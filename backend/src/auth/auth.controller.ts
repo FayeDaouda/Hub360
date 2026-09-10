@@ -1,4 +1,5 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
 import { LoginDto } from './dto/login.dto';
@@ -8,7 +9,12 @@ import {
   ReinitialiserMotDePasseDto,
 } from './dto/comptes.dto';
 
+// Seul contrôleur exposé sans authentification (login / activation / reset) →
+// seul à porter le rate-limiting. Défaut : 10 requêtes / min / IP ; login et
+// « mot de passe oublié » (sondés avec de vraies valeurs) descendent à 5.
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
+@Throttle({ default: { limit: 10, ttl: 60_000 } })
 export class AuthController {
   constructor(
     private authService: AuthService,
@@ -17,6 +23,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -32,6 +39,7 @@ export class AuthController {
   // Réponse constante — l'appelant ne peut pas savoir si l'email existe.
   @Post('mot-de-passe-oublie')
   @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async motDePasseOublie(@Body() dto: MotDePasseOublieDto) {
     await this.comptes.motDePasseOublie(dto.email);
     return {
