@@ -1,0 +1,45 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SocieteAccesGuard } from '../commun/societe-acces.guard';
+import { CellulesService } from './cellules.service';
+import { CreerCelluleDto, MajCelluleDto } from './dto';
+
+type R = { user: { societeId: string } };
+
+@Controller('societes/:slug/cellules')
+@UseGuards(JwtAuthGuard, SocieteAccesGuard)
+export class CellulesController {
+  constructor(private cellules: CellulesService) {}
+
+  @Get()
+  findAll(@Req() req: R) {
+    return this.cellules.findAll(req.user.societeId);
+  }
+
+  @Post()
+  creer(@Req() req: R, @Body() dto: CreerCelluleDto) {
+    return this.cellules.creer(req.user.societeId, dto);
+  }
+
+  @Patch(':id')
+  renommer(@Req() req: R, @Param('id') id: string, @Body() dto: MajCelluleDto) {
+    return this.cellules.renommer(req.user.societeId, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  supprimer(@Req() req: R, @Param('id') id: string) {
+    return this.cellules.supprimer(req.user.societeId, id);
+  }
+}

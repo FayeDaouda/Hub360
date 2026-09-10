@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+
+# Builds
+dist/
+.next/
+out/
+build/
+
+# Secrets & config locale (les *.example sont versionnés)
+.env
+.env.local
+.env.*.local
+
+# Cache outils
+*.tsbuildinfo
+.eslintcache
+coverage/
+.turbo/
+
+# Divers
+*.log
+.DS_Store

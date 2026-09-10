@@ -1,0 +1,1024 @@
+// Schéma de base de données HUB
+// Pensé pour qu'une nouvelle société s'ajoute sans toucher au code :
+// tout passe par des lignes en base (societes, societe_modules, roles).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Societe {
+  id            String   @id @default(uuid())
+  nom           String
+  slug          String   @unique
+  logoUrl       String?  @map("logo_url")
+  // Variante du logo pensée pour un fond sombre (le portail est en anthracite) —
+  // certains logos fournis (texte foncé sur transparent) sont illisibles sur fond
+  // sombre tels quels ; celle-ci reste optionnelle, on retombe sur logoUrl sinon.
+  logoUrlSombre String?  @map("logo_url_sombre")
+  couleurMarque String?  @map("couleur_marque")
+  // Clé d'icône générique (ex: "code", "building-2", "network") affichée sur
+  // la tuile du portail — validée côté frontend contre une liste blanche
+  // d'icônes disponibles, pas de logique par société codée en dur.
+  icone         String?
+  secteur       String?
+  actif         Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  roles          UtilisateurSocieteRole[]
+  modules        SocieteModule[]
+  clients        Client[]
+  dossiers       DossierCrm[]
+  projets        Projet[]
+  cellules       Cellule[]
+  collaborateurs Collaborateur[]
+  canaux         Canal[]
+  factures       Facture[]
+
+  @@map("societes")
+}
+
+model Utilisateur {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  // Nullable : un collaborateur invité n'a pas encore de mot de passe (compte
+  // créé, actif=false, en attente d'activation via le lien d'invitation).
+  motDePasseHash        String?   @map("mot_de_passe_hash")
+  nom                   String
+  prenom                String
+  actif                 Boolean   @default(true)
+  // Invalide toute session émise avant cette date (reset de mot de passe,
+  // désactivation). Vérifié dans jwt.strategy contre le `iat` du token.
+  sessionsValidesDepuis DateTime? @map("sessions_valides_depuis")
+  desactiveLe           DateTime? @map("desactive_le")
+  desactiveParId        String?   @map("desactive_par_id") // utilisateurId de l'admin (audit, pas de FK)
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  roles               UtilisateurSocieteRole[]
+  collaborations      Collaborateur[]
+  avantProjetsValides AvantProjet[]
+  entreesJournal      EntreeJournal[]
+  imagesAjoutees      ImageProjet[]            @relation("ImageAjoutPar")
+  imagesSupprimees    ImageProjet[]            @relation("ImageSupprPar")
+  fichiersAjoutes     FichierProjet[]          @relation("FichierAjoutPar")
+  fichiersSupprimes   FichierProjet[]          @relation("FichierSupprPar")
+  invitations         Invitation[]
+  notifications       Notification[]
+  evenementsCompte    EvenementCompte[]
+  messages            Message[]
+  canauxDmP1          Canal[]                  @relation("CanalDmP1")
+  canauxDmP2          Canal[]                  @relation("CanalDmP2")
+  lecturesCanal       LectureCanal[]
+
+  @@map("utilisateurs")
+}
+
+enum InvitationType {
+  invitation
+  reset
+}
+
+// Un seul mécanisme pour l'invitation initiale et le reset de mot de passe.
+// On stocke le SHA-256 du jeton, jamais le jeton en clair (rejeu impossible si
+// la base fuit). Usage unique réel : `usedAt` vérifié avant toute action.
+model Invitation {
+  id            String         @id @default(uuid())
+  tokenHash     String         @unique @map("token_hash")
+  type          InvitationType
+  email         String
+  utilisateurId String?        @map("utilisateur_id")
+  expiresAt     DateTime       @map("expires_at")
+  usedAt        DateTime?      @map("used_at")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  utilisateur Utilisateur? @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@index([email, type])
+  @@map("invitations")
+}
+
+enum EvenementCompteType {
+  invitation_envoyee
+  compte_active
+  mdp_reinitialise
+  compte_desactive
+  compte_reactive
+}
+
+// -- Notifications collaborateur --
+// Événements discrets poussés au moment où ils surviennent (assignation de
+// projet, changement de phase), une ligne par destinataire — même motif que
+// EvenementCompte (type fermé, parId en audit sans FK, titre pré-rendu par le
+// service : « le back tient la grammaire », cf. versAvantProjet). Les alertes
+// d'échéance d'avant-projet ne sont PAS stockées ici : dérivées à la lecture
+// du flux (pas de scheduler dans le projet).
+enum NotificationType {
+  projet_assigne
+  phase_changee
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  destinataireId String           @map("destinataire_id") // utilisateurId
+  societeId      String           @map("societe_id") // cloisonnement + purge par société
+  type           NotificationType
+  projetId       String?          @map("projet_id") // contexte cliquable
+  titre          String // texte pré-rendu par le service
+  parId          String?          @map("par_id") // qui a déclenché (audit, pas de FK)
+  luLe           DateTime?        @map("lu_le")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  destinataire Utilisateur @relation(fields: [destinataireId], references: [id], onDelete: Cascade)
+  projet       Projet?     @relation(fields: [projetId], references: [id], onDelete: SetNull)
+
+  @@index([destinataireId, luLe])
+  @@map("notifications")
+}
+
+// Journal d'audit des événements sensibles sur un compte.
+model EvenementCompte {
+  id            String              @id @default(uuid())
+  utilisateurId String              @map("utilisateur_id")
+  type          EvenementCompteType
+  parId         String?             @map("par_id") // qui a déclenché (audit, pas de FK)
+  detail        String              @default("")
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@index([utilisateurId])
+  @@map("evenements_compte")
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  nom         String  @unique // ex: holding_admin, societe_admin, collaborateur
+  description String?
+
+  utilisateurs UtilisateurSocieteRole[]
+
+  @@map("roles")
+}
+
+// Table pivot : le coeur du système multi-société.
+// Une ligne = "cet utilisateur a ce rôle dans cette société".
+// societeId nullable = rôle transverse (ex: holding_admin sur tout le groupe).
+model UtilisateurSocieteRole {
+  id            String   @id @default(uuid())
+  utilisateurId String   @map("utilisateur_id")
+  societeId     String?  @map("societe_id")
+  roleId        String   @map("role_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  societe     Societe?    @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  role        Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([utilisateurId, societeId, roleId])
+  @@map("utilisateur_societe_roles")
+}
+
+model Module {
+  id          String  @id @default(uuid())
+  nom         String
+  cle         String  @unique // ex: "projets", "finances", "documents", "communication"
+  description String?
+
+  societes SocieteModule[]
+
+  @@map("modules")
+}
+
+// Quels modules sont activés pour quelle société — zéro déploiement pour changer ça.
+model SocieteModule {
+  id        String  @id @default(uuid())
+  societeId String  @map("societe_id")
+  moduleId  String  @map("module_id")
+  actif     Boolean @default(true)
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  module  Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, moduleId])
+  @@map("societe_modules")
+}
+
+// =============================================================================
+// Grey Concrete — CRM, projets, avant-projet, pré-bilan
+//
+// Migration additive : aucune donnée existante pour ces modèles. Les 7 choix
+// de conception (Decimal(14,0), couts en Json, enums Prisma, snapshot sur
+// Projet, nom DossierCrm, gardes réimplémentées, validePar = utilisateurId)
+// sont figés — voir l'artifact « Backend Grey Concrete ».
+// =============================================================================
+
+// -- Vocabulaire métier (fermé) --
+
+enum NatureDossier {
+  mandat_client
+  promotion_interne
+}
+
+enum Categorie {
+  conception
+  amenagement
+}
+
+enum StatutCrm {
+  nouveau
+  devis_contrat
+  valide
+  annule
+}
+
+enum StatutProjet {
+  a_assigner
+  assigne
+  en_cours
+  livre
+}
+
+enum Phase {
+  avant_projet
+  permis
+  etudes
+  chantier
+  livre
+}
+
+enum EtapePreBilan {
+  esq
+  aps
+  apd
+  estimation
+  definitif
+}
+
+enum TypeBien {
+  villa
+  immeuble
+  lotissement
+  bureaux
+  commerce
+  mixte
+}
+
+enum Standing {
+  economique
+  moyen
+  haut
+  grand
+}
+
+enum Gamme {
+  entree
+  milieu
+  premium
+  luxe
+}
+
+enum NiveauFinition {
+  standard
+  soigne
+  haut_de_gamme
+}
+
+enum TypeClient {
+  particulier
+  sci
+  entreprise
+  institution
+}
+
+// -- Clients --
+
+model Client {
+  id        String     @id @default(uuid())
+  societeId String     @map("societe_id")
+  nom       String
+  type      TypeClient
+  contact   String?
+  email     String?
+  telephone String?
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  societe  Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  dossiers DossierCrm[]
+  projets  Projet[]
+
+  @@map("clients")
+}
+
+// -- Dossier CRM : la ligne du pipeline de prospection, avant validation --
+
+model DossierCrm {
+  id             String        @id @default(uuid())
+  societeId      String        @map("societe_id")
+  code           String
+  nature         NatureDossier
+  categorie      Categorie
+  localisation   String
+  latitude       Float? // pin géo optionnel, copié vers le Projet au pivot
+  longitude      Float?
+  type           TypeBien
+  nbPlanches     Int           @default(0) @map("nb_planches")
+  surfaceTerrain Int           @map("surface_terrain")
+  standing       Standing
+  gamme          Gamme
+  programme      String
+  statut         StatutCrm     @default(nouveau)
+  clientId       String        @map("client_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id])
+  projet  Projet? // 0..1 — créé à la validation (transaction pivot)
+
+  @@unique([societeId, code])
+  @@map("dossiers_crm")
+}
+
+// -- Projet : l'instance d'exécution. Champs métier = snapshot du dossier --
+
+model Projet {
+  id           String        @id @default(uuid())
+  societeId    String        @map("societe_id")
+  dossierCrmId String        @unique @map("dossier_crm_id")
+  code         String
+  // snapshot pris à la validation du dossier
+  nature       NatureDossier
+  categorie    Categorie
+  programme    String
+  localisation String
+  type         TypeBien
+  clientId     String        @map("client_id")
+  // localisation géo — pin posé à la main, copié du dossier au pivot
+  latitude     Float?
+  longitude    Float?
+  // exécution
+  celluleId    String?       @map("cellule_id")
+  statut       StatutProjet  @default(a_assigner)
+  phase        Phase         @default(avant_projet)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  societe          Societe           @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  dossierCrm       DossierCrm        @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
+  client           Client            @relation(fields: [clientId], references: [id])
+  cellule          Cellule?          @relation(fields: [celluleId], references: [id])
+  avantProjet      AvantProjet?
+  versionsPreBilan VersionPreBilan[]
+  // phase 2 — sections aval (conception : les 3 ; aménagement : execution seul)
+  permis           Permis?
+  etudes           Etudes?
+  execution        Execution?
+  journal          EntreeJournal[]
+  images           ImageProjet[]
+  notifications    Notification[]
+  fichiers         FichierProjet[]
+  factures         Facture[]
+
+  @@map("projets")
+}
+
+// -- Équipe : 6 cellules cross-fonctionnelles (Archi 1-4, Intérieur, Études).
+//    « 1 projet = 1 cellule » inchangé. Renommé depuis SousGroupe (vocabulaire
+//    métier — le studio dit « cellule »).
+
+model Cellule {
+  id        String   @id @default(uuid())
+  societeId String   @map("societe_id")
+  nom       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  societe Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  membres Collaborateur[]
+  projets Projet[]
+  canal   Canal? // fil de discussion permanent de la cellule (0..1)
+
+  @@map("cellules")
+}
+
+enum NiveauCollaborateur {
+  stagiaire
+  junior
+  confirme
+  senior
+  lead
+}
+
+model Collaborateur {
+  id            String              @id @default(uuid())
+  // societeId direct : un collaborateur peut être orphelin de cellule
+  // (celluleId null) mais reste rattaché à sa société (isolation multi-société).
+  societeId     String              @map("societe_id")
+  celluleId     String?             @map("cellule_id")
+  prenom        String
+  nom           String
+  role          String // métier : « Architecte », « Designer », « Dessinateur »…
+  niveau        NiveauCollaborateur @default(confirme) // séniorité (2ᵉ axe)
+  photoCle      String?             @map("photo_cle") // data URI puis clé S3 (seam ImageProjet.cle)
+  utilisateurId String?             @map("utilisateur_id") // comptes collaborateurs plus tard
+  // Entrée dans le studio, saisie par l'admin (AAAA-MM-JJ). Distinct de
+  // createdAt (création de la fiche) : sert l'ancienneté sur « Mes indicateurs ».
+  // Nullable — pas de date improvisée quand elle n'est pas renseignée.
+  dateArrivee   String?             @map("date_arrivee")
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  societe     Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  cellule     Cellule?      @relation(fields: [celluleId], references: [id], onDelete: SetNull)
+  utilisateur Utilisateur?  @relation(fields: [utilisateurId], references: [id])
+  dessinePour AvantProjet[] @relation("ApDessinateur")
+  rend3dPour  AvantProjet[] @relation("ApResponsable3d")
+
+  @@map("collaborateurs")
+}
+
+// -- Section Avant-projet : fiche programme + validation (1:1 avec Projet) --
+
+model AvantProjet {
+  projetId          String         @id @map("projet_id")
+  besoinSurface     Int?           @map("besoin_surface")
+  nbLots            Int?           @map("nb_lots")
+  usages            String         @default("")
+  niveauFinition    NiveauFinition @default(standard) @map("niveau_finition")
+  budgetCibleClient Decimal?       @map("budget_cible_client") @db.Decimal(14, 0)
+  delaiSouhaite     String         @default("") @map("delai_souhaite")
+  contraintes       String         @default("")
+  references        String         @default("")
+  // Affectation & agenda de la phase avant-projet (miroir de la carte Trello).
+  // dessinateur / responsable3d : FK Collaborateur (étaient des String libres).
+  dessinateurId     String?        @map("dessinateur_id")
+  responsable3dId   String?        @map("responsable_3d_id")
+  dateDebut         String?        @map("date_debut") // AAAA-MM-JJ (date agenda)
+  dateFin           String?        @map("date_fin")
+  // checklist macro — 4 colonnes plutôt qu'un Json ; verrou dur de sortie de phase
+  programmeValide   Boolean        @default(false) @map("programme_valide")
+  budgetValide      Boolean        @default(false) @map("budget_valide")
+  esquisseValidee   Boolean        @default(false) @map("esquisse_validee")
+  engagementValide  Boolean        @default(false) @map("engagement_valide")
+  pieceValidation   String?        @map("piece_validation")
+  valideLe          DateTime?      @map("valide_le")
+  validePar         String?        @map("valide_par") // utilisateurId
+
+  projet          Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  validateur      Utilisateur?        @relation(fields: [validePar], references: [id])
+  dessinateur     Collaborateur?      @relation("ApDessinateur", fields: [dessinateurId], references: [id], onDelete: SetNull)
+  responsable3d   Collaborateur?      @relation("ApResponsable3d", fields: [responsable3dId], references: [id], onDelete: SetNull)
+  lignesChecklist LigneChecklistAvp[]
+
+  @@map("avant_projets")
+}
+
+// -- Sous-checklists opérationnelles de l'avant-projet --
+// Le suivi quotidien de l'équipe (miroir du Trello Grey Concrete), distinct du
+// verrou macro à 4 points ci-dessus : n'ajoute AUCUN verrou de phase, alimente
+// juste un % (domaine/gardes.ts::avancementChecklistAvp). Une ligne par case.
+// `groupe` et libellés portés par la config CHECKLISTS_AVANT_PROJET
+// (domaine/config.ts + frontend/lib/types.ts, tenus synchro). Calqué sur
+// LigneEtude ; `nonRequis` = l'équivalent de StatutEtude.non_requise.
+
+enum GroupeChecklistAvp {
+  releve_existant
+  taches_complementaires
+  fichiers_produits
+  dossier_final
+}
+
+enum CleChecklistAvp {
+  // relevé de l'existant
+  visite_site
+  plans_terrain
+  assainissement
+  eau
+  electricite
+  telephone
+  photos_videos
+  autres_infos
+  // tâches complémentaires
+  plans_cotes
+  devis_descriptif
+  plaquettes_commerciales
+  // fichiers produits
+  dwg_pln
+  skp
+  source_rendus
+  // dossier final (PDF & images)
+  esquisses
+  plans_complets
+  images_3d_facade
+  details_livrables
+  emplacement_gaines
+  validation_client
+  mood_board
+}
+
+model LigneChecklistAvp {
+  id            String             @id @default(uuid())
+  avantProjetId String             @map("avant_projet_id")
+  groupe        GroupeChecklistAvp
+  cle           CleChecklistAvp
+  fait          Boolean            @default(false)
+  nonRequis     Boolean            @default(false) @map("non_requis")
+  note          String             @default("")
+
+  avantProjet AvantProjet @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
+
+  @@unique([avantProjetId, cle])
+  @@map("lignes_checklist_avp")
+}
+
+// -- Section Pré-bilan : chiffrage versionné. Pas de table « PreBilan »
+//    propre — les versions pendent du Projet, le DTO reconstitue la forme
+//    { projetId, versions[] } attendue par le front. --
+
+model VersionPreBilan {
+  id              String        @id @default(uuid())
+  projetId        String        @map("projet_id")
+  etape           EtapePreBilan
+  couts           Json          @default("{}") // { <ligne>: <montant FCFA> }
+  prixVenteEstime Decimal?      @map("prix_vente_estime") @db.Decimal(14, 0)
+  creeeLe         DateTime      @default(now()) @map("creee_le")
+  figeeLe         DateTime?     @map("figee_le") // figée dès la création de la version suivante
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  @@unique([projetId, etape])
+  @@map("versions_pre_bilan")
+}
+
+// =============================================================================
+// Grey Concrete — phase 2 : permis de construire, études techniques, exécution,
+// images. Migration additive (aucune donnée existante pour ces modèles).
+// Décisions figées — artifact « Backend Grey Concrete » §08 :
+//   · remise ≠ validee : deux valeurs d'enum distinctes (StatutEtude), pas un booléen ;
+//   · SituationPaiement pend directement du Lot (comme VersionPreBilan / Projet) ;
+//   · journal du permis + CR de chantier = une seule table EntreeJournal discriminée ;
+//   · ImageProjet strict — pas de Document générique tant qu'il n'y a qu'une nature ;
+//   · dates « agenda » (remise BET, jalons chantier) en String AAAA-MM-JJ ;
+//     horodatages (validation, dépôt, journal) en DateTime.
+// =============================================================================
+
+// -- Vocabulaire métier (fermé) — miroir de frontend/lib/types.ts --
+
+enum StatutNicad {
+  a_demander
+  demande
+  obtenu
+}
+
+enum StatutPermis {
+  a_deposer
+  depose
+  instruction
+  observations
+  obtenu
+  refuse
+}
+
+enum VoieDepot {
+  teledac
+  mairie
+}
+
+enum TypeEtude {
+  geotechnique
+  topographie
+  structure
+  fluides
+  electricite
+  vrd
+}
+
+enum StatutEtude {
+  a_lancer
+  en_cours
+  remise
+  validee
+  non_requise
+}
+
+enum TypeLot {
+  gros_oeuvre
+  second_oeuvre
+  lots_techniques
+  vrd
+  fournitures_mobilier
+  travaux_amenagement
+}
+
+enum StatutLot {
+  a_consulter
+  consulte
+  attribue
+  en_cours
+  termine
+}
+
+enum StatutReserve {
+  ouverte
+  levee
+}
+
+enum JournalContexte {
+  permis
+  chantier
+}
+
+enum UsageImage {
+  travail
+  portfolio
+}
+
+// -- Section « Permis de construire » (conception) : 1:1 avec Projet --
+// Procédure sénégalaise : NICAD → dossier (5 pièces) → dépôt (TeleDAC ou guichet
+// mairie) → instruction 90 j → obtention → certificat de conformité.
+// « Permis obtenu » est le 2ᵉ verrou dur de peutAvancerPhase.
+model Permis {
+  projetId             String       @id @map("projet_id")
+  nicad                StatutNicad  @default(a_demander)
+  nicadNumero          String       @default("") @map("nicad_numero")
+  planBornage          Boolean      @default(false) @map("plan_bornage")
+  // dossier — 5 colonnes booléennes (miroir de PieceDossierPermis) plutôt qu'un Json
+  titrePropriete       Boolean      @default(false) @map("titre_propriete")
+  planCadastralVise    Boolean      @default(false) @map("plan_cadastral_vise")
+  plansApd             Boolean      @default(false) @map("plans_apd")
+  devis                Boolean      @default(false)
+  timbreFiscal         Boolean      @default(false) @map("timbre_fiscal")
+  // dépôt & instruction
+  statut               StatutPermis @default(a_deposer)
+  voie                 VoieDepot?
+  dateDepot            DateTime?    @map("date_depot")
+  numeroRecepisse      String       @default("") @map("numero_recepisse")
+  dateObtention        DateTime?    @map("date_obtention")
+  dateRefus            DateTime?    @map("date_refus")
+  certificatConformite Boolean      @default(false) @map("certificat_conformite")
+  dateCertificat       DateTime?    @map("date_certificat")
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  @@map("permis")
+}
+
+// -- Journal générique : journal du permis + CR de chantier. Même objet côté
+//    front (EntreeJournal). Discriminé par `contexte`, filtré par le service. --
+model EntreeJournal {
+  id       String          @id @default(uuid())
+  projetId String          @map("projet_id")
+  contexte JournalContexte
+  date     DateTime        @default(now())
+  texte    String
+  auteurId String?         @map("auteur_id") // nom résolu par jointure au rendu
+
+  projet Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  auteur Utilisateur? @relation(fields: [auteurId], references: [id])
+
+  @@index([projetId, contexte])
+  @@map("entrees_journal")
+}
+
+// -- Section « Études » (conception) : en-tête 1:1 (comme AvantProjet) + lignes --
+model Etudes {
+  projetId     String    @id @map("projet_id")
+  dceConstitue Boolean   @default(false) @map("dce_constitue")
+  dceLe        DateTime? @map("dce_le")
+
+  projet Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  lignes LigneEtude[]
+
+  @@map("etudes")
+}
+
+model LigneEtude {
+  id               String      @id @default(uuid())
+  etudesId         String      @map("etudes_id")
+  type             TypeEtude
+  statut           StatutEtude @default(a_lancer) // a_lancer → en_cours → remise → validee | non_requise
+  bet              String      @default("") // nom du bureau d'études ; partenaireId nullable plus tard
+  dateRemisePrevue String?     @map("date_remise_prevue") // AAAA-MM-JJ
+  dateRemiseReelle String?     @map("date_remise_reelle")
+  note             String      @default("")
+
+  etudes Etudes @relation(fields: [etudesId], references: [projetId], onDelete: Cascade)
+
+  @@unique([etudesId, type])
+  @@map("lignes_etude")
+}
+
+// -- Section « Exécution / chantier » (les deux catégories) : en-tête 1:1,
+//    jalons de réception aplatis depuis le sous-objet Reception du front. --
+model Execution {
+  projetId             String  @id @map("projet_id")
+  receptionProvisoire  String? @map("reception_provisoire") // AAAA-MM-JJ
+  leveeReserves        String? @map("levee_reserves")
+  receptionDefinitive  String? @map("reception_definitive")
+  validationClient     Boolean @default(false) @map("validation_client")
+  dateValidationClient String? @map("date_validation_client")
+
+  projet   Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  lots     Lot[]
+  reserves Reserve[]
+
+  @@map("executions")
+}
+
+model Lot {
+  id                    String    @id @default(uuid())
+  executionId           String    @map("execution_id")
+  type                  TypeLot
+  statut                StatutLot @default(a_consulter)
+  entreprisesConsultees String[]  @map("entreprises_consultees")
+  entrepriseRetenue     String    @default("") @map("entreprise_retenue")
+  montantMarche         Decimal   @default(0) @map("montant_marche") @db.Decimal(14, 0)
+  dateAttribution       String?   @map("date_attribution") // AAAA-MM-JJ
+  avancement            Int       @default(0) // % physique
+  dateDebut             String?   @map("date_debut")
+  dateFinPrevue         String?   @map("date_fin_prevue")
+
+  execution  Execution           @relation(fields: [executionId], references: [projetId], onDelete: Cascade)
+  offres     OffreEntreprise[]
+  situations SituationPaiement[]
+
+  @@unique([executionId, type])
+  @@map("lots")
+}
+
+model OffreEntreprise {
+  id         String   @id @default(uuid())
+  lotId      String   @map("lot_id")
+  entreprise String
+  montant    Decimal  @db.Decimal(14, 0)
+  delaiJours Int?     @map("delai_jours")
+  creeLe     DateTime @default(now()) @map("cree_le") // ordre d'affichage
+
+  lot Lot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@map("offres_entreprise")
+}
+
+// Comme VersionPreBilan pend du Projet : SituationPaiement pend du Lot.
+model SituationPaiement {
+  id               String  @id @default(uuid())
+  lotId            String  @map("lot_id")
+  numero           Int // rang, renuméroté à la suppression
+  date             String // AAAA-MM-JJ
+  avancementCumule Int     @map("avancement_cumule") // %
+  montantSituation Decimal @map("montant_situation") @db.Decimal(14, 0)
+  retenueGarantie  Decimal @default(0) @map("retenue_garantie") @db.Decimal(14, 0)
+  montantVerse     Decimal @map("montant_verse") @db.Decimal(14, 0)
+
+  lot Lot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  @@unique([lotId, numero])
+  @@map("situations_paiement")
+}
+
+model Reserve {
+  id          String        @id @default(uuid())
+  executionId String        @map("execution_id")
+  description String
+  statut      StatutReserve @default(ouverte)
+  dateLevee   String?       @map("date_levee") // AAAA-MM-JJ
+  creeLe      DateTime      @default(now()) @map("cree_le") // ordre d'affichage
+
+  execution Execution @relation(fields: [executionId], references: [projetId], onDelete: Cascade)
+
+  @@map("reserves")
+}
+
+// -- Section « Images » : galerie de travail + portfolio. Table stricte (pas un
+//    Document générique) — chaque colonne a un sens pour chaque ligne. Le
+//    fichier vit dans le stockage objet ; `cle` = clé objet (data URI en
+//    transition tant que S3 n'est pas branché), l'URL est calculée à la lecture. --
+model ImageProjet {
+  id            String     @id @default(uuid())
+  projetId      String     @map("projet_id")
+  cle           String
+  nom           String
+  typeMime      String     @default("") @map("type_mime")
+  usage         UsageImage @default(travail)
+  phase         Phase? // tag optionnel — filtre, ne gate rien
+  legende       String     @default("")
+  ordre         Int        @default(0) // rang dans le portfolio
+  ajouteParId   String?    @map("ajoute_par_id")
+  ajouteLe      DateTime   @default(now()) @map("ajoute_le")
+  supprimee     Boolean    @default(false)
+  supprimeLe    DateTime?  @map("supprime_le")
+  supprimeParId String?    @map("supprime_par_id")
+
+  projet      Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  ajoutePar   Utilisateur? @relation("ImageAjoutPar", fields: [ajouteParId], references: [id])
+  supprimePar Utilisateur? @relation("ImageSupprPar", fields: [supprimeParId], references: [id])
+
+  @@index([projetId, supprimee])
+  @@map("images_projet")
+}
+
+// -- Section « Documents » : livrables non-images (PDF APS/APD, plans CAO DWG,
+//    devis, plaquettes…). 2ᵉ nature de pièce jointe → modèle propre plutôt que
+//    d'élargir ImageProjet. Même seam de stockage : `cle` porte le data URI en
+//    transition tant que S3 n'est pas branché. Soft-delete horodaté, `type` et
+//    `phase` = vocabulaires fermés (filtres, ne gatent rien). --
+enum TypeFichier {
+  plan // plans CAO (DWG, PLN, PDF de plans)
+  rendu_source // fichiers source des rendus (SKP…)
+  devis // devis descriptif / quantitatif
+  plaquette // plaquette commerciale
+  pdf_dossier // dossier PDF versionné (APS, APD…)
+  autre
+}
+
+model FichierProjet {
+  id            String      @id @default(uuid())
+  projetId      String      @map("projet_id")
+  cle           String // data URI en transition ; clé objet S3 à terme
+  nom           String
+  typeMime      String      @default("") @map("type_mime")
+  taille        Int         @default(0) // octets — info d'affichage
+  type          TypeFichier @default(autre)
+  phase         Phase? // tag optionnel — filtre
+  note          String      @default("")
+  ajouteParId   String?     @map("ajoute_par_id")
+  ajouteLe      DateTime    @default(now()) @map("ajoute_le")
+  supprimee     Boolean     @default(false)
+  supprimeLe    DateTime?   @map("supprime_le")
+  supprimeParId String?     @map("supprime_par_id")
+
+  projet      Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  ajoutePar   Utilisateur? @relation("FichierAjoutPar", fields: [ajouteParId], references: [id])
+  supprimePar Utilisateur? @relation("FichierSupprPar", fields: [supprimeParId], references: [id])
+
+  @@index([projetId, supprimee])
+  @@map("fichiers_projet")
+}
+
+// =============================================================================
+// Chat multi-canaux (lot 3) — cf. artifact « Chat multi-canaux » (cadrage v1.0).
+// 3 types de canaux : fil permanent par cellule, un Général par société, DM à
+// deux. `societeId` sur Canal = invariant multi-société. Canaux créés en
+// coquille lazy (comme AvantProjet/Etudes), messages immuables v1. Réception
+// temps réel par SSE ; l'envoi passe par l'API REST (mêmes gardes).
+// =============================================================================
+
+enum TypeCanal {
+  cellule
+  general
+  direct
+}
+
+model Canal {
+  id             String    @id @default(uuid())
+  societeId      String    @map("societe_id")
+  type           TypeCanal
+  // type = cellule uniquement — @unique : un seul fil par cellule.
+  celluleId      String?   @unique @map("cellule_id")
+  // type = direct uniquement — l'appelant range participant1Id < participant2Id
+  // (ordre canonique) ; le @@unique garantit un seul DM par paire.
+  participant1Id String?   @map("participant1_id")
+  participant2Id String?   @map("participant2_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  societe      Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  cellule      Cellule?       @relation(fields: [celluleId], references: [id], onDelete: Cascade)
+  participant1 Utilisateur?   @relation("CanalDmP1", fields: [participant1Id], references: [id])
+  participant2 Utilisateur?   @relation("CanalDmP2", fields: [participant2Id], references: [id])
+  messages     Message[]
+  lectures     LectureCanal[]
+
+  @@unique([participant1Id, participant2Id])
+  // Unicité du Général par société : index partiel posé en SQL brut dans la
+  // migration — CREATE UNIQUE INDEX ... ("societe_id") WHERE type = 'general'.
+  @@map("canaux")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  canalId   String   @map("canal_id")
+  // FK sans onDelete → Restrict par défaut : on ne supprime pas un compte qui a
+  // écrit (convention « on désactive, on ne supprime pas », cf. Utilisateur.desactiveLe).
+  auteurId  String   @map("auteur_id")
+  texte     String // plafonné à ~4000 au DTO
+  createdAt DateTime @default(now()) @map("created_at")
+
+  canal  Canal       @relation(fields: [canalId], references: [id], onDelete: Cascade)
+  auteur Utilisateur @relation(fields: [auteurId], references: [id])
+
+  @@index([canalId, createdAt])
+  @@map("messages")
+}
+
+// Curseur de lecture par (utilisateur, canal). Le non-lu se déduit :
+// COUNT(messages WHERE created_at > dernierLuLe AND auteur_id <> moi).
+model LectureCanal {
+  utilisateurId String   @map("utilisateur_id")
+  canalId       String   @map("canal_id")
+  dernierLuLe   DateTime @map("dernier_lu_le")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  canal       Canal       @relation(fields: [canalId], references: [id], onDelete: Cascade)
+
+  @@id([utilisateurId, canalId])
+  @@map("lectures_canal")
+}
+
+// =============================================================================
+// Facturation client (brique « gestion ») — cf. cadrage « Facturation client ».
+// Migration additive (aucune donnée existante). Le pré-bilan chiffre un projet ;
+// ce module transforme ce chiffrage en factures réelles, émises, suivies, payées.
+// Décisions figées du cadrage :
+//   · §2  type dérivé de projet.nature (mandat_client → honoraires ;
+//         promotion_interne → vente) — jamais saisi ; stocké dénormalisé car
+//         c'est ce qui figure sur la facture ;
+//   · §5  numéro séquentiel PAR SOCIÉTÉ (invariant societeId), attribué à
+//         l'émission — un brouillon n'a pas de numéro, donc sa suppression ne
+//         laisse pas de trou ; immuable ensuite ;
+//   · §5  une facture émise ne se modifie plus : correction = avoir (estAvoir +
+//         factureOrigineId, montants signés négatifs), jamais d'édition ;
+//   · §4  seuls montantHt + tauxTva sont stockés ; TVA / TTC dérivés à la
+//         lecture (mêmes valeurs figées, une seule source — comme le total du
+//         pré-bilan) ;
+//   · §6  statut stocké = cycle piloté par l'admin (brouillon → emise →
+//         annulee) ; partiellement_payee / payee / en_retard sont dérivés à la
+//         lecture du cumul des paiements et de l'échéance — pas de scheduler ;
+//   · §7  Paiement pend de la Facture (comme SituationPaiement pend du Lot) ;
+//   · §3  dates « échéance » / « versement » en String AAAA-MM-JJ (date agenda) ;
+//         horodatages (création, émission, annulation) en DateTime.
+// =============================================================================
+
+enum FactureType {
+  honoraires // nature = mandat_client — prestations de conception / suivi
+  vente // nature = promotion_interne — bien vendu à l'acheteur final
+}
+
+enum FactureStatut {
+  brouillon
+  emise
+  annulee // remplacée par un avoir
+}
+
+// Les 3 jalons standard d'un échéancier de facturation (mandat client).
+enum JalonFacture {
+  signature
+  avant_projet
+  livraison
+}
+
+enum ModePaiement {
+  virement
+  cheque
+  especes
+  mobile_money
+}
+
+model Facture {
+  id               String        @id @default(uuid())
+  societeId        String        @map("societe_id")
+  projetId         String        @map("projet_id")
+  numero           Int? // rang séquentiel par société — null tant que brouillon
+  type             FactureType
+  statut           FactureStatut @default(brouillon)
+  jalon            JalonFacture? // renseigné si la facture appartient à un échéancier
+  libelle          String        @default("")
+  montantHt        Decimal       @default(0) @map("montant_ht") @db.Decimal(14, 0)
+  tauxTva          Decimal       @default(18) @map("taux_tva") @db.Decimal(5, 2)
+  echeanceLe       String?       @map("echeance_le") // AAAA-MM-JJ (date agenda)
+  estAvoir         Boolean       @default(false) @map("est_avoir")
+  factureOrigineId String?       @map("facture_origine_id") // avoir → facture annulée
+  creeLe           DateTime      @default(now()) @map("cree_le")
+  emiseLe          DateTime?     @map("emise_le")
+  annuleeLe        DateTime?     @map("annulee_le")
+
+  societe        Societe    @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  projet         Projet     @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  factureOrigine Facture?   @relation("FactureAvoir", fields: [factureOrigineId], references: [id])
+  avoirs         Facture[]  @relation("FactureAvoir")
+  paiements      Paiement[]
+
+  @@unique([societeId, numero])
+  @@index([projetId])
+  @@map("factures")
+}
+
+// Comme SituationPaiement pend du Lot : Paiement pend de la Facture. Plusieurs
+// paiements s'accumulent jusqu'à couverture du TTC ; le statut « payée » se
+// déduit du cumul (jamais stocké). Suppression autorisée (correction) — c'est
+// la Facture qui est immuable, pas ses paiements.
+model Paiement {
+  id        String        @id @default(uuid())
+  factureId String        @map("facture_id")
+  date      String // AAAA-MM-JJ — date du versement
+  montant   Decimal       @db.Decimal(14, 0)
+  mode      ModePaiement?
+  reference String        @default("") // n° de virement / chèque, optionnel
+  creeLe    DateTime      @default(now()) @map("cree_le") // ordre d'affichage
+
+  facture Facture @relation(fields: [factureId], references: [id], onDelete: Cascade)
+
+  @@index([factureId])
+  @@map("paiements")
+}
