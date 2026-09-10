@@ -318,7 +318,7 @@ export default function PermisPage({ params }: Props) {
             </div>
             {permis.statut === 'obtenu' && (
               <label className="field">
-                <span className="field-label">Date d'obtention</span>
+                <span className="field-label">Date d’obtention</span>
                 <input
                   type="date"
                   className="field-input"
@@ -341,7 +341,7 @@ export default function PermisPage({ params }: Props) {
 
           {/* Journal */}
           <section className="panel">
-            <h3 className="panel-title">Échanges avec l'administration</h3>
+            <h3 className="panel-title">Échanges avec l’administration</h3>
             <div className="permis-journal-ajout">
               <input
                 className="field-input"

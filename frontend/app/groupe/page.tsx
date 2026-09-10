@@ -39,7 +39,7 @@ export default function GroupePage() {
   return (
     <main>
       <header className="espace-header">
-        <span>Vue d'ensemble du groupe</span>
+        <span>Vue d’ensemble du groupe</span>
         <button className="btn-ghost" onClick={handleLogout}>
           Se déconnecter
         </button>
@@ -47,7 +47,7 @@ export default function GroupePage() {
       <div className="espace-welcome">
         <h1>Bienvenue, {session!.utilisateur.prenom}</h1>
         <p>
-          Connecté en tant qu'<strong>administrateur du groupe</strong>.
+          Connecté en tant qu’<strong>administrateur du groupe</strong>.
         </p>
         {societes && societes.length > 0 && (
           <ul className="groupe-societe-list">

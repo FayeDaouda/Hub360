@@ -151,7 +151,7 @@ export default function EtudePage({ params }: Props) {
                   <tr>
                     <th>Étude</th>
                     <th>Statut</th>
-                    <th>Bureau d'études</th>
+                    <th>Bureau d’études</th>
                     <th>Remise prévue</th>
                     <th>Remise réelle</th>
                     <th>Note</th>
@@ -247,7 +247,7 @@ export default function EtudePage({ params }: Props) {
             <h3 className="panel-title">Dossier de consultation des entreprises (DCE)</h3>
             <p className="ap-a-venir">
               Mobilisable quand chaque étude est validée ou non requise. Sert de base à la
-              consultation des entreprises — l'attribution des marchés se fait dans « Exécution ».
+              consultation des entreprises — l’attribution des marchés se fait dans « Exécution ».
             </p>
             {etudes.dceConstitue ? (
               <div className="ap-bandeau" role="status">

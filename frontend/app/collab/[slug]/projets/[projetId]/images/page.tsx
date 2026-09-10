@@ -123,7 +123,6 @@ function Vue({
         <ul className="lecture-galerie">
           {images.map((img) => (
             <li key={img.id}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img.url} alt={img.legende || img.nom} loading="lazy" />
               <select
                 className="field-input doc-select"
