@@ -40,12 +40,14 @@ export type StatKpi = {
   libelle: string;
   valeur: number;
   format: FormatValeur;
-  // Exprimée dans l'unité indiquée ci-dessous (un % de croissance, ou un
-  // écart en points pour une valeur qui est déjà un pourcentage).
-  variation: number;
-  uniteVariation: 'pourcent' | 'points';
-  tendance: TendanceKpi;
-  // Complément affiché à la place de « vs période précédente » (ex : « 3 en chantier »).
+  // Delta vs période précédente — optionnel : une métrique « photo à l'instant T »
+  // (sans historique fiable en base) n'en fournit pas, et n'affiche alors que
+  // `detail`. Les trois vont ensemble ou aucun.
+  variation?: number;
+  uniteVariation?: 'pourcent' | 'points';
+  tendance?: TendanceKpi;
+  // Complément affiché sous la valeur (remplace « vs période précédente », ou
+  // tient lieu de contexte quand il n'y a pas de delta).
   detail?: string;
 };
 
@@ -61,18 +63,6 @@ export type Histogramme = {
   points: PointHistogramme[];
 };
 
-// Les 3 départements intégrés de Grey Concrete — voir la mémoire projet
-// « grey-concrete-business ». Contrairement à un gros promoteur, il n'y a
-// pas de modules Commercialisation/Finances/Juridique séparés : le
-// financement vit à l'intérieur de « developpement ».
-export type Departement = 'developpement' | 'conception' | 'amenagement';
-
-export const DEPARTEMENTS: Record<Departement, string> = {
-  developpement: 'Développement immobilier',
-  conception: 'Conception architecturale',
-  amenagement: 'Aménagements intérieurs',
-};
-
 export type StatutJalon = 'a_faire' | 'en_attente' | 'a_risque' | 'fait';
 
 export type JalonApercu = {
@@ -83,15 +73,17 @@ export type JalonApercu = {
   statut: StatutJalon;
 };
 
-export type StatutProjet = 'en_cours' | 'en_attente_client' | 'livre' | 'en_pause';
-
+// Aperçu d'un projet actif sur le tableau de bord. `categorie` +
+// `promotionInterne` : les champs réels du modèle Projet (pas un « département »
+// dérivé). `statut` = l'enum Prisma StatutProjetExec.
 export type ProjetApercu = {
   id: string;
   nom: string;
-  departement: Departement;
+  categorie: Categorie;
+  promotionInterne: boolean; // nature === 'promotion_interne'
   client: string;
   avancement: number; // 0-100
-  statut: StatutProjet;
+  statut: StatutProjetExec;
 };
 
 // --- Clients & projets (page /admin/[slug]/projets) ---
@@ -1256,8 +1248,10 @@ export function refFacture(
 
 export type AvancementProjets = {
   pourcentage: number;
-  variation: number;
-  tendance: TendanceKpi;
+  // Delta optionnel (cf. StatKpi) : absent quand la valeur est une photo à
+  // l'instant T ; le composant affiche alors un `sousTexte` de contexte.
+  variation?: number;
+  tendance?: TendanceKpi;
 };
 
 export type TableauBordSociete = {

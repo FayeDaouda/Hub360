@@ -11,10 +11,10 @@ import type {
   Session,
   Societe,
   StatutJalon,
-  StatutProjet,
+  StatutProjetExec,
   TableauBordSociete,
 } from '@/lib/types';
-import { DEPARTEMENTS } from '@/lib/types';
+import { CATEGORIES, STATUTS_PROJET_EXEC } from '@/lib/types';
 import { formatDateCourte } from '@/lib/format';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { StatCard } from '@/components/admin/stat-card';
@@ -39,11 +39,13 @@ const PILL_JALON: Record<StatutJalon, { classe: string; libelle: string }> = {
   fait: { classe: 'pill--succes', libelle: 'Fait' },
 };
 
-const PILL_PROJET: Record<StatutProjet, { classe: string; libelle: string }> = {
-  en_cours: { classe: 'pill--info', libelle: 'En cours' },
-  en_attente_client: { classe: 'pill--attention', libelle: 'En attente client' },
-  livre: { classe: 'pill--succes', libelle: 'Livré' },
-  en_pause: { classe: 'pill--neutre', libelle: 'En pause' },
+// Classe de pastille par statut d'assignation (enum Prisma StatutProjetExec) ;
+// le libellé vient de STATUTS_PROJET_EXEC.
+const CLASSE_STATUT_PROJET: Record<StatutProjetExec, string> = {
+  a_assigner: 'pill--attention',
+  assigne: 'pill--neutre',
+  en_cours: 'pill--info',
+  livre: 'pill--succes',
 };
 
 // Back-office d'une société — réservé à societe_admin. Les autres rôles sont
@@ -148,6 +150,13 @@ export default function AdminPage({ params }: Props) {
                 <RadialGauge
                   data={tableau.avancementMoyen}
                   libelle="Avancement moyen des projets actifs"
+                  sousTexte={
+                    tableau.projets.length
+                      ? `Checklists d’avant-projet · ${tableau.projets.length} projet${
+                          tableau.projets.length > 1 ? 's' : ''
+                        } actif${tableau.projets.length > 1 ? 's' : ''}`
+                      : 'Aucun projet actif'
+                  }
                 />
               </div>
             </div>
@@ -160,7 +169,7 @@ export default function AdminPage({ params }: Props) {
                 <thead>
                   <tr>
                     <th>Projet</th>
-                    <th>Département</th>
+                    <th>Catégorie</th>
                     <th>Client</th>
                     <th>Avancement</th>
                     <th>Statut</th>
@@ -170,7 +179,16 @@ export default function AdminPage({ params }: Props) {
                   {tableau.projets.map((projet) => (
                     <tr key={projet.id}>
                       <td data-label="Projet">{projet.nom}</td>
-                      <td data-label="Département">{DEPARTEMENTS[projet.departement]}</td>
+                      <td data-label="Catégorie">
+                        <span className={`pill pill--cat-${projet.categorie}`}>
+                          {CATEGORIES[projet.categorie]}
+                        </span>
+                        {projet.promotionInterne && (
+                          <span className="pill pill--nature-promotion_interne">
+                            Promotion interne
+                          </span>
+                        )}
+                      </td>
                       <td data-label="Client">{projet.client}</td>
                       <td data-label="Avancement">
                         <span className="progress">
@@ -184,8 +202,8 @@ export default function AdminPage({ params }: Props) {
                         </span>
                       </td>
                       <td data-label="Statut">
-                        <span className={`pill ${PILL_PROJET[projet.statut].classe}`}>
-                          {PILL_PROJET[projet.statut].libelle}
+                        <span className={`pill ${CLASSE_STATUT_PROJET[projet.statut]}`}>
+                          {STATUTS_PROJET_EXEC[projet.statut]}
                         </span>
                       </td>
                     </tr>

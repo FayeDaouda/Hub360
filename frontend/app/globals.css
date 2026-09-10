@@ -918,6 +918,17 @@ a.admin-nav-item:hover {
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* KPI « photo à l'instant T » : pas de delta, juste le contexte. */
+.stat-card-detail {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.stat-card--accent .stat-card-detail {
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* Grille principale : graphe (gauche) + colonne jalons/jauge (droite) */
 .admin-grid {
   display: grid;

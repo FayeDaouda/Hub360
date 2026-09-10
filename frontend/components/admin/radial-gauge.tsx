@@ -65,12 +65,12 @@ export function RadialGauge({
         <p className="gauge-legend-titre">{libelle}</p>
         {sousTexte !== undefined ? (
           <p className="gauge-sous">{sousTexte}</p>
-        ) : (
+        ) : data.variation !== undefined ? (
           <p className={`stat-card-delta stat-card-delta--${data.tendance ?? 'stable'}`}>
-            <span>{formatVariation(data.variation ?? 0, 'points')}</span>
+            <span>{formatVariation(data.variation, 'points')}</span>
             <span className="stat-card-delta-ref">vs période précédente</span>
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );
