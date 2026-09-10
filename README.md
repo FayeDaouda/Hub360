@@ -72,6 +72,18 @@ npm ci
 npm run dev                    # http://localhost:3000
 ```
 
+### 4. Hook pre-push (une fois par clone)
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Bloque tout `git push` qui ne passe pas `build` + `test` (backend) et `lint` +
+`typecheck` (frontend) — l'équivalent local d'une protection de branche, non
+disponible sur un dépôt privé en plan gratuit. Contournement d'urgence :
+`git push --no-verify`. La CI GitHub reste le filet de sécurité côté serveur ;
+une vraie protection de branche demandera un dépôt public ou GitHub Pro.
+
 ## Comptes de démonstration (après seed)
 
 | Rôle | Identifiant | Accès |

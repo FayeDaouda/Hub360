@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# Empêche un `git push` si les vérifications rapides échouent — l'équivalent
+# local d'une protection de branche (indisponible sur dépôt privé gratuit).
+# La CI GitHub rejoue tout, build complet inclus ; ici on attrape l'essentiel
+# avant que ça quitte la machine.
+#
+# Activation (une fois par clone) :  git config core.hooksPath .githooks
+# Échappatoire d'urgence           :  git push --no-verify
+#
+set -e
+
+root=$(git rev-parse --show-toplevel)
+echo "── pre-push : vérifications avant envoi ──"
+
+echo "▶ backend — build + tests"
+( cd "$root/backend" && npm run build && npm test )
+
+echo "▶ frontend — lint + types"
+( cd "$root/frontend" && npm run lint && npm run typecheck )
+
+echo "✓ tout est vert — push autorisé"
