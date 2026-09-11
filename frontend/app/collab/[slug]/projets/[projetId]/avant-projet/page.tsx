@@ -83,7 +83,7 @@ function Vue({
         </div>
       )}
 
-      <BlocLecture titre="Programme">
+      <BlocLecture titre="Programme" portee="Géré par l’administration.">
         <Champs>
           <Champ label="Surface (m²)">{ap.besoinSurface}</Champ>
           <Champ label="Pièces / lots">{ap.nbLots}</Champ>
@@ -114,12 +114,11 @@ function Vue({
         )}
       </BlocLecture>
 
-      <BlocLecture titre="Suivi opérationnel">
-        {ap.valideLe ? (
-          <p className="lecture-para" style={{ marginTop: 0 }}>
-            Avant-projet validé — les checklists sont figées.
-          </p>
-        ) : (
+      <BlocLecture
+        titre="Suivi opérationnel"
+        portee={ap.valideLe ? 'Avant-projet validé — checklists figées.' : undefined}
+      >
+        {!ap.valideLe && (
           <p className="lecture-para" style={{ marginTop: 0 }}>
             Coche au fil de l’avancement. « N/A » pour un point sans objet sur ce projet.
           </p>
@@ -186,7 +185,7 @@ function Vue({
         </div>
       </BlocLecture>
 
-      <BlocLecture titre="Validation">
+      <BlocLecture titre="Validation" portee="Réservée à l’administration.">
         <ListeCoches>
           {macro.map((m) => (
             <Coche key={m.cle} ok={ap.checklist[m.cle]}>
@@ -202,7 +201,7 @@ function Vue({
       </BlocLecture>
 
       {pb && pb.versions.length > 0 && (
-        <BlocLecture titre="Pré-bilan de faisabilité">
+        <BlocLecture titre="Pré-bilan de faisabilité" portee="Géré par l’administration.">
           <div className="lecture-table-wrap">
             <table className="prebilan-table">
               <thead>

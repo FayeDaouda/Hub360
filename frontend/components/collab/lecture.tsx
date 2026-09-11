@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Lock } from 'lucide-react';
 
 // Primitives d'affichage lecture seule pour les sections projet côté
 // collaborateur. Présentation (libellés + valeurs), jamais de formulaire.
@@ -7,10 +8,15 @@ import type { ReactNode } from 'react';
 
 export function BlocLecture({
   titre,
+  portee,
   aside,
   children,
 }: {
   titre: string;
+  // Pourquoi ce bloc n'est pas modifiable ici (ex. « Géré par l'administration »).
+  // Absente = le bloc est modifiable — sur ces pages, l'indication qui compte
+  // est celle du verrou, pas sa répétition sur chaque bloc ouvert.
+  portee?: ReactNode;
   aside?: ReactNode;
   children: ReactNode;
 }) {
@@ -22,6 +28,12 @@ export function BlocLecture({
         </h3>
         {aside}
       </div>
+      {portee && (
+        <p className="lecture-portee">
+          <Lock size={12} strokeWidth={2} aria-hidden />
+          {portee}
+        </p>
+      )}
       {children}
     </section>
   );

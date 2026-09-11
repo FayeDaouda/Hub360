@@ -2153,6 +2153,28 @@ a.admin-nav-item:hover {
   flex-wrap: wrap;
   margin-bottom: 1rem;
 }
+
+/* Portée d'un bloc pour le collaborateur : pourquoi il ne peut pas modifier
+   ici. Absente = le bloc est (au moins en partie) modifiable — le silence
+   est le signal normal sur ces pages, pas besoin de le répéter partout. */
+.lecture-portee {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: -0.5rem 0 1rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.lecture-portee svg {
+  flex-shrink: 0;
+}
+
+/* Colonnes lecture seule dans une table par ailleurs modifiable (ex. lots :
+   entreprise / marché / versé, gérés par l'administration). */
+.ro {
+  color: var(--text-muted);
+}
 .lecture-champs {
   margin: 0;
   display: grid;

@@ -165,8 +165,12 @@ export default function CollabPage({ params }: Props) {
   const enRetard = attention.filter((l) => (l.jours ?? 0) < 0).length;
 
   // Raccourcis : les 2 destinations réelles + « reprendre » sur le projet le
-  // plus prioritaire (lignes[0] après tri) quand il y en a un.
-  const urgent = lignes?.[0];
+  // plus prioritaire — mais seulement s'il reste vraiment quelque chose à
+  // reprendre. `lignes` est trié par urgence croissante (rang 4 = fini) ; si
+  // le premier est déjà complet, TOUS le sont (sinon il serait derrière un
+  // rang < 4) — zéro projet actif et « tout est bouclé » doivent tous les
+  // deux se comporter pareil : pas de raccourci « Reprendre » trompeur.
+  const urgent = lignes?.find((l) => !l.complete);
   const actions: ActionRapide[] = [
     ...(urgent
       ? [
