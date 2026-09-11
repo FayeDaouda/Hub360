@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlarmClock, CheckCircle2 } from 'lucide-react';
+import { AlarmClock, CheckCircle2, FolderKanban, Gauge, PlayCircle } from 'lucide-react';
 import { getSociete } from '@/lib/api';
+import { ActionsRapides, type ActionRapide } from '@/components/actions-rapides';
+import { RailAccueil } from '@/components/collab/rail-accueil';
 import { getMonProfil } from '@/lib/collab';
 import { getIndicateurs } from '@/lib/equipe';
 import { getAvantProjet, getProjetsExecution } from '@/lib/projets';
@@ -162,6 +164,34 @@ export default function CollabPage({ params }: Props) {
   );
   const enRetard = attention.filter((l) => (l.jours ?? 0) < 0).length;
 
+  // Raccourcis : les 2 destinations réelles + « reprendre » sur le projet le
+  // plus prioritaire (lignes[0] après tri) quand il y en a un.
+  const urgent = lignes?.[0];
+  const actions: ActionRapide[] = [
+    ...(urgent
+      ? [
+          {
+            cle: 'reprendre',
+            icone: PlayCircle,
+            label: `Reprendre — ${urgent.projet.programme}`,
+            href: `/collab/${params.slug}/projets/${urgent.projet.id}`,
+          },
+        ]
+      : []),
+    {
+      cle: 'projets',
+      icone: FolderKanban,
+      label: 'Mes projets',
+      href: `/collab/${params.slug}/projets`,
+    },
+    {
+      cle: 'indicateurs',
+      icone: Gauge,
+      label: 'Mes indicateurs',
+      href: `/collab/${params.slug}/indicateurs`,
+    },
+  ];
+
   if (!session) return null;
 
   // Tuiles : « en cours » / « livrés » pointent vers un sous-ensemble navigable
@@ -250,7 +280,8 @@ export default function CollabPage({ params }: Props) {
       active="accueil"
       titre="Accueil"
     >
-      <div className="collab-accueil">
+      <div className="collab-accueil collab-accueil--2col">
+        <div className="collab-accueil-main">
         <div className="collab-hero">
           <span
             className="equipe-avatar equipe-avatar--lg"
@@ -285,6 +316,8 @@ export default function CollabPage({ params }: Props) {
             )}
           </div>
         </div>
+
+        <ActionsRapides actions={actions} />
 
         {indic ? (
           <KpiStrip tuiles={tuiles} />
@@ -372,6 +405,9 @@ export default function CollabPage({ params }: Props) {
             ))}
           </ul>
         )}
+        </div>
+
+        <RailAccueil slug={params.slug} pourcentage={indic?.checklistPct ?? null} />
       </div>
 
       {popup === 'checklist' && (

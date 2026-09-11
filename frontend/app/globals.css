@@ -3804,6 +3804,73 @@ textarea.field-input {
   width: 100%;
 }
 
+/* Accueil en 2 colonnes : contenu principal + rail (flux + jauge), calqué
+   sur .admin-grid. Sous 1024px le rail passe dessous. */
+.collab-accueil--2col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.collab-accueil-main {
+  min-width: 0;
+}
+.rail-accueil {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1.5rem;
+}
+.rail-accueil-gauge {
+  display: grid;
+  place-items: center;
+  padding: 1.4rem 1.1rem;
+}
+@media (max-width: 1024px) {
+  .collab-accueil--2col {
+    grid-template-columns: 1fr;
+  }
+  .rail-accueil {
+    position: static;
+  }
+}
+
+/* Rangée de raccourcis d'accueil (admin & collaborateur) */
+.actions-rapides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+}
+.actions-rapides-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+.actions-rapides-item:hover {
+  border-color: var(--argile);
+}
+.actions-rapides-icone {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--encre);
+  color: #d3c9b7;
+  flex: none;
+}
+
 .collab-hero {
   display: flex;
   align-items: center;
