@@ -506,10 +506,14 @@ button {
 }
 
 .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 0.5rem 0.9rem;
+  font-family: inherit;
   font-size: 0.85rem;
   cursor: pointer;
   color: var(--text);
@@ -1228,7 +1232,8 @@ a.admin-nav-item:hover {
 .progress-val {
   font-size: 0.78rem;
   color: var(--text-muted);
-  width: 34px;
+  min-width: 38px;
+  white-space: nowrap;
 }
 
 /* États de chargement — variante claire du shimmer du portail (fond sombre). */
@@ -1649,6 +1654,16 @@ a.admin-nav-item:hover {
   }
 
   .cell-sub {
+    white-space: normal;
+  }
+
+  /* Cellule-carte : le contenu long (2 pastilles, libellés) passe à la ligne
+     au lieu d'être coupé au bord de la carte. */
+  .admin-table td {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+  .admin-table td .pill {
     white-space: normal;
   }
 }
@@ -5282,4 +5297,128 @@ a.notif-item:hover {
   .indic-bar-fill {
     animation: none;
   }
+}
+
+/* ── Tableau de bord admin — finitions (cas limites, tri, erreur) ───────── */
+
+/* Cartes KPI : hauteur homogène même quand une carte n'a pas de sous-ligne
+   (société neuve → `detail` absent). */
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.stat-card-value {
+  overflow-wrap: anywhere;
+}
+
+/* Bande d'erreur (fetch KO) — remplace le squelette, propose de réessayer. */
+.dash-erreur {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px solid #ecd9b4;
+  border-radius: var(--radius-lg);
+  background: var(--ocre-tint);
+  color: var(--ocre-fonce);
+}
+.dash-erreur p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* En-tête de panneau avec action à droite (titre + recherche). */
+.panel-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.1rem;
+}
+.panel-title--inline {
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.panel-compte {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.dash-recherche {
+  max-width: 260px;
+  font-size: 0.85rem;
+}
+
+/* Histogramme : barres des périodes sans donnée, discrètes plutôt que
+   « micro-barre » ambiguë. */
+.barchart-bar--vide {
+  background: var(--border);
+}
+.barchart-val--vide {
+  opacity: 0.45;
+}
+.barchart-vide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 190px;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Jalons : source visible + urgence qui ressort. */
+.jalon-date {
+  width: 54px;
+  white-space: nowrap;
+  font-size: 0.74rem;
+}
+.jalon-date--urgent {
+  color: var(--danger);
+  font-weight: 600;
+}
+.jalon-source {
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--text-muted);
+}
+.jalon--urgent {
+  margin: 0 -0.6rem;
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+  border-radius: 8px;
+  background: #f8ece0;
+}
+.jalon--urgent + .jalon {
+  border-top: 1px solid var(--border);
+}
+.jalon-vide {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Colonnes triables : le <th> porte un bouton nu. */
+.admin-table--triable th button {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.admin-table--triable th button:hover {
+  color: var(--text);
+}
+.admin-table--triable th button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 3px;
 }

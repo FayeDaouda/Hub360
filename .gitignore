@@ -21,3 +21,6 @@ coverage/
 # Divers
 *.log
 .DS_Store
+
+# Bac à sable local (scripts de vérif, captures d'écran)
+scratchpad/
