@@ -14,6 +14,7 @@ import { getSession } from '@/lib/auth';
 import { destinationForSession } from '@/lib/session-redirect';
 import {
   avancementChecklistAvp,
+  avertissementChangementPhase,
   CATEGORIES,
   etudesEnAttente,
   itemsChecklistAvp,
@@ -177,7 +178,11 @@ export default function CollabProjetPage({ params }: Props) {
             avantProjetValide={!!avantProjetValideLe}
             permisObtenu={statutPermis === 'obtenu'}
             avertissement={
-              projet.phase === 'etudes' && etudes && etudesEnAttente(etudes) > 0
+              avertissementChangementPhase(projet, {
+                avantProjetValide: !!avantProjetValideLe,
+                permisObtenu: statutPermis === 'obtenu',
+              }) ??
+              (projet.phase === 'etudes' && etudes && etudesEnAttente(etudes) > 0
                 ? `${etudesEnAttente(etudes)} étude${
                     etudesEnAttente(etudes) > 1 ? 's' : ''
                   } encore en cours.`
@@ -185,7 +190,7 @@ export default function CollabProjetPage({ params }: Props) {
                   ? `${lotsEnAttente(execution)} lot${
                       lotsEnAttente(execution) > 1 ? 's' : ''
                     } pas encore terminé${lotsEnAttente(execution) > 1 ? 's' : ''}.`
-                  : null
+                  : null)
             }
             onChange={() => {}}
             lectureSeule

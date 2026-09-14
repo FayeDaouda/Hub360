@@ -1,5 +1,6 @@
 import {
   avancementChecklistAvp,
+  avertissementChangementPhase,
   checklistComplete,
   dossierPermisComplet,
   etudesCompletes,
@@ -49,31 +50,25 @@ describe('checklistComplete', () => {
 });
 
 describe('peutAvancerPhase', () => {
-  it('bloque la sortie d’avant-projet tant qu’il n’est pas validé', () => {
-    const r = peutAvancerPhase(
-      { categorie: 'conception', phase: 'avant_projet' },
-      { avantProjetValide: false, permisObtenu: false },
-    );
-    expect(r.ok).toBe(false);
-    expect(r.raison).toMatch(/validé/);
-  });
-
-  it('laisse avancer l’avant-projet validé', () => {
+  // Les phases peuvent se chevaucher (décision boss, sept. 2026) : plus de
+  // verrou dur sur l'avant-projet non validé ni le permis non obtenu — voir
+  // avertissementChangementPhase pour le rappel doux correspondant.
+  it('laisse sortir d’avant-projet même non validé', () => {
     expect(
       peutAvancerPhase(
         { categorie: 'conception', phase: 'avant_projet' },
-        { avantProjetValide: true, permisObtenu: false },
+        { avantProjetValide: false, permisObtenu: false },
       ).ok,
     ).toBe(true);
   });
 
-  it('bloque la sortie de permis sans permis obtenu', () => {
+  it('laisse sortir de permis même sans permis obtenu', () => {
     expect(
       peutAvancerPhase(
         { categorie: 'conception', phase: 'permis' },
         { avantProjetValide: true, permisObtenu: false },
       ).ok,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('refuse d’avancer depuis la dernière phase', () => {
@@ -83,6 +78,41 @@ describe('peutAvancerPhase', () => {
         { avantProjetValide: true, permisObtenu: true },
       ).ok,
     ).toBe(false);
+  });
+});
+
+describe('avertissementChangementPhase', () => {
+  it('rappelle un avant-projet non validé, sans bloquer', () => {
+    expect(
+      avertissementChangementPhase(
+        { phase: 'avant_projet' },
+        { avantProjetValide: false, permisObtenu: false },
+      ),
+    ).toMatch(/validé/);
+  });
+
+  it('rappelle un permis non obtenu', () => {
+    expect(
+      avertissementChangementPhase(
+        { phase: 'permis' },
+        { avantProjetValide: true, permisObtenu: false },
+      ),
+    ).toMatch(/obtenu/);
+  });
+
+  it('ne dit rien si tout est en ordre ou hors de ces deux phases', () => {
+    expect(
+      avertissementChangementPhase(
+        { phase: 'avant_projet' },
+        { avantProjetValide: true, permisObtenu: false },
+      ),
+    ).toBeNull();
+    expect(
+      avertissementChangementPhase(
+        { phase: 'etudes' },
+        { avantProjetValide: false, permisObtenu: false },
+      ),
+    ).toBeNull();
   });
 });
 

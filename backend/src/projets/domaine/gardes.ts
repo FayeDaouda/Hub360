@@ -5,25 +5,38 @@ type VersionMinimale = { etape: string; couts: unknown };
 
 // GARDE MIROIR de frontend/lib/types.ts::peutAvancerPhase
 // Toute modification ici doit être répercutée côté front, et réciproquement.
-// Verrous durs vers l'avant : on ne quitte « avant_projet » que validé, et on
-// ne quitte « permis » que le permis en main. Le reste est libre (avertissement
-// doux côté UI, pas de blocage serveur).
+// Les phases peuvent se chevaucher dans la réalité du terrain (décision boss,
+// sept. 2026) : plus aucun verrou dur sur l'avant-projet non validé ou le
+// permis non obtenu — seule la dernière phase de la séquence bloque
+// l'avancement. `avantProjetValide`/`permisObtenu` restent en paramètres pour
+// alimenter un rappel doux côté UI (voir avertissementChangementPhase).
 export function peutAvancerPhase(
   projet: { categorie: Categorie; phase: Phase },
-  contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+  _contexte: { avantProjetValide: boolean; permisObtenu: boolean },
 ): { ok: boolean; raison?: string } {
   const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
   const i = sequence.indexOf(projet.phase);
   if (i < 0 || i >= sequence.length - 1) {
     return { ok: false, raison: 'Dernière phase' };
   }
+  return { ok: true };
+}
+
+// Rappel doux (n'affecte jamais `peutAvancerPhase.ok`) : signale qu'on quitte
+// « avant_projet » sans validation ou « permis » sans permis en main. Affiché
+// via la prop `avertissement` du PhaseStepper, au même titre que les autres
+// rappels (études/lots en attente) — jamais un blocage serveur.
+export function avertissementChangementPhase(
+  projet: { phase: Phase },
+  contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+): string | null {
   if (projet.phase === 'avant_projet' && !contexte.avantProjetValide) {
-    return { ok: false, raison: "L'avant-projet doit être validé d'abord." };
+    return "L'avant-projet n'est pas encore validé.";
   }
   if (projet.phase === 'permis' && !contexte.permisObtenu) {
-    return { ok: false, raison: 'Le permis de construire doit être obtenu.' };
+    return 'Le permis de construire n’est pas encore obtenu.';
   }
-  return { ok: true };
+  return null;
 }
 
 // Vrai si `cible` est adjacente (±1) à `courante` dans la séquence.

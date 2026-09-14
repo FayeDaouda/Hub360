@@ -439,29 +439,39 @@ export type ProjetExecution = {
   creeLe: string; // ISO 8601
 };
 
-// Garde de transition de phase. Seul verrou dur pour l'instant : on ne quitte
-// « avant_projet » que s'il est validé. Les autres transitions sont libres
-// vers l'avant — leur garde viendra avec la section qui produit la preuve
-// (permis obtenu, marché signé, réception faite).
+// Garde de transition de phase. Les phases peuvent se chevaucher dans la
+// réalité du terrain (décision boss, sept. 2026) : plus aucun verrou dur sur
+// l'avant-projet non validé ou le permis non obtenu — seule la dernière phase
+// de la séquence bloque l'avancement.
 //
 // GARDE MIROIR — le backend rejoue cette règle sur PUT …/projets/:id/phase
-// (422 non-adjacent, 409 verrou avant-projet). Toute modification ici doit
-// être répercutée côté NestJS, et réciproquement.
+// (422 si transition non adjacente). Toute modification ici doit être
+// répercutée côté NestJS, et réciproquement.
 export function peutAvancerPhase(
   projet: Pick<ProjetExecution, 'categorie' | 'phase'>,
-  contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+  _contexte: { avantProjetValide: boolean; permisObtenu: boolean },
 ): { ok: boolean; raison?: string } {
   const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
   const i = sequence.indexOf(projet.phase);
   if (i < 0 || i >= sequence.length - 1) return { ok: false, raison: 'Dernière phase' };
-  if (projet.phase === 'avant_projet' && !contexte.avantProjetValide) {
-    return { ok: false, raison: "L'avant-projet doit être validé d'abord." };
-  }
-  // Deuxième verrou dur : on ne quitte « permis » que le permis en main.
-  if (projet.phase === 'permis' && !contexte.permisObtenu) {
-    return { ok: false, raison: 'Le permis de construire doit être obtenu.' };
-  }
   return { ok: true };
+}
+
+// Rappel doux (n'affecte jamais `peutAvancerPhase.ok`) : signale qu'on quitte
+// « avant_projet » sans validation ou « permis » sans permis en main. À
+// combiner avec les autres textes de la prop `avertissement` du PhaseStepper
+// — jamais un blocage.
+export function avertissementChangementPhase(
+  projet: Pick<ProjetExecution, 'phase'>,
+  contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+): string | null {
+  if (projet.phase === 'avant_projet' && !contexte.avantProjetValide) {
+    return "L'avant-projet n'est pas encore validé.";
+  }
+  if (projet.phase === 'permis' && !contexte.permisObtenu) {
+    return 'Le permis de construire n’est pas encore obtenu.';
+  }
+  return null;
 }
 
 // Les 5 sections d'un projet (dossiers internes). Ordre = ordre d'affichage.
@@ -583,7 +593,7 @@ export type FichierProjet = {
 // Procédure sénégalaise (loi 2008-43, Code de l'urbanisme, révisé déc. 2023) :
 // NICAD → dossier → dépôt (TeleDAC ou guichet mairie) → instruction 90 j →
 // obtention → (fin de chantier) certificat de conformité.
-// Le passage « permis obtenu » est le 2ᵉ verrou dur de peutAvancerPhase.
+// « permis obtenu » n'est plus qu'un rappel doux (avertissementChangementPhase).
 
 export type StatutNicad = 'a_demander' | 'demande' | 'obtenu';
 

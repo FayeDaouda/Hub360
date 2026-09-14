@@ -106,9 +106,6 @@ export function PhaseStepper({
         </button>
       </div>
 
-      {!garde.ok && garde.raison && index < sequence.length - 1 && (
-        <p className="phase-hint">{garde.raison}</p>
-      )}
       {garde.ok && avertissement && (
         <p className="phase-hint phase-hint--doux">{avertissement}</p>
       )}

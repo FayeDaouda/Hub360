@@ -18,16 +18,10 @@ import {
   CLES_CHECKLIST_AVP,
   ETAPES_PRE_BILAN,
   LIBELLES_PHASE,
-  PHASES_PAR_CATEGORIE,
   phaseApresAvantProjet,
 } from './domaine/config';
 import { NotificationsService } from '../notifications/notifications.service';
-import {
-  checklistComplete,
-  peutAvancerPhase,
-  phasesAdjacentes,
-  preBilanComplet,
-} from './domaine/gardes';
+import { checklistComplete, phasesAdjacentes, preBilanComplet } from './domaine/gardes';
 import { versAvantProjet, versProjetExecution } from '../commun/format-contrat';
 import { ouProjetsDuCollaborateur } from './projet-acces';
 import { PatchAvantProjetDto, PatchLigneChecklistAvpDto, PatchVersionDto } from './dto';
@@ -296,24 +290,6 @@ export class ProjetsService {
     const projet = await this.charger(societeId, id);
     if (!phasesAdjacentes(projet.categorie, projet.phase, cible)) {
       throw new UnprocessableEntityException('Transition de phase non adjacente');
-    }
-    const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
-    if (sequence.indexOf(cible) > sequence.indexOf(projet.phase)) {
-      const [ap, permis] = await Promise.all([
-        this.prisma.avantProjet.findUnique({
-          where: { projetId: id },
-          select: { valideLe: true },
-        }),
-        this.prisma.permis.findUnique({
-          where: { projetId: id },
-          select: { statut: true },
-        }),
-      ]);
-      const garde = peutAvancerPhase(projet, {
-        avantProjetValide: !!ap?.valideLe,
-        permisObtenu: permis?.statut === 'obtenu',
-      });
-      if (!garde.ok) throw new ConflictException(garde.raison ?? 'Transition bloquée');
     }
 
     const maj = await this.prisma.projet.update({
