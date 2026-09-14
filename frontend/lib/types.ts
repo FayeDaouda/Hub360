@@ -898,6 +898,7 @@ export type ChecklistAvantProjet = {
 // afficher et PATCH …/avant-projet/checklist/:cle (un champ à la fois).
 
 export type GroupeChecklistAvp =
+  | 'programme'
   | 'releve_existant'
   | 'taches_complementaires'
   | 'fichiers_produits'

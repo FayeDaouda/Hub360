@@ -484,6 +484,7 @@ model AvantProjet {
 // LigneEtude ; `nonRequis` = l'équivalent de StatutEtude.non_requise.
 
 enum GroupeChecklistAvp {
+  programme
   releve_existant
   taches_complementaires
   fichiers_produits
@@ -491,6 +492,15 @@ enum GroupeChecklistAvp {
 }
 
 enum CleChecklistAvp {
+  // programme (checklist Trello « Programme : Immeuble / Villa R+… »)
+  prog_sous_sol
+  prog_rdc
+  prog_etage_courant
+  prog_terrasse
+  prog_standing
+  prog_gamme
+  prog_style
+  prog_autres_infos
   // relevé de l'existant
   visite_site
   plans_terrain

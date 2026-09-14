@@ -107,6 +107,35 @@ export const CHECKLISTS_AVANT_PROJET: {
   items: { cle: CleChecklistAvp; libelle: string }[];
 }[] = [
   {
+    groupe: 'programme',
+    libelle: 'Programme',
+    items: [
+      {
+        cle: 'prog_sous_sol',
+        libelle: 'Sous-sol (préciser le nombre de niveaux et les aménagements spécifiques)',
+      },
+      { cle: 'prog_rdc', libelle: 'Rez-de-chaussée (préciser les aménagements)' },
+      {
+        cle: 'prog_etage_courant',
+        libelle: 'Étage courant (préciser le nombre de niveaux et les aménagements)',
+      },
+      {
+        cle: 'prog_terrasse',
+        libelle: "Terrasse (préciser les aménagements et l'accessibilité)",
+      },
+      {
+        cle: 'prog_standing',
+        libelle: 'Standing (économique, moyen ou haut — préciser la différence)',
+      },
+      {
+        cle: 'prog_gamme',
+        libelle: 'Gamme (économique, moyen ou haut — préciser la différence)',
+      },
+      { cle: 'prog_style', libelle: 'Style (ex. moderne)' },
+      { cle: 'prog_autres_infos', libelle: 'Autres informations importantes' },
+    ],
+  },
+  {
     groupe: 'releve_existant',
     libelle: "Relevé de l'existant",
     items: [
