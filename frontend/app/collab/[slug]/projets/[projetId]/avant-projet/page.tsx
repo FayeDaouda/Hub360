@@ -44,11 +44,11 @@ function Vue({
   }, [slug, projetId]);
 
   async function majItem(
-    cle: string,
+    ligneId: string,
     patch: { fait?: boolean; nonRequis?: boolean; note?: string },
   ) {
     try {
-      setAp(await majLigneChecklistAvp(slug, projetId, cle, patch));
+      setAp(await majLigneChecklistAvp(slug, projetId, ligneId, patch));
     } catch {
       /* échec silencieux — l'état reste celui affiché */
     }
@@ -89,7 +89,7 @@ function Vue({
                 {ap.valideLe ? (
                   <ListeCoches>
                     {g.items.map((it) => (
-                      <Coche key={it.cle} ok={it.fait || it.nonRequis}>
+                      <Coche key={it.id} ok={it.fait || it.nonRequis}>
                         {it.libelle}
                         {it.nonRequis && !it.fait ? ' (N/A)' : ''}
                         {it.note ? ` — ${it.note}` : ''}
@@ -100,7 +100,7 @@ function Vue({
                   <ul className="ap-souscheck-groupe-liste">
                     {g.items.map((it) => (
                       <li
-                        key={it.cle}
+                        key={it.id}
                         className={`ap-souscheck-item${it.nonRequis ? ' is-na' : ''}`}
                       >
                         <label className="ap-souscheck-fait">
@@ -108,7 +108,7 @@ function Vue({
                             type="checkbox"
                             disabled={it.nonRequis}
                             checked={it.fait}
-                            onChange={(e) => majItem(it.cle, { fait: e.target.checked })}
+                            onChange={(e) => majItem(it.id, { fait: e.target.checked })}
                           />
                           <span>{it.libelle}</span>
                         </label>
@@ -116,7 +116,7 @@ function Vue({
                           <input
                             type="checkbox"
                             checked={it.nonRequis}
-                            onChange={(e) => majItem(it.cle, { nonRequis: e.target.checked })}
+                            onChange={(e) => majItem(it.id, { nonRequis: e.target.checked })}
                           />
                           <span>N/A</span>
                         </label>
@@ -126,7 +126,7 @@ function Vue({
                           placeholder="note…"
                           onBlur={(e) => {
                             if (e.target.value !== it.note) {
-                              majItem(it.cle, { note: e.target.value });
+                              majItem(it.id, { note: e.target.value });
                             }
                           }}
                         />

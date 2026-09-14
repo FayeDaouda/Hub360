@@ -7,7 +7,7 @@ import type {
   LigneChecklistAvp,
   Projet,
 } from '@prisma/client';
-import { CHECKLISTS_AVANT_PROJET } from '../projets/domaine/config';
+import { GROUPES_CHECKLIST_AVP } from '../projets/domaine/config';
 
 // Formatage des lignes Prisma vers les types partagés de frontend/lib/types.ts.
 // L'API est la source de vérité du contrat : on émet exactement la forme que le
@@ -118,8 +118,10 @@ export function versCellule(
 
 // Avant-projet (frontend/lib/types.ts::AvantProjet) : les 4 booléens de la
 // checklist macro sont ré-imbriqués, les sous-checklists opérationnelles sont
-// regroupées + libellées selon CHECKLISTS_AVANT_PROJET (le front n'a qu'à
-// afficher), `validePar` est résolu en « Prénom Nom ».
+// regroupées par leur propre `groupe` (les lignes supprimées sont exclues,
+// triées par `ordre` — chaque ligne porte désormais son libellé, l'admin
+// pouvant en ajouter/retirer par projet), `validePar` est résolu en « Prénom
+// Nom ».
 export function versAvantProjet(
   ap: AvantProjet & {
     validateur: { prenom: string; nom: string } | null;
@@ -128,7 +130,13 @@ export function versAvantProjet(
     lignesChecklist: LigneChecklistAvp[];
   },
 ) {
-  const parCle = new Map(ap.lignesChecklist.map((l) => [l.cle, l]));
+  const parGroupe = new Map<string, LigneChecklistAvp[]>();
+  for (const l of ap.lignesChecklist) {
+    if (l.supprimee) continue;
+    const lignes = parGroupe.get(l.groupe) ?? [];
+    lignes.push(l);
+    parGroupe.set(l.groupe, lignes);
+  }
   const ref = (c: { id: string; prenom: string; nom: string } | null) =>
     c ? { id: c.id, nom: `${c.prenom} ${c.nom}`.trim() } : null;
   return {
@@ -151,19 +159,18 @@ export function versAvantProjet(
       esquisseValidee: ap.esquisseValidee,
       engagementValide: ap.engagementValide,
     },
-    checklists: CHECKLISTS_AVANT_PROJET.map((g) => ({
+    checklists: GROUPES_CHECKLIST_AVP.map((g) => ({
       groupe: g.groupe,
       libelle: g.libelle,
-      items: g.items.map((i) => {
-        const l = parCle.get(i.cle);
-        return {
-          cle: i.cle,
-          libelle: i.libelle,
-          fait: l?.fait ?? false,
-          nonRequis: l?.nonRequis ?? false,
-          note: l?.note ?? '',
-        };
-      }),
+      items: (parGroupe.get(g.groupe) ?? [])
+        .sort((a, b) => a.ordre - b.ordre)
+        .map((l) => ({
+          id: l.id,
+          libelle: l.libelle,
+          fait: l.fait,
+          nonRequis: l.nonRequis,
+          note: l.note,
+        })),
     })),
     pieceValidation: ap.pieceValidation,
     valideLe: ap.valideLe,

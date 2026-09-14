@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsObject,
   IsOptional,
@@ -12,7 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { NiveauFinition, Phase } from '@prisma/client';
+import { GroupeChecklistAvp, NiveauFinition, Phase } from '@prisma/client';
 
 export class AssignerDto {
   @IsOptional() @IsString() celluleId!: string | null;
@@ -59,6 +60,12 @@ export class PatchLigneChecklistAvpDto {
   @IsOptional() @IsBoolean() fait?: boolean;
   @IsOptional() @IsBoolean() nonRequis?: boolean;
   @IsOptional() @IsString() @MaxLength(2000) note?: string;
+}
+
+// Ajout d'un item de checklist propre à un projet — admin uniquement.
+export class AjouterLigneChecklistAvpDto {
+  @IsEnum(GroupeChecklistAvp) groupe!: GroupeChecklistAvp;
+  @IsString() @IsNotEmpty() @MaxLength(300) libelle!: string;
 }
 
 export class PatchVersionDto {

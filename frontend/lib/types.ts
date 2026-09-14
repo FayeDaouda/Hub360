@@ -901,11 +901,14 @@ export type ChecklistAvantProjet = {
 };
 
 // --- Sous-checklists opérationnelles de l'avant-projet ---
-// Le suivi quotidien de l'équipe (miroir du Trello Grey Concrete), distinct du
-// gate macro à 4 points : n'ajoute AUCUN verrou de phase, alimente juste un %.
-// Le contrat (GET …/avant-projet) renvoie `checklists` déjà groupées et
-// libellées par le backend (CHECKLISTS_AVANT_PROJET) — le front n'a qu'à
-// afficher et PATCH …/avant-projet/checklist/:cle (un champ à la fois).
+// Le suivi quotidien de l'équipe (miroir du Trello Grey Concrete au départ),
+// distinct du gate macro à 4 points : n'ajoute AUCUN verrou de phase, alimente
+// juste un %. Items libres par projet depuis sept. 2026 (admin : ajout via
+// POST …/avant-projet/checklist, suppression via DELETE …/checklist/:id) —
+// `id` (pas une clé fixe) identifie chaque ligne. Le contrat (GET
+// …/avant-projet) renvoie `checklists` déjà groupées et libellées par le
+// backend — le front n'a qu'à afficher et PATCH …/checklist/:id (fait /
+// nonRequis / note, un champ à la fois — ouvert aux collaborateurs).
 
 export type GroupeChecklistAvp =
   | 'programme'
@@ -915,7 +918,7 @@ export type GroupeChecklistAvp =
   | 'dossier_final';
 
 export type ItemChecklistAvp = {
-  cle: string;
+  id: string;
   libelle: string;
   fait: boolean;
   nonRequis: boolean; // équivalent de StatutEtude.non_requise — hors dénominateur

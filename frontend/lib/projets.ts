@@ -143,13 +143,42 @@ export function enregistrerAvantProjet(
 export function majLigneChecklistAvp(
   slug: string,
   projetId: string,
-  cle: string,
+  ligneId: string,
   patch: { fait?: boolean; nonRequis?: boolean; note?: string },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,
-    `/projets/${projetId}/avant-projet/checklist/${cle}`,
+    `/projets/${projetId}/avant-projet/checklist/${ligneId}`,
     { method: 'PATCH', body: patch },
+  );
+}
+
+// Ajoute un item à une checklist — admin uniquement (403 pour un
+// collaborateur, la route n'est pas ouverte côté serveur). Va en fin du
+// groupe ciblé.
+export function ajouterLigneChecklistAvp(
+  slug: string,
+  projetId: string,
+  item: { groupe: string; libelle: string },
+): Promise<AvantProjet> {
+  return apiSociete<AvantProjet>(
+    slug,
+    `/projets/${projetId}/avant-projet/checklist`,
+    { method: 'POST', body: item },
+  );
+}
+
+// Retire un item de la checklist (suppression douce côté serveur) — admin
+// uniquement.
+export function supprimerLigneChecklistAvp(
+  slug: string,
+  projetId: string,
+  ligneId: string,
+): Promise<AvantProjet> {
+  return apiSociete<AvantProjet>(
+    slug,
+    `/projets/${projetId}/avant-projet/checklist/${ligneId}`,
+    { method: 'DELETE' },
   );
 }
 

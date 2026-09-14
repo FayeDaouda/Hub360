@@ -66,6 +66,7 @@ model Utilisateur {
   imagesSupprimees    ImageProjet[]            @relation("ImageSupprPar")
   fichiersAjoutes     FichierProjet[]          @relation("FichierAjoutPar")
   fichiersSupprimes   FichierProjet[]          @relation("FichierSupprPar")
+  lignesChecklistAvpSupprimees LigneChecklistAvp[] @relation("ChecklistAvpSupprPar")
   invitations         Invitation[]
   notifications       Notification[]
   evenementsCompte    EvenementCompte[]
@@ -491,55 +492,30 @@ enum GroupeChecklistAvp {
   dossier_final
 }
 
-enum CleChecklistAvp {
-  // programme (checklist Trello « Programme : Immeuble / Villa R+… »)
-  prog_sous_sol
-  prog_rdc
-  prog_etage_courant
-  prog_terrasse
-  prog_standing
-  prog_gamme
-  prog_style
-  prog_autres_infos
-  // relevé de l'existant
-  visite_site
-  plans_terrain
-  assainissement
-  eau
-  electricite
-  telephone
-  photos_videos
-  autres_infos
-  // tâches complémentaires
-  plans_cotes
-  devis_descriptif
-  plaquettes_commerciales
-  // fichiers produits
-  dwg_pln
-  skp
-  source_rendus
-  // dossier final (PDF & images)
-  esquisses
-  plans_complets
-  images_3d_facade
-  details_livrables
-  emplacement_gaines
-  validation_client
-  mood_board
-}
-
+// -- Sous-checklists opérationnelles de l'avant-projet --
+// Items libres par projet (admin : ajout/suppression) depuis sept. 2026 —
+// `libelle` est stocké sur la ligne (plus de jointure avec un enum de clés
+// fixes). `domaine/config.ts::GABARIT_CHECKLIST_AVP` ne sert plus qu'à
+// amorcer les 29 lignes standard à la création (coquilleAvantProjet) ; au-delà
+// de cet instant T, chaque ligne vit indépendamment de ce gabarit.
 model LigneChecklistAvp {
   id            String             @id @default(uuid())
   avantProjetId String             @map("avant_projet_id")
   groupe        GroupeChecklistAvp
-  cle           CleChecklistAvp
+  libelle       String
+  ordre         Int                @default(0)
   fait          Boolean            @default(false)
   nonRequis     Boolean            @default(false) @map("non_requis")
   note          String             @default("")
+  // Suppression douce (admin) — cohérent avec ImageProjet/FichierProjet :
+  // la ligne disparaît du suivi sans effacer la trace de qui/quand.
+  supprimee     Boolean            @default(false)
+  supprimeLe    DateTime?          @map("supprime_le")
+  supprimeParId String?            @map("supprime_par_id")
 
-  avantProjet AvantProjet @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
+  avantProjet AvantProjet  @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
+  supprimePar Utilisateur? @relation("ChecklistAvpSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
 
-  @@unique([avantProjetId, cle])
   @@map("lignes_checklist_avp")
 }
 

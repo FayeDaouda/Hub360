@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { getSociete } from '@/lib/api';
 import {
+  ajouterLigneChecklistAvp,
   devaliderAvantProjet,
   enregistrerAvantProjet,
   getAvantProjet,
   getProjetExecution,
   majLigneChecklistAvp,
+  supprimerLigneChecklistAvp,
   validerAvantProjet,
 } from '@/lib/projets';
 import { getCollaborateurs } from '@/lib/equipe';
@@ -29,6 +31,7 @@ import {
   type AvantProjet,
   type Categorie,
   type Collaborateur,
+  type GroupeChecklistAvp,
   type NiveauFinition,
   type PatchAvantProjet,
   type PreBilan,
@@ -58,6 +61,7 @@ export default function AvantProjetPage({ params }: Props) {
   const [preBilan, setPreBilan] = useState<PreBilan | null>(null);
   const [enregistre, setEnregistre] = useState(false);
   const [enCours, setEnCours] = useState(false);
+  const [programmeOuvert, setProgrammeOuvert] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
@@ -154,7 +158,7 @@ export default function AvantProjetPage({ params }: Props) {
   // (pas de bouton « Enregistrer » pour ce bloc). Le serveur renvoie
   // l'avant-projet complet, `checklists` recalculées.
   async function majItemChecklist(
-    cle: string,
+    ligneId: string,
     patch: { fait?: boolean; nonRequis?: boolean; note?: string },
   ) {
     setErreur(null);
@@ -162,12 +166,33 @@ export default function AvantProjetPage({ params }: Props) {
       const resultat = await majLigneChecklistAvp(
         params.slug,
         params.projetId,
-        cle,
+        ligneId,
         patch,
       );
       setAp(resultat);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Enregistrement impossible.');
+    }
+  }
+
+  // Ajout/suppression d'un item — réservés admin côté serveur (403 pour un
+  // collaborateur) ; cette page n'est de toute façon accessible qu'à l'admin.
+  async function ajouterItemChecklist(groupe: GroupeChecklistAvp, libelle: string) {
+    setErreur(null);
+    try {
+      setAp(await ajouterLigneChecklistAvp(params.slug, params.projetId, { groupe, libelle }));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Ajout impossible.');
+    }
+  }
+
+  async function supprimerItemChecklist(ligneId: string) {
+    if (!window.confirm('Retirer cet item de la checklist ?')) return;
+    setErreur(null);
+    try {
+      setAp(await supprimerLigneChecklistAvp(params.slug, params.projetId, ligneId));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Suppression impossible.');
     }
   }
 
@@ -256,7 +281,23 @@ export default function AvantProjetPage({ params }: Props) {
           </div>
 
           <section className="panel">
-            <h3 className="panel-title">Programme</h3>
+            <div className="panel-tete">
+              <button
+                type="button"
+                className="panel-title panel-title--repliable"
+                aria-expanded={programmeOuvert}
+                onClick={() => setProgrammeOuvert((o) => !o)}
+              >
+                <ChevronDown
+                  size={16}
+                  strokeWidth={2}
+                  aria-hidden
+                  className={`panel-repli-icone${programmeOuvert ? '' : ' est-replie'}`}
+                />
+                <span>Programme</span>
+              </button>
+            </div>
+            {programmeOuvert && (
             <div className="ap-form">
               <div className="field-row">
                 <label className="field">
@@ -423,6 +464,7 @@ export default function AvantProjetPage({ params }: Props) {
                 </label>
               </div>
             </div>
+            )}
           </section>
 
           <section className="panel">
@@ -455,7 +497,7 @@ export default function AvantProjetPage({ params }: Props) {
                     <ul>
                       {groupe.items.map((it) => (
                         <li
-                          key={it.cle}
+                          key={it.id}
                           className={`ap-souscheck-item${it.nonRequis ? ' is-na' : ''}`}
                         >
                           <label className="ap-souscheck-fait">
@@ -464,7 +506,7 @@ export default function AvantProjetPage({ params }: Props) {
                               disabled={valide || it.nonRequis}
                               checked={it.fait}
                               onChange={(e) =>
-                                majItemChecklist(it.cle, { fait: e.target.checked })
+                                majItemChecklist(it.id, { fait: e.target.checked })
                               }
                             />
                             <span>{it.libelle}</span>
@@ -475,7 +517,7 @@ export default function AvantProjetPage({ params }: Props) {
                               disabled={valide}
                               checked={it.nonRequis}
                               onChange={(e) =>
-                                majItemChecklist(it.cle, { nonRequis: e.target.checked })
+                                majItemChecklist(it.id, { nonRequis: e.target.checked })
                               }
                             />
                             <span>N/A</span>
@@ -487,12 +529,50 @@ export default function AvantProjetPage({ params }: Props) {
                             placeholder="note…"
                             onBlur={(e) => {
                               if (e.target.value !== it.note) {
-                                majItemChecklist(it.cle, { note: e.target.value });
+                                majItemChecklist(it.id, { note: e.target.value });
                               }
                             }}
                           />
+                          <button
+                            type="button"
+                            className="ap-souscheck-suppr"
+                            disabled={valide}
+                            title="Retirer cet item"
+                            onClick={() => supprimerItemChecklist(it.id)}
+                          >
+                            <Trash2 size={14} strokeWidth={2} aria-hidden />
+                          </button>
                         </li>
                       ))}
+                      <li className="ap-souscheck-item ap-souscheck-ajout">
+                        <form
+                          className="ap-souscheck-ajout-form"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const form = e.currentTarget;
+                            const input = form.elements.namedItem('libelle') as HTMLInputElement;
+                            const libelle = input.value.trim();
+                            if (!libelle) return;
+                            ajouterItemChecklist(groupe.groupe, libelle);
+                            form.reset();
+                          }}
+                        >
+                          <input
+                            name="libelle"
+                            className="field-input"
+                            placeholder="Ajouter un item…"
+                            disabled={valide}
+                          />
+                          <button
+                            type="submit"
+                            className="btn-ghost btn-ghost--sm"
+                            disabled={valide}
+                          >
+                            <Plus size={14} strokeWidth={2} aria-hidden />
+                            <span>Ajouter</span>
+                          </button>
+                        </form>
+                      </li>
                     </ul>
                   </div>
                 );

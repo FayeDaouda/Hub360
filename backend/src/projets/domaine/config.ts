@@ -1,6 +1,5 @@
 import {
   Categorie,
-  CleChecklistAvp,
   EtapePreBilan,
   FactureType,
   GroupeChecklistAvp,
@@ -98,13 +97,17 @@ export function phaseApresAvantProjet(categorie: Categorie): Phase {
 
 // -- Section « Avant-projet » : sous-checklists opérationnelles --
 
-// Les checklists du Trello Grey Concrete, dans l'ordre d'affichage. Chaque
-// groupe = une checklist ; les clés couvrent EXACTEMENT l'enum CleChecklistAvp.
+// Le GABARIT des checklists Trello Grey Concrete, dans l'ordre d'affichage —
+// sert uniquement à amorcer les 29 lignes standard d'un nouvel avant-projet
+// (coquilleAvantProjet). Au-delà de cet instant T, les lignes vivent en base
+// (LigneChecklistAvp : libelle/ordre propres) — l'admin peut en ajouter ou en
+// retirer par projet, indépendamment de ce gabarit. `cle` n'est qu'un repère
+// de provenance Trello interne à ce fichier, plus une clé de stockage.
 // Miroir de frontend/lib/types.ts::CHECKLISTS_AVANT_PROJET — à garder synchro.
 export const CHECKLISTS_AVANT_PROJET: {
   groupe: GroupeChecklistAvp;
   libelle: string;
-  items: { cle: CleChecklistAvp; libelle: string }[];
+  items: { cle: string; libelle: string }[];
 }[] = [
   {
     groupe: 'programme',
@@ -195,12 +198,23 @@ export const CHECKLISTS_AVANT_PROJET: {
   },
 ];
 
-// Toutes les clés à plat, avec leur groupe — jeu de lignes créé d'office à
-// l'ouverture de la section (miroir d'ETUDES_PAR_DEFAUT pour la coquille).
-export const CLES_CHECKLIST_AVP: { cle: CleChecklistAvp; groupe: GroupeChecklistAvp }[] =
-  CHECKLISTS_AVANT_PROJET.flatMap((g) =>
-    g.items.map((i) => ({ cle: i.cle, groupe: g.groupe })),
-  );
+// Les 5 groupes et leur libellé, dans l'ordre d'affichage — sert à construire
+// la réponse `checklists` même quand un groupe n'a (temporairement) plus
+// aucune ligne (tout supprimé par l'admin sur ce projet).
+export const GROUPES_CHECKLIST_AVP: { groupe: GroupeChecklistAvp; libelle: string }[] =
+  CHECKLISTS_AVANT_PROJET.map((g) => ({ groupe: g.groupe, libelle: g.libelle }));
+
+// Gabarit à plat (groupe + libellé + ordre dans le groupe) — jeu de lignes
+// créé d'office à l'ouverture de la section (miroir d'ETUDES_PAR_DEFAUT pour
+// la coquille). Purement une valeur de départ : n'est plus relu après coup,
+// contrairement à l'ancien CLES_CHECKLIST_AVP qui pilotait aussi la lecture.
+export const GABARIT_CHECKLIST_AVP: {
+  groupe: GroupeChecklistAvp;
+  libelle: string;
+  ordre: number;
+}[] = CHECKLISTS_AVANT_PROJET.flatMap((g) =>
+  g.items.map((item, ordre) => ({ groupe: g.groupe, libelle: item.libelle, ordre })),
+);
 
 // -- Section « Facturation client » (brique gestion) --
 // Miroir de frontend/lib/types.ts (TYPES_FACTURE, JALONS_FACTURE,

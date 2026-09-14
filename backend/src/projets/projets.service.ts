@@ -5,18 +5,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import {
-  Categorie,
-  CleChecklistAvp,
-  EtapePreBilan,
-  Phase,
-  Prisma,
-  StatutProjet,
-} from '@prisma/client';
+import { Categorie, EtapePreBilan, Phase, Prisma, StatutProjet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  CLES_CHECKLIST_AVP,
   ETAPES_PRE_BILAN,
+  GABARIT_CHECKLIST_AVP,
   LIBELLES_PHASE,
   phaseApresAvantProjet,
 } from './domaine/config';
@@ -24,7 +17,12 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { checklistComplete, phasesAdjacentes, preBilanComplet } from './domaine/gardes';
 import { versAvantProjet, versProjetExecution } from '../commun/format-contrat';
 import { ouProjetsDuCollaborateur } from './projet-acces';
-import { PatchAvantProjetDto, PatchLigneChecklistAvpDto, PatchVersionDto } from './dto';
+import {
+  AjouterLigneChecklistAvpDto,
+  PatchAvantProjetDto,
+  PatchLigneChecklistAvpDto,
+  PatchVersionDto,
+} from './dto';
 
 // Contexte d'accès résolu par le contrôleur depuis req.user. `null` = admin
 // (voit tout) ; sinon la liste est restreinte au périmètre du collaborateur.
@@ -149,7 +147,7 @@ export class ProjetsService {
   async patchLigneChecklistAvp(
     societeId: string,
     id: string,
-    cle: CleChecklistAvp,
+    ligneId: string,
     dto: PatchLigneChecklistAvpDto,
   ) {
     await this.charger(societeId, id);
@@ -167,10 +165,68 @@ export class ProjetsService {
     if (dto.nonRequis !== undefined) data.nonRequis = dto.nonRequis;
     if (dto.note !== undefined) data.note = dto.note;
 
-    await this.prisma.ligneChecklistAvp.update({
-      where: { avantProjetId_cle: { avantProjetId: id, cle } },
+    const { count } = await this.prisma.ligneChecklistAvp.updateMany({
+      where: { id: ligneId, avantProjetId: id, supprimee: false },
       data,
     });
+    if (count === 0) throw new NotFoundException('Item de checklist introuvable');
+    return versAvantProjet(await this.chargerAvantProjetComplet(id));
+  }
+
+  // Ajout d'un item de checklist propre à ce projet — admin uniquement (route
+  // non marquée @EcritureCollaborateur, fermée par défaut pour ce rôle). Va en
+  // fin du groupe ciblé.
+  async ajouterLigneChecklistAvp(
+    societeId: string,
+    id: string,
+    dto: AjouterLigneChecklistAvpDto,
+  ) {
+    await this.charger(societeId, id);
+    await this.coquilleAvantProjet(id);
+    const ap = await this.prisma.avantProjet.findUnique({
+      where: { projetId: id },
+      select: { valideLe: true },
+    });
+    if (ap?.valideLe) {
+      throw new ConflictException('Avant-projet validé — lecture seule');
+    }
+
+    const { _max } = await this.prisma.ligneChecklistAvp.aggregate({
+      where: { avantProjetId: id, groupe: dto.groupe },
+      _max: { ordre: true },
+    });
+    await this.prisma.ligneChecklistAvp.create({
+      data: {
+        avantProjetId: id,
+        groupe: dto.groupe,
+        libelle: dto.libelle,
+        ordre: (_max.ordre ?? -1) + 1,
+      },
+    });
+    return versAvantProjet(await this.chargerAvantProjetComplet(id));
+  }
+
+  // Suppression douce (comme ImageProjet/FichierProjet) — admin uniquement.
+  async supprimerLigneChecklistAvp(
+    societeId: string,
+    id: string,
+    ligneId: string,
+    utilisateurId: string,
+  ) {
+    await this.charger(societeId, id);
+    const ap = await this.prisma.avantProjet.findUnique({
+      where: { projetId: id },
+      select: { valideLe: true },
+    });
+    if (ap?.valideLe) {
+      throw new ConflictException('Avant-projet validé — lecture seule');
+    }
+
+    const { count } = await this.prisma.ligneChecklistAvp.updateMany({
+      where: { id: ligneId, avantProjetId: id, supprimee: false },
+      data: { supprimee: true, supprimeLe: new Date(), supprimeParId: utilisateurId },
+    });
+    if (count === 0) throw new NotFoundException('Item de checklist introuvable');
     return versAvantProjet(await this.chargerAvantProjetComplet(id));
   }
 
@@ -338,14 +394,22 @@ export class ProjetsService {
       update: {},
       create: { projetId },
     });
-    await this.prisma.ligneChecklistAvp.createMany({
-      data: CLES_CHECKLIST_AVP.map(({ cle, groupe }) => ({
-        avantProjetId: projetId,
-        cle,
-        groupe,
-      })),
-      skipDuplicates: true,
+    // Les lignes n'ont plus de clé unique (items libres, ajoutables par
+    // projet) : l'idempotence de l'amorçage se vérifie par comptage plutôt
+    // que par skipDuplicates sur une clé.
+    const existantes = await this.prisma.ligneChecklistAvp.count({
+      where: { avantProjetId: projetId },
     });
+    if (existantes === 0) {
+      await this.prisma.ligneChecklistAvp.createMany({
+        data: GABARIT_CHECKLIST_AVP.map(({ groupe, libelle, ordre }) => ({
+          avantProjetId: projetId,
+          groupe,
+          libelle,
+          ordre,
+        })),
+      });
+    }
     return this.chargerAvantProjetComplet(projetId);
   }
 

@@ -464,14 +464,14 @@ async function main() {
     // validé, ~50 % sinon (démo — montre l'avancement partiel sur la carte).
     await prisma.ligneChecklistAvp.createMany({
       data: CHECKLISTS_AVANT_PROJET.flatMap((g) =>
-        g.items.map((item, idx) => ({
+        g.items.map((item, ordre) => ({
           avantProjetId: projet.id,
           groupe: g.groupe,
-          cle: item.cle,
-          fait: cfg.avantProjetValide ? true : idx % 2 === 0,
+          libelle: item.libelle,
+          ordre,
+          fait: cfg.avantProjetValide ? true : ordre % 2 === 0,
         })),
       ),
-      skipDuplicates: true,
     });
 
     // -- Phase 2 : permis / études / exécution selon la phase du projet ----
