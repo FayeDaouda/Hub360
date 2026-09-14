@@ -1,26 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAvantProjet, getPreBilan, majLigneChecklistAvp } from '@/lib/projets';
+import { getAvantProjet, majLigneChecklistAvp } from '@/lib/projets';
 import {
   avancementChecklistAvp,
   checklistAvantProjet,
-  ETAPES_PRE_BILAN,
-  LIGNES_PRE_BILAN,
-  NIVEAUX_FINITION,
   type AvantProjet,
-  type PreBilan,
   type ProjetExecution,
 } from '@/lib/types';
-import { formatDateCourte, formatMontant } from '@/lib/format';
+import { formatDateCourte } from '@/lib/format';
 import { SectionCollabShell } from '@/components/collab/section-collab-shell';
-import {
-  BlocLecture,
-  Champ,
-  Champs,
-  Coche,
-  ListeCoches,
-} from '@/components/collab/lecture';
+import { BlocLecture, Coche, ListeCoches } from '@/components/collab/lecture';
 
 type Props = { params: { slug: string; projetId: string } };
 
@@ -48,11 +38,9 @@ function Vue({
   projet: ProjetExecution;
 }) {
   const [ap, setAp] = useState<AvantProjet | null>(null);
-  const [pb, setPb] = useState<PreBilan | null>(null);
 
   useEffect(() => {
     getAvantProjet(slug, projetId).then(setAp).catch(() => setAp(null));
-    getPreBilan(slug, projetId).then(setPb).catch(() => setPb(null));
   }, [slug, projetId]);
 
   async function majItem(
@@ -71,8 +59,6 @@ function Vue({
   }
 
   const macro = checklistAvantProjet(projet.categorie, projet.nature);
-  const etapes = ETAPES_PRE_BILAN[projet.categorie];
-  const lignes = LIGNES_PRE_BILAN[projet.categorie];
 
   return (
     <>
@@ -82,37 +68,6 @@ function Vue({
           {ap.validePar ? ` par ${ap.validePar}` : ''}.
         </div>
       )}
-
-      <BlocLecture titre="Programme" portee="Géré par l’administration.">
-        <Champs>
-          <Champ label="Surface (m²)">{ap.besoinSurface}</Champ>
-          <Champ label="Pièces / lots">{ap.nbLots}</Champ>
-          <Champ label="Usages">{ap.usages}</Champ>
-          <Champ label="Niveau de finition">{NIVEAUX_FINITION[ap.niveauFinition]}</Champ>
-          <Champ label="Budget cible client">
-            {ap.budgetCibleClient != null ? formatMontant(ap.budgetCibleClient) : null}
-          </Champ>
-          <Champ label="Délai souhaité">{ap.delaiSouhaite}</Champ>
-          <Champ label="Dessinateur">{ap.dessinateur?.nom}</Champ>
-          <Champ label="Responsable 3D">{ap.responsable3d?.nom}</Champ>
-          <Champ label="Début avant-projet">
-            {ap.dateDebut ? formatDateCourte(ap.dateDebut) : null}
-          </Champ>
-          <Champ label="Fin avant-projet">
-            {ap.dateFin ? formatDateCourte(ap.dateFin) : null}
-          </Champ>
-        </Champs>
-        {ap.contraintes && (
-          <p className="lecture-para">
-            <strong>Contraintes.</strong> {ap.contraintes}
-          </p>
-        )}
-        {ap.references && (
-          <p className="lecture-para">
-            <strong>Références.</strong> {ap.references}
-          </p>
-        )}
-      </BlocLecture>
 
       <BlocLecture
         titre="Suivi opérationnel"
@@ -185,7 +140,7 @@ function Vue({
         </div>
       </BlocLecture>
 
-      <BlocLecture titre="Validation" portee="Réservée à l’administration.">
+      <BlocLecture titre="Validation" portee="Repère d’avancement — modifiable par l’administration.">
         <ListeCoches>
           {macro.map((m) => (
             <Coche key={m.cle} ok={ap.checklist[m.cle]}>
@@ -199,58 +154,6 @@ function Vue({
           </p>
         )}
       </BlocLecture>
-
-      {pb && pb.versions.length > 0 && (
-        <BlocLecture titre="Pré-bilan de faisabilité" portee="Géré par l’administration.">
-          <div className="lecture-table-wrap">
-            <table className="prebilan-table">
-              <thead>
-                <tr>
-                  <th>Poste</th>
-                  {pb.versions.map((v) => (
-                    <th key={v.etape}>
-                      {etapes.find((e) => e.cle === v.etape)?.libelle ?? v.etape}
-                      {v.figeeLe ? ' ·figée' : ''}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {lignes.map((l) => (
-                  <tr key={l.cle}>
-                    <td>{l.libelle}</td>
-                    {pb.versions.map((v) => (
-                      <td key={v.etape}>
-                        {v.couts[l.cle] != null ? formatMontant(v.couts[l.cle]!) : '—'}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-                <tr className="prebilan-total">
-                  <td>Total</td>
-                  {pb.versions.map((v) => {
-                    const t = Object.values(v.couts).reduce<number>(
-                      (s, n) => s + (n ?? 0),
-                      0,
-                    );
-                    return <td key={v.etape}>{formatMontant(t)}</td>;
-                  })}
-                </tr>
-                {pb.versions.some((v) => v.prixVenteEstime != null) && (
-                  <tr>
-                    <td>Prix de vente estimé</td>
-                    {pb.versions.map((v) => (
-                      <td key={v.etape}>
-                        {v.prixVenteEstime != null ? formatMontant(v.prixVenteEstime) : '—'}
-                      </td>
-                    ))}
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </BlocLecture>
-      )}
     </>
   );
 }
