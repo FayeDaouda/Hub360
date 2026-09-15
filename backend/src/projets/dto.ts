@@ -58,7 +58,6 @@ export class PatchAvantProjetDto {
 // PatchLigneEtudeDto). La clé est validée en param via ParseEnumPipe.
 export class PatchLigneChecklistAvpDto {
   @IsOptional() @IsBoolean() fait?: boolean;
-  @IsOptional() @IsBoolean() nonRequis?: boolean;
   @IsOptional() @IsString() @MaxLength(2000) note?: string;
 }
 

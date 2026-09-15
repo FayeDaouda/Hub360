@@ -156,14 +156,14 @@ export class CollaborateursService {
             responsable3dId: true,
             dateFin: true,
             valideLe: true,
-            lignesChecklist: { select: { fait: true, nonRequis: true } },
+            lignesChecklist: { select: { fait: true } },
           },
         },
       },
     });
 
     // % de checklist d'un projet — null s'il n'a pas encore de lignes.
-    const pctProjet = (ls: { fait: boolean; nonRequis: boolean }[]) =>
+    const pctProjet = (ls: { fait: boolean }[]) =>
       ls.length ? avancementChecklistAvp(ls).pct : null;
 
     type LigneProjet = (typeof projets)[number];

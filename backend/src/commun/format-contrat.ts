@@ -162,13 +162,13 @@ export function versAvantProjet(
     checklists: GROUPES_CHECKLIST_AVP.map((g) => ({
       groupe: g.groupe,
       libelle: g.libelle,
+      description: g.description,
       items: (parGroupe.get(g.groupe) ?? [])
         .sort((a, b) => a.ordre - b.ordre)
         .map((l) => ({
           id: l.id,
           libelle: l.libelle,
           fait: l.fait,
-          nonRequis: l.nonRequis,
           note: l.note,
         })),
     })),

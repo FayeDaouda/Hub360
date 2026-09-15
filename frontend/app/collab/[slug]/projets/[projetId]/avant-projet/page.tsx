@@ -45,7 +45,7 @@ function Vue({
 
   async function majItem(
     ligneId: string,
-    patch: { fait?: boolean; nonRequis?: boolean; note?: string },
+    patch: { fait?: boolean; note?: string },
   ) {
     try {
       setAp(await majLigneChecklistAvp(slug, projetId, ligneId, patch));
@@ -75,7 +75,7 @@ function Vue({
       >
         {!ap.valideLe && (
           <p className="lecture-para" style={{ marginTop: 0 }}>
-            Coche au fil de l’avancement. « N/A » pour un point sans objet sur ce projet.
+            Coche au fil de l’avancement.
           </p>
         )}
         <div className="lecture-groupes">
@@ -86,12 +86,12 @@ function Vue({
                 <h4>
                   {g.libelle} <span className="lecture-compteur">{av.faits}/{av.total}</span>
                 </h4>
+                <p className="ap-souscheck-groupe-desc">{g.description}</p>
                 {ap.valideLe ? (
                   <ListeCoches>
                     {g.items.map((it) => (
-                      <Coche key={it.id} ok={it.fait || it.nonRequis}>
+                      <Coche key={it.id} ok={it.fait}>
                         {it.libelle}
-                        {it.nonRequis && !it.fait ? ' (N/A)' : ''}
                         {it.note ? ` — ${it.note}` : ''}
                       </Coche>
                     ))}
@@ -99,26 +99,14 @@ function Vue({
                 ) : (
                   <ul className="ap-souscheck-groupe-liste">
                     {g.items.map((it) => (
-                      <li
-                        key={it.id}
-                        className={`ap-souscheck-item${it.nonRequis ? ' is-na' : ''}`}
-                      >
+                      <li key={it.id} className="ap-souscheck-item">
                         <label className="ap-souscheck-fait">
                           <input
                             type="checkbox"
-                            disabled={it.nonRequis}
                             checked={it.fait}
                             onChange={(e) => majItem(it.id, { fait: e.target.checked })}
                           />
                           <span>{it.libelle}</span>
-                        </label>
-                        <label className="ap-souscheck-na" title="Non requise sur ce projet">
-                          <input
-                            type="checkbox"
-                            checked={it.nonRequis}
-                            onChange={(e) => majItem(it.id, { nonRequis: e.target.checked })}
-                          />
-                          <span>N/A</span>
                         </label>
                         <input
                           className="field-input ap-souscheck-note"

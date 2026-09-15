@@ -137,14 +137,14 @@ export function enregistrerAvantProjet(
   });
 }
 
-// Coche / N-A / annote une ligne des sous-checklists opérationnelles, un champ
-// à la fois (409 si l'avant-projet est déjà validé). Renvoie l'avant-projet
+// Coche / annote une ligne des sous-checklists opérationnelles, un champ à
+// la fois (409 si l'avant-projet est déjà validé). Renvoie l'avant-projet
 // complet — les `checklists` regroupées sont recalculées côté serveur.
 export function majLigneChecklistAvp(
   slug: string,
   projetId: string,
   ligneId: string,
-  patch: { fait?: boolean; nonRequis?: boolean; note?: string },
+  patch: { fait?: boolean; note?: string },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,

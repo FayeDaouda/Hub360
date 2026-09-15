@@ -49,10 +49,7 @@ describe('TableauBordService — société peuplée', () => {
       valideLe: null,
       dateFin: '2026-09-15',
       besoinSurface: null,
-      lignesChecklist: [
-        { fait: true, nonRequis: false },
-        { fait: false, nonRequis: false },
-      ],
+      lignesChecklist: [{ fait: true }, { fait: false }],
     },
     permis: {
       dateDepot: new Date('2026-07-01T00:00:00Z'),

@@ -80,15 +80,15 @@ export function checklistComplete(ap: {
 }
 
 // MIROIR de frontend/lib/types.ts::avancementChecklistAvp
-// Avancement des sous-checklists opérationnelles. `nonRequis` sort du
-// dénominateur (comme StatutEtude.non_requise n'est pas « à faire »). Purement
-// indicatif — aucun verrou de phase, contrairement à checklistComplete.
+// Avancement des sous-checklists opérationnelles. Purement indicatif —
+// aucun verrou de phase, contrairement à checklistComplete. Pas de statut
+// « non requis » : un item qui ne concerne pas le projet se supprime plutôt
+// que de sortir du dénominateur (une seule façon de dire « ne compte pas »).
 export function avancementChecklistAvp(
-  lignes: { fait: boolean; nonRequis: boolean }[],
+  lignes: { fait: boolean }[],
 ): { faits: number; total: number; pct: number; complete: boolean } {
-  const applicables = lignes.filter((l) => !l.nonRequis);
-  const faits = applicables.filter((l) => l.fait).length;
-  const total = applicables.length;
+  const faits = lignes.filter((l) => l.fait).length;
+  const total = lignes.length;
   return {
     faits,
     total,

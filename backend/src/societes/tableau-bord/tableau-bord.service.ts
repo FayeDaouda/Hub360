@@ -50,7 +50,7 @@ const PROJET_SELECT = {
       valideLe: true,
       dateFin: true,
       besoinSurface: true,
-      lignesChecklist: { select: { fait: true, nonRequis: true } },
+      lignesChecklist: { select: { fait: true } },
     },
   },
   permis: { select: { dateDepot: true, dateObtention: true, dateRefus: true } },

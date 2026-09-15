@@ -141,8 +141,8 @@ export class ProjetsService {
     return versAvantProjet(await this.chargerAvantProjetComplet(id));
   }
 
-  // PATCH …/avant-projet/checklist/:cle — un champ à la fois (fait, nonRequis,
-  // note). Aucun verrou de phase ; simplement figé si l'avant-projet est validé
+  // PATCH …/avant-projet/checklist/:ligneId — un champ à la fois (fait, note).
+  // Aucun verrou de phase ; simplement figé si l'avant-projet est validé
   // (cohérent avec patchAvantProjet).
   async patchLigneChecklistAvp(
     societeId: string,
@@ -162,7 +162,6 @@ export class ProjetsService {
 
     const data: Prisma.LigneChecklistAvpUpdateInput = {};
     if (dto.fait !== undefined) data.fait = dto.fait;
-    if (dto.nonRequis !== undefined) data.nonRequis = dto.nonRequis;
     if (dto.note !== undefined) data.note = dto.note;
 
     const { count } = await this.prisma.ligneChecklistAvp.updateMany({

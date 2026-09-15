@@ -498,6 +498,9 @@ enum GroupeChecklistAvp {
 // fixes). `domaine/config.ts::GABARIT_CHECKLIST_AVP` ne sert plus qu'à
 // amorcer les 29 lignes standard à la création (coquilleAvantProjet) ; au-delà
 // de cet instant T, chaque ligne vit indépendamment de ce gabarit.
+// Pas de statut « non requis » : un item qui ne concerne pas ce projet se
+// retire (l'admin peut supprimer une ligne) plutôt que de rester coché N/A —
+// une seule façon de dire « ne compte pas », pas deux qui se recouvrent.
 model LigneChecklistAvp {
   id            String             @id @default(uuid())
   avantProjetId String             @map("avant_projet_id")
@@ -505,7 +508,6 @@ model LigneChecklistAvp {
   libelle       String
   ordre         Int                @default(0)
   fait          Boolean            @default(false)
-  nonRequis     Boolean            @default(false) @map("non_requis")
   note          String             @default("")
   // Suppression douce (admin) — cohérent avec ImageProjet/FichierProjet :
   // la ligne disparaît du suivi sans effacer la trace de qui/quand.

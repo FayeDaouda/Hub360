@@ -16,23 +16,24 @@ import {
 // gardes du front — une régression ici casse les deux côtés en silence.
 
 describe('avancementChecklistAvp', () => {
-  it('exclut les lignes « non requis » du dénominateur', () => {
+  it('compte faits / total sur toutes les lignes', () => {
     const r = avancementChecklistAvp([
-      { fait: true, nonRequis: false },
-      { fait: false, nonRequis: false },
-      { fait: false, nonRequis: true },
+      { fait: true },
+      { fait: false },
+      { fait: true },
     ]);
-    expect(r).toEqual({ faits: 1, total: 2, pct: 50, complete: false });
+    expect(r).toEqual({ faits: 2, total: 3, pct: 67, complete: false });
   });
 
-  it('complete uniquement si au moins une ligne applicable et toutes faites', () => {
+  it('complete uniquement si au moins une ligne et toutes faites', () => {
     expect(avancementChecklistAvp([]).complete).toBe(false);
-    expect(
-      avancementChecklistAvp([{ fait: true, nonRequis: false }]).complete,
-    ).toBe(true);
-    expect(
-      avancementChecklistAvp([{ fait: false, nonRequis: true }]),
-    ).toEqual({ faits: 0, total: 0, pct: 0, complete: false });
+    expect(avancementChecklistAvp([{ fait: true }]).complete).toBe(true);
+    expect(avancementChecklistAvp([{ fait: false }])).toEqual({
+      faits: 0,
+      total: 1,
+      pct: 0,
+      complete: false,
+    });
   });
 });
 

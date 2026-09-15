@@ -159,7 +159,7 @@ export class NotificationsService {
           select: {
             dateFin: true,
             valideLe: true,
-            lignesChecklist: { select: { fait: true, nonRequis: true } },
+            lignesChecklist: { select: { fait: true } },
           },
         },
       },

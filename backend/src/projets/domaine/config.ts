@@ -104,14 +104,24 @@ export function phaseApresAvantProjet(categorie: Categorie): Phase {
 // retirer par projet, indépendamment de ce gabarit. `cle` n'est qu'un repère
 // de provenance Trello interne à ce fichier, plus une clé de stockage.
 // Miroir de frontend/lib/types.ts::CHECKLISTS_AVANT_PROJET — à garder synchro.
+//
+// Pas de groupe « Dossier final (PDF & images) » : retiré (déc. — sept.
+// 2026), son contenu (esquisses, plans, images 3D, mood board…) fait double
+// emploi avec les vrais fichiers déjà suivis dans les sections Images /
+// Documents de chaque projet. Les lignes déjà seedées sur les projets
+// existants sont soft-deletées par la migration
+// avp_checklist_retire_dossier_final.
 export const CHECKLISTS_AVANT_PROJET: {
   groupe: GroupeChecklistAvp;
   libelle: string;
+  description: string;
   items: { cle: string; libelle: string }[];
 }[] = [
   {
     groupe: 'programme',
     libelle: 'Programme',
+    description:
+      'Besoins spatiaux niveau par niveau, et positionnement (standing, gamme, style).',
     items: [
       {
         cle: 'prog_sous_sol',
@@ -141,6 +151,8 @@ export const CHECKLISTS_AVANT_PROJET: {
   {
     groupe: 'releve_existant',
     libelle: "Relevé de l'existant",
+    description:
+      'Documente le terrain avant conception — sans ça, l’équipe dessine à l’aveugle.',
     items: [
       { cle: 'visite_site', libelle: 'Visite sur site' },
       { cle: 'plans_terrain', libelle: 'Plans (terrain)' },
@@ -155,6 +167,7 @@ export const CHECKLISTS_AVANT_PROJET: {
   {
     groupe: 'taches_complementaires',
     libelle: 'Tâches complémentaires',
+    description: 'Livrables intermédiaires côté commercial et technique.',
     items: [
       { cle: 'plans_cotes', libelle: 'Plans avec cotations' },
       { cle: 'devis_descriptif', libelle: 'Devis descriptif' },
@@ -164,45 +177,28 @@ export const CHECKLISTS_AVANT_PROJET: {
   {
     groupe: 'fichiers_produits',
     libelle: 'Fichiers produits',
+    description: 'Suivi des formats de fichiers de travail générés, pour retrouver les bonnes sources.',
     items: [
       { cle: 'dwg_pln', libelle: 'DWG (AutoCAD) / PLN (Archicad)' },
       { cle: 'skp', libelle: 'SKP (SketchUp)' },
       { cle: 'source_rendus', libelle: 'Fichier source des rendus' },
     ],
   },
-  {
-    groupe: 'dossier_final',
-    libelle: 'Dossier final (PDF & images)',
-    items: [
-      { cle: 'esquisses', libelle: 'Esquisses' },
-      {
-        cle: 'plans_complets',
-        libelle:
-          'Plans complets (niveaux, axes, superficies, SHOB, plan de masse, coupes)',
-      },
-      {
-        cle: 'images_3d_facade',
-        libelle: 'Images 3D façade (face, gauche, droite, contre-plongée)',
-      },
-      {
-        cle: 'details_livrables',
-        libelle: 'Détails façade / cuisine / salle de bain / escaliers',
-      },
-      {
-        cle: 'emplacement_gaines',
-        libelle: "Emplacement gaines & locaux techniques (SEN'EAU, SENELEC)",
-      },
-      { cle: 'validation_client', libelle: 'Validation client (email + bon pour accord)' },
-      { cle: 'mood_board', libelle: 'Mood board (matériaux, ambiances)' },
-    ],
-  },
 ];
 
-// Les 5 groupes et leur libellé, dans l'ordre d'affichage — sert à construire
-// la réponse `checklists` même quand un groupe n'a (temporairement) plus
-// aucune ligne (tout supprimé par l'admin sur ce projet).
-export const GROUPES_CHECKLIST_AVP: { groupe: GroupeChecklistAvp; libelle: string }[] =
-  CHECKLISTS_AVANT_PROJET.map((g) => ({ groupe: g.groupe, libelle: g.libelle }));
+// Les 4 groupes, leur libellé et leur description, dans l'ordre d'affichage —
+// sert à construire la réponse `checklists` même quand un groupe n'a
+// (temporairement) plus aucune ligne (tout supprimé par l'admin sur ce
+// projet).
+export const GROUPES_CHECKLIST_AVP: {
+  groupe: GroupeChecklistAvp;
+  libelle: string;
+  description: string;
+}[] = CHECKLISTS_AVANT_PROJET.map((g) => ({
+  groupe: g.groupe,
+  libelle: g.libelle,
+  description: g.description,
+}));
 
 // Gabarit à plat (groupe + libellé + ordre dans le groupe) — jeu de lignes
 // créé d'office à l'ouverture de la section (miroir d'ETUDES_PAR_DEFAUT pour

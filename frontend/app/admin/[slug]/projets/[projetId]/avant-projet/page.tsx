@@ -42,6 +42,7 @@ import {
 import { formatDateCourte, formatMontant } from '@/lib/format';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { PreBilanBloc } from '@/components/admin/pre-bilan-bloc';
+import { ChampModal } from '@/components/admin/champ-modal';
 
 type Props = {
   params: { slug: string; projetId: string };
@@ -63,6 +64,7 @@ export default function AvantProjetPage({ params }: Props) {
   const [enCours, setEnCours] = useState(false);
   const [programmeOuvert, setProgrammeOuvert] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [groupeAjout, setGroupeAjout] = useState<GroupeChecklistAvp | null>(null);
 
   useEffect(() => {
     const current = getSession();
@@ -154,12 +156,12 @@ export default function AvantProjetPage({ params }: Props) {
     setEnregistre(false);
   }
 
-  // Coche / N-A / annote une ligne de sous-checklist — persiste tout de suite
-  // (pas de bouton « Enregistrer » pour ce bloc). Le serveur renvoie
-  // l'avant-projet complet, `checklists` recalculées.
+  // Coche / annote une ligne de sous-checklist — persiste tout de suite (pas
+  // de bouton « Enregistrer » pour ce bloc). Le serveur renvoie l'avant-projet
+  // complet, `checklists` recalculées.
   async function majItemChecklist(
     ligneId: string,
-    patch: { fait?: boolean; nonRequis?: boolean; note?: string },
+    patch: { fait?: boolean; note?: string },
   ) {
     setErreur(null);
     try {
@@ -177,13 +179,9 @@ export default function AvantProjetPage({ params }: Props) {
 
   // Ajout/suppression d'un item — réservés admin côté serveur (403 pour un
   // collaborateur) ; cette page n'est de toute façon accessible qu'à l'admin.
+  // Erreur affichée dans la modale elle-même (ChampModal), pas de catch ici.
   async function ajouterItemChecklist(groupe: GroupeChecklistAvp, libelle: string) {
-    setErreur(null);
-    try {
-      setAp(await ajouterLigneChecklistAvp(params.slug, params.projetId, { groupe, libelle }));
-    } catch (e) {
-      setErreur(e instanceof Error ? e.message : 'Ajout impossible.');
-    }
+    setAp(await ajouterLigneChecklistAvp(params.slug, params.projetId, { groupe, libelle }));
   }
 
   async function supprimerItemChecklist(ligneId: string) {
@@ -485,7 +483,10 @@ export default function AvantProjetPage({ params }: Props) {
                 return (
                   <div className="ap-souscheck-groupe" key={groupe.groupe}>
                     <div className="ap-souscheck-tete">
-                      <h4>{groupe.libelle}</h4>
+                      <div>
+                        <h4>{groupe.libelle}</h4>
+                        <p className="ap-souscheck-groupe-desc">{groupe.description}</p>
+                      </div>
                       <span
                         className={`ap-souscheck-compteur${
                           av.complete ? ' is-complet' : ''
@@ -496,31 +497,17 @@ export default function AvantProjetPage({ params }: Props) {
                     </div>
                     <ul>
                       {groupe.items.map((it) => (
-                        <li
-                          key={it.id}
-                          className={`ap-souscheck-item${it.nonRequis ? ' is-na' : ''}`}
-                        >
+                        <li key={it.id} className="ap-souscheck-item">
                           <label className="ap-souscheck-fait">
                             <input
                               type="checkbox"
-                              disabled={valide || it.nonRequis}
+                              disabled={valide}
                               checked={it.fait}
                               onChange={(e) =>
                                 majItemChecklist(it.id, { fait: e.target.checked })
                               }
                             />
                             <span>{it.libelle}</span>
-                          </label>
-                          <label className="ap-souscheck-na" title="Non requise sur ce projet">
-                            <input
-                              type="checkbox"
-                              disabled={valide}
-                              checked={it.nonRequis}
-                              onChange={(e) =>
-                                majItemChecklist(it.id, { nonRequis: e.target.checked })
-                              }
-                            />
-                            <span>N/A</span>
                           </label>
                           <input
                             className="field-input ap-souscheck-note"
@@ -544,41 +531,35 @@ export default function AvantProjetPage({ params }: Props) {
                           </button>
                         </li>
                       ))}
-                      <li className="ap-souscheck-item ap-souscheck-ajout">
-                        <form
-                          className="ap-souscheck-ajout-form"
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const form = e.currentTarget;
-                            const input = form.elements.namedItem('libelle') as HTMLInputElement;
-                            const libelle = input.value.trim();
-                            if (!libelle) return;
-                            ajouterItemChecklist(groupe.groupe, libelle);
-                            form.reset();
-                          }}
-                        >
-                          <input
-                            name="libelle"
-                            className="field-input"
-                            placeholder="Ajouter un item…"
-                            disabled={valide}
-                          />
-                          <button
-                            type="submit"
-                            className="btn-ghost btn-ghost--sm"
-                            disabled={valide}
-                          >
-                            <Plus size={14} strokeWidth={2} aria-hidden />
-                            <span>Ajouter</span>
-                          </button>
-                        </form>
-                      </li>
                     </ul>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
+                      disabled={valide}
+                      onClick={() => setGroupeAjout(groupe.groupe)}
+                    >
+                      <Plus size={14} strokeWidth={2} aria-hidden />
+                      <span>Ajouter un item</span>
+                    </button>
                   </div>
                 );
               })}
             </div>
           </section>
+
+          {groupeAjout && (
+            <ChampModal
+              titre="Ajouter un item de checklist"
+              label="Libellé"
+              placeholder="ex : Étude de sol"
+              confirmer="Ajouter"
+              onSubmit={async (valeur) => {
+                await ajouterItemChecklist(groupeAjout, valeur);
+                setGroupeAjout(null);
+              }}
+              onClose={() => setGroupeAjout(null)}
+            />
+          )}
 
           <PreBilanBloc
             slug={params.slug}

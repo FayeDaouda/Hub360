@@ -905,40 +905,40 @@ export type ChecklistAvantProjet = {
 // distinct du gate macro à 4 points : n'ajoute AUCUN verrou de phase, alimente
 // juste un %. Items libres par projet depuis sept. 2026 (admin : ajout via
 // POST …/avant-projet/checklist, suppression via DELETE …/checklist/:id) —
-// `id` (pas une clé fixe) identifie chaque ligne. Le contrat (GET
-// …/avant-projet) renvoie `checklists` déjà groupées et libellées par le
-// backend — le front n'a qu'à afficher et PATCH …/checklist/:id (fait /
-// nonRequis / note, un champ à la fois — ouvert aux collaborateurs).
+// `id` (pas une clé fixe) identifie chaque ligne. Pas de statut « non requis »
+// (retiré sept. 2026) : un item qui ne concerne pas le projet se supprime
+// plutôt que de sortir du dénominateur. Le contrat (GET …/avant-projet)
+// renvoie `checklists` déjà groupées et libellées par le backend — le front
+// n'a qu'à afficher et PATCH …/checklist/:id (fait / note, un champ à la
+// fois — ouvert aux collaborateurs).
 
 export type GroupeChecklistAvp =
   | 'programme'
   | 'releve_existant'
   | 'taches_complementaires'
-  | 'fichiers_produits'
-  | 'dossier_final';
+  | 'fichiers_produits';
 
 export type ItemChecklistAvp = {
   id: string;
   libelle: string;
   fait: boolean;
-  nonRequis: boolean; // équivalent de StatutEtude.non_requise — hors dénominateur
   note: string;
 };
 
 export type ChecklistAvpGroupe = {
   groupe: GroupeChecklistAvp;
   libelle: string;
+  description: string;
   items: ItemChecklistAvp[];
 };
 
-// MIROIR de backend domaine/gardes.ts::avancementChecklistAvp — `nonRequis`
-// sort du dénominateur. Purement indicatif (carte de section), aucun verrou.
+// MIROIR de backend domaine/gardes.ts::avancementChecklistAvp. Purement
+// indicatif (carte de section), aucun verrou.
 export function avancementChecklistAvp(
-  items: { fait: boolean; nonRequis: boolean }[],
+  items: { fait: boolean }[],
 ): { faits: number; total: number; pct: number; complete: boolean } {
-  const applicables = items.filter((i) => !i.nonRequis);
-  const faits = applicables.filter((i) => i.fait).length;
-  const total = applicables.length;
+  const faits = items.filter((i) => i.fait).length;
+  const total = items.length;
   return {
     faits,
     total,
