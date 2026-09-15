@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { Plus } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import {
   ajouterVersionPreBilan,
   enregistrerVersionPreBilan,
@@ -58,6 +58,7 @@ export function PreBilanBloc({ slug, projet, verrouille, onEtat }: Props) {
   const [pb, setPb] = useState<PreBilan | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [enregistre, setEnregistre] = useState(false);
+  const [ouvert, setOuvert] = useState(false);
   // Version affichée dans la vue mobile (null = suit la dernière).
   const [idxMobile, setIdxMobile] = useState<number | null>(null);
 
@@ -139,9 +140,25 @@ export function PreBilanBloc({ slug, projet, verrouille, onEtat }: Props) {
 
   return (
     <section className="panel">
-      <h3 className="panel-title">Pré-bilan de faisabilité</h3>
+      <button
+        type="button"
+        className="panel-title panel-title--repliable"
+        aria-expanded={ouvert}
+        onClick={() => setOuvert((o) => !o)}
+      >
+        <span className="repli-badge">
+          <ChevronDown
+            size={17}
+            strokeWidth={2.25}
+            aria-hidden
+            className={`repli-icone${ouvert ? '' : ' est-replie'}`}
+          />
+        </span>
+        <span>Pré-bilan de faisabilité</span>
+      </button>
 
-      {versions.length === 0 ? (
+      {ouvert && (
+      versions.length === 0 ? (
         <div className="prebilan-vide">
           <p className="empty-state">
             Pas encore de pré-bilan. Démarre par la première version pour caler l&apos;enveloppe.
@@ -385,6 +402,7 @@ export function PreBilanBloc({ slug, projet, verrouille, onEtat }: Props) {
             </div>
           )}
         </>
+      )
       )}
     </section>
   );

@@ -62,7 +62,8 @@ export default function AvantProjetPage({ params }: Props) {
   const [preBilan, setPreBilan] = useState<PreBilan | null>(null);
   const [enregistre, setEnregistre] = useState(false);
   const [enCours, setEnCours] = useState(false);
-  const [programmeOuvert, setProgrammeOuvert] = useState(true);
+  const [programmeOuvert, setProgrammeOuvert] = useState(false);
+  const [validationOuvert, setValidationOuvert] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [groupeAjout, setGroupeAjout] = useState<GroupeChecklistAvp | null>(null);
   // Groupes du Suivi opérationnel repliés — ouverts par défaut (Set plutôt
@@ -601,8 +602,25 @@ export default function AvantProjetPage({ params }: Props) {
           />
 
           <section className="panel">
-            <h3 className="panel-title">Validation</h3>
+            <button
+              type="button"
+              className="panel-title panel-title--repliable"
+              aria-expanded={validationOuvert}
+              onClick={() => setValidationOuvert((o) => !o)}
+            >
+              <span className="repli-badge">
+                <ChevronDown
+                  size={17}
+                  strokeWidth={2.25}
+                  aria-hidden
+                  className={`repli-icone${validationOuvert ? '' : ' est-replie'}`}
+                />
+              </span>
+              <span>Validation</span>
+            </button>
 
+            {validationOuvert && (
+            <>
             <ul className="ap-checklist">
               {checklistAvantProjet(projet.categorie, projet.nature).map((item) => {
                 const bloque = item.cle === 'budgetValide' && !preBilanOk;
@@ -672,6 +690,8 @@ export default function AvantProjetPage({ params }: Props) {
                 </button>
               )}
             </div>
+            </>
+            )}
           </section>
 
           <p className="ap-a-venir">
