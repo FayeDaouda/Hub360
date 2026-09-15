@@ -1,9 +1,56 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { ArrowDownRight, ArrowUpRight, Minus, type LucideIcon } from 'lucide-react';
 
 // Bandeau de KPI — chiffres dérivés de la liste déjà chargée par la page
 // (aucun endpoint, aucune saisie). Pas de « vs période précédente » comme le
-// StatCard du dashboard : ici il n'y a pas de période à comparer.
+// StatCard du dashboard, SAUF `tendance` : à poser seulement quand une vraie
+// période de comparaison existe dans les données déjà chargées — jamais une
+// valeur inventée pour occuper l'espace.
+
+// Couleur de sens (§5 Direction visuelle) : un filet discret, pas un fond
+// plein — Sauge = positif, Argile = appelle une action, Ocre = à surveiller.
+// Volontairement PAS de variante pour « annulé » : une métrique qu'on ne
+// veut pas mettre en avant reste neutre, pas mise en couleur.
+export type SensAccentKpi = 'sauge' | 'argile' | 'ocre';
+
+export type TendanceKpiTuile = {
+  sens: 'hausse' | 'baisse' | 'stable';
+  // Texte court affiché dans la pastille (ex. « +10 ») — un vrai delta,
+  // jamais une valeur inventée pour remplir l'espace.
+  court: string;
+  // Description complète, portée en `title` (accessibilité / survol).
+  texte: string;
+};
+
+const ICONE_TENDANCE = {
+  hausse: ArrowUpRight,
+  baisse: ArrowDownRight,
+  stable: Minus,
+} as const;
+
+// Anneau miniature dans le coin de la tuile — un pourcentage RÉEL uniquement
+// (ex. taux de conversion déjà calculé). Jamais posé sans valeur derrière.
+function AnneauMini({ pourcentage }: { pourcentage: number }) {
+  const r = 12;
+  const c = 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(100, pourcentage));
+  return (
+    <svg width="30" height="30" viewBox="0 0 30 30" className="kpi-tuile-anneau" aria-hidden>
+      <circle cx="15" cy="15" r={r} className="kpi-tuile-anneau-piste" fill="none" />
+      <circle
+        cx="15"
+        cy="15"
+        r={r}
+        className="kpi-tuile-anneau-trait"
+        fill="none"
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - p / 100)}
+        transform="rotate(-90 15 15)"
+      />
+    </svg>
+  );
+}
 
 export type KpiTuile = {
   cle: string;
@@ -14,25 +61,71 @@ export type KpiTuile = {
   // Chiffre en Argile (couleur de signature) : la tuile appelle une action —
   // sans le fond sombre de `accent`. cf. Direction visuelle §4.
   alerte?: boolean;
+  // Tuile volontairement en retrait (ex. « Annulés ») : on ne « célèbre » pas
+  // une mauvaise nouvelle avec le même poids visuel qu'un succès.
+  attenue?: boolean;
+  // Pastille d'icône en tête de tuile — repère visuel immédiat.
+  icone?: LucideIcon;
+  // Filet gauche + verre teinté selon le sens de la métrique.
+  accentSens?: SensAccentKpi;
+  // Décor en tête, à droite — UN seul des trois, jamais un graphique inventé :
+  //  · `ringPourcentage` : anneau sur un vrai pourcentage déjà calculé
+  //  · `tendance`        : pastille flèche + delta réel vs une vraie période antérieure
+  //  · `decorIcone`      : icône purement graphique (aucune donnée, assumé comme décor)
+  ringPourcentage?: number;
+  tendance?: TendanceKpiTuile;
+  decorIcone?: LucideIcon;
   // Remplace `valeur` pour une tuile qui porte un mini-graphe (ex. charge par cellule).
   contenu?: ReactNode;
   // Rend la tuile interactive. 'popup' → <button aria-haspopup="dialog"> ;
-  // 'lien' → <Link>. Absent → <div> statique (usage admin inchangé).
+  // 'lien' → <Link> ; 'filtre' → <button aria-pressed> qui bascule un filtre
+  // sur la page (`actif` reflète l'état courant). Absent → <div> statique.
   action?:
     | { type: 'popup'; onClick: () => void }
-    | { type: 'lien'; href: string };
+    | { type: 'lien'; href: string }
+    | { type: 'filtre'; actif: boolean; onClick: () => void };
 };
 
 export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
   return (
     <div className="kpi-strip">
       {tuiles.map((t) => {
+        const Icone = t.icone;
+        const DecorIcone = t.decorIcone;
+        const IconeTendance = t.tendance ? ICONE_TENDANCE[t.tendance.sens] : null;
+        const estFiltreActif = t.action?.type === 'filtre' && t.action.actif;
         const classe = `kpi-tuile${t.accent ? ' kpi-tuile--accent' : ''}${
           t.alerte ? ' kpi-tuile--alerte' : ''
-        }${t.action ? ' kpi-tuile--clic' : ''}`;
+        }${t.attenue ? ' kpi-tuile--attenue' : ''}${
+          t.accentSens ? ` kpi-tuile--sens-${t.accentSens}` : ''
+        }${t.action ? ' kpi-tuile--clic' : ''}${estFiltreActif ? ' kpi-tuile--actif' : ''}`;
         const contenu = (
           <>
-            <p className="kpi-tuile-label">{t.label}</p>
+            <div className="kpi-tuile-tete">
+              {Icone && (
+                <span className="kpi-tuile-icone" aria-hidden>
+                  <Icone size={15} strokeWidth={1.75} />
+                </span>
+              )}
+              <p className="kpi-tuile-label">{t.label}</p>
+              <span className="kpi-tuile-tete-droite">
+                {t.ringPourcentage != null && <AnneauMini pourcentage={t.ringPourcentage} />}
+                {t.tendance && IconeTendance && (
+                  <span
+                    className={`kpi-tuile-badge kpi-tuile-badge--${t.tendance.sens}`}
+                    title={t.tendance.texte}
+                  >
+                    <IconeTendance size={11} strokeWidth={2.5} aria-hidden />
+                    {t.tendance.court}
+                  </span>
+                )}
+                {DecorIcone && (
+                  <span className="kpi-tuile-decor" aria-hidden>
+                    <DecorIcone size={18} strokeWidth={1.5} />
+                  </span>
+                )}
+              </span>
+            </div>
             {t.contenu ?? <p className="kpi-tuile-valeur">{t.valeur}</p>}
             {t.sousTexte && <p className="kpi-tuile-sous">{t.sousTexte}</p>}
           </>
@@ -56,6 +149,19 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
             <Link key={t.cle} href={t.action.href} className={classe}>
               {contenu}
             </Link>
+          );
+        }
+        if (t.action?.type === 'filtre') {
+          return (
+            <button
+              key={t.cle}
+              type="button"
+              className={classe}
+              aria-pressed={t.action.actif}
+              onClick={t.action.onClick}
+            >
+              {contenu}
+            </button>
           );
         }
         return (

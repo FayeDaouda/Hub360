@@ -903,7 +903,7 @@ a.admin-nav-item:hover {
 }
 
 .stat-card-delta--hausse {
-  color: #1a7f4b;
+  color: var(--sauge-fonce);
 }
 
 .stat-card--accent .stat-card-delta--hausse {
@@ -1538,6 +1538,10 @@ button:focus-visible .repli-icone {
   justify-content: center;
   padding: 4rem 1.25rem 2rem;
   background: rgba(20, 20, 18, 0.45);
+  /* Flou le contenu de la page derrière le voile — l'effet « verre » a sa
+     place ici (un scrim), pas sur les cartes/tuiles elles-mêmes. */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   overflow-y: auto;
 }
 
@@ -1548,6 +1552,27 @@ button:focus-visible .repli-icone {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   overflow: hidden;
+}
+
+@keyframes modal-depuis-bas {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .modal {
+    animation: modal-depuis-bas 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal {
+    animation: none;
+  }
 }
 
 .modal-header {
@@ -1721,6 +1746,94 @@ button:focus-visible .repli-icone {
   .admin-table td .pill {
     white-space: normal;
   }
+}
+
+/* Liste CRM condensée (mobile) : une ligne par dossier, tap -> détail en
+   modale. Coexiste avec le tableau desktop (.crm-liste-desktop) — CSS bascule
+   l'un ou l'autre, même principe que la bascule tableau -> cartes ci-dessus. */
+.crm-liste-mobile {
+  display: none;
+}
+@media (max-width: 720px) {
+  .crm-liste-desktop {
+    display: none;
+  }
+  .crm-liste-mobile {
+    display: block;
+    /* Bloc scrollable à hauteur limitée — pas la page entière qui défile. */
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+}
+.crm-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.crm-liste li + li {
+  border-top: 1px solid var(--border);
+}
+.crm-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.crm-ligne:hover,
+.crm-ligne:focus-visible {
+  background: var(--bg);
+}
+.crm-ligne-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.crm-ligne-code {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.crm-ligne-nom {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-ligne-statut {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* Détail du dossier (modale) : champs en grille 2 colonnes dès qu'il y a la
+   place, valeur + pastille alignées sur la même ligne. */
+.detail-dossier-grille {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+@media (min-width: 480px) {
+  .detail-dossier-grille {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.detail-dossier-valeur {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.92rem;
 }
 
 @media (max-width: 640px) {
@@ -2422,7 +2535,11 @@ button:focus-visible .repli-icone {
 @media (prefers-reduced-motion: reduce) {
   .dossier,
   .dossier-paper,
-  .projet-carte {
+  .projet-carte,
+  .kpi-tuile,
+  .kpi-tuile--clic,
+  .kpi-tuile-icone,
+  .kpi-tuile-valeur {
     transition: none;
   }
 }
@@ -4244,12 +4361,41 @@ textarea.field-input {
   font: inherit;
   color: inherit;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  /* Easing qui ralentit en fin de course plutôt qu'un ease linéaire — posé
+     seulement sur les tuiles réellement cliquables : le hover annonce une
+     vraie interaction, pas un décor sur une tuile statique. */
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.15s ease,
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .kpi-tuile--clic:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--argile);
-  box-shadow: 0 6px 16px rgba(30, 22, 18, 0.08);
+  box-shadow: var(--shadow-md);
+}
+.kpi-tuile--clic:hover .kpi-tuile-icone {
+  transform: scale(1.08) rotate(-4deg);
+}
+/* Tuile-filtre actuellement engagée — liseré permanent, pas juste au survol. */
+.kpi-tuile--actif {
+  outline: 2px solid var(--argile);
+  outline-offset: -1px;
+}
+
+/* Pastille de filtre actif, à côté de la recherche — mêmes codes que .chip,
+   en cliquable/fermable. */
+.chip--filtre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  color: var(--argile-fonce);
+  background: var(--argile-tint);
+  border-color: transparent;
+  font-weight: 600;
+}
+.chip--filtre:hover {
+  border-color: var(--argile);
 }
 .kpi-tuile--clic:focus-visible {
   outline: 2px solid var(--argile);
@@ -4852,6 +4998,8 @@ a.notif-item:hover {
    Bandeaux de KPI — CRM & Projets
    ========================================================================= */
 
+/* Bandeau KPI — panneau Encre distinct posé sur la page Sable (pas un thème
+   sombre général : juste ce composant, assumé comme un bloc à part). */
 .kpi-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -4860,15 +5008,58 @@ a.notif-item:hover {
 }
 
 .kpi-tuile {
+  position: relative;
+  /* Empêche tout élément interne (icône, anneau, pastille) de déborder sur
+     la tuile voisine si le contenu est plus large que prévu. */
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
+  border-left: 3px solid transparent;
   border-radius: var(--radius-lg);
-  padding: 0.9rem 1.1rem;
+  padding: 1.1rem 1.25rem;
   min-width: 0;
+  color: var(--text);
+  transition: box-shadow 0.3s ease;
 }
 .kpi-tuile--accent {
   background: var(--brand);
   border-color: var(--brand);
+  color: #fff;
+}
+/* Tuile volontairement en retrait (« Annulés ») : on ne met pas une mauvaise
+   nouvelle au même poids visuel qu'un succès. */
+.kpi-tuile--attenue {
+  opacity: 0.82;
+}
+
+.kpi-tuile-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.kpi-tuile-tete-droite {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+.kpi-tuile-icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  /* Pastille pleine (Encre) — un repère vivant, pas un carré grisâtre.
+     Les variantes --sens-* la recolorent ci-dessous. */
+  background: var(--encre);
+  color: #efe7d8;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kpi-tuile--accent .kpi-tuile-icone {
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 
@@ -4876,18 +5067,35 @@ a.notif-item:hover {
   margin: 0;
   font-size: 0.78rem;
   color: var(--text-muted);
+  /* Tronque plutôt que de pousser la pastille/l'anneau de droite hors de la
+     tuile — cause du chevauchement constaté sur mobile. */
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kpi-tuile--accent .kpi-tuile-label {
   color: rgba(255, 255, 255, 0.7);
 }
 .kpi-tuile-valeur {
-  margin: 0.35rem 0 0;
-  font-size: 1.5rem;
+  margin: 0.4rem 0 0;
+  font-size: 1.75rem;
   font-weight: 700;
+  color: var(--text);
   letter-spacing: -0.01em;
+  transition: letter-spacing 0.22s ease;
+}
+/* Resserrement à peine perceptible au survol — seulement sur les tuiles
+   cliquables, comme le reste des micro-réactions de hover. */
+.kpi-tuile--clic:hover .kpi-tuile-valeur {
+  letter-spacing: -0.02em;
 }
 .kpi-tuile--alerte .kpi-tuile-valeur {
   color: var(--argile);
+}
+.kpi-tuile--accent .kpi-tuile-valeur {
+  color: #fff;
 }
 .kpi-tuile-sous {
   margin: 0.3rem 0 0;
@@ -4896,6 +5104,84 @@ a.notif-item:hover {
 }
 .kpi-tuile--accent .kpi-tuile-sous {
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* Couleur de sens — filet gauche + pastille d'icône pleine + chiffre teinté.
+   cf. Direction visuelle §5 : Sauge = positif, Argile = appelle une action,
+   Ocre = à surveiller. Un accent, jamais un fond plein sur toute la tuile. */
+.kpi-tuile--sens-sauge {
+  border-left-color: var(--sauge);
+}
+.kpi-tuile--sens-sauge .kpi-tuile-valeur {
+  color: var(--sauge-fonce);
+}
+.kpi-tuile--sens-sauge .kpi-tuile-icone {
+  background: var(--sauge);
+  color: #fff;
+}
+.kpi-tuile--sens-argile {
+  border-left-color: var(--argile);
+}
+.kpi-tuile--sens-argile .kpi-tuile-valeur {
+  color: var(--argile-fonce);
+}
+.kpi-tuile--sens-argile .kpi-tuile-icone {
+  background: var(--argile);
+  color: #fff;
+}
+.kpi-tuile--sens-ocre {
+  border-left-color: var(--ocre);
+}
+.kpi-tuile--sens-ocre .kpi-tuile-valeur {
+  color: var(--ocre-fonce);
+}
+.kpi-tuile--sens-ocre .kpi-tuile-icone {
+  background: var(--ocre);
+  color: #fff;
+}
+
+/* Anneau miniature — un vrai pourcentage (ex. taux de conversion), pas un
+   graphique inventé. */
+.kpi-tuile-anneau-piste {
+  stroke: var(--border);
+  stroke-width: 3;
+}
+.kpi-tuile-anneau-trait {
+  stroke: var(--sauge);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Pastille de tendance — un vrai delta vs une vraie période antérieure. */
+.kpi-tuile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.kpi-tuile-badge--hausse {
+  background: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+.kpi-tuile-badge--baisse {
+  background: #f6e3e1;
+  color: var(--danger);
+}
+.kpi-tuile-badge--stable {
+  background: var(--admin-fond);
+  color: var(--text-muted);
+}
+
+/* Icône décorative pure (ex. pictogramme de tendance sur « Pipeline actif ») :
+   aucune donnée dessinée, assumée comme un repère graphique et rien de plus. */
+.kpi-tuile-decor {
+  display: inline-flex;
+  color: var(--border-hover);
 }
 
 /* Funnel CRM */
@@ -5015,14 +5301,76 @@ a.notif-item:hover {
   background: var(--brand);
 }
 
+/* Mobile : les 4 tuiles restent alignées en une seule rangée (pas d'empilement
+   2×2 ni 1 colonne) — elles rétrécissent plutôt que de changer de forme. */
 @media (max-width: 900px) {
   .kpi-strip {
-    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+  .kpi-tuile {
+    padding: 0.7rem 0.65rem;
+  }
+  .kpi-tuile-valeur {
+    margin-top: 0.3rem;
+    font-size: 1.3rem;
   }
 }
-@media (max-width: 520px) {
+@media (max-width: 560px) {
   .kpi-strip {
-    grid-template-columns: 1fr;
+    /* Espacé plutôt que collé — la largeur en moins vient des tuiles,
+       pas d'un rapprochement entre elles. */
+    gap: 0.5rem;
+  }
+  .kpi-tuile {
+    padding: 0.55rem 0.4rem;
+    border-radius: 12px;
+    border-left-width: 2px;
+  }
+  .kpi-tuile-tete {
+    gap: 0.25rem;
+  }
+  .kpi-tuile-icone {
+    width: 18px;
+    height: 18px;
+  }
+  .kpi-tuile-icone svg {
+    width: 10px;
+    height: 10px;
+  }
+  .kpi-tuile-label {
+    font-size: 0.6rem;
+  }
+  .kpi-tuile-valeur {
+    margin-top: 0.25rem;
+    font-size: 1rem;
+  }
+  .kpi-tuile-sous {
+    margin-top: 0.15rem;
+    font-size: 0.6rem;
+  }
+  /* Le pictogramme décoratif (aucune donnée) cède la place en premier ; le
+     vrai delta (badge) et l'anneau (vrai %) restent tant qu'il y a la place. */
+  .kpi-tuile-decor {
+    display: none;
+  }
+  .kpi-tuile-tete-droite {
+    gap: 0.25rem;
+  }
+  .kpi-tuile-badge {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.58rem;
+    gap: 0.12rem;
+  }
+  .kpi-tuile-anneau {
+    width: 16px;
+    height: 16px;
+  }
+}
+/* En-dessous, même l'anneau cède la place au chiffre + au filet de couleur :
+   il n'y a plus la largeur pour un 5ᵉ élément dans l'en-tête. */
+@media (max-width: 380px) {
+  .kpi-tuile-anneau {
+    display: none;
   }
 }
 
@@ -5655,4 +6003,24 @@ a.notif-item:hover {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 3px;
+}
+
+/* Modale « feuille » (bottom sheet) — mobile uniquement, pour un contenu
+   court (détail de dossier) qui n'a pas besoin d'une prise en main plein
+   écran. Sans ce modificateur, .modal garde le comportement plein écran
+   générique (formulaires longs type Nouveau projet). En fin de fichier pour
+   gagner la cascade sur les règles génériques ≤640px déclarées plus haut. */
+@media (max-width: 640px) {
+  .modal-backdrop--feuille {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal--feuille {
+    min-height: 0;
+    max-height: 85vh;
+    border-radius: 16px 16px 0 0;
+  }
+  .modal--feuille .modal-body {
+    overflow-y: auto;
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { BarChart3, CheckCircle2, Plus, Sparkles, Workflow, X, XCircle } from 'lucide-react';
 import { getSociete } from '@/lib/api';
 import { changerStatut, getClients, getProjets } from '@/lib/crm';
 import { getSession } from '@/lib/auth';
@@ -25,6 +25,7 @@ import {
 import { formatPourcent, formatSurface } from '@/lib/format';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
+import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiFunnel, KpiStrip } from '@/components/admin/kpi-strip';
 
 type Props = {
@@ -38,6 +39,18 @@ const STATUT_MODIF: Record<StatutCrm, string> = {
   annule: 'annule',
 };
 
+// Filtre posé en cliquant une tuile KPI — bascule (reclic = on l'enlève),
+// combiné à la recherche texte. 'actif' = pipeline (nouveau + devis_contrat),
+// comme la valeur affichée sur la tuile « Pipeline actif ».
+type FiltreTuile = 'actif' | 'valide' | 'neufs' | 'annule';
+
+const LABEL_FILTRE_TUILE: Record<FiltreTuile, string> = {
+  actif: 'Pipeline actif',
+  valide: 'Validés',
+  neufs: 'Nouveaux (30 j)',
+  annule: 'Annulés',
+};
+
 export default function CrmPage({ params }: Props) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
@@ -45,9 +58,13 @@ export default function CrmPage({ params }: Props) {
   const [projets, setProjets] = useState<Projet[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [recherche, setRecherche] = useState('');
+  const [filtreTuile, setFiltreTuile] = useState<FiltreTuile | null>(null);
   const [modalOuvert, setModalOuvert] = useState(false);
   const [nouveauId, setNouveauId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Détail ouvert depuis la liste condensée mobile — id plutôt qu'une copie
+  // du projet, pour rester à jour après un changement de statut optimiste.
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   useEffect(() => {
     const current = getSession();
@@ -69,15 +86,32 @@ export default function CrmPage({ params }: Props) {
 
   const filtres = useMemo(() => {
     if (!projets) return [];
+    let liste = projets;
+    if (filtreTuile === 'actif') {
+      liste = liste.filter((p) => p.statut === 'nouveau' || p.statut === 'devis_contrat');
+    } else if (filtreTuile === 'valide' || filtreTuile === 'annule') {
+      liste = liste.filter((p) => p.statut === filtreTuile);
+    } else if (filtreTuile === 'neufs') {
+      const il30j = Date.now() - 30 * 86_400_000;
+      liste = liste.filter((p) => +new Date(p.creeLe) >= il30j);
+    }
     const q = recherche.trim().toLowerCase();
-    if (!q) return projets;
-    return projets.filter((p) =>
+    if (!q) return liste;
+    return liste.filter((p) =>
       [p.code, p.localisation, p.programme, p.client.nom, TYPES_BIEN[p.type]]
         .join(' ')
         .toLowerCase()
         .includes(q),
     );
-  }, [projets, recherche]);
+  }, [projets, recherche, filtreTuile]);
+
+  function basculerFiltre(cle: FiltreTuile) {
+    setFiltreTuile((actuel) => (actuel === cle ? null : cle));
+  }
+
+  // Dérivé de `projets` (pas une copie figée) : reflète tout de suite un
+  // changement de statut fait depuis la modale, sans avoir à la resynchroniser.
+  const detailProjet = detailId ? (projets ?? []).find((p) => p.id === detailId) ?? null : null;
 
   // KPI — sur la liste complète (snapshot global), indépendant de la recherche.
   const kpi = useMemo(() => {
@@ -89,13 +123,21 @@ export default function CrmPage({ params }: Props) {
     const annule = par('annule');
     const clos = valide + annule;
     const il30j = Date.now() - 30 * 86_400_000;
+    const il60j = Date.now() - 60 * 86_400_000;
     const nouveaux30j = liste.filter((p) => +new Date(p.creeLe) >= il30j).length;
+    // Vraie période de comparaison (30-60 j) — pour la flèche de tendance de
+    // la tuile. Pas de flèche sinon : on ne met jamais une valeur inventée.
+    const nouveauxPrecedents30j = liste.filter((p) => {
+      const t = +new Date(p.creeLe);
+      return t >= il60j && t < il30j;
+    }).length;
     return {
       pipelineActif: nouveau + devis,
       valide,
       annule,
       tauxConversion: clos > 0 ? Math.round((valide / clos) * 100) : null,
       nouveaux30j,
+      nouveauxPrecedents30j,
       funnel: [
         { cle: 'nouveau', label: 'Nouveau', valeur: nouveau },
         { cle: 'devis_contrat', label: 'Devis / contrat', valeur: devis },
@@ -148,8 +190,18 @@ export default function CrmPage({ params }: Props) {
           {projets && (
             <span className="projets-compte">
               {filtres.length} projet{filtres.length > 1 ? 's' : ''}
-              {recherche && ` sur ${projets.length}`}
+              {(recherche || filtreTuile) && ` sur ${projets.length}`}
             </span>
+          )}
+          {filtreTuile && (
+            <button
+              type="button"
+              className="chip chip--filtre"
+              onClick={() => setFiltreTuile(null)}
+            >
+              {LABEL_FILTRE_TUILE[filtreTuile]}
+              <X size={12} strokeWidth={2.5} aria-hidden />
+            </button>
           )}
         </div>
         <button type="button" className="btn-primary" onClick={() => setModalOuvert(true)}>
@@ -171,18 +223,78 @@ export default function CrmPage({ params }: Props) {
         <>
           <KpiStrip
             tuiles={[
-              { cle: 'actif', label: 'Pipeline actif', valeur: kpi.pipelineActif },
+              {
+                cle: 'actif',
+                label: 'Pipeline actif',
+                valeur: kpi.pipelineActif,
+                icone: Workflow,
+                // Icône purement décorative (aucune série réelle derrière) —
+                // pas un graphique, un repère visuel assumé comme tel.
+                decorIcone: BarChart3,
+                action: {
+                  type: 'filtre',
+                  actif: filtreTuile === 'actif',
+                  onClick: () => basculerFiltre('actif'),
+                },
+              },
               {
                 cle: 'valide',
                 label: 'Validés',
                 valeur: kpi.valide,
+                icone: CheckCircle2,
+                accentSens: 'sauge',
+                // Anneau réel : même valeur que le sous-texte, juste visualisée.
+                ringPourcentage: kpi.tauxConversion ?? undefined,
                 sousTexte:
                   kpi.tauxConversion === null
                     ? undefined
                     : `Taux de conversion ${formatPourcent(kpi.tauxConversion)}`,
+                action: {
+                  type: 'filtre',
+                  actif: filtreTuile === 'valide',
+                  onClick: () => basculerFiltre('valide'),
+                },
               },
-              { cle: 'neufs', label: 'Nouveaux (30 j)', valeur: kpi.nouveaux30j },
-              { cle: 'annule', label: 'Annulés', valeur: kpi.annule },
+              {
+                cle: 'neufs',
+                label: 'Nouveaux (30 j)',
+                valeur: kpi.nouveaux30j,
+                icone: Sparkles,
+                accentSens: 'argile',
+                tendance: {
+                  sens:
+                    kpi.nouveaux30j > kpi.nouveauxPrecedents30j
+                      ? 'hausse'
+                      : kpi.nouveaux30j < kpi.nouveauxPrecedents30j
+                        ? 'baisse'
+                        : 'stable',
+                  // Delta réel (30j vs 30j précédents) — jamais une valeur inventée.
+                  court: `${kpi.nouveaux30j - kpi.nouveauxPrecedents30j >= 0 ? '+' : '−'}${Math.abs(
+                    kpi.nouveaux30j - kpi.nouveauxPrecedents30j,
+                  )}`,
+                  texte: `${kpi.nouveauxPrecedents30j} sur les 30 j précédents`,
+                },
+                action: {
+                  type: 'filtre',
+                  actif: filtreTuile === 'neufs',
+                  onClick: () => basculerFiltre('neufs'),
+                },
+              },
+              {
+                // Métrique volontairement sobre : pas d'accentSens, pas de
+                // tendance, tuile atténuée — on ne « célèbre » pas les
+                // annulations. Reste filtrable comme les autres.
+                cle: 'annule',
+                label: 'Annulés',
+                valeur: kpi.annule,
+                icone: XCircle,
+                attenue: true,
+                action: {
+                  type: 'filtre',
+                  actif: filtreTuile === 'annule',
+                  onClick: () => basculerFiltre('annule'),
+                },
+              },
             ]}
           />
           <KpiFunnel segments={kpi.funnel} natureSplit={kpi.nature} />
@@ -196,13 +308,42 @@ export default function CrmPage({ params }: Props) {
           </div>
         ) : filtres.length === 0 ? (
           <p className="empty-state">
-            {recherche
-              ? 'Aucun projet ne correspond à cette recherche.'
+            {recherche || filtreTuile
+              ? 'Aucun projet ne correspond à ce filtre.'
               : 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'}
           </p>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+          <>
+            {/* Mobile : liste condensée à une ligne (tap -> détail en modale),
+                dans un bloc à hauteur limitée plutôt que toute la page qui
+                scrolle. Le tableau desktop ci-dessous reste inchangé. */}
+            <div className="crm-liste-mobile">
+              <ul className="crm-liste">
+                {filtres.map((projet) => (
+                  <li key={projet.id}>
+                    <button
+                      type="button"
+                      className="crm-ligne"
+                      aria-haspopup="dialog"
+                      onClick={() => setDetailId(projet.id)}
+                    >
+                      <span className="crm-ligne-txt">
+                        <span className="crm-ligne-code">{projet.code}</span>
+                        <span className="crm-ligne-nom">{projet.programme}</span>
+                      </span>
+                      <span
+                        className={`pill crm-ligne-statut statut-select--${STATUT_MODIF[projet.statut]}`}
+                      >
+                        {STATUTS_CRM[projet.nature][projet.statut]}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="admin-table-wrap crm-liste-desktop">
+              <table className="admin-table">
               <thead>
                 <tr>
                   <th>Code</th>
@@ -271,6 +412,7 @@ export default function CrmPage({ params }: Props) {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
 
@@ -280,6 +422,14 @@ export default function CrmPage({ params }: Props) {
           clients={clients}
           onClose={() => setModalOuvert(false)}
           onCree={onCree}
+        />
+      )}
+
+      {detailProjet && (
+        <DetailDossierModal
+          projet={detailProjet}
+          onClose={() => setDetailId(null)}
+          onChangerStatut={(statut) => onChangerStatut(detailProjet, statut)}
         />
       )}
     </AdminShell>
