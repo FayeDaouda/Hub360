@@ -969,7 +969,7 @@ a.admin-nav-item:hover {
   margin: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.6rem;
   background: none;
   border: none;
   padding: 0;
@@ -978,12 +978,41 @@ a.admin-nav-item:hover {
   font: inherit;
 }
 
-.panel-repli-icone {
+/* Badge rond autour du chevron replier/déplier — repris partout où une
+   section est rétractable (panneau Programme, groupes du Suivi
+   opérationnel) pour que le contrôle se voie et s'attrape facilement,
+   pas juste une flèche nue à côté d'un titre. */
+.repli-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
-  transition: transform 0.15s ease;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border-hover);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.panel-repli-icone.est-replie {
+button:hover .repli-badge,
+button:focus-visible .repli-badge {
+  background: var(--argile-tint);
+  border-color: var(--argile);
+}
+
+.repli-icone {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.18s ease, color 0.15s ease;
+}
+
+button:hover .repli-icone,
+button:focus-visible .repli-icone {
+  color: var(--argile);
+}
+
+.repli-icone.est-replie {
   transform: rotate(-90deg);
 }
 
@@ -2559,10 +2588,26 @@ textarea.field-input {
 
 .ap-souscheck-tete {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.7rem;
+}
+
+.ap-souscheck-tete--repliable {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ap-souscheck-tete-txt {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .ap-souscheck-tete h4 {

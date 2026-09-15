@@ -65,6 +65,18 @@ export default function AvantProjetPage({ params }: Props) {
   const [programmeOuvert, setProgrammeOuvert] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [groupeAjout, setGroupeAjout] = useState<GroupeChecklistAvp | null>(null);
+  // Groupes du Suivi opérationnel repliés — ouverts par défaut (Set plutôt
+  // qu'un booléen par groupe : la liste des groupes vient de l'API).
+  const [groupesFermes, setGroupesFermes] = useState<Set<GroupeChecklistAvp>>(new Set());
+
+  function toggleGroupe(groupe: GroupeChecklistAvp) {
+    setGroupesFermes((s) => {
+      const suivant = new Set(s);
+      if (suivant.has(groupe)) suivant.delete(groupe);
+      else suivant.add(groupe);
+      return suivant;
+    });
+  }
 
   useEffect(() => {
     const current = getSession();
@@ -286,12 +298,14 @@ export default function AvantProjetPage({ params }: Props) {
                 aria-expanded={programmeOuvert}
                 onClick={() => setProgrammeOuvert((o) => !o)}
               >
-                <ChevronDown
-                  size={16}
-                  strokeWidth={2}
-                  aria-hidden
-                  className={`panel-repli-icone${programmeOuvert ? '' : ' est-replie'}`}
-                />
+                <span className="repli-badge">
+                  <ChevronDown
+                    size={17}
+                    strokeWidth={2.25}
+                    aria-hidden
+                    className={`repli-icone${programmeOuvert ? '' : ' est-replie'}`}
+                  />
+                </span>
                 <span>Programme</span>
               </button>
             </div>
@@ -480,13 +494,27 @@ export default function AvantProjetPage({ params }: Props) {
             <div className="ap-souscheck">
               {ap.checklists.map((groupe) => {
                 const av = avancementChecklistAvp(groupe.items);
+                const fermee = groupesFermes.has(groupe.groupe);
                 return (
                   <div className="ap-souscheck-groupe" key={groupe.groupe}>
-                    <div className="ap-souscheck-tete">
-                      <div>
+                    <button
+                      type="button"
+                      className="ap-souscheck-tete ap-souscheck-tete--repliable"
+                      aria-expanded={!fermee}
+                      onClick={() => toggleGroupe(groupe.groupe)}
+                    >
+                      <span className="repli-badge">
+                        <ChevronDown
+                          size={17}
+                          strokeWidth={2.25}
+                          aria-hidden
+                          className={`repli-icone${fermee ? ' est-replie' : ''}`}
+                        />
+                      </span>
+                      <span className="ap-souscheck-tete-txt">
                         <h4>{groupe.libelle}</h4>
                         <p className="ap-souscheck-groupe-desc">{groupe.description}</p>
-                      </div>
+                      </span>
                       <span
                         className={`ap-souscheck-compteur${
                           av.complete ? ' is-complet' : ''
@@ -494,7 +522,8 @@ export default function AvantProjetPage({ params }: Props) {
                       >
                         {av.faits}/{av.total}
                       </span>
-                    </div>
+                    </button>
+                    {!fermee && (
                     <ul>
                       {groupe.items.map((it) => (
                         <li key={it.id} className="ap-souscheck-item">
@@ -532,6 +561,8 @@ export default function AvantProjetPage({ params }: Props) {
                         </li>
                       ))}
                     </ul>
+                    )}
+                    {!fermee && (
                     <button
                       type="button"
                       className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
@@ -541,6 +572,7 @@ export default function AvantProjetPage({ params }: Props) {
                       <Plus size={14} strokeWidth={2} aria-hidden />
                       <span>Ajouter un item</span>
                     </button>
+                    )}
                   </div>
                 );
               })}
