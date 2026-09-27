@@ -261,6 +261,13 @@ export function LignesDevisEditeur({
   );
 
   const autres = catalogue.filter((p) => !FAMILLES.some((f) => f.code === p.famille));
+  // Lignes renseignées mais sans prix (forfait « à fixer » laissé vide…) —
+  // rappel, l'enregistrement reste libre.
+  const aZero = lignes.filter(
+    (l) =>
+      (l.produitServiceId || (l.horsCatalogue && l.designation.trim())) &&
+      !(Number(l.prixUnitaire) > 0),
+  ).length;
 
   return (
     <>
@@ -268,11 +275,11 @@ export function LignesDevisEditeur({
         <table className="admin-table">
           <thead>
             <tr>
-              <th style={{ width: '22%' }}>Prestation</th>
+              <th style={{ width: '20%' }}>Prestation</th>
               <th>Désignation</th>
               <th style={{ width: '16%' }}>Qté</th>
               <th style={{ width: '14%' }}>P.U. HT (FCFA)</th>
-              <th style={{ width: '8%' }}>TVA %</th>
+              <th style={{ width: '10%' }}>TVA %</th>
               <th style={{ width: '13%' }}>Total TTC</th>
               <th aria-label="Retirer" />
             </tr>
@@ -406,6 +413,7 @@ export function LignesDevisEditeur({
                       className="field-input"
                       value={l.prixUnitaire}
                       disabled={figee}
+                      placeholder={p && p.prixUnitaire == null ? 'À fixer' : undefined}
                       title={figee ? 'Tarif du catalogue — non modifiable' : undefined}
                       onChange={(e) => majLigne(i, { prixUnitaire: e.target.value })}
                     />
@@ -454,6 +462,14 @@ export function LignesDevisEditeur({
         </button>
       </div>
 
+      {aZero > 0 && (
+        <p className="field-aide" style={{ textAlign: 'right' }} role="note">
+          <span className="pill pill--attention">
+            {aZero} ligne{aZero > 1 ? 's' : ''} à 0 FCFA
+          </span>{' '}
+          vérifie {aZero > 1 ? 'leur' : 'son'} prix.
+        </p>
+      )}
       <p className="field-aide" style={{ textAlign: 'right' }}>
         HT {formatMontantCompact(totaux.ht)} · TVA {formatMontantCompact(totaux.tva)} ·{' '}
         <strong>TTC {formatMontantCompact(totaux.ttc)}</strong>

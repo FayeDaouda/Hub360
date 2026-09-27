@@ -95,7 +95,7 @@ export function raisonBlocage(action: ActionCrm, projet: Projet): string | null 
     return `L’offre attend encore la réponse du client (valable jusqu’au ${offre?.dateValidite}).`;
   }
   if (action === 'refaire' && statut === 'accepte') {
-    return 'L’offre a été acceptée : passe plutôt le dossier en Onboard.';
+    return 'L’offre a été acceptée : prépare le contrat — sa signature fera passer le dossier en Onboard.';
   }
   return null;
 }

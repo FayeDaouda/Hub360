@@ -457,7 +457,9 @@ export class CrmService {
         return acceptee.id;
       }
       if (acceptee) {
-        throw new ConflictException('L’offre a été acceptée : passe plutôt le dossier en Onboard.');
+        throw new ConflictException(
+          'L’offre a été acceptée : prépare le contrat — sa signature fera passer le dossier en Onboard.',
+        );
       }
       if (enAttente) {
         throw new ConflictException(

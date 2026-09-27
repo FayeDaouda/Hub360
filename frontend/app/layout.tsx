@@ -34,7 +34,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${display.variable}`}>
+    // suppressHydrationWarning : data-theme est posé par le script ci-dessous
+    // avant l'hydratation, donc absent du HTML serveur — écart voulu (un seul
+    // niveau : n'étouffe rien chez les enfants).
+    <html lang="fr" className={`${inter.variable} ${display.variable}`} suppressHydrationWarning>
       <head>
         {/* Pose data-theme avant l'hydratation — évite un flash clair→sombre
             au chargement (cf. lib/theme.ts). */}

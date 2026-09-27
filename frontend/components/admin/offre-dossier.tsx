@@ -88,6 +88,11 @@ export function OffreDossier({
           </span>
         )}
         {offre?.relanceAFaire && <span className="pill pill--attention">Relance à faire</span>}
+        {!!offre?.lignesAZero && (
+          <span className="pill pill--attention" title="Un forfait « prix à fixer » laissé vide ?">
+            {offre.lignesAZero} ligne{offre.lignesAZero > 1 ? 's' : ''} à 0 FCFA
+          </span>
+        )}
       </div>
 
       {!offre ? (

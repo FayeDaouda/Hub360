@@ -382,12 +382,14 @@ export default function FacturationPage({ params }: Props) {
                             {f.reference ?? <span className="cell-sub">brouillon</span>}
                           </td>
                           <td data-label="Objet">
-                            {f.libelle || <span className="cell-sub">—</span>}
-                            {f.jalon && (
-                              <span className="chip factu-chip">
-                                {JALONS_FACTURE.find((j) => j.cle === f.jalon)?.libelle}
-                              </span>
-                            )}
+                            <span className="cell-stack">
+                              <span>{f.libelle || <span className="cell-sub">—</span>}</span>
+                              {f.jalon && (
+                                <span className="chip factu-chip">
+                                  {JALONS_FACTURE.find((j) => j.cle === f.jalon)?.libelle}
+                                </span>
+                              )}
+                            </span>
                           </td>
                           <td data-label="Statut">
                             {f.estAvoir ? (

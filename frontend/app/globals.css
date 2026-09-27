@@ -2601,6 +2601,7 @@ button:focus-visible .repli-icone {
 
 .modal-actions {
   display: flex;
+  flex-wrap: wrap; /* 3 boutons sur mobile : on passe à la ligne, jamais tronqués */
   justify-content: flex-end;
   gap: 0.6rem;
   margin-top: 0.4rem;
@@ -2610,6 +2611,13 @@ button:focus-visible .repli-icone {
    pas en scroll horizontal sur mobile. Chaque ligne devient une carte, le
    libellé de colonne (data-label) sert d'étiquette. */
 @media (max-width: 720px) {
+  /* Cartes empilées : plus de défilement horizontal, donc plus d'ombres de
+     défilement — leur fond opaque (--surface) dessinait deux bandes sombres
+     sur les bords de chaque carte posée sur le verre. */
+  .admin-table-wrap {
+    background: none;
+  }
+
   .admin-table thead {
     display: none;
   }
@@ -2789,6 +2797,13 @@ button:focus-visible .repli-icone {
 
   .modal-body {
     overflow-y: auto;
+  }
+
+  /* Conteneur à overflow → seul enfant « rétrécissable » du corps (flex) :
+     il absorbait toute la hauteur manquante et devenait un second scroll
+     imbriqué (lignes de l'offre coupées). C'est le corps qui défile. */
+  .modal-body > .admin-table-wrap {
+    flex-shrink: 0;
   }
 
   .field-row {
@@ -3299,6 +3314,12 @@ button:focus-visible .repli-icone {
 
 .lien-retour:hover svg {
   transform: translateX(-3px);
+}
+
+/* Sombre : --mod-solide-fonce (texte pensé pour un fond tinté CLAIR) sur le
+   fond sombre du lien était quasi illisible — on éclaircit avec --text. */
+:root[data-theme='dark'] .lien-retour {
+  color: color-mix(in oklch, var(--mod-solide, var(--iris)) 45%, var(--text) 55%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7792,9 +7813,12 @@ a.notif-item:hover {
   margin-bottom: 1.1rem;
 }
 
-/* Chip de jalon dans la colonne « Objet » du tableau */
+/* Chip de jalon sous le libellé, colonne « Objet » : à côté, libellé long +
+   chip (nowrap) élargissaient le tableau au-delà de 1440px et rognaient les
+   actions. */
 .factu-chip {
-  margin-left: 0.5rem;
+  align-self: flex-start;
+  margin-top: 0.3rem;
 }
 
 /* Bouton « Catalogue » + « Nouveau devis » dans l'entête de la page centrale */
@@ -8734,6 +8758,10 @@ a.notif-item:hover {
   .devis-public-doc {
     border-radius: 0;
     min-height: 100dvh;
+  }
+  /* Hors du document plein écran : sans ceci, boutons collés aux bords. */
+  .devis-public-page-actions {
+    padding: 0 1rem 1.5rem;
   }
   .devis-public-banniere,
   .devis-public-corps {

@@ -291,6 +291,7 @@ export type OffreDossier = {
   statutEffectif: StatutDevisEffectif;
   objet: string;
   nbLignes: number;
+  lignesAZero: number; // lignes à 0 FCFA — rappel affiché, jamais bloquant
   montantTtc: number;
   dateEnvoi: string | null;
   dateValidite: string | null; // AAAA-MM-JJ — envoi + 7 jours

@@ -152,7 +152,10 @@ export default function ContratPublicPage({ params }: Props) {
                 <input
                   className="field-input"
                   value={nom}
-                  onChange={(e) => setNom(e.target.value)}
+                  onChange={(e) => {
+                    setNom(e.target.value);
+                    setErreur(null);
+                  }}
                   maxLength={120}
                   autoComplete="name"
                 />
@@ -175,9 +178,23 @@ export default function ContratPublicPage({ params }: Props) {
                   Signer à la main
                 </button>
               </div>
-              {mode === 'trace' && <SignaturePad onChange={setTrace} />}
+              {mode === 'trace' && (
+                <SignaturePad
+                  onChange={(t) => {
+                    setTrace(t);
+                    setErreur(null);
+                  }}
+                />
+              )}
               <label className="contrat-public-accord">
-                <input type="checkbox" checked={lu} onChange={(e) => setLu(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={lu}
+                  onChange={(e) => {
+                    setLu(e.target.checked);
+                    setErreur(null);
+                  }}
+                />
                 <span>J’ai lu le contrat et ses annexes, et je les accepte.</span>
               </label>
               {erreur && <p className="field-erreur">{erreur}</p>}
