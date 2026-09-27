@@ -1355,7 +1355,9 @@ button {
   pointer-events: none;
 }
 
-.auth-carte--squelette {
+/* Spécificité renforcée : doit battre la règle d'animation d'entrée de
+   .auth-carte déclarée plus bas (le vrai formulaire, lui, s'anime). */
+.auth-carte.auth-carte--squelette {
   animation: none;
 }
 .auth-squelette {
