@@ -6694,6 +6694,22 @@ textarea.field-input {
   z-index: 40;
   overflow: hidden;
 }
+/* Mobile : la cloche n'est pas au bord droit de l'écran — ancré sur elle, le
+   menu (100vw − 2rem) débordait à gauche, hors écran. On l'ancre sur la barre
+   du haut (admin ET collab), pleine largeur, juste en dessous. */
+@media (max-width: 720px) {
+  .admin-topbar {
+    position: relative;
+  }
+  .notif {
+    position: static;
+  }
+  .notif-menu {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+}
 .notif-menu-tete {
   display: flex;
   align-items: center;
