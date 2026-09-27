@@ -1,12 +1,19 @@
 import { Suspense } from 'react';
+import { AuthShell } from '@/components/auth/auth-shell';
 import { DefinirMotDePasse } from '@/components/definir-mot-de-passe';
 
 export default function ActiverPage() {
   return (
-    <main className="auth-page">
-      <Suspense fallback={<div className="auth-card"><h1>Chargement…</h1></div>}>
+    <AuthShell>
+      <Suspense
+        fallback={
+          <section className="auth-carte" aria-busy="true">
+            <h1 className="auth-carte-titre">Chargement…</h1>
+          </section>
+        }
+      >
         <DefinirMotDePasse mode="activation" />
       </Suspense>
-    </main>
+    </AuthShell>
   );
 }

@@ -1,27 +1,41 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getSociete } from '@/lib/api';
-import { SocieteAvatar } from '@/components/societe-avatar';
 import { LoginForm } from './login-form';
 
 type Props = {
   params: { slug: string };
 };
 
+// getSociete est appelé ici ET dans la page : Next mémoïse le fetch sur la
+// requête, un seul appel réseau.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const societe = await getSociete(params.slug);
+  return { title: societe ? `Connexion · ${societe.nom} — hub360°` : 'Connexion — hub360°' };
+}
+
 export default async function LoginPage({ params }: Props) {
   const societe = await getSociete(params.slug);
   if (!societe) notFound();
 
+  // Le cadre AuthShell est posé par layout.tsx.
   return (
-    <main className="auth-page">
-      <div className="auth-card">
-        <SocieteAvatar societe={societe} size="lg" theme="glass" />
-        <h1>{societe.nom}</h1>
-        <p className="auth-subtitle">Connecte-toi pour accéder à ton espace</p>
-        <LoginForm societeSlug={societe.slug} />
-        <a href="/" className="auth-back">
-          ← Retour au portail
+    <section className="auth-carte" aria-labelledby="connexion-titre">
+      <header className="auth-carte-entete">
+        <h1 id="connexion-titre" className="auth-carte-titre">
+          Connexion
+        </h1>
+        <p className="auth-carte-sous-titre">
+          Accédez à votre espace <strong>{societe.nom}</strong>
+        </p>
+      </header>
+      <LoginForm societeSlug={societe.slug} />
+      <p className="auth-carte-pied">
+        Pas la bonne société&nbsp;?{' '}
+        <a href="/" className="auth-lien">
+          Changer de société
         </a>
-      </div>
-    </main>
+      </p>
+    </section>
   );
 }

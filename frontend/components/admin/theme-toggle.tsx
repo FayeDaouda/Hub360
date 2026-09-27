@@ -2,23 +2,34 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { definirThemePrefere, themePrefere, type Theme } from '@/lib/theme';
+import { usePreferenceTheme, type PreferenceTheme } from '@/lib/theme';
+import { OPTIONS_THEME } from '@/components/selecteur-theme';
+
+const ETAT: Record<PreferenceTheme, { titre: string; description: string }> = {
+  dark: {
+    titre: 'Mode sombre activé',
+    description: 'Une expérience plus reposante pour vos yeux.',
+  },
+  light: {
+    titre: 'Mode clair activé',
+    description: 'Fond clair et lumineux, même signature verre dépoli.',
+  },
+  system: {
+    titre: 'Mode système activé',
+    description: 'Suit automatiquement le réglage clair/sombre de votre appareil.',
+  },
+};
 
 // Bascule clair/sombre du topbar admin — refonte dark/light, sept. 2026
 // (maquette de référence, « Mode d'affichage » en popover plutôt qu'un
-// simple switch inline — retour boss). Défaut serveur 'dark' (cf.
-// THEME_PAR_DEFAUT dans lib/theme.ts) puis synchronisé sur la vraie
-// préférence après montage — même motif SSR-safe que le son de notification.
+// simple switch inline — retour boss). État lu dans le magasin partagé de
+// lib/theme.ts (défaut serveur 'dark', vraie préférence après hydratation).
 // Structure du popover (ouverture/fermeture, clic dehors, Échap) calquée sur
 // ClocheNotifications — un seul point de vérité pour ce pattern dans la topbar.
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>('dark');
+  const { preference, theme, choisir } = usePreferenceTheme();
   const [ouvert, setOuvert] = useState(false);
   const boiteRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setTheme(themePrefere());
-  }, []);
 
   useEffect(() => {
     if (!ouvert) return;
@@ -37,11 +48,6 @@ export function ThemeToggle() {
       window.removeEventListener('keydown', onKey);
     };
   }, [ouvert]);
-
-  function choisir(suivant: Theme) {
-    setTheme(suivant);
-    definirThemePrefere(suivant);
-  }
 
   const sombre = theme === 'dark';
 
@@ -63,31 +69,23 @@ export function ThemeToggle() {
         <div className="theme-menu" role="menu">
           <p className="theme-menu-titre">Mode d’affichage</p>
           <div className="theme-menu-segmente" role="radiogroup" aria-label="Mode d’affichage">
-            <button
-              type="button"
-              className={`theme-menu-option${!sombre ? ' est-actif' : ''}`}
-              role="radio"
-              aria-checked={!sombre}
-              onClick={() => choisir('light')}
-            >
-              <Sun size={17} strokeWidth={2} aria-hidden />
-            </button>
-            <button
-              type="button"
-              className={`theme-menu-option${sombre ? ' est-actif' : ''}`}
-              role="radio"
-              aria-checked={sombre}
-              onClick={() => choisir('dark')}
-            >
-              <Moon size={17} strokeWidth={2} aria-hidden />
-            </button>
+            {OPTIONS_THEME.map(({ valeur, libelle, Icone }) => (
+              <button
+                key={valeur}
+                type="button"
+                className={`theme-menu-option${preference === valeur ? ' est-actif' : ''}`}
+                role="radio"
+                aria-checked={preference === valeur}
+                aria-label={libelle}
+                title={libelle}
+                onClick={() => choisir(valeur)}
+              >
+                <Icone size={17} strokeWidth={2} aria-hidden />
+              </button>
+            ))}
           </div>
-          <p className="theme-menu-etat">{sombre ? 'Mode sombre activé' : 'Mode clair activé'}</p>
-          <p className="theme-menu-desc">
-            {sombre
-              ? 'Une expérience plus reposante pour vos yeux.'
-              : 'Fond clair et lumineux, même signature verre dépoli.'}
-          </p>
+          <p className="theme-menu-etat">{ETAT[preference].titre}</p>
+          <p className="theme-menu-desc">{ETAT[preference].description}</p>
         </div>
       )}
     </div>

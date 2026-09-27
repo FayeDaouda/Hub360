@@ -17,18 +17,42 @@ export async function getSociete(slug: string): Promise<Societe | null> {
   return res.json();
 }
 
+// Motif d'échec distinct par cause réelle : avant, tout échec s'affichait
+// « identifiants incorrects » — y compris le blocage anti-bruteforce du
+// backend (429, 5 essais/min) ou un serveur injoignable, ce qui poussait à
+// retaper un mot de passe pourtant juste. Les 401 restent volontairement
+// indistincts (anti-énumération, cf. AuthService.login).
+export type MotifEchecConnexion = 'identifiants' | 'trop_de_tentatives' | 'reseau' | 'serveur';
+
+export class EchecConnexion extends Error {
+  readonly motif: MotifEchecConnexion;
+
+  constructor(motif: MotifEchecConnexion) {
+    super(`Échec de connexion (${motif})`);
+    this.name = 'EchecConnexion';
+    this.motif = motif;
+  }
+}
+
 export async function login(
   email: string,
   motDePasse: string,
   societeSlug: string,
 ): Promise<Session> {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, motDePasse, societeSlug }),
-  });
-  if (!res.ok) throw new Error('Identifiants invalides');
-  return res.json();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, motDePasse, societeSlug }),
+    });
+  } catch {
+    throw new EchecConnexion('reseau');
+  }
+  if (res.ok) return res.json();
+  if (res.status === 429) throw new EchecConnexion('trop_de_tentatives');
+  if (res.status >= 500) throw new EchecConnexion('serveur');
+  throw new EchecConnexion('identifiants');
 }
 
 // -- Comptes : activation, reset, mot de passe oublié (routes /auth/*) --------

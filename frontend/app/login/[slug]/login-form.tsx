@@ -2,9 +2,20 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { login } from '@/lib/api';
+import { ArrowRight, CircleAlert, LoaderCircle, Lock, Mail } from 'lucide-react';
+import { EchecConnexion, login, type MotifEchecConnexion } from '@/lib/api';
 import { saveSession } from '@/lib/auth';
 import { destinationForSession } from '@/lib/session-redirect';
+import { AuthChamp } from '@/components/auth/auth-champ';
+
+const MESSAGE_ECHEC: Record<MotifEchecConnexion, string> = {
+  identifiants: 'Adresse e-mail ou mot de passe incorrect.',
+  trop_de_tentatives: 'Trop de tentatives. Patientez une minute avant de réessayer.',
+  reseau: 'Serveur injoignable. Vérifiez votre connexion internet puis réessayez.',
+  serveur: 'Service momentanément indisponible. Réessayez dans un instant.',
+};
+
+const ID_ERREUR = 'connexion-erreur';
 
 export function LoginForm({ societeSlug }: { societeSlug: string }) {
   const router = useRouter();
@@ -16,58 +27,89 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {
-      const session = await login(email, motDePasse, societeSlug);
+      const session = await login(email.trim(), motDePasse, societeSlug);
       saveSession(session, remember);
+      // loading reste vrai jusqu'au changement de page : pas de double envoi.
       router.push(destinationForSession(session));
-    } catch {
-      setError('Email ou mot de passe incorrect.');
+    } catch (err) {
+      setError(MESSAGE_ECHEC[err instanceof EchecConnexion ? err.motif : 'serveur']);
       setLoading(false);
     }
   }
 
+  const invalide = error !== null;
+
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
-      <input
+    <form className="auth-formulaire" onSubmit={handleSubmit} aria-busy={loading}>
+      <AuthChamp
+        icone={Mail}
+        libelle="Adresse e-mail"
         type="email"
-        className="auth-input"
-        placeholder="Email"
-        aria-label="Email"
+        name="email"
+        placeholder="exemple@hub360.com"
+        autoComplete="username"
+        inputMode="email"
+        autoCapitalize="none"
+        spellCheck={false}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        aria-invalid={invalide || undefined}
+        aria-describedby={invalide ? ID_ERREUR : undefined}
         autoFocus
         required
       />
-      <input
+      <AuthChamp
+        icone={Lock}
+        libelle="Mot de passe"
         type="password"
-        className="auth-input"
-        placeholder="Mot de passe"
-        aria-label="Mot de passe"
+        name="password"
+        placeholder="Votre mot de passe"
+        autoComplete="current-password"
         value={motDePasse}
         onChange={(e) => setMotDePasse(e.target.value)}
+        aria-invalid={invalide || undefined}
+        aria-describedby={invalide ? ID_ERREUR : undefined}
         required
       />
 
-      <label className="auth-remember">
-        <input
-          type="checkbox"
-          checked={remember}
-          onChange={(e) => setRemember(e.target.checked)}
-        />
-        Se souvenir de moi
-      </label>
+      <div className="auth-options">
+        <label className="auth-case">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Se souvenir de moi
+        </label>
+        <a href="/mot-de-passe-oublie" className="auth-lien">
+          Mot de passe oublié&nbsp;?
+        </a>
+      </div>
 
-      {error && <p className="auth-error">{error}</p>}
+      {error && (
+        <p id={ID_ERREUR} className="auth-erreur" role="alert">
+          <CircleAlert size={17} strokeWidth={2} aria-hidden />
+          {error}
+        </p>
+      )}
 
-      <button type="submit" className="auth-submit" disabled={loading}>
-        {loading ? 'Connexion...' : 'Se connecter'}
+      <button type="submit" className="auth-bouton" disabled={loading}>
+        {loading ? (
+          <>
+            <LoaderCircle className="auth-bouton-roue" size={18} strokeWidth={2.2} aria-hidden />
+            Connexion…
+          </>
+        ) : (
+          <>
+            Se connecter
+            <ArrowRight className="auth-bouton-fleche" size={18} strokeWidth={2.2} aria-hidden />
+          </>
+        )}
       </button>
-
-      <a href="/mot-de-passe-oublie" className="auth-lien-discret">
-        Mot de passe oublié&nbsp;?
-      </a>
     </form>
   );
 }

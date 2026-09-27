@@ -1,6 +1,7 @@
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { SCRIPT_THEME_INITIAL } from '@/lib/theme';
+import { SynchroTheme } from '@/components/synchro-theme';
 
 // Auto-hébergées par next/font — identiques sur toutes les machines (Mac,
 // Windows, Linux), pas besoin qu'elles soient installées localement.
@@ -34,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // suppressHydrationWarning : data-theme est posé par le script ci-dessous
+    // suppressHydrationWarning : data-theme(-pref) est posé par le script ci-dessous
     // avant l'hydratation, donc absent du HTML serveur — écart voulu (un seul
     // niveau : n'étouffe rien chez les enfants).
     <html lang="fr" className={`${inter.variable} ${display.variable}`} suppressHydrationWarning>
@@ -43,7 +44,10 @@ export default function RootLayout({
             au chargement (cf. lib/theme.ts). */}
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_THEME_INITIAL }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <SynchroTheme />
+        {children}
+      </body>
     </html>
   );
 }
