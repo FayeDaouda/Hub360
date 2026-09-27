@@ -80,3 +80,13 @@ export function montantTtcLignes(
     return s + ventilationTva(ht, l.tauxTva.toNumber()).montantTtc;
   }, 0);
 }
+
+// Montant HT d'un devis à partir de ses lignes (HT arrondi par ligne).
+export function montantHtLignes(
+  lignes: { quantite: { toNumber(): number }; prixUnitaire: { toNumber(): number } }[],
+): number {
+  return lignes.reduce(
+    (s, l) => s + Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()),
+    0,
+  );
+}

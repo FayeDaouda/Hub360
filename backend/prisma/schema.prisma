@@ -12,44 +12,56 @@ datasource db {
 }
 
 model Societe {
-  id                      String   @id @default(uuid())
-  nom                     String
-  slug                    String   @unique
-  logoUrl                 String?  @map("logo_url")
+  id                        String   @id @default(uuid())
+  nom                       String
+  slug                      String   @unique
+  logoUrl                   String?  @map("logo_url")
   // Variante du logo pensée pour un fond sombre (le portail est en anthracite) —
   // certains logos fournis (texte foncé sur transparent) sont illisibles sur fond
   // sombre tels quels ; celle-ci reste optionnelle, on retombe sur logoUrl sinon.
-  logoUrlSombre           String?  @map("logo_url_sombre")
-  couleurMarque           String?  @map("couleur_marque")
+  logoUrlSombre             String?  @map("logo_url_sombre")
+  couleurMarque             String?  @map("couleur_marque")
   // Clé d'icône générique (ex: "code", "building-2", "network") affichée sur
   // la tuile du portail — validée côté frontend contre une liste blanche
   // d'icônes disponibles, pas de logique par société codée en dur.
-  icone                   String?
-  secteur                 String?
+  icone                     String?
+  secteur                   String?
   // Pied des documents (devis, factures) — texte tel que fourni par la
   // société (Grey Concrete : catalogue JSON « mentions_legales_pied_de_page »
   // et pied des CGV 2026). null = rien d'affiché.
-  mentionsLegales         String?  @map("mentions_legales")
-  coordonnees             String? // adresse · téléphone · email de facturation
+  mentionsLegales           String?  @map("mentions_legales")
+  coordonnees               String? // adresse · téléphone · email de facturation
   // Pénalités de retard (% par mois, CGV art. 13) — rappelées sur la facture.
-  penaliteRetardMensuelle Decimal? @map("penalite_retard_mensuelle") @db.Decimal(4, 2)
-  actif                   Boolean  @default(true)
-  createdAt               DateTime @default(now()) @map("created_at")
+  penaliteRetardMensuelle   Decimal? @map("penalite_retard_mensuelle") @db.Decimal(4, 2)
+  // Contrats (étape G) — réglages société, modifiables par societe_admin ou
+  // CIO (Paramètres → Contrats). Vides au départ : aucun texte juridique
+  // n'est inventé ; tant que le modèle ou le signataire manque, la génération
+  // refuse avec un message clair.
+  contratModele             String?  @map("contrat_modele") // texte à {{champs}}
+  contratSignataireNom      String?  @map("contrat_signataire_nom")
+  contratSignataireFonction String?  @map("contrat_signataire_fonction")
+  // Offre (HT, complète) à partir de laquelle le contrat est rédigé sur mesure
+  // (téléversé) au lieu d'être généré depuis le modèle. null = toujours modèle.
+  contratSeuilSurMesureHt   Decimal? @map("contrat_seuil_sur_mesure_ht") @db.Decimal(14, 0)
+  actif                     Boolean  @default(true)
+  createdAt                 DateTime @default(now()) @map("created_at")
 
-  roles               UtilisateurSocieteRole[]
-  rolesDefinis        Role[]
-  modules             SocieteModule[]
-  clients             Client[]
-  dossiers            DossierCrm[]
-  projets             Projet[]
-  cellules            Cellule[]
-  collaborateurs      Collaborateur[]
-  canaux              Canal[]
-  factures            Facture[]
-  devis               Devis[]
-  produitsServices    ProduitService[]
-  lignesUnbordGabarit LigneUnbordGabarit[]
-  blocsEtudeGabarit   BlocEtudeGabarit[]
+  roles                 UtilisateurSocieteRole[]
+  rolesDefinis          Role[]
+  modules               SocieteModule[]
+  clients               Client[]
+  dossiers              DossierCrm[]
+  projets               Projet[]
+  cellules              Cellule[]
+  collaborateurs        Collaborateur[]
+  canaux                Canal[]
+  factures              Facture[]
+  devis                 Devis[]
+  produitsServices      ProduitService[]
+  contrats              Contrat[]
+  lignesUnbordGabarit   LigneUnbordGabarit[]
+  blocsEtudeGabarit     BlocEtudeGabarit[]
+  annexesContratGabarit AnnexeContratGabarit[]
 
   @@map("societes")
 }
@@ -498,6 +510,7 @@ model DossierCrm {
   projet               Projet? // 0..1 — créé au passage à onboard (transaction pivot)
   transitions          DossierCrmTransition[]
   offres               Devis[] // la plus récente = l'offre en cours (étape F)
+  contrat              Contrat? // étape G — sa signature déclenche l'Onboard
 
   @@unique([societeId, code])
   @@index([localiteId])
@@ -524,6 +537,111 @@ model DossierCrmTransition {
 
   @@index([dossierId, creeLe])
   @@map("dossier_crm_transitions")
+}
+
+// -- Contrat (étape G, cadrage validé 27/09/2026) -----------------------------
+//   · un contrat par dossier CRM, préparé une fois l'offre ACCEPTÉE ;
+//   · mode `modele` (offre HT < seuil société) : texte généré depuis le modèle
+//     société, figé à la génération ; mode `sur_mesure` (≥ seuil) : document
+//     rédigé à part, téléversé ;
+//   · annexes selon la liste société (offre acceptée jointe d'office, les
+//     autres : fichier joint ou « non nécessaire ») ;
+//   · signature client : bouton « J'accepte », signature tracée à l'écran
+//     (horodatée, IP) — via lien public à jeton — ou contrat papier scanné
+//     téléversé par l'équipe ;
+//   · la SIGNATURE fait passer le dossier en « onboard » (projet + factures
+//     brouillon, cf. CrmService) — plus de clic Onboard manuel.
+
+enum ModeContrat {
+  modele
+  sur_mesure
+}
+
+enum StatutContrat {
+  brouillon
+  envoye
+  signe
+}
+
+enum ModeSignatureContrat {
+  bouton // « J'accepte » sur le lien public
+  trace // signature tracée à l'écran sur le lien public
+  papier // contrat papier signé, scanné, téléversé par l'équipe
+}
+
+enum StatutAnnexeContrat {
+  a_joindre
+  jointe
+  non_necessaire
+}
+
+// Liste d'annexes par société (Paramètres → Contrats), même principe que les
+// gabarits Foncier / Études. `automatique` = « offre » : l'offre acceptée du
+// dossier, jointe d'office (jamais un fichier à téléverser).
+model AnnexeContratGabarit {
+  id          String    @id @default(uuid())
+  societeId   String    @map("societe_id")
+  libelle     String
+  automatique String? // 'offre' | null
+  ordre       Int       @default(0)
+  supprimeLe  DateTime? @map("supprime_le")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@index([societeId])
+  @@map("annexes_contrat_gabarit")
+}
+
+model Contrat {
+  id                 String                @id @default(uuid())
+  societeId          String                @map("societe_id")
+  dossierCrmId       String                @unique @map("dossier_crm_id")
+  devisId            String                @map("devis_id") // l'offre acceptée
+  mode               ModeContrat
+  statut             StatutContrat         @default(brouillon)
+  // Figés à la préparation / génération (le contrat ne bouge plus si les
+  // réglages société changent ensuite).
+  contenu            String? // mode modele : texte généré
+  montantOffreHt     Decimal               @map("montant_offre_ht") @db.Decimal(14, 0)
+  signataireNom      String                @map("signataire_nom")
+  signataireFonction String                @map("signataire_fonction")
+  // mode sur_mesure : le contrat rédigé à part (data URI, seam S3 comme
+  // FichierProjet).
+  documentNom        String?               @map("document_nom")
+  documentUrl        String?               @map("document_url")
+  tokenPublicHash    String?               @unique @map("token_public_hash")
+  dateEnvoi          DateTime?             @map("date_envoi")
+  signeLe            DateTime?             @map("signe_le")
+  modeSignature      ModeSignatureContrat? @map("mode_signature")
+  signeParNom        String?               @map("signe_par_nom") // nom saisi par le client
+  signatureTrace     String?               @map("signature_trace") // PNG data URI (mode trace)
+  signeIp            String?               @map("signe_ip")
+  scanNom            String?               @map("scan_nom") // mode papier
+  scanUrl            String?               @map("scan_url")
+  creeLe             DateTime              @default(now()) @map("cree_le")
+
+  societe Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  dossier DossierCrm      @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
+  devis   Devis           @relation(fields: [devisId], references: [id])
+  annexes AnnexeContrat[]
+
+  @@map("contrats")
+}
+
+model AnnexeContrat {
+  id          String              @id @default(uuid())
+  contratId   String              @map("contrat_id")
+  libelle     String
+  automatique String? // 'offre' : l'offre acceptée, jointe d'office
+  statut      StatutAnnexeContrat @default(a_joindre)
+  fichierNom  String?             @map("fichier_nom")
+  fichierUrl  String?             @map("fichier_url")
+  ordre       Int                 @default(0)
+
+  contrat Contrat @relation(fields: [contratId], references: [id], onDelete: Cascade)
+
+  @@index([contratId])
+  @@map("annexes_contrat")
 }
 
 // -- Projet : l'instance d'exécution. Champs métier = snapshot du dossier --
@@ -1656,6 +1774,7 @@ model Devis {
   lignes             LigneDevis[]
   factureConvertie   Facture?     @relation("DevisConversion")
   facturesEcheancier Facture[]    @relation("DevisEcheancier")
+  contrats           Contrat[]
 
   @@unique([societeId, numero])
   @@index([projetId])

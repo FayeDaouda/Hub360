@@ -5,7 +5,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Client, NiveauPermission, Prisma } from '@prisma/client';
+import {
+  Categorie,
+  Client,
+  NatureDossier,
+  NiveauPermission,
+  Prisma,
+  TypeBien,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PHASES_PAR_CATEGORIE } from '../projets/domaine/config';
 import { versDossierCrm, versProjetExecution } from '../commun/format-contrat';
@@ -256,6 +263,13 @@ export class CrmService {
         `Action « ${action} » impossible depuis le statut « ${dossier.statut} ».`,
       );
     }
+    // Étape G : l'Onboard n'est plus un clic — c'est la SIGNATURE du contrat
+    // qui le déclenche (onboarderParContrat), un seul chemin vers cet état.
+    if (action === 'onboarder') {
+      throw new ConflictException(
+        'L’Onboard se fait à la signature du contrat (bloc « Contrat » de la fiche).',
+      );
+    }
     const commentaire = commentaireSaisi?.trim() || null;
     if (regle.commentaireObligatoire && !commentaire) {
       throw new BadRequestException(
@@ -264,7 +278,7 @@ export class CrmService {
           : 'Un commentaire est obligatoire pour renvoyer le dossier.',
       );
     }
-    const offreAcceptee = await this.verifierOffre(id, action);
+    await this.verifierOffre(id, action);
 
     // Bascule du statut + ligne de journal, dans la transaction fournie.
     // Garde de concurrence : ne bascule que si le statut n'a pas changé
@@ -303,61 +317,114 @@ export class CrmService {
       };
     }
 
-    const { dossierMaj, projet, facturesPreparees } = await this.prisma.$transaction(async (tx) => {
+    const dossierMaj = await this.prisma.$transaction(async (tx) => {
       await basculer(tx);
-      const d = await tx.dossierCrm.findUniqueOrThrow({
-        where: { id },
-        include: INCLUDE_DOSSIER,
-      });
-      if (regle.vers !== 'onboard' || dossier.projet) {
-        return { dossierMaj: d, projet: null, facturesPreparees: 0 };
-      }
-
-      // Transaction pivot : le projet d'exécution et sa coquille avant-projet,
-      // puis l'offre acceptée rattachée au projet (conversion en facture).
-      const p = await tx.projet.create({
-        data: {
-          societeId,
-          dossierCrmId: d.id,
-          code: d.code,
-          nature: d.nature,
-          categorie: d.categorie,
-          programme: d.programme,
-          localisation: d.localisation,
-          latitude: d.latitude,
-          longitude: d.longitude,
-          type: d.type,
-          clientId: d.clientId,
-          phase: PHASES_PAR_CATEGORIE[d.categorie][0],
-          avantProjet: { create: {} },
-        },
-        include: { client: true, cellules: true },
-      });
-      // L'offre acceptée devient les factures brouillon du projet (étape H2,
-      // échéanciers CGV) — et passe « transformée » : plus de conversion
-      // « 1 devis → 1 facture » possible sur elle.
-      let facturesPreparees = 0;
-      if (offreAcceptee) {
-        await tx.devis.update({
-          where: { id: offreAcceptee },
-          data: { projetId: p.id, statut: 'transforme' },
-        });
-        facturesPreparees = await this.facturation.preparerDepuisOffre(
-          tx,
-          societeId,
-          { id: p.id, nature: d.nature },
-          offreAcceptee,
-        );
-      }
-      return { dossierMaj: d, projet: p, facturesPreparees };
+      return tx.dossierCrm.findUniqueOrThrow({ where: { id }, include: INCLUDE_DOSSIER });
     });
 
     return {
       projet: versDossierCrm(dossierMaj, opts),
-      projetCree: projet ? versProjetExecution(projet) : null,
+      projetCree: null,
       offreEmise: null,
-      facturesPreparees,
+      facturesPreparees: 0,
     };
+  }
+
+  // Étape G — la signature du contrat fait passer le dossier en « onboard »
+  // (seul chemin vers cet état) : bascule + journal + `dansTransaction`
+  // (le contrat marqué signé) + transaction pivot, TOUT OU RIEN. Pas de
+  // contrôle de droit ici : la signature du client (ou le scan déposé par
+  // un rôle ayant le droit, cf. ContratsService) fait autorité.
+  async onboarderParContrat(
+    societeId: string,
+    dossierId: string,
+    parId: string | null,
+    dansTransaction: (tx: Prisma.TransactionClient) => Promise<void>,
+  ) {
+    const dossier = await this.prisma.dossierCrm.findFirst({
+      where: { id: dossierId, societeId },
+      include: { projet: { select: { id: true } } },
+    });
+    if (!dossier) throw new NotFoundException('Dossier introuvable');
+    if (dossier.statut !== 'offre_envoyee' || dossier.projet) {
+      throw new ConflictException('Ce dossier n’attend plus de signature de contrat.');
+    }
+    const offreAcceptee = await this.verifierOffre(dossierId, 'onboarder');
+
+    return this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.dossierCrm.updateMany({
+        where: { id: dossierId, statut: 'offre_envoyee' },
+        data: { statut: 'onboard' },
+      });
+      if (count === 0) throw new ConflictException('Le dossier vient de changer de statut.');
+      await tx.dossierCrmTransition.create({
+        data: {
+          dossierId,
+          de: 'offre_envoyee',
+          vers: 'onboard',
+          parId,
+          commentaire: 'Contrat signé.',
+        },
+      });
+      await dansTransaction(tx);
+      const d = await tx.dossierCrm.findUniqueOrThrow({ where: { id: dossierId } });
+      return this.creerProjetOnboard(tx, societeId, d, offreAcceptee);
+    });
+  }
+
+  // Transaction pivot : le projet d'exécution et sa coquille avant-projet,
+  // puis l'offre acceptée rattachée au projet et transformée en factures
+  // brouillon (échéanciers CGV, étape H2) — « transformée » : plus de
+  // conversion « 1 devis → 1 facture » possible sur elle.
+  private async creerProjetOnboard(
+    tx: Prisma.TransactionClient,
+    societeId: string,
+    d: {
+      id: string;
+      code: string;
+      nature: NatureDossier;
+      categorie: Categorie;
+      programme: string;
+      localisation: string;
+      latitude: number | null;
+      longitude: number | null;
+      type: TypeBien;
+      clientId: string;
+    },
+    offreAcceptee: string | null,
+  ) {
+    const p = await tx.projet.create({
+      data: {
+        societeId,
+        dossierCrmId: d.id,
+        code: d.code,
+        nature: d.nature,
+        categorie: d.categorie,
+        programme: d.programme,
+        localisation: d.localisation,
+        latitude: d.latitude,
+        longitude: d.longitude,
+        type: d.type,
+        clientId: d.clientId,
+        phase: PHASES_PAR_CATEGORIE[d.categorie][0],
+        avantProjet: { create: {} },
+      },
+      include: { client: true, cellules: true },
+    });
+    let facturesPreparees = 0;
+    if (offreAcceptee) {
+      await tx.devis.update({
+        where: { id: offreAcceptee },
+        data: { projetId: p.id, statut: 'transforme' },
+      });
+      facturesPreparees = await this.facturation.preparerDepuisOffre(
+        tx,
+        societeId,
+        { id: p.id, nature: d.nature },
+        offreAcceptee,
+      );
+    }
+    return { projet: versProjetExecution(p), facturesPreparees };
   }
 
   // Conditions posées par l'offre du dossier (étape F). Renvoie l'id de

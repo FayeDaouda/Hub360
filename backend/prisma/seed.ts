@@ -118,6 +118,9 @@ async function main() {
     coordonnees:
       'VDN, Cité CPI, Lot 57, Immeuble Miroir, 3ᵉ étage, Dakar, Sénégal · +221 33 823 61 94 · finances@greyconcrete.group',
     penaliteRetardMensuelle: 1.5,
+    // Contrats (étape G) : seuil sur mesure — manuel de procédures, à
+    // confirmer. Modèle et signataire VIDES (à fournir par la société).
+    contratSeuilSurMesureHt: 50_000_000,
   };
   const grey = await prisma.societe.upsert({
     where: { slug: 'grey-concrete' },
@@ -505,6 +508,17 @@ async function main() {
   await prisma.collaborateur.deleteMany({ where: { societeId: grey.id } });
   await prisma.cellule.deleteMany({ where: { societeId: grey.id } });
   await prisma.client.deleteMany({ where: { societeId: grey.id } });
+
+  // --- Annexes de contrat (étape G) : liste de départ du cadrage ------------
+  if ((await prisma.annexeContratGabarit.count({ where: { societeId: grey.id } })) === 0) {
+    await prisma.annexeContratGabarit.createMany({
+      data: [
+        { societeId: grey.id, libelle: 'Offre acceptée', automatique: 'offre', ordre: 0 },
+        { societeId: grey.id, libelle: 'Planning', ordre: 1 },
+        { societeId: grey.id, libelle: 'Plans du terrain', ordre: 2 },
+      ],
+    });
+  }
 
   // --- Catalogue réel (prisma/data/catalogue-grey-concrete.json) -----------
   // Upsert par code : rejouable, resynchronise les tarifs sur la source.

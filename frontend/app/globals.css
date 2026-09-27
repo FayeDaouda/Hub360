@@ -5108,6 +5108,111 @@ textarea.field-input {
   white-space: normal;
 }
 
+/* Contrat (étape G) — aperçu du texte, annexes, signature. */
+.contrat-modele-saisie {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.contrat-variables {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+.contrat-public {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding: 1.6rem;
+}
+.contrat-public-tete h1 {
+  margin: 0.2rem 0;
+  font-size: 1.35rem;
+}
+.contrat-public-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.contrat-public-bloc h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.contrat-public-bloc p {
+  margin: 0;
+}
+.contrat-public-accord {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+@media (max-width: 640px) {
+  .contrat-public {
+    padding: 1rem;
+  }
+}
+.contrat-apercu summary {
+  cursor: pointer;
+  font-size: 0.84rem;
+}
+.contrat-texte {
+  margin-top: 0.6rem;
+  padding: 0.8rem 1rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.contrat-annexes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.contrat-annexes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.86rem;
+}
+.contrat-annexes li:first-child {
+  border-top: none;
+}
+.contrat-annexes li > span:first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.contrat-signature {
+  max-width: 14rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+.signature-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.signature-pad-zone {
+  width: 100%;
+  height: 10rem;
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius-md);
+  background: #fff;
+  touch-action: none; /* le doigt signe, il ne fait pas défiler la page */
+  cursor: crosshair;
+}
+
 .offre-dossier-resume {
   margin: 0;
   font-size: 0.9rem;

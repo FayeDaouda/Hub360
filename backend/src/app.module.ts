@@ -15,6 +15,7 @@ import { ChatModule } from './chat/chat.module';
 import { DevisModule } from './devis/devis.module';
 import { RolesModule } from './roles/roles.module';
 import { LocalitesModule } from './localites/localites.module';
+import { ContratsModule } from './contrats/contrats.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
 import { FiltreExceptionsGlobal } from './commun/exception.filter';
 
@@ -41,6 +42,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     DevisModule,
     RolesModule,
     LocalitesModule,
+    ContratsModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: SerialisationInterceptor },

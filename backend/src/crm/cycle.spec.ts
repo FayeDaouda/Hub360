@@ -187,11 +187,29 @@ describe('CrmService.agir', () => {
     expect(prisma.dossierCrmTransition.create).not.toHaveBeenCalled();
   });
 
-  it('onboarder : crée le projet, y rattache l’offre et prépare ses factures (pivot)', async () => {
+  it('onboarder à la main → 409 : l’Onboard se fait à la signature du contrat (étape G)', async () => {
+    const { svc, prisma } = monter('offre_envoyee', {
+      offres: [{ id: 'O1', statut: 'accepte', dateValidite: '2026-01-10' }],
+    });
+    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow(
+      'signature du contrat',
+    );
+    expect(prisma.projet.create).not.toHaveBeenCalled();
+  });
+
+  it('signature du contrat : bascule + contrat signé + projet + factures, une transaction', async () => {
     const { svc, prisma, facturation } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'accepte', dateValidite: '2026-01-10' }],
     });
-    const r = await svc.agir('S1', COO as never, 'D1', 'onboarder', undefined);
+    const marquerSigne = jest.fn().mockResolvedValue(undefined);
+    const r = await svc.onboarderParContrat('S1', 'D1', null, marquerSigne);
+    expect(marquerSigne).toHaveBeenCalledWith(prisma);
+    expect(prisma.dossierCrmTransition.create.mock.calls[0][0].data).toMatchObject({
+      de: 'offre_envoyee',
+      vers: 'onboard',
+      parId: null,
+      commentaire: 'Contrat signé.',
+    });
     expect(prisma.projet.create).toHaveBeenCalledTimes(1);
     expect(prisma.devis.update).toHaveBeenCalledWith({
       where: { id: 'O1' },
@@ -204,7 +222,7 @@ describe('CrmService.agir', () => {
       { id: 'P1', nature: 'mandat_client' },
       'O1',
     );
-    expect(r.projetCree).not.toBeNull();
+    expect(r.projet).not.toBeNull();
     expect(r.facturesPreparees).toBe(4);
   });
 });
@@ -221,11 +239,11 @@ describe('CrmService.agir — offre', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('onboarder sans offre acceptée → 409, aucun projet', async () => {
+  it('signature de contrat sans offre acceptée → 409, aucun projet', async () => {
     const { svc, prisma } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'envoye', dateValidite: demain }],
     });
-    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow(
+    await expect(svc.onboarderParContrat('S1', 'D1', null, jest.fn())).rejects.toThrow(
       'offre acceptée',
     );
     expect(prisma.projet.create).not.toHaveBeenCalled();

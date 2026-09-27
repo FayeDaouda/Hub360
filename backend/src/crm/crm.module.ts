@@ -12,5 +12,7 @@ import { CrmController } from './crm.controller';
   imports: [DevisModule, ProjetsModule],
   providers: [CrmService],
   controllers: [CrmController],
+  // Le contrat (étape G) déclenche l'Onboard par CrmService.
+  exports: [CrmService],
 })
 export class CrmModule {}

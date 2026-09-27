@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DevisEmail, EmailService, LienCompte, RelanceDevisEmail, RelanceFactureEmail } from './email.service';
+import {
+  ContratEmail,
+  DevisEmail,
+  EmailService,
+  LienCompte,
+  RelanceDevisEmail,
+  RelanceFactureEmail,
+} from './email.service';
 
 // Transport par défaut : rien n'est envoyé, le lien est écrit dans les logs.
 // `envoye: false` -> l'appelant affiche le lien à recopier (fallback manuel).
@@ -24,6 +31,11 @@ export class LogEmailService extends EmailService {
 
   async envoyerRelanceDevis(r: RelanceDevisEmail): Promise<{ envoye: boolean }> {
     this.log.log(`[log] relance devis ${r.reference} pour ${r.email} → ${r.lien}`);
+    return { envoye: false };
+  }
+
+  async envoyerContrat(c: ContratEmail): Promise<{ envoye: boolean }> {
+    this.log.log(`[log] contrat ${c.codeDossier} pour ${c.email} → ${c.lien}`);
     return { envoye: false };
   }
 }

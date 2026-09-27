@@ -1797,3 +1797,89 @@ export type MatriceRoles = {
   modules: ModulePermission[];
   roles: RoleAvecPermissions[];
 };
+
+// --- Contrat (étape G, cadrage validé 27/09/2026) -----------------------------
+// Préparé une fois l'offre acceptée ; sa SIGNATURE (lien public : bouton ou
+// signature tracée ; ou papier scanné) fait passer le dossier en Onboard.
+export type ModeContrat = 'modele' | 'sur_mesure';
+export type StatutContrat = 'brouillon' | 'envoye' | 'signe';
+export type ModeSignatureContrat = 'bouton' | 'trace' | 'papier';
+export type StatutAnnexeContrat = 'a_joindre' | 'jointe' | 'non_necessaire';
+
+export const STATUTS_CONTRAT: Record<StatutContrat, string> = {
+  brouillon: 'En préparation',
+  envoye: 'Envoyé au client',
+  signe: 'Signé',
+};
+
+export const MODES_SIGNATURE: Record<ModeSignatureContrat, string> = {
+  bouton: 'bouton « J’accepte »',
+  trace: 'signature tracée à l’écran',
+  papier: 'contrat papier scanné',
+};
+
+export type AnnexeContrat = {
+  id: string;
+  libelle: string;
+  automatique: string | null; // 'offre' : l'offre acceptée, jointe d'office
+  statut: StatutAnnexeContrat;
+  fichierNom: string | null;
+};
+
+export type Contrat = {
+  id: string;
+  mode: ModeContrat;
+  statut: StatutContrat;
+  contenu: string | null;
+  montantOffreHt: number;
+  signataire: { nom: string; fonction: string };
+  document: { nom: string } | null;
+  dateEnvoi: string | null;
+  signeLe: string | null;
+  modeSignature: ModeSignatureContrat | null;
+  signeParNom: string | null;
+  signatureTrace: string | null;
+  scan: { nom: string } | null;
+  annexes: AnnexeContrat[];
+};
+
+export type ContratDossier = {
+  contrat: Contrat | null;
+  preparation: {
+    offreAcceptee: { id: string; reference: string | null; montantHt: number } | null;
+    modePrevu: ModeContrat | null;
+    seuilSurMesureHt: number | null;
+    reglagesManquants: string[];
+  };
+};
+
+export type ContratPublic = {
+  societe: string;
+  clientNom: string;
+  codeDossier: string;
+  programme: string;
+  mode: ModeContrat;
+  contenu: string | null;
+  document: { nom: string } | null;
+  signataire: { nom: string; fonction: string };
+  offre: { reference: string | null; montantHt: number; montantTtc: number };
+  annexes: {
+    id: string;
+    libelle: string;
+    statut: StatutAnnexeContrat;
+    automatique: string | null;
+    fichierNom: string | null;
+  }[];
+  statut: StatutContrat;
+  signeLe: string | null;
+  peutSigner: boolean;
+};
+
+export type ParametresContrat = {
+  modele: string | null;
+  signataireNom: string | null;
+  signataireFonction: string | null;
+  seuilSurMesureHt: number | null;
+  variables: { cle: string; description: string }[];
+  annexes: { id: string; libelle: string; automatique: string | null }[];
+};

@@ -57,6 +57,16 @@ export type RelanceDevisEmail = {
   lien: string;
 };
 
+// Contrat à signer (étape G) — lien public : consultation, annexes, signature
+// (« J'accepte » ou signature tracée), sans compte.
+export type ContratEmail = {
+  email: string;
+  clientNom: string;
+  societeNom: string;
+  codeDossier: string;
+  lien: string;
+};
+
 export abstract class EmailService {
   // Ne lève jamais : un échec de transport renvoie `{ envoye: false }` pour que
   // l'appelant garde son repli (afficher le lien à recopier) et que la réponse
@@ -65,4 +75,5 @@ export abstract class EmailService {
   abstract envoyerDevis(d: DevisEmail): Promise<{ envoye: boolean }>;
   abstract envoyerRelanceFacture(r: RelanceFactureEmail): Promise<{ envoye: boolean }>;
   abstract envoyerRelanceDevis(r: RelanceDevisEmail): Promise<{ envoye: boolean }>;
+  abstract envoyerContrat(c: ContratEmail): Promise<{ envoye: boolean }>;
 }

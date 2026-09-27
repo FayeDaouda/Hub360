@@ -19,6 +19,7 @@ import type { ActionCrm } from '@/lib/cycle-crm';
 import type { OffreEmise } from '@/lib/crm';
 import { CycleDossier } from './cycle-dossier';
 import { OffreDossier } from './offre-dossier';
+import { ContratDossier } from './contrat-dossier';
 import { OffreDossierModal } from './offre-dossier-modal';
 import { LocaliteSelect } from './localite-select';
 
@@ -132,6 +133,12 @@ export function DetailDossierModal({
             onMaj={onMaj}
             lienEmis={lienEmis}
             onLienEmis={setLienEmis}
+          />
+          <ContratDossier
+            slug={slug}
+            projet={projet}
+            peutPreparer={peutPreparerOffre}
+            onMaj={onMaj}
           />
 
           <div className="detail-dossier-grille">

@@ -73,7 +73,9 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
   },
 };
 
-const ORDRE: ActionCrm[] = ['soumettre', 'valider', 'onboarder', 'refaire', 'renvoyer', 'perdre'];
+// « onboarder » n'est plus proposé : c'est la signature du contrat qui fait
+// passer le dossier en Onboard (étape G, bloc « Contrat » de la fiche).
+const ORDRE: ActionCrm[] = ['soumettre', 'valider', 'refaire', 'renvoyer', 'perdre'];
 
 // Pourquoi une action permise par le statut et le rôle ne peut PAS encore
 // partir, d'après l'offre du dossier (étape F) — null = rien ne bloque, ou
