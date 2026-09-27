@@ -20,15 +20,30 @@ const PILL_STATUT_EXEC: Record<StatutProjetExec, string> = {
 type Props = {
   projet: ProjetExecution;
   href: string;
-  celluleNom: string | null;
+  celluleNoms: string[];
 };
+
+// Couleur du dossier : variété purement visuelle, pas un classement (cf.
+// .dossier-folder--v1..v5 dans globals.css). Dérivée de l'id du projet plutôt
+// que Math.random() — la même carte doit garder la même couleur d'un rendu à
+// l'autre, pas en piocher une nouvelle à chaque re-render.
+const NB_VARIANTES_DOSSIER = 5;
+
+function varianteDossier(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return (h % NB_VARIANTES_DOSSIER) + 1;
+}
 
 // Un projet = un dossier. Le visuel (chemise + feuilles) est en CSS pur,
 // voir .dossier* dans globals.css.
-export function DossierProjet({ projet, href, celluleNom }: Props) {
+export function DossierProjet({ projet, href, celluleNoms }: Props) {
   return (
     <Link href={href} className="dossier">
-      <span className="dossier-folder" aria-hidden>
+      <span
+        className={`dossier-folder dossier-folder--v${varianteDossier(projet.id)}`}
+        aria-hidden
+      >
         <span className="dossier-folder-back" />
         <span className="dossier-paper dossier-paper--1" />
         <span className="dossier-paper dossier-paper--2" />
@@ -48,7 +63,7 @@ export function DossierProjet({ projet, href, celluleNom }: Props) {
         <span className="dossier-nom">{projet.programme}</span>
         <span className="dossier-meta">
           {projet.client.nom}
-          {celluleNom ? ` · ${celluleNom}` : ''}
+          {celluleNoms.length ? ` · ${celluleNoms.join(', ')}` : ''}
         </span>
         <span className="dossier-bas">
           <span className="pill pill--phase">{PHASES[projet.phase]}</span>

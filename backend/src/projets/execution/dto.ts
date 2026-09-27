@@ -1,79 +1,98 @@
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayNotEmpty,
   IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
-  IsNumber,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
-  Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
-import { StatutLot, StatutReserve } from '@prisma/client';
+import { GroupeChecklistExecution } from '@prisma/client';
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
+// -- Sous-checklist opérationnelle de l'exécution — mêmes DTO que
+// LigneChecklistPermis (cf. src/projets/permis/dto.ts), portés ici pour
+// rester dans le module Exécution. --
 
-// PATCH …/execution/lots/:type — champs d'un lot, tous confondus (admin).
-export class PatchLotDto {
-  @IsOptional() @IsEnum(StatutLot) statut?: StatutLot;
-  @IsOptional() @IsInt() @Min(0) @Max(100) avancement?: number;
-  @IsOptional() @Matches(DATE) dateDebut?: string | null;
-  @IsOptional() @Matches(DATE) dateFinPrevue?: string | null;
-  @IsOptional() @IsString() @MaxLength(200) entrepriseRetenue?: string;
-  @IsOptional() @IsNumber() @Min(0) montantMarche?: number;
-  @IsOptional() @IsArray() @IsString({ each: true }) entreprisesConsultees?: string[];
+const DATE_AGENDA = /^\d{4}-\d{2}-\d{2}$/;
+
+export class PatchLigneChecklistExecutionDto {
+  @IsOptional() @IsBoolean() fait?: boolean;
+  @IsOptional() @IsString() @MaxLength(2000) note?: string;
+  @IsOptional() @IsBoolean() nonRequise?: boolean;
 }
 
-// PATCH …/execution/lots/:type/suivi — seul le suivi opérationnel (statut,
-// avancement, planning). Ouvert au collaborateur (matrice de droits) ; les
-// champs financiers (entreprise retenue, montant, consultation) restent sur
-// PatchLotDto, admin uniquement.
-export class PatchLotSuiviDto {
-  @IsOptional() @IsEnum(StatutLot) statut?: StatutLot;
-  @IsOptional() @IsInt() @Min(0) @Max(100) avancement?: number;
-  @IsOptional() @Matches(DATE) dateDebut?: string | null;
-  @IsOptional() @Matches(DATE) dateFinPrevue?: string | null;
+// -- Blocs (Études / Les Plans / Viabilité / Locaux techniques / Aménagements
+// / Cahiers de menuiserie / Détails / CCTP) ---------------------------------
+// Échéance + responsable vivent au niveau du bloc, pas de l'item ni du
+// module entier — même motif que Permis (décision boss, sept. 2026, cf.
+// mémoire) : chaque bloc peut avoir une personne différente et une échéance
+// propre.
+
+// PATCH …/execution/blocs/:groupe — admin uniquement.
+export class PatchBlocExecutionDto {
+  @IsOptional() @Matches(DATE_AGENDA) echeance?: string | null;
+  @IsOptional() @IsString() responsableId?: string | null;
 }
 
-export class AjouterOffreDto {
-  @IsString() @MinLength(1) @MaxLength(200) entreprise!: string;
-  @IsNumber() @Min(0) montant!: number;
-  @IsOptional() @IsInt() @Min(0) delaiJours?: number | null;
+// POST …/execution/blocs/:groupe/prolongation — le responsable DE CE BLOC
+// uniquement (vérifié en service). Motif optionnel.
+export class DemanderProlongationBlocExecutionDto {
+  @Matches(DATE_AGENDA) echeance!: string;
+  @IsOptional() @IsString() @MaxLength(500) motif?: string;
 }
 
-export class AttribuerLotDto {
-  @IsString() @MinLength(1) @MaxLength(200) entreprise!: string;
-  @IsNumber() @Min(0) montant!: number;
+// PATCH …/execution/blocs/:groupe/prolongation — admin uniquement, décide de
+// la demande en attente (accepter reporte l'échéance du bloc, refuser la
+// laisse telle quelle) ; dans les deux cas la demande est effacée.
+export class DeciderProlongationBlocExecutionDto {
+  @IsBoolean() accepter!: boolean;
 }
 
-export class AjouterSituationDto {
-  @Matches(DATE) date!: string;
-  @IsInt() @Min(0) @Max(100) avancementCumule!: number;
-  @IsNumber() @Min(0) montantSituation!: number;
-  @IsNumber() @Min(0) retenueGarantie!: number;
-  @IsNumber() montantVerse!: number;
+// Ajout d'un item de checklist propre à un projet — admin uniquement.
+export class AjouterLigneChecklistExecutionDto {
+  @IsEnum(GroupeChecklistExecution) groupe!: GroupeChecklistExecution;
+  @IsString() @IsNotEmpty() @MaxLength(300) libelle!: string;
 }
 
-export class AjouterCrDto {
-  @IsString() @MinLength(1) @MaxLength(2000) texte!: string;
+// -- Pièces jointes rattachées à un item précis de la checklist -------------
+// Même seam de stockage que Permis (data URI en transition) : le fichier vit
+// dans ImageProjet/FichierProjet comme un upload normal, seul
+// `ligneChecklistExecutionId` + `phase: 'chantier'` (posés côté service) le
+// rattachent à cette ligne — un objet, deux points d'accès.
+
+class ImageEntreeDto {
+  @IsString() @MinLength(1) @MaxLength(300) nom!: string;
+  @IsString() @MaxLength(12_000_000) url!: string;
 }
 
-export class PatchReceptionDto {
-  @IsOptional() @Matches(DATE) receptionProvisoire?: string | null;
-  @IsOptional() @Matches(DATE) leveeReserves?: string | null;
-  @IsOptional() @Matches(DATE) receptionDefinitive?: string | null;
-  @IsOptional() @IsBoolean() validationClient?: boolean;
-  @IsOptional() @Matches(DATE) dateValidationClient?: string | null;
+export class JoindreImagesLigneDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => ImageEntreeDto)
+  fichiers!: ImageEntreeDto[];
 }
 
-export class AjouterReserveDto {
-  @IsString() @MinLength(1) @MaxLength(500) description!: string;
+class FichierEntreeDto {
+  @IsString() @MinLength(1) @MaxLength(300) nom!: string;
+  @IsString() @MaxLength(20_000_000) url!: string;
+  @IsOptional() @IsInt() @Min(0) taille?: number;
 }
 
-export class PatchReserveDto {
-  @IsOptional() @IsEnum(StatutReserve) statut?: StatutReserve;
-  @IsOptional() @Matches(DATE) dateLevee?: string | null;
+export class JoindreFichiersLigneDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => FichierEntreeDto)
+  fichiers!: FichierEntreeDto[];
 }

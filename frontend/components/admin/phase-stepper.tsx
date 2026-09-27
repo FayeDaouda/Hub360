@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Fragment, useState, type CSSProperties } from 'react';
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { changerPhaseProjet } from '@/lib/projets';
 import {
   PHASES,
@@ -11,10 +11,21 @@ import {
   type ProjetExecution,
 } from '@/lib/types';
 
+// Couleur « pleine » d'une phase — uniquement pour les 2 bouts d'un lien de
+// connexion (--lien-de/--lien-a), qui varient selon la paire d'étapes
+// voisines et ne peuvent donc pas être une simple classe CSS statique. La
+// pastille elle-même n'a PAS besoin de cette fonction : sa couleur vient
+// entièrement de la classe .phase-etape--<phase> (globals.css) — un seul
+// point de vérité par couleur, pas de mapping dupliqué JS + CSS.
+function couleurPhase(ph: Phase): string {
+  return `var(--${
+    { avant_projet: 'azur', permis: 'turquoise', etudes: 'iris', chantier: 'mandarine', livre: 'argile' }[ph]
+  })`;
+}
+
 type Props = {
   slug: string;
   projet: ProjetExecution;
-  avantProjetValide: boolean;
   permisObtenu: boolean;
   // Avertissement souple : affiché sous le stepper sans bloquer la transition
   // (ex : « 3 études encore en cours »).
@@ -28,7 +39,6 @@ type Props = {
 export function PhaseStepper({
   slug,
   projet,
-  avantProjetValide,
   permisObtenu,
   avertissement,
   onChange,
@@ -39,7 +49,7 @@ export function PhaseStepper({
 
   const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
   const index = sequence.indexOf(projet.phase);
-  const garde = peutAvancerPhase(projet, { avantProjetValide, permisObtenu });
+  const garde = peutAvancerPhase(projet, { permisObtenu });
   const peutReculer = index > 0;
 
   async function aller(cible: Phase) {
@@ -59,17 +69,40 @@ export function PhaseStepper({
         Phase {index + 1} / {sequence.length} — <strong>{PHASES[projet.phase]}</strong>
       </p>
       <ol className="phase-suite">
-        {sequence.map((ph, i) => (
-          <li
-            key={ph}
-            className={
-              i === index ? 'is-courante' : i < index ? 'is-faite' : undefined
-            }
-          >
-            <span className="phase-pastille">{i + 1}</span>
-            <span className="phase-nom">{PHASES[ph]}</span>
-          </li>
-        ))}
+        {sequence.map((ph, i) => {
+          const etat = i === index ? 'is-courante' : i < index ? 'is-faite' : 'is-a-venir';
+          // Le lien AVANT l'étape i : plein si les deux bouts sont faits,
+          // « transition » s'il mène à l'étape courante, pointillé sinon.
+          const lienEtat =
+            i > index ? 'a-venir' : i === index ? 'transition' : 'faite';
+          return (
+            <Fragment key={ph}>
+              {i > 0 && (
+                <li
+                  aria-hidden="true"
+                  className={`phase-lien-item phase-lien-item--${lienEtat}`}
+                  style={
+                    {
+                      '--lien-de': couleurPhase(sequence[i - 1]),
+                      '--lien-a': couleurPhase(ph),
+                    } as CSSProperties & Record<'--lien-de' | '--lien-a', string>
+                  }
+                >
+                  <span className="phase-lien" />
+                </li>
+              )}
+              <li
+                className={`phase-etape phase-etape--${ph} ${etat}`}
+                aria-current={i === index ? 'step' : undefined}
+              >
+                <span className="phase-pastille">
+                  {i < index ? <Check size={20} strokeWidth={2.5} aria-hidden /> : i + 1}
+                </span>
+                <span className="phase-nom">{PHASES[ph]}</span>
+              </li>
+            </Fragment>
+          );
+        })}
       </ol>
 
       {lectureSeule ? (

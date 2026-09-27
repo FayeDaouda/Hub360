@@ -1,0 +1,196 @@
+'use client';
+
+import { useState } from 'react';
+import { Copy } from 'lucide-react';
+import { marquerReponseDevis, relancerDevis } from '@/lib/devis';
+import type { OffreEmise } from '@/lib/crm';
+import { formatDateCourte, formatMontantCompact } from '@/lib/format';
+import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
+
+type Props = {
+  slug: string;
+  projet: Projet;
+  peutPreparer: boolean; // finances_devis ≥ écriture
+  onPreparer: (offreId?: string) => void; // ouvre la modale (création / brouillon)
+  onMaj: () => Promise<void>; // recharge le dossier après une action
+  // Lien émis (validation DAF ou relance) — le clair n'existe qu'à cet instant.
+  lienEmis: OffreEmise | null;
+  onLienEmis: (l: OffreEmise | null) => void;
+};
+
+const CLASSE_OFFRE: Record<string, string> = {
+  brouillon: 'pill--neutre',
+  envoye: 'pill--info',
+  accepte: 'pill--succes',
+  refuse: 'pill--risque',
+  expire: 'pill--attention',
+  transforme: 'pill--succes',
+};
+
+function joursDepuis(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+
+// Offre en cours d'un dossier CRM (étape F). Absente pour qui n'a pas
+// finances_devis en lecture (clé `offre` omise par le serveur).
+export function OffreDossier({
+  slug,
+  projet,
+  peutPreparer,
+  onPreparer,
+  onMaj,
+  lienEmis,
+  onLienEmis,
+}: Props) {
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  if (!('offre' in projet)) return null;
+  const offre: Offre | null = projet.offre ?? null;
+  const modifiable = projet.statut === 'nouveau_projet' && peutPreparer;
+
+  async function agir(fn: () => Promise<unknown>) {
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await fn();
+      await onMaj();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'L’action a échoué.');
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  function relancer(o: Offre) {
+    void agir(async () => {
+      const r = await relancerDevis(slug, o.id);
+      onLienEmis({ reference: r.reference, lienPublic: r.lienPublic, emailEnvoye: r.emailEnvoye });
+    });
+  }
+
+  function saisirReponse(o: Offre, reponse: 'accepte' | 'refuse') {
+    const texte =
+      reponse === 'accepte'
+        ? 'Enregistrer l’ACCEPTATION du client (réponse reçue par un autre canal) ?'
+        : 'Enregistrer le REFUS du client ? Le dossier passera en « Perdu ».';
+    if (!window.confirm(texte)) return;
+    void agir(() => marquerReponseDevis(slug, o.id, reponse));
+  }
+
+  return (
+    <section className="offre-dossier" aria-label="Offre">
+      <div className="cycle-dossier-tete">
+        <span className="field-label">Offre</span>
+        {offre && (
+          <span className={`pill ${CLASSE_OFFRE[offre.statutEffectif] ?? 'pill--neutre'}`}>
+            {STATUTS_DEVIS[offre.statutEffectif]}
+          </span>
+        )}
+        {offre?.relanceAFaire && <span className="pill pill--attention">Relance à faire</span>}
+      </div>
+
+      {!offre ? (
+        <p className="field-aide">
+          {modifiable
+            ? 'Aucune offre préparée — elle est requise pour soumettre le dossier à la DAF.'
+            : 'Aucune offre.'}
+        </p>
+      ) : (
+        <p className="offre-dossier-resume">
+          {offre.reference && <strong>{offre.reference} · </strong>}
+          {offre.nbLignes} ligne{offre.nbLignes > 1 ? 's' : ''} ·{' '}
+          <strong>{formatMontantCompact(offre.montantTtc)} TTC</strong>
+          {offre.objet && <span className="cell-sub">{offre.objet}</span>}
+          {offre.dateEnvoi && (
+            <span className="cell-sub">
+              Envoyée le {formatDateCourte(offre.dateEnvoi)} (J+{joursDepuis(offre.dateEnvoi)})
+              {offre.dateValidite && ` · valable jusqu’au ${formatDateCourte(offre.dateValidite)}`}
+              {offre.relancesEnvoyees > 0 &&
+                ` · ${offre.relancesEnvoyees} relance${offre.relancesEnvoyees > 1 ? 's' : ''}`}
+            </span>
+          )}
+          {offre.dateReponse && (
+            <span className="cell-sub">Réponse du client le {formatDateCourte(offre.dateReponse)}</span>
+          )}
+        </p>
+      )}
+
+      {lienEmis && (
+        <div className="crm-banner" role="status">
+          <span>
+            {lienEmis.emailEnvoye
+              ? `Offre ${lienEmis.reference ?? ''} envoyée par email au client.`
+              : `Email non envoyé (client sans adresse, ou envoi indisponible) — transmets ce lien au client.`}{' '}
+            Lien de secours (ne sera plus réaffiché) : <code>{lienEmis.lienPublic}</code>{' '}
+            <button
+              type="button"
+              className="lien-inline"
+              onClick={() => navigator.clipboard?.writeText(lienEmis.lienPublic)}
+            >
+              <Copy size={12} strokeWidth={2} aria-hidden /> Copier
+            </button>
+          </span>
+          <button type="button" aria-label="Fermer" onClick={() => onLienEmis(null)}>
+            ×
+          </button>
+        </div>
+      )}
+
+      {peutPreparer && (
+        <div className="cycle-dossier-actions">
+          {modifiable && !offre && (
+            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onPreparer()}>
+              Préparer l’offre
+            </button>
+          )}
+          {modifiable && offre?.statutEffectif === 'brouillon' && (
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              onClick={() => onPreparer(offre.id)}
+            >
+              Modifier l’offre
+            </button>
+          )}
+          {/* Après expiration + « Refaire une offre », on repart d'un brouillon neuf. */}
+          {modifiable && offre && offre.statutEffectif === 'expire' && (
+            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onPreparer()}>
+              Préparer une nouvelle offre
+            </button>
+          )}
+          {offre?.statutEffectif === 'envoye' && (
+            <>
+              <button
+                type="button"
+                className={offre.relanceAFaire ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
+                disabled={enCours}
+                onClick={() => relancer(offre)}
+                title="Envoie un rappel au client avec un nouveau lien (l’ancien ne marchera plus)"
+              >
+                Relancer le client
+              </button>
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm"
+                disabled={enCours}
+                onClick={() => saisirReponse(offre, 'accepte')}
+              >
+                Le client a accepté
+              </button>
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm btn-ghost--danger"
+                disabled={enCours}
+                onClick={() => saisirReponse(offre, 'refuse')}
+              >
+                Le client a refusé
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {erreur && <p className="field-erreur">{erreur}</p>}
+    </section>
+  );
+}

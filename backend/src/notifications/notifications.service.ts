@@ -1,23 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { avancementChecklistAvp } from '../projets/domaine/gardes';
 
-// Fenêtre « échéance proche » d'un avant-projet — miroir du SEUIL_JOURS de
-// frontend/app/collab/[slug]/page.tsx (worklist). En deçà (ou dépassé) →
-// alerte dérivée.
-const SEUIL_JOURS = 14;
 const MAX_STOCKEES = 30;
 
 type ProjetContexte = {
   id: string;
   code: string;
-  celluleId: string | null;
+  // Plusieurs cellules possibles depuis sept. 2026 (cf. ProjetCellule).
+  celluleIds: string[];
 };
 
+// `derivee` : calculée à la volée plutôt que stockée (aucune source ne le
+// fait plus depuis le retrait du verrou de validation avant-projet, sept.
+// 2026 — l'échéance dérivée qui l'utilisait a disparu avec lui) ; le
+// mécanisme reste en place, prêt pour une future alerte dérivée.
 export type NotificationItem = {
-  id: string; // uuid (stockée) | « echeance:<projetId> » (dérivée)
-  type: NotificationType | 'echeance_avant_projet';
+  id: string; // uuid (stockée)
+  type: NotificationType;
   titre: string;
   projetId: string | null;
   projetCode: string | null;
@@ -39,12 +39,15 @@ export class NotificationsService {
     type: NotificationType;
     titre: string;
     parId?: string | null;
+    // Cibles explicites (utilisateurId) — ex. assignation d'une tâche à une
+    // personne, ou tous les admins d'une société (cf. adminsDeSociete
+    // ci-dessous). Omis : diffusion à toute l'équipe du projet (comportement
+    // historique, cellule + dessinateur/responsable3d).
+    destinataireIds?: string[];
   }): Promise<void> {
-    const destinataires = await this.destinataires(
-      params.societeId,
-      params.projet,
-      params.parId ?? null,
-    );
+    const destinataires =
+      params.destinataireIds ??
+      (await this.destinataires(params.societeId, params.projet, params.parId ?? null));
     if (destinataires.length === 0) return;
 
     await this.prisma.notification.createMany({
@@ -60,16 +63,16 @@ export class NotificationsService {
   }
 
   // -- Lecture : flux du collaborateur connecté -----------------------------
+  // Plus de source dérivée depuis le retrait du verrou de validation
+  // avant-projet (sept. 2026) — `elementsStockes` seul alimente le flux ;
+  // `derivee` reste sur NotificationItem pour une future source.
   async flux(societeId: string, utilisateurId: string) {
-    const [stockees, derivees] = await Promise.all([
-      this.prisma.notification.findMany({
-        where: { destinataireId: utilisateurId, societeId },
-        include: { projet: { select: { code: true } } },
-        orderBy: { createdAt: 'desc' },
-        take: MAX_STOCKEES,
-      }),
-      this.echeancesDerivees(societeId, utilisateurId),
-    ]);
+    const stockees = await this.prisma.notification.findMany({
+      where: { destinataireId: utilisateurId, societeId },
+      include: { projet: { select: { code: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: MAX_STOCKEES,
+    });
 
     const elementsStockes: NotificationItem[] = stockees.map((n) => ({
       id: n.id,
@@ -82,10 +85,9 @@ export class NotificationsService {
       derivee: false,
     }));
 
-    const nonLues =
-      elementsStockes.filter((e) => !e.lu).length + derivees.length;
+    const nonLues = elementsStockes.filter((e) => !e.lu).length;
 
-    return { nonLues, elements: [...derivees, ...elementsStockes] };
+    return { nonLues, elements: elementsStockes };
   }
 
   async marquerLues(societeId: string, utilisateurId: string) {
@@ -115,7 +117,7 @@ export class NotificationsService {
     );
 
     const ou: Prisma.CollaborateurWhereInput[] = [];
-    if (projet.celluleId) ou.push({ celluleId: projet.celluleId });
+    if (projet.celluleIds.length) ou.push({ celluleId: { in: projet.celluleIds } });
     if (collabIds.length) ou.push({ id: { in: collabIds } });
     if (ou.length === 0) return [];
 
@@ -131,72 +133,15 @@ export class NotificationsService {
     return [...ids];
   }
 
-  // Alertes d'échéance d'avant-projet, calculées à la volée (pas de scheduler) :
-  // avant-projet ni validé ni bouclé, dont la date de fin est passée ou dans
-  // moins de SEUIL_JOURS. Même logique que la worklist de l'accueil.
-  private async echeancesDerivees(
-    societeId: string,
-    utilisateurId: string,
-  ): Promise<NotificationItem[]> {
-    const collab = await this.prisma.collaborateur.findFirst({
-      where: { societeId, utilisateurId },
-      select: { id: true, celluleId: true },
+  // Tous les admins de la société — ex. alerte « demande de prolongation ».
+  // N'importe quel societe_admin traite la demande (même logique que le
+  // reste des actions admin sur ce module, pas de notion de « responsable »).
+  async adminsDeSociete(societeId: string, exclusId?: string | null): Promise<string[]> {
+    const roles = await this.prisma.utilisateurSocieteRole.findMany({
+      where: { societeId, role: { nom: 'societe_admin' } },
+      select: { utilisateurId: true },
     });
-    if (!collab) return [];
-
-    const ou: Prisma.ProjetWhereInput[] = [
-      { avantProjet: { dessinateurId: collab.id } },
-      { avantProjet: { responsable3dId: collab.id } },
-    ];
-    if (collab.celluleId) ou.push({ celluleId: collab.celluleId });
-
-    const projets = await this.prisma.projet.findMany({
-      where: { societeId, phase: { not: 'livre' }, OR: ou },
-      select: {
-        id: true,
-        code: true,
-        avantProjet: {
-          select: {
-            dateFin: true,
-            valideLe: true,
-            lignesChecklist: { select: { fait: true } },
-          },
-        },
-      },
-    });
-
-    const items: NotificationItem[] = [];
-    for (const p of projets) {
-      const ap = p.avantProjet;
-      if (!ap?.dateFin) continue;
-      const boucle =
-        ap.valideLe !== null || avancementChecklistAvp(ap.lignesChecklist).complete;
-      if (boucle) continue;
-      const jours = joursAvant(ap.dateFin);
-      if (jours === null || jours > SEUIL_JOURS) continue;
-      items.push({
-        id: `echeance:${p.id}`,
-        type: 'echeance_avant_projet',
-        titre: `${p.code} — avant-projet ${etiquetteEcheance(jours)}`,
-        projetId: p.id,
-        projetCode: p.code,
-        date: new Date(),
-        lu: false,
-        derivee: true,
-      });
-    }
-    return items.sort((a, b) => a.titre.localeCompare(b.titre));
+    return [...new Set(roles.map((r) => r.utilisateurId))].filter((id) => id !== exclusId);
   }
-}
 
-function joursAvant(dateFin: string): number | null {
-  const fin = Date.parse(`${dateFin}T23:59:59`);
-  if (Number.isNaN(fin)) return null;
-  return Math.ceil((fin - Date.now()) / 86_400_000);
-}
-
-function etiquetteEcheance(jours: number): string {
-  if (jours < 0) return `en retard de ${-jours} j`;
-  if (jours === 0) return 'à rendre aujourd’hui';
-  return `à rendre dans ${jours} j`;
 }

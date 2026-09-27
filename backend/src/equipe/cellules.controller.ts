@@ -13,7 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SocieteAccesGuard } from '../commun/societe-acces.guard';
 import { CellulesService } from './cellules.service';
-import { CreerCelluleDto, MajCelluleDto } from './dto';
+import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
 
 type R = { user: { societeId: string } };
 
@@ -35,6 +35,17 @@ export class CellulesController {
   @Patch(':id')
   renommer(@Req() req: R, @Param('id') id: string, @Body() dto: MajCelluleDto) {
     return this.cellules.renommer(req.user.societeId, id, dto);
+  }
+
+  // Désigner/retirer le dispatcher de la cellule — admin uniquement (déjà
+  // garanti par SocieteAccesGuard sur tout ce contrôleur).
+  @Patch(':id/dispatcher')
+  definirDispatcher(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Body() dto: DefinirDispatcherDto,
+  ) {
+    return this.cellules.definirDispatcher(req.user.societeId, id, dto);
   }
 
   @Delete(':id')

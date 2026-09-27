@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import { getProjetExecution } from '@/lib/projets';
 import {
   ajouterFichiers,
@@ -17,8 +15,7 @@ import {
   supprimerFichiers,
   typeParDefaut,
 } from '@/lib/fichiers';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import {
   PHASES,
   PHASES_PAR_CATEGORIE,
@@ -26,12 +23,9 @@ import {
   type FichierProjet,
   type Phase,
   type ProjetExecution,
-  type Session,
-  type Societe,
   type TypeFichier,
 } from '@/lib/types';
 import { formatDateCourte } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
 
 type Props = { params: { slug: string; projetId: string } };
 
@@ -45,9 +39,6 @@ function telecharger(f: FichierProjet) {
 }
 
 export default function DocumentsPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [fichiers, setFichiers] = useState<FichierProjet[] | null>(null);
   const [corbeille, setCorbeille] = useState<FichierProjet[]>([]);
@@ -56,18 +47,9 @@ export default function DocumentsPage({ params }: Props) {
   const [erreur, setErreur] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  useTitrePage(vueCorbeille ? 'Corbeille' : 'Documents');
+
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
     getProjetExecution(params.slug, params.projetId).then((p) => {
       setProjet(p);
       if (p) {
@@ -75,9 +57,7 @@ export default function DocumentsPage({ params }: Props) {
         getFichiersSupprimes(params.slug, params.projetId).then(setCorbeille).catch(() => {});
       }
     });
-  }, [params.slug, params.projetId, router]);
-
-  if (!session) return null;
+  }, [params.slug, params.projetId]);
   const retour = `/admin/${params.slug}/projets/${params.projetId}`;
   const phases = projet ? PHASES_PAR_CATEGORIE[projet.categorie] : [];
 
@@ -125,8 +105,8 @@ export default function DocumentsPage({ params }: Props) {
   const liste = vueCorbeille ? corbeille : fichiers ?? [];
 
   return (
-    <AdminShell societe={societe} session={session} active="projets" titre="Documents">
-      <Link href={retour} className="lien-retour">
+    <>
+      <Link href={retour} className="lien-retour lien-retour--documents">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>{projet ? projet.programme : 'Projet'}</span>
       </Link>
@@ -270,6 +250,6 @@ export default function DocumentsPage({ params }: Props) {
           )}
         </section>
       )}
-    </AdminShell>
+    </>
   );
 }

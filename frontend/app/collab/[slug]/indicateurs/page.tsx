@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Boxes,
@@ -13,24 +12,25 @@ import {
   Store,
   type LucideIcon,
 } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import { getMonProfil } from '@/lib/collab';
 import { getIndicateurs } from '@/lib/equipe';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import {
+  CHEMIN_MODULE_TACHE,
+  MODULES_TACHE,
   NIVEAUX_COLLABORATEUR,
   PHASES,
   TYPES_BIEN,
   type IndicateursCollaborateur,
   type LigneProjetIndic,
+  type ModuleTache,
   type MonProfil,
-  type Session,
-  type Societe,
   type TypeBien,
 } from '@/lib/types';
-import { CollaborateurShell } from '@/components/collab/collab-shell';
+import { formatDateCourte } from '@/lib/format';
 import { RadialGauge } from '@/components/admin/radial-gauge';
+
+type FiltreStatutTache = 'toutes' | 'a_faire' | 'faites' | 'retard';
 
 type Props = { params: { slug: string } };
 
@@ -65,43 +65,19 @@ function anciennete(depuis: string): string {
   return reste ? `${a} et ${reste} mois` : a;
 }
 
-// « Avant-projet dans les délais » — l'unique mesure : sa date de validation
-// contre son échéance. Aucune date de livraison réelle n'existe.
-function delaiAvantProjet(l: LigneProjetIndic): {
-  texte: string;
-  ton: 'ok' | 'alerte' | 'neutre';
-} {
-  if (!l.apValideLe || !l.apDateFin) {
-    return { texte: 'Avant-projet non daté', ton: 'neutre' };
-  }
-  return l.apValideLe.slice(0, 10) <= l.apDateFin
-    ? { texte: 'Avant-projet dans les délais', ton: 'ok' }
-    : { texte: 'Avant-projet hors délais', ton: 'alerte' };
-}
-
 // « Mes indicateurs » — page « mon parcours », pas un second tableau de bord.
 // Tout est calcul de lecture serveur (endpoint indicateurs) : aucune saisie
 // côté collaborateur, aucun score agrégé, aucune comparaison entre personnes.
 export default function IndicateursPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Mes indicateurs');
+  const session = useSessionCourante();
   const [profil, setProfil] = useState<MonProfil | null>(null);
   const [indic, setIndic] = useState<IndicateursCollaborateur | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [filtreStatut, setFiltreStatut] = useState<FiltreStatutTache>('toutes');
+  const [filtreModule, setFiltreModule] = useState<'tous' | ModuleTache>('tous');
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'collaborateur') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
     getMonProfil(params.slug)
       .then((moi) => {
         setProfil(moi);
@@ -113,29 +89,41 @@ export default function IndicateursPage({ params }: Props) {
           e instanceof Error ? e.message : 'Indicateurs indisponibles pour le moment.',
         ),
       );
-  }, [params.slug, router]);
-
-  if (!session) return null;
+  }, [params.slug]);
 
   const projetBase = `/collab/${params.slug}/projets`;
-  const del = indic?.avantProjetDelais;
+  const mt = indic?.mesTaches;
   // Moyenne « avancement checklists » : sur les projets actifs qui ONT une checklist.
   const nChecklist = (indic?.projetsActifs ?? []).filter(
     (p) => p.checklistPct != null,
   ).length;
 
+  // « Mes tâches » filtrable (point 2, sept. 2026, décision boss) — tri : en
+  // retard d'abord, puis par échéance croissante (sans échéance en dernier).
+  const taches = useMemo(() => {
+    const liste = (indic?.taches ?? []).filter((t) => {
+      if (filtreModule !== 'tous' && t.module !== filtreModule) return false;
+      if (filtreStatut === 'a_faire' && t.fait) return false;
+      if (filtreStatut === 'faites' && !t.fait) return false;
+      if (filtreStatut === 'retard' && !t.enRetard) return false;
+      return true;
+    });
+    return [...liste].sort((a, b) => {
+      if (a.enRetard !== b.enRetard) return a.enRetard ? -1 : 1;
+      if (!a.echeance && !b.echeance) return 0;
+      if (!a.echeance) return 1;
+      if (!b.echeance) return -1;
+      return a.echeance < b.echeance ? -1 : a.echeance > b.echeance ? 1 : 0;
+    });
+  }, [indic?.taches, filtreModule, filtreStatut]);
+
   return (
-    <CollaborateurShell
-      societe={societe}
-      session={session}
-      active="indicateurs"
-      titre="Mes indicateurs"
-    >
+    <>
       <div className="indic">
         <div className="indic-actions">
           <p className="indic-intro">
-            Ton parcours dans le studio — projets, checklists, délais d’avant-projet.
-            Aucune note, aucun classement.
+            Ton parcours dans le studio — projets, tâches, délais. Aucune note, aucun
+            classement.
           </p>
           <button
             type="button"
@@ -205,60 +193,155 @@ export default function IndicateursPage({ params }: Props) {
           <>
             {/* Deux anneaux de progression — réels différenciateurs ? non : ils
                 doublent l'accueil. Gardés parce que la spec les demande, mais
-                discrets (ratio en sous-texte, pas de gros %). */}
+                discrets (ratio en sous-texte, pas de gros %). Mes tâches,
+                tous modules confondus (point 3, sept. 2026, décision boss) :
+                lignes Avant-projet assignées + items des blocs Permis/
+                Exécution dont je suis responsable, crédités un par un. */}
             <section className="indic-anneaux">
               <RadialGauge
-                data={{ pourcentage: indic.checklistPct ?? 0 }}
-                libelle="Avancement checklists"
+                data={{ pourcentage: mt?.pct ?? 0 }}
+                libelle="Mes tâches complétées"
                 ton="argile"
-                centre={indic.checklistPct == null ? '—' : `${indic.checklistPct} %`}
+                centre={mt?.pct == null ? '—' : `${mt.pct} %`}
                 ariaLabel={
-                  indic.checklistPct == null
-                    ? 'Avancement checklists : aucune checklist en cours'
-                    : `Avancement checklists : ${indic.checklistPct} %`
+                  mt?.pct == null
+                    ? 'Mes tâches complétées : aucune tâche assignée'
+                    : `Mes tâches complétées : ${mt.pct} %`
                 }
                 sousTexte={
-                  indic.checklistPct == null
-                    ? 'Aucune checklist en cours'
-                    : `Moyenne sur ${nChecklist} projet${nChecklist > 1 ? 's' : ''} actif${
-                        nChecklist > 1 ? 's' : ''
-                      }`
+                  mt == null || mt.total === 0
+                    ? 'Aucune tâche assignée'
+                    : `${mt.faites}/${mt.total} tâches, tous modules confondus`
                 }
               />
               <RadialGauge
                 data={{
-                  pourcentage: del && del.total ? (del.aTemps / del.total) * 100 : 0,
+                  pourcentage:
+                    mt && mt.respectDelais.total
+                      ? (mt.respectDelais.aTemps / mt.respectDelais.total) * 100
+                      : 0,
                 }}
-                libelle="Délais avant-projet tenus"
+                libelle="Respect des délais"
                 ton="sauge"
-                centre={del && del.total ? `${del.aTemps}/${del.total}` : '—'}
+                centre={
+                  mt && mt.respectDelais.total
+                    ? `${mt.respectDelais.aTemps}/${mt.respectDelais.total}`
+                    : '—'
+                }
                 ariaLabel={
-                  del && del.total
-                    ? `Délais avant-projet tenus : ${del.aTemps} sur ${del.total}`
-                    : 'Délais avant-projet tenus : aucune échéance datée'
+                  mt && mt.respectDelais.total
+                    ? `Respect des délais : ${mt.respectDelais.aTemps} sur ${mt.respectDelais.total}`
+                    : 'Respect des délais : aucune tâche faite avec échéance'
                 }
                 sousTexte={
-                  !del || del.total === 0
-                    ? 'Aucune échéance datée'
-                    : del.aTemps === del.total
+                  !mt || mt.respectDelais.total === 0
+                    ? 'Aucune tâche faite avec échéance'
+                    : mt.respectDelais.aTemps === mt.respectDelais.total
                       ? 'Aucun retard enregistré'
-                      : `${del.total - del.aTemps} avant-projet${
-                          del.total - del.aTemps > 1 ? 's' : ''
+                      : `${mt.respectDelais.total - mt.respectDelais.aTemps} tâche${
+                          mt.respectDelais.total - mt.respectDelais.aTemps > 1 ? 's' : ''
+                        } faite${
+                          mt.respectDelais.total - mt.respectDelais.aTemps > 1 ? 's' : ''
                         } hors délais`
                 }
               />
             </section>
 
-            {/* Fait brut annuel — identique pour tout le monde, jamais absent,
-                aucune notion de série « d'affilée ». Encart neutre. */}
-            <p className="indic-fait">
-              <strong>{indic.faitAnnuel.datesCetteAnnee}</strong> avant-projet
-              {indic.faitAnnuel.datesCetteAnnee > 1 ? 's' : ''} daté
-              {indic.faitAnnuel.datesCetteAnnee > 1 ? 's' : ''} validé
-              {indic.faitAnnuel.datesCetteAnnee > 1 ? 's' : ''} en{' '}
-              {indic.faitAnnuel.annee}, dont{' '}
-              <strong>{indic.faitAnnuel.dansLesDelais}</strong> dans les délais.
-            </p>
+            {/* En retard MAINTENANT — signal distinct du ratio historique
+                ci-dessus (dérivé à la volée, pour agir tout de suite, pas
+                pour juger la fiabilité dans la durée). Affiché seulement
+                s'il y a lieu — pas d'alerte vide. */}
+            {mt != null && mt.enRetard > 0 && (
+              <p className="indic-fait indic-fait--alerte">
+                <strong>{mt.enRetard}</strong> tâche{mt.enRetard > 1 ? 's' : ''} en retard
+                maintenant, tous modules confondus.
+              </p>
+            )}
+
+            {/* Mes tâches — liste détaillée et filtrable (point 2, sept.
+                2026, décision boss). Une ligne par tâche Avant-projet, une
+                ligne par BLOC pour Permis/Exécution (cf. mesTaches côté
+                service : le bloc reste l'unité de travail affichée). */}
+            <div className="indic-tete">
+              <h3>Mes tâches</h3>
+              <span className="indic-tete-compte">{indic.taches.length}</span>
+            </div>
+            <div className="indic-taches-filtres">
+              <select
+                className="field-input"
+                value={filtreStatut}
+                onChange={(e) => setFiltreStatut(e.target.value as FiltreStatutTache)}
+              >
+                <option value="toutes">Toutes</option>
+                <option value="a_faire">À faire</option>
+                <option value="faites">Faites</option>
+                <option value="retard">En retard</option>
+              </select>
+              <select
+                className="field-input"
+                value={filtreModule}
+                onChange={(e) => setFiltreModule(e.target.value as 'tous' | ModuleTache)}
+              >
+                <option value="tous">Tous les modules</option>
+                {(Object.keys(MODULES_TACHE) as ModuleTache[]).map((m) => (
+                  <option key={m} value={m}>
+                    {MODULES_TACHE[m]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {taches.length === 0 ? (
+              <p className="empty-state empty-state--bloc">
+                {indic.taches.length === 0
+                  ? 'Aucune tâche assignée pour le moment.'
+                  : 'Aucune tâche ne correspond à ce filtre.'}
+              </p>
+            ) : (
+              <ul className="indic-taches">
+                {taches.map((t) => (
+                  <li key={`${t.module}-${t.id}`}>
+                    <Link
+                      href={`${projetBase}/${t.projetId}/${CHEMIN_MODULE_TACHE[t.module]}`}
+                      className="indic-tache"
+                    >
+                      <span className="indic-tache-txt">
+                        <span className="indic-tache-nom">
+                          <span className="indic-tache-module">{MODULES_TACHE[t.module]}</span>
+                          {t.libelle}
+                        </span>
+                        <span className="indic-tache-projet">
+                          {t.projetCode} · {t.projetProgramme}
+                        </span>
+                      </span>
+                      <span className="indic-tache-droite">
+                        {t.total != null ? (
+                          <span className="indic-tache-progres">
+                            {t.faits}/{t.total}
+                          </span>
+                        ) : (
+                          <span
+                            className={`indic-tache-statut${
+                              t.fait ? ' indic-tache-statut--ok' : ''
+                            }`}
+                          >
+                            {t.fait ? 'Fait' : 'À faire'}
+                          </span>
+                        )}
+                        {t.echeance && (
+                          <span
+                            className={`indic-tache-echeance${
+                              t.enRetard ? ' indic-tache-echeance--retard' : ''
+                            }`}
+                          >
+                            {formatDateCourte(t.echeance)}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {/* Projets actifs — cartes enrichies */}
             <div className="indic-tete">
@@ -321,10 +404,6 @@ export default function IndicateursPage({ params }: Props) {
               <h3>Historique — projets livrés</h3>
               <span className="indic-tete-compte">{indic.historique.length}</span>
             </div>
-            <p className="indic-note">
-              Mesuré sur l’avant-projet seul : sa date de validation contre son
-              échéance. Aucune date de livraison réelle n’est suivie.
-            </p>
             {indic.historique.length === 0 ? (
               <p className="empty-state empty-state--bloc">
                 Aucun projet livré à ton actif pour l’instant.
@@ -332,7 +411,7 @@ export default function IndicateursPage({ params }: Props) {
             ) : (
               <ul className="indic-histo">
                 {indic.historique.map((p) => {
-                  const d = delaiAvantProjet(p);
+                  const pct = p.checklistPct;
                   return (
                     <li key={p.id}>
                       <Link href={`${projetBase}/${p.id}`} className="indic-histo-row">
@@ -341,9 +420,11 @@ export default function IndicateursPage({ params }: Props) {
                           {p.programme}
                         </span>
                         <span className="indic-histo-client">{p.clientNom}</span>
-                        <span className={`indic-delai indic-delai--${d.ton}`}>
-                          {d.texte}
-                        </span>
+                        {pct == null ? (
+                          <span className="indic-bar-vide">Pas de checklist</span>
+                        ) : (
+                          <span className="indic-bar-val">{pct} %</span>
+                        )}
                       </Link>
                     </li>
                   );
@@ -353,6 +434,6 @@ export default function IndicateursPage({ params }: Props) {
           </>
         )}
       </div>
-    </CollaborateurShell>
+    </>
   );
 }

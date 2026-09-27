@@ -27,11 +27,13 @@ type R = { user: { societeId: string; userId: string } };
 export class CollaborateursController {
   constructor(private collaborateurs: CollaborateursService) {}
 
+  // `?cellule=A` (une équipe) ou `?cellule=A&cellule=B` (plusieurs — Nest
+  // renvoie alors un tableau) : cf. CollaborateursService.findAll.
   @Get()
   findAll(
     @Req() req: R,
     @Query('q') q?: string,
-    @Query('cellule') cellule?: string,
+    @Query('cellule') cellule?: string | string[],
   ) {
     return this.collaborateurs.findAll(req.user.societeId, q, cellule);
   }

@@ -19,6 +19,7 @@ import type {
   MessageChat,
 } from '@/lib/types';
 import { PanneauChat } from '@/components/chat/panneau-chat';
+import { jouerSonNotification } from '@/lib/notification-sound';
 
 // Orchestrateur du chat, monté dans la topbar (collaborateur ET admin) : garde
 // une connexion SSE ouverte tant qu'on est dans l'app (le badge de non-lus vit
@@ -79,6 +80,9 @@ export function ChatWidget({ slug, moiId }: { slug: string; moiId: string }) {
     }
     const actif = canalId === canalActifIdRef.current && ouvertRef.current;
     const mien = message.auteur.id === moiId;
+    // Jamais pour son propre message renvoyé par le flux SSE — seulement à
+    // la réception d'un message de quelqu'un d'autre (décision boss, sept. 2026).
+    if (!mien) jouerSonNotification();
 
     setCanaux((cs) =>
       trier(

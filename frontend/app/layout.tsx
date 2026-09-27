@@ -1,5 +1,6 @@
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
+import { SCRIPT_THEME_INITIAL } from '@/lib/theme';
 
 // Auto-hébergées par next/font — identiques sur toutes les machines (Mac,
 // Windows, Linux), pas besoin qu'elles soient installées localement.
@@ -19,12 +20,11 @@ export const metadata = {
   description: 'Portail de gestion de la holding',
   manifest: '/manifest.json', // pour la PWA
   icons: {
-    icon: [
-      { url: '/logos/hub-icon.svg', type: 'image/svg+xml' },
-      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-    ],
-    apple: '/icons/apple-touch-icon.png',
+    // Nouveau logo hub360° (refonte dark/light, sept. 2026) — icône seule,
+    // fond sombre inclus dans le fichier (lisible sur n'importe quel chrome
+    // de navigateur, pas besoin de variante par prefers-color-scheme).
+    icon: [{ url: '/logos/hub-icon-dark.png', type: 'image/png' }],
+    apple: '/logos/hub-icon-dark.png',
   },
 };
 
@@ -35,6 +35,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className={`${inter.variable} ${display.variable}`}>
+      <head>
+        {/* Pose data-theme avant l'hydratation — évite un flash clair→sombre
+            au chargement (cf. lib/theme.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_THEME_INITIAL }} />
+      </head>
       <body>{children}</body>
     </html>
   );

@@ -31,8 +31,10 @@ const ctxOf = (req: Req): ExecutionContext =>
     getClass: () => class {},
   }) as unknown as ExecutionContext;
 
-const reflector = (ouvert: boolean | undefined): Reflector =>
-  ({ getAllAndOverride: jest.fn().mockReturnValue(ouvert) }) as unknown as Reflector;
+// Réutilisé pour les deux clés de métadonnées que le guard interroge :
+// ECRITURE_COLLABORATEUR (booléen) et PERMISSION_REQUISE ({module, niveau}).
+const reflector = (valeur: boolean | { module: string; niveau: string } | undefined): Reflector =>
+  ({ getAllAndOverride: jest.fn().mockReturnValue(valeur) }) as unknown as Reflector;
 
 function prisma(opts: { collab?: unknown; projet?: unknown } = {}) {
   const collabFind = jest.fn().mockResolvedValue(opts.collab ?? null);
@@ -85,13 +87,46 @@ describe('AccesProjetGuard', () => {
         g.canActivate(ctxOf(req({ user: { ...COLLAB, role: 'holding_admin' } }))),
       ).rejects.toThrow(/non autorisé/);
     });
+
+    it('rôle métier (CFO) sur un endpoint @RequiertPermission : laissé passer, sans toucher la base — PermissionGuard tranche le niveau', async () => {
+      const { svc, collabFind, projetFind } = prisma();
+      const g = new AccesProjetGuard(
+        svc,
+        reflector({ module: 'finances_marges', niveau: 'lecture' }),
+      );
+      await expect(
+        g.canActivate(ctxOf(req({ user: { ...COLLAB, role: 'CFO' } }))),
+      ).resolves.toBe(true);
+      expect(collabFind).not.toHaveBeenCalled();
+      expect(projetFind).not.toHaveBeenCalled();
+    });
+
+    it('rôle métier (CFO) sur un endpoint NON marqué @RequiertPermission → 403 (pas d’accès implicite)', async () => {
+      const g = new AccesProjetGuard(prisma().svc, reflector(undefined));
+      await expect(
+        g.canActivate(ctxOf(req({ user: { ...COLLAB, role: 'CFO' } }))),
+      ).rejects.toThrow(/non autorisé/);
+    });
   });
 
   describe('collaborateur — lecture', () => {
     it('AUTORISÉ : projet suivi par sa cellule', async () => {
       const { svc } = prisma({
         collab: { id: 'C1', celluleId: 'CEL1' },
-        projet: { celluleId: 'CEL1', avantProjet: null },
+        projet: { cellules: [{ celluleId: 'CEL1' }], avantProjet: null },
+      });
+      await expect(
+        new AccesProjetGuard(svc, reflector(undefined)).canActivate(ctxOf(req())),
+      ).resolves.toBe(true);
+    });
+
+    it('AUTORISÉ : projet suivi par plusieurs cellules dont la sienne', async () => {
+      const { svc } = prisma({
+        collab: { id: 'C1', celluleId: 'CEL1' },
+        projet: {
+          cellules: [{ celluleId: 'CEL2' }, { celluleId: 'CEL1' }],
+          avantProjet: null,
+        },
       });
       await expect(
         new AccesProjetGuard(svc, reflector(undefined)).canActivate(ctxOf(req())),
@@ -102,7 +137,7 @@ describe('AccesProjetGuard', () => {
       const { svc } = prisma({
         collab: { id: 'C1', celluleId: 'CEL1' },
         projet: {
-          celluleId: 'CEL2',
+          cellules: [{ celluleId: 'CEL2' }],
           avantProjet: { dessinateurId: 'C1', responsable3dId: null },
         },
       });
@@ -115,7 +150,7 @@ describe('AccesProjetGuard', () => {
       const { svc } = prisma({
         collab: { id: 'C1', celluleId: 'CEL1' },
         projet: {
-          celluleId: 'CEL2',
+          cellules: [{ celluleId: 'CEL2' }],
           avantProjet: { dessinateurId: 'CX', responsable3dId: 'CY' },
         },
       });
@@ -161,7 +196,7 @@ describe('AccesProjetGuard', () => {
     it('endpoint NON marqué → 403 (protège contre un futur endpoint ajouté sans y penser)', async () => {
       const { svc, collabFind } = prisma({
         collab: { id: 'C1', celluleId: 'CEL1' },
-        projet: { celluleId: 'CEL1', avantProjet: null },
+        projet: { cellules: [{ celluleId: 'CEL1' }], avantProjet: null },
       });
       await expect(
         new AccesProjetGuard(svc, reflector(undefined)).canActivate(
@@ -174,7 +209,7 @@ describe('AccesProjetGuard', () => {
     it('endpoint marqué + projet à lui → AUTORISÉ', async () => {
       const { svc } = prisma({
         collab: { id: 'C1', celluleId: 'CEL1' },
-        projet: { celluleId: 'CEL1', avantProjet: null },
+        projet: { cellules: [{ celluleId: 'CEL1' }], avantProjet: null },
       });
       await expect(
         new AccesProjetGuard(svc, reflector(true)).canActivate(
@@ -186,7 +221,7 @@ describe('AccesProjetGuard', () => {
     it('endpoint marqué mais projet PAS à lui → 403 (le périmètre s’applique quand même)', async () => {
       const { svc } = prisma({
         collab: { id: 'C1', celluleId: 'CEL1' },
-        projet: { celluleId: 'CEL2', avantProjet: null },
+        projet: { cellules: [{ celluleId: 'CEL2' }], avantProjet: null },
       });
       await expect(
         new AccesProjetGuard(svc, reflector(true)).canActivate(

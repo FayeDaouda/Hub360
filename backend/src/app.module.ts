@@ -12,6 +12,9 @@ import { ProjetsModule } from './projets/projets.module';
 import { EquipeModule } from './equipe/equipe.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
+import { DevisModule } from './devis/devis.module';
+import { RolesModule } from './roles/roles.module';
+import { LocalitesModule } from './localites/localites.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
 import { FiltreExceptionsGlobal } from './commun/exception.filter';
 
@@ -35,6 +38,9 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     EquipeModule,
     NotificationsModule,
     ChatModule,
+    DevisModule,
+    RolesModule,
+    LocalitesModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: SerialisationInterceptor },

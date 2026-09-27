@@ -1,4 +1,4 @@
-import type { ImageProjet, Phase, UsageImage } from './types';
+import type { ImageProjet, Phase, TypePhotoImage, UsageImage } from './types';
 import { apiSociete } from './client-api';
 
 // -----------------------------------------------------------------------------
@@ -37,10 +37,11 @@ export function ajouterImages(
   projetId: string,
   fichiers: { nom: string; url: string }[],
   _ajoutePar: string,
+  typePhoto: TypePhotoImage,
 ): Promise<ImageProjet[]> {
   return apiSociete<ImageProjet[]>(slug, `/projets/${projetId}/images`, {
     method: 'POST',
-    body: { fichiers },
+    body: { fichiers, typePhoto },
   });
 }
 
@@ -48,7 +49,12 @@ export function majImage(
   slug: string,
   projetId: string,
   imageId: string,
-  patch: { usage?: UsageImage; phase?: Phase | null; legende?: string },
+  patch: {
+    usage?: UsageImage;
+    phase?: Phase | null;
+    typePhoto?: TypePhotoImage | null;
+    legende?: string;
+  },
 ): Promise<ImageProjet> {
   return apiSociete<ImageProjet>(
     slug,
@@ -61,7 +67,7 @@ export function majImagesEnLot(
   slug: string,
   projetId: string,
   ids: string[],
-  patch: { usage?: UsageImage; phase?: Phase | null },
+  patch: { usage?: UsageImage; phase?: Phase | null; typePhoto?: TypePhotoImage | null },
 ): Promise<ImageProjet[]> {
   return apiSociete<ImageProjet[]>(slug, `/projets/${projetId}/images`, {
     method: 'PATCH',

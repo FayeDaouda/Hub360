@@ -1,13 +1,14 @@
 import {
   avancementChecklistAvp,
+  avancementChecklistFichiers,
   avertissementChangementPhase,
-  checklistComplete,
   dossierPermisComplet,
   etudesCompletes,
   joursRetardFacture,
   peutAvancerPhase,
   phasesAdjacentes,
   preBilanComplet,
+  statsTaches,
   statutFactureEffectif,
   ventilationTva,
 } from './gardes';
@@ -35,30 +36,96 @@ describe('avancementChecklistAvp', () => {
       complete: false,
     });
   });
+
+  it('un item non requis compte comme réglé, au même titre qu\'un item fait', () => {
+    expect(
+      avancementChecklistAvp([
+        { fait: true },
+        { fait: false, nonRequise: true },
+        { fait: false },
+      ]),
+    ).toEqual({ faits: 2, total: 3, pct: 67, complete: false });
+    expect(
+      avancementChecklistAvp([{ fait: false, nonRequise: true }]).complete,
+    ).toBe(true);
+  });
 });
 
-describe('checklistComplete', () => {
-  const base = {
-    programmeValide: true,
-    budgetValide: true,
-    esquisseValidee: true,
-    engagementValide: true,
-  };
-  it('exige les 4 points', () => {
-    expect(checklistComplete(base)).toBe(true);
-    expect(checklistComplete({ ...base, budgetValide: false })).toBe(false);
+describe('statsTaches', () => {
+  it('compte faites / total et calcule le pct, null si aucune tâche', () => {
+    expect(statsTaches([])).toEqual({
+      total: 0,
+      faites: 0,
+      pct: null,
+      enRetard: 0,
+      respectDelais: { aTemps: 0, total: 0 },
+    });
+    const r = statsTaches([
+      { fait: true, echeance: null, faitLe: null },
+      { fait: false, echeance: null, faitLe: null },
+    ]);
+    expect(r.total).toBe(2);
+    expect(r.faites).toBe(1);
+    expect(r.pct).toBe(50);
+  });
+
+  it('en retard = non faite ET échéance dépassée, jamais une tâche déjà faite', () => {
+    const r = statsTaches([
+      { fait: false, echeance: '2020-01-01', faitLe: null }, // en retard
+      { fait: false, echeance: '2099-01-01', faitLe: null }, // pas encore
+      { fait: false, echeance: null, faitLe: null }, // pas d'échéance
+      { fait: true, echeance: '2020-01-01', faitLe: new Date('2019-06-01') }, // faite, jamais « en retard »
+    ]);
+    expect(r.enRetard).toBe(1);
+  });
+
+  it('respectDelais : uniquement les tâches faites AVEC échéance connue', () => {
+    const r = statsTaches([
+      { fait: true, echeance: '2024-06-15', faitLe: new Date('2024-06-10') }, // à temps
+      { fait: true, echeance: '2024-06-15', faitLe: new Date('2024-06-20') }, // en retard
+      { fait: true, echeance: null, faitLe: new Date('2024-06-10') }, // pas d'échéance -> exclue
+      { fait: false, echeance: '2020-01-01', faitLe: null }, // pas faite -> exclue
+    ]);
+    expect(r.respectDelais).toEqual({ aTemps: 1, total: 2 });
+  });
+
+  it('respectDelais : à la date échéance exacte compte comme à temps', () => {
+    const r = statsTaches([
+      { fait: true, echeance: '2024-06-15', faitLe: new Date('2024-06-15T23:00:00Z') },
+    ]);
+    expect(r.respectDelais).toEqual({ aTemps: 1, total: 1 });
+  });
+});
+
+describe('avancementChecklistFichiers', () => {
+  it('compte non-en_attente / total (non_necessaire compte comme réglé)', () => {
+    const r = avancementChecklistFichiers([
+      { statut: 'fait' },
+      { statut: 'en_attente' },
+      { statut: 'non_necessaire' },
+    ]);
+    expect(r).toEqual({ faits: 2, total: 3, pct: 67, complete: false });
+  });
+
+  it('complete uniquement si au moins un item et tous réglés', () => {
+    expect(avancementChecklistFichiers([]).complete).toBe(false);
+    expect(avancementChecklistFichiers([{ statut: 'fait' }]).complete).toBe(true);
+    expect(avancementChecklistFichiers([{ statut: 'non_necessaire' }]).complete).toBe(true);
+    expect(avancementChecklistFichiers([{ statut: 'en_attente' }]).complete).toBe(false);
   });
 });
 
 describe('peutAvancerPhase', () => {
   // Les phases peuvent se chevaucher (décision boss, sept. 2026) : plus de
   // verrou dur sur l'avant-projet non validé ni le permis non obtenu — voir
-  // avertissementChangementPhase pour le rappel doux correspondant.
-  it('laisse sortir d’avant-projet même non validé', () => {
+  // avertissementChangementPhase pour le rappel doux correspondant. Le verrou
+  // de validation avant-projet lui-même a été retiré (sept. 2026, cf.
+  // schema.prisma::AvantProjet) : seul permisObtenu reste en paramètre.
+  it('laisse sortir d’avant-projet', () => {
     expect(
       peutAvancerPhase(
         { categorie: 'conception', phase: 'avant_projet' },
-        { avantProjetValide: false, permisObtenu: false },
+        { permisObtenu: false },
       ).ok,
     ).toBe(true);
   });
@@ -67,7 +134,7 @@ describe('peutAvancerPhase', () => {
     expect(
       peutAvancerPhase(
         { categorie: 'conception', phase: 'permis' },
-        { avantProjetValide: true, permisObtenu: false },
+        { permisObtenu: false },
       ).ok,
     ).toBe(true);
   });
@@ -76,43 +143,25 @@ describe('peutAvancerPhase', () => {
     expect(
       peutAvancerPhase(
         { categorie: 'amenagement', phase: 'livre' },
-        { avantProjetValide: true, permisObtenu: true },
+        { permisObtenu: true },
       ).ok,
     ).toBe(false);
   });
 });
 
 describe('avertissementChangementPhase', () => {
-  it('rappelle un avant-projet non validé, sans bloquer', () => {
-    expect(
-      avertissementChangementPhase(
-        { phase: 'avant_projet' },
-        { avantProjetValide: false, permisObtenu: false },
-      ),
-    ).toMatch(/validé/);
-  });
-
   it('rappelle un permis non obtenu', () => {
     expect(
-      avertissementChangementPhase(
-        { phase: 'permis' },
-        { avantProjetValide: true, permisObtenu: false },
-      ),
+      avertissementChangementPhase({ phase: 'permis' }, { permisObtenu: false }),
     ).toMatch(/obtenu/);
   });
 
-  it('ne dit rien si tout est en ordre ou hors de ces deux phases', () => {
+  it('ne dit rien si tout est en ordre ou hors de cette phase', () => {
     expect(
-      avertissementChangementPhase(
-        { phase: 'avant_projet' },
-        { avantProjetValide: true, permisObtenu: false },
-      ),
+      avertissementChangementPhase({ phase: 'permis' }, { permisObtenu: true }),
     ).toBeNull();
     expect(
-      avertissementChangementPhase(
-        { phase: 'etudes' },
-        { avantProjetValide: false, permisObtenu: false },
-      ),
+      avertissementChangementPhase({ phase: 'avant_projet' }, { permisObtenu: false }),
     ).toBeNull();
   });
 });

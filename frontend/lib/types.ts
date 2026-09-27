@@ -7,6 +7,10 @@ export type Societe = {
   couleurMarque: string | null;
   icone: string | null;
   secteur: string | null;
+  // Pied des documents (devis, factures) — tel que fourni par la société.
+  mentionsLegales: string | null;
+  coordonnees: string | null;
+  penaliteRetardMensuelle: number | null; // % par mois (CGV art. 13)
 };
 
 export type Session = {
@@ -23,6 +27,10 @@ export type Session = {
     slug: string;
   };
   role: string;
+  // Carte module → niveau (matrice RolePermission), identique au JWT. Absente
+  // d'une session ouverte avant son ajout : traitée comme « aucun » partout
+  // (cf. lib/auth.ts::aLaPermission) — une reconnexion la récupère.
+  permissions?: Partial<Record<string, NiveauPermission>>;
 };
 
 // --- Tableau de bord back-office d'une société ---
@@ -105,6 +113,9 @@ export type Client = {
   id: string;
   nom: string;
   type: TypeClient;
+  // Sigle choisi par l'entreprise — obligatoire pour une personne morale,
+  // segment CLIENT du code dossier (cf. lib/nomenclature.ts).
+  sigle?: string;
   contact?: string; // personne référente
   email?: string;
   telephone?: string;
@@ -168,35 +179,87 @@ export const NATURES_DOSSIER: Record<NatureDossier, string> = {
   promotion_interne: 'Promotion interne',
 };
 
-// Statut d'un dossier dans le pipeline CRM. La machine à états est la même
-// pour les deux natures (3 étapes + 1 sortie) ; seuls les libellés changent.
-// Passer à « valide » crée automatiquement un projet (voir lib/projets.ts).
-export type StatutCrm = 'nouveau' | 'devis_contrat' | 'valide' | 'annule';
+// Statut d'un dossier dans le cycle commercial (étape E, sept. 2026). On ne
+// le change jamais directement : on déclenche une ACTION (lib/cycle-crm.ts),
+// que le serveur autorise ou non. Passer à « onboard » crée le projet
+// d'exécution. onboard et perdu sont définitifs.
+export type StatutCrm = 'nouveau_projet' | 'en_validation' | 'offre_envoyee' | 'onboard' | 'perdu';
 
-export const STATUTS_CRM: Record<NatureDossier, Record<StatutCrm, string>> = {
-  mandat_client: {
-    nouveau: 'Nouveau projet',
-    devis_contrat: 'Devis / contrat',
-    valide: 'Validé',
-    annule: 'Annulé',
-  },
-  promotion_interne: {
-    nouveau: 'Repéré',
-    devis_contrat: 'Étudié',
-    valide: 'GO direction',
-    annule: 'Abandonné',
-  },
+// Un seul jeu de libellés : le cycle est celui de Grey Concrete, la nature
+// « Promotion interne » restant fermée à la création.
+export const STATUTS_CRM: Record<StatutCrm, string> = {
+  nouveau_projet: 'Nouveau projet',
+  en_validation: 'En validation (DAF)',
+  offre_envoyee: 'Offre envoyée',
+  onboard: 'Onboard',
+  perdu: 'Perdu',
 };
 
-export const STATUTS_ORDRE: StatutCrm[] = ['nouveau', 'devis_contrat', 'valide', 'annule'];
+export const STATUTS_ORDRE: StatutCrm[] = [
+  'nouveau_projet',
+  'en_validation',
+  'offre_envoyee',
+  'onboard',
+  'perdu',
+];
+
+// Une ligne du journal du cycle (de = null : création / reprise de données).
+export type TransitionDossier = {
+  id: string;
+  de: StatutCrm | null;
+  vers: StatutCrm;
+  par: Personne | null;
+  commentaire: string | null;
+  le: string; // ISO 8601
+};
 
 // Une ligne du CRM = un projet / dossier immobilier.
+// --- Référentiel des localités (partagé par toutes les sociétés du HUB) ---
+// Code = 3 lettres, unique sur les trois zones ; figé dès qu'un dossier
+// l'utilise (`codeVerrouille`) — seul le nom reste corrigeable.
+export type ZoneLocalite = 'dakar' | 'senegal' | 'pays';
+
+export const ZONES_LOCALITE: Record<ZoneLocalite, string> = {
+  dakar: 'Dakar',
+  senegal: 'Villes Sénégal',
+  pays: 'Pays',
+};
+
+// Libellé du niveau `region` selon la zone (colonnes du fichier source).
+export const LIBELLE_REGION_LOCALITE: Record<ZoneLocalite, string> = {
+  dakar: 'Département',
+  senegal: 'Région',
+  pays: 'Zone',
+};
+
+export type Localite = {
+  id: string;
+  code: string;
+  nom: string;
+  zone: ZoneLocalite;
+  region: string;
+  arrondissement: string | null;
+  commune: string | null;
+  codeVerrouille: boolean;
+};
+
+export type NouvelleLocalitePayload = {
+  code: string;
+  nom: string;
+  zone: ZoneLocalite;
+  region: string;
+  arrondissement?: string | null;
+  commune?: string | null;
+};
+
 export type Projet = {
   id: string;
-  code: string; // code projet — ex : PRJ-2026-014
+  code: string; // code dossier — ex : DF_PE.26 (cf. lib/nomenclature.ts)
   nature: NatureDossier;
   categorie: Categorie;
-  localisation: string;
+  localisation: string; // libellé affiché
+  // null = dossier antérieur au référentiel, pas encore rattaché.
+  localite: Pick<Localite, 'id' | 'code' | 'nom'> | null;
   type: TypeBien;
   nbPlanches: number; // nombre de planches
   surfaceTerrain: number; // m²
@@ -205,8 +268,48 @@ export type Projet = {
   gamme: Gamme;
   programme: string;
   statut: StatutCrm;
+  // Contenu de la fiche figé dès la soumission à la DAF (propriétaire excepté).
+  verrouillee: boolean;
   creeLe: string; // ISO 8601
+  creePar: Personne | null; // null = dossier antérieur à l'étape C1
+  apporteur: Apporteur | null; // null = dossier antérieur (non renseigné)
+  // Présente seulement pour qui a finances_charges en lecture (clé absente
+  // sinon) ; null = aucune commission.
+  commissionApporteur?: number | null;
+  proprietaire: Personne | null; // null = « à assigner »
+  // CO1/CO2/CO3 — fixée à l'envoi de l'offre (null avant). SU en découle.
+  categorieConception: string | null;
+  // Offre en cours (étape F). Clé absente sans finances_devis en lecture ;
+  // null = pas encore d'offre préparée.
+  offre?: OffreDossier | null;
 };
+
+// Résumé de l'offre en cours d'un dossier (la plus récente).
+export type OffreDossier = {
+  id: string;
+  reference: string | null; // null tant que brouillon
+  statutEffectif: StatutDevisEffectif;
+  objet: string;
+  nbLignes: number;
+  montantTtc: number;
+  dateEnvoi: string | null;
+  dateValidite: string | null; // AAAA-MM-JJ — envoi + 7 jours
+  dateReponse: string | null;
+  relancesEnvoyees: number;
+  relanceAFaire: boolean;
+};
+
+// Personne référencée sur une fiche (compte HUB).
+export type Personne = { id: string; nom: string };
+
+export type TypeApporteur = 'interne' | 'externe';
+
+export type Apporteur =
+  | { type: 'interne'; utilisateur: Personne | null }
+  | { type: 'externe'; nom: string; telephone?: string; email?: string };
+
+// Pas fixes validés (sept. 2026) — mêmes valeurs que le serveur et la base.
+export const PAS_COMMISSION = [3, 3.5, 4, 4.5, 5] as const;
 
 // Charge utile du formulaire « Nouveau projet ». `client` = soit l'id d'un
 // client existant, soit les champs d'un nouveau client à créer au passage.
@@ -214,24 +317,30 @@ export type Projet = {
 export type NouveauProjetPayload = {
   nature: NatureDossier;
   categorie: Categorie;
-  localisation: string;
+  localiteId: string; // le libellé `localisation` est déduit côté serveur
   type: TypeBien;
   nbPlanches: number;
   surfaceTerrain: number;
-  client: { id: string } | { nouveau: Omit<Client, 'id'> };
+  // `sigle` à côté de `id` : complète une personne morale qui n'en a pas.
+  client: { id: string; sigle?: string } | { nouveau: Omit<Client, 'id'> };
   standing: Standing;
   gamme: Gamme;
   programme: string;
-  statut: StatutCrm;
-  // Vide → code généré (XX_YY.ZZ, + V2/V3 si doublon). Renseigné → utilisé tel
-  // quel (409 si déjà pris). Cf. lib/nomenclature.ts.
-  code?: string;
+  // Pas de statut : tout dossier naît « Nouveau projet » (côté serveur).
+  // Interne = le créateur (rien d'autre à envoyer) ; externe = tiers saisi.
+  apporteur:
+    | { type: 'interne' }
+    | { type: 'externe'; nom: string; telephone?: string; email?: string };
+  commissionApporteur?: number | null; // exige finances_charges en écriture
+  proprietaireId?: string; // requis seulement s'il y a plusieurs Dir. GC
+  // Pas de code : toujours généré côté serveur (CLIENT_LOC.AA, -2 si doublon).
 };
 
 // --- Équipe : 6 cellules cross-fonctionnelles (Archi 1-4, Intérieur, Études) ---
-// Une cellule prend un projet de bout en bout — « 1 projet = 1 cellule ».
-// L'admin y a un CRUD complet (page Équipe). Un collaborateur peut être sans
-// cellule (celluleId null) tout en restant rattaché à sa société.
+// Un projet peut être suivi par PLUSIEURS cellules (décision boss, sept.
+// 2026 — remplace « 1 projet = 1 cellule »). L'admin y a un CRUD complet
+// (page Équipe). Un collaborateur, lui, reste rattaché à une seule cellule
+// au plus (celluleId null = sans cellule), ça ne change pas.
 
 // Séniorité (2ᵉ axe, distinct du métier `role`).
 export type NiveauCollaborateur = 'stagiaire' | 'junior' | 'confirme' | 'senior' | 'lead';
@@ -283,6 +392,9 @@ export type Collaborateur = {
 export type Cellule = {
   id: string;
   nom: string;
+  // Membre habilité à répartir les tâches aux autres (décision boss, sept.
+  // 2026) — un seul par cellule, désigné par l'admin, doit être membre.
+  dispatcherId: string | null;
   collaborateurs: Collaborateur[];
 };
 
@@ -290,6 +402,12 @@ export type Cellule = {
 // compte (jamais un :id d'URL). Alimente l'espace /collab/[slug].
 export type MonProfil = Collaborateur & {
   celluleNom: string | null;
+  // Dispatcher de sa cellule (décision boss, sept. 2026) — peut réassigner
+  // les lignes/blocs dont l'assigné est un membre de SA cellule (même
+  // périmètre que le guard estAutoriseAAssigner côté serveur). `equipeAssignable`
+  // = ses coéquipiers, vide si `estDispatcher` est faux.
+  estDispatcher: boolean;
+  equipeAssignable: { id: string; prenom: string; nom: string }[];
 };
 
 // Un projet tel que présenté sur « Mes indicateurs » (carte active / ligne
@@ -302,23 +420,67 @@ export type LigneProjetIndic = {
   phase: Phase;
   clientNom: string;
   checklistPct: number | null; // null = pas encore de checklist
-  apDateFin: string | null; // AAAA-MM-JJ — échéance de l'avant-projet
-  apValideLe: string | null; // ISO 8601 — validation de l'avant-projet
 };
 
 // Indicateurs de performance — calcul de lecture serveur (aucune saisie).
 // `faitAnnuel` / `projetsActifs` / `historique` alimentent la page « Mes
-// indicateurs » ; les 4 premiers champs, le bandeau accueil + la fiche admin.
+// indicateurs » ; les 3 premiers champs, le bandeau accueil + la fiche admin.
 export type IndicateursCollaborateur = {
   projetsEnCours: number;
   projetsLivres: number;
-  avantProjetDelais: { aTemps: number; total: number };
-  checklistPct: number | null;
-  // Fait brut de l'année civile en cours — toujours présent (0 / 0 si rien),
-  // sans notion de série. « X avant-projets datés cette année, Y dans les délais ».
-  faitAnnuel: { annee: number; datesCetteAnnee: number; dansLesDelais: number };
+  // « Mes tâches » (point 3, sept. 2026, décision boss) — lignes Avant-
+  // projet assignées + items des blocs Permis/Exécution dont ce
+  // collaborateur est responsable, crédités un par un (remplace l'ancien
+  // checklistPct/avantProjetDelais calculés en moyenne de projet, pas
+  // filtrés par assignation individuelle). Deux signaux délais séparés,
+  // pas un score unique : `enRetard` (dérivé à la volée, pour agir tout de
+  // suite) et `respectDelais` (ratio historique, pour la fiabilité dans la
+  // durée) — même logique que pipeline actif / taux de conversion sur le CRM.
+  mesTaches: {
+    total: number;
+    faites: number;
+    pct: number | null; // null = aucune tâche
+    enRetard: number;
+    respectDelais: { aTemps: number; total: number };
+  };
+  // Liste détaillée et filtrable de ces mêmes tâches (point 2, sept. 2026,
+  // décision boss) — une ligne par tâche Avant-projet, une ligne par BLOC
+  // pour Permis/Exécution (le bloc reste l'unité de travail affichée, même
+  // si `mesTaches` ci-dessus compte ses items un par un).
+  taches: TacheIndividuelle[];
   projetsActifs: LigneProjetIndic[];
   historique: LigneProjetIndic[]; // projets livrés
+};
+
+export type ModuleTache = 'avant_projet' | 'permis' | 'execution';
+
+export const MODULES_TACHE: Record<ModuleTache, string> = {
+  avant_projet: 'Avant-projet',
+  permis: 'Autorisation',
+  execution: 'Dossier Exécutions',
+};
+
+// Chemin de la section projet correspondante — cf. app/collab/[slug]/projets/[projetId]/…
+export const CHEMIN_MODULE_TACHE: Record<ModuleTache, string> = {
+  avant_projet: 'avant-projet',
+  permis: 'permis',
+  execution: 'execution',
+};
+
+export type TacheIndividuelle = {
+  id: string;
+  module: ModuleTache;
+  libelle: string;
+  projetId: string;
+  projetCode: string;
+  projetProgramme: string;
+  fait: boolean;
+  // Nb d'items faits / total du bloc — module = avant_projet, permis ou
+  // execution, tous assignés par bloc depuis sept. 2026 (même grain partout).
+  faits: number | null;
+  total: number | null;
+  echeance: string | null; // AAAA-MM-JJ
+  enRetard: boolean; // dérivé serveur : non faite ET échéance dépassée
 };
 
 // --- Notifications collaborateur ---
@@ -329,7 +491,9 @@ export type IndicateursCollaborateur = {
 export type NotificationType =
   | 'projet_assigne'
   | 'phase_changee'
-  | 'echeance_avant_projet';
+  | 'checklist_assignee'
+  | 'prolongation_demandee'
+  | 'prolongation_decidee';
 
 export type NotificationItem = {
   id: string;
@@ -410,8 +574,8 @@ export type Phase = 'avant_projet' | 'permis' | 'etudes' | 'chantier' | 'livre';
 
 export const PHASES: Record<Phase, string> = {
   avant_projet: 'Avant-projet',
-  permis: 'Permis',
-  etudes: 'Études',
+  permis: 'Autorisation',
+  etudes: 'Bureau d’études technique',
   chantier: 'Chantier',
   livre: 'Livré',
 };
@@ -431,7 +595,9 @@ export type ProjetExecution = {
   type: TypeBien;
   client: Client;
   origineCrmId: string;
-  celluleAssignee: string | null; // une seule cellule par projet
+  // Plusieurs équipes possibles par projet (décision boss, sept. 2026 —
+  // remplace l'ancien champ singulier celluleAssignee).
+  cellules: string[];
   latitude: number | null; // pin géo posé à la main
   longitude: number | null;
   statut: StatutProjetExec;
@@ -449,7 +615,7 @@ export type ProjetExecution = {
 // répercutée côté NestJS, et réciproquement.
 export function peutAvancerPhase(
   projet: Pick<ProjetExecution, 'categorie' | 'phase'>,
-  _contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+  _contexte: { permisObtenu: boolean },
 ): { ok: boolean; raison?: string } {
   const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
   const i = sequence.indexOf(projet.phase);
@@ -458,27 +624,28 @@ export function peutAvancerPhase(
 }
 
 // Rappel doux (n'affecte jamais `peutAvancerPhase.ok`) : signale qu'on quitte
-// « avant_projet » sans validation ou « permis » sans permis en main. À
-// combiner avec les autres textes de la prop `avertissement` du PhaseStepper
-// — jamais un blocage.
+// « permis » sans permis en main. À combiner avec les autres textes de la
+// prop `avertissement` du PhaseStepper — jamais un blocage. Le verrou de
+// validation avant-projet a été retiré (sept. 2026, cf. schema.prisma
+// backend) — plus de rappel correspondant.
 export function avertissementChangementPhase(
   projet: Pick<ProjetExecution, 'phase'>,
-  contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+  contexte: { permisObtenu: boolean },
 ): string | null {
-  if (projet.phase === 'avant_projet' && !contexte.avantProjetValide) {
-    return "L'avant-projet n'est pas encore validé.";
-  }
   if (projet.phase === 'permis' && !contexte.permisObtenu) {
     return 'Le permis de construire n’est pas encore obtenu.';
   }
   return null;
 }
 
-// Les 5 sections d'un projet (dossiers internes). Ordre = ordre d'affichage.
+// Les 6 sections d'un projet (dossiers internes). Ordre = ordre d'affichage
+// (confirmé boss, sept. 2026 — 11 cartes au total à terme, les 5 suivantes
+// restant à ajouter une fois leur contenu défini carte par carte).
 export type SectionProjet =
+  | 'foncier'
+  | 'documents'
   | 'avant-projet'
   | 'images'
-  | 'documents'
   | 'permis'
   | 'etude'
   | 'execution';
@@ -488,27 +655,55 @@ export const SECTIONS_PROJET: {
   libelle: string;
   description: string;
 }[] = [
-  { cle: 'avant-projet', libelle: 'Avant-projet', description: 'Cadrage, faisabilité, esquisse' },
-  { cle: 'images', libelle: 'Images', description: 'Photos, rendus, références' },
+  {
+    cle: 'foncier',
+    libelle: 'Foncier',
+    description: 'Cadastre, droit réel, relevé de l’existant sur le terrain',
+  },
   {
     cle: 'documents',
     libelle: 'Documents',
     description: 'PDF APS/APD, plans CAO, devis, plaquettes',
   },
+  { cle: 'avant-projet', libelle: 'Avant-projet', description: 'Cadrage, faisabilité, esquisse' },
+  { cle: 'images', libelle: 'Images', description: 'Photos, rendus, références' },
   {
     cle: 'permis',
-    libelle: 'Permis de construire',
+    libelle: 'Autorisation',
     description: 'Dossier PC, échanges, autorisations',
   },
-  { cle: 'etude', libelle: 'Étude', description: 'Plans techniques, notes, DCE' },
-  { cle: 'execution', libelle: 'Exécution', description: 'Chantier, comptes-rendus, réserves' },
+  { cle: 'etude', libelle: 'Bureau d’études technique', description: 'Plans techniques, notes, DCE' },
+  {
+    cle: 'execution',
+    libelle: 'Dossier Exécutions',
+    description: 'Chantier, comptes-rendus, réserves',
+  },
 ];
 
 // Sections disponibles selon la catégorie : « aménagement » n'a ni permis
-// de construire ni étude.
+// de construire ni étude. Foncier s'applique aux deux — un terrain se
+// documente pareil, conception ou aménagement. Foncier en premier (demande
+// boss, sept. 2026) : c'est le point de départ réel d'un dossier.
 export const SECTIONS_PAR_CATEGORIE: Record<Categorie, SectionProjet[]> = {
-  conception: ['avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
-  amenagement: ['avant-projet', 'images', 'documents', 'execution'],
+  conception: ['foncier', 'avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
+  amenagement: ['foncier', 'avant-projet', 'images', 'documents', 'execution'],
+};
+
+// Hiérarchie de couleur (sept. 2026, cf. globals.css .projet-carte--* /
+// .phase-etape--* / .lien-retour--* / .module-icone--*) — identité fixe liée
+// à la place dans le parcours, pas au statut. Images et Documents restent
+// neutres (transverses, pas une étape). Point de vérité UNIQUE : consommé
+// par les cartes de la fiche projet (admin + collab), le lien de retour de
+// chaque section (admin + SectionCollabShell) et le badge d'icône de module —
+// ne pas redéclarer cette table ailleurs.
+export const COULEUR_SECTION: Record<SectionProjet, string> = {
+  'avant-projet': 'avant-projet',
+  permis: 'permis',
+  images: 'images',
+  documents: 'documents',
+  foncier: 'foncier',
+  etude: 'etude',
+  execution: 'execution',
 };
 
 // --- Section « Images » ---
@@ -534,13 +729,38 @@ export const USAGES_IMAGE: Record<UsageImage, string> = {
   portfolio: 'Portfolio',
 };
 
+// Sujet de la photo — distinct de `Phase` qui tague la temporalité du projet
+// (« à quel moment » vs « quoi »). Enum fixe pour l'instant (cf. mémoire) :
+// pas d'ajout/modif par l'admin tant qu'un vrai besoin ne s'est pas confirmé.
+// `autre` (sept. 2026) : catch-all pour les images jointes depuis Permis/
+// Avant-projet (scans administratifs, rendus 3D, mood board…) — pas des
+// photos du bâtiment, aucune des 4 valeurs de base ne leur correspond.
+export type TypePhotoImage = 'facade' | 'interieur' | 'chantier' | 'existant' | 'autre';
+
+export const TYPES_PHOTO_IMAGE: Record<TypePhotoImage, string> = {
+  facade: 'Façade',
+  interieur: 'Intérieur',
+  chantier: 'Chantier',
+  existant: 'Existant',
+  autre: 'Autre',
+};
+
+// Provenance d'une image jointe depuis le bouton d'une checklist plutôt que
+// de cette page (Permis/Exécution/Foncier/Avant-projet) — sept. 2026. Texte
+// déjà pré-rendu côté serveur (« <module> → <groupe> », ex. « Autorisation →
+// Dossier de Permis ») ; `route` sert à construire le lien retour
+// (`/…/projets/:id/<route>`). null si l'image vient de cette page directement.
+export type ProvenanceImage = { route: string; libelle: string };
+
 export type ImageProjet = {
   id: string;
   projetId: string;
   url: string; // data URI en mock ; vraie URL objet une fois le stockage branché
   nom: string; // nom de fichier d'origine
   usage: UsageImage; // 'travail' par défaut à l'ajout
-  phase: Phase | null; // tag optionnel — filtre, ne gate rien
+  phase: Phase | null; // tag optionnel — filtre, ne gate rien (temporalité)
+  typePhoto: TypePhotoImage | null; // tag optionnel — sujet de la photo
+  provenance: ProvenanceImage | null;
   legende: string; // surtout renseigné côté portfolio
   ordre: number; // rang d'affichage dans le portfolio (drag & drop)
   ajoutePar: string; // nom résolu ; utilisateurId côté API
@@ -549,6 +769,64 @@ export type ImageProjet = {
   supprimeLe: string | null;
   supprimePar: string | null;
 };
+
+// --- Section « Foncier » (Unbord côté backend) ---
+// Checklist à fichiers, items configurables par société (gabarit —
+// UnbordGabaritService, societe_admin ou CIO). Assignation par BLOC (pas par
+// item, 2026-09-25) : bloc libre (`responsable` null) → toute l'équipe du
+// projet peut uploader/cocher (règle de septembre, préservée en repli) ;
+// bloc assigné → seul le responsable (+ admin) agit dessus. Qui peut
+// assigner suit la même règle que Permis (estAutoriseAAssigner côté
+// serveur) — cf. permis/collab page pour le pattern UI de référence.
+// « fait » n'est pas un champ saisi, dérivé de la présence d'au moins un
+// fichier — cf. GET .../unbord.
+
+export type GroupeFoncierCle = 'documents' | 'releve_existant';
+export type StatutItemFoncier = 'fait' | 'en_attente' | 'non_necessaire';
+
+export type FichierItemFoncier = {
+  id: string;
+  nom: string;
+  url: string;
+  estImage: boolean;
+  ajouteLe: string;
+};
+
+export type ItemFoncier = {
+  id: string;
+  libelle: string;
+  statut: StatutItemFoncier;
+  fichiers: FichierItemFoncier[];
+};
+
+export type GroupeFoncier = {
+  groupe: GroupeFoncierCle;
+  libelle: string;
+  description: string;
+  items: ItemFoncier[];
+  responsable: { id: string; prenom: string; nom: string } | null;
+};
+
+export type Foncier = {
+  projetId: string;
+  groupes: GroupeFoncier[];
+};
+
+// Gabarit société (configuration — societe_admin ou CIO, hors fiche projet).
+export type LigneGabaritFoncier = {
+  id: string;
+  societeId: string;
+  groupe: GroupeFoncierCle;
+  libelle: string;
+  ordre: number;
+};
+
+// Miroir de GROUPES_UNBORD (backend, domaine/config.ts) — les 2 blocs sont
+// fixes, pas configurables (seuls les items dedans le sont).
+export const GROUPES_FONCIER: { cle: GroupeFoncierCle; libelle: string }[] = [
+  { cle: 'documents', libelle: 'Documents' },
+  { cle: 'releve_existant', libelle: "Relevé de l'existant" },
+];
 
 // --- Section « Documents » ---
 // Livrables non-images : PDF APS/APD versionnés, plans CAO (DWG/PLN), devis,
@@ -581,6 +859,9 @@ export type FichierProjet = {
   taille: number; // octets
   type: TypeFichier;
   phase: Phase | null;
+  // Posé quand l'upload part d'une ligne de la checklist Permis plutôt que
+  // de cette page — même fichier, juste un repère de provenance.
+  ligneChecklistPermisId: string | null;
   note: string;
   ajoutePar: string;
   ajouteLe: string; // ISO 8601
@@ -590,18 +871,13 @@ export type FichierProjet = {
 };
 
 // --- Section « Permis de construire » (conception uniquement) ---
-// Procédure sénégalaise (loi 2008-43, Code de l'urbanisme, révisé déc. 2023) :
-// NICAD → dossier → dépôt (TeleDAC ou guichet mairie) → instruction 90 j →
-// obtention → (fin de chantier) certificat de conformité.
-// « permis obtenu » n'est plus qu'un rappel doux (avertissementChangementPhase).
-
-export type StatutNicad = 'a_demander' | 'demande' | 'obtenu';
-
-export const STATUTS_NICAD: Record<StatutNicad, string> = {
-  a_demander: 'À demander',
-  demande: 'Demandé',
-  obtenu: 'Obtenu',
-};
+// Le workflow historique (NICAD, dépôt/instruction, journal, certificat de
+// conformité) a été retiré (sept. 2026) : les 3 blocs de la checklist
+// (Constitution / Dépôt urbanisme / Procédure) couvrent déjà le travail réel.
+// Le statut final (validé/refusé — déclenche le rappel doux de
+// avertissementChangementPhase) garde une valeur propre. « Dossier
+// technique » (5 pièces) retiré de l'UI à la même restructuration — champs
+// laissés dormants côté données (cf. domaine/config.ts::PIECES_DOSSIER_PERMIS).
 
 export type PieceDossierPermis =
   | 'titre_propriete'
@@ -618,13 +894,12 @@ export const PIECES_DOSSIER_PERMIS: { cle: PieceDossierPermis; libelle: string }
   { cle: 'timbre_fiscal', libelle: 'Timbre fiscal (10 000 FCFA) + taxe mairie' },
 ];
 
-export type VoieDepot = 'teledac' | 'mairie';
-
-export const VOIES_DEPOT: Record<VoieDepot, string> = {
-  teledac: 'TeleDAC',
-  mairie: 'Guichet mairie',
-};
-
+// L'enum garde instruction/observations pour ne pas invalider de vieilles
+// valeurs déjà en base, mais plus aucun chemin n'écrit dessus — seuls les 4
+// états ci-dessous restent proposés (cf. STATUTS_PERMIS_CHOIX). `depose`
+// réintroduit sept. 2026 (restructuration Permis) : « Déposé » devient un
+// choix à part entière plutôt qu'une valeur dormante sous l'étiquette
+// « En cours » — zéro migration de données, la valeur existait déjà.
 export type StatutPermis =
   | 'a_deposer'
   | 'depose'
@@ -634,62 +909,88 @@ export type StatutPermis =
   | 'refuse';
 
 export const STATUTS_PERMIS: Record<StatutPermis, string> = {
-  a_deposer: 'À déposer',
+  a_deposer: 'En cours',
   depose: 'Déposé',
-  instruction: 'En instruction',
-  observations: 'Observations',
-  obtenu: 'Obtenu',
+  instruction: 'En cours',
+  observations: 'En cours',
+  obtenu: 'Validé',
   refuse: 'Refusé',
 };
 
-export const DELAI_INSTRUCTION_JOURS = 90;
-
-export type EntreeJournal = {
-  id: string;
-  date: string; // ISO 8601
-  texte: string;
-  auteur: string;
-};
+// Les 4 choix proposés dans le sélecteur, dans l'ordre logique du flux
+// (cf. STATUTS_PERMIS ci-dessus pour l'étiquette d'affichage, y compris des
+// vieilles valeurs intermédiaires dormantes).
+export const STATUTS_PERMIS_CHOIX: StatutPermis[] = ['a_deposer', 'depose', 'obtenu', 'refuse'];
 
 export type Permis = {
   projetId: string;
-  nicad: StatutNicad;
-  nicadNumero: string; // renseigné quand obtenu
-  planBornage: boolean; // plan de bornage du géomètre joint
   dossier: Record<PieceDossierPermis, boolean>;
   statut: StatutPermis;
-  voie: VoieDepot | null;
-  dateDepot: string | null; // ISO — déclenche le compteur 90 j
-  numeroRecepisse: string;
   dateObtention: string | null;
   dateRefus: string | null;
-  certificatConformite: boolean;
-  dateCertificat: string | null;
-  journal: EntreeJournal[];
+  // Équipe(s) à proposer dans le sélecteur de responsable de chaque bloc
+  // (front : GET …/collaborateurs?cellule=), comme AvantProjet. Plusieurs
+  // possibles depuis sept. 2026 (décision boss).
+  celluleIds: string[];
+  checklists: ChecklistPermisGroupe[];
+};
+
+// --- Sous-checklists opérationnelles du permis (en 3 blocs) ---
+// Miroir Trello Grey Concrete : suivi granulaire indépendant des verrous durs
+// du permis (nicad/dossier 5 pièces/statut) — juste un %, aucun blocage.
+// Échéance + responsable vivent au niveau du BLOC (Dossier de permis / Dépôt
+// urbanisme / Procédure), pas de l'item ni d'un seul responsable pour tout le
+// module (décision boss, sept. 2026, cf. mémoire) : chaque bloc peut avoir
+// une personne et une échéance différentes. Écriture (cocher, uploader,
+// prolongation) réservée au responsable DU BLOC + admin.
+
+export type GroupeChecklistPermis = 'dossier_permis' | 'depot_urbanisme' | 'procedure';
+
+// Image ou document rattaché à un item précis — même objet que dans
+// Images/Documents (ImageProjet/FichierProjet), juste un repère de
+// provenance ; pas de copie (cf. PermisService.joindreImages/joindreFichiers).
+export type FichierLigneChecklistPermis = {
+  id: string;
+  nom: string;
+  url: string;
+  estImage: boolean;
+  ajouteLe: string; // ISO 8601
+};
+
+export type ItemChecklistPermis = {
+  id: string;
+  libelle: string;
+  fait: boolean;
+  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
+  // avec fait (cf. lib/permis.ts::majLigneChecklistPermis).
+  nonRequise: boolean;
+  note: string;
+  faitPar: { id: string; nom: string } | null;
+  faitLe: string | null; // ISO 8601
+  fichiers: FichierLigneChecklistPermis[];
+};
+
+export type ChecklistPermisGroupe = {
+  groupe: GroupeChecklistPermis;
+  libelle: string;
+  description: string;
+  // Un seul responsable par bloc, une seule échéance par bloc — null =
+  // personne désigné / pas d'échéance fixée (admin seul peut alors agir).
+  echeance: string | null; // AAAA-MM-JJ
+  responsable: { id: string; nom: string } | null;
+  prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
+  prolongationEcheance: string | null; // AAAA-MM-JJ proposée
+  prolongationMotif: string | null;
+  items: ItemChecklistPermis[];
+  // Point d'upload partagé du bloc (Dépôt urbanisme / Procédure, sept.
+  // 2026) — pas rattaché à un item précis. Toujours vide pour Constitution,
+  // dont l'unique item reçoit déjà ses fichiers directement.
+  fichiersBloc: FichierLigneChecklistPermis[];
 };
 
 // Toutes les pièces du dossier cochées — garde avant de marquer « déposé ».
 export function dossierPermisComplet(dossier: Record<PieceDossierPermis, boolean>): boolean {
   return PIECES_DOSSIER_PERMIS.every((p) => dossier[p.cle]);
-}
-
-// Jours restants sur les 90 jours d'instruction. `null` si pas encore déposé
-// ou déjà tranché (obtenu / refusé). Négatif = délai dépassé.
-export function joursRestantsInstruction(permis: Permis): number | null {
-  if (!permis.dateDepot) return null;
-  if (permis.statut === 'obtenu' || permis.statut === 'refuse' || permis.statut === 'a_deposer') {
-    return null;
-  }
-  const ecoules = Math.floor((Date.now() - new Date(permis.dateDepot).getTime()) / 86_400_000);
-  return DELAI_INSTRUCTION_JOURS - ecoules;
-}
-
-export type NiveauDelai = 'ok' | 'attention' | 'depasse';
-
-export function niveauDelai(jours: number | null): NiveauDelai {
-  if (jours === null || jours > 15) return 'ok';
-  if (jours > 0) return 'attention';
-  return 'depasse';
 }
 
 // --- Section « Études » (conception uniquement) ---
@@ -698,34 +999,17 @@ export function niveauDelai(jours: number | null): NiveauDelai {
 // entreprises). La consultation / attribution des marchés vit dans Exécution.
 // Pas de verrou dur avant Chantier — juste un avertissement (bonne pratique,
 // pas blocage légal comme le permis).
-
-export type TypeEtude =
-  | 'geotechnique'
-  | 'topographie'
-  | 'structure'
-  | 'fluides'
-  | 'electricite'
-  | 'vrd';
-
-export const TYPES_ETUDE: Record<TypeEtude, string> = {
-  geotechnique: 'Étude géotechnique (sol)',
-  topographie: 'Relevé topographique',
-  structure: 'Structure / béton armé',
-  fluides: 'Fluides (plomberie / CVC)',
-  electricite: 'Électricité (courants forts / faibles)',
-  vrd: 'VRD (voirie & réseaux divers)',
-};
-
-// Ensemble amorcé à la création (toutes « à lancer ») ; chacune peut être
-// passée « non requise » selon le projet.
-export const ETUDES_PAR_DEFAUT: TypeEtude[] = [
-  'geotechnique',
-  'topographie',
-  'structure',
-  'fluides',
-  'electricite',
-  'vrd',
-];
+//
+// Restructurée sept. 2026 (décision boss) : chaque type d'étude (géotechnique,
+// structure…) n'est plus une ligne figée dans un tableau unique mais son
+// propre BLOC — configurable par gabarit société (comme Foncier/Unbord, mais
+// avec un niveau de nesting en plus puisque les blocs eux-mêmes sont
+// configurables, pas juste les items dedans). Chaque bloc porte son
+// interlocuteur (ex-« bureau d'études »)+contact, sa facture (montant +
+// fichier, visible admin/CIO uniquement — jamais exposée à un collaborateur),
+// son statut/remise/note (repris tels quels de l'ancien modèle), et ses
+// propres livrables en checklist à fichiers (statut dérivé + case à cocher
+// manuelle, même modèle que Foncier).
 
 export type StatutEtude = 'a_lancer' | 'en_cours' | 'remise' | 'validee' | 'non_requise';
 
@@ -737,207 +1021,213 @@ export const STATUTS_ETUDE: Record<StatutEtude, string> = {
   non_requise: 'Non requise',
 };
 
-export type LigneEtude = {
-  type: TypeEtude;
+export type StatutItemEtude = 'fait' | 'en_attente' | 'non_necessaire';
+
+export type FichierItemEtude = {
+  id: string;
+  nom: string;
+  url: string;
+  estImage: boolean;
+  ajouteLe: string; // ISO 8601
+};
+
+export type ItemEtude = {
+  id: string;
+  libelle: string;
+  statut: StatutItemEtude;
+  fichiers: FichierItemEtude[];
+};
+
+// null = redacted (appelant non admin/CIO) ; jamais renvoyé à un
+// collaborateur, même en lecture seule (cf. cadrage).
+export type FactureEtude = {
+  montant: number | null;
+  fichierNom: string | null;
+  fichierCle: string | null;
+};
+
+export type BlocEtude = {
+  id: string;
+  libelle: string;
+  interlocuteur: string; // ex-« bet » (nom du bureau d'études)
+  contactInterlocuteur: string;
   statut: StatutEtude;
-  bet: string; // nom du bureau d'études ; partenaireId nullable plus tard
-  dateRemisePrevue: string | null; // ISO date
+  dateRemisePrevue: string | null; // AAAA-MM-JJ
   dateRemiseReelle: string | null;
   note: string;
+  facture: FactureEtude | null;
+  items: ItemEtude[];
 };
 
 export type Etudes = {
   projetId: string;
-  lignes: LigneEtude[];
+  blocs: BlocEtude[];
   dceConstitue: boolean;
   dceLe: string | null;
 };
 
-// DCE mobilisable quand chaque ligne est validée OU non requise (pas
+// DCE mobilisable quand chaque bloc est validé OU non requis (pas
 // « remise » — on ne met pas un rendu non vérifié dans l'appel d'offres).
 export function etudesCompletes(e: Etudes): boolean {
-  return e.lignes.every((l) => l.statut === 'validee' || l.statut === 'non_requise');
+  return e.blocs.every((b) => b.statut === 'validee' || b.statut === 'non_requise');
 }
 
-// Lignes ni validées ni non-requises — pour l'avertissement du stepper.
+// Blocs ni validés ni non-requis — pour l'avertissement du stepper.
 export function etudesEnAttente(e: Etudes): number {
-  return e.lignes.filter((l) => l.statut !== 'validee' && l.statut !== 'non_requise').length;
+  return e.blocs.filter((b) => b.statut !== 'validee' && b.statut !== 'non_requise').length;
 }
+
+// -- Gabarit Études (configuration société, societe_admin ou CIO) ----------
+
+export type LigneGabaritEtude = {
+  id: string;
+  blocEtudeGabaritId: string;
+  libelle: string;
+  ordre: number;
+};
+
+export type BlocGabaritEtude = {
+  id: string;
+  libelle: string;
+  ordre: number;
+  items: LigneGabaritEtude[];
+};
 
 // --- Section « Exécution / chantier » (les deux catégories) ---
-// La phase la plus longue : consultation & attribution des marchés (le seam
-// avec le DCE des Études), suivi lot par lot (avancement + situations de
-// paiement), CR de chantier, réception. Pas de verrou dur avant « Livré » —
-// avertissement doux si tous les lots ne sont pas terminés (comme Études).
-// Paramétré par catégorie : lots BTP + réserves formelles côté conception ;
-// mobilier/aménagement + simple validation client côté aménagement.
+// Miroir Trello Grey Concrete, même motif que Permis (ChecklistPermisGroupe) —
+// 8 blocs fixes, chacun avec sa propre échéance et son responsable. Remplace
+// entièrement l'ancien système lots/offres/situations/réception/réserves
+// (retiré sept. 2026, cf. mémoire) : pas de verrou dur, juste un % de suivi
+// opérationnel, indépendant, comme le reste des sous-checklists. S'applique
+// aux deux catégories avec le même gabarit (décision boss, sept. 2026).
 
-export type TypeLot =
-  | 'gros_oeuvre'
-  | 'second_oeuvre'
-  | 'lots_techniques'
-  | 'vrd'
-  | 'fournitures_mobilier'
-  | 'travaux_amenagement';
+export type GroupeChecklistExecution =
+  | 'etudes'
+  | 'plans'
+  | 'viabilite'
+  | 'locaux_technique'
+  | 'amenagements'
+  | 'menuiserie'
+  | 'details'
+  | 'cctp';
 
-export const TYPES_LOT: Record<TypeLot, string> = {
-  gros_oeuvre: 'Gros œuvre',
-  second_oeuvre: 'Second œuvre',
-  lots_techniques: 'Lots techniques',
-  vrd: 'VRD',
-  fournitures_mobilier: 'Fournitures & mobilier',
-  travaux_amenagement: "Travaux d'aménagement",
-};
-
-export const LOTS_PAR_CATEGORIE: Record<Categorie, TypeLot[]> = {
-  conception: ['gros_oeuvre', 'second_oeuvre', 'lots_techniques', 'vrd'],
-  amenagement: ['fournitures_mobilier', 'travaux_amenagement'],
-};
-
-export type StatutLot = 'a_consulter' | 'consulte' | 'attribue' | 'en_cours' | 'termine';
-
-export const STATUTS_LOT: Record<StatutLot, string> = {
-  a_consulter: 'À consulter',
-  consulte: 'Consulté',
-  attribue: 'Attribué',
-  en_cours: 'En cours',
-  termine: 'Terminé',
-};
-
-export type OffreEntreprise = {
+// Image ou document rattaché à un item précis — même objet que dans
+// Images/Documents (ImageProjet/FichierProjet), juste un repère de
+// provenance ; pas de copie (cf. ExecutionService.joindreImages/joindreFichiers).
+export type FichierLigneChecklistExecution = {
   id: string;
-  entreprise: string;
-  montant: number; // FCFA
-  delaiJours: number | null;
+  nom: string;
+  url: string;
+  estImage: boolean;
+  ajouteLe: string; // ISO 8601
 };
 
-export type SituationPaiement = {
+export type ItemChecklistExecution = {
   id: string;
-  numero: number;
-  date: string; // ISO date
-  avancementCumule: number; // %
-  montantSituation: number; // FCFA — travaux de la période
-  retenueGarantie: number; // FCFA
-  montantVerse: number; // FCFA — net payé
+  libelle: string;
+  fait: boolean;
+  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
+  // avec fait, même modèle que ItemChecklistPermis.
+  nonRequise: boolean;
+  note: string;
+  faitPar: { id: string; nom: string } | null;
+  faitLe: string | null; // ISO 8601
+  fichiers: FichierLigneChecklistExecution[];
 };
 
-export type Lot = {
-  type: TypeLot;
-  statut: StatutLot;
-  // consultation / attribution (le seam avec le DCE)
-  entreprisesConsultees: string[];
-  offres: OffreEntreprise[];
-  entrepriseRetenue: string;
-  montantMarche: number; // = montant attribué (FCFA)
-  dateAttribution: string | null;
-  // suivi
-  avancement: number; // % physique
-  dateDebut: string | null;
-  dateFinPrevue: string | null;
-  situations: SituationPaiement[];
-};
-
-export type Reserve = {
-  id: string;
+export type ChecklistExecutionGroupe = {
+  groupe: GroupeChecklistExecution;
+  libelle: string;
   description: string;
-  statut: 'ouverte' | 'levee';
-  dateLevee: string | null;
-};
-
-export type Reception = {
-  receptionProvisoire: string | null;
-  reserves: Reserve[]; // surtout conception
-  leveeReserves: string | null;
-  receptionDefinitive: string | null;
-  validationClient: boolean; // surtout aménagement
-  dateValidationClient: string | null;
+  // Un seul responsable par bloc, une seule échéance par bloc — null =
+  // personne désigné / pas d'échéance fixée (admin seul peut alors agir).
+  echeance: string | null; // AAAA-MM-JJ
+  responsable: { id: string; nom: string } | null;
+  prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
+  prolongationEcheance: string | null; // AAAA-MM-JJ proposée
+  prolongationMotif: string | null;
+  items: ItemChecklistExecution[];
 };
 
 export type Execution = {
   projetId: string;
-  lots: Lot[];
-  crChantier: EntreeJournal[];
-  reception: Reception;
+  // Équipe(s) à proposer dans le sélecteur de responsable de chaque bloc
+  // (front : GET …/collaborateurs?cellule=), comme Permis. Plusieurs
+  // possibles depuis sept. 2026 (décision boss).
+  celluleIds: string[];
+  checklists: ChecklistExecutionGroupe[];
 };
-
-export function lotsTermines(e: Execution): boolean {
-  return e.lots.length > 0 && e.lots.every((l) => l.statut === 'termine');
-}
-
-export function lotsEnAttente(e: Execution): number {
-  return e.lots.filter((l) => l.statut !== 'termine').length;
-}
-
-// Net déjà versé sur un lot.
-export function verseSurLot(l: Lot): number {
-  return l.situations.reduce((s, x) => s + (x.montantVerse || 0), 0);
-}
-
-// Total des marchés signés (tous lots) — à confronter au pré-bilan APD figé.
-export function totalMarches(e: Execution): number {
-  return e.lots.reduce((s, l) => s + (l.montantMarche || 0), 0);
-}
-
-export function reservesOuvertes(e: Execution): number {
-  return e.reception.reserves.filter((r) => r.statut === 'ouverte').length;
-}
 
 // --- Section « Avant-projet » ---
-// Fiche programme (le brief) + validation (le GO qui débloque la suite).
+// Restructurée sept. 2026 (décision boss) : plus de fiche programme ni de
+// verrou de validation macro — juste l'affectation/agenda + la checklist
+// opérationnelle « Suivi opérationnel », réduite à 2 groupes (Livrables,
+// Fichiers produits) et passée au même modèle que Foncier/Unbord : statut
+// dérivé des fichiers joints (plus de case « fait »/note manuelles),
+// assignation PAR BLOC comme Permis/Exécution (un responsable + une échéance
+// par groupe, pas par ligne). Items libres par projet — admin OU dispatcher
+// d'une cellule du projet (nouveauté sept. 2026) : ajout via
+// POST …/avant-projet/checklist, suppression via DELETE …/checklist/:id.
 
-export type NiveauFinition = 'standard' | 'soigne' | 'haut_de_gamme';
+export type GroupeChecklistAvp = 'taches_complementaires' | 'fichiers_produits';
 
-export const NIVEAUX_FINITION: Record<NiveauFinition, string> = {
-  standard: 'Standard',
-  soigne: 'Soigné',
-  haut_de_gamme: 'Haut de gamme',
+export type StatutItemChecklistAvp = 'fait' | 'en_attente' | 'non_necessaire';
+
+export type FichierItemChecklistAvp = {
+  id: string;
+  nom: string;
+  url: string;
+  estImage: boolean;
+  ajouteLe: string;
 };
-
-export type ChecklistAvantProjet = {
-  programmeValide: boolean;
-  budgetValide: boolean;
-  esquisseValidee: boolean;
-  engagementValide: boolean;
-};
-
-// --- Sous-checklists opérationnelles de l'avant-projet ---
-// Le suivi quotidien de l'équipe (miroir du Trello Grey Concrete au départ),
-// distinct du gate macro à 4 points : n'ajoute AUCUN verrou de phase, alimente
-// juste un %. Items libres par projet depuis sept. 2026 (admin : ajout via
-// POST …/avant-projet/checklist, suppression via DELETE …/checklist/:id) —
-// `id` (pas une clé fixe) identifie chaque ligne. Pas de statut « non requis »
-// (retiré sept. 2026) : un item qui ne concerne pas le projet se supprime
-// plutôt que de sortir du dénominateur. Le contrat (GET …/avant-projet)
-// renvoie `checklists` déjà groupées et libellées par le backend — le front
-// n'a qu'à afficher et PATCH …/checklist/:id (fait / note, un champ à la
-// fois — ouvert aux collaborateurs).
-
-export type GroupeChecklistAvp =
-  | 'programme'
-  | 'releve_existant'
-  | 'taches_complementaires'
-  | 'fichiers_produits';
 
 export type ItemChecklistAvp = {
   id: string;
   libelle: string;
-  fait: boolean;
-  note: string;
+  statut: StatutItemChecklistAvp;
+  fichiers: FichierItemChecklistAvp[];
 };
 
 export type ChecklistAvpGroupe = {
   groupe: GroupeChecklistAvp;
   libelle: string;
   description: string;
+  // Assignation par bloc (même motif que ChecklistPermisGroupe) — vide =
+  // toute l'équipe du projet peut agir (règle de septembre, en repli).
+  echeance: string | null; // AAAA-MM-JJ
+  responsable: { id: string; nom: string } | null;
+  prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
+  prolongationEcheance: string | null; // AAAA-MM-JJ proposée
+  prolongationMotif: string | null;
   items: ItemChecklistAvp[];
 };
 
-// MIROIR de backend domaine/gardes.ts::avancementChecklistAvp. Purement
-// indicatif (carte de section), aucun verrou.
+// MIROIR de backend domaine/gardes.ts::avancementChecklistAvp. Checklists
+// Permis/Exécution (case « fait » manuelle) — purement indicatif, aucun
+// verrou. Un item « non requis » (Permis uniquement, sept. 2026) compte comme
+// réglé, même convention que avancementChecklistFichiers ci-dessous. NE PAS
+// réutiliser pour Avant-projet (cf. avancementChecklistFichiers — items à
+// statut dérivé des fichiers, plus de case « fait »).
 export function avancementChecklistAvp(
-  items: { fait: boolean }[],
+  items: { fait: boolean; nonRequise?: boolean }[],
 ): { faits: number; total: number; pct: number; complete: boolean } {
-  const faits = items.filter((i) => i.fait).length;
+  const faits = items.filter((i) => i.fait || i.nonRequise).length;
+  const total = items.length;
+  return {
+    faits,
+    total,
+    pct: total ? Math.round((faits / total) * 100) : 0,
+    complete: total > 0 && faits === total,
+  };
+}
+
+// MIROIR de backend domaine/gardes.ts::avancementChecklistFichiers. Purement
+// indicatif (carte de section), aucun verrou — un item « non nécessaire »
+// compte comme réglé, au même titre qu'un item avec au moins un fichier joint.
+export function avancementChecklistFichiers(
+  items: { statut: StatutItemChecklistAvp }[],
+): { faits: number; total: number; pct: number; complete: boolean } {
+  const faits = items.filter((i) => i.statut !== 'en_attente').length;
   const total = items.length;
   return {
     faits,
@@ -952,79 +1242,28 @@ export function itemsChecklistAvp(groupes: ChecklistAvpGroupe[]): ItemChecklistA
   return groupes.flatMap((g) => g.items);
 }
 
-// Libellés de la checklist selon catégorie × nature : le livrable de
-// conception diffère (esquisse / planches d'ambiance), la validation « par le
-// client » n'a de sens qu'en mandat, et le dernier verrou est le contrat
-// (mandat) ou le GO direction (promotion).
-//
-// GARDE MIROIR — le backend vérifie les 4 booléens à la validation de
-// l'avant-projet (POST …/avant-projet/validation, 409 si incomplet). Les clés
-// de ChecklistAvantProjet doivent rester alignées des deux côtés.
-export function checklistAvantProjet(
-  categorie: Categorie,
-  nature: NatureDossier,
-): { cle: keyof ChecklistAvantProjet; libelle: string }[] {
-  const client = nature === 'mandat_client';
-  const livrable = categorie === 'amenagement' ? "Planches d'ambiance" : 'Esquisse';
-  const livrableAccord = categorie === 'amenagement' ? 'validées' : 'validée';
-  return [
-    { cle: 'programmeValide', libelle: 'Programme validé' },
-    { cle: 'budgetValide', libelle: client ? 'Budget validé' : 'Pré-bilan validé (marge OK)' },
-    {
-      cle: 'esquisseValidee',
-      libelle: client
-        ? `${livrable} ${livrableAccord} par le client`
-        : `${livrable} ${livrableAccord}`,
-    },
-    {
-      cle: 'engagementValide',
-      libelle: client ? 'Contrat / honoraires signés' : 'GO direction acté',
-    },
-  ];
-}
-
 export type AvantProjet = {
   projetId: string;
-  // Fiche programme
-  besoinSurface: number | null; // m² à construire / aménager
-  nbLots: number | null; // pièces, logements, lots
-  usages: string;
-  niveauFinition: NiveauFinition;
-  budgetCibleClient: number | null; // FCFA
-  delaiSouhaite: string;
-  contraintes: string;
-  references: string;
   // Affectation & agenda (miroir carte Trello) — FK Collaborateur résolue { id, nom }
   dessinateur: { id: string; nom: string } | null;
   responsable3d: { id: string; nom: string } | null;
   dateDebut: string | null; // AAAA-MM-JJ
   dateFin: string | null;
-  // Validation macro (gate de sortie de phase)
-  checklist: ChecklistAvantProjet;
+  // Équipe(s) du projet — sert à limiter le sélecteur d'assignation de
+  // chaque bloc, cf. ChecklistAvpGroupe. Plusieurs possibles depuis sept.
+  // 2026 (décision boss).
+  celluleIds: string[];
   // Suivi opérationnel (sous-checklists Trello) — indicatif, ne gate rien
   checklists: ChecklistAvpGroupe[];
-  pieceValidation: string | null; // mail / PV joint (libellé)
-  valideLe: string | null; // ISO 8601
-  validePar: string | null;
 };
 
-// Charge utile du PATCH avant-projet : la fiche programme (merge partiel).
+// Charge utile du PATCH avant-projet : affectation + agenda (merge partiel).
 // `dessinateur`/`responsable3d` s'envoient par id (FK Collaborateur).
 export type PatchAvantProjet = Partial<{
-  besoinSurface: number | null;
-  nbLots: number | null;
-  usages: string;
-  niveauFinition: NiveauFinition;
-  budgetCibleClient: number | null;
-  delaiSouhaite: string;
-  contraintes: string;
-  references: string;
   dessinateurId: string | null;
   responsable3dId: string | null;
   dateDebut: string | null;
   dateFin: string | null;
-  checklist: Partial<ChecklistAvantProjet>;
-  pieceValidation: string | null;
 }>;
 
 // --- Pré-bilan de faisabilité (versionné) ---
@@ -1152,19 +1391,23 @@ export const STATUTS_FACTURE: Record<StatutFactureEffectif, string> = {
 
 export type JalonFacture = 'signature' | 'avant_projet' | 'livraison';
 
-export const JALONS_FACTURE: { cle: JalonFacture; libelle: string }[] = [
-  { cle: 'signature', libelle: 'Signature du contrat' },
-  { cle: 'avant_projet', libelle: "Validation de l'avant-projet" },
-  { cle: 'livraison', libelle: 'Livraison' },
+// Libellés et parts des CGV Grey Concrete 2026, art. 7 — miroir du backend
+// domaine/config.ts::JALONS_FACTURE.
+export const JALONS_FACTURE: { cle: JalonFacture; libelle: string; part: number }[] = [
+  { cle: 'signature', libelle: 'Acompte à la signature du contrat', part: 40 },
+  { cle: 'avant_projet', libelle: "Fin de l'APD", part: 40 },
+  { cle: 'livraison', libelle: "Livraison des plans d'exécution", part: 20 },
 ];
 
-export type ModePaiement = 'virement' | 'cheque' | 'especes' | 'mobile_money';
+// Mobile money distingué (Wave / Orange Money), décision du 27/09/2026.
+export type ModePaiement = 'virement' | 'cheque' | 'especes' | 'wave' | 'orange_money';
 
 export const MODES_PAIEMENT: Record<ModePaiement, string> = {
   virement: 'Virement',
   cheque: 'Chèque',
   especes: 'Espèces',
-  mobile_money: 'Mobile money',
+  wave: 'Wave',
+  orange_money: 'Orange Money',
 };
 
 // Taux de TVA par défaut (prestations de services, Sénégal). Ajustable par
@@ -1202,6 +1445,9 @@ export type Facture = {
   resteAPayer: number; // montantTtc - montantPaye (négatif = avoir / trop-perçu)
   joursRetard: number; // 0 si non échue ou soldée
   paiements: Paiement[];
+  // Détail (étape H3) — vide pour une facture à montant unique. Si présent,
+  // montantHt = somme des lignes, un seul taux de TVA pour toute la facture.
+  lignes: LigneFacture[];
 };
 
 export type ResumeFacturation = {
@@ -1212,10 +1458,89 @@ export type ResumeFacturation = {
   suggestionVenteHt: number | null; // prix de vente de la dernière version pré-bilan figée
 };
 
+// Référence courte d'un projet dans la section Facturation (qui n'appelle pas
+// les routes Projets, fermées aux rôles de direction).
+export type ProjetRef = {
+  id: string;
+  code: string;
+  programme: string;
+  client: { id: string; nom: string };
+  // CO1 / CO2 / CO3 figée à l'envoi de l'offre (null : projet sans offre) —
+  // tarif des reprises majeures (TS-MAJ) d'un devis complémentaire.
+  categorieConception: string | null;
+};
+
+export type ProjetFacturation = Omit<ProjetRef, 'categorieConception'> & {
+  nature: NatureDossier;
+  categorie: Categorie;
+  localisation: string;
+  type: TypeBien;
+  phase: Phase;
+};
+
 export type Facturation = {
   projetId: string;
+  projet: ProjetFacturation; // en-tête de la page Facturation du projet
   factures: Facture[];
+  // Lignes SU / EX de l'offre acceptée — facturées au mois, à la main.
+  mensualites: Mensualite[];
+  // Études techniques refacturables / refacturées et règlement des bureaux.
+  etudes: EtudeRefacturation[];
   resume: ResumeFacturation;
+};
+
+export type LigneFacture = {
+  id: string;
+  designation: string;
+  montantHt: number;
+  montantBase: number | null; // refacturation ET : montant HT du bureau
+  blocEtudeId: string | null;
+};
+
+// Règlement d'un bureau d'études refacturé (étape H3, CGV art. 5) — le
+// bureau ne se règle qu'après encaissement du client.
+export type StatutReglementBureau =
+  | 'non_refacture'
+  | 'en_attente_encaissement'
+  | 'a_regler'
+  | 'regle';
+
+export const STATUTS_REGLEMENT_BUREAU: Record<StatutReglementBureau, string> = {
+  non_refacture: 'À refacturer',
+  en_attente_encaissement: 'En attente du client',
+  a_regler: 'Bureau à régler',
+  regle: 'Bureau réglé',
+};
+
+export type EtudeRefacturation = {
+  blocId: string;
+  libelle: string;
+  bureau: string;
+  montantBureauHt: number | null;
+  montantRefactureHt: number | null; // bureau × 1,10 (coordination)
+  statutReglement: StatutReglementBureau;
+  facture: { id: string; reference: string | null } | null;
+  bureauRegleLe: string | null;
+  refacturable: boolean;
+};
+
+export type BureauARegler = {
+  blocId: string;
+  libelle: string;
+  bureau: string;
+  montantBureauHt: number | null;
+  factureReference: string | null;
+  projet: { id: string; code: string; programme: string };
+};
+
+export type Mensualite = {
+  ligneDevisId: string;
+  libelle: string; // « SU2 — Suivi de chantier — projet intermédiaire »
+  prixMensuelHt: number;
+  tauxTva: number;
+  moisPrevus: number;
+  moisFactures: number;
+  aFacturerCeMois: boolean; // en chantier, mois restants, rien ce mois-ci
 };
 
 // GARDE MIROIR du backend domaine/gardes.ts::ventilationTva
@@ -1260,6 +1585,182 @@ export function refFacture(
   return `${estAvoir ? 'AV' : 'F'}${annee}-${String(numero).padStart(4, '0')}`;
 }
 
+// --- Devis (brique « gestion », 2ᵉ étage après Facturation) ---
+// Miroir partiel de Facture : même numérotation séquentielle par société,
+// mêmes dates agenda en String. Diffère sur trois points (cf. cadrage
+// « Devis ») : de VRAIES lignes multiples à taux de TVA propre à chacune
+// (montantHt/Tva/Ttc dérivés en sommant les lignes, jamais stockés en
+// double) ; projetId nullable (devis « libre » possible) ; double canal de
+// réponse (validation manuelle admin ET lien public sans compte).
+
+export type StatutDevis = 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'transforme';
+
+// Statut effectif — « expire » est calculé à la lecture (dateValidite
+// dépassée sans réponse), jamais stocké. GARDE MIROIR du backend
+// devis/domaine.ts::statutDevisEffectif.
+export type StatutDevisEffectif = StatutDevis | 'expire';
+
+export const STATUTS_DEVIS: Record<StatutDevisEffectif, string> = {
+  brouillon: 'Brouillon',
+  envoye: 'Envoyé',
+  accepte: 'Accepté',
+  refuse: 'Refusé',
+  expire: 'Expiré',
+  transforme: 'Converti en facture',
+};
+
+export type LigneDevis = {
+  id: string;
+  produitServiceId: string | null;
+  designation: string;
+  surfaceM2: number | null; // ligne CO : quantité = surface × planches
+  planches: number | null;
+  quantite: number;
+  prixUnitaire: number; // FCFA
+  tauxTva: number; // %
+  montantHt: number; // FCFA — dérivé
+  montantTva: number; // FCFA — dérivé
+  montantTtc: number; // FCFA — dérivé
+  ordre: number;
+};
+
+export type Devis = {
+  id: string;
+  numero: number | null;
+  reference: string | null; // format provisoire, cf. refDevis
+  statut: StatutDevis;
+  statutEffectif: StatutDevisEffectif;
+  objet: string;
+  client: Client;
+  projetId: string | null;
+  // Offre d'un dossier CRM (étape F) — null pour un devis hors CRM.
+  dossierCrm: { id: string; code: string } | null;
+  dateValidite: string | null; // AAAA-MM-JJ
+  dateEnvoi: string | null; // ISO 8601
+  dateReponse: string | null;
+  relancesEnvoyees: number;
+  derniereRelanceLe: string | null;
+  relanceAFaire: boolean; // palier J+3 / J+6 atteint, pas encore relancé
+  lignes: LigneDevis[];
+  montantHt: number;
+  montantTva: number;
+  montantTtc: number;
+  creeLe: string;
+};
+
+// Réponse de POST …/devis/:id/envoi UNIQUEMENT — le jeton clair du lien
+// public n'est jamais ré-exposé ensuite (même convention qu'un lien
+// d'invitation compte). L'admin doit le copier/transmettre à cet instant.
+// `emailEnvoye` : false si le client n'a pas d'email renseigné (rien tenté)
+// OU si le transport a échoué — dans les deux cas, `lienPublic` reste le repli.
+export type DevisEnvoye = Devis & { lienPublic: string; emailEnvoye: boolean };
+
+// Vue CLIENT (lien public, sans compte) — GET/POST …/devis-public/:token.
+// Volontairement plus pauvre que Devis : aucun id interne, aucune coordonnée
+// du client (déjà les siennes), pas de référence produit du catalogue.
+export type DevisPublic = {
+  reference: string | null;
+  statutEffectif: StatutDevisEffectif;
+  peutRepondre: boolean;
+  objet: string;
+  societe: {
+    nom: string;
+    logoUrl: string | null;
+    logoUrlSombre: string | null;
+    couleurMarque: string | null;
+    icone: string | null;
+    mentionsLegales: string | null; // pied du document
+    coordonnees: string | null;
+  };
+  clientNom: string;
+  dateValidite: string | null;
+  dateEnvoi: string | null;
+  dateReponse: string | null;
+  lignes: (Omit<LigneDevis, 'produitServiceId' | 'ordre' | 'surfaceM2' | 'planches'> & {
+    detail: string | null; // « 250 m² × 2 planches » (ligne CO)
+  })[];
+  montantHt: number;
+  montantTva: number;
+  montantTtc: number;
+};
+
+// Catalogue optionnel (cf. cadrage « Devis ») — démarre vide, alimenté par
+// l'admin. Piocher dedans reste une option à côté de la ligne libre, jamais
+// une contrainte.
+// Mode de calcul d'une ligne tirée du catalogue réel (cf. backend
+// prisma/data/catalogue-grey-concrete.json).
+// tarif_co_surface_planches : reprise majeure TS-MAJ (tarif CO du projet ×
+// surface × planches concernées, CGV art. 8).
+export type ModeCalculProduit =
+  | 'quantite'
+  | 'surface_planches'
+  | 'forfait'
+  | 'tarif_co_surface_planches';
+
+export type ProduitService = {
+  id: string;
+  code: string | null; // CO1, IM2, SU3, DPC… ; null = ajout manuel de l'admin
+  famille: string | null; // CO, IM, SU, EX, PC
+  unite: string | null; // m2, piece, mois, forfait
+  modeCalcul: ModeCalculProduit;
+  prixModifiable: boolean; // false : le tarif du catalogue s'impose
+  coAssocie: string | null; // SU : catégorie CO dont il découle
+  designation: string;
+  prixUnitaire: number | null; // nullable — certains prix varient trop pour être fixés
+  tauxTva: number;
+  description: string;
+};
+
+// --- Facturation centralisée (page « Facturation », liste toutes sociétés
+// confondues... non, tous projets confondus) — contrairement à Facturation
+// (ci-dessus) qui reste scopée à un projet. Le client d'une facture SANS
+// projet (convertie depuis un devis « libre ») se résout via devisOrigineId
+// côté backend — jamais dupliqué ici.
+export type FactureCentrale = {
+  id: string;
+  numero: number | null;
+  reference: string | null;
+  type: FactureType;
+  jalon: JalonFacture | null;
+  libelle: string;
+  statut: StatutFacture;
+  statutEffectif: StatutFactureEffectif;
+  montantHt: number;
+  tauxTva: number;
+  montantTva: number;
+  montantTtc: number;
+  echeanceLe: string | null;
+  estAvoir: boolean;
+  factureOrigineId: string | null;
+  devisOrigineId: string | null;
+  creeLe: string;
+  emiseLe: string | null;
+  annuleeLe: string | null;
+  montantPaye: number;
+  resteAPayer: number;
+  joursRetard: number;
+  projetId: string | null;
+  projet: { id: string; code: string; programme: string } | null;
+  client: { id: string; nom: string } | null;
+  lignes: LigneFacture[];
+};
+
+// MIROIR du backend devis/domaine.ts::refDevis
+export function refDevis(numero: number | null, dateEnvoi: string | null): string | null {
+  if (numero == null) return null;
+  const annee = (dateEnvoi ? new Date(dateEnvoi) : new Date()).getFullYear();
+  return `DEV${annee}-${String(numero).padStart(4, '0')}`;
+}
+
+// MIROIR du backend devis/domaine.ts::statutDevisEffectif
+export function statutDevisEffectif(
+  d: { statut: StatutDevis; dateValidite: string | null },
+  aujourdhui: string, // AAAA-MM-JJ
+): StatutDevisEffectif {
+  if (d.statut === 'envoye' && d.dateValidite && d.dateValidite < aujourdhui) return 'expire';
+  return d.statut;
+}
+
 export type AvancementProjets = {
   pourcentage: number;
   // Delta optionnel (cf. StatKpi) : absent quand la valeur est une photo à
@@ -1276,4 +1777,23 @@ export type TableauBordSociete = {
   avancementMoyen: AvancementProjets;
   jalons: JalonApercu[];
   projets: ProjetApercu[];
+};
+
+// --- Rôles & permissions ------------------------------------------------
+export type NiveauPermission = 'aucun' | 'lecture' | 'ecriture' | 'validation';
+
+export type ModulePermission = { cle: string; nom: string };
+
+export type RoleAvecPermissions = {
+  id: string;
+  nom: string;
+  // true = rôle transverse (societeId null, ex. CEO/CTO/CIO) — lecture
+  // seule ici, édité au niveau holding par le CIO, pas par ce back-office.
+  transverse: boolean;
+  permissions: Partial<Record<string, NiveauPermission>>;
+};
+
+export type MatriceRoles = {
+  modules: ModulePermission[];
+  roles: RoleAvecPermissions[];
 };

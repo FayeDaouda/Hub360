@@ -4,16 +4,20 @@ import {
   Gamme,
   NatureDossier,
   NiveauCollaborateur,
+  NiveauPermission,
   Phase,
   PrismaClient,
   Standing,
   StatutCrm,
   StatutProjet,
   TypeBien,
-  TypeLot,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CHECKLISTS_AVANT_PROJET } from '../src/projets/domaine/config';
+import { codeAvecVariante, genererCodeDossier } from '../src/crm/nomenclature';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { CatalogueSource, importerCatalogue } from './catalogue';
 
 const prisma = new PrismaClient();
 
@@ -34,27 +38,45 @@ const LIGNES: Record<Categorie, string[]> = {
   ],
 };
 
-// Phase 2 — catalogue de lots par catégorie (miroir de domaine/config.ts).
-const LOTS_PAR_CAT: Record<Categorie, TypeLot[]> = {
-  conception: ['gros_oeuvre', 'second_oeuvre', 'lots_techniques', 'vrd'],
-  amenagement: ['fournitures_mobilier', 'travaux_amenagement'],
-};
-
 // IDs figés : un `migrate reset` recrée ces lignes à l'identique, donc un JWT
 // déjà émis (societeId / userId dedans) reste valide après un reseed.
 const ID_GREY = '11111111-1111-4111-8111-111111111111';
 const ID_ADMIN_HUB = '00000000-0000-4000-8000-000000000001';
 const ID_BOSS = '00000000-0000-4000-8000-000000000002';
 const ID_COLLAB = '00000000-0000-4000-8000-000000000003';
+const ID_DIR_GC = '00000000-0000-4000-8000-000000000004';
+const ID_CFO = '00000000-0000-4000-8000-000000000005';
 
 async function main() {
   // --- Rôles & modules -------------------------------------------------
+  // Rôles socles (societeId null) — rétrocompatibles, pré-créés pour toutes
+  // les sociétés ; chacune pourra ensuite définir ses propres rôles.
+  // `findFirst` + `create` plutôt que `.upsert()` : Prisma ne sait pas
+  // exprimer `null` dans la clé composite d'un `@@unique` portant sur un
+  // champ nullable (societeId) — le where-unique généré le type `string`.
   for (const nom of ['holding_admin', 'societe_admin', 'collaborateur']) {
-    await prisma.role.upsert({ where: { nom }, update: {}, create: { nom } });
+    const existant = await prisma.role.findFirst({ where: { societeId: null, nom } });
+    if (!existant) {
+      await prisma.role.create({ data: { nom } });
+    }
   }
+  // 'finances' (bloc unique) a existé un temps mais n'a jamais été lu par
+  // aucun guard — remplacé par les 4 sous-modules ci-dessous avant même
+  // d'avoir servi, pour ne pas migrer une deuxième fois une fois la matrice
+  // de permissions Grey Concrete posée (Dir. GC voit devis+factures mais pas
+  // marges, charges réservées CFO — non exprimable sur un module unique).
+  await prisma.module.deleteMany({ where: { cle: 'finances' } });
   for (const m of [
+    { nom: 'CRM', cle: 'crm' },
     { nom: 'Projets', cle: 'projets' },
-    { nom: 'Finances', cle: 'finances' },
+    { nom: 'Finances — Devis', cle: 'finances_devis' },
+    { nom: 'Finances — Factures', cle: 'finances_factures' },
+    { nom: 'Finances — Marges', cle: 'finances_marges' },
+    { nom: 'Finances — Charges', cle: 'finances_charges' },
+    { nom: 'Équipe', cle: 'equipe' },
+    { nom: 'RH', cle: 'rh' },
+    { nom: 'Mon espace', cle: 'mon_espace' },
+    { nom: 'Pilotage', cle: 'pilotage' },
     { nom: 'Documents', cle: 'documents' },
     { nom: 'Communication', cle: 'communication' },
   ]) {
@@ -75,7 +97,9 @@ async function main() {
       prenom: 'HUB',
     },
   });
-  const holdingAdmin = await prisma.role.findUniqueOrThrow({ where: { nom: 'holding_admin' } });
+  const holdingAdmin = await prisma.role.findFirstOrThrow({
+    where: { societeId: null, nom: 'holding_admin' },
+  });
   if (
     !(await prisma.utilisateurSocieteRole.findFirst({
       where: { utilisateurId: adminHub.id, societeId: null, roleId: holdingAdmin.id },
@@ -87,10 +111,19 @@ async function main() {
   }
 
   // --- Grey Concrete : société, modules, comptes ------------------------
+  // Pied des documents — valeurs réelles (catalogue JSON + CGV 2026).
+  const documentsGrey = {
+    mentionsLegales:
+      'GREY CONCRETE SARL — NINEA 009429483 — COFI 292 — RCCM SN DKR 2022 B 17567 — Capital 1 000 000 FCFA',
+    coordonnees:
+      'VDN, Cité CPI, Lot 57, Immeuble Miroir, 3ᵉ étage, Dakar, Sénégal · +221 33 823 61 94 · finances@greyconcrete.group',
+    penaliteRetardMensuelle: 1.5,
+  };
   const grey = await prisma.societe.upsert({
     where: { slug: 'grey-concrete' },
-    update: {},
+    update: documentsGrey,
     create: {
+      ...documentsGrey,
       id: ID_GREY,
       nom: 'Grey Concrete',
       slug: 'grey-concrete',
@@ -111,8 +144,198 @@ async function main() {
     });
   }
 
-  const roleAdmin = await prisma.role.findUniqueOrThrow({ where: { nom: 'societe_admin' } });
-  const roleCollab = await prisma.role.findUniqueOrThrow({ where: { nom: 'collaborateur' } });
+  // --- Grey Concrete : rôles métier + matrice de permissions (v2, 2026-09-24) --
+  // Matrice de synthèse fournie par l'utilisateur (vert = arbitrage déjà
+  // validé par le boss, jaune = proposition pas encore confirmée noir sur
+  // blanc — CIO en particulier, très incertain). Codée telle quelle pour
+  // débloquer le seed + les guards : c'est une donnée, pas une migration de
+  // schéma, donc triviale à corriger si le boss retouche une case. Ne pas
+  // relire ce détail comme définitif — voir mémoire
+  // grey-concrete-role-permission-system pour le suivi vert/jaune.
+  // `transverse: true` = rôle socle holding-wide (Role.societeId null,
+  // attribution transverse) ; sinon rôle propre à Grey Concrete.
+  const MATRICE_GREY: Record<
+    string,
+    { transverse: boolean; permissions: Record<string, NiveauPermission> }
+  > = {
+    'Dir. GC': {
+      transverse: false,
+      permissions: {
+        crm: 'ecriture',
+        projets: 'ecriture',
+        finances_devis: 'ecriture',
+        finances_factures: 'ecriture',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
+        equipe: 'ecriture',
+        rh: 'aucun',
+        mon_espace: 'ecriture',
+        pilotage: 'lecture',
+        documents: 'ecriture',
+        communication: 'ecriture',
+      },
+    },
+    COO: {
+      transverse: false,
+      permissions: {
+        crm: 'ecriture',
+        projets: 'lecture',
+        finances_devis: 'aucun',
+        finances_factures: 'aucun',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
+        equipe: 'aucun',
+        rh: 'aucun',
+        mon_espace: 'ecriture',
+        pilotage: 'aucun',
+        documents: 'lecture',
+        communication: 'ecriture',
+      },
+    },
+    CFO: {
+      transverse: false,
+      permissions: {
+        crm: 'lecture',
+        projets: 'lecture',
+        finances_devis: 'validation',
+        finances_factures: 'validation',
+        finances_marges: 'validation',
+        finances_charges: 'validation',
+        equipe: 'aucun',
+        rh: 'lecture',
+        mon_espace: 'aucun',
+        pilotage: 'lecture',
+        documents: 'lecture',
+        communication: 'lecture',
+      },
+    },
+    RH: {
+      transverse: false,
+      permissions: {
+        crm: 'aucun',
+        projets: 'aucun',
+        finances_devis: 'aucun',
+        finances_factures: 'aucun',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
+        equipe: 'lecture',
+        rh: 'ecriture',
+        mon_espace: 'validation',
+        pilotage: 'lecture',
+        documents: 'ecriture',
+        communication: 'ecriture',
+      },
+    },
+    Salarié: {
+      transverse: false,
+      permissions: {
+        crm: 'aucun',
+        projets: 'aucun',
+        finances_devis: 'aucun',
+        finances_factures: 'aucun',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
+        equipe: 'lecture',
+        rh: 'aucun',
+        mon_espace: 'ecriture',
+        pilotage: 'aucun',
+        documents: 'lecture',
+        communication: 'ecriture',
+      },
+    },
+    'CEO (transverse)': {
+      transverse: true,
+      permissions: {
+        crm: 'lecture',
+        projets: 'lecture',
+        finances_devis: 'validation',
+        finances_factures: 'validation',
+        finances_marges: 'validation',
+        finances_charges: 'validation',
+        equipe: 'lecture',
+        rh: 'lecture',
+        mon_espace: 'aucun',
+        pilotage: 'lecture',
+        documents: 'lecture',
+        communication: 'lecture',
+      },
+    },
+    'CTO (transverse)': {
+      transverse: true,
+      permissions: {
+        crm: 'lecture',
+        projets: 'validation',
+        finances_devis: 'aucun',
+        finances_factures: 'aucun',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
+        equipe: 'lecture',
+        rh: 'aucun',
+        mon_espace: 'ecriture',
+        pilotage: 'lecture',
+        documents: 'lecture',
+        communication: 'lecture',
+      },
+    },
+    'CIO (transverse)': {
+      transverse: true,
+      permissions: {
+        // ecriture (26/09/2026) : le CIO réassigne les dossiers en
+        // supervision (CrmService.peutReassigner) — il doit pouvoir entrer
+        // dans le CRM et y agir, pas seulement consulter.
+        crm: 'ecriture',
+        projets: 'aucun',
+        finances_devis: 'aucun',
+        finances_factures: 'aucun',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
+        equipe: 'aucun',
+        rh: 'aucun',
+        mon_espace: 'lecture',
+        pilotage: 'aucun',
+        documents: 'aucun',
+        communication: 'aucun',
+      },
+    },
+  };
+
+  const modulesParCle = new Map(modules.map((m) => [m.cle, m]));
+
+  for (const [nomRole, { transverse, permissions }] of Object.entries(MATRICE_GREY)) {
+    const societeIdRole = transverse ? null : grey.id;
+    let roleGrey = await prisma.role.findFirst({ where: { societeId: societeIdRole, nom: nomRole } });
+    if (!roleGrey) {
+      roleGrey = await prisma.role.create({ data: { nom: nomRole, societeId: societeIdRole } });
+    }
+    for (const [cle, niveau] of Object.entries(permissions)) {
+      const mod = modulesParCle.get(cle);
+      if (!mod) throw new Error(`Module inconnu dans la matrice Grey Concrete : ${cle}`);
+      await prisma.rolePermission.upsert({
+        where: { roleId_moduleId: { roleId: roleGrey.id, moduleId: mod.id } },
+        update: { niveau },
+        create: { roleId: roleGrey.id, moduleId: mod.id, niveau },
+      });
+    }
+  }
+
+  const roleAdmin = await prisma.role.findFirstOrThrow({
+    where: { societeId: null, nom: 'societe_admin' },
+  });
+  // societe_admin = le compte « tout voir » historique de chaque société :
+  // lignes EXPLICITES à `validation` sur tous les modules (décision
+  // 26/09/2026), plutôt qu'un contournement codé en dur dans PermissionGuard —
+  // la matrice reste la seule source de vérité de « qui voit quoi ». Boucle
+  // sur le catalogue entier : un module ajouté plus tard est couvert aussi.
+  for (const mod of modules) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_moduleId: { roleId: roleAdmin.id, moduleId: mod.id } },
+      update: { niveau: 'validation' },
+      create: { roleId: roleAdmin.id, moduleId: mod.id, niveau: 'validation' },
+    });
+  }
+  const roleCollab = await prisma.role.findFirstOrThrow({
+    where: { societeId: null, nom: 'collaborateur' },
+  });
 
   const boss = await prisma.utilisateur.upsert({
     where: { email: 'admin.greyconcrete@hub.group' },
@@ -151,16 +374,147 @@ async function main() {
     }
   }
 
+  // Comptes de test pour la matrice de permissions (premier endpoint réel
+  // gouverné par elle, cf. pre-bilan.controller.ts) — un rôle qui n'y a pas
+  // accès (Dir. GC : finances_marges = aucun) et un qui y a accès (CFO :
+  // finances_marges = validation), pour démontrer un vrai 403 vs 200.
+  const roleDirGc = await prisma.role.findFirstOrThrow({
+    where: { societeId: grey.id, nom: 'Dir. GC' },
+  });
+  const roleCfo = await prisma.role.findFirstOrThrow({
+    where: { societeId: grey.id, nom: 'CFO' },
+  });
+  const dirGc = await prisma.utilisateur.upsert({
+    where: { email: 'dirgc.greyconcrete@hub.group' },
+    update: {},
+    create: {
+      id: ID_DIR_GC,
+      email: 'dirgc.greyconcrete@hub.group',
+      motDePasseHash: mdp,
+      nom: 'Fall',
+      prenom: 'Cheikh',
+    },
+  });
+  const cfo = await prisma.utilisateur.upsert({
+    where: { email: 'cfo.greyconcrete@hub.group' },
+    update: {},
+    create: {
+      id: ID_CFO,
+      email: 'cfo.greyconcrete@hub.group',
+      motDePasseHash: mdp,
+      nom: 'Sarr',
+      prenom: 'Bineta',
+    },
+  });
+  for (const [u, r] of [
+    [dirGc, roleDirGc],
+    [cfo, roleCfo],
+  ] as const) {
+    if (
+      !(await prisma.utilisateurSocieteRole.findFirst({
+        where: { utilisateurId: u.id, societeId: grey.id, roleId: r.id },
+      }))
+    ) {
+      await prisma.utilisateurSocieteRole.create({
+        data: { utilisateurId: u.id, societeId: grey.id, roleId: r.id },
+      });
+    }
+  }
+
+  // --- Gabarit Unbord (société) — remplace l'ancien enum TypeUnbord figé.
+  // Les 14 items d'origine (cf. historique de src/projets/domaine/config.ts)
+  // deviennent les valeurs de départ du gabarit Grey Concrete, pas une page
+  // vide : le contenu existe déjà et est en usage sur le terrain.
+  const GABARIT_UNBORD_GREY: { groupe: 'documents' | 'releve_existant'; libelle: string }[] = [
+    { groupe: 'documents', libelle: 'Plan cadastral' },
+    { groupe: 'documents', libelle: 'Droit réel' },
+    { groupe: 'documents', libelle: 'Pièce d’identité' },
+    { groupe: 'documents', libelle: 'Ninéa' },
+    { groupe: 'documents', libelle: 'Plan géomètre' },
+    { groupe: 'documents', libelle: 'Rapport d’expertise' },
+    { groupe: 'releve_existant', libelle: 'Visite sur site' },
+    { groupe: 'releve_existant', libelle: 'Plans (terrain)' },
+    { groupe: 'releve_existant', libelle: 'Assainissement' },
+    { groupe: 'releve_existant', libelle: 'Eau' },
+    { groupe: 'releve_existant', libelle: 'Électricité' },
+    { groupe: 'releve_existant', libelle: 'Téléphone' },
+    { groupe: 'releve_existant', libelle: 'Photos et vidéos' },
+    { groupe: 'releve_existant', libelle: 'Autres informations' },
+  ];
+  const gabaritExistant = await prisma.ligneUnbordGabarit.findMany({
+    where: { societeId: grey.id },
+    select: { libelle: true },
+  });
+  if (gabaritExistant.length === 0) {
+    await prisma.ligneUnbordGabarit.createMany({
+      data: GABARIT_UNBORD_GREY.map((it, i) => ({
+        societeId: grey.id,
+        groupe: it.groupe,
+        libelle: it.libelle,
+        ordre: i,
+      })),
+    });
+  }
+
+  // --- Gabarit Études (société) — restructuration sept. 2026 : les 6 types
+  // d'étude fixes (ex-enum TypeEtude) deviennent les 6 blocs de départ du
+  // gabarit Grey Concrete. Pas de livrables pré-remplis dans chaque bloc
+  // (LigneEtudeGabarit) — contenu métier réel que l'admin ajoutera via
+  // Paramètres › Gabarit Études, pas inventé ici (cf. mémoire
+  // feedback_dont_invent_business_data).
+  const BLOCS_ETUDE_GREY: { cle: string; libelle: string }[] = [
+    { cle: 'geotechnique', libelle: 'Étude géotechnique (sol)' },
+    { cle: 'topographie', libelle: 'Relevé topographique' },
+    { cle: 'structure', libelle: 'Structure / béton armé' },
+    { cle: 'fluides', libelle: 'Fluides (plomberie / CVC)' },
+    { cle: 'electricite', libelle: 'Électricité (courants forts / faibles)' },
+    { cle: 'vrd', libelle: 'VRD (voirie & réseaux divers)' },
+  ];
+  const blocsEtudeGabaritExistants = await prisma.blocEtudeGabarit.findMany({
+    where: { societeId: grey.id },
+  });
+  const blocEtudeGabaritIdParCle = new Map<string, string>();
+  if (blocsEtudeGabaritExistants.length === 0) {
+    for (let i = 0; i < BLOCS_ETUDE_GREY.length; i++) {
+      const b = BLOCS_ETUDE_GREY[i];
+      const cree = await prisma.blocEtudeGabarit.create({
+        data: { societeId: grey.id, libelle: b.libelle, ordre: i },
+      });
+      blocEtudeGabaritIdParCle.set(b.cle, cree.id);
+    }
+  } else {
+    for (const b of blocsEtudeGabaritExistants) {
+      const cle = BLOCS_ETUDE_GREY.find((x) => x.libelle === b.libelle)?.cle;
+      if (cle) blocEtudeGabaritIdParCle.set(cle, b.id);
+    }
+  }
+
   // --- On repart propre sur les données métier -------------------------
-  // Ordre des FK : canaux (→ messages / lectures en cascade) puis dossiers
-  // (→ projet → sections aval, en cascade) puis collaborateurs (celluleId =
-  // SetNull, pas de cascade) puis cellules puis clients. Rend `prisma db seed`
-  // rejouable sans reset.
+  // Ordre des FK : canaux (→ messages / lectures en cascade) puis factures
+  // (→ paiements, en cascade — AVANT devis : Facture.devisOrigineId n'a pas
+  // de cascade, cf. cadrage Devis) puis devis (→ lignes de devis, en cascade
+  // — projetId/clientId n'ont pas de cascade non plus : un « devis libre »
+  // doit pouvoir survivre à son projet, donc il ne disparaît jamais tout
+  // seul) puis dossiers (→ projet → sections aval, en cascade) puis
+  // collaborateurs (celluleId = SetNull, pas de cascade) puis cellules puis
+  // clients. Rend `prisma db seed` rejouable sans reset.
   await prisma.canal.deleteMany({ where: { societeId: grey.id } });
+  await prisma.facture.deleteMany({ where: { societeId: grey.id } });
+  await prisma.devis.deleteMany({ where: { societeId: grey.id } });
   await prisma.dossierCrm.deleteMany({ where: { societeId: grey.id } });
   await prisma.collaborateur.deleteMany({ where: { societeId: grey.id } });
   await prisma.cellule.deleteMany({ where: { societeId: grey.id } });
   await prisma.client.deleteMany({ where: { societeId: grey.id } });
+
+  // --- Catalogue réel (prisma/data/catalogue-grey-concrete.json) -----------
+  // Upsert par code : rejouable, resynchronise les tarifs sur la source.
+  await importerCatalogue(
+    prisma,
+    grey.id,
+    JSON.parse(
+      readFileSync(join(__dirname, 'data', 'catalogue-grey-concrete.json'), 'utf8'),
+    ) as CatalogueSource,
+  );
 
   // --- Clients ------------------------------------------------------
   const clients = await Promise.all(
@@ -168,8 +522,8 @@ async function main() {
       { nom: 'M. et Mme Diouf', type: 'particulier' as const, contact: 'Awa Diouf', telephone: '+221 77 123 45 67' },
       { nom: 'Cheikh Mbaye', type: 'particulier' as const, email: 'c.mbaye@example.sn' },
       { nom: 'Fatou Sarr', type: 'particulier' as const, telephone: '+221 78 456 78 90' },
-      { nom: 'SCI Ndiaye Frères', type: 'sci' as const, contact: 'Ibrahima Ndiaye', email: 'contact@ndiaye-freres.sn' },
-      { nom: 'Teranga Capital', type: 'entreprise' as const, contact: 'Directrice immobilier', telephone: '+221 33 869 45 00' },
+      { nom: 'SCI Ndiaye Frères', type: 'sci' as const, sigle: 'SNF', contact: 'Ibrahima Ndiaye', email: 'contact@ndiaye-freres.sn' },
+      { nom: 'Teranga Capital', type: 'entreprise' as const, sigle: 'TC', contact: 'Directrice immobilier', telephone: '+221 33 869 45 00' },
     ].map((c) => prisma.client.create({ data: { societeId: grey.id, ...c } })),
   );
   const cli = (i: number) => clients[i].id;
@@ -320,14 +674,17 @@ async function main() {
   });
 
   // --- Dossiers CRM + projets ------------------------------------------
-  let seq = 0;
-  const code = () => `PRJ-2026-${String(++seq).padStart(3, '0')}`;
 
   type Cfg = {
     nature: NatureDossier;
     categorie: Categorie;
     statut: StatutCrm;
     localisation: string;
+    // Code de la localité du référentiel (importé par migration) — sert aussi
+    // au segment LOC du code dossier.
+    localiteCode: string;
+    // Apporteur tiers (démo) ; absent = apporteur interne (le créateur).
+    apporteurExterne?: { nom: string; telephone?: string; commission?: number };
     lat: number;
     lng: number;
     programme: string;
@@ -342,36 +699,54 @@ async function main() {
   };
 
   const cfgs: Cfg[] = [
-    { nature: 'mandat_client', categorie: 'conception', statut: 'valide', phase: 'avant_projet',
-      localisation: 'Ngor, Dakar', lat: 14.7470, lng: -17.5140, programme: 'Villa Cap Vert', type: 'villa', standing: 'haut', gamme: 'premium', clientId: cli(0) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'valide', phase: 'permis', equipe: 'Cellule Archi 1', avantProjetValide: true,
-      localisation: 'Sacré-Cœur 3, Dakar', lat: 14.7050, lng: -17.4620, programme: 'Duplex Sacré-Cœur', type: 'villa', standing: 'moyen', gamme: 'milieu', clientId: cli(1) },
-    { nature: 'promotion_interne', categorie: 'conception', statut: 'valide', phase: 'etudes', equipe: 'Cellule Archi 2', avantProjetValide: true,
-      localisation: 'Point E, Dakar', lat: 14.6920, lng: -17.4600, programme: 'Résidence Point E', type: 'immeuble', standing: 'haut', gamme: 'premium', clientId: cli(2) },
-    { nature: 'promotion_interne', categorie: 'conception', statut: 'valide', phase: 'chantier', equipe: 'Cellule Archi 3', avantProjetValide: true,
-      localisation: 'Almadies, Dakar', lat: 14.7440, lng: -17.5230, programme: 'Villas Cap Ouest', type: 'villa', standing: 'grand', gamme: 'luxe', clientId: cli(3) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'valide', phase: 'livre', equipe: 'Cellule Archi 1', avantProjetValide: true,
-      localisation: 'Fann Résidence, Dakar', lat: 14.6870, lng: -17.4640, programme: 'Villa Fann', type: 'villa', standing: 'haut', gamme: 'premium', clientId: cli(0) },
-    { nature: 'mandat_client', categorie: 'amenagement', statut: 'valide', phase: 'avant_projet',
-      localisation: 'Point E, Dakar', lat: 14.6935, lng: -17.4585, programme: 'Appartement Point E', type: 'bureaux', standing: 'moyen', gamme: 'milieu', clientId: cli(2) },
-    { nature: 'promotion_interne', categorie: 'amenagement', statut: 'valide', phase: 'chantier', equipe: 'Cellule Intérieur', avantProjetValide: true,
-      localisation: 'Almadies, Dakar', lat: 14.7460, lng: -17.5195, programme: 'Bureaux Almadies Business', type: 'bureaux', standing: 'grand', gamme: 'luxe', clientId: cli(4) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'nouveau',
-      localisation: 'Yoff, Dakar', lat: 14.7530, lng: -17.4890, programme: 'Villa Yoff', type: 'villa', standing: 'moyen', gamme: 'milieu', clientId: cli(1) },
-    { nature: 'promotion_interne', categorie: 'conception', statut: 'devis_contrat',
-      localisation: 'Ouakam, Dakar', lat: 14.7230, lng: -17.4980, programme: 'Résidence Ouakam', type: 'immeuble', standing: 'haut', gamme: 'premium', clientId: cli(3) },
-    { nature: 'mandat_client', categorie: 'amenagement', statut: 'annule',
-      localisation: 'VDN, Dakar', lat: 14.7280, lng: -17.4600, programme: 'Showroom VDN', type: 'commerce', standing: 'moyen', gamme: 'milieu', clientId: cli(4) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'avant_projet',
+      localisation: 'Ngor, Dakar', localiteCode: 'NGO', lat: 14.7470, lng: -17.5140, programme: 'Villa Cap Vert', type: 'villa', standing: 'haut', gamme: 'premium', clientId: cli(0) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'permis', equipe: 'Cellule Archi 1', avantProjetValide: true,
+      localisation: 'Sacré-Cœur 3, Dakar', localiteCode: 'SAC', lat: 14.7050, lng: -17.4620, programme: 'Duplex Sacré-Cœur', type: 'villa', standing: 'moyen', gamme: 'milieu', clientId: cli(1) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'etudes', equipe: 'Cellule Archi 2', avantProjetValide: true,
+      localisation: 'Point E, Dakar', localiteCode: 'POI', lat: 14.6920, lng: -17.4600, programme: 'Résidence Point E', type: 'immeuble', standing: 'haut', gamme: 'premium', clientId: cli(2) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Archi 3', avantProjetValide: true,
+      localisation: 'Almadies, Dakar', localiteCode: 'ALM', apporteurExterne: { nom: 'Me Aliou Ndiaye (notaire)', telephone: '+221 77 555 12 34', commission: 4 }, lat: 14.7440, lng: -17.5230, programme: 'Villas Cap Ouest', type: 'villa', standing: 'grand', gamme: 'luxe', clientId: cli(3) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'livre', equipe: 'Cellule Archi 1', avantProjetValide: true,
+      localisation: 'Fann Résidence, Dakar', localiteCode: 'FPE', lat: 14.6870, lng: -17.4640, programme: 'Villa Fann', type: 'villa', standing: 'haut', gamme: 'premium', clientId: cli(0) },
+    { nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'avant_projet',
+      localisation: 'Point E, Dakar', localiteCode: 'POI', lat: 14.6935, lng: -17.4585, programme: 'Appartement Point E', type: 'bureaux', standing: 'moyen', gamme: 'milieu', clientId: cli(2) },
+    { nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Intérieur', avantProjetValide: true,
+      localisation: 'Almadies, Dakar', localiteCode: 'ALM', lat: 14.7460, lng: -17.5195, programme: 'Bureaux Almadies Business', type: 'bureaux', standing: 'grand', gamme: 'luxe', clientId: cli(4) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'nouveau_projet',
+      localisation: 'Yoff, Dakar', localiteCode: 'YOF', lat: 14.7530, lng: -17.4890, programme: 'Villa Yoff', type: 'villa', standing: 'moyen', gamme: 'milieu', clientId: cli(1) },
+    { nature: 'mandat_client', categorie: 'conception', statut: 'offre_envoyee',
+      localisation: 'Ouakam, Dakar', localiteCode: 'OUA', apporteurExterne: { nom: 'Khady Seck' }, lat: 14.7230, lng: -17.4980, programme: 'Résidence Ouakam', type: 'immeuble', standing: 'haut', gamme: 'premium', clientId: cli(3) },
+    { nature: 'mandat_client', categorie: 'amenagement', statut: 'perdu',
+      localisation: 'VDN, Dakar', localiteCode: 'VDN', lat: 14.7280, lng: -17.4600, programme: 'Showroom VDN', type: 'commerce', standing: 'moyen', gamme: 'milieu', clientId: cli(4) },
   ];
+
+  const localiteParCode = new Map(
+    (await prisma.localite.findMany({ select: { id: true, code: true } })).map((l) => [
+      l.code,
+      l.id,
+    ]),
+  );
+
+  // Code selon la nomenclature réelle (CLIENT_LOC.AA, -2 si doublon), comme
+  // le fait CrmService à la création.
+  const codesPris = new Set<string>();
+  const codeDossier = (cfg: Cfg) => {
+    const client = clients.find((c) => c.id === cfg.clientId)!;
+    const code = codeAvecVariante(genererCodeDossier(client, cfg.localiteCode), codesPris);
+    codesPris.add(code);
+    return code;
+  };
 
   for (const cfg of cfgs) {
     const dossier = await prisma.dossierCrm.create({
       data: {
         societeId: grey.id,
-        code: code(),
+        code: codeDossier(cfg),
         nature: cfg.nature,
         categorie: cfg.categorie,
         localisation: cfg.localisation,
+        localiteId: localiteParCode.get(cfg.localiteCode) ?? null,
         type: cfg.type,
         latitude: cfg.lat,
         longitude: cfg.lng,
@@ -382,10 +757,51 @@ async function main() {
         programme: cfg.programme,
         statut: cfg.statut,
         clientId: cfg.clientId,
+        // « Qui » (étape C1) : saisis par le compte admin, suivis par le
+        // Dir. GC de test (seul titulaire du rôle → propriétaire d'office).
+        creeParId: boss.id,
+        apporteurType: cfg.apporteurExterne ? 'externe' : 'interne',
+        apporteurUtilisateurId: cfg.apporteurExterne ? null : boss.id,
+        apporteurNom: cfg.apporteurExterne?.nom ?? null,
+        apporteurTelephone: cfg.apporteurExterne?.telephone ?? null,
+        commissionApporteur: cfg.apporteurExterne?.commission ?? null,
+        proprietaireId: dirGc.id,
       },
     });
 
-    if (cfg.statut !== 'valide') continue;
+    // Journal du cycle (étape E) : le chemin réellement parcouru jusqu'au
+    // statut de démo — saisi par l'admin, validé par la CFO de test.
+    const chemin: { de: StatutCrm | null; vers: StatutCrm; par: string; commentaire?: string }[] = [
+      { de: null, vers: 'nouveau_projet', par: boss.id },
+    ];
+    if (['offre_envoyee', 'onboard'].includes(cfg.statut)) {
+      chemin.push(
+        { de: 'nouveau_projet', vers: 'en_validation', par: boss.id },
+        { de: 'en_validation', vers: 'offre_envoyee', par: cfo.id },
+      );
+    }
+    if (cfg.statut === 'onboard') chemin.push({ de: 'offre_envoyee', vers: 'onboard', par: boss.id });
+    if (cfg.statut === 'perdu') {
+      chemin.push({
+        de: 'nouveau_projet',
+        vers: 'perdu',
+        par: boss.id,
+        commentaire: 'Le client a reporté son projet à une date indéterminée (démo).',
+      });
+    }
+    await prisma.dossierCrmTransition.createMany({
+      data: chemin.map((t, i) => ({
+        dossierId: dossier.id,
+        // Horodatages espacés : l'historique se lit dans l'ordre (tri par date).
+        creeLe: new Date(dossier.createdAt.getTime() + i * 3_600_000),
+        de: t.de,
+        vers: t.vers,
+        parId: t.par,
+        commentaire: t.commentaire ?? null,
+      })),
+    });
+
+    if (cfg.statut !== 'onboard') continue;
 
     const phase = cfg.phase ?? 'avant_projet';
     const statut: StatutProjet = cfg.equipe
@@ -410,27 +826,15 @@ async function main() {
         longitude: phase === 'avant_projet' ? null : dossier.longitude,
         type: dossier.type,
         clientId: dossier.clientId,
-        celluleId: cfg.equipe ? cellules[cfg.equipe] : null,
+        cellules: cfg.equipe ? { create: [{ celluleId: cellules[cfg.equipe] }] } : undefined,
         statut,
         phase,
         avantProjet: {
           create: {
-            besoinSurface: cfg.categorie === 'conception' ? 320 : 480,
-            nbLots: cfg.categorie === 'conception' ? 4 : 12,
-            usages: cfg.categorie === 'conception' ? 'Habitation' : 'Bureaux',
-            niveauFinition: 'soigne',
-            budgetCibleClient: 620_000_000,
-            delaiSouhaite: 'Livraison T3 2027',
             dateDebut: cfg.equipe ? '2026-06-01' : null,
             dateFin: cfg.equipe ? '2026-08-31' : null,
             dessinateurId: cfg.equipe ? dessinateur.id : null,
             responsable3dId: cfg.equipe ? resp3d.id : null,
-            programmeValide: !!cfg.avantProjetValide,
-            budgetValide: !!cfg.avantProjetValide,
-            esquisseValidee: !!cfg.avantProjetValide,
-            engagementValide: !!cfg.avantProjetValide,
-            valideLe: cfg.avantProjetValide ? new Date('2026-08-15') : null,
-            validePar: cfg.avantProjetValide ? boss.id : null,
           },
         },
       },
@@ -460,8 +864,9 @@ async function main() {
       });
     }
 
-    // Sous-checklists opérationnelles : 100 % cochées si l'avant-projet est
-    // validé, ~50 % sinon (démo — montre l'avancement partiel sur la carte).
+    // Sous-checklists opérationnelles — statut dérivé des fichiers joints
+    // (restructuration sept. 2026, cf. schema.prisma) : pas de champ « fait »
+    // à seeder ici, les lignes démarrent toutes « en attente ».
     await prisma.ligneChecklistAvp.createMany({
       data: CHECKLISTS_AVANT_PROJET.flatMap((g) =>
         g.items.map((item, ordre) => ({
@@ -469,7 +874,6 @@ async function main() {
           groupe: g.groupe,
           libelle: item.libelle,
           ordre,
-          fait: cfg.avantProjetValide ? true : ordre % 2 === 0,
         })),
       ),
     });
@@ -485,193 +889,89 @@ async function main() {
       await prisma.permis.create({
         data: {
           projetId: projet.id,
-          nicad: 'obtenu',
-          nicadNumero: `NICAD-DK-2026-0${4000 + seq}`,
-          planBornage: true,
           titrePropriete: true,
           planCadastralVise: true,
           plansApd: true,
           devis: true,
           timbreFiscal: true,
-          statut: permisEnMain ? 'obtenu' : 'instruction',
-          voie: 'teledac',
-          dateDepot: new Date('2026-06-01'),
-          numeroRecepisse: `TLD-2026-0${700 + seq}`,
+          statut: permisEnMain ? 'obtenu' : 'a_deposer',
           dateObtention: permisEnMain ? new Date('2026-07-15') : null,
-          certificatConformite: phase === 'livre',
-          dateCertificat: phase === 'livre' ? new Date('2026-09-10') : null,
         },
-      });
-      await prisma.entreeJournal.createMany({
-        data: [
-          {
-            projetId: projet.id,
-            contexte: 'permis',
-            date: new Date('2026-06-01'),
-            texte: 'Dossier déposé sur TeleDAC.',
-            auteurId: boss.id,
-          },
-          permisEnMain
-            ? {
-                projetId: projet.id,
-                contexte: 'permis',
-                date: new Date('2026-07-15'),
-                texte: 'Permis accordé — arrêté municipal reçu.',
-                auteurId: boss.id,
-              }
-            : {
-                projetId: projet.id,
-                contexte: 'permis',
-                date: new Date('2026-07-01'),
-                texte: 'Passage en instruction technique confirmé par la mairie.',
-                auteurId: boss.id,
-              },
-        ],
       });
     }
 
     // Études — conception uniquement, dès la phase « études ».
     if (cfg.categorie === 'conception' && phasesEtudesEtPlus.includes(phase)) {
       const enCours = phase === 'etudes'; // toutes les études pas encore bouclées
+      const idGeotechnique = blocEtudeGabaritIdParCle.get('geotechnique');
+      const idTopographie = blocEtudeGabaritIdParCle.get('topographie');
+      const idStructure = blocEtudeGabaritIdParCle.get('structure');
+      const idFluides = blocEtudeGabaritIdParCle.get('fluides');
+      const idElectricite = blocEtudeGabaritIdParCle.get('electricite');
+      const idVrd = blocEtudeGabaritIdParCle.get('vrd');
       await prisma.etudes.create({
         data: {
           projetId: projet.id,
           dceConstitue: !enCours,
           dceLe: enCours ? null : new Date('2026-07-25'),
-          lignes: {
+          blocs: {
             create: [
-              { type: 'geotechnique', statut: 'validee', bet: 'Géotech Sénégal', dateRemisePrevue: '2026-05-05', dateRemiseReelle: '2026-05-02' },
-              { type: 'topographie', statut: 'validee', bet: 'Cabinet Bâ Géomètre', dateRemisePrevue: '2026-05-05', dateRemiseReelle: '2026-05-04' },
               {
-                type: 'structure',
+                blocEtudeGabaritId: idGeotechnique,
+                libelle: 'Étude géotechnique (sol)',
+                statut: 'validee',
+                interlocuteur: 'Géotech Sénégal',
+                dateRemisePrevue: '2026-05-05',
+                dateRemiseReelle: '2026-05-02',
+              },
+              {
+                blocEtudeGabaritId: idTopographie,
+                libelle: 'Relevé topographique',
+                statut: 'validee',
+                interlocuteur: 'Cabinet Bâ Géomètre',
+                dateRemisePrevue: '2026-05-05',
+                dateRemiseReelle: '2026-05-04',
+              },
+              {
+                blocEtudeGabaritId: idStructure,
+                libelle: 'Structure / béton armé',
                 statut: enCours ? 'remise' : 'validee',
-                bet: 'BET Structure Diallo',
+                interlocuteur: 'BET Structure Diallo',
                 dateRemisePrevue: '2026-06-15',
                 dateRemiseReelle: '2026-06-12',
                 note: enCours ? 'Rendu reçu, vérification MOE en cours.' : '',
               },
               {
-                type: 'fluides',
+                blocEtudeGabaritId: idFluides,
+                libelle: 'Fluides (plomberie / CVC)',
                 statut: enCours ? 'en_cours' : 'validee',
-                bet: 'Fluitec',
+                interlocuteur: 'Fluitec',
                 dateRemisePrevue: '2026-06-25',
                 dateRemiseReelle: enCours ? null : '2026-06-22',
               },
               {
-                type: 'electricite',
+                blocEtudeGabaritId: idElectricite,
+                libelle: 'Électricité (courants forts / faibles)',
                 statut: enCours ? 'a_lancer' : 'validee',
-                bet: enCours ? '' : 'Fluitec',
+                interlocuteur: enCours ? '' : 'Fluitec',
                 dateRemisePrevue: enCours ? null : '2026-06-25',
                 dateRemiseReelle: enCours ? null : '2026-06-24',
               },
-              { type: 'vrd', statut: 'non_requise', bet: '', note: 'Parcelle déjà viabilisée.' },
+              {
+                blocEtudeGabaritId: idVrd,
+                libelle: 'VRD (voirie & réseaux divers)',
+                statut: 'non_requise',
+                note: 'Parcelle déjà viabilisée.',
+              },
             ],
           },
         },
       });
     }
 
-    // Exécution — les deux catégories, dès la phase « chantier ».
-    if (phasesChantierEtPlus.includes(phase)) {
-      const livre = phase === 'livre';
-      const lots = LOTS_PAR_CAT[cfg.categorie];
-      const execution = await prisma.execution.create({
-        data: {
-          projetId: projet.id,
-          receptionProvisoire: livre ? '2026-08-20' : null,
-          leveeReserves: livre && cfg.categorie === 'conception' ? '2026-09-05' : null,
-          receptionDefinitive: livre ? '2026-09-12' : null,
-          validationClient: livre && cfg.categorie === 'amenagement',
-          dateValidationClient:
-            livre && cfg.categorie === 'amenagement' ? '2026-09-08' : null,
-          lots: {
-            create: lots.map((type, i) => {
-              const enConsultation = i === lots.length - 1 && !livre;
-              return {
-                type,
-                statut: livre
-                  ? 'termine'
-                  : enConsultation
-                    ? 'a_consulter'
-                    : i === 0
-                      ? 'en_cours'
-                      : 'attribue',
-                entreprisesConsultees: enConsultation
-                  ? []
-                  : ['SETUBAT', 'Entreprise Fall & Fils'],
-                entrepriseRetenue: enConsultation ? '' : 'SETUBAT',
-                montantMarche: enConsultation ? 0 : 220_000_000 - i * 40_000_000,
-                dateAttribution: enConsultation ? null : '2026-07-28',
-                avancement: livre ? 100 : i === 0 ? 55 : 0,
-                dateDebut: livre || i === 0 ? '2026-08-01' : null,
-                dateFinPrevue: livre || i === 0 ? '2026-12-15' : null,
-              };
-            }),
-          },
-          reserves:
-            livre && cfg.categorie === 'conception'
-              ? {
-                  create: [
-                    { description: "Reprise peinture cage d'escalier", statut: 'levee', dateLevee: '2026-09-03' },
-                    { description: 'Réglage de la porte de garage', statut: 'levee', dateLevee: '2026-09-03' },
-                  ],
-                }
-              : undefined,
-        },
-        include: { lots: { orderBy: { type: 'asc' } } },
-      });
-
-      const premierLot = execution.lots.find((l) => l.montantMarche.gt(0));
-      if (premierLot) {
-        await prisma.offreEntreprise.createMany({
-          data: [
-            { lotId: premierLot.id, entreprise: 'SETUBAT', montant: 220_000_000, delaiJours: 210 },
-            { lotId: premierLot.id, entreprise: 'Entreprise Fall & Fils', montant: 238_000_000, delaiJours: 240 },
-          ],
-        });
-        const sits: [number, string, number, number, number][] = livre
-          ? [
-              [1, '2026-08-15', 30, 66_000_000, 3_300_000],
-              [2, '2026-09-01', 70, 96_000_000, 4_800_000],
-              [3, '2026-09-12', 100, 58_000_000, 2_900_000],
-            ]
-          : [
-              [1, '2026-08-20', 25, 55_000_000, 2_750_000],
-              [2, '2026-09-05', 55, 66_000_000, 3_300_000],
-            ];
-        await prisma.situationPaiement.createMany({
-          data: sits.map(([numero, date, avct, montant, retenue]) => ({
-            lotId: premierLot.id,
-            numero,
-            date,
-            avancementCumule: avct,
-            montantSituation: montant,
-            retenueGarantie: retenue,
-            montantVerse: montant - retenue,
-          })),
-        });
-      }
-
-      await prisma.entreeJournal.createMany({
-        data: [
-          {
-            projetId: projet.id,
-            contexte: 'chantier',
-            date: new Date('2026-08-25'),
-            texte:
-              'Visite hebdo — coulage dalle R+1 conforme. Point sécurité échafaudage.',
-            auteurId: boss.id,
-          },
-          {
-            projetId: projet.id,
-            contexte: 'chantier',
-            date: new Date('2026-09-02'),
-            texte: 'Réunion de chantier — validation du calepinage carrelage.',
-            auteurId: boss.id,
-          },
-        ],
-      });
-    }
+    // Exécution — les deux catégories, dès la phase « chantier ». La
+    // checklist (8 blocs) est amorcée à la volée au premier GET, comme celle
+    // du Permis (assurerChecklist/assurerBlocs) — rien à seeder ici.
 
     // Quelques images sur les projets les plus avancés (démo galerie/portfolio).
     if (phasesChantierEtPlus.includes(phase)) {
@@ -712,8 +1012,8 @@ async function main() {
   // Les alertes d'échéance sont dérivées à la lecture (pas stockées) ; ici on
   // ne pose que les événements discrets.
   const [pAssigne, pPhase] = await Promise.all([
-    prisma.projet.findFirst({ where: { societeId: grey.id, code: 'PRJ-2026-003' } }),
-    prisma.projet.findFirst({ where: { societeId: grey.id, code: 'PRJ-2026-002' } }),
+    prisma.projet.findFirst({ where: { societeId: grey.id, programme: 'Résidence Point E' } }),
+    prisma.projet.findFirst({ where: { societeId: grey.id, programme: 'Duplex Sacré-Cœur' } }),
   ]);
   if (pAssigne && pPhase) {
     await prisma.notification.createMany({
@@ -800,11 +1100,10 @@ async function main() {
   const nbD = await prisma.dossierCrm.count({ where: { societeId: grey.id } });
   const nbPermis = await prisma.permis.count();
   const nbEtudes = await prisma.etudes.count();
-  const nbExec = await prisma.execution.count();
   const nbCel = await prisma.cellule.count({ where: { societeId: grey.id } });
   const nbCollab = await prisma.collaborateur.count({ where: { societeId: grey.id } });
   console.log(`  Grey Concrete : ${nbD} dossiers CRM, ${nbP} projets`);
-  console.log(`  Phase 2 : ${nbPermis} permis, ${nbEtudes} études, ${nbExec} exécutions`);
+  console.log(`  Phase 2 : ${nbPermis} permis, ${nbEtudes} études`);
   console.log(`  Équipe : ${nbCel} cellules, ${nbCollab} collaborateurs`);
   const nbCanaux = await prisma.canal.count({ where: { societeId: grey.id } });
   const nbMsg = await prisma.message.count({

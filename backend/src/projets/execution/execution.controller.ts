@@ -4,30 +4,27 @@ import {
   Delete,
   Get,
   Param,
-  ParseEnumPipe,
   Patch,
   Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { TypeLot } from '@prisma/client';
+import { GroupeChecklistExecution } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
 import { EcritureCollaborateur } from '../ecriture-collaborateur.decorator';
 import { ExecutionService } from './execution.service';
 import {
-  AjouterCrDto,
-  AjouterOffreDto,
-  AjouterReserveDto,
-  AjouterSituationDto,
-  AttribuerLotDto,
-  PatchLotDto,
-  PatchLotSuiviDto,
-  PatchReceptionDto,
-  PatchReserveDto,
+  AjouterLigneChecklistExecutionDto,
+  DeciderProlongationBlocExecutionDto,
+  DemanderProlongationBlocExecutionDto,
+  JoindreFichiersLigneDto,
+  JoindreImagesLigneDto,
+  PatchBlocExecutionDto,
+  PatchLigneChecklistExecutionDto,
 } from './dto';
 
-type R = { user: { societeId: string; userId: string } };
+type R = { user: { societeId: string; userId: string; role: string } };
 
 @Controller('societes/:slug/projets/:id/execution')
 @UseGuards(JwtAuthGuard, AccesProjetGuard)
@@ -39,113 +36,146 @@ export class ExecutionController {
     return this.execution.get(req.user.societeId, id);
   }
 
-  @Patch('lots/:type')
-  patchLot(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Body() dto: PatchLotDto,
-  ) {
-    return this.execution.patchLot(req.user.societeId, id, type, dto);
-  }
-
-  // Suivi opérationnel d'un lot (statut, avancement, planning) — ouvert au
-  // collaborateur assigné. Le financier reste sur PATCH lots/:type (admin).
+  // Ouvert à toute l'équipe côté guard (@EcritureCollaborateur) : le contrôle
+  // fin (responsable du bloc + admin) est en service.
   @EcritureCollaborateur()
-  @Patch('lots/:type/suivi')
-  patchLotSuivi(
+  @Patch('checklist/:ligneId')
+  patchChecklist(
     @Req() req: R,
     @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Body() dto: PatchLotSuiviDto,
+    @Param('ligneId') ligneId: string,
+    @Body() dto: PatchLigneChecklistExecutionDto,
   ) {
-    return this.execution.patchLot(req.user.societeId, id, type, dto);
+    return this.execution.patchLigneChecklist(
+      req.user.societeId,
+      id,
+      ligneId,
+      dto,
+      req.user.userId,
+      req.user.role,
+    );
   }
 
-  @Post('lots/:type/offres')
-  ajouterOffre(
+  // Structure de la checklist (ajout/suppression d'items) — admin uniquement.
+  @Post('checklist')
+  ajouterChecklist(
     @Req() req: R,
     @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Body() dto: AjouterOffreDto,
+    @Body() dto: AjouterLigneChecklistExecutionDto,
   ) {
-    return this.execution.ajouterOffre(req.user.societeId, id, type, dto);
+    return this.execution.ajouterLigneChecklist(req.user.societeId, id, dto);
   }
 
-  @Delete('lots/:type/offres/:offreId')
-  supprimerOffre(
+  @Delete('checklist/:ligneId')
+  supprimerChecklist(
     @Req() req: R,
     @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Param('offreId') offreId: string,
+    @Param('ligneId') ligneId: string,
   ) {
-    return this.execution.supprimerOffre(req.user.societeId, id, type, offreId);
+    return this.execution.supprimerLigneChecklist(
+      req.user.societeId,
+      id,
+      ligneId,
+      req.user.userId,
+    );
   }
 
-  @Post('lots/:type/attribution')
-  attribuer(
+  // Pièces jointes rattachées à une ligne — ouvert à toute l'équipe côté
+  // guard, restreint au responsable du bloc de cette ligne + admin en service.
+  @EcritureCollaborateur()
+  @Post('checklist/:ligneId/images')
+  joindreImages(
     @Req() req: R,
     @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Body() dto: AttribuerLotDto,
+    @Param('ligneId') ligneId: string,
+    @Body() dto: JoindreImagesLigneDto,
   ) {
-    return this.execution.attribuer(req.user.societeId, id, type, dto);
-  }
-
-  @Post('lots/:type/situations')
-  ajouterSituation(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Body() dto: AjouterSituationDto,
-  ) {
-    return this.execution.ajouterSituation(req.user.societeId, id, type, dto);
-  }
-
-  @Delete('lots/:type/situations/:situationId')
-  supprimerSituation(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('type', new ParseEnumPipe(TypeLot)) type: TypeLot,
-    @Param('situationId') situationId: string,
-  ) {
-    return this.execution.supprimerSituation(req.user.societeId, id, type, situationId);
+    return this.execution.joindreImages(
+      req.user.societeId,
+      id,
+      ligneId,
+      dto,
+      req.user.userId,
+      req.user.role,
+    );
   }
 
   @EcritureCollaborateur()
-  @Post('cr')
-  ajouterCr(@Req() req: R, @Param('id') id: string, @Body() dto: AjouterCrDto) {
-    return this.execution.ajouterCr(req.user.societeId, id, dto, req.user.userId);
-  }
-
-  @EcritureCollaborateur()
-  @Patch('reception')
-  patchReception(
+  @Post('checklist/:ligneId/fichiers')
+  joindreFichiers(
     @Req() req: R,
     @Param('id') id: string,
-    @Body() dto: PatchReceptionDto,
+    @Param('ligneId') ligneId: string,
+    @Body() dto: JoindreFichiersLigneDto,
   ) {
-    return this.execution.patchReception(req.user.societeId, id, dto);
+    return this.execution.joindreFichiers(
+      req.user.societeId,
+      id,
+      ligneId,
+      dto,
+      req.user.userId,
+      req.user.role,
+    );
   }
 
+  // -- Blocs (Études / Les Plans / Viabilité / Locaux techniques /
+  // Aménagements / Cahiers de menuiserie / Détails / CCTP) ------------------
+  // Échéance + responsable par bloc — cf. mémoire du 2026-09-17.
+
+  // Échéance + responsable du bloc — admin OU dispatcher de la cellule du
+  // responsable ciblé (décision boss, sept. 2026). Ouvert à
+  // @EcritureCollaborateur pour les dispatchers ; contrôle fin en service.
   @EcritureCollaborateur()
-  @Post('reserves')
-  ajouterReserve(
+  @Patch('blocs/:groupe')
+  patchBloc(
     @Req() req: R,
     @Param('id') id: string,
-    @Body() dto: AjouterReserveDto,
+    @Param('groupe') groupe: GroupeChecklistExecution,
+    @Body() dto: PatchBlocExecutionDto,
   ) {
-    return this.execution.ajouterReserve(req.user.societeId, id, dto);
+    return this.execution.patchBloc(
+      req.user.societeId,
+      id,
+      groupe,
+      dto,
+      req.user.userId,
+      req.user.role,
+    );
   }
 
+  // Demande de prolongation — ouvert à toute l'équipe du projet côté guard,
+  // restreint au SEUL responsable de ce bloc en service.
   @EcritureCollaborateur()
-  @Patch('reserves/:reserveId')
-  patchReserve(
+  @Post('blocs/:groupe/prolongation')
+  demanderProlongationBloc(
     @Req() req: R,
     @Param('id') id: string,
-    @Param('reserveId') reserveId: string,
-    @Body() dto: PatchReserveDto,
+    @Param('groupe') groupe: GroupeChecklistExecution,
+    @Body() dto: DemanderProlongationBlocExecutionDto,
   ) {
-    return this.execution.patchReserve(req.user.societeId, id, reserveId, dto);
+    return this.execution.demanderProlongationBloc(
+      req.user.societeId,
+      id,
+      groupe,
+      dto,
+      req.user.userId,
+    );
+  }
+
+  // Décision admin sur une demande en attente — même chemin, méthode différente.
+  @Patch('blocs/:groupe/prolongation')
+  deciderProlongationBloc(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('groupe') groupe: GroupeChecklistExecution,
+    @Body() dto: DeciderProlongationBlocExecutionDto,
+  ) {
+    return this.execution.deciderProlongationBloc(
+      req.user.societeId,
+      id,
+      groupe,
+      dto,
+      req.user.userId,
+    );
   }
 }

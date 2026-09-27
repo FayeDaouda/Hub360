@@ -1,4 +1,4 @@
-import { Session } from './types';
+import type { NiveauPermission, Session } from './types';
 
 const STORAGE_KEY = 'hub_session';
 
@@ -28,4 +28,27 @@ export function getSession(): Session | null {
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
   sessionStorage.removeItem(STORAGE_KEY);
+}
+
+const ORDRE_NIVEAUX: Record<NiveauPermission, number> = {
+  aucun: 0,
+  lecture: 1,
+  ecriture: 2,
+  validation: 3,
+};
+
+// Affichage seulement (montrer/masquer, rediriger) : le serveur revérifie
+// chaque requête. Même règle que backend/src/commun/permission.guard.ts.
+export function niveauSuffisant(
+  session: Session | null,
+  module: string,
+  niveau: NiveauPermission,
+): boolean {
+  const actuel = session?.permissions?.[module] ?? 'aucun';
+  return ORDRE_NIVEAUX[actuel] >= ORDRE_NIVEAUX[niveau];
+}
+
+// Raccourci sur la session courante.
+export function aLaPermission(module: string, niveau: NiveauPermission): boolean {
+  return niveauSuffisant(getSession(), module, niveau);
 }

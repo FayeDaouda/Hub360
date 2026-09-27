@@ -1,37 +1,35 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
   FileText,
   HardHat,
   Images,
+  LandPlot,
   Lightbulb,
   MapPin,
-  ReceiptText,
+  Pencil,
   Ruler,
   Stamp,
+  UserPlus,
   X,
 } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import { getAvantProjet, getProjetExecution } from '@/lib/projets';
 import { getCellules } from '@/lib/equipe';
 import { getPermis } from '@/lib/permis';
 import { getEtudes } from '@/lib/etudes';
 import { getExecution } from '@/lib/execution';
-import { getFacturation } from '@/lib/facturation';
-import { formatMontantCompact } from '@/lib/format';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistAvp,
+  avancementChecklistFichiers,
   avertissementChangementPhase,
   CATEGORIES,
+  COULEUR_SECTION,
   etudesEnAttente,
   itemsChecklistAvp,
-  lotsEnAttente,
   NATURES_DOSSIER,
   SECTIONS_PAR_CATEGORIE,
   SECTIONS_PROJET,
@@ -41,17 +39,13 @@ import {
   type ChecklistAvpGroupe,
   type Etudes,
   type Execution,
-  type ResumeFacturation,
   type ProjetExecution,
   type SectionProjet,
   type Cellule,
-  type Session,
-  type Societe,
   type StatutPermis,
   type StatutProjetExec,
 } from '@/lib/types';
 import dynamic from 'next/dynamic';
-import { AdminShell } from '@/components/admin/admin-shell';
 import { AssignerProjetModal } from '@/components/admin/assigner-projet-modal';
 import { PhaseStepper } from '@/components/admin/phase-stepper';
 
@@ -74,6 +68,7 @@ const PILL_STATUT_EXEC: Record<StatutProjetExec, string> = {
 const ICONE_SECTION: Record<SectionProjet, typeof Lightbulb> = {
   'avant-projet': Lightbulb,
   images: Images,
+  foncier: LandPlot,
   documents: FileText,
   permis: Stamp,
   etude: Ruler,
@@ -81,36 +76,20 @@ const ICONE_SECTION: Record<SectionProjet, typeof Lightbulb> = {
 };
 
 export default function ProjetPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [cellules, setCellules] = useState<Cellule[]>([]);
   const [assignation, setAssignation] = useState(false);
   const [carteOuverte, setCarteOuverte] = useState(false);
-  const [avantProjetValideLe, setAvantProjetValideLe] = useState<string | null>(null);
   const [avantProjetChecklists, setAvantProjetChecklists] = useState<ChecklistAvpGroupe[]>(
     [],
   );
   const [statutPermis, setStatutPermis] = useState<StatutPermis | null>(null);
   const [etudes, setEtudes] = useState<Etudes | null>(null);
   const [execution, setExecution] = useState<Execution | null>(null);
-  const [factuResume, setFactuResume] = useState<ResumeFacturation | null>(null);
+
+  useTitrePage(projet ? projet.programme : 'Projet');
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug)
-      .then(setSociete)
-      .catch(() => setSociete(null));
     getProjetExecution(params.slug, params.projetId).then((p) => {
       setProjet(p);
       if (!p) return;
@@ -118,32 +97,27 @@ export default function ProjetPage({ params }: Props) {
         getPermis(params.slug, params.projetId).then((permis) => setStatutPermis(permis.statut));
         getEtudes(params.slug, params.projetId).then(setEtudes);
       }
-      getExecution(params.slug, params.projetId, p.categorie).then(setExecution);
+      getExecution(params.slug, params.projetId).then(setExecution);
     });
-    getFacturation(params.slug, params.projetId)
-      .then((f) => setFactuResume(f.resume))
-      .catch(() => setFactuResume(null));
     getCellules(params.slug).then(setCellules).catch(() => setCellules([]));
     getAvantProjet(params.slug, params.projetId).then((ap) => {
-      setAvantProjetValideLe(ap.valideLe);
       setAvantProjetChecklists(ap.checklists);
     });
-  }, [params.slug, params.projetId, router]);
+  }, [params.slug, params.projetId]);
 
-  const celluleNom = useMemo(() => {
-    if (!projet?.celluleAssignee) return null;
-    return cellules.find((c) => c.id === projet.celluleAssignee)?.nom ?? null;
+  const celluleNoms = useMemo(() => {
+    if (!projet) return [];
+    return projet.cellules.map((id) => cellules.find((c) => c.id === id)?.nom ?? id);
   }, [projet, cellules]);
 
-  if (!session) return null;
+  // Avancement de la checklist Exécution (8 blocs) — remplace l'ancien
+  // décompte de lots (retiré sept. 2026, cf. mémoire).
+  const execAv = execution
+    ? avancementChecklistAvp(execution.checklists.flatMap((g) => g.items))
+    : null;
 
   return (
-    <AdminShell
-      societe={societe}
-      session={session}
-      active="projets"
-      titre={projet ? projet.programme : 'Projet'}
-    >
+    <>
       <Link href={`/admin/${params.slug}/projets`} className="lien-retour">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>Projets</span>
@@ -176,8 +150,12 @@ export default function ProjetPage({ params }: Props) {
                 {STATUTS_PROJET_EXEC[projet.statut]}
               </span>
               <span className="projet-equipe">
-                {celluleNom ? (
-                  <span className="chip">{celluleNom}</span>
+                {celluleNoms.length ? (
+                  celluleNoms.map((nom) => (
+                    <span key={nom} className="chip">
+                      {nom}
+                    </span>
+                  ))
                 ) : (
                   <span className="cell-sub">Aucune cellule</span>
                 )}
@@ -186,7 +164,12 @@ export default function ProjetPage({ params }: Props) {
                   className="btn-ghost btn-ghost--sm"
                   onClick={() => setAssignation(true)}
                 >
-                  {projet.celluleAssignee ? 'Modifier la cellule' : 'Assigner'}
+                  {projet.cellules.length ? (
+                    <Pencil size={14} strokeWidth={2} aria-hidden />
+                  ) : (
+                    <UserPlus size={14} strokeWidth={2} aria-hidden />
+                  )}
+                  {projet.cellules.length ? 'Modifier les cellules' : 'Assigner'}
                 </button>
                 <button
                   type="button"
@@ -203,21 +186,21 @@ export default function ProjetPage({ params }: Props) {
           <PhaseStepper
             slug={params.slug}
             projet={projet}
-            avantProjetValide={!!avantProjetValideLe}
             permisObtenu={statutPermis === 'obtenu'}
             avertissement={
               avertissementChangementPhase(projet, {
-                avantProjetValide: !!avantProjetValideLe,
                 permisObtenu: statutPermis === 'obtenu',
               }) ??
               (projet.phase === 'etudes' && etudes && etudesEnAttente(etudes) > 0
                 ? `${etudesEnAttente(etudes)} étude${
                     etudesEnAttente(etudes) > 1 ? 's' : ''
                   } encore en cours — le DCE n'est pas complet.`
-                : projet.phase === 'chantier' && execution && lotsEnAttente(execution) > 0
-                  ? `${lotsEnAttente(execution)} lot${
-                      lotsEnAttente(execution) > 1 ? 's' : ''
-                    } pas encore terminé${lotsEnAttente(execution) > 1 ? 's' : ''}.`
+                : projet.phase === 'chantier' && execAv && execAv.total > 0 && !execAv.complete
+                  ? `${execAv.total - execAv.faits} item${
+                      execAv.total - execAv.faits > 1 ? 's' : ''
+                    } pas encore coché${
+                      execAv.total - execAv.faits > 1 ? 's' : ''
+                    } sur la checklist chantier.`
                   : null)
             }
             onChange={setProjet}
@@ -230,17 +213,13 @@ export default function ProjetPage({ params }: Props) {
               const Icone = ICONE_SECTION[section.cle];
               let etat: { classe: string; texte: string } | null = null;
               if (section.cle === 'avant-projet') {
-                if (avantProjetValideLe) {
-                  etat = { classe: 'pill--succes', texte: 'Validé' };
-                } else {
-                  const av = avancementChecklistAvp(
-                    itemsChecklistAvp(avantProjetChecklists),
-                  );
-                  etat = {
-                    classe: 'pill--attention',
-                    texte: av.total ? `En cours · ${av.faits}/${av.total}` : 'En cours',
-                  };
-                }
+                const av = avancementChecklistFichiers(itemsChecklistAvp(avantProjetChecklists));
+                etat = av.complete
+                  ? { classe: 'pill--succes', texte: 'Terminé' }
+                  : {
+                      classe: 'pill--attention',
+                      texte: av.total ? `En cours · ${av.faits}/${av.total}` : 'En cours',
+                    };
               } else if (section.cle === 'permis' && statutPermis) {
                 etat = {
                   classe:
@@ -258,17 +237,17 @@ export default function ProjetPage({ params }: Props) {
                       classe: 'pill--info',
                       texte: `${etudesEnAttente(etudes)} en cours`,
                     };
-              } else if (section.cle === 'execution' && execution && execution.lots.length > 0) {
-                const enAttente = lotsEnAttente(execution);
-                etat = execution.reception.receptionDefinitive
-                  ? { classe: 'pill--succes', texte: 'Réceptionné' }
-                  : { classe: 'pill--info', texte: `${enAttente} lot${enAttente > 1 ? 's' : ''}` };
+              } else if (section.cle === 'execution' && execAv && execAv.total > 0) {
+                etat = {
+                  classe: execAv.complete ? 'pill--succes' : 'pill--info',
+                  texte: execAv.complete ? 'Terminé' : `${execAv.faits}/${execAv.total}`,
+                };
               }
               return (
                 <Link
                   key={section.cle}
                   href={`/admin/${params.slug}/projets/${projet.id}/${section.cle}`}
-                  className="projet-carte"
+                  className={`projet-carte projet-carte--${COULEUR_SECTION[section.cle]}`}
                 >
                   <span className="projet-carte-icone">
                     <Icone size={22} strokeWidth={1.75} aria-hidden />
@@ -279,45 +258,18 @@ export default function ProjetPage({ params }: Props) {
                 </Link>
               );
             })}
-
-            {/* Facturation — module « gestion », admin only, hors SECTIONS_PROJET
-                (jamais dans la vue collaborateur). */}
-            {(() => {
-              let etat = { classe: 'pill--neutre', texte: 'Aucune facture' };
-              if (factuResume) {
-                if (factuResume.nbEnRetard > 0) {
-                  etat = {
-                    classe: 'pill--risque',
-                    texte: `${factuResume.nbEnRetard} en retard`,
-                  };
-                } else if (factuResume.totalDu > 0) {
-                  etat = {
-                    classe: 'pill--info',
-                    texte: `Reste ${formatMontantCompact(factuResume.totalDu)}`,
-                  };
-                } else if (factuResume.totalFactureTtc > 0) {
-                  etat = { classe: 'pill--succes', texte: 'Soldé' };
-                }
-              }
-              return (
-                <Link
-                  href={`/admin/${params.slug}/projets/${projet.id}/facturation`}
-                  className="projet-carte"
-                >
-                  <span className="projet-carte-icone">
-                    <ReceiptText size={22} strokeWidth={1.75} aria-hidden />
-                  </span>
-                  <span className="projet-carte-titre">Facturation</span>
-                  <span className="projet-carte-desc">
-                    Factures client, TVA, échéancier, paiements
-                  </span>
-                  <span className={`pill ${etat.classe} projet-carte-etat`}>
-                    {etat.texte}
-                  </span>
-                </Link>
-              );
-            })()}
           </div>
+
+          {/* Facturation centralisée (cf. cadrage « Devis ») — retirée de la
+              grille projet (sept. 2026) : la carte + sa route dédiée
+              disparaissent, remplacées par un lien filtré depuis la page
+              centrale /admin/:slug/facturation. */}
+          <Link
+            href={`/admin/${params.slug}/facturation?projetId=${projet.id}`}
+            className="lien-inline"
+          >
+            Voir la facturation de ce projet →
+          </Link>
         </>
       )}
 
@@ -360,6 +312,6 @@ export default function ProjetPage({ params }: Props) {
           </div>
         </div>
       )}
-    </AdminShell>
+    </>
   );
 }

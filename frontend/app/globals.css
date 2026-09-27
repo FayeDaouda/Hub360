@@ -1,32 +1,86 @@
 :root {
   color-scheme: light;
 
-  /* --- Direction visuelle Hub 360 -------------------------------------------
-     Base neutre Encre / Sable conservée. 3 couleurs à connotation locale
-     remplacent le bleu/vert/ambre génériques. Argile = couleur de signature :
-     réservée à ce qui doit accrocher l'œil en premier (chiffres clés, CTA,
-     statuts « en cours / chantier », liens actifs) — ne pas disperser. */
-  --encre: #1b1a17;
-  --sable: #f4f1ea;
-  --argile: #b5502f; /* accent principal            */
-  --argile-fonce: #8c3f24; /* texte sur fond Argile tinté */
-  --sauge: #6b7a5e; /* validé / positif            */
-  --sauge-fonce: #3f4a34;
-  --ocre: #c08a2e; /* attention / échéance         */
-  --ocre-fonce: #7a5312;
+  /* --- Direction visuelle Hub 360 (virage « flashy », sept. 2026) -----------
+     Palette libre, indépendante de l'ancien kit navy/beige/taupe (décision
+     boss). Même architecture qu'avant (Encre / Sable + 3 couleurs de sens +
+     accents tintés) — seules les teintes changent, pour que tout le code
+     existant qui consomme ces tokens se re-thème sans être réécrit.
+     Argile reste la couleur de signature (CTA, statuts actifs, ce qui doit
+     accrocher l'œil en premier) ; Iris est la couleur de marque (liens,
+     avatars, dégradé de marque). Chaque couleur de sens/action a été
+     recalibrée en OKLCH pour rester lisible en blanc dessus (boutons,
+     pastilles, bulles de chat) — cf. mémoire contraste, sept. 2026. */
+  --encre: #140f1f;
+  --sable: #f5f3fc;
+  --argile: oklch(55% 0.22 355); /* accent principal (ex-terracotta -> flamingo) */
+  --argile-fonce: oklch(30% 0.15 355); /* texte sur fond Argile tinté */
+  --sauge: oklch(48% 0.165 142); /* validé / positif (ex-sauge -> vert vif) */
+  --sauge-fonce: oklch(28% 0.11 142);
+  --ocre: oklch(72% 0.15 82); /* attention / échéance (ambre vif) */
+  --ocre-fonce: oklch(30% 0.09 82);
+
+  /* Couleur de marque (liens, avatars, éléments d'identité) — distincte
+     d'Argile pour ne pas diluer la couleur de signature. */
+  --iris: oklch(50% 0.22 300);
+  --iris-fonce: oklch(28% 0.15 300); /* texte sur fond Iris tinté */
+  --turquoise: oklch(68% 0.13 200); /* accent secondaire (anneaux, info) */
+  --turquoise-fonce: oklch(34% 0.1 200);
+  /* Ajoutées pour la hiérarchie de couleur des cartes projet (sept. 2026) —
+     Étude et Exécution n'avaient pas encore de couleur de charte propre.
+     --bleu (plus bas) reste l'exception scopée à la checkbox avant-projet ;
+     Azur est la vraie couleur de charte pour tout usage « technique ». */
+  --azur: oklch(52% 0.18 255);
+  --azur-fonce: oklch(28% 0.13 255);
+  --mandarine: oklch(62% 0.19 45); /* exécution / chantier (action, intensité) */
+  --mandarine-fonce: oklch(32% 0.13 45);
+  /* Foncier/Documents/Images étaient en gris « neutre » délibéré (transverses,
+     pas une étape) — demande explicite sept. 2026 : leur donner chacun sa
+     propre couleur, comme les autres modules. Hues choisies pour rester bien
+     séparées de tout le reste (dont Sauge/Ocre/Danger, réservés aux statuts). */
+  --jade: oklch(54% 0.13 172); /* Foncier */
+  --jade-fonce: oklch(30% 0.095 172);
+  --fuchsia: oklch(56% 0.21 325); /* Documents */
+  --fuchsia-fonce: oklch(30% 0.15 325);
+  --corail: oklch(64% 0.19 18); /* Images */
+  --corail-fonce: oklch(32% 0.13 18);
 
   /* Fonds tintés des pastilles (jamais de texte noir plat dessus) */
-  --argile-tint: #f2e6e1;
-  --sauge-tint: #e9ede4;
-  --ocre-tint: #f7edd9;
+  --argile-tint: oklch(95% 0.025 355);
+  --sauge-tint: oklch(95% 0.025 142);
+  --ocre-tint: oklch(95% 0.025 82);
+  --iris-tint: oklch(95% 0.025 300);
+  --turquoise-tint: oklch(95% 0.025 200);
+  --azur-tint: oklch(95% 0.025 255);
+  --mandarine-tint: oklch(95% 0.025 45);
+  --jade-tint: oklch(95% 0.025 172);
+  --fuchsia-tint: oklch(95% 0.025 325);
+  --corail-tint: oklch(95% 0.025 18);
 
-  --bg: #f4f1ea;
+  --bg: #f5f3fc;
   --surface: #ffffff;
-  --border: #e6e2d8;
-  --border-hover: #d6d1c3;
-  --text: #1b1a17;
-  --text-muted: #6b6a66;
-  --brand: #1b1a17;
+  --border: #e7e2f5;
+  --border-hover: #d9d2f0;
+  --text: #17132a;
+  --text-muted: #6e6785;
+  /* Plat (border-color, accent-color…) : Iris. Le dégradé de marque a son
+     propre token car un <gradient> n'est pas une <color> CSS valide partout.
+     Calé sur le vrai spectre du logo (bleu -> turquoise -> vert -> jaune ->
+     orange, sept. 2026) — signature de marque isolée de la hiérarchie de
+     couleur des modules (Avant-projet/Permis/Étude/Exécution/Facturation) :
+     Azur/Turquoise/Mandarine s'y retrouvent déjà (bonne surprise), Iris et
+     Argile restent hors spectre par choix (kickoff / clôture, pas des étapes
+     du dégradé). Vert/jaune ne sont des repères que du dégradé, pas des
+     couleurs de module — inutile de leur donner un token à part. */
+  --brand: var(--iris);
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--azur),
+    var(--turquoise),
+    oklch(72% 0.16 150),
+    oklch(85% 0.15 95),
+    var(--mandarine)
+  );
   --accent: var(--argile);
   --accent-fort: var(--argile-fonce);
   --danger: #b3261e;
@@ -34,10 +88,10 @@
      explicite, sept. 2026) — la règle ci-dessus (pas de bleu/vert/ambre
      génériques) reste la direction par défaut ailleurs. */
   --bleu: #2563eb;
-  --radius-lg: 16px;
-  --radius-md: 10px;
-  --shadow-sm: 0 1px 2px rgba(20, 20, 18, 0.06);
-  --shadow-md: 0 8px 24px rgba(20, 20, 18, 0.08);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-sm: 0 1px 2px rgba(20, 15, 35, 0.07);
+  --shadow-md: 0 8px 24px rgba(20, 15, 35, 0.1);
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI',
     Roboto, Helvetica, Arial, sans-serif;
   /* Titres, noms de carte, gros chiffres KPI */
@@ -46,10 +100,234 @@
   /* Jetons back-office : jusqu'ici seulement des valeurs de repli éparpillées,
      désormais centralisés ici — un seul endroit à faire évoluer. */
   --admin-surface: var(--surface);
-  --admin-fond: #efeae0;
+  --admin-fond: #eee8fb;
   --admin-bordure: var(--border);
   --admin-texte-doux: var(--text-muted);
   --admin-accent: var(--argile);
+
+  /* --- Accents hub360° (refonte dark/light, sept. 2026) ---------------------
+     4 couleurs de la nouvelle identité (mêmes teintes que le nouveau logo),
+     identiques dans les deux modes — seuls les fonds/surfaces changent entre
+     clair et sombre. Additifs pour l'instant : n'a encore remplacé QUE le
+     décoratif des tuiles KPI du tableau de bord (stat-card.tsx) — la
+     hiérarchie de couleur des modules (Azur/Turquoise/Sauge…) est un chantier
+     séparé, à traiter module par module (décision boss). */
+  --violet-hub: #4f6bff;
+  --jaune-hub: #ffd02e;
+  --orange-hub: #ff7a3c;
+  --cyan-hub: #06b6d4;
+
+  /* Verre translucide — additif, opt-in (.glass-panel), n'affecte pas
+     --surface (qui doit rester opaque : modales, menus, tables en dépendent
+     partout dans l'appli). */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  /* Verre liquide premium — reflet spéculaire + ombre flottante, cf.
+     .admin-search/.admin-icon-btn/.admin-periode-label/.glass-panel. */
+  --glass-sheen: rgba(255, 255, 255, 0.55);
+  --glass-sheen-faible: rgba(255, 255, 255, 0.15);
+  --glass-ombre: rgba(23, 19, 42, 0.14);
+}
+
+/* --- Mode sombre (refonte dark/light, sept. 2026) ---------------------------
+   Bascule par attribut sur <html> (lib/theme.ts + composant ThemeToggle),
+   pas par prefers-color-scheme : préférence choisie et mémorisée par la
+   personne, pas déduite de l'OS. Ne redéfinit QUE les jetons déjà consommés
+   partout (--bg/--surface/--border/--text/--text-muted/--admin-*) : tout ce
+   qui les utilise déjà (panels, tuiles, tableaux) se re-thème sans être
+   réécrit — même principe que le virage « flashy » de sept. 2026 plus haut.
+   --surface reste une couleur PLEINE (pas de transparence) pour ne rien
+   casser côté modales/menus qui la supposent opaque. Déploiement progressif
+   module par module (décision boss) : le tableau de bord est à jour, le
+   reste de l'admin peut avoir des aspérités tant qu'il n'est pas repassé. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0e1a;
+  --surface: #12162b;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  --text: #f5f7fa;
+  --text-muted: rgba(245, 247, 250, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --admin-fond: #0a0e1a;
+  --admin-surface: #12162b;
+  --admin-bordure: rgba(255, 255, 255, 0.1);
+  --admin-texte-doux: rgba(245, 247, 250, 0.6);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-sheen: rgba(255, 255, 255, 0.3);
+  --glass-sheen-faible: rgba(255, 255, 255, 0.06);
+  --glass-ombre: rgba(0, 0, 0, 0.32);
+}
+
+/* Verre liquide premium — flou/saturation renforcés, reflet spéculaire fixe
+   qui simule la lumière sur une surface courbe (::before), liseré haut
+   clair / bas sombre pour la profondeur, ombre portée flottante, et un
+   bord « un peu allumé » : un halo teinté accent qui déborde très
+   doucement à l'extérieur (spread négatif, discret — pas de néon). */
+.glass-panel {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    inset 0 -1px 0 var(--glass-sheen-faible),
+    0 16px 40px var(--glass-ombre),
+    0 0 24px -6px color-mix(in oklch, var(--argile) 30%, transparent);
+  overflow: hidden;
+}
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 70% at 12% -10%, var(--glass-sheen), transparent 60%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+/* Halos de fond (refonte dark/light, retour boss sept. 2026) — sans cette
+   couche, le backdrop-filter des cartes en verre n'a rien d'intéressant à
+   flouter derrière lui. Fixed (ne défilent pas avec le contenu), z-index 0 :
+   .admin-sidebar/.admin-main restent opaques ou passent par-dessus en ordre
+   naturel. Opacité plus forte en sombre (identité par défaut), très discrète
+   en clair pour ne pas polluer la lisibilité sur fond blanc. */
+.admin-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.admin-atmosphere-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  opacity: var(--atmosphere-op, 0.35);
+}
+
+:root[data-theme='dark'] {
+  --atmosphere-op: 0.35;
+}
+:root:not([data-theme='dark']) {
+  --atmosphere-op: 0.14;
+}
+
+.admin-atmosphere-blob--violet {
+  top: -160px;
+  left: 20%;
+  width: 560px;
+  height: 560px;
+  background: var(--violet-hub);
+}
+.admin-atmosphere-blob--orange {
+  top: 30%;
+  right: -180px;
+  width: 520px;
+  height: 520px;
+  background: var(--orange-hub);
+}
+.admin-atmosphere-blob--cyan {
+  bottom: -200px;
+  left: 35%;
+  width: 560px;
+  height: 560px;
+  background: var(--cyan-hub);
+}
+
+/* Bascule clair/sombre (topbar admin) — popover « Mode d'affichage » plutôt
+   qu'un simple switch inline (retour boss sept. 2026, maquette de référence).
+   Structure calquée sur .notif/.notif-menu (ClocheNotifications) — même
+   pattern d'ouverture pour toute la topbar. Le déclencheur réutilise
+   .admin-icon-btn (déjà utilisé par les autres boutons ronds de la topbar). */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+}
+
+.theme-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(15rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  padding: 1rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-md);
+  z-index: 40;
+}
+
+.theme-menu-titre {
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.theme-menu-segmente {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--admin-fond);
+  margin-bottom: 0.8rem;
+}
+
+.theme-menu-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-menu-option.est-actif {
+  background: linear-gradient(135deg, var(--violet-hub), var(--cyan-hub));
+  color: #fff;
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--violet-hub) 40%, transparent);
+}
+
+.theme-menu-etat {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.theme-menu-desc {
+  margin: 0.25rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+/* Sous ~640px, le déclencheur est trop près du bord gauche pour qu'un popover
+   ancré à droite (right: 0) reste dans l'écran — centré sous le bouton à la
+   place, la largeur déjà bornée par calc(100vw - 2rem) fait le reste. */
+@media (max-width: 640px) {
+  .theme-menu {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 * {
@@ -509,7 +787,17 @@ button {
   font-weight: 600;
 }
 
+/* Action secondaire — même langage d'interaction que les cartes de module et
+   le stepper (sept. 2026) : au repos, contour discret ; au survol, un simple
+   SOUFFLE de l'effet glass (fond translucide + flou léger + halo discret,
+   élévation d'1px) — jamais la couleur pleine, réservée aux cartes qui
+   représentent une vraie navigation vers une section. Teinte par défaut :
+   Argile, la couleur de signature/CTA (alignée sur .btn-primary, correction
+   sept. 2026 — Iris est réservé à l'identité de marque, pas aux boutons
+   génériques) — .btn-ghost--danger garde la sienne. */
 .btn-ghost {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -521,10 +809,74 @@ button {
   font-size: 0.85rem;
   cursor: pointer;
   color: var(--text);
+  transition:
+    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Rai de lumière au survol — même recette que .admin-icon-btn/
+   .admin-periode-label (« liquid glass » partout, sept. 2026) : ce bouton en
+   était resté à un simple fond teinté, sans le balayage spéculaire. */
+.btn-ghost::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(120deg, transparent, var(--glass-sheen), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 
 .btn-ghost:hover {
-  background: var(--surface);
+  /* Mixé contre --surface (pas un « white » littéral, bug corrigé sept.
+     2026) : sinon le survol reste pâle/plat en thème sombre au lieu de
+     suivre le fond réel du bouton. */
+  background: color-mix(in oklch, var(--argile) 12%, var(--surface) 88%);
+  border-color: color-mix(in oklch, var(--argile) 35%, transparent);
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--argile) 18%, transparent);
+  transform: translateY(-1px);
+}
+.btn-ghost:hover::after {
+  left: 130%;
+}
+
+.btn-ghost--danger:hover {
+  background: color-mix(in oklch, var(--danger) 12%, var(--surface) 88%);
+  border-color: color-mix(in oklch, var(--danger) 35%, transparent);
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--danger) 18%, transparent);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn-ghost:disabled:hover {
+  background: transparent;
+  border-color: var(--border);
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.btn-ghost:disabled:hover::after {
+  left: -60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-ghost {
+    transition: none;
+  }
+  .btn-ghost::after {
+    transition: none;
+  }
 }
 
 .espace-welcome {
@@ -569,19 +921,100 @@ button {
   grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100dvh;
   background: var(--bg);
+  /* Même courbe que .kpi-tuile-icone / indic-bar-grow — la « signature »
+     d'accélération douce de l'appli, pour que le repli se sente cohérent
+     avec le reste plutôt qu'une transition CSS par défaut. */
+  transition: grid-template-columns 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Repli en rail d'icônes (desktop) — cf. admin-shell.tsx / collab-shell.tsx.
+   Un seul point de vérité pour la largeur : la sidebar n'a pas de `width`
+   propre, elle occupe simplement la colonne de la grille. */
+.admin--repliee {
+  grid-template-columns: 76px minmax(0, 1fr);
 }
 
 .admin-sidebar {
+  /* Sidebar volontairement sombre — ancre de navigation stable pendant que
+     le contenu (Sable) devient coloré. Tokens scopés (mêmes noms que la
+     famille --portal-*) car --text/--border/--bg restent clairs partout
+     ailleurs. */
+  --sidebar-text: rgba(245, 243, 252, 0.92);
+  --sidebar-text-muted: rgba(245, 243, 252, 0.6);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+
   position: sticky;
+  z-index: 1;
   top: 0;
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  /* Verre réel (retour boss sept. 2026, « style de menu » de référence) — pas
+     un aplat opaque : translucide + flou marqué, pour que les halos de fond
+     (.admin-atmosphere, déjà sous toute la page) se devinent au travers.
+     Volontairement sombre dans les DEUX thèmes (ancre de navigation stable
+     pendant que le contenu bascule clair/sombre) — cf. mémoire. */
+  background: rgba(10, 14, 26, 0.55);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border-right: 1px solid var(--sidebar-border);
+  color: var(--sidebar-text);
+  /* Pas de padding/overflow ici : la pilule de repli (.admin-sidebar-toggle)
+     est positionnée par rapport au vrai bord de cet élément — le padding et
+     le scroll vivent dans .admin-sidebar-scroll pour ne pas décaler ni
+     découper la pilule qui déborde volontairement dessus. */
+}
+
+.admin-sidebar-scroll {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   padding: 1.25rem 1rem;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
   overflow-y: auto;
+}
+
+/* Bulles de verre décoratives — même esprit que .admin-atmosphere mais
+   contenues dans la sidebar, pour la « texture » vue sur la maquette de
+   référence (sept. 2026). Purement atmosphérique, sous le contenu (z-index
+   0), jamais interactives. */
+.admin-sidebar::before,
+.admin-sidebar::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(50px);
+}
+.admin-sidebar::before {
+  top: 40%;
+  left: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(79, 107, 255, 0.55),
+    rgba(79, 107, 255, 0.1) 60%,
+    transparent 75%
+  );
+}
+.admin-sidebar::after {
+  bottom: 12%;
+  right: -80px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(
+    circle at 65% 70%,
+    rgba(255, 122, 60, 0.45),
+    rgba(6, 182, 212, 0.18) 55%,
+    transparent 75%
+  );
 }
 
 .admin-backdrop {
@@ -608,7 +1041,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand);
+  background: var(--brand-gradient);
   color: #fff;
   font-weight: 600;
 }
@@ -628,7 +1061,7 @@ button {
 }
 
 .admin-brand-text span {
-  color: var(--text-muted);
+  color: var(--sidebar-text-muted);
   font-size: 0.75rem;
 }
 
@@ -641,7 +1074,7 @@ button {
 .admin-sidebar-footer {
   margin-top: auto;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -654,7 +1087,7 @@ button {
   padding: 0.6rem 0.7rem;
   border-radius: var(--radius-md);
   font-size: 0.88rem;
-  color: var(--text-muted);
+  color: var(--sidebar-text-muted);
   text-decoration: none;
   border: none;
   background: none;
@@ -665,24 +1098,73 @@ button {
 }
 
 a.admin-nav-item:hover {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
 }
 
+/* Item actif = liseré lumineux + fond teinté translucide, pas un aplat plein
+   (retour boss sept. 2026, « style de menu » de référence — cohérent avec le
+   verre de la sidebar : un remplissage opaque aurait fait un bloc peint sur
+   un fond qui, lui, est du vrai verre). box-shadow inset plutôt qu'un vrai
+   border : évite tout décalage de layout sur les items non actifs. Chaque
+   .admin-nav-item--<cle> ne pose que 2 variables, comme .projet-carte--* et
+   .phase-etape--* — un seul point de vérité par couleur. */
 .admin-nav-item.is-active {
-  background: var(--argile-tint);
-  color: var(--argile-fonce);
+  background: color-mix(in oklch, var(--nav-solide, var(--iris)) 18%, transparent);
+  color: #fff;
   font-weight: 600;
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in oklch, var(--nav-solide, var(--iris)) 60%, transparent),
+    0 0 20px color-mix(in oklch, var(--nav-solide, var(--iris)) 35%, transparent);
+}
+
+.admin-nav-item--tableau-de-bord.is-active {
+  --nav-solide: var(--azur);
+  --nav-fonce: var(--azur-fonce);
+}
+.admin-nav-item--crm.is-active {
+  --nav-solide: var(--turquoise);
+  --nav-fonce: var(--turquoise-fonce);
+}
+.admin-nav-item--projets.is-active {
+  --nav-solide: var(--sauge);
+  --nav-fonce: var(--sauge-fonce);
+}
+.admin-nav-item--equipe.is-active {
+  --nav-solide: var(--iris);
+  --nav-fonce: var(--iris-fonce);
+}
+.admin-nav-item--facturation.is-active {
+  --nav-solide: var(--argile);
+  --nav-fonce: var(--argile-fonce);
+}
+/* Nav collaborateur (Accueil/Mes projets/Mes indicateurs/Mon équipe) —
+   partage ce même bloc de règles (classe .admin-nav-item, cf.
+   collab-shell.tsx) : Projets et Équipe retombent déjà sur les 2 règles
+   ci-dessus. Accueil fait écho à Tableau de bord (même rôle, vue
+   d'ensemble) ; Indicateurs prend Turquoise, libre côté collaborateur (pas
+   de CRM ici). */
+.admin-nav-item--accueil.is-active {
+  --nav-solide: var(--azur);
+  --nav-fonce: var(--azur-fonce);
+}
+.admin-nav-item--indicateurs.is-active {
+  --nav-solide: var(--turquoise);
+  --nav-fonce: var(--turquoise-fonce);
 }
 
 .admin-nav-item.is-soon {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 
+.admin-nav-btn {
+  color: var(--argile);
+}
+
 .admin-nav-btn:hover {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--sidebar-hover-bg);
+  color: #fff;
 }
 
 .admin-nav-label {
@@ -695,13 +1177,97 @@ a.admin-nav-item:hover {
   margin-left: auto;
   flex-shrink: 0;
   font-size: 0.6rem;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
+  color: var(--sidebar-text-muted);
+  border: 1px solid var(--sidebar-border);
   border-radius: 999px;
   padding: 0.08rem 0.4rem;
 }
 
+/* Bouton de repli — pilule accrochée sur le bord droit de la sidebar,
+   débordant légèrement sur le contenu principal (référence : pastille
+   « Write a review » débordant sur une carte, sept. 2026). Centrée sur la
+   hauteur de la sidebar ; arrondie côté contenu, plate côté sidebar. Position
+   absolue par rapport à .admin-sidebar (position: sticky, donc un vrai
+   conteneur pour ce positionnement) — indépendante de la largeur courante,
+   donc reste au même endroit sidebar repliée ou non. Desktop only : masquée
+   sous le seuil mobile (media query plus bas), qui garde le hamburger/panneau. */
+.admin-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 28px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in oklch, #140f1f 90%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--sidebar-text-muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.admin-sidebar-toggle:hover {
+  background: #140f1f;
+  color: var(--sidebar-text);
+}
+
+.admin-sidebar-toggle-icone {
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-sidebar-toggle-icone.est-tournee {
+  transform: rotate(180deg);
+}
+
+/* --- Contenu masqué / recentré en mode replié --------------------------- */
+.admin--repliee .admin-brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.admin--repliee .admin-brand-text,
+.admin--repliee .admin-nav-label,
+.admin--repliee .admin-nav-tag {
+  display: none;
+}
+
+.admin--repliee .admin-nav-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Étiquette flottante au survol/focus d'un item en rail replié — même
+   principe que la maquette de référence (rail d'icônes + info-bulle), mais
+   en portail (voir admin-shell.tsx / collab-shell.tsx) : positionnée en
+   `fixed` d'après getBoundingClientRect(), donc jamais rognée par l'overflow
+   de la sidebar. */
+.sidebar-infobulle {
+  position: fixed;
+  transform: translateY(-50%);
+  background: var(--encre);
+  color: #fff;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 100;
+}
+
 .admin-main {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   padding: 1.5rem 2rem 3rem;
 }
@@ -736,15 +1302,32 @@ a.admin-nav-item:hover {
   gap: 0.75rem;
 }
 
+/* Verre liquide premium (topbar) : flou/saturation + reflet spéculaire fixe
+   (::before) + un rai de lumière qui balaie au survol (::after) — même
+   recette sur .admin-search/.admin-icon-btn/.admin-periode-label. */
 .admin-search {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.55rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   color: var(--text-muted);
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    border-color 260ms ease,
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-search:focus-within {
+  border-color: var(--argile);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 0 0 3px color-mix(in oklch, var(--argile) 22%, transparent);
 }
 
 .admin-search input {
@@ -762,16 +1345,52 @@ a.admin-nav-item:hover {
 }
 
 .admin-icon-btn {
+  position: relative;
+  overflow: hidden;
   width: 38px;
   height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   color: var(--text-muted);
   cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease,
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 200ms ease;
+}
+/* Rai de lumière qui balaie la pastille au survol — un triangle clair
+   incliné qui traverse de gauche à droite, comme un reflet qui glisse sur
+   du verre bombé. */
+.admin-icon-btn::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(120deg, transparent, var(--glass-sheen), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.admin-icon-btn:hover {
+  transform: translateY(-2px) scale(1.06);
+  border-color: var(--glass-sheen);
+  color: var(--text);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 10px 22px var(--glass-ombre);
+}
+.admin-icon-btn:hover::after {
+  left: 130%;
 }
 
 /* Bouton hamburger (topbar) et bouton de fermeture (en tête de sidebar) —
@@ -793,6 +1412,9 @@ a.admin-nav-item:hover {
 
 .admin-sidebar-close {
   margin-left: auto;
+  /* Sidebar sombre : ce bouton vit dedans, contrairement au hamburger de la
+     topbar qui partage la même règle de base ci-dessus. */
+  color: var(--sidebar-text, var(--text));
 }
 
 .admin-user {
@@ -803,10 +1425,21 @@ a.admin-nav-item:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand);
+  background: var(--brand-gradient);
   color: #fff;
   font-size: 0.8rem;
   font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-user:hover {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 10px 22px var(--glass-ombre),
+    0 0 0 3px var(--glass-sheen-faible);
 }
 
 /* Sélecteur de période + libellé de la fenêtre affichée */
@@ -819,12 +1452,17 @@ a.admin-nav-item:hover {
   margin-bottom: 1.25rem;
 }
 
+/* Verre réel (retour boss sept. 2026, « liquid glass » partout) — même
+   recette que .theme-menu-segmente : piste translucide floutée, pastille
+   active en dégradé glossy + lueur plutôt qu'un aplat plat. */
 .admin-periode-toggle {
   display: inline-flex;
   padding: 0.25rem;
   border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .admin-periode-toggle button {
@@ -836,23 +1474,61 @@ a.admin-nav-item:hover {
   border-radius: 999px;
   color: var(--text-muted);
   cursor: pointer;
+  transition:
+    background 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .admin-periode-toggle button.is-active {
-  background: var(--brand);
+  background: linear-gradient(135deg, var(--argile), var(--argile-fonce));
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 6px 16px color-mix(in oklch, var(--argile) 45%, transparent);
 }
 
 .admin-periode-label {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font-size: 0.82rem;
   color: var(--text-muted);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   border-radius: 999px;
   padding: 0.45rem 0.9rem;
-  background: var(--surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease,
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-periode-label::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(120deg, transparent, var(--glass-sheen), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.admin-periode-label:hover {
+  transform: translateY(-1px);
+  border-color: var(--glass-sheen);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 8px 20px var(--glass-ombre);
+}
+.admin-periode-label:hover::after {
+  left: 130%;
 }
 
 /* Cartes indicateurs */
@@ -864,26 +1540,81 @@ a.admin-nav-item:hover {
 }
 
 .stat-card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.1rem 1.25rem;
 }
 
+/* Dégradé plein par tuile (retour boss sept. 2026, après avoir vu le verre en
+   place : couleur pleine comme les cartes « Projets/Tâches/Équipe/Analyses »
+   de la maquette, pas un simple accent) — --stat-a/--stat-b posées en inline
+   style (ACCENT_KPI, stat-card.tsx). Repos : dégradé glossy + reflet interne.
+   Survol : animation premium — légère élévation + zoom doux + halo qui
+   s'intensifie, même courbe « ease-out » que .admin (grid-template-columns)
+   et .kpi-tuile-icone — la signature d'accélération douce de l'appli. */
 .stat-card--accent {
-  background: var(--brand);
-  border-color: var(--brand);
+  background: linear-gradient(135deg, var(--stat-a), var(--stat-b));
+  border-color: transparent;
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--stat-a) 35%, transparent);
+  transition:
+    transform 380ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.stat-card--accent:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 22px 44px color-mix(in oklch, var(--stat-a) 50%, transparent);
+}
+
+.stat-card--accent .stat-card-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stat-card--accent .stat-card-delta-ref {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stat-card--accent .stat-card-delta--hausse {
+  color: #d7ffe9;
+}
+
+.stat-card--accent .stat-card-delta--baisse {
+  color: #ffd9d4;
+}
+
+.stat-card--accent .stat-card-detail {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stat-card-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.6rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transition: background 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stat-card--accent:hover .stat-card-chip {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .stat-card-label {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
-}
-
-.stat-card--accent .stat-card-label {
-  color: rgba(255, 255, 255, 0.65);
 }
 
 .stat-card-value {
@@ -906,24 +1637,12 @@ a.admin-nav-item:hover {
   color: var(--sauge-fonce);
 }
 
-.stat-card--accent .stat-card-delta--hausse {
-  color: #6fd39a;
-}
-
 .stat-card-delta--baisse {
   color: var(--danger);
 }
 
-.stat-card--accent .stat-card-delta--baisse {
-  color: #ff8a80;
-}
-
 .stat-card-delta-ref {
   color: var(--text-muted);
-}
-
-.stat-card--accent .stat-card-delta-ref {
-  color: rgba(255, 255, 255, 0.5);
 }
 
 /* KPI « photo à l'instant T » : pas de delta, juste le contexte. */
@@ -931,10 +1650,6 @@ a.admin-nav-item:hover {
   margin: 0;
   font-size: 0.78rem;
   color: var(--text-muted);
-}
-
-.stat-card--accent .stat-card-detail {
-  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Grille principale : graphe (gauche) + colonne jalons/jauge (droite) */
@@ -957,6 +1672,16 @@ a.admin-nav-item:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.25rem 1.3rem;
+}
+
+/* Panneaux du tableau de bord en verre réel (retour boss sept. 2026, « liquid
+   glass partout ») — sélecteur composé pour battre .panel ci-dessus quel que
+   soit l'ordre dans la feuille, sans toucher .panel lui-même (utilisé sur
+   TOUTES les pages admin ; ce chantier reste scopé au dashboard pour
+   l'instant, cf. mémoire « progressif, module par module »). */
+.panel.glass-panel {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
 }
 
 .panel-title {
@@ -1016,47 +1741,104 @@ button:focus-visible .repli-icone {
   transform: rotate(-90deg);
 }
 
-/* Histogramme */
-.barchart-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.9rem;
-  height: 190px;
+/* Courbe (aire + ligne) — remplace l'ancien histogramme : tendance sur une
+   série continue, plus lisible qu'un mois vide sur deux (cf. mémoire dataviz,
+   sept. 2026). Voir components/admin/area-chart.tsx. */
+.areachart-plot {
+  position: relative;
 }
 
-.barchart-col {
+.areachart-svg {
+  display: block;
+  overflow: visible;
+}
+
+.areachart-ligne {
+  fill: none;
+  stroke: var(--argile);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.areachart-point {
+  fill: var(--argile);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.areachart-mire {
+  stroke: var(--border-hover);
+  stroke-width: 1;
+}
+
+/* Une cible par mois, pleine hauteur — plus facile à viser qu'un trait de
+   2px, au clavier (focus) comme à la souris. */
+.areachart-cibles {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.areachart-cible {
   flex: 1;
-  min-width: 0;
+  min-width: 24px;
   height: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.areachart-etiquette {
+  position: absolute;
+  transform: translate(-50%, -100%) translateY(-10px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.barchart-val {
+  gap: 0.1rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   font-size: 0.72rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
-.barchart-bar {
-  width: 100%;
-  max-width: 44px;
-  border-radius: 8px 8px 3px 3px;
-  background: #1f1f1c;
-  transition: opacity 150ms ease;
+.areachart-etiquette strong {
+  font-family: var(--font-titre);
+  font-size: 0.95rem;
+  color: var(--text);
 }
 
-/* Barre de la période en cours — se détache des autres (sombres) plutôt que
-   de s'y fondre, reprend l'accent taupe de l'identité hub360°. */
-.barchart-bar--actif {
-  background: #c9c6ba;
+/* Point actif (période en cours), affiché sans survol : discret plutôt
+   qu'une bulle avec cadre — le survol/focus prend le dessus dessus. */
+.areachart-etiquette--fixe {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0 0.2rem;
 }
 
-.barchart-label {
+.areachart-labels {
+  display: flex;
+  margin-top: 0.6rem;
+}
+
+.areachart-label {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+.areachart-label--actif {
+  color: var(--argile-fonce);
+  font-weight: 600;
 }
 
 .barchart-unite {
@@ -1087,7 +1869,7 @@ button:focus-visible .repli-icone {
 
 .gauge-fill {
   fill: none;
-  stroke: var(--brand);
+  stroke: var(--argile);
   stroke-width: 12;
   stroke-linecap: round;
   transition: stroke-dashoffset 400ms ease;
@@ -1192,6 +1974,43 @@ button:focus-visible .repli-icone {
   color: var(--argile-fonce);
 }
 
+/* Niveau de permission (matrice de rôles, page Paramètres) — même famille
+   « fond tinté + texte foncé » que le reste des pills, pas une palette à
+   part. aucun = neutre, lecture = turquoise (info), ecriture/validation
+   reprennent argile/sauge comme le reste de l'appli. */
+.pill--aucun {
+  background: var(--admin-fond);
+  color: var(--text-muted);
+}
+.pill--lecture {
+  background: var(--turquoise-tint);
+  color: var(--turquoise-fonce);
+}
+.pill--ecriture {
+  background: var(--argile-tint);
+  color: var(--argile-fonce);
+}
+.pill--validation {
+  background: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+.statut-select--aucun {
+  background-color: var(--admin-fond);
+  color: var(--text-muted);
+}
+.statut-select--lecture {
+  background-color: var(--turquoise-tint);
+  color: var(--turquoise-fonce);
+}
+.statut-select--ecriture {
+  background-color: var(--argile-tint);
+  color: var(--argile-fonce);
+}
+.statut-select--validation {
+  background-color: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+
 .pill--succes {
   background: var(--sauge-tint);
   color: var(--sauge-fonce);
@@ -1222,6 +2041,37 @@ button:focus-visible .repli-icone {
     radial-gradient(farthest-side at 100% 50%, rgba(20, 20, 18, 0.12), transparent) 100% 0 /
       14px 100% no-repeat;
   background-attachment: local, local, scroll, scroll;
+}
+
+/* Bloc « Projets en cours » : hauteur bornée à ~10 lignes plutôt que de
+   pousser le reste de la page — le surplus (rangée plus haute qu'attendu,
+   petit écran) passe en scroll interne, la pagination reste la voie normale
+   pour voir la suite. */
+.admin-table-wrap--fixe {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.admin-table-wrap--fixe thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+
+/* Verre complet et uniforme sur tout le panneau « Projets en cours »
+   (retour boss sept. 2026) — plus de bandeau distinct sur la ligne de titre
+   ou l'en-tête de colonnes : la même recette .glass-panel du haut en bas, à
+   l'identique des 3 autres panneaux du dashboard. Seule exception : l'en-tête
+   sticky (.admin-table-wrap--fixe, qui a besoin d'un fond pour ne pas
+   laisser les lignes défiler à travers) reprend --glass-bg/--glass-border au
+   lieu de --surface (opaque) — sinon un bandeau uni casserait quand même la
+   continuité pendant le scroll. Scopé à .dash-table (posée uniquement sur
+   cette table) — jamais sur .admin-table-wrap--fixe générique, réutilisé par
+   CRM. */
+.dash-table.admin-table-wrap--fixe thead th {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
 
 .admin-table {
@@ -1281,7 +2131,21 @@ button:focus-visible .repli-icone {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--brand);
+  background: var(--argile);
+}
+/* Même code couleur que les pastilles de statut (.pill--*) juste à côté dans
+   le tableau — la barre porte le même sens plutôt qu'une teinte uniforme. */
+.progress-fill--info {
+  background: var(--argile);
+}
+.progress-fill--succes {
+  background: var(--sauge);
+}
+.progress-fill--attention {
+  background: var(--ocre);
+}
+.progress-fill--neutre {
+  background: var(--text-muted);
 }
 
 .progress-val {
@@ -1376,6 +2240,31 @@ button:focus-visible .repli-icone {
   .admin-main {
     padding: 1.1rem 1.25rem 3rem;
   }
+
+  /* Le repli en rail est un confort desktop — sous ce seuil, le panneau
+     mobile doit rester complet même si la préférence « replié » est activée
+     sur cet appareil (même clé localStorage que le desktop). */
+  .admin-sidebar-toggle {
+    display: none;
+  }
+
+  .admin--repliee .admin-brand,
+  .admin--repliee .admin-nav-item {
+    justify-content: revert;
+  }
+
+  /* `revert` remonterait jusqu'au style UA (span => inline) et casserait la
+     mise en colonne de .admin-brand-text, qui est elle-même un conteneur
+     flex — pas juste un enfant blockifié par un parent flex. Valeur
+     explicite, identique à la règle de base. */
+  .admin--repliee .admin-brand-text {
+    display: flex;
+  }
+
+  .admin--repliee .admin-nav-label,
+  .admin--repliee .admin-nav-tag {
+    display: revert;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1426,7 +2315,7 @@ button:focus-visible .repli-icone {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--brand);
+  background: var(--argile);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
@@ -1638,7 +2527,54 @@ button:focus-visible .repli-icone {
 
 .field-input:focus {
   outline: none;
-  border-color: var(--brand);
+  border-color: var(--argile);
+}
+
+.field-input:disabled {
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Champ posé dans un panneau verre (Foncier, CRM, tableau de bord…) : le
+   fond plein --surface d'un .field-input normal tranche sur le translucide
+   du panneau — même souci que .btn-ghost, pas propre à une seule page,
+   corrigé ici pour tout panneau .glass-panel plutôt qu'en surcharge locale. */
+.glass-panel .field-input {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+.glass-panel .field-input:disabled {
+  background: color-mix(in oklch, var(--glass-bg) 55%, transparent);
+}
+
+/* Texte d'appoint sous un champ verrouillé/désactivé (ex. Nature figée sur
+   Mandat client, sept. 2026) — explique pourquoi, pas une erreur de saisie. */
+.field-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Champ de recherche/filtre local (CRM, dashboard…) — icône loupe cohérente
+   avec la barre globale de la topbar, sur le même style de champ que le
+   reste des formulaires (pas la pilule de la topbar). */
+.champ-recherche {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.champ-recherche svg {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.champ-recherche .field-input {
+  padding-left: 2.15rem;
 }
 
 .field-row {
@@ -1923,15 +2859,21 @@ button:focus-visible .repli-icone {
 }
 
 .statut-select:focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--argile);
   outline-offset: 1px;
 }
 
-/* Même grammaire que les pastilles : Argile (à traiter) · Ocre (en cours) ·
-   Sauge (validé) · rouge (annulé). */
+/* Même grammaire que les pastilles : Argile (à traiter) · Iris (chez la
+   DAF) · Ocre (offre en cours) · Sauge (acquis) · rouge (perdu). Mapping
+   statut → variante : lib/cycle-crm.ts::CLASSE_STATUT. */
 .statut-select--nouveau {
   background-color: var(--argile-tint);
   color: var(--argile-fonce);
+}
+
+.statut-select--daf {
+  background-color: var(--iris-tint);
+  color: var(--iris-fonce);
 }
 
 .statut-select--devis {
@@ -1981,12 +2923,21 @@ button:focus-visible .repli-icone {
   gap: 0.3rem;
 }
 
+/* Pastille d'info (jamais cliquable en soi — pas de bordure de bouton) :
+   fond teinté Iris, la couleur de marque/identité (cf. :root), pour signaler
+   « ceci est une donnée affichée », pas une action. .chip--filtre (plus bas)
+   est le seul variant réellement cliquable et garde border-color transparent
+   à dessein — d'où le border ici en 1px transparent plutôt que `none`. */
 .chip {
+  display: inline-flex;
+  align-items: center;
   font-size: 0.72rem;
-  padding: 0.15rem 0.55rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
   border-radius: 999px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--iris-tint);
+  color: var(--iris-fonce);
+  border: 1px solid transparent;
   white-space: nowrap;
 }
 
@@ -2022,7 +2973,7 @@ button:focus-visible .repli-icone {
 }
 
 .assign-groupe.is-coche {
-  border-color: var(--brand);
+  border-color: var(--argile);
   background: var(--bg);
 }
 
@@ -2038,7 +2989,7 @@ button:focus-visible .repli-icone {
 .assign-groupe-tete input {
   width: 16px;
   height: 16px;
-  accent-color: var(--brand);
+  accent-color: var(--argile);
 }
 
 .assign-groupe-compte {
@@ -2126,12 +3077,42 @@ button:focus-visible .repli-icone {
   width: 96px;
   height: 72px;
   flex-shrink: 0;
+  /* Défaut si jamais aucune variante --v1..v5 n'est posée (cf.
+     dossier-projet.tsx) — ne devrait pas arriver en pratique. */
+  --dossier-a: var(--encre);
+  --dossier-b: var(--encre);
+}
+
+/* Variété visuelle par dossier — un dégradé stable par projet (dérivé de
+   son id, jamais recalculé au hasard à chaque rendu), repris de la même
+   palette de dégradés que les tuiles KPI (demande boss, sept. 2026 — même
+   traitement partout dans le back-office). Purement décoratif : aucune
+   intention de classement par catégorie/nature. */
+.dossier-folder--v1 {
+  --dossier-a: #2e3192; /* Ocean Blue */
+  --dossier-b: #1bffff;
+}
+.dossier-folder--v2 {
+  --dossier-a: #764ba2; /* Plum Plate */
+  --dossier-b: #667eea;
+}
+.dossier-folder--v3 {
+  --dossier-a: #11998e; /* Quepal */
+  --dossier-b: #38ef7d;
+}
+.dossier-folder--v4 {
+  --dossier-a: #ff5f6d; /* Sweet Morning */
+  --dossier-b: #ffc371;
+}
+.dossier-folder--v5 {
+  --dossier-a: #662d8c; /* Purple Lake */
+  --dossier-b: #ed1e79;
 }
 
 .dossier-folder-back {
   position: absolute;
   inset: 8px 0 0 0;
-  background: var(--encre);
+  background: linear-gradient(135deg, var(--dossier-a), var(--dossier-b));
   border-radius: 4px 12px 10px 10px;
 }
 
@@ -2142,7 +3123,7 @@ button:focus-visible .repli-icone {
   left: 4px;
   width: 40px;
   height: 12px;
-  background: var(--encre);
+  background: linear-gradient(135deg, var(--dossier-a), var(--dossier-b));
   border-radius: 6px 6px 0 0;
 }
 
@@ -2175,13 +3156,17 @@ button:focus-visible .repli-icone {
   transform: translateX(-44%) rotate(8deg) translateY(-4px);
 }
 
+/* Rabat avant : même teinte que le dos, avec un voile blanc en diagonale
+   pour l'effet « verre dépoli » des captures de référence. */
 .dossier-folder-front {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   height: 46px;
-  background: linear-gradient(180deg, #3c3a35, #232320);
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 60%),
+    linear-gradient(135deg, var(--dossier-a), var(--dossier-b));
   border-radius: 3px 3px 12px 12px;
 }
 
@@ -2235,18 +3220,92 @@ button:focus-visible .repli-icone {
 }
 
 /* Fiche projet */
+/* Retour — navigation plus significative qu'une action ponctuelle sur la
+   fiche (Modifier/Localisation) : glass dès le repos, plus grand/plus marqué
+   que les boutons secondaires, flèche qui glisse vers la gauche au survol
+   pour renforcer le sens « retour ». Partagé par 11 pages (toute sous-section
+   projet) — un seul point de vérité pour ce niveau de navigation. Reprend la
+   couleur du module (.lien-retour--<module>, mêmes tokens que
+   .projet-carte--* et .module-icone--*) quand on revient D'UNE section vers
+   la fiche projet — Iris par défaut (retour fiche -> liste, pas de module). */
 .lien-retour {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.7rem;
+  margin-bottom: 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in oklch, var(--mod-solide, var(--iris)) 20%, transparent);
+  background: color-mix(in oklch, var(--mod-solide, var(--iris)) 6%, var(--surface) 94%);
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--mod-solide-fonce, var(--iris-fonce));
   text-decoration: none;
-  margin-bottom: 1rem;
+  transition:
+    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lien-retour--avant-projet {
+  --mod-solide: var(--azur);
+  --mod-solide-fonce: var(--azur-fonce);
+}
+.lien-retour--permis {
+  --mod-solide: var(--turquoise);
+  --mod-solide-fonce: var(--turquoise-fonce);
+}
+.lien-retour--etude {
+  --mod-solide: var(--iris);
+  --mod-solide-fonce: var(--iris-fonce);
+}
+.lien-retour--execution {
+  --mod-solide: var(--mandarine);
+  --mod-solide-fonce: var(--mandarine-fonce);
+}
+.lien-retour--facturation {
+  --mod-solide: var(--argile);
+  --mod-solide-fonce: var(--argile-fonce);
+}
+/* Foncier / Documents / Images — couleur propre à chacun (sept. 2026), même
+   motif que .projet-carte--* ci-dessus (remplace l'ancien défaut Iris
+   « neutre » partagé). */
+.lien-retour--foncier {
+  --mod-solide: var(--jade);
+  --mod-solide-fonce: var(--jade-fonce);
+}
+.lien-retour--documents {
+  --mod-solide: var(--fuchsia);
+  --mod-solide-fonce: var(--fuchsia-fonce);
+}
+.lien-retour--images {
+  --mod-solide: var(--corail);
+  --mod-solide-fonce: var(--corail-fonce);
+}
+
+.lien-retour svg {
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .lien-retour:hover {
-  color: var(--text);
+  background: color-mix(in oklch, var(--mod-solide, var(--iris)) 13%, var(--surface) 87%);
+  border-color: color-mix(in oklch, var(--mod-solide, var(--iris)) 42%, transparent);
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--mod-solide, var(--iris)) 18%, transparent);
+  transform: translateY(-1px);
+}
+
+.lien-retour:hover svg {
+  transform: translateX(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lien-retour,
+  .lien-retour svg {
+    transition: none;
+  }
 }
 
 .projet-entete {
@@ -2261,8 +3320,45 @@ button:focus-visible .repli-icone {
 }
 
 .projet-entete-titre h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin: 0.3rem 0 0.4rem;
   font-size: 1.35rem;
+}
+
+/* Badge d'icône de module — fait écho à la carte d'entrée du module sur la
+   fiche projet (.projet-carte-icone), pour que la couleur de hiérarchie se
+   poursuive une fois DANS la page, pas seulement sur la carte qui y mène.
+   Sobre à dessein (pas de glass ici) : ces pages sont des formulaires/
+   checklists denses, la couleur reste un simple repère d'identité en tête de
+   page. Mêmes variables que .projet-carte--* et .phase-etape--*. */
+.module-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--mod-solide, var(--text-muted)) 14%, white 86%);
+  color: var(--mod-solide, var(--text-muted));
+  flex-shrink: 0;
+}
+
+.module-icone--avant-projet {
+  --mod-solide: var(--azur);
+}
+.module-icone--permis {
+  --mod-solide: var(--turquoise);
+}
+.module-icone--etude {
+  --mod-solide: var(--iris);
+}
+.module-icone--execution {
+  --mod-solide: var(--mandarine);
+}
+.module-icone--facturation {
+  --mod-solide: var(--argile);
 }
 
 .projet-entete-meta {
@@ -2290,26 +3386,123 @@ button:focus-visible .repli-icone {
   gap: 1rem;
 }
 
+/* Cartes projet — hiérarchie de couleur (sept. 2026) : chaque section garde
+   une couleur FIXE liée à sa place dans le parcours du projet (pas à son
+   statut, déjà couvert par le pill `etat`) — Avant-projet/Permis/Étude/
+   Exécution/Facturation ont chacun leur identité ; Images/Documents restent
+   neutres (transverses, pas une étape). Au repos : verre dépoli translucide
+   avec un liseré de la couleur du module. Au survol : la carte se remplit de
+   sa couleur pleine (icône/texte passent en blanc), halo qui APPARAÎT plutôt
+   que jaillit (opacity, pas de scale) — courbe « ease-out » douce sur 380ms.
+   Chaque modificateur ne pose que --carte-solide/--carte-fonce : tout le
+   reste (liseré, fond teinté, dégradé, halo) s'en déduit via color-mix, pour
+   qu'une couleur de module ne vive jamais que dans le CSS d'une seule carte
+   (cf. mémoire — éviter le token fantôme qui ne matche plus rien ailleurs). */
 .projet-carte {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 1.25rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  gap: 0.6rem;
+  padding: 1.4rem 1.3rem;
+  background: color-mix(in oklch, var(--carte-solide, var(--text-muted)) 7%, var(--surface) 93%);
+  border: 1.5px solid color-mix(in oklch, var(--carte-solide, var(--text-muted)) 35%, transparent);
   border-radius: var(--radius-lg);
   text-decoration: none;
-  color: inherit;
+  color: var(--text);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    var(--shadow-sm);
   transition:
-    transform 150ms ease,
-    box-shadow 150ms ease,
-    border-color 150ms ease;
+    background 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Dégradé plein, posé en dessous (z-index -1) et révélé par opacité au survol
+   — jamais un fond qui change brutalement de couleur. */
+.projet-carte::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--carte-solide, var(--text-muted)), var(--carte-fonce, var(--text)));
+  opacity: 0;
+  transition: opacity 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .projet-carte:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-hover);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-6px);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 20px 44px color-mix(in oklch, var(--carte-fonce, var(--text)) 45%, transparent);
+}
+.projet-carte:hover::before {
+  opacity: 1;
+}
+.projet-carte:hover .projet-carte-icone {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+.projet-carte:hover .projet-carte-titre {
+  color: #fff;
+}
+.projet-carte:hover .projet-carte-desc {
+  color: rgba(255, 255, 255, 0.86);
+}
+.projet-carte:hover .projet-carte-etat {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+/* Identité de chaque section — un seul point de vérité par couleur (les
+   tokens eux-mêmes, cf. :root) ; ajouter un module = ajouter 2 lignes ici.
+   Calée sur le vrai spectre du logo (sept. 2026, cf. --brand-gradient) pour
+   les 3 étapes qui s'y prêtent sans ambiguïté (Avant-projet/Permis/Exécution
+   = bleu/turquoise/orange, les couleurs réelles du dégradé). Vert et jaune
+   auraient semblé plus fidèles au dégradé, mais entrent en collision directe
+   avec des couleurs de statut déjà établies partout ailleurs dans l'app
+   (Sauge = succès/validé, ~32 usages ; Ocre = attention/échéance, ~30
+   usages) — une carte de module dans l'une de ces teintes serait ambiguë
+   avec un pill de statut voisin. Études garde donc Iris (l'ancienne couleur
+   d'Avant-projet, simple permutation) plutôt que d'hériter du vert du logo. */
+.projet-carte--avant-projet {
+  --carte-solide: var(--azur);
+  --carte-fonce: var(--azur-fonce);
+}
+.projet-carte--permis {
+  --carte-solide: var(--turquoise);
+  --carte-fonce: var(--turquoise-fonce);
+}
+.projet-carte--etude {
+  --carte-solide: var(--iris);
+  --carte-fonce: var(--iris-fonce);
+}
+.projet-carte--execution {
+  --carte-solide: var(--mandarine);
+  --carte-fonce: var(--mandarine-fonce);
+}
+/* Foncier / Documents / Images : transverses, pas une étape du parcours —
+   avaient un gris « neutre » délibéré au départ, changé pour une couleur
+   propre à chacun sur demande explicite (sept. 2026, cf. mémoire). */
+.projet-carte--foncier {
+  --carte-solide: var(--jade);
+  --carte-fonce: var(--jade-fonce);
+}
+.projet-carte--documents {
+  --carte-solide: var(--fuchsia);
+  --carte-fonce: var(--fuchsia-fonce);
+}
+.projet-carte--images {
+  --carte-solide: var(--corail);
+  --carte-fonce: var(--corail-fonce);
 }
 
 /* Sections projet en lecture seule (vue collaborateur) — affichage libellé/valeur */
@@ -2430,7 +3623,7 @@ button:focus-visible .repli-icone {
 .lecture-inline-check input {
   width: 15px;
   height: 15px;
-  accent-color: var(--brand, var(--argile));
+  accent-color: var(--argile);
 }
 .lecture-table-wrap {
   overflow-x: auto;
@@ -2505,25 +3698,34 @@ button:focus-visible .repli-icone {
 }
 
 .projet-carte-icone {
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
-  background: var(--bg);
-  color: var(--text);
-  margin-bottom: 0.35rem;
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--carte-solide, var(--text-muted));
+  margin-bottom: 0.1rem;
+  transition:
+    background 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .projet-carte-titre {
-  font-weight: 600;
-  font-size: 0.95rem;
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+  transition: color 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .projet-carte-desc {
+  margin: 0;
   font-size: 0.8rem;
+  line-height: 1.35;
   color: var(--text-muted);
+  transition: color 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (max-width: 560px) {
@@ -2536,6 +3738,11 @@ button:focus-visible .repli-icone {
   .dossier,
   .dossier-paper,
   .projet-carte,
+  .projet-carte::before,
+  .projet-carte-icone,
+  .projet-carte-titre,
+  .projet-carte-desc,
+  .projet-carte-etat,
   .kpi-tuile,
   .kpi-tuile--clic,
   .kpi-tuile-icone,
@@ -2653,7 +3860,7 @@ textarea.field-input {
 .ap-checklist input {
   width: 16px;
   height: 16px;
-  accent-color: var(--brand);
+  accent-color: var(--argile);
 }
 
 .ap-piece {
@@ -2752,9 +3959,291 @@ textarea.field-input {
 
 .ap-souscheck-item {
   display: grid;
-  grid-template-columns: 1fr minmax(9rem, 16rem) auto;
+  grid-template-columns: 1fr 8.5rem 8.5rem minmax(8rem, 12rem) auto;
   align-items: center;
   gap: 0.5rem 0.9rem;
+}
+
+/* Checklist Permis — pas d'échéance/assignation par item (portées par le
+   bloc parent, cf. .ap-souscheck-bloc-meta plus bas et mémoire), pas de note
+   affichée en permanence non plus (déplacée dans la popup Détail, cf.
+   DetailItemModal) : juste le libellé et les actions (joindre + détail +
+   suppr admin). */
+.ap-souscheck-item--permis {
+  grid-template-columns: 1fr auto;
+}
+
+/* Item désactivé (« non nécessaire », sept. 2026, cf. .ap-souscheck-non-requise
+   plus bas) — grisé sur le libellé/case seulement, pas sur les actions
+   (Non nécessaire / Détail / Suppr doivent rester pleinement lisibles pour
+   pouvoir revenir en arrière). */
+.ap-souscheck-item--non-requise .ap-souscheck-fait {
+  opacity: 0.5;
+}
+
+.ap-souscheck-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Échéance + responsable du bloc — sous l'en-tête repliable, toujours visible
+   (même bloc fermé) car c'est une info de planification, pas de détail. */
+.ap-souscheck-bloc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.8rem;
+  margin: 0.3rem 0 0.7rem;
+}
+
+.ap-souscheck-bloc-champ {
+  min-width: 170px;
+}
+
+/* Point d'upload partagé du bloc (Dépôt urbanisme / Procédure, sept. 2026) —
+   sous les items, mêmes chips que la popup Détail (.permis-detail-fichiers). */
+.ap-souscheck-bloc-fichiers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0.8rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+.ap-souscheck-bloc-fichiers .permis-detail-fichiers {
+  margin: 0;
+}
+
+.ap-souscheck-assigne.field-input,
+.ap-souscheck-echeance.field-input {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.4rem;
+}
+
+.ap-souscheck-assigne.field-input:disabled,
+.ap-souscheck-echeance.field-input:disabled {
+  opacity: 0.55;
+}
+
+/* Équivalent en lecture seule côté collaborateur (l'assignation reste
+   admin-only) — même emplacement dans la grille, texte simple. */
+.ap-souscheck-assigne-txt,
+.ap-souscheck-echeance-txt {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Trace de qui a réellement coché — visible seulement une fois fait, sur sa
+   propre ligne pleine largeur (info secondaire, pas de place dédiée dans la
+   grille principale). */
+.ap-souscheck-faitpar {
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: -0.3rem;
+}
+
+/* Demande de prolongation en attente — pleine largeur comme .ap-souscheck-faitpar
+   ci-dessus, mais avec les 2 actions de décision (admin uniquement). */
+.ap-souscheck-prolongation {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: -0.15rem;
+}
+
+.ap-souscheck-prolongation .btn-ghost--sm {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.ap-souscheck-prolongation-attente {
+  font-size: 0.72rem;
+  color: oklch(35% 0.08 85); /* famille Ambre — cohérent avec pill--attention */
+}
+
+.ap-souscheck-prolongation input.field-input {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  width: auto;
+}
+
+/* Côté collab : le déclencheur (et son statut « en attente ») occupe la
+   cellule de grille du champ note, plutôt qu'une ligne pleine largeur. */
+.ap-souscheck-prolongation-bouton {
+  justify-self: start;
+  white-space: nowrap;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.ap-souscheck-joindre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px dashed var(--border-hover);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.ap-souscheck-joindre:hover:not(:disabled) {
+  border-color: var(--bleu);
+  color: var(--bleu);
+}
+
+.ap-souscheck-joindre:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Déclencheur d'upload de Constitution (sept. 2026) — aligné dans la même
+   rangée qu'Échéance/Responsable du bloc plutôt que sous les items, et à la
+   même taille (même .field-input que les deux autres champs) ; poussé à
+   droite de la rangée via margin-left: auto. */
+.ap-souscheck-bloc-champ--joindre {
+  margin-left: auto;
+}
+
+.ap-souscheck-joindre-champ {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  background: #fff;
+  border-color: var(--bleu);
+  color: var(--bleu);
+  transition:
+    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Survol : « liquid glass » — fond transparent + flou plutôt qu'un simple
+   fond plein, même recette que .btn-ghost:hover (cf. plus haut). */
+.ap-souscheck-joindre-champ:hover {
+  background: color-mix(in oklch, var(--bleu) 22%, transparent);
+  border-color: color-mix(in oklch, var(--bleu) 55%, transparent);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  color: #fff;
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--bleu) 25%, transparent);
+}
+
+/* Ouvre la popup Détail (note + fichiers joints, cf. DetailItemModal) — le
+   point signale un item qui a déjà quelque chose, pour repérer d'un coup
+   d'œil « vide » vs « déjà renseigné » sans tout ouvrir. */
+.ap-souscheck-detail {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border-hover);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.ap-souscheck-detail:hover {
+  border-color: var(--bleu);
+  color: var(--bleu);
+}
+
+.ap-souscheck-detail-point {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--argile);
+}
+
+/* Bouton « Non nécessaire », à côté de Détail (sept. 2026) — désactive
+   l'item : pilule ghost comme .ap-souscheck-detail au repos, remplie en gris
+   une fois active pour marquer visuellement l'état « désactivé ». */
+.ap-souscheck-non-requise {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--border-hover);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.ap-souscheck-non-requise:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.ap-souscheck-non-requise.est-actif {
+  background: var(--text-muted);
+  border-color: var(--text-muted);
+  color: var(--surface);
+}
+
+.ap-souscheck-non-requise.est-actif:hover {
+  opacity: 0.85;
+}
+
+/* Popup Détail (DetailItemModal) — fichiers déjà joints, en chips. */
+.permis-detail-fichiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+
+.permis-detail-fichiers a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: var(--admin-fond);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.8rem;
+  max-width: 220px;
+}
+
+.permis-detail-fichiers img {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.permis-detail-fichiers span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.permis-detail-vide {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .ap-souscheck-suppr {
@@ -2816,12 +4305,14 @@ textarea.field-input {
 }
 
 .ap-souscheck-fait input[type='checkbox']:hover:not(:disabled) {
-  border-color: var(--bleu);
+  border-color: var(--sauge);
 }
 
+/* Coché = vert (demande explicite sept. 2026 — pas bleu, cohérent avec
+   .pill--succes/.foncier-item--fait ailleurs dans l'app pour « fait »). */
 .ap-souscheck-fait input[type='checkbox']:checked {
-  background: var(--bleu);
-  border-color: var(--bleu);
+  background: var(--sauge);
+  border-color: var(--sauge);
 }
 
 .ap-souscheck-fait input[type='checkbox']:checked::after {
@@ -2863,14 +4354,23 @@ textarea.field-input {
     grid-template-columns: 1fr auto;
   }
 
-  .ap-souscheck-note.field-input {
+  .ap-souscheck-note.field-input,
+  .ap-souscheck-assigne.field-input,
+  .ap-souscheck-echeance.field-input,
+  .ap-souscheck-prolongation-bouton,
+  .ap-souscheck-prolongation-attente {
     grid-column: 1 / -1;
   }
 }
 
 .projet-carte-etat {
   align-self: flex-start;
-  margin-top: 0.5rem;
+  margin-top: auto;
+  border: 1px solid transparent;
+  transition:
+    background 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (max-width: 560px) {
@@ -2959,7 +4459,7 @@ textarea.field-input {
 
 .prebilan-input:focus {
   outline: none;
-  border-color: var(--brand);
+  border-color: var(--argile);
 }
 
 .prebilan-delta {
@@ -3031,8 +4531,13 @@ textarea.field-input {
 }
 
 .vue-toggle button.is-active {
-  background: var(--brand);
+  background: color-mix(in oklch, var(--argile) 85%, transparent);
   color: #fff;
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 4px 10px color-mix(in oklch, var(--argile-fonce) 28%, transparent);
 }
 
 /* Vue « par phase » : sections empilées, une par phase occupée */
@@ -3074,64 +4579,180 @@ textarea.field-input {
   border-radius: var(--radius-lg);
 }
 
+/* Stepper de phase — hiérarchie de couleur (sept. 2026) : chaque étape reprend
+   la couleur EXACTE de sa carte projet (.projet-carte--*), lien visuel direct
+   entre le stepper et les cartes en dessous. Étape faite = pastille en verre
+   teinté (dégradé translucide + reflet inset) avec check blanc ; étape
+   courante = pastille légèrement teintée + halo qui pulse doucement (jamais
+   un remplissage plein — « en cours », pas « fait ») ; étape à venir = simple
+   contour gris. La ligne de connexion se lit comme une vraie barre de
+   progression : pleine (dégradé des 2 couleurs voisines) entre deux étapes
+   faites, dégradé qui s'estompe vers l'étape courante juste avant elle,
+   pointillée grise au-delà. Chaque .phase-etape--<phase> ne pose que 2
+   variables (--etape-solide/--etape-fonce) — un seul point de vérité par
+   couleur, cf. mémoire (éviter le token/couleur qui ne vit que sur un élément). */
 .phase-suite {
   list-style: none;
-  margin: 0 0 1rem;
-  padding: 0;
+  margin: 0 0 1.2rem;
+  padding: 0.4rem 0 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.5rem;
+  align-items: flex-start;
+  gap: 0;
 }
 
-.phase-suite li {
+.phase-etape {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  position: relative;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+  min-width: 84px;
 }
 
-.phase-suite li:not(:last-child)::after {
-  content: '';
-  width: 1rem;
-  height: 1px;
-  background: var(--border);
-  margin-left: 0.5rem;
+.phase-lien-item {
+  flex: 1 1 auto;
+  min-width: 20px;
+  align-self: flex-start;
+  margin-top: 22px; /* aligne la ligne sur le centre vertical des pastilles (46px) */
+}
+
+.phase-lien {
+  display: block;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.phase-lien-item--faite .phase-lien {
+  background: linear-gradient(90deg, var(--lien-de), var(--lien-a));
+}
+.phase-lien-item--transition .phase-lien {
+  background: linear-gradient(
+    90deg,
+    var(--lien-de),
+    color-mix(in oklch, var(--lien-a) 55%, transparent) 60%,
+    transparent
+  );
+}
+.phase-lien-item--a-venir .phase-lien {
+  height: 0;
+  border-top: 2px dashed var(--border);
 }
 
 .phase-pastille {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  font-size: 0.72rem;
-  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
   flex-shrink: 0;
+  transition:
+    background 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.phase-suite li.is-faite .phase-pastille {
-  background: var(--brand);
-  border-color: var(--brand);
+.phase-nom {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Étape faite — verre teinté : dégradé translucide + flou + reflet en haut. */
+.phase-etape.is-faite .phase-pastille {
+  border-color: color-mix(in oklch, var(--etape-solide) 55%, transparent);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, var(--etape-solide) 80%, transparent),
+    color-mix(in oklch, var(--etape-fonce) 88%, transparent)
+  );
   color: #fff;
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 6px 16px color-mix(in oklch, var(--etape-fonce) 35%, transparent);
 }
-
-.phase-suite li.is-faite .phase-nom {
-  color: var(--text);
-}
-
-.phase-suite li.is-courante {
-  color: var(--text);
+.phase-etape.is-faite .phase-nom {
+  color: var(--etape-fonce);
   font-weight: 600;
 }
 
-.phase-suite li.is-courante .phase-pastille {
-  border-color: var(--brand);
-  color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(26, 26, 24, 0.1);
+/* Étape courante — pas de remplissage plein (elle n'est pas « faite ») :
+   fond légèrement teinté + halo qui apparaît en pulsant doucement autour. */
+.phase-etape.is-courante .phase-pastille {
+  border-color: var(--etape-solide);
+  background: color-mix(in oklch, var(--etape-solide) 14%, white);
+  color: var(--etape-solide);
+}
+.phase-etape.is-courante .phase-pastille::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklch, var(--etape-solide) 55%, transparent);
+  animation: phase-pulse 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.phase-etape.is-courante .phase-nom {
+  color: var(--etape-solide);
+  font-weight: 700;
+}
+
+@keyframes phase-pulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+/* Identité de chaque phase — mêmes tokens que .projet-carte--* (cf. sa note
+   sur la collision vert/jaune avec Sauge/Ocre) ; « Livré » n'a pas de carte
+   propre, reprend Argile (déjà la couleur de clôture). */
+.phase-etape--avant_projet {
+  --etape-solide: var(--azur);
+  --etape-fonce: var(--azur-fonce);
+}
+.phase-etape--permis {
+  --etape-solide: var(--turquoise);
+  --etape-fonce: var(--turquoise-fonce);
+}
+.phase-etape--etudes {
+  --etape-solide: var(--iris);
+  --etape-fonce: var(--iris-fonce);
+}
+.phase-etape--chantier {
+  --etape-solide: var(--mandarine);
+  --etape-fonce: var(--mandarine-fonce);
+}
+.phase-etape--livre {
+  --etape-solide: var(--argile);
+  --etape-fonce: var(--argile-fonce);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phase-pastille,
+  .phase-nom,
+  .phase-lien {
+    transition: none;
+  }
+  .phase-etape.is-courante .phase-pastille::after {
+    animation: none;
+    opacity: 0.55;
+    transform: none;
+  }
 }
 
 .phase-actions {
@@ -3182,7 +4803,7 @@ textarea.field-input {
   transition: border-color 150ms ease, background 150ms ease;
 }
 .images-dropzone.is-survol {
-  border-color: var(--brand);
+  border-color: var(--argile);
   background: var(--surface);
 }
 
@@ -3255,19 +4876,51 @@ textarea.field-input {
   gap: 0.3rem;
 }
 .doc-icone {
+  position: relative;
+  overflow: hidden;
   display: grid;
   place-items: center;
   width: 30px;
   height: 30px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   border-radius: 7px;
-  background: var(--surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
   color: var(--text-muted);
   cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease,
+    box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 200ms ease;
+}
+/* Même rai de lumière que .admin-icon-btn — reste discret sur une icône
+   30x30 (versus la pastille ronde de la topbar), mais la signature visuelle
+   du survol doit être la même partout dans l'appli. */
+.doc-icone::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(120deg, transparent, var(--glass-sheen), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 .doc-icone:hover {
   color: var(--text);
   border-color: var(--argile);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 8px 18px var(--glass-ombre);
+}
+.doc-icone:hover::after {
+  left: 130%;
 }
 .doc-icone--danger:hover {
   color: var(--danger);
@@ -3280,6 +4933,328 @@ textarea.field-input {
   .doc-select.field-input {
     grid-column: 1 / -1;
     min-width: 0;
+  }
+}
+
+/* Section Foncier (Unbord) — checklist à fichiers, items du gabarit société. */
+.foncier-groupe {
+  margin-bottom: 1rem;
+}
+.foncier-groupe-desc {
+  margin: -0.5rem 0 1rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.foncier-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.foncier-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  transition: border-color 220ms ease;
+}
+/* Pourtour + pastille tenus par --sauge/--ocre directement (pas
+   --sauge-tint/--ocre-tint) : ces deux-là sont déjà identiques en clair et
+   en sombre (cf. « Accents hub360° » en haut du fichier), alors que les
+   jetons -tint restent pâles/peu lisibles en thème sombre tant que ce
+   chantier-là (dark mode, page par page, décision boss) n'a pas atteint le
+   reste des statuts de l'appli — ce détour évite d'en dépendre ici. */
+.foncier-item--fait {
+  border-color: var(--sauge);
+}
+.foncier-item--attente {
+  border-color: var(--ocre);
+}
+.foncier-item--fait .pill--succes {
+  background: var(--sauge);
+  color: #fff;
+}
+.foncier-item--attente .pill--attention {
+  background: var(--ocre);
+  color: #fff;
+}
+.foncier-item-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.foncier-item-libelle {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.foncier-fichiers {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.foncier-fichiers li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.foncier-fichier-nom {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.foncier-item-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+/* --- Référentiel des localités (Paramètres → Localités + sélecteur CRM) ---
+   Liste dense (143 lignes au départ) : une ligne par localité, pas une carte
+   bordée comme les items Foncier. Tokens uniquement → mode sombre gratuit. */
+/* --- Cycle commercial d'un dossier (fiche détail CRM, étape E) + son
+   offre (étape F), même mise en page de bloc --- */
+.cycle-dossier,
+.offre-dossier {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.cycle-dossier-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cycle-dossier-verrou {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.cycle-dossier-note {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+}
+.cycle-dossier-note--renvoi {
+  background: var(--iris-tint);
+  color: var(--iris-fonce);
+}
+.cycle-dossier-note--perte {
+  background: var(--corail-tint);
+  color: var(--corail-fonce);
+}
+/* Éditeur de lignes de devis (catalogue réel) — qté CO « surface m² × N pl. »,
+   ajout hors catalogue en second plan. */
+.ligne-co-qte {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.ligne-co-qte .field-input {
+  min-width: 4.5rem;
+}
+.lignes-devis-ajouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+.lignes-devis-ajout-secondaire {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Facturation mensuelle (SU / EX) — page Facturation d'un projet. */
+.mensualites-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mensualites-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+.mensualites-ligne:first-child {
+  border-top: none;
+}
+.mensualites-nom {
+  flex: 1 1 16rem;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+.mensualites-nom .cell-sub {
+  white-space: normal;
+}
+
+.offre-dossier-resume {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.offre-dossier-resume .cell-sub {
+  white-space: normal;
+}
+.cycle-dossier-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cycle-dossier-confirm-titre {
+  font-size: 0.9rem;
+}
+.cycle-dossier-historique summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.cycle-dossier-historique ol {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+}
+.cycle-dossier-historique li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.6rem;
+}
+.cycle-dossier-date {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .cycle-dossier-actions > * {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+.code-apercu {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.localite-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.localites-barre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.localites-barre .admin-periode-toggle {
+  flex-wrap: wrap;
+}
+.localites-recherche {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.localites-barre .btn-primary {
+  margin-left: auto;
+}
+.localites-intro {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.localites-intro svg {
+  vertical-align: -1px;
+}
+
+.localites-groupe {
+  margin-bottom: 1rem;
+}
+.localites-groupe-niveau {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.localites-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.localites-ligne {
+  display: grid;
+  grid-template-columns: 4.2rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+}
+.localites-ligne:first-child {
+  border-top: none;
+}
+.localites-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+.localites-code svg {
+  color: var(--text-muted);
+}
+.localites-nom {
+  min-width: 0;
+  font-size: 0.9rem;
+}
+.localites-nom .cell-sub {
+  white-space: normal;
+}
+
+.localite-code-input {
+  max-width: 7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.localite-code-aide {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+@media (max-width: 640px) {
+  .localites-recherche {
+    max-width: none;
+  }
+  .localites-barre .btn-primary {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -3337,8 +5312,36 @@ textarea.field-input {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--brand);
+  background: var(--argile);
   color: #fff;
+}
+
+/* Provenance (image jointe depuis une checklist plutôt que cette page) —
+   coin bas-droit (les 2 du haut sont pris par Portfolio/récent), discrète :
+   un simple repère métadonnée, pas un accent à mettre en avant. */
+.image-badge--provenance {
+  top: auto;
+  bottom: 0.4rem;
+  background: var(--glass-bg);
+  color: var(--text);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid var(--glass-border);
+}
+
+/* Lien retour vers la checklist d'origine — popup Détail image. */
+.image-provenance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.image-provenance:hover {
+  color: var(--argile);
+  text-decoration: underline;
 }
 
 .image-nom {
@@ -3347,6 +5350,38 @@ textarea.field-input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Bande de type de photo — sous la vignette, une couleur par sujet (façade/
+   intérieur/chantier/existant), même famille que les pastilles (fond tinté +
+   texte foncé, jamais de texte blanc plat dessus). */
+.image-type-bande {
+  display: block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+}
+.image-type-bande[data-type='facade'] {
+  background: var(--iris-tint);
+  color: var(--iris-fonce);
+}
+.image-type-bande[data-type='interieur'] {
+  background: var(--argile-tint);
+  color: var(--argile-fonce);
+}
+.image-type-bande[data-type='chantier'] {
+  background: var(--ocre-tint);
+  color: var(--ocre-fonce);
+}
+.image-type-bande[data-type='existant'] {
+  background: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+.image-type-bande[data-type='autre'] {
+  background: var(--admin-fond);
+  color: var(--text-muted);
 }
 
 .image-modal {
@@ -3438,7 +5473,7 @@ textarea.field-input {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 .image-coche.is-on {
-  background: var(--brand);
+  background: var(--argile);
 }
 .image-coche.is-on::after {
   content: '';
@@ -3452,8 +5487,8 @@ textarea.field-input {
   transform: rotate(45deg);
 }
 .image-vignette.is-cochee .image-vignette-btn {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px var(--brand);
+  border-color: var(--argile);
+  box-shadow: 0 0 0 2px var(--argile);
 }
 
 .image-sous {
@@ -3496,7 +5531,7 @@ textarea.field-input {
 .ap-checklist-item input {
   width: 16px;
   height: 16px;
-  accent-color: var(--brand);
+  accent-color: var(--argile);
   flex-shrink: 0;
 }
 
@@ -3720,8 +5755,8 @@ textarea.field-input {
   min-height: 40px;
 }
 .prebilan-mobile-onglets button.is-active {
-  background: var(--brand);
-  border-color: var(--brand);
+  background: var(--argile);
+  border-color: var(--argile);
   color: #fff;
 }
 .prebilan-mobile-liste {
@@ -3850,6 +5885,24 @@ textarea.field-input {
 .equipe-cellule-actions .lien-inline {
   display: inline-flex;
   padding: 0.2rem;
+}
+
+/* Sélecteur de dispatcher — un par cellule, admin uniquement (sept. 2026). */
+.equipe-dispatcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.equipe-dispatcher-label {
+  font-size: 0.78rem;
+  color: var(--admin-texte-doux, #6c6960);
+  flex-shrink: 0;
+}
+.equipe-dispatcher .field-input {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.82rem;
+  width: auto;
+  flex: 1;
 }
 
 .equipe-membres {
@@ -4381,6 +6434,15 @@ textarea.field-input {
   outline: 2px solid var(--argile);
   outline-offset: -1px;
 }
+/* Sur une tuile --pleine, le contour Argile en dur jurerait contre un
+   dégradé sauge/ocre/marque — un liseré blanc translucide marche sur
+   n'importe laquelle des 4 couleurs plutôt qu'une seule teinte figée. */
+.kpi-tuile--pleine.kpi-tuile--clic:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.kpi-tuile--pleine.kpi-tuile--actif {
+  outline-color: rgba(255, 255, 255, 0.7);
+}
 
 /* Pastille de filtre actif, à côté de la recherche — mêmes codes que .chip,
    en cliquable/fermable. */
@@ -4401,6 +6463,9 @@ textarea.field-input {
   outline: 2px solid var(--argile);
   outline-offset: 2px;
 }
+.kpi-tuile--pleine.kpi-tuile--clic:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.8);
+}
 
 /* Seule la worklist scrolle — tuiles et bandeau d'alerte restent visibles. */
 .collab-worklist--scroll {
@@ -4409,77 +6474,11 @@ textarea.field-input {
   padding-right: 0.3rem;
 }
 
-/* Popup de détail d'une tuile */
-.popup-detail-intro {
-  margin: 0 0 0.85rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-.popup-detail-liste {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.popup-detail-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s ease;
-}
-.popup-detail-row:hover {
-  border-color: var(--argile);
-}
-.popup-detail-nom {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  min-width: 0;
-  font-size: 0.88rem;
-  font-weight: 500;
-}
-.popup-detail-droite {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: none;
-}
-.popup-detail-val {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: var(--admin-fond, #f4f2ec);
-  color: var(--admin-texte-doux, #6c6960);
-  white-space: nowrap;
-}
-.popup-detail-val--ok {
-  background: var(--sauge-tint);
-  color: var(--sauge-fonce);
-}
-.popup-detail-val--alerte {
-  background: var(--ocre-tint);
-  color: var(--ocre-fonce);
-}
-.popup-detail-val--retard {
-  background: #f6e3e1;
-  color: var(--danger);
-}
-.popup-detail-sous {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
 /* Cloche d'alertes — topbar collab (v0 : compteur worklist) */
+/* Verre liquide premium — pas de overflow:hidden ici (contrairement à
+   .admin-icon-btn) : le badge de compteur déborde volontairement du bouton
+   (top/right négatifs) et serait rogné. Le rai de lumière au survol est
+   plutôt clippé sur lui-même en cercle (::after, clip-path). */
 .admin-cloche {
   position: relative;
   display: inline-flex;
@@ -4488,15 +6487,50 @@ textarea.field-input {
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    color 0.15s ease,
+    border-color 260ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-cloche::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: circle(50%);
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, var(--glass-sheen) 50%, transparent 60%);
+  background-size: 220% 220%;
+  background-position: -60% -60%;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 .admin-cloche:hover {
   color: var(--text);
   border-color: var(--argile);
+  transform: translateY(-2px) scale(1.06);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 10px 22px var(--glass-ombre);
+}
+.admin-cloche:hover::after {
+  opacity: 1;
+  animation: cloche-balayage 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes cloche-balayage {
+  from {
+    background-position: -60% -60%;
+  }
+  to {
+    background-position: 160% 160%;
+  }
 }
 .admin-cloche-badge {
   position: absolute;
@@ -4507,7 +6541,9 @@ textarea.field-input {
   padding: 0 4px;
   border-radius: 999px;
   background: var(--ocre);
-  color: #fff;
+  /* Ocre reste clair/doré (cohérent avec le reste de sa famille) : texte
+     foncé plutôt que blanc pour rester lisible — cf. mémoire contraste. */
+  color: var(--ocre-fonce);
   font-size: 0.65rem;
   font-weight: 700;
   display: flex;
@@ -4549,6 +6585,28 @@ textarea.field-input {
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
+}
+.notif-menu-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.notif-son-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.notif-son-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
 }
 .notif-vide {
   margin: 0;
@@ -4604,6 +6662,95 @@ a.notif-item:hover {
 .notif-meta {
   font-size: 0.72rem;
   color: var(--text-muted);
+}
+
+/* Toast de notification — bandeau éphémère (5 s), une seule notif à la fois.
+   cf. lib/use-notifications-poll.ts pour le minutage. */
+.notif-toast-hote {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  pointer-events: none;
+}
+
+.notif-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  pointer-events: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.55rem 0.6rem 0.55rem 1rem;
+  box-shadow: var(--shadow-md);
+  animation: notif-toast-entree 0.25s ease;
+}
+
+.notif-toast--sortie {
+  animation: notif-toast-sortie 0.3s ease forwards;
+}
+
+.notif-toast-corps {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.notif-toast-txt {
+  font-size: 0.85rem;
+  max-width: 46vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-toast-fermer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.notif-toast-fermer:hover {
+  background: var(--admin-fond);
+  color: var(--text);
+}
+
+@keyframes notif-toast-entree {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes notif-toast-sortie {
+  to {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+@media (max-width: 620px) {
+  .notif-toast-txt {
+    max-width: 60vw;
+  }
 }
 
 /* ==========================================================================
@@ -5009,8 +7156,8 @@ a.notif-item:hover {
 
 .kpi-tuile {
   position: relative;
-  /* Empêche tout élément interne (icône, anneau, pastille) de déborder sur
-     la tuile voisine si le contenu est plus large que prévu. */
+  /* Empêche tout élément interne (icône, anneau, pastille, décor de
+     .kpi-tuile--pleine) de déborder sur la tuile voisine. */
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -5021,21 +7168,120 @@ a.notif-item:hover {
   color: var(--text);
   transition: box-shadow 0.3s ease;
 }
-.kpi-tuile--accent {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-}
-/* Tuile volontairement en retrait (« Annulés ») : on ne met pas une mauvaise
-   nouvelle au même poids visuel qu'un succès. */
+
+/* Tuile volontairement en retrait (« Annulés ») : même famille « pleine
+   couleur » que les autres (texture, lueur, anneau — cf. .kpi-tuile--pleine
+   plus bas), mais un dégradé gris/noir plutôt qu'une teinte vive — on ne met
+   pas une mauvaise nouvelle au même poids visuel qu'un succès. */
 .kpi-tuile--attenue {
-  opacity: 0.82;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, #4a4658 82%, transparent),
+      color-mix(in oklch, var(--encre) 90%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 28px rgba(20, 15, 31, 0.28);
 }
 
+/* --- Tuile « pleine couleur » (accent + les 3 sens) ------------------------
+   Verre teinté plutôt qu'un aplat opaque (sept. 2026 — l'aplat plein rendait
+   ces tuiles trop chargées à côté du reste de l'app, cf. mémoire) : dégradé
+   translucide + flou + reflet en haut, même recette que .projet-carte au
+   survol / .phase-pastille faite. Texte blanc, voile de texture diagonale,
+   et deux formes décoratives abstraites (lueur + anneau) façon carte
+   premium. `--pleine` porte tout ce qui est PARTAGÉ ; chaque variante
+   ci-dessous ne fixe que sa couleur (background + ombre). */
+.kpi-tuile--pleine {
+  border-left-color: transparent;
+  color: #fff;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+
+/* Accent = Iris (couleur de marque/identité), pas le dégradé de marque
+   entier (trop chargé sur une petite tuile) — reste utilisé par « À
+   assigner » (page Projets). */
+.kpi-tuile--accent {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--iris) 80%, transparent),
+      color-mix(in oklch, var(--iris-fonce) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--iris-fonce) 30%, transparent);
+}
+.kpi-tuile--sens-sauge {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--sauge) 80%, transparent),
+      color-mix(in oklch, var(--sauge-fonce) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--sauge-fonce) 30%, transparent);
+}
+.kpi-tuile--sens-argile {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--argile) 80%, transparent),
+      color-mix(in oklch, var(--argile-fonce) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--argile-fonce) 30%, transparent);
+}
+/* Ocre reste clair/doré partout ailleurs (tint + fonce, cf. mémoire
+   contraste) — mais une carte pleine avec du texte blanc dessus a besoin
+   d'un ton plus profond (cuivré) pour rester lisible ; même famille de
+   teinte, pas le doré vif des pastilles. */
+.kpi-tuile--sens-ocre {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, oklch(50% 0.13 70) 80%, transparent),
+      color-mix(in oklch, oklch(32% 0.1 70) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px oklch(50% 0.13 70 / 0.28);
+}
+
+/* Dégradé vif propre à chaque tuile (demande boss, sept. 2026 — même
+   principe que .stat-card--degrade sur le tableau de bord) — --kpi-a/--kpi-b
+   posées en inline style depuis la page appelante (DEGRADE_KPI, un point de
+   vérité par page : CRM/Projets/Facturation choisissent chacune leurs 4
+   couleurs). Couleurs pleines plutôt que la dilution color-mix des variantes
+   de sens ci-dessus — assumé décoratif, pas lié à la hiérarchie de module. */
+.kpi-tuile--degrade {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
+    linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 12px 28px color-mix(in oklch, var(--kpi-a) 35%, transparent);
+}
+
+/* Tête + libellé alignés sur .stat-card-chip/.stat-card-label du tableau de
+   bord (style de base, retour boss sept. 2026) : icône seule sur sa ligne,
+   libellé juste en dessous — l'anneau/la pastille de tendance/le décor
+   (spécifiques aux tuiles KpiStrip, absents du dashboard) restent à droite
+   de la même ligne que l'icône plutôt que de forcer une 3e ligne. */
 .kpi-tuile-tete {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   min-width: 0;
 }
 .kpi-tuile-tete-droite {
@@ -5049,17 +7295,18 @@ a.notif-item:hover {
   display: grid;
   place-items: center;
   flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.6rem;
+  border-radius: var(--radius-md);
   /* Pastille pleine (Encre) — un repère vivant, pas un carré grisâtre.
-     Les variantes --sens-* la recolorent ci-dessous. */
+     .kpi-tuile--pleine la recolore ci-dessous. */
   background: var(--encre);
   color: #efe7d8;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.kpi-tuile--accent .kpi-tuile-icone {
-  background: rgba(255, 255, 255, 0.12);
+.kpi-tuile--pleine .kpi-tuile-icone {
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 
@@ -5067,18 +7314,13 @@ a.notif-item:hover {
   margin: 0;
   font-size: 0.78rem;
   color: var(--text-muted);
-  /* Tronque plutôt que de pousser la pastille/l'anneau de droite hors de la
-     tuile — cause du chevauchement constaté sur mobile. */
-  flex: 1 1 auto;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.kpi-tuile--accent .kpi-tuile-label {
-  color: rgba(255, 255, 255, 0.7);
+.kpi-tuile--pleine .kpi-tuile-label {
+  color: rgba(255, 255, 255, 0.75);
 }
 .kpi-tuile-valeur {
+  position: relative;
+  z-index: 1;
   margin: 0.4rem 0 0;
   font-size: 1.75rem;
   font-weight: 700;
@@ -5094,50 +7336,18 @@ a.notif-item:hover {
 .kpi-tuile--alerte .kpi-tuile-valeur {
   color: var(--argile);
 }
-.kpi-tuile--accent .kpi-tuile-valeur {
+.kpi-tuile--pleine .kpi-tuile-valeur {
   color: #fff;
 }
 .kpi-tuile-sous {
+  position: relative;
+  z-index: 1;
   margin: 0.3rem 0 0;
   font-size: 0.76rem;
   color: var(--text-muted);
 }
-.kpi-tuile--accent .kpi-tuile-sous {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-/* Couleur de sens — filet gauche + pastille d'icône pleine + chiffre teinté.
-   cf. Direction visuelle §5 : Sauge = positif, Argile = appelle une action,
-   Ocre = à surveiller. Un accent, jamais un fond plein sur toute la tuile. */
-.kpi-tuile--sens-sauge {
-  border-left-color: var(--sauge);
-}
-.kpi-tuile--sens-sauge .kpi-tuile-valeur {
-  color: var(--sauge-fonce);
-}
-.kpi-tuile--sens-sauge .kpi-tuile-icone {
-  background: var(--sauge);
-  color: #fff;
-}
-.kpi-tuile--sens-argile {
-  border-left-color: var(--argile);
-}
-.kpi-tuile--sens-argile .kpi-tuile-valeur {
-  color: var(--argile-fonce);
-}
-.kpi-tuile--sens-argile .kpi-tuile-icone {
-  background: var(--argile);
-  color: #fff;
-}
-.kpi-tuile--sens-ocre {
-  border-left-color: var(--ocre);
-}
-.kpi-tuile--sens-ocre .kpi-tuile-valeur {
-  color: var(--ocre-fonce);
-}
-.kpi-tuile--sens-ocre .kpi-tuile-icone {
-  background: var(--ocre);
-  color: #fff;
+.kpi-tuile--pleine .kpi-tuile-sous {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Anneau miniature — un vrai pourcentage (ex. taux de conversion), pas un
@@ -5151,6 +7361,12 @@ a.notif-item:hover {
   stroke-width: 3;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kpi-tuile--pleine .kpi-tuile-anneau-piste {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+.kpi-tuile--pleine .kpi-tuile-anneau-trait {
+  stroke: #fff;
 }
 
 /* Pastille de tendance — un vrai delta vs une vraie période antérieure. */
@@ -5176,12 +7392,24 @@ a.notif-item:hover {
   background: var(--admin-fond);
   color: var(--text-muted);
 }
+/* Sur fond dégradé, les 3 nuances (sauge/danger/neutre) ne ressortent plus
+   assez — la flèche de la pastille porte déjà le sens, une seule teinte
+   translucide suffit. */
+.kpi-tuile--pleine .kpi-tuile-badge--hausse,
+.kpi-tuile--pleine .kpi-tuile-badge--baisse,
+.kpi-tuile--pleine .kpi-tuile-badge--stable {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
 
 /* Icône décorative pure (ex. pictogramme de tendance sur « Pipeline actif ») :
    aucune donnée dessinée, assumée comme un repère graphique et rien de plus. */
 .kpi-tuile-decor {
   display: inline-flex;
   color: var(--border-hover);
+}
+.kpi-tuile--pleine .kpi-tuile-decor {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* Funnel CRM */
@@ -5208,7 +7436,8 @@ a.notif-item:hover {
   min-width: 2px;
 }
 .kpi-funnel-seg--nouveau { background: var(--argile); }
-.kpi-funnel-seg--devis_contrat { background: var(--ocre); }
+.kpi-funnel-seg--daf { background: var(--iris); }
+.kpi-funnel-seg--devis { background: var(--ocre); }
 .kpi-funnel-seg--valide { background: var(--sauge); }
 .kpi-funnel-seg--annule { background: #a8635c; }
 .kpi-funnel-barre {
@@ -5225,6 +7454,11 @@ a.notif-item:hover {
   font-weight: 700;
   color: #fff;
   line-height: 1;
+}
+/* Ocre reste clair/doré : texte foncé plutôt que blanc pour rester lisible
+   dans ce segment (cf. mémoire contraste). */
+.kpi-funnel-seg--devis .kpi-funnel-seg-val {
+  color: var(--ocre-fonce);
 }
 
 .kpi-funnel-seg--mandat { background: var(--brand); }
@@ -5298,7 +7532,23 @@ a.notif-item:hover {
 .kpi-minibars-barre {
   display: block;
   height: 100%;
-  background: var(--brand);
+  background: var(--argile);
+}
+
+/* Lisibilité quand la mini-liste vit dans une tuile « pleine couleur » (ex.
+   « Charge par cellule », page Projets) — piste/texte foncés illisibles sur
+   un dégradé vif sinon. */
+.kpi-tuile--pleine .kpi-minibars-label {
+  color: rgba(255, 255, 255, 0.75);
+}
+.kpi-tuile--pleine .kpi-minibars-piste {
+  background: rgba(255, 255, 255, 0.25);
+}
+.kpi-tuile--pleine .kpi-minibars-barre {
+  background: #fff;
+}
+.kpi-tuile--pleine .kpi-minibars li {
+  color: #fff;
 }
 
 /* Mobile : les 4 tuiles restent alignées en une seule rangée (pas d'empilement
@@ -5440,6 +7690,18 @@ a.notif-item:hover {
 /* Chip de jalon dans la colonne « Objet » du tableau */
 .factu-chip {
   margin-left: 0.5rem;
+}
+
+/* Bouton « Catalogue » + « Nouveau devis » dans l'entête de la page centrale */
+.factu-actions-tete {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  /* Seul enfant de .panel-tete depuis le retrait du titre en doublon
+     (déjà porté par le topbar, cf. useTitrePage) — pousse le groupe à
+     droite comme avant, où .panel-tete ne pouvait compter que sur le titre
+     comme second enfant pour justify-content: space-between. */
+  margin-left: auto;
 }
 
 /* Groupe de boutons d'action dans une cellule de tableau */
@@ -5611,6 +7873,13 @@ a.notif-item:hover {
 .indic-fait strong {
   font-weight: 700;
 }
+/* Signal « en retard maintenant » — seul encart de la page à porter une
+   couleur d'alerte : distinct exprès du ratio historique neutre ci-dessus. */
+.indic-fait--alerte {
+  border-color: color-mix(in oklch, var(--ocre) 45%, transparent);
+  background: var(--ocre-tint);
+  color: var(--ocre-fonce);
+}
 
 /* Têtes de section */
 .indic-tete {
@@ -5693,6 +7962,107 @@ a.notif-item:hover {
 .indic-projet-client {
   font-size: 0.78rem;
   color: var(--admin-texte-doux, #6c6960);
+}
+
+/* Filtres + liste « Mes tâches » (point 2, sept. 2026) — même langage visuel
+   que .indic-projet ci-dessus, adapté à une tâche individuelle (module +
+   statut/échéance à droite plutôt qu'une barre de checklist). */
+.indic-taches-filtres {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: -0.2rem 0 0.2rem;
+}
+.indic-taches-filtres .field-input {
+  width: auto;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.82rem;
+}
+.indic-taches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.indic-tache {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--admin-bordure, #e4dfd4);
+  border-radius: 12px;
+  background: var(--admin-surface, #fff);
+  text-decoration: none;
+  color: inherit;
+}
+.indic-tache:hover {
+  border-color: var(--border-hover);
+}
+.indic-tache-txt {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.indic-tache-nom {
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+.indic-tache-module {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--admin-fond, #f4f2ec);
+  color: var(--admin-texte-doux, #6c6960);
+}
+.indic-tache-projet {
+  font-size: 0.78rem;
+  color: var(--admin-texte-doux, #6c6960);
+}
+.indic-tache-droite {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.indic-tache-progres {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--admin-texte-doux, #6c6960);
+}
+.indic-tache-statut {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ocre-tint);
+  color: var(--ocre-fonce);
+}
+.indic-tache-statut--ok {
+  background: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+.indic-tache-echeance {
+  font-size: 0.75rem;
+  color: var(--admin-texte-doux, #6c6960);
+  white-space: nowrap;
+}
+.indic-tache-echeance--retard {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 /* Barre de progression compacte (checklist %) — piste fine + chiffre à côté */
@@ -5796,6 +8166,7 @@ a.notif-item:hover {
 
 @media (max-width: 640px) {
   .indic-projet,
+  .indic-tache,
   .indic-histo-row {
     flex-wrap: wrap;
   }
@@ -5811,7 +8182,8 @@ a.notif-item:hover {
   .admin-sidebar,
   .admin-backdrop,
   .admin-topbar,
-  .indic-actions {
+  .indic-actions,
+  .indic-taches-filtres {
     display: none !important;
   }
   .admin {
@@ -5936,14 +8308,6 @@ a.notif-item:hover {
   font-size: 0.85rem;
 }
 
-/* Histogramme : barres des périodes sans donnée, discrètes plutôt que
-   « micro-barre » ambiguë. */
-.barchart-bar--vide {
-  background: var(--border);
-}
-.barchart-val--vide {
-  opacity: 0.45;
-}
 .barchart-vide {
   display: flex;
   align-items: center;
@@ -6000,7 +8364,7 @@ a.notif-item:hover {
   color: var(--text);
 }
 .admin-table--triable th button:focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--argile);
   outline-offset: 2px;
   border-radius: 3px;
 }
@@ -6022,5 +8386,323 @@ a.notif-item:hover {
   }
   .modal--feuille .modal-body {
     overflow-y: auto;
+  }
+}
+
+/* =============================================================================
+   Devis — lien public (sans compte), cf. cadrage « Devis » §page publique.
+   Page de MARQUE (identité de la société émettrice, pas l'esthétique HUB
+   admin, pas un gabarit tiers copié) : bannière sombre dégradée (noir d'encre
+   → societe.couleurMarque, posée en inline style — jamais une teinte HUB en
+   dur) façon en-tête de facture premium, corps clair en dessous. Le dégradé
+   sert deux fois (bannière + barre Total) pour que l'œil relie les deux.
+   ============================================================================= */
+
+.devis-public-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1.25rem;
+  background: var(--bg);
+}
+
+.devis-public-page-corps {
+  width: 100%;
+  max-width: 760px;
+}
+
+.devis-public-page-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+.devis-public-page-actions .devis-public-actions {
+  width: 100%;
+}
+.devis-public-telecharger {
+  color: var(--text-muted);
+}
+
+.devis-public-doc {
+  width: 100%;
+  max-width: 760px;
+  background: var(--surface);
+  border-radius: var(--radius-lg, 20px);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(20, 20, 18, 0.12);
+}
+
+.devis-public-introuvable {
+  text-align: center;
+  padding: 3.5rem 2rem;
+}
+
+.devis-public-banniere {
+  padding: 2rem 2.25rem 1.75rem;
+  color: #fff;
+}
+
+.devis-public-banniere-marque {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+.devis-public-banniere-marque span {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.devis-public-banniere-bas {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.devis-public-banniere-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+.devis-public-banniere-bas h1 {
+  margin: 0.2rem 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.devis-public-banniere-infos {
+  display: flex;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+  margin: 0;
+  text-align: right;
+}
+.devis-public-banniere-infos dt {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.6);
+}
+.devis-public-banniere-infos dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.devis-public-corps {
+  padding: 1.75rem 2.25rem 2.25rem;
+}
+
+.devis-public-corps-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.devis-public-objet {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.devis-public-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+.devis-public-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 0 0.6rem 0.6rem;
+  border-bottom: 2px solid var(--border);
+}
+.devis-public-table td {
+  padding: 0.75rem 0.6rem;
+}
+.devis-public-table tbody tr:nth-child(odd) {
+  background: color-mix(in oklch, var(--bg) 60%, transparent);
+}
+.devis-public-table th:first-child,
+.devis-public-table td:first-child {
+  color: var(--text-muted);
+  width: 2.5rem;
+}
+.devis-public-table th:nth-child(3),
+.devis-public-table th:nth-child(4),
+.devis-public-table th:nth-child(5),
+.devis-public-table td:nth-child(3),
+.devis-public-table td:nth-child(4),
+.devis-public-table td:nth-child(5) {
+  text-align: right;
+}
+
+.devis-public-recap {
+  margin-left: auto;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+}
+.devis-public-recap-ligne {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  padding: 0 0.25rem;
+}
+.devis-public-recap-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.1rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-top: 0.25rem;
+}
+
+.devis-public-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.devis-public-message {
+  text-align: center;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Pied réglementaire d'un document (conditions CGV, mentions légales,
+   coordonnées) — sobre, lisible à l'impression. */
+.document-pied {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.5rem 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-align: center;
+}
+.document-pied p {
+  margin: 0;
+}
+.document-pied-legal {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.devis-public-pied {
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  padding: 1rem 0 1.5rem;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .devis-public-page {
+    padding: 0;
+  }
+  .devis-public-doc {
+    border-radius: 0;
+    min-height: 100dvh;
+  }
+  .devis-public-banniere,
+  .devis-public-corps {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  .devis-public-banniere-bas {
+    align-items: flex-start;
+  }
+  .devis-public-banniere-infos {
+    text-align: left;
+    gap: 1rem;
+  }
+  .devis-public-table {
+    font-size: 0.82rem;
+  }
+  .devis-public-recap {
+    max-width: none;
+  }
+  .devis-public-actions {
+    flex-direction: column-reverse;
+  }
+  .devis-public-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Impression / téléchargement — pas de lib, le navigateur fait foi (même
+   principe que la page « Mes indicateurs »). print-color-adjust force
+   l'impression du dégradé (les navigateurs l'omettent par défaut pour
+   économiser l'encre) : ici c'est l'identité du document, pas un décor. */
+@media print {
+  .devis-public-page {
+    padding: 0;
+    background: none;
+  }
+  .devis-public-doc {
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .devis-public-banniere,
+  .devis-public-recap-total {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .devis-public-page-actions {
+    display: none;
+  }
+}
+
+/* Impression d'UN document depuis une page admin (sidebar, tableaux…) — le
+   document est portalé en enfant direct de body (cf. ImpressionDocument) ;
+   cette règle masque tout le reste au moment d'imprimer, quelle que soit la
+   profondeur d'imbrication du reste de l'UI. Hors impression, le portail
+   reste invisible (jamais affiché à l'écran). `:has()` est essentiel ici :
+   sans lui, la règle s'appliquerait à TOUTE page qui imprime (y compris la
+   page publique du devis, qui n'a pas de portail) et viderait son body. */
+#impression-document {
+  display: none;
+}
+@media print {
+  body:has(#impression-document) > *:not(#impression-document) {
+    display: none !important;
+  }
+  #impression-document {
+    display: block !important;
+  }
+  #impression-document .devis-public-doc {
+    max-width: none;
+  }
+  #impression-document .devis-public-banniere,
+  #impression-document .devis-public-recap-total {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 }

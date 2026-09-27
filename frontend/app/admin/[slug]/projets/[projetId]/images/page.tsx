@@ -1,10 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Plus, RotateCcw, Star, Trash2, X } from 'lucide-react';
-import { getSociete } from '@/lib/api';
+import {
+  ArrowLeft,
+  Download,
+  Link2,
+  Plus,
+  RotateCcw,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { getProjetExecution } from '@/lib/projets';
 import {
   ajouterImages,
@@ -17,24 +24,23 @@ import {
   supprimerImages,
 } from '@/lib/images';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import {
   CATEGORIES,
   NATURES_DOSSIER,
   PHASES,
   PHASES_PAR_CATEGORIE,
+  TYPES_PHOTO_IMAGE,
   USAGES_IMAGE,
   type ImageProjet,
   type Phase,
   type ProjetExecution,
-  type Session,
-  type Societe,
+  type TypePhotoImage,
   type UsageImage,
 } from '@/lib/types';
 import { formatDateCourte } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { AjoutImagesModal } from '@/components/ajout-images-modal';
 
 type Props = { params: { slug: string; projetId: string } };
 
@@ -47,7 +53,8 @@ const FILTRES = [
 type Filtre = (typeof FILTRES)[number]['cle'];
 
 const JOUR = 86_400_000;
-const estRecent = (iso: string) => Date.now() - new Date(iso).getTime() < 7 * JOUR;
+const estRecent = (iso: string) =>
+  Date.now() - new Date(iso).getTime() < 7 * JOUR;
 
 function telecharger(img: ImageProjet) {
   const a = document.createElement('a');
@@ -59,16 +66,20 @@ function telecharger(img: ImageProjet) {
 }
 
 export default function ImagesPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
-  const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
+  useTitrePage('Images');
+  const session = useSessionCourante();
+  const [projet, setProjet] = useState<ProjetExecution | null | undefined>(
+    undefined,
+  );
   const [images, setImages] = useState<ImageProjet[] | null>(null);
   const [corbeille, setCorbeille] = useState<ImageProjet[]>([]);
 
   const [filtre, setFiltre] = useState<Filtre>('tout');
   const [recherche, setRecherche] = useState('');
   const [filtrePhase, setFiltrePhase] = useState<Phase | ''>('');
+  const [filtreTypePhoto, setFiltreTypePhoto] = useState<TypePhotoImage | ''>(
+    '',
+  );
   const [filtreAuteur, setFiltreAuteur] = useState('');
   const [tri, setTri] = useState<'recent' | 'ancien'>('recent');
 
@@ -77,31 +88,22 @@ export default function ImagesPage({ params }: Props) {
   const [coches, setCoches] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [survol, setSurvol] = useState(false);
-  const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [supprConfirm, setSupprConfirm] = useState<string[] | null>(null);
+  // Fichiers choisis (via le sélecteur) en attente du type de photo, demandé
+  // dans la popup avant que l'upload ne parte réellement.
+  const [fichiersEnAttente, setFichiersEnAttente] = useState<File[] | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const utilisateur = session
-    ? `${session.utilisateur.prenom} ${session.utilisateur.nom}`.trim()
-    : '';
+  const utilisateur = `${session.utilisateur.prenom} ${session.utilisateur.nom}`.trim();
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
     getProjetExecution(params.slug, params.projetId).then(setProjet);
     getImagesProjet(params.slug, params.projetId).then(setImages);
     getImagesSupprimees(params.slug, params.projetId).then(setCorbeille);
-  }, [params.slug, params.projetId, router]);
+  }, [params.slug, params.projetId]);
 
   const auteurs = useMemo(() => {
     const set = new Set<string>();
@@ -112,14 +114,17 @@ export default function ImagesPage({ params }: Props) {
   const enCorbeille = filtre === 'corbeille';
 
   const visibles = useMemo(() => {
-    const source = enCorbeille ? corbeille : images ?? [];
+    const source = enCorbeille ? corbeille : (images ?? []);
     const q = recherche.trim().toLowerCase();
     return source
-      .filter((i) => (enCorbeille || filtre === 'tout' ? true : i.usage === filtre))
+      .filter((i) =>
+        enCorbeille || filtre === 'tout' ? true : i.usage === filtre,
+      )
       .filter((i) =>
         !q ? true : `${i.nom} ${i.legende}`.toLowerCase().includes(q),
       )
       .filter((i) => (filtrePhase ? i.phase === filtrePhase : true))
+      .filter((i) => (filtreTypePhoto ? i.typePhoto === filtreTypePhoto : true))
       .filter((i) => (filtreAuteur ? i.ajoutePar === filtreAuteur : true))
       .sort(
         filtre === 'portfolio'
@@ -129,13 +134,24 @@ export default function ImagesPage({ params }: Props) {
               return tri === 'recent' ? -d : d;
             },
       );
-  }, [enCorbeille, corbeille, images, filtre, recherche, filtrePhase, filtreAuteur, tri]);
-
-  if (!session) return null;
+  }, [
+    enCorbeille,
+    corbeille,
+    images,
+    filtre,
+    recherche,
+    filtrePhase,
+    filtreTypePhoto,
+    filtreAuteur,
+    tri,
+  ]);
 
   const retour = `/admin/${params.slug}/projets/${params.projetId}`;
-  const phasesProjet: Phase[] = projet ? PHASES_PAR_CATEGORIE[projet.categorie] : [];
-  const selection = [...(images ?? []), ...corbeille].find((i) => i.id === selId) ?? null;
+  const phasesProjet: Phase[] = projet
+    ? PHASES_PAR_CATEGORIE[projet.categorie]
+    : [];
+  const selection =
+    [...(images ?? []), ...corbeille].find((i) => i.id === selId) ?? null;
   const lot = [...coches];
 
   function toggleCoche(id: string) {
@@ -150,32 +166,55 @@ export default function ImagesPage({ params }: Props) {
     setCoches(new Set());
   }
 
-  async function ajouterFichiers(liste: FileList | File[]) {
+  // Choix des fichiers : ne lance pas l'upload directement, ouvre la popup
+  // qui demande le type de photo (obligatoire, cf. échange du 2026-09-17).
+  function choisirFichiers(liste: FileList | File[]) {
     const fichiers = Array.from(liste).filter(estImage);
-    if (!fichiers.length) return;
-    setEnCours(true);
+    if (fichiers.length) setFichiersEnAttente(fichiers);
+  }
+
+  async function confirmerAjout(typePhoto: TypePhotoImage) {
+    const fichiers = fichiersEnAttente;
+    if (!fichiers) return;
     setErreur(null);
     try {
       const lus = await Promise.all(fichiers.map(lireImageRedimensionnee));
-      const nouvelles = await ajouterImages(params.slug, params.projetId, lus, utilisateur);
+      const nouvelles = await ajouterImages(
+        params.slug,
+        params.projetId,
+        lus,
+        utilisateur,
+        typePhoto,
+      );
       setImages((cur) => [...nouvelles, ...(cur ?? [])]);
+      setFichiersEnAttente(null);
     } catch {
       setErreur("Certains fichiers n'ont pas pu être ajoutés.");
+      setFichiersEnAttente(null);
     }
-    setEnCours(false);
   }
 
   async function patchSel(patch: {
     usage?: UsageImage;
     phase?: Phase | null;
+    typePhoto?: TypePhotoImage | null;
     legende?: string;
   }) {
     if (!selection) return;
-    const maj = await majImage(params.slug, params.projetId, selection.id, patch);
+    const maj = await majImage(
+      params.slug,
+      params.projetId,
+      selection.id,
+      patch,
+    );
     setImages((cur) => (cur ?? []).map((i) => (i.id === maj.id ? maj : i)));
   }
 
-  async function appliquerLot(patch: { usage?: UsageImage; phase?: Phase | null }) {
+  async function appliquerLot(patch: {
+    usage?: UsageImage;
+    phase?: Phase | null;
+    typePhoto?: TypePhotoImage | null;
+  }) {
     if (!lot.length) return;
     const maj = await majImagesEnLot(params.slug, params.projetId, lot, patch);
     setImages(maj);
@@ -194,7 +233,12 @@ export default function ImagesPage({ params }: Props) {
     setCorbeille((cur) => [
       ...(images ?? [])
         .filter((i) => ids.includes(i.id))
-        .map((i) => ({ ...i, supprimee: true, supprimeLe: quand, supprimePar: utilisateur })),
+        .map((i) => ({
+          ...i,
+          supprimee: true,
+          supprimeLe: quand,
+          supprimePar: utilisateur,
+        })),
       ...cur,
     ]);
     setSupprConfirm(null);
@@ -238,14 +282,17 @@ export default function ImagesPage({ params }: Props) {
   }
 
   return (
-    <AdminShell societe={societe} session={session} active="projets" titre="Images">
-      <Link href={retour} className="lien-retour">
+    <>
+      <Link href={retour} className="lien-retour lien-retour--images">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>{projet ? projet.programme : 'Projet'}</span>
       </Link>
 
       {images === null || projet === undefined ? (
-        <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        <div
+          className="skeleton admin-skeleton-panel admin-skeleton-panel--sm"
+          aria-hidden
+        />
       ) : projet === null ? (
         <p className="empty-state empty-state--bloc">Projet introuvable.</p>
       ) : (
@@ -282,7 +329,9 @@ export default function ImagesPage({ params }: Props) {
                   }}
                 >
                   {f.libelle}
-                  {f.cle === 'corbeille' && corbeille.length > 0 && ` (${corbeille.length})`}
+                  {f.cle === 'corbeille' &&
+                    corbeille.length > 0 &&
+                    ` (${corbeille.length})`}
                 </button>
               ))}
             </div>
@@ -316,7 +365,10 @@ export default function ImagesPage({ params }: Props) {
               accept="image/*"
               multiple
               hidden
-              onChange={(e) => e.target.files && ajouterFichiers(e.target.files)}
+              onChange={(e) => {
+                if (e.target.files) choisirFichiers(e.target.files);
+                e.target.value = '';
+              }}
             />
           </div>
 
@@ -338,6 +390,21 @@ export default function ImagesPage({ params }: Props) {
               {phasesProjet.map((ph) => (
                 <option key={ph} value={ph}>
                   {PHASES[ph]}
+                </option>
+              ))}
+            </select>
+            <select
+              className="field-input"
+              value={filtreTypePhoto}
+              onChange={(e) =>
+                setFiltreTypePhoto(e.target.value as TypePhotoImage | '')
+              }
+              aria-label="Filtrer par type de photo"
+            >
+              <option value="">Tous types de photo</option>
+              {(Object.keys(TYPES_PHOTO_IMAGE) as TypePhotoImage[]).map((t) => (
+                <option key={t} value={t}>
+                  {TYPES_PHOTO_IMAGE[t]}
                 </option>
               ))}
             </select>
@@ -368,7 +435,11 @@ export default function ImagesPage({ params }: Props) {
           </div>
 
           {modeSelection && lot.length > 0 && (
-            <div className="images-lot" role="region" aria-label="Actions groupées">
+            <div
+              className="images-lot"
+              role="region"
+              aria-label="Actions groupées"
+            >
               <span>
                 {lot.length} sélectionnée{lot.length > 1 ? 's' : ''}
               </span>
@@ -376,7 +447,8 @@ export default function ImagesPage({ params }: Props) {
                 className="field-input"
                 defaultValue=""
                 onChange={(e) => {
-                  if (e.target.value) appliquerLot({ usage: e.target.value as UsageImage });
+                  if (e.target.value)
+                    appliquerLot({ usage: e.target.value as UsageImage });
                   e.target.value = '';
                 }}
                 aria-label="Changer l'usage"
@@ -394,7 +466,9 @@ export default function ImagesPage({ params }: Props) {
                 onChange={(e) => {
                   const v = e.currentTarget.value;
                   if (v !== '__') {
-                    appliquerLot({ phase: v === '__aucune' ? null : (v as Phase) });
+                    appliquerLot({
+                      phase: v === '__aucune' ? null : (v as Phase),
+                    });
                   }
                   e.currentTarget.value = '__';
                 }}
@@ -407,6 +481,31 @@ export default function ImagesPage({ params }: Props) {
                     {PHASES[ph]}
                   </option>
                 ))}
+              </select>
+              <select
+                className="field-input"
+                defaultValue="__"
+                onChange={(e) => {
+                  const v = e.currentTarget.value;
+                  if (v !== '__') {
+                    appliquerLot({
+                      typePhoto:
+                        v === '__aucune' ? null : (v as TypePhotoImage),
+                    });
+                  }
+                  e.currentTarget.value = '__';
+                }}
+                aria-label="Changer le type de photo"
+              >
+                <option value="__">Type de photo…</option>
+                <option value="__aucune">— Aucun</option>
+                {(Object.keys(TYPES_PHOTO_IMAGE) as TypePhotoImage[]).map(
+                  (t) => (
+                    <option key={t} value={t}>
+                      {TYPES_PHOTO_IMAGE[t]}
+                    </option>
+                  ),
+                )}
               </select>
               <button
                 type="button"
@@ -431,14 +530,17 @@ export default function ImagesPage({ params }: Props) {
               if (enCorbeille) return;
               e.preventDefault();
               setSurvol(false);
-              ajouterFichiers(e.dataTransfer.files);
+              choisirFichiers(e.dataTransfer.files);
             }}
           >
             {visibles.length === 0 ? (
               <p className="images-vide">
                 {enCorbeille
                   ? 'Corbeille vide.'
-                  : recherche || filtrePhase || filtreAuteur || filtre !== 'tout'
+                  : recherche ||
+                      filtrePhase ||
+                      filtreAuteur ||
+                      filtre !== 'tout'
                     ? 'Aucune image ne correspond.'
                     : 'Glisse des images ici, ou « Ajouter ».'}
               </p>
@@ -466,31 +568,61 @@ export default function ImagesPage({ params }: Props) {
                           modeSelection ? toggleCoche(img.id) : setSelId(img.id)
                         }
                       >
-                        <img src={img.url} alt={img.legende || img.nom} loading="lazy" />
-                        {img.usage === 'portfolio' && !enCorbeille && !modeSelection && (
-                          <span className="image-badge" title="Portfolio">
-                            <Star size={12} strokeWidth={2.5} aria-hidden />
-                          </span>
-                        )}
+                        <img
+                          src={img.url}
+                          alt={img.legende || img.nom}
+                          loading="lazy"
+                        />
+                        {img.usage === 'portfolio' &&
+                          !enCorbeille &&
+                          !modeSelection && (
+                            <span className="image-badge" title="Portfolio">
+                              <Star size={12} strokeWidth={2.5} aria-hidden />
+                            </span>
+                          )}
                         {!enCorbeille && estRecent(img.ajouteLe) && (
                           <span className="image-badge-recent">récent</span>
                         )}
+                        {img.provenance && (
+                          <span
+                            className="image-badge image-badge--provenance"
+                            title={`Depuis : ${img.provenance.libelle}`}
+                          >
+                            <Link2 size={12} strokeWidth={2.5} aria-hidden />
+                          </span>
+                        )}
                         {modeSelection && (
-                          <span className={`image-coche${cochee ? ' is-on' : ''}`} aria-hidden />
+                          <span
+                            className={`image-coche${cochee ? ' is-on' : ''}`}
+                            aria-hidden
+                          />
                         )}
                       </button>
 
-                      <span className="image-nom">{img.legende || img.nom}</span>
+                      {img.typePhoto && (
+                        <span
+                          className="image-type-bande"
+                          data-type={img.typePhoto}
+                        >
+                          {TYPES_PHOTO_IMAGE[img.typePhoto]}
+                        </span>
+                      )}
+
+                      <span className="image-nom">
+                        {img.legende || img.nom}
+                      </span>
 
                       {enCorbeille ? (
                         <span className="image-sous">
-                          Supprimée par {img.supprimePar} · {formatDateCourte(img.supprimeLe!)}
+                          Supprimée par {img.supprimePar} ·{' '}
+                          {formatDateCourte(img.supprimeLe!)}
                           <button
                             type="button"
                             className="lien-inline"
                             onClick={() => restaurer(img.id)}
                           >
-                            <RotateCcw size={12} strokeWidth={2} aria-hidden /> Restaurer
+                            <RotateCcw size={12} strokeWidth={2} aria-hidden />{' '}
+                            Restaurer
                           </button>
                         </span>
                       ) : (
@@ -502,7 +634,8 @@ export default function ImagesPage({ params }: Props) {
                             onClick={() => telecharger(img)}
                             title="Télécharger"
                           >
-                            <Download size={12} strokeWidth={2} aria-hidden /> Télécharger
+                            <Download size={12} strokeWidth={2} aria-hidden />{' '}
+                            Télécharger
                           </button>
                         </span>
                       )}
@@ -514,7 +647,6 @@ export default function ImagesPage({ params }: Props) {
           </div>
 
           {erreur && <p className="field-erreur">{erreur}</p>}
-          {enCours && <p className="images-encours">Traitement des images…</p>}
         </>
       )}
 
@@ -546,6 +678,16 @@ export default function ImagesPage({ params }: Props) {
                 alt={selection.legende || selection.nom}
               />
 
+              {selection.provenance && (
+                <Link
+                  href={`/admin/${params.slug}/projets/${params.projetId}/${selection.provenance.route}`}
+                  className="image-provenance"
+                >
+                  <Link2 size={13} strokeWidth={2} aria-hidden />
+                  Depuis : {selection.provenance.libelle}
+                </Link>
+              )}
+
               {selection.supprimee ? (
                 <p className="image-meta">
                   Supprimée par {selection.supprimePar} ·{' '}
@@ -559,13 +701,17 @@ export default function ImagesPage({ params }: Props) {
                       <select
                         className="field-input"
                         value={selection.usage}
-                        onChange={(e) => patchSel({ usage: e.target.value as UsageImage })}
+                        onChange={(e) =>
+                          patchSel({ usage: e.target.value as UsageImage })
+                        }
                       >
-                        {(Object.keys(USAGES_IMAGE) as UsageImage[]).map((u) => (
-                          <option key={u} value={u}>
-                            {USAGES_IMAGE[u]}
-                          </option>
-                        ))}
+                        {(Object.keys(USAGES_IMAGE) as UsageImage[]).map(
+                          (u) => (
+                            <option key={u} value={u}>
+                              {USAGES_IMAGE[u]}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </label>
                     <label className="field">
@@ -575,7 +721,9 @@ export default function ImagesPage({ params }: Props) {
                         value={selection.phase ?? ''}
                         onChange={(e) =>
                           patchSel({
-                            phase: e.target.value ? (e.target.value as Phase) : null,
+                            phase: e.target.value
+                              ? (e.target.value as Phase)
+                              : null,
                           })
                         }
                       >
@@ -589,16 +737,46 @@ export default function ImagesPage({ params }: Props) {
                     </label>
                   </div>
 
+                  <label className="field">
+                    <span className="field-label">
+                      Type de photo (indicatif)
+                    </span>
+                    <select
+                      className="field-input"
+                      value={selection.typePhoto ?? ''}
+                      onChange={(e) =>
+                        patchSel({
+                          typePhoto: e.target.value
+                            ? (e.target.value as TypePhotoImage)
+                            : null,
+                        })
+                      }
+                    >
+                      <option value="">—</option>
+                      {(Object.keys(TYPES_PHOTO_IMAGE) as TypePhotoImage[]).map(
+                        (t) => (
+                          <option key={t} value={t}>
+                            {TYPES_PHOTO_IMAGE[t]}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+
                   {selection.usage === 'portfolio' && (
                     <label className="field">
-                      <span className="field-label">Légende — site vitrine</span>
+                      <span className="field-label">
+                        Légende — site vitrine
+                      </span>
                       <input
                         className="field-input"
                         value={selection.legende}
                         onChange={(e) =>
                           setImages((cur) =>
                             (cur ?? []).map((i) =>
-                              i.id === selection.id ? { ...i, legende: e.target.value } : i,
+                              i.id === selection.id
+                                ? { ...i, legende: e.target.value }
+                                : i,
                             ),
                           )
                         }
@@ -654,14 +832,23 @@ export default function ImagesPage({ params }: Props) {
           confirmer="Supprimer"
           message={
             <>
-              {supprConfirm.length} image{supprConfirm.length > 1 ? 's' : ''} iront dans la
-              corbeille. Tu pourras les restaurer depuis l&rsquo;onglet « Corbeille ».
+              {supprConfirm.length} image{supprConfirm.length > 1 ? 's' : ''}{' '}
+              iront dans la corbeille. Tu pourras les restaurer depuis
+              l&rsquo;onglet « Corbeille ».
             </>
           }
           onClose={() => setSupprConfirm(null)}
           onConfirm={confirmerSuppression}
         />
       )}
-    </AdminShell>
+
+      {fichiersEnAttente && (
+        <AjoutImagesModal
+          nbFichiers={fichiersEnAttente.length}
+          onConfirmer={confirmerAjout}
+          onClose={() => setFichiersEnAttente(null)}
+        />
+      )}
+    </>
   );
 }

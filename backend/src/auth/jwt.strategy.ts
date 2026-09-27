@@ -25,6 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     societeId?: string | null;
     societeSlug?: string | null;
     role: string;
+    permissions?: Record<string, string>;
     iat?: number;
   }) {
     const utilisateur = await this.prisma.utilisateur.findUnique({
@@ -62,6 +63,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       societeId,
       societeSlug: payload.societeSlug ?? null,
       role: payload.role,
+      // {} pour un token émis avant l'ajout de ce champ, ou pour un rôle
+      // socle sans RolePermission (cf. auth.service.ts) — PermissionGuard
+      // traite l'absence d'entrée pour un module comme 'aucun' (fail closed).
+      permissions: payload.permissions ?? {},
     };
   }
 }

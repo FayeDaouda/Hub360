@@ -1,8 +1,13 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { versCellule } from '../commun/format-contrat';
-import { CreerCelluleDto, MajCelluleDto } from './dto';
+import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
 
 // membres + le strict minimum du compte lié (jamais motDePasseHash).
 const MEMBRES = {
@@ -56,6 +61,31 @@ export class CellulesService {
     const cellule = await this.prisma.cellule.update({
       where: { id },
       data: { nom: dto.nom },
+      include: MEMBRES,
+    });
+    return formater(cellule);
+  }
+
+  // Désigne (ou retire, dispatcherId=null) le dispatcher de la cellule —
+  // admin uniquement (décision boss, sept. 2026). Doit être membre de CETTE
+  // cellule : un dispatcher répartit les tâches de son équipe, pas d'une
+  // autre — vérifié ici plutôt qu'en contrainte DB (le lien est un simple
+  // FK vers Collaborateur, sans savoir à quelle cellule il appartient).
+  async definirDispatcher(societeId: string, id: string, dto: DefinirDispatcherDto) {
+    await this.charger(societeId, id);
+    if (dto.dispatcherId) {
+      const membre = await this.prisma.collaborateur.findFirst({
+        where: { id: dto.dispatcherId, societeId, celluleId: id },
+      });
+      if (!membre) {
+        throw new UnprocessableEntityException(
+          'Le dispatcher doit être membre de cette cellule.',
+        );
+      }
+    }
+    const cellule = await this.prisma.cellule.update({
+      where: { id },
+      data: { dispatcherId: dto.dispatcherId },
       include: MEMBRES,
     });
     return formater(cellule);

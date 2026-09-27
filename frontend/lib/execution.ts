@@ -1,172 +1,137 @@
-import type {
-  Categorie,
-  Execution,
-  Lot,
-  OffreEntreprise,
-  Reserve,
-  SituationPaiement,
-  TypeLot,
-} from './types';
+import type { Execution, GroupeChecklistExecution } from './types';
 import { apiSociete } from './client-api';
 
 // -----------------------------------------------------------------------------
-// Exécution / chantier (les deux catégories). API NestJS :
-//   GET    …/projets/:id/execution
-//   PATCH  …/execution/lots/:type
-//   POST   …/execution/lots/:type/offres | /attribution | /situations
-//   DELETE …/execution/lots/:type/offres/:offreId | /situations/:id
-//   POST   …/execution/cr
-//   PATCH  …/execution/reception
-//   POST   …/execution/reserves     PATCH …/execution/reserves/:id
-// La catégorie est dérivée du projet côté serveur — 5ᵉ/3ᵉ argument conservé
-// pour les signatures d'appel existantes, non transmis.
+// Exécution / chantier (les deux catégories, même gabarit). API NestJS :
+//   GET   /api/societes/:slug/projets/:id/execution
+// Miroir Trello Grey Concrete — 8 blocs fixes (Études / Les Plans / Viabilité
+// / Locaux techniques / Aménagements / Cahiers de menuiserie / Détails /
+// CCTP), chacun avec sa propre échéance et son responsable. Remplace
+// entièrement l'ancien système lots/offres/situations/réception/réserves
+// (retiré sept. 2026, cf. mémoire) — même motif que lib/permis.ts.
 // -----------------------------------------------------------------------------
 
-const base = (projetId: string) => `/projets/${projetId}/execution`;
-
-export function getExecution(
-  slug: string,
-  projetId: string,
-  _categorie: Categorie = 'conception',
-): Promise<Execution> {
-  return apiSociete<Execution>(slug, base(projetId));
+export function getExecution(slug: string, projetId: string): Promise<Execution> {
+  return apiSociete<Execution>(slug, `/projets/${projetId}/execution`);
 }
 
-export function majLot(
+// -----------------------------------------------------------------------------
+// Sous-checklist opérationnelle (LigneChecklistExecution) — même contrat que
+// les fonctions ChecklistPermis de lib/permis.ts, sous /execution/checklist.
+// -----------------------------------------------------------------------------
+
+export function majLigneChecklistExecution(
   slug: string,
   projetId: string,
-  type: TypeLot,
-  patch: Partial<Omit<Lot, 'type' | 'offres' | 'situations'>>,
-  _categorie: Categorie = 'conception',
+  ligneId: string,
+  patch: { fait?: boolean; note?: string; nonRequise?: boolean },
 ): Promise<Execution> {
-  return apiSociete<Execution>(slug, `${base(projetId)}/lots/${type}`, {
+  return apiSociete<Execution>(slug, `/projets/${projetId}/execution/checklist/${ligneId}`, {
     method: 'PATCH',
     body: patch,
   });
 }
 
-// Suivi opérationnel d'un lot (statut, avancement, planning) — endpoint ouvert
-// au collaborateur assigné. Le financier passe par majLot / attribuerLot (admin).
-export function majLotSuivi(
+// Ajoute un item à une checklist — admin uniquement. Va en fin du groupe ciblé.
+export function ajouterLigneChecklistExecution(
   slug: string,
   projetId: string,
-  type: TypeLot,
-  patch: Partial<Pick<Lot, 'statut' | 'avancement' | 'dateDebut' | 'dateFinPrevue'>>,
+  item: { groupe: GroupeChecklistExecution; libelle: string },
 ): Promise<Execution> {
-  return apiSociete<Execution>(slug, `${base(projetId)}/lots/${type}/suivi`, {
+  return apiSociete<Execution>(slug, `/projets/${projetId}/execution/checklist`, {
+    method: 'POST',
+    body: item,
+  });
+}
+
+// Retire un item de la checklist (suppression douce côté serveur) — admin
+// uniquement.
+export function supprimerLigneChecklistExecution(
+  slug: string,
+  projetId: string,
+  ligneId: string,
+): Promise<Execution> {
+  return apiSociete<Execution>(slug, `/projets/${projetId}/execution/checklist/${ligneId}`, {
+    method: 'DELETE',
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Pièces jointes rattachées à une ligne — réservé au responsable du bloc +
+// admin (vérifié côté serveur). Le fichier vit dans Images/Documents comme un
+// upload normal (cf. ExecutionService.joindreImages/joindreFichiers) : pas de
+// copie, juste un repère de provenance.
+// -----------------------------------------------------------------------------
+
+export function joindreImagesLigneChecklistExecution(
+  slug: string,
+  projetId: string,
+  ligneId: string,
+  fichiers: { nom: string; url: string }[],
+): Promise<Execution> {
+  return apiSociete<Execution>(
+    slug,
+    `/projets/${projetId}/execution/checklist/${ligneId}/images`,
+    { method: 'POST', body: { fichiers } },
+  );
+}
+
+export function joindreFichiersLigneChecklistExecution(
+  slug: string,
+  projetId: string,
+  ligneId: string,
+  fichiers: { nom: string; url: string; taille?: number }[],
+): Promise<Execution> {
+  return apiSociete<Execution>(
+    slug,
+    `/projets/${projetId}/execution/checklist/${ligneId}/fichiers`,
+    { method: 'POST', body: { fichiers } },
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Blocs (Études / Les Plans / Viabilité / Locaux techniques / Aménagements /
+// Cahiers de menuiserie / Détails / CCTP) — échéance et responsable vivent
+// ici, pas au niveau de l'item ni du module entier.
+// -----------------------------------------------------------------------------
+
+// Échéance + responsable d'un bloc — admin uniquement.
+export function patchBlocExecution(
+  slug: string,
+  projetId: string,
+  groupe: GroupeChecklistExecution,
+  patch: { echeance?: string | null; responsableId?: string | null },
+): Promise<Execution> {
+  return apiSociete<Execution>(slug, `/projets/${projetId}/execution/blocs/${groupe}`, {
     method: 'PATCH',
     body: patch,
   });
 }
 
-export function ajouterOffre(
+// Demande de prolongation — le responsable DE CE BLOC uniquement.
+export function demanderProlongationBlocExecution(
   slug: string,
   projetId: string,
-  type: TypeLot,
-  offre: Omit<OffreEntreprise, 'id'>,
-): Promise<Execution> {
-  return apiSociete<Execution>(slug, `${base(projetId)}/lots/${type}/offres`, {
-    method: 'POST',
-    body: offre,
-  });
-}
-
-export function supprimerOffre(
-  slug: string,
-  projetId: string,
-  type: TypeLot,
-  offreId: string,
+  groupe: GroupeChecklistExecution,
+  patch: { echeance: string; motif?: string },
 ): Promise<Execution> {
   return apiSociete<Execution>(
     slug,
-    `${base(projetId)}/lots/${type}/offres/${offreId}`,
-    { method: 'DELETE' },
+    `/projets/${projetId}/execution/blocs/${groupe}/prolongation`,
+    { method: 'POST', body: patch },
   );
 }
 
-export function attribuerLot(
+// Décision admin sur une demande en attente — admin uniquement.
+export function deciderProlongationBlocExecution(
   slug: string,
   projetId: string,
-  type: TypeLot,
-  entreprise: string,
-  montant: number,
+  groupe: GroupeChecklistExecution,
+  accepter: boolean,
 ): Promise<Execution> {
   return apiSociete<Execution>(
     slug,
-    `${base(projetId)}/lots/${type}/attribution`,
-    { method: 'POST', body: { entreprise, montant } },
-  );
-}
-
-export function ajouterSituation(
-  slug: string,
-  projetId: string,
-  type: TypeLot,
-  s: Omit<SituationPaiement, 'id' | 'numero'>,
-): Promise<Execution> {
-  return apiSociete<Execution>(
-    slug,
-    `${base(projetId)}/lots/${type}/situations`,
-    { method: 'POST', body: s },
-  );
-}
-
-export function supprimerSituation(
-  slug: string,
-  projetId: string,
-  type: TypeLot,
-  situationId: string,
-): Promise<Execution> {
-  return apiSociete<Execution>(
-    slug,
-    `${base(projetId)}/lots/${type}/situations/${situationId}`,
-    { method: 'DELETE' },
-  );
-}
-
-export function ajouterCrChantier(
-  slug: string,
-  projetId: string,
-  texte: string,
-  _auteur: string,
-): Promise<Execution> {
-  return apiSociete<Execution>(slug, `${base(projetId)}/cr`, {
-    method: 'POST',
-    body: { texte },
-  });
-}
-
-export function majReception(
-  slug: string,
-  projetId: string,
-  patch: Partial<Execution['reception']>,
-): Promise<Execution> {
-  return apiSociete<Execution>(slug, `${base(projetId)}/reception`, {
-    method: 'PATCH',
-    body: patch,
-  });
-}
-
-export function ajouterReserve(
-  slug: string,
-  projetId: string,
-  description: string,
-): Promise<Execution> {
-  return apiSociete<Execution>(slug, `${base(projetId)}/reserves`, {
-    method: 'POST',
-    body: { description },
-  });
-}
-
-export function majReserve(
-  slug: string,
-  projetId: string,
-  reserveId: string,
-  patch: Partial<Omit<Reserve, 'id'>>,
-): Promise<Execution> {
-  return apiSociete<Execution>(
-    slug,
-    `${base(projetId)}/reserves/${reserveId}`,
-    { method: 'PATCH', body: patch },
+    `/projets/${projetId}/execution/blocs/${groupe}/prolongation`,
+    { method: 'PATCH', body: { accepter } },
   );
 }

@@ -1,13 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import {
   creerCellule,
   creerCollaborateur,
+  definirDispatcher,
   getCellules,
   getCollaborateurs,
   getIndicateurs,
@@ -18,8 +17,7 @@ import {
   supprimerCollaborateur,
 } from '@/lib/equipe';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import {
   NIVEAUX_COLLABORATEUR,
   NIVEAUX_ORDRE,
@@ -28,10 +26,7 @@ import {
   type Collaborateur,
   type IndicateursCollaborateur,
   type NiveauCollaborateur,
-  type Session,
-  type Societe,
 } from '@/lib/types';
-import { AdminShell } from '@/components/admin/admin-shell';
 import { ChampModal } from '@/components/admin/champ-modal';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
 
@@ -44,9 +39,7 @@ type CelluleModalEtat =
   | { mode: 'renommer'; cel: { id: string; nom: string } };
 
 export default function EquipePage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Équipe');
   const [cellules, setCellules] = useState<Cellule[] | null>(null);
   const [orphelins, setOrphelins] = useState<Collaborateur[]>([]);
   const [recherche, setRecherche] = useState('');
@@ -64,19 +57,8 @@ export default function EquipePage({ params }: Props) {
   }, [params.slug]);
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
     charger();
-  }, [params.slug, router, charger]);
+  }, [charger]);
 
   const total = useMemo(() => {
     if (!cellules) return 0;
@@ -87,19 +69,30 @@ export default function EquipePage({ params }: Props) {
   const filtre = (c: Collaborateur) =>
     !q || `${c.prenom} ${c.nom} ${c.role}`.toLowerCase().includes(q);
 
-  if (!session) return null;
-
-  const groupes: { id: string; nom: string; membres: Collaborateur[] }[] = [
+  const groupes: {
+    id: string;
+    nom: string;
+    membres: Collaborateur[];
+    dispatcherId?: string | null;
+  }[] = [
     ...(cellules ?? []).map((c) => ({
       id: c.id,
       nom: c.nom,
       membres: c.collaborateurs.filter(filtre),
+      dispatcherId: c.dispatcherId,
     })),
     { id: SANS, nom: 'Sans cellule', membres: orphelins.filter(filtre) },
   ];
 
+  async function changerDispatcher(celluleId: string, dispatcherId: string | null) {
+    const maj = await definirDispatcher(params.slug, celluleId, dispatcherId);
+    setCellules((actuel) =>
+      (actuel ?? []).map((c) => (c.id === celluleId ? maj : c)),
+    );
+  }
+
   return (
-    <AdminShell societe={societe} session={session} active="equipe" titre="Équipe">
+    <>
       <div className="projets-toolbar">
         <div className="projets-toolbar-info">
           <input
@@ -170,6 +163,24 @@ export default function EquipePage({ params }: Props) {
                     </span>
                   )}
                 </header>
+
+                {!estSans && (
+                  <label className="equipe-dispatcher">
+                    <span className="equipe-dispatcher-label">Dispatcher</span>
+                    <select
+                      className="field-input"
+                      value={g.dispatcherId ?? ''}
+                      onChange={(e) => changerDispatcher(g.id, e.target.value || null)}
+                    >
+                      <option value="">— Aucun —</option>
+                      {(cellules?.find((c) => c.id === g.id)?.collaborateurs ?? []).map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.prenom} {m.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
 
                 <ul className="equipe-membres">
                   {g.membres.map((c) => (
@@ -289,7 +300,7 @@ export default function EquipePage({ params }: Props) {
           }}
         />
       )}
-    </AdminShell>
+    </>
   );
 }
 
@@ -724,21 +735,30 @@ function CollaborateurModal({
                     · <b>{indic.projetsLivres}</b> livré{indic.projetsLivres > 1 ? 's' : ''}
                   </li>
                   <li>
-                    Avant-projet à l&rsquo;échéance :{' '}
-                    {indic.avantProjetDelais.total === 0 ? (
+                    Tâches complétées :{' '}
+                    {indic.mesTaches.pct === null ? (
                       <span className="cell-sub">—</span>
                     ) : (
-                      <b>
-                        {indic.avantProjetDelais.aTemps}/{indic.avantProjetDelais.total}
-                      </b>
+                      <b>{indic.mesTaches.pct} %</b>
                     )}
                   </li>
                   <li>
-                    Avancement checklists :{' '}
-                    {indic.checklistPct === null ? (
+                    En retard :{' '}
+                    {indic.mesTaches.enRetard === 0 ? (
+                      <span className="cell-sub">Aucune</span>
+                    ) : (
+                      <b>{indic.mesTaches.enRetard}</b>
+                    )}
+                  </li>
+                  <li>
+                    Respect des délais :{' '}
+                    {indic.mesTaches.respectDelais.total === 0 ? (
                       <span className="cell-sub">—</span>
                     ) : (
-                      <b>{indic.checklistPct} %</b>
+                      <b>
+                        {indic.mesTaches.respectDelais.aTemps}/
+                        {indic.mesTaches.respectDelais.total}
+                      </b>
                     )}
                   </li>
                 </ul>

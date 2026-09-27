@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, Minus, type LucideIcon } from 'lucide-react';
 
@@ -68,6 +68,11 @@ export type KpiTuile = {
   icone?: LucideIcon;
   // Filet gauche + verre teinté selon le sens de la métrique.
   accentSens?: SensAccentKpi;
+  // Dégradé vif propre à cette tuile (demande boss, sept. 2026 : chaque KPI
+  // d'un bandeau a sa propre couleur, comme le tableau de bord). Prend le pas
+  // sur accent/accentSens/attenue si les deux sont fournis — un point de
+  // vérité par page appelante (cf. DEGRADE_KPI dans chaque page), pas ici.
+  degrade?: { a: string; b: string };
   // Décor en tête, à droite — UN seul des trois, jamais un graphique inventé :
   //  · `ringPourcentage` : anneau sur un vrai pourcentage déjà calculé
   //  · `tendance`        : pastille flèche + delta réel vs une vraie période antérieure
@@ -94,20 +99,29 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
         const DecorIcone = t.decorIcone;
         const IconeTendance = t.tendance ? ICONE_TENDANCE[t.tendance.sens] : null;
         const estFiltreActif = t.action?.type === 'filtre' && t.action.actif;
+        // Tuile « pleine couleur » (dégradé sur toute la carte, texte blanc) :
+        // accent, sens, ou atténuée (dégradé gris/noir, même famille visuelle
+        // que les autres tuiles mais délibérément sobre) — regroupe les
+        // styles partagés (texte, anneau, pastille, décor).
+        const estColoree = t.accent || !!t.accentSens || t.attenue || !!t.degrade;
         const classe = `kpi-tuile${t.accent ? ' kpi-tuile--accent' : ''}${
           t.alerte ? ' kpi-tuile--alerte' : ''
         }${t.attenue ? ' kpi-tuile--attenue' : ''}${
           t.accentSens ? ` kpi-tuile--sens-${t.accentSens}` : ''
+        }${t.degrade ? ' kpi-tuile--degrade' : ''}${
+          estColoree ? ' kpi-tuile--pleine' : ''
         }${t.action ? ' kpi-tuile--clic' : ''}${estFiltreActif ? ' kpi-tuile--actif' : ''}`;
+        const style = t.degrade
+          ? ({ '--kpi-a': t.degrade.a, '--kpi-b': t.degrade.b } as CSSProperties)
+          : undefined;
         const contenu = (
           <>
             <div className="kpi-tuile-tete">
               {Icone && (
                 <span className="kpi-tuile-icone" aria-hidden>
-                  <Icone size={15} strokeWidth={1.75} />
+                  <Icone size={18} strokeWidth={2} />
                 </span>
               )}
-              <p className="kpi-tuile-label">{t.label}</p>
               <span className="kpi-tuile-tete-droite">
                 {t.ringPourcentage != null && <AnneauMini pourcentage={t.ringPourcentage} />}
                 {t.tendance && IconeTendance && (
@@ -126,6 +140,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
                 )}
               </span>
             </div>
+            <p className="kpi-tuile-label">{t.label}</p>
             {t.contenu ?? <p className="kpi-tuile-valeur">{t.valeur}</p>}
             {t.sousTexte && <p className="kpi-tuile-sous">{t.sousTexte}</p>}
           </>
@@ -137,6 +152,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
               key={t.cle}
               type="button"
               className={classe}
+              style={style}
               aria-haspopup="dialog"
               onClick={t.action.onClick}
             >
@@ -146,7 +162,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
         }
         if (t.action?.type === 'lien') {
           return (
-            <Link key={t.cle} href={t.action.href} className={classe}>
+            <Link key={t.cle} href={t.action.href} className={classe} style={style}>
               {contenu}
             </Link>
           );
@@ -157,6 +173,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
               key={t.cle}
               type="button"
               className={classe}
+              style={style}
               aria-pressed={t.action.actif}
               onClick={t.action.onClick}
             >
@@ -165,7 +182,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
           );
         }
         return (
-          <div key={t.cle} className={classe}>
+          <div key={t.cle} className={classe} style={style}>
             {contenu}
           </div>
         );

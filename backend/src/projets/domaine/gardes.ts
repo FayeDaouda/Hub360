@@ -6,13 +6,14 @@ type VersionMinimale = { etape: string; couts: unknown };
 // GARDE MIROIR de frontend/lib/types.ts::peutAvancerPhase
 // Toute modification ici doit être répercutée côté front, et réciproquement.
 // Les phases peuvent se chevaucher dans la réalité du terrain (décision boss,
-// sept. 2026) : plus aucun verrou dur sur l'avant-projet non validé ou le
-// permis non obtenu — seule la dernière phase de la séquence bloque
-// l'avancement. `avantProjetValide`/`permisObtenu` restent en paramètres pour
-// alimenter un rappel doux côté UI (voir avertissementChangementPhase).
+// sept. 2026) : plus aucun verrou dur — seule la dernière phase de la
+// séquence bloque l'avancement. `permisObtenu` reste en paramètre pour
+// alimenter un rappel doux côté UI (voir avertissementChangementPhase) — le
+// verrou « avant-projet validé » a été retiré avec la Validation macro
+// (chantier sept. 2026, cf. schema.prisma::AvantProjet).
 export function peutAvancerPhase(
   projet: { categorie: Categorie; phase: Phase },
-  _contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+  _contexte: { permisObtenu: boolean },
 ): { ok: boolean; raison?: string } {
   const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
   const i = sequence.indexOf(projet.phase);
@@ -23,16 +24,13 @@ export function peutAvancerPhase(
 }
 
 // Rappel doux (n'affecte jamais `peutAvancerPhase.ok`) : signale qu'on quitte
-// « avant_projet » sans validation ou « permis » sans permis en main. Affiché
-// via la prop `avertissement` du PhaseStepper, au même titre que les autres
-// rappels (études/lots en attente) — jamais un blocage serveur.
+// « permis » sans permis en main. Affiché via la prop `avertissement` du
+// PhaseStepper, au même titre que les autres rappels (études/lots en
+// attente) — jamais un blocage serveur.
 export function avertissementChangementPhase(
   projet: { phase: Phase },
-  contexte: { avantProjetValide: boolean; permisObtenu: boolean },
+  contexte: { permisObtenu: boolean },
 ): string | null {
-  if (projet.phase === 'avant_projet' && !contexte.avantProjetValide) {
-    return "L'avant-projet n'est pas encore validé.";
-  }
   if (projet.phase === 'permis' && !contexte.permisObtenu) {
     return 'Le permis de construire n’est pas encore obtenu.';
   }
@@ -66,34 +64,85 @@ export function preBilanComplet(
   return total > 0;
 }
 
-// GARDE MIROIR de frontend/lib/types.ts::checklistAvantProjet (les 4 clés).
-// Le backend ne vérifie que la complétude ; les libellés restent au front.
-export function checklistComplete(ap: {
-  programmeValide: boolean;
-  budgetValide: boolean;
-  esquisseValidee: boolean;
-  engagementValide: boolean;
-}): boolean {
-  return (
-    ap.programmeValide && ap.budgetValide && ap.esquisseValidee && ap.engagementValide
-  );
-}
-
 // MIROIR de frontend/lib/types.ts::avancementChecklistAvp
-// Avancement des sous-checklists opérationnelles. Purement indicatif —
-// aucun verrou de phase, contrairement à checklistComplete. Pas de statut
-// « non requis » : un item qui ne concerne pas le projet se supprime plutôt
-// que de sortir du dénominateur (une seule façon de dire « ne compte pas »).
+// Avancement des checklists Permis/Exécution (case « fait » manuelle) —
+// purement indicatif, aucun verrou de phase. Un item « non requis » (sept.
+// 2026, Permis uniquement pour l'instant — Exécution n'a pas ce champ, donc
+// toujours undefined/false pour lui) compte comme réglé, au même titre qu'un
+// item fait — même convention que avancementChecklistFichiers ci-dessous.
+// NE PAS réutiliser pour Avant-projet (statut dérivé des fichiers, plus de
+// case « fait » ni de ce champ).
 export function avancementChecklistAvp(
-  lignes: { fait: boolean }[],
+  lignes: { fait: boolean; nonRequise?: boolean }[],
 ): { faits: number; total: number; pct: number; complete: boolean } {
-  const faits = lignes.filter((l) => l.fait).length;
+  const faits = lignes.filter((l) => l.fait || l.nonRequise).length;
   const total = lignes.length;
   return {
     faits,
     total,
     pct: total ? Math.round((faits / total) * 100) : 0,
     complete: total > 0 && faits === total,
+  };
+}
+
+// MIROIR de frontend/lib/types.ts::avancementChecklistFichiers
+// Avancement pour les checklists à statut dérivé des fichiers (Avant-projet
+// depuis sept. 2026, même modèle que Foncier/Unbord) : un item « non
+// nécessaire » compte comme réglé (n'est plus en attente), au même titre
+// qu'un item avec au moins un fichier joint.
+export function avancementChecklistFichiers(
+  items: { statut: 'fait' | 'en_attente' | 'non_necessaire' }[],
+): { faits: number; total: number; pct: number; complete: boolean } {
+  const faits = items.filter((i) => i.statut !== 'en_attente').length;
+  const total = items.length;
+  return {
+    faits,
+    total,
+    pct: total ? Math.round((faits / total) * 100) : 0,
+    complete: total > 0 && faits === total,
+  };
+}
+
+// « Mes tâches » — indicateur de performance individuel (point 3, sept.
+// 2026, décision boss) : les lignes Avant-projet qui me sont assignées +
+// les items des blocs Permis/Exécution dont je suis responsable, crédités
+// UN PAR UN comme si assignés individuellement (le bloc n'est qu'un
+// raccourci d'assignation groupée, pas une unité de mesure à part — sinon
+// on comparerait des grains différents entre modules). `echeance` = celle
+// de la ligne pour Avant-projet, celle du bloc parent pour Permis/Exécution
+// (déjà résolue par l'appelant). Deux signaux gardés séparés plutôt que
+// fondus en un score : « en retard maintenant » (dérivé à la volée, pour
+// agir) et un ratio historique « fait avant/après échéance » (pour la
+// fiabilité dans la durée) — cohérent avec le principe déjà tenu ailleurs
+// (pipeline actif ≠ taux de conversion), et avec « aucun score agrégé »
+// affiché sur Mes indicateurs.
+export function statsTaches(
+  taches: { fait: boolean; echeance: string | null; faitLe: Date | null }[],
+): {
+  total: number;
+  faites: number;
+  pct: number | null;
+  enRetard: number;
+  respectDelais: { aTemps: number; total: number };
+} {
+  const total = taches.length;
+  const faites = taches.filter((t) => t.fait).length;
+  const aujourdHui = new Date().toISOString().slice(0, 10);
+  const enRetard = taches.filter(
+    (t) => !t.fait && t.echeance != null && t.echeance < aujourdHui,
+  ).length;
+  const faitesAvecEcheance = taches.filter(
+    (t) => t.fait && t.echeance != null && t.faitLe != null,
+  );
+  const aTemps = faitesAvecEcheance.filter(
+    (t) => t.faitLe!.toISOString().slice(0, 10) <= t.echeance!,
+  ).length;
+  return {
+    total,
+    faites,
+    pct: total ? Math.round((faites / total) * 100) : null,
+    enRetard,
+    respectDelais: { aTemps, total: faitesAvecEcheance.length },
   };
 }
 

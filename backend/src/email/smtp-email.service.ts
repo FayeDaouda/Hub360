@@ -1,7 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
-import { EmailService, LienCompte } from './email.service';
+import {
+  DevisEmail,
+  EmailService,
+  LienCompte,
+  RelanceDevisEmail,
+  RelanceFactureEmail,
+} from './email.service';
 import { contenuLienCompte } from './contenu-lien-compte';
+import { contenuDevis } from './contenu-devis';
+import { contenuRelanceFacture } from './contenu-relance-facture';
+import { contenuRelanceDevis } from './contenu-relance-devis';
 
 // Transport SMTP (nodemailer). Instancié uniquement quand EMAIL_TRANSPORT=smtp
 // ET SMTP_HOST est renseigné (cf. email.module.ts) — donc jamais actif sans
@@ -46,6 +55,72 @@ export class SmtpEmailService extends EmailService {
     } catch (e) {
       this.log.error(
         `[smtp] échec d'envoi ${l.type} à ${l.email} : ${
+          e instanceof Error ? e.message : e
+        }`,
+      );
+      return { envoye: false };
+    }
+  }
+
+  async envoyerDevis(d: DevisEmail): Promise<{ envoye: boolean }> {
+    const { sujet, texte, html } = contenuDevis(d);
+    try {
+      await this.transport.sendMail({
+        from: this.from,
+        to: d.email,
+        subject: sujet,
+        text: texte,
+        html,
+      });
+      this.log.log(`[smtp] devis ${d.reference} envoyé à ${d.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(
+        `[smtp] échec d'envoi devis ${d.reference} à ${d.email} : ${
+          e instanceof Error ? e.message : e
+        }`,
+      );
+      return { envoye: false };
+    }
+  }
+
+  async envoyerRelanceFacture(r: RelanceFactureEmail): Promise<{ envoye: boolean }> {
+    const { sujet, texte, html } = contenuRelanceFacture(r);
+    try {
+      await this.transport.sendMail({
+        from: this.from,
+        to: r.email,
+        subject: sujet,
+        text: texte,
+        html,
+      });
+      this.log.log(`[smtp] relance facture ${r.reference} envoyée à ${r.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(
+        `[smtp] échec d'envoi relance ${r.reference} à ${r.email} : ${
+          e instanceof Error ? e.message : e
+        }`,
+      );
+      return { envoye: false };
+    }
+  }
+
+  async envoyerRelanceDevis(r: RelanceDevisEmail): Promise<{ envoye: boolean }> {
+    const { sujet, texte, html } = contenuRelanceDevis(r);
+    try {
+      await this.transport.sendMail({
+        from: this.from,
+        to: r.email,
+        subject: sujet,
+        text: texte,
+        html,
+      });
+      this.log.log(`[smtp] relance devis ${r.reference} envoyée à ${r.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(
+        `[smtp] échec d'envoi relance devis ${r.reference} à ${r.email} : ${
           e instanceof Error ? e.message : e
         }`,
       );

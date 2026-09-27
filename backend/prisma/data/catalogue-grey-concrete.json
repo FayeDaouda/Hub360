@@ -1,0 +1,279 @@
+{
+  "meta": {
+    "entite": "Grey Concrete SARL",
+    "catalogue": "Produits de facturation — Conception",
+    "version": "1.0",
+    "date": "2026-09-22",
+    "devise": "XOF",
+    "prix_exprimes": "HT",
+    "tva_taux_pct": 18
+  },
+
+  "familles": [
+    {
+      "code": "CO",
+      "libelle": "Conception",
+      "mode_calcul": "TARIF_X_SURFACE_X_PLANCHES",
+      "formule": "prix_unitaire * surface_m2 * nombre_planches",
+      "champs_requis": ["surface_m2", "nombre_planches"],
+      "prix_modifiable": false,
+      "produits": [
+        {
+          "code": "CO1",
+          "libelle": "Conception — faible complexité",
+          "description": "Solution économique pour les projets à faible complexité architecturale. Approche fonctionnelle et optimisée, réalisations standards respectant les contraintes budgétaires.",
+          "unite": "m2",
+          "prix_ht": 5000
+        },
+        {
+          "code": "CO2",
+          "libelle": "Conception — complexité intermédiaire",
+          "description": "Équilibre entre coût et performance. Projets intégrant des exigences architecturales spécifiques, conception soignée, résultat esthétique et fonctionnel.",
+          "unite": "m2",
+          "prix_ht": 7000
+        },
+        {
+          "code": "CO3",
+          "libelle": "Conception — forte complexité / spécialisation",
+          "description": "Solution premium pour projets architecturaux complexes. Approche sur-mesure, innovation et précision, adaptée aux environnements les plus exigeants.",
+          "unite": "m2",
+          "prix_ht": 10000
+        }
+      ]
+    },
+
+    {
+      "code": "IM",
+      "libelle": "Images intérieures",
+      "mode_calcul": "PRIX_X_QUANTITE",
+      "formule": "prix_unitaire * quantite",
+      "champs_requis": ["quantite"],
+      "prix_modifiable": false,
+      "note": "Les IM couvrent exclusivement les rendus INTÉRIEURS. Les rendus extérieurs (façades) sont inclus dans toute prestation CO et ne se facturent pas ici.",
+      "produits": [
+        {
+          "code": "IM1",
+          "libelle": "Rendu 3D intérieur — IA",
+          "description": "Rendus générés par IA. Exactitude des pièces, aménagement d'un même style, sans détail d'aménagement fourni.",
+          "unite": "piece",
+          "prix_ht": 50000
+        },
+        {
+          "code": "IM2",
+          "libelle": "Rendu 3D intérieur — atelier",
+          "description": "Design et rendus réalisés en atelier, avec recherche sur les matériaux et le mobilier. Livré sous format moodboard.",
+          "unite": "piece",
+          "prix_ht": 100000
+        },
+        {
+          "code": "IM3",
+          "libelle": "Rendu 3D intérieur — sur-mesure",
+          "description": "Recherche spécifique et aménagement sur-mesure. Détails d'aménagement et moodboard fournis.",
+          "unite": "piece",
+          "prix_ht": 150000
+        }
+      ]
+    },
+
+    {
+      "code": "SU",
+      "libelle": "Suivi de chantier",
+      "mode_calcul": "PRIX_X_QUANTITE",
+      "formule": "prix_unitaire * nombre_mois",
+      "champs_requis": ["nombre_mois"],
+      "prix_modifiable": false,
+      "regle_auto": "La catégorie SU est déduite automatiquement de la catégorie CO du projet : CO1→SU1, CO2→SU2, CO3→SU3. Le champ ne doit pas être librement sélectionnable.",
+      "produits": [
+        {
+          "code": "SU1",
+          "libelle": "Suivi de chantier — projet simple",
+          "description": "Contrôle et supervision de l'avancement : conformité des travaux aux plans et spécifications, gestion des délais, coordination des intervenants, suivi des coûts.",
+          "unite": "mois",
+          "prix_ht": 300000,
+          "co_associe": "CO1"
+        },
+        {
+          "code": "SU2",
+          "libelle": "Suivi de chantier — projet intermédiaire",
+          "description": "Contrôle et supervision de l'avancement : conformité des travaux aux plans et spécifications, gestion des délais, coordination des intervenants, suivi des coûts.",
+          "unite": "mois",
+          "prix_ht": 500000,
+          "co_associe": "CO2"
+        },
+        {
+          "code": "SU3",
+          "libelle": "Suivi de chantier — projet complexe",
+          "description": "Contrôle et supervision de l'avancement : conformité des travaux aux plans et spécifications, gestion des délais, coordination des intervenants, suivi des coûts.",
+          "unite": "mois",
+          "prix_ht": 1000000,
+          "co_associe": "CO3"
+        }
+      ]
+    },
+
+    {
+      "code": "TS",
+      "libelle": "Travaux supplémentaires",
+      "mode_calcul": "MIXTE",
+      "note": "Déclenché uniquement après validation d'une phase (APS ou APD). Tout TS exige un devis complémentaire accepté par écrit AVANT exécution — prévoir un statut de validation bloquant.",
+      "produits": [
+        {
+          "code": "TS-MIN",
+          "libelle": "TS — reprise mineure",
+          "description": "Modification après validation d'une phase, sans changement de plan-type.",
+          "unite": "reprise",
+          "mode_calcul": "FORFAIT",
+          "prix_ht": 100000,
+          "prix_modifiable": false
+        },
+        {
+          "code": "TS-MAJ",
+          "libelle": "TS — reprise majeure",
+          "description": "Modification entraînant un nouveau plan-type (nouvelle planche).",
+          "unite": "m2",
+          "mode_calcul": "TARIF_CO_X_SURFACE_X_PLANCHES",
+          "formule": "tarif_categorie_CO_du_projet * surface_concernee * nombre_planches_concernees",
+          "champs_requis": ["surface_concernee", "nombre_planches_concernees"],
+          "prix_ht": null,
+          "prix_modifiable": false
+        }
+      ]
+    },
+
+    {
+      "code": "ET",
+      "libelle": "Études techniques (refacturation)",
+      "mode_calcul": "REFACTURATION_AVEC_COORDINATION",
+      "formule": "montant_facture_bureau * (1 + taux_coordination)",
+      "taux_coordination_pct": 10,
+      "champs_requis": ["montant_facture_bureau", "nom_bureau_etude"],
+      "prix_modifiable": true,
+      "note": "Grey Concrete avance et règle les bureaux d'étude, puis refacture au client majoré de 10 % de frais de coordination. Chaque étude doit apparaître sur une LIGNE DISTINCTE de la facture.",
+      "regle_tresorerie": "Le règlement des intervenants ne doit être déclenché qu'APRÈS encaissement de la somme correspondante auprès du client. Prévoir un statut : 'Encaissé client' → débloque 'À régler bureau'.",
+      "produits": [
+        {
+          "code": "ETS",
+          "libelle": "Étude de sol",
+          "description": "Étude géotechnique du terrain par un bureau spécialisé.",
+          "unite": "forfait",
+          "prix_ht": null
+        },
+        {
+          "code": "ETB",
+          "libelle": "Étude béton armé / structure",
+          "description": "Étude de structure et dimensionnement béton armé par un bureau spécialisé.",
+          "unite": "forfait",
+          "prix_ht": null
+        },
+        {
+          "code": "ETL",
+          "libelle": "Études des lots techniques",
+          "description": "Études des lots techniques (électricité, plomberie, réseaux) par un bureau spécialisé.",
+          "unite": "forfait",
+          "prix_ht": null
+        }
+      ]
+    },
+
+    {
+      "code": "PC",
+      "libelle": "Permis de construire",
+      "mode_calcul": "FORFAIT_VARIABLE",
+      "prix_modifiable": true,
+      "note": "Forfait établi manuellement selon la taille du projet. Échéancier propre, distinct de celui de la conception.",
+      "echeancier": [
+        { "libelle": "Avance à la commande", "pourcentage": 50, "declencheur": "COMMANDE" },
+        { "libelle": "Solde à la livraison", "pourcentage": 50, "declencheur": "LIVRAISON_LIVRABLE" }
+      ],
+      "produits": [
+        {
+          "code": "DPC",
+          "libelle": "Dépôt de permis de construire",
+          "description": "Constitution du dossier de dépôt (plans adaptés et conformes aux normes, cachet de l'architecte, notice de sécurité, fiche technique) et dépôt à l'urbanisme.",
+          "livrable": "Récépissé de dépôt",
+          "unite": "forfait",
+          "prix_ht": null
+        },
+        {
+          "code": "SPC",
+          "libelle": "Suivi de permis de construire",
+          "description": "Suivi et compte-rendu de chaque étape de l'instruction, avec intervention à chaque niveau.",
+          "livrable": "Plans autorisés et arrêté d'autorisation",
+          "unite": "forfait",
+          "prix_ht": null,
+          "note": "Les frais, taxes et règlements dus à la mairie restent à la charge du client — ne jamais les intégrer à ce forfait."
+        }
+      ]
+    },
+
+    {
+      "code": "EX",
+      "libelle": "Extras",
+      "mode_calcul": "PRIX_X_QUANTITE",
+      "formule": "prix_unitaire * nombre_mois",
+      "champs_requis": ["nombre_mois"],
+      "prix_modifiable": false,
+      "produits": [
+        {
+          "code": "BIMX",
+          "libelle": "Suivi BIM",
+          "description": "Modélisation et coordination des données du bâtiment tout au long du chantier.",
+          "unite": "mois",
+          "prix_ht": 100000
+        },
+        {
+          "code": "CAM",
+          "libelle": "Caméra de surveillance de chantier",
+          "description": "Installation et suivi par caméras de surveillance du chantier.",
+          "unite": "mois",
+          "prix_ht": 100000,
+          "note": "En sus de la facturation des caméras elles-mêmes (matériel refacturé séparément)."
+        }
+      ]
+    }
+  ],
+
+  "regles_metier": {
+    "planche": {
+      "definition": "Une planche désigne une page de dessin, soit un plan-type à concevoir. Elle se distingue du nombre d'étages : une nouvelle planche n'est comptée que lorsque le plan change. Des niveaux identiques ne constituent qu'une seule planche.",
+      "impact_technique": "Champ obligatoire sur la fiche projet. Utilisé par tout calcul de la famille CO et par TS-MAJ. Ne jamais l'assimiler au nombre d'étages."
+    },
+    "su_indexe_sur_co": "La catégorie de suivi de chantier découle automatiquement de la catégorie de conception retenue pour le projet (CO1→SU1, CO2→SU2, CO3→SU3).",
+    "rendus": "Les rendus 3D des façades (extérieurs) sont inclus dans toute prestation CO. Les produits IM couvrent exclusivement les rendus intérieurs.",
+    "livrables_co_identiques": "Les livrables sont identiques pour CO1, CO2 et CO3 : plans APS, plans d'exécution tous corps d'état, dossier de permis de construire, rendus 3D des façades. Seul le niveau de complexité et de spécialisation technique distingue les catégories.",
+    "exclusions_conception": [
+      "Études techniques (sol, structure, lots techniques) — voir famille ET",
+      "Bureau de contrôle",
+      "Prestations de dépôt et suivi de permis — voir famille PC",
+      "Frais et taxes de dépôt et d'obtention du permis de construire (toujours à la charge du client)"
+    ]
+  },
+
+  "echeanciers": {
+    "conception": [
+      { "libelle": "Acompte à la signature", "pourcentage": 40, "declencheur": "SIGNATURE_CONTRAT" },
+      { "libelle": "Paiement intermédiaire", "pourcentage": 40, "declencheur": "FIN_APD" },
+      { "libelle": "Solde", "pourcentage": 20, "declencheur": "LIVRAISON_PLANS_EXECUTION" }
+    ],
+    "permis": [
+      { "libelle": "Avance", "pourcentage": 50, "declencheur": "COMMANDE" },
+      { "libelle": "Solde", "pourcentage": 50, "declencheur": "LIVRAISON_LIVRABLE" }
+    ]
+  },
+
+  "parametres_facturation": {
+    "tva_taux_pct": 18,
+    "penalites_retard_pct_mensuel": 1.5,
+    "validite_devis_jours": 7,
+    "delai_mise_en_demeure_jours": 15,
+    "mentions_legales_pied_de_page": "GREY CONCRETE SARL — NINEA 009429483 — COFI 292 — RCCM SN DKR 2022 B 17567 — Capital 1 000 000 FCFA"
+  },
+
+  "notes_integration": [
+    "Calculer systématiquement en HT puis appliquer la TVA. Ne JAMAIS saisir un montant TTC dans un champ HT (source d'erreur connue sur l'outil de facturation actuel).",
+    "Ne jamais utiliser une remise pour ajuster un TTC à un montant rond : une remise porte sur le HT, la TVA se recalcule ensuite sur le montant remisé.",
+    "Les acomptes doivent afficher une ventilation cohérente : HT + TVA = TTC de l'acompte, et non le HT du projet entier.",
+    "Prévoir l'affichage du reste dû sur les reçus en cas de paiement échelonné.",
+    "Les familles ET et PC ont des prix saisis manuellement : prévoir un champ montant libre + contrôle de cohérence."
+  ]
+}

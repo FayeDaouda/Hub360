@@ -1,13 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSociete } from '@/lib/api';
 import { getProjetsExecution } from '@/lib/projets';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
-import type { ProjetExecution, Session, Societe } from '@/lib/types';
-import { CollaborateurShell } from '@/components/collab/collab-shell';
+import { useTitrePage } from '@/lib/layout-contexte';
+import type { ProjetExecution } from '@/lib/types';
 import { DossierProjet } from '@/components/admin/dossier-projet';
 
 type Props = { params: { slug: string } };
@@ -29,9 +25,7 @@ function statutInitial(): FiltreStatut {
 // Liste des projets du collaborateur — l'API restreint déjà le périmètre à sa
 // cellule (+ ceux où il est dessinateur / responsable 3D), cf. AccesProjetGuard.
 export default function CollabProjetsPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Mes projets');
   const [projets, setProjets] = useState<ProjetExecution[] | null>(null);
   const [recherche, setRecherche] = useState('');
   const [statut, setStatut] = useState<FiltreStatut>('tous');
@@ -42,19 +36,8 @@ export default function CollabProjetsPage({ params }: Props) {
   }, []);
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'collaborateur') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
     getProjetsExecution(params.slug).then(setProjets).catch(() => setProjets([]));
-  }, [params.slug, router]);
+  }, [params.slug]);
 
   const q = recherche.trim().toLowerCase();
   const filtres = useMemo(() => {
@@ -69,15 +52,8 @@ export default function CollabProjetsPage({ params }: Props) {
     });
   }, [projets, q, statut]);
 
-  if (!session) return null;
-
   return (
-    <CollaborateurShell
-      societe={societe}
-      session={session}
-      active="projets"
-      titre="Mes projets"
-    >
+    <>
       <div className="projets-toolbar">
         <div className="projets-toolbar-info">
           <input
@@ -124,11 +100,11 @@ export default function CollabProjetsPage({ params }: Props) {
               key={p.id}
               projet={p}
               href={`/collab/${params.slug}/projets/${p.id}`}
-              celluleNom={null}
+              celluleNoms={[]}
             />
           ))}
         </div>
       )}
-    </CollaborateurShell>
+    </>
   );
 }

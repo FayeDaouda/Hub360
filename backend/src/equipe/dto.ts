@@ -22,6 +22,12 @@ export class MajCelluleDto {
   @IsString() @MinLength(1) @MaxLength(120) nom!: string;
 }
 
+// null = retirer le dispatcher (aucun désigné). Admin uniquement — cf.
+// CellulesService.definirDispatcher (doit appartenir à la cellule).
+export class DefinirDispatcherDto {
+  @IsOptional() @IsString() dispatcherId!: string | null;
+}
+
 // `photo` = data URI (redimensionnée client-side), stockée telle quelle dans
 // photoCle en transition — seam S3 identique à ImageProjet.
 export class CreerCollaborateurDto {

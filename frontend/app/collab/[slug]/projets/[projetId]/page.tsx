@@ -1,24 +1,22 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, FileText, HardHat, Images, Lightbulb, Ruler, Stamp } from 'lucide-react';
-import { getSociete } from '@/lib/api';
+import { ArrowLeft, FileText, HardHat, Images, LandPlot, Lightbulb, Ruler, Stamp } from 'lucide-react';
 import { getAvantProjet, getProjetExecution } from '@/lib/projets';
 import { getPermis } from '@/lib/permis';
 import { getEtudes } from '@/lib/etudes';
 import { getExecution } from '@/lib/execution';
 import { getMonProfil } from '@/lib/collab';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistAvp,
+  avancementChecklistFichiers,
   avertissementChangementPhase,
   CATEGORIES,
+  COULEUR_SECTION,
   etudesEnAttente,
   itemsChecklistAvp,
-  lotsEnAttente,
   NATURES_DOSSIER,
   SECTIONS_PAR_CATEGORIE,
   SECTIONS_PROJET,
@@ -30,12 +28,9 @@ import {
   type Execution,
   type ProjetExecution,
   type SectionProjet,
-  type Session,
-  type Societe,
   type StatutPermis,
   type StatutProjetExec,
 } from '@/lib/types';
-import { CollaborateurShell } from '@/components/collab/collab-shell';
 import { PhaseStepper } from '@/components/admin/phase-stepper';
 
 type Props = { params: { slug: string; projetId: string } };
@@ -50,23 +45,21 @@ const PILL_STATUT_EXEC: Record<StatutProjetExec, string> = {
 const ICONE_SECTION: Record<SectionProjet, typeof Lightbulb> = {
   'avant-projet': Lightbulb,
   images: Images,
+  foncier: LandPlot,
   documents: FileText,
   permis: Stamp,
   etude: Ruler,
   execution: HardHat,
 };
 
+
 // Fiche projet côté collaborateur : lecture seule. Vue d'ensemble (en-tête,
 // frise de phase, état de chaque section) + accès aux 6 sections en lecture
 // seule (pages dédiées sous ce dossier). Toute écriture reste côté admin
 // (cf. AccesProjetGuard : GET large, écriture 403 pour le collaborateur).
 export default function CollabProjetPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [celluleNom, setCelluleNom] = useState<string | null>(null);
-  const [avantProjetValideLe, setAvantProjetValideLe] = useState<string | null>(null);
   const [avantProjetChecklists, setAvantProjetChecklists] = useState<ChecklistAvpGroupe[]>(
     [],
   );
@@ -74,19 +67,9 @@ export default function CollabProjetPage({ params }: Props) {
   const [etudes, setEtudes] = useState<Etudes | null>(null);
   const [execution, setExecution] = useState<Execution | null>(null);
 
-  useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'collaborateur') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
+  useTitrePage(projet ? projet.programme : 'Projet');
 
+  useEffect(() => {
     getProjetExecution(params.slug, params.projetId)
       .then((p) => {
         setProjet(p);
@@ -97,13 +80,15 @@ export default function CollabProjetPage({ params }: Props) {
             .catch(() => setStatutPermis(null));
           getEtudes(params.slug, params.projetId).then(setEtudes).catch(() => setEtudes(null));
         }
-        getExecution(params.slug, params.projetId, p.categorie)
+        getExecution(params.slug, params.projetId)
           .then(setExecution)
           .catch(() => setExecution(null));
         // Nom de cellule : via la fiche du collaborateur (pas d'accès à /cellules).
+        // Un projet peut avoir plusieurs équipes (sept. 2026) — on affiche la
+        // sienne dès qu'elle en fait partie.
         getMonProfil(params.slug)
           .then((moi) => {
-            if (moi.celluleId && moi.celluleId === p.celluleAssignee) {
+            if (moi.celluleId && p.cellules.includes(moi.celluleId)) {
               setCelluleNom(moi.celluleNom);
             }
           })
@@ -113,11 +98,10 @@ export default function CollabProjetPage({ params }: Props) {
 
     getAvantProjet(params.slug, params.projetId)
       .then((ap) => {
-        setAvantProjetValideLe(ap.valideLe);
         setAvantProjetChecklists(ap.checklists);
       })
       .catch(() => {});
-  }, [params.slug, params.projetId, router]);
+  }, [params.slug, params.projetId]);
 
   const sections = useMemo(() => {
     if (!projet) return [];
@@ -126,15 +110,14 @@ export default function CollabProjetPage({ params }: Props) {
     );
   }, [projet]);
 
-  if (!session) return null;
+  // Avancement de la checklist Exécution (8 blocs) — remplace l'ancien
+  // décompte de lots (retiré sept. 2026, cf. mémoire).
+  const execAv = execution
+    ? avancementChecklistAvp(execution.checklists.flatMap((g) => g.items))
+    : null;
 
   return (
-    <CollaborateurShell
-      societe={societe}
-      session={session}
-      active="projets"
-      titre={projet ? projet.programme : 'Projet'}
-    >
+    <>
       <Link href={`/collab/${params.slug}/projets`} className="lien-retour">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>Mes projets</span>
@@ -175,21 +158,21 @@ export default function CollabProjetPage({ params }: Props) {
           <PhaseStepper
             slug={params.slug}
             projet={projet}
-            avantProjetValide={!!avantProjetValideLe}
             permisObtenu={statutPermis === 'obtenu'}
             avertissement={
               avertissementChangementPhase(projet, {
-                avantProjetValide: !!avantProjetValideLe,
                 permisObtenu: statutPermis === 'obtenu',
               }) ??
               (projet.phase === 'etudes' && etudes && etudesEnAttente(etudes) > 0
                 ? `${etudesEnAttente(etudes)} étude${
                     etudesEnAttente(etudes) > 1 ? 's' : ''
                   } encore en cours.`
-                : projet.phase === 'chantier' && execution && lotsEnAttente(execution) > 0
-                  ? `${lotsEnAttente(execution)} lot${
-                      lotsEnAttente(execution) > 1 ? 's' : ''
-                    } pas encore terminé${lotsEnAttente(execution) > 1 ? 's' : ''}.`
+                : projet.phase === 'chantier' && execAv && execAv.total > 0 && !execAv.complete
+                  ? `${execAv.total - execAv.faits} item${
+                      execAv.total - execAv.faits > 1 ? 's' : ''
+                    } pas encore coché${
+                      execAv.total - execAv.faits > 1 ? 's' : ''
+                    } sur la checklist chantier.`
                   : null)
             }
             onChange={() => {}}
@@ -201,12 +184,10 @@ export default function CollabProjetPage({ params }: Props) {
               const Icone = ICONE_SECTION[section.cle];
               let etat: { classe: string; texte: string } | null = null;
               if (section.cle === 'avant-projet') {
-                if (avantProjetValideLe) {
-                  etat = { classe: 'pill--succes', texte: 'Validé' };
+                const av = avancementChecklistFichiers(itemsChecklistAvp(avantProjetChecklists));
+                if (av.complete) {
+                  etat = { classe: 'pill--succes', texte: 'Terminé' };
                 } else {
-                  const av = avancementChecklistAvp(
-                    itemsChecklistAvp(avantProjetChecklists),
-                  );
                   etat = {
                     classe: 'pill--attention',
                     texte: av.total ? `En cours · ${av.faits}/${av.total}` : 'En cours',
@@ -229,24 +210,17 @@ export default function CollabProjetPage({ params }: Props) {
                       classe: 'pill--info',
                       texte: `${etudesEnAttente(etudes)} en cours`,
                     };
-              } else if (
-                section.cle === 'execution' &&
-                execution &&
-                execution.lots.length > 0
-              ) {
-                const enAttente = lotsEnAttente(execution);
-                etat = execution.reception.receptionDefinitive
-                  ? { classe: 'pill--succes', texte: 'Réceptionné' }
-                  : {
-                      classe: 'pill--info',
-                      texte: `${enAttente} lot${enAttente > 1 ? 's' : ''}`,
-                    };
+              } else if (section.cle === 'execution' && execAv && execAv.total > 0) {
+                etat = {
+                  classe: execAv.complete ? 'pill--succes' : 'pill--info',
+                  texte: execAv.complete ? 'Terminé' : `${execAv.faits}/${execAv.total}`,
+                };
               }
               return (
                 <Link
                   key={section.cle}
                   href={`/collab/${params.slug}/projets/${params.projetId}/${section.cle}`}
-                  className="projet-carte"
+                  className={`projet-carte projet-carte--${COULEUR_SECTION[section.cle]}`}
                 >
                   <span className="projet-carte-icone">
                     <Icone size={22} strokeWidth={1.75} aria-hidden />
@@ -264,6 +238,6 @@ export default function CollabProjetPage({ params }: Props) {
           </div>
         </>
       )}
-    </CollaborateurShell>
+    </>
   );
 }

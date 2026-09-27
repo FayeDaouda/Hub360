@@ -122,6 +122,9 @@ function formater(f: FichierAvecAuteurs) {
     taille: f.taille,
     type: f.type,
     phase: f.phase,
+    // Posé quand l'upload part du bouton sur une ligne de la checklist
+    // Permis plutôt que de cette page — cf. PermisService.joindreFichiers.
+    ligneChecklistPermisId: f.ligneChecklistPermisId,
     note: f.note,
     ajoutePar: nomComplet(f.ajoutePar),
     ajouteLe: f.ajouteLe,

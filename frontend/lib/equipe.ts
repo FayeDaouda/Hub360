@@ -20,11 +20,15 @@ export function getCellules(slug: string): Promise<Cellule[]> {
 
 export function getCollaborateurs(
   slug: string,
-  opts: { q?: string; cellule?: string } = {},
+  opts: { q?: string; cellule?: string | string[] } = {},
 ): Promise<Collaborateur[]> {
   const qs = new URLSearchParams();
   if (opts.q) qs.set('q', opts.q);
-  if (opts.cellule) qs.set('cellule', opts.cellule);
+  // Un ou plusieurs `cellule=` (projet multi-équipes, sept. 2026) — répétés,
+  // pas une valeur jointe par des virgules, pour matcher @Query('cellule') côté API.
+  if (Array.isArray(opts.cellule)) {
+    for (const id of opts.cellule) qs.append('cellule', id);
+  } else if (opts.cellule) qs.set('cellule', opts.cellule);
   const suffixe = qs.toString() ? `?${qs}` : '';
   return apiSociete<Collaborateur[]>(slug, `/collaborateurs${suffixe}`);
 }
@@ -48,6 +52,19 @@ export function supprimerCellule(slug: string, id: string): Promise<void> {
   return apiSociete<void>(slug, `/cellules/${id}`, {
     method: 'DELETE',
     sansCorps: true,
+  });
+}
+
+// Désigne (ou retire, dispatcherId=null) le dispatcher de la cellule — admin
+// uniquement, doit être membre de cette cellule (décision boss, sept. 2026).
+export function definirDispatcher(
+  slug: string,
+  celluleId: string,
+  dispatcherId: string | null,
+): Promise<Cellule> {
+  return apiSociete<Cellule>(slug, `/cellules/${celluleId}/dispatcher`, {
+    method: 'PATCH',
+    body: { dispatcherId },
   });
 }
 

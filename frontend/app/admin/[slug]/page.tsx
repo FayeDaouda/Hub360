@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   ArrowDown,
   ArrowUp,
@@ -9,27 +8,23 @@ import {
   Hammer,
   RefreshCw,
   Ruler,
+  Search,
   Stamp,
   type LucideIcon,
 } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import { ApiError } from '@/lib/client-api';
 import { getTableauBordSociete } from '@/lib/tableau-bord';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import type {
   PeriodeTableauBord,
-  Session,
-  Societe,
   StatutJalon,
   StatutProjetExec,
   TableauBordSociete,
 } from '@/lib/types';
 import { CATEGORIES, STATUTS_PROJET_EXEC } from '@/lib/types';
 import { formatDateCourte } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
 import { StatCard } from '@/components/admin/stat-card';
-import { BarChart } from '@/components/admin/bar-chart';
+import { AreaChart } from '@/components/admin/area-chart';
 import { RadialGauge } from '@/components/admin/radial-gauge';
 
 type Props = {
@@ -89,12 +84,10 @@ function labelDateJalon(dateIso: string): string {
   return formatDateCourte(dateIso);
 }
 
-// Back-office d'une société — réservé à societe_admin. Les autres rôles sont
-// renvoyés vers leur propre destination (voir destinationForSession).
+// Back-office d'une société — réservé à societe_admin (auth + redirect gérés
+// par app/admin/[slug]/layout.tsx, voir destinationForSession).
 export default function AdminPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Tableau de bord');
   const [periode, setPeriode] = useState<PeriodeTableauBord>('mois');
   const [tableau, setTableau] = useState<TableauBordSociete | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -107,23 +100,6 @@ export default function AdminPage({ params }: Props) {
   });
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug)
-      .then(setSociete)
-      .catch(() => setSociete(null));
-  }, [params.slug, router]);
-
-  useEffect(() => {
-    if (!session) return;
     let annule = false;
     setTableau(null);
     setErreur(null);
@@ -145,7 +121,7 @@ export default function AdminPage({ params }: Props) {
     return () => {
       annule = true;
     };
-  }, [session, params.slug, periode, essai]);
+  }, [params.slug, periode, essai]);
 
   const projetsAffiches = useMemo(() => {
     if (!tableau) return [];
@@ -166,8 +142,6 @@ export default function AdminPage({ params }: Props) {
     });
   }, [tableau, recherche, tri]);
 
-  if (!session) return null;
-
   function trierPar(col: ColonneTri) {
     setTri((t) => (t.col === col ? { col, sens: t.sens === 1 ? -1 : 1 } : { col, sens: 1 }));
   }
@@ -180,12 +154,7 @@ export default function AdminPage({ params }: Props) {
     );
 
   return (
-    <AdminShell
-      societe={societe}
-      session={session}
-      active="tableau-de-bord"
-      titre="Tableau de bord"
-    >
+    <>
       <div className="admin-periode">
         <div className="admin-periode-toggle" role="group" aria-label="Période">
           {PERIODES.map((p) => (
@@ -220,19 +189,19 @@ export default function AdminPage({ params }: Props) {
       ) : (
         <>
           <section className="admin-stat-grid">
-            {tableau.kpis.map((kpi, index) => (
-              <StatCard key={kpi.cle} kpi={kpi} accent={index === 0} />
+            {tableau.kpis.map((kpi) => (
+              <StatCard key={kpi.cle} kpi={kpi} />
             ))}
           </section>
 
           <section className="admin-grid">
-            <div className="panel">
+            <div className="panel glass-panel">
               <h2 className="panel-title">{tableau.projetsSignesParPeriode.titre}</h2>
-              <BarChart data={tableau.projetsSignesParPeriode} />
+              <AreaChart data={tableau.projetsSignesParPeriode} />
             </div>
 
             <div className="admin-col">
-              <div className="panel">
+              <div className="panel glass-panel">
                 <h2 className="panel-title">Échéances à venir</h2>
                 {tableau.jalons.length === 0 ? (
                   <p className="jalon-vide">Aucune échéance à venir sur les projets actifs.</p>
@@ -268,7 +237,7 @@ export default function AdminPage({ params }: Props) {
                 )}
               </div>
 
-              <div className="panel">
+              <div className="panel glass-panel">
                 <RadialGauge
                   data={tableau.avancementMoyen}
                   libelle="Avancement moyen des projets actifs"
@@ -286,20 +255,23 @@ export default function AdminPage({ params }: Props) {
             </div>
           </section>
 
-          <section className="panel">
+          <section className="panel glass-panel">
             <div className="panel-tete">
               <h2 className="panel-title panel-title--inline">
                 Projets en cours
                 <span className="panel-compte">{projetsAffiches.length}</span>
               </h2>
               {tableau.projets.length > 0 && (
-                <input
-                  type="search"
-                  className="field-input dash-recherche"
-                  placeholder="Filtrer par projet ou client…"
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                />
+                <div className="champ-recherche dash-recherche">
+                  <Search size={15} strokeWidth={1.75} aria-hidden />
+                  <input
+                    type="search"
+                    className="field-input"
+                    placeholder="Filtrer par projet ou client…"
+                    value={recherche}
+                    onChange={(e) => setRecherche(e.target.value)}
+                  />
+                </div>
               )}
             </div>
 
@@ -312,7 +284,7 @@ export default function AdminPage({ params }: Props) {
                 Aucun projet ne correspond à « {recherche.trim()} ».
               </p>
             ) : (
-              <div className="admin-table-wrap">
+              <div className="admin-table-wrap admin-table-wrap--fixe dash-table">
                 <table className="admin-table admin-table--triable">
                   <thead>
                     <tr>
@@ -354,7 +326,12 @@ export default function AdminPage({ params }: Props) {
                           <span className="progress">
                             <span className="progress-track">
                               <span
-                                className="progress-fill"
+                                // Même famille de couleur que la pastille de statut juste à
+                                // côté (attention/info/succès/neutre) : la barre porte le même
+                                // sens plutôt qu'une teinte de marque uniforme.
+                                className={`progress-fill progress-fill--${CLASSE_STATUT_PROJET[
+                                  projet.statut
+                                ].replace('pill--', '')}`}
                                 style={{ width: `${projet.avancement}%` }}
                               />
                             </span>
@@ -375,7 +352,7 @@ export default function AdminPage({ params }: Props) {
           </section>
         </>
       )}
-    </AdminShell>
+    </>
   );
 }
 

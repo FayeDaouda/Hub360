@@ -1,74 +1,67 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, ChevronDown, Plus, Trash2 } from 'lucide-react';
-import { getSociete } from '@/lib/api';
+import { ArrowLeft, ChevronDown, Lightbulb, Paperclip, Plus, Trash2 } from 'lucide-react';
 import {
   ajouterLigneChecklistAvp,
-  devaliderAvantProjet,
-  enregistrerAvantProjet,
+  demanderProlongationBlocChecklistAvp,
+  deciderProlongationBlocChecklistAvp,
   getAvantProjet,
   getProjetExecution,
+  joindreFichiersLigneChecklistAvp,
+  joindreImagesLigneChecklistAvp,
   majLigneChecklistAvp,
+  patchBlocChecklistAvp,
   supprimerLigneChecklistAvp,
-  validerAvantProjet,
 } from '@/lib/projets';
 import { getCollaborateurs } from '@/lib/equipe';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import {
-  avancementChecklistAvp,
+  avancementChecklistFichiers,
   CATEGORIES,
-  checklistAvantProjet,
-  ETAPES_PRE_BILAN,
-  itemsChecklistAvp,
   NATURES_DOSSIER,
-  NIVEAUX_FINITION,
-  preBilanComplet,
   TYPES_BIEN,
   type AvantProjet,
-  type Categorie,
   type Collaborateur,
+  type FichierItemChecklistAvp,
   type GroupeChecklistAvp,
-  type NiveauFinition,
-  type PatchAvantProjet,
-  type PreBilan,
+  type ItemChecklistAvp,
   type ProjetExecution,
-  type Session,
-  type Societe,
 } from '@/lib/types';
-import { formatDateCourte, formatMontant } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
-import { PreBilanBloc } from '@/components/admin/pre-bilan-bloc';
+import { formatDateCourte } from '@/lib/format';
 import { ChampModal } from '@/components/admin/champ-modal';
+import { BoutonDetail, JoindreAvecItemModal } from '@/components/permis-piece-jointe';
+import { FoncierDetailModal } from '@/components/foncier-detail-modal';
 
 type Props = {
   params: { slug: string; projetId: string };
 };
 
-function nombreOuNull(v: string): number | null {
-  return v.trim() === '' ? null : Number(v);
+function telecharger(f: FichierItemChecklistAvp) {
+  const a = document.createElement('a');
+  a.href = f.url;
+  a.download = f.nom;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 export default function AvantProjetPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Avant-projet');
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [ap, setAp] = useState<AvantProjet | null>(null);
-  const [collaborateurs, setCollaborateurs] = useState<Collaborateur[]>([]);
-  const [preBilan, setPreBilan] = useState<PreBilan | null>(null);
-  const [enregistre, setEnregistre] = useState(false);
-  const [enCours, setEnCours] = useState(false);
-  const [programmeOuvert, setProgrammeOuvert] = useState(false);
-  const [validationOuvert, setValidationOuvert] = useState(false);
+  // Équipe DU PROJET (cellules assignées) — pour le sélecteur de responsable
+  // de chaque bloc.
+  const [equipeProjet, setEquipeProjet] = useState<Collaborateur[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [groupeAjout, setGroupeAjout] = useState<GroupeChecklistAvp | null>(null);
-  // Groupes du Suivi opérationnel repliés — ouverts par défaut (Set plutôt
-  // qu'un booléen par groupe : la liste des groupes vient de l'API).
+  const [detailItem, setDetailItem] = useState<ItemChecklistAvp | null>(null);
+  // Groupes du Suivi opérationnel repliés — ouverts par défaut.
   const [groupesFermes, setGroupesFermes] = useState<Set<GroupeChecklistAvp>>(new Set());
+  // Groupe dont la popup « Joindre » (item-picker, même style qu'Autorisation,
+  // sept. 2026) est ouverte — un seul point d'upload par bloc.
+  const [joindreGroupeOuvert, setJoindreGroupeOuvert] = useState<GroupeChecklistAvp | null>(null);
 
   function toggleGroupe(groupe: GroupeChecklistAvp) {
     setGroupesFermes((s) => {
@@ -80,119 +73,118 @@ export default function AvantProjetPage({ params }: Props) {
   }
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug)
-      .then(setSociete)
-      .catch(() => setSociete(null));
     getProjetExecution(params.slug, params.projetId).then((p) => {
       setProjet(p);
       // Ne charge l'avant-projet que si le projet existe : sinon le GET
       // renvoie 404 « Projet introuvable » et l'erreur remonte non gérée.
       if (p) getAvantProjet(params.slug, params.projetId).then(setAp);
     });
-    getCollaborateurs(params.slug).then(setCollaborateurs).catch(() => setCollaborateurs([]));
-  }, [params.slug, params.projetId, router]);
+  }, [params.slug, params.projetId]);
 
-  if (!session) return null;
+  // Équipe(s) du projet — chargée séparément dès que les cellules assignées
+  // sont connues (arrivent avec `ap`, après `projet`). Vide si le projet n'a
+  // encore aucune cellule assignée (statut « à assigner »).
+  useEffect(() => {
+    if (!ap?.celluleIds.length) {
+      setEquipeProjet([]);
+      return;
+    }
+    getCollaborateurs(params.slug, { cellule: ap.celluleIds })
+      .then(setEquipeProjet)
+      .catch(() => setEquipeProjet([]));
+  }, [params.slug, ap?.celluleIds]);
+
+  // Sondage — la checklist peut changer côté collaborateur (coché, demande de
+  // prolongation) pendant que cette page reste ouverte.
+  useEffect(() => {
+    if (!projet) return;
+    const id = setInterval(() => {
+      getAvantProjet(params.slug, params.projetId).then(setAp).catch(() => {});
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [params.slug, params.projetId, projet]);
 
   const retour = `/admin/${params.slug}/projets/${params.projetId}`;
-  const valide = !!ap?.valideLe;
-  // Le pré-bilan doit être structurellement complet pour que la case
-  // « Budget validé / Pré-bilan validé » soit cochable.
-  const categorie = projet ? projet.categorie : null;
-  const preBilanOk = categorie ? preBilanComplet(preBilan, categorie) : false;
-  const items = ap && projet ? checklistAvantProjet(projet.categorie, projet.nature) : [];
-  const suiviAvp = avancementChecklistAvp(ap ? itemsChecklistAvp(ap.checklists) : []);
-  const checklistComplete =
-    !!ap &&
-    items.length > 0 &&
-    items.every((it) =>
-      it.cle === 'budgetValide'
-        ? ap.checklist[it.cle] && preBilanOk
-        : ap.checklist[it.cle],
-    );
 
-  function texteManquePreBilan(cat: Categorie): string {
-    const sequence = ETAPES_PRE_BILAN[cat];
-    const faites = preBilan?.versions.length ?? 0;
-    if (faites < sequence.length) {
-      return sequence.slice(faites).map((e) => e.libelle).join(', ');
+  // Bascule « non nécessaire » sur un item — statut dérivé des fichiers joints.
+  async function basculerNonNecessaire(item: ItemChecklistAvp) {
+    setErreur(null);
+    try {
+      setAp(
+        await majLigneChecklistAvp(params.slug, params.projetId, item.id, {
+          nonRequise: item.statut !== 'non_necessaire',
+        }),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'La mise à jour a échoué.');
     }
-    return 'renseigne les montants de la dernière version';
   }
 
-  function maj<K extends keyof AvantProjet>(cle: K, valeur: AvantProjet[K]) {
-    setAp((a) => (a ? { ...a, [cle]: valeur } : a));
-    setEnregistre(false);
+  // Case à cocher manuelle (sept. 2026, en plus du statut dérivé des
+  // fichiers) — librement décochable même si des fichiers restent attachés.
+  async function basculerFait(item: ItemChecklistAvp) {
+    setErreur(null);
+    try {
+      setAp(
+        await majLigneChecklistAvp(params.slug, params.projetId, item.id, {
+          fait: item.statut !== 'fait',
+        }),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'La mise à jour a échoué.');
+    }
   }
 
-  function majChecklist(cle: keyof AvantProjet['checklist'], valeur: boolean) {
-    setAp((a) => (a ? { ...a, checklist: { ...a.checklist, [cle]: valeur } } : a));
-    setEnregistre(false);
+  async function joindreImages(itemId: string, fichiers: { nom: string; url: string }[]) {
+    setErreur(null);
+    try {
+      setAp(await joindreImagesLigneChecklistAvp(params.slug, params.projetId, itemId, fichiers));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'ajout a échoué.");
+    }
   }
 
-  function champsFiche(a: AvantProjet): PatchAvantProjet {
-    return {
-      besoinSurface: a.besoinSurface,
-      nbLots: a.nbLots,
-      usages: a.usages,
-      niveauFinition: a.niveauFinition,
-      budgetCibleClient: a.budgetCibleClient,
-      delaiSouhaite: a.delaiSouhaite,
-      contraintes: a.contraintes,
-      references: a.references,
-      dessinateurId: a.dessinateur?.id ?? null,
-      responsable3dId: a.responsable3d?.id ?? null,
-      dateDebut: a.dateDebut || null,
-      dateFin: a.dateFin || null,
-      checklist: a.checklist,
-      pieceValidation: a.pieceValidation,
-    };
-  }
-
-  // Les 2 champs FK : on stocke le { id, nom } localement pour le rendu, l'envoi
-  // se fait par id via champsFiche.
-  function majRefCollab(cle: 'dessinateur' | 'responsable3d', id: string) {
-    const c = collaborateurs.find((x) => x.id === id) ?? null;
-    setAp((a) =>
-      a ? { ...a, [cle]: c ? { id: c.id, nom: `${c.prenom} ${c.nom}`.trim() } : null } : a,
-    );
-    setEnregistre(false);
-  }
-
-  // Coche / annote une ligne de sous-checklist — persiste tout de suite (pas
-  // de bouton « Enregistrer » pour ce bloc). Le serveur renvoie l'avant-projet
-  // complet, `checklists` recalculées.
-  async function majItemChecklist(
-    ligneId: string,
-    patch: { fait?: boolean; note?: string },
+  async function joindreFichiers(
+    itemId: string,
+    fichiers: { nom: string; url: string; taille?: number }[],
   ) {
     setErreur(null);
     try {
-      const resultat = await majLigneChecklistAvp(
-        params.slug,
-        params.projetId,
-        ligneId,
-        patch,
-      );
-      setAp(resultat);
+      setAp(await joindreFichiersLigneChecklistAvp(params.slug, params.projetId, itemId, fichiers));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'ajout a échoué.");
+    }
+  }
+
+  // Responsable + échéance d'un bloc — sélecteur toujours actif côté admin
+  // (vérifié côté serveur de toute façon). Bloc laissé à « — Non désigné — » :
+  // toute l'équipe du projet peut agir dessus (règle de septembre, en repli).
+  async function majBloc(
+    groupe: GroupeChecklistAvp,
+    patch: { echeance?: string | null; responsableId?: string | null },
+  ) {
+    setErreur(null);
+    try {
+      setAp(await patchBlocChecklistAvp(params.slug, params.projetId, groupe, patch));
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Enregistrement impossible.');
     }
   }
 
-  // Ajout/suppression d'un item — réservés admin côté serveur (403 pour un
-  // collaborateur) ; cette page n'est de toute façon accessible qu'à l'admin.
-  // Erreur affichée dans la modale elle-même (ChampModal), pas de catch ici.
+  async function deciderProlongation(groupe: GroupeChecklistAvp, accepter: boolean) {
+    setErreur(null);
+    try {
+      setAp(
+        await deciderProlongationBlocChecklistAvp(params.slug, params.projetId, groupe, accepter),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Enregistrement impossible.');
+    }
+  }
+
+  // Ajout/suppression d'un item — admin OU dispatcher d'une cellule du projet
+  // (nouveauté sept. 2026). Erreur affichée dans la modale elle-même
+  // (ChampModal) pour l'ajout.
   async function ajouterItemChecklist(groupe: GroupeChecklistAvp, libelle: string) {
     setAp(await ajouterLigneChecklistAvp(params.slug, params.projetId, { groupe, libelle }));
   }
@@ -207,43 +199,9 @@ export default function AvantProjetPage({ params }: Props) {
     }
   }
 
-  async function enregistrer() {
-    if (!ap) return;
-    setEnCours(true);
-    setErreur(null);
-    const resultat = await enregistrerAvantProjet(params.slug, params.projetId, champsFiche(ap));
-    setAp(resultat);
-    setEnCours(false);
-    setEnregistre(true);
-  }
-
-  async function valider() {
-    if (!ap) return;
-    setEnCours(true);
-    setErreur(null);
-    try {
-      await enregistrerAvantProjet(params.slug, params.projetId, champsFiche(ap));
-      const nom = `${session!.utilisateur.prenom} ${session!.utilisateur.nom}`.trim();
-      const resultat = await validerAvantProjet(params.slug, params.projetId, nom);
-      setAp(resultat);
-      // recharge le projet (statut a pu passer « en cours »)
-      getProjetExecution(params.slug, params.projetId).then(setProjet);
-    } catch {
-      setErreur('Coche les 4 points de la checklist avant de valider.');
-    }
-    setEnCours(false);
-  }
-
-  async function devalider() {
-    setEnCours(true);
-    const resultat = await devaliderAvantProjet(params.slug, params.projetId);
-    setAp(resultat);
-    setEnCours(false);
-  }
-
   return (
-    <AdminShell societe={societe} session={session} active="projets" titre="Avant-projet">
-      <Link href={retour} className="lien-retour">
+    <>
+      <Link href={retour} className="lien-retour lien-retour--avant-projet">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>{projet ? projet.programme : 'Projet'}</span>
       </Link>
@@ -265,21 +223,17 @@ export default function AvantProjetPage({ params }: Props) {
                   {CATEGORIES[projet.categorie]}
                 </span>
               </span>
-              <h2>Avant-projet</h2>
+              <h2>
+                <span className="module-icone module-icone--avant-projet" aria-hidden>
+                  <Lightbulb size={17} strokeWidth={1.75} />
+                </span>
+                Avant-projet
+              </h2>
               <p className="projet-entete-meta">
                 {projet.programme} · {projet.client.nom} · {projet.localisation}
               </p>
             </div>
           </header>
-
-          {valide && (
-            <div className="ap-bandeau" role="status">
-              <CheckCircle2 size={16} strokeWidth={2} aria-hidden />
-              <span>
-                Avant-projet validé le {formatDateCourte(ap.valideLe!)} par {ap.validePar}.
-              </span>
-            </div>
-          )}
 
           {/* Contexte repris du CRM — non ressaisi */}
           <div className="ap-contexte">
@@ -291,213 +245,19 @@ export default function AvantProjetPage({ params }: Props) {
             </span>
           </div>
 
-          <section className="panel">
-            <div className="panel-tete">
-              <button
-                type="button"
-                className="panel-title panel-title--repliable"
-                aria-expanded={programmeOuvert}
-                onClick={() => setProgrammeOuvert((o) => !o)}
-              >
-                <span className="repli-badge">
-                  <ChevronDown
-                    size={17}
-                    strokeWidth={2.25}
-                    aria-hidden
-                    className={`repli-icone${programmeOuvert ? '' : ' est-replie'}`}
-                  />
-                </span>
-                <span>Programme</span>
-              </button>
-            </div>
-            {programmeOuvert && (
-            <div className="ap-form">
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Surface à construire / aménager (m²)</span>
-                  <input
-                    className="field-input"
-                    type="number"
-                    min="0"
-                    disabled={valide}
-                    value={ap.besoinSurface ?? ''}
-                    onChange={(e) => maj('besoinSurface', nombreOuNull(e.target.value))}
-                    placeholder="ex : 480"
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Nombre de pièces / lots</span>
-                  <input
-                    className="field-input"
-                    type="number"
-                    min="0"
-                    disabled={valide}
-                    value={ap.nbLots ?? ''}
-                    onChange={(e) => maj('nbLots', nombreOuNull(e.target.value))}
-                    placeholder="ex : 12"
-                  />
-                </label>
-              </div>
+          {erreur && <p className="field-erreur">{erreur}</p>}
 
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Usages</span>
-                  <input
-                    className="field-input"
-                    disabled={valide}
-                    value={ap.usages}
-                    onChange={(e) => maj('usages', e.target.value)}
-                    placeholder="ex : Habitation, bureaux, commerce…"
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Niveau de finition</span>
-                  <select
-                    className="field-input"
-                    disabled={valide}
-                    value={ap.niveauFinition}
-                    onChange={(e) => maj('niveauFinition', e.target.value as NiveauFinition)}
-                  >
-                    {(Object.keys(NIVEAUX_FINITION) as NiveauFinition[]).map((k) => (
-                      <option key={k} value={k}>
-                        {NIVEAUX_FINITION[k]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+          <h3 className="panel-title">Suivi opérationnel</h3>
+          <p className="ap-souscheck-intro">
+            Les checklists de production de l’équipe. Indicatif — ne bloque pas
+            le passage de phase.
+          </p>
 
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Budget cible client (FCFA)</span>
-                  <input
-                    className="field-input"
-                    type="number"
-                    min="0"
-                    disabled={valide}
-                    value={ap.budgetCibleClient ?? ''}
-                    onChange={(e) => maj('budgetCibleClient', nombreOuNull(e.target.value))}
-                    placeholder="ex : 620000000"
-                  />
-                  {ap.budgetCibleClient != null && (
-                    <span className="field-aide">{formatMontant(ap.budgetCibleClient)}</span>
-                  )}
-                </label>
-                <label className="field">
-                  <span className="field-label">Délai souhaité</span>
-                  <input
-                    className="field-input"
-                    disabled={valide}
-                    value={ap.delaiSouhaite}
-                    onChange={(e) => maj('delaiSouhaite', e.target.value)}
-                    placeholder="ex : Livraison T3 2027"
-                  />
-                </label>
-              </div>
-
-              <label className="field">
-                <span className="field-label">Contraintes particulières</span>
-                <textarea
-                  className="field-input"
-                  rows={2}
-                  disabled={valide}
-                  value={ap.contraintes}
-                  onChange={(e) => maj('contraintes', e.target.value)}
-                  placeholder="Servitudes, mitoyenneté, exigences techniques…"
-                />
-              </label>
-
-              <label className="field">
-                <span className="field-label">Références / style</span>
-                <textarea
-                  className="field-input"
-                  rows={2}
-                  disabled={valide}
-                  value={ap.references}
-                  onChange={(e) => maj('references', e.target.value)}
-                  placeholder="Liens, notes. La galerie de références vit dans « Images »."
-                />
-              </label>
-
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Dessinateur</span>
-                  <select
-                    className="field-input"
-                    disabled={valide}
-                    value={ap.dessinateur?.id ?? ''}
-                    onChange={(e) => majRefCollab('dessinateur', e.target.value)}
-                  >
-                    <option value="">— Aucun —</option>
-                    {collaborateurs.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.prenom} {c.nom} · {c.role}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span className="field-label">Responsable 3D</span>
-                  <select
-                    className="field-input"
-                    disabled={valide}
-                    value={ap.responsable3d?.id ?? ''}
-                    onChange={(e) => majRefCollab('responsable3d', e.target.value)}
-                  >
-                    <option value="">— Aucun —</option>
-                    {collaborateurs.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.prenom} {c.nom} · {c.role}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Début avant-projet</span>
-                  <input
-                    className="field-input"
-                    type="date"
-                    disabled={valide}
-                    value={ap.dateDebut ?? ''}
-                    onChange={(e) => maj('dateDebut', e.target.value || null)}
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Fin avant-projet</span>
-                  <input
-                    className="field-input"
-                    type="date"
-                    disabled={valide}
-                    value={ap.dateFin ?? ''}
-                    onChange={(e) => maj('dateFin', e.target.value || null)}
-                  />
-                </label>
-              </div>
-            </div>
-            )}
-          </section>
-
-          <section className="panel">
-            <h3 className="panel-title">
-              Suivi opérationnel
-              <span className="pill pill--info">
-                {suiviAvp.faits}/{suiviAvp.total}
-              </span>
-            </h3>
-            <p className="ap-souscheck-intro">
-              Les checklists de production de l’équipe. Indicatif — ne bloque pas
-              le passage de phase (seule la validation ci-dessous le fait).
-            </p>
-
-            <div className="ap-souscheck">
-              {ap.checklists.map((groupe) => {
-                const av = avancementChecklistAvp(groupe.items);
+          {ap.checklists.map((groupe) => {
+                const av = avancementChecklistFichiers(groupe.items);
                 const fermee = groupesFermes.has(groupe.groupe);
                 return (
-                  <div className="ap-souscheck-groupe" key={groupe.groupe}>
+                  <section className="panel" key={groupe.groupe}>
                     <button
                       type="button"
                       className="ap-souscheck-tete ap-souscheck-tete--repliable"
@@ -516,69 +276,139 @@ export default function AvantProjetPage({ params }: Props) {
                         <h4>{groupe.libelle}</h4>
                         <p className="ap-souscheck-groupe-desc">{groupe.description}</p>
                       </span>
-                      <span
-                        className={`ap-souscheck-compteur${
-                          av.complete ? ' is-complet' : ''
-                        }`}
-                      >
+                      <span className={`ap-souscheck-compteur${av.complete ? ' is-complet' : ''}`}>
                         {av.faits}/{av.total}
                       </span>
                     </button>
-                    {!fermee && (
-                    <ul>
-                      {groupe.items.map((it) => (
-                        <li key={it.id} className="ap-souscheck-item">
-                          <label className="ap-souscheck-fait">
-                            <input
-                              type="checkbox"
-                              disabled={valide}
-                              checked={it.fait}
-                              onChange={(e) =>
-                                majItemChecklist(it.id, { fait: e.target.checked })
-                              }
-                            />
-                            <span>{it.libelle}</span>
-                          </label>
-                          <input
-                            className="field-input ap-souscheck-note"
-                            disabled={valide}
-                            defaultValue={it.note}
-                            placeholder="note…"
-                            onBlur={(e) => {
-                              if (e.target.value !== it.note) {
-                                majItemChecklist(it.id, { note: e.target.value });
-                              }
-                            }}
-                          />
+
+                    <div className="ap-souscheck-bloc-meta">
+                      <label className="field ap-souscheck-bloc-champ">
+                        <span className="field-label">Échéance du bloc</span>
+                        <input
+                          type="date"
+                          className="field-input"
+                          value={groupe.echeance ?? ''}
+                          onChange={(e) => majBloc(groupe.groupe, { echeance: e.target.value || null })}
+                        />
+                      </label>
+                      <label className="field ap-souscheck-bloc-champ">
+                        <span className="field-label">Responsable du bloc</span>
+                        <select
+                          className="field-input"
+                          disabled={equipeProjet.length === 0}
+                          title={
+                            equipeProjet.length === 0
+                              ? 'Assigne d’abord une cellule à ce projet'
+                              : undefined
+                          }
+                          value={groupe.responsable?.id ?? ''}
+                          onChange={(e) =>
+                            majBloc(groupe.groupe, { responsableId: e.target.value || null })
+                          }
+                        >
+                          <option value="">— Non désigné —</option>
+                          {equipeProjet.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.prenom} {c.nom}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {groupe.prolongationDemandeeLe && (
+                        <span className="ap-souscheck-prolongation">
+                          <span className="pill pill--attention">
+                            Prolongation demandée
+                            {groupe.responsable ? ` par ${groupe.responsable.nom}` : ''} · proposée
+                            au {formatDateCourte(groupe.prolongationEcheance!)}
+                            {groupe.prolongationMotif ? ` — « ${groupe.prolongationMotif} »` : ''}
+                          </span>
                           <button
                             type="button"
-                            className="ap-souscheck-suppr"
-                            disabled={valide}
-                            title="Retirer cet item"
-                            onClick={() => supprimerItemChecklist(it.id)}
+                            className="btn-ghost btn-ghost--sm"
+                            onClick={() => deciderProlongation(groupe.groupe, true)}
                           >
-                            <Trash2 size={14} strokeWidth={2} aria-hidden />
+                            Accepter
                           </button>
-                        </li>
-                      ))}
-                    </ul>
+                          <button
+                            type="button"
+                            className="btn-ghost btn-ghost--sm"
+                            onClick={() => deciderProlongation(groupe.groupe, false)}
+                          >
+                            Refuser
+                          </button>
+                        </span>
+                      )}
+                      <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
+                        <span className="field-label">Ajouter une pièce</span>
+                        <button
+                          type="button"
+                          className="field-input ap-souscheck-joindre-champ"
+                          onClick={() => setJoindreGroupeOuvert(groupe.groupe)}
+                        >
+                          <Paperclip size={14} strokeWidth={2} aria-hidden />
+                          Joindre
+                        </button>
+                      </div>
+                    </div>
+
+                    {!fermee && (
+                      <ul>
+                        {groupe.items.map((item) => (
+                          <li
+                            key={item.id}
+                            className={`ap-souscheck-item ap-souscheck-item--permis${
+                              item.statut === 'non_necessaire' ? ' ap-souscheck-item--non-requise' : ''
+                            }`}
+                          >
+                            <label className="ap-souscheck-fait">
+                              <input
+                                type="checkbox"
+                                checked={item.statut === 'fait'}
+                                disabled={item.statut === 'non_necessaire'}
+                                onChange={() => basculerFait(item)}
+                              />
+                              <span>{item.libelle}</span>
+                            </label>
+                            <span className="ap-souscheck-actions">
+                              <button
+                                type="button"
+                                className={`ap-souscheck-non-requise${
+                                  item.statut === 'non_necessaire' ? ' est-actif' : ''
+                                }`}
+                                onClick={() => basculerNonNecessaire(item)}
+                              >
+                                Non nécessaire
+                              </button>
+                              <BoutonDetail
+                                actif={item.fichiers.length > 0}
+                                onClick={() => setDetailItem(item)}
+                              />
+                              <button
+                                type="button"
+                                className="ap-souscheck-suppr"
+                                title="Retirer cet item"
+                                onClick={() => supprimerItemChecklist(item.id)}
+                              >
+                                <Trash2 size={14} strokeWidth={2} aria-hidden />
+                              </button>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
                     {!fermee && (
-                    <button
-                      type="button"
-                      className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
-                      disabled={valide}
-                      onClick={() => setGroupeAjout(groupe.groupe)}
-                    >
-                      <Plus size={14} strokeWidth={2} aria-hidden />
-                      <span>Ajouter un item</span>
-                    </button>
+                      <button
+                        type="button"
+                        className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
+                        onClick={() => setGroupeAjout(groupe.groupe)}
+                      >
+                        <Plus size={14} strokeWidth={2} aria-hidden />
+                        <span>Ajouter un item</span>
+                      </button>
                     )}
-                  </div>
+                  </section>
                 );
               })}
-            </div>
-          </section>
 
           {groupeAjout && (
             <ChampModal
@@ -594,111 +424,33 @@ export default function AvantProjetPage({ params }: Props) {
             />
           )}
 
-          <PreBilanBloc
-            slug={params.slug}
-            projet={projet}
-            verrouille={valide}
-            onEtat={setPreBilan}
-          />
+          {detailItem && (
+            <FoncierDetailModal
+              libelle={detailItem.libelle}
+              fichiers={detailItem.fichiers}
+              onTelecharger={telecharger}
+              onClose={() => setDetailItem(null)}
+            />
+          )}
 
-          <section className="panel">
-            <button
-              type="button"
-              className="panel-title panel-title--repliable"
-              aria-expanded={validationOuvert}
-              onClick={() => setValidationOuvert((o) => !o)}
-            >
-              <span className="repli-badge">
-                <ChevronDown
-                  size={17}
-                  strokeWidth={2.25}
-                  aria-hidden
-                  className={`repli-icone${validationOuvert ? '' : ' est-replie'}`}
-                />
-              </span>
-              <span>Validation</span>
-            </button>
-
-            {validationOuvert && (
-            <>
-            <ul className="ap-checklist">
-              {checklistAvantProjet(projet.categorie, projet.nature).map((item) => {
-                const bloque = item.cle === 'budgetValide' && !preBilanOk;
-                return (
-                  <li key={item.cle}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        disabled={valide || bloque}
-                        checked={bloque ? false : ap.checklist[item.cle]}
-                        onChange={(e) => majChecklist(item.cle, e.target.checked)}
-                      />
-                      <span>{item.libelle}</span>
-                    </label>
-                    {bloque && (
-                      <span className="ap-checklist-hint">
-                        Complète d’abord le pré-bilan ({texteManquePreBilan(projet.categorie)}).
-                      </span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-
-            <label className="field ap-piece">
-              <span className="field-label">Pièce de validation (mail / PV)</span>
-              <input
-                className="field-input"
-                disabled={valide}
-                value={ap.pieceValidation ?? ''}
-                onChange={(e) => maj('pieceValidation', e.target.value || null)}
-                placeholder="ex : Mail de validation du client — 12/09"
-              />
-            </label>
-
-            {erreur && <p className="field-erreur">{erreur}</p>}
-
-            <div className="ap-actions">
-              {!valide ? (
-                <>
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    onClick={enregistrer}
-                    disabled={enCours}
-                  >
-                    {enregistre ? 'Enregistré' : 'Enregistrer'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={valider}
-                    disabled={enCours || !checklistComplete}
-                    title={checklistComplete ? undefined : 'Coche les 4 points d’abord'}
-                  >
-                    Valider l’avant-projet
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={devalider}
-                  disabled={enCours}
-                >
-                  Dévalider
-                </button>
-              )}
-            </div>
-            </>
-            )}
-          </section>
+          {joindreGroupeOuvert && (
+            <JoindreAvecItemModal
+              items={
+                ap.checklists
+                  .find((g) => g.groupe === joindreGroupeOuvert)
+                  ?.items.map((it) => ({ id: it.id, libelle: it.libelle })) ?? []
+              }
+              onJoindreImages={joindreImages}
+              onJoindreFichiers={joindreFichiers}
+              onClose={() => setJoindreGroupeOuvert(null)}
+            />
+          )}
 
           <p className="ap-a-venir">
             Prochainement dans cette section : Site &amp; réglementation · Esquisse &amp; APD.
           </p>
         </>
       )}
-    </AdminShell>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { estProjetDuCollaborateur } from './projet-acces';
 import { ECRITURE_COLLABORATEUR } from './ecriture-collaborateur.decorator';
+import { PERMISSION_REQUISE, PermissionRequise } from '../commun/permission.decorator';
 
 // Garde des routes /societes/:slug/projets(/:id/…) — point d'application UNIQUE
 // du cloisonnement projet (checklist sécurité #7 / #9).
@@ -18,7 +19,14 @@ import { ECRITURE_COLLABORATEUR } from './ecriture-collaborateur.decorator';
 //                     est dessinateur / responsable 3D), + ÉCRITURE sur les
 //                     seuls endpoints marqués @EcritureCollaborateur (matrice de
 //                     droits — doc de référence). Tout autre write → 403.
-//  · autre rôle     → 403.
+//  · rôle métier Grey Concrete (Dir. GC, CFO, …) → accès plein comme
+//                     societe_admin (pas de scope par cellule — ce sont des
+//                     rôles de direction, pas d'exécution), mais SEULEMENT
+//                     sur un endpoint marqué @RequiertPermission, et la
+//                     vérification du niveau est déléguée à PermissionGuard
+//                     (posé juste après dans @UseGuards) — ce guard-ci ne
+//                     fait que ne pas rejeter le rôle par avance.
+//  · autre rôle/endpoint non marqué → 403.
 //
 // Le service reste agnostique du rôle : il n'assure que l'isolation société.
 @Injectable()
@@ -31,7 +39,13 @@ export class AccesProjetGuard implements CanActivate {
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
     const user = req.user as
-      | { societeId: string; societeSlug: string | null; userId: string; role: string }
+      | {
+          societeId: string;
+          societeSlug: string | null;
+          userId: string;
+          role: string;
+          permissions?: Record<string, string>;
+        }
       | undefined;
     const slug = req.params.slug as string;
     const projetId = req.params.id as string | undefined;
@@ -43,6 +57,15 @@ export class AccesProjetGuard implements CanActivate {
     if (user.role === 'societe_admin') return true;
 
     if (user.role !== 'collaborateur') {
+      const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(
+        PERMISSION_REQUISE,
+        [ctx.getHandler(), ctx.getClass()],
+      );
+      // Endpoint opt-in : on laisse passer, PermissionGuard tranche le
+      // niveau exact. Endpoint non marqué : comportement inchangé (403),
+      // un rôle métier n'a pas d'accès implicite à ce qui n'est pas
+      // explicitement ouvert par module.
+      if (requis) return true;
       throw new ForbiddenException('Accès aux projets non autorisé');
     }
 
@@ -80,7 +103,7 @@ export class AccesProjetGuard implements CanActivate {
     const projet = await this.prisma.projet.findFirst({
       where: { id: projetId, societeId: user.societeId },
       select: {
-        celluleId: true,
+        cellules: { select: { celluleId: true } },
         avantProjet: { select: { dessinateurId: true, responsable3dId: true } },
       },
     });

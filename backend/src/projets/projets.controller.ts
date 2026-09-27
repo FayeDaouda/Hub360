@@ -34,12 +34,12 @@ export class ProjetsController {
     return this.projets.findOne(req.user.societeId, id);
   }
 
-  @Put(':id/cellule')
+  @Put(':id/cellules')
   assigner(@Req() req: R, @Param('id') id: string, @Body() dto: AssignerDto) {
-    return this.projets.assigner(
+    return this.projets.assignerCellules(
       req.user.societeId,
       id,
-      dto.celluleId ?? null,
+      dto.celluleIds,
       req.user.userId,
     );
   }

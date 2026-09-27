@@ -19,7 +19,7 @@ describe('TableauBordService — société vide', () => {
     const svc = new TableauBordService(fakePrisma([], []));
     const tb = await svc.pour('soc-1', 'mois', NOW);
 
-    expect(tb.kpis.map((k) => k.valeur)).toEqual([0, 0, 0, 0]);
+    expect(tb.kpis.map((k) => k.valeur)).toEqual([0, 0, 0]);
     tb.kpis.forEach((k) => expect(Number.isNaN(k.valeur)).toBe(false));
     expect(tb.kpis.find((k) => k.cle === 'projets-actifs')?.detail).toBeUndefined();
 
@@ -46,18 +46,12 @@ describe('TableauBordService — société peuplée', () => {
     createdAt: new Date('2026-09-05T09:00:00Z'),
     client: { nom: 'Client A' },
     avantProjet: {
-      valideLe: null,
-      dateFin: '2026-09-15',
-      besoinSurface: null,
-      lignesChecklist: [{ fait: true }, { fait: false }],
-    },
-    permis: {
-      dateDepot: new Date('2026-07-01T00:00:00Z'),
-      dateObtention: null,
-      dateRefus: null,
+      lignesChecklist: [
+        { nonRequise: false, images: [], fichiers: [{ id: 'f1' }] },
+        { nonRequise: false, images: [], fichiers: [] },
+      ],
     },
     etudes: null,
-    execution: null,
   };
   const p2 = {
     id: 'p2',
@@ -68,15 +62,8 @@ describe('TableauBordService — société peuplée', () => {
     statut: 'livre',
     createdAt: new Date('2026-07-10T09:00:00Z'),
     client: { nom: 'Client B' },
-    avantProjet: {
-      valideLe: new Date('2026-06-01T00:00:00Z'),
-      dateFin: '2026-05-30',
-      besoinSurface: 800,
-      lignesChecklist: [],
-    },
-    permis: null,
+    avantProjet: { lignesChecklist: [] },
     etudes: null,
-    execution: null,
   };
   const p3 = {
     id: 'p3',
@@ -87,15 +74,8 @@ describe('TableauBordService — société peuplée', () => {
     statut: 'a_assigner',
     createdAt: new Date('2026-09-09T09:00:00Z'),
     client: { nom: 'Client C' },
-    avantProjet: {
-      valideLe: null,
-      dateFin: null,
-      besoinSurface: null,
-      lignesChecklist: [],
-    },
-    permis: null,
+    avantProjet: { lignesChecklist: [] },
     etudes: null,
-    execution: null,
   };
   const facture = {
     montantHt: d(1_000_000),
@@ -118,10 +98,6 @@ describe('TableauBordService — société peuplée', () => {
       valeur: 1,
       detail: 'sur 3 projets au total',
     });
-    expect(parCle['surface-concue']).toMatchObject({
-      valeur: 800,
-      detail: 'sur 1 projet livré',
-    });
     // TTC = 1 000 000 + 18 % = 1 180 000 ; payé 400 000 ; reste 780 000
     expect(parCle['reste-a-encaisser']).toMatchObject({
       valeur: 780_000,
@@ -142,24 +118,9 @@ describe('TableauBordService — société peuplée', () => {
     expect(points[5].actif).toBe(true);
   });
 
-  it('jalons : avant-projet + permis, dates futures, triés, financier exclu', async () => {
+  it('jalons : aucune source avant-projet depuis le retrait de la Validation (sept. 2026)', async () => {
     const tb = await build();
-    expect(tb.jalons).toEqual([
-      {
-        id: 'ap:p1',
-        date: '2026-09-15',
-        projet: 'Villa A',
-        type: 'Échéance avant-projet',
-        statut: 'a_faire',
-      },
-      {
-        id: 'permis:p1',
-        date: '2026-09-29',
-        projet: 'Villa A',
-        type: "Fin d'instruction du permis",
-        statut: 'a_faire',
-      },
-    ]);
+    expect(tb.jalons).toEqual([]);
   });
 
   it('projets : contrat aligné Prisma (categorie + promotionInterne + statut réel)', async () => {

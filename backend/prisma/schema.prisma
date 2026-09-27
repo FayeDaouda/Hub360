@@ -12,32 +12,44 @@ datasource db {
 }
 
 model Societe {
-  id            String   @id @default(uuid())
-  nom           String
-  slug          String   @unique
-  logoUrl       String?  @map("logo_url")
+  id                      String   @id @default(uuid())
+  nom                     String
+  slug                    String   @unique
+  logoUrl                 String?  @map("logo_url")
   // Variante du logo pensée pour un fond sombre (le portail est en anthracite) —
   // certains logos fournis (texte foncé sur transparent) sont illisibles sur fond
   // sombre tels quels ; celle-ci reste optionnelle, on retombe sur logoUrl sinon.
-  logoUrlSombre String?  @map("logo_url_sombre")
-  couleurMarque String?  @map("couleur_marque")
+  logoUrlSombre           String?  @map("logo_url_sombre")
+  couleurMarque           String?  @map("couleur_marque")
   // Clé d'icône générique (ex: "code", "building-2", "network") affichée sur
   // la tuile du portail — validée côté frontend contre une liste blanche
   // d'icônes disponibles, pas de logique par société codée en dur.
-  icone         String?
-  secteur       String?
-  actif         Boolean  @default(true)
-  createdAt     DateTime @default(now()) @map("created_at")
+  icone                   String?
+  secteur                 String?
+  // Pied des documents (devis, factures) — texte tel que fourni par la
+  // société (Grey Concrete : catalogue JSON « mentions_legales_pied_de_page »
+  // et pied des CGV 2026). null = rien d'affiché.
+  mentionsLegales         String?  @map("mentions_legales")
+  coordonnees             String? // adresse · téléphone · email de facturation
+  // Pénalités de retard (% par mois, CGV art. 13) — rappelées sur la facture.
+  penaliteRetardMensuelle Decimal? @map("penalite_retard_mensuelle") @db.Decimal(4, 2)
+  actif                   Boolean  @default(true)
+  createdAt               DateTime @default(now()) @map("created_at")
 
-  roles          UtilisateurSocieteRole[]
-  modules        SocieteModule[]
-  clients        Client[]
-  dossiers       DossierCrm[]
-  projets        Projet[]
-  cellules       Cellule[]
-  collaborateurs Collaborateur[]
-  canaux         Canal[]
-  factures       Facture[]
+  roles               UtilisateurSocieteRole[]
+  rolesDefinis        Role[]
+  modules             SocieteModule[]
+  clients             Client[]
+  dossiers            DossierCrm[]
+  projets             Projet[]
+  cellules            Cellule[]
+  collaborateurs      Collaborateur[]
+  canaux              Canal[]
+  factures            Facture[]
+  devis               Devis[]
+  produitsServices    ProduitService[]
+  lignesUnbordGabarit LigneUnbordGabarit[]
+  blocsEtudeGabarit   BlocEtudeGabarit[]
 
   @@map("societes")
 }
@@ -58,22 +70,34 @@ model Utilisateur {
   desactiveParId        String?   @map("desactive_par_id") // utilisateurId de l'admin (audit, pas de FK)
   createdAt             DateTime  @default(now()) @map("created_at")
 
-  roles               UtilisateurSocieteRole[]
-  collaborations      Collaborateur[]
-  avantProjetsValides AvantProjet[]
-  entreesJournal      EntreeJournal[]
-  imagesAjoutees      ImageProjet[]            @relation("ImageAjoutPar")
-  imagesSupprimees    ImageProjet[]            @relation("ImageSupprPar")
-  fichiersAjoutes     FichierProjet[]          @relation("FichierAjoutPar")
-  fichiersSupprimes   FichierProjet[]          @relation("FichierSupprPar")
-  lignesChecklistAvpSupprimees LigneChecklistAvp[] @relation("ChecklistAvpSupprPar")
-  invitations         Invitation[]
-  notifications       Notification[]
-  evenementsCompte    EvenementCompte[]
-  messages            Message[]
-  canauxDmP1          Canal[]                  @relation("CanalDmP1")
-  canauxDmP2          Canal[]                  @relation("CanalDmP2")
-  lecturesCanal       LectureCanal[]
+  roles                              UtilisateurSocieteRole[]
+  rolesSupprimes                     Role[]                    @relation("RoleSupprPar")
+  lignesUnbordGabaritSupprimees      LigneUnbordGabarit[]      @relation("UnbordGabaritSupprPar")
+  collaborations                     Collaborateur[]
+  imagesAjoutees                     ImageProjet[]             @relation("ImageAjoutPar")
+  imagesSupprimees                   ImageProjet[]             @relation("ImageSupprPar")
+  fichiersAjoutes                    FichierProjet[]           @relation("FichierAjoutPar")
+  fichiersSupprimes                  FichierProjet[]           @relation("FichierSupprPar")
+  lignesChecklistAvpSupprimees       LigneChecklistAvp[]       @relation("ChecklistAvpSupprPar")
+  lignesChecklistPermisSupprimees    LigneChecklistPermis[]    @relation("ChecklistPermisSupprPar")
+  lignesChecklistPermisFaites        LigneChecklistPermis[]    @relation("ChecklistPermisFaitPar")
+  lignesChecklistExecutionSupprimees LigneChecklistExecution[] @relation("ChecklistExecutionSupprPar")
+  lignesChecklistExecutionFaites     LigneChecklistExecution[] @relation("ChecklistExecutionFaitPar")
+  blocsEtudeGabaritSupprimes         BlocEtudeGabarit[]        @relation("BlocEtudeGabaritSupprPar")
+  lignesEtudeGabaritSupprimees       LigneEtudeGabarit[]       @relation("LigneEtudeGabaritSupprPar")
+  blocsEtudeSupprimes                BlocEtude[]               @relation("BlocEtudeSupprPar")
+  itemsEtudeSupprimes                ItemEtude[]               @relation("ItemEtudeSupprPar")
+  invitations                        Invitation[]
+  notifications                      Notification[]
+  evenementsCompte                   EvenementCompte[]
+  messages                           Message[]
+  canauxDmP1                         Canal[]                   @relation("CanalDmP1")
+  canauxDmP2                         Canal[]                   @relation("CanalDmP2")
+  lecturesCanal                      LectureCanal[]
+  dossiersCrees                      DossierCrm[]              @relation("DossierCreePar")
+  dossiersApportes                   DossierCrm[]              @relation("DossierApporteur")
+  dossiersPossedes                   DossierCrm[]              @relation("DossierProprietaire")
+  transitionsDossier                 DossierCrmTransition[]    @relation("TransitionDossierPar")
 
   @@map("utilisateurs")
 }
@@ -120,6 +144,9 @@ enum EvenementCompteType {
 enum NotificationType {
   projet_assigne
   phase_changee
+  checklist_assignee
+  prolongation_demandee
+  prolongation_decidee
 }
 
 model Notification {
@@ -155,13 +182,36 @@ model EvenementCompte {
   @@map("evenements_compte")
 }
 
+// Un rôle est soit un « socle » partagé par toute la holding (societeId
+// null — ex: les 3 rôles historiques holding_admin/societe_admin/collaborateur,
+// ou un futur rôle transverse type CEO), soit défini par une société pour son
+// usage propre (societeId renseigné — ex: Grey Concrete crée "Dir. GC", "CFO"...).
+// Attention à ne pas confondre avec UtilisateurSocieteRole.societeId : ce
+// dernier scope une ATTRIBUTION (qui a ce rôle où), celui-ci scope la
+// DÉFINITION du rôle (qui a le droit de le créer/modifier et dans quel
+// catalogue il apparaît). Un rôle socle peut être attribué transversalement
+// (UtilisateurSocieteRole.societeId = null) ou pour une société précise ; un
+// rôle propre à une société n'a de sens qu'attribué dans cette société-là.
+// Unicité du nom : garantie en base seulement à l'intérieur d'une société
+// (@@unique ci-dessous) — Postgres ne déduplique pas les societeId NULL entre
+// eux, donc l'unicité des noms de rôles socles est à vérifier côté service.
 model Role {
-  id          String  @id @default(uuid())
-  nom         String  @unique // ex: holding_admin, societe_admin, collaborateur
-  description String?
+  id            String    @id @default(uuid())
+  societeId     String?   @map("societe_id")
+  nom           String // ex: holding_admin, societe_admin, collaborateur, "Dir. GC"
+  description   String?
+  // Suppression douce (CIO, ou responsable de la société propriétaire du rôle).
+  supprimeLe    DateTime? @map("supprime_le")
+  supprimeParId String?   @map("supprime_par_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
+  societe      Societe?                 @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  supprimePar  Utilisateur?             @relation("RoleSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
   utilisateurs UtilisateurSocieteRole[]
+  permissions  RolePermission[]
 
+  @@unique([societeId, nom])
+  @@index([societeId])
   @@map("roles")
 }
 
@@ -189,9 +239,34 @@ model Module {
   cle         String  @unique // ex: "projets", "finances", "documents", "communication"
   description String?
 
-  societes SocieteModule[]
+  societes    SocieteModule[]
+  permissions RolePermission[]
 
   @@map("modules")
+}
+
+enum NiveauPermission {
+  aucun
+  lecture
+  ecriture
+  validation
+}
+
+// Ce qu'un rôle peut faire sur un module : la matrice de droits fine qui
+// remplace le simple binaire admin/collaborateur (ex: Dir. GC = écriture sur
+// "finances", RH = validation sur "rh" mais aucun sur "finances").
+// Absence de ligne pour un (role, module) donné = aucun accès (fail closed).
+model RolePermission {
+  id       String           @id @default(uuid())
+  roleId   String           @map("role_id")
+  moduleId String           @map("module_id")
+  niveau   NiveauPermission @default(aucun)
+
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, moduleId])
+  @@map("role_permissions")
 }
 
 // Quels modules sont activés pour quelle société — zéro déploiement pour changer ça.
@@ -229,11 +304,15 @@ enum Categorie {
   amenagement
 }
 
+// Cycle commercial Grey Concrete (étape E, validé sept. 2026). Les passages
+// autorisés et qui peut les faire vivent dans crm/cycle.ts — jamais un
+// changement libre de statut. onboard et perdu sont définitifs.
 enum StatutCrm {
-  nouveau
-  devis_contrat
-  valide
-  annule
+  nouveau_projet
+  en_validation // attend la DAF (CFO)
+  offre_envoyee
+  onboard // client acquis → projet d'exécution créé (transaction pivot)
+  perdu // motif obligatoire (journal des transitions)
 }
 
 enum StatutProjet {
@@ -302,6 +381,11 @@ model Client {
   societeId String     @map("societe_id")
   nom       String
   type      TypeClient
+  // Sigle choisi par l'entreprise elle-même — obligatoire pour une personne
+  // morale (sci/entreprise/institution) : c'est le segment CLIENT du code
+  // dossier (cf. crm/nomenclature.ts), jamais dérivé du nom. Stocké normalisé
+  // (majuscules, lettres/chiffres). null pour un particulier.
+  sigle     String?
   contact   String?
   email     String?
   telephone String?
@@ -310,38 +394,136 @@ model Client {
   societe  Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
   dossiers DossierCrm[]
   projets  Projet[]
+  devis    Devis[]
 
   @@map("clients")
 }
 
+// -- Référentiel des localités (partagé par TOUTES les sociétés du HUB) --
+//
+// Source : fichier « Référentiel des localités — HUB360° » (sept. 2026),
+// importé tel quel par la migration localites_referentiel. Règles métier du
+// fichier, appliquées ici et dans LocalitesService :
+//   · code = 3 lettres majuscules, unique sur l'ensemble des trois zones
+//     (un quartier ne peut pas reprendre le code ISO d'un pays) ;
+//   · seule la direction (societe_admin ou CIO) ajoute une localité ;
+//   · un code déjà utilisé par un dossier ne se modifie jamais — on corrige
+//     le nom d'affichage, pas le code.
+// Pas de societeId : une localité ne change pas de sens selon la société.
+
+enum ZoneLocalite {
+  dakar // onglet « Dakar » — région de Dakar
+  senegal // onglet « Villes Sénégal » — reste du pays
+  pays // onglet « Pays » — code ISO 3166-1 alpha-3
+}
+
+model Localite {
+  id             String       @id @default(uuid())
+  code           String       @unique
+  nom            String
+  zone           ZoneLocalite
+  // département (Dakar) / région (Sénégal) / zone géographique (Pays)
+  region         String
+  arrondissement String? // Dakar uniquement, quand le fichier le précise
+  // Quartier d'usage rattaché à sa commune administrative d'origine (ex.
+  // Point E → « Fann-Point E-Amitié ») — traçabilité, pas de hiérarchie.
+  commune        String?
+  ordre          Int          @default(0)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  dossiers DossierCrm[]
+
+  @@index([zone, ordre])
+  @@map("localites")
+}
+
 // -- Dossier CRM : la ligne du pipeline de prospection, avant validation --
 
-model DossierCrm {
-  id             String        @id @default(uuid())
-  societeId      String        @map("societe_id")
-  code           String
-  nature         NatureDossier
-  categorie      Categorie
-  localisation   String
-  latitude       Float? // pin géo optionnel, copié vers le Projet au pivot
-  longitude      Float?
-  type           TypeBien
-  nbPlanches     Int           @default(0) @map("nb_planches")
-  surfaceTerrain Int           @map("surface_terrain")
-  standing       Standing
-  gamme          Gamme
-  programme      String
-  statut         StatutCrm     @default(nouveau)
-  clientId       String        @map("client_id")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+enum TypeApporteur {
+  interne // le créateur de la fiche, compte HUB
+  externe // tiers (notaire, partenaire, recommandation…)
+}
 
-  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  client  Client  @relation(fields: [clientId], references: [id])
-  projet  Projet? // 0..1 — créé à la validation (transaction pivot)
+model DossierCrm {
+  id                     String         @id @default(uuid())
+  societeId              String         @map("societe_id")
+  code                   String
+  nature                 NatureDossier
+  categorie              Categorie
+  // Libellé affiché (= nom de la localité pour tout dossier créé depuis le
+  // référentiel ; texte libre historique pour les dossiers antérieurs).
+  localisation           String
+  // null = dossier antérieur au référentiel, pas encore rattaché (à la main,
+  // par l'admin — jamais de rapprochement automatique sur le texte libre).
+  localiteId             String?        @map("localite_id")
+  latitude               Float? // pin géo optionnel, copié vers le Projet au pivot
+  longitude              Float?
+  type                   TypeBien
+  nbPlanches             Int            @default(0) @map("nb_planches")
+  surfaceTerrain         Int            @map("surface_terrain")
+  standing               Standing
+  gamme                  Gamme
+  programme              String
+  statut                 StatutCrm      @default(nouveau_projet)
+  clientId               String         @map("client_id")
+  // -- « Qui » (étape C1, sept. 2026). Tous null sur les dossiers antérieurs.
+  creeParId              String?        @map("cree_par_id")
+  // Apporteur d'affaire, figé à la création : interne = le créateur lui-même
+  // (compte HUB, rempli automatiquement) ; externe = tiers saisi (nom +
+  // coordonnées). Commission = taux à pas fixes (3 à 5 %), null = aucune —
+  // donnée financière, lue/écrite sous le module finances_charges.
+  apporteurType          TypeApporteur? @map("apporteur_type")
+  apporteurUtilisateurId String?        @map("apporteur_utilisateur_id")
+  apporteurNom           String?        @map("apporteur_nom")
+  apporteurTelephone     String?        @map("apporteur_telephone")
+  apporteurEmail         String?        @map("apporteur_email")
+  commissionApporteur    Decimal?       @map("commission_apporteur") @db.Decimal(3, 1)
+  // Propriétaire = responsable qui suit le dossier : un titulaire du rôle
+  // Dir. GC de la société. null = « à assigner » (aucun titulaire à la
+  // création) — jamais bloquant. Réassignable (cf. CrmService).
+  proprietaireId         String?        @map("proprietaire_id")
+  // Catégorie de conception (CO1/CO2/CO3) — fixée par la ligne CO de l'offre
+  // à son envoi (validation DAF). SU (et plus tard TS) en découlent.
+  categorieConception    String?        @map("categorie_conception")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+
+  societe              Societe                @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  client               Client                 @relation(fields: [clientId], references: [id])
+  // Restrict : une localité référencée ne peut pas disparaître sous un dossier.
+  localite             Localite?              @relation(fields: [localiteId], references: [id], onDelete: Restrict)
+  creePar              Utilisateur?           @relation("DossierCreePar", fields: [creeParId], references: [id], onDelete: SetNull)
+  apporteurUtilisateur Utilisateur?           @relation("DossierApporteur", fields: [apporteurUtilisateurId], references: [id], onDelete: SetNull)
+  proprietaire         Utilisateur?           @relation("DossierProprietaire", fields: [proprietaireId], references: [id], onDelete: SetNull)
+  projet               Projet? // 0..1 — créé au passage à onboard (transaction pivot)
+  transitions          DossierCrmTransition[]
+  offres               Devis[] // la plus récente = l'offre en cours (étape F)
 
   @@unique([societeId, code])
+  @@index([localiteId])
   @@map("dossiers_crm")
+}
+
+// -- Journal du cycle commercial : une ligne par changement de statut (et une
+//    à la création, `de` null). Porte le motif d'un passage à « perdu » et le
+//    commentaire de la DAF quand elle renvoie un dossier — trace d'audit (qui
+//    a validé quoi) et base des futurs calculs de délais du pipeline.
+model DossierCrmTransition {
+  id          String     @id @default(uuid())
+  dossierId   String     @map("dossier_id")
+  de          StatutCrm?
+  vers        StatutCrm
+  // null = reprise de données (migration) ou le client lui-même (refus via
+  // le lien public de l'offre).
+  parId       String?    @map("par_id")
+  commentaire String?
+  creeLe      DateTime   @default(now()) @map("cree_le")
+
+  dossier DossierCrm   @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  par     Utilisateur? @relation("TransitionDossierPar", fields: [parId], references: [id], onDelete: SetNull)
+
+  @@index([dossierId, creeLe])
+  @@map("dossier_crm_transitions")
 }
 
 // -- Projet : l'instance d'exécution. Champs métier = snapshot du dossier --
@@ -362,47 +544,79 @@ model Projet {
   latitude     Float?
   longitude    Float?
   // exécution
-  celluleId    String?       @map("cellule_id")
   statut       StatutProjet  @default(a_assigner)
   phase        Phase         @default(avant_projet)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  societe          Societe           @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  dossierCrm       DossierCrm        @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
-  client           Client            @relation(fields: [clientId], references: [id])
-  cellule          Cellule?          @relation(fields: [celluleId], references: [id])
-  avantProjet      AvantProjet?
-  versionsPreBilan VersionPreBilan[]
+  societe                  Societe                   @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  dossierCrm               DossierCrm                @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
+  client                   Client                    @relation(fields: [clientId], references: [id])
+  // Plusieurs équipes par projet (décision boss, sept. 2026 — remplace « 1
+  // projet = 1 cellule »). Collaborateur.celluleId reste singulier : un
+  // collaborateur suit un projet si SA cellule fait partie des cellules du
+  // projet (cf. projet-acces.ts).
+  cellules                 ProjetCellule[]
+  avantProjet              AvantProjet?
+  versionsPreBilan         VersionPreBilan[]
   // phase 2 — sections aval (conception : les 3 ; aménagement : execution seul)
-  permis           Permis?
-  etudes           Etudes?
-  execution        Execution?
-  journal          EntreeJournal[]
-  images           ImageProjet[]
-  notifications    Notification[]
-  fichiers         FichierProjet[]
-  factures         Facture[]
+  permis                   Permis?
+  etudes                   Etudes?
+  lignesUnbord             LigneUnbord[]
+  blocsUnbord              BlocUnbord[]
+  blocsExecution           BlocExecution[]
+  lignesChecklistExecution LigneChecklistExecution[]
+  images                   ImageProjet[]
+  notifications            Notification[]
+  fichiers                 FichierProjet[]
+  factures                 Facture[]
+  devis                    Devis[]
 
   @@map("projets")
 }
 
 // -- Équipe : 6 cellules cross-fonctionnelles (Archi 1-4, Intérieur, Études).
-//    « 1 projet = 1 cellule » inchangé. Renommé depuis SousGroupe (vocabulaire
-//    métier — le studio dit « cellule »).
+//    Renommé depuis SousGroupe (vocabulaire métier — le studio dit « cellule »).
+//    Un projet peut être suivi par PLUSIEURS cellules (décision boss, sept.
+//    2026 — remplace « 1 projet = 1 cellule », cf. ProjetCellule) ; un
+//    collaborateur, lui, reste rattaché à une seule cellule (celluleId sur
+//    Collaborateur, inchangé).
 
 model Cellule {
-  id        String   @id @default(uuid())
-  societeId String   @map("societe_id")
-  nom       String
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  nom          String
+  // Le membre de CETTE cellule habilité à répartir les tâches aux autres
+  // (décision boss, sept. 2026) — un seul par cellule, désigné par l'admin
+  // uniquement (cf. CellulesService.definirDispatcher, même pattern que
+  // « responsable d'un bloc » pour Permis/Exécution). Doit appartenir à la
+  // cellule (vérifié en service, pas en contrainte DB) ; SetNull si retiré
+  // de l'équipe ou si son compte est supprimé.
+  dispatcherId String?  @map("dispatcher_id")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  societe Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  membres Collaborateur[]
-  projets Projet[]
-  canal   Canal? // fil de discussion permanent de la cellule (0..1)
+  societe    Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  membres    Collaborateur[] @relation("CelluleMembre")
+  dispatcher Collaborateur?  @relation("CelluleDispatcher", fields: [dispatcherId], references: [id], onDelete: SetNull)
+  projets    ProjetCellule[]
+  canal      Canal? // fil de discussion permanent de la cellule (0..1)
 
   @@map("cellules")
+}
+
+// Table de liaison Projet <-> Cellule (many-to-many). Pas de champ propre
+// au-delà des deux FK : l'appartenance elle-même est l'information, il n'y a
+// pas de rôle par ligne (ça, c'est le « dispatcher » sur Cellule, au-dessus).
+model ProjetCellule {
+  projetId  String   @map("projet_id")
+  celluleId String   @map("cellule_id")
+  creeLe    DateTime @default(now()) @map("cree_le")
+
+  projet  Projet  @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  cellule Cellule @relation(fields: [celluleId], references: [id], onDelete: Cascade)
+
+  @@id([projetId, celluleId])
+  @@map("projet_cellules")
 }
 
 enum NiveauCollaborateur {
@@ -431,59 +645,63 @@ model Collaborateur {
   dateArrivee   String?             @map("date_arrivee")
   createdAt     DateTime            @default(now()) @map("created_at")
 
-  societe     Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  cellule     Cellule?      @relation(fields: [celluleId], references: [id], onDelete: SetNull)
-  utilisateur Utilisateur?  @relation(fields: [utilisateurId], references: [id])
-  dessinePour AvantProjet[] @relation("ApDessinateur")
-  rend3dPour  AvantProjet[] @relation("ApResponsable3d")
+  societe                      Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  cellule                      Cellule?           @relation("CelluleMembre", fields: [celluleId], references: [id], onDelete: SetNull)
+  // Back-relation de Cellule.dispatcherId — un tableau car non-`@unique` en
+  // base, mais en pratique jamais plus de 1 élément (la désignation exige
+  // d'appartenir à la cellule, donc « être dispatcher de 2 cellules à la
+  // fois » impliquerait d'être membre des deux, impossible avec celluleId
+  // singulier).
+  celluleDispatchee            Cellule[]          @relation("CelluleDispatcher")
+  utilisateur                  Utilisateur?       @relation(fields: [utilisateurId], references: [id])
+  dessinePour                  AvantProjet[]      @relation("ApDessinateur")
+  rend3dPour                   AvantProjet[]      @relation("ApResponsable3d")
+  blocsChecklistAvpResponsable BlocChecklistAvp[] @relation("BlocChecklistAvpResponsable")
+  blocsPermisResponsable       BlocPermis[]       @relation("BlocPermisResponsable")
+  blocsExecutionResponsable    BlocExecution[]    @relation("BlocExecutionResponsable")
+  blocsUnbordResponsable       BlocUnbord[]       @relation("BlocUnbordResponsable")
 
   @@map("collaborateurs")
 }
 
 // -- Section Avant-projet : fiche programme + validation (1:1 avec Projet) --
 
+// Restructuration sept. 2026 (chantier « Avant-projet 2 groupes ») : retire la
+// section formulaire « Programme » (besoinSurface/nbLots/usages/niveauFinition/
+// budgetCibleClient/delaiSouhaite/contraintes/references — faisait double
+// emploi, plus utilisée nulle part), et le verrou macro « Validation »
+// (programmeValide/budgetValide/esquisseValidee/engagementValide/
+// pieceValidation/valideLe/validePar) — décision boss : plus de lecture seule
+// automatique, l'avant-projet reste éditable en permanence (cohérent avec
+// phases_chevauchement, sept. 2026) ; la phase avance via changerPhase
+// (mécanisme déjà générique, indépendant de ceci). Pré-bilan (VersionPreBilan)
+// n'est plus embarqué sur la page Avant-projet mais reste en base, accessible
+// nulle part pour l'instant — même sort qu'Unbord avant Foncier.
 model AvantProjet {
-  projetId          String         @id @map("projet_id")
-  besoinSurface     Int?           @map("besoin_surface")
-  nbLots            Int?           @map("nb_lots")
-  usages            String         @default("")
-  niveauFinition    NiveauFinition @default(standard) @map("niveau_finition")
-  budgetCibleClient Decimal?       @map("budget_cible_client") @db.Decimal(14, 0)
-  delaiSouhaite     String         @default("") @map("delai_souhaite")
-  contraintes       String         @default("")
-  references        String         @default("")
+  projetId        String  @id @map("projet_id")
   // Affectation & agenda de la phase avant-projet (miroir de la carte Trello).
   // dessinateur / responsable3d : FK Collaborateur (étaient des String libres).
-  dessinateurId     String?        @map("dessinateur_id")
-  responsable3dId   String?        @map("responsable_3d_id")
-  dateDebut         String?        @map("date_debut") // AAAA-MM-JJ (date agenda)
-  dateFin           String?        @map("date_fin")
-  // checklist macro — 4 colonnes plutôt qu'un Json ; verrou dur de sortie de phase
-  programmeValide   Boolean        @default(false) @map("programme_valide")
-  budgetValide      Boolean        @default(false) @map("budget_valide")
-  esquisseValidee   Boolean        @default(false) @map("esquisse_validee")
-  engagementValide  Boolean        @default(false) @map("engagement_valide")
-  pieceValidation   String?        @map("piece_validation")
-  valideLe          DateTime?      @map("valide_le")
-  validePar         String?        @map("valide_par") // utilisateurId
+  dessinateurId   String? @map("dessinateur_id")
+  responsable3dId String? @map("responsable_3d_id")
+  dateDebut       String? @map("date_debut") // AAAA-MM-JJ (date agenda)
+  dateFin         String? @map("date_fin")
 
   projet          Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  validateur      Utilisateur?        @relation(fields: [validePar], references: [id])
   dessinateur     Collaborateur?      @relation("ApDessinateur", fields: [dessinateurId], references: [id], onDelete: SetNull)
   responsable3d   Collaborateur?      @relation("ApResponsable3d", fields: [responsable3dId], references: [id], onDelete: SetNull)
   lignesChecklist LigneChecklistAvp[]
+  blocsChecklist  BlocChecklistAvp[]
 
   @@map("avant_projets")
 }
 
-// -- Sous-checklists opérationnelles de l'avant-projet --
-// Le suivi quotidien de l'équipe (miroir du Trello Grey Concrete), distinct du
-// verrou macro à 4 points ci-dessus : n'ajoute AUCUN verrou de phase, alimente
-// juste un % (domaine/gardes.ts::avancementChecklistAvp). Une ligne par case.
-// `groupe` et libellés portés par la config CHECKLISTS_AVANT_PROJET
-// (domaine/config.ts + frontend/lib/types.ts, tenus synchro). Calqué sur
-// LigneEtude ; `nonRequis` = l'équivalent de StatutEtude.non_requise.
-
+// -- Sous-checklist opérationnelle de l'avant-projet --
+// Restructurée sept. 2026 : 2 groupes seulement (taches_complementaires,
+// renommé « Livrables » côté UI — et fichiers_produits). programme/
+// releve_existant/dossier_final retirés de la config (domaine/config.ts) —
+// valeurs d'enum laissées en base (coûteux à retirer d'un type Postgres, sans
+// utilité, même motif que dossier_final avant elles) ; lignes existantes
+// soft-deletées par la migration de ce chantier.
 enum GroupeChecklistAvp {
   programme
   releve_existant
@@ -492,31 +710,59 @@ enum GroupeChecklistAvp {
   dossier_final
 }
 
-// -- Sous-checklists opérationnelles de l'avant-projet --
-// Items libres par projet (admin : ajout/suppression) depuis sept. 2026 —
-// `libelle` est stocké sur la ligne (plus de jointure avec un enum de clés
-// fixes). `domaine/config.ts::GABARIT_CHECKLIST_AVP` ne sert plus qu'à
-// amorcer les 29 lignes standard à la création (coquilleAvantProjet) ; au-delà
-// de cet instant T, chaque ligne vit indépendamment de ce gabarit.
-// Pas de statut « non requis » : un item qui ne concerne pas ce projet se
-// retire (l'admin peut supprimer une ligne) plutôt que de rester coché N/A —
-// une seule façon de dire « ne compte pas », pas deux qui se recouvrent.
+// Les 2 blocs — porteurs de l'échéance et du responsable (un par bloc, même
+// motif que BlocPermis/BlocExecution : décision boss, sept. 2026 — remplace
+// l'ancienne assignation par ligne, indicative, sans échéance propre).
+model BlocChecklistAvp {
+  avantProjetId          String             @map("avant_projet_id")
+  groupe                 GroupeChecklistAvp
+  echeance               String?            @map("echeance") // AAAA-MM-JJ
+  responsableId          String?            @map("responsable_id")
+  // Demande de prolongation (responsable du bloc uniquement) — même motif que
+  // BlocPermis/BlocExecution.
+  prolongationDemandeeLe DateTime?          @map("prolongation_demandee_le")
+  prolongationEcheance   String?            @map("prolongation_echeance")
+  prolongationMotif      String?            @map("prolongation_motif")
+
+  avantProjet AvantProjet    @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
+  responsable Collaborateur? @relation("BlocChecklistAvpResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+
+  @@id([avantProjetId, groupe])
+  @@map("blocs_checklist_avp")
+}
+
+// Items du groupe (admin ou dispatcher d'une cellule du projet : ajout/
+// suppression, nouveauté de ce chantier — jusqu'ici admin seul). Restructurée
+// sept. 2026 sur le même modèle que Foncier/Unbord : plus de case « fait »
+// manuelle ni de note — le statut se déduit de la présence d'un fichier joint
+// (images/fichiers ci-dessous), `nonRequise` pour « ne s'applique pas à ce
+// projet ». L'ancien fait/note/faitParId/faitLe/collaborateurId/echeance/
+// prolongation par ligne sont retirés : assignation + échéance + prolongation
+// vivent maintenant sur BlocChecklistAvp (un responsable par groupe, pas par
+// ligne), et l'état « fait » est dérivé, pas déclaratif — plus rien à tracer
+// par ligne (cohérent avec LigneUnbord).
 model LigneChecklistAvp {
   id            String             @id @default(uuid())
   avantProjetId String             @map("avant_projet_id")
   groupe        GroupeChecklistAvp
   libelle       String
   ordre         Int                @default(0)
+  // Case à cocher manuelle (sept. 2026, en plus du statut dérivé des
+  // fichiers) — un fichier joint la met aussi à true automatiquement (cf.
+  // ProjetsService.marquerFaitApresUploadChecklistAvp), mais elle reste
+  // librement décochable ensuite (même contrat que LigneChecklistPermis.fait,
+  // les fichiers restent attachés). Mutuellement exclusif avec nonRequise.
   fait          Boolean            @default(false)
-  note          String             @default("")
-  // Suppression douce (admin) — cohérent avec ImageProjet/FichierProjet :
-  // la ligne disparaît du suivi sans effacer la trace de qui/quand.
+  nonRequise    Boolean            @default(false) @map("non_requise")
+  // Suppression douce (admin/dispatcher) — cohérent avec le reste du projet.
   supprimee     Boolean            @default(false)
   supprimeLe    DateTime?          @map("supprime_le")
   supprimeParId String?            @map("supprime_par_id")
 
-  avantProjet AvantProjet  @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
-  supprimePar Utilisateur? @relation("ChecklistAvpSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  avantProjet AvantProjet     @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
+  supprimePar Utilisateur?    @relation("ChecklistAvpSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  images      ImageProjet[]
+  fichiers    FichierProjet[]
 
   @@map("lignes_checklist_avp")
 }
@@ -545,21 +791,20 @@ model VersionPreBilan {
 // images. Migration additive (aucune donnée existante pour ces modèles).
 // Décisions figées — artifact « Backend Grey Concrete » §08 :
 //   · remise ≠ validee : deux valeurs d'enum distinctes (StatutEtude), pas un booléen ;
-//   · SituationPaiement pend directement du Lot (comme VersionPreBilan / Projet) ;
-//   · journal du permis + CR de chantier = une seule table EntreeJournal discriminée ;
 //   · ImageProjet strict — pas de Document générique tant qu'il n'y a qu'une nature ;
-//   · dates « agenda » (remise BET, jalons chantier) en String AAAA-MM-JJ ;
-//     horodatages (validation, dépôt, journal) en DateTime.
+//   · dates « agenda » (remise BET) en String AAAA-MM-JJ ; horodatages (validation) en DateTime.
+// Permis (sept. 2026) et Exécution (sept. 2026) ont depuis été refondus en
+// checklists Trello par blocs (BlocPermis/LigneChecklistPermis,
+// BlocExecution/LigneChecklistExecution) — le journal générique EntreeJournal
+// et le suivi lots/offres/situations/réception ont été retirés, cf. mémoire.
 // =============================================================================
 
 // -- Vocabulaire métier (fermé) — miroir de frontend/lib/types.ts --
 
-enum StatutNicad {
-  a_demander
-  demande
-  obtenu
-}
-
+// Réduit à 3 états réellement utilisés depuis le retrait du workflow de
+// dépôt/instruction (a_deposer = « en cours ») — depose/instruction/
+// observations restent dans l'enum pour ne pas casser les valeurs déjà
+// écrites en base, mais plus aucun chemin n'écrit dessus (cf. PermisService).
 enum StatutPermis {
   a_deposer
   depose
@@ -567,11 +812,6 @@ enum StatutPermis {
   observations
   obtenu
   refuse
-}
-
-enum VoieDepot {
-  teledac
-  mairie
 }
 
 enum TypeEtude {
@@ -591,36 +831,27 @@ enum StatutEtude {
   non_requise
 }
 
-enum TypeLot {
-  gros_oeuvre
-  second_oeuvre
-  lots_techniques
-  vrd
-  fournitures_mobilier
-  travaux_amenagement
-}
-
-enum StatutLot {
-  a_consulter
-  consulte
-  attribue
-  en_cours
-  termine
-}
-
-enum StatutReserve {
-  ouverte
-  levee
-}
-
-enum JournalContexte {
-  permis
-  chantier
-}
-
 enum UsageImage {
   travail
   portfolio
+}
+
+// Sujet de la photo (façade/intérieur/chantier/existant) — distinct de
+// `Phase` qui tague la temporalité du projet. Enum en dur pour l'instant (5
+// valeurs suffisent) ; à revoir en table société-scopée si un besoin de
+// personnalisation par l'admin se confirme (cf. mémoire).
+// `autre` ajouté sept. 2026 : catch-all pour les images jointes depuis des
+// checklists qui ne sont pas des photos du bâtiment (Permis — scans
+// administratifs, plans techniques ; Avant-projet — rendus 3D, mood board,
+// esquisses) — forcer facade/interieur/chantier/existant sur ces images
+// n'aurait pas de sens. Exécution/Foncier restent sur chantier/existant, qui
+// leur correspondent vraiment (cf. images.service.ts::MODULE_TYPE_PHOTO).
+enum TypePhotoImage {
+  facade
+  interieur
+  chantier
+  existant
+  autre
 }
 
 // -- Section « Permis de construire » (conception) : 1:1 avec Projet --
@@ -628,46 +859,102 @@ enum UsageImage {
 // mairie) → instruction 90 j → obtention → certificat de conformité.
 // « Permis obtenu » est le 2ᵉ verrou dur de peutAvancerPhase.
 model Permis {
-  projetId             String       @id @map("projet_id")
-  nicad                StatutNicad  @default(a_demander)
-  nicadNumero          String       @default("") @map("nicad_numero")
-  planBornage          Boolean      @default(false) @map("plan_bornage")
+  projetId          String       @id @map("projet_id")
   // dossier — 5 colonnes booléennes (miroir de PieceDossierPermis) plutôt qu'un Json
-  titrePropriete       Boolean      @default(false) @map("titre_propriete")
-  planCadastralVise    Boolean      @default(false) @map("plan_cadastral_vise")
-  plansApd             Boolean      @default(false) @map("plans_apd")
-  devis                Boolean      @default(false)
-  timbreFiscal         Boolean      @default(false) @map("timbre_fiscal")
-  // dépôt & instruction
-  statut               StatutPermis @default(a_deposer)
-  voie                 VoieDepot?
-  dateDepot            DateTime?    @map("date_depot")
-  numeroRecepisse      String       @default("") @map("numero_recepisse")
-  dateObtention        DateTime?    @map("date_obtention")
-  dateRefus            DateTime?    @map("date_refus")
-  certificatConformite Boolean      @default(false) @map("certificat_conformite")
-  dateCertificat       DateTime?    @map("date_certificat")
+  titrePropriete    Boolean      @default(false) @map("titre_propriete")
+  planCadastralVise Boolean      @default(false) @map("plan_cadastral_vise")
+  plansApd          Boolean      @default(false) @map("plans_apd")
+  devis             Boolean      @default(false)
+  timbreFiscal      Boolean      @default(false) @map("timbre_fiscal")
+  // Statut final — réduit à 3 états utilisables (a_deposer = « en cours »,
+  // obtenu, refuse) depuis le retrait du workflow de dépôt/instruction
+  // intermédiaire (sept. 2026) : les 3 blocs de la checklist couvrent déjà le
+  // travail réel, seul le résultat final garde une valeur propre (déclenche
+  // le rappel doux de changement de phase, cf. domaine/gardes.ts).
+  statut            StatutPermis @default(a_deposer)
+  dateObtention     DateTime?    @map("date_obtention")
+  dateRefus         DateTime?    @map("date_refus")
 
-  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  projet          Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  blocs           BlocPermis[]
+  lignesChecklist LigneChecklistPermis[]
 
   @@map("permis")
 }
 
-// -- Journal générique : journal du permis + CR de chantier. Même objet côté
-//    front (EntreeJournal). Discriminé par `contexte`, filtré par le service. --
-model EntreeJournal {
-  id       String          @id @default(uuid())
-  projetId String          @map("projet_id")
-  contexte JournalContexte
-  date     DateTime        @default(now())
-  texte    String
-  auteurId String?         @map("auteur_id") // nom résolu par jointure au rendu
+// -- Sous-checklists opérationnelles du permis (miroir Trello Grey Concrete,
+//    même motif que LigneChecklistAvp) : suivi granulaire indépendant des
+//    verrous durs ci-dessus (nicad/dossier/statut). Juste un %
+//    (domaine/gardes.ts::avancementChecklistAvp, réutilisée telle quelle).
+enum GroupeChecklistPermis {
+  dossier_permis
+  depot_urbanisme
+  procedure
+}
 
-  projet Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  auteur Utilisateur? @relation(fields: [auteurId], references: [id])
+// Les 3 blocs fixes de la checklist — porteurs de l'échéance et du
+// responsable (un par bloc, pas un seul pour tout le module ni un par item :
+// décision boss, sept. 2026, cf. mémoire). `groupe` fait à la fois office de
+// clé (avec permisId) et de lien vers les lignes qui partagent le même champ
+// — pas de FK blocId sur LigneChecklistPermis, juste le couple (permisId,
+// groupe) déjà présent des deux côtés.
+model BlocPermis {
+  permisId               String                @map("permis_id")
+  groupe                 GroupeChecklistPermis
+  echeance               String?               @map("echeance") // AAAA-MM-JJ
+  responsableId          String?               @map("responsable_id")
+  // Demande de prolongation (responsable du bloc uniquement) — une seule
+  // active, effacée à la décision (pas d'historique conservé, communiqué
+  // par notification).
+  prolongationDemandeeLe DateTime?             @map("prolongation_demandee_le")
+  prolongationEcheance   String?               @map("prolongation_echeance")
+  prolongationMotif      String?               @map("prolongation_motif")
 
-  @@index([projetId, contexte])
-  @@map("entrees_journal")
+  permis      Permis          @relation(fields: [permisId], references: [projetId], onDelete: Cascade)
+  responsable Collaborateur?  @relation("BlocPermisResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+  images      ImageProjet[]
+  fichiers    FichierProjet[]
+
+  @@id([permisId, groupe])
+  @@map("blocs_permis")
+}
+
+model LigneChecklistPermis {
+  id            String                @id @default(uuid())
+  permisId      String                @map("permis_id")
+  groupe        GroupeChecklistPermis
+  libelle       String
+  ordre         Int                   @default(0)
+  fait          Boolean               @default(false)
+  note          String                @default("")
+  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
+  // avec fait (cf. PermisService.patchLigneChecklist : passer nonRequise à
+  // true force fait à false). Compte comme réglé dans avancementChecklistAvp,
+  // même traitement que LigneChecklistAvp.nonRequise.
+  nonRequise    Boolean               @default(false) @map("non_requise")
+  // Pas d'échéance/assignation par item : portées par le bloc parent
+  // (BlocPermis, même permisId + groupe). Qui a réellement coché reste ici
+  // (le responsable du bloc OU l'admin, cf. PermisService).
+  faitLe        DateTime?             @map("fait_le")
+  faitParId     String?               @map("fait_par_id")
+  // Suppression douce (admin) — cohérent avec le reste du projet.
+  supprimee     Boolean               @default(false)
+  supprimeLe    DateTime?             @map("supprime_le")
+  supprimeParId String?               @map("supprime_par_id")
+
+  permis      Permis          @relation(fields: [permisId], references: [projetId], onDelete: Cascade)
+  faitPar     Utilisateur?    @relation("ChecklistPermisFaitPar", fields: [faitParId], references: [id], onDelete: SetNull)
+  supprimePar Utilisateur?    @relation("ChecklistPermisSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  images      ImageProjet[]
+  fichiers    FichierProjet[]
+
+  // Empêche le double-amorçage du gabarit si deux requêtes GET concurrentes
+  // (deux onglets, double montage React StrictMode…) tombent toutes les deux
+  // sur `count === 0` avant que la première n'ait inséré — cf. assurerChecklist
+  // (skipDuplicates). Les deux tentatives partagent les mêmes (groupe, ordre)
+  // puisqu'ils viennent du même gabarit statique.
+  @@unique([permisId, groupe, ordre])
+  @@map("lignes_checklist_permis")
 }
 
 // -- Section « Études » (conception) : en-tête 1:1 (comme AvantProjet) + lignes --
@@ -677,7 +964,12 @@ model Etudes {
   dceLe        DateTime? @map("dce_le")
 
   projet Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  // LigneEtude (6 types figés, TypeEtude) laissée dormante — restructuration
+  // sept. 2026 en blocs configurables par gabarit société (BlocEtude
+  // ci-dessous), même motif que dossier_final/checklist Avant-projet avant
+  // elle : rien supprimé, juste plus jamais lu/écrit par le service.
   lignes LigneEtude[]
+  blocs  BlocEtude[]
 
   @@map("etudes")
 }
@@ -698,85 +990,273 @@ model LigneEtude {
   @@map("lignes_etude")
 }
 
-// -- Section « Exécution / chantier » (les deux catégories) : en-tête 1:1,
-//    jalons de réception aplatis depuis le sous-objet Reception du front. --
-model Execution {
-  projetId             String  @id @map("projet_id")
-  receptionProvisoire  String? @map("reception_provisoire") // AAAA-MM-JJ
-  leveeReserves        String? @map("levee_reserves")
-  receptionDefinitive  String? @map("reception_definitive")
-  validationClient     Boolean @default(false) @map("validation_client")
-  dateValidationClient String? @map("date_validation_client")
+// -- Études techniques restructurées en blocs configurables (sept. 2026) —
+//    chaque type d'étude (géotechnique, structure…) n'est plus une ligne
+//    figée dans un tableau unique mais son propre bloc, avec un bureau
+//    d'études (interlocuteur+contact), une facture (admin/CIO uniquement) et
+//    ses propres livrables (ItemEtude) en checklist à fichiers, même modèle
+//    que Foncier (statut dérivé + case à cocher manuelle, cf.
+//    LigneUnbord.fait). Blocs ET items configurables par gabarit société
+//    (societe_admin ou CIO) — même pattern que LigneUnbordGabarit, mais avec
+//    un niveau de nesting en plus puisque les BLOCS eux-mêmes sont
+//    configurables ici (pas juste les items dans des blocs fixes). --
 
-  projet   Projet    @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  lots     Lot[]
-  reserves Reserve[]
+model BlocEtudeGabarit {
+  id            String    @id @default(uuid())
+  societeId     String    @map("societe_id")
+  libelle       String
+  ordre         Int       @default(0)
+  // Suppression douce : le bloc disparaît des nouveaux projets (et cesse
+  // d'être re-synchronisé sur les projets existants), mais les BlocEtude déjà
+  // créés (et leurs items/fichiers) restent intacts — même motif que
+  // LigneUnbordGabarit.
+  supprimeLe    DateTime? @map("supprime_le")
+  supprimeParId String?   @map("supprime_par_id")
 
-  @@map("executions")
+  societe     Societe             @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  supprimePar Utilisateur?        @relation("BlocEtudeGabaritSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  items       LigneEtudeGabarit[]
+  blocs       BlocEtude[]
+
+  @@index([societeId, supprimeLe])
+  @@map("blocs_etude_gabarit")
 }
 
-model Lot {
-  id                    String    @id @default(uuid())
-  executionId           String    @map("execution_id")
-  type                  TypeLot
-  statut                StatutLot @default(a_consulter)
-  entreprisesConsultees String[]  @map("entreprises_consultees")
-  entrepriseRetenue     String    @default("") @map("entreprise_retenue")
-  montantMarche         Decimal   @default(0) @map("montant_marche") @db.Decimal(14, 0)
-  dateAttribution       String?   @map("date_attribution") // AAAA-MM-JJ
-  avancement            Int       @default(0) // % physique
-  dateDebut             String?   @map("date_debut")
-  dateFinPrevue         String?   @map("date_fin_prevue")
+model LigneEtudeGabarit {
+  id                 String    @id @default(uuid())
+  blocEtudeGabaritId String    @map("bloc_etude_gabarit_id")
+  libelle            String
+  ordre              Int       @default(0)
+  supprimeLe         DateTime? @map("supprime_le")
+  supprimeParId      String?   @map("supprime_par_id")
 
-  execution  Execution           @relation(fields: [executionId], references: [projetId], onDelete: Cascade)
-  offres     OffreEntreprise[]
-  situations SituationPaiement[]
+  blocEtudeGabarit BlocEtudeGabarit @relation(fields: [blocEtudeGabaritId], references: [id], onDelete: Cascade)
+  supprimePar      Utilisateur?     @relation("LigneEtudeGabaritSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  items            ItemEtude[]
 
-  @@unique([executionId, type])
-  @@map("lots")
+  @@index([blocEtudeGabaritId, supprimeLe])
+  @@map("lignes_etude_gabarit")
 }
 
-model OffreEntreprise {
-  id         String   @id @default(uuid())
-  lotId      String   @map("lot_id")
-  entreprise String
-  montant    Decimal  @db.Decimal(14, 0)
-  delaiJours Int?     @map("delai_jours")
-  creeLe     DateTime @default(now()) @map("cree_le") // ordre d'affichage
+model BlocEtude {
+  id                   String      @id @default(uuid())
+  projetId             String      @map("projet_id")
+  blocEtudeGabaritId   String?     @map("bloc_etude_gabarit_id")
+  // Copié du gabarit à la création (figé), même motif que LigneUnbord.libelle
+  // — renommer le gabarit après coup ne réécrit pas les projets en cours.
+  // L'ORDRE en revanche n'est PAS figé : trié via blocEtudeGabarit.ordre à la
+  // lecture (même motif que LigneUnbord/gabarit.ordre), pour que réordonner
+  // le gabarit se reflète immédiatement partout.
+  libelle              String
+  interlocuteur        String      @default("") // ex-« bet » (nom du bureau d'études)
+  contactInterlocuteur String      @default("") @map("contact_interlocuteur")
+  statut               StatutEtude @default(a_lancer)
+  dateRemisePrevue     String?     @map("date_remise_prevue") // AAAA-MM-JJ
+  dateRemiseReelle     String?     @map("date_remise_reelle")
+  note                 String      @default("")
+  // Visible admin/CIO uniquement — redacted côté service pour tout autre
+  // rôle (jamais renvoyé à un collaborateur, cf. EtudesService.formater).
+  factureMontant       Decimal?    @map("facture_montant") @db.Decimal(14, 0)
+  factureFichierNom    String?     @map("facture_fichier_nom")
+  factureFichierCle    String?     @map("facture_fichier_cle")
+  // Règlement du bureau par Grey Concrete (étape H3, CGV art. 5 : seulement
+  // APRÈS encaissement du client). « À régler » est dérivé (facture de
+  // refacturation soldée) ; seul le règlement effectif est saisi — CFO,
+  // module finances_charges.
+  bureauRegleLe        DateTime?   @map("bureau_regle_le")
+  bureauRegleParId     String?     @map("bureau_regle_par_id") // audit, pas de FK
+  supprimee            Boolean     @default(false)
+  supprimeLe           DateTime?   @map("supprime_le")
+  supprimeParId        String?     @map("supprime_par_id")
 
-  lot Lot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  etudes           Etudes            @relation(fields: [projetId], references: [projetId], onDelete: Cascade)
+  blocEtudeGabarit BlocEtudeGabarit? @relation(fields: [blocEtudeGabaritId], references: [id], onDelete: SetNull)
+  supprimePar      Utilisateur?      @relation("BlocEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  items            ItemEtude[]
+  lignesFacture    LigneFacture[] // refacturation(s) — une seule active à la fois
 
-  @@map("offres_entreprise")
+  @@unique([projetId, blocEtudeGabaritId])
+  @@map("blocs_etude")
 }
 
-// Comme VersionPreBilan pend du Projet : SituationPaiement pend du Lot.
-model SituationPaiement {
-  id               String  @id @default(uuid())
-  lotId            String  @map("lot_id")
-  numero           Int // rang, renuméroté à la suppression
-  date             String // AAAA-MM-JJ
-  avancementCumule Int     @map("avancement_cumule") // %
-  montantSituation Decimal @map("montant_situation") @db.Decimal(14, 0)
-  retenueGarantie  Decimal @default(0) @map("retenue_garantie") @db.Decimal(14, 0)
-  montantVerse     Decimal @map("montant_verse") @db.Decimal(14, 0)
+model ItemEtude {
+  id                  String    @id @default(uuid())
+  blocEtudeId         String    @map("bloc_etude_id")
+  ligneEtudeGabaritId String?   @map("ligne_etude_gabarit_id")
+  // Copié du gabarit à la création (figé) ; ordre trié via
+  // ligneEtudeGabarit.ordre à la lecture — même motif que BlocEtude ci-dessus.
+  libelle             String
+  // Case à cocher manuelle + statut dérivé des fichiers joints, même modèle
+  // que LigneUnbord (Foncier) : un fichier joint coche aussi automatiquement.
+  fait                Boolean   @default(false)
+  nonRequise          Boolean   @default(false) @map("non_requise")
+  supprimee           Boolean   @default(false)
+  supprimeLe          DateTime? @map("supprime_le")
+  supprimeParId       String?   @map("supprime_par_id")
 
-  lot Lot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  blocEtude         BlocEtude          @relation(fields: [blocEtudeId], references: [id], onDelete: Cascade)
+  ligneEtudeGabarit LigneEtudeGabarit? @relation(fields: [ligneEtudeGabaritId], references: [id], onDelete: SetNull)
+  supprimePar       Utilisateur?       @relation("ItemEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  images            ImageProjet[]
+  fichiers          FichierProjet[]
 
-  @@unique([lotId, numero])
-  @@map("situations_paiement")
+  @@unique([blocEtudeId, ligneEtudeGabaritId])
+  @@map("items_etude")
 }
 
-model Reserve {
-  id          String        @id @default(uuid())
-  executionId String        @map("execution_id")
-  description String
-  statut      StatutReserve @default(ouverte)
-  dateLevee   String?       @map("date_levee") // AAAA-MM-JJ
-  creeLe      DateTime      @default(now()) @map("cree_le") // ordre d'affichage
+// -- Section « Unbord » (ex-Documents, renommée + restructurée en checklist à
+//    fichiers, sept. 2026) : 2 groupes fixes, items configurables par
+//    société (gabarit, 2026-09-24 — cf. LigneUnbordGabarit ci-dessous),
+//    pas d'échéance ni de responsable — toute l'équipe du projet peut
+//    uploader ou marquer « non nécessaire » (contrairement à
+//    Permis/Exécution, aucun guard d'assignation ici). « fait » n'est PAS
+//    stocké : dérivé à la lecture de la présence d'au moins un fichier/image
+//    rattaché (voir ImageProjet.ligneUnbordId / FichierProjet.ligneUnbordId
+//    plus bas) — un
+//    seul état de vérité, pas de champ qui pourrait diverger si le fichier
+//    est retiré.
+enum GroupeUnbord {
+  documents
+  releve_existant
+}
 
-  execution Execution @relation(fields: [executionId], references: [projetId], onDelete: Cascade)
+// Gabarit société — remplace l'ancien enum TypeUnbord (14 valeurs figées) :
+// depuis le 2026-09-24, chaque société définit sa propre liste d'items par
+// groupe (ajout/retrait/réordonnancement), comme les checklists
+// Avant-projet/Permis sont devenues configurables avant elle — sauf qu'ici
+// le gabarit est un standard PARTAGÉ par toute la société (mêmes pièces
+// attendues sur chaque projet), pas une checklist libre par projet. Édité
+// par societe_admin OU le rôle transverse CIO (cf. SocieteAdminOuCioGuard).
+model LigneUnbordGabarit {
+  id            String       @id @default(uuid())
+  societeId     String       @map("societe_id")
+  groupe        GroupeUnbord
+  libelle       String
+  ordre         Int          @default(0)
+  // Suppression douce : l'item disparaît des nouveaux projets, mais les
+  // lignes déjà créées sur des projets existants (et leurs fichiers) restent
+  // intactes — LigneUnbord copie libelle/groupe à la création, indépendant
+  // du gabarit ensuite (même motif que LigneChecklistAvp).
+  supprimeLe    DateTime?    @map("supprime_le")
+  supprimeParId String?      @map("supprime_par_id")
 
-  @@map("reserves")
+  societe     Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  supprimePar Utilisateur?  @relation("UnbordGabaritSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  lignes      LigneUnbord[]
+
+  @@index([societeId, supprimeLe])
+  @@map("lignes_unbord_gabarit")
+}
+
+// Assignation par bloc (2026-09-25) — même motif que BlocPermis/BlocExecution :
+// vide = toute l'équipe du projet peut agir sur les items de ce bloc (règle
+// de septembre, préservée en repli) ; renseigné = seul le responsable (+
+// societe_admin) peut cocher/uploader — vérifié par verifierResponsableOuAdmin,
+// même fonction que Permis/Exécution. Qui peut ASSIGNER (et se désigner
+// soi-même sur un bloc libre) passe par estAutoriseAAssigner
+// (dispatch-acces.ts), même règle exacte que Permis — pas de nouveau modèle
+// d'autorisation. Pas d'échéance/prolongation ici : pas demandé.
+model BlocUnbord {
+  projetId      String       @map("projet_id")
+  groupe        GroupeUnbord
+  responsableId String?      @map("responsable_id")
+
+  projet      Projet         @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  responsable Collaborateur? @relation("BlocUnbordResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+
+  @@id([projetId, groupe])
+  @@map("blocs_unbord")
+}
+
+model LigneUnbord {
+  id         String       @id @default(uuid())
+  projetId   String       @map("projet_id")
+  gabaritId  String       @map("gabarit_id")
+  // groupe/libelle copiés du gabarit à la création (figés) : renommer ou
+  // retirer un item du gabarit plus tard ne réécrit pas l'historique des
+  // projets déjà seedés avec lui.
+  groupe     GroupeUnbord
+  libelle    String
+  // Case à cocher manuelle (sept. 2026, en plus du statut dérivé des
+  // fichiers) — même contrat que LigneChecklistAvp.fait ci-dessus.
+  fait       Boolean      @default(false)
+  nonRequise Boolean      @default(false) @map("non_requise")
+
+  projet   Projet             @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  gabarit  LigneUnbordGabarit @relation(fields: [gabaritId], references: [id])
+  images   ImageProjet[]
+  fichiers FichierProjet[]
+
+  @@unique([projetId, gabaritId])
+  @@map("lignes_unbord")
+}
+
+// -- Section « Exécution / chantier » (les deux catégories) : miroir Trello
+//    Grey Concrete, même motif que Permis (BlocPermis/LigneChecklistPermis) —
+//    8 blocs fixes, chacun avec sa propre échéance et son responsable (pas de
+//    responsable unique pour tout le module ni d'en-tête 1:1 : contrairement à
+//    Permis, l'ancien système lots/offres/situations/réception est retiré en
+//    bloc, rien à garder au niveau module — décision boss, sept. 2026, cf.
+//    mémoire). S'applique aux deux catégories avec le même gabarit (idem).
+enum GroupeChecklistExecution {
+  etudes
+  plans
+  viabilite
+  locaux_technique
+  amenagements
+  menuiserie
+  details
+  cctp
+}
+
+model BlocExecution {
+  projetId               String                   @map("projet_id")
+  groupe                 GroupeChecklistExecution
+  echeance               String?                  @map("echeance") // AAAA-MM-JJ
+  responsableId          String?                  @map("responsable_id")
+  // Demande de prolongation (responsable du bloc uniquement) — même motif que
+  // BlocPermis.
+  prolongationDemandeeLe DateTime?                @map("prolongation_demandee_le")
+  prolongationEcheance   String?                  @map("prolongation_echeance")
+  prolongationMotif      String?                  @map("prolongation_motif")
+
+  projet      Projet         @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  responsable Collaborateur? @relation("BlocExecutionResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+
+  @@id([projetId, groupe])
+  @@map("blocs_execution")
+}
+
+model LigneChecklistExecution {
+  id            String                   @id @default(uuid())
+  projetId      String                   @map("projet_id")
+  groupe        GroupeChecklistExecution
+  libelle       String
+  ordre         Int                      @default(0)
+  fait          Boolean                  @default(false)
+  note          String                   @default("")
+  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
+  // avec fait. Même traitement que LigneChecklistPermis.nonRequise.
+  nonRequise    Boolean                  @default(false) @map("non_requise")
+  // Pas d'échéance/assignation par item : portées par le bloc parent
+  // (BlocExecution, même projetId + groupe).
+  faitLe        DateTime?                @map("fait_le")
+  faitParId     String?                  @map("fait_par_id")
+  // Suppression douce (admin) — cohérent avec le reste du projet.
+  supprimee     Boolean                  @default(false)
+  supprimeLe    DateTime?                @map("supprime_le")
+  supprimeParId String?                  @map("supprime_par_id")
+
+  projet      Projet          @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  faitPar     Utilisateur?    @relation("ChecklistExecutionFaitPar", fields: [faitParId], references: [id], onDelete: SetNull)
+  supprimePar Utilisateur?    @relation("ChecklistExecutionSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  images      ImageProjet[]
+  fichiers    FichierProjet[]
+
+  // Filet de sécurité contre le double-amorçage du gabarit (deux requêtes GET
+  // concurrentes) — même motif que LigneChecklistPermis (skipDuplicates).
+  @@unique([projetId, groupe, ordre])
+  @@map("lignes_checklist_execution")
 }
 
 // -- Section « Images » : galerie de travail + portfolio. Table stricte (pas un
@@ -784,24 +1264,50 @@ model Reserve {
 //    fichier vit dans le stockage objet ; `cle` = clé objet (data URI en
 //    transition tant que S3 n'est pas branché), l'URL est calculée à la lecture. --
 model ImageProjet {
-  id            String     @id @default(uuid())
-  projetId      String     @map("projet_id")
-  cle           String
-  nom           String
-  typeMime      String     @default("") @map("type_mime")
-  usage         UsageImage @default(travail)
-  phase         Phase? // tag optionnel — filtre, ne gate rien
-  legende       String     @default("")
-  ordre         Int        @default(0) // rang dans le portfolio
-  ajouteParId   String?    @map("ajoute_par_id")
-  ajouteLe      DateTime   @default(now()) @map("ajoute_le")
-  supprimee     Boolean    @default(false)
-  supprimeLe    DateTime?  @map("supprime_le")
-  supprimeParId String?    @map("supprime_par_id")
+  id                        String                 @id @default(uuid())
+  projetId                  String                 @map("projet_id")
+  cle                       String
+  nom                       String
+  typeMime                  String                 @default("") @map("type_mime")
+  usage                     UsageImage             @default(travail)
+  phase                     Phase? // tag optionnel — filtre, ne gate rien (temporalité)
+  typePhoto                 TypePhotoImage?        @map("type_photo") // tag optionnel — sujet de la photo, distinct de `phase`
+  legende                   String                 @default("")
+  ordre                     Int                    @default(0) // rang dans le portfolio
+  // Rattachement à un item précis de la checklist Permis / Exécution — posé
+  // quand l'upload part du bouton sur la ligne plutôt que de la page Images.
+  // SetNull (pas Cascade) : la ligne peut être retirée sans perdre le fichier.
+  ligneChecklistPermisId    String?                @map("ligne_checklist_permis_id")
+  ligneChecklistExecutionId String?                @map("ligne_checklist_execution_id")
+  // Rattachement à un item Unbord — même motif que les deux FK ci-dessus.
+  ligneUnbordId             String?                @map("ligne_unbord_id")
+  // Rattachement à un item de la checklist Avant-projet (chantier sept. 2026,
+  // statut fichier plutôt que case à cocher — même motif que ligneUnbordId).
+  ligneChecklistAvpId       String?                @map("ligne_checklist_avp_id")
+  // Rattachement au niveau du BLOC (pas d'un item précis) — Dépôt urbanisme /
+  // Procédure depuis la simplification Permis (sept. 2026) : un seul point
+  // d'upload partagé pour tout le bloc, les items restent cochables sans
+  // bouton « joindre » chacun. Référence composite (BlocPermis n'a pas de PK
+  // simple) — distinct de ligneChecklistPermisId, jamais les deux à la fois.
+  blocPermisPermisId        String?                @map("bloc_permis_permis_id")
+  blocPermisGroupe          GroupeChecklistPermis? @map("bloc_permis_groupe")
+  // Rattachement à un item Études — même motif que ligneUnbordId (sept. 2026).
+  itemEtudeId               String?                @map("item_etude_id")
+  ajouteParId               String?                @map("ajoute_par_id")
+  ajouteLe                  DateTime               @default(now()) @map("ajoute_le")
+  supprimee                 Boolean                @default(false)
+  supprimeLe                DateTime?              @map("supprime_le")
+  supprimeParId             String?                @map("supprime_par_id")
 
-  projet      Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  ajoutePar   Utilisateur? @relation("ImageAjoutPar", fields: [ajouteParId], references: [id])
-  supprimePar Utilisateur? @relation("ImageSupprPar", fields: [supprimeParId], references: [id])
+  projet                  Projet                   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  ajoutePar               Utilisateur?             @relation("ImageAjoutPar", fields: [ajouteParId], references: [id])
+  supprimePar             Utilisateur?             @relation("ImageSupprPar", fields: [supprimeParId], references: [id])
+  ligneChecklistPermis    LigneChecklistPermis?    @relation(fields: [ligneChecklistPermisId], references: [id], onDelete: SetNull)
+  ligneChecklistExecution LigneChecklistExecution? @relation(fields: [ligneChecklistExecutionId], references: [id], onDelete: SetNull)
+  ligneUnbord             LigneUnbord?             @relation(fields: [ligneUnbordId], references: [id], onDelete: SetNull)
+  ligneChecklistAvp       LigneChecklistAvp?       @relation(fields: [ligneChecklistAvpId], references: [id], onDelete: SetNull)
+  blocPermis              BlocPermis?              @relation(fields: [blocPermisPermisId, blocPermisGroupe], references: [permisId, groupe], onDelete: SetNull)
+  itemEtude               ItemEtude?               @relation(fields: [itemEtudeId], references: [id], onDelete: SetNull)
 
   @@index([projetId, supprimee])
   @@map("images_projet")
@@ -822,24 +1328,44 @@ enum TypeFichier {
 }
 
 model FichierProjet {
-  id            String      @id @default(uuid())
-  projetId      String      @map("projet_id")
-  cle           String // data URI en transition ; clé objet S3 à terme
-  nom           String
-  typeMime      String      @default("") @map("type_mime")
-  taille        Int         @default(0) // octets — info d'affichage
-  type          TypeFichier @default(autre)
-  phase         Phase? // tag optionnel — filtre
-  note          String      @default("")
-  ajouteParId   String?     @map("ajoute_par_id")
-  ajouteLe      DateTime    @default(now()) @map("ajoute_le")
-  supprimee     Boolean     @default(false)
-  supprimeLe    DateTime?   @map("supprime_le")
-  supprimeParId String?     @map("supprime_par_id")
+  id                        String                 @id @default(uuid())
+  projetId                  String                 @map("projet_id")
+  cle                       String // data URI en transition ; clé objet S3 à terme
+  nom                       String
+  typeMime                  String                 @default("") @map("type_mime")
+  taille                    Int                    @default(0) // octets — info d'affichage
+  type                      TypeFichier            @default(autre)
+  phase                     Phase? // tag optionnel — filtre
+  note                      String                 @default("")
+  // Rattachement à un item précis de la checklist Permis / Exécution — même
+  // motif que ImageProjet.ligneChecklistPermisId ci-dessus.
+  ligneChecklistPermisId    String?                @map("ligne_checklist_permis_id")
+  ligneChecklistExecutionId String?                @map("ligne_checklist_execution_id")
+  // Rattachement à un item Unbord — même motif que les deux FK ci-dessus.
+  ligneUnbordId             String?                @map("ligne_unbord_id")
+  // Rattachement à un item de la checklist Avant-projet — même motif que
+  // ligneUnbordId (cf. ImageProjet).
+  ligneChecklistAvpId       String?                @map("ligne_checklist_avp_id")
+  // Rattachement au niveau du BLOC — même motif que ImageProjet.blocPermis*.
+  blocPermisPermisId        String?                @map("bloc_permis_permis_id")
+  blocPermisGroupe          GroupeChecklistPermis? @map("bloc_permis_groupe")
+  // Rattachement à un item Études — même motif que ligneUnbordId (sept. 2026).
+  itemEtudeId               String?                @map("item_etude_id")
+  ajouteParId               String?                @map("ajoute_par_id")
+  ajouteLe                  DateTime               @default(now()) @map("ajoute_le")
+  supprimee                 Boolean                @default(false)
+  supprimeLe                DateTime?              @map("supprime_le")
+  supprimeParId             String?                @map("supprime_par_id")
 
-  projet      Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  ajoutePar   Utilisateur? @relation("FichierAjoutPar", fields: [ajouteParId], references: [id])
-  supprimePar Utilisateur? @relation("FichierSupprPar", fields: [supprimeParId], references: [id])
+  projet                  Projet                   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  ajoutePar               Utilisateur?             @relation("FichierAjoutPar", fields: [ajouteParId], references: [id])
+  supprimePar             Utilisateur?             @relation("FichierSupprPar", fields: [supprimeParId], references: [id])
+  ligneChecklistPermis    LigneChecklistPermis?    @relation(fields: [ligneChecklistPermisId], references: [id], onDelete: SetNull)
+  ligneChecklistExecution LigneChecklistExecution? @relation(fields: [ligneChecklistExecutionId], references: [id], onDelete: SetNull)
+  ligneUnbord             LigneUnbord?             @relation(fields: [ligneUnbordId], references: [id], onDelete: SetNull)
+  blocPermis              BlocPermis?              @relation(fields: [blocPermisPermisId, blocPermisGroupe], references: [permisId, groupe], onDelete: SetNull)
+  ligneChecklistAvp       LigneChecklistAvp?       @relation(fields: [ligneChecklistAvpId], references: [id], onDelete: SetNull)
+  itemEtude               ItemEtude?               @relation(fields: [itemEtudeId], references: [id], onDelete: SetNull)
 
   @@index([projetId, supprimee])
   @@map("fichiers_projet")
@@ -960,36 +1486,84 @@ enum ModePaiement {
   virement
   cheque
   especes
-  mobile_money
+  wave // mobile money — distingués (décision 27/09/2026)
+  orange_money
 }
 
 model Facture {
-  id               String        @id @default(uuid())
-  societeId        String        @map("societe_id")
-  projetId         String        @map("projet_id")
-  numero           Int? // rang séquentiel par société — null tant que brouillon
-  type             FactureType
-  statut           FactureStatut @default(brouillon)
-  jalon            JalonFacture? // renseigné si la facture appartient à un échéancier
-  libelle          String        @default("")
-  montantHt        Decimal       @default(0) @map("montant_ht") @db.Decimal(14, 0)
-  tauxTva          Decimal       @default(18) @map("taux_tva") @db.Decimal(5, 2)
-  echeanceLe       String?       @map("echeance_le") // AAAA-MM-JJ (date agenda)
-  estAvoir         Boolean       @default(false) @map("est_avoir")
-  factureOrigineId String?       @map("facture_origine_id") // avoir → facture annulée
-  creeLe           DateTime      @default(now()) @map("cree_le")
-  emiseLe          DateTime?     @map("emise_le")
-  annuleeLe        DateTime?     @map("annulee_le")
+  id                String        @id @default(uuid())
+  societeId         String        @map("societe_id")
+  // Nullable depuis le module Devis (cf. cadrage « Devis ») : une facture
+  // convertie depuis un devis « libre » (sans projet) doit pouvoir exister
+  // sans projetId. Tout le flux existant (échéancier par jalon) continue de
+  // toujours renseigner projetId — seule la contrainte est desserrée.
+  projetId          String?       @map("projet_id")
+  numero            Int? // rang séquentiel par société — null tant que brouillon
+  type              FactureType
+  statut            FactureStatut @default(brouillon)
+  jalon             JalonFacture? // renseigné si la facture appartient à un échéancier
+  libelle           String        @default("")
+  montantHt         Decimal       @default(0) @map("montant_ht") @db.Decimal(14, 0)
+  tauxTva           Decimal       @default(18) @map("taux_tva") @db.Decimal(5, 2)
+  echeanceLe        String?       @map("echeance_le") // AAAA-MM-JJ (date agenda)
+  estAvoir          Boolean       @default(false) @map("est_avoir")
+  factureOrigineId  String?       @map("facture_origine_id") // avoir → facture annulée
+  // Devis converti (cf. Devis.statut = transforme) — même idiome que
+  // factureOrigineId ci-dessus : le document dérivé porte le lien vers son
+  // origine. Le détail ligne par ligne reste sur le Devis, jamais dupliqué
+  // ici (Facture reste à montant unique, cf. cadrage §Devis).
+  devisOrigineId    String?       @unique @map("devis_origine_id")
+  // Étape H2 : factures préparées à l'Onboard depuis l'offre acceptée d'un
+  // dossier CRM (échéancier 40/40/20 de la conception, 50/50 par permis,
+  // images, autres lignes) — plusieurs par offre, d'où ce lien distinct de
+  // devisOrigineId (conversion 1 devis → 1 facture, devis libres).
+  devisEcheancierId String?       @map("devis_echeancier_id")
+  // Mensualité d'une ligne SU / EX de l'offre (facturation mensuelle
+  // manuelle, CGV : forfait mensuel) — une facture par mois facturé.
+  ligneDevisId      String?       @map("ligne_devis_id")
+  creeLe            DateTime      @default(now()) @map("cree_le")
+  emiseLe           DateTime?     @map("emise_le")
+  annuleeLe         DateTime?     @map("annulee_le")
 
-  societe        Societe    @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  projet         Projet     @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  factureOrigine Facture?   @relation("FactureAvoir", fields: [factureOrigineId], references: [id])
-  avoirs         Facture[]  @relation("FactureAvoir")
-  paiements      Paiement[]
+  societe         Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  projet          Projet?        @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  factureOrigine  Facture?       @relation("FactureAvoir", fields: [factureOrigineId], references: [id])
+  avoirs          Facture[]      @relation("FactureAvoir")
+  devisOrigine    Devis?         @relation("DevisConversion", fields: [devisOrigineId], references: [id])
+  devisEcheancier Devis?         @relation("DevisEcheancier", fields: [devisEcheancierId], references: [id], onDelete: SetNull)
+  ligneDevis      LigneDevis?    @relation(fields: [ligneDevisId], references: [id], onDelete: SetNull)
+  paiements       Paiement[]
+  lignes          LigneFacture[]
 
   @@unique([societeId, numero])
   @@index([projetId])
+  @@index([ligneDevisId])
   @@map("factures")
+}
+
+// Lignes d'une facture (étape H3, option B confirmée par le boss : les études
+// refacturées « figurent sur lignes distinctes de la facture », CGV art. 5).
+// ADDITIF : une facture sans lignes reste à montant unique, comme avant. Avec
+// lignes, Facture.montantHt reste le total stocké (= somme des lignes, tenu
+// par le service) et un SEUL taux de TVA par facture (Facture.tauxTva) —
+// statuts, paiements, avoirs, relances et tableau de bord restent inchangés.
+model LigneFacture {
+  id          String   @id @default(uuid())
+  factureId   String   @map("facture_id")
+  designation String
+  montantHt   Decimal  @map("montant_ht") @db.Decimal(14, 0)
+  // Refacturation d'une étude (ET) : montant HT facturé par le bureau ;
+  // montantHt = base × 1,10 (coordination, catalogue ET). Figé à la création.
+  montantBase Decimal? @map("montant_base") @db.Decimal(14, 0)
+  blocEtudeId String?  @map("bloc_etude_id")
+  ordre       Int      @default(0)
+
+  facture   Facture    @relation(fields: [factureId], references: [id], onDelete: Cascade)
+  blocEtude BlocEtude? @relation(fields: [blocEtudeId], references: [id], onDelete: SetNull)
+
+  @@index([factureId])
+  @@index([blocEtudeId])
+  @@map("lignes_facture")
 }
 
 // Comme SituationPaiement pend du Lot : Paiement pend de la Facture. Plusieurs
@@ -1009,4 +1583,151 @@ model Paiement {
 
   @@index([factureId])
   @@map("paiements")
+}
+
+// =============================================================================
+// Devis (brique « gestion », 2ᵉ étage après Facturation) — cf. cadrage « Devis ».
+// Miroir partiel de Facture (numérotation séquentielle par société, dates
+// agenda en String, horodatages en DateTime) — diffère sur trois points figés
+// au cadrage :
+//   · un Devis a de VRAIES lignes multiples (LigneDevis, taux de TVA propre à
+//     chaque ligne) — Facture reste à montant unique (échéancier à 3 jalons) :
+//     montantHt/montantTva du devis sont dérivés à la lecture en sommant les
+//     lignes (une seule source, jamais stockés en double) ;
+//   · conversion en facture = additionne les lignes en un montantHt unique
+//     sur la Facture créée (jalon = null), jamais une refonte de Facture pour
+//     lui ajouter des lignes (système déjà livré et testé, cf. mémoire) —
+//     Facture.devisOrigineId porte la traçabilité vers le détail ligne par
+//     ligne, jamais dupliqué ;
+//   · projetId nullable : un devis peut précéder la création du dossier
+//     projet (devis « libre ») — Facture.projetId est nullable pour la même
+//     raison (la conversion doit aboutir même sans projet) ;
+//   · double canal de réponse dès le départ : validation manuelle par l'admin
+//     (statut posé à la main) ET lien public sans compte (tokenPublicHash,
+//     même convention qu'Invitation.tokenHash — seul le SHA-256 est stocké,
+//     cf. auth/jetons.ts) — le client accepte/refuse sans compte, ou l'admin
+//     tranche lui-même après une réponse reçue autrement.
+// =============================================================================
+
+// `expire` n'est PAS une valeur stockée : comme en_retard/payee pour Facture
+// (statutFactureEffectif), c'est un statut dérivé à la lecture (envoye + date
+// de validité dépassée sans réponse) — jamais une transition écrite en base.
+// Cf. domaine.ts::statutDevisEffectif.
+enum StatutDevis {
+  brouillon
+  envoye
+  accepte
+  refuse
+  transforme // converti en facture — état terminal, comme `annulee` pour Facture
+}
+
+model Devis {
+  id                String      @id @default(uuid())
+  societeId         String      @map("societe_id")
+  projetId          String?     @map("projet_id") // nullable — devis « libre » possible
+  clientId          String      @map("client_id") // toujours un client du CRM, jamais ressaisi
+  numero            Int? // rang séquentiel par société — null tant que brouillon, comme Facture
+  statut            StatutDevis @default(brouillon)
+  objet             String      @default("")
+  dateValidite      String?     @map("date_validite") // AAAA-MM-JJ (date agenda)
+  dateEnvoi         DateTime?   @map("date_envoi")
+  dateReponse       DateTime?   @map("date_reponse")
+  // Jeton d'acceptation/refus sans compte — même convention QUE
+  // Invitation.tokenHash (cf. auth/jetons.ts) : on ne stocke QUE le SHA-256,
+  // jamais le jeton en clair (une fuite de base ne permet aucun rejeu). Le
+  // clair ne vit que dans le lien envoyé par email, généré à l'envoi et
+  // jamais ré-exposé ensuite — un renvoi régénère un nouveau jeton.
+  tokenPublicHash   String?     @unique @map("token_public_hash")
+  creeLe            DateTime    @default(now()) @map("cree_le")
+  // Offre d'un dossier CRM (étape F) : préparée en « Nouveau projet »,
+  // envoyée UNIQUEMENT par la validation DAF (cycle du dossier), validité
+  // 7 jours. null = devis hors CRM (Facturation). Rattachée au projet
+  // (projetId) au passage du dossier à « onboard ».
+  dossierCrmId      String?     @map("dossier_crm_id")
+  // Relances manuelles (J+3, J+6 — « relance à faire » dérivé à la lecture,
+  // aucun scheduler) : compteur pour savoir laquelle est due.
+  relancesEnvoyees  Int         @default(0) @map("relances_envoyees")
+  derniereRelanceLe DateTime?   @map("derniere_relance_le")
+
+  societe            Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  projet             Projet?      @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  dossierCrm         DossierCrm?  @relation(fields: [dossierCrmId], references: [id], onDelete: SetNull)
+  client             Client       @relation(fields: [clientId], references: [id])
+  lignes             LigneDevis[]
+  factureConvertie   Facture?     @relation("DevisConversion")
+  facturesEcheancier Facture[]    @relation("DevisEcheancier")
+
+  @@unique([societeId, numero])
+  @@index([projetId])
+  @@index([clientId])
+  @@index([dossierCrmId])
+  @@map("devis")
+}
+
+model LigneDevis {
+  id               String  @id @default(uuid())
+  devisId          String  @map("devis_id")
+  produitServiceId String? @map("produit_service_id") // null = ligne libre
+  designation      String
+  // Ligne CO (tarif × surface × planches) : paramètres conservés pour
+  // l'affichage (« 250 m² × 2 planches ») ; quantite = surface × planches,
+  // donc tous les calculs aval (HT, TVA, conversion en facture) restent
+  // « quantité × prix unitaire ».
+  surfaceM2        Int?    @map("surface_m2")
+  planches         Int?
+  quantite         Decimal @default(1) @db.Decimal(10, 2)
+  prixUnitaire     Decimal @map("prix_unitaire") @db.Decimal(14, 0)
+  tauxTva          Decimal @default(18) @map("taux_tva") @db.Decimal(5, 2)
+  ordre            Int     @default(0)
+
+  devis          Devis           @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  produitService ProduitService? @relation(fields: [produitServiceId], references: [id], onDelete: SetNull)
+  mensualites    Facture[] // SU / EX : une facture par mois facturé (étape H2)
+
+  @@index([devisId])
+  @@map("lignes_devis")
+}
+
+// Catalogue optionnel — démarre vide, l'admin l'alimente au fil de l'eau (pas
+// de pré-remplissage : les libellés doivent être ceux du boss, pas une
+// supposition métier, cf. mémoire). Sur chaque ligne de devis, piocher dans le
+// catalogue reste une option À CÔTÉ de la ligne libre, jamais une contrainte.
+// Mode de calcul d'une ligne tirée du catalogue (catalogue réel Grey
+// Concrete, sept. 2026 — cf. prisma/data/catalogue-grey-concrete.json).
+enum ModeCalculProduit {
+  quantite // prix × quantité (pièces, mois…) — IM, SU, EX
+  surface_planches // tarif × surface à concevoir × planches — CO
+  forfait // montant saisi (prix modifiable) — PC (DPC/SPC)
+  // TS-MAJ (reprise majeure) : tarif de la catégorie CO DU PROJET × surface
+  // concernée × planches concernées (CGV art. 8) — pas de prix au catalogue.
+  tarif_co_surface_planches
+}
+
+model ProduitService {
+  id             String            @id @default(uuid())
+  societeId      String            @map("societe_id")
+  // Identité catalogue réel (null = produit ajouté à la main par l'admin,
+  // sans règle de calcul). code unique par société : CO1, IM2, SU3, DPC…
+  code           String?
+  famille        String? // CO, IM, SU, EX, PC
+  unite          String? // m2, piece, mois, forfait
+  modeCalcul     ModeCalculProduit @default(quantite) @map("mode_calcul")
+  // false : le prix du catalogue s'impose sur la ligne (jamais saisi).
+  prixModifiable Boolean           @default(true) @map("prix_modifiable")
+  // SU : catégorie CO dont il découle (CO1→SU1…) — jamais choisi librement.
+  coAssocie      String?           @map("co_associe")
+  designation    String
+  prixUnitaire   Decimal?          @map("prix_unitaire") @db.Decimal(14, 0) // nullable — certains prix varient trop pour être fixés
+  tauxTva        Decimal           @default(18) @map("taux_tva") @db.Decimal(5, 2)
+  description    String            @default("")
+  supprime       Boolean           @default(false)
+  supprimeLe     DateTime?         @map("supprime_le")
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  societe Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  lignes  LigneDevis[]
+
+  @@unique([societeId, code])
+  @@index([societeId, supprime])
+  @@map("produits_services")
 }

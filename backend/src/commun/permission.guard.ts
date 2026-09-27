@@ -1,0 +1,53 @@
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import type { NiveauPermission } from '@prisma/client';
+import { PERMISSION_REQUISE, PermissionRequise } from './permission.decorator';
+
+// Ordre total des niveaux — un niveau donne accès à tout ce qui est en
+// dessous (validation implique ecriture implique lecture).
+const ORDRE: Record<NiveauPermission, number> = {
+  aucun: 0,
+  lecture: 1,
+  ecriture: 2,
+  validation: 3,
+};
+
+// Même règle que le garde, pour un service qui doit décider au niveau d'un
+// CHAMP (ex. commission d'apporteur masquée dans une réponse) plutôt que
+// d'une route entière.
+export function aLaPermission(
+  permissions: Record<string, NiveauPermission> | undefined,
+  module: string,
+  niveau: NiveauPermission,
+): boolean {
+  return ORDRE[permissions?.[module] ?? 'aucun'] >= ORDRE[niveau];
+}
+
+// À poser après JwtAuthGuard sur une route marquée @RequiertPermission(module,
+// niveau). Sans le décorateur, laisse passer (opt-in route par route — cf.
+// mémoire grey-concrete-role-permission-system : le déploiement se fait guard
+// par guard, pas en un seul changement qui rebrancherait tout l'admin d'un
+// coup). Absence d'entrée pour le module dans req.user.permissions = 'aucun'
+// (fail closed), pas une exception.
+@Injectable()
+export class PermissionGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(ctx: ExecutionContext): boolean {
+    const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(
+      PERMISSION_REQUISE,
+      [ctx.getHandler(), ctx.getClass()],
+    );
+    if (!requis) return true;
+
+    const req = ctx.switchToHttp().getRequest();
+    const permissions = req.user?.permissions as Record<string, NiveauPermission> | undefined;
+
+    if (!aLaPermission(permissions, requis.module, requis.niveau)) {
+      throw new ForbiddenException(
+        `Accès insuffisant sur le module « ${requis.module} » (niveau requis : ${requis.niveau}).`,
+      );
+    }
+    return true;
+  }
+}

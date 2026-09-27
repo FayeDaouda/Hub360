@@ -1,34 +1,36 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AlarmClock, CheckCircle2, FolderKanban, Gauge, PlayCircle } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import { ActionsRapides, type ActionRapide } from '@/components/actions-rapides';
 import { RailAccueil } from '@/components/collab/rail-accueil';
 import { getMonProfil } from '@/lib/collab';
 import { getIndicateurs } from '@/lib/equipe';
 import { getAvantProjet, getProjetsExecution } from '@/lib/projets';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import {
-  avancementChecklistAvp,
+  avancementChecklistFichiers,
   itemsChecklistAvp,
   NIVEAUX_COLLABORATEUR,
   PHASES,
   type IndicateursCollaborateur,
   type MonProfil,
   type ProjetExecution,
-  type Session,
-  type Societe,
 } from '@/lib/types';
-import { CollaborateurShell } from '@/components/collab/collab-shell';
 import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
-import { PopupDetail, type LigneDetail } from '@/components/collab/popup-detail';
-import { formatDateCourte } from '@/lib/format';
 
 type Props = { params: { slug: string } };
+
+// Même palette de dégradés que le tableau de bord admin, CRM, Projets et
+// Facturation (demande boss, sept. 2026) — cohérence de traitement des KPI
+// dans toute l'appli, y compris côté collaborateur.
+const DEGRADE_KPI: Record<string, { a: string; b: string }> = {
+  encours: { a: '#2e3192', b: '#1bffff' }, // Ocean Blue
+  livres: { a: '#11998e', b: '#38ef7d' }, // Quepal
+  retard: { a: '#ff5f6d', b: '#ffc371' }, // Sweet Morning
+  checklist: { a: '#764ba2', b: '#667eea' }, // Plum Plate
+};
 
 const SEUIL_JOURS = 14; // en deçà, l'échéance est « proche »
 
@@ -40,9 +42,6 @@ type Ligne = {
   complete: boolean;
   // jours avant dateFin (négatif = dépassé), null si aucune date
   jours: number | null;
-  // brut de l'avant-projet — pour le popup « délais tenus »
-  dateFin: string | null;
-  valideLe: string | null;
   rang: number;
 };
 
@@ -76,38 +75,18 @@ function echLabel(l: Ligne): string {
   return `Échéance dans ${l.jours} j`;
 }
 
-// Ratio d'avancement checklist (1 = terminé / rien à faire) — tri du popup.
-function ratio(l: Pick<Ligne, 'faits' | 'total' | 'complete'>): number {
-  if (l.complete) return 1;
-  return l.total ? l.faits / l.total : 1;
-}
-
 // Accueil collaborateur : point de départ de journée. En-tête + 4 chiffres
 // (endpoint indicateurs, étape 4) + « ce qui m'attend » + ses projets actifs
 // triés par urgence. Tout dérivé de données existantes, aucune saisie.
 export default function CollabPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Accueil');
+  const session = useSessionCourante();
   const [profil, setProfil] = useState<MonProfil | null>(null);
   const [indic, setIndic] = useState<IndicateursCollaborateur | null>(null);
   const [lignes, setLignes] = useState<Ligne[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [popup, setPopup] = useState<null | 'checklist' | 'delais'>(null);
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'collaborateur') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
-
     // Profil PUIS indicateurs (l'id vient du profil). Un échec de l'un ou de
     // l'autre pose `erreur` — sans quoi le bandeau KPI resterait en squelette
     // indéfiniment (cas d'un compte « collaborateur » sans fiche : mon-profil
@@ -133,16 +112,14 @@ export default function CollabPage({ params }: Props) {
           actifs.map(async (projet): Promise<Ligne> => {
             const ap = await getAvantProjet(params.slug, projet.id).catch(() => null);
             const av = ap
-              ? avancementChecklistAvp(itemsChecklistAvp(ap.checklists))
+              ? avancementChecklistFichiers(itemsChecklistAvp(ap.checklists))
               : { faits: 0, total: 0, complete: false };
             const base = {
               projet,
               faits: av.faits,
               total: av.total,
-              complete: !!ap?.valideLe || av.complete,
+              complete: av.complete,
               jours: joursAvant(ap?.dateFin ?? null),
-              dateFin: ap?.dateFin ?? null,
-              valideLe: ap?.valideLe ?? null,
             };
             return { ...base, rang: rangUrgence(base) };
           }),
@@ -156,7 +133,7 @@ export default function CollabPage({ params }: Props) {
         setLignes(rows);
       })
       .catch(() => setLignes([]));
-  }, [params.slug, router]);
+  }, [params.slug]);
 
   const attention = useMemo(
     () => (lignes ?? []).filter((l) => l.rang <= 1),
@@ -196,8 +173,6 @@ export default function CollabPage({ params }: Props) {
     },
   ];
 
-  if (!session) return null;
-
   // Tuiles : « en cours » / « livrés » pointent vers un sous-ensemble navigable
   // (lien vers la liste filtrée) ; « délais » / « checklists » cachent un calcul
   // détaillé → popup.
@@ -208,82 +183,39 @@ export default function CollabPage({ params }: Props) {
           cle: 'encours',
           label: 'Projets en cours',
           valeur: indic.projetsEnCours,
+          degrade: DEGRADE_KPI.encours,
           action: { type: 'lien', href: `${projetsBase}?statut=encours` },
         },
         {
           cle: 'livres',
           label: 'Livrés',
           valeur: indic.projetsLivres,
+          degrade: DEGRADE_KPI.livres,
           action: { type: 'lien', href: `${projetsBase}?statut=livres` },
         },
         {
-          cle: 'delais',
-          label: 'Délais avant-projet tenus',
-          valeur: indic.avantProjetDelais.total
-            ? `${indic.avantProjetDelais.aTemps}/${indic.avantProjetDelais.total}`
-            : '—',
-          alerte:
-            indic.avantProjetDelais.total > 0 &&
-            indic.avantProjetDelais.aTemps < indic.avantProjetDelais.total,
-          action: { type: 'popup', onClick: () => setPopup('delais') },
+          // Lien plutôt que popup (contrairement aux 2 tuiles ci-dessus) :
+          // le détail tâche par tâche, tous modules confondus, vit sur
+          // « Mes indicateurs », pas dans une popup dérivée de `lignes`
+          // (qui reste un worklist par PROJET, pas par tâche individuelle).
+          cle: 'retard',
+          label: 'Tâches en retard',
+          valeur: indic.mesTaches.enRetard,
+          degrade: DEGRADE_KPI.retard,
+          action: { type: 'lien', href: `/collab/${params.slug}/indicateurs` },
         },
         {
           cle: 'checklist',
-          label: 'Avancement checklists',
-          valeur: indic.checklistPct == null ? '—' : `${indic.checklistPct} %`,
-          alerte: indic.checklistPct != null && indic.checklistPct < 100,
-          action: { type: 'popup', onClick: () => setPopup('checklist') },
+          label: 'Mes tâches complétées',
+          valeur: indic.mesTaches.pct == null ? '—' : `${indic.mesTaches.pct} %`,
+          degrade: DEGRADE_KPI.checklist,
+          action: { type: 'lien', href: `/collab/${params.slug}/indicateurs` },
         },
       ]
     : [];
 
-  // Détail projet par projet des 2 popups — dérivé de `lignes` déjà chargées
-  // (aucun appel supplémentaire).
-  const lignesChecklist: LigneDetail[] = [...(lignes ?? [])]
-    .sort((a, b) => ratio(a) - ratio(b))
-    .map((l) => ({
-      id: l.projet.id,
-      code: l.projet.code,
-      programme: l.projet.programme,
-      href: `/collab/${params.slug}/projets/${l.projet.id}`,
-      valeur: l.complete ? 'Terminé' : `${l.faits}/${l.total}`,
-      ton: l.complete ? 'ok' : ratio(l) < 0.5 ? 'alerte' : 'neutre',
-    }));
-
-  const lignesDelais: LigneDetail[] = (lignes ?? [])
-    .filter((l) => l.dateFin)
-    .map((l) => {
-      const socle = {
-        id: l.projet.id,
-        code: l.projet.code,
-        programme: l.projet.programme,
-        href: `/collab/${params.slug}/projets/${l.projet.id}`,
-      };
-      if (l.valideLe) {
-        const tenu = l.valideLe.slice(0, 10) <= l.dateFin!;
-        return {
-          ...socle,
-          valeur: tenu ? 'Tenu' : 'Dépassé',
-          ton: tenu ? 'ok' : 'retard',
-          sous: `prévu ${formatDateCourte(l.dateFin!)} · validé ${formatDateCourte(l.valideLe)}`,
-        };
-      }
-      const cl = echClasse(l);
-      return {
-        ...socle,
-        valeur: echLabel(l),
-        ton: cl === 'retard' ? 'retard' : cl === 'proche' ? 'alerte' : 'neutre',
-        sous: `échéance ${formatDateCourte(l.dateFin!)}`,
-      };
-    });
-
   return (
-    <CollaborateurShell
-      societe={societe}
-      session={session}
-      active="accueil"
-      titre="Accueil"
-    >
+    <>
       <div className="collab-accueil collab-accueil--2col">
         <div className="collab-accueil-main">
         <div className="collab-hero">
@@ -411,27 +343,8 @@ export default function CollabPage({ params }: Props) {
         )}
         </div>
 
-        <RailAccueil slug={params.slug} pourcentage={indic?.checklistPct ?? null} />
+        <RailAccueil slug={params.slug} pourcentage={indic?.mesTaches.pct ?? null} />
       </div>
-
-      {popup === 'checklist' && (
-        <PopupDetail
-          titre="Avancement des checklists"
-          intro="Sous-checklists opérationnelles de l’avant-projet, projet par projet."
-          lignes={lignesChecklist}
-          vide="Aucun projet actif."
-          onClose={() => setPopup(null)}
-        />
-      )}
-      {popup === 'delais' && (
-        <PopupDetail
-          titre="Échéances avant-projet"
-          intro="Projets en cours datés : échéance vs validation. La tuile, elle, compte aussi les projets livrés (bilan)."
-          lignes={lignesDelais}
-          vide="Aucun projet en cours n’a de date de fin d’avant-projet."
-          onClose={() => setPopup(null)}
-        />
-      )}
-    </CollaborateurShell>
+    </>
   );
 }

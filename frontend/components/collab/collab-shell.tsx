@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
+  ChevronLeft,
   FolderKanban,
   Gauge,
   LayoutDashboard,
@@ -39,9 +41,24 @@ const NAV: NavItem[] = [
   { cle: 'equipe', libelle: 'Mon équipe', icone: Users },
 ];
 
+// Dérive l'entrée de nav active depuis l'URL — même motif que
+// activeAdminDepuisPathname (admin-shell.tsx) : un seul point de vérité.
+export function activeCollabDepuisPathname(pathname: string, slug: string): string {
+  const base = `/collab/${slug}`;
+  const reste = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
+  const segment = reste.split('/').filter(Boolean)[0] ?? '';
+  return NAV.find((item) => item.chemin === segment)?.cle ?? 'accueil';
+}
+
 function initiales(utilisateur: Session['utilisateur']): string {
   return `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`.toUpperCase();
 }
+
+// Repli en rail d'icônes (desktop uniquement — cf. media query 960px) :
+// préférence mémorisée, pas remise à zéro à chaque navigation. Même clé que
+// AdminShell — un seul réglage de confort par utilisateur, peu importe
+// l'espace (admin ou collaborateur).
+const CLE_SIDEBAR_REPLIEE = 'hub-sidebar-repliee';
 
 type Props = {
   societe: Societe | null;
@@ -62,6 +79,26 @@ export function CollaborateurShell({
   const router = useRouter();
   const base = `/collab/${session.societe.slug}`;
   const [menuOuvert, setMenuOuvert] = useState(false);
+  const [repliee, setRepliee] = useState(false);
+  // Portail plutôt qu'un ::after dans la sidebar — cf. commentaire équivalent
+  // dans AdminShell (overflow-y auto y force overflow-x à `auto`).
+  const [infobulle, setInfobulle] = useState<{ texte: string; top: number; left: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setRepliee(localStorage.getItem(CLE_SIDEBAR_REPLIEE) === '1');
+  }, []);
+
+  function afficherInfobulle(e: { currentTarget: HTMLElement }, texte: string) {
+    if (!repliee) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setInfobulle({ texte, top: rect.top + rect.height / 2, left: rect.right + 12 });
+  }
+
+  function masquerInfobulle() {
+    setInfobulle(null);
+  }
 
   // Échap ferme le panneau escamotable (tablette / mobile).
   useEffect(() => {
@@ -73,13 +110,21 @@ export function CollaborateurShell({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [menuOuvert]);
 
+  function basculerRepliee() {
+    setRepliee((actuel) => {
+      const suivant = !actuel;
+      localStorage.setItem(CLE_SIDEBAR_REPLIEE, suivant ? '1' : '0');
+      return suivant;
+    });
+  }
+
   function deconnexion() {
     clearSession();
     router.push('/');
   }
 
   return (
-    <div className="admin admin--collab">
+    <div className={`admin admin--collab${repliee ? ' admin--repliee' : ''}`}>
       <div
         className={`admin-backdrop${menuOuvert ? ' is-visible' : ''}`}
         onClick={() => setMenuOuvert(false)}
@@ -87,27 +132,48 @@ export function CollaborateurShell({
       />
 
       <aside className={`admin-sidebar${menuOuvert ? ' is-open' : ''}`}>
-        <div className="admin-brand">
-          {societe ? (
-            <SocieteAvatar societe={societe} size="md" />
-          ) : (
-            <span className="admin-brand-fallback">{session.societe.nom.charAt(0)}</span>
-          )}
-          <span className="admin-brand-text">
-            <strong>{session.societe.nom}</strong>
-            <span>Espace collaborateur</span>
-          </span>
-          <button
-            type="button"
-            className="admin-sidebar-close"
-            aria-label="Fermer le menu"
-            onClick={() => setMenuOuvert(false)}
-          >
-            <X size={18} strokeWidth={1.75} />
-          </button>
-        </div>
+        {/* Pilule de repli — accrochée au bord droit de la sidebar, déborde
+            sur le contenu principal (sept. 2026). Sortie du flex/scroll
+            interne pour rester ancrée au vrai bord de .admin-sidebar (pas
+            celui, décalé par le padding, du contenu défilant) et pour rester
+            visible même sidebar repliée. */}
+        <button
+          type="button"
+          className="admin-sidebar-toggle"
+          aria-label={repliee ? 'Déplier le menu' : 'Replier le menu'}
+          aria-pressed={repliee}
+          onClick={basculerRepliee}
+        >
+          <ChevronLeft
+            size={15}
+            strokeWidth={2.25}
+            className={`admin-sidebar-toggle-icone${repliee ? ' est-tournee' : ''}`}
+            aria-hidden
+          />
+        </button>
 
-        <nav className="admin-nav">
+        <div className="admin-sidebar-scroll">
+          <div className="admin-brand">
+            {societe ? (
+              <SocieteAvatar societe={societe} size="md" theme="glass" />
+            ) : (
+              <span className="admin-brand-fallback">{session.societe.nom.charAt(0)}</span>
+            )}
+            <span className="admin-brand-text">
+              <strong>{session.societe.nom}</strong>
+              <span>Espace collaborateur</span>
+            </span>
+            <button
+              type="button"
+              className="admin-sidebar-close"
+              aria-label="Fermer le menu"
+              onClick={() => setMenuOuvert(false)}
+            >
+              <X size={18} strokeWidth={1.75} />
+            </button>
+          </div>
+
+          <nav className="admin-nav">
           {NAV.map((item) => {
             const Icone = item.icone;
             const estActif = item.cle === active;
@@ -123,14 +189,30 @@ export function CollaborateurShell({
 
             if (estActif) {
               return (
-                <span key={item.cle} className="admin-nav-item is-active" aria-current="page">
+                <span
+                  key={item.cle}
+                  className={`admin-nav-item admin-nav-item--${item.cle} is-active`}
+                  onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
+                  onMouseLeave={masquerInfobulle}
+                  onFocus={(e) => afficherInfobulle(e, item.libelle)}
+                  onBlur={masquerInfobulle}
+                  aria-current="page"
+                >
                   {contenu}
                 </span>
               );
             }
             if (item.chemin === undefined) {
               return (
-                <span key={item.cle} className="admin-nav-item is-soon" aria-disabled>
+                <span
+                  key={item.cle}
+                  className="admin-nav-item is-soon"
+                  onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
+                  onMouseLeave={masquerInfobulle}
+                  onFocus={(e) => afficherInfobulle(e, item.libelle)}
+                  onBlur={masquerInfobulle}
+                  aria-disabled
+                >
                   {contenu}
                 </span>
               );
@@ -140,21 +222,45 @@ export function CollaborateurShell({
                 key={item.cle}
                 href={item.chemin ? `${base}/${item.chemin}` : base}
                 className="admin-nav-item"
+                onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
+                onMouseLeave={masquerInfobulle}
+                onFocus={(e) => afficherInfobulle(e, item.libelle)}
+                onBlur={masquerInfobulle}
                 onClick={() => setMenuOuvert(false)}
               >
                 {contenu}
               </Link>
             );
           })}
-        </nav>
+          </nav>
 
-        <div className="admin-sidebar-footer">
-          <button type="button" className="admin-nav-item admin-nav-btn" onClick={deconnexion}>
-            <LogOut size={18} strokeWidth={1.75} aria-hidden />
-            <span className="admin-nav-label">Se déconnecter</span>
-          </button>
+          <div className="admin-sidebar-footer">
+            <button
+              type="button"
+              className="admin-nav-item admin-nav-btn"
+              onMouseEnter={(e) => afficherInfobulle(e, 'Se déconnecter')}
+              onMouseLeave={masquerInfobulle}
+              onFocus={(e) => afficherInfobulle(e, 'Se déconnecter')}
+              onBlur={masquerInfobulle}
+              onClick={deconnexion}
+            >
+              <LogOut size={18} strokeWidth={1.75} aria-hidden />
+              <span className="admin-nav-label">Se déconnecter</span>
+            </button>
+          </div>
         </div>
       </aside>
+
+      {infobulle &&
+        createPortal(
+          <div
+            className="sidebar-infobulle"
+            style={{ top: infobulle.top, left: infobulle.left }}
+          >
+            {infobulle.texte}
+          </div>,
+          document.body,
+        )}
 
       <main className="admin-main">
         <header className="admin-topbar">

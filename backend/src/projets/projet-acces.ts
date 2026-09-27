@@ -2,11 +2,14 @@ import { NotFoundException } from '@nestjs/common';
 import { Categorie, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-// Un projet « appartient » à un collaborateur s'il est suivi par sa cellule
-// (« 1 projet = 1 cellule ») OU s'il en est nommément le dessinateur / le
-// responsable 3D sur l'avant-projet. Même prédicat des deux côtés : le `where`
-// Prisma qui filtre la liste, et le test booléen du garde sur un projet chargé.
-// Miroir du calcul de CollaborateursService.indicateurs().
+// Un projet « appartient » à un collaborateur si SA cellule (singulière — ça
+// ne change pas) fait partie des cellules qui suivent ce projet (pluriel
+// depuis sept. 2026, décision boss : « plusieurs équipes par projet »)
+// OU s'il en est nommément le dessinateur / le responsable 3D sur l'avant-
+// projet. Même prédicat des deux côtés : le `where` Prisma qui filtre la
+// liste, et le test booléen du garde sur un projet chargé. Réutilisé par
+// NotificationsService.echeancesDerivees() et CollaborateursService.indicateurs()
+// plutôt que dupliqué — un seul endroit à faire évoluer.
 type CollabAcces = { id: string; celluleId: string | null };
 
 export function ouProjetsDuCollaborateur(
@@ -16,19 +19,20 @@ export function ouProjetsDuCollaborateur(
     { avantProjet: { dessinateurId: collab.id } },
     { avantProjet: { responsable3dId: collab.id } },
   ];
-  if (collab.celluleId) ou.push({ celluleId: collab.celluleId });
+  if (collab.celluleId) ou.push({ cellules: { some: { celluleId: collab.celluleId } } });
   return ou;
 }
 
 export function estProjetDuCollaborateur(
   projet: {
-    celluleId: string | null;
+    cellules: { celluleId: string }[];
     avantProjet: { dessinateurId: string | null; responsable3dId: string | null } | null;
   },
   collab: CollabAcces,
 ): boolean {
   return (
-    (collab.celluleId != null && projet.celluleId === collab.celluleId) ||
+    (collab.celluleId != null &&
+      projet.cellules.some((c) => c.celluleId === collab.celluleId)) ||
     projet.avantProjet?.dessinateurId === collab.id ||
     projet.avantProjet?.responsable3dId === collab.id
   );
@@ -37,7 +41,8 @@ export function estProjetDuCollaborateur(
 // Charge un projet en vérifiant qu'il appartient bien à la société du token
 // (cloisonnement multi-société). `categorieRequise` : renvoie 404 si la section
 // n'existe pas pour ce projet — le permis et les études sont propres à la
-// conception, l'aménagement ne les a pas.
+// conception, l'aménagement ne les a pas. `cellules` toujours inclus (léger,
+// et évite qu'un appelant oublie de le demander quand il en a besoin).
 export async function chargerProjet(
   prisma: PrismaService,
   societeId: string,
@@ -46,6 +51,7 @@ export async function chargerProjet(
 ) {
   const projet = await prisma.projet.findFirst({
     where: { id: projetId, societeId },
+    include: { cellules: true },
   });
   if (!projet) throw new NotFoundException('Projet introuvable');
   if (categorieRequise && projet.categorie !== categorieRequise) {

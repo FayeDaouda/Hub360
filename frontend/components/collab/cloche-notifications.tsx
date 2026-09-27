@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Bell } from 'lucide-react';
-import { getNotifications, marquerNotificationsLues } from '@/lib/notifications';
-import type { FluxNotifications } from '@/lib/types';
+import { Bell, Volume2, VolumeX } from 'lucide-react';
+import { useNotificationsPoll } from '@/lib/use-notifications-poll';
+import { definirSonActive, sonActive } from '@/lib/notification-sound';
+import { NotifToast } from '@/components/notif-toast';
 
 function ilYa(iso: string): string {
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
@@ -16,17 +17,14 @@ function ilYa(iso: string): string {
 }
 
 export function ClocheNotifications({ slug }: { slug: string }) {
-  const [flux, setFlux] = useState<FluxNotifications | null>(null);
+  const { flux, recharger, toutLire, toast, fermerToast } = useNotificationsPoll(slug);
   const [ouvert, setOuvert] = useState(false);
   const boiteRef = useRef<HTMLDivElement>(null);
-
-  function charger() {
-    getNotifications(slug).then(setFlux).catch(() => setFlux(null));
-  }
-
-  useEffect(() => {
-    getNotifications(slug).then(setFlux).catch(() => setFlux(null));
-  }, [slug]);
+  // Lu après montage seulement (localStorage) — évite un mismatch d'hydratation
+  // entre le rendu serveur (toujours "activé" par défaut) et la préférence
+  // réelle de l'appareil.
+  const [son, setSon] = useState(true);
+  useEffect(() => setSon(sonActive()), []);
 
   // Clic hors cadre + Échap ferment le panneau.
   useEffect(() => {
@@ -49,17 +47,9 @@ export function ClocheNotifications({ slug }: { slug: string }) {
 
   function basculer() {
     setOuvert((o) => {
-      if (!o) charger(); // rafraîchit à l'ouverture
+      if (!o) recharger(); // rafraîchit à l'ouverture
       return !o;
     });
-  }
-
-  async function toutLire() {
-    try {
-      setFlux(await marquerNotificationsLues(slug));
-    } catch {
-      /* on garde l'état courant */
-    }
   }
 
   const nonLues = flux?.nonLues ?? 0;
@@ -85,11 +75,31 @@ export function ClocheNotifications({ slug }: { slug: string }) {
         <div className="notif-menu" role="menu">
           <div className="notif-menu-tete">
             <span>Notifications</span>
-            {nonLues > 0 && (
-              <button type="button" className="notif-tout-lu" onClick={toutLire}>
-                Tout marquer lu
+            <span className="notif-menu-actions">
+              <button
+                type="button"
+                className="notif-son-toggle"
+                aria-pressed={son}
+                aria-label={son ? 'Couper le son des notifications' : 'Activer le son des notifications'}
+                title={son ? 'Son activé' : 'Son coupé'}
+                onClick={() => {
+                  const suivant = !son;
+                  setSon(suivant);
+                  definirSonActive(suivant);
+                }}
+              >
+                {son ? (
+                  <Volume2 size={15} strokeWidth={1.75} aria-hidden />
+                ) : (
+                  <VolumeX size={15} strokeWidth={1.75} aria-hidden />
+                )}
               </button>
-            )}
+              {nonLues > 0 && (
+                <button type="button" className="notif-tout-lu" onClick={toutLire}>
+                  Tout marquer lu
+                </button>
+              )}
+            </span>
           </div>
 
           {elements.length === 0 ? (
@@ -127,6 +137,14 @@ export function ClocheNotifications({ slug }: { slug: string }) {
             </ul>
           )}
         </div>
+      )}
+
+      {toast && (
+        <NotifToast
+          notification={toast}
+          href={toast.projetId ? `/collab/${slug}/projets/${toast.projetId}` : null}
+          onFermer={fermerToast}
+        />
       )}
     </div>
   );

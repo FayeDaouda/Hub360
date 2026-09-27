@@ -10,6 +10,12 @@ import { PermisService } from './permis/permis.service';
 import { PermisController } from './permis/permis.controller';
 import { EtudesService } from './etudes/etudes.service';
 import { EtudesController } from './etudes/etudes.controller';
+import { EtudesGabaritService } from './etudes/gabarit.service';
+import { EtudesGabaritController } from './etudes/gabarit.controller';
+import { UnbordService } from './unbord/unbord.service';
+import { UnbordController } from './unbord/unbord.controller';
+import { UnbordGabaritService } from './unbord/gabarit.service';
+import { UnbordGabaritController } from './unbord/gabarit.controller';
 import { ExecutionService } from './execution/execution.service';
 import { ExecutionController } from './execution/execution.controller';
 import { ImagesService } from './images/images.service';
@@ -18,6 +24,7 @@ import { ImagesController } from './images/images.controller';
 import { FichiersController } from './fichiers/fichiers.controller';
 import { FacturationService } from './facturation/facturation.service';
 import { FacturationController } from './facturation/facturation.controller';
+import { FacturationCentraleController } from './facturation/facturation-centrale.controller';
 
 // L'agrégat « projet » : le tronc (assignation, phase) plus les sections aval,
 // chacune avec son service + son contrôleur mais sous le même module —
@@ -29,6 +36,9 @@ import { FacturationController } from './facturation/facturation.controller';
     ProjetsService,
     PermisService,
     EtudesService,
+    EtudesGabaritService,
+    UnbordService,
+    UnbordGabaritService,
     ExecutionService,
     ImagesService,
     FichiersService,
@@ -41,10 +51,17 @@ import { FacturationController } from './facturation/facturation.controller';
     PhaseController,
     PermisController,
     EtudesController,
+    EtudesGabaritController,
+    UnbordController,
+    UnbordGabaritController,
     ExecutionController,
     ImagesController,
     FichiersController,
     FacturationController,
+    FacturationCentraleController,
   ],
+  // FacturationService exporté pour DevisModule (conversion d'un devis
+  // accepté en facture, cf. FacturationService.creerDepuisDevis).
+  exports: [FacturationService],
 })
 export class ProjetsModule {}

@@ -44,8 +44,11 @@ export class ComptesService {
       });
     }
 
-    const role = await this.prisma.role.findUniqueOrThrow({
-      where: { nom: 'collaborateur' },
+    // 'collaborateur' est un rôle socle (societeId null) — findFirst, pas
+    // findUnique : Prisma type la clé composite d'un @@unique portant sur un
+    // champ nullable (societeId) en `string`, donc `null` n'y est pas exprimable.
+    const role = await this.prisma.role.findFirstOrThrow({
+      where: { societeId: null, nom: 'collaborateur' },
     });
     await this.prisma.utilisateurSocieteRole.upsert({
       where: {

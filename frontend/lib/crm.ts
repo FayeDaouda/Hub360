@@ -1,10 +1,12 @@
 import type {
   Client,
+  Personne,
   NouveauProjetPayload,
   Projet,
   ProjetExecution,
-  StatutCrm,
+  TransitionDossier,
 } from './types';
+import type { ActionCrm } from './cycle-crm';
 import { apiSociete } from './client-api';
 
 // -----------------------------------------------------------------------------
@@ -12,8 +14,12 @@ import { apiSociete } from './client-api';
 //   GET   /api/societes/:slug/dossiers
 //   GET   /api/societes/:slug/clients
 //   POST  /api/societes/:slug/dossiers      (crée aussi le client si `nouveau`)
-//   PATCH /api/societes/:slug/dossiers/:id   { statut }
-// Passer un dossier à « validé » déclenche la transaction pivot côté serveur
+//   POST  /api/societes/:slug/dossiers/:id/actions   { action, commentaire? }
+//   GET   /api/societes/:slug/dossiers/:id/historique
+//   PATCH /api/societes/:slug/dossiers/:id/localite  { localiteId }
+//   GET   /api/societes/:slug/dossiers/proprietaires-possibles
+//   PATCH /api/societes/:slug/dossiers/:id/proprietaire  { proprietaireId }
+// Passer un dossier à « onboard » déclenche la transaction pivot côté serveur
 // (création du projet d'exécution + coquille avant-projet, idempotente).
 // -----------------------------------------------------------------------------
 
@@ -32,15 +38,62 @@ export function creerProjet(
   return apiSociete<Projet>(slug, '/dossiers', { method: 'POST', body: payload });
 }
 
-// Modifie le statut d'un dossier. Le passage à « validé » crée le projet
-// d'exécution côté serveur ; `projetCree` le porte (null sinon / déjà créé).
-export function changerStatut(
+// Offre émise par la validation DAF — le lien clair n'existe qu'ici : repli
+// à transmettre au client si l'email n'est pas parti.
+export type OffreEmise = { reference: string | null; lienPublic: string; emailEnvoye: boolean };
+
+// Fait avancer un dossier dans le cycle (cf. lib/cycle-crm.ts). Passer à
+// « onboard » crée le projet d'exécution côté serveur ; `projetCree` le porte.
+// « valider » envoie l'offre ; `offreEmise` le porte.
+export function agirSurDossier(
   slug: string,
   id: string,
-  statut: StatutCrm,
-): Promise<{ projet: Projet; projetCree: ProjetExecution | null }> {
-  return apiSociete(slug, `/dossiers/${id}`, {
+  action: ActionCrm,
+  commentaire?: string,
+): Promise<{
+  projet: Projet;
+  projetCree: ProjetExecution | null;
+  offreEmise: OffreEmise | null;
+  // Onboard : factures brouillon préparées depuis l'offre (échéanciers CGV).
+  facturesPreparees: number;
+}> {
+  return apiSociete(slug, `/dossiers/${id}/actions`, {
+    method: 'POST',
+    body: { action, commentaire },
+  });
+}
+
+// Journal du cycle d'un dossier, du plus ancien au plus récent.
+export function getHistorique(slug: string, id: string): Promise<TransitionDossier[]> {
+  return apiSociete<TransitionDossier[]>(slug, `/dossiers/${id}/historique`);
+}
+
+// Rattache un dossier antérieur au référentiel à une localité (une seule
+// fois — 409 s'il est déjà rattaché). Ne change ni son code ni son libellé.
+export function rattacherLocalite(
+  slug: string,
+  id: string,
+  localiteId: string,
+): Promise<Projet> {
+  return apiSociete(slug, `/dossiers/${id}/localite`, {
     method: 'PATCH',
-    body: { statut },
+    body: { localiteId },
+  });
+}
+
+// Titulaires du rôle Dir. GC de la société — propriétaires possibles d'un
+// dossier (choix à la création s'ils sont plusieurs, réassignation).
+export function getProprietairesPossibles(slug: string): Promise<Personne[]> {
+  return apiSociete<Personne[]>(slug, '/dossiers/proprietaires-possibles');
+}
+
+export function changerProprietaire(
+  slug: string,
+  id: string,
+  proprietaireId: string,
+): Promise<Projet> {
+  return apiSociete(slug, `/dossiers/${id}/proprietaire`, {
+    method: 'PATCH',
+    body: { proprietaireId },
   });
 }

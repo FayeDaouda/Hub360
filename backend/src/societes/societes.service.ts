@@ -37,6 +37,11 @@ export class SocietesService {
         couleurMarque: true,
         icone: true,
         secteur: true,
+        // Pied des documents (devis, factures) : identifiants légaux déjà
+        // imprimés sur chaque document remis au client — publics par nature.
+        mentionsLegales: true,
+        coordonnees: true,
+        penaliteRetardMensuelle: true,
       },
     });
   }

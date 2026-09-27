@@ -4,22 +4,20 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getSociete } from '@/lib/api';
 import { getProjetExecution } from '@/lib/projets';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 import {
+  COULEUR_SECTION,
   SECTIONS_PAR_CATEGORIE,
   SECTIONS_PROJET,
   type ProjetExecution,
   type SectionProjet,
-  type Session,
-  type Societe,
 } from '@/lib/types';
-import { CollaborateurShell } from '@/components/collab/collab-shell';
 
-// Coquille commune aux pages de section collaborateur (lecture seule) : auth +
-// rôle + chargement du projet + garde de disponibilité de la section pour la
+// Coquille commune aux pages de section collaborateur (lecture seule) — auth
+// + rôle désormais gérés par app/collab/[slug]/layout.tsx (layout persistant,
+// cf. cadrage « layout persistant », sept. 2026) : ne reste ici que le
+// chargement du projet + la garde de disponibilité de la section pour sa
 // catégorie. `children` reçoit le projet chargé.
 export function SectionCollabShell({
   slug,
@@ -33,24 +31,12 @@ export function SectionCollabShell({
   children: (projet: ProjetExecution) => ReactNode;
 }) {
   const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
 
   const meta = SECTIONS_PROJET.find((s) => s.cle === section);
+  useTitrePage(meta?.libelle ?? 'Section');
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== slug) {
-      router.replace(`/login/${slug}`);
-      return;
-    }
-    if (current.role !== 'collaborateur') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(slug).then(setSociete).catch(() => setSociete(null));
     getProjetExecution(slug, projetId).then((p) => {
       if (p && !SECTIONS_PAR_CATEGORIE[p.categorie].includes(section)) {
         router.replace(`/collab/${slug}/projets/${projetId}`);
@@ -60,16 +46,12 @@ export function SectionCollabShell({
     });
   }, [slug, projetId, section, router]);
 
-  if (!session) return null;
-
   return (
-    <CollaborateurShell
-      societe={societe}
-      session={session}
-      active="projets"
-      titre={meta?.libelle ?? 'Section'}
-    >
-      <Link href={`/collab/${slug}/projets/${projetId}`} className="lien-retour">
+    <>
+      <Link
+        href={`/collab/${slug}/projets/${projetId}`}
+        className={`lien-retour lien-retour--${COULEUR_SECTION[section]}`}
+      >
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>{projet ? projet.programme : 'Projet'}</span>
       </Link>
@@ -84,6 +66,6 @@ export function SectionCollabShell({
       ) : (
         children(projet)
       )}
-    </CollaborateurShell>
+    </>
   );
 }

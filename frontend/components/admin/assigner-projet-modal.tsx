@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { assignerProjet } from '@/lib/projets';
+import { assignerCellules } from '@/lib/projets';
 import { NIVEAUX_COLLABORATEUR, type Cellule, type ProjetExecution } from '@/lib/types';
 
 type Props = {
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export function AssignerProjetModal({ slug, projet, cellules, onClose, onAssigne }: Props) {
-  const [choix, setChoix] = useState<string>(projet.celluleAssignee ?? '');
+  const [choix, setChoix] = useState<Set<string>>(new Set(projet.cellules));
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -26,11 +26,20 @@ export function AssignerProjetModal({ slug, projet, cellules, onClose, onAssigne
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  function basculer(celluleId: string) {
+    setChoix((actuel) => {
+      const suivant = new Set(actuel);
+      if (suivant.has(celluleId)) suivant.delete(celluleId);
+      else suivant.add(celluleId);
+      return suivant;
+    });
+  }
+
   async function enregistrer() {
     setErreur(null);
     setEnvoi(true);
     try {
-      const maj = await assignerProjet(slug, projet.id, choix || null);
+      const maj = await assignerCellules(slug, projet.id, [...choix]);
       onAssigne(maj);
       onClose();
     } catch {
@@ -57,20 +66,19 @@ export function AssignerProjetModal({ slug, projet, cellules, onClose, onAssigne
 
         <div className="modal-body">
           <p className="assign-intro">
-            {projet.programme} · une seule cellule prend en charge ce projet.
+            {projet.programme} · une ou plusieurs cellules peuvent prendre en charge ce projet.
           </p>
 
           <ul className="assign-liste">
             {cellules.map((cel) => {
-              const actif = choix === cel.id;
+              const actif = choix.has(cel.id);
               return (
                 <li key={cel.id} className={`assign-groupe${actif ? ' is-coche' : ''}`}>
                   <label className="assign-groupe-tete">
                     <input
-                      type="radio"
-                      name="cellule"
+                      type="checkbox"
                       checked={actif}
-                      onChange={() => setChoix(cel.id)}
+                      onChange={() => basculer(cel.id)}
                     />
                     <span className="assign-groupe-nom">{cel.nom}</span>
                     <span className="assign-groupe-compte">
@@ -94,14 +102,13 @@ export function AssignerProjetModal({ slug, projet, cellules, onClose, onAssigne
             })}
           </ul>
 
-          {projet.celluleAssignee && (
+          {choix.size > 0 && (
             <button
               type="button"
               className="assign-retirer"
-              onClick={() => setChoix('')}
-              disabled={choix === ''}
+              onClick={() => setChoix(new Set())}
             >
-              Retirer l&rsquo;assignation
+              Retirer toutes les assignations
             </button>
           )}
 

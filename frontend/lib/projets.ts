@@ -1,6 +1,7 @@
 import type {
   AvantProjet,
   Categorie,
+  GroupeChecklistAvp,
   PatchAvantProjet,
   Phase,
   PreBilan,
@@ -12,9 +13,10 @@ import { apiSociete, ApiError } from './client-api';
 // -----------------------------------------------------------------------------
 // Projets (exécution), avant-projet & pré-bilan.
 // Branché sur l'API NestJS (agrégat « projets ») :
-//   GET  /projets · GET /projets/:id · PUT /projets/:id/cellule · PATCH /projets/:id/carte
+//   GET  /projets · GET /projets/:id · PUT /projets/:id/cellules · PATCH /projets/:id/carte
 //   PUT /projets/:id/phase
-//   GET/PATCH /projets/:id/avant-projet · POST/DELETE …/avant-projet/validation
+//   GET/PATCH /projets/:id/avant-projet
+//   PATCH /projets/:id/avant-projet/checklist/blocs/:groupe (+ /prolongation)
 //   GET /projets/:id/pre-bilan · POST …/pre-bilan/versions · PATCH …/pre-bilan/versions/:etape
 // Les cellules & collaborateurs vivent dans lib/equipe.ts.
 // Un projet naît quand un dossier CRM passe « validé » (transaction pivot
@@ -37,14 +39,16 @@ export async function getProjetExecution(
   }
 }
 
-export function assignerProjet(
+// Remplace l'ENSEMBLE des cellules du projet ([] = désassigner complètement)
+// — plusieurs équipes par projet depuis sept. 2026 (décision boss).
+export function assignerCellules(
   slug: string,
   projetId: string,
-  celluleId: string | null,
+  celluleIds: string[],
 ): Promise<ProjetExecution> {
-  return apiSociete<ProjetExecution>(slug, `/projets/${projetId}/cellule`, {
+  return apiSociete<ProjetExecution>(slug, `/projets/${projetId}/cellules`, {
     method: 'PUT',
-    body: { celluleId },
+    body: { celluleIds },
   });
 }
 
@@ -125,7 +129,7 @@ export function getAvantProjet(
   return apiSociete<AvantProjet>(slug, `/projets/${projetId}/avant-projet`);
 }
 
-// Enregistre la fiche sans la valider (merge partiel ; 409 si déjà validé).
+// Enregistre l'affectation/agenda (merge partiel).
 export function enregistrerAvantProjet(
   slug: string,
   projetId: string,
@@ -137,14 +141,13 @@ export function enregistrerAvantProjet(
   });
 }
 
-// Coche / annote une ligne des sous-checklists opérationnelles, un champ à
-// la fois (409 si l'avant-projet est déjà validé). Renvoie l'avant-projet
-// complet — les `checklists` regroupées sont recalculées côté serveur.
+// Bascule « non nécessaire » sur un item — statut dérivé des fichiers joints,
+// même modèle que Foncier/Unbord.
 export function majLigneChecklistAvp(
   slug: string,
   projetId: string,
   ligneId: string,
-  patch: { fait?: boolean; note?: string },
+  patch: { fait?: boolean; nonRequise?: boolean },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,
@@ -153,13 +156,38 @@ export function majLigneChecklistAvp(
   );
 }
 
-// Ajoute un item à une checklist — admin uniquement (403 pour un
-// collaborateur, la route n'est pas ouverte côté serveur). Va en fin du
-// groupe ciblé.
+export function joindreImagesLigneChecklistAvp(
+  slug: string,
+  projetId: string,
+  ligneId: string,
+  fichiers: { nom: string; url: string }[],
+): Promise<AvantProjet> {
+  return apiSociete<AvantProjet>(
+    slug,
+    `/projets/${projetId}/avant-projet/checklist/${ligneId}/images`,
+    { method: 'POST', body: { fichiers } },
+  );
+}
+
+export function joindreFichiersLigneChecklistAvp(
+  slug: string,
+  projetId: string,
+  ligneId: string,
+  fichiers: { nom: string; url: string; taille?: number }[],
+): Promise<AvantProjet> {
+  return apiSociete<AvantProjet>(
+    slug,
+    `/projets/${projetId}/avant-projet/checklist/${ligneId}/fichiers`,
+    { method: 'POST', body: { fichiers } },
+  );
+}
+
+// Ajoute un item à une checklist — admin OU dispatcher d'une cellule du
+// projet (nouveauté sept. 2026). Va en fin du groupe ciblé.
 export function ajouterLigneChecklistAvp(
   slug: string,
   projetId: string,
-  item: { groupe: string; libelle: string },
+  item: { groupe: GroupeChecklistAvp; libelle: string },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,
@@ -168,8 +196,8 @@ export function ajouterLigneChecklistAvp(
   );
 }
 
-// Retire un item de la checklist (suppression douce côté serveur) — admin
-// uniquement.
+// Retire un item de la checklist (suppression douce côté serveur) — même
+// autorisation que l'ajout.
 export function supprimerLigneChecklistAvp(
   slug: string,
   projetId: string,
@@ -182,28 +210,49 @@ export function supprimerLigneChecklistAvp(
   );
 }
 
-// Valide l'avant-projet : le serveur exige checklist 4/4 + pré-bilan complet
-// (409 sinon), horodate (validateur = utilisateur du token), fait avancer
-// statut + phase. `_validePar` gardé pour la signature d'appel.
-export function validerAvantProjet(
+// -----------------------------------------------------------------------------
+// Blocs (Livrables / Fichiers produits) — échéance et responsable vivent ici,
+// pas au niveau de l'item (assignation par bloc, sept. 2026, même motif que
+// Permis/Exécution).
+// -----------------------------------------------------------------------------
+
+export function patchBlocChecklistAvp(
   slug: string,
   projetId: string,
-  _validePar: string,
+  groupe: GroupeChecklistAvp,
+  patch: { echeance?: string | null; responsableId?: string | null },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,
-    `/projets/${projetId}/avant-projet/validation`,
-    { method: 'POST', body: {} },
+    `/projets/${projetId}/avant-projet/blocs/${groupe}`,
+    { method: 'PATCH', body: patch },
   );
 }
 
-export function devaliderAvantProjet(
+// Demande de prolongation — le responsable DE CE BLOC uniquement.
+export function demanderProlongationBlocChecklistAvp(
   slug: string,
   projetId: string,
+  groupe: GroupeChecklistAvp,
+  patch: { echeance: string; motif?: string },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,
-    `/projets/${projetId}/avant-projet/validation`,
-    { method: 'DELETE' },
+    `/projets/${projetId}/avant-projet/blocs/${groupe}/prolongation`,
+    { method: 'POST', body: patch },
+  );
+}
+
+// Décision admin sur une demande en attente — admin uniquement.
+export function deciderProlongationBlocChecklistAvp(
+  slug: string,
+  projetId: string,
+  groupe: GroupeChecklistAvp,
+  accepter: boolean,
+): Promise<AvantProjet> {
+  return apiSociete<AvantProjet>(
+    slug,
+    `/projets/${projetId}/avant-projet/blocs/${groupe}/prolongation`,
+    { method: 'PATCH', body: { accepter } },
   );
 }

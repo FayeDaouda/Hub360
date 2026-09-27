@@ -13,6 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "codes:regenerer": "ts-node prisma/scripts/regenerer-codes-dossiers.ts",
+    "catalogue:importer": "ts-node prisma/scripts/importer-catalogue.ts",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {

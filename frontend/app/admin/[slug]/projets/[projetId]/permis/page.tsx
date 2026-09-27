@@ -3,68 +3,72 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus } from 'lucide-react';
-import { getSociete } from '@/lib/api';
+import { ArrowLeft, ChevronDown, Paperclip, Plus, Stamp, Trash2 } from 'lucide-react';
 import { getProjetExecution } from '@/lib/projets';
-import { ajouterEntreeJournal, enregistrerPermis, getPermis } from '@/lib/permis';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
 import {
+  ajouterLigneChecklistPermis,
+  deciderProlongationBlocPermis,
+  enregistrerPermis,
+  getPermis,
+  joindreFichiersBlocPermis,
+  joindreFichiersLigneChecklistPermis,
+  joindreImagesBlocPermis,
+  joindreImagesLigneChecklistPermis,
+  majLigneChecklistPermis,
+  patchBlocPermis,
+  supprimerLigneChecklistPermis,
+} from '@/lib/permis';
+import { getCollaborateurs } from '@/lib/equipe';
+import { useTitrePage } from '@/lib/layout-contexte';
+import {
+  avancementChecklistAvp,
   CATEGORIES,
-  DELAI_INSTRUCTION_JOURS,
   NATURES_DOSSIER,
-  PIECES_DOSSIER_PERMIS,
-  STATUTS_NICAD,
   STATUTS_PERMIS,
-  VOIES_DEPOT,
-  dossierPermisComplet,
-  joursRestantsInstruction,
-  niveauDelai,
+  STATUTS_PERMIS_CHOIX,
+  type Collaborateur,
+  type GroupeChecklistPermis,
+  type ItemChecklistPermis,
   type Permis,
-  type PieceDossierPermis,
   type ProjetExecution,
-  type Session,
-  type Societe,
-  type StatutNicad,
   type StatutPermis,
-  type VoieDepot,
 } from '@/lib/types';
 import { formatDateCourte } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
+import { ChampModal } from '@/components/admin/champ-modal';
+import { BoutonDetail, BoutonJoindre, JoindreAvecItemModal } from '@/components/permis-piece-jointe';
+import { DetailItemModal } from '@/components/permis-detail-item-modal';
 
 type Props = { params: { slug: string; projetId: string } };
 
-// Ordre des statuts pour désactiver ceux « au-delà du dépôt » tant que le
-// dossier n'est pas prêt.
-const APRES_DEPOT: StatutPermis[] = ['depose', 'instruction', 'observations', 'obtenu', 'refuse'];
-
 export default function PermisPage({ params }: Props) {
+  useTitrePage('Autorisation');
   const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [permis, setPermis] = useState<Permis | null>(null);
-  const [journalTexte, setJournalTexte] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [enregistre, setEnregistre] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Équipe DU PROJET (cellule assignée) pour le sélecteur de responsable de
+  // chaque bloc — même source que la page Avant-projet.
+  const [equipeProjet, setEquipeProjet] = useState<Collaborateur[]>([]);
+  const [groupeAjout, setGroupeAjout] = useState<GroupeChecklistPermis | null>(null);
+  const [groupesFermes, setGroupesFermes] = useState<Set<GroupeChecklistPermis>>(new Set());
+  // Item dont la popup « Détail » (note + fichiers joints) est ouverte.
+  const [detailItem, setDetailItem] = useState<ItemChecklistPermis | null>(null);
+  // Constitution : un seul point d'upload pour les 12 items — la popup
+  // demande l'item concerné avant de choisir les fichiers.
+  const [joindreConstitutionOuvert, setJoindreConstitutionOuvert] = useState(false);
 
-  const utilisateur = session
-    ? `${session.utilisateur.prenom} ${session.utilisateur.nom}`.trim()
-    : '';
+  function toggleGroupe(groupe: GroupeChecklistPermis) {
+    setGroupesFermes((s) => {
+      const suivant = new Set(s);
+      if (suivant.has(groupe)) suivant.delete(groupe);
+      else suivant.add(groupe);
+      return suivant;
+    });
+  }
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
     getProjetExecution(params.slug, params.projetId).then((p) => {
       setProjet(p);
       // Le permis n'existe que pour la conception.
@@ -75,22 +79,33 @@ export default function PermisPage({ params }: Props) {
     getPermis(params.slug, params.projetId).then(setPermis);
   }, [params.slug, params.projetId, router]);
 
-  if (!session) return null;
+  // Équipe(s) du projet — chargées dès que les cellules assignées sont
+  // connues (arrivent avec `permis`, après `projet`). Même motif que la page
+  // Avant-projet.
+  useEffect(() => {
+    if (!permis?.celluleIds.length) {
+      setEquipeProjet([]);
+      return;
+    }
+    getCollaborateurs(params.slug, { cellule: permis.celluleIds })
+      .then(setEquipeProjet)
+      .catch(() => setEquipeProjet([]));
+  }, [params.slug, permis?.celluleIds]);
+
+  // Sondage — la checklist peut changer côté collaborateur (coché, demande de
+  // prolongation) pendant que cette page reste ouverte.
+  useEffect(() => {
+    if (!projet) return;
+    const id = setInterval(() => {
+      getPermis(params.slug, params.projetId).then(setPermis).catch(() => {});
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [params.slug, params.projetId, projet]);
 
   const retour = `/admin/${params.slug}/projets/${params.projetId}`;
-  const dossierPret = permis
-    ? permis.nicad === 'obtenu' && dossierPermisComplet(permis.dossier)
-    : false;
-  const jr = permis ? joursRestantsInstruction(permis) : null;
-  const niveau = niveauDelai(jr);
 
   function maj<K extends keyof Permis>(cle: K, valeur: Permis[K]) {
     setPermis((p) => (p ? { ...p, [cle]: valeur } : p));
-    setEnregistre(false);
-  }
-
-  function majPiece(cle: PieceDossierPermis, valeur: boolean) {
-    setPermis((p) => (p ? { ...p, dossier: { ...p.dossier, [cle]: valeur } } : p));
     setEnregistre(false);
   }
 
@@ -99,7 +114,7 @@ export default function PermisPage({ params }: Props) {
     setEnCours(true);
     setErreur(null);
     try {
-      const { projetId, journal, ...patch } = permis;
+      const { projetId, celluleIds, checklists, ...patch } = permis;
       const maj = await enregistrerPermis(params.slug, params.projetId, patch);
       setPermis(maj);
       setEnregistre(true);
@@ -109,21 +124,119 @@ export default function PermisPage({ params }: Props) {
     setEnCours(false);
   }
 
-  async function ajouterEntree() {
-    if (!journalTexte.trim()) return;
-    const maj = await ajouterEntreeJournal(
-      params.slug,
-      params.projetId,
-      journalTexte,
-      utilisateur,
-    );
-    setPermis(maj);
-    setJournalTexte('');
+  // Coche / annote une ligne de sous-checklist — persiste tout de suite.
+  async function majItemChecklist(
+    ligneId: string,
+    patch: { fait?: boolean; note?: string; nonRequise?: boolean },
+  ) {
+    setErreur(null);
+    try {
+      setPermis(await majLigneChecklistPermis(params.slug, params.projetId, ligneId, patch));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Enregistrement impossible.');
+    }
+  }
+
+  // Bascule « non nécessaire » — mutuellement exclusif avec fait (cf.
+  // PermisService.patchLigneChecklist, qui force fait à false côté serveur
+  // aussi). On l'envoie explicitement ici pour que l'UI reflète l'état sans
+  // attendre l'aller-retour.
+  function toggleNonRequis(it: ItemChecklistPermis) {
+    majItemChecklist(it.id, it.nonRequise ? { nonRequise: false } : { nonRequise: true, fait: false });
+  }
+
+  // Échéance + responsable d'un bloc — admin uniquement (vérifié côté
+  // serveur). Seul le responsable désigné (+ l'admin) pourra ensuite
+  // cocher/uploader/prolonger sur ce bloc précis.
+  async function majBloc(
+    groupe: GroupeChecklistPermis,
+    patch: { echeance?: string | null; responsableId?: string | null },
+  ) {
+    setErreur(null);
+    try {
+      setPermis(await patchBlocPermis(params.slug, params.projetId, groupe, patch));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Enregistrement impossible.');
+    }
+  }
+
+  async function joindreImages(ligneId: string, fichiers: { nom: string; url: string }[]) {
+    setErreur(null);
+    try {
+      setPermis(
+        await joindreImagesLigneChecklistPermis(params.slug, params.projetId, ligneId, fichiers),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'ajout du fichier a échoué.");
+    }
+  }
+
+  async function joindreFichiers(
+    ligneId: string,
+    fichiers: { nom: string; url: string; taille?: number }[],
+  ) {
+    setErreur(null);
+    try {
+      setPermis(
+        await joindreFichiersLigneChecklistPermis(params.slug, params.projetId, ligneId, fichiers),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'ajout du fichier a échoué.");
+    }
+  }
+
+  // Pièces jointes au niveau du BLOC (Dépôt urbanisme / Procédure) — pas
+  // liées à un item précis, cf. lib/permis.ts.
+  async function joindreImagesBloc(groupe: GroupeChecklistPermis, fichiers: { nom: string; url: string }[]) {
+    setErreur(null);
+    try {
+      setPermis(await joindreImagesBlocPermis(params.slug, params.projetId, groupe, fichiers));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'ajout du fichier a échoué.");
+    }
+  }
+
+  async function joindreFichiersBloc(
+    groupe: GroupeChecklistPermis,
+    fichiers: { nom: string; url: string; taille?: number }[],
+  ) {
+    setErreur(null);
+    try {
+      setPermis(await joindreFichiersBlocPermis(params.slug, params.projetId, groupe, fichiers));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : "L'ajout du fichier a échoué.");
+    }
+  }
+
+  // Décision sur une demande de prolongation en attente (au niveau du bloc).
+  async function deciderProlongation(groupe: GroupeChecklistPermis, accepter: boolean) {
+    setErreur(null);
+    try {
+      setPermis(
+        await deciderProlongationBlocPermis(params.slug, params.projetId, groupe, accepter),
+      );
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Enregistrement impossible.');
+    }
+  }
+
+  async function ajouterItemChecklist(groupe: GroupeChecklistPermis, libelle: string) {
+    setPermis(await ajouterLigneChecklistPermis(params.slug, params.projetId, { groupe, libelle }));
+  }
+
+  async function supprimerItemChecklist(ligneId: string) {
+    if (!window.confirm('Retirer cet item de la checklist ?')) return;
+    setErreur(null);
+    try {
+      setPermis(await supprimerLigneChecklistPermis(params.slug, params.projetId, ligneId));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Suppression impossible.');
+    }
   }
 
   return (
-    <AdminShell societe={societe} session={session} active="projets" titre="Permis de construire">
-      <Link href={retour} className="lien-retour">
+    <>
+      <Link href={retour} className="lien-retour lien-retour--permis">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>{projet ? projet.programme : 'Projet'}</span>
       </Link>
@@ -145,7 +258,12 @@ export default function PermisPage({ params }: Props) {
                   {CATEGORIES[projet.categorie]}
                 </span>
               </span>
-              <h2>Permis de construire</h2>
+              <h2>
+                <span className="module-icone module-icone--permis" aria-hidden>
+                  <Stamp size={17} strokeWidth={1.75} />
+                </span>
+                Autorisation
+              </h2>
               <p className="projet-entete-meta">
                 {projet.programme} · {projet.client.nom} · {projet.localisation}
               </p>
@@ -178,231 +296,256 @@ export default function PermisPage({ params }: Props) {
                 </p>
               );
             }
-            if (jr === null) return null;
-            return (
-              <p className={`permis-delai permis-delai--${niveau}`}>
-                {jr > 0
-                  ? `${jr} jour${jr > 1 ? 's' : ''} restant${jr > 1 ? 's' : ''} sur les ${DELAI_INSTRUCTION_JOURS} jours d'instruction.`
-                  : `Délai d'instruction dépassé de ${-jr} jour${-jr > 1 ? 's' : ''}, sans décision.`}
-              </p>
-            );
+            return null;
           })()}
 
-          {/* NICAD */}
-          <section className="panel">
-            <h3 className="panel-title">NICAD — identification cadastrale</h3>
-            <div className="field-row">
-              <label className="field">
-                <span className="field-label">Statut</span>
-                <select
-                  className="field-input"
-                  value={permis.nicad}
-                  onChange={(e) => maj('nicad', e.target.value as StatutNicad)}
+          {permis.checklists.map((groupe) => {
+            const av = avancementChecklistAvp(groupe.items);
+            const fermee = groupesFermes.has(groupe.groupe);
+            return (
+              <section className="panel" key={groupe.groupe}>
+                <button
+                  type="button"
+                  className="ap-souscheck-tete ap-souscheck-tete--repliable"
+                  aria-expanded={!fermee}
+                  onClick={() => toggleGroupe(groupe.groupe)}
                 >
-                  {(Object.keys(STATUTS_NICAD) as StatutNicad[]).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUTS_NICAD[s]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {permis.nicad === 'obtenu' && (
-                <label className="field">
-                  <span className="field-label">Numéro NICAD</span>
-                  <input
-                    className="field-input"
-                    value={permis.nicadNumero}
-                    onChange={(e) => maj('nicadNumero', e.target.value)}
-                    placeholder="NICAD-DK-2026-…"
-                  />
-                </label>
-              )}
-            </div>
-            <label className="ap-checklist-item">
-              <input
-                type="checkbox"
-                checked={permis.planBornage}
-                onChange={(e) => maj('planBornage', e.target.checked)}
-              />
-              <span>Plan de bornage du géomètre-expert joint</span>
-            </label>
-          </section>
-
-          {/* Dossier */}
-          <section className="panel">
-            <h3 className="panel-title">
-              Dossier technique
-              <span className={`pill ${dossierPret ? 'pill--succes' : 'pill--attention'}`}>
-                {dossierPret ? 'Complet' : 'Incomplet — requis avant dépôt'}
-              </span>
-            </h3>
-            <ul className="ap-checklist">
-              {PIECES_DOSSIER_PERMIS.map((p) => (
-                <li key={p.cle}>
-                  <label className="ap-checklist-item">
-                    <input
-                      type="checkbox"
-                      checked={permis.dossier[p.cle]}
-                      onChange={(e) => majPiece(p.cle, e.target.checked)}
+                  <span className="repli-badge">
+                    <ChevronDown
+                      size={17}
+                      strokeWidth={2.25}
+                      aria-hidden
+                      className={`repli-icone${fermee ? ' est-replie' : ''}`}
                     />
-                    <span>{p.libelle}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </section>
+                  </span>
+                  <span className="ap-souscheck-tete-txt">
+                    <h4>{groupe.libelle}</h4>
+                    <p className="ap-souscheck-groupe-desc">{groupe.description}</p>
+                  </span>
+                  <span
+                    className={`ap-souscheck-compteur${av.complete ? ' is-complet' : ''}`}
+                  >
+                    {av.faits}/{av.total}
+                  </span>
+                </button>
 
-          {/* Dépôt & instruction */}
-          <section className="panel">
-            <h3 className="panel-title">Dépôt &amp; instruction</h3>
-            <div className="field-row">
-              <label className="field">
-                <span className="field-label">Statut du permis</span>
-                <select
-                  className="field-input"
-                  value={permis.statut}
-                  onChange={(e) => maj('statut', e.target.value as StatutPermis)}
-                >
-                  {(Object.keys(STATUTS_PERMIS) as StatutPermis[]).map((s) => (
-                    <option
-                      key={s}
-                      value={s}
-                      disabled={
-                        !dossierPret && APRES_DEPOT.includes(s) && permis.statut === 'a_deposer'
+                <div className="ap-souscheck-bloc-meta">
+                  <label className="field ap-souscheck-bloc-champ">
+                    <span className="field-label">Échéance du bloc</span>
+                    <input
+                      type="date"
+                      className="field-input"
+                      value={groupe.echeance ?? ''}
+                      onChange={(e) =>
+                        majBloc(groupe.groupe, { echeance: e.target.value || null })
+                      }
+                    />
+                  </label>
+                  <label className="field ap-souscheck-bloc-champ">
+                    <span className="field-label">Responsable du bloc</span>
+                    <select
+                      className="field-input"
+                      disabled={equipeProjet.length === 0}
+                      title={
+                        equipeProjet.length === 0
+                          ? 'Assigne d’abord une cellule à ce projet'
+                          : undefined
+                      }
+                      value={groupe.responsable?.id ?? ''}
+                      onChange={(e) =>
+                        majBloc(groupe.groupe, { responsableId: e.target.value || null })
                       }
                     >
-                      {STATUTS_PERMIS[s]}
-                    </option>
+                      <option value="">— Non désigné —</option>
+                      {equipeProjet.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.prenom} {c.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {groupe.prolongationDemandeeLe && (
+                    <span className="ap-souscheck-prolongation">
+                      <span className="pill pill--attention">
+                        Prolongation demandée
+                        {groupe.responsable ? ` par ${groupe.responsable.nom}` : ''} · proposée
+                        au {formatDateCourte(groupe.prolongationEcheance!)}
+                        {groupe.prolongationMotif ? ` — « ${groupe.prolongationMotif} »` : ''}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-ghost btn-ghost--sm"
+                        onClick={() => deciderProlongation(groupe.groupe, true)}
+                      >
+                        Accepter
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost btn-ghost--sm"
+                        onClick={() => deciderProlongation(groupe.groupe, false)}
+                      >
+                        Refuser
+                      </button>
+                    </span>
+                  )}
+                  {groupe.groupe === 'dossier_permis' ? (
+                    <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
+                      <span className="field-label">Ajouter une pièce</span>
+                      <button
+                        type="button"
+                        className="field-input ap-souscheck-joindre-champ"
+                        onClick={() => setJoindreConstitutionOuvert(true)}
+                      >
+                        <Paperclip size={14} strokeWidth={2} aria-hidden />
+                        Joindre
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
+                      <span className="field-label">Pièces jointes</span>
+                      <BoutonJoindre
+                        className="field-input ap-souscheck-joindre-champ"
+                        iconSize={14}
+                        onJoindreImages={(f) => joindreImagesBloc(groupe.groupe, f)}
+                        onJoindreFichiers={(f) => joindreFichiersBloc(groupe.groupe, f)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {!fermee && (
+                <ul>
+                  {groupe.items.map((it) => (
+                    <li
+                      key={it.id}
+                      className={`ap-souscheck-item ap-souscheck-item--permis${
+                        it.nonRequise ? ' ap-souscheck-item--non-requise' : ''
+                      }`}
+                    >
+                      <label className="ap-souscheck-fait">
+                        <input
+                          type="checkbox"
+                          checked={it.fait}
+                          disabled={it.nonRequise}
+                          onChange={(e) =>
+                            majItemChecklist(it.id, { fait: e.target.checked })
+                          }
+                        />
+                        <span>{it.libelle}</span>
+                      </label>
+                      <span className="ap-souscheck-actions">
+                        <button
+                          type="button"
+                          className={`ap-souscheck-non-requise${
+                            it.nonRequise ? ' est-actif' : ''
+                          }`}
+                          onClick={() => toggleNonRequis(it)}
+                        >
+                          Non nécessaire
+                        </button>
+                        <BoutonDetail
+                          actif={!!it.note || it.fichiers.length > 0}
+                          onClick={() => setDetailItem(it)}
+                        />
+                        <button
+                          type="button"
+                          className="ap-souscheck-suppr"
+                          title="Retirer cet item"
+                          onClick={() => supprimerItemChecklist(it.id)}
+                        >
+                          <Trash2 size={14} strokeWidth={2} aria-hidden />
+                        </button>
+                      </span>
+                      {it.fait && it.faitPar && (
+                        <span className="ap-souscheck-faitpar">Coché par {it.faitPar.nom}</span>
+                      )}
+                    </li>
                   ))}
-                </select>
-              </label>
-              <label className="field">
-                <span className="field-label">Voie de dépôt</span>
-                <select
-                  className="field-input"
-                  value={permis.voie ?? ''}
-                  onChange={(e) =>
-                    maj('voie', e.target.value ? (e.target.value as VoieDepot) : null)
-                  }
+                </ul>
+                )}
+                {!fermee && groupe.groupe !== 'dossier_permis' && groupe.fichiersBloc.length > 0 && (
+                  <div className="ap-souscheck-bloc-fichiers">
+                    <span className="field-label">Pièces jointes du bloc</span>
+                    <ul className="permis-detail-fichiers">
+                      {groupe.fichiersBloc.map((f) => (
+                        <li key={f.id}>
+                          <a href={f.url} target="_blank" rel="noreferrer" title={f.nom}>
+                            {f.estImage && <img src={f.url} alt="" />}
+                            <span>{f.nom}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {!fermee && (
+                <button
+                  type="button"
+                  className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
+                  onClick={() => setGroupeAjout(groupe.groupe)}
                 >
-                  <option value="">—</option>
-                  {(Object.keys(VOIES_DEPOT) as VoieDepot[]).map((v) => (
-                    <option key={v} value={v}>
-                      {VOIES_DEPOT[v]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="field-row">
-              <label className="field">
-                <span className="field-label">Date de dépôt</span>
-                <input
-                  type="date"
-                  className="field-input"
-                  value={permis.dateDepot ? permis.dateDepot.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    maj('dateDepot', e.target.value ? new Date(e.target.value).toISOString() : null)
-                  }
-                />
-              </label>
-              <label className="field">
-                <span className="field-label">N° accusé de réception</span>
-                <input
-                  className="field-input"
-                  value={permis.numeroRecepisse}
-                  onChange={(e) => maj('numeroRecepisse', e.target.value)}
-                  placeholder="TLD-2026-… / MR-…"
-                />
-              </label>
-            </div>
-            {permis.statut === 'obtenu' && (
-              <label className="field">
-                <span className="field-label">Date d’obtention</span>
-                <input
-                  type="date"
-                  className="field-input"
-                  value={permis.dateObtention ? permis.dateObtention.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    maj(
-                      'dateObtention',
-                      e.target.value ? new Date(e.target.value).toISOString() : null,
-                    )
-                  }
-                />
-              </label>
-            )}
-            {!dossierPret && (
-              <p className="phase-hint">
-                Le dépôt exige le NICAD obtenu et toutes les pièces du dossier cochées.
-              </p>
-            )}
-          </section>
+                  <Plus size={14} strokeWidth={2} aria-hidden />
+                  <span>Ajouter un item</span>
+                </button>
+                )}
+              </section>
+            );
+          })}
 
-          {/* Journal */}
+          {groupeAjout && (
+            <ChampModal
+              titre="Ajouter un item de checklist"
+              label="Libellé"
+              placeholder="ex : Étude de sol"
+              confirmer="Ajouter"
+              onSubmit={async (valeur) => {
+                await ajouterItemChecklist(groupeAjout, valeur);
+                setGroupeAjout(null);
+              }}
+              onClose={() => setGroupeAjout(null)}
+            />
+          )}
+
+          {detailItem && (
+            <DetailItemModal
+              libelle={detailItem.libelle}
+              noteInitiale={detailItem.note}
+              fichiers={detailItem.fichiers}
+              onEnregistrerNote={(note) => majItemChecklist(detailItem.id, { note })}
+              onClose={() => setDetailItem(null)}
+            />
+          )}
+
+          {joindreConstitutionOuvert && (
+            <JoindreAvecItemModal
+              items={
+                permis.checklists
+                  .find((g) => g.groupe === 'dossier_permis')
+                  ?.items.map((it) => ({ id: it.id, libelle: it.libelle })) ?? []
+              }
+              onJoindreImages={joindreImages}
+              onJoindreFichiers={joindreFichiers}
+              onClose={() => setJoindreConstitutionOuvert(false)}
+            />
+          )}
+
+          {/* Statut */}
           <section className="panel">
-            <h3 className="panel-title">Échanges avec l’administration</h3>
-            <div className="permis-journal-ajout">
-              <input
+            <h3 className="panel-title">Statut du permis</h3>
+            <label className="field" style={{ maxWidth: 260 }}>
+              <span className="field-label">Statut</span>
+              <select
                 className="field-input"
-                value={journalTexte}
-                onChange={(e) => setJournalTexte(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && ajouterEntree()}
-                placeholder="ex : Demande de pièce complémentaire reçue"
-              />
-              <button
-                type="button"
-                className="btn-ghost btn-ghost--sm"
-                onClick={ajouterEntree}
-                disabled={!journalTexte.trim()}
+                value={permis.statut}
+                onChange={(e) => maj('statut', e.target.value as StatutPermis)}
               >
-                <Plus size={14} strokeWidth={2} aria-hidden />
-                <span>Ajouter</span>
-              </button>
-            </div>
-            {permis.journal.length === 0 ? (
-              <p className="images-vide">Aucun échange consigné.</p>
-            ) : (
-              <ul className="permis-journal">
-                {permis.journal.map((e) => (
-                  <li key={e.id}>
-                    <span className="permis-journal-date">{formatDateCourte(e.date)}</span>
-                    <span className="permis-journal-texte">{e.texte}</span>
-                    <span className="permis-journal-auteur">{e.auteur}</span>
-                  </li>
+                {STATUTS_PERMIS_CHOIX.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUTS_PERMIS[s]}
+                  </option>
                 ))}
-              </ul>
-            )}
-          </section>
-
-          {/* Conformité */}
-          <section className="panel">
-            <h3 className="panel-title">Certificat de conformité</h3>
-            <label className="ap-checklist-item">
-              <input
-                type="checkbox"
-                checked={permis.certificatConformite}
-                onChange={(e) => maj('certificatConformite', e.target.checked)}
-              />
-              <span>Certificat de conformité obtenu</span>
+              </select>
             </label>
-            {permis.certificatConformite && (
-              <label className="field" style={{ marginTop: '0.6rem', maxWidth: 260 }}>
-                <span className="field-label">Date du certificat</span>
-                <input
-                  type="date"
-                  className="field-input"
-                  value={permis.dateCertificat ? permis.dateCertificat.slice(0, 10) : ''}
-                  onChange={(e) =>
-                    maj(
-                      'dateCertificat',
-                      e.target.value ? new Date(e.target.value).toISOString() : null,
-                    )
-                  }
-                />
-              </label>
-            )}
-            <p className="ap-a-venir">À demander à la fin du chantier — délai de délivrance de 15 jours.</p>
           </section>
 
           {erreur && <p className="field-erreur">{erreur}</p>}
@@ -418,6 +561,6 @@ export default function PermisPage({ params }: Props) {
           </div>
         </>
       )}
-    </AdminShell>
+    </>
   );
 }

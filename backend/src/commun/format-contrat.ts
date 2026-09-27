@@ -1,13 +1,20 @@
 import type {
   AvantProjet,
+  BlocChecklistAvp,
   Cellule,
   Client,
   Collaborateur,
+  Devis,
   DossierCrm,
   LigneChecklistAvp,
+  LigneDevis,
+  Localite,
   Projet,
+  ProjetCellule,
 } from '@prisma/client';
 import { GROUPES_CHECKLIST_AVP } from '../projets/domaine/config';
+import { ficheModifiable } from '../crm/cycle';
+import { montantTtcLignes, refDevis, relanceAFaire, statutDevisEffectif } from '../devis/domaine';
 
 // Formatage des lignes Prisma vers les types partagés de frontend/lib/types.ts.
 // L'API est la source de vérité du contrat : on émet exactement la forme que le
@@ -24,6 +31,7 @@ export function versClient(c: Client) {
     id: c.id,
     nom: c.nom,
     type: c.type,
+    sigle: c.sigle ?? undefined,
     contact: c.contact ?? undefined,
     email: c.email ?? undefined,
     telephone: c.telephone ?? undefined,
@@ -31,13 +39,32 @@ export function versClient(c: Client) {
 }
 
 // Ligne du CRM (frontend/lib/types.ts::Projet).
-export function versDossierCrm(d: DossierCrm & { client: Client }) {
+type PersonneRef = { id: string; prenom: string; nom: string } | null;
+const versPersonne = (u: PersonneRef) => (u ? { id: u.id, nom: `${u.prenom} ${u.nom}` } : null);
+
+export function versDossierCrm(
+  d: DossierCrm & {
+    client: Client;
+    localite: Localite | null;
+    creePar: PersonneRef;
+    apporteurUtilisateur: PersonneRef;
+    proprietaire: PersonneRef;
+    offres: (Devis & { lignes: LigneDevis[] })[];
+  },
+  // Commission (finances_charges) et offre (finances_devis) : absentes de la
+  // réponse (clé omise, pas null) pour qui n'a pas le droit en lecture.
+  opts: { voitCommission: boolean; voitOffre: boolean },
+) {
   return {
     id: d.id,
     code: d.code,
     nature: d.nature,
     categorie: d.categorie,
     localisation: d.localisation,
+    // null = dossier antérieur au référentiel, pas encore rattaché.
+    localite: d.localite
+      ? { id: d.localite.id, code: d.localite.code, nom: d.localite.nom }
+      : null,
     type: d.type,
     nbPlanches: d.nbPlanches,
     surfaceTerrain: d.surfaceTerrain,
@@ -46,12 +73,58 @@ export function versDossierCrm(d: DossierCrm & { client: Client }) {
     gamme: d.gamme,
     programme: d.programme,
     statut: d.statut,
+    // Contenu figé dès la soumission à la DAF (propriétaire excepté).
+    verrouillee: !ficheModifiable(d.statut),
     creeLe: d.createdAt,
+    creePar: versPersonne(d.creePar),
+    // null = dossier antérieur à l'étape C1 (non renseigné).
+    apporteur:
+      d.apporteurType === 'interne'
+        ? { type: 'interne' as const, utilisateur: versPersonne(d.apporteurUtilisateur) }
+        : d.apporteurType === 'externe'
+          ? {
+              type: 'externe' as const,
+              nom: d.apporteurNom ?? '',
+              telephone: d.apporteurTelephone ?? undefined,
+              email: d.apporteurEmail ?? undefined,
+            }
+          : null,
+    ...(opts.voitCommission && {
+      commissionApporteur:
+        d.commissionApporteur === null ? null : Number(d.commissionApporteur),
+    }),
+    // null = « à assigner ».
+    proprietaire: versPersonne(d.proprietaire),
+    // CO1/CO2/CO3 fixée à l'envoi de l'offre — null tant qu'aucune offre avec
+    // ligne de conception n'est partie.
+    categorieConception: d.categorieConception,
+    // null = pas encore d'offre préparée.
+    ...(opts.voitOffre && { offre: d.offres[0] ? versResumeOffre(d.offres[0]) : null }),
+  };
+}
+
+// Résumé de l'offre en cours d'un dossier (frontend/lib/types.ts::OffreDossier).
+function versResumeOffre(o: Devis & { lignes: LigneDevis[] }) {
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  return {
+    id: o.id,
+    reference: refDevis(o.numero, o.dateEnvoi),
+    statutEffectif: statutDevisEffectif(o, aujourdhui),
+    objet: o.objet,
+    nbLignes: o.lignes.length,
+    montantTtc: montantTtcLignes(o.lignes),
+    dateEnvoi: o.dateEnvoi,
+    dateValidite: o.dateValidite,
+    dateReponse: o.dateReponse,
+    relancesEnvoyees: o.relancesEnvoyees,
+    relanceAFaire: relanceAFaire(o, aujourdhui),
   };
 }
 
 // Projet d'exécution (frontend/lib/types.ts::ProjetExecution).
-export function versProjetExecution(p: Projet & { client: Client }) {
+export function versProjetExecution(
+  p: Projet & { client: Client; cellules: ProjetCellule[] },
+) {
   return {
     id: p.id,
     code: p.code,
@@ -64,7 +137,9 @@ export function versProjetExecution(p: Projet & { client: Client }) {
     type: p.type,
     client: versClient(p.client),
     origineCrmId: p.dossierCrmId,
-    celluleAssignee: p.celluleId,
+    // Plusieurs équipes par projet (décision boss, sept. 2026) — remplace
+    // l'ancien champ singulier celluleAssignee.
+    cellules: p.cellules.map((c) => c.celluleId),
     statut: p.statut,
     phase: p.phase,
     creeLe: p.createdAt,
@@ -112,25 +187,47 @@ export function versCellule(
   return {
     id: cel.id,
     nom: cel.nom,
+    // Désigné par l'admin — habilité à répartir les tâches à ses coéquipiers
+    // (décision boss, sept. 2026).
+    dispatcherId: cel.dispatcherId,
     collaborateurs: cel.membres.map(versCollaborateur),
   };
 }
 
-// Avant-projet (frontend/lib/types.ts::AvantProjet) : les 4 booléens de la
-// checklist macro sont ré-imbriqués, les sous-checklists opérationnelles sont
-// regroupées par leur propre `groupe` (les lignes supprimées sont exclues,
-// triées par `ordre` — chaque ligne porte désormais son libellé, l'admin
-// pouvant en ajouter/retirer par projet), `validePar` est résolu en « Prénom
-// Nom ».
+// Fichier joint à un item de checklist (image ou document) — même forme que
+// FichierLigne dans UnbordService, dupliquée ici plutôt qu'importée (types
+// internes à chaque module, cf. convention FichierLigneChecklistPermis).
+export type FichierLigneChecklistAvp = {
+  id: string;
+  nom: string;
+  url: string;
+  estImage: boolean;
+  ajouteLe: Date;
+};
+
+// Avant-projet (frontend/lib/types.ts::AvantProjet) : restructuré sept. 2026 —
+// plus de section « Programme » ni de verrou « Validation » (cf.
+// schema.prisma). Les sous-checklists opérationnelles sont regroupées par
+// `groupe` (lignes supprimées exclues, triées par `ordre`), statut dérivé des
+// fichiers joints (même modèle que Foncier/Unbord) ; l'assignation et
+// l'échéance vivent maintenant sur BlocChecklistAvp (un responsable par
+// groupe, pas par ligne).
+type LigneChecklistAvpAvecRefs = LigneChecklistAvp;
+type BlocChecklistAvpAvecRefs = BlocChecklistAvp & {
+  responsable: { id: string; prenom: string; nom: string } | null;
+};
+
 export function versAvantProjet(
   ap: AvantProjet & {
-    validateur: { prenom: string; nom: string } | null;
     dessinateur: (Collaborateur | { id: string; prenom: string; nom: string }) | null;
     responsable3d: (Collaborateur | { id: string; prenom: string; nom: string }) | null;
-    lignesChecklist: LigneChecklistAvp[];
+    projet: { cellules: { celluleId: string }[] };
+    lignesChecklist: LigneChecklistAvpAvecRefs[];
+    blocsChecklist: BlocChecklistAvpAvecRefs[];
   },
+  fichiersParLigne: Map<string, FichierLigneChecklistAvp[]>,
 ) {
-  const parGroupe = new Map<string, LigneChecklistAvp[]>();
+  const parGroupe = new Map<string, LigneChecklistAvpAvecRefs[]>();
   for (const l of ap.lignesChecklist) {
     if (l.supprimee) continue;
     const lignes = parGroupe.get(l.groupe) ?? [];
@@ -141,41 +238,37 @@ export function versAvantProjet(
     c ? { id: c.id, nom: `${c.prenom} ${c.nom}`.trim() } : null;
   return {
     projetId: ap.projetId,
-    besoinSurface: ap.besoinSurface,
-    nbLots: ap.nbLots,
-    usages: ap.usages,
-    niveauFinition: ap.niveauFinition,
-    budgetCibleClient: ap.budgetCibleClient,
-    delaiSouhaite: ap.delaiSouhaite,
-    contraintes: ap.contraintes,
-    references: ap.references,
     dessinateur: ref(ap.dessinateur),
     responsable3d: ref(ap.responsable3d),
     dateDebut: ap.dateDebut,
     dateFin: ap.dateFin,
-    checklist: {
-      programmeValide: ap.programmeValide,
-      budgetValide: ap.budgetValide,
-      esquisseValidee: ap.esquisseValidee,
-      engagementValide: ap.engagementValide,
-    },
-    checklists: GROUPES_CHECKLIST_AVP.map((g) => ({
-      groupe: g.groupe,
-      libelle: g.libelle,
-      description: g.description,
-      items: (parGroupe.get(g.groupe) ?? [])
-        .sort((a, b) => a.ordre - b.ordre)
-        .map((l) => ({
-          id: l.id,
-          libelle: l.libelle,
-          fait: l.fait,
-          note: l.note,
-        })),
-    })),
-    pieceValidation: ap.pieceValidation,
-    valideLe: ap.valideLe,
-    validePar: ap.validateur
-      ? `${ap.validateur.prenom} ${ap.validateur.nom}`.trim()
-      : null,
+    // Équipe(s) à proposer dans le sélecteur d'assignation de chaque bloc
+    // (front : GET …/collaborateurs?cellule=). Plusieurs possibles depuis
+    // sept. 2026 (décision boss — plusieurs équipes par projet).
+    celluleIds: ap.projet.cellules.map((c) => c.celluleId),
+    checklists: GROUPES_CHECKLIST_AVP.map((g) => {
+      const bloc = ap.blocsChecklist.find((b) => b.groupe === g.groupe);
+      return {
+        groupe: g.groupe,
+        libelle: g.libelle,
+        description: g.description,
+        echeance: bloc?.echeance ?? null,
+        responsable: ref(bloc?.responsable ?? null),
+        prolongationDemandeeLe: bloc?.prolongationDemandeeLe ?? null,
+        prolongationEcheance: bloc?.prolongationEcheance ?? null,
+        prolongationMotif: bloc?.prolongationMotif ?? null,
+        items: (parGroupe.get(g.groupe) ?? [])
+          .sort((a, b) => a.ordre - b.ordre)
+          .map((l) => {
+            const fichiers = fichiersParLigne.get(l.id) ?? [];
+            const statut: 'fait' | 'en_attente' | 'non_necessaire' = l.nonRequise
+              ? 'non_necessaire'
+              : l.fait
+                ? 'fait'
+                : 'en_attente';
+            return { id: l.id, libelle: l.libelle, statut, fichiers };
+          }),
+      };
+    }),
   };
 }

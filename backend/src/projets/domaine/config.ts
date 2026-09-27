@@ -3,16 +3,18 @@ import {
   EtapePreBilan,
   FactureType,
   GroupeChecklistAvp,
+  GroupeChecklistExecution,
+  GroupeChecklistPermis,
+  GroupeUnbord,
   JalonFacture,
   NatureDossier,
   Phase,
   TypeEtude,
-  TypeLot,
 } from '@prisma/client';
 
 // Tables de paramétrage par catégorie — miroir de frontend/lib/types.ts
 // (PHASES_PAR_CATEGORIE, ETAPES_PRE_BILAN, LIGNES_PRE_BILAN,
-// SECTIONS_PAR_CATEGORIE, ETUDES_PAR_DEFAUT, LOTS_PAR_CATEGORIE).
+// SECTIONS_PAR_CATEGORIE, ETUDES_PAR_DEFAUT).
 // À garder synchronisées des deux côtés.
 
 export const PHASES_PAR_CATEGORIE: Record<Categorie, Phase[]> = {
@@ -53,9 +55,12 @@ export const SECTIONS_PAR_CATEGORIE: Record<Categorie, string[]> = {
 
 // -- Section « Permis » (conception uniquement) --
 
-// Les 5 pièces du dossier de permis, dans l'ordre. Miroir de
-// frontend/lib/types.ts::PIECES_DOSSIER_PERMIS — noms alignés sur les colonnes
-// booléennes du modèle Permis.
+// « Dossier technique » retiré de l'UI (sept. 2026, restructuration Permis —
+// fait double emploi avec la checklist « Constitution » ci-dessous). Champs/
+// fonction laissés intacts et dormants (schéma, service, dossierPermisComplet)
+// — même traitement que Pré-bilan/Affectation avant lui sur Avant-projet :
+// rien de supprimé, juste plus aucune UI ne les pose. Miroir de
+// frontend/lib/types.ts::PIECES_DOSSIER_PERMIS.
 export const PIECES_DOSSIER_PERMIS = [
   'titrePropriete',
   'planCadastralVise',
@@ -65,9 +70,6 @@ export const PIECES_DOSSIER_PERMIS = [
 ] as const;
 
 export type PieceDossierPermis = (typeof PIECES_DOSSIER_PERMIS)[number];
-
-// Délai légal d'instruction (jours). Miroir de DELAI_INSTRUCTION_JOURS.
-export const DELAI_INSTRUCTION_JOURS = 90;
 
 // -- Section « Études » (conception uniquement) --
 
@@ -82,13 +84,27 @@ export const ETUDES_PAR_DEFAUT: TypeEtude[] = [
   'vrd',
 ];
 
-// -- Section « Exécution » (les deux catégories) --
-
-// Catalogue de lots par catégorie. Miroir de LOTS_PAR_CATEGORIE.
-export const LOTS_PAR_CATEGORIE: Record<Categorie, TypeLot[]> = {
-  conception: ['gros_oeuvre', 'second_oeuvre', 'lots_techniques', 'vrd'],
-  amenagement: ['fournitures_mobilier', 'travaux_amenagement'],
-};
+// -- Section « Unbord » (ex-Documents, restructurée en checklist à fichiers,
+//    sept. 2026) : 2 groupes fixes — pas configurables, contrairement aux
+//    items qu'ils contiennent (gabarit par société depuis le 2026-09-24, cf.
+//    LigneUnbordGabarit/UnbordGabaritService — les 14 items d'origine listés
+//    ci-dessous ne sont plus lus par le code, ils ne servent qu'à amorcer le
+//    gabarit de Grey Concrete dans prisma/seed.ts). « Relevé de l'existant »
+//    reprend volontairement le même intitulé/ordre que le groupe homonyme
+//    d'Avant-projet (cf. CHECKLISTS_AVP plus bas) — même réalité de terrain,
+//    suivie ici par présence de fichier plutôt que par case à cocher manuelle.
+export const GROUPES_UNBORD: { groupe: GroupeUnbord; libelle: string; description: string }[] = [
+  {
+    groupe: 'documents',
+    libelle: 'Documents',
+    description: 'Pièces administratives et juridiques du terrain.',
+  },
+  {
+    groupe: 'releve_existant',
+    libelle: "Relevé de l'existant",
+    description: 'Constat du terrain avant conception.',
+  },
+];
 
 // Phase qui suit « avant_projet » pour une catégorie donnée.
 export function phaseApresAvantProjet(categorie: Categorie): Phase {
@@ -98,19 +114,23 @@ export function phaseApresAvantProjet(categorie: Categorie): Phase {
 // -- Section « Avant-projet » : sous-checklists opérationnelles --
 
 // Le GABARIT des checklists Trello Grey Concrete, dans l'ordre d'affichage —
-// sert uniquement à amorcer les 29 lignes standard d'un nouvel avant-projet
+// sert uniquement à amorcer les 16 lignes standard d'un nouvel avant-projet
 // (coquilleAvantProjet). Au-delà de cet instant T, les lignes vivent en base
-// (LigneChecklistAvp : libelle/ordre propres) — l'admin peut en ajouter ou en
-// retirer par projet, indépendamment de ce gabarit. `cle` n'est qu'un repère
-// de provenance Trello interne à ce fichier, plus une clé de stockage.
+// (LigneChecklistAvp : libelle/ordre propres) — l'admin ou le dispatcher
+// d'une cellule du projet peuvent en ajouter ou en retirer, indépendamment de
+// ce gabarit. `cle` n'est qu'un repère de provenance Trello interne à ce
+// fichier, plus une clé de stockage.
 // Miroir de frontend/lib/types.ts::CHECKLISTS_AVANT_PROJET — à garder synchro.
 //
-// Pas de groupe « Dossier final (PDF & images) » : retiré (déc. — sept.
-// 2026), son contenu (esquisses, plans, images 3D, mood board…) fait double
-// emploi avec les vrais fichiers déjà suivis dans les sections Images /
-// Documents de chaque projet. Les lignes déjà seedées sur les projets
-// existants sont soft-deletées par la migration
-// avp_checklist_retire_dossier_final.
+// Restructuration sept. 2026 : plus que 2 groupes — Livrables (ex-« Tâches
+// complémentaires », étendu à 13 items) et Fichiers produits (inchangé). Les
+// groupes Programme et Relevé de l'existant sont retirés (doublonnaient /
+// n'apportaient plus rien à ce stade) — leurs lignes déjà seedées sont
+// soft-deletées par la migration avant_projet_restructuration ; les valeurs
+// d'enum restent en base (même motif que dossier_final avant elles, cf.
+// schema.prisma). Chaque item peut désormais recevoir des fichiers — statut
+// dérivé de leur présence, plus de case « fait »/note manuelles (même modèle
+// que Foncier/Unbord).
 export const CHECKLISTS_AVANT_PROJET: {
   groupe: GroupeChecklistAvp;
   libelle: string;
@@ -118,57 +138,34 @@ export const CHECKLISTS_AVANT_PROJET: {
   items: { cle: string; libelle: string }[];
 }[] = [
   {
-    groupe: 'programme',
-    libelle: 'Programme',
-    description:
-      'Besoins spatiaux niveau par niveau, et positionnement (standing, gamme, style).',
-    items: [
-      {
-        cle: 'prog_sous_sol',
-        libelle: 'Sous-sol (préciser le nombre de niveaux et les aménagements spécifiques)',
-      },
-      { cle: 'prog_rdc', libelle: 'Rez-de-chaussée (préciser les aménagements)' },
-      {
-        cle: 'prog_etage_courant',
-        libelle: 'Étage courant (préciser le nombre de niveaux et les aménagements)',
-      },
-      {
-        cle: 'prog_terrasse',
-        libelle: "Terrasse (préciser les aménagements et l'accessibilité)",
-      },
-      {
-        cle: 'prog_standing',
-        libelle: 'Standing (économique, moyen ou haut — préciser la différence)',
-      },
-      {
-        cle: 'prog_gamme',
-        libelle: 'Gamme (économique, moyen ou haut — préciser la différence)',
-      },
-      { cle: 'prog_style', libelle: 'Style (ex. moderne)' },
-      { cle: 'prog_autres_infos', libelle: 'Autres informations importantes' },
-    ],
-  },
-  {
-    groupe: 'releve_existant',
-    libelle: "Relevé de l'existant",
-    description:
-      'Documente le terrain avant conception — sans ça, l’équipe dessine à l’aveugle.',
-    items: [
-      { cle: 'visite_site', libelle: 'Visite sur site' },
-      { cle: 'plans_terrain', libelle: 'Plans (terrain)' },
-      { cle: 'assainissement', libelle: 'Assainissement' },
-      { cle: 'eau', libelle: 'Eau' },
-      { cle: 'electricite', libelle: 'Électricité' },
-      { cle: 'telephone', libelle: 'Téléphone' },
-      { cle: 'photos_videos', libelle: 'Photos et vidéos' },
-      { cle: 'autres_infos', libelle: 'Autres informations' },
-    ],
-  },
-  {
     groupe: 'taches_complementaires',
-    libelle: 'Tâches complémentaires',
-    description: 'Livrables intermédiaires côté commercial et technique.',
+    libelle: 'Livrables',
+    description: 'Livrables de conception à produire et transmettre au client.',
     items: [
+      { cle: 'esquisses', libelle: 'Esquisses' },
+      {
+        cle: 'plans',
+        libelle:
+          'Plans (dessin de tous les niveaux, axes, superficies des pièces et SHOB, aménagements, plan de masse, coupe)',
+      },
+      {
+        cle: 'images_synthese_facade_3d',
+        libelle: 'Images de synthèse façade 3D (vue de face, gauche, droite, contre-plongée)',
+      },
+      { cle: 'details_facade', libelle: 'Détails façade (coupes et perspectives)' },
+      { cle: 'details_cuisine', libelle: 'Détails cuisine (coupes et perspectives)' },
+      { cle: 'details_salle_de_bain', libelle: 'Détails salle de bain (coupes et perspectives)' },
+      { cle: 'details_escaliers', libelle: 'Détails escaliers (coupes et perspectives)' },
+      {
+        cle: 'emplacement_gaines',
+        libelle:
+          "Emplacement des gaines, local technique (SEN'EAU et SENELEC), bâche à eau et local gaz",
+      },
+      {
+        cle: 'validation_client',
+        libelle: 'Validation client (envoi par e-mail et bon pour accord sur les plans physiques)',
+      },
+      { cle: 'mood_board', libelle: 'Mood Board (matériaux et ambiances des aménagements)' },
       { cle: 'plans_cotes', libelle: 'Plans avec cotations' },
       { cle: 'devis_descriptif', libelle: 'Devis descriptif' },
       { cle: 'plaquettes_commerciales', libelle: 'Plaquettes commerciales' },
@@ -212,6 +209,220 @@ export const GABARIT_CHECKLIST_AVP: {
   g.items.map((item, ordre) => ({ groupe: g.groupe, libelle: item.libelle, ordre })),
 );
 
+// Le GABARIT des checklists Permis (miroir Trello Grey Concrete), même motif
+// que CHECKLISTS_AVANT_PROJET ci-dessus — amorce les lignes standard, l'admin
+// ajoute/retire ensuite par projet (LigneChecklistPermis). Distinct des
+// verrous durs du modèle Permis (nicad/dossier 5 pièces/statut) : juste un %
+// de suivi opérationnel, indépendant.
+// La numérotation du groupe « Procédure » saute de 6 à 8 (pas de « 7. » dans
+// le Trello source) — reproduite telle quelle plutôt que « corrigée ».
+//
+// Restructuration sept. 2026 : « Dossier de Permis de construire » renommé
+// « Constitution » — items INCHANGÉS (les 12 pièces restent cochables
+// individuellement), mais plus de bouton « joindre » par item : UN seul
+// point d'upload au niveau du bloc, où on choisit l'item concerné au moment
+// de joindre (cf. JoindreAvecItemModal, frontend) — plus premium que 12
+// boutons éparpillés, mais le fichier reste rattaché à SON item précis
+// (ligneChecklistPermisId, comme avant), pas au bloc entier. Dépôt urbanisme
+// / Procédure : même retrait du bouton par item, mais leur point d'upload
+// partagé ne demande PAS de choisir un item — direct au niveau du bloc (cf.
+// BlocPermis.images/fichiers, schema.prisma) puisque leurs pièces ne
+// correspondent pas à un item précis de la même façon.
+export const CHECKLISTS_PERMIS: {
+  groupe: GroupeChecklistPermis;
+  libelle: string;
+  description: string;
+  items: { cle: string; libelle: string }[];
+}[] = [
+  {
+    groupe: 'dossier_permis',
+    libelle: 'Constitution',
+    description: 'Pièces à réunir pour constituer le dossier administratif.',
+    items: [
+      { cle: 'mail_depot', libelle: 'Mail pour dépôt' },
+      { cle: 'droit_reel', libelle: 'Droit réel' },
+      { cle: 'plan_cadastral', libelle: 'Plan cadastral' },
+      { cle: 'id', libelle: 'ID' },
+      { cle: 'ninea', libelle: 'Ninéa (pour les SCI)' },
+      {
+        cle: 'notice_securite',
+        libelle: 'Notice de sécurité (projet avec publique)',
+      },
+      { cle: 'quittance_redevances', libelle: 'Quittance sur les redevances' },
+      { cle: 'plans_cotation', libelle: 'Plans avec cotation' },
+      { cle: 'coupe', libelle: 'Coupe' },
+      { cle: 'facade', libelle: 'Façade' },
+      { cle: 'fiche_technique', libelle: 'Fiche technique' },
+      {
+        cle: 'decharge_responsabilite',
+        libelle:
+          'Décharge de responsabilité client (si le client refuse de faire son permis de construire)',
+      },
+    ],
+  },
+  {
+    groupe: 'depot_urbanisme',
+    libelle: 'Dépôt urbanisme',
+    description: 'Dépôt du dossier au service urbanisme et formalités associées.',
+    items: [
+      { cle: 'depot', libelle: 'Dépôt' },
+      {
+        cle: 'partage_infos_connexion',
+        libelle:
+          'Partage des infos de connexion et récépissé de dépôt avec le client par mail',
+      },
+      {
+        cle: 'frais_depot',
+        libelle: 'Frais de dépôt (urbanisme, montant à remplir)',
+      },
+      { cle: 'cachet_architecte', libelle: "Cachet de l'architecte" },
+    ],
+  },
+  {
+    groupe: 'procedure',
+    libelle: 'Procédure',
+    description: "Organismes à consulter dans le circuit d'instruction du permis.",
+    items: [
+      { cle: 'organisme_1', libelle: '1. Bureau de permis de construire' },
+      { cle: 'organisme_2', libelle: '2. Bureau étude et lotissement' },
+      { cle: 'organisme_3', libelle: '3. Cadastre' },
+      { cle: 'organisme_4', libelle: '4. Domaine' },
+      { cle: 'organisme_5', libelle: '5. Protection civile' },
+      { cle: 'organisme_6', libelle: '6. Chef de direction régionale urbaine' },
+      { cle: 'organisme_8', libelle: '8. Mairie' },
+      { cle: 'organisme_9', libelle: '9. Préfecture' },
+      { cle: 'organisme_10', libelle: '10. Urbanisme' },
+    ],
+  },
+];
+
+export const GROUPES_CHECKLIST_PERMIS: {
+  groupe: GroupeChecklistPermis;
+  libelle: string;
+  description: string;
+}[] = CHECKLISTS_PERMIS.map((g) => ({
+  groupe: g.groupe,
+  libelle: g.libelle,
+  description: g.description,
+}));
+
+export const GABARIT_CHECKLIST_PERMIS: {
+  groupe: GroupeChecklistPermis;
+  libelle: string;
+  ordre: number;
+}[] = CHECKLISTS_PERMIS.flatMap((g) =>
+  g.items.map((item, ordre) => ({ groupe: g.groupe, libelle: item.libelle, ordre })),
+);
+
+// Le GABARIT des checklists Exécution (miroir Trello Grey Concrete), même
+// motif que CHECKLISTS_PERMIS ci-dessus — 8 blocs fixes, chacun avec sa
+// propre échéance et son responsable (BlocExecution). S'applique aux deux
+// catégories avec le même gabarit (décision boss, sept. 2026, cf. mémoire).
+// « CCTP » est vide pour l'instant côté Trello — le groupe existe déjà, prêt
+// à recevoir des items ajoutés par l'admin.
+// « Études (Bureaux) » (groupe 'etudes') et « Les Plans » (groupe 'plans')
+// retirés sur demande explicite (sept. 2026) — même traitement dormant que
+// Pré-bilan/Affectation/Dossier technique avant eux : l'enum
+// GroupeChecklistExecution et les lignes déjà créées sur des projets en
+// cours (et leurs fichiers) restent intacts, juste plus jamais servis ici.
+export const CHECKLISTS_EXECUTION: {
+  groupe: GroupeChecklistExecution;
+  libelle: string;
+  description: string;
+  items: { cle: string; libelle: string }[];
+}[] = [
+  {
+    groupe: 'viabilite',
+    libelle: 'Viabilité',
+    description: 'Réseaux à raccorder.',
+    items: [
+      { cle: 'assainissement', libelle: 'Assainissement' },
+      { cle: 'eau', libelle: 'Eau' },
+      { cle: 'electricite_viabilite', libelle: 'Électricité' },
+      { cle: 'telephone', libelle: 'Téléphone' },
+    ],
+  },
+  {
+    groupe: 'locaux_technique',
+    libelle: 'Locaux techniques',
+    description: 'Équipements techniques à prévoir.',
+    items: [
+      { cle: 'groupe_electrogene', libelle: 'Groupe électrogène' },
+      { cle: 'bache_a_eau', libelle: 'Bâche à eau' },
+      { cle: 'fosse_relevage', libelle: 'Fosse de relevage et regards' },
+      { cle: 'local_comptage', libelle: 'Local comptage' },
+      { cle: 'electricite_locaux', libelle: 'Électricité' },
+      { cle: 'plomberie', libelle: 'Plomberie' },
+      { cle: 'climatisation', libelle: 'Climatisation' },
+      { cle: 'securite_incendie', libelle: 'Sécurité incendie' },
+      { cle: 'securite_antivol', libelle: 'Sécurité surveillance et antivol (informatique)' },
+    ],
+  },
+  {
+    groupe: 'amenagements',
+    libelle: 'Aménagements',
+    description: 'Aménagements intérieurs à détailler.',
+    items: [
+      { cle: 'cuisine_buanderie', libelle: 'Cuisine et buanderie' },
+      { cle: 'salles_de_bain', libelle: 'Salles de bain et toilettes' },
+      { cle: 'chambres', libelle: 'Chambres' },
+      { cle: 'pieces_a_vivre', libelle: 'Pièces à vivre' },
+      { cle: 'paysage_amenagement', libelle: 'Paysage' },
+      { cle: 'faux_plafond', libelle: 'Faux plafond (coupe des différents types)' },
+    ],
+  },
+  {
+    groupe: 'menuiserie',
+    libelle: 'Cahiers de menuiserie',
+    description: 'Menuiseries par matériau.',
+    items: [
+      { cle: 'bois', libelle: 'Bois' },
+      { cle: 'metallique', libelle: 'Métallique' },
+      { cle: 'aluminium', libelle: 'Aluminium' },
+    ],
+  },
+  {
+    groupe: 'details',
+    libelle: 'Détails',
+    description: 'Finitions et équipements à détailler.',
+    items: [
+      { cle: 'revetements_sol', libelle: 'Revêtements sol' },
+      { cle: 'revetements_mural', libelle: 'Revêtements mural' },
+      { cle: 'sanitaires', libelle: 'Sanitaires' },
+      { cle: 'equipements', libelle: 'Équipements' },
+      { cle: 'cuisine_details', libelle: 'Cuisine' },
+      { cle: 'luminaires', libelle: 'Luminaires' },
+      { cle: 'piscine', libelle: 'Piscine' },
+      { cle: 'ascenseur', libelle: 'Ascenseur' },
+      { cle: 'paysage_details', libelle: 'Paysage' },
+    ],
+  },
+  {
+    groupe: 'cctp',
+    libelle: 'CCTP',
+    description: 'Cahier des clauses techniques particulières.',
+    items: [],
+  },
+];
+
+export const GROUPES_CHECKLIST_EXECUTION: {
+  groupe: GroupeChecklistExecution;
+  libelle: string;
+  description: string;
+}[] = CHECKLISTS_EXECUTION.map((g) => ({
+  groupe: g.groupe,
+  libelle: g.libelle,
+  description: g.description,
+}));
+
+export const GABARIT_CHECKLIST_EXECUTION: {
+  groupe: GroupeChecklistExecution;
+  libelle: string;
+  ordre: number;
+}[] = CHECKLISTS_EXECUTION.flatMap((g) =>
+  g.items.map((item, ordre) => ({ groupe: g.groupe, libelle: item.libelle, ordre })),
+);
+
 // -- Section « Facturation client » (brique gestion) --
 // Miroir de frontend/lib/types.ts (TYPES_FACTURE, JALONS_FACTURE,
 // TAUX_TVA_DEFAUT, refFacture). Cf. cadrage « Facturation client ».
@@ -225,12 +436,14 @@ export function typeFactureDepuisNature(nature: NatureDossier): FactureType {
   return nature === 'promotion_interne' ? 'vente' : 'honoraires';
 }
 
-// Les 3 jalons standard d'un échéancier de facturation (mandat client), dans
-// l'ordre d'affichage. Miroir de JALONS_FACTURE.
-export const JALONS_FACTURE: { cle: JalonFacture; libelle: string }[] = [
-  { cle: 'signature', libelle: 'Signature du contrat' },
-  { cle: 'avant_projet', libelle: "Validation de l'avant-projet" },
-  { cle: 'livraison', libelle: 'Livraison' },
+// Les 3 jalons de l'échéancier de conception (mandat client), dans l'ordre
+// d'affichage — libellés et parts des CGV Grey Concrete 2026, art. 7
+// (40 % signature / 40 % fin de l'APD / 20 % livraison des plans
+// d'exécution). Clés d'enum inchangées. Miroir de JALONS_FACTURE (front).
+export const JALONS_FACTURE: { cle: JalonFacture; libelle: string; part: number }[] = [
+  { cle: 'signature', libelle: 'Acompte à la signature du contrat', part: 40 },
+  { cle: 'avant_projet', libelle: "Fin de l'APD", part: 40 },
+  { cle: 'livraison', libelle: "Livraison des plans d'exécution", part: 20 },
 ];
 
 // Référence d'affichage d'une facture — format PROVISOIRE. Le format légal

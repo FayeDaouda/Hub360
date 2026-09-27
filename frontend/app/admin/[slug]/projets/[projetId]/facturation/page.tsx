@@ -1,24 +1,25 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Pencil, Plus, Send, Trash2, Undo2, Wallet } from 'lucide-react';
-import { getSociete } from '@/lib/api';
-import { getProjetExecution } from '@/lib/projets';
+import { ArrowLeft, Pencil, Plus, ReceiptText, Send, Trash2, Undo2, Wallet } from 'lucide-react';
 import {
   ajouterPaiement,
   creerAvoir,
   creerEcheancier,
   creerFacture,
+  creerMensualite,
   emettreFacture,
+  marquerBureauRegle,
+  refacturerEtudes,
   getFacturation,
   majFacture,
   supprimerFacture,
   supprimerPaiement,
 } from '@/lib/facturation';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
+import { niveauSuffisant } from '@/lib/auth';
+import { sectionAccessible } from '@/lib/acces-back-office';
 import {
   CATEGORIES,
   JALONS_FACTURE,
@@ -31,13 +32,11 @@ import {
   type Facturation,
   type JalonFacture,
   type ModePaiement,
-  type ProjetExecution,
-  type Session,
-  type Societe,
   type StatutFactureEffectif,
+  STATUTS_REGLEMENT_BUREAU,
+  type StatutReglementBureau,
 } from '@/lib/types';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
 
 type Props = { params: { slug: string; projetId: string } };
 
@@ -54,41 +53,49 @@ const PILL_FACTURE: Record<StatutFactureEffectif, string> = {
 
 // Une facture porte des actions selon son statut stocké. L'avoir (négatif) et la
 // facture annulée sont en lecture seule.
-function actionsPossibles(f: Facture) {
+const PILL_REGLEMENT: Record<StatutReglementBureau, string> = {
+  non_refacture: 'pill--neutre',
+  en_attente_encaissement: 'pill--info',
+  a_regler: 'pill--attention',
+  regle: 'pill--succes',
+};
+
+// Selon la matrice (finances_factures) : écriture = préparer les brouillons
+// (Dir. GC) ; validation = émettre, avoir, paiements (« la CFO seule
+// enregistre les paiements »). Affichage seulement — le serveur revérifie.
+type Droits = { ecriture: boolean; validation: boolean };
+
+function actionsPossibles(f: Facture, d: Droits) {
   return {
-    modifiable: f.statut === 'brouillon',
-    emissible: f.statut === 'brouillon',
-    encaissable: f.statut === 'emise' && !f.estAvoir,
-    annulable: f.statut === 'emise' && !f.estAvoir,
+    modifiable: f.statut === 'brouillon' && d.ecriture,
+    emissible: f.statut === 'brouillon' && d.validation,
+    encaissable: f.statut === 'emise' && !f.estAvoir && d.validation,
+    annulable: f.statut === 'emise' && !f.estAvoir && d.validation,
   };
 }
 
 export default function FacturationPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
-  const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
+  useTitrePage('Facturation');
+  const session = useSessionCourante();
+  const droits: Droits = {
+    ecriture: niveauSuffisant(session, 'finances_factures', 'ecriture'),
+    validation: niveauSuffisant(session, 'finances_factures', 'validation'),
+  };
+  // Régler un bureau d'études = une charge (finances_charges), pas une facture.
+  const peutReglerBureau = niveauSuffisant(session, 'finances_charges', 'validation');
+  const [etudesChoisies, setEtudesChoisies] = useState<Set<string>>(new Set());
   const [factu, setFactu] = useState<Facturation | null>(null);
+  // En-tête : fourni par la réponse Facturation elle-même (pas d'appel aux
+  // routes Projets, fermées aux rôles de direction).
+  const projet = factu?.projet;
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [paiementsId, setPaiementsId] = useState<string | null>(null);
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug).then(setSociete).catch(() => setSociete(null));
-    getProjetExecution(params.slug, params.projetId).then(setProjet);
     getFacturation(params.slug, params.projetId).then(setFactu);
-  }, [params.slug, params.projetId, router]);
+  }, [params.slug, params.projetId]);
 
   const factureEditee = useMemo(
     () => factu?.factures.find((f) => f.id === editId) ?? null,
@@ -99,9 +106,11 @@ export default function FacturationPage({ params }: Props) {
     [factu, paiementsId],
   );
 
-  if (!session) return null;
-
-  const retour = `/admin/${params.slug}/projets/${params.projetId}`;
+  // Retour vers la fiche projet si le rôle voit la section Projets, sinon
+  // vers la Facturation centrale (CFO, Dir. GC…).
+  const retour = sectionAccessible(session, 'projets')
+    ? `/admin/${params.slug}/projets/${params.projetId}`
+    : `/admin/${params.slug}/facturation`;
   const mandat = projet?.nature === 'mandat_client';
   const echeancierPose = !!factu?.factures.some((f) => f.jalon);
 
@@ -122,16 +131,14 @@ export default function FacturationPage({ params }: Props) {
   }
 
   return (
-    <AdminShell societe={societe} session={session} active="projets" titre="Facturation">
-      <Link href={retour} className="lien-retour">
+    <>
+      <Link href={retour} className="lien-retour lien-retour--facturation">
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />
         <span>{projet ? projet.programme : 'Projet'}</span>
       </Link>
 
-      {!factu || projet === undefined ? (
+      {!factu || !projet ? (
         <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
-      ) : projet === null ? (
-        <p className="empty-state empty-state--bloc">Projet introuvable.</p>
       ) : (
         <>
           <header className="projet-entete">
@@ -145,7 +152,12 @@ export default function FacturationPage({ params }: Props) {
                   {CATEGORIES[projet.categorie]}
                 </span>
               </span>
-              <h2>Facturation client</h2>
+              <h2>
+                <span className="module-icone module-icone--facturation" aria-hidden>
+                  <ReceiptText size={17} strokeWidth={1.75} />
+                </span>
+                Facturation client
+              </h2>
               <p className="projet-entete-meta">
                 {projet.programme} · {projet.client.nom} · {projet.localisation} ·{' '}
                 {TYPES_BIEN[projet.type]}
@@ -198,6 +210,144 @@ export default function FacturationPage({ params }: Props) {
             </div>
           </section>
 
+          {/* Facturation mensuelle — SU / EX de l'offre acceptée, au mois, à la
+              main (pas de scheduler : le rappel est dérivé à la lecture). */}
+          {factu.mensualites.length > 0 && (
+            <section className="panel">
+              <h3 className="panel-title">Facturation mensuelle</h3>
+              <ul className="mensualites-liste">
+                {factu.mensualites.map((m) => (
+                  <li key={m.ligneDevisId} className="mensualites-ligne">
+                    <span className="mensualites-nom">
+                      {m.libelle}
+                      <span className="cell-sub">
+                        {formatMontantCompact(m.prixMensuelHt)} HT / mois · {m.moisFactures}/
+                        {m.moisPrevus} mois facturés
+                      </span>
+                    </span>
+                    {m.aFacturerCeMois && (
+                      <span className="pill pill--attention">À facturer ce mois</span>
+                    )}
+                    <button
+                      type="button"
+                      className={m.aFacturerCeMois ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
+                      disabled={busy || !droits.ecriture || m.moisFactures >= m.moisPrevus}
+                      onClick={() =>
+                        action(() => creerMensualite(params.slug, params.projetId, m.ligneDevisId))
+                      }
+                    >
+                      Facturer le mois
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Études techniques (étape H3, CGV art. 5) — une facture, une ligne
+              par étude (bureau × 1,10) ; le bureau se règle après
+              encaissement du client. Montants de bureau saisis dans Études. */}
+          {factu.etudes.length > 0 && (
+            <section className="panel">
+              <h3 className="panel-title">Études techniques — refacturation</h3>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th aria-label="Sélection" />
+                      <th>Étude</th>
+                      <th>Facture du bureau (HT)</th>
+                      <th>Refacturé HT (+10 %)</th>
+                      <th>Statut</th>
+                      <th aria-label="Actions" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {factu.etudes.map((e) => (
+                      <tr key={e.blocId}>
+                        <td data-label="">
+                          {e.refacturable && droits.ecriture && (
+                            <input
+                              type="checkbox"
+                              aria-label={`Refacturer ${e.libelle}`}
+                              checked={etudesChoisies.has(e.blocId)}
+                              onChange={(ev) =>
+                                setEtudesChoisies((s) => {
+                                  const n = new Set(s);
+                                  if (ev.target.checked) n.add(e.blocId);
+                                  else n.delete(e.blocId);
+                                  return n;
+                                })
+                              }
+                            />
+                          )}
+                        </td>
+                        <td data-label="Étude">
+                          {e.libelle}
+                          <span className="cell-sub">{e.bureau || 'Bureau non renseigné'}</span>
+                        </td>
+                        <td data-label="Facture du bureau (HT)">
+                          {e.montantBureauHt != null ? formatMontantCompact(e.montantBureauHt) : '—'}
+                        </td>
+                        <td data-label="Refacturé HT (+10 %)">
+                          {e.montantRefactureHt != null ? formatMontantCompact(e.montantRefactureHt) : '—'}
+                          {e.facture?.reference && <span className="cell-sub">{e.facture.reference}</span>}
+                        </td>
+                        <td data-label="Statut">
+                          <span className={`pill ${PILL_REGLEMENT[e.statutReglement]}`}>
+                            {STATUTS_REGLEMENT_BUREAU[e.statutReglement]}
+                          </span>
+                          {e.statutReglement === 'non_refacture' && !e.refacturable && (
+                            <span className="cell-sub">Bureau et montant à saisir dans Études</span>
+                          )}
+                        </td>
+                        <td data-label="" className="cell-actions">
+                          {e.statutReglement === 'a_regler' && peutReglerBureau && (
+                            <button
+                              type="button"
+                              className="lien-inline"
+                              disabled={busy}
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Confirmer le règlement de ${e.bureau} (${e.libelle}) par Grey Concrete ?`,
+                                  )
+                                ) {
+                                  void action(() =>
+                                    marquerBureauRegle(params.slug, params.projetId, e.blocId),
+                                  );
+                                }
+                              }}
+                            >
+                              Bureau réglé
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {droits.ecriture && factu.etudes.some((e) => e.refacturable) && (
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy || etudesChoisies.size === 0}
+                    onClick={async () => {
+                      const ok = await action(() =>
+                        refacturerEtudes(params.slug, params.projetId, [...etudesChoisies]),
+                      );
+                      if (ok) setEtudesChoisies(new Set());
+                    }}
+                  >
+                    Refacturer la sélection ({etudesChoisies.size})
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Factures */}
           <section className="panel">
             <h3 className="panel-title">Factures</h3>
@@ -220,7 +370,7 @@ export default function FacturationPage({ params }: Props) {
                   </thead>
                   <tbody>
                     {factu.factures.map((f) => {
-                      const a = actionsPossibles(f);
+                      const a = actionsPossibles(f, droits);
                       const cls = f.estAvoir
                         ? 'factu-l--avoir'
                         : f.statut === 'annulee'
@@ -353,19 +503,21 @@ export default function FacturationPage({ params }: Props) {
             )}
           </section>
 
-          {/* Création */}
-          <CreationFacture
-            mandat={mandat}
-            echeancierPose={echeancierPose}
-            suggestionVenteHt={factu.resume.suggestionVenteHt}
-            busy={busy}
-            onFacture={(body) =>
-              action(() => creerFacture(params.slug, params.projetId, body))
-            }
-            onEcheancier={(body) =>
-              action(() => creerEcheancier(params.slug, params.projetId, body))
-            }
-          />
+          {/* Création — préparer une facture = écriture (Dir. GC, CFO, admin). */}
+          {droits.ecriture && (
+            <CreationFacture
+              mandat={mandat}
+              echeancierPose={echeancierPose}
+              suggestionVenteHt={factu.resume.suggestionVenteHt}
+              busy={busy}
+              onFacture={(body) =>
+                action(() => creerFacture(params.slug, params.projetId, body))
+              }
+              onEcheancier={(body) =>
+                action(() => creerEcheancier(params.slug, params.projetId, body))
+              }
+            />
+          )}
         </>
       )}
 
@@ -405,7 +557,7 @@ export default function FacturationPage({ params }: Props) {
           }
         />
       )}
-    </AdminShell>
+    </>
   );
 }
 
@@ -682,13 +834,15 @@ function ModaleModifier({
   busy: boolean;
   onClose: () => void;
   onEnregistrer: (patch: {
-    montantHt: number;
+    montantHt?: number; // absent pour une facture à lignes (somme des lignes)
     tauxTva: number;
     echeanceLe: string | null;
     libelle: string;
   }) => void;
 }) {
   const [montant, setMontant] = useState(String(facture.montantHt || ''));
+  // Facture à lignes (refacturation d'études) : montant = somme des lignes.
+  const aLignes = facture.lignes.length > 0;
   const [taux, setTaux] = useState(String(facture.tauxTva));
   const [echeance, setEcheance] = useState(facture.echeanceLe ?? '');
   const [libelle, setLibelle] = useState(facture.libelle);
@@ -716,8 +870,12 @@ function ModaleModifier({
                 min="0"
                 className="field-input"
                 value={montant}
+                disabled={aLignes}
                 onChange={(e) => setMontant(e.target.value)}
               />
+              {aLignes && (
+                <span className="field-aide">Somme des lignes de la facture — non modifiable.</span>
+              )}
             </label>
             <label className="field">
               <span className="field-label">TVA (%)</span>
@@ -761,7 +919,7 @@ function ModaleModifier({
               disabled={busy || !Number(montant)}
               onClick={() =>
                 onEnregistrer({
-                  montantHt: Number(montant),
+                  ...(!aLignes && { montantHt: Number(montant) }),
                   tauxTva: Number(taux) || TAUX_TVA_DEFAUT,
                   echeanceLe: echeance || null,
                   libelle: libelle.trim(),

@@ -1,62 +1,87 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { BarChart3, CheckCircle2, Plus, Sparkles, Workflow, X, XCircle } from 'lucide-react';
-import { getSociete } from '@/lib/api';
-import { changerStatut, getClients, getProjets } from '@/lib/crm';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { BarChart3, CheckCircle2, Plus, Search, Sparkles, Workflow, X, XCircle } from 'lucide-react';
+import {
+  agirSurDossier,
+  changerProprietaire,
+  getClients,
+  getProjets,
+  getProprietairesPossibles,
+  rattacherLocalite,
+} from '@/lib/crm';
+import { getLocalites } from '@/lib/localites';
+import { getProduitsServices } from '@/lib/devis';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
+import { niveauSuffisant } from '@/lib/auth';
+import { CLASSE_STATUT, type ActionCrm } from '@/lib/cycle-crm';
 import {
   CATEGORIES,
   GAMMES,
   NATURES_DOSSIER,
   STANDINGS,
   STATUTS_CRM,
-  STATUTS_ORDRE,
   TYPES_BIEN,
   TYPES_CLIENT,
   type Client,
+  type Localite,
+  type Personne,
+  type ProduitService,
   type Projet,
-  type Session,
-  type Societe,
   type StatutCrm,
 } from '@/lib/types';
 import { formatPourcent, formatSurface } from '@/lib/format';
-import { AdminShell } from '@/components/admin/admin-shell';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiFunnel, KpiStrip } from '@/components/admin/kpi-strip';
+
+// Même palette de dégradés que le tableau de bord (demande boss, sept.
+// 2026 : chaque KPI a sa propre couleur vive) — un point de vérité par
+// page, cf. le commentaire `degrade` dans KpiTuile. Choix sémantique par
+// tuile, pas juste positionnel : Validés en vert (succès), Annulés dans le
+// même dégradé chaud que « Retards » en facturation (signal d'attention).
+const DEGRADE_KPI: Record<string, { a: string; b: string }> = {
+  actif: { a: '#2e3192', b: '#1bffff' }, // Ocean Blue
+  valide: { a: '#11998e', b: '#38ef7d' }, // Quepal
+  neufs: { a: '#764ba2', b: '#667eea' }, // Plum Plate
+  annule: { a: '#ff5f6d', b: '#ffc371' }, // Sweet Morning
+};
 
 type Props = {
   params: { slug: string };
 };
 
-const STATUT_MODIF: Record<StatutCrm, string> = {
-  nouveau: 'nouveau',
-  devis_contrat: 'devis',
-  valide: 'valide',
-  annule: 'annule',
-};
-
 // Filtre posé en cliquant une tuile KPI — bascule (reclic = on l'enlève),
-// combiné à la recherche texte. 'actif' = pipeline (nouveau + devis_contrat),
-// comme la valeur affichée sur la tuile « Pipeline actif ».
-type FiltreTuile = 'actif' | 'valide' | 'neufs' | 'annule';
+// combiné à la recherche texte. 'actif' = pipeline (les 3 statuts non
+// définitifs), comme la valeur affichée sur la tuile « Pipeline actif ».
+type FiltreTuile = 'actif' | 'onboard' | 'neufs' | 'perdu';
 
 const LABEL_FILTRE_TUILE: Record<FiltreTuile, string> = {
   actif: 'Pipeline actif',
-  valide: 'Validés',
+  onboard: 'Onboard',
   neufs: 'Nouveaux (30 j)',
-  annule: 'Annulés',
+  perdu: 'Perdus',
 };
 
+const STATUTS_ACTIFS: StatutCrm[] = ['nouveau_projet', 'en_validation', 'offre_envoyee'];
+
 export default function CrmPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('CRM');
+  const session = useSessionCourante();
+  // Lecture seule pour un rôle qui n'a que la lecture sur le CRM (CFO, CEO…)
+  // — affichage seulement, le serveur refuse de toute façon l'écriture.
+  const peutEcrire = niveauSuffisant(session, 'crm', 'ecriture');
+  // Offre d'un dossier (étape F) : voir = finances_devis lecture, préparer /
+  // relancer / saisir la réponse = écriture (le Dir. GC, pas le COO).
+  const voitOffres = niveauSuffisant(session, 'finances_devis', 'lecture');
+  const peutPreparerOffre = niveauSuffisant(session, 'finances_devis', 'ecriture');
+  const [catalogue, setCatalogue] = useState<ProduitService[]>([]);
   const [projets, setProjets] = useState<Projet[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  // Référentiel des localités — chargé une fois, partagé par la création et
+  // le rattachement. null = en cours (les listes s'affichent désactivées).
+  const [localites, setLocalites] = useState<Localite[] | null>(null);
+  const [proprietaires, setProprietaires] = useState<Personne[] | null>(null);
   const [recherche, setRecherche] = useState('');
   const [filtreTuile, setFiltreTuile] = useState<FiltreTuile | null>(null);
   const [modalOuvert, setModalOuvert] = useState(false);
@@ -67,29 +92,27 @@ export default function CrmPage({ params }: Props) {
   const [detailId, setDetailId] = useState<string | null>(null);
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug)
-      .then(setSociete)
-      .catch(() => setSociete(null));
     getProjets(params.slug).then(setProjets);
     getClients(params.slug).then(setClients);
-  }, [params.slug, router]);
+    getLocalites(params.slug).then(setLocalites);
+    getProprietairesPossibles(params.slug).then(setProprietaires);
+    // Catalogue : liste de choix des lignes d'offre (lecture ouverte aux
+    // préparateurs d'offre) — inutile à charger sinon.
+    if (voitOffres) getProduitsServices(params.slug).then(setCatalogue).catch(() => setCatalogue([]));
+  }, [params.slug, voitOffres]);
+
+  // Recharge la liste après une action sur l'offre (création, relance,
+  // réponse saisie — un refus fait passer le dossier en « Perdu »).
+  async function rafraichir() {
+    setProjets(await getProjets(params.slug));
+  }
 
   const filtres = useMemo(() => {
     if (!projets) return [];
     let liste = projets;
     if (filtreTuile === 'actif') {
-      liste = liste.filter((p) => p.statut === 'nouveau' || p.statut === 'devis_contrat');
-    } else if (filtreTuile === 'valide' || filtreTuile === 'annule') {
+      liste = liste.filter((p) => STATUTS_ACTIFS.includes(p.statut));
+    } else if (filtreTuile === 'onboard' || filtreTuile === 'perdu') {
       liste = liste.filter((p) => p.statut === filtreTuile);
     } else if (filtreTuile === 'neufs') {
       const il30j = Date.now() - 30 * 86_400_000;
@@ -98,7 +121,7 @@ export default function CrmPage({ params }: Props) {
     const q = recherche.trim().toLowerCase();
     if (!q) return liste;
     return liste.filter((p) =>
-      [p.code, p.localisation, p.programme, p.client.nom, TYPES_BIEN[p.type]]
+      [p.code, p.localisation, p.localite?.code, p.programme, p.client.nom, TYPES_BIEN[p.type]]
         .join(' ')
         .toLowerCase()
         .includes(q),
@@ -117,11 +140,12 @@ export default function CrmPage({ params }: Props) {
   const kpi = useMemo(() => {
     const liste = projets ?? [];
     const par = (s: StatutCrm) => liste.filter((p) => p.statut === s).length;
-    const nouveau = par('nouveau');
-    const devis = par('devis_contrat');
-    const valide = par('valide');
-    const annule = par('annule');
-    const clos = valide + annule;
+    const nouveau = par('nouveau_projet');
+    const daf = par('en_validation');
+    const offre = par('offre_envoyee');
+    const onboard = par('onboard');
+    const perdu = par('perdu');
+    const clos = onboard + perdu;
     const il30j = Date.now() - 30 * 86_400_000;
     const il60j = Date.now() - 60 * 86_400_000;
     const nouveaux30j = liste.filter((p) => +new Date(p.creeLe) >= il30j).length;
@@ -132,17 +156,19 @@ export default function CrmPage({ params }: Props) {
       return t >= il60j && t < il30j;
     }).length;
     return {
-      pipelineActif: nouveau + devis,
-      valide,
-      annule,
-      tauxConversion: clos > 0 ? Math.round((valide / clos) * 100) : null,
+      pipelineActif: nouveau + daf + offre,
+      onboard,
+      perdu,
+      tauxConversion: clos > 0 ? Math.round((onboard / clos) * 100) : null,
       nouveaux30j,
       nouveauxPrecedents30j,
       funnel: [
-        { cle: 'nouveau', label: 'Nouveau', valeur: nouveau },
-        { cle: 'devis_contrat', label: 'Devis / contrat', valeur: devis },
-        { cle: 'valide', label: 'Validé', valeur: valide },
-        { cle: 'annule', label: 'Annulé', valeur: annule },
+        // cle = variante de couleur du statut (même palette que les pastilles).
+        { cle: CLASSE_STATUT.nouveau_projet, label: STATUTS_CRM.nouveau_projet, valeur: nouveau },
+        { cle: CLASSE_STATUT.en_validation, label: 'En validation', valeur: daf },
+        { cle: CLASSE_STATUT.offre_envoyee, label: STATUTS_CRM.offre_envoyee, valeur: offre },
+        { cle: CLASSE_STATUT.onboard, label: STATUTS_CRM.onboard, valeur: onboard },
+        { cle: CLASSE_STATUT.perdu, label: STATUTS_CRM.perdu, valeur: perdu },
       ],
       nature: {
         mandat: liste.filter((p) => p.nature === 'mandat_client').length,
@@ -150,8 +176,6 @@ export default function CrmPage({ params }: Props) {
       },
     };
   }, [projets]);
-
-  if (!session) return null;
 
   function onCree(projet: Projet) {
     setProjets((actuels) => [projet, ...(actuels ?? [])]);
@@ -162,31 +186,54 @@ export default function CrmPage({ params }: Props) {
     setRecherche('');
   }
 
-  async function onChangerStatut(dossier: Projet, statut: StatutCrm) {
-    // maj optimiste
-    setProjets((actuels) =>
-      (actuels ?? []).map((p) => (p.id === dossier.id ? { ...p, statut } : p)),
+  // Action du cycle depuis la fiche détail. Pas de maj optimiste : le
+  // serveur peut refuser (droit, statut changé entre-temps) — l'erreur
+  // remonte à la fiche, qui l'affiche.
+  async function onAgir(dossier: Projet, action: ActionCrm, commentaire?: string) {
+    const { projet: maj, projetCree, offreEmise, facturesPreparees } = await agirSurDossier(
+      params.slug,
+      dossier.id,
+      action,
+      commentaire,
     );
-    const { projetCree } = await changerStatut(params.slug, dossier.id, statut);
+    setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
     if (projetCree) {
-      const etape = STATUTS_CRM[dossier.nature].valide.toLowerCase();
       setMessage(
-        `Dossier ${dossier.code} — ${etape} : projet créé dans « Projets », à assigner.`,
+        `Dossier ${dossier.code} — onboard : projet créé dans « Projets », à assigner` +
+          (facturesPreparees > 0
+            ? ` ; ${facturesPreparees} facture${facturesPreparees > 1 ? 's' : ''} préparée${facturesPreparees > 1 ? 's' : ''} en brouillon depuis l’offre (échéanciers CGV).`
+            : '.'),
       );
     }
+    return offreEmise;
+  }
+
+
+  async function onRattacher(dossier: Projet, localiteId: string) {
+    const maj = await rattacherLocalite(params.slug, dossier.id, localiteId);
+    setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
+    setMessage(`Dossier ${dossier.code} rattaché à ${maj.localite?.nom ?? 'la localité'}.`);
+  }
+
+  async function onChangerProprietaire(dossier: Projet, proprietaireId: string) {
+    const maj = await changerProprietaire(params.slug, dossier.id, proprietaireId);
+    setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
   }
 
   return (
-    <AdminShell societe={societe} session={session} active="crm" titre="CRM">
+    <>
       <div className="projets-toolbar">
         <div className="projets-toolbar-info">
-          <input
-            type="search"
-            className="field-input projets-recherche"
-            placeholder="Rechercher un code, une localisation, un programme, un client…"
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-          />
+          <div className="champ-recherche projets-recherche">
+            <Search size={15} strokeWidth={1.75} aria-hidden />
+            <input
+              type="search"
+              className="field-input"
+              placeholder="Rechercher un code, une localisation, un programme, un client…"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+            />
+          </div>
           {projets && (
             <span className="projets-compte">
               {filtres.length} projet{filtres.length > 1 ? 's' : ''}
@@ -204,10 +251,12 @@ export default function CrmPage({ params }: Props) {
             </button>
           )}
         </div>
-        <button type="button" className="btn-primary" onClick={() => setModalOuvert(true)}>
-          <Plus size={16} strokeWidth={2} aria-hidden />
-          <span>Nouveau projet</span>
-        </button>
+        {peutEcrire && (
+          <button type="button" className="btn-primary" onClick={() => setModalOuvert(true)}>
+            <Plus size={16} strokeWidth={2} aria-hidden />
+            <span>Nouveau projet</span>
+          </button>
+        )}
       </div>
 
       {message && (
@@ -231,6 +280,7 @@ export default function CrmPage({ params }: Props) {
                 // Icône purement décorative (aucune série réelle derrière) —
                 // pas un graphique, un repère visuel assumé comme tel.
                 decorIcone: BarChart3,
+                degrade: DEGRADE_KPI.actif,
                 action: {
                   type: 'filtre',
                   actif: filtreTuile === 'actif',
@@ -238,11 +288,11 @@ export default function CrmPage({ params }: Props) {
                 },
               },
               {
-                cle: 'valide',
-                label: 'Validés',
-                valeur: kpi.valide,
+                cle: 'onboard',
+                label: 'Onboard',
+                valeur: kpi.onboard,
                 icone: CheckCircle2,
-                accentSens: 'sauge',
+                degrade: DEGRADE_KPI.valide,
                 // Anneau réel : même valeur que le sous-texte, juste visualisée.
                 ringPourcentage: kpi.tauxConversion ?? undefined,
                 sousTexte:
@@ -251,8 +301,8 @@ export default function CrmPage({ params }: Props) {
                     : `Taux de conversion ${formatPourcent(kpi.tauxConversion)}`,
                 action: {
                   type: 'filtre',
-                  actif: filtreTuile === 'valide',
-                  onClick: () => basculerFiltre('valide'),
+                  actif: filtreTuile === 'onboard',
+                  onClick: () => basculerFiltre('onboard'),
                 },
               },
               {
@@ -260,7 +310,7 @@ export default function CrmPage({ params }: Props) {
                 label: 'Nouveaux (30 j)',
                 valeur: kpi.nouveaux30j,
                 icone: Sparkles,
-                accentSens: 'argile',
+                degrade: DEGRADE_KPI.neufs,
                 tendance: {
                   sens:
                     kpi.nouveaux30j > kpi.nouveauxPrecedents30j
@@ -281,18 +331,19 @@ export default function CrmPage({ params }: Props) {
                 },
               },
               {
-                // Métrique volontairement sobre : pas d'accentSens, pas de
-                // tendance, tuile atténuée — on ne « célèbre » pas les
-                // annulations. Reste filtrable comme les autres.
-                cle: 'annule',
-                label: 'Annulés',
-                valeur: kpi.annule,
+                // Dégradé chaud (même famille que « Retards » en
+                // facturation) : plus un traitement atténué depuis le
+                // passage aux couleurs vives (demande boss, sept. 2026) —
+                // le dégradé porte lui-même le signal d'attention.
+                cle: 'perdu',
+                label: 'Perdus',
+                valeur: kpi.perdu,
                 icone: XCircle,
-                attenue: true,
+                degrade: DEGRADE_KPI.annule,
                 action: {
                   type: 'filtre',
-                  actif: filtreTuile === 'annule',
-                  onClick: () => basculerFiltre('annule'),
+                  actif: filtreTuile === 'perdu',
+                  onClick: () => basculerFiltre('perdu'),
                 },
               },
             ]}
@@ -301,7 +352,7 @@ export default function CrmPage({ params }: Props) {
         </>
       )}
 
-      <section className="panel">
+      <section className="panel glass-panel">
         {!projets ? (
           <div className="admin-skeleton" aria-hidden>
             <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" />
@@ -310,7 +361,9 @@ export default function CrmPage({ params }: Props) {
           <p className="empty-state">
             {recherche || filtreTuile
               ? 'Aucun projet ne correspond à ce filtre.'
-              : 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'}
+              : peutEcrire
+                ? 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'
+                : 'Aucun projet pour le moment.'}
           </p>
         ) : (
           <>
@@ -332,9 +385,9 @@ export default function CrmPage({ params }: Props) {
                         <span className="crm-ligne-nom">{projet.programme}</span>
                       </span>
                       <span
-                        className={`pill crm-ligne-statut statut-select--${STATUT_MODIF[projet.statut]}`}
+                        className={`pill crm-ligne-statut statut-select--${CLASSE_STATUT[projet.statut]}`}
                       >
-                        {STATUTS_CRM[projet.nature][projet.statut]}
+                        {STATUTS_CRM[projet.statut]}
                       </span>
                     </button>
                   </li>
@@ -342,7 +395,7 @@ export default function CrmPage({ params }: Props) {
               </ul>
             </div>
 
-            <div className="admin-table-wrap crm-liste-desktop">
+            <div className="admin-table-wrap admin-table-wrap--fixe crm-liste-desktop">
               <table className="admin-table">
               <thead>
                 <tr>
@@ -366,7 +419,23 @@ export default function CrmPage({ params }: Props) {
                     className={projet.id === nouveauId ? 'is-nouveau' : undefined}
                   >
                     <td data-label="Code projet" className="cell-code">
-                      {projet.code}
+                      <span className="cell-stack">
+                        {/* Ouvre la fiche détail (apporteur, propriétaire…) —
+                            sur desktop comme la ligne entière sur mobile. */}
+                        <button
+                          type="button"
+                          className="lien-inline"
+                          aria-haspopup="dialog"
+                          onClick={() => setDetailId(projet.id)}
+                        >
+                          {projet.code}
+                        </button>
+                        {!projet.proprietaire && (
+                          <span className="cell-sub">
+                            <span className="pill pill--attention">À assigner</span>
+                          </span>
+                        )}
+                      </span>
                     </td>
                     <td data-label="Nature">
                       <span className="cell-stack">
@@ -376,7 +445,29 @@ export default function CrmPage({ params }: Props) {
                         <span className="cell-sub">{CATEGORIES[projet.categorie]}</span>
                       </span>
                     </td>
-                    <td data-label="Localisation">{projet.localisation}</td>
+                    <td data-label="Localisation">
+                      <span className="cell-stack">
+                        <span>{projet.localisation}</span>
+                        <span className="cell-sub">
+                          {projet.localite ? (
+                            <span className="pill pill--neutre">{projet.localite.code}</span>
+                          ) : (
+                            peutEcrire ? (
+                              <button
+                                type="button"
+                                className="lien-inline"
+                                aria-haspopup="dialog"
+                                onClick={() => setDetailId(projet.id)}
+                              >
+                                À rattacher
+                              </button>
+                            ) : (
+                              <span className="pill pill--attention">Non rattachée</span>
+                            )
+                          )}
+                        </span>
+                      </span>
+                    </td>
                     <td data-label="Type">{TYPES_BIEN[projet.type]}</td>
                     <td data-label="Planches">{projet.nbPlanches || '—'}</td>
                     <td data-label="Surface terrain">{formatSurface(projet.surfaceTerrain)}</td>
@@ -394,18 +485,11 @@ export default function CrmPage({ params }: Props) {
                     <td data-label="Gamme">{GAMMES[projet.gamme]}</td>
                     <td data-label="Programme">{projet.programme}</td>
                     <td data-label="Statut">
-                      <select
-                        className={`statut-select statut-select--${STATUT_MODIF[projet.statut]}`}
-                        value={projet.statut}
-                        aria-label={`Statut de ${projet.code}`}
-                        onChange={(e) => onChangerStatut(projet, e.target.value as StatutCrm)}
-                      >
-                        {STATUTS_ORDRE.map((s) => (
-                          <option key={s} value={s}>
-                            {STATUTS_CRM[projet.nature][s]}
-                          </option>
-                        ))}
-                      </select>
+                      {/* Lecture seule : le statut avance par les actions de
+                          la fiche (code cliquable), jamais par une liste libre. */}
+                      <span className={`pill statut-select--${CLASSE_STATUT[projet.statut]}`}>
+                        {STATUTS_CRM[projet.statut]}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -420,6 +504,8 @@ export default function CrmPage({ params }: Props) {
         <NouveauProjetModal
           slug={params.slug}
           clients={clients}
+          localites={localites}
+          proprietaires={proprietaires}
           onClose={() => setModalOuvert(false)}
           onCree={onCree}
         />
@@ -427,11 +513,27 @@ export default function CrmPage({ params }: Props) {
 
       {detailProjet && (
         <DetailDossierModal
+          slug={params.slug}
           projet={detailProjet}
+          localites={localites}
+          peutEcrire={peutEcrire}
+          peutPreparerOffre={peutPreparerOffre}
+          catalogue={catalogue}
+          onMaj={rafraichir}
+          // Réassigner : titulaires Dir. GC, administration, CIO (même règle
+          // que CrmService.peutReassigner — le serveur tranche).
+          peutReassigner={
+            session.role === 'societe_admin' ||
+            session.role === 'CIO (transverse)' ||
+            !!proprietaires?.some((p) => p.id === session.utilisateur.id)
+          }
           onClose={() => setDetailId(null)}
-          onChangerStatut={(statut) => onChangerStatut(detailProjet, statut)}
+          onAgir={(action, commentaire) => onAgir(detailProjet, action, commentaire)}
+          onRattacher={(localiteId) => onRattacher(detailProjet, localiteId)}
+          proprietaires={proprietaires}
+          onChangerProprietaire={(id) => onChangerProprietaire(detailProjet, id)}
         />
       )}
-    </AdminShell>
+    </>
   );
 }

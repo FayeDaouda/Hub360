@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { avancementChecklistAvp, ventilationTva } from '../../projets/domaine/gardes';
-import { DELAI_INSTRUCTION_JOURS } from '../../projets/domaine/config';
+import { avancementChecklistFichiers, ventilationTva } from '../../projets/domaine/gardes';
 import {
   bucketsHistogramme,
   isoJour,
@@ -15,15 +14,7 @@ import {
 
 // Libellés de sous-types pour les jalons pré-rendus (contrat : le backend rend
 // le texte, comme pour les notifications). Miroir de frontend/lib/types.ts
-// (STATUTS_LOT / TYPES_ETUDE) — à garder synchro si ces enums bougent.
-const LIB_LOT: Record<string, string> = {
-  gros_oeuvre: 'Gros œuvre',
-  second_oeuvre: 'Second œuvre',
-  lots_techniques: 'Lots techniques',
-  vrd: 'VRD',
-  fournitures_mobilier: 'Fournitures & mobilier',
-  travaux_amenagement: 'Travaux d’aménagement',
-};
+// (TYPES_ETUDE) — à garder synchro si cet enum bouge.
 const LIB_ETUDE: Record<string, string> = {
   geotechnique: 'Géotechnique',
   topographie: 'Topographie',
@@ -47,18 +38,18 @@ const PROJET_SELECT = {
   client: { select: { nom: true } },
   avantProjet: {
     select: {
-      valideLe: true,
-      dateFin: true,
-      besoinSurface: true,
-      lignesChecklist: { select: { fait: true } },
+      lignesChecklist: {
+        where: { supprimee: false },
+        select: {
+          nonRequise: true,
+          images: { where: { supprimee: false }, select: { id: true } },
+          fichiers: { where: { supprimee: false }, select: { id: true } },
+        },
+      },
     },
   },
-  permis: { select: { dateDepot: true, dateObtention: true, dateRefus: true } },
   etudes: {
     select: { lignes: { select: { type: true, statut: true, dateRemisePrevue: true } } },
-  },
-  execution: {
-    select: { lots: { select: { type: true, statut: true, dateFinPrevue: true } } },
   },
 } satisfies Prisma.ProjetSelect;
 
@@ -102,9 +93,24 @@ export interface TableauBord {
   }[];
 }
 
+// Volontairement indépendant de `statut` (a_assigner/assigne/en_cours/livre) :
+// la checklist trace le cadrage (livrables, fichiers produits…), que le
+// commercial ou le boss peut avancer dès la validation CRM — avant même
+// d'affecter un dessinateur. `statut` ne dit que qui exécute, pas qui cadre
+// (confirmé, sept. 2026 : un projet « à assigner » peut légitimement afficher
+// de l'avancement). Statut dérivé des fichiers joints depuis la
+// restructuration Avant-projet (sept. 2026, même modèle que Foncier/Unbord) —
+// une ligne « non nécessaire » compte comme réglée, au même titre qu'une
+// ligne avec au moins un fichier joint (cf. avancementChecklistFichiers).
 function pctChecklist(p: ProjetLite): number {
   const lignes = p.avantProjet?.lignesChecklist ?? [];
-  return lignes.length ? avancementChecklistAvp(lignes).pct : 0;
+  if (!lignes.length) return 0;
+  const items = lignes.map((l) => ({
+    statut: (l.nonRequise || l.images.length > 0 || l.fichiers.length > 0
+      ? 'fait'
+      : 'en_attente') as 'fait' | 'en_attente',
+  }));
+  return avancementChecklistFichiers(items).pct;
 }
 
 @Injectable()
@@ -168,11 +174,6 @@ export class TableauBordService {
     const nConception = actifs.filter((p) => p.categorie === 'conception').length;
     const nAmenagement = actifs.length - nConception;
 
-    const surfaceConcue = livres.reduce(
-      (s, p) => s + (p.avantProjet?.besoinSurface ?? 0),
-      0,
-    );
-
     const resteAEncaisser = factures.reduce((s, f) => {
       const { montantTtc } = ventilationTva(num(f.montantHt), num(f.tauxTva));
       const paye = f.paiements.reduce((p, x) => p + num(x.montant), 0);
@@ -195,17 +196,6 @@ export class TableauBordService {
         valeur: livres.length,
         format: 'nombre',
         detail: tous.length ? `sur ${tous.length} projets au total` : undefined,
-      },
-      {
-        cle: 'surface-concue',
-        libelle: 'Surface conçue & livrée',
-        valeur: surfaceConcue,
-        format: 'surface',
-        detail: livres.length
-          ? `sur ${livres.length} projet${livres.length > 1 ? 's' : ''} livré${
-              livres.length > 1 ? 's' : ''
-            }`
-          : undefined,
       },
       {
         cle: 'reste-a-encaisser',
@@ -244,7 +234,7 @@ export class TableauBordService {
     return moyennePct(pcts);
   }
 
-  // -- Jalons : 4 sources de production, dates ≥ aujourd'hui -------------
+  // -- Jalons : 3 sources de production, dates ≥ aujourd'hui -------------
   private jalons(actifs: ProjetLite[], aujourdhui: string): TableauBord['jalons'] {
     const out: TableauBord['jalons'] = [];
     const ajouter = (
@@ -266,33 +256,6 @@ export class TableauBordService {
     };
 
     for (const p of actifs) {
-      const ap = p.avantProjet;
-      if (ap && !ap.valideLe && ap.dateFin) {
-        ajouter('ap', p.id, ap.dateFin, p.programme, 'Échéance avant-projet');
-      }
-
-      const permis = p.permis;
-      if (permis?.dateDepot && !permis.dateObtention && !permis.dateRefus) {
-        const echeance = isoJour(
-          new Date(
-            permis.dateDepot.getTime() + DELAI_INSTRUCTION_JOURS * 86_400_000,
-          ),
-        );
-        ajouter('permis', p.id, echeance, p.programme, "Fin d'instruction du permis");
-      }
-
-      for (const lot of p.execution?.lots ?? []) {
-        if (lot.dateFinPrevue && lot.statut !== 'termine') {
-          ajouter(
-            'lot',
-            `${p.id}-${lot.type}`,
-            lot.dateFinPrevue,
-            p.programme,
-            `Fin de lot — ${LIB_LOT[lot.type] ?? lot.type}`,
-          );
-        }
-      }
-
       for (const l of p.etudes?.lignes ?? []) {
         if (
           l.dateRemisePrevue &&

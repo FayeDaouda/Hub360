@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsEnum,
   IsNumber,
   IsObject,
@@ -64,4 +66,16 @@ export class AjouterPaiementDto {
   @IsNumber() @Min(1) montant!: number;
   @IsOptional() @IsEnum(ModePaiement) mode?: ModePaiement;
   @IsOptional() @IsString() @MaxLength(120) reference?: string;
+}
+
+// POST …/factures/mensualites — facture de la mensualité du mois d'une ligne
+// SU / EX de l'offre acceptée (étape H2, facturation mensuelle manuelle).
+export class CreerMensualiteDto {
+  @IsString() ligneDevisId!: string;
+}
+
+// POST …/factures/refacturation-etudes — une facture, une ligne par étude
+// (étape H3, CGV art. 5).
+export class RefacturerEtudesDto {
+  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) blocIds!: string[];
 }

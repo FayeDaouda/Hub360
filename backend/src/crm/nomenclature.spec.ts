@@ -1,90 +1,139 @@
-import { codeAvecVariante, genererCodeDossier } from './nomenclature';
+import {
+  codeAvecVariante,
+  genererCodeDossier,
+  normaliserSigle,
+} from './nomenclature';
 
-// Nomenclature XX_YY.ZZ — miroir de frontend/lib/nomenclature.ts.
-// On couvre le cas normal + les entrées « pénibles » (accents, mot unique,
-// vide, virgules) : la fonction ne doit jamais planter ni produire un code
-// dégénéré, elle retombe sur des sentinelles (XX / X).
+// Nomenclature CLIENT_LOC.AA — miroir de frontend/lib/nomenclature.ts.
+// On couvre la règle validée (initiales sans plafond, sigle pour une personne
+// morale, code localité, suffixe -2) et les entrées « pénibles » : la
+// fonction ne plante jamais, elle renvoie '' quand une information manque.
 
 const A2026 = new Date('2026-06-15T00:00:00Z');
 
 describe('genererCodeDossier', () => {
-  it('particulier : initiale de chaque mot du nom', () => {
+  it('particulier : initiale de chaque mot, dans l’ordre saisi', () => {
     expect(
-      genererCodeDossier({ nom: 'Daouda Faye', type: 'particulier' }, 'Point E, Dakar', A2026),
-    ).toBe('DF_PE.26');
+      genererCodeDossier({ nom: 'Daouda Faye Sow', type: 'particulier' }, 'ALM', A2026),
+    ).toBe('DFS_ALM.26');
   });
 
-  it('entreprise / SCI : 2 premières lettres du nom', () => {
+  it('particulier : pas de plafond sur le nombre d’initiales', () => {
     expect(
       genererCodeDossier(
-        { nom: 'Teranga Capital', type: 'entreprise' },
-        'Almadies',
+        { nom: 'Mame Diarra Bousso Ndiaye', type: 'particulier' },
+        'POI',
         A2026,
       ),
-    ).toBe('TE_A.26');
-    expect(
-      genererCodeDossier({ nom: 'SCI Ndiaye Frères', type: 'sci' }, 'Yoff', A2026),
-    ).toBe('SC_Y.26');
+    ).toBe('MDBN_POI.26');
   });
 
-  it('particulier avec un seul mot : ses 2 premières lettres', () => {
-    expect(
-      genererCodeDossier({ nom: 'Cheikh', type: 'particulier' }, 'Ngor', A2026),
-    ).toBe('CH_N.26');
-  });
-
-  it('accents et traits d’union normalisés', () => {
-    expect(
-      genererCodeDossier(
-        { nom: 'Amélie Ndèye', type: 'particulier' },
-        'Sacré-Cœur, Dakar',
-        A2026,
-      ),
-    ).toBe('AN_SC.26');
-  });
-
-  it('quartier = partie avant la première virgule', () => {
-    expect(
-      genererCodeDossier(
-        { nom: 'Awa Sow', type: 'particulier' },
-        'Ngor, Almadies, Dakar',
-        A2026,
-      ),
-    ).toBe('AS_N.26');
-  });
-
-  it('entrées vides : retombe sur XX / X, ne plante pas', () => {
-    expect(genererCodeDossier({ nom: '', type: 'particulier' }, '', A2026)).toBe(
-      'XX_X.26',
+  it('particulier : un seul mot → ses 3 premières lettres', () => {
+    expect(genererCodeDossier({ nom: 'Cheikh', type: 'particulier' }, 'NGO', A2026)).toBe(
+      'CHE_NGO.26',
     );
+    expect(genererCodeDossier({ nom: 'Bâ', type: 'particulier' }, 'NGO', A2026)).toBe(
+      'BA_NGO.26',
+    );
+  });
+
+  it('couple : titres et « et » ignorés, mot restant → 3 lettres', () => {
+    expect(
+      genererCodeDossier({ nom: 'M. et Mme Diouf', type: 'particulier' }, 'NGO', A2026),
+    ).toBe('DIO_NGO.26');
+    expect(
+      genererCodeDossier({ nom: 'Awa et Moussa Diouf', type: 'particulier' }, 'NGO', A2026),
+    ).toBe('AMD_NGO.26');
+    expect(
+      genererCodeDossier({ nom: 'Famille Ndiaye', type: 'particulier' }, 'NGO', A2026),
+    ).toBe('NDI_NGO.26');
+  });
+
+  it('titres courts et longs ignorés, avec ou sans point ni accent', () => {
+    expect(genererCodeDossier({ nom: 'Dr Fatou Sarr', type: 'particulier' }, 'YOF', A2026)).toBe(
+      'FS_YOF.26',
+    );
+    expect(
+      genererCodeDossier({ nom: 'Maître Aliou Ba', type: 'particulier' }, 'YOF', A2026),
+    ).toBe('AB_YOF.26');
+    expect(
+      genererCodeDossier(
+        { nom: 'Monsieur & Madame Fall', type: 'particulier' },
+        'YOF',
+        A2026,
+      ),
+    ).toBe('FAL_YOF.26');
+    expect(genererCodeDossier({ nom: 'Me Awa Sy', type: 'particulier' }, 'YOF', A2026)).toBe(
+      'AS_YOF.26',
+    );
+  });
+
+  it('nom fait uniquement de titres → on garde tout plutôt que bloquer', () => {
+    expect(genererCodeDossier({ nom: 'Monsieur', type: 'particulier' }, 'YOF', A2026)).toBe(
+      'MON_YOF.26',
+    );
+  });
+
+  it('accents, traits d’union et apostrophes séparent les mots', () => {
+    expect(
+      genererCodeDossier({ nom: 'Élodie Ndèye-Anta', type: 'particulier' }, 'SAC', A2026),
+    ).toBe('ENA_SAC.26');
+  });
+
+  it('personne morale : sigle de la fiche, jamais dérivé du nom', () => {
+    expect(
+      genererCodeDossier(
+        { nom: 'Teranga Capital', type: 'entreprise', sigle: 'TERANGA' },
+        'ALM',
+        A2026,
+      ),
+    ).toBe('TERANGA_ALM.26');
+    expect(
+      genererCodeDossier({ nom: 'SCI Ndiaye Frères', type: 'sci', sigle: 's.n.f' }, 'YOF', A2026),
+    ).toBe('SNF_YOF.26');
+  });
+
+  it('personne morale sans sigle → vide (pas de repli sur le nom)', () => {
+    expect(
+      genererCodeDossier({ nom: 'Teranga Capital', type: 'entreprise', sigle: null }, 'ALM', A2026),
+    ).toBe('');
+  });
+
+  it('nom ou localité manquants → vide, ne plante pas', () => {
+    expect(genererCodeDossier({ nom: '', type: 'particulier' }, 'ALM', A2026)).toBe('');
+    expect(genererCodeDossier({ nom: 'Awa Sow', type: 'particulier' }, '', A2026)).toBe('');
   });
 
   it('année : 2 derniers chiffres', () => {
     expect(
       genererCodeDossier(
         { nom: 'Awa Sow', type: 'particulier' },
-        'Yoff',
+        'YOF',
         new Date('2019-03-01T00:00:00Z'),
       ),
-    ).toBe('AS_Y.19');
+    ).toBe('AS_YOF.19');
+  });
+});
+
+describe('normaliserSigle', () => {
+  it('majuscules, sans accents ni ponctuation', () => {
+    expect(normaliserSigle(' Téranga-Cap. ')).toBe('TERANGACAP');
+    expect(normaliserSigle('...')).toBe('');
   });
 });
 
 describe('codeAvecVariante', () => {
   it('base libre → base inchangée', () => {
-    expect(codeAvecVariante('DF_PE.26', new Set())).toBe('DF_PE.26');
+    expect(codeAvecVariante('DF_POI.26', new Set())).toBe('DF_POI.26');
   });
 
-  it('base prise → suffixe V2', () => {
-    expect(codeAvecVariante('DF_PE.26', new Set(['DF_PE.26']))).toBe('DF_PE.26 V2');
+  it('base prise → suffixe -2 en toute fin', () => {
+    expect(codeAvecVariante('DF_POI.26', new Set(['DF_POI.26']))).toBe('DF_POI.26-2');
   });
 
-  it('incrémente jusqu’à la première variante libre', () => {
+  it('base et -2 pris → -3', () => {
     expect(
-      codeAvecVariante(
-        'DF_PE.26',
-        new Set(['DF_PE.26', 'DF_PE.26 V2', 'DF_PE.26 V3']),
-      ),
-    ).toBe('DF_PE.26 V4');
+      codeAvecVariante('DF_POI.26', new Set(['DF_POI.26', 'DF_POI.26-2'])),
+    ).toBe('DF_POI.26-3');
   });
 });

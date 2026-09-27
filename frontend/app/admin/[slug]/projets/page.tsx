@@ -1,30 +1,29 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { getSociete } from '@/lib/api';
 import { getProjetsExecution } from '@/lib/projets';
 import { getCellules } from '@/lib/equipe';
-import { getSession } from '@/lib/auth';
-import { destinationForSession } from '@/lib/session-redirect';
+import { useTitrePage } from '@/lib/layout-contexte';
 
 // Leaflet touche `window` → pas de SSR.
 const ProjetsCarte = dynamic(
   () => import('@/components/admin/projets-carte').then((m) => m.ProjetsCarte),
   { ssr: false, loading: () => <div className="projets-carte projets-carte--vide">Carte…</div> },
 );
-import {
-  PHASES,
-  type Cellule,
-  type Phase,
-  type ProjetExecution,
-  type Session,
-  type Societe,
-} from '@/lib/types';
-import { AdminShell } from '@/components/admin/admin-shell';
+import { PHASES, type Cellule, type Phase, type ProjetExecution } from '@/lib/types';
 import { DossierProjet } from '@/components/admin/dossier-projet';
 import { KpiMiniBars, KpiStrip } from '@/components/admin/kpi-strip';
+
+// Même palette de dégradés que le tableau de bord et le CRM (demande boss,
+// sept. 2026 : chaque KPI a sa propre couleur vive) — choix sémantique par
+// tuile : « À assigner » garde une couleur d'appel à l'action.
+const DEGRADE_KPI: Record<string, { a: string; b: string }> = {
+  assigner: { a: '#ff5f6d', b: '#ffc371' }, // Sweet Morning
+  cours: { a: '#2e3192', b: '#1bffff' }, // Ocean Blue
+  livres: { a: '#11998e', b: '#38ef7d' }, // Quepal
+  charge: { a: '#764ba2', b: '#667eea' }, // Plum Plate
+};
 
 type Props = {
   params: { slug: string };
@@ -36,35 +35,20 @@ type Vue = 'grille' | 'phase' | 'carte';
 const ORDRE_PHASES: Phase[] = ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'];
 
 export default function ProjetsPage({ params }: Props) {
-  const router = useRouter();
-  const [session, setSession] = useState<Session | null>(null);
-  const [societe, setSociete] = useState<Societe | null>(null);
+  useTitrePage('Projets');
   const [projets, setProjets] = useState<ProjetExecution[] | null>(null);
   const [cellules, setCellules] = useState<Cellule[]>([]);
   const [recherche, setRecherche] = useState('');
   const [vue, setVue] = useState<Vue>('grille');
 
   useEffect(() => {
-    const current = getSession();
-    if (!current || current.societe.slug !== params.slug) {
-      router.replace(`/login/${params.slug}`);
-      return;
-    }
-    if (current.role !== 'societe_admin') {
-      router.replace(destinationForSession(current));
-      return;
-    }
-    setSession(current);
-    getSociete(params.slug)
-      .then(setSociete)
-      .catch(() => setSociete(null));
     getProjetsExecution(params.slug).then(setProjets);
     getCellules(params.slug).then(setCellules).catch(() => setCellules([]));
-  }, [params.slug, router]);
+  }, [params.slug]);
 
   const nomCellule = useMemo(() => {
     const map = new Map(cellules.map((c) => [c.id, c.nom]));
-    return (id: string | null) => (id ? map.get(id) ?? id : null);
+    return (id: string) => map.get(id) ?? id;
   }, [cellules]);
 
   const filtres = useMemo(() => {
@@ -83,13 +67,16 @@ export default function ProjetsPage({ params }: Props) {
     })).filter((g) => g.projets.length > 0);
   }, [filtres]);
 
-  // KPI — liste complète, indépendant de la recherche.
+  // KPI — liste complète, indépendant de la recherche. Un projet à plusieurs
+  // cellules (sept. 2026) compte dans la charge de CHACUNE d'entre elles.
   const kpi = useMemo(() => {
     const liste = projets ?? [];
     const parCellule = new Map<string, number>();
     for (const p of liste) {
-      if (p.phase === 'livre' || !p.celluleAssignee) continue;
-      parCellule.set(p.celluleAssignee, (parCellule.get(p.celluleAssignee) ?? 0) + 1);
+      if (p.phase === 'livre') continue;
+      for (const celluleId of p.cellules) {
+        parCellule.set(celluleId, (parCellule.get(celluleId) ?? 0) + 1);
+      }
     }
     return {
       aAssigner: liste.filter((p) => p.statut === 'a_assigner').length,
@@ -101,21 +88,19 @@ export default function ProjetsPage({ params }: Props) {
     };
   }, [projets, nomCellule]);
 
-  if (!session) return null;
-
   function carte(projet: ProjetExecution) {
     return (
       <DossierProjet
         key={projet.id}
         projet={projet}
         href={`/admin/${params.slug}/projets/${projet.id}`}
-        celluleNom={nomCellule(projet.celluleAssignee)}
+        celluleNoms={projet.cellules.map(nomCellule)}
       />
     );
   }
 
   return (
-    <AdminShell societe={societe} session={session} active="projets" titre="Projets">
+    <>
       <div className="projets-toolbar">
         <div className="projets-toolbar-info">
           <input
@@ -163,13 +148,19 @@ export default function ProjetsPage({ params }: Props) {
       {projets && projets.length > 0 && (
         <KpiStrip
           tuiles={[
-            { cle: 'assigner', label: 'À assigner', valeur: kpi.aAssigner, accent: true },
-            { cle: 'cours', label: 'En cours', valeur: kpi.enCours },
-            { cle: 'livres', label: 'Livrés', valeur: kpi.livres },
+            {
+              cle: 'assigner',
+              label: 'À assigner',
+              valeur: kpi.aAssigner,
+              degrade: DEGRADE_KPI.assigner,
+            },
+            { cle: 'cours', label: 'En cours', valeur: kpi.enCours, degrade: DEGRADE_KPI.cours },
+            { cle: 'livres', label: 'Livrés', valeur: kpi.livres, degrade: DEGRADE_KPI.livres },
             {
               cle: 'charge',
               label: 'Charge par cellule',
               contenu: <KpiMiniBars items={kpi.charge} />,
+              degrade: DEGRADE_KPI.charge,
             },
           ]}
         />
@@ -204,6 +195,6 @@ export default function ProjetsPage({ params }: Props) {
           ))}
         </div>
       )}
-    </AdminShell>
+    </>
   );
 }

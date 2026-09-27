@@ -43,11 +43,20 @@ export class AuthService {
         utilisateurId: utilisateur.id,
         OR: [{ societeId: societe.id }, { societeId: null }],
       },
-      include: { role: true },
+      include: { role: { include: { permissions: { include: { module: true } } } } },
     });
 
     if (!acces) {
       throw new UnauthorizedException("Vous n'avez pas accès à cette société");
+    }
+
+    // Niveau par module (cle), lu dans la matrice RolePermission. societe_admin
+    // y a des lignes explicites (validation partout, cf. seed.ts) ; les autres
+    // rôles socles (holding_admin/collaborateur) n'en ont pas → {} (fail closed
+    // sur toute route marquée @RequiertPermission).
+    const permissions: Record<string, string> = {};
+    for (const p of acces.role.permissions) {
+      permissions[p.module.cle] = p.niveau;
     }
 
     const payload = {
@@ -56,6 +65,7 @@ export class AuthService {
       societeId: societe.id,
       societeSlug: societe.slug,
       role: acces.role.nom,
+      permissions,
     };
 
     return {
@@ -72,6 +82,9 @@ export class AuthService {
         slug: societe.slug,
       },
       role: acces.role.nom,
+      // Même carte que dans le JWT — l'interface s'en sert pour afficher ou
+      // masquer (le serveur reste seul juge : chaque route revérifie).
+      permissions,
     };
   }
 }

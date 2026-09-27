@@ -51,6 +51,27 @@ export async function apiSociete<T>(
   return res.json() as Promise<T>;
 }
 
+// Appel SANS authentification à une route publique (racine, pas sous
+// /societes/:slug) — ex. le lien devis-public par jeton. Jamais de session
+// attachée : le jeton de l'URL en tient lieu côté serveur.
+export async function apiPublic<T>(chemin: string, options: Options = {}): Promise<T> {
+  const aCorps = options.body !== undefined;
+  const res = await fetch(`${API_URL}${chemin}`, {
+    method: options.method ?? 'GET',
+    cache: 'no-store',
+    headers: aCorps ? { 'Content-Type': 'application/json' } : {},
+    body: aCorps ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (!res.ok) {
+    throw new ApiError(await messageErreur(res), res.status);
+  }
+  if (options.sansCorps || res.status === 204) {
+    return undefined as T;
+  }
+  return res.json() as Promise<T>;
+}
+
 async function messageErreur(res: Response): Promise<string> {
   try {
     const corps = await res.json();
