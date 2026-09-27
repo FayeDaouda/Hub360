@@ -45,6 +45,15 @@ export default function ContratPublicPage({ params }: Props) {
     }
   }
 
+  // Le pavé est démonté hors mode tracé et revient VIDE : on oublie le tracé
+  // précédent, sinon « Signer » enverrait une signature que le client ne
+  // voit plus à l'écran.
+  function changerMode(m: 'bouton' | 'trace') {
+    setMode(m);
+    setTrace(null);
+    setErreur(null);
+  }
+
   async function signer() {
     if (nom.trim().length < 2) return setErreur('Indiquez vos nom et prénom.');
     if (!lu) return setErreur('Confirmez avoir lu le contrat et ses annexes.');
@@ -165,7 +174,7 @@ export default function ContratPublicPage({ params }: Props) {
                   type="button"
                   className={mode === 'bouton' ? 'is-active' : ''}
                   aria-pressed={mode === 'bouton'}
-                  onClick={() => setMode('bouton')}
+                  onClick={() => changerMode('bouton')}
                 >
                   J’accepte
                 </button>
@@ -173,7 +182,7 @@ export default function ContratPublicPage({ params }: Props) {
                   type="button"
                   className={mode === 'trace' ? 'is-active' : ''}
                   aria-pressed={mode === 'trace'}
-                  onClick={() => setMode('trace')}
+                  onClick={() => changerMode('trace')}
                 >
                   Signer à la main
                 </button>
