@@ -494,7 +494,13 @@ export type NotificationType =
   | 'phase_changee'
   | 'checklist_assignee'
   | 'prolongation_demandee'
-  | 'prolongation_decidee';
+  | 'prolongation_decidee'
+  // Cycle CRM (back-office) — ouvrent le dossier dans le CRM.
+  | 'dossier_soumis'
+  | 'dossier_renvoye'
+  | 'offre_acceptee'
+  | 'offre_refusee'
+  | 'contrat_signe';
 
 export type NotificationItem = {
   id: string;
@@ -502,6 +508,7 @@ export type NotificationItem = {
   titre: string;
   projetId: string | null;
   projetCode: string | null;
+  dossierCrmId: string | null;
   date: string; // ISO 8601
   lu: boolean;
   derivee: boolean;

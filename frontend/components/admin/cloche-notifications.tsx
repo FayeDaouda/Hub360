@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNotificationsPoll } from '@/lib/use-notifications-poll';
+import { lienNotificationAdmin } from '@/lib/notifications';
+import type { Session } from '@/lib/types';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { NotifToast } from '@/components/notif-toast';
 
@@ -16,10 +18,10 @@ function ilYa(iso: string): string {
   return j === 1 ? 'hier' : `il y a ${j} j`;
 }
 
-// Pendant civile de components/collab/cloche-notifications.tsx — seul le
-// préfixe des liens change (/admin vs /collab). La cloche topbar admin était
-// un bouton `disabled` (placeholder) jusqu'ici.
-export function ClocheNotifications({ slug }: { slug: string }) {
+// Pendant civile de components/collab/cloche-notifications.tsx — seuls les
+// liens changent : /admin, et les notifications du cycle CRM ouvrent le
+// dossier (cf. lienNotificationAdmin).
+export function ClocheNotifications({ slug, session }: { slug: string; session: Session }) {
   const { flux, recharger, toutLire, toast, fermerToast } = useNotificationsPoll(slug);
   const [ouvert, setOuvert] = useState(false);
   const boiteRef = useRef<HTMLDivElement>(null);
@@ -120,11 +122,12 @@ export function ClocheNotifications({ slug }: { slug: string }) {
                     </span>
                   </>
                 );
+                const href = lienNotificationAdmin(slug, n, session);
                 return (
                   <li key={n.id}>
-                    {n.projetId ? (
+                    {href ? (
                       <Link
-                        href={`/admin/${slug}/projets/${n.projetId}`}
+                        href={href}
                         className="notif-item"
                         onClick={() => setOuvert(false)}
                       >
@@ -144,7 +147,7 @@ export function ClocheNotifications({ slug }: { slug: string }) {
       {toast && (
         <NotifToast
           notification={toast}
-          href={toast.projetId ? `/admin/${slug}/projets/${toast.projetId}` : null}
+          href={lienNotificationAdmin(slug, toast, session)}
           onFermer={fermerToast}
         />
       )}

@@ -115,7 +115,13 @@ export default function FacturationCentralePage({ params }: Props) {
   const [catalogue, setCatalogue] = useState<ProduitService[]>([]);
   const [devis, setDevis] = useState<Devis[] | null>(null);
   const [factures, setFactures] = useState<FactureCentrale[] | null>(null);
-  const [onglet, setOnglet] = useState<'devis' | 'factures'>('devis');
+  // ?onglet=factures : arrivée depuis la notification « contrat signé » (les
+  // factures brouillon de l'Onboard) — aussi quand la page est déjà ouverte.
+  const ongletDemande = searchParams.get('onglet') === 'factures' ? 'factures' : null;
+  const [onglet, setOnglet] = useState<'devis' | 'factures'>(ongletDemande ?? 'devis');
+  useEffect(() => {
+    if (ongletDemande) setOnglet(ongletDemande);
+  }, [ongletDemande]);
   const [modalDevis, setModalDevis] = useState(false);
   const [modalCatalogue, setModalCatalogue] = useState(false);
   const [busy, setBusy] = useState(false);

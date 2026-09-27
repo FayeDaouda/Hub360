@@ -21,7 +21,9 @@ import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { statutDevisEffectif } from '../devis/domaine';
-import { ActionCrm, REGLES_ACTIONS } from './cycle';
+import { NotificationsService } from '../notifications/notifications.service';
+import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER } from './cycle';
+import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import { CreerDossierDto } from './dto';
 import {
   codeAvecVariante,
@@ -29,12 +31,6 @@ import {
   genererCodeDossier,
   normaliserSigle,
 } from './nomenclature';
-
-// Rôle dont les titulaires peuvent être propriétaires d'un dossier (« le
-// responsable GC », décision sept. 2026). Comparaison sur Role.nom, comme
-// ROLE_CIO (cf. societe-admin-ou-cio.guard.ts) : si le rôle est renommé dans
-// Paramètres, ce fichier est le seul à mettre à jour.
-export const ROLE_PROPRIETAIRE_DOSSIER = 'Dir. GC';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
@@ -64,6 +60,7 @@ export class CrmService {
     private prisma: PrismaService,
     private devis: DevisService,
     private facturation: FacturationService,
+    private notifications: NotificationsService,
   ) {}
 
   async findAll(societeId: string, acteur: Acteur, q?: string) {
@@ -321,6 +318,16 @@ export class CrmService {
       await basculer(tx);
       return tx.dossierCrm.findUniqueOrThrow({ where: { id }, include: INCLUDE_DOSSIER });
     });
+    const evenement = EVENEMENT_PAR_ACTION[action];
+    if (evenement) {
+      await this.notifications.notifierDossierCrm({
+        societeId,
+        dossierId: id,
+        evenement,
+        parId: acteur.userId,
+        commentaire,
+      });
+    }
 
     return {
       projet: versDossierCrm(dossierMaj, opts),
@@ -351,7 +358,7 @@ export class CrmService {
     }
     const offreAcceptee = await this.verifierOffre(dossierId, 'onboarder');
 
-    return this.prisma.$transaction(async (tx) => {
+    const onboard = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.dossierCrm.updateMany({
         where: { id: dossierId, statut: 'offre_envoyee' },
         data: { statut: 'onboard' },
@@ -370,6 +377,15 @@ export class CrmService {
       const d = await tx.dossierCrm.findUniqueOrThrow({ where: { id: dossierId } });
       return this.creerProjetOnboard(tx, societeId, d, offreAcceptee);
     });
+    await this.notifications.notifierDossierCrm({
+      societeId,
+      dossierId,
+      evenement: 'contrat_signe',
+      parId,
+      projetId: onboard.projet.id,
+      facturesPreparees: onboard.facturesPreparees,
+    });
+    return onboard;
   }
 
   // Transaction pivot : le projet d'exécution et sa coquille avant-projet,

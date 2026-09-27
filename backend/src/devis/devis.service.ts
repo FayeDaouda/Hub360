@@ -14,6 +14,7 @@ import { FacturationService } from '../projets/facturation/facturation.service';
 import { EmailService } from '../email/email.service';
 import { genererJeton, hacherJeton } from '../auth/jetons';
 import { MOTIF_REFUS_CLIENT } from '../crm/cycle';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   VALIDITE_OFFRE_JOURS,
   ajouterJours,
@@ -85,6 +86,7 @@ export class DevisService {
     private prisma: PrismaService,
     private facturation: FacturationService,
     private email: EmailService,
+    private notifications: NotificationsService,
   ) {}
 
   async findAll(
@@ -422,19 +424,21 @@ export class DevisService {
   // sur une offre de dossier CRM fait passer le dossier en « perdu »
   // automatiquement, motif posé — le client a dit non, c'est un fait
   // (décision F). Une acceptation ne bascule rien : l'Onboard reste un geste
-  // humain (le contrat, étape G, pourra s'intercaler).
+  // humain (le contrat, étape G, pourra s'intercaler). Sur une offre de
+  // dossier, propriétaire et apporteur sont prévenus dans les deux cas.
   private async enregistrerReponse(
     devisId: string,
     dossierCrmId: string | null,
     reponse: 'accepte' | 'refuse',
     parId: string | null,
   ) {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.devis.update({
+    const societeId = await this.prisma.$transaction(async (tx) => {
+      const { societeId } = await tx.devis.update({
         where: { id: devisId },
         data: { statut: reponse, dateReponse: new Date() },
+        select: { societeId: true },
       });
-      if (reponse !== 'refuse' || !dossierCrmId) return;
+      if (reponse !== 'refuse' || !dossierCrmId) return societeId;
       const { count } = await tx.dossierCrm.updateMany({
         where: { id: dossierCrmId, statut: 'offre_envoyee' },
         data: { statut: 'perdu' },
@@ -450,7 +454,16 @@ export class DevisService {
           },
         });
       }
+      return societeId;
     });
+    if (dossierCrmId) {
+      await this.notifications.notifierDossierCrm({
+        societeId,
+        dossierId: dossierCrmId,
+        evenement: reponse === 'accepte' ? 'offre_acceptee' : 'offre_refusee',
+        parId,
+      });
+    }
   }
 
   // Nouvelle offre sur un dossier : même société, dossier en « Nouveau

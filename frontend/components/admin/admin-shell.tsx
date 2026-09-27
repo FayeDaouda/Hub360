@@ -337,7 +337,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               <input type="search" placeholder="Rechercher — bientôt" disabled />
             </div>
             <ChatWidget slug={session.societe.slug} moiId={session.utilisateur.id} />
-            <ClocheNotifications slug={session.societe.slug} />
+            <ClocheNotifications slug={session.societe.slug} session={session} />
             <ThemeToggle />
             <span className="admin-user" title={session.utilisateur.email}>
               {initiales(session.utilisateur)}

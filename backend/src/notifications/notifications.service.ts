@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ROLE_DAF, ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
+import {
+  ContexteNotificationCrm,
+  EvenementCrm,
+  planNotificationsCrm,
+} from '../crm/notifications-crm';
 
 const MAX_STOCKEES = 30;
 
@@ -21,6 +27,7 @@ export type NotificationItem = {
   titre: string;
   projetId: string | null;
   projetCode: string | null;
+  dossierCrmId: string | null;
   date: Date;
   lu: boolean;
   derivee: boolean;
@@ -28,6 +35,7 @@ export type NotificationItem = {
 
 @Injectable()
 export class NotificationsService {
+  private readonly log = new Logger('Notifications');
   constructor(private prisma: PrismaService) {}
 
   // -- Écriture : appelée par ProjetsService au moment de l'événement --------
@@ -62,6 +70,94 @@ export class NotificationsService {
     });
   }
 
+  // -- Cycle CRM : qui prévenir à chaque étape (src/crm/notifications-crm.ts)
+  // Appelée APRÈS la transaction de l'événement. Ne lève jamais : une
+  // notification manquée ne doit pas faire échouer une validation DAF, une
+  // réponse client ou une signature — l'échec est journalisé.
+  //   · DAF          = titulaires du rôle ROLE_DAF de la société
+  //   · propriétaire = le propriétaire du dossier ; « à assigner » → tous les
+  //                    titulaires Dir. GC (l'un d'eux reprendra le dossier)
+  //   · apporteur    = l'apporteur INTERNE (compte HUB) ; externe → personne
+  async notifierDossierCrm(params: {
+    societeId: string;
+    dossierId: string;
+    evenement: EvenementCrm;
+    parId: string | null;
+    commentaire?: string | null;
+    projetId?: string | null;
+    facturesPreparees?: number;
+  }): Promise<void> {
+    try {
+      const { societeId, dossierId, evenement } = params;
+      const d = await this.prisma.dossierCrm.findFirst({
+        where: { id: dossierId, societeId },
+        select: {
+          code: true,
+          programme: true,
+          proprietaireId: true,
+          apporteurType: true,
+          apporteurUtilisateurId: true,
+        },
+      });
+      if (!d) return;
+
+      const [daf, dirGc] = await Promise.all([
+        this.titulairesRole(societeId, ROLE_DAF),
+        d.proprietaireId ? Promise.resolve([]) : this.titulairesRole(societeId, ROLE_PROPRIETAIRE_DOSSIER),
+      ]);
+      const ctx: ContexteNotificationCrm = {
+        code: d.code,
+        programme: d.programme,
+        commentaire: params.commentaire,
+        facturesPreparees: params.facturesPreparees,
+      };
+      const plan = planNotificationsCrm(
+        evenement,
+        ctx,
+        {
+          daf,
+          proprietaire: d.proprietaireId ? [d.proprietaireId] : dirGc,
+          apporteur:
+            d.apporteurType === 'interne' && d.apporteurUtilisateurId
+              ? [d.apporteurUtilisateurId]
+              : [],
+        },
+        params.parId,
+      );
+      if (plan.length === 0) return;
+
+      await this.prisma.notification.createMany({
+        data: plan.map(({ destinataireId, titre }) => ({
+          destinataireId,
+          societeId,
+          type: evenement,
+          dossierCrmId: dossierId,
+          projetId: params.projetId ?? null,
+          titre,
+          parId: params.parId,
+        })),
+      });
+    } catch (e) {
+      this.log.error(
+        `Notification CRM « ${params.evenement} » non envoyée (dossier ${params.dossierId}) : ${(e as Error).message}`,
+      );
+    }
+  }
+
+  // Titulaires ACTIFS d'un rôle de la société (rôle non supprimé) — même
+  // lecture que le choix du propriétaire dans CrmService.
+  private async titulairesRole(societeId: string, nom: string): Promise<string[]> {
+    const lignes = await this.prisma.utilisateurSocieteRole.findMany({
+      where: {
+        societeId,
+        role: { societeId, nom, supprimeLe: null },
+        utilisateur: { actif: true },
+      },
+      select: { utilisateurId: true },
+    });
+    return [...new Set(lignes.map((l) => l.utilisateurId))];
+  }
+
   // -- Lecture : flux du collaborateur connecté -----------------------------
   // Plus de source dérivée depuis le retrait du verrou de validation
   // avant-projet (sept. 2026) — `elementsStockes` seul alimente le flux ;
@@ -80,6 +176,7 @@ export class NotificationsService {
       titre: n.titre,
       projetId: n.projetId,
       projetCode: n.projet?.code ?? null,
+      dossierCrmId: n.dossierCrmId,
       date: n.createdAt,
       lu: n.luLe !== null,
       derivee: false,

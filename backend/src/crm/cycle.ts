@@ -100,3 +100,13 @@ export function ficheModifiable(statut: StatutCrm): boolean {
 
 // Motif posé automatiquement quand le client refuse l'offre (cf. DevisService).
 export const MOTIF_REFUS_CLIENT = 'Offre refusée par le client.';
+
+// Rôle dont les titulaires peuvent être propriétaires d'un dossier (« le
+// responsable GC », décision sept. 2026). Comparaison sur Role.nom, comme
+// ROLE_CIO (cf. societe-admin-ou-cio.guard.ts) : si le rôle est renommé dans
+// Paramètres, ce fichier est le seul à mettre à jour.
+export const ROLE_PROPRIETAIRE_DOSSIER = 'Dir. GC';
+
+// La DAF (« CFO c'est DAF, je garde CFO » — le boss) : destinataire des
+// dossiers soumis et des factures brouillon à l'Onboard. Même convention.
+export const ROLE_DAF = 'CFO';

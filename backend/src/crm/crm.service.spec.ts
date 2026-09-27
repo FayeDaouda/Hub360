@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
 
 // Deux points de décision privés, appelés par leur nom : le code (toujours
@@ -33,7 +34,7 @@ function prismaMock(opts: { codes?: string[]; client?: object | null } = {}) {
 }
 
 function svc(prisma: ReturnType<typeof prismaMock>) {
-  return new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService) as unknown as Prive;
+  return new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService) as unknown as Prive;
 }
 
 const annee = String(new Date().getFullYear()).slice(-2);
@@ -126,7 +127,7 @@ describe('CrmService.resoudreProprietaire', () => {
         findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService) as unknown as P;
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService) as unknown as P;
     return (choisi?: string) => s.resoudreProprietaire(prisma, 'S1', choisi);
   };
 
@@ -171,7 +172,7 @@ describe('CrmService — commission d’apporteur', () => {
 
   it('saisie sans finances_charges en écriture → 403 avant toute écriture', async () => {
     const prisma = { $transaction: jest.fn() };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService);
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
     await expect(
       s.creer('S1', { userId: 'U', role: 'COO', permissions: { finances_charges: 'lecture' } }, DTO as never),
     ).rejects.toThrow(ForbiddenException);
@@ -180,7 +181,7 @@ describe('CrmService — commission d’apporteur', () => {
 
   it('dossier de conception sans planches → 400 (base du tarif CO)', async () => {
     const prisma = { $transaction: jest.fn() };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService);
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
     await expect(
       s.creer(
         'S1',
@@ -192,7 +193,7 @@ describe('CrmService — commission d’apporteur', () => {
   });
 
   it('lecture : clé absente sans le droit, présente avec', () => {
-    const s = new CrmService({} as PrismaService, {} as DevisService, {} as FacturationService) as unknown as {
+    const s = new CrmService({} as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService) as unknown as {
       optsFormat: (a: unknown) => { voitCommission: boolean };
     };
     expect(s.optsFormat({ permissions: {} }).voitCommission).toBe(false);
@@ -208,7 +209,7 @@ describe('CrmService.peutReassigner', () => {
       utilisateur: {
         findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
-    } as unknown as PrismaService, {} as DevisService, {} as FacturationService);
+    } as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
   const acteur = (userId: string, role: string) => ({ userId, role, permissions: {} });
 
   it.each(['societe_admin', 'CIO (transverse)'])('%s → oui, en supervision', async (role) => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BarChart3, CheckCircle2, Plus, Search, Sparkles, Workflow, X, XCircle } from 'lucide-react';
 import {
   agirSurDossier,
@@ -100,6 +101,18 @@ export default function CrmPage({ params }: Props) {
     // préparateurs d'offre) — inutile à charger sinon.
     if (voitOffres) getProduitsServices(params.slug).then(setCatalogue).catch(() => setCatalogue([]));
   }, [params.slug, voitOffres]);
+
+  // Lien direct vers un dossier (?dossier=… — notifications du cycle CRM) :
+  // ouvre sa fiche puis retire le paramètre, pour qu'un rechargement ne la
+  // rouvre pas et qu'un nouveau clic sur la notification la rouvre.
+  const router = useRouter();
+  const dossierDemande = useSearchParams().get('dossier');
+  useEffect(() => {
+    if (!dossierDemande || !projets) return;
+    if (projets.some((p) => p.id === dossierDemande)) setDetailId(dossierDemande);
+    else setMessage('Ce dossier n’est plus accessible.');
+    router.replace(`/admin/${params.slug}/crm`, { scroll: false });
+  }, [dossierDemande, projets, params.slug, router]);
 
   // Recharge la liste après une action sur l'offre (création, relance,
   // réponse saisie — un refus fait passer le dossier en « Perdu »).

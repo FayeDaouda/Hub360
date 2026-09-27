@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
 import { REGLES_ACTIONS } from './cycle';
 
@@ -71,14 +72,17 @@ function monter(
     }),
   };
   const facturation = { preparerDepuisOffre: jest.fn().mockResolvedValue(4) };
+  const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
   return {
     prisma,
     devis,
     facturation,
+    notifications,
     svc: new CrmService(
       prisma as unknown as PrismaService,
       devis as unknown as DevisService,
       facturation as unknown as FacturationService,
+      notifications as unknown as NotificationsService,
     ),
   };
 }
@@ -106,8 +110,16 @@ describe('Cycle CRM — règles', () => {
 
 describe('CrmService.agir', () => {
   it('soumettre : nouveau_projet → en_validation, journalisé avec l’auteur', async () => {
-    const { svc, prisma } = monter('nouveau_projet');
+    const { svc, prisma, notifications } = monter('nouveau_projet');
     await svc.agir('S1', COO as never, 'D1', 'soumettre', undefined);
+    // La DAF est prévenue, APRÈS la transaction, l'auteur exclu en aval.
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
+      societeId: 'S1',
+      dossierId: 'D1',
+      evenement: 'dossier_soumis',
+      parId: 'U-COO',
+      commentaire: null,
+    });
     expect(prisma.dossierCrm.updateMany).toHaveBeenCalledWith({
       where: { id: 'D1', statut: 'nouveau_projet' },
       data: { statut: 'en_validation' },
@@ -124,9 +136,11 @@ describe('CrmService.agir', () => {
   });
 
   it('valider : la DAF (finances_devis validation) passe et ENVOIE l’offre', async () => {
-    const { svc, prisma, devis } = monter('en_validation');
+    const { svc, prisma, devis, notifications } = monter('en_validation');
     const r = await svc.agir('S1', CFO as never, 'D1', 'valider', undefined);
     expect(devis.emettreOffre).toHaveBeenCalledTimes(1);
+    // Hors tableau validé : l'envoi de l'offre au client ne notifie personne.
+    expect(notifications.notifierDossierCrm).not.toHaveBeenCalled();
     expect(prisma.dossierCrm.updateMany.mock.calls[0][0].data).toEqual({
       statut: 'offre_envoyee',
     });
@@ -159,6 +173,10 @@ describe('CrmService.agir', () => {
       vers: 'nouveau_projet',
       commentaire: 'Chiffrage à revoir',
     });
+    expect(vide.notifications.notifierDossierCrm).not.toHaveBeenCalled();
+    expect(ok.notifications.notifierDossierCrm).toHaveBeenCalledWith(
+      expect.objectContaining({ evenement: 'dossier_renvoye', commentaire: 'Chiffrage à revoir' }),
+    );
   });
 
   it('perdre sans motif → 400 ; depuis onboard → 409 (définitif)', async () => {
@@ -198,7 +216,7 @@ describe('CrmService.agir', () => {
   });
 
   it('signature du contrat : bascule + contrat signé + projet + factures, une transaction', async () => {
-    const { svc, prisma, facturation } = monter('offre_envoyee', {
+    const { svc, prisma, facturation, notifications } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'accepte', dateValidite: '2026-01-10' }],
     });
     const marquerSigne = jest.fn().mockResolvedValue(undefined);
@@ -224,6 +242,14 @@ describe('CrmService.agir', () => {
     );
     expect(r.projet).not.toBeNull();
     expect(r.facturesPreparees).toBe(4);
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
+      societeId: 'S1',
+      dossierId: 'D1',
+      evenement: 'contrat_signe',
+      parId: null,
+      projetId: 'P1',
+      facturesPreparees: 4,
+    });
   });
 });
 

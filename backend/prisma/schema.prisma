@@ -159,6 +159,12 @@ enum NotificationType {
   checklist_assignee
   prolongation_demandee
   prolongation_decidee
+  // Cycle CRM (tableau validé sept. 2026) — cf. src/crm/notifications-crm.ts
+  dossier_soumis
+  dossier_renvoye
+  offre_acceptee
+  offre_refusee
+  contrat_signe
 }
 
 model Notification {
@@ -167,6 +173,7 @@ model Notification {
   societeId      String           @map("societe_id") // cloisonnement + purge par société
   type           NotificationType
   projetId       String?          @map("projet_id") // contexte cliquable
+  dossierCrmId   String?          @map("dossier_crm_id") // contexte cliquable (cycle CRM)
   titre          String // texte pré-rendu par le service
   parId          String?          @map("par_id") // qui a déclenché (audit, pas de FK)
   luLe           DateTime?        @map("lu_le")
@@ -174,6 +181,7 @@ model Notification {
 
   destinataire Utilisateur @relation(fields: [destinataireId], references: [id], onDelete: Cascade)
   projet       Projet?     @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  dossierCrm   DossierCrm? @relation(fields: [dossierCrmId], references: [id], onDelete: SetNull)
 
   @@index([destinataireId, luLe])
   @@map("notifications")
@@ -511,6 +519,7 @@ model DossierCrm {
   transitions          DossierCrmTransition[]
   offres               Devis[] // la plus récente = l'offre en cours (étape F)
   contrat              Contrat? // étape G — sa signature déclenche l'Onboard
+  notifications        Notification[]
 
   @@unique([societeId, code])
   @@index([localiteId])

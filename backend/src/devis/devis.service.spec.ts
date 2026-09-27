@@ -1,5 +1,6 @@
 import { EmailService } from '../email/email.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from './devis.service';
 
@@ -57,7 +58,7 @@ function setup(clientEmail: string | null) {
   const email = { envoyerDevis } as unknown as EmailService;
   const facturation = {} as unknown as FacturationService;
 
-  const service = new DevisService(prisma, facturation, email);
+  const service = new DevisService(prisma, facturation, email, {} as NotificationsService);
   return { service, envoyerDevis, findFirst };
 }
 
@@ -104,7 +105,7 @@ describe('DevisService — offre de dossier CRM', () => {
       derniereRelanceLe: null,
     };
     const tx = {
-      devis: { update: jest.fn().mockResolvedValue({}) },
+      devis: { update: jest.fn().mockResolvedValue({ societeId: 'S1' }) },
       dossierCrm: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       dossierCrmTransition: { create: jest.fn().mockResolvedValue({}) },
     };
@@ -112,12 +113,14 @@ describe('DevisService — offre de dossier CRM', () => {
       devis: { findFirst: jest.fn().mockResolvedValue(row) },
       $transaction: jest.fn((cb: (t: unknown) => unknown) => cb(tx)),
     } as unknown as PrismaService;
+    const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
     const service = new DevisService(
       prisma,
       {} as FacturationService,
       { envoyerDevis: jest.fn() } as unknown as EmailService,
+      notifications as unknown as NotificationsService,
     );
-    return { service, tx };
+    return { service, tx, notifications };
   }
 
   it('envoi direct d’une offre (hors validation DAF) → 409', async () => {
@@ -126,8 +129,14 @@ describe('DevisService — offre de dossier CRM', () => {
   });
 
   it('refus du client par le lien → dossier perdu, motif posé, auteur null', async () => {
-    const { service, tx } = monterOffre('envoye', '2999-12-31');
+    const { service, tx, notifications } = monterOffre('envoye', '2999-12-31');
     await service.repondrePublic('jeton', 'refuse');
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
+      societeId: 'S1',
+      dossierId: 'DOS1',
+      evenement: 'offre_refusee',
+      parId: null,
+    });
     expect(tx.dossierCrm.updateMany).toHaveBeenCalledWith({
       where: { id: 'DOS1', statut: 'offre_envoyee' },
       data: { statut: 'perdu' },
@@ -141,9 +150,12 @@ describe('DevisService — offre de dossier CRM', () => {
   });
 
   it('acceptation du client → le dossier ne bouge pas (Onboard = geste humain)', async () => {
-    const { service, tx } = monterOffre('envoye', '2999-12-31');
+    const { service, tx, notifications } = monterOffre('envoye', '2999-12-31');
     await service.repondrePublic('jeton', 'accepte');
     expect(tx.devis.update).toHaveBeenCalled();
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith(
+      expect.objectContaining({ evenement: 'offre_acceptee', dossierId: 'DOS1' }),
+    );
     expect(tx.dossierCrm.updateMany).not.toHaveBeenCalled();
   });
 });
@@ -184,6 +196,7 @@ describe('DevisService — catalogue réel', () => {
     } as unknown as PrismaService,
     {} as FacturationService,
     {} as EmailService,
+    {} as NotificationsService,
   ) as unknown as {
     appliquerCatalogue: (
       s: string,

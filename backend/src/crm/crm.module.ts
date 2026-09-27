@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DevisModule } from '../devis/devis.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { ProjetsModule } from '../projets/projets.module';
 import { CrmService } from './crm.service';
 import { CrmController } from './crm.controller';
@@ -9,7 +10,7 @@ import { CrmController } from './crm.controller';
 // à l'Onboard, l'offre acceptée devient les factures du projet
 // (FacturationService.preparerDepuisOffre, étape H2).
 @Module({
-  imports: [DevisModule, ProjetsModule],
+  imports: [DevisModule, ProjetsModule, NotificationsModule],
   providers: [CrmService],
   controllers: [CrmController],
   // Le contrat (étape G) déclenche l'Onboard par CrmService.
