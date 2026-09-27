@@ -6,12 +6,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { estRoleBackOffice } from '../commun/back-office.guard';
 
 // Garde des routes /societes/:slug/canaux/:id/… — point d'application UNIQUE du
 // cloisonnement chat, sur le modèle d'AccesProjetGuard.
 //   · general → tout membre de la société (déjà garanti par MembreSocieteGuard)
 //   · direct  → l'un des deux participants
-//   · cellule → membre de CETTE cellule, ou societe_admin (vue transverse)
+//   · cellule → membre de CETTE cellule, ou societe_admin (vue transverse).
+//               Un rôle de direction sans fiche n'a pas de cellule : refusé.
 // Un canal qu'on ne peut pas lire, on ne peut pas y écrire : la garde couvre
 // GET messages, POST message et PATCH lecture indifféremment.
 @Injectable()
@@ -55,10 +57,10 @@ export class AccesCanalGuard implements CanActivate {
       where: { utilisateurId: user.userId, societeId: user.societeId },
       select: { celluleId: true },
     });
-    if (!collab) {
+    if (!collab && !estRoleBackOffice(user.role)) {
       throw new ForbiddenException('Aucune fiche collaborateur pour ce compte');
     }
-    if (collab.celluleId && collab.celluleId === canal.celluleId) return true;
+    if (collab?.celluleId && collab.celluleId === canal.celluleId) return true;
     throw new ForbiddenException("Ce canal n'est pas celui de votre cellule");
   }
 }

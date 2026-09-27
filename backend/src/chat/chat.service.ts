@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, TypeCanal } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { estRoleBackOffice } from '../commun/back-office.guard';
 import { ChatBus } from './chat.bus';
 
 type Acteur = { userId: string; societeId: string; role: string };
@@ -67,14 +68,16 @@ export class ChatService {
       });
       await Promise.all(cellules.map((c) => this.coquilleCellule(societeId, c.id)));
     } else {
+      // La fiche donne la cellule. Exigée d'un collaborateur ; un rôle de
+      // direction (Dir. GC, CFO…) sans fiche n'a pas de cellule : Général + DM.
       const collab = await this.prisma.collaborateur.findFirst({
         where: { utilisateurId: userId, societeId },
         select: { celluleId: true },
       });
-      if (!collab) {
+      if (!collab && !estRoleBackOffice(acteur.role)) {
         throw new ForbiddenException('Aucune fiche collaborateur pour ce compte');
       }
-      celluleId = collab.celluleId;
+      celluleId = collab?.celluleId ?? null;
       if (celluleId) await this.coquilleCellule(societeId, celluleId);
     }
 
@@ -230,10 +233,13 @@ export class ChatService {
   }
 
   // -- Annuaire : les personnes avec qui ouvrir un DM --------------------
-  // Membres de la société ayant un compte (collaborateurs + societe_admin),
-  // hors l'appelant et hors holding_admin.
+  // Membres de la société ayant un compte, hors l'appelant et hors
+  // holding_admin : les fiches collaborateur (libellé = métier), puis les
+  // titulaires d'un rôle de back-office — societe_admin (« Administration »)
+  // et rôles de la matrice (libellé = nom du rôle : CFO, Dir. GC…), même
+  // règle d'appartenance qu'au login (rôle de la société ou transverse).
   async annuaire(acteur: Acteur) {
-    const [collabs, admins] = await Promise.all([
+    const [collabs, direction] = await Promise.all([
       this.prisma.collaborateur.findMany({
         where: { societeId: acteur.societeId, utilisateurId: { not: null } },
         select: {
@@ -246,9 +252,13 @@ export class ChatService {
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       }),
       this.prisma.utilisateurSocieteRole.findMany({
-        where: { societeId: acteur.societeId, role: { nom: 'societe_admin' } },
+        where: {
+          OR: [{ societeId: acteur.societeId }, { societeId: null }],
+          role: { nom: { notIn: ['collaborateur', 'holding_admin'] }, supprimeLe: null },
+        },
         select: {
           utilisateur: { select: { id: true, prenom: true, nom: true } },
+          role: { select: { nom: true } },
         },
       }),
     ]);
@@ -268,14 +278,14 @@ export class ChatService {
         });
       }
     }
-    for (const a of admins) {
-      const u = a.utilisateur;
+    for (const d of direction) {
+      const u = d.utilisateur;
       if (u.id !== acteur.userId && !parId.has(u.id)) {
         parId.set(u.id, {
           utilisateurId: u.id,
           prenom: u.prenom,
           nom: u.nom,
-          role: 'Administration',
+          role: d.role.nom === 'societe_admin' ? 'Administration' : d.role.nom,
           cellule: null,
         });
       }
@@ -290,8 +300,13 @@ export class ChatService {
     if (avecUtilisateurId === acteur.userId) {
       throw new BadRequestException('Conversation avec soi-même impossible');
     }
+    // Même règle d'appartenance que le login et l'annuaire (rôle transverse
+    // compris — holding_admin, transverse lui aussi, est refusé juste après).
     const roles = await this.prisma.utilisateurSocieteRole.findMany({
-      where: { utilisateurId: avecUtilisateurId, societeId: acteur.societeId },
+      where: {
+        utilisateurId: avecUtilisateurId,
+        OR: [{ societeId: acteur.societeId }, { societeId: null }],
+      },
       select: { role: { select: { nom: true } } },
     });
     if (roles.length === 0) {

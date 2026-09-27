@@ -5,7 +5,8 @@ import { AccesCanalGuard } from './acces-canal.guard';
 // Point de cloisonnement chat UNIQUE. Trois types de canal, chacun sa règle :
 //   general → tout le monde (déjà garanti en amont par MembreSocieteGuard)
 //   direct  → l'un des deux participants
-//   cellule → membre de CETTE cellule, ou societe_admin (vue transverse)
+//   cellule → membre de CETTE cellule, ou societe_admin (vue transverse) ;
+//             un rôle de direction sans fiche n'a pas de cellule → refusé
 // Plus le cas hors périmètre (canal d'une autre société → 404, jamais 403,
 // pour ne pas révéler qu'un canal existe ailleurs).
 
@@ -130,6 +131,26 @@ describe('AccesCanalGuard', () => {
       await expect(
         new AccesCanalGuard(svc).canActivate(ctxOf(req())),
       ).rejects.toThrow(/n'est pas celui de votre cellule/);
+    });
+
+    it('REFUSÉ : rôle de direction sans fiche (pas de cellule) → 403 cellule', async () => {
+      const { svc } = prisma({
+        canal: { type: 'cellule', celluleId: 'CEL1', participant1Id: null, participant2Id: null },
+        collab: null,
+      });
+      await expect(
+        new AccesCanalGuard(svc).canActivate(ctxOf(req({ user: { ...USER, role: 'CFO' } }))),
+      ).rejects.toThrow(/n'est pas celui de votre cellule/);
+    });
+
+    it('AUTORISÉ : rôle de direction qui a aussi une fiche dans CETTE cellule', async () => {
+      const { svc } = prisma({
+        canal: { type: 'cellule', celluleId: 'CEL1', participant1Id: null, participant2Id: null },
+        collab: { celluleId: 'CEL1' },
+      });
+      await expect(
+        new AccesCanalGuard(svc).canActivate(ctxOf(req({ user: { ...USER, role: 'Dir. GC' } }))),
+      ).resolves.toBe(true);
     });
 
     it('compte collaborateur sans fiche → 403', async () => {
