@@ -1,8 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
+import { PermissionGuard } from '../../commun/permission.guard';
+import { PermissionSelonMethode } from '../../commun/permission.decorator';
 import { EcritureCollaborateur } from '../ecriture-collaborateur.decorator';
-import { EtudesService } from './etudes.service';
+import type { NiveauPermission } from '@prisma/client';
+import { EtudesService, type ActeurEtudes } from './etudes.service';
 import {
   JoindreFichiersItemEtudeDto,
   JoindreImagesItemEtudeDto,
@@ -10,16 +13,28 @@ import {
   PatchItemEtudeDto,
 } from './dto';
 
-type R = { user: { societeId: string; userId: string; role: string } };
+type R = {
+  user: {
+    societeId: string;
+    userId: string;
+    role: string;
+    permissions?: Record<string, NiveauPermission>;
+  };
+};
+
+// Rôle + carte de la matrice : les factures des bureaux d'études en dépendent
+// (cf. EtudesService.voitFactures / modifieFactures).
+const acteur = (req: R): ActeurEtudes => ({ role: req.user.role, permissions: req.user.permissions });
 
 @Controller('societes/:slug/projets/:id/etudes')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('projets', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class EtudesController {
   constructor(private etudes: EtudesService) {}
 
   @Get()
   get(@Req() req: R, @Param('id') id: string) {
-    return this.etudes.get(req.user.societeId, id, req.user.role);
+    return this.etudes.get(req.user.societeId, id, acteur(req));
   }
 
   @EcritureCollaborateur()
@@ -30,7 +45,7 @@ export class EtudesController {
     @Param('blocId') blocId: string,
     @Body() dto: PatchBlocEtudeDto,
   ) {
-    return this.etudes.patchBloc(req.user.societeId, id, blocId, dto, req.user.role);
+    return this.etudes.patchBloc(req.user.societeId, id, blocId, dto, acteur(req));
   }
 
   @EcritureCollaborateur()
@@ -41,7 +56,7 @@ export class EtudesController {
     @Param('itemId') itemId: string,
     @Body() dto: PatchItemEtudeDto,
   ) {
-    return this.etudes.patchItem(req.user.societeId, id, itemId, dto, req.user.role);
+    return this.etudes.patchItem(req.user.societeId, id, itemId, dto, acteur(req));
   }
 
   @EcritureCollaborateur()
@@ -58,7 +73,7 @@ export class EtudesController {
       itemId,
       dto,
       req.user.userId,
-      req.user.role,
+      acteur(req),
     );
   }
 
@@ -76,19 +91,19 @@ export class EtudesController {
       itemId,
       dto,
       req.user.userId,
-      req.user.role,
+      acteur(req),
     );
   }
 
   @EcritureCollaborateur()
   @Post('dce')
   constituerDce(@Req() req: R, @Param('id') id: string) {
-    return this.etudes.constituerDce(req.user.societeId, id, req.user.role);
+    return this.etudes.constituerDce(req.user.societeId, id, acteur(req));
   }
 
   @EcritureCollaborateur()
   @Delete('dce')
   annulerDce(@Req() req: R, @Param('id') id: string) {
-    return this.etudes.annulerDce(req.user.societeId, id, req.user.role);
+    return this.etudes.annulerDce(req.user.societeId, id, acteur(req));
   }
 }

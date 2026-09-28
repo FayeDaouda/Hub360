@@ -13,6 +13,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
+import { PermissionGuard } from '../../commun/permission.guard';
+import { PermissionSelonMethode } from '../../commun/permission.decorator';
 import { EcritureCollaborateur } from '../ecriture-collaborateur.decorator';
 import { ImagesService } from './images.service';
 import {
@@ -26,7 +28,8 @@ import {
 type R = { user: { societeId: string; userId: string } };
 
 @Controller('societes/:slug/projets/:id/images')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('projets', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class ImagesController {
   constructor(private images: ImagesService) {}
 

@@ -17,7 +17,7 @@ import {
 import { NotificationsService } from '../notifications/notifications.service';
 import { phasesAdjacentes } from './domaine/gardes';
 import { versAvantProjet, versProjetExecution, type FichierLigneChecklistAvp } from '../commun/format-contrat';
-import { ouProjetsDuCollaborateur } from './projet-acces';
+import { agitEnDirection, ouProjetsDuCollaborateur } from './projet-acces';
 import {
   estAutoriseAAssigner,
   estDispatcherDuneCelluleDuProjet,
@@ -282,7 +282,7 @@ export class ProjetsService {
     });
     if (!avant) throw new NotFoundException('Bloc introuvable');
 
-    if (role !== 'societe_admin') {
+    if (!agitEnDirection(role)) {
       const cibleId = dto.responsableId !== undefined ? dto.responsableId : avant.responsableId;
       const autorise = await estAutoriseAAssigner(
         this.prisma,
@@ -452,7 +452,7 @@ export class ProjetsService {
   ) {
     const projet = await this.charger(societeId, id);
     await this.coquilleAvantProjet(id);
-    if (role !== 'societe_admin') {
+    if (!agitEnDirection(role)) {
       const autorise = await estDispatcherDuneCelluleDuProjet(
         this.prisma,
         societeId,
@@ -491,7 +491,7 @@ export class ProjetsService {
     role: string,
   ) {
     const projet = await this.charger(societeId, id);
-    if (role !== 'societe_admin') {
+    if (!agitEnDirection(role)) {
       const autorise = await estDispatcherDuneCelluleDuProjet(
         this.prisma,
         societeId,

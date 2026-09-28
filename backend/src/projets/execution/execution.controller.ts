@@ -12,6 +12,8 @@ import {
 import { GroupeChecklistExecution } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
+import { PermissionGuard } from '../../commun/permission.guard';
+import { PermissionSelonMethode } from '../../commun/permission.decorator';
 import { EcritureCollaborateur } from '../ecriture-collaborateur.decorator';
 import { ExecutionService } from './execution.service';
 import {
@@ -27,7 +29,8 @@ import {
 type R = { user: { societeId: string; userId: string; role: string } };
 
 @Controller('societes/:slug/projets/:id/execution')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('projets', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class ExecutionController {
   constructor(private execution: ExecutionService) {}
 

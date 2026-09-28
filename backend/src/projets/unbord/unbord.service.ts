@@ -3,7 +3,7 @@ import { GroupeUnbord, LigneUnbord, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { GROUPES_UNBORD } from '../domaine/config';
-import { chargerProjet } from '../projet-acces';
+import { agitEnDirection, chargerProjet } from '../projet-acces';
 import { estAutoriseAAssigner, verifierResponsableOuAdmin } from '../dispatch-acces';
 import {
   JoindreFichiersLigneUnbordDto,
@@ -69,7 +69,7 @@ export class UnbordService {
     const avant = blocs.find((b) => b.groupe === groupe);
     if (!avant) throw new NotFoundException('Bloc introuvable');
 
-    if (role !== 'societe_admin') {
+    if (!agitEnDirection(role)) {
       const cibleId = dto.responsableId !== undefined ? dto.responsableId : avant.responsableId;
       const autorise = await estAutoriseAAssigner(
         this.prisma,

@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { agitEnDirection } from './projet-acces';
 
 // Deux voies pour un collaborateur non-admin d'assigner une ligne de
 // checklist ou un responsable de bloc (l'admin passe toujours, déjà laissé
@@ -73,8 +74,8 @@ export async function estDispatcherDuneCelluleDuProjet(
 
 // Contrepartie de estAutoriseAAssigner ci-dessus : celle-ci décide QUI peut
 // DÉSIGNER un responsable, celle-ci décide qui peut AGIR une fois désigné.
-// L'admin passe toujours (déjà vérifié par l'appelant avant d'appeler ceci,
-// même convention partout) ; sinon, seul le responsable exact du bloc —
+// La direction passe toujours (admin ou rôle de la matrice, cf.
+// agitEnDirection) ; sinon, seul le responsable exact du bloc —
 // extrait de Permis/Exécution qui en avaient chacun leur propre copie
 // identique (2026-09-25, ajouté pour Unbord plutôt que d'en écrire une 3ᵉ).
 export async function verifierResponsableOuAdmin(
@@ -84,7 +85,7 @@ export async function verifierResponsableOuAdmin(
   role: string,
   responsableId: string | null,
 ): Promise<void> {
-  if (role === 'societe_admin') return;
+  if (agitEnDirection(role)) return;
   const collab = await prisma.collaborateur.findFirst({
     where: { utilisateurId, societeId },
     select: { id: true },

@@ -9,7 +9,7 @@ import { GroupeChecklistExecution, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { GABARIT_CHECKLIST_EXECUTION, GROUPES_CHECKLIST_EXECUTION } from '../domaine/config';
-import { chargerProjet } from '../projet-acces';
+import { agitEnDirection, chargerProjet } from '../projet-acces';
 import { estAutoriseAAssigner, verifierResponsableOuAdmin } from '../dispatch-acces';
 import {
   AjouterLigneChecklistExecutionDto,
@@ -165,7 +165,7 @@ export class ExecutionService {
     const avant = blocs.find((b) => b.groupe === groupe);
     if (!avant) throw new NotFoundException('Bloc introuvable');
 
-    if (role !== 'societe_admin') {
+    if (!agitEnDirection(role)) {
       const cibleId = dto.responsableId !== undefined ? dto.responsableId : avant.responsableId;
       const autorise = await estAutoriseAAssigner(
         this.prisma,

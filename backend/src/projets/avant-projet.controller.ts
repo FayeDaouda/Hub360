@@ -12,6 +12,8 @@ import {
 import { GroupeChecklistAvp } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AccesProjetGuard } from './acces-projet.guard';
+import { PermissionGuard } from '../commun/permission.guard';
+import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { ProjetsService } from './projets.service';
 import {
   AjouterLigneChecklistAvpDto,
@@ -35,7 +37,8 @@ type R = { user: { societeId: string; userId: string; role: string } };
 // `checklist/:ligneId` : segment statique, sinon Nest le confondrait avec un
 // id de ligne.
 @Controller('societes/:slug/projets/:id/avant-projet')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('projets', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class AvantProjetController {
   constructor(private projets: ProjetsService) {}
 

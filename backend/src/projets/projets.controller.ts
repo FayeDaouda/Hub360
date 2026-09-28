@@ -10,13 +10,16 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AccesProjetGuard } from './acces-projet.guard';
+import { PermissionGuard } from '../commun/permission.guard';
+import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { ProjetsService } from './projets.service';
 import { AssignerDto, PoserPinDto } from './dto';
 
 type R = { user: { societeId: string; userId: string; role: string } };
 
 @Controller('societes/:slug/projets')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('projets', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class ProjetsController {
   constructor(private projets: ProjetsService) {}
 

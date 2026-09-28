@@ -2,6 +2,8 @@ import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nest
 import { GroupeUnbord } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
+import { PermissionGuard } from '../../commun/permission.guard';
+import { PermissionSelonMethode } from '../../commun/permission.decorator';
 import { EcritureCollaborateur } from '../ecriture-collaborateur.decorator';
 import { UnbordService } from './unbord.service';
 import {
@@ -21,7 +23,8 @@ type R = { user: { societeId: string; userId: string; role: string } };
 // déclaré AVANT `:ligneId` : segment statique, sinon Nest le confondrait
 // avec un id de ligne.
 @Controller('societes/:slug/projets/:id/unbord')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('projets', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class UnbordController {
   constructor(private unbord: UnbordService) {}
 

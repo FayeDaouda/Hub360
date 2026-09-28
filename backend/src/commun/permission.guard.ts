@@ -1,7 +1,12 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { NiveauPermission } from '@prisma/client';
-import { PERMISSION_REQUISE, PermissionRequise } from './permission.decorator';
+import {
+  PERMISSION_REQUISE,
+  PERMISSION_SELON_METHODE,
+  PermissionRequise,
+  PermissionSelonMethode,
+} from './permission.decorator';
 
 // Ordre total des niveaux — un niveau donne accès à tout ce qui est en
 // dessous (validation implique ecriture implique lecture).
@@ -34,20 +39,41 @@ export class PermissionGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
-    const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(
-      PERMISSION_REQUISE,
-      [ctx.getHandler(), ctx.getClass()],
-    );
-    if (!requis) return true;
-
+    const cibles = [ctx.getHandler(), ctx.getClass()];
     const req = ctx.switchToHttp().getRequest();
     const permissions = req.user?.permissions as Record<string, NiveauPermission> | undefined;
 
-    if (!aLaPermission(permissions, requis.module, requis.niveau)) {
-      throw new ForbiddenException(
-        `Accès insuffisant sur le module « ${requis.module} » (niveau requis : ${requis.niveau}).`,
-      );
+    // Règle explicite d'une route (ex. finances) : prioritaire, sans exemption.
+    const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(
+      PERMISSION_REQUISE,
+      cibles,
+    );
+    if (requis) {
+      verifier(permissions, requis.module, requis.niveau);
+      return true;
     }
+
+    // Règle de contrôleur selon la méthode (cf. @PermissionSelonMethode).
+    const selon = this.reflector.getAllAndOverride<PermissionSelonMethode | undefined>(
+      PERMISSION_SELON_METHODE,
+      cibles,
+    );
+    if (!selon) return true;
+    if (selon.roleHorsMatrice && req.user?.role === selon.roleHorsMatrice) return true;
+    const lecture = req.method === 'GET' || req.method === 'HEAD';
+    verifier(permissions, selon.module, lecture ? 'lecture' : 'ecriture');
     return true;
+  }
+}
+
+function verifier(
+  permissions: Record<string, NiveauPermission> | undefined,
+  module: string,
+  niveau: NiveauPermission,
+): void {
+  if (!aLaPermission(permissions, module, niveau)) {
+    throw new ForbiddenException(
+      `Accès insuffisant sur le module « ${module} » (niveau requis : ${niveau}).`,
+    );
   }
 }

@@ -96,7 +96,7 @@ describe('EtudesService.get / coquille', () => {
   it('amorce la coquille (upsert + createMany skipDuplicates) même sur un projet déjà initialisé', async () => {
     const { prisma, etudes, blocEtude } = mockPrisma();
     const svc = service(prisma);
-    await svc.get('S1', 'P1', 'collaborateur');
+    await svc.get('S1', 'P1', { role: 'collaborateur' });
     expect(etudes.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ where: { projetId: 'P1' }, update: {} }),
     );
@@ -113,7 +113,7 @@ describe('EtudesService.get / coquille', () => {
     ];
     const { prisma } = mockPrisma(blocsMelanges);
     const svc = service(prisma);
-    const res = await svc.get('S1', 'P1', 'collaborateur');
+    const res = await svc.get('S1', 'P1', { role: 'collaborateur' });
     expect(res.blocs.map((b) => b.libelle)).toEqual(['geotechnique', 'structure', 'vrd']);
   });
 
@@ -122,10 +122,10 @@ describe('EtudesService.get / coquille', () => {
     const { prisma } = mockPrisma(blocs);
     const svc = service(prisma);
 
-    const resCollab = await svc.get('S1', 'P1', 'collaborateur');
+    const resCollab = await svc.get('S1', 'P1', { role: 'collaborateur' });
     expect(resCollab.blocs[0].facture).toBeNull();
 
-    const resAdmin = await svc.get('S1', 'P1', 'societe_admin');
+    const resAdmin = await svc.get('S1', 'P1', { role: 'societe_admin' });
     expect(resAdmin.blocs[0].facture).toEqual({
       montant: 500000,
       fichierNom: 'facture.pdf',
@@ -138,7 +138,7 @@ describe('EtudesService.patchBloc', () => {
   it('ne transmet que les champs explicitement fournis (pas de undefined qui écrase le reste)', async () => {
     const { prisma, blocEtude } = mockPrisma();
     const svc = service(prisma);
-    await svc.patchBloc('S1', 'P1', 'geotechnique', { statut: 'remise' as never }, 'collaborateur');
+    await svc.patchBloc('S1', 'P1', 'geotechnique', { statut: 'remise' as never }, { role: 'collaborateur' });
     expect(blocEtude.update).toHaveBeenCalledWith({
       where: { id: 'geotechnique' },
       data: { statut: 'remise' },
@@ -148,7 +148,7 @@ describe('EtudesService.patchBloc', () => {
   it('une date envoyée à null (effacement) est bien transmise, pas ignorée', async () => {
     const { prisma, blocEtude } = mockPrisma();
     const svc = service(prisma);
-    await svc.patchBloc('S1', 'P1', 'geotechnique', { dateRemisePrevue: null }, 'collaborateur');
+    await svc.patchBloc('S1', 'P1', 'geotechnique', { dateRemisePrevue: null }, { role: 'collaborateur' });
     expect(blocEtude.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { dateRemisePrevue: null } }),
     );
@@ -157,14 +157,14 @@ describe('EtudesService.patchBloc', () => {
   it('un collaborateur ne peut PAS poser factureMontant — silencieusement ignoré', async () => {
     const { prisma, blocEtude } = mockPrisma();
     const svc = service(prisma);
-    await svc.patchBloc('S1', 'P1', 'geotechnique', { factureMontant: 999999 }, 'collaborateur');
+    await svc.patchBloc('S1', 'P1', 'geotechnique', { factureMontant: 999999 }, { role: 'collaborateur' });
     expect(blocEtude.update).toHaveBeenCalledWith({ where: { id: 'geotechnique' }, data: {} });
   });
 
   it('societe_admin PEUT poser factureMontant', async () => {
     const { prisma, blocEtude } = mockPrisma();
     const svc = service(prisma);
-    await svc.patchBloc('S1', 'P1', 'geotechnique', { factureMontant: 999999 }, 'societe_admin');
+    await svc.patchBloc('S1', 'P1', 'geotechnique', { factureMontant: 999999 }, { role: 'societe_admin' });
     expect(blocEtude.update).toHaveBeenCalledWith({
       where: { id: 'geotechnique' },
       data: { factureMontant: 999999 },
@@ -176,7 +176,7 @@ describe('EtudesService.patchItem — mutuellement exclusif avec nonRequise', ()
   it('nonRequise:true force fait à false', async () => {
     const { prisma, itemEtude } = mockPrisma();
     const svc = service(prisma);
-    await svc.patchItem('S1', 'P1', 'I1', { nonRequise: true }, 'collaborateur');
+    await svc.patchItem('S1', 'P1', 'I1', { nonRequise: true }, { role: 'collaborateur' });
     expect(itemEtude.update).toHaveBeenCalledWith({
       where: { id: 'I1' },
       data: { nonRequise: true, fait: false },
@@ -194,7 +194,7 @@ describe('EtudesService.joindreImages / joindreFichiers — auto-coche l’item'
       'I1',
       { fichiers: [{ nom: 'plan.pdf', url: 'data:application/pdf;base64,AA==' }] },
       'U1',
-      'collaborateur',
+      { role: 'collaborateur' },
     );
     expect(itemEtude.update).toHaveBeenCalledWith({
       where: { id: 'I1' },
@@ -209,21 +209,21 @@ describe('EtudesService.constituerDce — garde etudesCompletes', () => {
     blocs[0] = bloc('geotechnique', 'remise'); // rendu non vérifié
     const { prisma, etudes } = mockPrisma(blocs);
     const svc = service(prisma);
-    await expect(svc.constituerDce('S1', 'P1', 'societe_admin')).rejects.toThrow(ConflictException);
+    await expect(svc.constituerDce('S1', 'P1', { role: 'societe_admin' })).rejects.toThrow(ConflictException);
     expect(etudes.update).not.toHaveBeenCalled();
   });
 
   it('refuse tant qu’un bloc reste « à lancer » (état par défaut)', async () => {
     const { prisma, etudes } = mockPrisma(SIX_BLOCS_A_LANCER);
     const svc = service(prisma);
-    await expect(svc.constituerDce('S1', 'P1', 'societe_admin')).rejects.toThrow(ConflictException);
+    await expect(svc.constituerDce('S1', 'P1', { role: 'societe_admin' })).rejects.toThrow(ConflictException);
     expect(etudes.update).not.toHaveBeenCalled();
   });
 
   it('accepte un mélange validée / non requise — « non requise » compte comme complet', async () => {
     const { prisma, etudes } = mockPrisma(SIX_BLOCS_COMPLETS);
     const svc = service(prisma);
-    await svc.constituerDce('S1', 'P1', 'societe_admin');
+    await svc.constituerDce('S1', 'P1', { role: 'societe_admin' });
     expect(etudes.update).toHaveBeenCalledWith({
       where: { projetId: 'P1' },
       data: { dceConstitue: true, dceLe: expect.any(Date) },
@@ -235,10 +235,45 @@ describe('EtudesService.annulerDce', () => {
   it('réinitialise dceConstitue et dceLe, sans revérifier l’état des blocs', async () => {
     const { prisma, etudes } = mockPrisma(SIX_BLOCS_A_LANCER, { dceConstitue: true });
     const svc = service(prisma);
-    await svc.annulerDce('S1', 'P1', 'societe_admin');
+    await svc.annulerDce('S1', 'P1', { role: 'societe_admin' });
     expect(etudes.update).toHaveBeenCalledWith({
       where: { projetId: 'P1' },
       data: { dceConstitue: false, dceLe: null },
     });
+  });
+});
+
+describe('EtudesService — factures des bureaux d’études selon la matrice', () => {
+  const avecFacture = (res: { blocs: { facture: unknown }[] }) => res.blocs.map((b) => b.facture !== null);
+
+  it.each([
+    ['Dir. GC (finances_factures écriture)', { role: 'Dir. GC', permissions: { projets: 'ecriture', finances_factures: 'ecriture' } }, true],
+    ['CFO (finances_factures validation)', { role: 'CFO', permissions: { projets: 'lecture', finances_factures: 'validation' } }, true],
+    ['COO (projets lecture, factures aucun)', { role: 'COO', permissions: { projets: 'lecture', finances_factures: 'aucun' } }, false],
+    ['CTO (projets validation, sans factures)', { role: 'CTO (transverse)', permissions: { projets: 'validation' } }, false],
+    ['collaborateur (aucune carte)', { role: 'collaborateur' }, false],
+  ] as const)('%s → montant visible : %s', async (_, acteur, attendu) => {
+    const { prisma } = mockPrisma();
+    const res = await service(prisma).get('S1', 'P1', acteur as never);
+    expect(res.blocs.length).toBeGreaterThan(0); // pas de réussite « à vide »
+    expect(avecFacture(res).every((v) => v === attendu)).toBe(true);
+  });
+
+  it('un rôle avec « projets » mais sans écriture sur les factures ne peut pas saisir de montant', async () => {
+    const { prisma, blocEtude } = mockPrisma();
+    await service(prisma).patchBloc('S1', 'P1', 'geotechnique', { factureMontant: 123 }, {
+      role: 'CTO (transverse)',
+      permissions: { projets: 'validation', finances_factures: 'lecture' },
+    });
+    expect(blocEtude.update.mock.calls[0][0].data).not.toHaveProperty('factureMontant');
+  });
+
+  it('Dir. GC (finances_factures écriture) saisit le montant', async () => {
+    const { prisma, blocEtude } = mockPrisma();
+    await service(prisma).patchBloc('S1', 'P1', 'geotechnique', { factureMontant: 123 }, {
+      role: 'Dir. GC',
+      permissions: { projets: 'ecriture', finances_factures: 'ecriture' },
+    });
+    expect(blocEtude.update.mock.calls[0][0].data).toHaveProperty('factureMontant', 123);
   });
 });

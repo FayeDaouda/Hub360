@@ -240,3 +240,27 @@ describe('AccesProjetGuard', () => {
     });
   });
 });
+
+describe('AccesProjetGuard — contrôleurs sous @PermissionSelonMethode', () => {
+  const parCle = (valeurs: Record<string, unknown>): Reflector =>
+    ({ getAllAndOverride: jest.fn((cle: string) => valeurs[cle]) }) as unknown as Reflector;
+
+  it('rôle de direction (Dir. GC) : laissé passer sans filtre de cellule ni lecture de la base — PermissionGuard tranche', async () => {
+    const { svc, collabFind, projetFind } = prisma();
+    const g = new AccesProjetGuard(svc, parCle({ permissionSelonMethode: { module: 'projets', roleHorsMatrice: 'collaborateur' } }));
+    await expect(
+      g.canActivate(ctxOf(req({ user: { ...COLLAB, role: 'Dir. GC' } }))),
+    ).resolves.toBe(true);
+    expect(collabFind).not.toHaveBeenCalled();
+    expect(projetFind).not.toHaveBeenCalled();
+  });
+
+  it('collaborateur : son chemin par cellule est inchangé (projet d’une autre cellule → 403)', async () => {
+    const { svc } = prisma({
+      collab: { id: 'C1', celluleId: 'CEL-A' },
+      projet: { cellules: [{ celluleId: 'CEL-B' }], avantProjet: null },
+    });
+    const g = new AccesProjetGuard(svc, parCle({ permissionSelonMethode: { module: 'projets', roleHorsMatrice: 'collaborateur' } }));
+    await expect(g.canActivate(ctxOf(req()))).rejects.toThrow(ForbiddenException);
+  });
+});

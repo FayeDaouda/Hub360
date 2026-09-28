@@ -59,3 +59,15 @@ export async function chargerProjet(
   }
   return projet;
 }
+
+// Qui agit « en direction » dans un service projet (assigner n'importe qui,
+// agir sur n'importe quel bloc, modifier la structure d'une checklist) :
+// societe_admin, ou un rôle de la matrice (Dir. GC, CTO…). Sûr parce que ces
+// services ne sont atteints QUE derrière AccesProjetGuard + PermissionGuard :
+// un rôle autre que collaborateur arrivé ici est soit l'admin, soit un rôle
+// ayant le niveau requis sur « projets » (écriture pour toute écriture).
+// Le collaborateur, lui, reste borné à sa cellule / aux blocs dont il est
+// responsable.
+export function agitEnDirection(role: string): boolean {
+  return role !== 'collaborateur';
+}

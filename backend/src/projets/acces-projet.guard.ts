@@ -9,7 +9,12 @@ import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { estProjetDuCollaborateur } from './projet-acces';
 import { ECRITURE_COLLABORATEUR } from './ecriture-collaborateur.decorator';
-import { PERMISSION_REQUISE, PermissionRequise } from '../commun/permission.decorator';
+import {
+  PERMISSION_REQUISE,
+  PERMISSION_SELON_METHODE,
+  PermissionRequise,
+  PermissionSelonMethode,
+} from '../commun/permission.decorator';
 
 // Garde des routes /societes/:slug/projets(/:id/…) — point d'application UNIQUE
 // du cloisonnement projet (checklist sécurité #7 / #9).
@@ -22,7 +27,8 @@ import { PERMISSION_REQUISE, PermissionRequise } from '../commun/permission.deco
 //  · rôle métier Grey Concrete (Dir. GC, CFO, …) → accès plein comme
 //                     societe_admin (pas de scope par cellule — ce sont des
 //                     rôles de direction, pas d'exécution), mais SEULEMENT
-//                     sur un endpoint marqué @RequiertPermission, et la
+//                     sur un endpoint marqué @RequiertPermission ou un
+//                     contrôleur sous @PermissionSelonMethode, et la
 //                     vérification du niveau est déléguée à PermissionGuard
 //                     (posé juste après dans @UseGuards) — ce guard-ci ne
 //                     fait que ne pas rejeter le rôle par avance.
@@ -57,15 +63,22 @@ export class AccesProjetGuard implements CanActivate {
     if (user.role === 'societe_admin') return true;
 
     if (user.role !== 'collaborateur') {
+      const cibles = [ctx.getHandler(), ctx.getClass()];
       const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(
         PERMISSION_REQUISE,
-        [ctx.getHandler(), ctx.getClass()],
+        cibles,
       );
-      // Endpoint opt-in : on laisse passer, PermissionGuard tranche le
-      // niveau exact. Endpoint non marqué : comportement inchangé (403),
+      const selon = this.reflector.getAllAndOverride<PermissionSelonMethode | undefined>(
+        PERMISSION_SELON_METHODE,
+        cibles,
+      );
+      // Endpoint opt-in (@RequiertPermission, ou contrôleur sous
+      // @PermissionSelonMethode) : on laisse passer, PermissionGuard tranche
+      // le niveau exact. Endpoint non marqué : comportement inchangé (403),
       // un rôle métier n'a pas d'accès implicite à ce qui n'est pas
-      // explicitement ouvert par module.
-      if (requis) return true;
+      // explicitement ouvert par module. Pas de filtre de cellule : ce sont
+      // des rôles de direction (tous les projets de la société).
+      if (requis || selon) return true;
       throw new ForbiddenException('Accès aux projets non autorisé');
     }
 

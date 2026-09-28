@@ -53,3 +53,57 @@ describe('PermissionGuard', () => {
     expect(() => guard.canActivate(ctxOf(req(undefined)))).toThrow(ForbiddenException);
   });
 });
+
+// @PermissionSelonMethode (contrôleurs Projets) : lecture en GET, écriture
+// sinon ; exemption EXPLICITE d'un rôle hors matrice (collaborateur) ; une
+// règle de route (@RequiertPermission, ex. finances) reste prioritaire.
+describe('PermissionGuard — règle selon la méthode', () => {
+  const SELON = { module: 'projets', roleHorsMatrice: 'collaborateur' };
+  const parCle = (valeurs: Record<string, unknown>): Reflector =>
+    ({ getAllAndOverride: jest.fn((cle: string) => valeurs[cle]) }) as unknown as Reflector;
+  const requete = (method: string, role: string, permissions?: Record<string, string>) => ({
+    method,
+    user: { role, permissions },
+  });
+  const g = (valeurs: Record<string, unknown>) => new PermissionGuard(parCle(valeurs));
+
+  it('GET avec projets:lecture → autorisé', () => {
+    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'COO', { projets: 'lecture' })))).toBe(true);
+  });
+
+  it.each([['POST'], ['PATCH'], ['PUT'], ['DELETE']])('%s avec projets:lecture seulement → 403', (m) => {
+    expect(() =>
+      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete(m, 'COO', { projets: 'lecture' }))),
+    ).toThrow(ForbiddenException);
+  });
+
+  it('PATCH avec projets:ecriture → autorisé ; validation couvre écriture', () => {
+    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'Dir. GC', { projets: 'ecriture' })))).toBe(true);
+    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'CTO (transverse)', { projets: 'validation' })))).toBe(true);
+  });
+
+  it('GET sans aucune ligne projets (RH, CIO) → 403', () => {
+    expect(() =>
+      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'RH', { rh: 'ecriture' }))),
+    ).toThrow(ForbiddenException);
+  });
+
+  it('collaborateur exempté SUR CES ROUTES (cellule gérée par AccesProjetGuard), même en écriture', () => {
+    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'collaborateur', {})))).toBe(true);
+  });
+
+  it('pas d’exemption sans roleHorsMatrice déclaré : collaborateur refusé', () => {
+    expect(() =>
+      g({ permissionSelonMethode: { module: 'projets' } }).canActivate(ctxOf(requete('GET', 'collaborateur', {}))),
+    ).toThrow(ForbiddenException);
+  });
+
+  it('une règle de route (finances) prime et ne connaît pas l’exemption : collaborateur refusé sur le pré-bilan', () => {
+    expect(() =>
+      g({
+        permissionRequise: { module: 'finances_marges', niveau: 'lecture' },
+        permissionSelonMethode: SELON,
+      }).canActivate(ctxOf(requete('GET', 'collaborateur', {}))),
+    ).toThrow(ForbiddenException);
+  });
+});

@@ -1,9 +1,16 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { BlocEtude, Etudes, ItemEtude, Prisma } from '@prisma/client';
+import {
+  BlocEtude,
+  Etudes,
+  ItemEtude,
+  Prisma,
+  NiveauPermission,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { etudesCompletes } from '../domaine/gardes';
 import { chargerProjet } from '../projet-acces';
 import { ROLE_CIO } from '../../commun/societe-admin-ou-cio.guard';
+import { aLaPermission } from '../../commun/permission.guard';
 import {
   JoindreFichiersItemEtudeDto,
   JoindreImagesItemEtudeDto,
@@ -22,8 +29,22 @@ function typeMimeDepuisDataUri(url: string): string {
   return m ? m[1] : '';
 }
 
-function estAdminOuCio(role: string): boolean {
-  return role === 'societe_admin' || role === ROLE_CIO;
+// Appelant d'un service Études : rôle + carte de la matrice (req.user).
+export type ActeurEtudes = { role: string; permissions?: Record<string, NiveauPermission> };
+
+// Factures des bureaux d'études = de l'argent : admin/CIO comme avant, et
+// pour un rôle de la matrice le droit « finances_factures » — lecture pour
+// voir le montant, écriture pour le saisir. Accéder au projet (module
+// « projets ») ne suffit jamais : un COO, un CTO ou une RH voient les blocs
+// d'études sans leurs factures. Le collaborateur n'a aucune carte : jamais.
+function voitFactures(a: ActeurEtudes): boolean {
+  if (a.role === 'societe_admin' || a.role === ROLE_CIO) return true;
+  return a.role !== 'collaborateur' && aLaPermission(a.permissions, 'finances_factures', 'lecture');
+}
+
+function modifieFactures(a: ActeurEtudes): boolean {
+  if (a.role === 'societe_admin' || a.role === ROLE_CIO) return true;
+  return a.role !== 'collaborateur' && aLaPermission(a.permissions, 'finances_factures', 'ecriture');
 }
 
 // Études techniques restructurées en blocs configurables (sept. 2026) —
@@ -37,24 +58,24 @@ function estAdminOuCio(role: string): boolean {
 export class EtudesService {
   constructor(private prisma: PrismaService) {}
 
-  async get(societeId: string, projetId: string, role: string) {
+  async get(societeId: string, projetId: string, acteur: ActeurEtudes) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     const etudes = await this.assurerBlocs(societeId, projetId);
     const fichiersParItem = await this.fichiersParItem(projetId);
-    return this.formater(etudes, fichiersParItem, estAdminOuCio(role));
+    return this.formater(etudes, fichiersParItem, voitFactures(acteur));
   }
 
   // PATCH …/etudes/blocs/:id — champs métier ouverts à toute l'équipe du
   // projet ; factureMontant/factureFichier* appliqués UNIQUEMENT si
-  // l'appelant est admin/CIO (silencieusement ignorés sinon — le front
-  // collab n'envoie jamais ces clés de toute façon, ceci est la défense en
-  // profondeur côté serveur).
+  // l'appelant peut modifier les factures (modifieFactures — silencieusement
+  // ignorés sinon : le front n'envoie jamais ces clés sans le droit, ceci est
+  // la défense en profondeur côté serveur).
   async patchBloc(
     societeId: string,
     projetId: string,
     blocId: string,
     dto: PatchBlocEtudeDto,
-    role: string,
+    acteur: ActeurEtudes,
   ) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     await this.trouverBloc(projetId, blocId);
@@ -66,7 +87,7 @@ export class EtudesService {
     if (dto.dateRemisePrevue !== undefined) data.dateRemisePrevue = dto.dateRemisePrevue;
     if (dto.dateRemiseReelle !== undefined) data.dateRemiseReelle = dto.dateRemiseReelle;
     if (dto.note !== undefined) data.note = dto.note;
-    if (estAdminOuCio(role)) {
+    if (modifieFactures(acteur)) {
       if (dto.factureMontant !== undefined) {
         data.factureMontant = dto.factureMontant === null ? null : dto.factureMontant;
       }
@@ -75,7 +96,7 @@ export class EtudesService {
     }
 
     await this.prisma.blocEtude.update({ where: { id: blocId }, data });
-    return this.get(societeId, projetId, role);
+    return this.get(societeId, projetId, acteur);
   }
 
   async patchItem(
@@ -83,7 +104,7 @@ export class EtudesService {
     projetId: string,
     itemId: string,
     dto: PatchItemEtudeDto,
-    role: string,
+    acteur: ActeurEtudes,
   ) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     await this.trouverItem(projetId, itemId);
@@ -97,7 +118,7 @@ export class EtudesService {
     }
 
     await this.prisma.itemEtude.update({ where: { id: itemId }, data });
-    return this.get(societeId, projetId, role);
+    return this.get(societeId, projetId, acteur);
   }
 
   async joindreImages(
@@ -106,7 +127,7 @@ export class EtudesService {
     itemId: string,
     dto: JoindreImagesItemEtudeDto,
     utilisateurId: string,
-    role: string,
+    acteur: ActeurEtudes,
   ) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     await this.trouverItem(projetId, itemId);
@@ -125,7 +146,7 @@ export class EtudesService {
       }),
       this.marquerFait(itemId),
     ]);
-    return this.get(societeId, projetId, role);
+    return this.get(societeId, projetId, acteur);
   }
 
   async joindreFichiers(
@@ -134,7 +155,7 @@ export class EtudesService {
     itemId: string,
     dto: JoindreFichiersItemEtudeDto,
     utilisateurId: string,
-    role: string,
+    acteur: ActeurEtudes,
   ) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     await this.trouverItem(projetId, itemId);
@@ -153,10 +174,10 @@ export class EtudesService {
       }),
       this.marquerFait(itemId),
     ]);
-    return this.get(societeId, projetId, role);
+    return this.get(societeId, projetId, acteur);
   }
 
-  async constituerDce(societeId: string, projetId: string, role: string) {
+  async constituerDce(societeId: string, projetId: string, acteur: ActeurEtudes) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     const etudes = await this.assurerBlocs(societeId, projetId);
 
@@ -171,16 +192,16 @@ export class EtudesService {
       where: { projetId },
       data: { dceConstitue: true, dceLe: new Date() },
     });
-    return this.get(societeId, projetId, role);
+    return this.get(societeId, projetId, acteur);
   }
 
-  async annulerDce(societeId: string, projetId: string, role: string) {
+  async annulerDce(societeId: string, projetId: string, acteur: ActeurEtudes) {
     await chargerProjet(this.prisma, societeId, projetId, 'conception');
     await this.prisma.etudes.update({
       where: { projetId },
       data: { dceConstitue: false, dceLe: null },
     });
-    return this.get(societeId, projetId, role);
+    return this.get(societeId, projetId, acteur);
   }
 
   // -- Internes ------------------------------------------------------------
@@ -318,7 +339,7 @@ export class EtudesService {
   private formater(
     e: Etudes & { blocs: BlocAvecGabaritEtItems[] },
     fichiersParItem: Map<string, FichierLigne[]>,
-    estAdmin: boolean,
+    avecFactures: boolean,
   ) {
     const rangBloc = (b: BlocAvecGabaritEtItems) => b.blocEtudeGabarit?.ordre ?? 0;
     const rangItem = (it: ItemEtude & { ligneEtudeGabarit: { ordre: number } | null }) =>
@@ -337,9 +358,9 @@ export class EtudesService {
           dateRemisePrevue: b.dateRemisePrevue,
           dateRemiseReelle: b.dateRemiseReelle,
           note: b.note,
-          // Redacted pour tout appelant non admin/CIO — jamais exposé à un
-          // collaborateur, même en lecture seule (cf. cadrage).
-          facture: estAdmin
+          // Redacted sans droit de lecture sur les factures (voitFactures) —
+          // jamais exposé à un collaborateur, même en lecture seule.
+          facture: avecFactures
             ? {
                 montant: b.factureMontant ? b.factureMontant.toNumber() : null,
                 fichierNom: b.factureFichierNom,
