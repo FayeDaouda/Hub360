@@ -2,8 +2,9 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { SocieteAdminOuCioGuard, ROLE_CIO } from './societe-admin-ou-cio.guard';
 
 // Deux chemins d'autorisation légitimes, testés séparément — comme pour le
-// dispatcher de cellule (« admin OU dispatcher ») : societe_admin DE la
-// bonne société, ou le CIO (transverse, aucun lien de société à vérifier).
+// dispatcher de cellule (« admin OU dispatcher ») : societe_admin ou CIO,
+// chacun connecté sur la société de l'URL (les services lisent la société
+// du jeton — un jeton d'une autre société écrirait au mauvais endroit).
 
 type User = { societeSlug: string | null; role: string };
 
@@ -21,20 +22,20 @@ describe('SocieteAdminOuCioGuard', () => {
     expect(new SocieteAdminOuCioGuard().canActivate(ctxOf(req()))).toBe(true);
   });
 
-  it('AUTORISÉ : CIO, sans être societe_admin', () => {
+  it('AUTORISÉ : CIO connecté sur cette société, sans être societe_admin', () => {
     expect(
       new SocieteAdminOuCioGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: null, role: ROLE_CIO } })),
+        ctxOf(req({ user: { societeSlug: 'grey', role: ROLE_CIO } })),
       ),
     ).toBe(true);
   });
 
-  it('AUTORISÉ : CIO même si le token porte une autre société (rôle transverse, pas de lien slug)', () => {
-    expect(
+  it('REFUSÉ : CIO dont le jeton porte une AUTRE société → 403 (sinon écriture dans la société du jeton)', () => {
+    expect(() =>
       new SocieteAdminOuCioGuard().canActivate(
         ctxOf(req({ user: { societeSlug: 'autre', role: ROLE_CIO } })),
       ),
-    ).toBe(true);
+    ).toThrow(ForbiddenException);
   });
 
   it('REFUSÉ : societe_admin d’une AUTRE société → 403', () => {

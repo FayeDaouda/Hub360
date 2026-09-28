@@ -1795,9 +1795,11 @@ export type ModulePermission = { cle: string; nom: string };
 export type RoleAvecPermissions = {
   id: string;
   nom: string;
-  // true = rôle transverse (societeId null, ex. CEO/CTO/CIO) — lecture
-  // seule ici, édité au niveau holding par le CIO, pas par ce back-office.
+  // true = rôle transverse (societeId null, ex. CEO/CTO/CIO).
   transverse: boolean;
+  // Calculé par le serveur pour l'appelant : rôles propres → admin société
+  // ou CIO ; transverses → CIO seul ; rôles socles → personne.
+  modifiable: boolean;
   permissions: Partial<Record<string, NiveauPermission>>;
 };
 

@@ -1,4 +1,4 @@
-import { premiereSectionAccessible } from './acces-back-office';
+import { premiereSectionAccessible, ROLE_CIO } from './acces-back-office';
 import { Session } from './types';
 
 // Où envoyer un utilisateur une fois connecté, selon son rôle — un seul
@@ -7,6 +7,7 @@ import { Session } from './types';
 export function destinationForSession(session: Session): string {
   switch (session.role) {
     case 'holding_admin':
+    case ROLE_CIO: // super admin du HUB : arrive sur l'administration du HUB
       return '/groupe';
     case 'societe_admin':
       return `/admin/${session.societe.slug}`;

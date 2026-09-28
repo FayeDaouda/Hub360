@@ -13,9 +13,10 @@ const NIVEAUX: { cle: NiveauPermission; libelle: string }[] = [
   { cle: 'validation', libelle: 'Validation' },
 ];
 
-// Matrice des rôles Grey Concrete × modules. Les rôles transverses
-// (CEO/CTO/CIO) sont affichés en lecture seule — leur édition relève du CIO
-// à l'échelle holding, pas de ce back-office société.
+// Matrice des rôles × modules d'une société. Chaque ligne s'édite si le
+// serveur la déclare `modifiable` pour l'appelant : l'admin société édite
+// les rôles de sa société ; le CIO (super admin du HUB) aussi, plus les
+// rôles transverses (CEO/CTO/CIO) ; les rôles socles restent en lecture.
 export function RolesPanel({ slug }: { slug: string }) {
   const [matrice, setMatrice] = useState<MatriceRoles | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -129,7 +130,7 @@ export function RolesPanel({ slug }: { slug: string }) {
                 </td>
                 {matrice.modules.map((m) => {
                   const niveau = role.permissions[m.cle] ?? 'aucun';
-                  if (role.transverse) {
+                  if (!role.modifiable) {
                     return (
                       <td data-label={m.nom} key={m.cle}>
                         <span className={`pill pill--${niveau}`}>

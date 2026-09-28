@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { LayoutDashboard, LogOut } from 'lucide-react';
 import { clearSession, getSession } from '@/lib/auth';
+import { estAdministrateurHub, ROLE_CIO } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { Session } from '@/lib/types';
 import { HubLogo } from '@/components/hub-logo';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 
-// Espace groupe — réservé à holding_admin (le « super admin », rôle
-// transverse, pas lié à une société précise). Les autres rôles sont renvoyés
-// vers leur propre destination (voir destinationForSession). Premier outil :
-// Comptes & rôles (attribution des rôles de la matrice + salaires).
+// Administration du HUB — le CIO, super admin désigné (28/09/2026), ou le
+// compte technique holding_admin (cf. estAdministrateurHub). Les autres rôles
+// sont renvoyés vers leur propre destination (voir destinationForSession).
+// Premier outil : Comptes & rôles (rôles de la matrice + salaires).
 export default function GroupePage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
@@ -24,7 +26,7 @@ export default function GroupePage() {
       router.replace('/');
       return;
     }
-    if (current.role !== 'holding_admin') {
+    if (!estAdministrateurHub(current)) {
       router.replace(destinationForSession(current));
       return;
     }
@@ -49,9 +51,17 @@ export default function GroupePage() {
       <header className="groupe-barre">
         <div className="groupe-barre-marque">
           <HubLogo className="groupe-logo" />
-          <span className="groupe-barre-titre">Espace groupe</span>
+          <span className="groupe-barre-titre">Administration du HUB</span>
         </div>
         <div className="groupe-barre-actions">
+          {/* Le CIO a aussi un rôle métier dans sa société (ex. CRM) — le
+              compte technique holding_admin, lui, n'a pas de back-office. */}
+          {session.role === ROLE_CIO && (
+            <Link href={`/admin/${session.societe.slug}`} className="btn-ghost">
+              <LayoutDashboard size={15} aria-hidden />
+              <span className="groupe-libelle-bouton">Back-office {session.societe.nom}</span>
+            </Link>
+          )}
           <ThemeToggle />
           <button type="button" className="btn-ghost" onClick={handleLogout}>
             <LogOut size={15} aria-hidden />
@@ -63,9 +73,9 @@ export default function GroupePage() {
       <main className="groupe-contenu">
         <div className="groupe-intro">
           <h1>Bonjour {session.utilisateur.prenom}</h1>
-          <p>Administration du groupe — rôles et rémunérations des comptes de chaque société.</p>
+          <p>Administration du HUB — rôles et rémunérations des comptes de chaque société.</p>
         </div>
-        <ComptesRolesPanel />
+        <ComptesRolesPanel moiId={session.utilisateur.id} />
       </main>
     </div>
   );

@@ -35,11 +35,12 @@ function messageErreur(e: unknown, repli: string): string {
   return e instanceof ApiError ? e.message : repli;
 }
 
-// Comptes & rôles — espace groupe (admin du groupe, sept. 2026). Une ligne
-// par personne et par société : son rôle (liste regroupée : rôles de la
-// société, rôles transverses, socle) et son salaire brut mensuel. Les comptes
-// d'administration sont affichés en lecture seule.
-export function ComptesRolesPanel() {
+// Comptes & rôles — administration du HUB (CIO, sept. 2026). Une ligne par
+// personne et par société : son rôle (liste regroupée : rôles de la société,
+// rôles transverses, socle) et son salaire brut mensuel. Les comptes
+// d'administration et la propre ligne de la personne connectée (`moiId`)
+// sont en lecture seule — le serveur refuse de toute façon (409).
+export function ComptesRolesPanel({ moiId }: { moiId: string }) {
   const [donnees, setDonnees] = useState<ComptesGroupe | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [essai, setEssai] = useState(0);
@@ -139,6 +140,7 @@ export function ComptesRolesPanel() {
       ) : (
         <TableComptes
           societe={societe}
+          moiId={moiId}
           recherche={recherche}
           onRecherche={setRecherche}
           onMaj={majCompte}
@@ -185,11 +187,13 @@ function Resume({ societe }: { societe: SocieteComptes }) {
 
 function TableComptes({
   societe,
+  moiId,
   recherche,
   onRecherche,
   onMaj,
 }: {
   societe: SocieteComptes;
+  moiId: string;
   recherche: string;
   onRecherche: (v: string) => void;
   onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
@@ -235,7 +239,14 @@ function TableComptes({
           </thead>
           <tbody>
             {comptes.map((c) => (
-              <LigneCompte key={c.id} compte={c} societe={societe} roles={roles} onMaj={onMaj} />
+              <LigneCompte
+                key={c.id}
+                compte={c}
+                estMoi={c.id === moiId}
+                societe={societe}
+                roles={roles}
+                onMaj={onMaj}
+              />
             ))}
           </tbody>
         </table>
@@ -246,11 +257,13 @@ function TableComptes({
 
 function LigneCompte({
   compte,
+  estMoi,
   societe,
   roles,
   onMaj,
 }: {
   compte: CompteGroupe;
+  estMoi: boolean;
   societe: SocieteComptes;
   roles: RoleAttribuable[];
   onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
@@ -266,6 +279,7 @@ function LigneCompte({
           <span>
             <strong>
               {compte.prenom} {compte.nom}
+              {estMoi && <span className="groupe-moi">Vous</span>}
             </strong>
             <span className="groupe-email">{compte.email}</span>
           </span>
@@ -277,10 +291,14 @@ function LigneCompte({
         </span>
       </td>
       <td data-libelle="Rôle">
-        {compte.administration ? (
+        {compte.administration || estMoi ? (
           <span
             className="groupe-role-admin"
-            title="Compte d’administration : son rôle ne se modifie pas depuis cet écran."
+            title={
+              estMoi
+                ? 'Votre propre rôle ne se modifie pas ici (vous vous retireriez vos pouvoirs d’administration).'
+                : 'Compte d’administration : son rôle ne se modifie pas depuis cet écran.'
+            }
           >
             <ShieldCheck size={14} aria-hidden />
             {libelleRole(compte.role.nom)}

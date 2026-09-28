@@ -1,19 +1,21 @@
 import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SocieteAccesGuard } from '../commun/societe-acces.guard';
+import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
 import { RolesService } from './roles.service';
 import { MajPermissionDto } from './dto';
 
-type R = { user: { societeId: string } };
+type R = { user: { societeId: string; role: string } };
 
+// Matrice des rôles d'une société — son admin, ou le CIO (super admin du
+// HUB) connecté sur cette société. Qui modifie quelle ligne : RolesService.
 @Controller('societes/:slug/roles')
-@UseGuards(JwtAuthGuard, SocieteAccesGuard)
+@UseGuards(JwtAuthGuard, SocieteAdminOuCioGuard)
 export class RolesController {
   constructor(private roles: RolesService) {}
 
   @Get()
   lister(@Req() req: R) {
-    return this.roles.listerAvecPermissions(req.user.societeId);
+    return this.roles.listerAvecPermissions(req.user.societeId, req.user.role);
   }
 
   @Patch(':roleId/modules/:moduleCle')
@@ -23,6 +25,6 @@ export class RolesController {
     @Param('moduleCle') moduleCle: string,
     @Body() dto: MajPermissionDto,
   ) {
-    return this.roles.majPermission(req.user.societeId, roleId, moduleCle, dto.niveau);
+    return this.roles.majPermission(req.user.societeId, roleId, moduleCle, dto.niveau, req.user.role);
   }
 }

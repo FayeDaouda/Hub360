@@ -23,9 +23,9 @@ const ONGLETS: { cle: Onglet; libelle: string }[] = [
 ];
 
 // Hub de configuration société — un onglet par domaine, chacun chargé
-// indépendamment (pas de fetch groupé) : les deux n'ont pas le même guard
-// côté API (Rôles = societe_admin seul ; Gabarit Foncier = societe_admin OU
-// CIO), inutile qu'un onglet bloque l'autre sur un 403.
+// indépendamment (pas de fetch groupé) : un onglet en échec ne bloque pas
+// les autres. Ouvert à l'admin de la société et au CIO (super admin du HUB),
+// tous deux via SocieteAdminOuCioGuard côté API.
 export default function ParametresPage({ params }: Props) {
   useTitrePage('Paramètres');
   const [onglet, setOnglet] = useState<Onglet>('roles');

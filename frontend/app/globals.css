@@ -2198,6 +2198,9 @@ button {
   align-items: center;
   gap: 0.6rem;
 }
+.groupe-barre-actions a.btn-ghost {
+  text-decoration: none; /* lien habillé en bouton (Back-office) */
+}
 
 .groupe-contenu {
   position: relative;
@@ -2370,6 +2373,16 @@ button {
 .groupe-personne strong {
   display: block;
   font-weight: 600;
+}
+.groupe-moi {
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--violet-hub) 18%, transparent);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  vertical-align: 0.1em;
 }
 .groupe-email {
   display: block;

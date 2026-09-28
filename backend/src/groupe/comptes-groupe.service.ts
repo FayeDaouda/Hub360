@@ -6,13 +6,16 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-// Comptes & rôles du groupe (sept. 2026) — l'admin du groupe (holding_admin)
-// attribue à chaque compte son rôle dans une société et saisit son salaire
-// brut mensuel. Règles :
+// Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
+// compte technique holding_admin, cf. AdministrationHubGuard) attribue à
+// chaque compte son rôle dans une société et saisit son salaire brut
+// mensuel. Règles :
 // - UN rôle par personne et par société : la connexion lit une seule
 //   affectation (cf. AuthService.login) ; changer de rôle remplace l'ancien.
 // - Les rôles d'administration (holding_admin, societe_admin) ne s'attribuent
 //   ni ne se retirent ici : c'est le socle qui garde l'accès aux sociétés.
+// - Personne ne change son PROPRE rôle : le CIO se retirerait lui-même ses
+//   pouvoirs d'administration d'un clic.
 // - Un rôle transverse (CEO/CTO/CIO — définition partagée par le groupe) est
 //   attribué DANS la société de la ligne, comme les autres.
 // - Le salaire vit dans sa propre table (Remuneration), jamais recopié dans
@@ -114,6 +117,9 @@ export class ComptesGroupeService {
   }
 
   async changerRole(utilisateurId: string, societeId: string, roleId: string, acteurId: string) {
+    if (utilisateurId === acteurId) {
+      throw new ConflictException('Vous ne pouvez pas modifier votre propre rôle.');
+    }
     const [role, societe, affectations] = await Promise.all([
       this.prisma.role.findFirst({ where: { id: roleId, supprimeLe: null } }),
       this.prisma.societe.findUnique({ where: { id: societeId }, select: { id: true, nom: true } }),

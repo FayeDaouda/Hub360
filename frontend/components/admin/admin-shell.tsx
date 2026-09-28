@@ -15,12 +15,13 @@ import {
   ReceiptText,
   Search,
   Settings,
+  ShieldCheck,
   Users,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import { clearSession } from '@/lib/auth';
-import { sectionAccessible } from '@/lib/acces-back-office';
+import { estAdministrateurHub, sectionAccessible } from '@/lib/acces-back-office';
 import type { Session, Societe } from '@/lib/types';
 import { SocieteAvatar } from '@/components/societe-avatar';
 import { ChatWidget } from '@/components/chat/chat-widget';
@@ -263,6 +264,21 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
           </nav>
 
           <div className="admin-sidebar-footer">
+            {/* CIO (super admin du HUB) : retour à l'administration du HUB. */}
+            {estAdministrateurHub(session) && (
+              <Link
+                href="/groupe"
+                className="admin-nav-item"
+                onMouseEnter={(e) => afficherInfobulle(e, 'Administration du HUB')}
+                onMouseLeave={masquerInfobulle}
+                onFocus={(e) => afficherInfobulle(e, 'Administration du HUB')}
+                onBlur={masquerInfobulle}
+                onClick={() => setMenuOuvert(false)}
+              >
+                <ShieldCheck size={18} strokeWidth={1.75} aria-hidden />
+                <span className="admin-nav-label">Administration du HUB</span>
+              </Link>
+            )}
             {sectionAccessible(session, 'parametres') && (
               <Link
                 href={`${base}/parametres`}

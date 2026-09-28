@@ -1,12 +1,12 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RolesService } from './roles.service';
+import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
 
-// Deux comportements à verrouiller : la liste expose les rôles transverses
-// (societeId null) pour transparence, et majPermission refuse d'éditer un
-// rôle qui n'appartient pas à la société de l'appelant — que ce soit un
-// rôle transverse (CEO/CTO/CIO, réservé au CIO holding) ou, plus grave,
-// celui d'une AUTRE société (cloisonnement).
+// Gouvernance de la matrice (CIO = super admin du HUB, 28/09/2026) : rôles
+// propres → admin société ou CIO ; rôles transverses (CEO/CTO/CIO) → CIO
+// seul ; rôles socles → personne ; rôle d'une AUTRE société → jamais
+// (cloisonnement). La liste expose `modifiable` selon la même règle.
 
 function svc(opts: {
   roles?: unknown[];
@@ -38,10 +38,26 @@ describe('RolesService.listerAvecPermissions', () => {
       ],
       modules: [{ cle: 'crm', nom: 'CRM' }],
     });
-    const res = await s.listerAvecPermissions('S1');
+    const res = await s.listerAvecPermissions('S1', 'societe_admin');
     expect(res.roles).toEqual([
-      { id: 'R1', nom: 'Dir. GC', transverse: false, permissions: {} },
-      { id: 'R2', nom: 'CEO (transverse)', transverse: true, permissions: {} },
+      { id: 'R1', nom: 'Dir. GC', transverse: false, modifiable: true, permissions: {} },
+      { id: 'R2', nom: 'CEO (transverse)', transverse: true, modifiable: false, permissions: {} },
+    ]);
+  });
+
+  it('modifiable : le CIO édite les transverses, personne n’édite les rôles socles', async () => {
+    const { svc: s } = svc({
+      roles: [
+        { id: 'R2', nom: 'CEO (transverse)', societeId: null, permissions: [] },
+        { id: 'RA', nom: 'societe_admin', societeId: null, permissions: [] },
+        { id: 'RC', nom: 'collaborateur', societeId: null, permissions: [] },
+      ],
+    });
+    const res = await s.listerAvecPermissions('S1', ROLE_CIO);
+    expect(res.roles.map((r) => [r.nom, r.modifiable])).toEqual([
+      ['CEO (transverse)', true],
+      ['societe_admin', false],
+      ['collaborateur', false],
     ]);
   });
 
@@ -59,7 +75,7 @@ describe('RolesService.listerAvecPermissions', () => {
         },
       ],
     });
-    const res = await s.listerAvecPermissions('S1');
+    const res = await s.listerAvecPermissions('S1', 'societe_admin');
     expect(res.roles[0].permissions).toEqual({
       finances_marges: 'validation',
       crm: 'lecture',
@@ -70,10 +86,10 @@ describe('RolesService.listerAvecPermissions', () => {
 describe('RolesService.majPermission', () => {
   it('AUTORISÉ : rôle propre à la société → upsert la permission', async () => {
     const { svc: s, upsert } = svc({
-      roleTrouve: { id: 'R1', societeId: 'S1' },
+      roleTrouve: { id: 'R1', nom: 'Dir. GC', societeId: 'S1' },
       moduleTrouve: { id: 'M1', cle: 'crm' },
     });
-    await expect(s.majPermission('S1', 'R1', 'crm', 'ecriture')).resolves.toEqual({
+    await expect(s.majPermission('S1', 'R1', 'crm', 'ecriture', 'societe_admin')).resolves.toEqual({
       roleId: 'R1',
       moduleCle: 'crm',
       niveau: 'ecriture',
@@ -85,32 +101,68 @@ describe('RolesService.majPermission', () => {
     });
   });
 
-  it('REFUSÉ : rôle transverse (societeId null) → 403, pas d’upsert', async () => {
-    const { svc: s, upsert } = svc({ roleTrouve: { id: 'R2', societeId: null } });
-    await expect(s.majPermission('S1', 'R2', 'crm', 'lecture')).rejects.toThrow(
+  it('REFUSÉ : rôle transverse par l’admin société → 403, pas d’upsert', async () => {
+    const { svc: s, upsert } = svc({ roleTrouve: { id: 'R2', nom: 'CEO (transverse)', societeId: null } });
+    await expect(s.majPermission('S1', 'R2', 'crm', 'lecture', 'societe_admin')).rejects.toThrow(
+      'CIO',
+    );
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('AUTORISÉ : rôle transverse par le CIO', async () => {
+    const { svc: s, upsert } = svc({
+      roleTrouve: { id: 'R2', nom: 'CEO (transverse)', societeId: null },
+      moduleTrouve: { id: 'M1', cle: 'crm' },
+    });
+    await s.majPermission('S1', 'R2', 'crm', 'lecture', ROLE_CIO);
+    expect(upsert).toHaveBeenCalled();
+  });
+
+  it('AUTORISÉ : rôle propre à la société par le CIO', async () => {
+    const { svc: s, upsert } = svc({
+      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
+      moduleTrouve: { id: 'M1', cle: 'crm' },
+    });
+    await s.majPermission('S1', 'R1', 'crm', 'lecture', ROLE_CIO);
+    expect(upsert).toHaveBeenCalled();
+  });
+
+  it.each([['societe_admin'], ['collaborateur'], ['holding_admin']])(
+    'REFUSÉ : rôle socle %s, même par le CIO',
+    async (nom) => {
+      const { svc: s, upsert } = svc({ roleTrouve: { id: 'RS', nom, societeId: null } });
+      await expect(s.majPermission('S1', 'RS', 'crm', 'lecture', ROLE_CIO)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(upsert).not.toHaveBeenCalled();
+    },
+  );
+
+  it('REFUSÉ : rôle d’une autre société, même par le CIO → 403', async () => {
+    const { svc: s, upsert } = svc({ roleTrouve: { id: 'R3', nom: 'CFO', societeId: 'AUTRE' } });
+    await expect(s.majPermission('S1', 'R3', 'crm', 'lecture', ROLE_CIO)).rejects.toThrow(
       ForbiddenException,
     );
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it('REFUSÉ : rôle d’une autre société → 403, pas d’upsert', async () => {
-    const { svc: s, upsert } = svc({ roleTrouve: { id: 'R3', societeId: 'AUTRE' } });
-    await expect(s.majPermission('S1', 'R3', 'crm', 'lecture')).rejects.toThrow(
-      ForbiddenException,
+  it('rôle supprimé → 404', async () => {
+    const { svc: s } = svc({ roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1', supprimeLe: new Date() } });
+    await expect(s.majPermission('S1', 'R1', 'crm', 'lecture', ROLE_CIO)).rejects.toThrow(
+      NotFoundException,
     );
-    expect(upsert).not.toHaveBeenCalled();
   });
 
   it('rôle introuvable → 404', async () => {
     const { svc: s } = svc({ roleTrouve: null });
-    await expect(s.majPermission('S1', 'INEXISTANT', 'crm', 'lecture')).rejects.toThrow(
+    await expect(s.majPermission('S1', 'INEXISTANT', 'crm', 'lecture', 'societe_admin')).rejects.toThrow(
       NotFoundException,
     );
   });
 
   it('module introuvable → 404', async () => {
-    const { svc: s } = svc({ roleTrouve: { id: 'R1', societeId: 'S1' }, moduleTrouve: null });
-    await expect(s.majPermission('S1', 'R1', 'inexistant', 'lecture')).rejects.toThrow(
+    const { svc: s } = svc({ roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' }, moduleTrouve: null });
+    await expect(s.majPermission('S1', 'R1', 'inexistant', 'lecture', 'societe_admin')).rejects.toThrow(
       NotFoundException,
     );
   });

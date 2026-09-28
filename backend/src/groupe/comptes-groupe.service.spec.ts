@@ -110,6 +110,12 @@ describe('ComptesGroupeService.changerRole', () => {
     affectations: [{ roleId: 'RC', role: { id: 'RC', nom: 'collaborateur' } }],
   };
 
+  it('409 sur son propre rôle (le CIO ne se retire pas ses pouvoirs)', async () => {
+    const { svc, tx } = mockPrisma(base);
+    await expect(svc.changerRole('ADM', 'S1', 'R1', 'ADM')).rejects.toThrow('propre rôle');
+    expect(tx).not.toHaveBeenCalled();
+  });
+
   it('refuse un rôle d’administration', async () => {
     const { svc } = mockPrisma({ ...base, role: { id: 'RA', nom: 'societe_admin', societeId: null } });
     await expect(svc.changerRole('U1', 'S1', 'RA', 'ADM')).rejects.toThrow(BadRequestException);

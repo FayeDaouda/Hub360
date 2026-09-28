@@ -1,14 +1,15 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { HoldingAdminGuard } from '../commun/holding-admin.guard';
+import { AdministrationHubGuard } from '../commun/administration-hub.guard';
 import { ComptesGroupeService } from './comptes-groupe.service';
 import { ChangerRoleDto, DefinirSalaireDto } from './dto';
 
 type R = { user: { userId: string } };
 
-// Écran « Comptes & rôles » de l'espace groupe — admin du groupe uniquement.
+// Écran « Comptes & rôles » — administration du HUB (CIO, ou compte
+// technique holding_admin), cf. AdministrationHubGuard.
 @Controller('groupe/comptes')
-@UseGuards(JwtAuthGuard, HoldingAdminGuard)
+@UseGuards(JwtAuthGuard, AdministrationHubGuard)
 export class ComptesGroupeController {
   constructor(private comptes: ComptesGroupeService) {}
 

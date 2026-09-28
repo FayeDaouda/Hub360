@@ -31,9 +31,23 @@ const CHEMINS: Record<string, string> = {
 // que backend/src/commun/back-office.guard.ts.
 const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin', 'collaborateur']);
 
+// Le CIO est le super admin du HUB (décision 28/09/2026) — même nom de rôle
+// que backend/src/commun/societe-admin-ou-cio.guard.ts (ROLE_CIO).
+export const ROLE_CIO = 'CIO (transverse)';
+
+// Administration du HUB (/groupe : comptes, rôles, salaires) — même règle
+// que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte
+// technique holding_admin (secours).
+export function estAdministrateurHub(session: Session): boolean {
+  return session.role === ROLE_CIO || session.role === 'holding_admin';
+}
+
 export function sectionAccessible(session: Session, cle: string): boolean {
   if (session.role === 'societe_admin') return true;
   if (ROLES_HORS_BACK_OFFICE.has(session.role)) return false;
+  // Paramètres (matrice des rôles, gabarits, localités, contrats) : pouvoir
+  // d'admin plateforme hors matrice — le CIO, en plus de l'admin société.
+  if (cle === 'parametres') return session.role === ROLE_CIO;
   const moduleMatrice = SECTIONS_DIRECTION[cle];
   return !!moduleMatrice && niveauSuffisant(session, moduleMatrice, 'lecture');
 }
