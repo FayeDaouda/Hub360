@@ -148,13 +148,10 @@ async function main() {
   }
 
   // --- Grey Concrete : rôles métier + matrice de permissions (v2, 2026-09-24) --
-  // Matrice de synthèse fournie par l'utilisateur (vert = arbitrage déjà
-  // validé par le boss, jaune = proposition pas encore confirmée noir sur
-  // blanc — CIO en particulier, très incertain). Codée telle quelle pour
-  // débloquer le seed + les guards : c'est une donnée, pas une migration de
-  // schéma, donc triviale à corriger si le boss retouche une case. Ne pas
-  // relire ce détail comme définitif — voir mémoire
-  // grey-concrete-role-permission-system pour le suivi vert/jaune.
+  // VALIDÉE PAR LE BOSS le 28/09/2026, telle qu'écrite ci-dessous (96 cases,
+  // identiques à la base au moment de la validation) — plus de cases « à
+  // confirmer ». Une retouche ultérieure se fait dans Paramètres (écran
+  // Rôles) ; la reporter ici pour qu'un re-seed ne l'écrase pas.
   // `transverse: true` = rôle socle holding-wide (Role.societeId null,
   // attribution transverse) ; sinon rôle propre à Grey Concrete.
   const MATRICE_GREY: Record<
