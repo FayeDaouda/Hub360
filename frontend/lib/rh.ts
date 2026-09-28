@@ -1,6 +1,7 @@
 import type {
   ChampsDossierPersonnel,
   DossierPersonnel,
+  IntegrationSalarie,
   OptionsDossiers,
   TypeContrat,
   TypePieceDossier,
@@ -56,3 +57,10 @@ export function finProche(d: DossierPersonnel, aujourdhui = new Date()): boolean
   limite.setMonth(limite.getMonth() + 6);
   return fin <= limite;
 }
+
+// RH · Intégration des nouveaux arrivants (lot 3) : points J30/J60/J90.
+export const getIntegrations = (slug: string) => apiSociete<IntegrationSalarie[]>(slug, '/rh/integrations');
+export const enregistrerPointIntegration = (slug: string, dossierId: string, jalon: number, corps: { realiseLe: string; compteRendu: string }) =>
+  apiSociete<IntegrationSalarie>(slug, `/rh/integrations/${dossierId}/points/${jalon}`, { method: 'POST', body: corps });
+export const confirmerIntegration = (slug: string, dossierId: string) =>
+  apiSociete<{ id: string; confirmeLe: string }>(slug, `/rh/integrations/${dossierId}/confirmation`, { method: 'POST', body: {} });

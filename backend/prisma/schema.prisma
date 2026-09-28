@@ -1945,6 +1945,9 @@ model DossierPersonnel {
   missionSignalAlerte String              @default("") @map("mission_signal_alerte")
   archiveLe           DateTime?           @map("archive_le")
   archiveParId        String?             @map("archive_par_id") // audit, pas de FK
+  // Intégration (lot 3) : fin du suivi J30/J60/J90 — cf. rh/regles-integration.ts.
+  confirmeLe          String?             @map("confirme_le") // AAAA-MM-JJ
+  confirmeParId       String?             @map("confirme_par_id") // audit, pas de FK
   creeParId           String?             @map("cree_par_id")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
@@ -1954,6 +1957,7 @@ model DossierPersonnel {
   pieces         PieceDossierPersonnel[]
   absences       DemandeAbsence[]
   remboursements DemandeRemboursement[]
+  pointsIntegration PointIntegration[]
 
   @@index([societeId])
   @@map("dossiers_personnel")
@@ -2098,4 +2102,24 @@ model JustificatifRemboursement {
   demande DemandeRemboursement @relation(fields: [demandeId], references: [id], onDelete: Cascade)
 
   @@map("justificatifs_remboursement")
+}
+
+// --- RH · Intégration des nouveaux arrivants (lot 3, sept. 2026) ------------
+// Points à J+30, J+60, J+90 (jours calendaires depuis l'entrée), jusqu'à la
+// confirmation. Contenu d'un point = compte rendu libre : les critères du
+// manuel (§9.3) ne sont pas encore connus — ne rien inventer ici.
+model PointIntegration {
+  id              String   @id @default(uuid())
+  dossierId       String   @map("dossier_id")
+  jalon           Int // 30, 60 ou 90
+  realiseLe       String   @map("realise_le") // AAAA-MM-JJ
+  compteRendu     String   @map("compte_rendu")
+  enregistreParId String?  @map("enregistre_par_id") // audit, pas de FK
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@unique([dossierId, jalon])
+  @@map("points_integration")
 }

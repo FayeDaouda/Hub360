@@ -223,7 +223,7 @@ function FormAbsence({ slug, onFait }: { slug: string; onFait: () => void }) {
           />
         </label>
       )}
-      <p className="cell-sub">Dimanches exclus, samedi compté. Jours fériés pas encore déduits.</p>
+      <p className="dmd-note">Dimanches exclus, samedi compté. Jours fériés pas encore déduits.</p>
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
       <button type="submit" className="btn-primary" disabled={etat.envoi}>
         {etat.envoi ? 'Envoi…' : 'Envoyer au N+1'}
@@ -301,7 +301,7 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
           }
         />
       </label>
-      <p className="cell-sub">Aucun diagnostic ni information médicale : seulement la catégorie et le montant.</p>
+      <p className="dmd-note">Aucun diagnostic ni information médicale : seulement la catégorie et le montant.</p>
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
       <button type="submit" className="btn-primary" disabled={etat.envoi}>
         {etat.envoi ? 'Envoi…' : 'Soumettre à la RH'}

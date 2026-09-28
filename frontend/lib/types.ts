@@ -2035,3 +2035,26 @@ export type PreparationDecision = {
   candidats: { id: string; libelle: string; cellule: string | null }[];
   alerteCellule: { absents: number; membres: number; preselection: boolean };
 };
+
+// --- RH · Intégration (lot 3) — cf. backend rh/regles-integration.ts ---
+export type StatutPointIntegration = 'fait' | 'a_faire' | 'a_venir';
+export type PointIntegration = {
+  jalon: 30 | 60 | 90;
+  datePrevue: string;
+  statut: StatutPointIntegration;
+  realiseLe: string | null;
+  compteRendu: string | null;
+};
+export type IntegrationSalarie = {
+  id: string;
+  matricule: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  societe: string;
+  typeContrat: TypeContrat;
+  dateEntree: string;
+  mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string };
+  points: PointIntegration[];
+  aTraiter: number;
+};

@@ -77,7 +77,7 @@ export function DecisionN1Modal({ slug, id, onFait, onClose }: { slug: string; i
         </header>
         <div className="modal-body">
           {!prep ? (
-            <p className="cell-sub">{erreur ?? 'Chargement…'}</p>
+            <p className="dmd-note">{erreur ?? 'Chargement…'}</p>
           ) : (
             <>
               <p>
@@ -85,7 +85,7 @@ export function DecisionN1Modal({ slug, id, onFait, onClose }: { slug: string; i
                 {d!.commentaire && <span className="cell-sub"> — « {d!.commentaire} »</span>}
               </p>
               {prep.alerteCellule.membres > 0 && (
-                <p className={prep.alerteCellule.preselection ? 'field-erreur' : 'cell-sub'}>
+                <p className={prep.alerteCellule.preselection ? 'field-erreur' : 'dmd-note'}>
                   {prep.alerteCellule.absents} autre(s) membre(s) de la cellule absent(s) sur la période ({prep.alerteCellule.membres} au total).
                 </p>
               )}
@@ -97,11 +97,11 @@ export function DecisionN1Modal({ slug, id, onFait, onClose }: { slug: string; i
                   </button>
                 ))}
               </div>
-              <p className="cell-sub">{DECISIONS.find((x) => x.cle === decision)!.aide}</p>
+              <p className="dmd-note">{DECISIONS.find((x) => x.cle === decision)!.aide}</p>
 
               {avecLivrables &&
                 (prep.livrables.length === 0 ? (
-                  <p className="cell-sub">Aucun livrable dû pendant l’absence.</p>
+                  <p className="dmd-note">Aucun livrable dû pendant l’absence.</p>
                 ) : (
                   <ul className="rh-pieces">
                     {prep.livrables.map((l) => (
