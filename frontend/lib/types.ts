@@ -1983,3 +1983,55 @@ export type OptionsDossiers = {
   societes: { id: string; nom: string }[];
   collaborateursSansDossier: { id: string; libelle: string; societeId: string; cellule: string | null }[];
 };
+
+// --- RH · Demandes (lot 2) — hypothèses de travail, cf. backend regles-conges ---
+export type TypeAbsence = 'conge_paye' | 'maladie' | 'permission_exceptionnelle' | 'autre';
+export type StatutAbsence = 'attente_n1' | 'autres_dates' | 'accord_n1' | 'validee' | 'refusee' | 'retiree';
+export type DecisionN1 = 'valider' | 'sous_conditions' | 'autres_dates' | 'refuser';
+export type MotifRefusAbsence = 'periode_critique' | 'effectif_insuffisant' | 'solde_insuffisant' | 'autre';
+
+export type DemandeAbsence = {
+  id: string;
+  type: TypeAbsence;
+  dateDebut: string;
+  dateFin: string;
+  jours: number;
+  commentaire: string;
+  justificatifNom: string | null;
+  aJustificatif: boolean;
+  statut: StatutAbsence;
+  n1Role: string | null;
+  decisionN1: DecisionN1 | null;
+  motifRefus: MotifRefusAbsence | null;
+  commentaireRefus: string;
+  datesProposeesDebut: string | null;
+  datesProposeesFin: string | null;
+  createdAt: string;
+  salarie?: { prenom: string; nom: string; poste?: string; matricule?: string };
+};
+
+export type SoldeConges = { acquis: number; pris: number; enAttente: number; disponible: number };
+
+export type CategorieSoins = 'pharmacie' | 'consultation' | 'analyses_imagerie' | 'hospitalisation' | 'dentaire_optique' | 'autre';
+export type StatutRemboursement = 'soumise' | 'transmise' | 'remboursee' | 'rejetee';
+export type DemandeRemboursement = {
+  id: string;
+  categorie: CategorieSoins;
+  beneficiaire: 'moi' | 'conjoint' | 'enfant';
+  dateSoins: string;
+  montant: number;
+  montantRembourse: number | null;
+  statut: StatutRemboursement;
+  motifRejet: string;
+  createdAt: string;
+  justificatifs: { id: string; nom: string }[];
+  dossier?: { prenom: string; nom: string; matricule: string };
+};
+
+export type LivrableAbsence = { cle: string; source: string; projet: string; groupe: string; echeance: string };
+export type PreparationDecision = {
+  demande: DemandeAbsence;
+  livrables: LivrableAbsence[];
+  candidats: { id: string; libelle: string; cellule: string | null }[];
+  alerteCellule: { absents: number; membres: number; preselection: boolean };
+};

@@ -21,6 +21,7 @@ import {
 } from '@/lib/rh';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
+import { DemandesRh } from '@/components/absences/demandes-rh';
 
 type Props = { params: { slug: string } };
 
@@ -44,6 +45,7 @@ export default function RhPage({ params }: Props) {
   const [filtre, setFiltre] = useState<'incomplets' | 'fins' | null>(null);
   const [archives, setArchives] = useState(false);
   const [ouvert, setOuvert] = useState<DossierPersonnel | 'nouveau' | null>(null);
+  const [onglet, setOnglet] = useState<'personnel' | 'demandes'>('personnel');
 
   useEffect(() => {
     Promise.all([getDossiers(params.slug), getOptionsDossiers(params.slug)])
@@ -85,8 +87,27 @@ export default function RhPage({ params }: Props) {
   const fins = actifs.filter((d) => finProche(d)).length;
   const basculerFiltre = (f: 'incomplets' | 'fins') => setFiltre((x) => (x === f ? null : f));
 
+  const onglets = (
+    <div className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique RH">
+      {(['personnel', 'demandes'] as const).map((o) => (
+        <button key={o} type="button" role="tab" aria-selected={onglet === o} className={onglet === o ? 'is-active' : ''} onClick={() => setOnglet(o)}>
+          {o === 'personnel' ? 'Personnel' : 'Demandes'}
+        </button>
+      ))}
+    </div>
+  );
+  if (onglet === 'demandes') {
+    return (
+      <>
+        {onglets}
+        <DemandesRh slug={params.slug} ecriture={ecriture} />
+      </>
+    );
+  }
+
   return (
     <>
+      {onglets}
       <div className="rh-entete">
         <p className="rh-sous-titre">
           Dossiers du personnel des sociétés du groupe. Accès : RH (modification), CFO et CEO

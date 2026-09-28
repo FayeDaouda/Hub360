@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  CalendarDays,
   ChevronLeft,
   FolderKanban,
   Gauge,
@@ -38,6 +39,7 @@ const NAV: NavItem[] = [
   { cle: 'accueil', libelle: 'Accueil', icone: LayoutDashboard, chemin: '' },
   { cle: 'projets', libelle: 'Mes projets', icone: FolderKanban, chemin: 'projets' },
   { cle: 'indicateurs', libelle: 'Mes indicateurs', icone: Gauge, chemin: 'indicateurs' },
+  { cle: 'demandes', libelle: 'Congés et demandes', icone: CalendarDays, chemin: 'demandes' },
   { cle: 'equipe', libelle: 'Mon équipe', icone: Users },
 ];
 

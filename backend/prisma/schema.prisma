@@ -1949,9 +1949,11 @@ model DossierPersonnel {
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
 
-  societe       Societe                 @relation(fields: [societeId], references: [id], onDelete: Restrict)
-  collaborateur Collaborateur?          @relation(fields: [collaborateurId], references: [id], onDelete: SetNull)
-  pieces        PieceDossierPersonnel[]
+  societe        Societe                 @relation(fields: [societeId], references: [id], onDelete: Restrict)
+  collaborateur  Collaborateur?          @relation(fields: [collaborateurId], references: [id], onDelete: SetNull)
+  pieces         PieceDossierPersonnel[]
+  absences       DemandeAbsence[]
+  remboursements DemandeRemboursement[]
 
   @@index([societeId])
   @@map("dossiers_personnel")
@@ -1970,4 +1972,130 @@ model PieceDossierPersonnel {
 
   @@unique([dossierId, type]) // une pièce par type, remplaçable
   @@map("pieces_dossier_personnel")
+}
+
+// --- RH · Demandes (lot 2, sept. 2026) ----------------------------------------
+// HYPOTHÈSES DE TRAVAIL (conception d'origine, non confirmées par un vrai RH) :
+// circuit N+1 → validation RH ; solde 2 jours ouvrables/mois (dimanches exclus,
+// fériés pas encore déduits) ; remboursements sans AUCUNE donnée médicale.
+enum TypeAbsence {
+  conge_paye
+  maladie
+  permission_exceptionnelle
+  autre
+}
+
+enum StatutAbsence {
+  attente_n1
+  autres_dates // le N+1 propose d'autres dates : le salarié accepte ou retire
+  accord_n1 // en attente de la validation finale RH
+  validee
+  refusee
+  retiree
+}
+
+enum DecisionN1 {
+  valider
+  sous_conditions
+  autres_dates
+  refuser
+}
+
+enum MotifRefusAbsence {
+  periode_critique
+  effectif_insuffisant
+  solde_insuffisant
+  autre
+}
+
+model DemandeAbsence {
+  id                  String             @id @default(uuid())
+  dossierId           String             @map("dossier_id")
+  type                TypeAbsence
+  dateDebut           String             @map("date_debut") // AAAA-MM-JJ
+  dateFin             String             @map("date_fin")
+  jours               Int // jours ouvrables (lundi → samedi)
+  commentaire         String             @default("")
+  justificatifNom     String?            @map("justificatif_nom")
+  justificatifCle     String?            @map("justificatif_cle") // data URI
+  statut              StatutAbsence      @default(attente_n1)
+  // N+1 figé au dépôt : chef de cellule (fiche) OU rôle de direction.
+  n1CollaborateurId   String?            @map("n1_collaborateur_id")
+  n1Role              String?            @map("n1_role")
+  decisionN1          DecisionN1?        @map("decision_n1")
+  decisionN1ParId     String?            @map("decision_n1_par_id")
+  decisionN1Le        DateTime?          @map("decision_n1_le")
+  motifRefus          MotifRefusAbsence? @map("motif_refus")
+  commentaireRefus    String             @default("") @map("commentaire_refus")
+  datesProposeesDebut String?            @map("dates_proposees_debut")
+  datesProposeesFin   String?            @map("dates_proposees_fin")
+  traitementLivrables Json?              @map("traitement_livrables") // délégations / reports décidés
+  valideRhParId       String?            @map("valide_rh_par_id")
+  valideRhLe          DateTime?          @map("valide_rh_le")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@index([dossierId])
+  @@index([statut])
+  @@map("demandes_absence")
+}
+
+enum CategorieSoins {
+  pharmacie
+  consultation
+  analyses_imagerie
+  hospitalisation
+  dentaire_optique
+  autre
+}
+
+enum BeneficiaireSoins {
+  moi
+  conjoint
+  enfant
+}
+
+enum StatutRemboursement {
+  soumise
+  transmise
+  remboursee
+  rejetee
+}
+
+// Aucun diagnostic : seulement la catégorie de dépense, le bénéficiaire, la
+// date, le montant et les justificatifs (circuit administratif).
+model DemandeRemboursement {
+  id               String              @id @default(uuid())
+  dossierId        String              @map("dossier_id")
+  categorie        CategorieSoins
+  beneficiaire     BeneficiaireSoins   @default(moi)
+  dateSoins        String              @map("date_soins")
+  montant          Int // FCFA
+  montantRembourse Int?                @map("montant_rembourse")
+  statut           StatutRemboursement @default(soumise)
+  motifRejet       String              @default("") @map("motif_rejet")
+  transmiseLe      DateTime?           @map("transmise_le")
+  traiteLe         DateTime?           @map("traite_le")
+  traiteParId      String?             @map("traite_par_id")
+  createdAt        DateTime            @default(now()) @map("created_at")
+
+  dossier       DossierPersonnel            @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+  justificatifs JustificatifRemboursement[]
+
+  @@index([dossierId])
+  @@map("demandes_remboursement")
+}
+
+model JustificatifRemboursement {
+  id        String   @id @default(uuid())
+  demandeId String   @map("demande_id")
+  nom       String
+  cle       String // data URI
+  createdAt DateTime @default(now()) @map("created_at")
+
+  demande DemandeRemboursement @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+
+  @@map("justificatifs_remboursement")
 }

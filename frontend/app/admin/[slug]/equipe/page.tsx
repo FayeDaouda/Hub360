@@ -31,6 +31,7 @@ import { niveauSuffisant } from '@/lib/auth';
 import type { Session } from '@/lib/types';
 import { ChampModal } from '@/components/admin/champ-modal';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { AbsencesADecider } from '@/components/absences/absences-a-decider';
 
 type Props = { params: { slug: string } };
 
@@ -96,6 +97,7 @@ export default function EquipePage({ params }: Props) {
 
   return (
     <>
+      <AbsencesADecider slug={params.slug} />
       <div className="projets-toolbar">
         <div className="projets-toolbar-info">
           <input
