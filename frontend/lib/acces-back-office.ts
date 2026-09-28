@@ -14,6 +14,7 @@ import type { Session } from './types';
 const SECTIONS_DIRECTION: Record<string, string> = {
   crm: 'crm', // clé de nav → module de la matrice
   projets: 'projets',
+  equipe: 'equipe',
   facturation: 'finances_factures',
 };
 

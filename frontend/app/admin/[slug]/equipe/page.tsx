@@ -17,7 +17,7 @@ import {
   supprimerCollaborateur,
 } from '@/lib/equipe';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import {
   NIVEAUX_COLLABORATEUR,
   NIVEAUX_ORDRE,
@@ -27,6 +27,8 @@ import {
   type IndicateursCollaborateur,
   type NiveauCollaborateur,
 } from '@/lib/types';
+import { niveauSuffisant } from '@/lib/auth';
+import type { Session } from '@/lib/types';
 import { ChampModal } from '@/components/admin/champ-modal';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
 
@@ -40,6 +42,7 @@ type CelluleModalEtat =
 
 export default function EquipePage({ params }: Props) {
   useTitrePage('Équipe');
+  const ecriture = niveauEquipeEcriture(useSessionCourante());
   const [cellules, setCellules] = useState<Cellule[] | null>(null);
   const [orphelins, setOrphelins] = useState<Collaborateur[]>([]);
   const [recherche, setRecherche] = useState('');
@@ -109,7 +112,8 @@ export default function EquipePage({ params }: Props) {
           )}
         </div>
         <div className="equipe-toolbar-actions">
-          <button
+          {ecriture && (
+<button
             type="button"
             className="btn-ghost"
             onClick={() => setCelluleModal({ mode: 'creer' })}
@@ -117,7 +121,9 @@ export default function EquipePage({ params }: Props) {
             <Plus size={16} strokeWidth={2} aria-hidden />
             <span>Nouvelle cellule</span>
           </button>
-          <button
+)}
+          {ecriture && (
+<button
             type="button"
             className="btn-primary"
             onClick={() => setEdite({ celluleId: null })}
@@ -125,6 +131,7 @@ export default function EquipePage({ params }: Props) {
             <Plus size={16} strokeWidth={2} aria-hidden />
             <span>Collaborateur</span>
           </button>
+)}
         </div>
       </div>
 
@@ -144,7 +151,8 @@ export default function EquipePage({ params }: Props) {
                   </span>
                   {!estSans && (
                     <span className="equipe-cellule-actions">
-                      <button
+                      {ecriture && (
+<button
                         type="button"
                         className="lien-inline"
                         aria-label="Renommer"
@@ -152,7 +160,9 @@ export default function EquipePage({ params }: Props) {
                       >
                         <Pencil size={13} strokeWidth={2} aria-hidden />
                       </button>
-                      <button
+)}
+                      {ecriture && (
+<button
                         type="button"
                         className="lien-inline"
                         aria-label="Supprimer"
@@ -160,6 +170,7 @@ export default function EquipePage({ params }: Props) {
                       >
                         <Trash2 size={13} strokeWidth={2} aria-hidden />
                       </button>
+)}
                     </span>
                   )}
                 </header>
@@ -167,7 +178,7 @@ export default function EquipePage({ params }: Props) {
                 {!estSans && (
                   <label className="equipe-dispatcher">
                     <span className="equipe-dispatcher-label">Dispatcher</span>
-                    <select
+                    <select disabled={!ecriture}
                       className="field-input"
                       value={g.dispatcherId ?? ''}
                       onChange={(e) => changerDispatcher(g.id, e.target.value || null)}
@@ -231,8 +242,8 @@ export default function EquipePage({ params }: Props) {
                   )}
                 </ul>
 
-                {!estSans && (
-                  <button
+                {!estSans && ecriture && (
+<button
                     type="button"
                     className="equipe-ajout"
                     onClick={() => setEdite({ celluleId: g.id })}
@@ -258,6 +269,7 @@ export default function EquipePage({ params }: Props) {
             charger();
           }}
           onRefresh={charger}
+          lectureSeule={!ecriture}
         />
       )}
 
@@ -313,6 +325,7 @@ function CollaborateurModal({
   onClose,
   onEnregistre,
   onRefresh,
+  lectureSeule = false,
 }: {
   slug: string;
   cellules: Cellule[];
@@ -323,6 +336,7 @@ function CollaborateurModal({
   // Recharge la grille en arrière-plan, modale laissée ouverte (invitation :
   // l'admin doit encore voir / copier le lien généré).
   onRefresh: () => void;
+  lectureSeule?: boolean;
 }) {
   const collab = 'collab' in initial ? initial.collab : null;
   const [prenom, setPrenom] = useState(collab?.prenom ?? '');
@@ -495,6 +509,8 @@ function CollaborateurModal({
         </header>
 
         <div className="modal-body">
+          {/* Consultation : tous les champs et actions de compte désactivés. */}
+          <fieldset disabled={lectureSeule} className="fieldset-nu">
           <div className="equipe-form-photo">
             <span
               className="equipe-avatar equipe-avatar--lg"
@@ -772,9 +788,16 @@ function CollaborateurModal({
             </div>
           )}
 
+          </fieldset>
           {erreur && <p className="field-erreur">{erreur}</p>}
 
           <div className="modal-actions">
+            {lectureSeule ? (
+              <button type="button" className="btn-ghost" onClick={onClose}>
+                Fermer
+              </button>
+            ) : (
+            <>
             {collab && (
               <button
                 type="button"
@@ -806,6 +829,8 @@ function CollaborateurModal({
                   {envoi ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
               </>
+            )}
+            </>
             )}
           </div>
         </div>
@@ -852,4 +877,10 @@ function CollaborateurModal({
       )}
     </div>
   );
+}
+
+// Module « équipe » de la matrice : écriture = admin ou Dir. GC ; les autres
+// rôles qui y ont accès (CEO, CTO, RH, Salarié) consultent seulement.
+function niveauEquipeEcriture(session: Session): boolean {
+  return session.role === 'societe_admin' || niveauSuffisant(session, 'equipe', 'ecriture');
 }

@@ -11,14 +11,18 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SocieteAccesGuard } from '../commun/societe-acces.guard';
+import { BackOfficeGuard } from '../commun/back-office.guard';
+import { PermissionGuard } from '../commun/permission.guard';
+import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { CellulesService } from './cellules.service';
 import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
 
 type R = { user: { societeId: string } };
 
 @Controller('societes/:slug/cellules')
-@UseGuards(JwtAuthGuard, SocieteAccesGuard)
+// Module « équipe » de la matrice (cf. CollaborateursController).
+@PermissionSelonMethode('equipe')
+@UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class CellulesController {
   constructor(private cellules: CellulesService) {}
 
@@ -37,8 +41,8 @@ export class CellulesController {
     return this.cellules.renommer(req.user.societeId, id, dto);
   }
 
-  // Désigner/retirer le dispatcher de la cellule — admin uniquement (déjà
-  // garanti par SocieteAccesGuard sur tout ce contrôleur).
+  // Désigner/retirer le dispatcher de la cellule — écriture sur « équipe »
+  // (admin ou Dir. GC), comme tout ce contrôleur.
   @Patch(':id/dispatcher')
   definirDispatcher(
     @Req() req: R,

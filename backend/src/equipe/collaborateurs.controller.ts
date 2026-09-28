@@ -12,7 +12,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SocieteAccesGuard } from '../commun/societe-acces.guard';
+import { BackOfficeGuard } from '../commun/back-office.guard';
+import { PermissionGuard } from '../commun/permission.guard';
+import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { CollaborateursService } from './collaborateurs.service';
 import {
   CreerCollaborateurDto,
@@ -23,7 +25,11 @@ import {
 type R = { user: { societeId: string; userId: string } };
 
 @Controller('societes/:slug/collaborateurs')
-@UseGuards(JwtAuthGuard, SocieteAccesGuard)
+// Module « équipe » de la matrice : lecture en GET, écriture sinon
+// (Dir. GC écriture ; CEO, CTO, RH, Salarié lecture). Les collaborateurs
+// n'y entrent pas (BackOfficeGuard) : leur fiche passe par /mon-profil.
+@PermissionSelonMethode('equipe')
+@UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class CollaborateursController {
   constructor(private collaborateurs: CollaborateursService) {}
 
