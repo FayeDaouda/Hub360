@@ -18,6 +18,7 @@ import { codeAvecVariante, genererCodeDossier } from '../src/crm/nomenclature';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
+import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
 
 const prisma = new PrismaClient();
 
@@ -44,8 +45,6 @@ const ID_GREY = '11111111-1111-4111-8111-111111111111';
 const ID_ADMIN_HUB = '00000000-0000-4000-8000-000000000001';
 const ID_BOSS = '00000000-0000-4000-8000-000000000002';
 const ID_COLLAB = '00000000-0000-4000-8000-000000000003';
-const ID_DIR_GC = '00000000-0000-4000-8000-000000000004';
-const ID_CFO = '00000000-0000-4000-8000-000000000005';
 
 async function main() {
   // --- Rôles & modules -------------------------------------------------
@@ -374,52 +373,11 @@ async function main() {
     }
   }
 
-  // Comptes de test pour la matrice de permissions (premier endpoint réel
-  // gouverné par elle, cf. pre-bilan.controller.ts) — un rôle qui n'y a pas
-  // accès (Dir. GC : finances_marges = aucun) et un qui y a accès (CFO :
-  // finances_marges = validation), pour démontrer un vrai 403 vs 200.
-  const roleDirGc = await prisma.role.findFirstOrThrow({
-    where: { societeId: grey.id, nom: 'Dir. GC' },
-  });
-  const roleCfo = await prisma.role.findFirstOrThrow({
-    where: { societeId: grey.id, nom: 'CFO' },
-  });
-  const dirGc = await prisma.utilisateur.upsert({
-    where: { email: 'dirgc.greyconcrete@hub.group' },
-    update: {},
-    create: {
-      id: ID_DIR_GC,
-      email: 'dirgc.greyconcrete@hub.group',
-      motDePasseHash: mdp,
-      nom: 'Fall',
-      prenom: 'Cheikh',
-    },
-  });
-  const cfo = await prisma.utilisateur.upsert({
-    where: { email: 'cfo.greyconcrete@hub.group' },
-    update: {},
-    create: {
-      id: ID_CFO,
-      email: 'cfo.greyconcrete@hub.group',
-      motDePasseHash: mdp,
-      nom: 'Sarr',
-      prenom: 'Bineta',
-    },
-  });
-  for (const [u, r] of [
-    [dirGc, roleDirGc],
-    [cfo, roleCfo],
-  ] as const) {
-    if (
-      !(await prisma.utilisateurSocieteRole.findFirst({
-        where: { utilisateurId: u.id, societeId: grey.id, roleId: r.id },
-      }))
-    ) {
-      await prisma.utilisateurSocieteRole.create({
-        data: { utilisateurId: u.id, societeId: grey.id, roleId: r.id },
-      });
-    }
-  }
+  // Comptes fictifs, un par rôle de la matrice (démonstration et recette des
+  // droits) — module partagé avec `npm run comptes-demo`, cf. comptes-demo.ts.
+  const comptesDemo = await creerComptesDemo(prisma, grey.id, mdp);
+  const dirGc = comptesDemo['Dir. GC'];
+  const cfo = comptesDemo.CFO;
 
   // --- Gabarit Unbord (société) — remplace l'ancien enum TypeUnbord figé.
   // Les 14 items d'origine (cf. historique de src/projets/domaine/config.ts)
@@ -1107,6 +1065,7 @@ async function main() {
   console.log('   · admin@hub.group                 holding_admin');
   console.log('   · admin.greyconcrete@hub.group    societe_admin  → /admin/grey-concrete');
   console.log('   · collab.greyconcrete@hub.group   collaborateur');
+  for (const c of COMPTES_DEMO) console.log(`   · ${c.email.padEnd(32)} ${c.role}`);
   const nbP = await prisma.projet.count({ where: { societeId: grey.id } });
   const nbD = await prisma.dossierCrm.count({ where: { societeId: grey.id } });
   const nbPermis = await prisma.permis.count();

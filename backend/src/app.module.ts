@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { DevisModule } from './devis/devis.module';
 import { RolesModule } from './roles/roles.module';
+import { GroupeModule } from './groupe/groupe.module';
 import { LocalitesModule } from './localites/localites.module';
 import { ContratsModule } from './contrats/contrats.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
@@ -41,6 +42,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ChatModule,
     DevisModule,
     RolesModule,
+    GroupeModule,
     LocalitesModule,
     ContratsModule,
   ],

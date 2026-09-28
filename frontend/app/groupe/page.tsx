@@ -2,18 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSocietes } from '@/lib/api';
+import { LogOut } from 'lucide-react';
 import { clearSession, getSession } from '@/lib/auth';
 import { destinationForSession } from '@/lib/session-redirect';
-import { Societe, Session } from '@/lib/types';
+import { Session } from '@/lib/types';
+import { HubLogo } from '@/components/hub-logo';
+import { ThemeToggle } from '@/components/admin/theme-toggle';
+import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 
-// Vue d'ensemble du groupe — réservée à holding_admin (rôle transverse, pas
-// lié à une société précise). Les autres rôles sont renvoyés vers leur
-// propre destination (voir destinationForSession).
+// Espace groupe — réservé à holding_admin (le « super admin », rôle
+// transverse, pas lié à une société précise). Les autres rôles sont renvoyés
+// vers leur propre destination (voir destinationForSession). Premier outil :
+// Comptes & rôles (attribution des rôles de la matrice + salaires).
 export default function GroupePage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
-  const [societes, setSocietes] = useState<Societe[] | null>(null);
 
   useEffect(() => {
     const current = getSession();
@@ -26,7 +29,6 @@ export default function GroupePage() {
       return;
     }
     setSession(current);
-    getSocietes().then(setSocietes);
   }, [router]);
 
   if (!session) return null;
@@ -37,30 +39,34 @@ export default function GroupePage() {
   }
 
   return (
-    <main>
-      <header className="espace-header">
-        <span>Vue d’ensemble du groupe</span>
-        <button className="btn-ghost" onClick={handleLogout}>
-          Se déconnecter
-        </button>
-      </header>
-      <div className="espace-welcome">
-        <h1>Bienvenue, {session!.utilisateur.prenom}</h1>
-        <p>
-          Connecté en tant qu’<strong>administrateur du groupe</strong>.
-        </p>
-        {societes && societes.length > 0 && (
-          <ul className="groupe-societe-list">
-            {societes.map((societe) => (
-              <li key={societe.id}>{societe.nom}</li>
-            ))}
-          </ul>
-        )}
-        <p className="espace-note">
-          Le pilotage détaillé de chaque société (utilisateurs, modules) arrivera dans une
-          prochaine étape.
-        </p>
+    <div className="groupe-espace">
+      <div className="admin-atmosphere" aria-hidden>
+        <span className="admin-atmosphere-blob admin-atmosphere-blob--violet" />
+        <span className="admin-atmosphere-blob admin-atmosphere-blob--orange" />
+        <span className="admin-atmosphere-blob admin-atmosphere-blob--cyan" />
       </div>
-    </main>
+
+      <header className="groupe-barre">
+        <div className="groupe-barre-marque">
+          <HubLogo className="groupe-logo" />
+          <span className="groupe-barre-titre">Espace groupe</span>
+        </div>
+        <div className="groupe-barre-actions">
+          <ThemeToggle />
+          <button type="button" className="btn-ghost" onClick={handleLogout}>
+            <LogOut size={15} aria-hidden />
+            <span className="groupe-libelle-bouton">Se déconnecter</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="groupe-contenu">
+        <div className="groupe-intro">
+          <h1>Bonjour {session.utilisateur.prenom}</h1>
+          <p>Administration du groupe — rôles et rémunérations des comptes de chaque société.</p>
+        </div>
+        <ComptesRolesPanel />
+      </main>
+    </div>
   );
 }

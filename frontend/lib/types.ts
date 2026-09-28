@@ -1891,3 +1891,36 @@ export type ParametresContrat = {
   variables: { cle: string; description: string }[];
   annexes: { id: string; libelle: string; automatique: string | null }[];
 };
+
+// --- Espace groupe : comptes & rôles (sept. 2026) ------------------------------
+// GET /groupe/comptes — admin du groupe uniquement. Un compte = une personne
+// dans une société, avec UN rôle ; les comptes d'administration
+// (societe_admin) sont listés mais pas modifiables depuis cet écran.
+export type StatutCompteGroupe = 'actif' | 'en_attente' | 'desactive';
+
+export type RoleAttribuable = {
+  id: string;
+  nom: string;
+  transverse: boolean; // CEO/CTO/CIO : définition partagée par le groupe
+};
+
+export type CompteGroupe = {
+  id: string; // utilisateurId
+  prenom: string;
+  nom: string;
+  email: string;
+  statut: StatutCompteGroupe;
+  role: { id: string; nom: string };
+  administration: boolean;
+  salaireBrutMensuel: number | null; // FCFA ; null = non renseigné
+};
+
+export type SocieteComptes = {
+  id: string;
+  nom: string;
+  slug: string;
+  rolesAttribuables: RoleAttribuable[];
+  comptes: CompteGroupe[];
+};
+
+export type ComptesGroupe = { societes: SocieteComptes[] };

@@ -24,15 +24,17 @@ type Options = {
 
 // Appel authentifié à une route sous /api/societes/:slug.
 // `chemin` commence par « / » — ex. apiSociete(slug, `/projets/${id}/permis`).
-export async function apiSociete<T>(
-  slug: string,
-  chemin: string,
-  options: Options = {},
-): Promise<T> {
+export function apiSociete<T>(slug: string, chemin: string, options: Options = {}): Promise<T> {
+  return apiAuth<T>(`/societes/${slug}${chemin}`, options);
+}
+
+// Appel authentifié à n'importe quelle route de l'API (ex. /groupe/comptes
+// pour l'admin du groupe, hors de toute société). `chemin` commence par « / ».
+export async function apiAuth<T>(chemin: string, options: Options = {}): Promise<T> {
   const session = getSession();
   const aCorps = options.body !== undefined;
 
-  const res = await fetch(`${API_URL}/societes/${slug}${chemin}`, {
+  const res = await fetch(`${API_URL}${chemin}`, {
     method: options.method ?? 'GET',
     cache: 'no-store',
     headers: {

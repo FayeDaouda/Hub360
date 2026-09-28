@@ -37,14 +37,21 @@ export class AuthService {
       throw new UnauthorizedException('Société introuvable');
     }
 
-    // Cherche un rôle spécifique à cette société, ou un rôle transverse (societeId null)
-    const acces = await this.prisma.utilisateurSocieteRole.findFirst({
+    // Affectation dans cette société, sinon affectation transverse
+    // (societeId null, ex. holding_admin). Choix explicite plutôt qu'un
+    // findFirst non ordonné, qui prenait l'une ou l'autre au hasard quand un
+    // compte a les deux. Un rôle supprimé (soft-delete) n'ouvre aucun accès.
+    const affectations = await this.prisma.utilisateurSocieteRole.findMany({
       where: {
         utilisateurId: utilisateur.id,
         OR: [{ societeId: societe.id }, { societeId: null }],
+        role: { supprimeLe: null },
       },
       include: { role: { include: { permissions: { include: { module: true } } } } },
     });
+    const acces =
+      affectations.find((a) => a.societeId === societe.id) ??
+      affectations.find((a) => a.societeId === null);
 
     if (!acces) {
       throw new UnauthorizedException("Vous n'avez pas accès à cette société");

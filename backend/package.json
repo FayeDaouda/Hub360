@@ -15,7 +15,8 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "codes:regenerer": "ts-node prisma/scripts/regenerer-codes-dossiers.ts",
     "catalogue:importer": "ts-node prisma/scripts/importer-catalogue.ts",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "comptes-demo": "ts-node prisma/comptes-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

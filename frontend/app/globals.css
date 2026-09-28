@@ -2132,20 +2132,520 @@ button {
   font-size: 0.9rem;
 }
 
-.groupe-societe-list {
-  margin: 1.5rem 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+/* ==========================================================================
+   Espace groupe (app/groupe) — admin du groupe : Comptes & rôles (sept. 2026).
+   Même langage que le back-office (fond --admin-fond + halos, .glass-panel,
+   pastilles de statut) ; le tableau passe en cartes sous 860px.
+   ========================================================================== */
+.groupe-espace {
+  --gs-ok: var(--sauge-fonce);
+  --gs-attente: var(--ocre-fonce);
+  --gs-erreur: #b3261e;
+
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--admin-fond);
+  color: var(--text);
+}
+:root[data-theme='dark'] .groupe-espace {
+  --gs-ok: oklch(80% 0.15 142);
+  --gs-attente: oklch(84% 0.13 82);
+  --gs-erreur: #ff9b91;
 }
 
-.groupe-societe-list li {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+.groupe-espace .skeleton {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--text) 5%, transparent) 30%,
+    color-mix(in srgb, var(--text) 10%, transparent) 50%,
+    color-mix(in srgb, var(--text) 5%, transparent) 70%
+  );
+  background-size: 200% 100%;
+}
+
+.groupe-barre {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) clamp(1rem, 4vw, 2rem) 0.5rem;
+}
+.groupe-barre-marque {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+.groupe-logo {
+  flex: none;
+  width: 104px;
+}
+.groupe-barre-titre {
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.95rem;
   font-weight: 600;
+  white-space: nowrap;
+}
+.groupe-barre-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.groupe-contenu {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1.5rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 4vw, 2rem) 3rem;
+}
+.groupe-intro h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.1rem);
+  letter-spacing: -0.02em;
+}
+.groupe-intro p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.groupe-panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: clamp(1.1rem, 2.5vw, 1.75rem);
+}
+/* Le reflet de .glass-panel (::before, positionné) se peindrait PAR-DESSUS
+   le contenu non positionné — champ de recherche délavé en sombre. */
+.groupe-panel > * {
+  position: relative;
+}
+.groupe-panel-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+.groupe-panel-entete h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.groupe-panel-entete p {
+  max-width: 52ch;
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.groupe-resume {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+}
+.groupe-resume > div {
+  min-width: 118px;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+.groupe-resume dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.groupe-resume dd {
+  display: grid;
+  margin: 0.2rem 0 0;
+  font-family: var(--font-titre);
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.groupe-resume small {
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.groupe-onglets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.groupe-onglet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--glass-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.groupe-onglet.est-actif {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--violet-hub), var(--cyan-hub));
+  color: #fff;
+}
+.groupe-onglet-compte {
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.72rem;
+}
+.groupe-onglet:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 2px;
+}
+
+.groupe-recherche {
+  max-width: 360px;
+}
+/* Gris par défaut du navigateur (#757575) illisible sur le verre sombre. */
+.groupe-recherche .field-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.groupe-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.groupe-table th {
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.groupe-table td {
+  padding: 0.75rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  vertical-align: middle;
+}
+.groupe-table tr:last-child td {
+  border-bottom: none;
+}
+.groupe-table th:first-child,
+.groupe-table td:first-child {
+  padding-left: 0;
+}
+.groupe-table th:last-child,
+.groupe-table td:last-child {
+  padding-right: 0;
+}
+.groupe-col-salaire {
+  width: 230px;
+}
+
+.groupe-personne {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.groupe-personne strong {
+  display: block;
+  font-weight: 600;
+}
+.groupe-email {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+.groupe-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--violet-hub), var(--cyan-hub));
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.groupe-statut {
+  justify-self: start; /* en carte (mobile), ne s'étire pas sur la largeur */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.groupe-statut::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.groupe-statut--actif {
+  color: var(--gs-ok);
+  background: color-mix(in srgb, var(--gs-ok) 14%, transparent);
+}
+.groupe-statut--en_attente {
+  color: var(--gs-attente);
+  background: color-mix(in srgb, var(--gs-attente) 16%, transparent);
+}
+.groupe-statut--desactive {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.groupe-cellule-action {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: start;
+}
+
+.groupe-role-select {
+  min-width: 190px;
+  padding: 0.45rem 2rem 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--glass-bg);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    right 0.95rem center,
+    right 0.7rem center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+}
+.groupe-role-select:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.groupe-role-select:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 1px;
+}
+
+.groupe-role-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.groupe-salaire {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 210px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--glass-bg);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.groupe-salaire:focus-within {
+  border-color: var(--argile);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--argile) 18%, transparent);
+}
+.groupe-salaire.est-invalide {
+  border-color: var(--gs-erreur);
+}
+.groupe-salaire-saisie {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.45rem 0.45rem 0.7rem;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.groupe-salaire-saisie::placeholder {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.groupe-salaire-devise {
+  padding-right: 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.groupe-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+.groupe-etat:empty {
+  min-height: 0;
+}
+.groupe-etat--ok {
+  color: var(--gs-ok);
+}
+.groupe-etat--erreur {
+  color: var(--gs-erreur);
+}
+.groupe-etat-roue {
+  animation: auth-rotation 0.8s linear infinite;
+}
+
+.groupe-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.groupe-note svg {
+  flex: none;
+  margin-top: 0.1rem;
+}
+.groupe-erreur {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--gs-erreur);
+}
+.groupe-squelette-titre {
+  width: 40%;
+  height: 1.6rem;
+}
+.groupe-squelette-ligne {
+  height: 3rem;
+}
+
+/* Écrans tactiles : 16px minimum dans les champs, sinon iOS zoome au focus. */
+@media (pointer: coarse) {
+  .groupe-salaire-saisie,
+  .groupe-role-select {
+    font-size: 16px;
+  }
+}
+
+/* Sous 860px : chaque compte devient une carte (libellés tirés de data-libelle). */
+@media (max-width: 859px) {
+  .groupe-table thead {
+    display: none;
+  }
+  .groupe-table,
+  .groupe-table tbody,
+  .groupe-table tr,
+  .groupe-table td {
+    display: block;
+    width: 100%;
+  }
+  .groupe-table tr {
+    margin-bottom: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+  }
+  .groupe-table td,
+  .groupe-table td:first-child,
+  .groupe-table td:last-child {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border: 0;
+  }
+  .groupe-table td::before {
+    content: attr(data-libelle);
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .groupe-table td[data-libelle='Personne'] {
+    display: block;
+    padding-bottom: 0.6rem;
+  }
+  .groupe-table td[data-libelle='Personne']::before {
+    content: none;
+  }
+  .groupe-col-salaire {
+    width: auto;
+  }
+  .groupe-role-select,
+  .groupe-salaire {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+  .groupe-cellule-action {
+    justify-items: stretch;
+  }
+  .groupe-recherche {
+    max-width: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .groupe-table td,
+  .groupe-table td:first-child,
+  .groupe-table td:last-child {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+  .groupe-barre-titre,
+  .groupe-libelle-bouton {
+    display: none;
+  }
+  .groupe-resume > div {
+    flex: 1 1 40%;
+  }
 }
 
 /* ==========================================================================
