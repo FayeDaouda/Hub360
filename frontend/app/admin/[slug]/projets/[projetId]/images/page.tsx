@@ -24,7 +24,7 @@ import {
   supprimerImages,
 } from '@/lib/images';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
-import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import {
   CATEGORIES,
   NATURES_DOSSIER,
@@ -67,6 +67,7 @@ function telecharger(img: ImageProjet) {
 
 export default function ImagesPage({ params }: Props) {
   useTitrePage('Images');
+  const { ecriture } = useDroitsProjet();
   const session = useSessionCourante();
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(
     undefined,
@@ -349,7 +350,8 @@ export default function ImagesPage({ params }: Props) {
                 >
                   {modeSelection ? 'Annuler' : 'Sélectionner'}
                 </button>
-                <button
+                {ecriture && (
+<button
                   type="button"
                   className="btn-primary"
                   onClick={() => inputRef.current?.click()}
@@ -357,6 +359,7 @@ export default function ImagesPage({ params }: Props) {
                   <Plus size={16} strokeWidth={2} aria-hidden />
                   <span>Ajouter</span>
                 </button>
+)}
               </>
             )}
             <input
@@ -434,7 +437,7 @@ export default function ImagesPage({ params }: Props) {
             )}
           </div>
 
-          {modeSelection && lot.length > 0 && (
+          {ecriture && modeSelection && lot.length > 0 && (
             <div
               className="images-lot"
               role="region"
@@ -521,13 +524,13 @@ export default function ImagesPage({ params }: Props) {
           <div
             className={`images-dropzone${survol ? ' is-survol' : ''}`}
             onDragOver={(e) => {
-              if (enCorbeille) return;
+              if (enCorbeille || !ecriture) return;
               e.preventDefault();
               setSurvol(true);
             }}
             onDragLeave={() => setSurvol(false)}
             onDrop={(e) => {
-              if (enCorbeille) return;
+              if (enCorbeille || !ecriture) return;
               e.preventDefault();
               setSurvol(false);
               choisirFichiers(e.dataTransfer.files);
@@ -548,7 +551,7 @@ export default function ImagesPage({ params }: Props) {
               <ul className="images-grille">
                 {visibles.map((img) => {
                   const cochee = coches.has(img.id);
-                  const ordonnable = filtre === 'portfolio' && !modeSelection;
+                  const ordonnable = ecriture && filtre === 'portfolio' && !modeSelection;
                   return (
                     <li
                       key={img.id}
@@ -616,7 +619,8 @@ export default function ImagesPage({ params }: Props) {
                         <span className="image-sous">
                           Supprimée par {img.supprimePar} ·{' '}
                           {formatDateCourte(img.supprimeLe!)}
-                          <button
+                          {ecriture && (
+<button
                             type="button"
                             className="lien-inline"
                             onClick={() => restaurer(img.id)}
@@ -624,6 +628,7 @@ export default function ImagesPage({ params }: Props) {
                             <RotateCcw size={12} strokeWidth={2} aria-hidden />{' '}
                             Restaurer
                           </button>
+)}
                         </span>
                       ) : (
                         <span className="image-sous">
@@ -698,7 +703,7 @@ export default function ImagesPage({ params }: Props) {
                   <div className="field-row">
                     <label className="field">
                       <span className="field-label">Usage</span>
-                      <select
+                      <select disabled={!ecriture}
                         className="field-input"
                         value={selection.usage}
                         onChange={(e) =>
@@ -716,7 +721,7 @@ export default function ImagesPage({ params }: Props) {
                     </label>
                     <label className="field">
                       <span className="field-label">Phase (indicatif)</span>
-                      <select
+                      <select disabled={!ecriture}
                         className="field-input"
                         value={selection.phase ?? ''}
                         onChange={(e) =>
@@ -741,7 +746,7 @@ export default function ImagesPage({ params }: Props) {
                     <span className="field-label">
                       Type de photo (indicatif)
                     </span>
-                    <select
+                    <select disabled={!ecriture}
                       className="field-input"
                       value={selection.typePhoto ?? ''}
                       onChange={(e) =>
@@ -768,7 +773,7 @@ export default function ImagesPage({ params }: Props) {
                       <span className="field-label">
                         Légende — site vitrine
                       </span>
-                      <input
+                      <input disabled={!ecriture}
                         className="field-input"
                         value={selection.legende}
                         onChange={(e) =>
@@ -802,7 +807,7 @@ export default function ImagesPage({ params }: Props) {
                   <Download size={14} strokeWidth={2} aria-hidden />
                   <span>Télécharger</span>
                 </button>
-                {selection.supprimee ? (
+                {!ecriture ? null : selection.supprimee ? (
                   <button
                     type="button"
                     className="btn-primary"

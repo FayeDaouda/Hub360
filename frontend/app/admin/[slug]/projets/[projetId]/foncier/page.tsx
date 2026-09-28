@@ -12,7 +12,7 @@ import {
   patchItemFoncier,
 } from '@/lib/foncier';
 import { getCollaborateurs } from '@/lib/equipe';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistFichiers,
   COULEUR_SECTION,
@@ -54,6 +54,7 @@ export default function FoncierPage({ params }: Props) {
   const [joindreGroupeOuvert, setJoindreGroupeOuvert] = useState<GroupeFoncierCle | null>(null);
 
   useTitrePage('Foncier');
+  const { ecriture } = useDroitsProjet();
 
   function toggleGroupe(groupe: GroupeFoncierCle) {
     setGroupesFermes((s) => {
@@ -199,7 +200,7 @@ export default function FoncierPage({ params }: Props) {
                     <span className="field-label">Responsable du bloc</span>
                     <select
                       className="field-input"
-                      disabled={equipeProjet.length === 0}
+                      disabled={!ecriture || equipeProjet.length === 0}
                       title={
                         equipeProjet.length === 0
                           ? 'Assigne d’abord une cellule à ce projet'
@@ -218,7 +219,8 @@ export default function FoncierPage({ params }: Props) {
                   </label>
                   <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
                     <span className="field-label">Ajouter une pièce</span>
-                    <button
+                    {ecriture && (
+<button
                       type="button"
                       className="field-input ap-souscheck-joindre-champ"
                       onClick={() => setJoindreGroupeOuvert(groupe.groupe)}
@@ -226,6 +228,7 @@ export default function FoncierPage({ params }: Props) {
                       <Paperclip size={14} strokeWidth={2} aria-hidden />
                       Joindre
                     </button>
+)}
                   </div>
                 </div>
 
@@ -242,7 +245,7 @@ export default function FoncierPage({ params }: Props) {
                           <input
                             type="checkbox"
                             checked={item.statut === 'fait'}
-                            disabled={item.statut === 'non_necessaire'}
+                            disabled={!ecriture || item.statut === 'non_necessaire'}
                             onChange={() => basculerFait(item)}
                           />
                           <span>{item.libelle}</span>
@@ -254,6 +257,7 @@ export default function FoncierPage({ params }: Props) {
                               item.statut === 'non_necessaire' ? ' est-actif' : ''
                             }`}
                             onClick={() => basculerNonNecessaire(item)}
+ disabled={!ecriture}
                           >
                             Non nécessaire
                           </button>

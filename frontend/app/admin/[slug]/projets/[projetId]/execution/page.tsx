@@ -15,7 +15,7 @@ import {
   supprimerLigneChecklistExecution,
 } from '@/lib/execution';
 import { getCollaborateurs } from '@/lib/equipe';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistAvp,
   CATEGORIES,
@@ -35,6 +35,7 @@ type Props = { params: { slug: string; projetId: string } };
 
 export default function ExecutionPage({ params }: Props) {
   useTitrePage('Dossier Exécutions');
+  const { ecriture } = useDroitsProjet();
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [exec, setExec] = useState<Execution | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -260,6 +261,7 @@ export default function ExecutionPage({ params }: Props) {
                     <input
                       type="date"
                       className="field-input"
+                      disabled={!ecriture}
                       value={groupe.echeance ?? ''}
                       onChange={(e) =>
                         majBloc(groupe.groupe, { echeance: e.target.value || null })
@@ -270,7 +272,7 @@ export default function ExecutionPage({ params }: Props) {
                     <span className="field-label">Responsable du bloc</span>
                     <select
                       className="field-input"
-                      disabled={equipeProjet.length === 0}
+                      disabled={!ecriture || equipeProjet.length === 0}
                       title={
                         equipeProjet.length === 0
                           ? 'Assigne d’abord une cellule à ce projet'
@@ -297,25 +299,30 @@ export default function ExecutionPage({ params }: Props) {
                         au {formatDateCourte(groupe.prolongationEcheance!)}
                         {groupe.prolongationMotif ? ` — « ${groupe.prolongationMotif} »` : ''}
                       </span>
-                      <button
+                      {ecriture && (
+<button
                         type="button"
                         className="btn-ghost btn-ghost--sm"
                         onClick={() => deciderProlongation(groupe.groupe, true)}
                       >
                         Accepter
                       </button>
-                      <button
+)}
+                      {ecriture && (
+<button
                         type="button"
                         className="btn-ghost btn-ghost--sm"
                         onClick={() => deciderProlongation(groupe.groupe, false)}
                       >
                         Refuser
                       </button>
+)}
                     </span>
                   )}
                   <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
                     <span className="field-label">Ajouter une pièce</span>
-                    <button
+                    {ecriture && (
+<button
                       type="button"
                       className="field-input ap-souscheck-joindre-champ"
                       onClick={() => setJoindreGroupeOuvert(groupe.groupe)}
@@ -323,6 +330,7 @@ export default function ExecutionPage({ params }: Props) {
                       <Paperclip size={14} strokeWidth={2} aria-hidden />
                       Joindre
                     </button>
+)}
                   </div>
                 </div>
 
@@ -339,7 +347,7 @@ export default function ExecutionPage({ params }: Props) {
                         <input
                           type="checkbox"
                           checked={it.fait}
-                          disabled={it.nonRequise}
+                          disabled={!ecriture || it.nonRequise}
                           onChange={(e) =>
                             majItemChecklist(it.id, { fait: e.target.checked })
                           }
@@ -353,6 +361,7 @@ export default function ExecutionPage({ params }: Props) {
                             it.nonRequise ? ' est-actif' : ''
                           }`}
                           onClick={() => toggleNonRequis(it)}
+ disabled={!ecriture}
                         >
                           Non nécessaire
                         </button>
@@ -360,7 +369,8 @@ export default function ExecutionPage({ params }: Props) {
                           actif={!!it.note || it.fichiers.length > 0}
                           onClick={() => setDetailItem(it)}
                         />
-                        <button
+                        {ecriture && (
+<button
                           type="button"
                           className="ap-souscheck-suppr"
                           title="Retirer cet item"
@@ -368,6 +378,7 @@ export default function ExecutionPage({ params }: Props) {
                         >
                           <Trash2 size={14} strokeWidth={2} aria-hidden />
                         </button>
+)}
                       </span>
                       {it.fait && it.faitPar && (
                         <span className="ap-souscheck-faitpar">Coché par {it.faitPar.nom}</span>
@@ -376,7 +387,7 @@ export default function ExecutionPage({ params }: Props) {
                   ))}
                 </ul>
                 )}
-                {!fermee && (
+                {!fermee && ecriture && (
                 <button
                   type="button"
                   className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
@@ -406,6 +417,7 @@ export default function ExecutionPage({ params }: Props) {
 
           {detailItem && (
             <DetailItemModal
+ lectureSeule={!ecriture}
               libelle={detailItem.libelle}
               noteInitiale={detailItem.note}
               fichiers={detailItem.fichiers}

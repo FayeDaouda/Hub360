@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect } from 'react';
 import type { Session, Societe } from './types';
+import { droitsProjet, type DroitsProjet } from './acces-back-office';
 
 // Contexte posé par les layouts persistants (app/admin/[slug]/layout.tsx,
 // app/collab/[slug]/layout.tsx) — la coquille (sidebar/topbar) ne démonte plus
@@ -53,4 +54,9 @@ export function useSessionCourante(): Session {
 // cas comme avant le layout persistant.
 export function useSocieteCourante(): Societe | null {
   return useLayoutCtx().societe;
+}
+
+// Droits projet de la personne connectée (cf. droitsProjet).
+export function useDroitsProjet(): DroitsProjet {
+  return droitsProjet(useSessionCourante());
 }

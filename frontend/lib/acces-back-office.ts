@@ -13,6 +13,7 @@ import type { Session } from './types';
 // H5 = Facturation).
 const SECTIONS_DIRECTION: Record<string, string> = {
   crm: 'crm', // clé de nav → module de la matrice
+  projets: 'projets',
   facturation: 'finances_factures',
 };
 
@@ -66,4 +67,26 @@ export function sectionPourAcces(pathname: string, slug: string, sectionNav: str
 export function premiereSectionAccessible(session: Session): string | null {
   const cle = ORDRE_SECTIONS.find((c) => sectionAccessible(session, c));
   return cle === undefined ? null : CHEMINS[cle];
+}
+
+// Ce que la personne connectée peut faire sur un projet (écrans admin) —
+// mêmes règles que le serveur, qui revérifie tout. Un seul point de vérité
+// pour toutes les pages projet.
+export type DroitsProjet = {
+  ecriture: boolean; // modifier le projet (checklists, blocs, phase, cellules, carte…)
+  documents: boolean; // section Documents (module « documents », ouvert plus tard aux rôles)
+  facturesLecture: boolean; // montants de facture (Études, Facturation)
+  facturesEcriture: boolean;
+  marges: boolean; // pré-bilan
+};
+
+export function droitsProjet(session: Session): DroitsProjet {
+  const admin = session.role === 'societe_admin';
+  return {
+    ecriture: admin || niveauSuffisant(session, 'projets', 'ecriture'),
+    documents: admin,
+    facturesLecture: admin || niveauSuffisant(session, 'finances_factures', 'lecture'),
+    facturesEcriture: admin || niveauSuffisant(session, 'finances_factures', 'ecriture'),
+    marges: admin || niveauSuffisant(session, 'finances_marges', 'lecture'),
+  };
 }

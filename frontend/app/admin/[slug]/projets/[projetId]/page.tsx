@@ -21,7 +21,7 @@ import { getCellules } from '@/lib/equipe';
 import { getPermis } from '@/lib/permis';
 import { getEtudes } from '@/lib/etudes';
 import { getExecution } from '@/lib/execution';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistAvp,
   avancementChecklistFichiers,
@@ -88,6 +88,7 @@ export default function ProjetPage({ params }: Props) {
   const [execution, setExecution] = useState<Execution | null>(null);
 
   useTitrePage(projet ? projet.programme : 'Projet');
+  const droits = useDroitsProjet();
 
   useEffect(() => {
     getProjetExecution(params.slug, params.projetId).then((p) => {
@@ -107,7 +108,11 @@ export default function ProjetPage({ params }: Props) {
 
   const celluleNoms = useMemo(() => {
     if (!projet) return [];
-    return projet.cellules.map((id) => cellules.find((c) => c.id === id)?.nom ?? id);
+    // Nom inconnu (rôle sans accès à la liste des cellules) : libellé neutre,
+    // jamais l'identifiant brut.
+    return projet.cellules.map(
+      (id, i) => cellules.find((c) => c.id === id)?.nom ?? `Cellule ${i + 1}`,
+    );
   }, [projet, cellules]);
 
   // Avancement de la checklist Exécution (8 blocs) — remplace l'ancien
@@ -159,6 +164,7 @@ export default function ProjetPage({ params }: Props) {
                 ) : (
                   <span className="cell-sub">Aucune cellule</span>
                 )}
+                {droits.ecriture && (
                 <button
                   type="button"
                   className="btn-ghost btn-ghost--sm"
@@ -171,6 +177,8 @@ export default function ProjetPage({ params }: Props) {
                   )}
                   {projet.cellules.length ? 'Modifier les cellules' : 'Assigner'}
                 </button>
+                )}
+                {droits.ecriture && (
                 <button
                   type="button"
                   className="btn-ghost btn-ghost--sm"
@@ -179,6 +187,7 @@ export default function ProjetPage({ params }: Props) {
                   <MapPin size={14} strokeWidth={2} aria-hidden />
                   {projet.latitude != null ? 'Localisation' : 'Localiser'}
                 </button>
+                )}
               </span>
             </div>
           </header>
@@ -204,11 +213,14 @@ export default function ProjetPage({ params }: Props) {
                   : null)
             }
             onChange={setProjet}
+            lectureSeule={!droits.ecriture}
           />
 
           <div className="projet-cartes">
-            {SECTIONS_PROJET.filter((section) =>
-              SECTIONS_PAR_CATEGORIE[projet.categorie].includes(section.cle),
+            {SECTIONS_PROJET.filter(
+              (section) =>
+                SECTIONS_PAR_CATEGORIE[projet.categorie].includes(section.cle) &&
+                (section.cle !== 'documents' || droits.documents),
             ).map((section) => {
               const Icone = ICONE_SECTION[section.cle];
               let etat: { classe: string; texte: string } | null = null;
@@ -264,12 +276,14 @@ export default function ProjetPage({ params }: Props) {
               grille projet (sept. 2026) : la carte + sa route dédiée
               disparaissent, remplacées par un lien filtré depuis la page
               centrale /admin/:slug/facturation. */}
-          <Link
-            href={`/admin/${params.slug}/facturation?projetId=${projet.id}`}
-            className="lien-inline"
-          >
-            Voir la facturation de ce projet →
-          </Link>
+          {droits.facturesLecture && (
+            <Link
+              href={`/admin/${params.slug}/facturation?projetId=${projet.id}`}
+              className="lien-inline"
+            >
+              Voir la facturation de ce projet →
+            </Link>
+          )}
         </>
       )}
 

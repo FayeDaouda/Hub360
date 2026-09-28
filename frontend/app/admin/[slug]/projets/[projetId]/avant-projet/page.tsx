@@ -16,7 +16,7 @@ import {
   supprimerLigneChecklistAvp,
 } from '@/lib/projets';
 import { getCollaborateurs } from '@/lib/equipe';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistFichiers,
   CATEGORIES,
@@ -49,6 +49,7 @@ function telecharger(f: FichierItemChecklistAvp) {
 
 export default function AvantProjetPage({ params }: Props) {
   useTitrePage('Avant-projet');
+  const { ecriture } = useDroitsProjet();
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [ap, setAp] = useState<AvantProjet | null>(null);
   // Équipe DU PROJET (cellules assignées) — pour le sélecteur de responsable
@@ -287,6 +288,7 @@ export default function AvantProjetPage({ params }: Props) {
                         <input
                           type="date"
                           className="field-input"
+                          disabled={!ecriture}
                           value={groupe.echeance ?? ''}
                           onChange={(e) => majBloc(groupe.groupe, { echeance: e.target.value || null })}
                         />
@@ -295,7 +297,7 @@ export default function AvantProjetPage({ params }: Props) {
                         <span className="field-label">Responsable du bloc</span>
                         <select
                           className="field-input"
-                          disabled={equipeProjet.length === 0}
+                          disabled={!ecriture || equipeProjet.length === 0}
                           title={
                             equipeProjet.length === 0
                               ? 'Assigne d’abord une cellule à ce projet'
@@ -322,25 +324,30 @@ export default function AvantProjetPage({ params }: Props) {
                             au {formatDateCourte(groupe.prolongationEcheance!)}
                             {groupe.prolongationMotif ? ` — « ${groupe.prolongationMotif} »` : ''}
                           </span>
-                          <button
+                          {ecriture && (
+<button
                             type="button"
                             className="btn-ghost btn-ghost--sm"
                             onClick={() => deciderProlongation(groupe.groupe, true)}
                           >
                             Accepter
                           </button>
-                          <button
+)}
+                          {ecriture && (
+<button
                             type="button"
                             className="btn-ghost btn-ghost--sm"
                             onClick={() => deciderProlongation(groupe.groupe, false)}
                           >
                             Refuser
                           </button>
+)}
                         </span>
                       )}
                       <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
                         <span className="field-label">Ajouter une pièce</span>
-                        <button
+                        {ecriture && (
+<button
                           type="button"
                           className="field-input ap-souscheck-joindre-champ"
                           onClick={() => setJoindreGroupeOuvert(groupe.groupe)}
@@ -348,6 +355,7 @@ export default function AvantProjetPage({ params }: Props) {
                           <Paperclip size={14} strokeWidth={2} aria-hidden />
                           Joindre
                         </button>
+)}
                       </div>
                     </div>
 
@@ -364,7 +372,7 @@ export default function AvantProjetPage({ params }: Props) {
                               <input
                                 type="checkbox"
                                 checked={item.statut === 'fait'}
-                                disabled={item.statut === 'non_necessaire'}
+                                disabled={!ecriture || item.statut === 'non_necessaire'}
                                 onChange={() => basculerFait(item)}
                               />
                               <span>{item.libelle}</span>
@@ -376,6 +384,7 @@ export default function AvantProjetPage({ params }: Props) {
                                   item.statut === 'non_necessaire' ? ' est-actif' : ''
                                 }`}
                                 onClick={() => basculerNonNecessaire(item)}
+ disabled={!ecriture}
                               >
                                 Non nécessaire
                               </button>
@@ -383,7 +392,8 @@ export default function AvantProjetPage({ params }: Props) {
                                 actif={item.fichiers.length > 0}
                                 onClick={() => setDetailItem(item)}
                               />
-                              <button
+                              {ecriture && (
+<button
                                 type="button"
                                 className="ap-souscheck-suppr"
                                 title="Retirer cet item"
@@ -391,12 +401,13 @@ export default function AvantProjetPage({ params }: Props) {
                               >
                                 <Trash2 size={14} strokeWidth={2} aria-hidden />
                               </button>
+)}
                             </span>
                           </li>
                         ))}
                       </ul>
                     )}
-                    {!fermee && (
+                    {!fermee && ecriture && (
                       <button
                         type="button"
                         className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"

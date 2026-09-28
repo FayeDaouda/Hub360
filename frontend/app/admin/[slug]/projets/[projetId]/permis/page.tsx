@@ -19,7 +19,7 @@ import {
   supprimerLigneChecklistPermis,
 } from '@/lib/permis';
 import { getCollaborateurs } from '@/lib/equipe';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistAvp,
   CATEGORIES,
@@ -42,6 +42,7 @@ type Props = { params: { slug: string; projetId: string } };
 
 export default function PermisPage({ params }: Props) {
   useTitrePage('Autorisation');
+  const { ecriture } = useDroitsProjet();
   const router = useRouter();
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [permis, setPermis] = useState<Permis | null>(null);
@@ -335,6 +336,7 @@ export default function PermisPage({ params }: Props) {
                     <input
                       type="date"
                       className="field-input"
+                      disabled={!ecriture}
                       value={groupe.echeance ?? ''}
                       onChange={(e) =>
                         majBloc(groupe.groupe, { echeance: e.target.value || null })
@@ -345,7 +347,7 @@ export default function PermisPage({ params }: Props) {
                     <span className="field-label">Responsable du bloc</span>
                     <select
                       className="field-input"
-                      disabled={equipeProjet.length === 0}
+                      disabled={!ecriture || equipeProjet.length === 0}
                       title={
                         equipeProjet.length === 0
                           ? 'Assigne d’abord une cellule à ce projet'
@@ -372,23 +374,27 @@ export default function PermisPage({ params }: Props) {
                         au {formatDateCourte(groupe.prolongationEcheance!)}
                         {groupe.prolongationMotif ? ` — « ${groupe.prolongationMotif} »` : ''}
                       </span>
-                      <button
-                        type="button"
-                        className="btn-ghost btn-ghost--sm"
-                        onClick={() => deciderProlongation(groupe.groupe, true)}
-                      >
-                        Accepter
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost btn-ghost--sm"
-                        onClick={() => deciderProlongation(groupe.groupe, false)}
-                      >
-                        Refuser
-                      </button>
+                      {ecriture && (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-ghost btn-ghost--sm"
+                            onClick={() => deciderProlongation(groupe.groupe, true)}
+                          >
+                            Accepter
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-ghost btn-ghost--sm"
+                            onClick={() => deciderProlongation(groupe.groupe, false)}
+                          >
+                            Refuser
+                          </button>
+                        </>
+                      )}
                     </span>
                   )}
-                  {groupe.groupe === 'dossier_permis' ? (
+                  {!ecriture ? null : groupe.groupe === 'dossier_permis' ? (
                     <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
                       <span className="field-label">Ajouter une pièce</span>
                       <button
@@ -426,7 +432,7 @@ export default function PermisPage({ params }: Props) {
                         <input
                           type="checkbox"
                           checked={it.fait}
-                          disabled={it.nonRequise}
+                          disabled={!ecriture || it.nonRequise}
                           onChange={(e) =>
                             majItemChecklist(it.id, { fait: e.target.checked })
                           }
@@ -440,6 +446,7 @@ export default function PermisPage({ params }: Props) {
                             it.nonRequise ? ' est-actif' : ''
                           }`}
                           onClick={() => toggleNonRequis(it)}
+                          disabled={!ecriture}
                         >
                           Non nécessaire
                         </button>
@@ -447,14 +454,16 @@ export default function PermisPage({ params }: Props) {
                           actif={!!it.note || it.fichiers.length > 0}
                           onClick={() => setDetailItem(it)}
                         />
-                        <button
-                          type="button"
-                          className="ap-souscheck-suppr"
-                          title="Retirer cet item"
-                          onClick={() => supprimerItemChecklist(it.id)}
-                        >
-                          <Trash2 size={14} strokeWidth={2} aria-hidden />
-                        </button>
+                        {ecriture && (
+                          <button
+                            type="button"
+                            className="ap-souscheck-suppr"
+                            title="Retirer cet item"
+                            onClick={() => supprimerItemChecklist(it.id)}
+                          >
+                            <Trash2 size={14} strokeWidth={2} aria-hidden />
+                          </button>
+                        )}
                       </span>
                       {it.fait && it.faitPar && (
                         <span className="ap-souscheck-faitpar">Coché par {it.faitPar.nom}</span>
@@ -478,7 +487,7 @@ export default function PermisPage({ params }: Props) {
                     </ul>
                   </div>
                 )}
-                {!fermee && (
+                {!fermee && ecriture && (
                 <button
                   type="button"
                   className="btn-ghost btn-ghost--sm ap-souscheck-ajout-bouton"
@@ -513,6 +522,7 @@ export default function PermisPage({ params }: Props) {
               fichiers={detailItem.fichiers}
               onEnregistrerNote={(note) => majItemChecklist(detailItem.id, { note })}
               onClose={() => setDetailItem(null)}
+              lectureSeule={!ecriture}
             />
           )}
 
@@ -536,6 +546,7 @@ export default function PermisPage({ params }: Props) {
               <span className="field-label">Statut</span>
               <select
                 className="field-input"
+                disabled={!ecriture}
                 value={permis.statut}
                 onChange={(e) => maj('statut', e.target.value as StatutPermis)}
               >
@@ -549,6 +560,7 @@ export default function PermisPage({ params }: Props) {
           </section>
 
           {erreur && <p className="field-erreur">{erreur}</p>}
+          {ecriture && (
           <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
             <button
               type="button"
@@ -559,6 +571,7 @@ export default function PermisPage({ params }: Props) {
               {enregistre ? 'Enregistré' : enCours ? 'Enregistrement…' : 'Enregistrer'}
             </button>
           </div>
+          )}
         </>
       )}
     </>

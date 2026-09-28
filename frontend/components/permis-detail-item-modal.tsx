@@ -14,6 +14,8 @@ type Props = {
   fichiers: FichierLigne[];
   onEnregistrerNote: (note: string) => Promise<void>;
   onClose: () => void;
+  // Rôle en lecture seule sur le projet : note consultable, pas modifiable.
+  lectureSeule?: boolean;
 };
 
 // Détail d'un item de checklist (Permis / Exécution) — remplace le champ note
@@ -26,6 +28,7 @@ export function DetailItemModal({
   noteInitiale,
   fichiers,
   onEnregistrerNote,
+  lectureSeule = false,
   onClose,
 }: Props) {
   const [note, setNote] = useState(noteInitiale);
@@ -100,18 +103,21 @@ export function DetailItemModal({
               rows={3}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Précision, motif, contexte…"
-              autoFocus
+              placeholder={lectureSeule ? '' : 'Précision, motif, contexte…'}
+              readOnly={lectureSeule}
+              autoFocus={!lectureSeule}
             />
           </label>
 
           <div className="modal-actions">
             <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
-              Annuler
+              {lectureSeule ? 'Fermer' : 'Annuler'}
             </button>
-            <button type="button" className="btn-primary" onClick={enregistrer} disabled={enCours}>
-              {enCours ? 'Enregistrement…' : 'Enregistrer'}
-            </button>
+            {!lectureSeule && (
+              <button type="button" className="btn-primary" onClick={enregistrer} disabled={enCours}>
+                {enCours ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            )}
           </div>
         </div>
       </div>

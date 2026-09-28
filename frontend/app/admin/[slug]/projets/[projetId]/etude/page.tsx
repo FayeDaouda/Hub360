@@ -16,7 +16,7 @@ import {
   type PatchBlocEtude,
 } from '@/lib/etudes';
 import { lireFichier } from '@/lib/fichiers';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   avancementChecklistFichiers,
   CATEGORIES,
@@ -42,6 +42,7 @@ function dateInput(iso: string | null): string {
 
 export default function EtudePage({ params }: Props) {
   useTitrePage('Bureau d’études technique');
+  const { ecriture, facturesEcriture } = useDroitsProjet();
   const router = useRouter();
   const [projet, setProjet] = useState<ProjetExecution | null | undefined>(undefined);
   const [etudes, setEtudes] = useState<Etudes | null>(null);
@@ -239,7 +240,7 @@ export default function EtudePage({ params }: Props) {
                 <div className="ap-souscheck-bloc-meta">
                   <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Interlocuteur</span>
-                    <input
+                    <input disabled={!ecriture}
                       className="field-input"
                       defaultValue={bloc.interlocuteur}
                       placeholder="Nom du bureau d’études"
@@ -252,7 +253,7 @@ export default function EtudePage({ params }: Props) {
                   </label>
                   <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Contact</span>
-                    <input
+                    <input disabled={!ecriture}
                       className="field-input"
                       defaultValue={bloc.contactInterlocuteur}
                       placeholder="Téléphone, e-mail…"
@@ -265,7 +266,7 @@ export default function EtudePage({ params }: Props) {
                   </label>
                   <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Statut</span>
-                    <select
+                    <select disabled={!ecriture}
                       className={`field-input etude-statut etude-statut--${bloc.statut}`}
                       value={bloc.statut}
                       onChange={(e) => patchBloc(bloc.id, { statut: e.target.value as StatutEtude })}
@@ -279,7 +280,7 @@ export default function EtudePage({ params }: Props) {
                   </label>
                   <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Remise prévue</span>
-                    <input
+                    <input disabled={!ecriture}
                       type="date"
                       className="field-input"
                       value={dateInput(bloc.dateRemisePrevue)}
@@ -288,7 +289,7 @@ export default function EtudePage({ params }: Props) {
                   </label>
                   <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Remise réelle</span>
-                    <input
+                    <input disabled={!ecriture}
                       type="date"
                       className="field-input"
                       value={dateInput(bloc.dateRemiseReelle)}
@@ -297,7 +298,7 @@ export default function EtudePage({ params }: Props) {
                   </label>
                   <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Note</span>
-                    <input
+                    <input disabled={!ecriture}
                       className="field-input"
                       defaultValue={bloc.note}
                       placeholder="—"
@@ -308,7 +309,8 @@ export default function EtudePage({ params }: Props) {
                   </label>
                   <div className="field ap-souscheck-bloc-champ ap-souscheck-bloc-champ--joindre">
                     <span className="field-label">Ajouter une pièce</span>
-                    <button
+                    {ecriture && (
+<button
                       type="button"
                       className="field-input ap-souscheck-joindre-champ"
                       onClick={() => setJoindreBlocOuvert(bloc.id)}
@@ -316,6 +318,7 @@ export default function EtudePage({ params }: Props) {
                       <Paperclip size={14} strokeWidth={2} aria-hidden />
                       Joindre
                     </button>
+)}
                   </div>
                 </div>
 
@@ -329,6 +332,7 @@ export default function EtudePage({ params }: Props) {
                         type="number"
                         min={0}
                         className="field-input"
+                        disabled={!facturesEcriture}
                         defaultValue={bloc.facture.montant ?? ''}
                         placeholder="—"
                         onBlur={(e) => {
@@ -356,6 +360,7 @@ export default function EtudePage({ params }: Props) {
                           Aucun fichier
                         </span>
                       )}
+                      {facturesEcriture && (
                       <label className="ap-souscheck-joindre" style={{ marginTop: '0.4rem' }}>
                         <Paperclip size={12} strokeWidth={2} aria-hidden />
                         {bloc.facture.fichierNom ? 'Remplacer' : 'Joindre'}
@@ -365,6 +370,7 @@ export default function EtudePage({ params }: Props) {
                           onChange={(e) => surFactureFichier(bloc, e.target.files?.[0])}
                         />
                       </label>
+                      )}
                     </div>
                   </div>
                 )}
@@ -382,7 +388,7 @@ export default function EtudePage({ params }: Props) {
                           <input
                             type="checkbox"
                             checked={item.statut === 'fait'}
-                            disabled={item.statut === 'non_necessaire'}
+                            disabled={!ecriture || item.statut === 'non_necessaire'}
                             onChange={() => basculerFait(item)}
                           />
                           <span>{item.libelle}</span>
@@ -394,6 +400,7 @@ export default function EtudePage({ params }: Props) {
                               item.statut === 'non_necessaire' ? ' est-actif' : ''
                             }`}
                             onClick={() => basculerNonNecessaire(item)}
+                            disabled={!ecriture}
                           >
                             Non nécessaire
                           </button>
@@ -427,10 +434,14 @@ export default function EtudePage({ params }: Props) {
               <div className="ap-bandeau" role="status">
                 <FileCheck2 size={16} strokeWidth={2} aria-hidden />
                 <span>DCE constitué le {formatDateCourte(etudes.dceLe!)}.</span>
-                <button type="button" className="lien-inline" onClick={defaireDce}>
-                  Annuler
-                </button>
+                {ecriture && (
+                  <button type="button" className="lien-inline" onClick={defaireDce}>
+                    Annuler
+                  </button>
+                )}
               </div>
+            ) : !ecriture ? (
+              <p className="ap-a-venir">DCE pas encore constitué.</p>
             ) : (
               <button
                 type="button"
