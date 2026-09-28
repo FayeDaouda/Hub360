@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CircleAlert, LoaderCircle, Lock, Mail } from 'lucide-react';
+import Link from 'next/link';
 import { EchecConnexion, login, type MotifEchecConnexion } from '@/lib/api';
 import { saveSession } from '@/lib/auth';
 import { destinationForSession } from '@/lib/session-redirect';
@@ -85,9 +86,9 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
           />
           Se souvenir de moi
         </label>
-        <a href="/mot-de-passe-oublie" className="auth-lien">
+        <Link href="/mot-de-passe-oublie" className="auth-lien">
           Mot de passe oublié&nbsp;?
-        </a>
+        </Link>
       </div>
 
       {error && (

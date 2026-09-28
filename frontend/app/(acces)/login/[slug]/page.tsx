@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getSociete } from '@/lib/api';
 import { LoginForm } from './login-form';
 
@@ -18,7 +19,7 @@ export default async function LoginPage({ params }: Props) {
   const societe = await getSociete(params.slug);
   if (!societe) notFound();
 
-  // Le cadre AuthShell est posé par layout.tsx.
+  // Cadre et présentation posés par les layouts (acces) et login/[slug].
   return (
     <section className="auth-carte" aria-labelledby="connexion-titre">
       <header className="auth-carte-entete">
@@ -32,9 +33,9 @@ export default async function LoginPage({ params }: Props) {
       <LoginForm societeSlug={societe.slug} />
       <p className="auth-carte-pied">
         Pas la bonne société&nbsp;?{' '}
-        <a href="/" className="auth-lien">
+        <Link href="/" className="auth-lien">
           Changer de société
-        </a>
+        </Link>
       </p>
     </section>
   );

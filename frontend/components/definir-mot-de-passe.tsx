@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CircleAlert, LoaderCircle, Lock } from 'lucide-react';
+import Link from 'next/link';
 import { activerCompte, reinitialiserMotDePasse } from '@/lib/api';
 import { AuthChamp } from '@/components/auth/auth-champ';
 
@@ -61,9 +62,9 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
           </p>
         </header>
         <p className="auth-carte-pied">
-          <a href="/" className="auth-lien">
+          <Link href="/" className="auth-lien">
             ← Retour au portail
-          </a>
+          </Link>
         </p>
       </section>
     );
@@ -80,9 +81,9 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
             Tu peux maintenant te connecter avec ton mot de passe.
           </p>
         </header>
-        <a href="/" className="auth-bouton">
+        <Link href="/" className="auth-bouton">
           Aller à la connexion
-        </a>
+        </Link>
       </section>
     );
   }
@@ -139,9 +140,9 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
         </button>
       </form>
       <p className="auth-carte-pied">
-        <a href="/" className="auth-lien">
+        <Link href="/" className="auth-lien">
           ← Retour au portail
-        </a>
+        </Link>
       </p>
     </section>
   );

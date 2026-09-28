@@ -8,9 +8,12 @@ type Props = {
   // photo) — pas de tuile, juste une ombre portée pour rester lisible ;
   // utilise logoUrlSombre (texte clair) si disponible.
   theme?: 'light' | 'glass';
+  // Texte alternatif du logo — par défaut le nom ; '' quand le nom est déjà
+  // affiché à côté (évite une double annonce aux lecteurs d'écran).
+  alt?: string;
 };
 
-export function SocieteAvatar({ societe, size = 'md', theme = 'light' }: Props) {
+export function SocieteAvatar({ societe, size = 'md', theme = 'light', alt }: Props) {
   const sizeClass = size === 'lg' ? 'avatar-lg' : size === 'xl' ? 'avatar-xl' : '';
   const className = ['avatar', sizeClass, theme === 'glass' ? 'avatar--glass' : '']
     .filter(Boolean)
@@ -21,7 +24,7 @@ export function SocieteAvatar({ societe, size = 'md', theme = 'light' }: Props) 
   if (logo) {
     return (
       <div className={className}>
-        <img src={logo} alt={societe.nom} />
+        <img src={logo} alt={alt ?? societe.nom} />
       </div>
     );
   }

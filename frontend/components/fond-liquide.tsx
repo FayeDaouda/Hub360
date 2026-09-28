@@ -14,19 +14,18 @@
 // peinture par image), très lent ; coupé sous prefers-reduced-motion.
 // Purement décoratif : aria-hidden, aucun événement pointeur.
 //
-// composition : « duo » = présentation à gauche + carte à droite (connexion),
-// « centre » = colonne unique centrée (les bulles s'écartent du logo et de
-// la carte). En portrait, les deux partagent le même cadrage en bordure.
+// Composition (où sont les bulles) : déduite en CSS du contenu affiché —
+// présentation + carte (connexion) ou colonne centrée (portail, carte seule)
+// —, cf. .auth-shell:has(...) dans globals.css. En portrait, cadrage commun
+// en bordure.
 
 const BULLES = ['bleu', 'jaune', 'cyan', 'orange', 'azur'] as const;
 const PERLES = ['bleu', 'jaune', 'orange', 'cyan'] as const;
 const ECLATS = 8;
 
-type Props = { composition?: 'duo' | 'centre' };
-
-export function FondLiquide({ composition = 'duo' }: Props) {
+export function FondLiquide() {
   return (
-    <div className="fond-liquide" data-composition={composition} aria-hidden="true">
+    <div className="fond-liquide" aria-hidden="true">
       <svg
         className="fond-liquide-vagues"
         viewBox="0 0 1440 900"
@@ -72,8 +71,13 @@ export function FondLiquide({ composition = 'duo' }: Props) {
         />
       </svg>
 
+      {/* Enveloppe (position, mouvement, halo) + corps (verre) : le halo est
+          un dégradé sur l'enveloppe, pas un box-shadow flouté — voir
+          .fl-bulle::before dans globals.css. */}
       {BULLES.map((teinte) => (
-        <span key={teinte} className={`fl-bulle fl-bulle--${teinte}`} />
+        <span key={teinte} className={`fl-bulle fl-bulle--${teinte}`}>
+          <span className="fl-bulle-corps" />
+        </span>
       ))}
       {PERLES.map((teinte) => (
         <span key={teinte} className={`fl-perle fl-perle--${teinte}`} />

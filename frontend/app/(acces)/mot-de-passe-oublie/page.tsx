@@ -2,8 +2,9 @@
 
 import { FormEvent, useState } from 'react';
 import { LoaderCircle, Mail } from 'lucide-react';
+import Link from 'next/link';
 import { motDePasseOublie } from '@/lib/api';
-import { AuthShell } from '@/components/auth/auth-shell';
+import { ContenuAcces } from '@/components/auth/acces';
 import { AuthChamp } from '@/components/auth/auth-champ';
 
 export default function MotDePasseOubliePage() {
@@ -26,7 +27,7 @@ export default function MotDePasseOubliePage() {
   }
 
   return (
-    <AuthShell>
+    <ContenuAcces>
       <section className="auth-carte" aria-labelledby="oubli-titre">
         <header className="auth-carte-entete">
           <h1 id="oubli-titre" className="auth-carte-titre">
@@ -69,11 +70,11 @@ export default function MotDePasseOubliePage() {
           </form>
         )}
         <p className="auth-carte-pied">
-          <a href="/" className="auth-lien">
+          <Link href="/" className="auth-lien">
             ← Retour au portail
-          </a>
+          </Link>
         </p>
       </section>
-    </AuthShell>
+    </ContenuAcces>
   );
 }

@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
-import { AuthShell } from '@/components/auth/auth-shell';
+import { ContenuAcces } from '@/components/auth/acces';
 import { DefinirMotDePasse } from '@/components/definir-mot-de-passe';
 
 export default function ReinitialiserPage() {
   return (
-    <AuthShell>
+    <ContenuAcces>
       <Suspense
         fallback={
           <section className="auth-carte" aria-busy="true">
@@ -14,6 +14,6 @@ export default function ReinitialiserPage() {
       >
         <DefinirMotDePasse mode="reset" />
       </Suspense>
-    </AuthShell>
+    </ContenuAcces>
   );
 }
