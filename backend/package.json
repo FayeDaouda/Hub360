@@ -16,7 +16,8 @@
     "codes:regenerer": "ts-node prisma/scripts/regenerer-codes-dossiers.ts",
     "catalogue:importer": "ts-node prisma/scripts/importer-catalogue.ts",
     "prisma:studio": "prisma studio",
-    "comptes-demo": "ts-node prisma/comptes-demo.ts"
+    "comptes-demo": "ts-node prisma/comptes-demo.ts",
+    "rh-dossiers-init": "ts-node prisma/rh-dossiers-init.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

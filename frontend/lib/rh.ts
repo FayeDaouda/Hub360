@@ -1,0 +1,58 @@
+import type {
+  ChampsDossierPersonnel,
+  DossierPersonnel,
+  OptionsDossiers,
+  TypeContrat,
+  TypePieceDossier,
+} from './types';
+import { apiSociete } from './client-api';
+
+// RH · Dossiers du personnel — API NestJS (module « rh » de la matrice) :
+//   GET   …/rh/dossiers                 liste (groupe)
+//   GET   …/rh/dossiers/options         sociétés + fiches d'équipe sans dossier
+//   POST  …/rh/dossiers                 création (matricule GH-xxxx attribué)
+//   PATCH …/rh/dossiers/:id             mise à jour partielle
+//   POST  …/rh/dossiers/:id/archivage   { archive }
+//   PUT   …/rh/dossiers/:id/pieces/:t   { nom, url (data URI) }
+//   GET   …/rh/dossiers/:id/pieces/:t   → { nom, url }
+
+export type MajDossier = Partial<ChampsDossierPersonnel> & {
+  societeId?: string;
+  collaborateurId?: string | null;
+};
+
+export const getDossiers = (slug: string) => apiSociete<DossierPersonnel[]>(slug, '/rh/dossiers');
+export const getOptionsDossiers = (slug: string) => apiSociete<OptionsDossiers>(slug, '/rh/dossiers/options');
+export const creerDossier = (slug: string, corps: MajDossier) =>
+  apiSociete<DossierPersonnel>(slug, '/rh/dossiers', { method: 'POST', body: corps });
+export const majDossier = (slug: string, id: string, corps: MajDossier) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}`, { method: 'PATCH', body: corps });
+export const archiverDossier = (slug: string, id: string, archive: boolean) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/archivage`, { method: 'POST', body: { archive } });
+export const joindrePieceDossier = (slug: string, id: string, type: TypePieceDossier, nom: string, url: string) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/pieces/${type}`, { method: 'PUT', body: { nom, url } });
+export const getPieceDossier = (slug: string, id: string, type: TypePieceDossier) =>
+  apiSociete<{ nom: string; url: string }>(slug, `/rh/dossiers/${id}/pieces/${type}`);
+
+export const LIBELLE_CONTRAT: Record<TypeContrat, string> = { cdi: 'CDI', cdd: 'CDD', stage: 'Stage' };
+
+export const PIECES: { type: TypePieceDossier; libelle: string; aide?: string }[] = [
+  { type: 'piece_identite', libelle: 'Pièce d’identité', aide: 'CNI ou passeport' },
+  { type: 'cv', libelle: 'CV' },
+  { type: 'diplomes', libelle: 'Diplômes' },
+  { type: 'contrat_signe', libelle: 'Contrat de travail signé' },
+  { type: 'fiche_poste', libelle: 'Fiche de poste' },
+  { type: 'rib_ou_attestation', libelle: 'RIB ou attestation Wave / Orange Money' },
+  { type: 'certificat_residence', libelle: 'Certificat de résidence' },
+  { type: 'photo_identite', libelle: 'Photo d’identité' },
+  { type: 'carte_ipm', libelle: 'Carte IPM / assurance' },
+];
+
+// Fin de contrat dans moins de 6 mois (CDD, stage) — à anticiper.
+export function finProche(d: DossierPersonnel, aujourdhui = new Date()): boolean {
+  if (!d.dateFin || d.typeContrat === 'cdi' || d.archiveLe) return false;
+  const fin = new Date(`${d.dateFin}T00:00:00`);
+  const limite = new Date(aujourdhui);
+  limite.setMonth(limite.getMonth() + 6);
+  return fin <= limite;
+}

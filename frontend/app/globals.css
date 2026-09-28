@@ -10615,3 +10615,145 @@ a.notif-item:hover {
   padding: 0;
   border: 0;
 }
+
+/* ==========================================================================
+   RH · Dossiers du personnel (app/admin/[slug]/rh) — lot 1, sept. 2026.
+   Réutilise KpiStrip, .admin-table, .vue-toggle, .progress, .modal.
+   ========================================================================== */
+.rh-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.rh-sous-titre {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.rh-liste {
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.25rem;
+}
+.rh-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.rh-archives {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.rh-matricule {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+.rh-nom {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.rh-nom:hover {
+  text-decoration: underline;
+}
+.rh-nom:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 2px;
+}
+.rh-fiche {
+  max-width: 980px;
+}
+.rh-fiche .modal-body {
+  max-height: min(78vh, 900px);
+  overflow-y: auto;
+}
+.rh-completude {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.rh-completude-piste {
+  width: min(320px, 50vw);
+}
+.rh-section {
+  margin: 1.25rem 0 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rh-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 0.75rem 0.9rem;
+}
+.rh-grille--2 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.rh-pieces {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.rh-piece {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.rh-piece-point {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border-hover);
+}
+.rh-piece-point.est-joint {
+  background: var(--sauge);
+}
+.rh-piece-libelle {
+  display: grid;
+  min-width: 0;
+}
+.rh-manquant {
+  color: var(--ocre-fonce);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+:root[data-theme='dark'] .rh-manquant {
+  color: var(--ocre);
+}
+.rh-piece label.btn-ghost {
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .rh-piece {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}

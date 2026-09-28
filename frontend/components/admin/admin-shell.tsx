@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   Contact,
   FolderKanban,
+  IdCard,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -49,6 +50,7 @@ const NAV: NavItem[] = [
   { cle: 'crm', libelle: 'CRM', icone: Contact, chemin: 'crm' },
   { cle: 'projets', libelle: 'Projets', icone: FolderKanban, chemin: 'projets' },
   { cle: 'facturation', libelle: 'Facturation', icone: ReceiptText, chemin: 'facturation' },
+  { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
   { cle: 'equipe', libelle: 'Équipe', icone: Users, chemin: 'equipe' },
 ];
 

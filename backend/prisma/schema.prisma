@@ -63,6 +63,8 @@ model Societe {
   blocsEtudeGabarit     BlocEtudeGabarit[]
   annexesContratGabarit AnnexeContratGabarit[]
 
+  dossiersPersonnel DossierPersonnel[]
+
   @@map("societes")
 }
 
@@ -810,6 +812,8 @@ model Collaborateur {
   blocsPermisResponsable       BlocPermis[]       @relation("BlocPermisResponsable")
   blocsExecutionResponsable    BlocExecution[]    @relation("BlocExecutionResponsable")
   blocsUnbordResponsable       BlocUnbord[]       @relation("BlocUnbordResponsable")
+
+  dossierPersonnel DossierPersonnel?
 
   @@map("collaborateurs")
 }
@@ -1881,4 +1885,89 @@ model ProduitService {
   @@unique([societeId, code])
   @@index([societeId, supprime])
   @@map("produits_services")
+}
+
+// --- RH · Dossiers du personnel (lot 1, sept. 2026) --------------------------
+// Dossier RH d'une personne, sur tout le groupe (Holding, Concrete, Coded).
+// Distinct de Collaborateur (fiche d'équipe d'exécution) et d'Utilisateur
+// (compte de connexion) : un salarié peut n'avoir ni l'un ni l'autre. Données
+// sensibles (identité, paie, salaire) — lues/écrites seulement via le module
+// « rh » de la matrice. Jamais supprimé : archivé au départ.
+enum TypeContrat {
+  cdi
+  cdd
+  stage
+}
+
+enum ModePaiementSalaire {
+  virement
+  wave
+  orange_money
+}
+
+enum TypePieceDossier {
+  piece_identite
+  cv
+  diplomes
+  contrat_signe
+  fiche_poste
+  rib_ou_attestation
+  certificat_residence
+  photo_identite
+  carte_ipm
+}
+
+model DossierPersonnel {
+  id                  String              @id @default(uuid())
+  matricule           String              @unique // GH-0001, séquence groupe
+  societeId           String              @map("societe_id")
+  collaborateurId     String?             @unique @map("collaborateur_id")
+  poste               String              @default("")
+  typeContrat         TypeContrat         @default(cdi) @map("type_contrat")
+  dateEntree          String?             @map("date_entree") // AAAA-MM-JJ
+  dateFin             String?             @map("date_fin") // CDD, stage
+  salaireBase         Int?                @map("salaire_base") // FCFA
+  prenom              String              @default("")
+  nom                 String              @default("")
+  dateNaissance       String?             @map("date_naissance")
+  lieuNaissance       String              @default("") @map("lieu_naissance")
+  nationalite         String              @default("Sénégalaise")
+  numeroPiece         String              @default("") @map("numero_piece") // CNI ou passeport
+  telephone           String              @default("")
+  emailPro            String              @default("") @map("email_pro")
+  contactUrgence      String              @default("") @map("contact_urgence")
+  modePaiement        ModePaiementSalaire @default(virement) @map("mode_paiement")
+  coordonneesPaiement String              @default("") @map("coordonnees_paiement") // RIB ou numéro
+  numeroIpm           String              @default("") @map("numero_ipm")
+  missionResultat     String              @default("") @map("mission_resultat")
+  missionLivrables    String              @default("") @map("mission_livrables")
+  missionKpi          String              @default("") @map("mission_kpi")
+  missionSignalAlerte String              @default("") @map("mission_signal_alerte")
+  archiveLe           DateTime?           @map("archive_le")
+  archiveParId        String?             @map("archive_par_id") // audit, pas de FK
+  creeParId           String?             @map("cree_par_id")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  societe       Societe                 @relation(fields: [societeId], references: [id], onDelete: Restrict)
+  collaborateur Collaborateur?          @relation(fields: [collaborateurId], references: [id], onDelete: SetNull)
+  pieces        PieceDossierPersonnel[]
+
+  @@index([societeId])
+  @@map("dossiers_personnel")
+}
+
+model PieceDossierPersonnel {
+  id          String           @id @default(uuid())
+  dossierId   String           @map("dossier_id")
+  type        TypePieceDossier
+  nom         String
+  cle         String // data URI (puis clé S3, même seam que FichierProjet)
+  ajouteParId String?          @map("ajoute_par_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@unique([dossierId, type]) // une pièce par type, remplaçable
+  @@map("pieces_dossier_personnel")
 }

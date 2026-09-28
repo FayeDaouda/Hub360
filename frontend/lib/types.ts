@@ -1926,3 +1926,60 @@ export type SocieteComptes = {
 };
 
 export type ComptesGroupe = { societes: SocieteComptes[] };
+
+// --- RH · Dossiers du personnel (lot 1, sept. 2026) --------------------------
+// Groupe entier (Holding, Concrete, Coded) ; module « rh » de la matrice :
+// lecture CFO/CEO, écriture RH. Jamais supprimé : archivé au départ.
+export type TypeContrat = 'cdi' | 'cdd' | 'stage';
+export type ModePaiementSalaire = 'virement' | 'wave' | 'orange_money';
+export type TypePieceDossier =
+  | 'piece_identite'
+  | 'cv'
+  | 'diplomes'
+  | 'contrat_signe'
+  | 'fiche_poste'
+  | 'rib_ou_attestation'
+  | 'certificat_residence'
+  | 'photo_identite'
+  | 'carte_ipm';
+
+export type ChampsDossierPersonnel = {
+  poste: string;
+  typeContrat: TypeContrat;
+  dateEntree: string | null;
+  dateFin: string | null;
+  salaireBase: number | null; // FCFA
+  prenom: string;
+  nom: string;
+  dateNaissance: string | null;
+  lieuNaissance: string;
+  nationalite: string;
+  numeroPiece: string;
+  telephone: string;
+  emailPro: string;
+  contactUrgence: string;
+  modePaiement: ModePaiementSalaire;
+  coordonneesPaiement: string;
+  numeroIpm: string;
+  missionResultat: string;
+  missionLivrables: string;
+  missionKpi: string;
+  missionSignalAlerte: string;
+};
+
+export type DossierPersonnel = ChampsDossierPersonnel & {
+  id: string;
+  matricule: string;
+  societeId: string;
+  collaborateurId: string | null;
+  societe: { id: string; nom: string; slug: string };
+  cellule: string | null;
+  archiveLe: string | null;
+  pieces: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
+  completude: { pourcentage: number; manquants: number };
+};
+
+export type OptionsDossiers = {
+  societes: { id: string; nom: string }[];
+  collaborateursSansDossier: { id: string; libelle: string; societeId: string; cellule: string | null }[];
+};

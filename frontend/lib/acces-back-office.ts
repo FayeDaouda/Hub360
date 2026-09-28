@@ -16,15 +16,17 @@ const SECTIONS_DIRECTION: Record<string, string> = {
   projets: 'projets',
   equipe: 'equipe',
   facturation: 'finances_factures',
+  rh: 'rh',
 };
 
 // Ordre de préférence pour la page d'arrivée (= ordre de la sidebar).
-const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'equipe'];
+const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe'];
 const CHEMINS: Record<string, string> = {
   'tableau-de-bord': '',
   crm: 'crm',
   projets: 'projets',
   facturation: 'facturation',
+  rh: 'rh',
   equipe: 'equipe',
   parametres: 'parametres',
 };
