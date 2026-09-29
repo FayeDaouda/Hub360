@@ -3,7 +3,7 @@ import { Prisma, TypePieceDossier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ouDossierDuCompte } from './mon-compte';
 
-type Acteur = { userId: string };
+type Acteur = { userId: string; societeId?: string };
 
 // Pièces du dossier que le salarié retrouve dans « Mon espace » (maquette RH :
 // « visible dans Mon espace »). Les autres pièces restent côté RH.
@@ -60,6 +60,50 @@ export class MonEspaceService {
     });
     if (!b) throw new NotFoundException('Bulletin pas encore déposé par la RH.');
     return { nom: b.nom, url: b.cle };
+  }
+
+  // Ma cellule (lot 5d) : l'équipe du salarié et les projets qu'elle suit.
+  // Rien d'autre (ni charge ni absences des collègues) : pas demandé.
+  async maCellule(a: Acteur) {
+    const dossier = await this.prisma.dossierPersonnel.findFirst({
+      where: ouDossierDuCompte(a.userId),
+      select: { collaborateur: { select: { id: true, celluleId: true } } },
+    });
+    const fiche =
+      dossier?.collaborateur ??
+      (await this.prisma.collaborateur.findFirst({
+        where: { utilisateurId: a.userId, ...(a.societeId && { societeId: a.societeId }) },
+        select: { id: true, celluleId: true },
+      }));
+    if (!fiche?.celluleId) return { cellule: null };
+
+    const c = await this.prisma.cellule.findUniqueOrThrow({
+      where: { id: fiche.celluleId },
+      select: {
+        nom: true,
+        dispatcherId: true,
+        membres: { select: { id: true, prenom: true, nom: true, role: true, niveau: true }, orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] },
+        projets: {
+          where: { projet: { phase: { not: 'livre' } } },
+          select: { projet: { select: { id: true, code: true, programme: true, phase: true } } },
+          orderBy: { projet: { code: 'asc' } },
+        },
+      },
+    });
+    return {
+      cellule: {
+        nom: c.nom,
+        membres: c.membres.map((m) => ({
+          id: m.id,
+          nom: `${m.prenom} ${m.nom}`.trim(),
+          role: m.role,
+          niveau: m.niveau,
+          estChef: m.id === c.dispatcherId,
+          estMoi: m.id === fiche.id,
+        })),
+        projets: c.projets.map((p) => p.projet),
+      },
+    };
   }
 
   private async idDossier(a: Acteur): Promise<string> {

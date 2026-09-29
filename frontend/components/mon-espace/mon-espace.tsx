@@ -12,6 +12,7 @@ import { AValider } from './a-valider';
 import { CongesAbsences, RemboursementsSante } from './demandes';
 import { MesDocuments } from './documents';
 import { MesInformations } from './informations';
+import { MaCellule } from './ma-cellule';
 import { MonTemps } from './mon-temps';
 import { MesPerformances } from './performances';
 
@@ -19,6 +20,7 @@ const ONGLETS = [
   { cle: 'performances', libelle: 'Mes performances', dossierRequis: false },
   { cle: 'a-valider', libelle: 'À valider', dossierRequis: false },
   { cle: 'temps', libelle: 'Mon temps', dossierRequis: false },
+  { cle: 'cellule', libelle: 'Ma cellule', dossierRequis: false },
   { cle: 'conges', libelle: 'Congés et absences', dossierRequis: true },
   { cle: 'remboursements', libelle: 'Remboursements santé', dossierRequis: true },
   { cle: 'informations', libelle: 'Mes informations', dossierRequis: true },
@@ -127,6 +129,8 @@ export function MonEspace({ slug }: { slug: string }) {
         <AValider slug={slug} onCompte={compter} />
       ) : onglet === 'temps' ? (
         <MonTemps slug={slug} />
+      ) : onglet === 'cellule' ? (
+        <MaCellule slug={slug} />
       ) : onglet === 'conges' ? (
         <CongesAbsences slug={slug} />
       ) : onglet === 'remboursements' ? (

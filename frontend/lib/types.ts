@@ -2202,3 +2202,10 @@ export type TacheAValider = {
   echeance: string | null;
   remisLe: string;
 };
+
+// Mon espace · Ma cellule (lot 5d) : l'équipe et les projets qu'elle suit.
+export type MaCellule = {
+  nom: string;
+  membres: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; estChef: boolean; estMoi: boolean }[];
+  projets: { id: string; code: string; programme: string; phase: Phase }[];
+};

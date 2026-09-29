@@ -15,6 +15,18 @@ function svc(dossier: object | null = DOSSIER) {
   const prisma = {
     dossierPersonnel: { findFirst: jest.fn().mockResolvedValue(dossier), update: jest.fn() },
     pieceDossierPersonnel: { findUnique: jest.fn().mockResolvedValue({ nom: 'contrat.pdf', cle: 'data:application/pdf;base64,AA' }) },
+    collaborateur: { findFirst: jest.fn().mockResolvedValue(null) },
+    cellule: {
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        nom: 'Cellule Études',
+        dispatcherId: 'C2',
+        membres: [
+          { id: 'C1', prenom: 'Awa', nom: 'Ndiaye', role: 'Architecte', niveau: 'junior' },
+          { id: 'C2', prenom: 'Moussa', nom: 'Diop', role: 'Architecte', niveau: 'senior' },
+        ],
+        projets: [{ projet: { id: 'P1', code: 'PN_S.26', programme: 'Villa', phase: 'permis' } }],
+      }),
+    },
   } as unknown as PrismaService;
   return { s: new MonEspaceService(prisma), prisma };
 }
@@ -40,5 +52,15 @@ describe('MonEspaceService', () => {
     await expect(svc().s.document({ userId: 'U' }, 'cv')).rejects.toThrow(NotFoundException);
     await expect(svc().s.document({ userId: 'U' }, 'contrat_signe')).resolves.toMatchObject({ nom: 'contrat.pdf' });
     await expect(svc(null).s.majCoordonnees({ userId: 'U' }, { telephone: '1' })).rejects.toThrow(NotFoundException);
+  });
+  it('ma cellule : chef et « moi » repérés ; sans cellule → null', async () => {
+    const { s } = svc({ ...DOSSIER, collaborateur: { id: 'C1', celluleId: 'CEL' } });
+    const { cellule } = await s.maCellule({ userId: 'U' });
+    expect(cellule?.membres).toEqual([
+      expect.objectContaining({ nom: 'Awa Ndiaye', estMoi: true, estChef: false }),
+      expect.objectContaining({ nom: 'Moussa Diop', estMoi: false, estChef: true }),
+    ]);
+    expect(cellule?.projets).toEqual([expect.objectContaining({ code: 'PN_S.26' })]);
+    await expect(svc().s.maCellule({ userId: 'U' })).resolves.toEqual({ cellule: null });
   });
 });

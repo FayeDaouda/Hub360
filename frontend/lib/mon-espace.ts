@@ -1,4 +1,5 @@
 import type {
+  MaCellule,
   ModePaiementSalaire,
   ProfilMonEspace,
   StatsPerformances,
@@ -14,7 +15,9 @@ import { apiSociete } from './client-api';
 //   PATCH …/mon-espace/coordonnees      { telephone?, contactUrgence? }
 //   GET   …/mon-espace/documents/:type  { nom, url }
 //   GET   …/mon-espace/bulletins/:mois  { nom, url }
+//   GET   …/mon-espace/cellule          { cellule | null }
 
+export const getMaCellule = (slug: string) => apiSociete<{ cellule: MaCellule | null }>(slug, '/mon-espace/cellule');
 export const getMonEspace = (slug: string) => apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace');
 export const majCoordonnees = (slug: string, corps: { telephone?: string; contactUrgence?: string }) =>
   apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/coordonnees', { method: 'PATCH', body: corps });

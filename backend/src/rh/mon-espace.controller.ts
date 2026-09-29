@@ -10,7 +10,7 @@ class CoordonneesDto {
   @IsOptional() @IsString() @MaxLength(200) contactUrgence?: string;
 }
 
-type R = { user: { userId: string } };
+type R = { user: { userId: string; societeId: string } };
 
 // « Mon espace » (lot 5) : tout compte connecté, sur son propre dossier.
 @Controller('societes/:slug/mon-espace')
@@ -31,6 +31,11 @@ export class MonEspaceController {
   @Get('bulletins/:mois')
   bulletin(@Req() req: R, @Param('mois') mois: string) {
     return this.monEspace.bulletin(req.user, mois);
+  }
+
+  @Get('cellule')
+  cellule(@Req() req: R) {
+    return this.monEspace.maCellule(req.user);
   }
 
   @Get('documents/:type')
