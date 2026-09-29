@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { DemandeAbsence, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ouDossierDuCompte } from './mon-compte';
 import {
   DecisionN1Dto,
   DeposerAbsenceDto,
@@ -26,9 +27,14 @@ import {
 
 // Chaîne du N+1 (conception d'origine, confirmée par le boss) :
 //  collaborateur → chef de cellule (= dispatcher de sa cellule) ;
-//  chef de cellule, ou sans cellule → Dir. GC ; Dir. GC → CTO (pas encore :
-//  la direction n'a pas de fiche d'équipe liée à un dossier).
+//  chef de cellule, ou sans cellule → Dir. GC ; Dir. GC → CTO.
+// Les autres rôles de direction n'ont pas encore de N+1 défini : leur
+// demande est refusée avec un message clair plutôt que routée au hasard.
 export const ROLE_N1_DIRECTION = 'Dir. GC';
+export const N1_DES_ROLES: Readonly<Record<string, string>> = { [ROLE_N1_DIRECTION]: 'CTO (transverse)' };
+// Rôles « salariés » : sans cellule (ou chef de leur cellule) → Dir. GC.
+const ROLES_SALARIES = ['collaborateur', 'Salarié'];
+const ROLES_N1 = [ROLE_N1_DIRECTION, ...Object.values(N1_DES_ROLES)];
 
 type Acteur = { userId: string; societeId: string; role: string };
 
@@ -40,16 +46,25 @@ type Livrable = { cle: string; source: 'avant-projet' | 'permis' | 'execution'; 
 export class DemandesService {
   constructor(private prisma: PrismaService) {}
 
-  // --- Salarié (espace collaborateur) ------------------------------------------
+  // --- Salarié (Mon espace) ------------------------------------------------------
   private async moi(a: Acteur) {
-    const collab = await this.prisma.collaborateur.findFirst({
-      where: { utilisateurId: a.userId, societeId: a.societeId },
-      include: { dossierPersonnel: true, cellule: { select: { id: true, dispatcherId: true } } },
+    const dossier = await this.prisma.dossierPersonnel.findFirst({
+      where: ouDossierDuCompte(a.userId),
+      include: { collaborateur: { select: { id: true, cellule: { select: { id: true, dispatcherId: true } } } } },
     });
-    if (!collab?.dossierPersonnel) {
-      throw new NotFoundException("Aucun dossier du personnel pour ce compte — voir avec la RH.");
-    }
-    return { collab, dossier: collab.dossierPersonnel };
+    if (!dossier) throw new NotFoundException('Aucun dossier du personnel pour ce compte — voir avec la RH.');
+    const { collaborateur: collab, ...reste } = dossier;
+    return { collab, dossier: reste };
+  }
+
+  private n1Pour(role: string, collab: { id: string; cellule: { dispatcherId: string | null } | null } | null) {
+    const chef = collab?.cellule?.dispatcherId;
+    if (collab && chef && chef !== collab.id) return { n1CollaborateurId: chef };
+    if (N1_DES_ROLES[role]) return { n1Role: N1_DES_ROLES[role] };
+    if (ROLES_SALARIES.includes(role)) return { n1Role: ROLE_N1_DIRECTION };
+    throw new ConflictException(
+      'Le circuit de validation (N+1) de ton rôle n’est pas encore défini par la direction : vois avec la RH.',
+    );
   }
 
   async mesDemandes(a: Acteur) {
@@ -74,10 +89,7 @@ export class DemandesService {
     if (dto.dateFin < dto.dateDebut) throw new BadRequestException('La date de fin précède la date de début.');
     const jours = joursOuvrables(dto.dateDebut, dto.dateFin);
     if (jours === 0) throw new BadRequestException('Aucun jour ouvrable sur cette période.');
-    const n1 =
-      collab.cellule?.dispatcherId && collab.cellule.dispatcherId !== collab.id
-        ? { n1CollaborateurId: collab.cellule.dispatcherId }
-        : { n1Role: ROLE_N1_DIRECTION };
+    const n1 = this.n1Pour(a.role, collab);
     const d = await this.prisma.demandeAbsence.create({
       data: {
         dossierId: dossier.id,
@@ -146,9 +158,9 @@ export class DemandesService {
       // Dir. GC d'une autre société du groupe ne décide pas ici).
       const dossier = await this.prisma.dossierPersonnel.findUnique({
         where: { id: d.dossierId },
-        select: { collaborateur: { select: { societeId: true } } },
+        select: { societeId: true },
       });
-      if (dossier?.collaborateur?.societeId !== a.societeId) return false;
+      if (dossier?.societeId !== a.societeId) return false;
       return a.role === d.n1Role || a.role === 'societe_admin';
     }
     const c = await this.prisma.collaborateur.findFirst({
@@ -165,10 +177,11 @@ export class DemandesService {
     });
     const ou: Prisma.DemandeAbsenceWhereInput[] = [];
     if (c) ou.push({ n1CollaborateurId: c.id });
-    if (a.role === ROLE_N1_DIRECTION || a.role === 'societe_admin') ou.push({ n1Role: ROLE_N1_DIRECTION });
+    if (ROLES_N1.includes(a.role)) ou.push({ n1Role: a.role });
+    if (a.role === 'societe_admin') ou.push({ n1Role: { in: ROLES_N1 } });
     if (!ou.length) return [];
     const demandes = await this.prisma.demandeAbsence.findMany({
-      where: { statut: 'attente_n1', OR: ou, dossier: { collaborateur: { societeId: a.societeId } } },
+      where: { statut: 'attente_n1', OR: ou, dossier: { societeId: a.societeId } },
       include: { dossier: { select: { prenom: true, nom: true, poste: true } } },
       orderBy: { dateDebut: 'asc' },
     });

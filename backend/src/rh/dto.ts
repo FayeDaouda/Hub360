@@ -20,6 +20,8 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export class DossierPersonnelDto {
   @IsOptional() @IsUUID() societeId?: string;
   @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() collaborateurId?: string | null;
+  // Compte HUB d'un salarié sans fiche d'équipe (exclusif avec collaborateurId).
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() utilisateurId?: string | null;
   @IsOptional() @IsString() @MaxLength(120) poste?: string;
   @IsOptional() @IsEnum(TypeContrat) typeContrat?: TypeContrat;
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) dateEntree?: string | null;

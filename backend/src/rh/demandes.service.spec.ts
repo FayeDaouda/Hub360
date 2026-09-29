@@ -8,16 +8,23 @@ const DEMANDE = {
 };
 const BLOC = { avantProjetId: 'P1', groupe: 'plans', echeance: '2026-10-06', avantProjet: { projet: { code: 'PRJ.26' } } };
 
-function svc(o: { demande?: object; moiCollab?: string; blocs?: object[] } = {}) {
+function svc(o: { demande?: object; moiCollab?: string; blocs?: object[]; moi?: object | null } = {}) {
   const update = jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...o.demande, ...data }));
   const majAvp = jest.fn().mockReturnValue('majAvp');
   const prisma = {
-    demandeAbsence: { findUnique: jest.fn().mockResolvedValue({ ...DEMANDE, ...o.demande }), update },
+    demandeAbsence: {
+      findUnique: jest.fn().mockResolvedValue({ ...DEMANDE, ...o.demande }),
+      update,
+      create: jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...data })),
+    },
     collaborateur: {
       findFirst: jest.fn().mockResolvedValue(o.moiCollab === undefined ? { id: 'CHEF' } : o.moiCollab ? { id: o.moiCollab } : null),
       findMany: jest.fn().mockResolvedValue([{ id: 'X1' }, { id: 'X2' }, { id: 'COLLAB' }]),
     },
-    dossierPersonnel: { findUnique: jest.fn().mockResolvedValue({ collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }) },
+    dossierPersonnel: {
+      findUnique: jest.fn().mockResolvedValue({ societeId: 'S', collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }),
+      findFirst: jest.fn().mockResolvedValue(o.moi === undefined ? { id: 'DOS1', collaborateur: null } : o.moi),
+    },
     blocChecklistAvp: { findMany: jest.fn().mockResolvedValue(o.blocs ?? [BLOC]), update: majAvp },
     blocPermis: { findMany: jest.fn().mockResolvedValue([]) },
     blocExecution: { findMany: jest.fn().mockResolvedValue([]) },
@@ -67,6 +74,25 @@ describe('DemandesService.decider (N+1)', () => {
   it("N+1 « Dir. GC » : la Dir. GC d'une autre société du groupe ne décide pas", async () => {
     const dir = svc({ demande: { n1CollaborateurId: null, n1Role: 'Dir. GC' } });
     await expect(dir.s.decider({ ...CHEF, societeId: 'AUTRE', role: 'Dir. GC' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ForbiddenException);
+  });
+});
+
+describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
+  const CONGE = { type: 'conge_paye' as const, dateDebut: '2026-10-05', dateFin: '2026-10-09' };
+  const deposer = (role: string, moi?: object | null) => svc({ moi }).s.deposerAbsence({ userId: 'U', societeId: 'S', role }, CONGE);
+  it('collaborateur : chef de sa cellule, sinon Dir. GC', async () => {
+    const membre = { id: 'DOS1', collaborateur: { id: 'C1', cellule: { id: 'CEL', dispatcherId: 'CHEF' } } };
+    await expect(deposer('collaborateur', membre)).resolves.toMatchObject({ n1CollaborateurId: 'CHEF' });
+    const chef = { id: 'DOS1', collaborateur: { id: 'CHEF', cellule: { id: 'CEL', dispatcherId: 'CHEF' } } };
+    await expect(deposer('collaborateur', chef)).resolves.toMatchObject({ n1Role: 'Dir. GC' });
+  });
+  it('direction : Dir. GC → CTO ; Salarié → Dir. GC ; rôle sans circuit défini refusé', async () => {
+    await expect(deposer('Dir. GC')).resolves.toMatchObject({ n1Role: 'CTO (transverse)' });
+    await expect(deposer('Salarié')).resolves.toMatchObject({ n1Role: 'Dir. GC' });
+    await expect(deposer('CFO')).rejects.toThrow(ConflictException);
+  });
+  it('compte sans dossier du personnel → 404', async () => {
+    await expect(deposer('collaborateur', null)).rejects.toThrow('Aucun dossier');
   });
 });
 

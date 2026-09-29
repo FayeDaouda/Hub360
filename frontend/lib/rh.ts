@@ -20,6 +20,7 @@ import { apiSociete } from './client-api';
 export type MajDossier = Partial<ChampsDossierPersonnel> & {
   societeId?: string;
   collaborateurId?: string | null;
+  utilisateurId?: string | null;
 };
 
 export const getDossiers = (slug: string) => apiSociete<DossierPersonnel[]>(slug, '/rh/dossiers');

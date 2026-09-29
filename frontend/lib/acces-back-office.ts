@@ -20,7 +20,7 @@ const SECTIONS_DIRECTION: Record<string, string> = {
 };
 
 // Ordre de préférence pour la page d'arrivée (= ordre de la sidebar).
-const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe'];
+const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
 const CHEMINS: Record<string, string> = {
   'tableau-de-bord': '',
   crm: 'crm',
@@ -28,6 +28,7 @@ const CHEMINS: Record<string, string> = {
   facturation: 'facturation',
   rh: 'rh',
   equipe: 'equipe',
+  'mon-espace': 'mon-espace',
   parametres: 'parametres',
 };
 
@@ -49,6 +50,9 @@ export function estAdministrateurHub(session: Session): boolean {
 export function sectionAccessible(session: Session, cle: string): boolean {
   if (session.role === 'societe_admin') return true;
   if (ROLES_HORS_BACK_OFFICE.has(session.role)) return false;
+  // Mon espace (RH lot 5) : chacun le sien, hors matrice — le serveur ne
+  // sert que le dossier du compte connecté.
+  if (cle === 'mon-espace') return true;
   // Paramètres (matrice des rôles, gabarits, localités, contrats) : pouvoir
   // d'admin plateforme hors matrice — le CIO, en plus de l'admin société.
   if (cle === 'parametres') return session.role === ROLE_CIO;

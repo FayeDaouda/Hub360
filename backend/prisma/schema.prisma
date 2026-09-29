@@ -89,6 +89,7 @@ model Utilisateur {
   rolesSupprimes                     Role[]                    @relation("RoleSupprPar")
   lignesUnbordGabaritSupprimees      LigneUnbordGabarit[]      @relation("UnbordGabaritSupprPar")
   collaborations                     Collaborateur[]
+  dossierPersonnel                   DossierPersonnel?
   imagesAjoutees                     ImageProjet[]             @relation("ImageAjoutPar")
   imagesSupprimees                   ImageProjet[]             @relation("ImageSupprPar")
   fichiersAjoutes                    FichierProjet[]           @relation("FichierAjoutPar")
@@ -1932,6 +1933,11 @@ model DossierPersonnel {
   matricule           String              @unique // GH-0001, séquence groupe
   societeId           String              @map("societe_id")
   collaborateurId     String?             @unique @map("collaborateur_id")
+  // Compte HUB du salarié sans fiche d'équipe (direction, salariés hors
+  // cellule) — lot 5 « Mon espace ». Un dossier relié à une fiche d'équipe
+  // prend le compte de la fiche : les deux liens sont exclusifs (vérifié en
+  // service, cf. rh/mon-compte.ts).
+  utilisateurId       String?             @unique @map("utilisateur_id")
   poste               String              @default("")
   typeContrat         TypeContrat         @default(cdi) @map("type_contrat")
   dateEntree          String?             @map("date_entree") // AAAA-MM-JJ
@@ -1964,6 +1970,7 @@ model DossierPersonnel {
 
   societe           Societe                 @relation(fields: [societeId], references: [id], onDelete: Restrict)
   collaborateur     Collaborateur?          @relation(fields: [collaborateurId], references: [id], onDelete: SetNull)
+  utilisateur       Utilisateur?            @relation(fields: [utilisateurId], references: [id], onDelete: SetNull)
   pieces            PieceDossierPersonnel[]
   absences          DemandeAbsence[]
   remboursements    DemandeRemboursement[]

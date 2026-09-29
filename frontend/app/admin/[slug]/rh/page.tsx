@@ -281,6 +281,7 @@ const CHAMPS_VIDES: MajDossier = {
   missionSignalAlerte: '',
   societeId: '',
   collaborateurId: null,
+  utilisateurId: null,
 };
 
 function versFormulaire(d: DossierPersonnel): MajDossier {
@@ -320,10 +321,11 @@ function FicheDossier({
     const valeur =
       cle === 'salaireBase'
         ? v === '' ? null : Number(v.replace(/\D/g, ''))
-        : ['dateEntree', 'dateFin', 'dateNaissance', 'collaborateurId'].includes(cle)
+        : ['dateEntree', 'dateFin', 'dateNaissance', 'collaborateurId', 'utilisateurId'].includes(cle)
           ? v || null
           : v;
-    setForm((f) => ({ ...f, [cle]: valeur }));
+    // Une fiche d'équipe porte son propre compte : relier une fiche retire le compte direct.
+    setForm((f) => ({ ...f, [cle]: valeur, ...(cle === 'collaborateurId' && valeur ? { utilisateurId: null } : {}) }));
     setEnregistre(false);
   };
 
@@ -455,6 +457,34 @@ function FicheDossier({
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="field">
+                <span className="field-label">Compte HUB (Mon espace)</span>
+                {form.collaborateurId ? (
+                  <input
+                    className="field-input"
+                    disabled
+                    value={
+                      dossier?.compte?.viaFiche && dossier.collaborateurId === form.collaborateurId
+                        ? `${dossier.compte.libelle} · via la fiche d’équipe`
+                        : 'Celui de la fiche d’équipe'
+                    }
+                  />
+                ) : (
+                  <select className="field-input" value={form.utilisateurId ?? ''} onChange={maj('utilisateurId')}>
+                    <option value="">Aucun</option>
+                    {dossier?.compte && !dossier.compte.viaFiche && (
+                      <option value={dossier.compte.id}>
+                        {dossier.compte.libelle} · {dossier.compte.email}
+                      </option>
+                    )}
+                    {options.comptesSansDossier.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.libelle} · {c.email}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
             </div>
 

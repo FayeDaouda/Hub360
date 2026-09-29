@@ -16,6 +16,7 @@ import {
   periodeComptee,
   type Salarie,
 } from './regles-temps';
+import { ouDossierDuCompte } from './mon-compte';
 import { chargerDurees, chargerTachesAssignees, groupeConnu, SECTIONS_TACHES, type TacheAssignee } from './taches-assignees';
 
 type Acteur = { userId: string; societeId: string };
@@ -184,16 +185,21 @@ export class TempsService {
   async monTemps(a: Acteur, mois?: string) {
     const jour = aujourdhui();
     const cible = moisValide(mois ?? moisDe(jour), jour);
-    const collab = await this.prisma.collaborateur.findFirst({
-      where: { utilisateurId: a.userId, societeId: a.societeId },
-      select: { id: true, dateArrivee: true, dossierPersonnel: { include: INCLUDE_DOSSIER } },
-    });
-    if (!collab) throw new NotFoundException('Aucune fiche collaborateur pour ce compte.');
+    // Dossier RH relié au compte (direction comprise) ; à défaut, la fiche
+    // d'équipe seule (pas encore de dossier ouvert par la RH).
+    const dossier = await this.prisma.dossierPersonnel.findFirst({ where: ouDossierDuCompte(a.userId), include: INCLUDE_DOSSIER });
+    const fiche = dossier
+      ? null
+      : await this.prisma.collaborateur.findFirst({
+          where: { utilisateurId: a.userId, societeId: a.societeId },
+          select: { id: true, dateArrivee: true },
+        });
+    if (!dossier && !fiche) throw new NotFoundException('Aucun dossier du personnel pour ce compte — voir avec la RH.');
 
-    const dossier = collab.dossierPersonnel;
     // Sans dossier RH : pas d'absence validée possible, entrée = arrivée de la fiche.
-    const salarie = dossier ? salarieDe(dossier) : { dateEntree: collab.dateArrivee, dateSortie: null, absences: [] };
-    const taches = await chargerTachesAssignees(this.prisma, [collab.id]);
+    const salarie = dossier ? salarieDe(dossier) : { dateEntree: fiche!.dateArrivee, dateSortie: null, absences: [] };
+    const collabId = dossier ? dossier.collaborateur?.id : fiche!.id;
+    const taches = collabId ? await chargerTachesAssignees(this.prisma, [collabId]) : [];
     const absents = joursAbsents(salarie.absences);
 
     return {

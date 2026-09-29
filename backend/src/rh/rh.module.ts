@@ -6,6 +6,8 @@ import { IntegrationController } from './integration.controller';
 import { IntegrationService } from './integration.service';
 import { DureesStandardController, FeuillesTempsController, MonTempsController } from './temps.controller';
 import { TempsService } from './temps.service';
+import { MonEspaceController } from './mon-espace.controller';
+import { MonEspaceService } from './mon-espace.service';
 import {
   DemandesRhController,
   MesDemandesController,
@@ -13,7 +15,7 @@ import {
 } from './demandes.controller';
 
 @Module({
-  providers: [DossiersPersonnelService, DemandesService, IntegrationService, TempsService],
+  providers: [DossiersPersonnelService, DemandesService, IntegrationService, TempsService, MonEspaceService],
   controllers: [
     DossiersPersonnelController,
     MesDemandesController,
@@ -23,6 +25,7 @@ import {
     FeuillesTempsController,
     MonTempsController,
     DureesStandardController,
+    MonEspaceController,
   ],
 })
 export class RhModule {}

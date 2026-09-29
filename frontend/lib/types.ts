@@ -1975,6 +1975,9 @@ export type DossierPersonnel = ChampsDossierPersonnel & {
   matricule: string;
   societeId: string;
   collaborateurId: string | null;
+  utilisateurId: string | null; // compte relié directement (sans fiche d'équipe)
+  // Compte qui ouvre « Mon espace » : celui de la fiche d'équipe, sinon le direct.
+  compte: { id: string; libelle: string; email: string; viaFiche: boolean } | null;
   societe: { id: string; nom: string; slug: string };
   cellule: string | null;
   archiveLe: string | null;
@@ -1985,6 +1988,7 @@ export type DossierPersonnel = ChampsDossierPersonnel & {
 export type OptionsDossiers = {
   societes: { id: string; nom: string }[];
   collaborateursSansDossier: { id: string; libelle: string; societeId: string; cellule: string | null }[];
+  comptesSansDossier: { id: string; libelle: string; email: string }[];
 };
 
 // --- RH · Demandes (lot 2) — hypothèses de travail, cf. backend regles-conges ---
@@ -2131,4 +2135,31 @@ export type DureesStandardSection = {
   section: SectionTache;
   libelle: string;
   groupes: { groupe: string; libelle: string; heures: number | null }[];
+};
+
+// --- RH · Mon espace (lot 5) ---------------------------------------------------
+// Le dossier du compte connecté, sans le salaire (réservé RH, CFO, CEO).
+export type ProfilMonEspace = {
+  id: string;
+  matricule: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  societe: string;
+  cellule: string | null;
+  typeContrat: TypeContrat;
+  dateEntree: string | null;
+  dateFin: string | null;
+  dateNaissance: string | null;
+  lieuNaissance: string;
+  nationalite: string;
+  numeroPiece: string;
+  telephone: string;
+  emailPro: string;
+  contactUrgence: string;
+  modePaiement: ModePaiementSalaire;
+  coordonneesPaiement: string;
+  numeroIpm: string;
+  mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string } | null;
+  documents: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
 };

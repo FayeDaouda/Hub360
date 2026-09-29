@@ -14,7 +14,11 @@ const SANS_FICHE = { ...DOSSIER, id: 'D2', matricule: 'GH-0002', collaborateur: 
 function svc(o: { dossier?: object; blocs?: object[]; collab?: object | null } = {}) {
   const d = { ...DOSSIER, ...o.dossier };
   const prisma = {
-    dossierPersonnel: { findMany: jest.fn().mockResolvedValue([d, SANS_FICHE]), findUnique: jest.fn().mockResolvedValue(d) },
+    dossierPersonnel: {
+      findMany: jest.fn().mockResolvedValue([d, SANS_FICHE]),
+      findUnique: jest.fn().mockResolvedValue(d),
+      findFirst: jest.fn().mockResolvedValue(o.collab === null ? null : d),
+    },
     blocChecklistAvp: { findMany: jest.fn().mockResolvedValue([]) },
     blocPermis: { findMany: jest.fn().mockResolvedValue(o.blocs ?? [BLOC]) },
     blocExecution: { findMany: jest.fn().mockResolvedValue([]) },
@@ -24,7 +28,7 @@ function svc(o: { dossier?: object; blocs?: object[]; collab?: object | null } =
       deleteMany: jest.fn(),
     },
     controleFeuilleTemps: { create: jest.fn() },
-    collaborateur: { findFirst: jest.fn().mockResolvedValue(o.collab === undefined ? { id: 'C1', dateArrivee: null, dossierPersonnel: d } : o.collab) },
+    collaborateur: { findFirst: jest.fn().mockResolvedValue(o.collab === undefined ? { id: 'C1', dateArrivee: null } : o.collab) },
   } as unknown as PrismaService;
   return { s: new TempsService(prisma), prisma };
 }
@@ -78,7 +82,7 @@ describe('TempsService', () => {
     expect(r.periodes[0].aControler).toBe(0);
   });
 
-  it('mon temps : tâches du salarié avec imputé cumulé, fiche requise', async () => {
+  it('mon temps : tâches du salarié avec imputé cumulé, dossier ou fiche requis', async () => {
     const r = await svc().s.monTemps({ userId: 'U', societeId: 'S1' });
     expect(r.mois).toBe('2026-10');
     expect(r.taches).toEqual([expect.objectContaining({ dureeStandard: 16, heuresImputees: 16, etat: 'terminee', manque: null })]);

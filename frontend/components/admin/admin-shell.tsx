@@ -17,6 +17,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  UserRound,
   Users,
   X,
   type LucideIcon,
@@ -52,6 +53,7 @@ const NAV: NavItem[] = [
   { cle: 'facturation', libelle: 'Facturation', icone: ReceiptText, chemin: 'facturation' },
   { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
   { cle: 'equipe', libelle: 'Équipe', icone: Users, chemin: 'equipe' },
+  { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
 ];
 
 // Dérive l'entrée de nav active depuis l'URL — un seul point de vérité (avant

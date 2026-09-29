@@ -37,19 +37,14 @@ const CHAMPS_TEXTE = [
   'numeroIpm',
 ] as const;
 
-type DossierLu = Prisma.DossierPersonnelGetPayload<{
-  include: {
-    societe: { select: { id: true; nom: true; slug: true } };
-    collaborateur: { select: { id: true; cellule: { select: { nom: true } } } };
-    pieces: { select: { type: true; nom: true; createdAt: true } };
-  };
-}>;
-
+const COMPTE = { select: { id: true, prenom: true, nom: true, email: true } } as const;
 const INCLURE = {
   societe: { select: { id: true, nom: true, slug: true } },
-  collaborateur: { select: { id: true, cellule: { select: { nom: true } } } },
+  collaborateur: { select: { id: true, cellule: { select: { nom: true } }, utilisateur: COMPTE } },
+  utilisateur: COMPTE,
   pieces: { select: { type: true, nom: true, createdAt: true } },
-} as const;
+} satisfies Prisma.DossierPersonnelInclude;
+type DossierLu = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE }>;
 
 export function completude(d: DossierLu): { pourcentage: number; manquants: number } {
   const remplis = [
@@ -65,11 +60,17 @@ export function completude(d: DossierLu): { pourcentage: number; manquants: numb
 }
 
 function versDossier(d: DossierLu) {
-  const { societe, collaborateur, pieces, archiveParId: _a, creeParId: _c, ...champs } = d;
+  const { societe, collaborateur, utilisateur, pieces, archiveParId: _a, creeParId: _c, ...champs } = d;
+  // Compte qui ouvre « Mon espace » : celui de la fiche d'équipe s'il y en a
+  // une, sinon le compte relié directement au dossier.
+  const compte = collaborateur?.utilisateur ?? utilisateur;
   return {
     ...champs,
     societe,
     cellule: collaborateur?.cellule?.nom ?? null,
+    compte: compte
+      ? { id: compte.id, libelle: `${compte.prenom} ${compte.nom}`.trim(), email: compte.email, viaFiche: !!collaborateur?.utilisateur }
+      : null,
     pieces: PIECES_DOSSIER.map((type) => {
       const p = pieces.find((x) => x.type === type);
       return { type, nom: p?.nom ?? null, ajouteLe: p?.createdAt ?? null };
@@ -106,7 +107,7 @@ export class DossiersPersonnelService {
   }
 
   async options() {
-    const [societes, collaborateurs] = await Promise.all([
+    const [societes, collaborateurs, comptes] = await Promise.all([
       this.prisma.societe.findMany({
         where: { actif: true },
         select: { id: true, nom: true },
@@ -117,9 +118,17 @@ export class DossiersPersonnelService {
         select: { id: true, prenom: true, nom: true, societeId: true, cellule: { select: { nom: true } } },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       }),
+      // Comptes reliables directement : sans fiche d'équipe (sinon le lien
+      // passe par la fiche) et sans dossier.
+      this.prisma.utilisateur.findMany({
+        where: { collaborations: { none: {} }, dossierPersonnel: null },
+        select: { id: true, prenom: true, nom: true, email: true },
+        orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+      }),
     ]);
     return {
       societes,
+      comptesSansDossier: comptes.map((u) => ({ id: u.id, libelle: `${u.prenom} ${u.nom}`.trim(), email: u.email })),
       collaborateursSansDossier: collaborateurs.map((c) => ({
         id: c.id,
         libelle: `${c.prenom} ${c.nom}`,
@@ -192,9 +201,10 @@ export class DossiersPersonnelService {
     return `GH-${String(n).padStart(4, '0')}`;
   }
 
-  // Société active ; fiche d'équipe liée de la même société et pas déjà liée.
+  // Société active ; fiche d'équipe liée de la même société et pas déjà liée ;
+  // compte direct seulement sans fiche d'équipe (la fiche porte déjà le compte).
   private async valider(dto: DossierPersonnelDto, id: string | null) {
-    const { societeId, collaborateurId, ...reste } = dto;
+    const { societeId, collaborateurId, utilisateurId, ...reste } = dto;
     const data: Prisma.DossierPersonnelUncheckedUpdateInput = { ...reste };
     if (societeId) {
       const s = await this.prisma.societe.findFirst({ where: { id: societeId, actif: true } });
@@ -216,6 +226,29 @@ export class DossiersPersonnelService {
         }
       }
       data.collaborateurId = collaborateurId;
+      // Relier une fiche d'équipe remplace le compte direct : c'est la fiche
+      // qui porte désormais le compte.
+      if (collaborateurId !== null) data.utilisateurId = null;
+    }
+    if (utilisateurId !== undefined && utilisateurId !== null) {
+      const ficheCible = collaborateurId !== undefined ? collaborateurId : id ? (await this.charger(id)).collaborateurId : null;
+      if (ficheCible) {
+        throw new BadRequestException("Ce dossier est relié à une fiche d'équipe : le compte vient de la fiche.");
+      }
+      const u = await this.prisma.utilisateur.findUnique({
+        where: { id: utilisateurId },
+        select: { _count: { select: { collaborations: true } }, dossierPersonnel: { select: { id: true } } },
+      });
+      if (!u) throw new BadRequestException('Compte introuvable.');
+      if (u._count.collaborations > 0) {
+        throw new ConflictException("Ce compte a une fiche d'équipe : reliez le dossier à la fiche.");
+      }
+      if (u.dossierPersonnel && u.dossierPersonnel.id !== id) {
+        throw new ConflictException('Ce compte est déjà relié à un autre dossier.');
+      }
+      data.utilisateurId = utilisateurId;
+    } else if (utilisateurId === null) {
+      data.utilisateurId = null;
     }
     return data as Prisma.DossierPersonnelUncheckedCreateInput & Prisma.DossierPersonnelUncheckedUpdateInput;
   }
