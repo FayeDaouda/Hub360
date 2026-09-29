@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseEnumPipe, ParseUUIDPipe, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseUUIDPipe, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { TypePieceDossier } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
@@ -63,5 +63,21 @@ export class DossiersPersonnelController {
     @Body() dto: PieceDto,
   ) {
     return this.dossiers.joindrePiece(id, type, dto, req.user.userId);
+  }
+
+  // Bulletins de paie (lot 5b).
+  @Get(':id/bulletins/:mois')
+  bulletin(@Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
+    return this.dossiers.bulletin(id, mois);
+  }
+
+  @Put(':id/bulletins/:mois')
+  deposerBulletin(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string, @Body() dto: PieceDto) {
+    return this.dossiers.deposerBulletin(id, mois, dto, req.user.userId);
+  }
+
+  @Delete(':id/bulletins/:mois')
+  retirerBulletin(@Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
+    return this.dossiers.retirerBulletin(id, mois);
   }
 }

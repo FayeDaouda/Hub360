@@ -9,6 +9,9 @@ import { lireFichier } from '@/lib/fichiers';
 import {
   archiverDossier,
   creerDossier,
+  deposerBulletin,
+  getBulletin,
+  retirerBulletin,
   finProche,
   getDossiers,
   getOptionsDossiers,
@@ -19,6 +22,7 @@ import {
   PIECES,
   type MajDossier,
 } from '@/lib/rh';
+import { libelleMois } from '@/lib/temps';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { DemandesRh } from '@/components/absences/demandes-rh';
@@ -27,7 +31,22 @@ import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
 
 type Props = { params: { slug: string } };
 
-const jjmmaaaa = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '—');
+const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—');
+
+function telecharger(f: { nom: string; url: string }) {
+  const a = document.createElement('a');
+  a.href = f.url;
+  a.download = f.nom;
+  a.click();
+}
+
+// Mois de paie par défaut : le mois précédent (AAAA-MM).
+function moisPrecedent(): string {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 function messageErreur(e: unknown, repli: string) {
   return e instanceof ApiError ? e.message : repli;
@@ -311,6 +330,7 @@ function FicheDossier({
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enregistre, setEnregistre] = useState(false);
+  const [moisBulletin, setMoisBulletin] = useState(moisPrecedent);
 
   useEffect(() => {
     if (dossier) setForm(versFormulaire(dossier));
@@ -356,11 +376,29 @@ function FicheDossier({
 
   async function ouvrirPiece(type: TypePieceDossier) {
     if (!dossier) return;
-    const p = await getPieceDossier(slug, dossier.id, type);
-    const a = document.createElement('a');
-    a.href = p.url;
-    a.download = p.nom;
-    a.click();
+    telecharger(await getPieceDossier(slug, dossier.id, type));
+  }
+
+  // Bulletins de paie (lot 5b) : un dépôt sur un mois déjà servi le remplace.
+  async function deposer(fichier?: File) {
+    if (!dossier || !fichier) return;
+    setErreur(null);
+    try {
+      const lu = await lireFichier(fichier);
+      onChange(await deposerBulletin(slug, dossier.id, moisBulletin, lu.nom, lu.url));
+    } catch (e) {
+      setErreur(messageErreur(e, 'Bulletin non déposé.'));
+    }
+  }
+
+  async function retirer(mois: string) {
+    if (!dossier || !window.confirm(`Retirer le bulletin de ${libelleMois(mois)} ? Le salarié ne le verra plus.`)) return;
+    setErreur(null);
+    try {
+      onChange(await retirerBulletin(slug, dossier.id, mois));
+    } catch (e) {
+      setErreur(messageErreur(e, 'Retrait impossible.'));
+    }
   }
 
   async function archiver() {
@@ -556,6 +594,77 @@ function FicheDossier({
                 );
               })}
             </ul>
+          )}
+
+          <h3 className="rh-section">Bulletins de paie</h3>
+          {!dossier ? (
+            <p className="cell-sub">Enregistrez le dossier pour déposer les bulletins.</p>
+          ) : (
+            <>
+              {ecriture && (
+                <div className="rh-bulletin-depot">
+                  <label className="field">
+                    <span className="field-label">Mois de paie</span>
+                    <input
+                      type="month"
+                      className="field-input"
+                      placeholder="AAAA-MM"
+                      max={new Date().toISOString().slice(0, 7)}
+                      value={moisBulletin}
+                      onChange={(e) => setMoisBulletin(e.target.value)}
+                    />
+                  </label>
+                  <label className={`btn-ghost btn-ghost--sm${moisBulletin ? '' : ' is-disabled'}`}>
+                    <Paperclip size={14} strokeWidth={2} aria-hidden />
+                    {dossier.bulletins.some((b) => b.mois === moisBulletin) ? 'Remplacer le bulletin' : 'Déposer le bulletin'}
+                    <input
+                      type="file"
+                      hidden
+                      disabled={!moisBulletin}
+                      onChange={(e) => {
+                        deposer(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
+              {dossier.bulletins.length === 0 ? (
+                <p className="cell-sub">Aucun bulletin déposé.</p>
+              ) : (
+                <ul className="rh-pieces">
+                  {dossier.bulletins.map((b) => (
+                    <li key={b.mois} className="rh-piece">
+                      <span className="rh-piece-point est-joint" aria-hidden />
+                      <span className="rh-piece-libelle">
+                        <strong className="mes-mois">{libelleMois(b.mois)}</strong>
+                        <span className="cell-sub">déposé le {jjmmaaaa(b.deposeLe)}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="lien-inline"
+                        onClick={() =>
+                          getBulletin(slug, dossier.id, b.mois)
+                            .then(telecharger)
+                            .catch((e) => setErreur(messageErreur(e, 'Téléchargement impossible.')))
+                        }
+                      >
+                        {b.nom}
+                      </button>
+                      {ecriture && (
+                        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => retirer(b.mois)}>
+                          Retirer
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="cell-sub">
+                Le salarié retrouve ses bulletins dans Mon espace · Mes documents. Un nouveau dépôt sur le même mois remplace
+                le précédent.
+              </p>
+            </>
           )}
           <p className="cell-sub">Un dossier n’est jamais supprimé : en cas de départ, il est archivé.</p>
 

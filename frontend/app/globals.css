@@ -11100,6 +11100,28 @@ a.notif-item:hover {
   font-size: 0.78rem;
   font-weight: 600;
 }
+/* « septembre 2026 » en tête de ligne : majuscule initiale (::first-letter
+   exige une boîte bloc). */
+.mes-mois {
+  display: inline-block;
+}
+.mes-mois::first-letter {
+  text-transform: uppercase;
+}
+.rh-bulletin-depot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.rh-bulletin-depot .field {
+  min-width: 170px;
+}
+.rh-bulletin-depot .is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 .mes-infos dd {
   margin: 0.15rem 0 0;
   white-space: pre-line;

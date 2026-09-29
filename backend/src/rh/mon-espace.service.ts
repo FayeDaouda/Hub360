@@ -13,6 +13,7 @@ const INCLURE = {
   societe: { select: { nom: true } },
   collaborateur: { select: { cellule: { select: { nom: true } } } },
   pieces: { where: { type: { in: DOCUMENTS_SALARIE } }, select: { type: true, nom: true, createdAt: true } },
+  bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
 } satisfies Prisma.DossierPersonnelInclude;
 type DossierProfil = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE }>;
 
@@ -50,6 +51,15 @@ export class MonEspaceService {
     });
     if (!p) throw new NotFoundException('Document pas encore déposé par la RH.');
     return { nom: p.nom, url: p.cle };
+  }
+
+  async bulletin(a: Acteur, mois: string) {
+    const b = await this.prisma.bulletinPaie.findUnique({
+      where: { dossierId_mois: { dossierId: await this.idDossier(a), mois } },
+      select: { nom: true, cle: true },
+    });
+    if (!b) throw new NotFoundException('Bulletin pas encore déposé par la RH.');
+    return { nom: b.nom, url: b.cle };
   }
 
   private async idDossier(a: Acteur): Promise<string> {
@@ -92,5 +102,6 @@ function versProfil(d: DossierProfil) {
       const p = d.pieces.find((x) => x.type === type);
       return { type, nom: p?.nom ?? null, ajouteLe: p?.createdAt ?? null };
     }),
+    bulletins: d.bulletins.map((b) => ({ mois: b.mois, nom: b.nom, deposeLe: b.updatedAt })),
   };
 }

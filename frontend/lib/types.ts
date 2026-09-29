@@ -1983,7 +1983,11 @@ export type DossierPersonnel = ChampsDossierPersonnel & {
   archiveLe: string | null;
   pieces: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
   completude: { pourcentage: number; manquants: number };
+  bulletins: BulletinPaie[]; // du plus récent au plus ancien
 };
+
+// Bulletin de paie (lot 5b) : un par mois, déposé par la RH.
+export type BulletinPaie = { mois: string; nom: string; deposeLe: string };
 
 export type OptionsDossiers = {
   societes: { id: string; nom: string }[];
@@ -2162,4 +2166,5 @@ export type ProfilMonEspace = {
   numeroIpm: string;
   mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string } | null;
   documents: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
+  bulletins: BulletinPaie[];
 };

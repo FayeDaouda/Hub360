@@ -1976,6 +1976,7 @@ model DossierPersonnel {
   remboursements    DemandeRemboursement[]
   pointsIntegration PointIntegration[]
   controlesTemps    ControleFeuilleTemps[]
+  bulletins         BulletinPaie[]
 
   @@index([societeId])
   @@map("dossiers_personnel")
@@ -2190,4 +2191,23 @@ model ControleFeuilleTemps {
 
   @@unique([dossierId, mois])
   @@map("controles_feuilles_temps")
+}
+
+// --- RH · Bulletins de paie (lot 5b, sept. 2026) -----------------------------
+// Un bulletin par salarié et par mois, déposé par la RH (remplaçable pour une
+// correction), visible par le salarié dans « Mon espace » · Mes documents.
+model BulletinPaie {
+  id          String   @id @default(uuid())
+  dossierId   String   @map("dossier_id")
+  mois        String // AAAA-MM
+  nom         String
+  cle         String // data URI (puis clé S3, même seam que PieceDossierPersonnel)
+  deposeParId String?  @map("depose_par_id") // audit, pas de FK
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@unique([dossierId, mois])
+  @@map("bulletins_paie")
 }

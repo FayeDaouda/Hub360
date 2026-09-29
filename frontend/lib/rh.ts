@@ -65,3 +65,11 @@ export const enregistrerPointIntegration = (slug: string, dossierId: string, jal
   apiSociete<IntegrationSalarie>(slug, `/rh/integrations/${dossierId}/points/${jalon}`, { method: 'POST', body: corps });
 export const confirmerIntegration = (slug: string, dossierId: string) =>
   apiSociete<{ id: string; confirmeLe: string }>(slug, `/rh/integrations/${dossierId}/confirmation`, { method: 'POST', body: {} });
+
+// Bulletins de paie (lot 5b) : un par mois (AAAA-MM), remplaçable, retirable.
+export const deposerBulletin = (slug: string, id: string, mois: string, nom: string, url: string) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/bulletins/${mois}`, { method: 'PUT', body: { nom, url } });
+export const getBulletin = (slug: string, id: string, mois: string) =>
+  apiSociete<{ nom: string; url: string }>(slug, `/rh/dossiers/${id}/bulletins/${mois}`);
+export const retirerBulletin = (slug: string, id: string, mois: string) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/bulletins/${mois}`, { method: 'DELETE' });

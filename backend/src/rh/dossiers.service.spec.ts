@@ -30,7 +30,7 @@ describe('completude', () => {
 
 describe('DossiersPersonnelService', () => {
   function svc(o: { dernier?: unknown; collab?: unknown } = {}) {
-    const create = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...VIDE, ...data, societe: {}, collaborateur: null, pieces: [] }));
+    const create = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...VIDE, ...data, societe: {}, collaborateur: null, pieces: [], bulletins: [] }));
     const prisma = {
       dossierPersonnel: { findFirst: jest.fn().mockResolvedValue(o.dernier ?? null), create },
       societe: { findFirst: jest.fn().mockResolvedValue({ id: 'S1' }) },
@@ -63,5 +63,15 @@ describe('DossiersPersonnelService', () => {
   it("refuse une fiche d'équipe déjà liée à un autre dossier", async () => {
     const { s } = svc({ collab: { societeId: 'S1', dossierPersonnel: { id: 'AUTRE' } } });
     await expect(s.creer({ societeId: 'S1', collaborateurId: 'C1' }, 'U1')).rejects.toThrow(ConflictException);
+  });
+});
+
+describe('verifierMoisBulletin', () => {
+  const { verifierMoisBulletin } = jest.requireActual('./dossiers.service');
+  it('mois AAAA-MM déjà commencé, pas avant l’entrée', () => {
+    expect(() => verifierMoisBulletin('2026-09', '2024-01-03', '2026-09-29')).not.toThrow();
+    expect(() => verifierMoisBulletin('2026-9', null, '2026-09-29')).toThrow('Mois invalide');
+    expect(() => verifierMoisBulletin('2026-10', null, '2026-09-29')).toThrow('à venir');
+    expect(() => verifierMoisBulletin('2023-12', '2024-01-03', '2026-09-29')).toThrow('entrée');
   });
 });

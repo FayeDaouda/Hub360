@@ -28,6 +28,11 @@ export class MonEspaceController {
     return this.monEspace.majCoordonnees(req.user, dto);
   }
 
+  @Get('bulletins/:mois')
+  bulletin(@Req() req: R, @Param('mois') mois: string) {
+    return this.monEspace.bulletin(req.user, mois);
+  }
+
   @Get('documents/:type')
   document(@Req() req: R, @Param('type') type: string) {
     return this.monEspace.document(req.user, type);

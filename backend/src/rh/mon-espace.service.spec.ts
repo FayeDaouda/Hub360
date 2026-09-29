@@ -8,6 +8,7 @@ const DOSSIER = {
   emailPro: '', contactUrgence: '', modePaiement: 'virement', coordonneesPaiement: '', numeroIpm: '', salaireBase: 450000,
   missionResultat: '', missionLivrables: '', missionKpi: '', missionSignalAlerte: '',
   societe: { nom: 'Grey Concrete' }, collaborateur: null, pieces: [{ type: 'contrat_signe', nom: 'contrat.pdf', createdAt: new Date() }],
+  bulletins: [{ mois: '2026-08', nom: 'bulletin-08.pdf', updatedAt: new Date() }],
 };
 
 function svc(dossier: object | null = DOSSIER) {
@@ -25,6 +26,7 @@ describe('MonEspaceService', () => {
     expect(dossier?.documents.map((d) => d.type)).toEqual(['contrat_signe', 'fiche_poste']);
     expect(dossier?.documents[1].nom).toBeNull();
     expect(dossier?.mission).toBeNull();
+    expect(dossier?.bulletins).toEqual([expect.objectContaining({ mois: '2026-08', nom: 'bulletin-08.pdf' })]);
   });
   it('profil sans dossier : null, pas d’erreur', async () => {
     await expect(svc(null).s.profil({ userId: 'U' })).resolves.toEqual({ dossier: null });

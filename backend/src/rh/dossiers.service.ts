@@ -43,6 +43,7 @@ const INCLURE = {
   collaborateur: { select: { id: true, cellule: { select: { nom: true } }, utilisateur: COMPTE } },
   utilisateur: COMPTE,
   pieces: { select: { type: true, nom: true, createdAt: true } },
+  bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
 } satisfies Prisma.DossierPersonnelInclude;
 type DossierLu = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE }>;
 
@@ -60,7 +61,7 @@ export function completude(d: DossierLu): { pourcentage: number; manquants: numb
 }
 
 function versDossier(d: DossierLu) {
-  const { societe, collaborateur, utilisateur, pieces, archiveParId: _a, creeParId: _c, ...champs } = d;
+  const { societe, collaborateur, utilisateur, pieces, bulletins, archiveParId: _a, creeParId: _c, ...champs } = d;
   // Compte qui ouvre « Mon espace » : celui de la fiche d'équipe s'il y en a
   // une, sinon le compte relié directement au dossier.
   const compte = collaborateur?.utilisateur ?? utilisateur;
@@ -76,6 +77,7 @@ function versDossier(d: DossierLu) {
       return { type, nom: p?.nom ?? null, ajouteLe: p?.createdAt ?? null };
     }),
     completude: completude(d),
+    bulletins: bulletins.map((b) => ({ mois: b.mois, nom: b.nom, deposeLe: b.updatedAt })),
   };
 }
 
@@ -185,6 +187,37 @@ export class DossiersPersonnelService {
     return this.detail(id);
   }
 
+  // --- Bulletins de paie (lot 5b) : un par mois, remplaçable ------------------
+  async deposerBulletin(id: string, mois: string, dto: PieceDto, acteurId: string) {
+    const d = await this.charger(id);
+    verifierMoisBulletin(mois, d.dateEntree);
+    if (!dto.url.startsWith('data:')) throw new BadRequestException('Fichier invalide.');
+    const data = { nom: dto.nom, cle: dto.url, deposeParId: acteurId };
+    await this.prisma.bulletinPaie.upsert({
+      where: { dossierId_mois: { dossierId: id, mois } },
+      create: { dossierId: id, mois, ...data },
+      update: data,
+    });
+    return this.detail(id);
+  }
+
+  async bulletin(id: string, mois: string) {
+    const b = await this.prisma.bulletinPaie.findUnique({
+      where: { dossierId_mois: { dossierId: id, mois } },
+      select: { nom: true, cle: true },
+    });
+    if (!b) throw new NotFoundException('Bulletin absent');
+    return { nom: b.nom, url: b.cle };
+  }
+
+  // Retrait d'un dépôt erroné (mauvais salarié, mauvais mois).
+  async retirerBulletin(id: string, mois: string) {
+    await this.charger(id);
+    const { count } = await this.prisma.bulletinPaie.deleteMany({ where: { dossierId: id, mois } });
+    if (count === 0) throw new NotFoundException('Bulletin absent');
+    return this.detail(id);
+  }
+
   // --- internes ---------------------------------------------------------------
   private async charger(id: string): Promise<DossierLu> {
     const d = await this.prisma.dossierPersonnel.findUnique({ where: { id }, include: INCLURE });
@@ -252,4 +285,11 @@ export class DossiersPersonnelService {
     }
     return data as Prisma.DossierPersonnelUncheckedCreateInput & Prisma.DossierPersonnelUncheckedUpdateInput;
   }
+}
+
+// Mois AAAA-MM déjà commencé, et pas avant l'entrée du salarié.
+export function verifierMoisBulletin(mois: string, dateEntree: string | null, aujourdhui = new Date().toISOString().slice(0, 10)) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new BadRequestException('Mois invalide (AAAA-MM).');
+  if (mois > aujourdhui.slice(0, 7)) throw new BadRequestException('Pas de bulletin pour un mois à venir.');
+  if (dateEntree && mois < dateEntree.slice(0, 7)) throw new BadRequestException("Mois antérieur à l'entrée du salarié.");
 }
