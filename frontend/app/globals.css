@@ -10942,3 +10942,119 @@ a.notif-item:hover {
 .integ-detail .cell-sub {
   white-space: normal;
 }
+
+/* ---------- RH · Temps de travail (lot 4) : feuilles, Mon temps, durées ---------- */
+.temps-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1rem;
+  align-items: start;
+}
+/* Côte à côte seulement quand le tableau (7 colonnes) tient sans défiler. */
+@media (min-width: 1500px) {
+  .temps-grille {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+/* Une grille à piste unique s'élargit à son contenu le plus large (tableau) :
+   on la borne pour que textes et tableaux restent dans le panneau. */
+.temps-panel {
+  grid-template-columns: minmax(0, 1fr);
+  scroll-margin-top: 1rem;
+}
+.temps-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+.temps-entete > div:first-child {
+  display: grid;
+  gap: 0.3rem;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.temps-entete .admin-periode-toggle {
+  flex-wrap: wrap;
+}
+.temps-entete .vue-toggle,
+.rh-onglets {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.temps-entete .vue-toggle button,
+.rh-onglets button {
+  white-space: nowrap;
+}
+.temps-mois {
+  margin-bottom: 1rem;
+}
+.temps-mois .admin-periode-toggle {
+  flex-wrap: wrap;
+}
+.temps-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.temps-table tr.is-active td {
+  background: color-mix(in oklch, var(--accent) 9%, transparent);
+}
+.temps-chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+.temps-chiffres dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.temps-chiffres dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.temps-alerte {
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .temps-alerte {
+  color: var(--ocre);
+}
+.temps-table .cell-sub.temps-alerte {
+  white-space: normal;
+}
+.durees-intro {
+  margin-bottom: 1rem;
+}
+.durees-liste {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.durees-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.durees-ligne:last-child {
+  border-bottom: none;
+}
+.durees-saisie {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.durees-saisie .field-input {
+  width: 7.5rem;
+  text-align: right;
+}

@@ -151,7 +151,7 @@ export default function PermisPage({ params }: Props) {
   // cocher/uploader/prolonger sur ce bloc précis.
   async function majBloc(
     groupe: GroupeChecklistPermis,
-    patch: { echeance?: string | null; responsableId?: string | null },
+    patch: { debut?: string | null; echeance?: string | null; responsableId?: string | null },
   ) {
     setErreur(null);
     try {
@@ -332,11 +332,25 @@ export default function PermisPage({ params }: Props) {
 
                 <div className="ap-souscheck-bloc-meta">
                   <label className="field ap-souscheck-bloc-champ">
+                    <span className="field-label">Début</span>
+                    <input
+                      type="date"
+                      className="field-input"
+                      disabled={!ecriture}
+                      max={groupe.echeance ?? undefined}
+                      value={groupe.debut ?? ''}
+                      onChange={(e) =>
+                        majBloc(groupe.groupe, { debut: e.target.value || null })
+                      }
+                    />
+                  </label>
+                  <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Échéance du bloc</span>
                     <input
                       type="date"
                       className="field-input"
                       disabled={!ecriture}
+                      min={groupe.debut ?? undefined}
                       value={groupe.echeance ?? ''}
                       onChange={(e) =>
                         majBloc(groupe.groupe, { echeance: e.target.value || null })

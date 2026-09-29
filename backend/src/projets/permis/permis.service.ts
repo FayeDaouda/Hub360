@@ -9,6 +9,7 @@ import { GroupeChecklistPermis, Permis, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { GABARIT_CHECKLIST_PERMIS, GROUPES_CHECKLIST_PERMIS } from '../domaine/config';
+import { verifierFenetreBloc } from '../domaine/fenetre-bloc';
 import { agitEnDirection, chargerProjet } from '../projet-acces';
 import { estAutoriseAAssigner, verifierResponsableOuAdmin } from '../dispatch-acces';
 import {
@@ -254,7 +255,12 @@ export class PermisService {
       }
     }
 
+    verifierFenetreBloc(
+      dto.debut !== undefined ? dto.debut : avant.debut,
+      dto.echeance !== undefined ? dto.echeance : avant.echeance,
+    );
     const data: Prisma.BlocPermisUpdateInput = {};
+    if (dto.debut !== undefined) data.debut = dto.debut;
     if (dto.echeance !== undefined) data.echeance = dto.echeance;
     if (dto.responsableId !== undefined) {
       data.responsable = dto.responsableId
@@ -790,6 +796,7 @@ export class PermisService {
           groupe: g.groupe,
           libelle: g.libelle,
           description: g.description,
+          debut: bloc?.debut ?? null,
           echeance: bloc?.echeance ?? null,
           responsable: ref(bloc?.responsable ?? null),
           prolongationDemandeeLe: bloc?.prolongationDemandeeLe ?? null,

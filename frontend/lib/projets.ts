@@ -220,7 +220,7 @@ export function patchBlocChecklistAvp(
   slug: string,
   projetId: string,
   groupe: GroupeChecklistAvp,
-  patch: { echeance?: string | null; responsableId?: string | null },
+  patch: { debut?: string | null; echeance?: string | null; responsableId?: string | null },
 ): Promise<AvantProjet> {
   return apiSociete<AvantProjet>(
     slug,

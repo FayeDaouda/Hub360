@@ -140,7 +140,7 @@ export function patchBlocPermis(
   slug: string,
   projetId: string,
   groupe: GroupeChecklistPermis,
-  patch: { echeance?: string | null; responsableId?: string | null },
+  patch: { debut?: string | null; echeance?: string | null; responsableId?: string | null },
 ): Promise<Permis> {
   return apiSociete<Permis>(slug, `/projets/${projetId}/permis/blocs/${groupe}`, {
     method: 'PATCH',

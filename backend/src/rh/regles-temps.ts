@@ -1,0 +1,151 @@
+// RH · Temps de travail (lot 4). Règles pures, testées.
+//
+// Tirées des maquettes « Feuilles de temps » et « Mon espace » (manuel non reçu) :
+//  - calcul automatique à partir des tâches assignées dans les projets, hors
+//    absences validées : personne ne saisit ni ne modifie d'heures ;
+//  - la durée standard de chaque tâche est répartie sur sa fenêtre (début →
+//    échéance) ;
+//  - 8 h par jour ouvré, du lundi au vendredi : la maquette donne 168 h pour
+//    août 2026 (21 jours ouvrés) et 88 h avec 10 jours d'absence (11 × 8) ;
+//  - le mois en cours est compté jusqu'à aujourd'hui (154,9 h « imputées » le
+//    23/09 sur une fenêtre de 17 jours ouvrés).
+// HYPOTHÈSES DE TRAVAIL (à valider avec la RH) :
+//  - la durée se répartit à parts égales sur les jours ouvrés de la fenêtre où
+//    le salarié est présent : une absence reporte la charge sur ses autres
+//    jours, elle ne l'efface pas ;
+//  - jours fériés pas encore déduits (même réserve que les congés).
+export const HEURES_PAR_JOUR = 8;
+
+// Premier mois couvert : aucun bloc n'avait de date de début avant la mise en
+// service des feuilles de temps, il n'y a donc rien à calculer avant.
+export const MOIS_DEBUT_FEUILLES = '2026-09';
+
+export type Periode = { debut: string; fin: string }; // AAAA-MM-JJ inclus
+
+export type Tache = {
+  id: string;
+  debut: string | null;
+  echeance: string | null;
+  heures: number | null; // durée standard ; null = non définie
+};
+
+// Raison pour laquelle une tâche ne produit aucune heure.
+export type Manque = 'duree' | 'debut' | 'echeance' | 'fenetre' | 'absence';
+
+const jour = (iso: string) => new Date(`${iso}T00:00:00Z`);
+const versIso = (d: Date) => d.toISOString().slice(0, 10);
+const max = (a: string, b: string) => (a > b ? a : b);
+const min = (a: string, b: string) => (a < b ? a : b);
+
+export const arrondi = (n: number) => Math.round(n * 10) / 10;
+
+// Jours ouvrés (lundi → vendredi) de l'intervalle, bornes incluses.
+export function joursOuvres(p: Periode): string[] {
+  const jours: string[] = [];
+  for (let d = jour(p.debut); d <= jour(p.fin); d.setUTCDate(d.getUTCDate() + 1)) {
+    const j = d.getUTCDay();
+    if (j !== 0 && j !== 6) jours.push(versIso(d));
+  }
+  return jours;
+}
+
+export function moisDe(date: string): string {
+  return date.slice(0, 7);
+}
+
+export function bornesMois(mois: string): Periode {
+  const [a, m] = mois.split('-').map(Number);
+  const dernier = new Date(Date.UTC(a, m, 0)).getUTCDate();
+  return { debut: `${mois}-01`, fin: `${mois}-${String(dernier).padStart(2, '0')}` };
+}
+
+// Mois de `depuis` à `jusqua` inclus (AAAA-MM), dans l'ordre.
+export function moisEntre(depuis: string, jusqua: string): string[] {
+  const liste: string[] = [];
+  const [a0, m0] = depuis.split('-').map(Number);
+  for (let d = new Date(Date.UTC(a0, m0 - 1, 1)); versIso(d).slice(0, 7) <= jusqua; d.setUTCMonth(d.getUTCMonth() + 1)) {
+    liste.push(versIso(d).slice(0, 7));
+  }
+  return liste;
+}
+
+// Jours ouvrés couverts par des absences validées (ensemble, sans doublon).
+export function joursAbsents(absences: Periode[]): Set<string> {
+  return new Set(absences.flatMap(joursOuvres));
+}
+
+export function manqueTache(t: Tache, absents: Set<string>): Manque | null {
+  if (!t.debut) return 'debut';
+  if (!t.echeance) return 'echeance';
+  if (t.debut > t.echeance) return 'fenetre';
+  if (t.heures == null || t.heures <= 0) return 'duree';
+  if (!joursOuvres({ debut: t.debut, fin: t.echeance }).some((j) => !absents.has(j))) return 'absence';
+  return null;
+}
+
+// Heures de la tâche tombant dans `p` (non arrondies) : durée × jours présents
+// de la fenêtre situés dans `p` ÷ jours présents de toute la fenêtre.
+export function heuresTache(t: Tache, absents: Set<string>, p: Periode): number {
+  if (manqueTache(t, absents) || p.debut > p.fin) return 0;
+  const presents = joursOuvres({ debut: t.debut!, fin: t.echeance! }).filter((j) => !absents.has(j));
+  const dansPeriode = presents.filter((j) => j >= p.debut && j <= p.fin).length;
+  return (t.heures! * dansPeriode) / presents.length;
+}
+
+export type Salarie = {
+  dateEntree: string | null;
+  // Départ effectif (archivage du dossier) ; la fin prévue d'un CDD n'en est
+  // pas une tant que le dossier n'est pas archivé.
+  dateSortie: string | null;
+  absences: Periode[];
+};
+
+// Période effectivement comptée pour ce mois : bornée par l'entrée, la
+// sortie et, pour le mois en cours, par aujourd'hui. `null` si vide.
+export function periodeComptee(mois: string, s: Salarie, aujourdhui: string): Periode | null {
+  const m = bornesMois(mois);
+  const debut = s.dateEntree ? max(m.debut, s.dateEntree) : m.debut;
+  let fin = min(m.fin, aujourdhui);
+  if (s.dateSortie) fin = min(fin, s.dateSortie);
+  return debut <= fin ? { debut, fin } : null;
+}
+
+export type LigneFeuille = { id: string; heures: number; manque: Manque | null };
+
+export type Feuille = {
+  heuresImputees: number;
+  heuresDisponibles: number;
+  joursAbsence: number;
+  occupation: number | null; // % entier ; null sans heure disponible
+  lignes: LigneFeuille[];
+};
+
+export function feuilleDuMois(mois: string, s: Salarie, taches: Tache[], aujourdhui: string): Feuille {
+  const absents = joursAbsents(s.absences);
+  const p = periodeComptee(mois, s, aujourdhui);
+  const ouvres = p ? joursOuvres(p) : [];
+  const joursAbsence = ouvres.filter((j) => absents.has(j)).length;
+  const heuresDisponibles = (ouvres.length - joursAbsence) * HEURES_PAR_JOUR;
+  const lignes = taches.map((t) => ({
+    id: t.id,
+    heures: p ? arrondi(heuresTache(t, absents, p)) : 0,
+    manque: manqueTache(t, absents),
+  }));
+  const brut = p ? taches.reduce((n, t) => n + heuresTache(t, absents, p), 0) : 0;
+  return {
+    heuresImputees: arrondi(brut),
+    heuresDisponibles,
+    joursAbsence,
+    occupation: heuresDisponibles > 0 ? Math.round((brut / heuresDisponibles) * 100) : null,
+    lignes,
+  };
+}
+
+export type EtatTache = 'a_venir' | 'en_cours' | 'terminee';
+
+// État de la fenêtre d'une tâche (et non de son avancement, suivi ailleurs).
+export function etatTache(t: Tache, aujourdhui: string): EtatTache | null {
+  if (!t.debut || !t.echeance) return null;
+  if (aujourdhui < t.debut) return 'a_venir';
+  return aujourdhui <= t.echeance ? 'en_cours' : 'terminee';
+}

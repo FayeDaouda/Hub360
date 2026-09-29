@@ -86,7 +86,7 @@ function Vue({ slug, projetId }: { slug: string; projetId: string }) {
 
   async function majResponsableBloc(
     groupe: ChecklistExecutionGroupe['groupe'],
-    patch: { responsableId?: string | null; echeance?: string | null },
+    patch: { debut?: string | null; responsableId?: string | null; echeance?: string | null },
   ) {
     try {
       setExec(await patchBlocExecution(slug, projetId, groupe, patch));
@@ -141,10 +141,23 @@ function Vue({ slug, projetId }: { slug: string; projetId: string }) {
                 profil.equipeAssignable.some((m) => m.id === g.responsable!.id)) ? (
                 <>
                   <label className="field ap-souscheck-bloc-champ">
+                    <span className="field-label">Début</span>
+                    <input
+                      type="date"
+                      className="field-input"
+                      max={g.echeance ?? undefined}
+                      value={g.debut ?? ''}
+                      onChange={(e) =>
+                        majResponsableBloc(g.groupe, { debut: e.target.value || null })
+                      }
+                    />
+                  </label>
+                  <label className="field ap-souscheck-bloc-champ">
                     <span className="field-label">Échéance du bloc</span>
                     <input
                       type="date"
                       className="field-input"
+                      min={g.debut ?? undefined}
                       value={g.echeance ?? ''}
                       onChange={(e) =>
                         majResponsableBloc(g.groupe, { echeance: e.target.value || null })
@@ -173,6 +186,9 @@ function Vue({ slug, projetId }: { slug: string; projetId: string }) {
                 </>
               ) : (
                 <>
+                  <span className="ap-souscheck-echeance-txt">
+                    Début : {g.debut ? formatDateCourte(g.debut) : '—'}
+                  </span>
                   <span className="ap-souscheck-echeance-txt">
                     Échéance : {g.echeance ? formatDateCourte(g.echeance) : '—'}
                   </span>

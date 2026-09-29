@@ -15,6 +15,7 @@ import {
   LIBELLES_PHASE,
 } from './domaine/config';
 import { NotificationsService } from '../notifications/notifications.service';
+import { verifierFenetreBloc } from './domaine/fenetre-bloc';
 import { phasesAdjacentes } from './domaine/gardes';
 import { versAvantProjet, versProjetExecution, type FichierLigneChecklistAvp } from '../commun/format-contrat';
 import { agitEnDirection, ouProjetsDuCollaborateur } from './projet-acces';
@@ -298,7 +299,12 @@ export class ProjetsService {
       }
     }
 
+    verifierFenetreBloc(
+      dto.debut !== undefined ? dto.debut : avant.debut,
+      dto.echeance !== undefined ? dto.echeance : avant.echeance,
+    );
     const data: Prisma.BlocChecklistAvpUpdateInput = {};
+    if (dto.debut !== undefined) data.debut = dto.debut;
     if (dto.echeance !== undefined) data.echeance = dto.echeance;
     if (dto.responsableId !== undefined) {
       data.responsable = dto.responsableId

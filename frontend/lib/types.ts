@@ -984,6 +984,7 @@ export type ChecklistPermisGroupe = {
   description: string;
   // Un seul responsable par bloc, une seule échéance par bloc — null =
   // personne désigné / pas d'échéance fixée (admin seul peut alors agir).
+  debut: string | null; // AAAA-MM-JJ — fenêtre début → échéance (RH · Temps)
   echeance: string | null; // AAAA-MM-JJ
   responsable: { id: string; nom: string } | null;
   prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
@@ -1149,6 +1150,7 @@ export type ChecklistExecutionGroupe = {
   description: string;
   // Un seul responsable par bloc, une seule échéance par bloc — null =
   // personne désigné / pas d'échéance fixée (admin seul peut alors agir).
+  debut: string | null; // AAAA-MM-JJ — fenêtre début → échéance (RH · Temps)
   echeance: string | null; // AAAA-MM-JJ
   responsable: { id: string; nom: string } | null;
   prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
@@ -1202,6 +1204,7 @@ export type ChecklistAvpGroupe = {
   description: string;
   // Assignation par bloc (même motif que ChecklistPermisGroupe) — vide =
   // toute l'équipe du projet peut agir (règle de septembre, en repli).
+  debut: string | null; // AAAA-MM-JJ — fenêtre début → échéance (RH · Temps)
   echeance: string | null; // AAAA-MM-JJ
   responsable: { id: string; nom: string } | null;
   prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
@@ -2057,4 +2060,75 @@ export type IntegrationSalarie = {
   mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string };
   points: PointIntegration[];
   aTraiter: number;
+};
+
+// --- RH · Temps de travail (lot 4) -------------------------------------------
+// Heures calculées depuis les blocs assignés (durée standard répartie sur la
+// fenêtre début → échéance), hors absences validées — jamais saisies.
+export type SectionTache = 'avant_projet' | 'permis' | 'execution';
+export type ManqueTache = 'duree' | 'debut' | 'echeance' | 'fenetre' | 'absence';
+export type StatutFeuilleTemps = 'en_cours' | 'a_controler' | 'sans_heures' | 'controlee';
+export type EtatTacheTemps = 'a_venir' | 'en_cours' | 'terminee';
+
+export type LigneCalculTemps = {
+  id: string;
+  section: SectionTache;
+  libelle: string;
+  projetCode: string;
+  projetProgramme: string;
+  debut: string;
+  echeance: string;
+  dureeStandard: number | null;
+  heures: number; // part du mois
+  manque: ManqueTache | null;
+};
+export type FeuilleTempsCalculee = {
+  mois: string; // AAAA-MM
+  statut: StatutFeuilleTemps;
+  heuresImputees: number;
+  heuresDisponibles: number;
+  joursAbsence: number;
+  occupation: number | null; // %
+  controleLe: string | null;
+  lignes: LigneCalculTemps[];
+};
+export type FeuilleTempsSalarie = FeuilleTempsCalculee & {
+  dossierId: string;
+  matricule: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  societe: string;
+  cellule: string | null;
+  blocsNonPlanifies: number;
+};
+export type FeuillesTemps = {
+  mois: string;
+  periodes: { mois: string; clos: boolean; aControler: number }[];
+  feuilles: FeuilleTempsSalarie[];
+};
+export type TacheTemps = {
+  id: string;
+  section: SectionTache;
+  libelle: string;
+  projetId: string;
+  projetCode: string;
+  projetProgramme: string;
+  debut: string | null;
+  echeance: string | null;
+  dureeStandard: number | null;
+  heuresImputees: number; // cumul jusqu'à aujourd'hui
+  etat: EtatTacheTemps | null;
+  manque: ManqueTache | null;
+};
+export type MonTemps = {
+  mois: string;
+  periodes: string[];
+  feuille: FeuilleTempsCalculee;
+  taches: TacheTemps[];
+};
+export type DureesStandardSection = {
+  section: SectionTache;
+  libelle: string;
+  groupes: { groupe: string; libelle: string; heures: number | null }[];
 };

@@ -173,6 +173,9 @@ function Vue({ slug, projetId }: { slug: string; projetId: string }) {
               ) : (
                 <>
                   <span className="ap-souscheck-echeance-txt">
+                    Début : {g.debut ? formatDateCourte(g.debut) : '—'}
+                  </span>
+                  <span className="ap-souscheck-echeance-txt">
                     Échéance : {g.echeance ? formatDateCourte(g.echeance) : '—'}
                   </span>
                   <span className="ap-souscheck-assigne-txt">

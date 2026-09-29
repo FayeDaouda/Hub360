@@ -38,6 +38,7 @@ export class PatchLigneChecklistExecutionDto {
 
 // PATCH …/execution/blocs/:groupe — admin uniquement.
 export class PatchBlocExecutionDto {
+  @IsOptional() @Matches(DATE_AGENDA) debut?: string | null;
   @IsOptional() @Matches(DATE_AGENDA) echeance?: string | null;
   @IsOptional() @IsString() responsableId?: string | null;
 }

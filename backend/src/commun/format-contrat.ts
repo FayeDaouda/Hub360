@@ -255,6 +255,7 @@ export function versAvantProjet(
         groupe: g.groupe,
         libelle: g.libelle,
         description: g.description,
+        debut: bloc?.debut ?? null,
         echeance: bloc?.echeance ?? null,
         responsable: ref(bloc?.responsable ?? null),
         prolongationDemandeeLe: bloc?.prolongationDemandeeLe ?? null,

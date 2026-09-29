@@ -100,7 +100,7 @@ export function patchBlocExecution(
   slug: string,
   projetId: string,
   groupe: GroupeChecklistExecution,
-  patch: { echeance?: string | null; responsableId?: string | null },
+  patch: { debut?: string | null; echeance?: string | null; responsableId?: string | null },
 ): Promise<Execution> {
   return apiSociete<Execution>(slug, `/projets/${projetId}/execution/blocs/${groupe}`, {
     method: 'PATCH',

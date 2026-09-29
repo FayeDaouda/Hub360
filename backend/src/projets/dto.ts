@@ -55,6 +55,7 @@ export class PatchLigneChecklistAvpDto {
 // PATCH …/avant-projet/checklist/blocs/:groupe — assignation + échéance par
 // bloc, même motif que PatchBlocPermisDto.
 export class PatchBlocChecklistAvpDto {
+  @IsOptional() @Matches(DATE_AGENDA) debut?: string | null;
   @IsOptional() @Matches(DATE_AGENDA) echeance?: string | null;
   @IsOptional() @IsString() responsableId?: string | null;
 }

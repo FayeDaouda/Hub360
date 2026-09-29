@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import {
   CalendarDays,
   ChevronLeft,
+  Clock,
   FolderKanban,
   Gauge,
   LayoutDashboard,
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { cle: 'projets', libelle: 'Mes projets', icone: FolderKanban, chemin: 'projets' },
   { cle: 'indicateurs', libelle: 'Mes indicateurs', icone: Gauge, chemin: 'indicateurs' },
   { cle: 'demandes', libelle: 'Congés et demandes', icone: CalendarDays, chemin: 'demandes' },
+  { cle: 'temps', libelle: 'Mon temps', icone: Clock, chemin: 'temps' },
   { cle: 'equipe', libelle: 'Mon équipe', icone: Users },
 ];
 

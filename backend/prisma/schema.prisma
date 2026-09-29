@@ -63,7 +63,8 @@ model Societe {
   blocsEtudeGabarit     BlocEtudeGabarit[]
   annexesContratGabarit AnnexeContratGabarit[]
 
-  dossiersPersonnel DossierPersonnel[]
+  dossiersPersonnel    DossierPersonnel[]
+  dureesStandardTaches DureeStandardTache[]
 
   @@map("societes")
 }
@@ -870,6 +871,9 @@ enum GroupeChecklistAvp {
 model BlocChecklistAvp {
   avantProjetId          String             @map("avant_projet_id")
   groupe                 GroupeChecklistAvp
+  // Début planifié (RH · Temps, lot 4) : la durée standard du bloc se
+  // répartit sur la fenêtre début → échéance (cf. rh/regles-temps.ts).
+  debut                  String?            @map("debut") // AAAA-MM-JJ
   echeance               String?            @map("echeance") // AAAA-MM-JJ
   responsableId          String?            @map("responsable_id")
   // Demande de prolongation (responsable du bloc uniquement) — même motif que
@@ -1055,6 +1059,9 @@ enum GroupeChecklistPermis {
 model BlocPermis {
   permisId               String                @map("permis_id")
   groupe                 GroupeChecklistPermis
+  // Début planifié (RH · Temps, lot 4) : la durée standard du bloc se
+  // répartit sur la fenêtre début → échéance (cf. rh/regles-temps.ts).
+  debut                  String?               @map("debut") // AAAA-MM-JJ
   echeance               String?               @map("echeance") // AAAA-MM-JJ
   responsableId          String?               @map("responsable_id")
   // Demande de prolongation (responsable du bloc uniquement) — une seule
@@ -1366,6 +1373,9 @@ enum GroupeChecklistExecution {
 model BlocExecution {
   projetId               String                   @map("projet_id")
   groupe                 GroupeChecklistExecution
+  // Début planifié (RH · Temps, lot 4) : la durée standard du bloc se
+  // répartit sur la fenêtre début → échéance (cf. rh/regles-temps.ts).
+  debut                  String?                  @map("debut") // AAAA-MM-JJ
   echeance               String?                  @map("echeance") // AAAA-MM-JJ
   responsableId          String?                  @map("responsable_id")
   // Demande de prolongation (responsable du bloc uniquement) — même motif que
@@ -1952,12 +1962,13 @@ model DossierPersonnel {
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
 
-  societe        Societe                 @relation(fields: [societeId], references: [id], onDelete: Restrict)
-  collaborateur  Collaborateur?          @relation(fields: [collaborateurId], references: [id], onDelete: SetNull)
-  pieces         PieceDossierPersonnel[]
-  absences       DemandeAbsence[]
-  remboursements DemandeRemboursement[]
+  societe           Societe                 @relation(fields: [societeId], references: [id], onDelete: Restrict)
+  collaborateur     Collaborateur?          @relation(fields: [collaborateurId], references: [id], onDelete: SetNull)
+  pieces            PieceDossierPersonnel[]
+  absences          DemandeAbsence[]
+  remboursements    DemandeRemboursement[]
   pointsIntegration PointIntegration[]
+  controlesTemps    ControleFeuilleTemps[]
 
   @@index([societeId])
   @@map("dossiers_personnel")
@@ -2122,4 +2133,54 @@ model PointIntegration {
 
   @@unique([dossierId, jalon])
   @@map("points_integration")
+}
+
+// --- RH · Temps de travail (lot 4, sept. 2026) -------------------------------
+// Une « tâche assignée » = un bloc de checklist Avant-projet / Permis /
+// Exécution dont le collaborateur est responsable (l'assignation est par bloc,
+// décision boss). Sa durée standard est fixée par la société (référentiel
+// ci-dessous, vide par défaut : aucune valeur inventée) et se répartit sur la
+// fenêtre début → échéance du bloc. Personne ne saisit ni ne modifie d'heures.
+enum SectionTache {
+  avant_projet
+  permis
+  execution
+}
+
+// Référentiel société (societe_admin ou CIO). `groupe` = valeur de l'enum de
+// groupe de la section (GroupeChecklistAvp/Permis/Execution), validée en
+// service. Lu en direct : modifier une durée recalcule les feuilles non encore
+// contrôlées, jamais celles déjà contrôlées (figées, cf. ControleFeuilleTemps).
+model DureeStandardTache {
+  societeId String       @map("societe_id")
+  section   SectionTache
+  groupe    String
+  heures    Decimal      @db.Decimal(5, 1)
+  majParId  String?      @map("maj_par_id") // audit, pas de FK
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@id([societeId, section, groupe])
+  @@map("durees_standard_taches")
+}
+
+// Contrôle RH d'une feuille de mois clos : fige les chiffres et le détail du
+// calcul tels qu'ils ont été contrôlés (une réassignation ou une durée
+// modifiée ensuite ne réécrit pas un mois déjà contrôlé).
+model ControleFeuilleTemps {
+  id                String   @id @default(uuid())
+  dossierId         String   @map("dossier_id")
+  mois              String // AAAA-MM
+  heuresImputees    Decimal  @map("heures_imputees") @db.Decimal(6, 1)
+  heuresDisponibles Decimal  @map("heures_disponibles") @db.Decimal(6, 1)
+  joursAbsence      Int      @map("jours_absence")
+  detail            Json // lignes de calcul (tâches) au moment du contrôle
+  controleLe        DateTime @default(now()) @map("controle_le")
+  controleParId     String?  @map("controle_par_id") // audit, pas de FK
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@unique([dossierId, mois])
+  @@map("controles_feuilles_temps")
 }
