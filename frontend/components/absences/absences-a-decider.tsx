@@ -7,7 +7,8 @@ import { DecisionN1Modal } from './decision-n1-modal';
 
 // File des absences dont la personne connectée est le N+1 (chef de cellule
 // côté collab, Dir. GC côté back-office). Rien à afficher = rien rendu.
-export function AbsencesADecider({ slug }: { slug: string }) {
+// `onCompte` : nombre en attente, pour un compteur d'onglet (Mon espace).
+export function AbsencesADecider({ slug, onCompte }: { slug: string; onCompte?: (n: number) => void }) {
   const [liste, setListe] = useState<DemandeAbsence[]>([]);
   const [ouverte, setOuverte] = useState<string | null>(null);
 
@@ -15,6 +16,7 @@ export function AbsencesADecider({ slug }: { slug: string }) {
     getAbsencesAValider(slug).then(setListe).catch(() => setListe([]));
   }, [slug]);
   useEffect(charger, [charger]);
+  useEffect(() => onCompte?.(liste.length), [liste, onCompte]);
 
   if (liste.length === 0) return null;
   return (

@@ -11089,6 +11089,15 @@ a.notif-item:hover {
   margin: 0.15rem 0 0;
   white-space: normal;
 }
+.perf-statut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+.perf-statut .cell-sub {
+  white-space: normal;
+}
 .mes-infos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));

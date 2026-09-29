@@ -200,6 +200,12 @@ export class ExecutionService {
       data,
     });
 
+    // Nouveau responsable (ou bloc libéré) : la remise/validation de l'ancien
+    // ne le suit pas — le circuit repart de zéro (RH lot 5c).
+    if (dto.responsableId !== undefined && dto.responsableId !== avant.responsableId) {
+      await this.prisma.validationTache.deleteMany({ where: { section: 'execution', projetId: id, groupe } });
+    }
+
     const nouveauResponsable =
       dto.responsableId != null && dto.responsableId !== avant.responsableId;
     if (nouveauResponsable) {

@@ -2,14 +2,9 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma, SectionTache } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  arrondi,
   bornesMois,
-  etatTache,
   feuilleDuMois,
-  heuresTache,
-  joursAbsents,
   type Manque,
-  manqueTache,
   MOIS_DEBUT_FEUILLES,
   moisDe,
   moisEntre,
@@ -200,28 +195,10 @@ export class TempsService {
     const salarie = dossier ? salarieDe(dossier) : { dateEntree: fiche!.dateArrivee, dateSortie: null, absences: [] };
     const collabId = dossier ? dossier.collaborateur?.id : fiche!.id;
     const taches = collabId ? await chargerTachesAssignees(this.prisma, [collabId]) : [];
-    const absents = joursAbsents(salarie.absences);
-
     return {
       mois: cible,
       periodes: moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)),
       feuille: calculer(cible, salarie, dossier?.controlesTemps ?? [], taches, jour),
-      taches: taches
-        .map((t) => ({
-          id: t.id,
-          section: t.section,
-          libelle: t.libelle,
-          projetId: t.projetId,
-          projetCode: t.projetCode,
-          projetProgramme: t.projetProgramme,
-          debut: t.debut,
-          echeance: t.echeance,
-          dureeStandard: t.heures,
-          heuresImputees: planifiee(t) ? arrondi(heuresTache(t, absents, { debut: t.debut!, fin: jour })) : 0,
-          etat: etatTache(t, jour),
-          manque: manqueTache(t, absents),
-        }))
-        .sort((x, y) => (x.echeance ?? '9999').localeCompare(y.echeance ?? '9999')),
     };
   }
 }

@@ -38,6 +38,7 @@ function mockPrisma() {
     projet,
     imageProjet,
     fichierProjet,
+    validationTache: { deleteMany: jest.fn() },
     // joindreImages/joindreFichiers postent le fichier ET marquent l'item
     // fait en une transaction (cf. marquerFaitApresUpload) — mock minimal.
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),

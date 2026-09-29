@@ -20,7 +20,6 @@ import {
 import { formatMontant } from '@/lib/format';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
-import { AbsencesADecider } from '@/components/absences/absences-a-decider';
 
 type Fichier = { nom: string; url: string };
 type MesDemandes = { solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] };
@@ -47,9 +46,9 @@ function Chargement() {
   );
 }
 
-// « Mon espace » · Congés et absences (RH lot 2) : solde, demande, suivi, et
-// la file « à valider » du N+1. Règles de solde = hypothèses de travail (cf.
-// regles-conges.ts).
+// « Mon espace » · Congés et absences (RH lot 2) : solde, demande, suivi (la
+// file du N+1 vit dans l'onglet « À valider »). Règles de solde = hypothèses
+// de travail (cf. regles-conges.ts).
 export function CongesAbsences({ slug }: { slug: string }) {
   const { donnees, erreur, charger } = useMesDemandes(slug);
   if (erreur) return <p className="empty-state">{erreur}</p>;
@@ -65,8 +64,6 @@ export function CongesAbsences({ slug }: { slug: string }) {
           { cle: 'attente', label: 'En attente', valeur: solde.enAttente, sousTexte: `${solde.pris} j déjà pris`, icone: Hourglass },
         ]}
       />
-
-      <AbsencesADecider slug={slug} />
 
       <div className="dmd-grille">
         <FormAbsence slug={slug} onFait={charger} />

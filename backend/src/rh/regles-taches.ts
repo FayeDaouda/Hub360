@@ -1,0 +1,39 @@
+// RH · Remise et validation des tâches (lot 5c). Règles pures, testées.
+//
+// Tirées de la maquette « Mon espace · Mes performances » : une tâche est
+// « Remis · à valider » puis « Validée » ; « Respect des délais » = part des
+// tâches validées qui ont été remises au plus tard à leur échéance (« 16
+// tâches validées, dont 15 remises à temps ») ; « En cours » = tout ce qui
+// n'est pas encore validé.
+
+export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'en_cours' | 'a_venir' | 'a_planifier';
+
+export type EtatValidation = { remisLe: Date | null; valideLe: Date | null; renvoyeLe: Date | null } | null;
+
+const jour = (d: Date) => d.toISOString().slice(0, 10);
+
+export function statutTache(t: { debut: string | null; echeance: string | null }, v: EtatValidation, aujourdhui: string): StatutTache {
+  if (v?.valideLe) return 'validee';
+  if (v?.remisLe) return 'remise';
+  if (v?.renvoyeLe) return 'a_reprendre';
+  if (!t.debut || !t.echeance) return 'a_planifier';
+  if (t.echeance < aujourdhui) return 'en_retard';
+  return t.debut > aujourdhui ? 'a_venir' : 'en_cours';
+}
+
+export function statsPerformances(taches: { statut: StatutTache; echeance: string | null; remisLe: Date | null }[]) {
+  const validees = taches.filter((t) => t.statut === 'validee');
+  const jugees = validees.filter((t) => t.echeance && t.remisLe);
+  const aTemps = jugees.filter((t) => jour(t.remisLe!) <= t.echeance!).length;
+  return {
+    total: taches.length,
+    validees: validees.length,
+    enCours: taches.length - validees.length,
+    enRetard: taches.filter((t) => t.statut === 'en_retard').length,
+    respectDelais: {
+      aTemps,
+      total: jugees.length,
+      pct: jugees.length ? Math.round((aTemps / jugees.length) * 100) : null,
+    },
+  };
+}

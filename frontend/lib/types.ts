@@ -500,7 +500,11 @@ export type NotificationType =
   | 'dossier_renvoye'
   | 'offre_acceptee'
   | 'offre_refusee'
-  | 'contrat_signe';
+  | 'contrat_signe'
+  // Remise / validation des tâches (RH lot 5c) — ouvrent le projet.
+  | 'tache_remise'
+  | 'tache_validee'
+  | 'tache_renvoyee';
 
 export type NotificationItem = {
   id: string;
@@ -2115,25 +2119,10 @@ export type FeuillesTemps = {
   periodes: { mois: string; clos: boolean; aControler: number }[];
   feuilles: FeuilleTempsSalarie[];
 };
-export type TacheTemps = {
-  id: string;
-  section: SectionTache;
-  libelle: string;
-  projetId: string;
-  projetCode: string;
-  projetProgramme: string;
-  debut: string | null;
-  echeance: string | null;
-  dureeStandard: number | null;
-  heuresImputees: number; // cumul jusqu'à aujourd'hui
-  etat: EtatTacheTemps | null;
-  manque: ManqueTache | null;
-};
 export type MonTemps = {
   mois: string;
   periodes: string[];
   feuille: FeuilleTempsCalculee;
-  taches: TacheTemps[];
 };
 export type DureesStandardSection = {
   section: SectionTache;
@@ -2167,4 +2156,49 @@ export type ProfilMonEspace = {
   mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string } | null;
   documents: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
   bulletins: BulletinPaie[];
+};
+
+// --- RH · Remise et validation des tâches (lot 5c) -----------------------------
+export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'en_cours' | 'a_venir' | 'a_planifier';
+
+export type TacheMonEspace = {
+  id: string;
+  section: SectionTache;
+  groupe: string;
+  libelle: string;
+  projetId: string;
+  projetCode: string;
+  projetProgramme: string;
+  debut: string | null;
+  echeance: string | null;
+  dureeStandard: number | null;
+  heuresImputees: number; // cumul jusqu'à aujourd'hui
+  manque: ManqueTache | null;
+  etat: EtatTacheTemps | null;
+  statut: StatutTache;
+  remisLe: string | null;
+  valideLe: string | null;
+  renvoiMotif: string | null; // tant que la tâche est à reprendre
+};
+
+export type StatsPerformances = {
+  total: number;
+  validees: number;
+  enCours: number;
+  enRetard: number;
+  respectDelais: { aTemps: number; total: number; pct: number | null };
+};
+
+export type TacheAValider = {
+  id: string;
+  section: SectionTache;
+  groupe: string;
+  libelle: string;
+  projetId: string;
+  projetCode: string;
+  projetProgramme: string;
+  responsable: string;
+  debut: string | null;
+  echeance: string | null;
+  remisLe: string;
 };

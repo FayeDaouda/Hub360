@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { DossiersPersonnelController } from './dossiers.controller';
 import { DossiersPersonnelService } from './dossiers.service';
 import { DemandesService } from './demandes.service';
@@ -8,6 +9,8 @@ import { DureesStandardController, FeuillesTempsController, MonTempsController }
 import { TempsService } from './temps.service';
 import { MonEspaceController } from './mon-espace.controller';
 import { MonEspaceService } from './mon-espace.service';
+import { MesTachesController, ValidationsTachesController } from './taches.controller';
+import { TachesService } from './taches.service';
 import {
   DemandesRhController,
   MesDemandesController,
@@ -15,7 +18,8 @@ import {
 } from './demandes.controller';
 
 @Module({
-  providers: [DossiersPersonnelService, DemandesService, IntegrationService, TempsService, MonEspaceService],
+  imports: [NotificationsModule],
+  providers: [DossiersPersonnelService, DemandesService, IntegrationService, TempsService, MonEspaceService, TachesService],
   controllers: [
     DossiersPersonnelController,
     MesDemandesController,
@@ -26,6 +30,8 @@ import {
     MonTempsController,
     DureesStandardController,
     MonEspaceController,
+    MesTachesController,
+    ValidationsTachesController,
   ],
 })
 export class RhModule {}

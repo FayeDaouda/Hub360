@@ -192,6 +192,10 @@ enum NotificationType {
   offre_acceptee
   offre_refusee
   contrat_signe
+  // Remise / validation des tâches (RH lot 5c) — cf. src/rh/taches.service.ts
+  tache_remise
+  tache_validee
+  tache_renvoyee
 }
 
 model Notification {
@@ -725,6 +729,7 @@ model Projet {
   fichiers                 FichierProjet[]
   factures                 Facture[]
   devis                    Devis[]
+  validationsTaches        ValidationTache[]
 
   @@map("projets")
 }
@@ -2210,4 +2215,29 @@ model BulletinPaie {
 
   @@unique([dossierId, mois])
   @@map("bulletins_paie")
+}
+
+// --- RH · Remise et validation des tâches (lot 5c, sept. 2026) ---------------
+// Le responsable d'un bloc assigné le remet ; son N+1 (chef de cellule, sinon
+// Dir. GC — même chaîne que les absences) le valide ou le renvoie avec un
+// motif. Une ligne par bloc, commune aux trois sections (même clé que les
+// tâches du module Temps : section + projet + groupe). Réassigner le bloc
+// efface la ligne : le circuit repart de zéro avec le nouveau responsable.
+model ValidationTache {
+  section     SectionTache
+  projetId    String       @map("projet_id")
+  groupe      String
+  remisLe     DateTime?    @map("remis_le")
+  remisParId  String?      @map("remis_par_id") // audit, pas de FK
+  valideLe    DateTime?    @map("valide_le")
+  valideParId String?      @map("valide_par_id") // audit, pas de FK
+  // Dernier renvoi (conservé après une nouvelle remise, pour mémoire).
+  renvoyeLe   DateTime?    @map("renvoye_le")
+  renvoiMotif String       @default("") @map("renvoi_motif")
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  @@id([section, projetId, groupe])
+  @@index([remisLe, valideLe])
+  @@map("validations_taches")
 }

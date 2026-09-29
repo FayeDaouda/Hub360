@@ -82,10 +82,11 @@ describe('TempsService', () => {
     expect(r.periodes[0].aControler).toBe(0);
   });
 
-  it('mon temps : tâches du salarié avec imputé cumulé, dossier ou fiche requis', async () => {
+  it('mon temps : feuille du mois du salarié, dossier ou fiche requis', async () => {
     const r = await svc().s.monTemps({ userId: 'U', societeId: 'S1' });
     expect(r.mois).toBe('2026-10');
-    expect(r.taches).toEqual([expect.objectContaining({ dureeStandard: 16, heuresImputees: 16, etat: 'terminee', manque: null })]);
+    expect(r.feuille).toMatchObject({ statut: 'en_cours', heuresImputees: 0, lignes: [] });
+    expect((await svc().s.monTemps({ userId: 'U', societeId: 'S1' }, '2026-09')).feuille.heuresImputees).toBe(16);
     await expect(svc({ collab: null }).s.monTemps({ userId: 'U', societeId: 'S1' })).rejects.toThrow(NotFoundException);
   });
 

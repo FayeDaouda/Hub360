@@ -1,17 +1,23 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ApiError } from '@/lib/client-api';
-import { getMonEspace } from '@/lib/mon-espace';
+import { useSessionCourante } from '@/lib/layout-contexte';
+import { getAbsencesAValider } from '@/lib/demandes';
+import { getMonEspace, getTachesAValider } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
 import type { ProfilMonEspace } from '@/lib/types';
+import { AValider } from './a-valider';
 import { CongesAbsences, RemboursementsSante } from './demandes';
 import { MesDocuments } from './documents';
 import { MesInformations } from './informations';
 import { MonTemps } from './mon-temps';
+import { MesPerformances } from './performances';
 
 const ONGLETS = [
+  { cle: 'performances', libelle: 'Mes performances', dossierRequis: false },
+  { cle: 'a-valider', libelle: 'À valider', dossierRequis: false },
   { cle: 'temps', libelle: 'Mon temps', dossierRequis: false },
   { cle: 'conges', libelle: 'Congés et absences', dossierRequis: true },
   { cle: 'remboursements', libelle: 'Remboursements santé', dossierRequis: true },
@@ -26,6 +32,7 @@ const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
 // comprise, monté dans le back-office comme dans l'espace collaborateur.
 // L'onglet vit dans l'URL (?onglet=) pour les liens directs.
 export function MonEspace({ slug }: { slug: string }) {
+  const { utilisateur } = useSessionCourante();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -35,11 +42,18 @@ export function MonEspace({ slug }: { slug: string }) {
   const [dossier, setDossier] = useState<ProfilMonEspace | null | undefined>(undefined);
   const [erreur, setErreur] = useState<string | null>(null);
   const onglets = useRef<HTMLDivElement>(null);
+  // Tâches remises + absences en attente de ma décision (N+1) : l'onglet
+  // « À valider » n'apparaît que s'il y a quelque chose (ou s'il est ouvert).
+  const [aValider, setAValider] = useState(0);
+  const compter = useCallback((n: number) => setAValider(n), []);
 
   useEffect(() => {
     getMonEspace(slug)
       .then((r) => setDossier(r.dossier))
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger ton espace.'));
+    Promise.all([getTachesAValider(slug), getAbsencesAValider(slug)])
+      .then(([t, a]) => setAValider(t.length + a.length))
+      .catch(() => setAValider(0));
   }, [slug]);
 
   // Barre d'onglets défilante sur mobile : l'onglet actif reste visible.
@@ -59,16 +73,19 @@ export function MonEspace({ slug }: { slug: string }) {
   }
 
   const courant = ONGLETS.find((o) => o.cle === onglet)!;
+  // Sans dossier RH : le nom du compte connecté.
+  const prenom = dossier?.prenom ?? utilisateur.prenom;
+  const nom = dossier?.nom ?? utilisateur.nom;
   const choisir = (cle: Onglet) => router.replace(`${pathname}?onglet=${cle}`, { scroll: false });
 
   return (
     <>
       <div className="mes-entete">
         <span className="mes-initiales" aria-hidden>
-          {dossier ? `${dossier.prenom.charAt(0)}${dossier.nom.charAt(0)}`.toUpperCase() : '?'}
+          {`${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase()}
         </span>
         <div>
-          <h2 className="mes-nom">{dossier ? `${dossier.prenom} ${dossier.nom}`.trim() : 'Mon espace'}</h2>
+          <h2 className="mes-nom">{`${prenom} ${nom}`.trim()}</h2>
           {dossier && (
             <p className="cell-sub mes-sous-titre">
               {[
@@ -85,7 +102,7 @@ export function MonEspace({ slug }: { slug: string }) {
       </div>
 
       <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
-        {ONGLETS.map((o) => (
+        {ONGLETS.filter((o) => o.cle !== 'a-valider' || aValider > 0 || onglet === o.cle).map((o) => (
           <button
             key={o.cle}
             type="button"
@@ -94,7 +111,7 @@ export function MonEspace({ slug }: { slug: string }) {
             className={onglet === o.cle ? 'is-active' : ''}
             onClick={() => choisir(o.cle)}
           >
-            {o.libelle}
+            {o.cle === 'a-valider' ? `${o.libelle} · ${aValider}` : o.libelle}
           </button>
         ))}
       </div>
@@ -104,6 +121,10 @@ export function MonEspace({ slug }: { slug: string }) {
           Aucun dossier du personnel n’est relié à ton compte : la RH doit l’ouvrir (ou le relier) avant que cette rubrique
           soit disponible.
         </p>
+      ) : onglet === 'performances' ? (
+        <MesPerformances slug={slug} />
+      ) : onglet === 'a-valider' ? (
+        <AValider slug={slug} onCompte={compter} />
       ) : onglet === 'temps' ? (
         <MonTemps slug={slug} />
       ) : onglet === 'conges' ? (
