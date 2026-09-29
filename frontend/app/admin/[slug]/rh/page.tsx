@@ -211,19 +211,19 @@ export default function RhPage({ params }: Props) {
                 {visibles.map((d) => (
                   <tr key={d.id}>
                     <td className="rh-matricule">{d.matricule}</td>
-                    <td>
+                    <td data-label="Salarié">
                       <button type="button" className="rh-nom" onClick={() => setOuvert(d)}>
                         {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
                       </button>
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
                     </td>
-                    <td>{d.societe.nom}</td>
-                    <td>{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
-                    <td>
+                    <td data-label="Société">{d.societe.nom}</td>
+                    <td data-label="Équipe">{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
+                    <td data-label="Contrat">
                       {LIBELLE_CONTRAT[d.typeContrat]}
                       {d.typeContrat !== 'cdi' && d.dateFin && ` → ${jjmmaaaa(d.dateFin)}`}
                     </td>
-                    <td>
+                    <td data-label="Dossier">
                       <span className="progress">
                         <span className="progress-track">
                           <span
@@ -234,7 +234,7 @@ export default function RhPage({ params }: Props) {
                         {d.completude.pourcentage} %
                       </span>
                     </td>
-                    <td>{jjmmaaaa(d.dateEntree)}</td>
+                    <td data-label="Entrée">{jjmmaaaa(d.dateEntree)}</td>
                   </tr>
                 ))}
               </tbody>
