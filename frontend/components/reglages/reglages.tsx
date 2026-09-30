@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ClipboardList, FileClock, Scale, Target } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { ROLE_CIO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -91,16 +92,18 @@ export function Reglages({ slug }: { slug: string }) {
       {entete}
       <div className="reg-tuiles" role="tablist" aria-label="Sections des réglages">
         {[
-          { s: 'gabarit' as const, label: 'Gabarit Conception', valeur: gabarit.libelle, sous: `${gabarit.projets} projet(s) en ${gabarit.libelle}` },
+          { s: 'gabarit' as const, icone: ClipboardList, label: 'Gabarit Conception', valeur: gabarit.libelle, sous: `${gabarit.projets} projet(s) en ${gabarit.libelle}` },
           {
             s: 'regles' as const,
+            icone: Scale,
             label: 'Règles et délais',
             valeur: `F1 ${p.F1} · F2 ${p.F2} · F3 ${p.F3}`,
             sous: `ouverture ${afficher(ouverture, ouverture.enService)} · contresignature CEO au-delà de ${(Number(ceo.enService) / 1_000_000).toLocaleString('fr-FR')} M FCFA`,
           },
-          { s: 'objectifs' as const, label: 'Objectifs à fixer', valeur: String(aFixer), sous: 'indicateur(s) sans objectif dans Pilotage', alerte: aFixer > 0 },
+          { s: 'objectifs' as const, icone: Target, label: 'Objectifs à fixer', valeur: String(aFixer), sous: 'indicateur(s) sans objectif dans Pilotage', alerte: aFixer > 0 },
           {
             s: 'journal' as const,
+            icone: FileClock,
             label: 'Modifications tracées',
             valeur: String(donnees.modifications),
             sous: donnees.modifications ? 'voir le journal des réglages' : 'aucune modification depuis la mise en service',
@@ -111,9 +114,12 @@ export function Reglages({ slug }: { slug: string }) {
             type="button"
             role="tab"
             aria-selected={section === t.s}
-            className={`reg-tuile${section === t.s ? ' is-active' : ''}`}
+            className={`reg-tuile glass-panel${section === t.s ? ' is-active' : ''}`}
             onClick={() => choisir(t.s)}
           >
+            <span className="kpi-tuile-icone" aria-hidden>
+              <t.icone size={17} strokeWidth={2} />
+            </span>
             <span className="reg-tuile-label">{t.label}</span>
             <span className={`reg-tuile-valeur${t.alerte ? ' is-alerte' : ''}`}>{t.valeur}</span>
             <span className="reg-tuile-sous">{t.sous}</span>

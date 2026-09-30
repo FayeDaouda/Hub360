@@ -11158,8 +11158,8 @@ a.notif-item:hover {
   border-radius: 999px;
   font-size: 0.85rem;
 }
-/* Tuiles de section (maquette du boss) : libellé, valeur, précision — pas
-   d'icône ; la section ouverte est cerclée d'accent. */
+/* Tuiles de section (maquette du boss) : pastille d'icône, libellé, valeur,
+   précision ; effet de verre ; la section ouverte est cerclée d'accent. */
 .reg-tuiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -11172,18 +11172,18 @@ a.notif-item:hover {
   gap: 0.35rem;
   min-width: 0;
   padding: 1rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
   color: var(--text);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
+.reg-tuile .kpi-tuile-icone {
+  margin-bottom: 0.25rem;
+}
 .reg-tuile:hover {
   border-color: var(--border-hover);
 }
-.reg-tuile.is-active {
+.reg-tuile.glass-panel.is-active {
   border: 2px solid var(--accent);
   padding: calc(1rem - 1px) calc(1.25rem - 1px);
 }
@@ -11218,17 +11218,9 @@ a.notif-item:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-/* Panneaux pleins, sans verre (maquette). */
+/* Panneaux en verre (style du HUB). */
 .reg-panel {
   grid-template-columns: minmax(0, 1fr);
-}
-.reg-panel.glass-panel {
-  background: var(--surface);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-.reg-panel.glass-panel::before {
-  display: none;
 }
 .reg-pied {
   margin: 1rem 0 0;
@@ -11262,7 +11254,10 @@ a.notif-item:hover {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--surface);
+  /* Verre presque opaque : les lignes qui défilent dessous ne transparaissent pas. */
+  background: color-mix(in oklch, var(--surface) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
 .reg-ligne {
   display: grid;
@@ -11336,7 +11331,9 @@ a.notif-item:hover {
   padding: 0.8rem 1.25rem;
   border-top: 1px solid var(--border);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: var(--surface);
+  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 .reg-motif-ligne {
   display: flex;
