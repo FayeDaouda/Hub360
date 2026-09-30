@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { TachesService } from './taches.service';
 
 const PROJET = { id: 'P1', code: 'PN_S.26', programme: 'Villa', societeId: 'S', cellules: [{ celluleId: 'CEL' }] };
@@ -33,7 +34,7 @@ function svc(o: { bloc?: object; validation?: object | null; fiche?: string | nu
     utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([{ utilisateurId: 'U-DIR' }]) },
   } as unknown as PrismaService;
   const notifications = { pousser: jest.fn() } as unknown as NotificationsService;
-  return { s: new TachesService(prisma, notifications), prisma, notifications };
+  return { s: new TachesService(prisma, notifications, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), prisma, notifications };
 }
 const AWA = { userId: 'U-AWA', societeId: 'S', role: 'collaborateur' };
 const CHEF = { userId: 'U-CHEF', societeId: 'S', role: 'collaborateur' };

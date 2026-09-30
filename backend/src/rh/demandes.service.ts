@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { DemandeAbsence, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { ouDossierDuCompte } from './mon-compte';
 import {
   DecisionN1Dto,
@@ -44,7 +45,15 @@ type Livrable = { cle: string; source: 'avant-projet' | 'permis' | 'execution'; 
 
 @Injectable()
 export class DemandesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private reglages: ReglagesService,
+  ) {}
+
+  // Jours fériés de la société du salarié (Réglages) : non décomptés.
+  private async feries(societeId: string) {
+    return (await this.reglages.joursFeries([societeId])).get(societeId)!;
+  }
 
   // --- Salarié (Mon espace) ------------------------------------------------------
   private async moi(a: Acteur) {
@@ -87,7 +96,7 @@ export class DemandesService {
   async deposerAbsence(a: Acteur, dto: DeposerAbsenceDto) {
     const { collab, dossier } = await this.moi(a);
     if (dto.dateFin < dto.dateDebut) throw new BadRequestException('La date de fin précède la date de début.');
-    const jours = joursOuvrables(dto.dateDebut, dto.dateFin);
+    const jours = joursOuvrables(dto.dateDebut, dto.dateFin, await this.feries(dossier.societeId));
     if (jours === 0) throw new BadRequestException('Aucun jour ouvrable sur cette période.');
     const n1 = this.n1Pour(a.role, collab);
     const d = await this.prisma.demandeAbsence.create({
@@ -121,7 +130,7 @@ export class DemandesService {
     return versAbsence(
       await this.prisma.demandeAbsence.update({
         where: { id },
-        data: { dateDebut: debut, dateFin: fin, jours: joursOuvrables(debut, fin), statut: 'attente_n1', decisionN1: null },
+        data: { dateDebut: debut, dateFin: fin, jours: joursOuvrables(debut, fin, await this.feries(dossier.societeId)), statut: 'attente_n1', decisionN1: null },
       }),
     );
   }

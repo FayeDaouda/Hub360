@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { DemandesService } from './demandes.service';
 
 const DEMANDE = {
@@ -30,7 +31,7 @@ function svc(o: { demande?: object; moiCollab?: string; blocs?: object[]; moi?: 
     blocExecution: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn().mockImplementation((ops: unknown[]) => Promise.resolve(ops.map(() => ({ ...DEMANDE, statut: 'accord_n1' })))),
   } as unknown as PrismaService;
-  return { s: new DemandesService(prisma), update, majAvp };
+  return { s: new DemandesService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), update, majAvp };
 }
 const CHEF = { userId: 'U', societeId: 'S', role: 'collaborateur' };
 const CLE = 'avant-projet:P1:plans';

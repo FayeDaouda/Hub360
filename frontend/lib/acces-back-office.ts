@@ -29,7 +29,7 @@ const CHEMINS: Record<string, string> = {
   rh: 'rh',
   equipe: 'equipe',
   'mon-espace': 'mon-espace',
-  parametres: 'parametres',
+  parametres: 'reglages',
 };
 
 // Rôles socles qui ont leur propre espace (/groupe, /collab) — même liste

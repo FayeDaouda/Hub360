@@ -65,6 +65,9 @@ model Societe {
 
   dossiersPersonnel    DossierPersonnel[]
   dureesStandardTaches DureeStandardTache[]
+  gabaritVersions      GabaritVersion[]
+  reglages             ReglageSociete[]
+  journalReglages      JournalReglage[]
 
   @@map("societes")
 }
@@ -2240,4 +2243,65 @@ model ValidationTache {
   @@id([section, projetId, groupe])
   @@index([remisLe, valideLe])
   @@map("validations_taches")
+}
+
+// --- Réglages du HUB (CIO) — maquette du boss, sept. 2026 ----------------------
+// Gabarit de projet versionné : un projet garde la version avec laquelle il a
+// été ouvert. Le contenu (étapes → cartes → tâches, fenêtres en jours ouvrés
+// depuis J1 et temps standard) est un instantané immuable, validé par le
+// service (cf. src/reglages/gabarit.ts). Enregistrer une modification crée
+// la version suivante ; les versions ne sont jamais modifiées ni supprimées.
+model GabaritVersion {
+  id        String   @id @default(uuid())
+  societeId String   @map("societe_id")
+  code      String // ex. GC-CONCEPTION
+  numero    Int // 0 = bêta 1.0, 1 = bêta 1.1…
+  libelle   String // « bêta 1.0 »
+  contenu   Json
+  motif     String   @default("")
+  creeParId String?  @map("cree_par_id") // audit, pas de FK
+  createdAt DateTime @default(now()) @map("created_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, code, numero])
+  @@map("gabarit_versions")
+}
+
+// Règles et délais, objectifs des indicateurs : une ligne seulement pour une
+// valeur modifiée — absente, c'est la valeur par défaut qui est en service
+// (src/reglages/definitions.ts).
+model ReglageSociete {
+  societeId String   @map("societe_id")
+  cle       String
+  valeur    Json
+  majParId  String?  @map("maj_par_id") // audit, pas de FK
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@id([societeId, cle])
+  @@map("reglages_societe")
+}
+
+// Journal des réglages (ISO 9001 §7.5.3) : une ligne par valeur modifiée ;
+// les lignes d'un même enregistrement partagent `lot` et le motif. Jamais
+// modifié ni supprimé. Alimente aussi le registre des décisions (Pilotage).
+model JournalReglage {
+  id        String   @id @default(uuid())
+  societeId String   @map("societe_id")
+  lot       String
+  section   String // gabarit | regles | objectifs
+  cle       String
+  libelle   String // pré-rendu : « Livrables · Esquisses — temps : 40 h → 32 h »
+  avant     Json?
+  apres     Json?
+  motif     String
+  parId     String?  @map("par_id") // audit, pas de FK
+  createdAt DateTime @default(now()) @map("created_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@index([societeId, createdAt])
+  @@map("journal_reglages")
 }

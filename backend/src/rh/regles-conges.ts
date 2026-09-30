@@ -3,7 +3,7 @@
 // dès qu'un RH en poste les corrige.
 //  - Jours OUVRABLES : lundi → samedi (seul le dimanche est exclu).
 //  - Acquisition : 2 jours ouvrables par mois complet depuis l'entrée.
-//  - Jours fériés : PAS encore déduits.
+//  - Jours fériés : déduits (liste des Réglages · Règles et délais).
 export const JOURS_ACQUIS_PAR_MOIS = 2;
 
 // « Autres dates » présélectionné quand au moins cette part de la cellule
@@ -13,10 +13,10 @@ export const PART_CELLULE_ABSENTE_ALERTE = 0.5;
 const jour = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-export function joursOuvrables(debut: string, fin: string): number {
+export function joursOuvrables(debut: string, fin: string, feries: ReadonlySet<string> = new Set()): number {
   let n = 0;
   for (let d = jour(debut); d <= jour(fin); d.setUTCDate(d.getUTCDate() + 1)) {
-    if (d.getUTCDay() !== 0) n++;
+    if (d.getUTCDay() !== 0 && !feries.has(iso(d))) n++;
   }
   return n;
 }

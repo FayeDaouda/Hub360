@@ -18,6 +18,7 @@ import { GroupeModule } from './groupe/groupe.module';
 import { RhModule } from './rh/rh.module';
 import { LocalitesModule } from './localites/localites.module';
 import { ContratsModule } from './contrats/contrats.module';
+import { ReglagesModule } from './reglages/reglages.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
 import { FiltreExceptionsGlobal } from './commun/exception.filter';
 
@@ -47,6 +48,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     RhModule,
     LocalitesModule,
     ContratsModule,
+    ReglagesModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: SerialisationInterceptor },

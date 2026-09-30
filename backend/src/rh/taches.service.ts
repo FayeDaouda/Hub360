@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { ROLE_N1_DIRECTION } from './demandes.service';
 import { ouDossierDuCompte } from './mon-compte';
 import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from './regles-temps';
@@ -57,6 +58,7 @@ export class TachesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private reglages: ReglagesService,
   ) {}
 
   // --- Le salarié : ses tâches, leur temps et leur état de validation ----------
@@ -64,7 +66,7 @@ export class TachesService {
     const jour = aujourdhui();
     const dossier = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),
-      select: { collaborateurId: true, absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } },
+      select: { collaborateurId: true, societeId: true, absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } },
     });
     const collabId =
       dossier?.collaborateurId ??
@@ -75,7 +77,9 @@ export class TachesService {
           where: { OR: taches.map((t) => ({ section: t.section, projetId: t.projetId, groupe: t.groupe })) },
         })
       : [];
-    const absents = joursAbsents((dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })));
+    const societeId = dossier?.societeId ?? a.societeId;
+    const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
+    const absents = joursAbsents((dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })), feries);
 
     const lignes = taches
       .map((t) => {
@@ -92,8 +96,8 @@ export class TachesService {
           debut: t.debut,
           echeance: t.echeance,
           dureeStandard: t.heures,
-          heuresImputees: planifiee ? arrondi(heuresTache(t, absents, { debut: t.debut!, fin: jour })) : 0,
-          manque: manqueTache(t, absents),
+          heuresImputees: planifiee ? arrondi(heuresTache(t, absents, { debut: t.debut!, fin: jour }, feries)) : 0,
+          manque: manqueTache(t, absents, feries),
           etat: etatTache(t, jour),
           statut: statutTache(t, v, jour),
           remisLe: v?.remisLe ?? null,

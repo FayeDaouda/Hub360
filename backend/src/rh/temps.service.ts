@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, SectionTache } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import {
   bornesMois,
   feuilleDuMois,
@@ -9,6 +10,7 @@ import {
   moisDe,
   moisEntre,
   periodeComptee,
+  type Feries,
   type Salarie,
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
@@ -69,7 +71,10 @@ const planifiee = (t: TacheAssignee) => !!t.debut && !!t.echeance;
 // du salarié, référentiel des durées standard par société.
 @Injectable()
 export class TempsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private reglages: ReglagesService,
+  ) {}
 
   // --- Référentiel des durées standard (paramètres société) ----------------
 
@@ -112,13 +117,16 @@ export class TempsService {
       dossiers.flatMap((d) => (d.collaborateur ? [d.collaborateur.id] : [])),
     );
     const tachesDe = (d: DossierTemps) => taches.filter((t) => t.collaborateurId === d.collaborateur?.id);
+    // Jours fériés de la société de chaque salarié (Réglages).
+    const feries = await this.reglages.joursFeries(dossiers.map((d) => d.societeId));
+    const feriesDe = (d: DossierTemps) => feries.get(d.societeId)!;
     const presentsEn = (m: string) => dossiers.filter((d) => periodeComptee(m, salarieDe(d), jour));
 
     const periodes = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).map((m) => ({
       mois: m,
       clos: m < moisDe(jour),
       aControler: presentsEn(m).filter(
-        (d) => calculer(m, salarieDe(d), d.controlesTemps, tachesDe(d), jour).statut === 'a_controler',
+        (d) => calculer(m, salarieDe(d), d.controlesTemps, tachesDe(d), jour, feriesDe(d)).statut === 'a_controler',
       ).length,
     }));
 
@@ -136,7 +144,7 @@ export class TempsService {
         // État actuel (pas celui du mois) : blocs assignés sans début ou sans
         // échéance, qui ne produisent aucune heure tant qu'ils ne sont pas planifiés.
         blocsNonPlanifies: tachesDe(d).filter((t) => !planifiee(t)).length,
-        ...calculer(cible, salarieDe(d), d.controlesTemps, tachesDe(d), jour),
+        ...calculer(cible, salarieDe(d), d.controlesTemps, tachesDe(d), jour, feriesDe(d)),
       })),
     };
   }
@@ -152,7 +160,8 @@ export class TempsService {
     if (d.controlesTemps.some((c) => c.mois === mois)) throw new ConflictException('Feuille déjà contrôlée.');
 
     const taches = d.collaborateur ? await chargerTachesAssignees(this.prisma, [d.collaborateur.id]) : [];
-    const f = calculer(mois, salarieDe(d), [], taches, jour);
+    const feries = (await this.reglages.joursFeries([d.societeId])).get(d.societeId)!;
+    const f = calculer(mois, salarieDe(d), [], taches, jour, feries);
     const detail: DetailFige = { lignes: f.lignes };
     try {
       await this.prisma.controleFeuilleTemps.create({
@@ -195,10 +204,12 @@ export class TempsService {
     const salarie = dossier ? salarieDe(dossier) : { dateEntree: fiche!.dateArrivee, dateSortie: null, absences: [] };
     const collabId = dossier ? dossier.collaborateur?.id : fiche!.id;
     const taches = collabId ? await chargerTachesAssignees(this.prisma, [collabId]) : [];
+    const societeId = dossier?.societeId ?? a.societeId;
+    const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
     return {
       mois: cible,
       periodes: moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)),
-      feuille: calculer(cible, salarie, dossier?.controlesTemps ?? [], taches, jour),
+      feuille: calculer(cible, salarie, dossier?.controlesTemps ?? [], taches, jour, feries),
     };
   }
 }
@@ -211,6 +222,7 @@ function calculer(
   controles: Controle[],
   taches: TacheAssignee[],
   jour: string,
+  feries: Feries,
 ): FeuilleCalculee {
   const controle = controles.find((c) => c.mois === mois);
   if (controle) {
@@ -232,7 +244,7 @@ function calculer(
   // Détail du mois : les blocs dont la fenêtre touche le mois.
   const m = bornesMois(mois);
   const duMois = taches.filter((t) => planifiee(t) && t.debut! <= m.fin && t.echeance! >= m.debut);
-  const f = feuilleDuMois(mois, salarie, duMois, jour);
+  const f = feuilleDuMois(mois, salarie, duMois, jour, feries);
   const statut: StatutFeuille =
     mois >= moisDe(jour) ? 'en_cours' : f.heuresImputees > 0 ? 'a_controler' : 'sans_heures';
   return {

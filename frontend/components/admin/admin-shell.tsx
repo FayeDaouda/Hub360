@@ -67,7 +67,7 @@ export function activeAdminDepuisPathname(pathname: string, slug: string): strin
   const segment = reste.split('/').filter(Boolean)[0] ?? '';
   // « Paramètres » vit dans le pied de sidebar, pas dans NAV (colonne
   // principale) — reste géré ici pour garder un seul point de vérité.
-  if (segment === 'parametres') return 'parametres';
+  if (segment === 'reglages' || segment === 'parametres') return 'parametres';
   return NAV.find((item) => item.chemin === segment)?.cle ?? 'tableau-de-bord';
 }
 
@@ -285,19 +285,19 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             )}
             {sectionAccessible(session, 'parametres') && (
               <Link
-                href={`${base}/parametres`}
+                href={`${base}/reglages`}
                 className={`admin-nav-item admin-nav-item--parametres${
                   active === 'parametres' ? ' is-active' : ''
                 }`}
-                onMouseEnter={(e) => afficherInfobulle(e, 'Paramètres')}
+                onMouseEnter={(e) => afficherInfobulle(e, 'Réglages')}
                 onMouseLeave={masquerInfobulle}
-                onFocus={(e) => afficherInfobulle(e, 'Paramètres')}
+                onFocus={(e) => afficherInfobulle(e, 'Réglages')}
                 onBlur={masquerInfobulle}
                 onClick={() => setMenuOuvert(false)}
                 aria-current={active === 'parametres' ? 'page' : undefined}
               >
                 <Settings size={18} strokeWidth={1.75} aria-hidden />
-                <span className="admin-nav-label">Paramètres</span>
+                <span className="admin-nav-label">Réglages</span>
               </Link>
             )}
             <span

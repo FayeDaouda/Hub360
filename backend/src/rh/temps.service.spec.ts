@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from './temps.service';
 
 const PROJET = { id: 'P1', code: 'PN_S.26', programme: 'Villa', societeId: 'S1' };
@@ -30,7 +31,7 @@ function svc(o: { dossier?: object; blocs?: object[]; collab?: object | null } =
     controleFeuilleTemps: { create: jest.fn() },
     collaborateur: { findFirst: jest.fn().mockResolvedValue(o.collab === undefined ? { id: 'C1', dateArrivee: null } : o.collab) },
   } as unknown as PrismaService;
-  return { s: new TempsService(prisma), prisma };
+  return { s: new TempsService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), prisma };
 }
 
 describe('TempsService', () => {

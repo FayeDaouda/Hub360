@@ -92,3 +92,18 @@ describe('regles-temps', () => {
     expect(etatTache(tache('t', null, null, 8), '2026-10-01')).toBeNull();
   });
 });
+
+describe('regles-temps · jours fériés', () => {
+  const noel = new Set(['2026-12-25']);
+  it('un férié sort des disponibles et reporte la charge sur les autres jours', () => {
+    expect(joursOuvres(bornesMois('2026-12'), noel)).toHaveLength(22);
+    const f = feuilleDuMois('2026-12', present, [tache('t', '2026-12-21', '2026-12-25', 8)], '2027-01-10', noel);
+    expect(f.heuresDisponibles).toBe(22 * 8);
+    expect(f.heuresImputees).toBe(8);
+    expect(heuresTache(tache('t', '2026-12-21', '2026-12-25', 8), new Set(), { debut: '2026-12-25', fin: '2026-12-25' }, noel)).toBe(0);
+  });
+  it('une absence posée sur un férié ne compte pas comme jour d’absence', () => {
+    const f = feuilleDuMois('2026-12', { ...present, absences: [{ debut: '2026-12-24', fin: '2026-12-28' }] }, [], '2027-01-10', noel);
+    expect(f.joursAbsence).toBe(2); // 24 et 28 ; le 25 est férié, 26-27 week-end
+  });
+});

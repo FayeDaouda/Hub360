@@ -21,3 +21,11 @@ describe('règles de congés (hypothèses de travail)', () => {
     expect(s).toEqual({ acquis: 16, pris: 5, enAttente: 2, disponible: 9 });
   });
 });
+
+describe('joursOuvrables · jours fériés', () => {
+  it('un férié n’est pas décompté du congé', () => {
+    const { joursOuvrables } = jest.requireActual('./regles-conges');
+    expect(joursOuvrables('2026-12-21', '2026-12-26')).toBe(6);
+    expect(joursOuvrables('2026-12-21', '2026-12-26', new Set(['2026-12-25']))).toBe(5);
+  });
+});

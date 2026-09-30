@@ -13,8 +13,12 @@
 //  - la durée se répartit à parts égales sur les jours ouvrés de la fenêtre où
 //    le salarié est présent : une absence reporte la charge sur ses autres
 //    jours, elle ne l'efface pas ;
-//  - jours fériés pas encore déduits (même réserve que les congés).
+//  - les jours fériés (Réglages · Règles et délais) sortent du calendrier
+//    ouvrable : ni disponibles, ni porteurs de charge.
 export const HEURES_PAR_JOUR = 8;
+
+export type Feries = ReadonlySet<string>; // AAAA-MM-JJ
+export const AUCUN_FERIE: Feries = new Set();
 
 // Premier mois couvert : aucun bloc n'avait de date de début avant la mise en
 // service des feuilles de temps, il n'y a donc rien à calculer avant.
@@ -39,12 +43,12 @@ const min = (a: string, b: string) => (a < b ? a : b);
 
 export const arrondi = (n: number) => Math.round(n * 10) / 10;
 
-// Jours ouvrés (lundi → vendredi) de l'intervalle, bornes incluses.
-export function joursOuvres(p: Periode): string[] {
+// Jours ouvrés (lundi → vendredi, hors fériés) de l'intervalle, bornes incluses.
+export function joursOuvres(p: Periode, feries: Feries = AUCUN_FERIE): string[] {
   const jours: string[] = [];
   for (let d = jour(p.debut); d <= jour(p.fin); d.setUTCDate(d.getUTCDate() + 1)) {
     const j = d.getUTCDay();
-    if (j !== 0 && j !== 6) jours.push(versIso(d));
+    if (j !== 0 && j !== 6 && !feries.has(versIso(d))) jours.push(versIso(d));
   }
   return jours;
 }
@@ -70,24 +74,24 @@ export function moisEntre(depuis: string, jusqua: string): string[] {
 }
 
 // Jours ouvrés couverts par des absences validées (ensemble, sans doublon).
-export function joursAbsents(absences: Periode[]): Set<string> {
-  return new Set(absences.flatMap(joursOuvres));
+export function joursAbsents(absences: Periode[], feries: Feries = AUCUN_FERIE): Set<string> {
+  return new Set(absences.flatMap((a) => joursOuvres(a, feries)));
 }
 
-export function manqueTache(t: Tache, absents: Set<string>): Manque | null {
+export function manqueTache(t: Tache, absents: Set<string>, feries: Feries = AUCUN_FERIE): Manque | null {
   if (!t.debut) return 'debut';
   if (!t.echeance) return 'echeance';
   if (t.debut > t.echeance) return 'fenetre';
   if (t.heures == null || t.heures <= 0) return 'duree';
-  if (!joursOuvres({ debut: t.debut, fin: t.echeance }).some((j) => !absents.has(j))) return 'absence';
+  if (!joursOuvres({ debut: t.debut, fin: t.echeance }, feries).some((j) => !absents.has(j))) return 'absence';
   return null;
 }
 
 // Heures de la tâche tombant dans `p` (non arrondies) : durée × jours présents
 // de la fenêtre situés dans `p` ÷ jours présents de toute la fenêtre.
-export function heuresTache(t: Tache, absents: Set<string>, p: Periode): number {
-  if (manqueTache(t, absents) || p.debut > p.fin) return 0;
-  const presents = joursOuvres({ debut: t.debut!, fin: t.echeance! }).filter((j) => !absents.has(j));
+export function heuresTache(t: Tache, absents: Set<string>, p: Periode, feries: Feries = AUCUN_FERIE): number {
+  if (manqueTache(t, absents, feries) || p.debut > p.fin) return 0;
+  const presents = joursOuvres({ debut: t.debut!, fin: t.echeance! }, feries).filter((j) => !absents.has(j));
   const dansPeriode = presents.filter((j) => j >= p.debut && j <= p.fin).length;
   return (t.heures! * dansPeriode) / presents.length;
 }
@@ -120,18 +124,18 @@ export type Feuille = {
   lignes: LigneFeuille[];
 };
 
-export function feuilleDuMois(mois: string, s: Salarie, taches: Tache[], aujourdhui: string): Feuille {
-  const absents = joursAbsents(s.absences);
+export function feuilleDuMois(mois: string, s: Salarie, taches: Tache[], aujourdhui: string, feries: Feries = AUCUN_FERIE): Feuille {
+  const absents = joursAbsents(s.absences, feries);
   const p = periodeComptee(mois, s, aujourdhui);
-  const ouvres = p ? joursOuvres(p) : [];
+  const ouvres = p ? joursOuvres(p, feries) : [];
   const joursAbsence = ouvres.filter((j) => absents.has(j)).length;
   const heuresDisponibles = (ouvres.length - joursAbsence) * HEURES_PAR_JOUR;
   const lignes = taches.map((t) => ({
     id: t.id,
-    heures: p ? arrondi(heuresTache(t, absents, p)) : 0,
-    manque: manqueTache(t, absents),
+    heures: p ? arrondi(heuresTache(t, absents, p, feries)) : 0,
+    manque: manqueTache(t, absents, feries),
   }));
-  const brut = p ? taches.reduce((n, t) => n + heuresTache(t, absents, p), 0) : 0;
+  const brut = p ? taches.reduce((n, t) => n + heuresTache(t, absents, p, feries), 0) : 0;
   return {
     heuresImputees: arrondi(brut),
     heuresDisponibles,
