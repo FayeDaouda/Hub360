@@ -11295,6 +11295,15 @@ a.notif-item:hover {
 .reg-pas-appliquee {
   font-size: 0.7rem;
 }
+/* Onglets de l'Administration (6) : défilent sur mobile au lieu d'élargir la page. */
+.reg-admin-onglets .admin-periode-toggle {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.reg-admin-onglets .admin-periode-toggle button {
+  white-space: nowrap;
+}
 .reg-lot {
   display: grid;
   gap: 0.3rem;

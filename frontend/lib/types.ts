@@ -1864,9 +1864,12 @@ export type Contrat = {
 export type ContratDossier = {
   contrat: Contrat | null;
   preparation: {
-    offreAcceptee: { id: string; reference: string | null; montantHt: number } | null;
+    offreAcceptee: { id: string; reference: string | null; montantHt: number; montantTtc: number } | null;
     modePrevu: ModeContrat | null;
     seuilSurMesureHt: number | null;
+    // Qui signe pour la société : le CEO au-delà du seuil de contresignature
+    // (Réglages, TTC), sinon l'Architecte DPLG. nom/fonction null = non réglés.
+    signataire: { qui: 'ceo' | 'dplg'; seuilTtc: number; nom: string | null; fonction: string | null } | null;
     reglagesManquants: string[];
   };
 };
@@ -1897,6 +1900,8 @@ export type ParametresContrat = {
   modele: string | null;
   signataireNom: string | null;
   signataireFonction: string | null;
+  signataireCeoNom: string | null;
+  signataireCeoFonction: string | null;
   seuilSurMesureHt: number | null;
   variables: { cle: string; description: string }[];
   annexes: { id: string; libelle: string; automatique: string | null }[];

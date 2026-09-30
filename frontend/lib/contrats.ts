@@ -83,7 +83,7 @@ export function getParametresContrat(slug: string): Promise<ParametresContrat> {
 
 export function majParametresContrat(
   slug: string,
-  patch: Partial<Pick<ParametresContrat, 'modele' | 'signataireNom' | 'signataireFonction' | 'seuilSurMesureHt'>>,
+  patch: Partial<Pick<ParametresContrat, 'modele' | 'signataireNom' | 'signataireFonction' | 'signataireCeoNom' | 'signataireCeoFonction' | 'seuilSurMesureHt'>>,
 ): Promise<ParametresContrat> {
   return apiSociete<ParametresContrat>(slug, '/parametres-contrat', { method: 'PATCH', body: patch });
 }

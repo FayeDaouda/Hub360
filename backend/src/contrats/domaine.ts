@@ -44,3 +44,12 @@ export function modeContrat(montantOffreHt: number, seuilSurMesureHt: number | n
 export function formatFcfa(montant: number): string {
   return `${new Intl.NumberFormat('fr-FR').format(Math.round(montant))} FCFA`;
 }
+
+export type Signataire = 'ceo' | 'dplg';
+
+// Seuil de contresignature (Réglages · Règles et délais) : au-delà de ce
+// montant TTC, seul le CEO contresigne ; en deçà — ou pile au seuil —
+// l'Architecte DPLG.
+export function signataireRequis(montantOffreTtc: number, seuilCeoTtc: number): Signataire {
+  return montantOffreTtc > seuilCeoTtc ? 'ceo' : 'dplg';
+}

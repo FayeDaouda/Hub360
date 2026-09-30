@@ -44,6 +44,9 @@ export class ParametresContratDto {
   @IsOptional() @IsString() @MaxLength(100_000) modele?: string | null;
   @IsOptional() @IsString() @MaxLength(120) signataireNom?: string | null;
   @IsOptional() @IsString() @MaxLength(120) signataireFonction?: string | null;
+  // Signataire au-delà du seuil de contresignature (Réglages) : le CEO.
+  @IsOptional() @IsString() @MaxLength(120) signataireCeoNom?: string | null;
+  @IsOptional() @IsString() @MaxLength(120) signataireCeoFonction?: string | null;
   @IsOptional() @IsInt() @Min(0) seuilSurMesureHt?: number | null;
 }
 

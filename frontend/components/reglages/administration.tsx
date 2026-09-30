@@ -28,7 +28,7 @@ export function Administration({ slug }: { slug: string }) {
 
   return (
     <>
-      <div className="admin-periode" style={{ marginBottom: '1.1rem' }}>
+      <div className="admin-periode reg-admin-onglets" style={{ marginBottom: '1.1rem' }}>
         <div className="admin-periode-toggle" role="group" aria-label="Section des paramètres">
           {ONGLETS.map((o) => (
             <button

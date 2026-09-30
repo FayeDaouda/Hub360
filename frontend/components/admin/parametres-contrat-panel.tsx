@@ -22,6 +22,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
   const [modele, setModele] = useState('');
   const [nom, setNom] = useState('');
   const [fonction, setFonction] = useState('');
+  const [ceoNom, setCeoNom] = useState('');
+  const [ceoFonction, setCeoFonction] = useState('');
   const [seuil, setSeuil] = useState('');
   const [nouvelleAnnexe, setNouvelleAnnexe] = useState('');
   const [enCours, setEnCours] = useState(false);
@@ -32,6 +34,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
     setModele(x.modele ?? '');
     setNom(x.signataireNom ?? '');
     setFonction(x.signataireFonction ?? '');
+    setCeoNom(x.signataireCeoNom ?? '');
+    setCeoFonction(x.signataireCeoFonction ?? '');
     setSeuil(x.seuilSurMesureHt != null ? String(x.seuilSurMesureHt) : '');
   }
 
@@ -113,15 +117,29 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
       </section>
 
       <section className="panel glass-panel foncier-groupe">
-        <h3 className="panel-title">Signataire et seuil</h3>
+        <h3 className="panel-title">Signataires et seuil</h3>
+        <p className="field-aide">
+          Le signataire pour la société dépend du montant TTC de l’offre acceptée et du seuil de contresignature
+          (Réglages › Règles et délais) : au-delà, seul le CEO contresigne ; en deçà, l’Architecte DPLG.
+        </p>
         <div className="field-row">
           <label className="field">
-            <span className="field-label">Signataire pour la société</span>
+            <span className="field-label">Signataire jusqu’au seuil (Architecte DPLG)</span>
             <input className="field-input" value={nom} onChange={(e) => setNom(e.target.value)} maxLength={120} placeholder="Nom et prénom" />
           </label>
           <label className="field">
             <span className="field-label">Fonction</span>
-            <input className="field-input" value={fonction} onChange={(e) => setFonction(e.target.value)} maxLength={120} placeholder="ex : Gérant" />
+            <input className="field-input" value={fonction} onChange={(e) => setFonction(e.target.value)} maxLength={120} placeholder="ex : Architecte DPLG" />
+          </label>
+        </div>
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Signataire au-delà du seuil (CEO)</span>
+            <input className="field-input" value={ceoNom} onChange={(e) => setCeoNom(e.target.value)} maxLength={120} placeholder="Nom et prénom" />
+          </label>
+          <label className="field">
+            <span className="field-label">Fonction</span>
+            <input className="field-input" value={ceoFonction} onChange={(e) => setCeoFonction(e.target.value)} maxLength={120} placeholder="ex : Directeur général" />
           </label>
         </div>
         <label className="field">
@@ -149,6 +167,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
                     modele,
                     signataireNom: nom,
                     signataireFonction: fonction,
+                    signataireCeoNom: ceoNom,
+                    signataireCeoFonction: ceoFonction,
                     seuilSurMesureHt: seuil === '' ? null : Math.round(Number(seuil)),
                   }),
                 true,

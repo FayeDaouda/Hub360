@@ -2,6 +2,7 @@ import { ConflictException, UnprocessableEntityException } from '@nestjs/common'
 import { CrmService } from '../crm/crm.service';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { ContratsService } from './contrats.service';
 
 // Contrat (étape G) — ContratsService contre un Prisma simulé.
@@ -13,6 +14,8 @@ const SOCIETE = {
   contratModele: 'Entre {{societe}} et {{client}} pour {{montant_offre_ht}}. Signé : {{signataire_nom}}, {{signataire_fonction}}.',
   contratSignataireNom: 'Gérant Test',
   contratSignataireFonction: 'Gérant',
+  contratSignataireCeoNom: 'CEO Test',
+  contratSignataireCeoFonction: 'Directeur général',
   contratSeuilSurMesureHt: dec(50_000_000),
 };
 
@@ -44,6 +47,7 @@ function monter(o: { societe?: object; offreHt?: number; contrat?: object | null
     prisma as unknown as PrismaService,
     crm as unknown as CrmService,
     { envoyerContrat: jest.fn().mockResolvedValue({ envoye: false }) } as unknown as EmailService,
+    { regle: jest.fn().mockResolvedValue(50_000_000) } as unknown as ReglagesService, // seuil CEO (TTC)
   );
   return { svc, prisma, crm };
 }
@@ -73,7 +77,7 @@ describe('ContratsService.preparer', () => {
 
   it('modèle ou signataire non renseignés → 422 qui dit quoi remplir, rien créé', async () => {
     const { svc, prisma } = monter({ societe: { contratModele: null, contratSignataireNom: null } });
-    await expect(svc.preparer('S1', 'D1')).rejects.toThrow('nom du signataire, modèle de contrat');
+    await expect(svc.preparer('S1', 'D1')).rejects.toThrow('nom du signataire (Architecte DPLG), modèle de contrat');
     expect(prisma.contrat.create).not.toHaveBeenCalled();
   });
 
@@ -144,5 +148,28 @@ describe('ContratsService — réglages', () => {
       UnprocessableEntityException,
     );
     expect(prisma.societe.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('ContratsService · seuil de contresignature CEO (Réglages, TTC)', () => {
+  it('en deçà du seuil TTC : l’Architecte DPLG signe pour la société', async () => {
+    const { svc, prisma } = monter({ offreHt: 40_000_000 }); // 47,2 M TTC
+    await svc.preparer('S1', 'D1');
+    expect(prisma.contrat.create.mock.calls[0][0].data).toMatchObject({ signataireNom: 'Gérant Test', signataireFonction: 'Gérant' });
+  });
+  it('au-delà du seuil TTC (même si le HT est en deçà) : le CEO', async () => {
+    const { svc, prisma } = monter({ offreHt: 45_000_000 }); // 53,1 M TTC
+    await svc.preparer('S1', 'D1');
+    expect(prisma.contrat.create.mock.calls[0][0].data).toMatchObject({ signataireNom: 'CEO Test', signataireFonction: 'Directeur général' });
+  });
+  it('au-delà du seuil sans CEO renseigné : préparation refusée, réglage nommé', async () => {
+    const { svc } = monter({ offreHt: 45_000_000, societe: { contratSignataireCeoNom: null } });
+    await expect(svc.preparer('S1', 'D1')).rejects.toThrow('nom du signataire au-delà du seuil (CEO)');
+  });
+  it('préparation : signataire prévu exposé avec le montant TTC et le seuil', async () => {
+    const { svc } = monter({ offreHt: 45_000_000 });
+    const r = await svc.get('S1', 'D1');
+    expect(r.preparation.signataire).toEqual({ qui: 'ceo', seuilTtc: 50_000_000, nom: 'CEO Test', fonction: 'Directeur général' });
+    expect(r.preparation.offreAcceptee?.montantTtc).toBe(53_100_000);
   });
 });

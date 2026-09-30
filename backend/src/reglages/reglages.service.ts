@@ -186,10 +186,17 @@ export class ReglagesService {
     return new Map(societeIds.map((id) => [id, parSociete.get(id) ?? new Set<string>()]));
   }
 
-  // Parts F1 / F2 / F3 en service (réglage, sinon valeur par défaut).
-  async partsFactures(societeId: string): Promise<PartsFactures> {
-    const l = await this.prisma.reglageSociete.findUnique({ where: { societeId_cle: { societeId, cle: 'parts_factures' } } });
-    return (l?.valeur ?? REGLES.find((d) => d.cle === 'parts_factures')!.defaut) as PartsFactures;
+  // Valeur en service d'une règle (réglage, sinon valeur par défaut).
+  async regle<T>(societeId: string, cle: string): Promise<T> {
+    const def = REGLES.find((d) => d.cle === cle);
+    if (!def) throw new Error(`Règle inconnue : ${cle}`);
+    const l = await this.prisma.reglageSociete.findUnique({ where: { societeId_cle: { societeId, cle } } });
+    return (l ? l.valeur : def.defaut) as T;
+  }
+
+  // Parts F1 / F2 / F3 en service.
+  partsFactures(societeId: string): Promise<PartsFactures> {
+    return this.regle<PartsFactures>(societeId, 'parts_factures');
   }
 
   // --- internes ---------------------------------------------------------------------

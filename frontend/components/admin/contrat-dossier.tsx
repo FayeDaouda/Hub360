@@ -168,6 +168,22 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
               : 'généré depuis le modèle de la société'}
             . Sa signature fera passer le dossier en Onboard.
           </p>
+          {prep.signataire && prep.offreAcceptee && (
+            <p className="field-aide">
+              Signataire pour la société :{' '}
+              <strong>
+                {prep.signataire.nom
+                  ? `${prep.signataire.nom}, ${prep.signataire.fonction}`
+                  : prep.signataire.qui === 'ceo'
+                    ? 'le CEO (non renseigné)'
+                    : 'l’Architecte DPLG (non renseigné)'}
+              </strong>{' '}
+              — {prep.signataire.qui === 'ceo' ? 'seul le CEO contresigne' : 'l’Architecte DPLG signe'} : offre de{' '}
+              {formatMontantCompact(prep.offreAcceptee.montantTtc)} TTC,{' '}
+              {prep.signataire.qui === 'ceo' ? 'au-delà' : 'en deçà'} du seuil de{' '}
+              {formatMontantCompact(prep.signataire.seuilTtc)}.
+            </p>
+          )}
           {prep.reglagesManquants.length > 0 && (
             <p className="cycle-dossier-note cycle-dossier-note--perte" role="note">
               À renseigner dans Paramètres → Contrats : {prep.reglagesManquants.join(', ')}.

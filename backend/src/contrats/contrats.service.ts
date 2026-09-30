@@ -11,11 +11,14 @@ import { genererJeton, hacherJeton } from '../auth/jetons';
 import { CrmService } from '../crm/crm.service';
 import { montantHtLignes, refDevis } from '../devis/domaine';
 import { ventilationTva } from '../projets/domaine/gardes';
+import { ReglagesService } from '../reglages/reglages.service';
 import {
   VARIABLES_CONTRAT,
   formatFcfa,
   modeContrat,
   remplirModele,
+  type Signataire,
+  signataireRequis,
   variablesInconnues,
 } from './domaine';
 import { FichierContratDto, ParametresContratDto, SignerContratDto } from './dto';
@@ -28,6 +31,23 @@ const AVEC_DETAIL = {
 } satisfies Prisma.ContratInclude;
 
 type ContratDetail = Prisma.ContratGetPayload<{ include: typeof AVEC_DETAIL }>;
+type LigneMontant = { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal };
+type SignatairesSociete = {
+  contratSignataireNom: string | null;
+  contratSignataireFonction: string | null;
+  contratSignataireCeoNom: string | null;
+  contratSignataireCeoFonction: string | null;
+};
+
+const montantTtcLignes = (lignes: LigneMontant[]) =>
+  lignes.reduce((s, l) => s + ventilationTva(Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()), l.tauxTva.toNumber()).montantTtc, 0);
+
+// Nom et fonction du signataire requis, tels que réglés dans Paramètres →
+// Contrats (null si non renseignés).
+function signataireDe(s: SignatairesSociete, qui: Signataire) {
+  const [nom, fonction] = qui === 'ceo' ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction] : [s.contratSignataireNom, s.contratSignataireFonction];
+  return nom && fonction ? { nom, fonction } : null;
+}
 
 // Contrat d'un dossier CRM (étape G, cadrage validé 27/09/2026) — cf. modèle
 // Contrat dans schema.prisma. Préparé une fois l'offre ACCEPTÉE ; sa
@@ -39,7 +59,16 @@ export class ContratsService {
     private prisma: PrismaService,
     private crm: CrmService,
     private email: EmailService,
+    private reglages: ReglagesService,
   ) {}
+
+  // Signataire requis pour une offre, selon le seuil de contresignature CEO
+  // (Réglages · Règles et délais, montant TTC).
+  private async signatairePour(societeId: string, lignes: LigneMontant[]) {
+    const montantTtc = montantTtcLignes(lignes);
+    const seuil = await this.reglages.regle<number>(societeId, 'seuil_contresignature_ceo');
+    return { qui: signataireRequis(montantTtc, seuil), montantTtc, seuil };
+  }
 
   // -- Back-office (dossier) ---------------------------------------------------
 
@@ -59,13 +88,16 @@ export class ContratsService {
     const seuil = dossier.societe.contratSeuilSurMesureHt?.toNumber() ?? null;
     const montantHt = offre ? montantHtLignes(offre.lignes) : null;
     const mode = montantHt != null ? modeContrat(montantHt, seuil) : null;
+    const requis = offre ? await this.signatairePour(societeId, offre.lignes) : null;
     return {
       contrat: dossier.contrat ? this.formater(dossier.contrat) : null,
       preparation: {
-        offreAcceptee: offre ? { id: offre.id, reference: refDevis(offre.numero, offre.dateEnvoi), montantHt } : null,
+        offreAcceptee: offre ? { id: offre.id, reference: refDevis(offre.numero, offre.dateEnvoi), montantHt, montantTtc: requis!.montantTtc } : null,
         modePrevu: mode,
         seuilSurMesureHt: seuil,
-        reglagesManquants: this.reglagesManquants(dossier.societe, mode),
+        // Qui signe pour la société : le CEO au-delà du seuil (TTC), sinon l'Architecte DPLG.
+        signataire: requis ? { qui: requis.qui, seuilTtc: requis.seuil, ...(signataireDe(dossier.societe, requis.qui) ?? { nom: null, fonction: null }) } : null,
+        reglagesManquants: this.reglagesManquants(dossier.societe, mode, requis?.qui ?? 'dplg'),
       },
     };
   }
@@ -91,7 +123,8 @@ export class ContratsService {
     }
     const montantHt = montantHtLignes(offre.lignes);
     const mode = modeContrat(montantHt, dossier.societe.contratSeuilSurMesureHt?.toNumber() ?? null);
-    const manquants = this.reglagesManquants(dossier.societe, mode);
+    const { qui } = await this.signatairePour(societeId, offre.lignes);
+    const manquants = this.reglagesManquants(dossier.societe, mode, qui);
     if (manquants.length) {
       throw new UnprocessableEntityException(
         `Contrat impossible à préparer — à renseigner dans Paramètres → Contrats : ${manquants.join(', ')}.`,
@@ -109,8 +142,8 @@ export class ContratsService {
         devisId: offre.id,
         mode,
         montantOffreHt: montantHt,
-        signataireNom: dossier.societe.contratSignataireNom!,
-        signataireFonction: dossier.societe.contratSignataireFonction!,
+        signataireNom: signataireDe(dossier.societe, qui)!.nom,
+        signataireFonction: signataireDe(dossier.societe, qui)!.fonction,
         contenu:
           mode === 'modele'
             ? this.generer(dossier.societe.contratModele!, {
@@ -118,10 +151,7 @@ export class ContratsService {
                 dossier,
                 offre,
                 montantHt,
-                signataire: {
-                  nom: dossier.societe.contratSignataireNom!,
-                  fonction: dossier.societe.contratSignataireFonction!,
-                },
+                signataire: signataireDe(dossier.societe, qui)!,
               })
             : null,
         annexes: {
@@ -144,26 +174,25 @@ export class ContratsService {
     const c = await this.brouillon(societeId, dossierId);
     if (c.mode !== 'modele') throw new ConflictException('Contrat sur mesure : rien à générer.');
     const societe = await this.prisma.societe.findUniqueOrThrow({ where: { id: societeId } });
-    const manquants = this.reglagesManquants(societe, 'modele');
+    const { qui } = await this.signatairePour(societeId, c.devis.lignes);
+    const manquants = this.reglagesManquants(societe, 'modele', qui);
     if (manquants.length) {
       throw new UnprocessableEntityException(
         `À renseigner dans Paramètres → Contrats : ${manquants.join(', ')}.`,
       );
     }
+    const signataire = signataireDe(societe, qui)!;
     await this.prisma.contrat.update({
       where: { id: c.id },
       data: {
-        signataireNom: societe.contratSignataireNom!,
-        signataireFonction: societe.contratSignataireFonction!,
+        signataireNom: signataire.nom,
+        signataireFonction: signataire.fonction,
         contenu: this.generer(societe.contratModele!, {
           societe: societe.nom,
           dossier: c.dossier,
           offre: c.devis,
           montantHt: c.montantOffreHt.toNumber(),
-          signataire: {
-            nom: societe.contratSignataireNom!,
-            fonction: societe.contratSignataireFonction!,
-          },
+          signataire,
         }),
       },
     });
@@ -354,6 +383,8 @@ export class ContratsService {
       modele: s.contratModele,
       signataireNom: s.contratSignataireNom,
       signataireFonction: s.contratSignataireFonction,
+      signataireCeoNom: s.contratSignataireCeoNom,
+      signataireCeoFonction: s.contratSignataireCeoFonction,
       seuilSurMesureHt: s.contratSeuilSurMesureHt?.toNumber() ?? null,
       variables: VARIABLES_CONTRAT,
       annexes: annexes.map((a) => ({ id: a.id, libelle: a.libelle, automatique: a.automatique })),
@@ -376,6 +407,8 @@ export class ContratsService {
         contratModele: vide(dto.modele),
         contratSignataireNom: vide(dto.signataireNom),
         contratSignataireFonction: vide(dto.signataireFonction),
+        contratSignataireCeoNom: vide(dto.signataireCeoNom),
+        contratSignataireCeoFonction: vide(dto.signataireCeoFonction),
         contratSeuilSurMesureHt: dto.seuilSurMesureHt === undefined ? undefined : dto.seuilSurMesureHt,
       },
     });
@@ -405,16 +438,15 @@ export class ContratsService {
   // -- Internes ------------------------------------------------------------------
 
   private reglagesManquants(
-    s: {
-      contratModele: string | null;
-      contratSignataireNom: string | null;
-      contratSignataireFonction: string | null;
-    },
+    s: SignatairesSociete & { contratModele: string | null },
     mode: 'modele' | 'sur_mesure' | null,
+    qui: Signataire,
   ): string[] {
     const manquants: string[] = [];
-    if (!s.contratSignataireNom) manquants.push('nom du signataire');
-    if (!s.contratSignataireFonction) manquants.push('fonction du signataire');
+    const titre = qui === 'ceo' ? 'du signataire au-delà du seuil (CEO)' : 'du signataire (Architecte DPLG)';
+    const [nom, fonction] = qui === 'ceo' ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction] : [s.contratSignataireNom, s.contratSignataireFonction];
+    if (!nom) manquants.push(`nom ${titre}`);
+    if (!fonction) manquants.push(`fonction ${titre}`);
     if (mode === 'modele' && !s.contratModele?.trim()) manquants.push('modèle de contrat');
     return manquants;
   }
@@ -429,10 +461,7 @@ export class ContratsService {
       signataire: { nom: string; fonction: string };
     },
   ): string {
-    const montantTtc = x.offre.lignes.reduce((s, l) => {
-      const ht = Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber());
-      return s + ventilationTva(ht, l.tauxTva.toNumber()).montantTtc;
-    }, 0);
+    const montantTtc = montantTtcLignes(x.offre.lignes);
     return remplirModele(modele, {
       societe: x.societe,
       client: x.dossier.client.nom,
@@ -449,11 +478,7 @@ export class ContratsService {
   }
 
   private montants(c: ContratDetail) {
-    const montantTtc = c.devis.lignes.reduce((s, l) => {
-      const ht = Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber());
-      return s + ventilationTva(ht, l.tauxTva.toNumber()).montantTtc;
-    }, 0);
-    return { montantTtc };
+    return { montantTtc: montantTtcLignes(c.devis.lignes) };
   }
 
   private async charger(societeId: string, dossierId: string): Promise<ContratDetail> {

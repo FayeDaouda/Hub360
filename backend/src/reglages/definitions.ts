@@ -58,7 +58,7 @@ export const REGLES: DefinitionReglage[] = [
     valeur: { type: 'entier', min: 0, max: 100_000_000_000, unite: 'FCFA' },
     defaut: 50_000_000,
     aide: "Au-delà de ce montant TTC, seul le CEO contresigne le devis accepté ; en deçà, l'Architecte DPLG.",
-    appliquee: false,
+    appliquee: true, // signataire du contrat choisi à sa préparation (contrats.service)
   },
   {
     cle: 'pilote_etudes',

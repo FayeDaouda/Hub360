@@ -30,3 +30,12 @@ describe('Contrat — modèle ou sur mesure', () => {
     expect(modeContrat(900_000_000, null)).toBe('modele');
   });
 });
+
+describe('signataireRequis (seuil de contresignature CEO, TTC)', () => {
+  const { signataireRequis } = jest.requireActual('./domaine');
+  it('au-delà du seuil : le CEO ; en deçà ou pile au seuil : l’Architecte DPLG', () => {
+    expect(signataireRequis(50_000_001, 50_000_000)).toBe('ceo');
+    expect(signataireRequis(50_000_000, 50_000_000)).toBe('dplg');
+    expect(signataireRequis(12_000_000, 50_000_000)).toBe('dplg');
+  });
+});
