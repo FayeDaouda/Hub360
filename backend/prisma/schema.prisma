@@ -121,6 +121,7 @@ model Utilisateur {
   dossiersCrees                      DossierCrm[]              @relation("DossierCreePar")
   dossiersApportes                   DossierCrm[]              @relation("DossierApporteur")
   dossiersPossedes                   DossierCrm[]              @relation("DossierProprietaire")
+  dossiersArchives                   DossierCrm[]              @relation("DossierArchivePar")
   transitionsDossier                 DossierCrmTransition[]    @relation("TransitionDossierPar")
   remuneration                       Remuneration?
 
@@ -544,6 +545,11 @@ model DossierCrm {
   // Catégorie de conception (CO1/CO2/CO3) — fixée par la ligne CO de l'offre
   // à son envoi (validation DAF). SU (et plus tard TS) en découlent.
   categorieConception    String?        @map("categorie_conception")
+  // Lead archivé (maquette CRM du boss) : un lead incomplet ou mal renseigné
+  // s'archive, il ne se supprime jamais — consultable dans « Archivés », son
+  // code reste réservé. Définitif, possible en « Nouveau projet » seulement.
+  archiveLe              DateTime?      @map("archive_le")
+  archiveParId           String?        @map("archive_par_id")
   createdAt              DateTime       @default(now()) @map("created_at")
   updatedAt              DateTime       @updatedAt @map("updated_at")
 
@@ -554,6 +560,7 @@ model DossierCrm {
   creePar              Utilisateur?           @relation("DossierCreePar", fields: [creeParId], references: [id], onDelete: SetNull)
   apporteurUtilisateur Utilisateur?           @relation("DossierApporteur", fields: [apporteurUtilisateurId], references: [id], onDelete: SetNull)
   proprietaire         Utilisateur?           @relation("DossierProprietaire", fields: [proprietaireId], references: [id], onDelete: SetNull)
+  archivePar           Utilisateur?           @relation("DossierArchivePar", fields: [archiveParId], references: [id], onDelete: SetNull)
   projet               Projet? // 0..1 — créé au passage à onboard (transaction pivot)
   transitions          DossierCrmTransition[]
   offres               Devis[] // la plus récente = l'offre en cours (étape F)

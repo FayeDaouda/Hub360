@@ -285,6 +285,8 @@ export type Projet = {
   // Offre envoyée restée sans réponse au-delà de sa validité (visible sans
   // droit Finances : le statut seul).
   offreExpiree: boolean;
+  // null = lead actif ; sinon figé, consultable dans « Archivés » (code réservé).
+  archive: { le: string; par: Personne | null } | null;
 };
 
 // Résumé de l'offre en cours d'un dossier (la plus récente).

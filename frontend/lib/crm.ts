@@ -87,6 +87,11 @@ export function getProprietairesPossibles(slug: string): Promise<Personne[]> {
   return apiSociete<Personne[]>(slug, '/dossiers/proprietaires-possibles');
 }
 
+// Définitif : Direction GC ou CIO, lead en « Nouveau projet » seulement.
+export function archiverDossier(slug: string, id: string): Promise<Projet> {
+  return apiSociete(slug, `/dossiers/${id}/archivage`, { method: 'POST' });
+}
+
 export function changerProprietaire(
   slug: string,
   id: string,

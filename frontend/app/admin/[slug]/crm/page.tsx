@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock3, FileWarning, FolderOpen, Home, Plus, Search, Send } from 'lucide-react';
 import {
   agirSurDossier,
+  archiverDossier,
   changerProprietaire,
   completudeFiche,
   getClients,
@@ -48,10 +49,11 @@ type Props = {
 };
 
 // Situation d'un dossier dans le registre : son statut, sauf une offre
-// envoyée restée sans réponse au-delà de sa validité (« Expirée »).
-type Situation = StatutCrm | 'expiree';
-const situationDe = (p: Projet): Situation => (p.offreExpiree ? 'expiree' : p.statut);
-const LIBELLE_SITUATION: Record<Situation, string> = { ...STATUTS_CRM, expiree: 'Expirée' };
+// envoyée restée sans réponse au-delà de sa validité (« Expirée ») et un lead
+// archivé (« Archivés » : hors de « Tous » et des tuiles, jamais supprimé).
+type Situation = StatutCrm | 'expiree' | 'archive';
+const situationDe = (p: Projet): Situation => (p.archive ? 'archive' : p.offreExpiree ? 'expiree' : p.statut);
+const LIBELLE_SITUATION: Record<Situation, string> = { ...STATUTS_CRM, expiree: 'Expirée', archive: 'Archivé' };
 const PILL_SITUATION: Record<Situation, string> = {
   nouveau_projet: 'statut-select--nouveau',
   en_validation: 'statut-select--daf',
@@ -59,8 +61,11 @@ const PILL_SITUATION: Record<Situation, string> = {
   onboard: 'statut-select--valide',
   perdu: 'statut-select--annule',
   expiree: 'pill--risque',
+  archive: 'pill--neutre',
 };
-const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu', 'expiree'];
+const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu', 'expiree', 'archive'];
+const LIBELLE_FILTRE: Partial<Record<Situation, string>> = { en_validation: 'En validation', archive: 'Archivés' };
+const aCompleter = (p: Projet) => !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
 const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', amenagement: 'pill--attention' };
 
 export default function CrmPage({ params }: Props) {
@@ -127,9 +132,11 @@ export default function CrmPage({ params }: Props) {
   const duPipeline = useMemo(() => (projets ?? []).filter((p) => p.creeLe.startsWith(annee)), [projets, annee]);
   const filtres = useMemo(() => {
     let liste = duPipeline;
-    if (situation === 'a_completer') {
-      liste = liste.filter((p) => p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total);
-    } else if (situation !== 'tous') {
+    if (situation === 'tous') {
+      liste = liste.filter((p) => !p.archive);
+    } else if (situation === 'a_completer') {
+      liste = liste.filter(aCompleter);
+    } else {
       liste = liste.filter((p) => situationDe(p) === situation);
     }
     const q = recherche.trim().toLowerCase();
@@ -142,6 +149,12 @@ export default function CrmPage({ params }: Props) {
   // Dérivé de `projets` (pas une copie figée) : reflète tout de suite un
   // changement de statut fait depuis la modale, sans avoir à la resynchroniser.
   const detailProjet = detailId ? (projets ?? []).find((p) => p.id === detailId) ?? null : null;
+  // Réassigner et archiver : titulaires Dir. GC, administration, CIO (même
+  // règle que CrmService.peutReassigner — le serveur tranche).
+  const estDirectionOuCio =
+    session.role === 'societe_admin' ||
+    session.role === 'CIO (transverse)' ||
+    !!proprietaires?.some((p) => p.id === session.utilisateur.id);
 
   // Tuiles et compteurs — sur le pipeline de l'année, indépendants de la recherche.
   const kpi = useMemo(() => {
@@ -150,8 +163,9 @@ export default function CrmPage({ params }: Props) {
     const surfaces = valides.map((p) => p.surfaceTerrain * p.nbPlanches);
     return {
       par,
-      actifs: duPipeline.filter((p) => !['perdu', 'expiree'].includes(situationDe(p))).length,
-      aCompleter: duPipeline.filter((p) => p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total).length,
+      actifs: duPipeline.filter((p) => !['perdu', 'expiree', 'archive'].includes(situationDe(p))).length,
+      aCompleter: duPipeline.filter(aCompleter).length,
+      tous: duPipeline.filter((p) => !p.archive).length,
       surfaceVendue: surfaces.reduce((t, x) => t + x, 0),
       detailSurface:
         valides.length === 1
@@ -201,6 +215,12 @@ export default function CrmPage({ params }: Props) {
   async function onChangerProprietaire(dossier: Projet, proprietaireId: string) {
     const maj = await changerProprietaire(params.slug, dossier.id, proprietaireId);
     setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
+  }
+
+  async function onArchiver(dossier: Projet) {
+    const maj = await archiverDossier(params.slug, dossier.id);
+    setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
+    setMessage(`Lead ${dossier.code} archivé : consultable dans « Archivés », son code reste réservé.`);
   }
 
   return (
@@ -281,11 +301,11 @@ export default function CrmPage({ params }: Props) {
           <div className="crm-filtres">
             <div className="vue-toggle crm-situations" role="group" aria-label="Situation">
               <button type="button" className={situation === 'tous' ? 'is-active' : ''} aria-pressed={situation === 'tous'} onClick={() => setSituation('tous')}>
-                Tous <span className="crm-compte">{duPipeline.length}</span>
+                Tous <span className="crm-compte">{kpi.tous}</span>
               </button>
               {FILTRES_SITUATION.map((x) => (
                 <button key={x} type="button" className={situation === x ? 'is-active' : ''} aria-pressed={situation === x} onClick={() => basculer(x)}>
-                  {x === 'en_validation' ? 'En validation' : LIBELLE_SITUATION[x]} <span className="crm-compte">{kpi.par(x)}</span>
+                  {LIBELLE_FILTRE[x] ?? LIBELLE_SITUATION[x]} <span className="crm-compte">{kpi.par(x)}</span>
                 </button>
               ))}
             </div>
@@ -457,18 +477,14 @@ export default function CrmPage({ params }: Props) {
           peutPreparerOffre={peutPreparerOffre}
           catalogue={catalogue}
           onMaj={rafraichir}
-          // Réassigner : titulaires Dir. GC, administration, CIO (même règle
-          // que CrmService.peutReassigner — le serveur tranche).
-          peutReassigner={
-            session.role === 'societe_admin' ||
-            session.role === 'CIO (transverse)' ||
-            !!proprietaires?.some((p) => p.id === session.utilisateur.id)
-          }
+          peutReassigner={estDirectionOuCio}
+          peutArchiver={estDirectionOuCio}
           onClose={() => setDetailId(null)}
           onAgir={(action, commentaire) => onAgir(detailProjet, action, commentaire)}
           onRattacher={(localiteId) => onRattacher(detailProjet, localiteId)}
           proprietaires={proprietaires}
           onChangerProprietaire={(id) => onChangerProprietaire(detailProjet, id)}
+          onArchiver={() => onArchiver(detailProjet)}
         />
       )}
     </>

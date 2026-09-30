@@ -11741,6 +11741,32 @@ a.notif-item:hover {
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
+.fiche-crm-archive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+.fiche-crm-archive > p {
+  flex: 1 1 18rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.fiche-crm-archive .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.fiche-crm-archive-confirmer {
+  display: grid;
+  flex: 1 1 100%;
+  gap: 0.6rem;
+}
 @media (max-width: 640px) {
   .fiche-crm {
     padding: 1.1rem 1rem 1.5rem;

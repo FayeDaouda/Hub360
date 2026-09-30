@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
@@ -226,5 +226,57 @@ describe('CrmService.peutReassigner', () => {
     await expect(svcTitulaires(['U1']).peutReassigner('S1', acteur('U9', 'COO'))).resolves.toBe(
       false,
     );
+  });
+});
+
+// Archivage d'un lead (maquette CRM) : Direction GC ou CIO, « Nouveau
+// projet » seulement, définitif — la ligne reste (code réservé).
+describe('CrmService.archiver', () => {
+  const svcArchive = (dossier: object | null, titulaires: string[] = []) => {
+    const prisma = {
+      dossierCrm: {
+        findFirst: jest.fn().mockResolvedValue(dossier),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn(),
+      },
+      utilisateur: {
+        findMany: jest.fn().mockResolvedValue(titulaires.map((id) => ({ id, prenom: 'P', nom: id }))),
+      },
+    };
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    return { s, prisma };
+  };
+  const cio = { userId: 'C1', role: 'CIO (transverse)', permissions: {} };
+  const lead = { statut: 'nouveau_projet', archiveLe: null };
+
+  it('COO (écriture CRM, pas Direction GC) → 403, rien écrit', async () => {
+    const { s, prisma } = svcArchive(lead, ['U1']);
+    await expect(s.archiver('S1', { userId: 'U9', role: 'COO', permissions: {} }, 'D1')).rejects.toThrow(ForbiddenException);
+    expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
+  });
+
+  it.each(['en_validation', 'offre_envoyee', 'onboard', 'perdu'])('statut %s → 409', async (statut) => {
+    const { s, prisma } = svcArchive({ statut, archiveLe: null });
+    await expect(s.archiver('S1', cio, 'D1')).rejects.toThrow(ConflictException);
+    expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('déjà archivé → 409 (définitif)', async () => {
+    const { s } = svcArchive({ statut: 'nouveau_projet', archiveLe: new Date() });
+    await expect(s.archiver('S1', cio, 'D1')).rejects.toThrow(ConflictException);
+  });
+
+  it('lead en « Nouveau projet » → horodaté et attribué, jamais supprimé', async () => {
+    const { s, prisma } = svcArchive(lead);
+    await s.archiver('S1', cio, 'D1').catch(() => undefined); // relecture non simulée
+    const arg = prisma.dossierCrm.updateMany.mock.calls[0][0];
+    expect(arg.where).toEqual({ id: 'D1', statut: 'nouveau_projet', archiveLe: null });
+    expect(arg.data.archiveParId).toBe('C1');
+    expect(arg.data.archiveLe).toBeInstanceOf(Date);
+  });
+
+  it('lead archivé : plus aucune action du cycle', async () => {
+    const { s } = svcArchive({ ...lead, archiveLe: new Date(), projet: null });
+    await expect(s.agir('S1', cio, 'D1', 'soumettre', undefined)).rejects.toThrow(ConflictException);
   });
 });

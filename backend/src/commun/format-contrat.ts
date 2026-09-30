@@ -49,6 +49,7 @@ export function versDossierCrm(
     creePar: PersonneRef;
     apporteurUtilisateur: PersonneRef;
     proprietaire: PersonneRef;
+    archivePar: PersonneRef;
     offres: (Devis & { lignes: LigneDevis[] })[];
   },
   // Commission (finances_charges) et offre (finances_devis) : absentes de la
@@ -95,6 +96,8 @@ export function versDossierCrm(
     }),
     // null = « à assigner ».
     proprietaire: versPersonne(d.proprietaire),
+    // null = lead actif ; sinon figé, consultable dans « Archivés ».
+    archive: d.archiveLe ? { le: d.archiveLe, par: versPersonne(d.archivePar) } : null,
     // CO1/CO2/CO3 fixée à l'envoi de l'offre — null tant qu'aucune offre avec
     // ligne de conception n'est partie.
     categorieConception: d.categorieConception,

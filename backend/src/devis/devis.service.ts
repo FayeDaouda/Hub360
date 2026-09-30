@@ -38,7 +38,7 @@ type ContexteLignes = {
 const AVEC_DETAIL = {
   client: true,
   societe: { select: { nom: true } },
-  dossierCrm: { select: { id: true, statut: true, code: true } },
+  dossierCrm: { select: { id: true, statut: true, code: true, archiveLe: true } },
   // famille : repérer un avenant (lignes TS) sans relire le catalogue.
   lignes: { orderBy: { ordre: 'asc' as const }, include: { produitService: { select: { famille: true } } } },
 } satisfies Prisma.DevisInclude;
@@ -147,7 +147,7 @@ export class DevisService {
   async patch(societeId: string, id: string, dto: PatchDevisDto) {
     const devis = await this.brouillon(societeId, id);
     if (devis.dossierCrm) {
-      this.exigerOffreModifiable(devis.dossierCrm.statut);
+      this.exigerOffreModifiable(devis.dossierCrm);
       // Client, projet et validité d'une offre sont fixés par le dossier et
       // par l'envoi — seuls l'objet et les lignes se retravaillent.
       if (dto.clientId || dto.projetId !== undefined || dto.dateValidite !== undefined) {
@@ -191,7 +191,7 @@ export class DevisService {
 
   async supprimer(societeId: string, id: string) {
     const devis = await this.brouillon(societeId, id);
-    if (devis.dossierCrm) this.exigerOffreModifiable(devis.dossierCrm.statut);
+    if (devis.dossierCrm) this.exigerOffreModifiable(devis.dossierCrm);
     await this.prisma.devis.delete({ where: { id: devis.id } });
   }
 
@@ -482,10 +482,10 @@ export class DevisService {
   private async validerNouvelleOffre(societeId: string, dto: CreerDevisDto) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id: dto.dossierCrmId, societeId },
-      select: { statut: true, clientId: true },
+      select: { statut: true, clientId: true, archiveLe: true },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
-    this.exigerOffreModifiable(dossier.statut);
+    this.exigerOffreModifiable(dossier);
     if (dto.clientId !== dossier.clientId || dto.projetId) {
       throw new UnprocessableEntityException(
         'Une offre de dossier CRM porte sur le client du dossier, sans projet.',
@@ -500,9 +500,13 @@ export class DevisService {
   }
 
   // L'offre se prépare et se retravaille tant que le dossier est en
-  // « Nouveau projet » — figée pendant la validation DAF et après l'envoi.
-  private exigerOffreModifiable(statutDossier: string) {
-    if (statutDossier !== 'nouveau_projet') {
+  // « Nouveau projet » — figée pendant la validation DAF et après l'envoi,
+  // comme sur un lead archivé.
+  private exigerOffreModifiable(dossier: { statut: string; archiveLe: Date | null }) {
+    if (dossier.archiveLe) {
+      throw new ConflictException('Lead archivé : aucune offre ne s’y prépare.');
+    }
+    if (dossier.statut !== 'nouveau_projet') {
       throw new ConflictException(
         'L’offre ne se modifie qu’en « Nouveau projet » (la DAF peut renvoyer le dossier).',
       );

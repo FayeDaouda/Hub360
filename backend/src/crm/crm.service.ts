@@ -46,6 +46,7 @@ const INCLUDE_DOSSIER = {
   creePar: PERSONNE,
   apporteurUtilisateur: PERSONNE,
   proprietaire: PERSONNE,
+  archivePar: PERSONNE,
   // L'offre en cours = la plus récente (étape F) — résumée dans la réponse.
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
 } as const;
@@ -181,9 +182,10 @@ export class CrmService {
   ) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
-      select: { id: true },
+      select: { archiveLe: true },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
+    exigerNonArchive(dossier);
     if (!(await this.peutReassigner(societeId, acteur))) {
       throw new ForbiddenException(
         `Réassigner un dossier est réservé aux titulaires ${ROLE_PROPRIETAIRE_DOSSIER}, à l’administration et au CIO.`,
@@ -211,9 +213,10 @@ export class CrmService {
   ) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
-      select: { localiteId: true },
+      select: { localiteId: true, archiveLe: true },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
+    exigerNonArchive(dossier);
     if (dossier.localiteId) {
       throw new ConflictException('Ce dossier est déjà rattaché à une localité.');
     }
@@ -226,6 +229,38 @@ export class CrmService {
     const maj = await this.prisma.dossierCrm.update({
       where: { id },
       data: { localiteId },
+      include: INCLUDE_DOSSIER,
+    });
+    return versDossierCrm(maj, this.optsFormat(acteur));
+  }
+
+  // Archive un lead (maquette CRM) : Direction GC ou CIO — mêmes titulaires
+  // que la réassignation. Seul un lead en « Nouveau projet » s'archive (aucune
+  // offre partie) ; jamais supprimé, il reste consultable et son code réservé
+  // (la ligne demeure, cf. resoudreCode). Définitif : aucune action ensuite.
+  async archiver(societeId: string, acteur: Acteur, id: string) {
+    const dossier = await this.prisma.dossierCrm.findFirst({
+      where: { id, societeId },
+      select: { statut: true, archiveLe: true },
+    });
+    if (!dossier) throw new NotFoundException('Dossier introuvable');
+    if (!(await this.peutReassigner(societeId, acteur))) {
+      throw new ForbiddenException(
+        `Archiver un lead est réservé aux titulaires ${ROLE_PROPRIETAIRE_DOSSIER}, à l’administration et au CIO.`,
+      );
+    }
+    exigerNonArchive(dossier);
+    if (dossier.statut !== 'nouveau_projet') {
+      throw new ConflictException('Seul un lead en « Nouveau projet » s’archive.');
+    }
+    // Garde en base : deux archivages simultanés n'en enregistrent qu'un.
+    const { count } = await this.prisma.dossierCrm.updateMany({
+      where: { id, statut: 'nouveau_projet', archiveLe: null },
+      data: { archiveLe: new Date(), archiveParId: acteur.userId },
+    });
+    if (count === 0) throw new ConflictException('Ce lead vient de changer : recharge la fiche.');
+    const maj = await this.prisma.dossierCrm.findUniqueOrThrow({
+      where: { id },
       include: INCLUDE_DOSSIER,
     });
     return versDossierCrm(maj, this.optsFormat(acteur));
@@ -249,6 +284,7 @@ export class CrmService {
       include: { projet: { select: { id: true } } },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
+    exigerNonArchive(dossier);
 
     if (!aLaPermission(acteur.permissions, regle.module, regle.niveau)) {
       throw new ForbiddenException(
@@ -631,5 +667,12 @@ export class CrmService {
       ).map((d) => d.code),
     );
     return codeAvecVariante(base, pris);
+  }
+}
+
+// Un lead archivé est figé : plus aucune action, réassignation ni rattachement.
+function exigerNonArchive(dossier: { archiveLe: Date | null }) {
+  if (dossier.archiveLe) {
+    throw new ConflictException('Lead archivé : consultable seulement.');
   }
 }

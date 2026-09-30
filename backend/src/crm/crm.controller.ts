@@ -77,6 +77,14 @@ export class CrmController {
     );
   }
 
+  // Même garde que la réassignation (Direction GC, administration, CIO),
+  // tranchée par le service.
+  @Post(':id/archivage')
+  @RequiertPermission('crm', 'ecriture')
+  archiver(@Req() req: Req, @Param('id') id: string) {
+    return this.crm.archiver(req.user.societeId, req.user, id);
+  }
+
   // Lecture suffit à la porte : le niveau réel dépend de l'action (la DAF,
   // en lecture sur le CRM, valide via finances_devis) — tranché par le
   // service, cf. crm/cycle.ts.

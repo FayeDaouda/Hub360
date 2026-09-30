@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, X } from 'lucide-react';
+import { Archive, ArrowRight, X } from 'lucide-react';
 import {
   CATEGORIES,
   GAMMES,
@@ -31,6 +31,7 @@ type Props = {
   proprietaires: Personne[] | null; // titulaires Dir. GC
   peutEcrire: boolean; // crm ≥ écriture : rattachement de localité
   peutReassigner: boolean;
+  peutArchiver: boolean; // Direction GC ou CIO (même règle que la réassignation)
   peutPreparerOffre: boolean; // finances_devis ≥ écriture
   catalogue: ProduitService[];
   onMaj: () => Promise<void>; // recharge le dossier (après une action sur l'offre)
@@ -40,6 +41,7 @@ type Props = {
   // Rejeter la promesse garde le bloc ouvert + affiche l'erreur en ligne.
   onRattacher: (localiteId: string) => Promise<void>;
   onChangerProprietaire: (proprietaireId: string) => Promise<void>;
+  onArchiver: () => Promise<void>;
 };
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
@@ -76,6 +78,7 @@ export function DetailDossierModal({
   proprietaires,
   peutEcrire,
   peutReassigner,
+  peutArchiver,
   peutPreparerOffre,
   catalogue,
   onMaj,
@@ -83,6 +86,7 @@ export function DetailDossierModal({
   onAgir,
   onRattacher,
   onChangerProprietaire,
+  onArchiver,
 }: Props) {
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
   // fois, affiché jusqu'à fermeture.
@@ -95,6 +99,10 @@ export function DetailDossierModal({
   const [localiteId, setLocaliteId] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Archivage : définitif, donc confirmé avant l'envoi.
+  const [confirmerArchive, setConfirmerArchive] = useState(false);
+  const [archivage, setArchivage] = useState(false);
+  const [erreurArchive, setErreurArchive] = useState<string | null>(null);
 
   // Rechargé à chaque changement de statut (nouvelle ligne de journal).
   useEffect(() => {
@@ -122,6 +130,19 @@ export function DetailDossierModal({
     }
   }
 
+  async function archiver() {
+    setArchivage(true);
+    setErreurArchive(null);
+    try {
+      await onArchiver();
+      setConfirmerArchive(false);
+    } catch (e) {
+      setErreurArchive(e instanceof Error && e.message ? e.message : 'L’archivage a échoué.');
+    } finally {
+      setArchivage(false);
+    }
+  }
+
   async function rattacher() {
     if (!localiteId) return setErreur('Choisis une localité dans la liste.');
     setEnCours(true);
@@ -136,6 +157,8 @@ export function DetailDossierModal({
   }
 
   const completude = completudeFiche(projet);
+  // Lead archivé : fiche consultable seulement, plus aucune action.
+  const archive = projet.archive;
   const rang = ETAPES.findIndex((e) => e.statut === projet.statut);
   const ap = projet.apporteur;
   const manquant = (texte = 'à renseigner') => <span className="crm-manquant">{texte}</span>;
@@ -191,7 +214,7 @@ export function DetailDossierModal({
 
         <section className="fiche-crm-section">
           <h3 className="fiche-crm-titre">Situation</h3>
-          <ol className={`fiche-crm-etapes${projet.statut === 'perdu' ? ' is-perdu' : ''}`}>
+          <ol className={`fiche-crm-etapes${projet.statut === 'perdu' || archive ? ' is-perdu' : ''}`}>
             {ETAPES.map((e, i) => (
               <li key={e.statut} className={i < rang ? 'is-fait' : i === rang ? 'is-courant' : undefined}>
                 {e.libelle}
@@ -200,9 +223,15 @@ export function DetailDossierModal({
           </ol>
           {projet.statut === 'perdu' && <p className="fiche-crm-note">Dossier perdu : le cycle est clos.</p>}
           {projet.offreExpiree && <p className="fiche-crm-note">Offre expirée sans réponse du client.</p>}
+          {archive && (
+            <p className="fiche-crm-note">
+              Lead archivé le {jjmmaaaa(archive.le)}
+              {archive.par ? ` par ${archive.par.nom}` : ''} : consultable seulement, son code reste réservé.
+            </p>
+          )}
         </section>
 
-        {projet.statut === 'nouveau_projet' && completude.faits < completude.total && (
+        {!archive && projet.statut === 'nouveau_projet' && completude.faits < completude.total && (
           <div className="fiche-crm-alerte" role="note">
             <strong>
               Fiche {completude.faits}/{completude.total} : il manque {completude.manquants.join(', ')}
@@ -227,7 +256,7 @@ export function DetailDossierModal({
               </div>
             ))}
           </dl>
-          {!projet.localite && peutEcrire && (
+          {!projet.localite && peutEcrire && !archive && (
             <div className="field-bloc">
               <label className="field-label" htmlFor="rattacher-localite">
                 Rattacher au référentiel des localités
@@ -303,7 +332,7 @@ export function DetailDossierModal({
             <ArrowRight size={18} strokeWidth={2} aria-hidden className="fiche-crm-fleche" />
             <div className="fiche-crm-carte fiche-crm-carte--proprio">
               <span className="fiche-crm-aide">Propriétaire</span>
-              {peutReassigner && proprietaires && proprietaires.length > 0 ? (
+              {peutReassigner && !archive && proprietaires && proprietaires.length > 0 ? (
                 <select
                   className="field-input"
                   aria-label="Propriétaire de la fiche"
@@ -341,30 +370,65 @@ export function DetailDossierModal({
                   <span>{libelleTransition(t)}</span>
                 </li>
               ))}
+              {archive && (
+                <li>
+                  <time>{jjmmaaaa(archive.le)}</time>
+                  <span>Lead archivé{archive.par ? ` par ${archive.par.nom}` : ''}</span>
+                </li>
+              )}
             </ol>
           )}
         </section>
 
-        <section className="fiche-crm-section fiche-crm-actions">
-          <CycleDossier
-            slug={slug}
-            projet={projet}
-            onAgir={async (action, commentaire) => {
-              const emise = await onAgir(action, commentaire);
-              if (emise) setLienEmis(emise);
-            }}
-          />
-          <OffreDossier
-            slug={slug}
-            projet={projet}
-            peutPreparer={peutPreparerOffre}
-            onPreparer={(offreId) => setEdition({ offreId })}
-            onMaj={onMaj}
-            lienEmis={lienEmis}
-            onLienEmis={setLienEmis}
-          />
-          <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
-        </section>
+        {!archive && peutArchiver && projet.statut === 'nouveau_projet' && (
+          <div className="fiche-crm-archive">
+            <p>
+              Direction GC ou CIO (administrateur du HUB) · un lead incomplet ou mal renseigné s’archive, il ne se supprime
+              jamais. Il reste consultable dans « Archivés » et son code reste réservé.
+            </p>
+            {!confirmerArchive ? (
+              <button type="button" className="btn-ghost" onClick={() => setConfirmerArchive(true)}>
+                <Archive size={16} strokeWidth={1.75} aria-hidden /> Archiver ce lead
+              </button>
+            ) : (
+              <div className="fiche-crm-archive-confirmer" role="group" aria-label="Confirmer l’archivage">
+                <strong>Archiver {projet.code} ? C’est définitif : plus aucune action sur ce lead.</strong>
+                {erreurArchive && <p className="field-erreur">{erreurArchive}</p>}
+                <div className="modal-actions">
+                  <button type="button" className="btn-ghost" disabled={archivage} onClick={() => setConfirmerArchive(false)}>
+                    Annuler
+                  </button>
+                  <button type="button" className="btn-danger" disabled={archivage} onClick={archiver}>
+                    {archivage ? 'Archivage…' : 'Archiver'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!archive && (
+          <section className="fiche-crm-section fiche-crm-actions">
+            <CycleDossier
+              slug={slug}
+              projet={projet}
+              onAgir={async (action, commentaire) => {
+                const emise = await onAgir(action, commentaire);
+                if (emise) setLienEmis(emise);
+              }}
+            />
+            <OffreDossier
+              slug={slug}
+              projet={projet}
+              peutPreparer={peutPreparerOffre}
+              onPreparer={(offreId) => setEdition({ offreId })}
+              onMaj={onMaj}
+              lienEmis={lienEmis}
+              onLienEmis={setLienEmis}
+            />
+            <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
+          </section>
+        )}
       </aside>
       {edition && (
         <OffreDossierModal
