@@ -88,7 +88,7 @@ export const REGLES: DefinitionReglage[] = [
     valeur: { type: 'entier', min: 1, max: 365, unite: 'j' },
     defaut: 7,
     aide: "Au-delà, l'avenant (TS) non accepté par le client déclenche une alerte et une échéance dépassée au registre.",
-    appliquee: false,
+    appliquee: true, // alerte sur l'avenant (Facturation) ; le registre viendra avec le Pilotage
   },
   {
     cle: 'charges_gc_heures',

@@ -15,9 +15,11 @@ import { EmailService } from '../email/email.service';
 import { genererJeton, hacherJeton } from '../auth/jetons';
 import { MOTIF_REFUS_CLIENT } from '../crm/cycle';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import {
   VALIDITE_OFFRE_JOURS,
   ajouterJours,
+  alerteAvenant,
   refDevis,
   relanceAFaire,
   statutDevisEffectif,
@@ -37,7 +39,8 @@ const AVEC_DETAIL = {
   client: true,
   societe: { select: { nom: true } },
   dossierCrm: { select: { id: true, statut: true, code: true } },
-  lignes: { orderBy: { ordre: 'asc' as const } },
+  // famille : repérer un avenant (lignes TS) sans relire le catalogue.
+  lignes: { orderBy: { ordre: 'asc' as const }, include: { produitService: { select: { famille: true } } } },
 } satisfies Prisma.DevisInclude;
 
 type DevisAvecDetail = Prisma.DevisGetPayload<{ include: typeof AVEC_DETAIL }>;
@@ -87,7 +90,13 @@ export class DevisService {
     private facturation: FacturationService,
     private email: EmailService,
     private notifications: NotificationsService,
+    private reglages: ReglagesService,
   ) {}
+
+  // Délai d'acceptation d'un avenant (Réglages · Règles et délais).
+  private seuilAvenant(societeId: string) {
+    return this.reglages.regle<number>(societeId, 'alerte_avenant_jours');
+  }
 
   async findAll(
     societeId: string,
@@ -103,11 +112,12 @@ export class DevisService {
       include: AVEC_DETAIL,
       orderBy: [{ creeLe: 'desc' }],
     });
-    return devis.map((d) => this.formater(d));
+    const seuil = await this.seuilAvenant(societeId);
+    return devis.map((d) => this.formater(d, seuil));
   }
 
   async get(societeId: string, id: string) {
-    return this.formater(await this.charger(societeId, id));
+    return this.formater(await this.charger(societeId, id), await this.seuilAvenant(societeId));
   }
 
   async creer(societeId: string, dto: CreerDevisDto) {
@@ -772,7 +782,9 @@ export class DevisService {
     return { lignes: calculees, montantHt, montantTva, montantTtc: montantHt + montantTva };
   }
 
-  private formater(d: DevisAvecDetail) {
+  // `seuilAvenant` : délai réglé (jours) ; null = alerte non calculée (brouillon
+  // qui vient d'être créé ou modifié — rien n'est encore envoyé).
+  private formater(d: DevisAvecDetail, seuilAvenant: number | null = null) {
     const { lignes, montantHt, montantTva, montantTtc } = this.calculerLignes(d.lignes);
     return {
       id: d.id,
@@ -790,6 +802,11 @@ export class DevisService {
       relancesEnvoyees: d.relancesEnvoyees,
       derniereRelanceLe: d.derniereRelanceLe,
       relanceAFaire: relanceAFaire(d, jourCourant()),
+      // Avenant (TS) envoyé et toujours pas accepté au-delà du délai réglé.
+      alerteAvenant:
+        seuilAvenant == null
+          ? null
+          : alerteAvenant({ ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) }, jourCourant(), seuilAvenant),
       lignes,
       montantHt,
       montantTva,

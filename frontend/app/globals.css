@@ -11304,6 +11304,9 @@ a.notif-item:hover {
 .reg-admin-onglets .admin-periode-toggle button {
   white-space: nowrap;
 }
+.factu-alerte-avenant {
+  margin-left: 0.35rem;
+}
 .reg-lot {
   display: grid;
   gap: 0.3rem;

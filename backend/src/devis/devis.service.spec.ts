@@ -2,6 +2,7 @@ import { EmailService } from '../email/email.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { DevisService } from './devis.service';
 
 // DevisService.envoyer() : le client CRM n'a pas forcément d'email — dans ce
@@ -58,7 +59,7 @@ function setup(clientEmail: string | null) {
   const email = { envoyerDevis } as unknown as EmailService;
   const facturation = {} as unknown as FacturationService;
 
-  const service = new DevisService(prisma, facturation, email, {} as NotificationsService);
+  const service = new DevisService(prisma, facturation, email, {} as NotificationsService, { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService);
   return { service, envoyerDevis, findFirst };
 }
 
@@ -119,6 +120,7 @@ describe('DevisService — offre de dossier CRM', () => {
       {} as FacturationService,
       { envoyerDevis: jest.fn() } as unknown as EmailService,
       notifications as unknown as NotificationsService,
+      { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
     );
     return { service, tx, notifications };
   }
@@ -197,6 +199,7 @@ describe('DevisService — catalogue réel', () => {
     {} as FacturationService,
     {} as EmailService,
     {} as NotificationsService,
+    { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
   ) as unknown as {
     appliquerCatalogue: (
       s: string,

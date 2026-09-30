@@ -1657,6 +1657,8 @@ export type Devis = {
   relancesEnvoyees: number;
   derniereRelanceLe: string | null;
   relanceAFaire: boolean; // palier J+3 / J+6 atteint, pas encore relancé
+  // Avenant (TS) envoyé, toujours pas accepté au-delà du délai des Réglages.
+  alerteAvenant: { jours: number; seuil: number } | null;
   lignes: LigneDevis[];
   montantHt: number;
   montantTva: number;

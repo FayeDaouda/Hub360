@@ -167,6 +167,7 @@ export default function FacturationCentralePage({ params }: Props) {
     const mois = moisCourant();
     return {
       devisEnAttente: d.filter((x) => x.statutEffectif === 'envoye').length,
+      avenantsEnRetard: d.filter((x) => x.alerteAvenant).length,
       facturesImpayees: f.filter(
         (x) => x.statutEffectif === 'emise' || x.statutEffectif === 'partiellement_payee',
       ).length,
@@ -329,6 +330,10 @@ export default function FacturationCentralePage({ params }: Props) {
             cle: 'devis-attente',
             label: 'Devis en attente de réponse',
             valeur: kpi.devisEnAttente,
+            sousTexte: kpi.avenantsEnRetard
+              ? `${kpi.avenantsEnRetard} avenant(s) non accepté(s) hors délai`
+              : undefined,
+            alerte: kpi.avenantsEnRetard > 0,
             icone: Send,
             degrade: DEGRADE_KPI['devis-attente'],
           },
@@ -446,6 +451,14 @@ export default function FacturationCentralePage({ params }: Props) {
                         <span className={`pill ${PILL_DEVIS[d.statutEffectif]}`}>
                           {STATUTS_DEVIS[d.statutEffectif]}
                         </span>
+                        {d.alerteAvenant && (
+                          <span
+                            className="pill pill--risque factu-alerte-avenant"
+                            title={`Délai d’acceptation réglé : ${d.alerteAvenant.seuil} jours (Réglages)`}
+                          >
+                            Avenant non accepté · {d.alerteAvenant.jours} j
+                          </span>
+                        )}
                       </td>
                       <td data-label="TTC">{formatMontantCompact(d.montantTtc)}</td>
                       <td data-label="Validité">{d.dateValidite ?? '—'}</td>

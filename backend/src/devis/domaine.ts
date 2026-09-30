@@ -90,3 +90,19 @@ export function montantHtLignes(
     0,
   );
 }
+
+// -- Avenant non accepté (Réglages · Règles et délais) -----------------------
+// Un avenant = devis complémentaire d'un PROJET portant au moins une ligne TS
+// (CGV art. 8). Envoyé au client et resté sans acceptation (en attente ou
+// expiré) au-delà du délai réglé : alerte (et, avec le Pilotage, échéance
+// dépassée au registre des décisions).
+export function alerteAvenant(
+  d: { projetId: string | null; statut: StatutDevis; dateValidite: string | null; dateEnvoi: Date | null; familles: (string | null)[] },
+  aujourdhui: string,
+  seuilJours: number,
+): { jours: number; seuil: number } | null {
+  if (!d.projetId || !d.dateEnvoi || !d.familles.includes('TS')) return null;
+  if (!['envoye', 'expire'].includes(statutDevisEffectif(d, aujourdhui))) return null;
+  const jours = joursEntre(d.dateEnvoi.toISOString().slice(0, 10), aujourdhui);
+  return jours > seuilJours ? { jours, seuil: seuilJours } : null;
+}

@@ -36,3 +36,21 @@ describe('ajouterJours', () => {
     expect(ajouterJours('2026-09-28', 7)).toBe('2026-10-05');
   });
 });
+
+describe('alerteAvenant (délai d’acceptation réglé)', () => {
+  const { alerteAvenant } = jest.requireActual('./domaine');
+  const avenant = { projetId: 'P1', statut: 'envoye', dateValidite: '2026-10-07', dateEnvoi: new Date('2026-09-20T10:00:00Z'), familles: ['TS'] };
+  it('au-delà du délai sans acceptation : alerte avec le nombre de jours', () => {
+    expect(alerteAvenant(avenant, '2026-09-28', 7)).toEqual({ jours: 8, seuil: 7 });
+    expect(alerteAvenant(avenant, '2026-09-27', 7)).toBeNull(); // pile 7 jours : pas encore
+  });
+  it('expiré sans réponse : toujours non accepté, donc alerte', () => {
+    expect(alerteAvenant({ ...avenant, dateValidite: '2026-09-27' }, '2026-10-01', 7)).toEqual({ jours: 11, seuil: 7 });
+  });
+  it('accepté, refusé, sans TS ou hors projet : pas d’alerte', () => {
+    expect(alerteAvenant({ ...avenant, statut: 'accepte' }, '2026-10-01', 7)).toBeNull();
+    expect(alerteAvenant({ ...avenant, statut: 'refuse' }, '2026-10-01', 7)).toBeNull();
+    expect(alerteAvenant({ ...avenant, familles: ['CO', null] }, '2026-10-01', 7)).toBeNull();
+    expect(alerteAvenant({ ...avenant, projetId: null }, '2026-10-01', 7)).toBeNull();
+  });
+});

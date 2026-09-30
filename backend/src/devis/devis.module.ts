@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ReglagesModule } from '../reglages/reglages.module';
 import { ProjetsModule } from '../projets/projets.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DevisService } from './devis.service';
@@ -11,7 +12,7 @@ import { ProduitsServicesController } from './produits-services.controller';
 // ProjetsModule importé pour FacturationService (conversion d'un devis
 // accepté en facture, cf. DevisService.convertir).
 @Module({
-  imports: [ProjetsModule, NotificationsModule],
+  imports: [ProjetsModule, NotificationsModule, ReglagesModule],
   providers: [DevisService, ProduitsServicesService, DevisPublicGuard],
   controllers: [DevisController, DevisPublicController, ProduitsServicesController],
   // Le cycle CRM émet l'offre d'un dossier à la validation DAF (étape F).
