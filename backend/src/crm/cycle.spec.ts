@@ -18,10 +18,17 @@ const DOSSIER = {
   categorie: 'conception',
   programme: 'Villa',
   localisation: 'Almadies',
+  localiteId: 'L1',
   latitude: null,
   longitude: null,
   type: 'villa',
+  surfaceTerrain: 350,
+  nbPlanches: 3,
+  standing: 'moyen',
+  gamme: 'milieu',
   clientId: 'C1',
+  archiveLe: null,
+  archivePar: null,
   commissionApporteur: null,
   apporteurType: 'interne',
   client: { id: 'C1', nom: 'X', type: 'particulier' },
@@ -135,6 +142,15 @@ describe('CrmService.agir', () => {
         commentaire: null,
       },
     });
+  });
+
+  it('soumettre une fiche incomplète → 409, rien ne bascule (elle se verrouillerait incomplète)', async () => {
+    const { svc, prisma } = monter('nouveau_projet');
+    prisma.dossierCrm.findFirst.mockResolvedValue({ ...DOSSIER, statut: 'nouveau_projet', gamme: null, nbPlanches: 0, projet: null });
+    await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
+      'Fiche 8/10 : il manque n° de planches, gamme',
+    );
+    expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
   });
 
   it('valider : la DAF (finances_devis validation) passe et ENVOIE l’offre', async () => {

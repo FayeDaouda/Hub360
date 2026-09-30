@@ -18,6 +18,7 @@ import {
   ActionDossierDto,
   ChangerProprietaireDto,
   CreerDossierDto,
+  ModifierFicheDto,
   RattacherLocaliteDto,
 } from './dto';
 
@@ -48,6 +49,13 @@ export class CrmController {
   @RequiertPermission('crm', 'ecriture')
   creer(@Req() req: Req, @Body() dto: CreerDossierDto) {
     return this.crm.creer(req.user.societeId, req.user, dto);
+  }
+
+  // Complétion de la fiche d'un lead (champ par champ, « Nouveau projet »).
+  @Patch(':id/fiche')
+  @RequiertPermission('crm', 'ecriture')
+  modifierFiche(@Req() req: Req, @Param('id') id: string, @Body() dto: ModifierFicheDto) {
+    return this.crm.modifierFiche(req.user.societeId, req.user, id, dto);
   }
 
   @Patch(':id/localite')

@@ -25,6 +25,7 @@ import {
   statutDevisEffectif,
 } from './domaine';
 import { CreerDevisDto, LigneDevisDto, PatchDevisDto } from './dto';
+import { motifFicheIncomplete } from '../crm/fiche';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -482,10 +483,27 @@ export class DevisService {
   private async validerNouvelleOffre(societeId: string, dto: CreerDevisDto) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id: dto.dossierCrmId, societeId },
-      select: { statut: true, clientId: true, archiveLe: true },
+      select: {
+        statut: true,
+        archiveLe: true,
+        code: true,
+        categorie: true,
+        localiteId: true,
+        type: true,
+        surfaceTerrain: true,
+        nbPlanches: true,
+        clientId: true,
+        standing: true,
+        gamme: true,
+        programme: true,
+      },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     this.exigerOffreModifiable(dossier);
+    // « Créer une offre » reste bloqué tant que la fiche n'est pas complète
+    // (maquette CRM) : le tarif CO dépend des planches et de la catégorie.
+    const incomplete = motifFicheIncomplete(dossier, 'avant de créer l’offre');
+    if (incomplete) throw new ConflictException(incomplete);
     if (dto.clientId !== dossier.clientId || dto.projetId) {
       throw new UnprocessableEntityException(
         'Une offre de dossier CRM porte sur le client du dossier, sans projet.',

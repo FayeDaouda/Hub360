@@ -785,7 +785,7 @@ async function main() {
         dossierCrmId: dossier.id,
         code: dossier.code,
         nature: dossier.nature,
-        categorie: dossier.categorie,
+        categorie: cfg.categorie,
         programme: dossier.programme,
         localisation: dossier.localisation,
         // Pin posé une fois le projet lancé ; ceux encore en avant-projet
@@ -793,7 +793,7 @@ async function main() {
         // l'adresse du site.
         latitude: phase === 'avant_projet' ? null : dossier.latitude,
         longitude: phase === 'avant_projet' ? null : dossier.longitude,
-        type: dossier.type,
+        type: cfg.type,
         clientId: dossier.clientId,
         cellules: cfg.equipe ? { create: [{ celluleId: cellules[cfg.equipe] }] } : undefined,
         statut,

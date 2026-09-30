@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "dossiers_crm" ALTER COLUMN "categorie" DROP NOT NULL,
+ALTER COLUMN "type" DROP NOT NULL,
+ALTER COLUMN "surface_terrain" SET DEFAULT 0,
+ALTER COLUMN "standing" DROP NOT NULL,
+ALTER COLUMN "gamme" DROP NOT NULL,
+ALTER COLUMN "programme" SET DEFAULT '';
+

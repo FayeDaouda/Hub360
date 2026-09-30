@@ -22,9 +22,10 @@ import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
-import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER } from './cycle';
+import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
-import { CreerDossierDto } from './dto';
+import { CreerDossierDto, ModifierFicheDto } from './dto';
+import { motifFicheIncomplete } from './fiche';
 import {
   codeAvecVariante,
   estPersonneMorale,
@@ -94,11 +95,6 @@ export class CrmService {
     if (!dto.client.id && !dto.client.nouveau) {
       throw new BadRequestException('client.id ou client.nouveau est requis');
     }
-    // Catalogue réel : les planches sont un « champ obligatoire sur la fiche
-    // projet » (tout tarif CO en dépend) — pour un dossier de conception.
-    if (dto.categorie === 'conception' && dto.nbPlanches < 1) {
-      throw new BadRequestException('Nombre de planches requis pour un dossier de conception.');
-    }
     const commission = dto.commissionApporteur ?? null;
     if (
       commission !== null &&
@@ -130,17 +126,19 @@ export class CrmService {
           societeId,
           code: await this.resoudreCode(tx, societeId, client, localite.code),
           nature: dto.nature,
-          categorie: dto.categorie,
+          // Lead incomplet permis : null / 0 / "" = à renseigner sur la fiche
+          // (les planches, base du tarif CO, sont exigées avant l'offre).
+          categorie: dto.categorie ?? null,
           localisation: localite.nom,
           localiteId: localite.id,
           latitude: dto.latitude ?? null,
           longitude: dto.longitude ?? null,
-          type: dto.type,
-          nbPlanches: dto.nbPlanches,
-          surfaceTerrain: dto.surfaceTerrain,
-          standing: dto.standing,
-          gamme: dto.gamme,
-          programme: dto.programme,
+          type: dto.type ?? null,
+          nbPlanches: dto.nbPlanches ?? 0,
+          surfaceTerrain: dto.surfaceTerrain ?? 0,
+          standing: dto.standing ?? null,
+          gamme: dto.gamme ?? null,
+          programme: dto.programme?.trim() ?? '',
           // Toujours créé au début du cycle (plus de statut choisi à la
           // création : on ne saute plus d'étape) — première ligne du journal.
           statut: 'nouveau_projet',
@@ -266,6 +264,53 @@ export class CrmService {
     return versDossierCrm(maj, this.optsFormat(acteur));
   }
 
+  // Complète la fiche d'un lead (« Caractéristiques du projet »), champ par
+  // champ, tant qu'elle n'est pas verrouillée (« Nouveau projet »). Les
+  // planches et la catégorie fixent le tarif CO : pas de changement sous une
+  // offre en préparation (le brouillon se supprime d'abord).
+  async modifierFiche(societeId: string, acteur: Acteur, id: string, dto: ModifierFicheDto) {
+    const dossier = await this.prisma.dossierCrm.findFirst({
+      where: { id, societeId },
+      select: { statut: true, archiveLe: true, nbPlanches: true, categorie: true },
+    });
+    if (!dossier) throw new NotFoundException('Dossier introuvable');
+    exigerNonArchive(dossier);
+    if (!ficheModifiable(dossier.statut)) {
+      throw new ConflictException('Fiche verrouillée depuis la soumission de l’offre.');
+    }
+    const programme = dto.programme?.trim();
+    if (dto.programme !== undefined && !programme) {
+      throw new BadRequestException('Le programme ne peut pas être vide.');
+    }
+    const tarifChange =
+      (dto.nbPlanches !== undefined && dto.nbPlanches !== dossier.nbPlanches) ||
+      (dto.categorie !== undefined && dto.categorie !== dossier.categorie);
+    if (tarifChange) {
+      const brouillon = await this.prisma.devis.count({
+        where: { dossierCrmId: id, statut: 'brouillon' },
+      });
+      if (brouillon > 0) {
+        throw new ConflictException(
+          'Une offre est en préparation : son tarif dépend des planches et de la catégorie. Supprime le brouillon avant de les changer.',
+        );
+      }
+    }
+    const maj = await this.prisma.dossierCrm.update({
+      where: { id },
+      data: {
+        categorie: dto.categorie,
+        type: dto.type,
+        surfaceTerrain: dto.surfaceTerrain,
+        nbPlanches: dto.nbPlanches,
+        standing: dto.standing,
+        gamme: dto.gamme,
+        programme,
+      },
+      include: INCLUDE_DOSSIER,
+    });
+    return versDossierCrm(maj, this.optsFormat(acteur));
+  }
+
   // Fait avancer un dossier dans le cycle commercial (cf. crm/cycle.ts) :
   // droit de l'acteur sur le module de l'action, statut de départ autorisé,
   // texte obligatoire le cas échéant — puis écriture + ligne de journal dans
@@ -296,6 +341,10 @@ export class CrmService {
         `Action « ${action} » impossible depuis le statut « ${dossier.statut} ».`,
       );
     }
+    // La fiche se verrouille à la soumission : incomplète, elle le resterait.
+    const incomplete =
+      action === 'soumettre' && motifFicheIncomplete(dossier, 'avant de la soumettre au CFO');
+    if (incomplete) throw new ConflictException(incomplete);
     // Étape G : l'Onboard n'est plus un clic — c'est la SIGNATURE du contrat
     // qui le déclenche (onboarderParContrat), un seul chemin vers cet état.
     if (action === 'onboarder') {
@@ -437,30 +486,36 @@ export class CrmService {
       id: string;
       code: string;
       nature: NatureDossier;
-      categorie: Categorie;
+      categorie: Categorie | null;
       programme: string;
       localisation: string;
       latitude: number | null;
       longitude: number | null;
-      type: TypeBien;
+      type: TypeBien | null;
       clientId: string;
     },
     offreAcceptee: string | null,
   ) {
+    // Soumis complet (crm/fiche.ts), un dossier a sa catégorie et son type ;
+    // garde pour un dossier antérieur resté incomplet (annule la transaction).
+    const { categorie, type } = d;
+    if (!categorie || !type) {
+      throw new ConflictException('Fiche incomplète : catégorie et type de projet requis pour ouvrir le projet.');
+    }
     const p = await tx.projet.create({
       data: {
         societeId,
         dossierCrmId: d.id,
         code: d.code,
         nature: d.nature,
-        categorie: d.categorie,
+        categorie,
         programme: d.programme,
         localisation: d.localisation,
         latitude: d.latitude,
         longitude: d.longitude,
-        type: d.type,
+        type,
         clientId: d.clientId,
-        phase: PHASES_PAR_CATEGORIE[d.categorie][0],
+        phase: PHASES_PAR_CATEGORIE[categorie][0],
         avantProjet: { create: {} },
       },
       include: { client: true, cellules: true },

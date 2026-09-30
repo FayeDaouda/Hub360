@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { Archive, ArrowRight, X } from 'lucide-react';
 import {
-  CATEGORIES,
   GAMMES,
   STANDINGS,
   TYPES_BIEN,
   TYPES_CLIENT,
   type Localite,
+  type ModifierFichePayload,
   type Personne,
   type ProduitService,
   type Projet,
@@ -17,12 +17,13 @@ import {
 } from '@/lib/types';
 import { formatNombre } from '@/lib/format';
 import type { ActionCrm } from '@/lib/cycle-crm';
-import { completudeFiche, getHistorique, type OffreEmise } from '@/lib/crm';
+import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } from '@/lib/crm';
 import { CycleDossier } from './cycle-dossier';
 import { OffreDossier } from './offre-dossier';
 import { ContratDossier } from './contrat-dossier';
 import { OffreDossierModal } from './offre-dossier-modal';
 import { LocaliteSelect } from './localite-select';
+import { CaracteristiquesProjet } from './caracteristiques-projet';
 
 type Props = {
   slug: string;
@@ -42,6 +43,7 @@ type Props = {
   onRattacher: (localiteId: string) => Promise<void>;
   onChangerProprietaire: (proprietaireId: string) => Promise<void>;
   onArchiver: () => Promise<void>;
+  onModifierFiche: (champs: ModifierFichePayload) => Promise<void>;
 };
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
@@ -87,6 +89,7 @@ export function DetailDossierModal({
   onRattacher,
   onChangerProprietaire,
   onArchiver,
+  onModifierFiche,
 }: Props) {
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
   // fois, affiché jusqu'à fermeture.
@@ -159,6 +162,11 @@ export function DetailDossierModal({
   const completude = completudeFiche(projet);
   // Lead archivé : fiche consultable seulement, plus aucune action.
   const archive = projet.archive;
+  // Fiche à compléter tant qu'elle n'est pas verrouillée (maquette) ; sinon
+  // la liste de ses dix champs, en lecture.
+  const editable = peutEcrire && !archive && projet.statut === 'nouveau_projet';
+  // Dossier antérieur au référentiel : à rattacher à une localité.
+  const rattachable = !projet.localite && peutEcrire && !archive;
   const rang = ETAPES.findIndex((e) => e.statut === projet.statut);
   const ap = projet.apporteur;
   const manquant = (texte = 'à renseigner') => <span className="crm-manquant">{texte}</span>;
@@ -167,7 +175,7 @@ export function DetailDossierModal({
     { libelle: 'Code projet', valeur: projet.code, aide: 'Généré : initiales client _ localité . année' },
     {
       libelle: 'Catégorie',
-      valeur: projet.nature === 'promotion_interne' ? 'Développement' : CATEGORIES[projet.categorie],
+      valeur: libelleCategorie(projet) ?? manquant('à choisir'),
       aide: 'Conception, Développement ou Aménagement',
     },
     {
@@ -175,7 +183,7 @@ export function DetailDossierModal({
       valeur: projet.localite ? `${projet.localite.nom} (${projet.localite.code})` : manquant(`${projet.localisation} · non rattachée`),
       aide: 'Choisie dans le référentiel des localités',
     },
-    { libelle: 'Type de projet', valeur: TYPES_BIEN[projet.type] ?? manquant(), aide: 'Liste déroulante' },
+    { libelle: 'Type de projet', valeur: projet.type ? TYPES_BIEN[projet.type] : manquant(), aide: 'Liste déroulante' },
     {
       libelle: 'Surface du terrain',
       valeur: projet.surfaceTerrain > 0 ? `${formatNombre(projet.surfaceTerrain)} m²` : manquant(),
@@ -183,8 +191,8 @@ export function DetailDossierModal({
     },
     { libelle: 'N° de planches', valeur: projet.nbPlanches > 0 ? projet.nbPlanches : manquant(), aide: 'Une planche = un plan-type, pas un étage' },
     { libelle: 'Client', valeur: projet.client.nom, aide: TYPES_CLIENT[projet.client.type] },
-    { libelle: 'Standing', valeur: STANDINGS[projet.standing] ?? manquant(), aide: 'Ce que le bâtiment offre' },
-    { libelle: 'Gamme', valeur: GAMMES[projet.gamme] ?? manquant(), aide: 'Avec quoi on le finit' },
+    { libelle: 'Standing', valeur: projet.standing ? STANDINGS[projet.standing] : manquant(), aide: 'Ce que le bâtiment offre' },
+    { libelle: 'Gamme', valeur: projet.gamme ? GAMMES[projet.gamme] : manquant(), aide: 'Avec quoi on le finit' },
     { libelle: 'Programme', valeur: projet.programme.trim() || manquant('Fiche Programme à remplir'), aide: 'Résumé de la fiche Programme' },
   ];
 
@@ -240,23 +248,30 @@ export function DetailDossierModal({
           </div>
         )}
 
-        <section className="fiche-crm-section">
-          <div className="fiche-crm-titre-ligne">
-            <h3 className="fiche-crm-titre">Les champs de la fiche</h3>
-            {projet.verrouillee && <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>}
-          </div>
-          <dl className="fiche-crm-champs">
-            {champs.map((c) => (
-              <div key={c.libelle}>
-                <dt>{c.libelle}</dt>
-                <dd>
-                  <span className="fiche-crm-valeur">{c.valeur}</span>
-                  <span className="fiche-crm-aide">{c.aide}</span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-          {!projet.localite && peutEcrire && !archive && (
+        {editable && <CaracteristiquesProjet projet={projet} onModifier={onModifierFiche} />}
+
+        {(!editable || rattachable) && (
+          <section className="fiche-crm-section">
+            {!editable && (
+              <>
+                <div className="fiche-crm-titre-ligne">
+                  <h3 className="fiche-crm-titre">Les champs de la fiche</h3>
+                  {projet.verrouillee && <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>}
+                </div>
+                <dl className="fiche-crm-champs">
+                  {champs.map((c) => (
+                    <div key={c.libelle}>
+                      <dt>{c.libelle}</dt>
+                      <dd>
+                        <span className="fiche-crm-valeur">{c.valeur}</span>
+                        <span className="fiche-crm-aide">{c.aide}</span>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+          )}
+          {rattachable && (
             <div className="field-bloc">
               <label className="field-label" htmlFor="rattacher-localite">
                 Rattacher au référentiel des localités
@@ -274,6 +289,7 @@ export function DetailDossierModal({
             </div>
           )}
         </section>
+        )}
 
         <section className="fiche-crm-section">
           <div className="fiche-crm-titre-ligne">

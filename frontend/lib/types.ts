@@ -256,17 +256,18 @@ export type Projet = {
   id: string;
   code: string; // code dossier — ex : DF_PE.26 (cf. lib/nomenclature.ts)
   nature: NatureDossier;
-  categorie: Categorie;
+  // Lead créé incomplet : null / 0 / "" = à renseigner (cf. completudeFiche).
+  categorie: Categorie | null; // null = « À choisir »
   localisation: string; // libellé affiché
   // null = dossier antérieur au référentiel, pas encore rattaché.
   localite: Pick<Localite, 'id' | 'code' | 'nom'> | null;
-  type: TypeBien;
-  nbPlanches: number; // nombre de planches
-  surfaceTerrain: number; // m²
+  type: TypeBien | null;
+  nbPlanches: number; // nombre de planches (0 = à renseigner)
+  surfaceTerrain: number; // m² (0 = à renseigner)
   client: Client;
-  standing: Standing;
-  gamme: Gamme;
-  programme: string;
+  standing: Standing | null;
+  gamme: Gamme | null;
+  programme: string; // "" = fiche Programme à remplir
   statut: StatutCrm;
   // Contenu de la fiche figé dès la soumission à la DAF (propriétaire excepté).
   verrouillee: boolean;
@@ -320,18 +321,19 @@ export const PAS_COMMISSION = [3, 3.5, 4, 4.5, 5] as const;
 // Charge utile du formulaire « Nouveau projet ». `client` = soit l'id d'un
 // client existant, soit les champs d'un nouveau client à créer au passage.
 // `code` est généré côté service, pas saisi.
+// Lead incomplet permis : seuls client et localité (le code) sont requis.
 export type NouveauProjetPayload = {
   nature: NatureDossier;
-  categorie: Categorie;
+  categorie?: Categorie;
   localiteId: string; // le libellé `localisation` est déduit côté serveur
-  type: TypeBien;
-  nbPlanches: number;
-  surfaceTerrain: number;
+  type?: TypeBien;
+  nbPlanches?: number;
+  surfaceTerrain?: number;
   // `sigle` à côté de `id` : complète une personne morale qui n'en a pas.
   client: { id: string; sigle?: string } | { nouveau: Omit<Client, 'id'> };
-  standing: Standing;
-  gamme: Gamme;
-  programme: string;
+  standing?: Standing;
+  gamme?: Gamme;
+  programme?: string;
   // Pas de statut : tout dossier naît « Nouveau projet » (côté serveur).
   // Interne = le créateur (rien d'autre à envoyer) ; externe = tiers saisi.
   apporteur:
@@ -341,6 +343,18 @@ export type NouveauProjetPayload = {
   proprietaireId?: string; // requis seulement s'il y a plusieurs Dir. GC
   // Pas de code : toujours généré côté serveur (CLIENT_LOC.AA, -2 si doublon).
 };
+
+// Complétion de la fiche (« Caractéristiques du projet ») : un champ à la
+// fois ; une valeur se corrige, jamais ne s'efface.
+export type ModifierFichePayload = Partial<{
+  categorie: Categorie;
+  type: TypeBien;
+  surfaceTerrain: number;
+  nbPlanches: number;
+  standing: Standing;
+  gamme: Gamme;
+  programme: string;
+}>;
 
 // --- Équipe : 6 cellules cross-fonctionnelles (Archi 1-4, Intérieur, Études) ---
 // Un projet peut être suivi par PLUSIEURS cellules (décision boss, sept.

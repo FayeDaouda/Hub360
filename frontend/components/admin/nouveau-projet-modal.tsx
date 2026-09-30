@@ -48,6 +48,9 @@ function options<T extends string>(map: Record<T, string>) {
   ));
 }
 
+// Champ facultatif à la création : vide = « à choisir » sur la fiche.
+const aChoisir = <option value="">— Choisir —</option>;
+
 export function NouveauProjetModal({
   slug,
   clients,
@@ -60,14 +63,16 @@ export function NouveauProjetModal({
   // interne reste dans l'enum côté schéma (pas une suppression) mais n'est
   // plus proposée à la création tant que la consigne n'est pas levée.
   const nature: NatureDossier = 'mandat_client';
-  const [categorie, setCategorie] = useState<Categorie>('conception');
+  // Lead incomplet permis (maquette CRM) : rien de pré-choisi — un champ
+  // laissé vide se complète sur la fiche avant l'offre.
+  const [categorie, setCategorie] = useState<Categorie | ''>('');
   const [localiteId, setLocaliteId] = useState('');
-  const [type, setType] = useState<TypeBien>('villa');
+  const [type, setType] = useState<TypeBien | ''>('');
   const [nbPlanches, setNbPlanches] = useState('');
   const [surfaceTerrain, setSurfaceTerrain] = useState('');
   const [programme, setProgramme] = useState('');
-  const [standing, setStanding] = useState<Standing>('moyen');
-  const [gamme, setGamme] = useState<Gamme>('milieu');
+  const [standing, setStanding] = useState<Standing | ''>('');
+  const [gamme, setGamme] = useState<Gamme | ''>('');
   const [clientId, setClientId] = useState('');
   const [nouveauNom, setNouveauNom] = useState('');
   const [nouveauType, setNouveauType] = useState<TypeClient>('particulier');
@@ -130,9 +135,6 @@ export function NouveauProjetModal({
     setErreur(null);
 
     if (!localiteId) return setErreur('Choisis une localité dans la liste.');
-    if (categorie === 'conception' && !(Number(nbPlanches) >= 1))
-      return setErreur('Le nombre de planches est requis pour un dossier de conception.');
-    if (!programme.trim()) return setErreur('Le programme est requis.');
     if (!clientId) return setErreur('Choisis un client (ou crée-en un).');
     if (clientNouveau && !nouveauNom.trim())
       return setErreur('Le nom du nouveau client est requis.');
@@ -160,15 +162,15 @@ export function NouveauProjetModal({
     try {
       const projet = await creerProjet(slug, {
         nature,
-        categorie,
+        categorie: categorie || undefined,
         localiteId,
-        type,
-        nbPlanches: nbPlanches ? Number(nbPlanches) : 0,
-        surfaceTerrain: surfaceTerrain ? Number(surfaceTerrain) : 0,
+        type: type || undefined,
+        nbPlanches: nbPlanches ? Number(nbPlanches) : undefined,
+        surfaceTerrain: surfaceTerrain ? Number(surfaceTerrain) : undefined,
         client,
-        standing,
-        gamme,
-        programme: programme.trim(),
+        standing: standing || undefined,
+        gamme: gamme || undefined,
+        programme: programme.trim() || undefined,
         apporteur:
           apporteurType === 'interne'
             ? { type: 'interne' }
@@ -209,6 +211,10 @@ export function NouveauProjetModal({
         </header>
 
         <form className="modal-body" onSubmit={soumettre}>
+          <p className="field-aide">
+            Côté projet, seuls la localisation et le client sont requis : ils composent le code. Le reste se complète sur la
+            fiche, avant l’offre.
+          </p>
           <div className="field-row">
             <label className="field">
               <span className="field-label">Nature</span>
@@ -222,8 +228,9 @@ export function NouveauProjetModal({
               <select
                 className="field-input"
                 value={categorie}
-                onChange={(e) => setCategorie(e.target.value as Categorie)}
+                onChange={(e) => setCategorie(e.target.value as Categorie | '')}
               >
+                {aChoisir}
                 {options(CATEGORIES)}
               </select>
             </label>
@@ -261,8 +268,9 @@ export function NouveauProjetModal({
               <select
                 className="field-input"
                 value={type}
-                onChange={(e) => setType(e.target.value as TypeBien)}
+                onChange={(e) => setType(e.target.value as TypeBien | '')}
               >
+                {aChoisir}
                 {options(TYPES_BIEN)}
               </select>
             </label>
@@ -300,8 +308,9 @@ export function NouveauProjetModal({
               <select
                 className="field-input"
                 value={standing}
-                onChange={(e) => setStanding(e.target.value as Standing)}
+                onChange={(e) => setStanding(e.target.value as Standing | '')}
               >
+                {aChoisir}
                 {options(STANDINGS)}
               </select>
             </label>
@@ -313,8 +322,9 @@ export function NouveauProjetModal({
               <select
                 className="field-input"
                 value={gamme}
-                onChange={(e) => setGamme(e.target.value as Gamme)}
+                onChange={(e) => setGamme(e.target.value as Gamme | '')}
               >
+                {aChoisir}
                 {options(GAMMES)}
               </select>
             </label>

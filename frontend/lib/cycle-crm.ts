@@ -1,4 +1,5 @@
 import { niveauSuffisant } from './auth';
+import { completudeFiche } from './crm';
 import type { NiveauPermission, Projet, Session, StatutCrm } from './types';
 
 // Actions du cycle commercial — MIROIR de backend/src/crm/cycle.ts (mêmes
@@ -82,6 +83,11 @@ const ORDRE: ActionCrm[] = ['soumettre', 'valider', 'refaire', 'renvoyer', 'perd
 // on ne sait pas (offre invisible sans finances_devis : le serveur tranchera
 // et renverra son message). Mêmes conditions que CrmService.verifierOffre.
 export function raisonBlocage(action: ActionCrm, projet: Projet): string | null {
+  // La fiche se verrouille à la soumission : complète d'abord (crm/fiche.ts).
+  const fiche = completudeFiche(projet);
+  if (action === 'soumettre' && fiche.faits < fiche.total) {
+    return `Complète d’abord la fiche (${fiche.faits}/${fiche.total}).`;
+  }
   if (!('offre' in projet)) return null;
   const offre = projet.offre ?? null;
   const statut = offre?.statutEffectif;

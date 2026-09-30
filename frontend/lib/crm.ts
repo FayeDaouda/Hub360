@@ -1,6 +1,7 @@
 import type {
   Client,
   Personne,
+  ModifierFichePayload,
   NouveauProjetPayload,
   Projet,
   ProjetExecution,
@@ -8,6 +9,7 @@ import type {
 } from './types';
 import type { ActionCrm } from './cycle-crm';
 import { apiSociete } from './client-api';
+import { CATEGORIES } from './types';
 
 // -----------------------------------------------------------------------------
 // CRM — dossiers immobiliers & clients. Branché sur l'API NestJS :
@@ -17,6 +19,8 @@ import { apiSociete } from './client-api';
 //   POST  /api/societes/:slug/dossiers/:id/actions   { action, commentaire? }
 //   GET   /api/societes/:slug/dossiers/:id/historique
 //   PATCH /api/societes/:slug/dossiers/:id/localite  { localiteId }
+//   PATCH /api/societes/:slug/dossiers/:id/fiche     (complétion d'un lead)
+//   POST  /api/societes/:slug/dossiers/:id/archivage
 //   GET   /api/societes/:slug/dossiers/proprietaires-possibles
 //   PATCH /api/societes/:slug/dossiers/:id/proprietaire  { proprietaireId }
 // Passer un dossier à « onboard » déclenche la transaction pivot côté serveur
@@ -87,6 +91,11 @@ export function getProprietairesPossibles(slug: string): Promise<Personne[]> {
   return apiSociete<Personne[]>(slug, '/dossiers/proprietaires-possibles');
 }
 
+// Champ par champ, tant que la fiche n'est pas verrouillée (« Nouveau projet »).
+export function modifierFiche(slug: string, id: string, champs: ModifierFichePayload): Promise<Projet> {
+  return apiSociete(slug, `/dossiers/${id}/fiche`, { method: 'PATCH', body: champs });
+}
+
 // Définitif : Direction GC ou CIO, lead en « Nouveau projet » seulement.
 export function archiverDossier(slug: string, id: string): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/archivage`, { method: 'POST' });
@@ -107,6 +116,13 @@ export function changerProprietaire(
 // code, catégorie, localisation (rattachée au référentiel), type, surface du
 // terrain, n° de planches, client, standing, gamme, programme. Les libellés
 // manquants alimentent le rappel « il manque … » de la fiche.
+// Catégorie affichée (maquette) : « Développement » = promotion interne ;
+// null = « À choisir » (lead créé sans catégorie).
+export function libelleCategorie(p: Projet): string | null {
+  if (p.nature === 'promotion_interne') return 'Développement';
+  return p.categorie ? CATEGORIES[p.categorie] : null;
+}
+
 export function completudeFiche(p: Projet): { faits: number; total: number; manquants: string[] } {
   const champs: [string, boolean][] = [
     ['code projet', !!p.code],

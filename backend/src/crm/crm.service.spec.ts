@@ -179,17 +179,15 @@ describe('CrmService — commission d’apporteur', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('dossier de conception sans planches → 400 (base du tarif CO)', async () => {
-    const prisma = { $transaction: jest.fn() };
+  it('lead sans planches → créé quand même (à compléter avant l’offre)', async () => {
+    const prisma = { $transaction: jest.fn().mockResolvedValue({ id: 'D-neuf' }) };
     const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
-    await expect(
-      s.creer(
-        'S1',
-        { userId: 'U', role: 'COO', permissions: {} },
-        { ...DTO, nbPlanches: 0, commissionApporteur: null } as never,
-      ),
-    ).rejects.toThrow('Nombre de planches requis');
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    await s.creer(
+      'S1',
+      { userId: 'U', role: 'COO', permissions: {} },
+      { ...DTO, nbPlanches: 0, commissionApporteur: null } as never,
+    );
+    expect(prisma.$transaction).toHaveBeenCalled();
   });
 
   it('lecture : clé absente sans le droit, présente avec', () => {

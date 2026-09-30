@@ -11589,9 +11589,12 @@ a.notif-item:hover {
   text-transform: uppercase;
 }
 .fiche-crm-badge--ok {
-  border-color: transparent;
-  background: var(--sauge-tint);
+  border-color: color-mix(in oklch, var(--sauge) 40%, transparent);
+  background: color-mix(in oklch, var(--sauge) 16%, transparent);
   color: var(--sauge-fonce);
+}
+:root[data-theme='dark'] .fiche-crm-badge--ok {
+  color: var(--sauge);
 }
 .fiche-crm-etapes {
   display: grid;
@@ -11636,9 +11639,13 @@ a.notif-item:hover {
   display: grid;
   gap: 0.25rem;
   padding: 0.9rem 1.1rem;
+  border: 1px solid color-mix(in oklch, var(--ocre) 35%, transparent);
   border-radius: var(--radius-md);
-  background: var(--ocre-tint);
+  background: color-mix(in oklch, var(--ocre) 14%, transparent);
   color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .fiche-crm-alerte {
+  color: var(--ocre);
 }
 .fiche-crm-champs {
   margin: 0;
@@ -11741,6 +11748,60 @@ a.notif-item:hover {
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
+/* Lead incomplet : « Caractéristiques du projet » (champ manquant cerné d'ambre). */
+.fiche-crm-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.1rem;
+}
+.fiche-crm-programme {
+  gap: 0.9rem;
+  padding: 1.2rem 1.25rem;
+}
+.fiche-crm-sous-titre {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+.fiche-crm .field-input.is-manquant {
+  border-color: var(--ocre);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--ocre) 45%, transparent);
+}
+.fiche-crm-lecture {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.6rem;
+}
+.fiche-crm-code-loc {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.crm-a-choisir {
+  border: 1px solid var(--ocre);
+  background: transparent;
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .crm-a-choisir {
+  color: var(--ocre);
+}
+.offre-bloquee {
+  display: grid;
+  flex: 1 1 100%;
+  gap: 0.45rem;
+  text-align: center;
+}
+.offre-bloquee-bouton {
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: not-allowed;
+}
 .fiche-crm-archive {
   display: flex;
   flex-wrap: wrap;
@@ -11774,7 +11835,8 @@ a.notif-item:hover {
   .fiche-crm-champs > div {
     grid-template-columns: minmax(0, 1fr);
   }
-  .fiche-crm-passation {
+  .fiche-crm-passation,
+  .fiche-crm-form {
     grid-template-columns: minmax(0, 1fr);
   }
   .fiche-crm-fleche {

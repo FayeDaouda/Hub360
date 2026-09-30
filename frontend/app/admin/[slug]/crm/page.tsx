@@ -8,6 +8,8 @@ import {
   archiverDossier,
   changerProprietaire,
   completudeFiche,
+  libelleCategorie,
+  modifierFiche,
   getClients,
   getProjets,
   getProprietairesPossibles,
@@ -19,7 +21,6 @@ import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { type ActionCrm } from '@/lib/cycle-crm';
 import {
-  CATEGORIES,
   STATUTS_CRM,
   TYPES_BIEN,
   TYPES_CLIENT,
@@ -27,6 +28,7 @@ import {
   type Localite,
   type Personne,
   type ProduitService,
+  type ModifierFichePayload,
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
@@ -67,6 +69,8 @@ const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offr
 const LIBELLE_FILTRE: Partial<Record<Situation, string>> = { en_validation: 'En validation', archive: 'Archivés' };
 const aCompleter = (p: Projet) => !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
 const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', amenagement: 'pill--attention' };
+const pillCategorie = (p: Projet) =>
+  p.nature === 'promotion_interne' ? 'pill--info' : (p.categorie && PILL_CATEGORIE[p.categorie]) || 'pill--neutre';
 
 export default function CrmPage({ params }: Props) {
   useTitrePage('CRM · Registre des projets');
@@ -214,6 +218,11 @@ export default function CrmPage({ params }: Props) {
 
   async function onChangerProprietaire(dossier: Projet, proprietaireId: string) {
     const maj = await changerProprietaire(params.slug, dossier.id, proprietaireId);
+    setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
+  }
+
+  async function onModifierFiche(dossier: Projet, champs: ModifierFichePayload) {
+    const maj = await modifierFiche(params.slug, dossier.id, champs);
     setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
   }
 
@@ -400,7 +409,11 @@ export default function CrmPage({ params }: Props) {
                               </button>
                             </td>
                             <td data-label="Catégorie">
-                              <span className={`pill ${PILL_CATEGORIE[projet.categorie] ?? 'pill--neutre'}`}>{CATEGORIES[projet.categorie]}</span>
+                              {libelleCategorie(projet) ? (
+                                <span className={`pill ${pillCategorie(projet)}`}>{libelleCategorie(projet)}</span>
+                              ) : (
+                                <span className="pill crm-a-choisir">À choisir</span>
+                              )}
                             </td>
                             <td data-label="Client">
                               <span className="cell-stack">
@@ -408,7 +421,7 @@ export default function CrmPage({ params }: Props) {
                                 <span className="cell-sub">{projet.localite?.nom ?? projet.localisation}</span>
                               </span>
                             </td>
-                            <td data-label="Type">{TYPES_BIEN[projet.type] ?? '—'}</td>
+                            <td data-label="Type">{projet.type ? TYPES_BIEN[projet.type] : '—'}</td>
                             <td data-label="Programme">
                               {projet.programme.trim() ? projet.programme : <span className="crm-manquant">Fiche Programme à remplir</span>}
                             </td>
@@ -485,6 +498,7 @@ export default function CrmPage({ params }: Props) {
           proprietaires={proprietaires}
           onChangerProprietaire={(id) => onChangerProprietaire(detailProjet, id)}
           onArchiver={() => onArchiver(detailProjet)}
+          onModifierFiche={(champs) => onModifierFiche(detailProjet, champs)}
         />
       )}
     </>

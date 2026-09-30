@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Copy } from 'lucide-react';
 import { marquerReponseDevis, relancerDevis } from '@/lib/devis';
-import type { OffreEmise } from '@/lib/crm';
+import { completudeFiche, type OffreEmise } from '@/lib/crm';
 import { formatDateCourte, formatMontantCompact } from '@/lib/format';
 import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
 
@@ -48,6 +48,7 @@ export function OffreDossier({
   if (!('offre' in projet)) return null;
   const offre: Offre | null = projet.offre ?? null;
   const modifiable = projet.statut === 'nouveau_projet' && peutPreparer;
+  const fiche = completudeFiche(projet);
 
   async function agir(fn: () => Promise<unknown>) {
     setEnCours(true);
@@ -144,10 +145,22 @@ export function OffreDossier({
 
       {peutPreparer && (
         <div className="cycle-dossier-actions">
-          {modifiable && !offre && (
+          {/* Maquette : bloqué tant que la fiche n'est pas complète (le serveur
+              refuse aussi — le tarif CO dépend des planches et de la catégorie). */}
+          {modifiable && !offre && fiche.faits === fiche.total && (
             <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onPreparer()}>
-              Préparer l’offre
+              Créer une offre
             </button>
+          )}
+          {modifiable && !offre && fiche.faits < fiche.total && (
+            <div className="offre-bloquee">
+              <button type="button" className="offre-bloquee-bouton" disabled>
+                Créer une offre
+              </button>
+              <span className="field-aide">
+                Bloqué : compléter la fiche ({fiche.faits}/{fiche.total}).
+              </span>
+            </div>
           )}
           {modifiable && offre?.statutEffectif === 'brouillon' && (
             <button

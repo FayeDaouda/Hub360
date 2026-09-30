@@ -509,7 +509,10 @@ model DossierCrm {
   societeId              String         @map("societe_id")
   code                   String
   nature                 NatureDossier
-  categorie              Categorie
+  // Champs de la fiche : un lead peut être créé incomplet (seuls client et
+  // localité, qui composent le code, sont requis) ; null / 0 / "" = à
+  // renseigner. Complète (crm/fiche.ts) avant toute offre.
+  categorie              Categorie?
   // Libellé affiché (= nom de la localité pour tout dossier créé depuis le
   // référentiel ; texte libre historique pour les dossiers antérieurs).
   localisation           String
@@ -518,12 +521,12 @@ model DossierCrm {
   localiteId             String?        @map("localite_id")
   latitude               Float? // pin géo optionnel, copié vers le Projet au pivot
   longitude              Float?
-  type                   TypeBien
+  type                   TypeBien?
   nbPlanches             Int            @default(0) @map("nb_planches")
-  surfaceTerrain         Int            @map("surface_terrain")
-  standing               Standing
-  gamme                  Gamme
-  programme              String
+  surfaceTerrain         Int            @default(0) @map("surface_terrain")
+  standing               Standing?
+  gamme                  Gamme?
+  programme              String         @default("")
   statut                 StatutCrm      @default(nouveau_projet)
   clientId               String         @map("client_id")
   // -- « Qui » (étape C1, sept. 2026). Tous null sur les dossiers antérieurs.

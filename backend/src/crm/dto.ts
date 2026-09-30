@@ -59,20 +59,23 @@ class ApporteurDto {
   @IsOptional() @IsEmail() @MaxLength(120) email?: string;
 }
 
+// Un lead peut être créé incomplet (maquette CRM) : seuls le client et la
+// localité — qui composent le code — sont requis ; le reste se complète sur
+// la fiche (ModifierFicheDto) avant l'offre.
 export class CreerDossierDto {
   @IsEnum(NatureDossier) nature!: NatureDossier;
-  @IsEnum(Categorie) categorie!: Categorie;
+  @IsOptional() @IsEnum(Categorie) categorie?: Categorie;
   // Localité du référentiel (liste déroulante) — le libellé `localisation`
   // du dossier en est déduit côté serveur, jamais saisi.
   @IsString() @MinLength(1) localiteId!: string;
   @IsOptional() @IsNumber() latitude?: number | null;
   @IsOptional() @IsNumber() longitude?: number | null;
-  @IsEnum(TypeBien) type!: TypeBien;
-  @IsInt() @Min(0) nbPlanches!: number;
-  @IsInt() @Min(0) surfaceTerrain!: number;
-  @IsEnum(Standing) standing!: Standing;
-  @IsEnum(Gamme) gamme!: Gamme;
-  @IsString() @MinLength(1) programme!: string;
+  @IsOptional() @IsEnum(TypeBien) type?: TypeBien;
+  @IsOptional() @IsInt() @Min(0) nbPlanches?: number;
+  @IsOptional() @IsInt() @Min(0) surfaceTerrain?: number;
+  @IsOptional() @IsEnum(Standing) standing?: Standing;
+  @IsOptional() @IsEnum(Gamme) gamme?: Gamme;
+  @IsOptional() @IsString() @MaxLength(200) programme?: string;
   @ValidateNested() @Type(() => ClientRefDto) client!: ClientRefDto;
   @ValidateNested() @Type(() => ApporteurDto) apporteur!: ApporteurDto;
   // null/absent = aucune commission. Exige finances_charges ≥ écriture.
@@ -99,4 +102,17 @@ export class ActionDossierDto {
   // Motif (perdre) ou commentaire DAF (renvoyer) — obligatoire pour ces deux
   // actions, contrôlé par le service qui connaît la règle.
   @IsOptional() @IsString() @MaxLength(1000) commentaire?: string;
+}
+
+// Complétion de la fiche d'un lead (« Caractéristiques du projet ») : champ
+// par champ, en « Nouveau projet ». Une valeur se corrige, jamais ne s'efface
+// — une fiche complète le reste. Client et localité (le code) n'y sont pas.
+export class ModifierFicheDto {
+  @IsOptional() @IsEnum(Categorie) categorie?: Categorie;
+  @IsOptional() @IsEnum(TypeBien) type?: TypeBien;
+  @IsOptional() @IsInt() @Min(1) surfaceTerrain?: number;
+  @IsOptional() @IsInt() @Min(1) nbPlanches?: number;
+  @IsOptional() @IsEnum(Standing) standing?: Standing;
+  @IsOptional() @IsEnum(Gamme) gamme?: Gamme;
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(200) programme?: string;
 }
