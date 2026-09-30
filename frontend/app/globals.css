@@ -11432,3 +11432,99 @@ a.notif-item:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------- CRM · Registre des projets (maquette du boss) ---------- */
+.crm-entete,
+.crm-filtres,
+.crm-registre-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.crm-onglets,
+.crm-situations {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.crm-onglets button,
+.crm-situations button {
+  white-space: nowrap;
+}
+.crm-compte {
+  margin-left: 0.25rem;
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+.crm-annee .field-input {
+  width: auto;
+  border-radius: 999px;
+  padding: 0.4rem 2rem 0.4rem 0.9rem;
+}
+.crm-titre-registre {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.crm-titre-registre span {
+  margin-left: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.crm-recherche {
+  flex: 0 1 22rem;
+  min-width: min(100%, 14rem);
+}
+.crm-registre .crm-ligne-registre {
+  cursor: pointer;
+}
+.crm-registre .crm-ligne-registre:hover td {
+  background: color-mix(in oklch, var(--accent) 6%, transparent);
+}
+.crm-code {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crm-code:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.crm-manquant {
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .crm-manquant {
+  color: var(--ocre);
+}
+.crm-completude {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 6.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.crm-completude--complete {
+  background: var(--accent);
+}
+.crm-completude--partielle {
+  background: var(--ocre);
+}
+/* 5 tuiles sur une ligne quand la place le permet (maquette). */
+@media (min-width: 1200px) {
+  .crm-kpi .kpi-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.crm-pied {
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+

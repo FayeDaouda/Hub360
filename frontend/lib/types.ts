@@ -282,6 +282,9 @@ export type Projet = {
   // Offre en cours (étape F). Clé absente sans finances_devis en lecture ;
   // null = pas encore d'offre préparée.
   offre?: OffreDossier | null;
+  // Offre envoyée restée sans réponse au-delà de sa validité (visible sans
+  // droit Finances : le statut seul).
+  offreExpiree: boolean;
 };
 
 // Résumé de l'offre en cours d'un dossier (la plus récente).

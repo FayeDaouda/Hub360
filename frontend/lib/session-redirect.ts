@@ -6,9 +6,12 @@ import { Session } from './types';
 // rôle apparaît.
 export function destinationForSession(session: Session): string {
   switch (session.role) {
-    case 'holding_admin':
-    case ROLE_CIO: // super admin du HUB : arrive sur l'administration du HUB
+    case 'holding_admin': // compte technique : administration du HUB
       return '/groupe';
+    // Le CIO arrive sur le registre du CRM (maquette du boss) ; son
+    // administration du HUB reste dans le menu du back-office.
+    case ROLE_CIO:
+      return `/admin/${session.societe.slug}/crm`;
     case 'societe_admin':
       return `/admin/${session.societe.slug}`;
     case 'collaborateur':

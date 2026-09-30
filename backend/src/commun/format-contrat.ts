@@ -100,6 +100,13 @@ export function versDossierCrm(
     categorieConception: d.categorieConception,
     // null = pas encore d'offre préparée.
     ...(opts.voitOffre && { offre: d.offres[0] ? versResumeOffre(d.offres[0]) : null }),
+    // Offre envoyée restée sans réponse au-delà de sa validité (« Expirée »
+    // du registre) : le seul statut, visible sans droit Finances — ni montant
+    // ni contenu de l'offre.
+    offreExpiree:
+      d.statut === 'offre_envoyee' &&
+      !!d.offres[0] &&
+      statutDevisEffectif(d.offres[0], new Date().toISOString().slice(0, 10)) === 'expire',
   };
 }
 

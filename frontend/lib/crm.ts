@@ -97,3 +97,24 @@ export function changerProprietaire(
     body: { proprietaireId },
   });
 }
+
+// Complétude d'une fiche (registre CRM, maquette du boss) : les 10 champs —
+// code, catégorie, localisation (rattachée au référentiel), type, surface du
+// terrain, n° de planches, client, standing, gamme, programme. Les libellés
+// manquants alimentent le rappel « il manque … » de la fiche.
+export function completudeFiche(p: Projet): { faits: number; total: number; manquants: string[] } {
+  const champs: [string, boolean][] = [
+    ['code projet', !!p.code],
+    ['catégorie', !!p.categorie],
+    ['localisation', !!p.localite],
+    ['type de projet', !!p.type],
+    ['surface du terrain', p.surfaceTerrain > 0],
+    ['n° de planches', p.nbPlanches > 0],
+    ['client', !!p.client],
+    ['standing', !!p.standing],
+    ['gamme', !!p.gamme],
+    ['programme', !!p.programme.trim()],
+  ];
+  const manquants = champs.filter(([, ok]) => !ok).map(([nom]) => nom);
+  return { faits: champs.length - manquants.length, total: champs.length, manquants };
+}

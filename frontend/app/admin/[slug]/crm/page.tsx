@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BarChart3, CheckCircle2, Plus, Search, Sparkles, Workflow, X, XCircle } from 'lucide-react';
+import { Clock3, FileWarning, FolderOpen, Home, Plus, Search, Send } from 'lucide-react';
 import {
   agirSurDossier,
   changerProprietaire,
+  completudeFiche,
   getClients,
   getProjets,
   getProprietairesPossibles,
@@ -15,12 +16,9 @@ import { getLocalites } from '@/lib/localites';
 import { getProduitsServices } from '@/lib/devis';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { CLASSE_STATUT, type ActionCrm } from '@/lib/cycle-crm';
+import { type ActionCrm } from '@/lib/cycle-crm';
 import {
   CATEGORIES,
-  GAMMES,
-  NATURES_DOSSIER,
-  STANDINGS,
   STATUTS_CRM,
   TYPES_BIEN,
   TYPES_CLIENT,
@@ -31,43 +29,42 @@ import {
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
-import { formatPourcent, formatSurface } from '@/lib/format';
+import { formatNombre } from '@/lib/format';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
-import { KpiFunnel, KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/admin/kpi-strip';
 
-// Même palette de dégradés que le tableau de bord (demande boss, sept.
-// 2026 : chaque KPI a sa propre couleur vive) — un point de vérité par
-// page, cf. le commentaire `degrade` dans KpiTuile. Choix sémantique par
-// tuile, pas juste positionnel : Validés en vert (succès), Annulés dans le
-// même dégradé chaud que « Retards » en facturation (signal d'attention).
+// Registre des projets (maquette du boss) : une couleur vive par tuile.
 const DEGRADE_KPI: Record<string, { a: string; b: string }> = {
-  actif: { a: '#2e3192', b: '#1bffff' }, // Ocean Blue
-  valide: { a: '#11998e', b: '#38ef7d' }, // Quepal
-  neufs: { a: '#764ba2', b: '#667eea' }, // Plum Plate
-  annule: { a: '#ff5f6d', b: '#ffc371' }, // Sweet Morning
+  actif: { a: '#5b6cf0', b: '#8a98ff' },
+  fiches: { a: '#3fb7b8', b: '#7fd6cf' },
+  cfo: { a: '#ec7a3c', b: '#f3a35d' },
+  client: { a: '#e3a92c', b: '#f2cd55' },
+  surface: { a: '#e3447b', b: '#f07aa4' },
 };
 
 type Props = {
   params: { slug: string };
 };
 
-// Filtre posé en cliquant une tuile KPI — bascule (reclic = on l'enlève),
-// combiné à la recherche texte. 'actif' = pipeline (les 3 statuts non
-// définitifs), comme la valeur affichée sur la tuile « Pipeline actif ».
-type FiltreTuile = 'actif' | 'onboard' | 'neufs' | 'perdu';
-
-const LABEL_FILTRE_TUILE: Record<FiltreTuile, string> = {
-  actif: 'Pipeline actif',
-  onboard: 'Onboard',
-  neufs: 'Nouveaux (30 j)',
-  perdu: 'Perdus',
+// Situation d'un dossier dans le registre : son statut, sauf une offre
+// envoyée restée sans réponse au-delà de sa validité (« Expirée »).
+type Situation = StatutCrm | 'expiree';
+const situationDe = (p: Projet): Situation => (p.offreExpiree ? 'expiree' : p.statut);
+const LIBELLE_SITUATION: Record<Situation, string> = { ...STATUTS_CRM, expiree: 'Expirée' };
+const PILL_SITUATION: Record<Situation, string> = {
+  nouveau_projet: 'statut-select--nouveau',
+  en_validation: 'statut-select--daf',
+  offre_envoyee: 'statut-select--devis',
+  onboard: 'statut-select--valide',
+  perdu: 'statut-select--annule',
+  expiree: 'pill--risque',
 };
-
-const STATUTS_ACTIFS: StatutCrm[] = ['nouveau_projet', 'en_validation', 'offre_envoyee'];
+const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu', 'expiree'];
+const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', amenagement: 'pill--attention' };
 
 export default function CrmPage({ params }: Props) {
-  useTitrePage('CRM');
+  useTitrePage('CRM · Registre des projets');
   const session = useSessionCourante();
   // Lecture seule pour un rôle qui n'a que la lecture sur le CRM (CFO, CEO…)
   // — affichage seulement, le serveur refuse de toute façon l'écriture.
@@ -84,7 +81,9 @@ export default function CrmPage({ params }: Props) {
   const [localites, setLocalites] = useState<Localite[] | null>(null);
   const [proprietaires, setProprietaires] = useState<Personne[] | null>(null);
   const [recherche, setRecherche] = useState('');
-  const [filtreTuile, setFiltreTuile] = useState<FiltreTuile | null>(null);
+  const [onglet, setOnglet] = useState<'registre' | 'clients'>('registre');
+  const [situation, setSituation] = useState<Situation | 'tous' | 'a_completer'>('tous');
+  const [annee, setAnnee] = useState<string>(String(new Date().getFullYear()));
   const [modalOuvert, setModalOuvert] = useState(false);
   const [nouveauId, setNouveauId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -120,75 +119,46 @@ export default function CrmPage({ params }: Props) {
     setProjets(await getProjets(params.slug));
   }
 
+  // Dossiers de l'année du pipeline choisie (création), puis situation et recherche.
+  const annees = useMemo(
+    () => [...new Set([String(new Date().getFullYear()), ...(projets ?? []).map((p) => p.creeLe.slice(0, 4))])].sort().reverse(),
+    [projets],
+  );
+  const duPipeline = useMemo(() => (projets ?? []).filter((p) => p.creeLe.startsWith(annee)), [projets, annee]);
   const filtres = useMemo(() => {
-    if (!projets) return [];
-    let liste = projets;
-    if (filtreTuile === 'actif') {
-      liste = liste.filter((p) => STATUTS_ACTIFS.includes(p.statut));
-    } else if (filtreTuile === 'onboard' || filtreTuile === 'perdu') {
-      liste = liste.filter((p) => p.statut === filtreTuile);
-    } else if (filtreTuile === 'neufs') {
-      const il30j = Date.now() - 30 * 86_400_000;
-      liste = liste.filter((p) => +new Date(p.creeLe) >= il30j);
+    let liste = duPipeline;
+    if (situation === 'a_completer') {
+      liste = liste.filter((p) => p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total);
+    } else if (situation !== 'tous') {
+      liste = liste.filter((p) => situationDe(p) === situation);
     }
     const q = recherche.trim().toLowerCase();
     if (!q) return liste;
-    return liste.filter((p) =>
-      [p.code, p.localisation, p.localite?.code, p.programme, p.client.nom, TYPES_BIEN[p.type]]
-        .join(' ')
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [projets, recherche, filtreTuile]);
+    return liste.filter((p) => [p.code, p.client.nom].join(' ').toLowerCase().includes(q));
+  }, [duPipeline, situation, recherche]);
 
-  function basculerFiltre(cle: FiltreTuile) {
-    setFiltreTuile((actuel) => (actuel === cle ? null : cle));
-  }
+  const basculer = (s: Situation | 'a_completer') => setSituation((x) => (x === s ? 'tous' : s));
 
   // Dérivé de `projets` (pas une copie figée) : reflète tout de suite un
   // changement de statut fait depuis la modale, sans avoir à la resynchroniser.
   const detailProjet = detailId ? (projets ?? []).find((p) => p.id === detailId) ?? null : null;
 
-  // KPI — sur la liste complète (snapshot global), indépendant de la recherche.
+  // Tuiles et compteurs — sur le pipeline de l'année, indépendants de la recherche.
   const kpi = useMemo(() => {
-    const liste = projets ?? [];
-    const par = (s: StatutCrm) => liste.filter((p) => p.statut === s).length;
-    const nouveau = par('nouveau_projet');
-    const daf = par('en_validation');
-    const offre = par('offre_envoyee');
-    const onboard = par('onboard');
-    const perdu = par('perdu');
-    const clos = onboard + perdu;
-    const il30j = Date.now() - 30 * 86_400_000;
-    const il60j = Date.now() - 60 * 86_400_000;
-    const nouveaux30j = liste.filter((p) => +new Date(p.creeLe) >= il30j).length;
-    // Vraie période de comparaison (30-60 j) — pour la flèche de tendance de
-    // la tuile. Pas de flèche sinon : on ne met jamais une valeur inventée.
-    const nouveauxPrecedents30j = liste.filter((p) => {
-      const t = +new Date(p.creeLe);
-      return t >= il60j && t < il30j;
-    }).length;
+    const par = (x: Situation) => duPipeline.filter((p) => situationDe(p) === x).length;
+    const valides = duPipeline.filter((p) => p.statut === 'onboard');
+    const surfaces = valides.map((p) => p.surfaceTerrain * p.nbPlanches);
     return {
-      pipelineActif: nouveau + daf + offre,
-      onboard,
-      perdu,
-      tauxConversion: clos > 0 ? Math.round((onboard / clos) * 100) : null,
-      nouveaux30j,
-      nouveauxPrecedents30j,
-      funnel: [
-        // cle = variante de couleur du statut (même palette que les pastilles).
-        { cle: CLASSE_STATUT.nouveau_projet, label: STATUTS_CRM.nouveau_projet, valeur: nouveau },
-        { cle: CLASSE_STATUT.en_validation, label: 'En validation', valeur: daf },
-        { cle: CLASSE_STATUT.offre_envoyee, label: STATUTS_CRM.offre_envoyee, valeur: offre },
-        { cle: CLASSE_STATUT.onboard, label: STATUTS_CRM.onboard, valeur: onboard },
-        { cle: CLASSE_STATUT.perdu, label: STATUTS_CRM.perdu, valeur: perdu },
-      ],
-      nature: {
-        mandat: liste.filter((p) => p.nature === 'mandat_client').length,
-        promotion: liste.filter((p) => p.nature === 'promotion_interne').length,
-      },
+      par,
+      actifs: duPipeline.filter((p) => !['perdu', 'expiree'].includes(situationDe(p))).length,
+      aCompleter: duPipeline.filter((p) => p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total).length,
+      surfaceVendue: surfaces.reduce((t, x) => t + x, 0),
+      detailSurface:
+        valides.length === 1
+          ? `${formatNombre(valides[0].surfaceTerrain)} m² × ${valides[0].nbPlanches} pl. · projets validés`
+          : `${valides.length} projets validés`,
     };
-  }, [projets]);
+  }, [duPipeline]);
 
   function onCree(projet: Projet) {
     setProjets((actuels) => [projet, ...(actuels ?? [])]);
@@ -235,34 +205,14 @@ export default function CrmPage({ params }: Props) {
 
   return (
     <>
-      <div className="projets-toolbar">
-        <div className="projets-toolbar-info">
-          <div className="champ-recherche projets-recherche">
-            <Search size={15} strokeWidth={1.75} aria-hidden />
-            <input
-              type="search"
-              className="field-input"
-              placeholder="Rechercher un code, une localisation, un programme, un client…"
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-            />
-          </div>
-          {projets && (
-            <span className="projets-compte">
-              {filtres.length} projet{filtres.length > 1 ? 's' : ''}
-              {(recherche || filtreTuile) && ` sur ${projets.length}`}
-            </span>
-          )}
-          {filtreTuile && (
-            <button
-              type="button"
-              className="chip chip--filtre"
-              onClick={() => setFiltreTuile(null)}
-            >
-              {LABEL_FILTRE_TUILE[filtreTuile]}
-              <X size={12} strokeWidth={2.5} aria-hidden />
-            </button>
-          )}
+      <div className="crm-entete">
+        <div className="vue-toggle crm-onglets" role="tablist" aria-label="Vue du CRM">
+          <button type="button" role="tab" aria-selected={onglet === 'registre'} className={onglet === 'registre' ? 'is-active' : ''} onClick={() => setOnglet('registre')}>
+            Registre des projets · {projets?.length ?? '…'}
+          </button>
+          <button type="button" role="tab" aria-selected={onglet === 'clients'} className={onglet === 'clients' ? 'is-active' : ''} onClick={() => setOnglet('clients')}>
+            Clients · {clients.length}
+          </button>
         </div>
         {peutEcrire && (
           <button type="button" className="btn-primary" onClick={() => setModalOuvert(true)}>
@@ -281,237 +231,211 @@ export default function CrmPage({ params }: Props) {
         </div>
       )}
 
-      {projets && projets.length > 0 && (
+      {onglet === 'clients' ? (
+        <section className="panel glass-panel">
+          <h2 className="crm-titre-registre">
+            Clients <span>{clients.length}</span>
+          </h2>
+          {clients.length === 0 ? (
+            <p className="empty-state">Aucun client pour le moment.</p>
+          ) : (
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Type</th>
+                    <th>Contact</th>
+                    <th>Projets</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clients.map((c) => {
+                    const siens = (projets ?? []).filter((p) => p.client.id === c.id);
+                    return (
+                      <tr key={c.id}>
+                        <td>
+                          <span className="cell-stack">
+                            <span className="cell-fort">{c.nom}</span>
+                            {c.sigle && <span className="cell-sub">{c.sigle}</span>}
+                          </span>
+                        </td>
+                        <td data-label="Type">{TYPES_CLIENT[c.type]}</td>
+                        <td data-label="Contact">
+                          <span className="cell-stack">
+                            <span>{c.contact || c.email || '—'}</span>
+                            {c.telephone && <span className="cell-sub">{c.telephone}</span>}
+                          </span>
+                        </td>
+                        <td data-label="Projets">{siens.length ? siens.map((p) => p.code).join(' · ') : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : (
         <>
+          <div className="crm-filtres">
+            <div className="vue-toggle crm-situations" role="group" aria-label="Situation">
+              <button type="button" className={situation === 'tous' ? 'is-active' : ''} aria-pressed={situation === 'tous'} onClick={() => setSituation('tous')}>
+                Tous <span className="crm-compte">{duPipeline.length}</span>
+              </button>
+              {FILTRES_SITUATION.map((x) => (
+                <button key={x} type="button" className={situation === x ? 'is-active' : ''} aria-pressed={situation === x} onClick={() => basculer(x)}>
+                  {x === 'en_validation' ? 'En validation' : LIBELLE_SITUATION[x]} <span className="crm-compte">{kpi.par(x)}</span>
+                </button>
+              ))}
+            </div>
+            <label className="crm-annee">
+              <select className="field-input" aria-label="Année du pipeline" value={annee} onChange={(e) => setAnnee(e.target.value)}>
+                {annees.map((a) => (
+                  <option key={a} value={a}>
+                    Pipeline {a}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="crm-kpi">
           <KpiStrip
             tuiles={[
-              {
-                cle: 'actif',
-                label: 'Pipeline actif',
-                valeur: kpi.pipelineActif,
-                icone: Workflow,
-                // Icône purement décorative (aucune série réelle derrière) —
-                // pas un graphique, un repère visuel assumé comme tel.
-                decorIcone: BarChart3,
-                degrade: DEGRADE_KPI.actif,
-                action: {
-                  type: 'filtre',
-                  actif: filtreTuile === 'actif',
-                  onClick: () => basculerFiltre('actif'),
-                },
-              },
-              {
-                cle: 'onboard',
-                label: 'Onboard',
-                valeur: kpi.onboard,
-                icone: CheckCircle2,
-                degrade: DEGRADE_KPI.valide,
-                // Anneau réel : même valeur que le sous-texte, juste visualisée.
-                ringPourcentage: kpi.tauxConversion ?? undefined,
-                sousTexte:
-                  kpi.tauxConversion === null
-                    ? undefined
-                    : `Taux de conversion ${formatPourcent(kpi.tauxConversion)}`,
-                action: {
-                  type: 'filtre',
-                  actif: filtreTuile === 'onboard',
-                  onClick: () => basculerFiltre('onboard'),
-                },
-              },
-              {
-                cle: 'neufs',
-                label: 'Nouveaux (30 j)',
-                valeur: kpi.nouveaux30j,
-                icone: Sparkles,
-                degrade: DEGRADE_KPI.neufs,
-                tendance: {
-                  sens:
-                    kpi.nouveaux30j > kpi.nouveauxPrecedents30j
-                      ? 'hausse'
-                      : kpi.nouveaux30j < kpi.nouveauxPrecedents30j
-                        ? 'baisse'
-                        : 'stable',
-                  // Delta réel (30j vs 30j précédents) — jamais une valeur inventée.
-                  court: `${kpi.nouveaux30j - kpi.nouveauxPrecedents30j >= 0 ? '+' : '−'}${Math.abs(
-                    kpi.nouveaux30j - kpi.nouveauxPrecedents30j,
-                  )}`,
-                  texte: `${kpi.nouveauxPrecedents30j} sur les 30 j précédents`,
-                },
-                action: {
-                  type: 'filtre',
-                  actif: filtreTuile === 'neufs',
-                  onClick: () => basculerFiltre('neufs'),
-                },
-              },
-              {
-                // Dégradé chaud (même famille que « Retards » en
-                // facturation) : plus un traitement atténué depuis le
-                // passage aux couleurs vives (demande boss, sept. 2026) —
-                // le dégradé porte lui-même le signal d'attention.
-                cle: 'perdu',
-                label: 'Perdus',
-                valeur: kpi.perdu,
-                icone: XCircle,
-                degrade: DEGRADE_KPI.annule,
-                action: {
-                  type: 'filtre',
-                  actif: filtreTuile === 'perdu',
-                  onClick: () => basculerFiltre('perdu'),
-                },
-              },
+              { cle: 'actif', label: 'Pipeline actif', valeur: kpi.actifs, sousTexte: 'projets hors Perdu et Expirée', icone: FolderOpen, degrade: DEGRADE_KPI.actif, action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') } },
+              { cle: 'fiches', label: 'Fiches à compléter', valeur: kpi.aCompleter, sousTexte: 'fiche incomplète · délai 72 h', icone: FileWarning, degrade: DEGRADE_KPI.fiches, action: { type: 'filtre', actif: situation === 'a_completer', onClick: () => basculer('a_completer') } },
+              { cle: 'cfo', label: 'En attente CFO', valeur: kpi.par('en_validation'), sousTexte: 'offres soumises · délai 48 h', icone: Clock3, degrade: DEGRADE_KPI.cfo, action: { type: 'filtre', actif: situation === 'en_validation', onClick: () => basculer('en_validation') } },
+              { cle: 'client', label: 'Chez le client', valeur: kpi.par('offre_envoyee'), sousTexte: 'offres envoyées · validité 7 jours', icone: Send, degrade: DEGRADE_KPI.client, action: { type: 'filtre', actif: situation === 'offre_envoyee', onClick: () => basculer('offre_envoyee') } },
+              { cle: 'surface', label: 'Surface vendue', valeur: `${formatNombre(kpi.surfaceVendue)} m²`, sousTexte: kpi.detailSurface, icone: Home, degrade: DEGRADE_KPI.surface, action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') } },
             ]}
           />
-          <KpiFunnel segments={kpi.funnel} natureSplit={kpi.nature} />
+          </div>
+
+          <section className="panel glass-panel">
+            <div className="crm-registre-tete">
+              <h2 className="crm-titre-registre">
+                Registre des projets <span>{filtres.length}</span>
+              </h2>
+              <div className="champ-recherche crm-recherche">
+                <Search size={15} strokeWidth={1.75} aria-hidden />
+                <input type="search" className="field-input" placeholder="Filtrer par code ou client" value={recherche} onChange={(e) => setRecherche(e.target.value)} />
+              </div>
+            </div>
+            {!projets ? (
+              <div className="admin-skeleton" aria-hidden>
+                <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" />
+              </div>
+            ) : filtres.length === 0 ? (
+              <p className="empty-state">
+                {recherche || situation !== 'tous'
+                  ? 'Aucun projet ne correspond à ce filtre.'
+                  : peutEcrire
+                    ? 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'
+                    : 'Aucun projet pour le moment.'}
+              </p>
+            ) : (
+              <>
+                {/* Mobile : liste condensée (tap → fiche). */}
+                <div className="crm-liste-mobile">
+                  <ul className="crm-liste">
+                    {filtres.map((projet) => (
+                      <li key={projet.id}>
+                        <button type="button" className="crm-ligne" aria-haspopup="dialog" onClick={() => setDetailId(projet.id)}>
+                          <span className="crm-ligne-txt">
+                            <span className="crm-ligne-code">{projet.code}</span>
+                            <span className="crm-ligne-nom">{projet.client.nom}</span>
+                          </span>
+                          <span className={`pill crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>{LIBELLE_SITUATION[situationDe(projet)]}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="admin-table-wrap admin-table-wrap--fixe crm-liste-desktop">
+                  <table className="admin-table crm-registre">
+                    <thead>
+                      <tr>
+                        <th>Code projet</th>
+                        <th>Catégorie</th>
+                        <th>Client</th>
+                        <th>Type</th>
+                        <th>Programme</th>
+                        <th>Apporteur</th>
+                        <th>Complétude</th>
+                        <th>Situation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtres.map((projet) => {
+                        const c = completudeFiche(projet);
+                        const s = situationDe(projet);
+                        const ap = projet.apporteur;
+                        return (
+                          <tr key={projet.id} className={`crm-ligne-registre${projet.id === nouveauId ? ' is-nouveau' : ''}`} onClick={() => setDetailId(projet.id)}>
+                            <td data-label="Code projet" className="cell-code">
+                              <button type="button" className="crm-code" aria-haspopup="dialog" onClick={(e) => { e.stopPropagation(); setDetailId(projet.id); }}>
+                                {projet.code}
+                              </button>
+                            </td>
+                            <td data-label="Catégorie">
+                              <span className={`pill ${PILL_CATEGORIE[projet.categorie] ?? 'pill--neutre'}`}>{CATEGORIES[projet.categorie]}</span>
+                            </td>
+                            <td data-label="Client">
+                              <span className="cell-stack">
+                                <span className="cell-fort">{projet.client.nom}</span>
+                                <span className="cell-sub">{projet.localite?.nom ?? projet.localisation}</span>
+                              </span>
+                            </td>
+                            <td data-label="Type">{TYPES_BIEN[projet.type] ?? '—'}</td>
+                            <td data-label="Programme">
+                              {projet.programme.trim() ? projet.programme : <span className="crm-manquant">Fiche Programme à remplir</span>}
+                            </td>
+                            <td data-label="Apporteur">
+                              <span className="cell-stack">
+                                <span className="cell-fort">
+                                  {ap?.type === 'externe' ? ap.nom : ap?.type === 'interne' ? ap.utilisateur?.nom ?? 'Apporteur interne' : 'Affaire directe'}
+                                </span>
+                                <span className="cell-sub">
+                                  {ap
+                                    ? [
+                                        projet.commissionApporteur != null && `${formatNombre(projet.commissionApporteur)} %`,
+                                        ap.type === 'interne' ? 'Interne' : ap.telephone,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(' · ')
+                                    : projet.verrouillee
+                                      ? 'fiche verrouillée'
+                                      : ''}
+                                </span>
+                              </span>
+                            </td>
+                            <td data-label="Complétude">
+                              <span className="crm-completude" title={c.manquants.length ? `Il manque : ${c.manquants.join(', ')}` : 'Fiche complète'}>
+                                <span>
+                                  {c.faits}/{c.total}
+                                </span>
+                                <span className="progress-track">
+                                  <span className={`progress-fill ${c.faits === c.total ? 'crm-completude--complete' : 'crm-completude--partielle'}`} style={{ width: `${(c.faits / c.total) * 100}%` }} />
+                                </span>
+                              </span>
+                            </td>
+                            <td data-label="Situation">
+                              <span className={`pill ${PILL_SITUATION[s]}`}>{LIBELLE_SITUATION[s]}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="crm-pied">Cliquer une ligne ouvre la fiche. Les valeurs en ambre sont manquantes.</p>
+              </>
+            )}
+          </section>
         </>
       )}
-
-      <section className="panel glass-panel">
-        {!projets ? (
-          <div className="admin-skeleton" aria-hidden>
-            <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" />
-          </div>
-        ) : filtres.length === 0 ? (
-          <p className="empty-state">
-            {recherche || filtreTuile
-              ? 'Aucun projet ne correspond à ce filtre.'
-              : peutEcrire
-                ? 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'
-                : 'Aucun projet pour le moment.'}
-          </p>
-        ) : (
-          <>
-            {/* Mobile : liste condensée à une ligne (tap -> détail en modale),
-                dans un bloc à hauteur limitée plutôt que toute la page qui
-                scrolle. Le tableau desktop ci-dessous reste inchangé. */}
-            <div className="crm-liste-mobile">
-              <ul className="crm-liste">
-                {filtres.map((projet) => (
-                  <li key={projet.id}>
-                    <button
-                      type="button"
-                      className="crm-ligne"
-                      aria-haspopup="dialog"
-                      onClick={() => setDetailId(projet.id)}
-                    >
-                      <span className="crm-ligne-txt">
-                        <span className="crm-ligne-code">{projet.code}</span>
-                        <span className="crm-ligne-nom">{projet.programme}</span>
-                      </span>
-                      <span
-                        className={`pill crm-ligne-statut statut-select--${CLASSE_STATUT[projet.statut]}`}
-                      >
-                        {STATUTS_CRM[projet.statut]}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="admin-table-wrap admin-table-wrap--fixe crm-liste-desktop">
-              <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Nature</th>
-                  <th>Localisation</th>
-                  <th>Type</th>
-                  <th>Planches</th>
-                  <th>Surface</th>
-                  <th>Client</th>
-                  <th>Standing</th>
-                  <th>Gamme</th>
-                  <th>Programme</th>
-                  <th>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtres.map((projet) => (
-                  <tr
-                    key={projet.id}
-                    className={projet.id === nouveauId ? 'is-nouveau' : undefined}
-                  >
-                    <td data-label="Code projet" className="cell-code">
-                      <span className="cell-stack">
-                        {/* Ouvre la fiche détail (apporteur, propriétaire…) —
-                            sur desktop comme la ligne entière sur mobile. */}
-                        <button
-                          type="button"
-                          className="lien-inline"
-                          aria-haspopup="dialog"
-                          onClick={() => setDetailId(projet.id)}
-                        >
-                          {projet.code}
-                        </button>
-                        {!projet.proprietaire && (
-                          <span className="cell-sub">
-                            <span className="pill pill--attention">À assigner</span>
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                    <td data-label="Nature">
-                      <span className="cell-stack">
-                        <span className={`pill pill--nature-${projet.nature}`}>
-                          {NATURES_DOSSIER[projet.nature]}
-                        </span>
-                        <span className="cell-sub">{CATEGORIES[projet.categorie]}</span>
-                      </span>
-                    </td>
-                    <td data-label="Localisation">
-                      <span className="cell-stack">
-                        <span>{projet.localisation}</span>
-                        <span className="cell-sub">
-                          {projet.localite ? (
-                            <span className="pill pill--neutre">{projet.localite.code}</span>
-                          ) : (
-                            peutEcrire ? (
-                              <button
-                                type="button"
-                                className="lien-inline"
-                                aria-haspopup="dialog"
-                                onClick={() => setDetailId(projet.id)}
-                              >
-                                À rattacher
-                              </button>
-                            ) : (
-                              <span className="pill pill--attention">Non rattachée</span>
-                            )
-                          )}
-                        </span>
-                      </span>
-                    </td>
-                    <td data-label="Type">{TYPES_BIEN[projet.type]}</td>
-                    <td data-label="Planches">{projet.nbPlanches || '—'}</td>
-                    <td data-label="Surface terrain">{formatSurface(projet.surfaceTerrain)}</td>
-                    <td data-label="Client">
-                      <span className="cell-stack">
-                        <span className="cell-fort">{projet.client.nom}</span>
-                        <span className="cell-sub">
-                          <span className="pill pill--neutre">
-                            {TYPES_CLIENT[projet.client.type]}
-                          </span>
-                        </span>
-                      </span>
-                    </td>
-                    <td data-label="Standing">{STANDINGS[projet.standing]}</td>
-                    <td data-label="Gamme">{GAMMES[projet.gamme]}</td>
-                    <td data-label="Programme">{projet.programme}</td>
-                    <td data-label="Statut">
-                      {/* Lecture seule : le statut avance par les actions de
-                          la fiche (code cliquable), jamais par une liste libre. */}
-                      <span className={`pill statut-select--${CLASSE_STATUT[projet.statut]}`}>
-                        {STATUTS_CRM[projet.statut]}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          </>
-        )}
-      </section>
 
       {modalOuvert && (
         <NouveauProjetModal
