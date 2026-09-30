@@ -316,6 +316,8 @@ export class CrmService {
 
     const dossierMaj = await this.prisma.$transaction(async (tx) => {
       await basculer(tx);
+      // Soumise à la DAF : l'offre fige ses parts F1 / F2 / F3 (Réglages).
+      if (action === 'soumettre') await this.facturation.figerPartsOffres(tx, societeId, id);
       return tx.dossierCrm.findUniqueOrThrow({ where: { id }, include: INCLUDE_DOSSIER });
     });
     const evenement = EVENEMENT_PAR_ACTION[action];

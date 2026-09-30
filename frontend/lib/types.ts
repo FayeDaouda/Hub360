@@ -1406,12 +1406,13 @@ export const STATUTS_FACTURE: Record<StatutFactureEffectif, string> = {
 
 export type JalonFacture = 'signature' | 'avant_projet' | 'livraison';
 
-// Libellés et parts des CGV Grey Concrete 2026, art. 7 — miroir du backend
-// domaine/config.ts::JALONS_FACTURE.
-export const JALONS_FACTURE: { cle: JalonFacture; libelle: string; part: number }[] = [
-  { cle: 'signature', libelle: 'Acompte à la signature du contrat', part: 40 },
-  { cle: 'avant_projet', libelle: "Fin de l'APD", part: 40 },
-  { cle: 'livraison', libelle: "Livraison des plans d'exécution", part: 20 },
+// Libellés des CGV Grey Concrete 2026, art. 7 — miroir du backend
+// domaine/config.ts::JALONS_FACTURE. Les parts (F1 / F2 / F3) sont un réglage
+// du CIO (Réglages · Règles et délais), figé sur l'offre à sa soumission.
+export const JALONS_FACTURE: { cle: JalonFacture; code: 'F1' | 'F2' | 'F3'; libelle: string }[] = [
+  { cle: 'signature', code: 'F1', libelle: 'Acompte à la signature du contrat' },
+  { cle: 'avant_projet', code: 'F2', libelle: "Fin de l'APD" },
+  { cle: 'livraison', code: 'F3', libelle: "Livraison des plans d'exécution" },
 ];
 
 // Mobile money distingué (Wave / Orange Money), décision du 27/09/2026.

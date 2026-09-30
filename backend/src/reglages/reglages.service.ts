@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import type { PartsFactures } from '../projets/domaine/config';
 import { appliquer, type Changement, type ContenuGabarit, decrire, ErreurGabarit, libelleVersion } from './gabarit';
 import { type DefinitionReglage, GABARITS_PAR_SOCIETE, normaliser, OBJECTIFS, REGLES } from './definitions';
 
@@ -183,6 +184,12 @@ export class ReglagesService {
     });
     const parSociete = new Map(lignes.map((l) => [l.societeId, new Set(l.valeur as string[])]));
     return new Map(societeIds.map((id) => [id, parSociete.get(id) ?? new Set<string>()]));
+  }
+
+  // Parts F1 / F2 / F3 en service (réglage, sinon valeur par défaut).
+  async partsFactures(societeId: string): Promise<PartsFactures> {
+    const l = await this.prisma.reglageSociete.findUnique({ where: { societeId_cle: { societeId, cle: 'parts_factures' } } });
+    return (l?.valeur ?? REGLES.find((d) => d.cle === 'parts_factures')!.defaut) as PartsFactures;
   }
 
   // --- internes ---------------------------------------------------------------------

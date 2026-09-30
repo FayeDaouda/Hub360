@@ -6,9 +6,11 @@ import {
 } from '@nestjs/common';
 import { FactureStatut, FactureType, NatureDossier, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReglagesService } from '../../reglages/reglages.service';
 import { chargerProjet } from '../projet-acces';
 import {
   JALONS_FACTURE,
+  type PartsFactures,
   refFacture,
   TAUX_TVA_DEFAUT,
   typeFactureDepuisNature,
@@ -39,7 +41,19 @@ export class FacturationService {
   constructor(
     private prisma: PrismaService,
     private email: EmailService,
+    private reglages: ReglagesService,
   ) {}
+
+  // Soumission du dossier à la DAF (cycle CRM, dans sa transaction) : l'offre
+  // en brouillon fige les parts F1 / F2 / F3 du réglage en service. Une offre
+  // déjà soumise (parts déjà figées) garde les siennes.
+  async figerPartsOffres(tx: Prisma.TransactionClient, societeId: string, dossierCrmId: string) {
+    const parts = await this.reglages.partsFactures(societeId);
+    await tx.devis.updateMany({
+      where: { dossierCrmId, statut: 'brouillon', partsFactures: { equals: Prisma.DbNull } },
+      data: { partsFactures: parts },
+    });
+  }
 
   async get(societeId: string, projetId: string) {
     await chargerProjet(this.prisma, societeId, projetId);
@@ -422,6 +436,9 @@ export class FacturationService {
       include: { produitService: { select: { code: true, famille: true } } },
       orderBy: { ordre: 'asc' },
     });
+    // Parts figées sur l'offre (soumission à la DAF) ; à défaut, réglage en service.
+    const offre = await tx.devis.findUnique({ where: { id: devisId }, select: { partsFactures: true } });
+    const parts = (offre?.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
     const plan = planFacturationOffre(
       lignes.map((l) => ({
         code: l.produitService?.code ?? null,
@@ -430,6 +447,7 @@ export class FacturationService {
         montantHt: Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()),
         tauxTva: l.tauxTva.toNumber(),
       })),
+      parts,
     );
     await tx.facture.createMany({
       data: plan.map((f) => ({

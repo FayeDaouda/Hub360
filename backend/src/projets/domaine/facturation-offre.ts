@@ -1,11 +1,12 @@
 import { JalonFacture } from '@prisma/client';
-import { JALONS_FACTURE } from './config';
+import { JALONS_FACTURE, type PartsFactures } from './config';
 
 // Plan de facturation d'une offre acceptée (étape H2, CGV Grey Concrete 2026,
 // décisions du 27/09/2026) — pur, sans I/O : ligne d'offre → factures à
 // préparer en brouillon au passage du dossier à « onboard ».
 //
-//   · CO (conception) → échéancier 40 / 40 / 20 (CGV art. 7) — la conception
+//   · CO (conception) → échéancier F1 / F2 / F3 (CGV art. 7, parts figées sur
+//     l'offre à sa soumission — 40 / 40 / 20 par défaut) — la conception
 //     SEULE, pas les images ;
 //   · DPC, SPC (permis) → 50 / 50 chacun, avance à la commande / solde à la
 //     remise du livrable (CGV art. 6) ;
@@ -52,18 +53,18 @@ function parTaux(lignes: LigneOffre[]): Map<number, LigneOffre[]> {
 
 const nomLigne = (l: LigneOffre) => l.code ?? l.designation;
 
-export function planFacturationOffre(lignes: LigneOffre[]): FacturePrevue[] {
+export function planFacturationOffre(lignes: LigneOffre[], parts: PartsFactures): FacturePrevue[] {
   const prevues: FacturePrevue[] = [];
 
   for (const co of lignes.filter((l) => l.famille === 'CO')) {
     const montants = repartir(
       co.montantHt,
-      JALONS_FACTURE.map((j) => j.part),
+      JALONS_FACTURE.map((j) => parts[j.code]),
     );
     JALONS_FACTURE.forEach((j, i) =>
       prevues.push({
         jalon: j.cle,
-        libelle: `${co.code} — ${j.libelle} (${j.part} %)`,
+        libelle: `${co.code} — ${j.libelle} (${parts[j.code]} %)`,
         montantHt: montants[i],
         tauxTva: co.tauxTva,
       }),

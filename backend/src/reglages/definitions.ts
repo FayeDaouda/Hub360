@@ -42,7 +42,7 @@ export const REGLES: DefinitionReglage[] = [
     valeur: { type: 'parts', cles: ['F1', 'F2', 'F3'] },
     defaut: { F1: 40, F2: 40, F3: 20 },
     aide: "Somme égale à 100 %. S'applique aux offres rédigées ensuite ; une offre déjà soumise au CFO garde ses parts.",
-    appliquee: false,
+    appliquee: true, // figées sur l'offre à sa soumission, appliquées à l'Onboard (factures)
   },
   {
     cle: 'ouverture_projet',

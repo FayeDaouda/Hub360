@@ -31,7 +31,7 @@ describe('planFacturationOffre', () => {
     ligne('BIMX', 'EX', 600_000),
     ligne(null, null, 200_000),
   ];
-  const plan = planFacturationOffre(offre);
+  const plan = planFacturationOffre(offre, { F1: 40, F2: 40, F3: 20 });
 
   it('conception : 40/40/20 sur les jalons CGV, la CO seule', () => {
     const co = plan.filter((f) => f.jalon);
@@ -41,6 +41,16 @@ describe('planFacturationOffre', () => {
       ['livraison', 700_000],
     ]);
     expect(co[1].libelle).toBe("CO2 — Fin de l'APD (40 %)");
+  });
+
+  it('conception : parts figées de l’offre (réglage du CIO), arrondi sur la dernière', () => {
+    const co = planFacturationOffre([ligne('CO1', 'CO', 1_000_001)], { F1: 30, F2: 50, F3: 20 });
+    expect(co.map((f) => f.montantHt)).toEqual([300_000, 500_001, 200_000]);
+    expect(co.map((f) => f.libelle)).toEqual([
+      'CO1 — Acompte à la signature du contrat (30 %)',
+      "CO1 — Fin de l'APD (50 %)",
+      "CO1 — Livraison des plans d'exécution (20 %)",
+    ]);
   });
 
   it('permis : 50/50 par prestation', () => {
@@ -71,7 +81,7 @@ describe('planFacturationOffre', () => {
   });
 
   it('taux de TVA différents → factures séparées (une facture = un taux)', () => {
-    const p = planFacturationOffre([ligne('IM1', 'IM', 100, 18), ligne('IM2', 'IM', 100, 0)]);
+    const p = planFacturationOffre([ligne('IM1', 'IM', 100, 18), ligne('IM2', 'IM', 100, 0)], { F1: 40, F2: 40, F3: 20 });
     expect(p.map((f) => f.tauxTva).sort()).toEqual([0, 18]);
   });
 });

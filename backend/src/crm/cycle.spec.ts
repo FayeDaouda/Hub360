@@ -71,7 +71,7 @@ function monter(
       return { reference: 'DEV2026-0001', lienPublic: 'http://x/devis/t', emailEnvoye: false };
     }),
   };
-  const facturation = { preparerDepuisOffre: jest.fn().mockResolvedValue(4) };
+  const facturation = { preparerDepuisOffre: jest.fn().mockResolvedValue(4), figerPartsOffres: jest.fn() };
   const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
   return {
     prisma,
@@ -110,8 +110,10 @@ describe('Cycle CRM — règles', () => {
 
 describe('CrmService.agir', () => {
   it('soumettre : nouveau_projet → en_validation, journalisé avec l’auteur', async () => {
-    const { svc, prisma, notifications } = monter('nouveau_projet');
+    const { svc, prisma, notifications, facturation } = monter('nouveau_projet');
     await svc.agir('S1', COO as never, 'D1', 'soumettre', undefined);
+    // L'offre fige ses parts F1 / F2 / F3 (Réglages) dans la transaction.
+    expect(facturation.figerPartsOffres).toHaveBeenCalledWith(expect.anything(), 'S1', 'D1');
     // La DAF est prévenue, APRÈS la transaction, l'auteur exclu en aval.
     expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
       societeId: 'S1',

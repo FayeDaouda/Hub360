@@ -1820,6 +1820,10 @@ model Devis {
   // Relances manuelles (J+3, J+6 — « relance à faire » dérivé à la lecture,
   // aucun scheduler) : compteur pour savoir laquelle est due.
   relancesEnvoyees  Int         @default(0) @map("relances_envoyees")
+  // Parts F1 / F2 / F3 (%) figées à la soumission du dossier à la DAF
+  // (Réglages · Règles et délais) : une offre déjà soumise garde ses parts,
+  // même si le réglage change ensuite. null = jamais soumise (réglage courant).
+  partsFactures     Json?       @map("parts_factures")
   derniereRelanceLe DateTime?   @map("derniere_relance_le")
 
   societe            Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)

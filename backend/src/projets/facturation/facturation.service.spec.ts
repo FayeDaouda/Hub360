@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { EmailService } from '../../email/email.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReglagesService } from '../../reglages/reglages.service';
 import { FacturationService } from './facturation.service';
 
 // FacturationService.relancer() — relance MANUELLE d'une facture en retard
@@ -46,7 +47,7 @@ function setup(row: ReturnType<typeof factureRow> | null) {
   const prisma = { facture: { findFirst } } as unknown as PrismaService;
   const envoyerRelanceFacture = jest.fn().mockResolvedValue({ envoye: true });
   const email = { envoyerRelanceFacture } as unknown as EmailService;
-  const service = new FacturationService(prisma, email);
+  const service = new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService);
   return { service, envoyerRelanceFacture, findFirst };
 }
 
@@ -143,7 +144,7 @@ function mockPrisma() {
 
 function service(prisma: PrismaService) {
   const email = {} as unknown as EmailService;
-  return new FacturationService(prisma, email);
+  return new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService);
 }
 
 describe('FacturationService.creerEcheancier', () => {
@@ -588,5 +589,29 @@ describe('FacturationService — refacturation des études', () => {
     expect(avant.etudes[0].statutReglement).toBe('a_regler');
     await service(m.prisma).marquerBureauRegle('S1', 'P1', 'B1', 'U-CFO');
     expect(m.blocEtude.update.mock.calls[0][0].data).toMatchObject({ bureauRegleParId: 'U-CFO' });
+  });
+});
+
+describe('FacturationService · parts F1 / F2 / F3 (Réglages)', () => {
+  const reglages = { partsFactures: jest.fn().mockResolvedValue({ F1: 30, F2: 50, F3: 20 }) } as unknown as ReglagesService;
+  const service = new FacturationService({} as PrismaService, {} as never, reglages);
+  it('soumission à la DAF : fige le réglage en service sur les offres brouillon pas encore figées', async () => {
+    const tx = { devis: { updateMany: jest.fn() } };
+    await service.figerPartsOffres(tx as never, 'S1', 'D1');
+    expect(tx.devis.updateMany).toHaveBeenCalledWith({
+      where: { dossierCrmId: 'D1', statut: 'brouillon', partsFactures: { equals: expect.anything() } },
+      data: { partsFactures: { F1: 30, F2: 50, F3: 20 } },
+    });
+  });
+  it('Onboard : les parts figées de l’offre priment sur le réglage courant', async () => {
+    const tx = {
+      ligneDevis: { findMany: jest.fn().mockResolvedValue([{ designation: 'CO2', quantite: { toNumber: () => 1 }, prixUnitaire: { toNumber: () => 1_000_000 }, tauxTva: { toNumber: () => 18 }, produitService: { code: 'CO2', famille: 'CO' } }]) },
+      devis: { findUnique: jest.fn().mockResolvedValue({ partsFactures: { F1: 40, F2: 40, F3: 20 } }) },
+      facture: { createMany: jest.fn() },
+    };
+    await service.preparerDepuisOffre(tx as never, 'S1', { id: 'P1', nature: 'mandat_client' as never }, 'DV1');
+    const { data } = tx.facture.createMany.mock.calls[0][0];
+    expect(data.map((f: { montantHt: number }) => f.montantHt)).toEqual([400_000, 400_000, 200_000]);
+    expect(reglages.partsFactures).not.toHaveBeenCalled();
   });
 });

@@ -437,13 +437,16 @@ export function typeFactureDepuisNature(nature: NatureDossier): FactureType {
 }
 
 // Les 3 jalons de l'échéancier de conception (mandat client), dans l'ordre
-// d'affichage — libellés et parts des CGV Grey Concrete 2026, art. 7
-// (40 % signature / 40 % fin de l'APD / 20 % livraison des plans
-// d'exécution). Clés d'enum inchangées. Miroir de JALONS_FACTURE (front).
-export const JALONS_FACTURE: { cle: JalonFacture; libelle: string; part: number }[] = [
-  { cle: 'signature', libelle: 'Acompte à la signature du contrat', part: 40 },
-  { cle: 'avant_projet', libelle: "Fin de l'APD", part: 40 },
-  { cle: 'livraison', libelle: "Livraison des plans d'exécution", part: 20 },
+// d'affichage — libellés des CGV Grey Concrete 2026, art. 7. Leurs parts
+// (F1 / F2 / F3, 40 / 40 / 20 par défaut) sont un réglage du CIO (Réglages ·
+// Règles et délais), figé sur l'offre à sa soumission à la DAF. Clés d'enum
+// inchangées. Miroir de JALONS_FACTURE (front).
+export type CodeFacture = 'F1' | 'F2' | 'F3';
+export type PartsFactures = Record<CodeFacture, number>; // %, somme 100
+export const JALONS_FACTURE: { cle: JalonFacture; code: CodeFacture; libelle: string }[] = [
+  { cle: 'signature', code: 'F1', libelle: 'Acompte à la signature du contrat' },
+  { cle: 'avant_projet', code: 'F2', libelle: "Fin de l'APD" },
+  { cle: 'livraison', code: 'F3', libelle: "Livraison des plans d'exécution" },
 ];
 
 // Référence d'affichage d'une facture — format PROVISOIRE. Le format légal
