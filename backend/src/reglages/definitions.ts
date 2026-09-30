@@ -11,7 +11,8 @@ export type TypeValeur =
   | { type: 'entier'; min: number; max: number; unite?: string }
   | { type: 'parts'; cles: string[] } // somme = 100
   | { type: 'heures'; cles: string[] } // plusieurs durées nommées
-  | { type: 'choix'; options: { valeur: string; libelle: string }[] }
+  // enService : libellé affiché après « En service : » quand il diffère de l'option.
+  | { type: 'choix'; options: { valeur: string; libelle: string; enService?: string }[] }
   | { type: 'texte'; max: number }
   | { type: 'dates' } // liste AAAA-MM-JJ
   | { type: 'pourcentage' } // 0 à 100, vide = à fixer
@@ -47,7 +48,7 @@ export const REGLES: DefinitionReglage[] = [
   {
     cle: 'ouverture_projet',
     libelle: 'Ouverture du projet',
-    valeur: { type: 'choix', options: [{ valeur: 'emission_f1', libelle: "À l'émission de F1 (défaut)" }] },
+    valeur: { type: 'choix', options: [{ valeur: 'emission_f1', libelle: "À l'émission de F1 (défaut)", enService: "à l'émission de F1" }] },
     defaut: 'emission_f1',
     aide: "Déclenche l'instanciation du gabarit (J1). Les projets déjà ouverts ne changent pas.",
     appliquee: false,
@@ -66,7 +67,7 @@ export const REGLES: DefinitionReglage[] = [
     valeur: {
       type: 'choix',
       options: [
-        { valeur: 'architecte_dplg', libelle: 'Architecte DPLG (défaut)' },
+        { valeur: 'architecte_dplg', libelle: 'Architecte DPLG (défaut)', enService: 'Architecte DPLG (Head of Engineering à recruter)' },
         { valeur: 'head_of_engineering', libelle: 'Head of Engineering (à recruter)' },
       ],
     },

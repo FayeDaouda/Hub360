@@ -99,7 +99,7 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         {gabarit.contenu.etapes.map((e) => (
           <div key={e.cle} role="rowgroup">
             <div className="reg-ligne reg-ligne--etape" role="row">
-              <span className="reg-numero">{String(e.numero).padStart(2, '0')}</span>
+              <span className={`reg-numero reg-numero--${e.numero}`}>{String(e.numero).padStart(2, '0')}</span>
               <strong>{e.libelle}</strong>
             </div>
             {e.cartes.map((c) => (

@@ -2,18 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ClipboardList, FileClock, Scale, Target } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { ROLE_CIO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { afficher, getReglages, libelleVersion, type Reglages as DonneesReglages } from '@/lib/reglages';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 import { Administration } from './administration';
 import { GabaritPanel } from './gabarit-panel';
 import { JournalPanel } from './journal-panel';
 import { ValeursPanel } from './valeurs-panel';
-
-const minusculeInitiale = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
 
 const SECTIONS = ['gabarit', 'regles', 'objectifs', 'journal', 'administration'] as const;
 type Section = (typeof SECTIONS)[number];
@@ -55,19 +51,22 @@ export function Reglages({ slug }: { slug: string }) {
 
   const entete = (
     <div className="reg-titre">
-      <p className="rh-sous-titre">
-        Administration du HUB. Chaque modification exige un motif et entre au journal. Le gabarit est versionné : un projet
-        garde la version avec laquelle il a été ouvert.
+      <p className="reg-sous-titre">
+        Administration du HUB. Chaque modification exige un motif, entre au journal et au registre des décisions. Le
+        gabarit est versionné : un projet garde la version avec laquelle il a été ouvert.
       </p>
-      <span className="reg-badges">
-        <span className="pill pill--neutre">{session.role === ROLE_CIO ? 'CIO : modification des réglages' : 'Administration de la société'}</span>
-        {donnees.disponible && (
-          <button type="button" className={`btn-ghost btn-ghost--sm${section === 'administration' ? ' is-active' : ''}`} onClick={() => choisir('administration')}>
-            Rôles, localités, contrats…
-          </button>
-        )}
-      </span>
+      <span className="reg-badge">{session.role === ROLE_CIO ? 'CIO : modification des réglages' : 'Administration de la société'}</span>
     </div>
+  );
+
+  // Paramètres historiques (rôles, gabarits Foncier/Études, localités,
+  // contrats) : hors maquette, accessibles par un lien discret en pied de page.
+  const lienAdministration = donnees.disponible && section !== 'administration' && (
+    <p className="reg-pied">
+      <button type="button" className="lien-inline" onClick={() => choisir('administration')}>
+        Autres paramètres : rôles, localités, contrats, gabarits Foncier et Études
+      </button>
+    </p>
   );
 
   if (!donnees.disponible) {
@@ -86,40 +85,48 @@ export function Reglages({ slug }: { slug: string }) {
   const ouverture = donnees.regles.find((r) => r.cle === 'ouverture_projet')!;
   const aFixer = donnees.objectifs.filter((o) => o.enService === null).length;
   const p = parts.enService as Record<string, number>;
-  const tuile = (s: Section) => ({ type: 'filtre' as const, actif: section === s, onClick: () => choisir(s) });
 
   return (
     <>
       {entete}
-      <KpiStrip
-        tuiles={[
-          { cle: 'gabarit', label: 'Gabarit Conception', valeur: gabarit.libelle, sousTexte: `${gabarit.projets} projet(s) en ${gabarit.libelle}`, icone: ClipboardList, action: tuile('gabarit') },
+      <div className="reg-tuiles" role="tablist" aria-label="Sections des réglages">
+        {[
+          { s: 'gabarit' as const, label: 'Gabarit Conception', valeur: gabarit.libelle, sous: `${gabarit.projets} projet(s) en ${gabarit.libelle}` },
           {
-            cle: 'regles',
+            s: 'regles' as const,
             label: 'Règles et délais',
             valeur: `F1 ${p.F1} · F2 ${p.F2} · F3 ${p.F3}`,
-            sousTexte: `ouverture ${minusculeInitiale(afficher(ouverture, ouverture.enService))} · contresignature CEO au-delà de ${(Number(ceo.enService) / 1_000_000).toLocaleString('fr-FR')} M FCFA`,
-            icone: Scale,
-            action: tuile('regles'),
+            sous: `ouverture ${afficher(ouverture, ouverture.enService)} · contresignature CEO au-delà de ${(Number(ceo.enService) / 1_000_000).toLocaleString('fr-FR')} M FCFA`,
           },
-          { cle: 'objectifs', label: 'Objectifs à fixer', valeur: aFixer, sousTexte: 'indicateur(s) sans objectif dans Pilotage', icone: Target, alerte: aFixer > 0, action: tuile('objectifs') },
+          { s: 'objectifs' as const, label: 'Objectifs à fixer', valeur: String(aFixer), sous: 'indicateur(s) sans objectif dans Pilotage', alerte: aFixer > 0 },
           {
-            cle: 'journal',
+            s: 'journal' as const,
             label: 'Modifications tracées',
-            valeur: donnees.modifications,
-            sousTexte: donnees.modifications ? 'voir le journal' : 'aucune modification depuis la mise en service',
-            icone: FileClock,
-            action: tuile('journal'),
+            valeur: String(donnees.modifications),
+            sous: donnees.modifications ? 'voir le journal des réglages' : 'aucune modification depuis la mise en service',
           },
-        ]}
-      />
+        ].map((t) => (
+          <button
+            key={t.s}
+            type="button"
+            role="tab"
+            aria-selected={section === t.s}
+            className={`reg-tuile${section === t.s ? ' is-active' : ''}`}
+            onClick={() => choisir(t.s)}
+          >
+            <span className="reg-tuile-label">{t.label}</span>
+            <span className={`reg-tuile-valeur${t.alerte ? ' is-alerte' : ''}`}>{t.valeur}</span>
+            <span className="reg-tuile-sous">{t.sous}</span>
+          </button>
+        ))}
+      </div>
       {section === 'gabarit' && <GabaritPanel key={gabarit.numero} slug={slug} gabarit={gabarit} onEnregistre={setDonnees} />}
       {section === 'regles' && (
         <ValeursPanel
           slug={slug}
           section="regles"
           titre="Règles et délais"
-          description="Règles du process Conception et des circuits Finances. Chaque modification exige un motif et entre au journal."
+          description="Règles du process Conception et des circuits Finances. Chaque modification exige un motif et entre au registre des décisions."
           reglages={donnees.regles}
           onEnregistre={setDonnees}
         />
@@ -137,6 +144,7 @@ export function Reglages({ slug }: { slug: string }) {
       )}
       {section === 'journal' && <JournalPanel key={donnees.modifications} slug={slug} versionInitiale={libelleVersion(0)} />}
       {section === 'administration' && <Administration slug={slug} />}
+      {lienAdministration}
     </>
   );
 }

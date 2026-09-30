@@ -11146,21 +11146,97 @@ a.notif-item:hover {
   gap: 0.6rem 1rem;
   margin-bottom: 1rem;
 }
-.reg-titre .rh-sous-titre {
+.reg-sous-titre {
   flex: 1 1 320px;
   margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
-.reg-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+.reg-badge {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
 }
-.reg-badges .is-active {
-  border-color: var(--accent);
+/* Tuiles de section (maquette du boss) : libellé, valeur, précision — pas
+   d'icône ; la section ouverte est cerclée d'accent. */
+.reg-tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
 }
+.reg-tuile {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.reg-tuile:hover {
+  border-color: var(--border-hover);
+}
+.reg-tuile.is-active {
+  border: 2px solid var(--accent);
+  padding: calc(1rem - 1px) calc(1.25rem - 1px);
+}
+.reg-tuile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.reg-tuile-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.reg-tuile-valeur {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.reg-tuile-valeur.is-alerte {
+  color: var(--ocre);
+}
+.reg-tuile-sous {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+@media (max-width: 1100px) {
+  .reg-tuiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .reg-tuiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Panneaux pleins, sans verre (maquette). */
 .reg-panel {
   grid-template-columns: minmax(0, 1fr);
+}
+.reg-panel.glass-panel {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.reg-panel.glass-panel::before {
+  display: none;
+}
+.reg-pied {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+}
+.reg-pied .lien-inline {
+  white-space: normal;
+  text-align: left;
 }
 .reg-entete {
   display: flex;
@@ -11175,7 +11251,18 @@ a.notif-item:hover {
 }
 .reg-gabarit {
   display: grid;
+  align-content: start;
   gap: 0.15rem;
+  /* Le tableau défile dans le panneau, en-tête fixe (maquette). */
+  max-height: calc(100dvh - 31rem);
+  min-height: 16rem;
+  overflow-y: auto;
+}
+.reg-ligne--tete {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
 }
 .reg-ligne {
   display: grid;
@@ -11211,6 +11298,12 @@ a.notif-item:hover {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 600;
 }
+.reg-numero--1 { color: var(--azur); }
+.reg-numero--2 { color: var(--turquoise); }
+.reg-numero--3 { color: var(--iris); }
+.reg-numero--4 { color: var(--mandarine); }
+.reg-numero--5 { color: var(--jade); }
+.reg-numero--6 { color: var(--fuchsia); }
 .reg-fenetre,
 .reg-temps {
   display: inline-flex;
@@ -11221,8 +11314,7 @@ a.notif-item:hover {
 }
 .reg-num {
   width: 4.5rem;
-  padding: 0.3rem 0.5rem;
-  text-align: right;
+  padding: 0.3rem 0.6rem;
 }
 .reg-num--jour {
   width: 3.6rem;
@@ -11279,7 +11371,17 @@ a.notif-item:hover {
 .reg-multi {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 0.9rem;
+  gap: 0.5rem 0.7rem;
+}
+.reg-multi .reg-num {
+  width: 3.8rem;
+}
+.reg-panel .dmd-titre {
+  font-size: 1.3rem;
+}
+/* Champs rectangulaires arrondis (maquette), pas en pilule. */
+.reg-panel .field-input {
+  border-radius: 8px;
 }
 .reg-multi label {
   display: inline-flex;
@@ -11291,9 +11393,6 @@ a.notif-item:hover {
 }
 .reg-choix {
   max-width: 22rem;
-}
-.reg-pas-appliquee {
-  font-size: 0.7rem;
 }
 /* Onglets de l'Administration (6) : défilent sur mobile au lieu d'élargir la page. */
 .reg-admin-onglets .admin-periode-toggle {

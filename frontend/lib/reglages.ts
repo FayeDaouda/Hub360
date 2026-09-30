@@ -42,7 +42,7 @@ export type TypeValeur =
   | { type: 'entier'; min: number; max: number; unite?: string }
   | { type: 'parts'; cles: string[] }
   | { type: 'heures'; cles: string[] }
-  | { type: 'choix'; options: { valeur: string; libelle: string }[] }
+  | { type: 'choix'; options: { valeur: string; libelle: string; enService?: string }[] }
   | { type: 'texte'; max: number }
   | { type: 'dates' }
   | { type: 'pourcentage' }
@@ -80,10 +80,15 @@ export function afficher(r: Pick<Reglage, 'valeur'>, v: unknown): string {
   const t = r.valeur;
   if (t.type === 'parts') return t.cles.map((k) => (v as Record<string, number>)[k]).join(' / ') + ' %';
   if (t.type === 'heures') return t.cles.map((k) => `${k} ${(v as Record<string, number>)[k]} h`).join(' · ');
-  if (t.type === 'choix') return t.options.find((o) => o.valeur === v)?.libelle.replace(' (défaut)', '') ?? String(v);
+  if (t.type === 'choix') {
+    const o = t.options.find((x) => x.valeur === v);
+    return o ? (o.enService ?? o.libelle.replace(' (défaut)', '')) : String(v);
+  }
   if (t.type === 'dates') return (v as string[]).length ? (v as string[]).map(jjmmaaaa).join(', ') : 'aucun';
   if (t.type === 'zone') return `${(v as { de: number }).de} à ${(v as { a: number }).a} %`;
   if (t.type === 'pourcentage') return `${v} %`;
+  // Budget atelier : heures et jours ouvrés (8 h), comme la maquette.
+  if (t.type === 'entier' && t.unite === 'h') return `${Number(v).toLocaleString('fr-FR')} h (${Number(v) / 8} jours ouvrés)`;
   if (t.type === 'entier' && t.unite) return `${Number(v).toLocaleString('fr-FR')} ${t.unite}`;
   return String(v);
 }

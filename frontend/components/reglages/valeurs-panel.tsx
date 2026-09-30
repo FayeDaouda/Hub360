@@ -153,7 +153,6 @@ export function ValeursPanel({
             <span className="reg-valeur-libelle">
               <strong>{r.libelle}</strong>
               <span className="cell-sub">En service : {afficher(r, r.enService)}</span>
-              {!r.appliquee && <span className="pill pill--neutre reg-pas-appliquee">pas encore appliquée par le HUB</span>}
             </span>
             <span className="reg-valeur-champ">
               {champ(r)}

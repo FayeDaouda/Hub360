@@ -31,7 +31,7 @@ export function JournalPanel({ slug, versionInitiale }: { slug: string; versionI
     <section className="panel glass-panel dmd-section reg-panel">
       <h2 className="dmd-titre">Journal des réglages</h2>
       <p className="dmd-note">
-        Historique complet des réglages (ISO 9001 §7.5.3). Chaque ligne alimentera aussi le registre des décisions, dans
+        Historique complet des réglages (ISO 9001 §7.5.3). Chaque ligne figure aussi au registre des décisions, dans
         Pilotage.
       </p>
       {erreur ? (
