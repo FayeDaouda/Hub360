@@ -7000,29 +7000,6 @@ textarea.field-input {
 .cycle-dossier-confirm-titre {
   font-size: 0.9rem;
 }
-.cycle-dossier-historique summary {
-  cursor: pointer;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-.cycle-dossier-historique ol {
-  list-style: none;
-  margin: 0.6rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  font-size: 0.84rem;
-}
-.cycle-dossier-historique li {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr;
-  gap: 0.6rem;
-}
-.cycle-dossier-date {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
 @media (max-width: 640px) {
   .cycle-dossier-actions > * {
     flex: 1 1 100%;
@@ -11526,5 +11503,260 @@ a.notif-item:hover {
   margin: 0.75rem 0 0;
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+/* ---------- CRM · fiche du dossier en panneau latéral (maquette du boss) ---------- */
+.fiche-crm-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: color-mix(in oklch, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.fiche-crm {
+  display: grid;
+  align-content: start;
+  gap: 1.4rem;
+  width: min(46rem, 100vw);
+  height: 100dvh;
+  overflow-y: auto;
+  padding: 1.6rem 1.75rem 2rem;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: -24px 0 60px color-mix(in oklch, var(--bg) 60%, transparent);
+  animation: fiche-crm-entree 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fiche-crm-entree {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fiche-crm {
+    animation: none;
+  }
+}
+.fiche-crm-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.fiche-crm-code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6rem;
+}
+.fiche-crm-client {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.fiche-crm-meta {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+}
+.fiche-crm-section {
+  display: grid;
+  gap: 0.7rem;
+}
+.fiche-crm-titre-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+.fiche-crm-titre {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fiche-crm-badge {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.fiche-crm-badge--ok {
+  border-color: transparent;
+  background: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+.fiche-crm-etapes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fiche-crm-etapes li {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.fiche-crm-etapes li::before {
+  content: '';
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.fiche-crm-etapes li.is-fait,
+.fiche-crm-etapes li.is-courant {
+  color: var(--text);
+}
+.fiche-crm-etapes li.is-fait::before {
+  background: var(--accent);
+}
+.fiche-crm-etapes li.is-courant::before {
+  background: var(--iris);
+}
+.fiche-crm-etapes.is-perdu li::before {
+  background: var(--border);
+}
+.fiche-crm-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.fiche-crm-alerte {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--ocre-tint);
+  color: var(--ocre-fonce);
+}
+.fiche-crm-champs {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.fiche-crm-champs > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.fiche-crm-champs > div:last-child {
+  border-bottom: none;
+}
+.fiche-crm-champs dt {
+  font-weight: 600;
+}
+.fiche-crm-champs dd {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+.fiche-crm-valeur {
+  font-weight: 700;
+}
+.fiche-crm-aide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.fiche-crm-carte {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.fiche-crm-apporteur {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 0.8rem 1rem;
+  margin: 0 0 0.4rem;
+}
+.fiche-crm-apporteur dt {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.fiche-crm-apporteur dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.fiche-crm-pourcent {
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+.fiche-crm-passation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.fiche-crm-carte--proprio {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--iris), color-mix(in oklch, var(--iris) 70%, var(--azur)));
+  color: #fff;
+}
+.fiche-crm-carte--proprio .fiche-crm-aide {
+  color: color-mix(in oklch, #fff 80%, transparent);
+}
+.fiche-crm-carte--proprio .field-input {
+  background: color-mix(in oklch, #000 18%, transparent);
+  color: #fff;
+}
+.fiche-crm-fleche {
+  color: var(--text-muted);
+}
+.fiche-crm-historique {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fiche-crm-historique li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 1rem;
+}
+.fiche-crm-historique time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fiche-crm-actions {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 640px) {
+  .fiche-crm {
+    padding: 1.1rem 1rem 1.5rem;
+  }
+  .fiche-crm-champs > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fiche-crm-passation {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fiche-crm-fleche {
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+  .fiche-crm-etapes li {
+    font-size: 0.72rem;
+  }
 }
 

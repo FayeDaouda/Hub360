@@ -10,7 +10,6 @@ import {
   raisonBlocage,
   type ActionCrm,
 } from '@/lib/cycle-crm';
-import { formatDateCourte } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { STATUTS_CRM, type Projet, type TransitionDossier } from '@/lib/types';
 
@@ -22,7 +21,7 @@ type Props = {
 };
 
 // Cycle commercial d'un dossier (étapes E-F) : statut, actions permises à ce
-// rôle, commentaire de la DAF en cas de renvoi, et journal. Toute action
+// rôle et commentaire de la DAF en cas de renvoi (le journal est dans la fiche). Toute action
 // passe par une confirmation qui dit ce qu'elle va provoquer — plusieurs
 // sont définitives (onboard crée le projet, perdu sort du pipeline).
 export function CycleDossier({ slug, projet, onAgir }: Props) {
@@ -175,29 +174,6 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
           </div>
         </div>
       )}
-
-      <details className="cycle-dossier-historique">
-        <summary>Historique{historique ? ` (${historique.length})` : ''}</summary>
-        {!historique ? (
-          <p className="field-aide">Chargement…</p>
-        ) : (
-          <ol>
-            {historique.map((t) => (
-              <li key={t.id}>
-                <span className="cycle-dossier-date">{formatDateCourte(t.le)}</span>
-                <span>
-                  {t.de ? `${STATUTS_CRM[t.de]} → ` : ''}
-                  <strong>{STATUTS_CRM[t.vers]}</strong>
-                  {/* Sans auteur : reprise de données (création) ou le client
-                      lui-même (refus via le lien de l'offre). */}
-                  {t.par ? ` · ${t.par.nom}` : t.de ? ' · le client' : ''}
-                  {t.commentaire && <span className="cell-sub">« {t.commentaire} »</span>}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </details>
     </section>
   );
 }
