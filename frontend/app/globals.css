@@ -12295,6 +12295,12 @@ a.notif-item:hover {
   color: var(--sauge);
   font-weight: 700;
 }
+:root[data-theme='dark'] .po-avance {
+  color: color-mix(in oklch, var(--sauge) 55%, white);
+}
+:root[data-theme='dark'] .po-retard {
+  color: color-mix(in oklch, var(--fuchsia) 60%, white);
+}
 
 /* Panneau de la tâche */
 .po-panneau {
