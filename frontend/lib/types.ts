@@ -1,3 +1,4 @@
+import type { FicheProgramme } from './fiche-programme';
 export type Societe = {
   id: string;
   nom: string;
@@ -121,51 +122,55 @@ export type Client = {
   telephone?: string;
 };
 
+// Type de projet (doc « Création de projet côté CRM » §3.3, oct. 2026).
 export type TypeBien =
   | 'villa'
-  | 'immeuble'
-  | 'lotissement'
-  | 'bureaux'
-  | 'commerce'
-  | 'mixte';
+  | 'immeuble_residentiel'
+  | 'immeuble_mixte'
+  | 'immeuble_bureaux'
+  | 'local_commercial'
+  | 'hotelier'
+  | 'equipement';
 
 export const TYPES_BIEN: Record<TypeBien, string> = {
   villa: 'Villa',
-  immeuble: 'Immeuble',
-  lotissement: 'Lotissement',
-  bureaux: 'Bureaux',
-  commerce: 'Commerce',
-  mixte: 'Mixte',
+  immeuble_residentiel: 'Immeuble résidentiel',
+  immeuble_mixte: 'Immeuble mixte',
+  immeuble_bureaux: 'Immeuble de bureaux',
+  local_commercial: 'Local commercial',
+  hotelier: 'Hôtelier',
+  equipement: 'Équipement',
 };
 
-// Catégorie d'un dossier / projet. Détermine les sections disponibles :
-// un projet « aménagement » n'a ni permis de construire ni étude
-// (voir SECTIONS_PAR_CATEGORIE plus bas).
-export type Categorie = 'conception' | 'amenagement';
+// Catégorie = type de mission confiée à Grey Concrete (doc §3.3), choisie
+// librement — indépendante de la nature de la mission (mandat / promotion).
+// Détermine les sections disponibles : « aménagement » n'a ni permis de
+// construire ni étude (voir SECTIONS_PAR_CATEGORIE plus bas). « Développement »
+// suit la conception (hypothèse de travail, oct. 2026, à confirmer).
+export type Categorie = 'conception' | 'developpement' | 'amenagement';
 
 export const CATEGORIES: Record<Categorie, string> = {
   conception: 'Conception',
+  developpement: 'Développement',
   amenagement: 'Aménagement',
 };
 
-// Libellés courts (l'en-tête de colonne / de champ porte déjà « Standing »,
-// « Gamme ») pour garder le tableau CRM lisible sans scroll horizontal.
-export type Standing = 'economique' | 'moyen' | 'haut' | 'grand';
+// Standing (ce que le bâtiment offre) et gamme (avec quoi on le finit) :
+// listes du doc « Création de projet côté CRM » §3.4 (oct. 2026).
+export type Standing = 'economique' | 'moyen' | 'grand';
 
 export const STANDINGS: Record<Standing, string> = {
-  economique: 'Économique',
-  moyen: 'Moyen',
-  haut: 'Haut',
-  grand: 'Grand',
+  economique: 'Économique · aucune commodité',
+  moyen: 'Moyen · quelques commodités',
+  grand: 'Grand · tout inclus',
 };
 
-export type Gamme = 'entree' | 'milieu' | 'premium' | 'luxe';
+export type Gamme = 'local' | 'importe' | 'sur_mesure_importe';
 
 export const GAMMES: Record<Gamme, string> = {
-  entree: 'Entrée',
-  milieu: 'Milieu',
-  premium: 'Premium',
-  luxe: 'Luxe',
+  local: 'Local',
+  importe: 'Importé',
+  sur_mesure_importe: 'Sur-mesure importé',
 };
 
 // Nature du dossier : Grey Concrete travaille en mandat pour un client
@@ -267,7 +272,8 @@ export type Projet = {
   client: Client;
   standing: Standing | null;
   gamme: Gamme | null;
-  programme: string; // "" = fiche Programme à remplir
+  programme: string; // résumé automatique de la Fiche Programme ; "" = à remplir
+  ficheProgramme: FicheProgramme | null; // null = pas encore commencée
   statut: StatutCrm;
   // Contenu de la fiche figé dès la soumission à la DAF (propriétaire excepté).
   verrouillee: boolean;
@@ -345,6 +351,8 @@ export type NouveauProjetPayload = {
 
 // Complétion de la fiche (« Caractéristiques du projet ») : un champ à la
 // fois ; une valeur se corrige, jamais ne s'efface.
+// Le programme (résumé) et, quand ils se calculent, les planches sont déduits
+// de la Fiche Programme par le serveur.
 export type ModifierFichePayload = Partial<{
   categorie: Categorie;
   type: TypeBien;
@@ -352,7 +360,7 @@ export type ModifierFichePayload = Partial<{
   nbPlanches: number;
   standing: Standing;
   gamme: Gamme;
-  programme: string;
+  ficheProgramme: FicheProgramme;
 }>;
 
 // --- Équipe : 6 cellules cross-fonctionnelles (Archi 1-4, Intérieur, Études) ---
@@ -616,6 +624,7 @@ export const PHASES: Record<Phase, string> = {
 
 export const PHASES_PAR_CATEGORIE: Record<Categorie, Phase[]> = {
   conception: ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'],
+  developpement: ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'],
   amenagement: ['avant_projet', 'chantier', 'livre'],
 };
 
@@ -720,6 +729,7 @@ export const SECTIONS_PROJET: {
 // boss, sept. 2026) : c'est le point de départ réel d'un dossier.
 export const SECTIONS_PAR_CATEGORIE: Record<Categorie, SectionProjet[]> = {
   conception: ['foncier', 'avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
+  developpement: ['foncier', 'avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
   amenagement: ['foncier', 'avant-projet', 'images', 'documents', 'execution'],
 };
 
@@ -1319,6 +1329,12 @@ export const ETAPES_PRE_BILAN: Record<
     { cle: 'aps', libelle: 'APS' },
     { cle: 'apd', libelle: 'APD' },
   ],
+  // Développement : comme la conception (hypothèse de travail, oct. 2026).
+  developpement: [
+    { cle: 'esq', libelle: 'ESQ' },
+    { cle: 'aps', libelle: 'APS' },
+    { cle: 'apd', libelle: 'APD' },
+  ],
   amenagement: [
     { cle: 'estimation', libelle: 'Estimation initiale' },
     { cle: 'definitif', libelle: 'Chiffrage définitif' },
@@ -1339,6 +1355,13 @@ export const LIGNES_PRE_BILAN: Record<
   { cle: LignePreBilan; libelle: string }[]
 > = {
   conception: [
+    { cle: 'charges_foncieres', libelle: 'Charges foncières' },
+    { cle: 'travaux', libelle: 'Travaux' },
+    { cle: 'honoraires', libelle: 'Honoraires' },
+    { cle: 'frais_divers', libelle: 'Frais divers' },
+    { cle: 'aleas', libelle: 'Aléas' },
+  ],
+  developpement: [
     { cle: 'charges_foncieres', libelle: 'Charges foncières' },
     { cle: 'travaux', libelle: 'Travaux' },
     { cle: 'honoraires', libelle: 'Honoraires' },

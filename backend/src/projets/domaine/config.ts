@@ -17,8 +17,11 @@ import {
 // SECTIONS_PAR_CATEGORIE, ETUDES_PAR_DEFAUT).
 // À garder synchronisées des deux côtés.
 
+// « Développement » suit la conception (hypothèse de travail, oct. 2026, à
+// confirmer) — ici comme pour le pré-bilan et les sections.
 export const PHASES_PAR_CATEGORIE: Record<Categorie, Phase[]> = {
   conception: ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'],
+  developpement: ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'],
   amenagement: ['avant_projet', 'chantier', 'livre'],
 };
 
@@ -34,11 +37,13 @@ export const LIBELLES_PHASE: Record<Phase, string> = {
 
 export const ETAPES_PRE_BILAN: Record<Categorie, EtapePreBilan[]> = {
   conception: ['esq', 'aps', 'apd'],
+  developpement: ['esq', 'aps', 'apd'],
   amenagement: ['estimation', 'definitif'],
 };
 
 export const LIGNES_PRE_BILAN: Record<Categorie, string[]> = {
   conception: ['charges_foncieres', 'travaux', 'honoraires', 'frais_divers', 'aleas'],
+  developpement: ['charges_foncieres', 'travaux', 'honoraires', 'frais_divers', 'aleas'],
   amenagement: [
     'fournitures_mobilier',
     'travaux_amenagement',
@@ -50,6 +55,7 @@ export const LIGNES_PRE_BILAN: Record<Categorie, string[]> = {
 
 export const SECTIONS_PAR_CATEGORIE: Record<Categorie, string[]> = {
   conception: ['avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
+  developpement: ['avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
   amenagement: ['avant-projet', 'images', 'documents', 'execution'],
 };
 

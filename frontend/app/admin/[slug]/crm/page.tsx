@@ -68,9 +68,8 @@ const PILL_SITUATION: Record<Situation, string> = {
 const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu', 'expiree', 'archive'];
 const LIBELLE_FILTRE: Partial<Record<Situation, string>> = { en_validation: 'En validation', archive: 'Archivés' };
 const aCompleter = (p: Projet) => !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
-const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', amenagement: 'pill--attention' };
-const pillCategorie = (p: Projet) =>
-  p.nature === 'promotion_interne' ? 'pill--info' : (p.categorie && PILL_CATEGORIE[p.categorie]) || 'pill--neutre';
+const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', developpement: 'pill--info', amenagement: 'pill--attention' };
+const pillCategorie = (p: Projet) => (p.categorie && PILL_CATEGORIE[p.categorie]) || 'pill--neutre';
 
 export default function CrmPage({ params }: Props) {
   useTitrePage('CRM · Registre des projets');

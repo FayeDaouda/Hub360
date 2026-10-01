@@ -27,6 +27,7 @@ import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
 import { motifFicheIncomplete } from './fiche';
 import { codeAvecVariante, genererCodeDossier } from './nomenclature';
+import { ErreurFicheProgramme, normaliserFiche, planchesCalculees, resume, type FicheProgramme } from './fiche-programme';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
@@ -307,12 +308,18 @@ export class CrmService {
     if (!ficheModifiable(dossier.statut)) {
       throw new ConflictException('Fiche verrouillée depuis la soumission de l’offre.');
     }
-    const programme = dto.programme?.trim();
-    if (dto.programme !== undefined && !programme) {
-      throw new BadRequestException('Le programme ne peut pas être vide.');
+    // Fiche Programme : programme (résumé) déduit ; planches déduites dès
+    // qu'elles se calculent, saisies sinon.
+    let fiche: FicheProgramme | undefined;
+    try {
+      fiche = dto.ficheProgramme ? normaliserFiche(dto.ficheProgramme) : undefined;
+    } catch (e) {
+      if (e instanceof ErreurFicheProgramme) throw new BadRequestException(e.message);
+      throw e;
     }
+    const planches = (fiche && planchesCalculees(fiche)) ?? dto.nbPlanches;
     const tarifChange =
-      (dto.nbPlanches !== undefined && dto.nbPlanches !== dossier.nbPlanches) ||
+      (planches !== undefined && planches !== dossier.nbPlanches) ||
       (dto.categorie !== undefined && dto.categorie !== dossier.categorie);
     if (tarifChange) {
       const brouillon = await this.prisma.devis.count({
@@ -330,10 +337,10 @@ export class CrmService {
         categorie: dto.categorie,
         type: dto.type,
         surfaceTerrain: dto.surfaceTerrain,
-        nbPlanches: dto.nbPlanches,
+        nbPlanches: planches,
         standing: dto.standing,
         gamme: dto.gamme,
-        programme,
+        ...(fiche && { ficheProgramme: fiche as unknown as Prisma.InputJsonValue, programme: resume(fiche) }),
       },
       include: INCLUDE_DOSSIER,
     });

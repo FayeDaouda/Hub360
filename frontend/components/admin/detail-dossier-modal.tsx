@@ -25,6 +25,7 @@ import { OffreDossierModal } from './offre-dossier-modal';
 import { LocaliteSelect } from './localite-select';
 import { CaracteristiquesProjet } from './caracteristiques-projet';
 import { FicheApporteurSection } from './fiche-apporteur-section';
+import { estPersonneMorale } from '@/lib/nomenclature';
 
 type Props = {
   slug: string;
@@ -223,7 +224,8 @@ export function DetailDossierModal({
             </h2>
             <p className="fiche-crm-client">{projet.client.nom}</p>
             <p className="fiche-crm-meta">
-              {TYPES_CLIENT[projet.client.type]} · {projet.localite?.nom ?? projet.localisation} · créé le {jjmmaaaa(projet.creeLe)}
+              {estPersonneMorale(projet.client.type) ? 'Personne morale' : 'Personne physique'} · {projet.localite?.nom ?? projet.localisation} · créé
+              le {jjmmaaaa(projet.creeLe)}
             </p>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>

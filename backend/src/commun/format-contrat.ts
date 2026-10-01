@@ -73,6 +73,8 @@ export function versDossierCrm(
     standing: d.standing,
     gamme: d.gamme,
     programme: d.programme,
+    // Fiche Programme dynamique (crm/fiche-programme.ts) ; null = pas commencée.
+    ficheProgramme: d.ficheProgramme,
     statut: d.statut,
     // Contenu figé dès la soumission à la DAF (propriétaire excepté).
     verrouillee: !ficheModifiable(d.statut),

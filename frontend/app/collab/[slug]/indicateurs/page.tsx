@@ -7,7 +7,8 @@ import {
   Briefcase,
   Building2,
   Home,
-  Map as MapIcon,
+  Hotel,
+  Landmark,
   Printer,
   Store,
   type LucideIcon,
@@ -38,11 +39,12 @@ type Props = { params: { slug: string } };
 // de portfolio. Aucune donnée nouvelle : projet.type existe déjà.
 const ICONE_BIEN: Record<TypeBien, LucideIcon> = {
   villa: Home,
-  immeuble: Building2,
-  lotissement: MapIcon,
-  bureaux: Briefcase,
-  commerce: Store,
-  mixte: Boxes,
+  immeuble_residentiel: Building2,
+  immeuble_mixte: Boxes,
+  immeuble_bureaux: Briefcase,
+  local_commercial: Store,
+  hotelier: Hotel,
+  equipement: Landmark,
 };
 
 const moisAnnee = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });

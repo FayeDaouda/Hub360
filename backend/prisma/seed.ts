@@ -15,6 +15,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { CHECKLISTS_AVANT_PROJET } from '../src/projets/domaine/config';
 import { codeAvecVariante, genererCodeDossier } from '../src/crm/nomenclature';
+import { FICHE_VIDE, planchesCalculees, resume, type FicheProgramme } from '../src/crm/fiche-programme';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
@@ -26,10 +27,12 @@ const prisma = new PrismaClient();
 // src/projets/domaine/config.ts et frontend/lib/types.ts.
 const ETAPES: Record<Categorie, EtapePreBilan[]> = {
   conception: ['esq', 'aps', 'apd'],
+  developpement: ['esq', 'aps', 'apd'],
   amenagement: ['estimation', 'definitif'],
 };
 const LIGNES: Record<Categorie, string[]> = {
   conception: ['charges_foncieres', 'travaux', 'honoraires', 'frais_divers', 'aleas'],
+  developpement: ['charges_foncieres', 'travaux', 'honoraires', 'frais_divers', 'aleas'],
   amenagement: [
     'fournitures_mobilier',
     'travaux_amenagement',
@@ -491,11 +494,16 @@ async function main() {
   // --- Clients ------------------------------------------------------
   const clients = await Promise.all(
     [
+      // Données fictives (oct. 2026) : personnes physiques puis morales — le
+      // segment CLIENT du code se tire du nom ou de la raison sociale.
       { nom: 'M. et Mme Diouf', type: 'particulier' as const, contact: 'Awa Diouf', telephone: '+221 77 123 45 67' },
       { nom: 'Cheikh Mbaye', type: 'particulier' as const, email: 'c.mbaye@example.sn' },
       { nom: 'Fatou Sarr', type: 'particulier' as const, telephone: '+221 78 456 78 90' },
-      { nom: 'SCI Ndiaye Frères', type: 'sci' as const, sigle: 'SNF', contact: 'Ibrahima Ndiaye', email: 'contact@ndiaye-freres.sn' },
-      { nom: 'Teranga Capital', type: 'entreprise' as const, sigle: 'TC', contact: 'Directrice immobilier', telephone: '+221 33 869 45 00' },
+      { nom: 'SCI Ndiaye Frères', type: 'sci' as const, contact: 'Ibrahima Ndiaye', email: 'contact@ndiaye-freres.sn' },
+      { nom: 'Teranga Capital SA', type: 'entreprise' as const, contact: 'Directrice immobilier', telephone: '+221 33 869 45 00' },
+      { nom: 'Awa Ba', type: 'particulier' as const, telephone: '+221 76 210 33 44' },
+      { nom: 'Résidences Atlantique SARL', type: 'entreprise' as const, contact: 'Moustapha Gaye', email: 'contact@residences-atlantique.sn' },
+      { nom: 'Grey Holding', type: 'entreprise' as const, contact: 'Direction générale' },
     ].map((c) => prisma.client.create({ data: { societeId: grey.id, ...c } })),
   );
   const cli = (i: number) => clients[i].id;
@@ -647,50 +655,116 @@ async function main() {
 
   // --- Dossiers CRM + projets ------------------------------------------
 
+  // Dossiers fictifs au format du doc « Création de projet côté CRM » (oct.
+  // 2026) : catégorie (dont Développement), types, standing, gamme, Fiche
+  // Programme dynamique (programme et planches en sont déduits), apporteur
+  // « affaire directe » (null) ou externe avec structure ; quelques leads
+  // incomplets, l'un d'eux en attente depuis plus de 72 h, et un archivé.
+  type Apporteur = { nom: string; structure?: string; telephone?: string; email?: string; commission?: number };
   type Cfg = {
+    nom: string; // libellé de démo (légendes, repérage dans le seed)
     nature: NatureDossier;
-    categorie: Categorie;
+    categorie: Categorie | null;
     statut: StatutCrm;
-    localisation: string;
     // Code de la localité du référentiel (importé par migration) — sert aussi
-    // au segment LOC du code dossier.
+    // au segment LOC du code dossier ; le libellé vient du référentiel.
     localiteCode: string;
-    // Apporteur tiers (démo) ; absent = apporteur interne (le créateur).
-    apporteurExterne?: { nom: string; telephone?: string; commission?: number };
+    localisation: string;
+    apporteur: Apporteur | null; // null = aucun apporteur (affaire directe)
     lat: number;
     lng: number;
-    programme: string;
-    type: TypeBien;
-    standing: Standing;
-    gamme: Gamme;
+    type: TypeBien | null;
+    surface: number; // 0 = à renseigner
+    standing: Standing | null;
+    gamme: Gamme | null;
+    fiche: Partial<FicheProgramme> | null; // null = Fiche Programme pas commencée
+    planchesSaisies?: number; // quand elles ne se calculent pas encore
     clientId: string;
+    creeIlYaJours?: number; // ancienneté (relance 72 h)
+    archive?: boolean;
     // si le dossier est validé :
     phase?: Phase;
     equipe?: string;
     avantProjetValide?: boolean;
   };
 
+  const NOTAIRE: Apporteur = { nom: 'Me Aliou Ndiaye', structure: 'Notaire', telephone: '+221 77 555 12 34', email: 'etude.ndiaye@example.sn', commission: 4 };
+  const villa = (o: Partial<FicheProgramme>): Partial<FicheProgramme> => ({ usage: 'residentiel', forme: 'villa', ...o });
+  const immeuble = (o: Partial<FicheProgramme>): Partial<FicheProgramme> => ({ forme: 'immeuble', ...o });
+
   const cfgs: Cfg[] = [
-    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'avant_projet',
-      localisation: 'Ngor, Dakar', localiteCode: 'NGO', lat: 14.7470, lng: -17.5140, programme: 'Villa Cap Vert', type: 'villa', standing: 'haut', gamme: 'premium', clientId: cli(0) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'permis', equipe: 'Cellule Archi 1', avantProjetValide: true,
-      localisation: 'Sacré-Cœur 3, Dakar', localiteCode: 'SAC', lat: 14.7050, lng: -17.4620, programme: 'Duplex Sacré-Cœur', type: 'villa', standing: 'moyen', gamme: 'milieu', clientId: cli(1) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'etudes', equipe: 'Cellule Archi 2', avantProjetValide: true,
-      localisation: 'Point E, Dakar', localiteCode: 'POI', lat: 14.6920, lng: -17.4600, programme: 'Résidence Point E', type: 'immeuble', standing: 'haut', gamme: 'premium', clientId: cli(2) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Archi 3', avantProjetValide: true,
-      localisation: 'Almadies, Dakar', localiteCode: 'ALM', apporteurExterne: { nom: 'Me Aliou Ndiaye (notaire)', telephone: '+221 77 555 12 34', commission: 4 }, lat: 14.7440, lng: -17.5230, programme: 'Villas Cap Ouest', type: 'villa', standing: 'grand', gamme: 'luxe', clientId: cli(3) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'livre', equipe: 'Cellule Archi 1', avantProjetValide: true,
-      localisation: 'Fann Résidence, Dakar', localiteCode: 'FPE', lat: 14.6870, lng: -17.4640, programme: 'Villa Fann', type: 'villa', standing: 'haut', gamme: 'premium', clientId: cli(0) },
-    { nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'avant_projet',
-      localisation: 'Point E, Dakar', localiteCode: 'POI', lat: 14.6935, lng: -17.4585, programme: 'Appartement Point E', type: 'bureaux', standing: 'moyen', gamme: 'milieu', clientId: cli(2) },
-    { nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Intérieur', avantProjetValide: true,
-      localisation: 'Almadies, Dakar', localiteCode: 'ALM', lat: 14.7460, lng: -17.5195, programme: 'Bureaux Almadies Business', type: 'bureaux', standing: 'grand', gamme: 'luxe', clientId: cli(4) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'nouveau_projet',
-      localisation: 'Yoff, Dakar', localiteCode: 'YOF', lat: 14.7530, lng: -17.4890, programme: 'Villa Yoff', type: 'villa', standing: 'moyen', gamme: 'milieu', clientId: cli(1) },
-    { nature: 'mandat_client', categorie: 'conception', statut: 'offre_envoyee',
-      localisation: 'Ouakam, Dakar', localiteCode: 'OUA', apporteurExterne: { nom: 'Khady Seck' }, lat: 14.7230, lng: -17.4980, programme: 'Résidence Ouakam', type: 'immeuble', standing: 'haut', gamme: 'premium', clientId: cli(3) },
-    { nature: 'mandat_client', categorie: 'amenagement', statut: 'perdu',
-      localisation: 'VDN, Dakar', localiteCode: 'VDN', lat: 14.7280, lng: -17.4600, programme: 'Showroom VDN', type: 'commerce', standing: 'moyen', gamme: 'milieu', clientId: cli(4) },
+    { nom: 'Villa Cap Vert', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'avant_projet',
+      localiteCode: 'NGO', localisation: 'Ngor, Dakar', lat: 14.747, lng: -17.514, apporteur: null, clientId: cli(0),
+      type: 'villa', surface: 400, standing: 'moyen', gamme: 'local',
+      fiche: villa({ gabarit: 1, typologieVilla: 'F5', suiteParentale: true, annexes: ['bureau', 'buanderie'],
+        commodites: ['parking_exterieur', 'portail_motorise', 'videosurveillance', 'interphone', 'groupe_electrogene', 'bache_surpresseur', 'pre_climatisation', 'fibre'] }) },
+    { nom: 'Duplex Sacré-Cœur', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'permis', equipe: 'Cellule Archi 1', avantProjetValide: true,
+      localiteCode: 'SAC', localisation: 'Sacré-Cœur 3, Dakar', lat: 14.705, lng: -17.462, apporteur: { nom: 'Khady Seck', structure: 'Partenaire', telephone: '+221 70 412 18 80', commission: 3 }, clientId: cli(1),
+      type: 'villa', surface: 300, standing: 'grand', gamme: 'importe',
+      fiche: villa({ gabarit: 2, toitureTerrasse: true, typologieVilla: 'F6', suiteParentale: true, annexes: ['chambre_service', 'buanderie'],
+        commodites: ['garage_box', 'portail_motorise', 'videosurveillance', 'detection_incendie', 'groupe_electrogene', 'panneaux_solaires', 'climatisation_centralisee', 'fibre', 'domotique', 'piscine', 'jardin'] }) },
+    { nom: 'Résidence Point E', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'etudes', equipe: 'Cellule Archi 2', avantProjetValide: true,
+      localiteCode: 'POI', localisation: 'Point E, Dakar', lat: 14.692, lng: -17.46, apporteur: null, clientId: cli(2),
+      type: 'immeuble_residentiel', surface: 600, standing: 'moyen', gamme: 'local',
+      fiche: immeuble({ usage: 'residentiel', gabarit: 4, sousSols: 1, composition: [
+        { de: -1, a: -1, usage: 'parking', typologie: '', nb: 1 },
+        { de: 0, a: 0, usage: 'commerce', typologie: '', nb: 2 },
+        { de: 1, a: 4, usage: 'logements', typologie: 'F3', nb: 4 },
+      ], commodites: ['parking_sous_sol', 'ascenseur', 'interphone', 'detection_incendie', 'groupe_electrogene', 'bache_surpresseur', 'local_poubelles', 'local_technique'] }) },
+    { nom: 'Villas Cap Ouest', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Archi 3', avantProjetValide: true,
+      localiteCode: 'ALM', localisation: 'Almadies, Dakar', lat: 14.744, lng: -17.523, apporteur: NOTAIRE, clientId: cli(3),
+      type: 'villa', surface: 1000, standing: 'grand', gamme: 'sur_mesure_importe',
+      fiche: villa({ gabarit: 1, sousSols: 1, typologieVilla: 'F7+', suiteParentale: true, annexes: ['bureau', 'chambre_service', 'buanderie', 'dependance'],
+        commodites: ['garage_box', 'bornes_recharge', 'portail_motorise', 'gardiennage', 'guerite', 'videosurveillance', 'cloture', 'groupe_electrogene', 'panneaux_solaires', 'forage', 'climatisation_centralisee', 'domotique', 'piscine', 'salle_sport', 'spa', 'jardin'] }) },
+    { nom: 'Villa Fann', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'livre', equipe: 'Cellule Archi 1', avantProjetValide: true,
+      localiteCode: 'FPE', localisation: 'Fann Résidence, Dakar', lat: 14.687, lng: -17.464, apporteur: null, clientId: cli(0),
+      type: 'villa', surface: 250, standing: 'economique', gamme: 'local',
+      fiche: villa({ gabarit: 0, typologieVilla: 'F4' }) },
+    { nom: 'Les Terrasses de Ouakam', nature: 'promotion_interne', categorie: 'developpement', statut: 'onboard', phase: 'avant_projet', equipe: 'Cellule Archi 4',
+      localiteCode: 'OUA', localisation: 'Ouakam, Dakar', lat: 14.723, lng: -17.498, apporteur: null, clientId: cli(7),
+      type: 'immeuble_mixte', surface: 1500, standing: 'grand', gamme: 'importe',
+      fiche: immeuble({ usage: 'mixte', gabarit: 6, sousSols: 2, toitureTerrasse: true, composition: [
+        { de: -2, a: -1, usage: 'parking', typologie: '', nb: 1 },
+        { de: 0, a: 0, usage: 'commerce', typologie: '', nb: 3 },
+        { de: 1, a: 1, usage: 'bureaux', typologie: '', nb: 2 },
+        { de: 2, a: 5, usage: 'logements', typologie: 'F3', nb: 2 },
+        { de: 6, a: 6, usage: 'logements', typologie: 'F5', nb: 1 },
+      ], commodites: ['parking_sous_sol', 'acces_badge', 'ascenseur', 'monte_charge', 'escalier_secours', 'gardiennage', 'videosurveillance', 'detection_incendie', 'groupe_electrogene', 'panneaux_solaires', 'bache_surpresseur', 'fibre', 'rooftop', 'hall_accueil', 'local_poubelles', 'local_technique'] }) },
+    { nom: 'Bureaux Almadies Business', nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Intérieur', avantProjetValide: true,
+      localiteCode: 'ALM', localisation: 'Almadies, Dakar', lat: 14.746, lng: -17.5195, apporteur: null, clientId: cli(4),
+      type: 'immeuble_bureaux', surface: 800, standing: 'moyen', gamme: 'importe',
+      fiche: immeuble({ usage: 'commercial', gabarit: 3, composition: [
+        { de: 0, a: 0, usage: 'commerce', typologie: '', nb: 1 },
+        { de: 1, a: 3, usage: 'bureaux', typologie: '', nb: 4 },
+      ], commodites: ['parking_exterieur', 'ascenseur', 'acces_badge', 'videosurveillance', 'detection_incendie', 'climatisation_centralisee', 'fibre', 'hall_accueil'] }) },
+    // Leads en cours de qualification (« Nouveau projet ») :
+    { nom: 'Lead Yoff (3/10)', nature: 'mandat_client', categorie: null, statut: 'nouveau_projet', creeIlYaJours: 4,
+      localiteCode: 'YOF', localisation: 'Yoff, Dakar', lat: 14.753, lng: -17.489, apporteur: null, clientId: cli(5),
+      type: null, surface: 0, standing: null, gamme: null, fiche: null },
+    { nom: 'Résidence VDN (en cours)', nature: 'mandat_client', categorie: 'conception', statut: 'nouveau_projet', creeIlYaJours: 1,
+      localiteCode: 'VDN', localisation: 'VDN, Dakar', lat: 14.728, lng: -17.46, apporteur: NOTAIRE, clientId: cli(6),
+      type: 'immeuble_residentiel', surface: 2000, standing: 'moyen', gamme: null,
+      fiche: immeuble({ usage: 'residentiel', gabarit: 8, sousSols: 1, composition: [
+        { de: 0, a: 0, usage: 'commerce', typologie: '', nb: 4 },
+      ] }) },
+    { nom: 'Villa Ngor (complète)', nature: 'mandat_client', categorie: 'conception', statut: 'nouveau_projet',
+      localiteCode: 'NGO', localisation: 'Ngor, Dakar', lat: 14.749, lng: -17.512, apporteur: null, clientId: cli(2),
+      type: 'villa', surface: 500, standing: 'moyen', gamme: 'local',
+      fiche: villa({ gabarit: 1, typologieVilla: 'F5', annexes: ['buanderie'], commodites: ['parking_exterieur', 'portail_motorise', 'interphone', 'bache_surpresseur', 'chauffe_eau_solaire', 'pre_climatisation'] }) },
+    { nom: 'Résidence Ouakam', nature: 'mandat_client', categorie: 'conception', statut: 'offre_envoyee',
+      localiteCode: 'OUA', localisation: 'Ouakam, Dakar', lat: 14.724, lng: -17.497, apporteur: { nom: 'Khady Seck', structure: 'Partenaire', commission: 3 }, clientId: cli(3),
+      type: 'immeuble_residentiel', surface: 1000, standing: 'grand', gamme: 'importe',
+      fiche: immeuble({ usage: 'residentiel', gabarit: 5, composition: [
+        { de: 0, a: 0, usage: 'logements', typologie: 'F3', nb: 2 },
+        { de: 1, a: 5, usage: 'logements', typologie: 'F4', nb: 3 },
+      ], commodites: ['parking_exterieur', 'ascenseur', 'gardiennage', 'videosurveillance', 'groupe_electrogene', 'piscine', 'jardin'] }) },
+    { nom: 'Showroom VDN', nature: 'mandat_client', categorie: 'amenagement', statut: 'perdu',
+      localiteCode: 'VDN', localisation: 'VDN, Dakar', lat: 14.729, lng: -17.4595, apporteur: null, clientId: cli(4),
+      type: 'local_commercial', surface: 300, standing: 'moyen', gamme: 'importe',
+      fiche: immeuble({ usage: 'commercial', gabarit: 0, composition: [{ de: 0, a: 0, usage: 'commerce', typologie: '', nb: 1 }] }) },
+    { nom: 'Lead Sacré-Cœur (archivé)', nature: 'mandat_client', categorie: null, statut: 'nouveau_projet', creeIlYaJours: 9, archive: true,
+      localiteCode: 'SAC', localisation: 'Sacré-Cœur 3, Dakar', lat: 14.706, lng: -17.461, apporteur: null, clientId: cli(5),
+      type: null, surface: 0, standing: null, gamme: null, fiche: null },
   ];
 
   const localiteParCode = new Map(
@@ -710,7 +784,13 @@ async function main() {
     return code;
   };
 
+  const dossierParNom = new Map<string, string>(); // libellé de démo → id du dossier
   for (const cfg of cfgs) {
+    // Fiche Programme : programme (résumé) et planches déduits comme le fait
+    // CrmService.modifierFiche.
+    const fiche: FicheProgramme | null = cfg.fiche ? { ...FICHE_VIDE, ...cfg.fiche } : null;
+    const creeLe = new Date(Date.now() - (cfg.creeIlYaJours ?? 30) * 86_400_000);
+    const ap = cfg.apporteur;
     const dossier = await prisma.dossierCrm.create({
       data: {
         societeId: grey.id,
@@ -722,29 +802,36 @@ async function main() {
         type: cfg.type,
         latitude: cfg.lat,
         longitude: cfg.lng,
-        nbPlanches: cfg.categorie === 'conception' ? 3 : 0,
-        surfaceTerrain: cfg.categorie === 'conception' ? 350 : 600,
+        nbPlanches: (fiche && planchesCalculees(fiche)) ?? cfg.planchesSaisies ?? 0,
+        surfaceTerrain: cfg.surface,
         standing: cfg.standing,
         gamme: cfg.gamme,
-        programme: cfg.programme,
+        ficheProgramme: fiche ?? undefined,
+        programme: fiche ? resume(fiche) : '',
         statut: cfg.statut,
         clientId: cfg.clientId,
-        // « Qui » (étape C1) : saisis par le compte admin, suivis par le
-        // Dir. GC de test (seul titulaire du rôle → propriétaire d'office).
+        createdAt: creeLe,
+        // « Qui » : saisis par le compte admin, suivis par le Dir. GC de test
+        // (seul titulaire du rôle → propriétaire d'office).
         creeParId: boss.id,
-        apporteurType: cfg.apporteurExterne ? 'externe' : 'interne',
-        apporteurUtilisateurId: cfg.apporteurExterne ? null : boss.id,
-        apporteurNom: cfg.apporteurExterne?.nom ?? null,
-        apporteurTelephone: cfg.apporteurExterne?.telephone ?? null,
-        commissionApporteur: cfg.apporteurExterne?.commission ?? null,
+        // Fiche apporteur (maquette « Nouveau projet ») : null = affaire directe.
+        apporteurType: ap ? 'externe' : null,
+        apporteurNom: ap?.nom ?? null,
+        apporteurStructure: ap?.structure ?? null,
+        apporteurTelephone: ap?.telephone ?? null,
+        apporteurEmail: ap?.email ?? null,
+        commissionApporteur: ap?.commission ?? null,
         proprietaireId: dirGc.id,
+        ...(cfg.archive && { archiveLe: new Date(creeLe.getTime() + 2 * 86_400_000), archiveParId: dirGc.id }),
       },
     });
 
     // Journal du cycle (étape E) : le chemin réellement parcouru jusqu'au
     // statut de démo — saisi par l'admin, validé par la CFO de test.
+    dossierParNom.set(cfg.nom, dossier.id);
+    const apporteurResume = ap ? (ap.structure ? `${ap.nom} (${ap.structure})` : ap.nom) : 'affaire directe';
     const chemin: { de: StatutCrm | null; vers: StatutCrm; par: string; commentaire?: string }[] = [
-      { de: null, vers: 'nouveau_projet', par: boss.id },
+      { de: null, vers: 'nouveau_projet', par: boss.id, commentaire: `Fiche apporteur : ${apporteurResume}, validée et verrouillée` },
     ];
     if (['offre_envoyee', 'onboard'].includes(cfg.statut)) {
       chemin.push(
@@ -773,7 +860,7 @@ async function main() {
       })),
     });
 
-    if (cfg.statut !== 'onboard') continue;
+    if (cfg.statut !== 'onboard' || !cfg.categorie || !cfg.type) continue;
 
     const phase = cfg.phase ?? 'avant_projet';
     const statut: StatutProjet = cfg.equipe
@@ -856,7 +943,7 @@ async function main() {
     const phasesChantierEtPlus: Phase[] = ['chantier', 'livre'];
 
     // Permis — conception uniquement, dès la phase « permis ».
-    if (cfg.categorie === 'conception' && phasesPermisEtPlus.includes(phase)) {
+    if (cfg.categorie !== 'amenagement' && phasesPermisEtPlus.includes(phase)) {
       const permisEnMain = phasesEtudesEtPlus.includes(phase);
       await prisma.permis.create({
         data: {
@@ -873,7 +960,7 @@ async function main() {
     }
 
     // Études — conception uniquement, dès la phase « études ».
-    if (cfg.categorie === 'conception' && phasesEtudesEtPlus.includes(phase)) {
+    if (cfg.categorie !== 'amenagement' && phasesEtudesEtPlus.includes(phase)) {
       const enCours = phase === 'etudes'; // toutes les études pas encore bouclées
       const idGeotechnique = blocEtudeGabaritIdParCle.get('geotechnique');
       const idTopographie = blocEtudeGabaritIdParCle.get('topographie');
@@ -970,7 +1057,7 @@ async function main() {
             typeMime: 'image/svg+xml',
             usage: phase === 'livre' ? 'portfolio' : 'travail',
             phase: phase === 'livre' ? 'livre' : 'chantier',
-            legende: phase === 'livre' ? `${cfg.programme} — façade principale` : '',
+            legende: phase === 'livre' ? `${cfg.nom} — façade principale` : '',
             ordre: 0,
             ajouteParId: boss.id,
             ajouteLe: new Date('2026-09-13'),
@@ -983,10 +1070,11 @@ async function main() {
   // --- Notifications de démo pour Rokhaya (compte collaborateur actif) ------
   // Les alertes d'échéance sont dérivées à la lecture (pas stockées) ; ici on
   // ne pose que les événements discrets.
-  const [pAssigne, pPhase] = await Promise.all([
-    prisma.projet.findFirst({ where: { societeId: grey.id, programme: 'Résidence Point E' } }),
-    prisma.projet.findFirst({ where: { societeId: grey.id, programme: 'Duplex Sacré-Cœur' } }),
-  ]);
+  const [pAssigne, pPhase] = await Promise.all(
+    ['Résidence Point E', 'Duplex Sacré-Cœur'].map((nom) =>
+      prisma.projet.findFirst({ where: { societeId: grey.id, dossierCrmId: dossierParNom.get(nom) } }),
+    ),
+  );
   if (pAssigne && pPhase) {
     await prisma.notification.createMany({
       data: [
@@ -995,7 +1083,7 @@ async function main() {
           societeId: grey.id,
           type: 'projet_assigne',
           projetId: pAssigne.id,
-          titre: `${pAssigne.programme} · assigné à ta cellule`,
+          titre: `${pAssigne.code} · assigné à ta cellule`,
           parId: boss.id,
           createdAt: new Date('2026-09-05T09:12:00'),
         },
@@ -1004,7 +1092,7 @@ async function main() {
           societeId: grey.id,
           type: 'phase_changee',
           projetId: pPhase.id,
-          titre: `${pPhase.programme} · passe en phase Permis`,
+          titre: `${pPhase.code} · passe en phase Permis`,
           parId: boss.id,
           luLe: new Date('2026-09-04T18:00:00'),
           createdAt: new Date('2026-09-04T15:40:00'),

@@ -13012,3 +13012,191 @@ a.notif-item:hover {
     background: color-mix(in oklch, var(--text-muted) 45%, transparent);
   }
 }
+
+/* ---------- CRM · Fiche Programme dynamique (doc « Création de projet côté CRM » §3.4) ---------- */
+.fp-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+.fp-grille3 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+.fp-grille-typo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 1rem;
+}
+.fp-cases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.fp-cases--ligne {
+  display: flex;
+  flex-wrap: wrap;
+}
+.fp-case {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.9rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 6%, transparent);
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+}
+.fp-case input {
+  flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.fp-case--seule {
+  border-color: transparent;
+  background: transparent;
+}
+.fp-compo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1.3fr) minmax(0, 0.8fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+.fp-compo-tete {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fp-retirer,
+.fp-ajouter,
+.fp-bouton {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.fp-retirer {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+}
+.fp-ajouter {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.55rem 1rem;
+  border-style: dashed;
+  font-weight: 700;
+}
+.fp-totaux {
+  margin: 0.5rem 0 0;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 8%, transparent);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.fp-alerte {
+  margin: 0.5rem 0 0;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ocre) 14%, transparent);
+  color: var(--ocre-fonce);
+  font-weight: 700;
+}
+:root[data-theme='dark'] .fp-alerte {
+  color: var(--ocre);
+}
+.fp-commodites-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-top: 0.4rem;
+}
+.fp-commodites-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.fp-bouton {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.fp-bouton--accent {
+  border-color: var(--fuchsia);
+}
+.fp-bouton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fp-groupe {
+  display: grid;
+  gap: 0.5rem;
+}
+.fp-groupe-titre {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.fp-separateur {
+  margin: 0.4rem 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.fp-ok {
+  color: var(--sauge);
+  font-size: 0.85rem;
+}
+:root[data-theme='dark'] .fp-ok {
+  color: color-mix(in oklch, var(--sauge) 55%, white);
+}
+.fp-resume {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--iris), color-mix(in oklch, var(--iris) 60%, var(--azur)));
+  color: #fff;
+}
+.fp-resume-titre {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+@media (max-width: 640px) {
+  .fp-grille3,
+  .fp-grille-typo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fp-cases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fp-compo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .fp-compo-tete {
+    display: none;
+  }
+}

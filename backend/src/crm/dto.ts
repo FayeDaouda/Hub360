@@ -5,8 +5,10 @@ import {
   IsIn,
   IsInt,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
   MinLength,
@@ -111,12 +113,15 @@ export class ActionDossierDto {
 // Complétion de la fiche d'un lead (« Caractéristiques du projet ») : champ
 // par champ, en « Nouveau projet ». Une valeur se corrige, jamais ne s'efface
 // — une fiche complète le reste. Client et localité (le code) n'y sont pas.
+// Le programme (résumé) se déduit de la Fiche Programme, jamais saisi ; les
+// planches aussi dès qu'elles se calculent (crm/fiche-programme.ts).
 export class ModifierFicheDto {
   @IsOptional() @IsEnum(Categorie) categorie?: Categorie;
   @IsOptional() @IsEnum(TypeBien) type?: TypeBien;
   @IsOptional() @IsInt() @Min(1) surfaceTerrain?: number;
-  @IsOptional() @IsInt() @Min(1) nbPlanches?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(99) nbPlanches?: number;
   @IsOptional() @IsEnum(Standing) standing?: Standing;
   @IsOptional() @IsEnum(Gamme) gamme?: Gamme;
-  @IsOptional() @IsString() @MinLength(1) @MaxLength(200) programme?: string;
+  // Validée et nettoyée par normaliserFiche (valeurs connues seulement).
+  @IsOptional() @IsObject() ficheProgramme?: Record<string, unknown>;
 }
