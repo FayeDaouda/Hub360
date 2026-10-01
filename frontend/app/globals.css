@@ -12198,8 +12198,95 @@ a.notif-item:hover {
 .po-tache-echeance {
   font-variant-numeric: tabular-nums;
 }
-.po-tache .po-pastille {
-  justify-self: end;
+.po-tache-etat {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+}
+.po-tache-fil {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+.po-fil-bouton {
+  justify-self: start;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.po-fil-bouton:hover,
+.po-fil-bouton.is-actif {
+  border-color: var(--fuchsia);
+}
+.po-fil {
+  gap: 0.5rem;
+}
+.po-fil-liste {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-fil-liste > li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.po-fil-liste > li.is-ouvert {
+  border-color: color-mix(in oklch, var(--ocre) 55%, var(--border));
+}
+.po-fil-message p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.po-fil-message p:last-child {
+  font-size: 0.92rem;
+}
+.po-fil-mention {
+  color: var(--iris);
+  font-weight: 700;
+}
+.po-fil-reponse {
+  margin-left: 0.75rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid var(--border);
+}
+.po-fil-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.po-lien {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fuchsia);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.po-fil-texte {
+  width: 100%;
+  resize: vertical;
+}
+.po-fil-envoi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
 }
 .po-retard {
   color: var(--fuchsia);
@@ -12336,9 +12423,9 @@ a.notif-item:hover {
   .po-tache-libelle {
     grid-column: 1 / -1;
   }
-  .po-tache .po-pastille {
+  .po-tache-etat {
     grid-column: 1 / -1;
-    justify-self: start;
+    justify-items: start;
   }
   .po-carte-droite {
     justify-items: start;

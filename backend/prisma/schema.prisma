@@ -124,6 +124,8 @@ model Utilisateur {
   dossiersArchives                   DossierCrm[]              @relation("DossierArchivePar")
   tachesProjetValidees               TacheProjet[]             @relation("TacheProjetValideePar")
   evenementsTachesProjet             EvenementTacheProjet[]    @relation("EvenementTacheProjetPar")
+  commentairesProjet                 CommentaireProjet[]       @relation("CommentaireProjetAuteur")
+  mentionsProjet                     CommentaireProjet[]       @relation("CommentaireProjetMentionne")
   transitionsDossier                 DossierCrmTransition[]    @relation("TransitionDossierPar")
   remuneration                       Remuneration?
 
@@ -207,6 +209,7 @@ enum NotificationType {
   tache_remise
   tache_validee
   tache_renvoyee
+  mention_projet // @mention dans un fil de discussion de projet (maquette « Projets »)
 }
 
 model Notification {
@@ -761,6 +764,7 @@ model Projet {
   gabaritVersion           GabaritVersion?           @relation(fields: [gabaritVersionId], references: [id])
   cartes                   CarteProjet[]
   taches                   TacheProjet[]
+  commentaires             CommentaireProjet[]
 
   @@map("projets")
 }
@@ -2326,6 +2330,35 @@ model EvenementTacheProjet {
   @@map("evenements_tache_projet")
 }
 
+// Fil de discussion d'un projet ouvert (maquette « Projets ») : par carte
+// (tacheId null) ou par tâche. Une @mention notifie la personne ; le
+// commentaire reste ouvert jusqu'à une réponse ou sa résolution par l'auteur.
+// Un seul niveau de réponse.
+model CommentaireProjet {
+  id          String    @id @default(uuid())
+  projetId    String    @map("projet_id")
+  carteId     String    @map("carte_id")
+  tacheId     String?   @map("tache_id")
+  parentId    String?   @map("parent_id") // réponse à ce commentaire
+  auteurId    String?   @map("auteur_id")
+  mentionneId String?   @map("mentionne_id")
+  texte       String
+  resoluLe    DateTime? @map("resolu_le")
+  creeLe      DateTime  @default(now()) @map("cree_le")
+
+  projet    Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  carte     CarteProjet         @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  tache     TacheProjet?        @relation(fields: [tacheId], references: [id], onDelete: Cascade)
+  parent    CommentaireProjet?  @relation("ReponsesCommentaire", fields: [parentId], references: [id], onDelete: Cascade)
+  reponses  CommentaireProjet[] @relation("ReponsesCommentaire")
+  auteur    Utilisateur?        @relation("CommentaireProjetAuteur", fields: [auteurId], references: [id], onDelete: SetNull)
+  mentionne Utilisateur?        @relation("CommentaireProjetMentionne", fields: [mentionneId], references: [id], onDelete: SetNull)
+
+  @@index([carteId, creeLe])
+  @@index([tacheId, creeLe])
+  @@map("commentaires_projet")
+}
+
 // Gabarit recopié dans un projet à son ouverture (maquette « Projets » du
 // boss) : étapes → cartes → tâches, fenêtres en jours ouvrés depuis J1 et
 // dates calendaires figées (jours fériés déduits). Une version du gabarit
@@ -2353,8 +2386,9 @@ model CarteProjet {
   desactivation String?
   ouvreApres    String[] @default([]) @map("ouvre_apres") // « carte.tâche »
 
-  projet Projet        @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  taches TacheProjet[]
+  projet       Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  taches       TacheProjet[]
+  commentaires CommentaireProjet[]
 
   @@unique([projetId, cle])
   @@map("cartes_projet")
@@ -2390,11 +2424,12 @@ model TacheProjet {
   valideeLe    DateTime?         @map("validee_le")
   valideeParId String?           @map("validee_par_id")
 
-  projet     Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  carte      CarteProjet            @relation(fields: [carteId], references: [id], onDelete: Cascade)
-  assigne    Collaborateur?         @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
-  valideePar Utilisateur?           @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
-  evenements EvenementTacheProjet[]
+  projet       Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  carte        CarteProjet            @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  assigne      Collaborateur?         @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
+  valideePar   Utilisateur?           @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
+  evenements   EvenementTacheProjet[]
+  commentaires CommentaireProjet[]
 
   @@unique([carteId, cle])
   @@index([projetId])

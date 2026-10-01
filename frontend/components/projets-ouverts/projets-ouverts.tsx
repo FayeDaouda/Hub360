@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { MessageCircle } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import {
   getAssignables,
   getDossierProjet,
+  getMentionnables,
   getTableauProjets,
   heuresTache,
   jjmm,
@@ -21,6 +24,10 @@ import {
   type TableauProjets,
 } from '@/lib/projets-ouverts';
 import { TachePanneau } from './tache-panneau';
+import { CartePanneau } from './carte-panneau';
+
+// Panneau de droite : une tâche, ou le fil d'une carte.
+type Selection = { type: 'tache' | 'carte'; id: string } | null;
 
 const HEURES_PAR_JOUR = 8;
 
@@ -30,13 +37,16 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const session = useSessionCourante();
   const [tableau, setTableau] = useState<TableauProjets | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [projetId, setProjetId] = useState<string | null>(null);
+  // ?projet= : lien d'une notification (mention dans un fil).
+  const projetDemande = useSearchParams().get('projet');
+  const [projetId, setProjetId] = useState<string | null>(projetDemande);
   const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
   const [etape, setEtape] = useState(1);
-  const [tacheId, setTacheId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection>(null);
   // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
   const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
   const [assignables, setAssignables] = useState<Assignable[] | null>(null);
+  const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
 
   useTitrePage(`Projets · gabarit ${tableau?.gabarit ?? 'GC-CONCEPTION'}`);
 
@@ -54,6 +64,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     getAssignables(slug)
       .then(setAssignables)
       .catch(() => setAssignables(null));
+    getMentionnables(slug)
+      .then(setMentionnables)
+      .catch(() => setMentionnables(null));
   }, [slug, peutAssigner]);
 
   // Après une écriture : le dossier relu, la tâche choisie gardée.
@@ -65,7 +78,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     if (!projetId) return;
     let annule = false;
     setDossier(null);
-    setTacheId(null);
+    setSelection(null);
     getDossierProjet(slug, projetId)
       .then((d) => !annule && setDossier(d))
       .catch((e) => !annule && setErreur(e instanceof Error ? e.message : 'Lecture impossible.'));
@@ -164,9 +177,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                 dossier={dossier}
                 etape={etape}
                 onEtape={setEtape}
-                tacheId={tacheId}
-                onTache={setTacheId}
+                selection={selection}
+                onSelection={setSelection}
                 assignables={peutAssigner ? assignables : null}
+                moiId={session.utilisateur.id}
+                mentionnables={peutAssigner ? mentionnables : null}
                 onMaj={recharger}
               />
             )}
@@ -192,15 +207,19 @@ type PropsDossier = {
   dossier: DossierProjetOuvert;
   etape: number;
   onEtape: (n: number) => void;
-  tacheId: string | null;
-  onTache: (id: string | null) => void;
+  selection: Selection;
+  onSelection: (s: Selection) => void;
   assignables: Assignable[] | null;
+  moiId: string;
+  mentionnables: { id: string; nom: string }[] | null;
   onMaj: () => Promise<void>;
 };
 
-function Dossier({ slug, dossier: d, etape, onEtape, tacheId, onTache, assignables, onMaj }: PropsDossier) {
+function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, assignables, moiId, mentionnables, onMaj }: PropsDossier) {
   const cartes = d.cartes.filter((c) => c.etapeNumero === etape);
+  const tacheId = selection?.type === 'tache' ? selection.id : null;
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
+  const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
   const factures = pastillesFactures(d);
 
   return (
@@ -248,7 +267,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, tacheId, onTache, assignabl
               className={`po-etape${e.numero === etape ? ' is-actif' : ''}`}
               onClick={() => {
                 onEtape(e.numero);
-                onTache(null);
+                onSelection(null);
               }}
             >
               <span className="po-etape-tete">
@@ -267,7 +286,14 @@ function Dossier({ slug, dossier: d, etape, onEtape, tacheId, onTache, assignabl
       <div className="po-corps">
         <div className="po-cartes">
           {cartes.map((c) => (
-            <Carte key={c.id} carte={c} tacheId={tacheId} onTache={onTache} />
+            <Carte
+              key={c.id}
+              carte={c}
+              tacheId={tacheId}
+              filActif={carteFil?.id === c.id}
+              onTache={(id) => onSelection({ type: 'tache', id })}
+              onFil={() => onSelection({ type: 'carte', id: c.id })}
+            />
           ))}
         </div>
         {choisie ? (
@@ -278,17 +304,31 @@ function Dossier({ slug, dossier: d, etape, onEtape, tacheId, onTache, assignabl
             carte={choisie.carte}
             tache={choisie.tache}
             assignables={assignables}
+            moiId={moiId}
+            mentionnables={mentionnables}
             onMaj={onMaj}
           />
+        ) : carteFil ? (
+          <CartePanneau slug={slug} projetId={d.id} carte={carteFil} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
         ) : (
-          <p className="po-panneau po-panneau--vide">Cliquez une tâche pour voir son descriptif, son échéance et qui la valide.</p>
+          <p className="po-panneau po-panneau--vide">
+            Cliquez une tâche pour voir son descriptif, l’assigner ou en discuter. Chaque carte a aussi son fil de discussion.
+          </p>
         )}
       </div>
     </>
   );
 }
 
-function Carte({ carte: c, tacheId, onTache }: { carte: CarteOuverte; tacheId: string | null; onTache: (id: string) => void }) {
+type PropsCarte = {
+  carte: CarteOuverte;
+  tacheId: string | null;
+  filActif: boolean;
+  onTache: (id: string) => void;
+  onFil: () => void;
+};
+
+function Carte({ carte: c, tacheId, filActif, onTache, onFil }: PropsCarte) {
   const p = pastilleCarte(c.etat);
   const eteinte = c.etat.code === 'desactivee';
   // « délai en heures ouvrées depuis J1 » : la fenêtre se lit aussi en heures.
@@ -347,13 +387,23 @@ function Carte({ carte: c, tacheId, onTache }: { carte: CarteOuverte; tacheId: s
                   <span className="po-tache-assigne">{t.assigne?.nom ?? 'À assigner'}</span>
                   <span className="po-tache-heures">{heuresTache(t)}</span>
                   <span className={`po-tache-echeance${t.etat.code === 'en_retard' ? ' po-retard' : ''}`}>{t.finLe ? jjmm(t.finLe) : '—'}</span>
-                  <span className={`po-pastille po-pastille--${pt.ton}`}>{pt.libelle}</span>
+                  <span className="po-tache-etat">
+                    <span className={`po-pastille po-pastille--${pt.ton}`}>{pt.libelle}</span>
+                    {t.fil > 0 && (
+                      <span className="po-tache-fil" aria-label={`${t.fil} message(s)`}>
+                        <MessageCircle size={13} strokeWidth={2} aria-hidden /> {t.fil}
+                      </span>
+                    )}
+                  </span>
                 </button>
               </li>
             );
           })}
         </ul>
       )}
+      <button type="button" className={`po-fil-bouton${filActif ? ' is-actif' : ''}`} aria-pressed={filActif} onClick={onFil}>
+        Fil de la carte · {c.fil}
+      </button>
     </article>
   );
 }

@@ -5,6 +5,7 @@ import { ReglagesService } from '../../reglages/reglages.service';
 import type { Temps } from '../../reglages/gabarit';
 import { alerteAvenant, refDevis } from '../../devis/domaine';
 import { dateDuJour, rangOuvre } from './calendrier';
+import { estOuvert } from './fil';
 import {
   attentesFactures,
   etatCarte,
@@ -82,10 +83,10 @@ export class ProjetsOuvertsService {
       kpi: {
         remisesAValider: taches.filter((t) => t.statut === 'a_valider').length,
         tachesEnRetard: resumes.reduce((s, r) => s + r.enRetard, 0),
-        // Prolongations et mentions : lots suivants (aucune donnée encore).
+        // Prolongations : lot suivant (aucune donnée encore).
         prolongations: 0,
         tsNonAcceptes: await this.tsNonAcceptes(societeId, projets.map((p) => p.id), jour),
-        mentions: 0,
+        mentions: await this.mentionsOuvertes(projets.map((p) => p.id)),
       },
     };
   }
@@ -112,6 +113,10 @@ export class ProjetsOuvertsService {
     const dplg = p.societe.contratSignataireNom?.trim() || null;
     const pilote = await this.reglages.regle<string>(societeId, 'pilote_etudes');
     const horizon = this.horizon(p.budgetHeures);
+    // Nombre de messages par fil (« Fil de la carte · N », bulle d'une tâche).
+    const fils = await this.prisma.commentaireProjet.groupBy({ by: ['carteId', 'tacheId'], where: { projetId: p.id }, _count: true });
+    const filDe = (carteId: string, tacheId: string | null) =>
+      fils.find((f) => f.carteId === carteId && f.tacheId === tacheId)?._count ?? 0;
 
     // Validation (maquette) : sans temps atelier, le dépôt du justificatif vaut
     // validation ; sinon le chef de team, et l'Architecte DPLG quand la tâche
@@ -163,6 +168,7 @@ export class ProjetsOuvertsService {
         temps: c.temps as Temps | null,
         client: c.client,
         fichiers: c.fichiers,
+        fil: filDe(c.id, null),
         etat: etatsCartes.get(c.id)!,
         taches: c.taches.map((t) => ({
           id: t.id,
@@ -183,6 +189,7 @@ export class ProjetsOuvertsService {
           valideePar: nom(t.valideePar),
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
           validation: validation(t.temps as Temps, t.assigneId),
+          fil: filDe(c.id, t.id),
           etat: etatsTaches.get(t.id)!,
         })),
       })),
@@ -234,6 +241,18 @@ export class ProjetsOuvertsService {
     });
     const etapes = [...parEtape.entries()].sort(([a], [b]) => a - b).map(([n, e]) => resumeEtape(n, e));
     return { etapes, etatsCartes, etatsTaches };
+  }
+
+  // Tâches (ou cartes) dont un commentaire attend la réponse d'une personne
+  // mentionnée (tuile « Signalements et mentions » : « N tâche(s) »).
+  private async mentionsOuvertes(projetIds: string[]) {
+    if (!projetIds.length) return 0;
+    const racines = await this.prisma.commentaireProjet.findMany({
+      where: { projetId: { in: projetIds }, parentId: null, mentionneId: { not: null }, resoluLe: null },
+      select: { carteId: true, tacheId: true, mentionneId: true, resoluLe: true, _count: { select: { reponses: true } } },
+    });
+    const ouvertes = racines.filter((r) => estOuvert({ ...r, reponses: r._count.reponses }));
+    return new Set(ouvertes.map((r) => r.tacheId ?? r.carteId)).size;
   }
 
   // Avenants (TS) envoyés et non acceptés au-delà du délai réglé.

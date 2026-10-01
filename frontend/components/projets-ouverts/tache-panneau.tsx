@@ -12,6 +12,7 @@ import {
   type EvenementTache,
   type TacheOuverte,
 } from '@/lib/projets-ouverts';
+import { FilDiscussion } from './fil-discussion';
 
 type Props = {
   slug: string;
@@ -21,14 +22,17 @@ type Props = {
   tache: TacheOuverte;
   // null = pas le droit d'assigner (lecture seule).
   assignables: Assignable[] | null;
+  moiId: string;
+  // null = lecture seule du fil.
+  mentionnables: { id: string; nom: string }[] | null;
   onMaj: () => Promise<void>;
 };
 
 // Panneau d'une tâche (maquette « Projets ») : qui, qui valide, durée,
 // fenêtre et échéance figées, écart, descriptif, assignation (à la tâche ou à
-// toute la carte), fichiers et historique. Remise, validation et fil de
-// discussion : lots suivants.
-export function TachePanneau({ slug, projetId, code, carte, tache, assignables, onMaj }: Props) {
+// toute la carte), fichiers, fil de discussion et historique. Remise et
+// validation : avec les vues chef de team et collaborateur.
+export function TachePanneau({ slug, projetId, code, carte, tache, assignables, moiId, mentionnables, onMaj }: Props) {
   const [aLaCarte, setALaCarte] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -161,6 +165,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
         <p className="po-aide">nommage {code}_ÉTAPE_LIVRABLE_vNN, une version par reprise</p>
         <p className="po-aide">Aucun fichier.</p>
       </div>
+      <FilDiscussion slug={slug} projetId={projetId} tacheId={tache.id} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
       <div className="po-panneau-bloc">
         <p className="po-kicker">Historique</p>
         {!historique ? (

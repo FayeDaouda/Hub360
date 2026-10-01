@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../../commun/back-office.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AssignerTacheDto } from './dto';
+import { AssignerTacheDto, PublierCommentaireDto } from './dto';
+import { FilsProjetService } from './fils-projet.service';
 
 type R = { user: { societeId: string; userId: string } };
 
@@ -16,6 +17,7 @@ export class ProjetsOuvertsController {
   constructor(
     private projets: ProjetsOuvertsService,
     private taches: TachesProjetService,
+    private fils: FilsProjetService,
   ) {}
 
   @Get()
@@ -29,6 +31,12 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'ecriture')
   assignables(@Req() req: R) {
     return this.taches.assignables(req.user.societeId);
+  }
+
+  @Get('mentionnables')
+  @RequiertPermission('projets', 'lecture')
+  mentionnables(@Req() req: R) {
+    return this.fils.mentionnables(req.user.societeId);
   }
 
   @Get(':id')
@@ -48,5 +56,24 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'ecriture')
   assigner(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: AssignerTacheDto) {
     return this.taches.assigner(req.user.societeId, req.user, id, tacheId, dto.collaborateurId, !!dto.carte);
+  }
+
+  // Fil d'une carte (?carte=) ou d'une tâche (?tache=).
+  @Get(':id/fil')
+  @RequiertPermission('projets', 'lecture')
+  fil(@Req() req: R, @Param('id') id: string, @Query('carte') carteId?: string, @Query('tache') tacheId?: string) {
+    return this.fils.lire(req.user.societeId, id, { carteId, tacheId });
+  }
+
+  @Post(':id/fil')
+  @RequiertPermission('projets', 'ecriture')
+  publier(@Req() req: R, @Param('id') id: string, @Body() dto: PublierCommentaireDto) {
+    return this.fils.publier(req.user.societeId, req.user, id, dto);
+  }
+
+  @Post(':id/fil/:commentaireId/resolution')
+  @RequiertPermission('projets', 'ecriture')
+  resoudre(@Req() req: R, @Param('id') id: string, @Param('commentaireId') commentaireId: string) {
+    return this.fils.resoudre(req.user.societeId, req.user, id, commentaireId);
   }
 }

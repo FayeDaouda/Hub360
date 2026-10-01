@@ -523,7 +523,8 @@ export type NotificationType =
   // Remise / validation des tâches (RH lot 5c) — ouvrent le projet.
   | 'tache_remise'
   | 'tache_validee'
-  | 'tache_renvoyee';
+  | 'tache_renvoyee'
+  | 'mention_projet'; // @mention dans un fil de projet (maquette « Projets »)
 
 export type NotificationItem = {
   id: string;

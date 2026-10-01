@@ -33,6 +33,8 @@ export function lienNotificationAdmin(
     return `/admin/${slug}/facturation?projetId=${n.projetId}&onglet=factures`;
   }
   if (n.dossierCrmId) return `/admin/${slug}/crm?dossier=${n.dossierCrmId}`;
+  // Mention dans un fil : le projet ouvert dans la vue « Projets · gabarit ».
+  if (n.type === 'mention_projet' && n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;
   if (n.projetId) return `/admin/${slug}/projets/${n.projetId}`;
   return null;
 }

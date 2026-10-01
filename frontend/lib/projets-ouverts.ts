@@ -8,6 +8,8 @@ import type { Temps } from './reglages';
 //   GET /api/societes/:slug/projets-ouverts/assignables
 //   PATCH …/projets-ouverts/:id/taches/:tacheId/assignation  { collaborateurId, carte }
 //   GET …/projets-ouverts/:id/taches/:tacheId/historique
+//   GET …/projets-ouverts/mentionnables · GET/POST …/projets-ouverts/:id/fil
+//   POST …/projets-ouverts/:id/fil/:commentaireId/resolution
 // Les états (en cours, en retard, avance…) sont dérivés côté serveur au jour
 // de la lecture, depuis les délais figés à l'ouverture (émission de F1).
 // -----------------------------------------------------------------------------
@@ -70,6 +72,7 @@ export type TacheOuverte = {
   valideePar: string | null;
   assigne: { id: string; nom: string; cellule: string | null } | null;
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
+  fil: number; // messages du fil de la tâche
   etat: EtatTache;
 };
 
@@ -89,6 +92,7 @@ export type CarteOuverte = {
   temps: Temps | null;
   client: boolean;
   fichiers: boolean;
+  fil: number; // messages du « Fil de la carte »
   etat: EtatCarte;
   taches: TacheOuverte[];
 };
@@ -151,6 +155,33 @@ export function assignerTache(
     method: 'PATCH',
     body: { collaborateurId, carte },
   });
+}
+
+// Fil de discussion d'une carte ou d'une tâche (un niveau de réponse).
+export type Personne = { id: string; nom: string | null };
+export type MessageFil = { id: string; texte: string; le: string; resoluLe: string | null; auteur: Personne | null; mentionne: Personne | null };
+export type CommentaireFil = MessageFil & { ouvert: boolean; reponses: MessageFil[] };
+export type CibleFil = { carteId: string } | { tacheId: string };
+
+export function getMentionnables(slug: string): Promise<{ id: string; nom: string }[]> {
+  return apiSociete(slug, '/projets-ouverts/mentionnables');
+}
+
+export function getFil(slug: string, projetId: string, cible: CibleFil): Promise<CommentaireFil[]> {
+  const q = 'carteId' in cible ? `carte=${cible.carteId}` : `tache=${cible.tacheId}`;
+  return apiSociete(slug, `/projets-ouverts/${projetId}/fil?${q}`);
+}
+
+export function publierCommentaire(
+  slug: string,
+  projetId: string,
+  corps: CibleFil & { texte: string; mentionneId?: string | null; parentId?: string },
+): Promise<{ id: string }> {
+  return apiSociete(slug, `/projets-ouverts/${projetId}/fil`, { method: 'POST', body: corps });
+}
+
+export function resoudreCommentaire(slug: string, projetId: string, commentaireId: string): Promise<{ ok: true }> {
+  return apiSociete(slug, `/projets-ouverts/${projetId}/fil/${commentaireId}/resolution`, { method: 'POST' });
 }
 
 export function getHistoriqueTache(slug: string, projetId: string, tacheId: string): Promise<EvenementTache[]> {
