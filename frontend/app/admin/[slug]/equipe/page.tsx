@@ -179,7 +179,8 @@ export default function EquipePage({ params }: Props) {
 
                 {!estSans && (
                   <label className="equipe-dispatcher">
-                    <span className="equipe-dispatcher-label">Dispatcher</span>
+                    {/* Chef de team (maquette « Projets ») = le dispatcher de la cellule. */}
+                    <span className="equipe-dispatcher-label">Chef de team</span>
                     <select disabled={!ecriture}
                       className="field-input"
                       value={g.dispatcherId ?? ''}

@@ -473,7 +473,7 @@ export class ProjetsService {
       );
       if (!autorise) {
         throw new ForbiddenException(
-          "Réservé à l'administration ou au dispatcher d'une des cellules du projet.",
+          "Réservé à l'administration ou au chef de team d'une des cellules du projet.",
         );
       }
     }
@@ -512,7 +512,7 @@ export class ProjetsService {
       );
       if (!autorise) {
         throw new ForbiddenException(
-          "Réservé à l'administration ou au dispatcher d'une des cellules du projet.",
+          "Réservé à l'administration ou au chef de team d'une des cellules du projet.",
         );
       }
     }
