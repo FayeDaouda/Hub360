@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import {
+  getAssignables,
   getDossierProjet,
   getTableauProjets,
   heuresTache,
@@ -14,6 +15,7 @@ import {
   pastilleCarte,
   pastilleEtape,
   pastilleTache,
+  type Assignable,
   type CarteOuverte,
   type DossierProjetOuvert,
   type TableauProjets,
@@ -32,6 +34,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
   const [etape, setEtape] = useState(1);
   const [tacheId, setTacheId] = useState<string | null>(null);
+  // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
+  const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
+  const [assignables, setAssignables] = useState<Assignable[] | null>(null);
 
   useTitrePage(`Projets · gabarit ${tableau?.gabarit ?? 'GC-CONCEPTION'}`);
 
@@ -43,6 +48,18 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       })
       .catch((e) => setErreur(e instanceof Error ? e.message : 'Lecture impossible.'));
   }, [slug]);
+
+  useEffect(() => {
+    if (!peutAssigner) return;
+    getAssignables(slug)
+      .then(setAssignables)
+      .catch(() => setAssignables(null));
+  }, [slug, peutAssigner]);
+
+  // Après une écriture : le dossier relu, la tâche choisie gardée.
+  const recharger = useCallback(async () => {
+    if (projetId) setDossier(await getDossierProjet(slug, projetId));
+  }, [slug, projetId]);
 
   useEffect(() => {
     if (!projetId) return;
@@ -58,7 +75,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   }, [slug, projetId]);
 
   const horizon = tableau ? Math.round(tableau.budgetHeures / HEURES_PAR_JOUR) : null;
-  const acces = niveauSuffisant(session, 'projets', 'ecriture') ? 'Lecture et assignation · accès complet' : 'Lecture seule';
+  const acces = peutAssigner ? 'Lecture et assignation · accès complet' : 'Lecture seule';
 
   return (
     <div className="po">
@@ -142,7 +159,16 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
             {!dossier ? (
               <div className="skeleton admin-skeleton-panel" aria-hidden />
             ) : (
-              <Dossier dossier={dossier} etape={etape} onEtape={setEtape} tacheId={tacheId} onTache={setTacheId} />
+              <Dossier
+                slug={slug}
+                dossier={dossier}
+                etape={etape}
+                onEtape={setEtape}
+                tacheId={tacheId}
+                onTache={setTacheId}
+                assignables={peutAssigner ? assignables : null}
+                onMaj={recharger}
+              />
             )}
           </section>
         </div>
@@ -162,14 +188,17 @@ function Tuile({ libelle, valeur, aide, ton }: { libelle: string; valeur: number
 }
 
 type PropsDossier = {
+  slug: string;
   dossier: DossierProjetOuvert;
   etape: number;
   onEtape: (n: number) => void;
   tacheId: string | null;
   onTache: (id: string | null) => void;
+  assignables: Assignable[] | null;
+  onMaj: () => Promise<void>;
 };
 
-function Dossier({ dossier: d, etape, onEtape, tacheId, onTache }: PropsDossier) {
+function Dossier({ slug, dossier: d, etape, onEtape, tacheId, onTache, assignables, onMaj }: PropsDossier) {
   const cartes = d.cartes.filter((c) => c.etapeNumero === etape);
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
   const factures = pastillesFactures(d);
@@ -242,7 +271,15 @@ function Dossier({ dossier: d, etape, onEtape, tacheId, onTache }: PropsDossier)
           ))}
         </div>
         {choisie ? (
-          <TachePanneau code={d.code} carte={choisie.carte} tache={choisie.tache} />
+          <TachePanneau
+            slug={slug}
+            projetId={d.id}
+            code={d.code}
+            carte={choisie.carte}
+            tache={choisie.tache}
+            assignables={assignables}
+            onMaj={onMaj}
+          />
         ) : (
           <p className="po-panneau po-panneau--vide">Cliquez une tâche pour voir son descriptif, son échéance et qui la valide.</p>
         )}

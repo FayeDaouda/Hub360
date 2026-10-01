@@ -5,6 +5,9 @@ import type { Temps } from './reglages';
 // Projets ouverts selon le gabarit (maquette « Projets » du boss). Branché sur :
 //   GET /api/societes/:slug/projets-ouverts       (liste + tuiles)
 //   GET /api/societes/:slug/projets-ouverts/:id   (dossier : étapes, cartes, tâches)
+//   GET /api/societes/:slug/projets-ouverts/assignables
+//   PATCH …/projets-ouverts/:id/taches/:tacheId/assignation  { collaborateurId, carte }
+//   GET …/projets-ouverts/:id/taches/:tacheId/historique
 // Les états (en cours, en retard, avance…) sont dérivés côté serveur au jour
 // de la lecture, depuis les délais figés à l'ouverture (émission de F1).
 // -----------------------------------------------------------------------------
@@ -127,6 +130,31 @@ export function getTableauProjets(slug: string): Promise<TableauProjets> {
 
 export function getDossierProjet(slug: string, id: string): Promise<DossierProjetOuvert> {
   return apiSociete(slug, `/projets-ouverts/${id}`);
+}
+
+export type Assignable = { id: string; nom: string; cellule: string | null };
+export type EvenementTache = { id: string; type: 'assignation' | 'remise' | 'validation' | 'reprise'; detail: string; par: string | null; le: string };
+
+export function getAssignables(slug: string): Promise<Assignable[]> {
+  return apiSociete(slug, '/projets-ouverts/assignables');
+}
+
+// À la tâche, ou (carte = true) à toutes les tâches encore ouvertes de sa carte.
+export function assignerTache(
+  slug: string,
+  projetId: string,
+  tacheId: string,
+  collaborateurId: string | null,
+  carte: boolean,
+): Promise<{ modifiees: number }> {
+  return apiSociete(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/assignation`, {
+    method: 'PATCH',
+    body: { collaborateurId, carte },
+  });
+}
+
+export function getHistoriqueTache(slug: string, projetId: string, tacheId: string): Promise<EvenementTache[]> {
+  return apiSociete(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/historique`);
 }
 
 // --- Libellés (maquette) ------------------------------------------------------------

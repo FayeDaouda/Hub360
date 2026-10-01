@@ -123,6 +123,7 @@ model Utilisateur {
   dossiersPossedes                   DossierCrm[]              @relation("DossierProprietaire")
   dossiersArchives                   DossierCrm[]              @relation("DossierArchivePar")
   tachesProjetValidees               TacheProjet[]             @relation("TacheProjetValideePar")
+  evenementsTachesProjet             EvenementTacheProjet[]    @relation("EvenementTacheProjetPar")
   transitionsDossier                 DossierCrmTransition[]    @relation("TransitionDossierPar")
   remuneration                       Remuneration?
 
@@ -2301,6 +2302,30 @@ model GabaritVersion {
   @@map("gabarit_versions")
 }
 
+// Historique d'une tâche (panneau de la tâche, maquette « Projets ») : une
+// ligne par fait — jamais modifiée ni supprimée.
+enum TypeEvenementTache {
+  assignation
+  remise
+  validation
+  reprise
+}
+
+model EvenementTacheProjet {
+  id      String             @id @default(uuid())
+  tacheId String             @map("tache_id")
+  type    TypeEvenementTache
+  parId   String?            @map("par_id")
+  detail  String // phrase affichée (« Assignée à Moussa Diop »)
+  creeLe  DateTime           @default(now()) @map("cree_le")
+
+  tache TacheProjet  @relation(fields: [tacheId], references: [id], onDelete: Cascade)
+  par   Utilisateur? @relation("EvenementTacheProjetPar", fields: [parId], references: [id], onDelete: SetNull)
+
+  @@index([tacheId, creeLe])
+  @@map("evenements_tache_projet")
+}
+
 // Gabarit recopié dans un projet à son ouverture (maquette « Projets » du
 // boss) : étapes → cartes → tâches, fenêtres en jours ouvrés depuis J1 et
 // dates calendaires figées (jours fériés déduits). Une version du gabarit
@@ -2365,10 +2390,11 @@ model TacheProjet {
   valideeLe    DateTime?         @map("validee_le")
   valideeParId String?           @map("validee_par_id")
 
-  projet     Projet         @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  carte      CarteProjet    @relation(fields: [carteId], references: [id], onDelete: Cascade)
-  assigne    Collaborateur? @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
-  valideePar Utilisateur?   @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
+  projet     Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  carte      CarteProjet            @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  assigne    Collaborateur?         @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
+  valideePar Utilisateur?           @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
+  evenements EvenementTacheProjet[]
 
   @@unique([carteId, cle])
   @@index([projetId])

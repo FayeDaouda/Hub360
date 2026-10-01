@@ -12112,7 +12112,7 @@ a.notif-item:hover {
 }
 .po-corps {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
   align-items: start;
   gap: 1rem;
 }
@@ -12166,9 +12166,10 @@ a.notif-item:hover {
 }
 .po-tache {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) 2.8rem 3rem auto;
+  /* Colonne d'état de largeur fixe : les lignes restent alignées d'une tâche à l'autre. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(5.5rem, 1fr) 2.6rem 3rem 9.5rem;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   width: 100%;
   padding: 0.65rem 0.85rem;
   border: 1px solid var(--border);
@@ -12269,6 +12270,27 @@ a.notif-item:hover {
 }
 .po-vide {
   padding: 1.5rem;
+}
+.po-panneau-label {
+  font-weight: 700;
+}
+.po-case {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.po-case input {
+  margin-top: 0.2rem;
+}
+.po-historique {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
 }
 
 @media (max-width: 1200px) {

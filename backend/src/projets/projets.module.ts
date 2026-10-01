@@ -26,6 +26,7 @@ import { FichiersController } from './fichiers/fichiers.controller';
 import { FacturationService } from './facturation/facturation.service';
 import { OuvertureProjetService } from './gabarit/ouverture.service';
 import { ProjetsOuvertsService } from './gabarit/projets-ouverts.service';
+import { TachesProjetService } from './gabarit/taches-projet.service';
 import { ProjetsOuvertsController } from './gabarit/projets-ouverts.controller';
 import { FacturationController } from './facturation/facturation.controller';
 import { FacturationCentraleController } from './facturation/facturation-centrale.controller';
@@ -49,6 +50,7 @@ import { FacturationCentraleController } from './facturation/facturation-central
     FacturationService,
     OuvertureProjetService,
     ProjetsOuvertsService,
+    TachesProjetService,
   ],
   controllers: [
     ProjetsOuvertsController,
