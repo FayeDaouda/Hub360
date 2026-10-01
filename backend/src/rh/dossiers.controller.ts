@@ -5,7 +5,7 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { DossiersPersonnelService } from './dossiers.service';
-import { ArchivageDto, DossierPersonnelDto, PieceDto } from './dto';
+import { ArchivageDto, DecisionPaiementDto, DossierPersonnelDto, PieceDto } from './dto';
 
 type R = { user: { userId: string } };
 
@@ -53,6 +53,11 @@ export class DossiersPersonnelController {
   @Post(':id/archivage')
   archiver(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ArchivageDto) {
     return this.dossiers.archiver(id, dto.archive, req.user.userId);
+  }
+
+  @Post(':id/paiement')
+  deciderPaiement(@Param('id', ParseUUIDPipe) id: string, @Body() dto: DecisionPaiementDto) {
+    return this.dossiers.deciderPaiement(id, dto.valide);
   }
 
   @Put(':id/pieces/:type')

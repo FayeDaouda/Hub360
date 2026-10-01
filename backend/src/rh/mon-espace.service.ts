@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, TypePieceDossier } from '@prisma/client';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ModePaiementSalaire, Prisma, SituationFamiliale, TypePieceDossier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ouDossierDuCompte } from './mon-compte';
 import { TachesService } from './taches.service';
@@ -35,17 +35,53 @@ export class MonEspaceService {
     return { dossier: d ? versProfil(d) : null };
   }
 
-  async majCoordonnees(a: Acteur, corps: { telephone?: string; contactUrgence?: string }) {
+  async majCoordonnees(
+    a: Acteur,
+    corps: {
+      telephone?: string;
+      emailPerso?: string;
+      situationFamiliale?: SituationFamiliale | null;
+      enfantsACharge?: number;
+      adresse?: string;
+      contactUrgence?: string;
+      telephoneUrgence?: string;
+    },
+  ) {
     const id = await this.idDossier(a);
+    const texte = (v?: string) => (v === undefined ? undefined : v.trim());
     await this.prisma.dossierPersonnel.update({
       where: { id },
       data: {
-        ...(corps.telephone !== undefined && { telephone: corps.telephone.trim() }),
-        ...(corps.contactUrgence !== undefined && { contactUrgence: corps.contactUrgence.trim() }),
+        telephone: texte(corps.telephone),
+        emailPerso: texte(corps.emailPerso),
+        situationFamiliale: corps.situationFamiliale,
+        enfantsACharge: corps.enfantsACharge,
+        adresse: texte(corps.adresse),
+        contactUrgence: texte(corps.contactUrgence),
+        telephoneUrgence: texte(corps.telephoneUrgence),
       },
     });
     return this.profil(a);
   }
+
+  // « Soumettre à la RH » : le nouveau moyen de paiement attend la validation
+  // de la RH (appliqué à la paie ensuite) ; une nouvelle demande remplace la
+  // précédente. Identique à celui en service : rien à valider.
+  async demanderPaiement(a: Acteur, corps: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string }) {
+    const id = await this.idDossier(a);
+    const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({ where: { id }, select: { modePaiement: true, coordonneesPaiement: true } });
+    const coordonnees = corps.coordonneesPaiement.trim();
+    if (!coordonnees) throw new BadRequestException('Indiquez la banque et le RIB, ou le numéro.');
+    if (d.modePaiement === corps.modePaiement && d.coordonneesPaiement === coordonnees) {
+      throw new ConflictException('C’est déjà le moyen de paiement en service.');
+    }
+    await this.prisma.dossierPersonnel.update({
+      where: { id },
+      data: { paiementDemandeMode: corps.modePaiement, paiementDemandeCoordonnees: coordonnees, paiementDemandeLe: new Date() },
+    });
+    return this.profil(a);
+  }
+
 
   async document(a: Acteur, type: string) {
     if (!(DOCUMENTS_SALARIE as string[]).includes(type)) throw new NotFoundException('Document inconnu.');
@@ -145,8 +181,17 @@ function versProfil(d: DossierProfil) {
     telephone: d.telephone,
     emailPro: d.emailPro,
     contactUrgence: d.contactUrgence,
+    telephoneUrgence: d.telephoneUrgence,
+    emailPerso: d.emailPerso,
+    situationFamiliale: d.situationFamiliale,
+    enfantsACharge: d.enfantsACharge,
+    adresse: d.adresse,
     modePaiement: d.modePaiement,
     coordonneesPaiement: d.coordonneesPaiement,
+    // null = rien en attente de la RH.
+    paiementDemande: d.paiementDemandeMode
+      ? { mode: d.paiementDemandeMode, coordonnees: d.paiementDemandeCoordonnees ?? '', le: d.paiementDemandeLe }
+      : null,
     numeroIpm: d.numeroIpm,
     mission: Object.values(mission).some((v) => v.trim()) ? mission : null,
     documents: DOCUMENTS_SALARIE.map((type) => {

@@ -6,7 +6,9 @@ import { TachesService } from './taches.service';
 const DOSSIER = {
   id: 'D1', matricule: 'GH-0001', prenom: 'Awa', nom: 'Ndiaye', poste: 'CAD L1', typeContrat: 'cdi', dateEntree: '2024-01-03',
   dateFin: null, dateNaissance: null, lieuNaissance: '', nationalite: 'Sénégalaise', numeroPiece: '', telephone: '77',
-  emailPro: '', contactUrgence: '', modePaiement: 'virement', coordonneesPaiement: '', numeroIpm: '', salaireBase: 450000,
+  emailPro: '', contactUrgence: '', modePaiement: 'virement', coordonneesPaiement: 'CBAO · SN012', numeroIpm: '', salaireBase: 450000,
+  telephoneUrgence: '', emailPerso: '', situationFamiliale: null, enfantsACharge: 0, adresse: '',
+  paiementDemandeMode: null, paiementDemandeCoordonnees: null, paiementDemandeLe: null,
   missionResultat: '', missionLivrables: '', missionKpi: '', missionSignalAlerte: '',
   societe: { nom: 'Grey Concrete' }, collaborateur: null, pieces: [{ type: 'contrat_signe', nom: 'contrat.pdf', createdAt: new Date() }],
   bulletins: [{ mois: '2026-08', nom: 'bulletin-08.pdf', updatedAt: new Date() }],
@@ -14,7 +16,11 @@ const DOSSIER = {
 
 function svc(dossier: object | null = DOSSIER) {
   const prisma = {
-    dossierPersonnel: { findFirst: jest.fn().mockResolvedValue(dossier), update: jest.fn() },
+    dossierPersonnel: {
+      findFirst: jest.fn().mockResolvedValue(dossier),
+      findUniqueOrThrow: jest.fn().mockResolvedValue(dossier),
+      update: jest.fn(),
+    },
     pieceDossierPersonnel: { findUnique: jest.fn().mockResolvedValue({ nom: 'contrat.pdf', cle: 'data:application/pdf;base64,AA' }) },
     collaborateur: { findFirst: jest.fn().mockResolvedValue(null) },
     cellule: {
@@ -65,5 +71,20 @@ describe('MonEspaceService', () => {
     ]);
     expect(cellule?.projets).toEqual([expect.objectContaining({ code: 'PN_S.26' })]);
     await expect(svc().s.maCellule({ userId: 'U' })).resolves.toEqual({ cellule: null, stats: expect.objectContaining({ enCours: 0 }) });
+  });
+
+  it('moyen de paiement : la demande attend la RH ; identique à celui en service → 409', async () => {
+    const { s: service, prisma } = svc();
+    await service.demanderPaiement({ userId: 'U' }, { modePaiement: 'wave', coordonneesPaiement: ' 77 100 00 09 ' });
+    const data = (prisma.dossierPersonnel.update as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({ paiementDemandeMode: 'wave', paiementDemandeCoordonnees: '77 100 00 09' });
+    expect(data).not.toHaveProperty('modePaiement');
+    await expect(service.demanderPaiement({ userId: 'U' }, { modePaiement: 'virement', coordonneesPaiement: 'CBAO · SN012' })).rejects.toThrow('déjà');
+  });
+
+  it('mes informations : champs saisis enregistrés tels quels (texte nettoyé)', async () => {
+    const { s: service, prisma } = svc();
+    await service.majCoordonnees({ userId: 'U' }, { adresse: ' Sacré-Cœur 3 ', enfantsACharge: 2, situationFamiliale: 'marie' });
+    expect((prisma.dossierPersonnel.update as jest.Mock).mock.calls[0][0].data).toMatchObject({ adresse: 'Sacré-Cœur 3', enfantsACharge: 2, situationFamiliale: 'marie' });
   });
 });

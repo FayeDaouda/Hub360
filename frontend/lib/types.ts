@@ -2016,6 +2016,11 @@ export type DossierPersonnel = ChampsDossierPersonnel & {
   pieces: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
   completude: { pourcentage: number; manquants: number };
   bulletins: BulletinPaie[]; // du plus récent au plus ancien
+  // Changement de moyen de paiement soumis par le salarié (Mon espace), à
+  // valider avant la paie ; null = rien en attente.
+  paiementDemandeMode: ModePaiementSalaire | null;
+  paiementDemandeCoordonnees: string | null;
+  paiementDemandeLe: string | null;
 };
 
 // Bulletin de paie (lot 5b) : un par mois, déposé par la RH.
@@ -2162,6 +2167,8 @@ export type DureesStandardSection = {
 
 // --- RH · Mon espace (lot 5) ---------------------------------------------------
 // Le dossier du compte connecté, sans le salaire (réservé RH, CFO, CEO).
+export type SituationFamiliale = 'celibataire' | 'marie' | 'divorce' | 'veuf';
+
 export type ProfilMonEspace = {
   id: string;
   matricule: string;
@@ -2180,8 +2187,15 @@ export type ProfilMonEspace = {
   telephone: string;
   emailPro: string;
   contactUrgence: string;
+  telephoneUrgence: string;
+  emailPerso: string;
+  situationFamiliale: SituationFamiliale | null;
+  enfantsACharge: number;
+  adresse: string;
   modePaiement: ModePaiementSalaire;
   coordonneesPaiement: string;
+  // Changement soumis à la RH (validé avant la paie) ; null = rien en attente.
+  paiementDemande: { mode: ModePaiementSalaire; coordonnees: string; le: string } | null;
   numeroIpm: string;
   mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string } | null;
   documents: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];

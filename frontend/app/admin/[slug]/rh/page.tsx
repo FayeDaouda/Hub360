@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/client-api';
 import { lireFichier } from '@/lib/fichiers';
 import {
   archiverDossier,
+  deciderPaiement,
   creerDossier,
   deposerBulletin,
   getBulletin,
@@ -23,6 +24,7 @@ import {
   type MajDossier,
 } from '@/lib/rh';
 import { libelleMois } from '@/lib/temps';
+import { LIBELLE_PAIEMENT_SALAIRE } from '@/lib/mon-espace';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { DemandesRh } from '@/components/absences/demandes-rh';
@@ -235,6 +237,7 @@ export default function RhPage({ params }: Props) {
                         {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
                       </button>
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
+                      {d.paiementDemandeMode && <span className="pill pill--attention">Moyen de paiement à valider</span>}
                     </td>
                     <td data-label="Société">{d.societe.nom}</td>
                     <td data-label="Équipe">{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
@@ -401,6 +404,16 @@ function FicheDossier({
     }
   }
 
+  async function decider(valide: boolean) {
+    if (!dossier) return;
+    setErreur(null);
+    try {
+      onChange(await deciderPaiement(slug, dossier.id, valide));
+    } catch (e) {
+      setErreur(messageErreur(e, 'Décision non enregistrée.'));
+    }
+  }
+
   async function archiver() {
     if (!dossier) return;
     try {
@@ -537,6 +550,24 @@ function FicheDossier({
             </div>
 
             <h3 className="rh-section">Contact, paie, prévoyance</h3>
+            {dossier?.paiementDemandeMode && (
+              <div className="rh-paiement-demande" role="status">
+                <span>
+                  <strong>Changement de moyen de paiement demandé</strong> le {dossier.paiementDemandeLe?.slice(0, 10).split('-').reverse().join('/')} :{' '}
+                  {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]} · {dossier.paiementDemandeCoordonnees}
+                </span>
+                {ecriture && (
+                  <span className="dmd-actions">
+                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => decider(false)}>
+                      Refuser
+                    </button>
+                    <button type="button" className="btn-primary btn-primary--sm" onClick={() => decider(true)}>
+                      Valider pour la paie
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
             <div className="rh-grille">
               {champ('telephone', 'Téléphone', { type: 'tel' })}
               {champ('emailPro', 'E-mail professionnel', { type: 'email', placeholder: 'prenom.nom@…' })}

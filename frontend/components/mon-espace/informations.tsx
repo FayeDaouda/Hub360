@@ -1,33 +1,29 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { LIBELLE_PAIEMENT_SALAIRE, majCoordonnees } from '@/lib/mon-espace';
+import { demanderPaiement, LIBELLE_PAIEMENT_SALAIRE, majCoordonnees, type ChampsPersonnels } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
-import type { ProfilMonEspace } from '@/lib/types';
+import type { ModePaiementSalaire, ProfilMonEspace, SituationFamiliale } from '@/lib/types';
 
-const jjmmaaaa = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : '—');
+const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—');
 const ou = (v: string) => v.trim() || '—';
+// Pièce d'identité masquée (maquette : « •••• 2211 »).
+const masquer = (n: string) => (n.trim() ? `•••• ${n.trim().slice(-4)}` : '—');
 
-function Bloc({ titre, lignes }: { titre: string; lignes: [string, string][] }) {
-  return (
-    <section className="panel glass-panel dmd-section">
-      <h2 className="dmd-titre">{titre}</h2>
-      <dl className="mes-infos">
-        {lignes.map(([libelle, valeur]) => (
-          <div key={libelle}>
-            <dt>{libelle}</dt>
-            <dd>{valeur}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
+const SITUATIONS: Record<SituationFamiliale, string> = {
+  celibataire: 'Célibataire',
+  marie: 'Marié(e)',
+  divorce: 'Divorcé(e)',
+  veuf: 'Veuf / veuve',
+};
 
-// « Mon espace » · Mes informations (lot 5) : le dossier tenu par la RH, en
-// lecture ; le salarié ne modifie que ses coordonnées (téléphone, contact
-// d'urgence). Le salaire n'y figure pas.
+type Champ = 'telephone' | 'emailPerso' | 'adresse' | 'contactUrgence' | 'telephoneUrgence';
+
+// « Mon espace » · Mes informations (maquette du boss) : à gauche, ce que gère
+// la RH (lecture) ; à droite, ce que le salarié modifie lui-même, enregistré
+// immédiatement — sauf le moyen de paiement, soumis à la RH qui le valide
+// avant la paie. Le salaire n'y figure pas.
 export function MesInformations({
   slug,
   dossier,
@@ -37,88 +33,163 @@ export function MesInformations({
   dossier: ProfilMonEspace;
   onMaj: (d: ProfilMonEspace) => void;
 }) {
-  const [telephone, setTelephone] = useState(dossier.telephone);
-  const [contactUrgence, setContactUrgence] = useState(dossier.contactUrgence);
-  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null; ok: boolean }>({ envoi: false, erreur: null, ok: false });
-  const modifie = telephone !== dossier.telephone || contactUrgence !== dossier.contactUrgence;
+  const [saisies, setSaisies] = useState<Partial<Record<Champ, string>>>({});
+  const [mode, setMode] = useState<ModePaiementSalaire>(dossier.paiementDemande?.mode ?? dossier.modePaiement);
+  const [coordonnees, setCoordonnees] = useState(dossier.paiementDemande?.coordonnees ?? dossier.coordonneesPaiement);
+  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null; enregistre: boolean }>({ envoi: false, erreur: null, enregistre: false });
 
-  async function enregistrer(e: FormEvent) {
-    e.preventDefault();
-    setEtat({ envoi: true, erreur: null, ok: false });
+  async function enregistrer(champs: ChampsPersonnels) {
+    setEtat({ envoi: true, erreur: null, enregistre: false });
     try {
-      const { dossier: maj } = await majCoordonnees(slug, { telephone, contactUrgence });
-      if (maj) onMaj(maj);
-      setEtat({ envoi: false, erreur: null, ok: true });
-    } catch (err) {
-      setEtat({ envoi: false, erreur: err instanceof ApiError ? err.message : 'Enregistrement impossible.', ok: false });
+      const r = await majCoordonnees(slug, champs);
+      if (r.dossier) onMaj(r.dossier);
+      setEtat({ envoi: false, erreur: null, enregistre: true });
+    } catch (e) {
+      setEtat({ envoi: false, erreur: e instanceof ApiError ? e.message : 'Non enregistré.', enregistre: false });
     }
   }
 
+  // Champ texte : enregistré à la sortie du champ, s'il a changé.
+  const texte = (champ: Champ, libelle: string, o: { type?: string; long?: boolean } = {}) => {
+    const valeur = saisies[champ] ?? dossier[champ];
+    const props = {
+      id: `mi-${champ}`,
+      className: 'field-input',
+      value: valeur,
+      onChange: (e: { target: { value: string } }) => setSaisies((s) => ({ ...s, [champ]: e.target.value })),
+      onBlur: () => {
+        if (saisies[champ] !== undefined && saisies[champ]!.trim() !== dossier[champ]) void enregistrer({ [champ]: saisies[champ] });
+      },
+    };
+    return (
+      <label className="field" htmlFor={props.id}>
+        <span className="field-label">{libelle}</span>
+        {o.long ? <textarea {...props} rows={2} maxLength={300} /> : <input {...props} type={o.type ?? 'text'} />}
+      </label>
+    );
+  };
+
+  async function soumettrePaiement() {
+    setEtat({ envoi: true, erreur: null, enregistre: false });
+    try {
+      const r = await demanderPaiement(slug, { modePaiement: mode, coordonneesPaiement: coordonnees });
+      if (r.dossier) onMaj(r.dossier);
+      setEtat({ envoi: false, erreur: null, enregistre: false });
+    } catch (e) {
+      setEtat({ envoi: false, erreur: e instanceof ApiError ? e.message : 'Demande non envoyée.', enregistre: false });
+    }
+  }
+
+  const enAttente = dossier.paiementDemande;
+  const reference = enAttente ?? { mode: dossier.modePaiement, coordonnees: dossier.coordonneesPaiement };
+  const paiementModifie = mode !== reference.mode || coordonnees.trim() !== reference.coordonnees;
+
+  const rh: [string, string][] = [
+    ['Matricule', dossier.matricule],
+    ['Société', dossier.societe],
+    ['Poste', ou(dossier.poste)],
+    ['Cellule', dossier.cellule ?? 'sans cellule'],
+    ['Contrat', LIBELLE_CONTRAT[dossier.typeContrat]],
+    ['Date d’entrée', jjmmaaaa(dossier.dateEntree)],
+    ['Date de naissance', jjmmaaaa(dossier.dateNaissance)],
+    ['Pièce d’identité', masquer(dossier.numeroPiece)],
+    ['N° IPM / assurance', ou(dossier.numeroIpm)],
+    ['E-mail professionnel', ou(dossier.emailPro)],
+  ];
+
   return (
-    <div className="dmd-grille">
-      <Bloc
-        titre="Poste et contrat"
-        lignes={[
-          ['Matricule', dossier.matricule],
-          ['Poste', ou(dossier.poste)],
-          ['Société', dossier.societe],
-          ['Cellule', dossier.cellule ?? '—'],
-          ['Contrat', LIBELLE_CONTRAT[dossier.typeContrat]],
-          ['Entrée', jjmmaaaa(dossier.dateEntree)],
-          ...(dossier.typeContrat !== 'cdi' ? ([['Fin prévue', jjmmaaaa(dossier.dateFin)]] as [string, string][]) : []),
-        ]}
-      />
-      <form className="panel glass-panel dmd-section" onSubmit={enregistrer}>
-        <h2 className="dmd-titre">Mes coordonnées</h2>
-        <label className="field">
-          <span className="field-label">Téléphone</span>
-          <input className="field-input" type="tel" maxLength={40} value={telephone} onChange={(e) => setTelephone(e.target.value)} />
-        </label>
-        <label className="field">
-          <span className="field-label">Contact d’urgence</span>
-          <input
-            className="field-input"
-            maxLength={200}
-            placeholder="Nom, lien, téléphone"
-            value={contactUrgence}
-            onChange={(e) => setContactUrgence(e.target.value)}
-          />
-        </label>
-        <p className="dmd-note">E-mail professionnel : {ou(dossier.emailPro)}. Pour toute autre correction, adresse-toi à la RH.</p>
+    <div className="me-colonnes me-colonnes--egales">
+      <section className="panel glass-panel dmd-section">
+        <h2 className="dmd-titre">Gérées par la RH</h2>
+        <p className="dmd-note">Une erreur ? Signalez-la à la RH, elle corrige le dossier.</p>
+        <dl className="me-lignes">
+          {rh.map(([libelle, valeur]) => (
+            <div key={libelle}>
+              <dt>{libelle}</dt>
+              <dd>{valeur}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section className="panel glass-panel dmd-section">
+        <h2 className="dmd-titre">Mes informations</h2>
+        <p className="dmd-note">
+          Enregistrées immédiatement. Le changement de moyen de paiement est validé par la RH avant la paie.
+          {etat.enregistre && <span className="me-ok"> Enregistré.</span>}
+        </p>
+        <div className="rh-grille">
+          {texte('telephone', 'Téléphone', { type: 'tel' })}
+          {texte('emailPerso', 'E-mail personnel', { type: 'email' })}
+          <label className="field">
+            <span className="field-label">Situation familiale</span>
+            <select
+              className="field-input"
+              value={dossier.situationFamiliale ?? ''}
+              disabled={etat.envoi}
+              onChange={(e) => enregistrer({ situationFamiliale: (e.target.value || null) as SituationFamiliale | null })}
+            >
+              <option value="">Non renseignée</option>
+              {Object.entries(SITUATIONS).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">Enfants à charge</span>
+            <input
+              className="field-input"
+              type="number"
+              min={0}
+              max={30}
+              defaultValue={dossier.enfantsACharge}
+              key={dossier.enfantsACharge}
+              onBlur={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isInteger(n) && n >= 0 && n <= 30 && n !== dossier.enfantsACharge) void enregistrer({ enfantsACharge: n });
+              }}
+            />
+          </label>
+        </div>
+        {texte('adresse', 'Adresse', { long: true })}
+        <div className="rh-grille">
+          {texte('contactUrgence', 'Contact d’urgence')}
+          {texte('telephoneUrgence', 'Téléphone d’urgence', { type: 'tel' })}
+        </div>
+
+        <p className="me-intertitre">Moyen de paiement du salaire</p>
+        <div className="rh-grille">
+          <label className="field">
+            <span className="field-label">Mode</span>
+            <select className="field-input" value={mode} onChange={(e) => setMode(e.target.value as ModePaiementSalaire)}>
+              {Object.entries(LIBELLE_PAIEMENT_SALAIRE).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">Banque et RIB, ou numéro</span>
+            <input className="field-input" maxLength={80} value={coordonnees} onChange={(e) => setCoordonnees(e.target.value)} />
+          </label>
+        </div>
+        <div className="me-paiement">
+          <button type="button" className="btn-ghost" disabled={etat.envoi || !paiementModifie || !coordonnees.trim()} onClick={soumettrePaiement}>
+            Soumettre à la RH
+          </button>
+          {enAttente ? (
+            <span className="me-attente">
+              En attente de la RH · {LIBELLE_PAIEMENT_SALAIRE[enAttente.mode]} (soumis le {jjmmaaaa(enAttente.le)})
+            </span>
+          ) : (
+            <span className="me-ok">À jour · {LIBELLE_PAIEMENT_SALAIRE[dossier.modePaiement]}</span>
+          )}
+        </div>
         {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
-        {etat.ok && !modifie && <p className="dmd-note">Coordonnées enregistrées.</p>}
-        <button type="submit" className="btn-primary" disabled={etat.envoi || !modifie}>
-          {etat.envoi ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-      </form>
-      <Bloc
-        titre="Identité"
-        lignes={[
-          ['Nom', `${dossier.prenom} ${dossier.nom}`.trim() || '—'],
-          ['Naissance', `${jjmmaaaa(dossier.dateNaissance)}${dossier.lieuNaissance.trim() ? ` à ${dossier.lieuNaissance}` : ''}`],
-          ['Nationalité', ou(dossier.nationalite)],
-          ['Pièce d’identité', ou(dossier.numeroPiece)],
-        ]}
-      />
-      <Bloc
-        titre="Paie et assurance"
-        lignes={[
-          ['Paiement du salaire', LIBELLE_PAIEMENT_SALAIRE[dossier.modePaiement]],
-          ['RIB ou numéro', ou(dossier.coordonneesPaiement)],
-          ['N° adhérent IPM', ou(dossier.numeroIpm)],
-        ]}
-      />
-      {dossier.mission && (
-        <Bloc
-          titre="Carte de mission"
-          lignes={[
-            ['Résultat attendu', ou(dossier.mission.resultat)],
-            ['Livrables', ou(dossier.mission.livrables)],
-            ['KPI', ou(dossier.mission.kpi)],
-            ['Signal d’alerte', ou(dossier.mission.signalAlerte)],
-          ]}
-        />
-      )}
+      </section>
     </div>
   );
 }

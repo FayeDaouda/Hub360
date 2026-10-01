@@ -21,8 +21,15 @@ import { apiSociete } from './client-api';
 export const getMaCellule = (slug: string) =>
   apiSociete<{ cellule: MaCellule | null; stats: StatsPerformances }>(slug, '/mon-espace/cellule');
 export const getMonEspace = (slug: string) => apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace');
-export const majCoordonnees = (slug: string, corps: { telephone?: string; contactUrgence?: string }) =>
+// « Mes informations » : enregistrées immédiatement, champ par champ.
+export type ChampsPersonnels = Partial<
+  Pick<ProfilMonEspace, 'telephone' | 'emailPerso' | 'situationFamiliale' | 'enfantsACharge' | 'adresse' | 'contactUrgence' | 'telephoneUrgence'>
+>;
+export const majCoordonnees = (slug: string, corps: ChampsPersonnels) =>
   apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/coordonnees', { method: 'PATCH', body: corps });
+// Changement de moyen de paiement : soumis à la RH, appliqué après sa validation.
+export const demanderPaiement = (slug: string, corps: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string }) =>
+  apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/paiement', { method: 'POST', body: corps });
 
 async function telecharger(slug: string, chemin: string) {
   const f = await apiSociete<{ nom: string; url: string }>(slug, chemin);

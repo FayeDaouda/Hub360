@@ -31,6 +31,10 @@ export const majDossier = (slug: string, id: string, corps: MajDossier) =>
   apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}`, { method: 'PATCH', body: corps });
 export const archiverDossier = (slug: string, id: string, archive: boolean) =>
   apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/archivage`, { method: 'POST', body: { archive } });
+// Changement de moyen de paiement demandé dans Mon espace : validé (appliqué
+// à la paie) ou refusé.
+export const deciderPaiement = (slug: string, id: string, valide: boolean) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/paiement`, { method: 'POST', body: { valide } });
 export const joindrePieceDossier = (slug: string, id: string, type: TypePieceDossier, nom: string, url: string) =>
   apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/pieces/${type}`, { method: 'PUT', body: { nom, url } });
 export const getPieceDossier = (slug: string, id: string, type: TypePieceDossier) =>

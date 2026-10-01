@@ -54,6 +54,12 @@ export class ArchivageDto {
   @IsBoolean() archive: boolean;
 }
 
+// Changement de moyen de paiement demandé par le salarié : la RH valide
+// (appliqué à la paie) ou refuse.
+export class DecisionPaiementDto {
+  @IsBoolean() valide: boolean;
+}
+
 export class PieceDto {
   @IsString() @MaxLength(300) nom: string;
   @IsString() @MaxLength(20_000_000) url: string; // data URI

@@ -165,6 +165,24 @@ export class DossiersPersonnelService {
     return versDossier(d);
   }
 
+  // Changement de moyen de paiement demandé dans « Mon espace » : validé, il
+  // remplace celui de la paie ; refusé, il est simplement retiré.
+  async deciderPaiement(id: string, valide: boolean) {
+    const d = await this.charger(id);
+    if (!d.paiementDemandeMode) throw new ConflictException('Aucun changement de moyen de paiement en attente.');
+    const maj = await this.prisma.dossierPersonnel.update({
+      where: { id },
+      data: {
+        ...(valide && { modePaiement: d.paiementDemandeMode, coordonneesPaiement: d.paiementDemandeCoordonnees ?? '' }),
+        paiementDemandeMode: null,
+        paiementDemandeCoordonnees: null,
+        paiementDemandeLe: null,
+      },
+      include: INCLURE,
+    });
+    return versDossier(maj);
+  }
+
   // Départ : archivé, jamais supprimé ; réversible.
   async archiver(id: string, archive: boolean, acteurId: string) {
     await this.charger(id);
