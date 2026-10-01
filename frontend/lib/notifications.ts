@@ -27,11 +27,15 @@ export function marquerNotificationsLues(slug: string): Promise<FluxNotification
 //   · sinon → la fiche projet (notifications d'exécution, admin).
 export function lienNotificationAdmin(
   slug: string,
-  n: Pick<NotificationItem, 'type' | 'projetId' | 'dossierCrmId'>,
+  n: Pick<NotificationItem, 'type' | 'projetId' | 'dossierCrmId' | 'factureId'>,
   session: Session | null,
 ): string | null {
   if (n.type === 'contrat_signe' && n.projetId && niveauSuffisant(session, 'finances_factures', 'validation')) {
     return `/admin/${slug}/facturation?projetId=${n.projetId}&onglet=factures`;
+  }
+  // Facture directe à valider : la facture ouverte dans Facturation (CFO).
+  if (n.type === 'facture_a_valider') {
+    return n.factureId ? `/admin/${slug}/facturation?facture=${n.factureId}` : `/admin/${slug}/facturation?onglet=factures`;
   }
   if (n.dossierCrmId) return `/admin/${slug}/crm?dossier=${n.dossierCrmId}`;
   // Mention dans un fil : le projet ouvert dans la vue « Projets · gabarit ».

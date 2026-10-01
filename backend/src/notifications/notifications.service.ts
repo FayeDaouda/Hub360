@@ -31,6 +31,7 @@ export type NotificationItem = {
   projetId: string | null;
   projetCode: string | null;
   dossierCrmId: string | null;
+  factureId: string | null; // facture à valider (Finances)
   date: Date;
   lu: boolean;
   derivee: boolean;
@@ -147,6 +148,28 @@ export class NotificationsService {
     }
   }
 
+  // Facture directe d'un lead préparée (maquette Finances) : le CFO est
+  // prévenu qu'elle attend sa validation. Ne lève jamais : une notification
+  // manquée ne doit pas faire échouer la préparation (l'échec est journalisé).
+  async notifierFactureAValider(params: { societeId: string; factureId: string; dossierCrmId: string; titre: string }) {
+    try {
+      const cfo = await this.titulairesRole(params.societeId, ROLE_DAF);
+      if (!cfo.length) return;
+      await this.prisma.notification.createMany({
+        data: cfo.map((destinataireId) => ({
+          destinataireId,
+          societeId: params.societeId,
+          type: 'facture_a_valider' as const,
+          factureId: params.factureId,
+          dossierCrmId: params.dossierCrmId,
+          titre: params.titre,
+        })),
+      });
+    } catch (e) {
+      this.log.error(`Facture à valider non notifiée (${params.factureId}) : ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
   // Titulaires ACTIFS d'un rôle de la société (rôle non supprimé) — même
   // lecture que le choix du propriétaire dans CrmService.
   private async titulairesRole(societeId: string, nom: string): Promise<string[]> {
@@ -179,6 +202,7 @@ export class NotificationsService {
       projetId: n.projetId,
       projetCode: n.projet?.code ?? null,
       dossierCrmId: n.dossierCrmId,
+      factureId: n.factureId,
       date: n.createdAt,
       lu: n.luLe !== null,
       derivee: false,
@@ -237,6 +261,7 @@ export class NotificationsService {
           projetId: null,
           projetCode: null,
           dossierCrmId: d.id,
+          factureId: null,
           date: relance.date,
           lu: false,
           derivee: true,

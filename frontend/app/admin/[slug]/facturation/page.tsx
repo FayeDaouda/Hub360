@@ -131,7 +131,9 @@ export default function FacturationCentralePage({ params }: Props) {
   // factures brouillon de l'Onboard) — aussi quand la page est déjà ouverte.
   // ?nouvelle=<dossier> : « Émettre une facture directe » depuis la fiche CRM.
   const nouvelleDemandee = searchParams.get('nouvelle');
-  const ongletDemande = searchParams.get('onglet') === 'factures' || nouvelleDemandee ? 'factures' : null;
+  // ?facture=<id> : notification « facture à valider » (CFO) — la facture ouverte.
+  const factureDemandee = searchParams.get('facture');
+  const ongletDemande = searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee ? 'factures' : null;
   const [onglet, setOnglet] = useState<'devis' | 'factures'>(ongletDemande ?? 'devis');
   useEffect(() => {
     if (ongletDemande) setOnglet(ongletDemande);
@@ -144,6 +146,9 @@ export default function FacturationCentralePage({ params }: Props) {
   useEffect(() => {
     if (nouvelleDemandee) setNouvelle({ dossier: nouvelleDemandee });
   }, [nouvelleDemandee]);
+  useEffect(() => {
+    if (factureDemandee) setFactureOuverte(factureDemandee);
+  }, [factureDemandee]);
   const [modalCatalogue, setModalCatalogue] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -614,9 +619,30 @@ export default function FacturationCentralePage({ params }: Props) {
               {facturesFiltrees.map((f) => (
                 <tr key={f.id} className="factu-ligne" onClick={() => setFactureOuverte(f.id)}>
                   <td data-label="Réf.">
-                    <button type="button" className="crm-code" onClick={(e) => { e.stopPropagation(); setFactureOuverte(f.id); }}>
-                      {f.reference ?? 'brouillon'}
-                    </button>
+                    <span className="cell-stack">
+                      {/* Référence « CODE-n » (maquette) ; un brouillon montre celle
+                          qu'il prendra à la validation, en retrait. */}
+                      <button
+                        type="button"
+                        className={`crm-code${f.reference ? '' : ' factu-ref-prevue'}`}
+                        title={f.reference ? undefined : 'Référence attribuée à la validation'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFactureOuverte(f.id);
+                        }}
+                      >
+                        {f.reference ?? f.referencePrevue ?? 'brouillon'}
+                      </button>
+                      {f.dossierCrm ? (
+                        <span className="cell-sub">directe</span>
+                      ) : (
+                        f.tranche && (
+                          <span className="cell-sub">
+                            {f.tranche.rang}/{f.tranche.total}
+                          </span>
+                        )
+                      )}
+                    </span>
                   </td>
                   <td data-label="Client">{f.client?.nom ?? <span className="cell-sub">—</span>}</td>
                   <td data-label="Projet">

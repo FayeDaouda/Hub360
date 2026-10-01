@@ -13283,3 +13283,7 @@ a.notif-item:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.factu-ref-prevue {
+  opacity: 0.7;
+  font-style: italic;
+}

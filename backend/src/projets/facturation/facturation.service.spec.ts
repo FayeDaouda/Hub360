@@ -4,8 +4,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { FacturationService } from './facturation.service';
 import { OuvertureProjetService } from '../gabarit/ouverture.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 // Ouverture selon le gabarit : sans objet ici (aucune F1 d'un projet à gabarit).
+// Notification « facture à valider » : sans objet ici.
+const NOTIFS = { notifierFactureAValider: jest.fn() } as unknown as NotificationsService;
 const OUVERTURE = { preparer: jest.fn().mockResolvedValue(null), enregistrer: jest.fn() } as unknown as OuvertureProjetService;
 
 // FacturationService.relancer() — relance MANUELLE d'une facture en retard
@@ -51,7 +54,7 @@ function setup(row: ReturnType<typeof factureRow> | null) {
   const prisma = { facture: { findFirst } } as unknown as PrismaService;
   const envoyerRelanceFacture = jest.fn().mockResolvedValue({ envoye: true });
   const email = { envoyerRelanceFacture } as unknown as EmailService;
-  const service = new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService, OUVERTURE);
+  const service = new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService, OUVERTURE, NOTIFS);
   return { service, envoyerRelanceFacture, findFirst };
 }
 
@@ -148,7 +151,7 @@ function mockPrisma() {
 
 function service(prisma: PrismaService) {
   const email = {} as unknown as EmailService;
-  return new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService, OUVERTURE);
+  return new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService, OUVERTURE, NOTIFS);
 }
 
 describe('FacturationService.creerEcheancier', () => {
@@ -436,10 +439,22 @@ describe('FacturationService.findAllPourSociete', () => {
         lignes: [],
       },
     ]);
+    (facture as unknown as { groupBy: jest.Mock }).groupBy = jest.fn().mockResolvedValue([]);
     const svc = service(prisma);
     const res = await svc.findAllPourSociete('S1', {});
     expect(res[0].client).toEqual({ id: 'C1', nom: 'Client Libre' });
     expect(res[0].projet).toBeNull();
+    // Sans dossier : référence de la séquence de la société.
+    expect(res[0].reference).toMatch(/^F\d{4}-0001$/);
+  });
+});
+
+describe('refFacture · numérotation par dossier (maquette Finances)', () => {
+  it('code du dossier + rang ; sans dossier, séquence de la société', () => {
+    const { refFacture } = jest.requireActual('../domaine/config');
+    expect(refFacture({ numero: 42, emiseLe: '2026-09-23', estAvoir: false, codeDossier: 'D_ALM.26', rangDossier: 1 })).toBe('D_ALM.26-1');
+    expect(refFacture({ numero: 7, emiseLe: '2026-09-23', estAvoir: false, codeDossier: null, rangDossier: null })).toBe('F2026-0007');
+    expect(refFacture({ numero: null, emiseLe: null, estAvoir: false, codeDossier: null, rangDossier: null })).toBeNull();
   });
 });
 
@@ -598,7 +613,7 @@ describe('FacturationService — refacturation des études', () => {
 
 describe('FacturationService · parts F1 / F2 / F3 (Réglages)', () => {
   const reglages = { partsFactures: jest.fn().mockResolvedValue({ F1: 30, F2: 50, F3: 20 }) } as unknown as ReglagesService;
-  const service = new FacturationService({} as PrismaService, {} as never, reglages, OUVERTURE);
+  const service = new FacturationService({} as PrismaService, {} as never, reglages, OUVERTURE, NOTIFS);
   it('soumission à la DAF : fige le réglage en service sur les offres brouillon pas encore figées', async () => {
     const tx = { devis: { updateMany: jest.fn() } };
     await service.figerPartsOffres(tx as never, 'S1', 'D1');

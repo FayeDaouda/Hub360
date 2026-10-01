@@ -75,7 +75,7 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
           <div>
             <p className="fiche-crm-titre">Nouvelle facture</p>
             <h2 id="nfd-titre" className="fiche-crm-code">
-              {lead ? lead.code : '—'}
+              {lead ? lead.prochaineReference : '—'}
             </h2>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>

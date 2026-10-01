@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { FactureStatut, FactureType, NatureDossier, Prisma } from '@prisma/client';
+import { FactureStatut, FactureType, JalonFacture, NatureDossier, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { chargerProjet } from '../projet-acces';
@@ -33,6 +33,7 @@ import {
 import { EmailService } from '../../email/email.service';
 import { OuvertureProjetService } from '../gabarit/ouverture.service';
 import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './facture-directe';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -47,6 +48,7 @@ export class FacturationService {
     private email: EmailService,
     private reglages: ReglagesService,
     private ouverture: OuvertureProjetService,
+    private notifications: NotificationsService,
   ) {}
 
   // Soumission du dossier à la DAF (cycle CRM, dans sa transaction) : l'offre
@@ -142,7 +144,7 @@ export class FacturationService {
   }
 
   async emettre(societeId: string, projetId: string, factureId: string) {
-    await chargerProjet(this.prisma, societeId, projetId);
+    const projet = await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.brouillon(projetId, factureId);
     if (facture.montantHt.lte(0)) {
       throw new UnprocessableEntityException(
@@ -157,10 +159,11 @@ export class FacturationService {
         : null;
     // Transition conditionnée sur `statut` dans la transaction : deux émissions
     // concurrentes du même brouillon ne peuvent pas consommer deux numéros.
-    await this.avecSequence(societeId, async (tx, numero) => {
+    // Code du projet = code de son dossier (recopié à l'Onboard).
+    await this.avecSequence(societeId, projet.code, async (tx, seq) => {
       const r = await tx.facture.updateMany({
         where: { id: facture.id, statut: 'brouillon' },
-        data: { numero, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(facture) },
+        data: { ...seq, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(facture) },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
       if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
@@ -178,7 +181,7 @@ export class FacturationService {
   // Correction d'une facture émise (cadrage §5) : on n'édite pas, on émet un
   // avoir qui la porte en négatif et bascule l'originale en « annulée ».
   async creerAvoir(societeId: string, projetId: string, factureId: string) {
-    await chargerProjet(this.prisma, societeId, projetId);
+    const projet = await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.prisma.facture.findFirst({
       where: { id: factureId, projetId, societeId },
     });
@@ -192,7 +195,7 @@ export class FacturationService {
       );
     }
 
-    await this.avecSequence(societeId, async (tx, numero) => {
+    await this.avecSequence(societeId, projet.code, async (tx, seq) => {
       // Annulation conditionnée sur `statut` : deux avoirs concurrents sur la
       // même facture sont exclus (le 2ᵉ voit statut ≠ emise).
       const r = await tx.facture.updateMany({
@@ -204,7 +207,7 @@ export class FacturationService {
         data: {
           societeId,
           projetId,
-          numero,
+          ...seq,
           statut: 'emise',
           estAvoir: true,
           emiseLe: new Date(),
@@ -213,7 +216,7 @@ export class FacturationService {
           montantHt: facture.montantHt.negated(),
           tauxTva: facture.tauxTva,
           factureOrigineId: facture.id,
-          libelle: `Avoir sur ${refFacture(facture.numero, facture.emiseLe, false)}`,
+          libelle: `Avoir sur ${refFacture(facture)}`,
         },
       });
     });
@@ -306,6 +309,10 @@ export class FacturationService {
       orderBy: [{ creeLe: 'desc' }],
     });
     const aujourdhui = jourCourant();
+    const [rangs, tranches] = await Promise.all([
+      this.rangsParDossier(societeId),
+      this.tranchesEcheancier(societeId, [...new Set(factures.map((f) => f.projetId).filter((x): x is string => !!x))]),
+    ]);
 
     return factures.map((f) => {
       const montantHt = f.montantHt.toNumber();
@@ -320,7 +327,7 @@ export class FacturationService {
       return {
         id: f.id,
         numero: f.numero,
-        reference: refFacture(f.numero, f.emiseLe, f.estAvoir),
+        reference: refFacture(f),
         type: f.type,
         jalon: f.jalon,
         libelle: f.libelle,
@@ -344,6 +351,11 @@ export class FacturationService {
         projetId: f.projetId,
         projet: f.projet ? { id: f.projet.id, code: f.projet.code, programme: f.projet.programme } : null,
         client: client ? { id: client.id, nom: client.nom } : null,
+        // Brouillon : la référence qu'il prendra à l'émission (rang suivant du
+        // dossier) — indicative, attribuée seulement par la validation.
+        referencePrevue: prochaineReference(f.statut === 'brouillon' ? (f.dossierCrm?.code ?? f.projet?.code ?? null) : null, rangs),
+        // Tranche d'échéancier « k/N » (maquette Finances) ; null hors échéancier.
+        tranche: tranches.get(f.id) ?? null,
         // Facture directe d'un lead (sans offre) ; null sinon.
         dossierCrm: f.dossierCrm ? { id: f.dossierCrm.id, code: f.dossierCrm.code } : null,
         paiements: f.paiements
@@ -362,13 +374,46 @@ export class FacturationService {
       select: { id: true, code: true, statut: true, localisation: true, localite: { select: { nom: true } }, client: { select: { nom: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    const rangs = await this.rangsParDossier(societeId);
     return dossiers.map((d) => ({
       id: d.id,
       code: d.code,
       client: d.client.nom,
       localisation: d.localite?.nom ?? d.localisation,
       statut: d.statut,
+      // « Nouvelle facture D_ALM.26-1 » : la référence que prendra la prochaine
+      // facture émise sur ce lead.
+      prochaineReference: prochaineReference(d.code, rangs)!,
     }));
+  }
+
+  // Dernier rang de facture émis par code de dossier.
+  private async rangsParDossier(societeId: string): Promise<Map<string, number>> {
+    const g = await this.prisma.facture.groupBy({
+      by: ['codeDossier'],
+      where: { societeId, codeDossier: { not: null } },
+      _max: { rangDossier: true },
+    });
+    return new Map(g.map((x) => [x.codeDossier!, x._max.rangDossier ?? 0]));
+  }
+
+  // Position « k/N » des factures d'échéancier (jalons) de chaque projet, dans
+  // l'ordre des jalons ; les avoirs n'en font pas partie.
+  private async tranchesEcheancier(societeId: string, projetIds: string[]) {
+    const tranches = new Map<string, { rang: number; total: number }>();
+    if (!projetIds.length) return tranches;
+    const fs = await this.prisma.facture.findMany({
+      where: { societeId, projetId: { in: projetIds }, jalon: { not: null }, estAvoir: false },
+      select: { id: true, projetId: true, jalon: true, creeLe: true },
+    });
+    const ordre = (j: JalonFacture | null) => JALONS_FACTURE.findIndex((x) => x.cle === j);
+    for (const projetId of projetIds) {
+      const duProjet = fs
+        .filter((f) => f.projetId === projetId)
+        .sort((a, b) => ordre(a.jalon) - ordre(b.jalon) || a.creeLe.getTime() - b.creeLe.getTime());
+      duProjet.forEach((f, i) => tranches.set(f.id, { rang: i + 1, total: duProjet.length }));
+    }
+    return tranches;
   }
 
   // Préparée « à valider par le CFO avant émission » : brouillon, sans numéro,
@@ -384,7 +429,7 @@ export class FacturationService {
     }
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id: dto.dossierCrmId, societeId },
-      select: { id: true, nature: true, archiveLe: true, projet: { select: { id: true } } },
+      select: { id: true, code: true, nature: true, archiveLe: true, projet: { select: { id: true } }, client: { select: { nom: true } } },
     });
     if (!dossier) throw new NotFoundException('Lead introuvable');
     if (dossier.archiveLe) throw new ConflictException('Lead archivé : aucune facture ne s’y prépare.');
@@ -399,7 +444,14 @@ export class FacturationService {
         montantHt: lignes.reduce((t, l) => t + l.montantHt, 0),
         lignes: { create: lignes.map((l, ordre) => ({ ...l, ordre })) },
       },
-      select: { id: true },
+      select: { id: true, montantHt: true, tauxTva: true },
+    });
+    const { montantTtc } = ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber());
+    await this.notifications.notifierFactureAValider({
+      societeId,
+      factureId: f.id,
+      dossierCrmId: dossier.id,
+      titre: `Facture directe à valider · ${dossier.code} · ${dossier.client.nom} · ${montantTtc.toLocaleString('fr-FR')} FCFA TTC`,
     });
     return this.factureCentrale(societeId, f.id);
   }
@@ -421,10 +473,13 @@ export class FacturationService {
     }
     if (f.statut !== 'brouillon') throw new ConflictException('Facture déjà émise.');
     if (f.montantHt.lte(0)) throw new UnprocessableEntityException("Renseignez un montant HT avant d'émettre la facture.");
-    await this.avecSequence(societeId, async (tx, numero) => {
+    const dossier = f.dossierCrmId
+      ? await this.prisma.dossierCrm.findUnique({ where: { id: f.dossierCrmId }, select: { code: true } })
+      : null;
+    await this.avecSequence(societeId, dossier?.code ?? null, async (tx, seq) => {
       const r = await tx.facture.updateMany({
         where: { id: f.id, statut: 'brouillon' },
-        data: { numero, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(f) },
+        data: { ...seq, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(f) },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
     });
@@ -501,7 +556,7 @@ export class FacturationService {
       email: client.email,
       clientNom: client.nom,
       societeNom: f.societe.nom,
-      reference: refFacture(f.numero, f.emiseLe, f.estAvoir),
+      reference: refFacture(f),
       resteAPayer: montantTtc - montantPaye,
       echeanceLe: f.echeanceLe,
       joursRetard: joursRetardFacture(f.echeanceLe, aujourdhui),
@@ -527,12 +582,15 @@ export class FacturationService {
     },
   ): Promise<string> {
     let factureId = '';
-    await this.avecSequence(societeId, async (tx, numero) => {
+    const projet = data.projetId
+      ? await this.prisma.projet.findUnique({ where: { id: data.projetId }, select: { code: true } })
+      : null;
+    await this.avecSequence(societeId, projet?.code ?? null, async (tx, seq) => {
       const f = await tx.facture.create({
         data: {
           societeId,
           projetId: data.projetId,
-          numero,
+          ...seq,
           type: data.type,
           statut: 'emise',
           libelle: data.libelle,
@@ -727,7 +785,7 @@ export class FacturationService {
           libelle: b.libelle,
           bureau: b.interlocuteur,
           montantBureauHt: ligne.montantBase?.toNumber() ?? null,
-          factureReference: refFacture(f.numero, f.emiseLe, false),
+          factureReference: refFacture({ ...f, estAvoir: false }),
           projet: b.etudes.projet,
         },
       ];
@@ -816,9 +874,13 @@ export class FacturationService {
   // de 4 personnes), mais la garantie « sans trou » repose sur cette unicité,
   // pas sur l'absence de course. Le numéro n'est attribué qu'ici — un brouillon
   // reste sans numéro, donc sa suppression ne laisse pas de trou.
+  // Avec `codeDossier` (code du dossier de la facture), attribue aussi son rang
+  // dans le dossier — la référence affichée « CODE-n » (maquette Finances),
+  // sans trou par dossier : seule une émission consomme un rang.
   private async avecSequence(
     societeId: string,
-    action: (tx: Prisma.TransactionClient, numero: number) => Promise<unknown>,
+    codeDossier: string | null,
+    action: (tx: Prisma.TransactionClient, seq: Sequence) => Promise<unknown>,
   ) {
     for (let essai = 0; ; essai++) {
       try {
@@ -827,7 +889,14 @@ export class FacturationService {
             where: { societeId, numero: { not: null } },
             _max: { numero: true },
           });
-          await action(tx, (max._max.numero ?? 0) + 1);
+          const rang = codeDossier
+            ? await tx.facture.aggregate({ where: { societeId, codeDossier }, _max: { rangDossier: true } })
+            : null;
+          await action(tx, {
+            numero: (max._max.numero ?? 0) + 1,
+            codeDossier,
+            rangDossier: rang ? (rang._max.rangDossier ?? 0) + 1 : null,
+          });
         });
         return;
       } catch (e) {
@@ -896,7 +965,7 @@ export class FacturationService {
       return {
         id: f.id,
         numero: f.numero,
-        reference: refFacture(f.numero, f.emiseLe, f.estAvoir),
+        reference: refFacture(f),
         type: f.type,
         jalon: f.jalon,
         libelle: f.libelle,
@@ -1030,4 +1099,12 @@ function versLigneFacture(l: {
 function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string | null }): string | null {
   if (f.echeanceLe) return f.echeanceLe;
   return f.dossierCrmId ? echeanceDirecte(new Date().toISOString().slice(0, 10)) : null;
+}
+
+// Numéros attribués à l'émission : séquence de la société, et code + rang du
+// dossier pour la référence affichée (null sans dossier).
+type Sequence = { numero: number; codeDossier: string | null; rangDossier: number | null };
+
+function prochaineReference(code: string | null, rangs: Map<string, number>): string | null {
+  return code ? `${code}-${(rangs.get(code) ?? 0) + 1}` : null;
 }

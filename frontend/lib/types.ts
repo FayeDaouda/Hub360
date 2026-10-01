@@ -532,6 +532,8 @@ export type NotificationType =
   | 'tache_validee'
   | 'tache_renvoyee'
   | 'mention_projet' // @mention dans un fil de projet (maquette « Projets »)
+  // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
+  | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
   // incomplet 72 h après sa création — ouvre la fiche dans le CRM.
   | 'fiche_a_completer';
@@ -543,6 +545,7 @@ export type NotificationItem = {
   projetId: string | null;
   projetCode: string | null;
   dossierCrmId: string | null;
+  factureId: string | null; // facture à valider (Finances)
   date: string; // ISO 8601
   lu: boolean;
   derivee: boolean;
@@ -1632,18 +1635,21 @@ export function statutFactureEffectif(
   return 'emise';
 }
 
-// MIROIR du backend domaine/config.ts::refFacture
-// Format PROVISOIRE — le format légal et les mentions obligatoires restent à
-// caler sur un modèle de facture réel Grey Concrete (cadrage §10). Le numéro
-// séquentiel fait foi ; ceci n'est qu'un rendu.
-export function refFacture(
-  numero: number | null,
-  emiseLe: string | null,
-  estAvoir: boolean,
-): string | null {
-  if (numero == null) return null;
-  const annee = (emiseLe ? new Date(emiseLe) : new Date()).getFullYear();
-  return `${estAvoir ? 'AV' : 'F'}${annee}-${String(numero).padStart(4, '0')}`;
+// MIROIR du backend domaine/config.ts::refFacture (maquette Finances, oct.
+// 2026) : code du dossier + rang de la facture dans ce dossier, attribués à
+// l'émission (« D_ALM.26-1 ») ; sans dossier (devis libre), la séquence de la
+// société (F / AV + année + numéro).
+export function refFacture(f: {
+  numero: number | null;
+  emiseLe: string | null;
+  estAvoir: boolean;
+  codeDossier: string | null;
+  rangDossier: number | null;
+}): string | null {
+  if (f.codeDossier && f.rangDossier != null) return `${f.codeDossier}-${f.rangDossier}`;
+  if (f.numero == null) return null;
+  const annee = (f.emiseLe ? new Date(f.emiseLe) : new Date()).getFullYear();
+  return `${f.estAvoir ? 'AV' : 'F'}${annee}-${String(f.numero).padStart(4, '0')}`;
 }
 
 // --- Devis (brique « gestion », 2ᵉ étage après Facturation) ---
@@ -1805,6 +1811,10 @@ export type FactureCentrale = {
   projetId: string | null;
   projet: { id: string; code: string; programme: string } | null;
   client: { id: string; nom: string } | null;
+  // Brouillon : référence qu'il prendra à l'émission (rang suivant du dossier).
+  referencePrevue: string | null;
+  // Tranche d'échéancier « k/N » ; null hors échéancier.
+  tranche: { rang: number; total: number } | null;
   // Facture directe d'un lead (sans offre) ; null sinon.
   dossierCrm: { id: string; code: string } | null;
   paiements: Paiement[];
@@ -1812,7 +1822,14 @@ export type FactureCentrale = {
 };
 
 // Lead du CRM proposé pour une facture directe (dossiers non archivés).
-export type LeadFacturable = { id: string; code: string; client: string; localisation: string; statut: StatutCrm };
+export type LeadFacturable = {
+  id: string;
+  code: string;
+  client: string;
+  localisation: string;
+  statut: StatutCrm;
+  prochaineReference: string; // « D_ALM.26-1 » : référence de la prochaine facture émise
+};
 
 // MIROIR du backend devis/domaine.ts::refDevis
 export function refDevis(numero: number | null, dateEnvoi: string | null): string | null {

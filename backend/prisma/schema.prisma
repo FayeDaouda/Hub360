@@ -209,6 +209,7 @@ enum NotificationType {
   tache_remise
   tache_validee
   tache_renvoyee
+  facture_a_valider // facture directe d'un lead préparée, à valider par le CFO
   mention_projet // @mention dans un fil de discussion de projet (maquette « Projets »)
 }
 
@@ -219,6 +220,7 @@ model Notification {
   type           NotificationType
   projetId       String?          @map("projet_id") // contexte cliquable
   dossierCrmId   String?          @map("dossier_crm_id") // contexte cliquable (cycle CRM)
+  factureId      String?          @map("facture_id") // contexte cliquable (facture à valider)
   titre          String // texte pré-rendu par le service
   parId          String?          @map("par_id") // qui a déclenché (audit, pas de FK)
   luLe           DateTime?        @map("lu_le")
@@ -227,6 +229,7 @@ model Notification {
   destinataire Utilisateur @relation(fields: [destinataireId], references: [id], onDelete: Cascade)
   projet       Projet?     @relation(fields: [projetId], references: [id], onDelete: SetNull)
   dossierCrm   DossierCrm? @relation(fields: [dossierCrmId], references: [id], onDelete: SetNull)
+  facture      Facture?    @relation(fields: [factureId], references: [id], onDelete: SetNull)
 
   @@index([destinataireId, luLe])
   @@map("notifications")
@@ -1722,6 +1725,12 @@ model Facture {
   // toujours renseigner projetId — seule la contrainte est desserrée.
   projetId          String?       @map("projet_id")
   numero            Int? // rang séquentiel par société — null tant que brouillon
+  // Référence affichée (maquette Finances, oct. 2026) : code du dossier +
+  // rang de la facture dans ce dossier, « D_ALM.26-1 », attribués à
+  // l'émission (un brouillon n'en a pas : sa suppression ne laisse pas de
+  // trou). null = facture sans dossier (devis libre) : référence F-AAAA-NNNN.
+  codeDossier       String?       @map("code_dossier")
+  rangDossier       Int?          @map("rang_dossier")
   type              FactureType
   statut            FactureStatut @default(brouillon)
   jalon             JalonFacture? // renseigné si la facture appartient à un échéancier
@@ -1760,10 +1769,12 @@ model Facture {
   devisEcheancier Devis?         @relation("DevisEcheancier", fields: [devisEcheancierId], references: [id], onDelete: SetNull)
   ligneDevis      LigneDevis?    @relation(fields: [ligneDevisId], references: [id], onDelete: SetNull)
   dossierCrm      DossierCrm?    @relation(fields: [dossierCrmId], references: [id], onDelete: Restrict)
+  notifications   Notification[]
   paiements       Paiement[]
   lignes          LigneFacture[]
 
   @@unique([societeId, numero])
+  @@unique([societeId, codeDossier, rangDossier])
   @@index([projetId])
   @@index([ligneDevisId])
   @@map("factures")

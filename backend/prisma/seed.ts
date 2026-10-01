@@ -267,10 +267,11 @@ async function main() {
       permissions: {
         crm: 'lecture',
         projets: 'validation',
-        finances_devis: 'aucun',
-        finances_factures: 'aucun',
-        finances_marges: 'aucun',
-        finances_charges: 'aucun',
+        // Finances ouvertes, comme le CIO (maquette Finances, oct. 2026).
+        finances_devis: 'ecriture',
+        finances_factures: 'ecriture',
+        finances_marges: 'lecture',
+        finances_charges: 'lecture',
         equipe: 'lecture',
         rh: 'aucun',
         mon_espace: 'ecriture',
@@ -290,10 +291,14 @@ async function main() {
         // tous les projets ouverts et assigne (« Lecture et assignation ·
         // accès complet ») ; la validation reste au chef de team / DPLG.
         projets: 'ecriture',
-        finances_devis: 'aucun',
-        finances_factures: 'aucun',
-        finances_marges: 'aucun',
-        finances_charges: 'aucun',
+        // Finances ouvertes (maquette Finances, oct. 2026 : « CFO, CEO, CTO,
+        // CIO : tout, y compris tableau de bord et rentabilité ») : préparer
+        // devis et factures, lire marges et charges ; la validation (émission,
+        // offres) reste au CFO.
+        finances_devis: 'ecriture',
+        finances_factures: 'ecriture',
+        finances_marges: 'lecture',
+        finances_charges: 'lecture',
         equipe: 'aucun',
         rh: 'aucun',
         mon_espace: 'lecture',

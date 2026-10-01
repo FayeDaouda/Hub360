@@ -455,17 +455,21 @@ export const JALONS_FACTURE: { cle: JalonFacture; code: CodeFacture; libelle: st
   { cle: 'livraison', code: 'F3', libelle: "Livraison des plans d'exécution" },
 ];
 
-// Référence d'affichage d'une facture — format PROVISOIRE. Le format légal
-// définitif et les mentions obligatoires restent à caler sur un modèle de
-// facture réel utilisé aujourd'hui par Grey Concrete (cadrage §10). La donnée
-// qui fait foi est le numéro séquentiel (Facture.numero) ; cette chaîne n'est
-// qu'un rendu. Miroir de refFacture côté front.
-export function refFacture(
-  numero: number | null,
-  emiseLe: Date | string | null,
-  estAvoir: boolean,
-): string | null {
-  if (numero == null) return null;
-  const annee = (emiseLe ? new Date(emiseLe) : new Date()).getFullYear();
-  return `${estAvoir ? 'AV' : 'F'}${annee}-${String(numero).padStart(4, '0')}`;
+// Référence d'une facture (maquette Finances, oct. 2026) : code du dossier et
+// rang de la facture dans ce dossier, attribués à l'émission (« D_ALM.26-1 »).
+// Une facture sans dossier (devis libre) garde la séquence de la société
+// (F / AV + année + numéro). Miroir de refFacture côté front.
+export type ReferenceFacture = {
+  numero: number | null;
+  emiseLe: Date | string | null;
+  estAvoir: boolean;
+  codeDossier: string | null;
+  rangDossier: number | null;
+};
+
+export function refFacture(f: ReferenceFacture): string | null {
+  if (f.codeDossier && f.rangDossier != null) return `${f.codeDossier}-${f.rangDossier}`;
+  if (f.numero == null) return null;
+  const annee = (f.emiseLe ? new Date(f.emiseLe) : new Date()).getFullYear();
+  return `${f.estAvoir ? 'AV' : 'F'}${annee}-${String(f.numero).padStart(4, '0')}`;
 }
