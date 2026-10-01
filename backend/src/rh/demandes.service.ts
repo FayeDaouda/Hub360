@@ -179,7 +179,9 @@ export class DemandesService {
     return !!c && c.id === d.n1CollaborateurId;
   }
 
-  async aValider(a: Acteur) {
+  // Demandes dont l'acteur est le N+1 : en attente de sa décision, ou toutes
+  // (les plus récentes d'abord, pour l'historique « Toutes »).
+  async aValider(a: Acteur, toutes = false) {
     const c = await this.prisma.collaborateur.findFirst({
       where: { utilisateurId: a.userId, societeId: a.societeId },
       select: { id: true },
@@ -190,9 +192,9 @@ export class DemandesService {
     if (a.role === 'societe_admin') ou.push({ n1Role: { in: ROLES_N1 } });
     if (!ou.length) return [];
     const demandes = await this.prisma.demandeAbsence.findMany({
-      where: { statut: 'attente_n1', OR: ou, dossier: { societeId: a.societeId } },
+      where: { ...(!toutes && { statut: 'attente_n1' as const }), OR: ou, dossier: { societeId: a.societeId } },
       include: { dossier: { select: { prenom: true, nom: true, poste: true } } },
-      orderBy: { dateDebut: 'asc' },
+      orderBy: toutes ? { createdAt: 'desc' } : { dateDebut: 'asc' },
     });
     return demandes.map((d) => ({ ...versAbsence(d), salarie: d.dossier }));
   }

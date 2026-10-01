@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
@@ -56,9 +56,10 @@ export class MesDemandesController {
 export class ValidationsAbsencesController {
   constructor(private demandes: DemandesService) {}
 
+  // ?toutes=1 : aussi les demandes déjà décidées (« Toutes », Mon espace).
   @Get('a-valider')
-  aValider(@Req() req: R) {
-    return this.demandes.aValider(req.user);
+  aValider(@Req() req: R, @Query('toutes') toutes?: string) {
+    return this.demandes.aValider(req.user, toutes === '1');
   }
 
   @Get(':id/preparation')

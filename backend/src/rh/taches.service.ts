@@ -110,6 +110,25 @@ export class TachesService {
     return { taches: lignes, stats: statsPerformances(lignes) };
   }
 
+  // Statistiques d'une équipe (« Ma cellule ») : mêmes règles que « Mes
+  // performances », sur les tâches de tous ses membres.
+  async statsEquipe(collaborateurIds: string[]) {
+    if (!collaborateurIds.length) return statsPerformances([]);
+    const jour = aujourdhui();
+    const taches = await chargerTachesAssignees(this.prisma, collaborateurIds);
+    const validations = taches.length
+      ? await this.prisma.validationTache.findMany({
+          where: { OR: taches.map((t) => ({ section: t.section, projetId: t.projetId, groupe: t.groupe })) },
+        })
+      : [];
+    return statsPerformances(
+      taches.map((t) => {
+        const v = validations.find((x) => x.section === t.section && x.projetId === t.projetId && x.groupe === t.groupe) ?? null;
+        return { statut: statutTache(t, v, jour), echeance: t.echeance, remisLe: v?.remisLe ?? null };
+      }),
+    );
+  }
+
   async remettre(a: Acteur, k: Cle) {
     const bloc = await this.bloc(k);
     if (bloc.responsable?.utilisateurId !== a.userId) {

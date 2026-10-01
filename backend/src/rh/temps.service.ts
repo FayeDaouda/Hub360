@@ -32,6 +32,9 @@ export type LigneCalcul = {
   debut: string;
   echeance: string;
   dureeStandard: number | null;
+  // Jours ouvrés de présence comptés dans le mois ; absent des feuilles
+  // figées avant son ajout (01/10/2026).
+  jours?: number;
   heures: number;
   manque: Manque | null;
 };
@@ -264,6 +267,7 @@ function calculer(
       debut: t.debut!,
       echeance: t.echeance!,
       dureeStandard: t.heures,
+      jours: f.lignes[i].jours,
       heures: f.lignes[i].heures,
       manque: f.lignes[i].manque,
     })),

@@ -17,7 +17,9 @@ import { apiSociete } from './client-api';
 //   GET   …/mon-espace/bulletins/:mois  { nom, url }
 //   GET   …/mon-espace/cellule          { cellule | null }
 
-export const getMaCellule = (slug: string) => apiSociete<{ cellule: MaCellule | null }>(slug, '/mon-espace/cellule');
+// Sans cellule : `cellule: null`, compteurs à zéro.
+export const getMaCellule = (slug: string) =>
+  apiSociete<{ cellule: MaCellule | null; stats: StatsPerformances }>(slug, '/mon-espace/cellule');
 export const getMonEspace = (slug: string) => apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace');
 export const majCoordonnees = (slug: string, corps: { telephone?: string; contactUrgence?: string }) =>
   apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/coordonnees', { method: 'PATCH', body: corps });

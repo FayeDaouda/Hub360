@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, TypePieceDossier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ouDossierDuCompte } from './mon-compte';
+import { TachesService } from './taches.service';
 
 type Acteur = { userId: string; societeId?: string };
 
@@ -22,7 +23,10 @@ type DossierProfil = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE
 // Le salaire n'y figure pas (réservé RH, CFO, CEO).
 @Injectable()
 export class MonEspaceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private taches: TachesService,
+  ) {}
 
   // `dossier: null` plutôt qu'une erreur : les autres onglets (tâches, temps,
   // validations du N+1) restent utilisables sans dossier ouvert par la RH.
@@ -62,8 +66,9 @@ export class MonEspaceService {
     return { nom: b.nom, url: b.cle };
   }
 
-  // Ma cellule (lot 5d) : l'équipe du salarié et les projets qu'elle suit.
-  // Rien d'autre (ni charge ni absences des collègues) : pas demandé.
+  // Ma cellule (lot 5d, maquette « Mon espace » du boss) : l'équipe, son
+  // pilote (chef de team), ses projets et ses tâches (en cours, en retard,
+  // remises à temps). Aucun montant. Sans cellule : tout à zéro.
   async maCellule(a: Acteur) {
     const dossier = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),
@@ -75,7 +80,7 @@ export class MonEspaceService {
         where: { utilisateurId: a.userId, ...(a.societeId && { societeId: a.societeId }) },
         select: { id: true, celluleId: true },
       }));
-    if (!fiche?.celluleId) return { cellule: null };
+    if (!fiche?.celluleId) return { cellule: null, stats: await this.taches.statsEquipe([]) };
 
     const c = await this.prisma.cellule.findUniqueOrThrow({
       where: { id: fiche.celluleId },
@@ -83,16 +88,18 @@ export class MonEspaceService {
         nom: true,
         dispatcherId: true,
         membres: { select: { id: true, prenom: true, nom: true, role: true, niveau: true }, orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] },
+        dispatcher: { select: { prenom: true, nom: true } },
         projets: {
-          where: { projet: { phase: { not: 'livre' } } },
           select: { projet: { select: { id: true, code: true, programme: true, phase: true } } },
           orderBy: { projet: { code: 'asc' } },
         },
       },
     });
     return {
+      stats: await this.taches.statsEquipe(c.membres.map((m) => m.id)),
       cellule: {
         nom: c.nom,
+        pilote: c.dispatcher ? `${c.dispatcher.prenom} ${c.dispatcher.nom}`.trim() : null,
         membres: c.membres.map((m) => ({
           id: m.id,
           nom: `${m.prenom} ${m.nom}`.trim(),

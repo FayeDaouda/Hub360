@@ -2119,6 +2119,7 @@ export type LigneCalculTemps = {
   debut: string;
   echeance: string;
   dureeStandard: number | null;
+  jours?: number; // jours ouvrés de présence comptés dans le mois (absent des feuilles figées avant le 01/10/2026)
   heures: number; // part du mois
   manque: ManqueTache | null;
 };
@@ -2234,6 +2235,7 @@ export type TacheAValider = {
 // Mon espace · Ma cellule (lot 5d) : l'équipe et les projets qu'elle suit.
 export type MaCellule = {
   nom: string;
+  pilote: string | null; // chef de team (dispatcher) ; null = « Pilote à désigner »
   membres: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; estChef: boolean; estMoi: boolean }[];
   projets: { id: string; code: string; programme: string; phase: Phase }[];
 };

@@ -1,0 +1,105 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { getAbsencesAValider, jjmm, LIBELLE_TYPE_ABSENCE, STATUT_ABSENCE } from '@/lib/demandes';
+import type { DemandeAbsence } from '@/lib/types';
+import { DecisionN1Formulaire } from '@/components/absences/decision-n1-modal';
+
+type Filtre = 'a_decider' | 'toutes';
+
+// « Mon espace › À valider » (maquette du boss) : les demandes de l'équipe
+// dont je suis le N+1 — à décider, ou toutes — et, à droite, les signaux et
+// la décision de la demande choisie.
+export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n: number) => void }) {
+  const [toutes, setToutes] = useState<DemandeAbsence[] | null>(null);
+  const [filtre, setFiltre] = useState<Filtre>('a_decider');
+  const [choisie, setChoisie] = useState<string | null>(null);
+
+  const charger = useCallback(() => {
+    getAbsencesAValider(slug, true)
+      .then(setToutes)
+      .catch(() => setToutes([]));
+  }, [slug]);
+  useEffect(charger, [charger]);
+
+  const aDecider = (toutes ?? []).filter((d) => d.statut === 'attente_n1');
+  useEffect(() => {
+    if (toutes) onCompte(aDecider.length);
+  }, [toutes, aDecider.length, onCompte]);
+
+  const visibles = filtre === 'a_decider' ? aDecider : toutes ?? [];
+  const demande = (toutes ?? []).find((d) => d.id === choisie) ?? null;
+
+  return (
+    <div className="me-colonnes">
+      <section className="panel glass-panel dmd-section">
+        <h2 className="dmd-titre">Demandes de mon équipe (N+1)</h2>
+        <div className="vue-toggle" role="group" aria-label="Filtrer les demandes">
+          {(
+            [
+              ['a_decider', 'À décider', aDecider.length],
+              ['toutes', 'Toutes', toutes?.length ?? 0],
+            ] as const
+          ).map(([cle, libelle, n]) => (
+            <button key={cle} type="button" className={filtre === cle ? 'is-active' : ''} aria-pressed={filtre === cle} onClick={() => setFiltre(cle)}>
+              {libelle} · {n}
+            </button>
+          ))}
+        </div>
+        {!toutes ? (
+          <p className="dmd-note">Chargement…</p>
+        ) : visibles.length === 0 ? (
+          <p className="dmd-note">Aucune demande.</p>
+        ) : (
+          <ul className="dmd-liste">
+            {visibles.map((d) => (
+              <li key={d.id}>
+                <button
+                  type="button"
+                  className={`me-demande${d.id === choisie ? ' is-actif' : ''}`}
+                  aria-pressed={d.id === choisie}
+                  onClick={() => setChoisie(d.id)}
+                >
+                  <span>
+                    <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
+                    <span className="cell-sub">
+                      {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {jjmm(d.dateDebut)} → {jjmm(d.dateFin)}
+                    </span>
+                  </span>
+                  <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel glass-panel dmd-section me-decision">
+        {!demande ? (
+          <p className="dmd-note">Sélectionnez une demande pour voir les signaux et décider.</p>
+        ) : demande.statut === 'attente_n1' ? (
+          <DecisionN1Formulaire
+            key={demande.id}
+            slug={slug}
+            id={demande.id}
+            onFait={() => {
+              setChoisie(null);
+              charger();
+            }}
+          />
+        ) : (
+          <>
+            <h2 className="dmd-titre">{demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}</h2>
+            <p>
+              <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du {jjmm(demande.dateDebut)} au{' '}
+              {jjmm(demande.dateFin)}
+            </p>
+            <p className="dmd-note">
+              {STATUT_ABSENCE[demande.statut].libelle} : la demande n’attend plus votre décision.
+            </p>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}

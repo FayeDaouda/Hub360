@@ -53,7 +53,7 @@ export function MesPerformances({ slug }: { slug: string }) {
   const charger = useCallback(() => {
     getMesTaches(slug)
       .then(setDonnees)
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger tes tâches.'));
+      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger vos tâches.'));
     getMonTemps(slug)
       .then(setTemps)
       .catch(() => setTemps(null));
@@ -82,9 +82,7 @@ export function MesPerformances({ slug }: { slug: string }) {
             cle: 'delais',
             label: 'Respect des délais',
             valeur: rd.pct == null ? '—' : `${rd.pct} %`,
-            sousTexte: rd.total
-              ? `${rd.total} tâche(s) validée(s) avec échéance, dont ${rd.aTemps} remise(s) à temps`
-              : 'aucune tâche validée pour l’instant',
+            sousTexte: `${stats.validees} tâches validées, dont ${rd.aTemps} remises à temps`,
             icone: CircleCheck,
           },
           {
@@ -108,8 +106,7 @@ export function MesPerformances({ slug }: { slug: string }) {
             cle: 'temps',
             label: temps ? `Temps imputé · ${libelleMois(temps.feuille.mois)}` : 'Temps imputé',
             valeur: temps ? formatHeures(temps.feuille.heuresImputees) : '—',
-            sousTexte:
-              temps?.feuille.occupation != null ? `${temps.feuille.occupation} % d’occupation · calcul automatique` : 'calcul automatique',
+            sousTexte: `${temps?.feuille.occupation ?? 0} % d’occupation · calcul automatique`,
             icone: Clock,
           },
         ]}
@@ -120,9 +117,8 @@ export function MesPerformances({ slug }: { slug: string }) {
           <div>
             <h2 className="dmd-titre">Mes tâches assignées</h2>
             <p className="dmd-note">
-              Seul ce qui t’est assigné compte. Le temps est calculé automatiquement (durée standard de chaque bloc,
-              répartie sur sa fenêtre), hors absences ; il n’est pas modifiable. Une fois le bloc terminé, remets-le : ton
-              N+1 le valide ou te le renvoie.
+              Seul ce qui vous est assigné compte. Le temps est calculé automatiquement (durée standard de chaque tâche,
+              répartie sur sa fenêtre), hors absences ; il n’est pas modifiable.
             </p>
           </div>
           <div className="vue-toggle" role="group" aria-label="Filtrer les tâches">
@@ -134,70 +130,73 @@ export function MesPerformances({ slug }: { slug: string }) {
           </div>
         </div>
         {erreur && <p className="field-erreur">{erreur}</p>}
-        {visibles.length === 0 ? (
-          <p className="empty-state">{taches.length === 0 ? 'Aucune tâche ne t’est assignée.' : 'Aucune tâche dans ce filtre.'}</p>
-        ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table temps-table">
-              <thead>
+        <div className="admin-table-wrap">
+          <table className="admin-table temps-table">
+            <thead>
+              <tr>
+                <th>Projet</th>
+                <th>Tâche</th>
+                <th className="num">Durée std</th>
+                <th>Période</th>
+                <th>Échéance</th>
+                <th className="num">Temps prévu · imputé</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibles.length === 0 && (
                 <tr>
-                  <th>Projet</th>
-                  <th>Tâche</th>
-                  <th className="num">Durée std</th>
-                  <th>Période</th>
-                  <th>Échéance</th>
-                  <th className="num">Prévu · imputé</th>
-                  <th>Statut</th>
+                  <td colSpan={7} className="me-vide">
+                    Rien dans cette liste.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {visibles.map((t) => (
-                  <tr key={t.id}>
-                    <td className="rh-matricule">
-                      <Link className="lien-inline" href={`${base}/projets/${t.projetId}/${SECTION_URL[t.section]}`}>
-                        {t.projetCode}
-                      </Link>
-                    </td>
-                    <td data-label="Tâche">
-                      {t.libelle}
-                      <span className="cell-sub">
-                        {LIBELLE_SECTION[t.section]} · {t.projetProgramme}
-                      </span>
-                    </td>
-                    <td data-label="Durée std" className="num">
-                      {t.dureeStandard == null ? '—' : formatHeures(t.dureeStandard)}
-                    </td>
-                    <td data-label="Période">
-                      {t.debut && t.echeance ? `du ${jjmm(t.debut)} au ${jjmm(t.echeance)}` : '—'}
-                      {t.manque && t.statut !== 'validee' && <span className="cell-sub temps-alerte">{LIBELLE_MANQUE[t.manque]}</span>}
-                    </td>
-                    <td data-label="Échéance">{t.echeance ? jjmmaaaa(t.echeance) : '—'}</td>
-                    <td data-label="Prévu · imputé" className="num">
-                      {t.dureeStandard == null ? '—' : `${formatHeures(t.dureeStandard)} · ${formatHeures(t.heuresImputees)}`}
-                    </td>
-                    <td data-label="Statut">
-                      <span className="perf-statut">
-                        <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
-                        {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
-                        {t.statut !== 'validee' && t.statut !== 'remise' && (
-                          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setARemettre(t)}>
-                            Remettre
-                          </button>
-                        )}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              )}
+              {visibles.map((t) => (
+                <tr key={t.id}>
+                  <td className="rh-matricule">
+                    <Link className="lien-inline" href={`${base}/projets/${t.projetId}/${SECTION_URL[t.section]}`}>
+                      {t.projetCode}
+                    </Link>
+                  </td>
+                  <td data-label="Tâche">
+                    {t.libelle}
+                    <span className="cell-sub">
+                      {LIBELLE_SECTION[t.section]} · {t.projetProgramme}
+                    </span>
+                  </td>
+                  <td data-label="Durée std" className="num">
+                    {t.dureeStandard == null ? '—' : formatHeures(t.dureeStandard)}
+                  </td>
+                  <td data-label="Période">
+                    {t.debut && t.echeance ? `du ${jjmm(t.debut)} au ${jjmm(t.echeance)}` : '—'}
+                    {t.manque && t.statut !== 'validee' && <span className="cell-sub temps-alerte">{LIBELLE_MANQUE[t.manque]}</span>}
+                  </td>
+                  <td data-label="Échéance">{t.echeance ? jjmmaaaa(t.echeance) : '—'}</td>
+                  <td data-label="Prévu · imputé" className="num">
+                    {t.dureeStandard == null ? '—' : `${formatHeures(t.dureeStandard)} · ${formatHeures(t.heuresImputees)}`}
+                  </td>
+                  <td data-label="Statut">
+                    <span className="perf-statut">
+                      <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
+                      {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
+                      {t.statut !== 'validee' && t.statut !== 'remise' && (
+                        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setARemettre(t)}>
+                          Remettre
+                        </button>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {aRemettre && (
         <ConfirmModal
           titre="Remettre la tâche"
-          message={`« ${aRemettre.libelle} » (${aRemettre.projetCode}) part en validation chez ton N+1. Tu ne pourras plus la remettre tant qu’il ne l’a pas validée ou renvoyée.`}
+          message={`« ${aRemettre.libelle} » (${aRemettre.projetCode}) part en validation chez votre N+1. Vous ne pourrez plus la remettre tant qu’il ne l’a pas validée ou renvoyée.`}
           confirmer="Remettre"
           onConfirm={async () => {
             setDonnees(await remettreTache(slug, aRemettre));

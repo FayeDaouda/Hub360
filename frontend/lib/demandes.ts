@@ -26,7 +26,9 @@ export const retirerAbsence = (slug: string, id: string) =>
 export const deposerRemboursement = (slug: string, corps: { categorie: CategorieSoins; beneficiaire: string; dateSoins: string; montant: number; justificatifs?: Fichier[] }) =>
   apiSociete<DemandeRemboursement>(slug, '/mon-espace/remboursements', { method: 'POST', body: corps });
 
-export const getAbsencesAValider = (slug: string) => apiSociete<DemandeAbsence[]>(slug, '/absences/a-valider');
+// Demandes dont je suis le N+1 : en attente de ma décision, ou toutes (`toutes`).
+export const getAbsencesAValider = (slug: string, toutes = false) =>
+  apiSociete<DemandeAbsence[]>(slug, `/absences/a-valider${toutes ? '?toutes=1' : ''}`);
 export const getPreparationDecision = (slug: string, id: string) =>
   apiSociete<PreparationDecision>(slug, `/absences/${id}/preparation`);
 export const deciderAbsence = (

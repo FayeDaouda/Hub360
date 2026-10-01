@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonEspaceService } from './mon-espace.service';
+import { TachesService } from './taches.service';
 
 const DOSSIER = {
   id: 'D1', matricule: 'GH-0001', prenom: 'Awa', nom: 'Ndiaye', poste: 'CAD L1', typeContrat: 'cdi', dateEntree: '2024-01-03',
@@ -28,7 +29,9 @@ function svc(dossier: object | null = DOSSIER) {
       }),
     },
   } as unknown as PrismaService;
-  return { s: new MonEspaceService(prisma), prisma };
+  // Statistiques d'équipe : sans objet ici (aucun membre n'a de tâche).
+  const taches = { statsEquipe: jest.fn().mockResolvedValue({ total: 0, validees: 0, enCours: 0, enRetard: 0, respectDelais: { aTemps: 0, total: 0, pct: null } }) };
+  return { s: new MonEspaceService(prisma, taches as unknown as TachesService), prisma };
 }
 
 describe('MonEspaceService', () => {
@@ -53,7 +56,7 @@ describe('MonEspaceService', () => {
     await expect(svc().s.document({ userId: 'U' }, 'contrat_signe')).resolves.toMatchObject({ nom: 'contrat.pdf' });
     await expect(svc(null).s.majCoordonnees({ userId: 'U' }, { telephone: '1' })).rejects.toThrow(NotFoundException);
   });
-  it('ma cellule : chef et « moi » repérés ; sans cellule → null', async () => {
+  it('ma cellule : chef et « moi » repérés ; sans cellule → null, compteurs à zéro', async () => {
     const { s } = svc({ ...DOSSIER, collaborateur: { id: 'C1', celluleId: 'CEL' } });
     const { cellule } = await s.maCellule({ userId: 'U' });
     expect(cellule?.membres).toEqual([
@@ -61,6 +64,6 @@ describe('MonEspaceService', () => {
       expect.objectContaining({ nom: 'Moussa Diop', estMoi: false, estChef: true }),
     ]);
     expect(cellule?.projets).toEqual([expect.objectContaining({ code: 'PN_S.26' })]);
-    await expect(svc().s.maCellule({ userId: 'U' })).resolves.toEqual({ cellule: null });
+    await expect(svc().s.maCellule({ userId: 'U' })).resolves.toEqual({ cellule: null, stats: expect.objectContaining({ enCours: 0 }) });
   });
 });

@@ -87,13 +87,24 @@ export function manqueTache(t: Tache, absents: Set<string>, feries: Feries = AUC
   return null;
 }
 
+// Jours ouvrés de présence de la fenêtre situés dans `p` (colonne « Jours »
+// de Mon temps) et sur toute la fenêtre.
+function joursPresents(t: Tache, absents: Set<string>, p: Periode, feries: Feries) {
+  const presents = joursOuvres({ debut: t.debut!, fin: t.echeance! }, feries).filter((j) => !absents.has(j));
+  return { dansPeriode: presents.filter((j) => j >= p.debut && j <= p.fin).length, total: presents.length };
+}
+
+export function joursTache(t: Tache, absents: Set<string>, p: Periode, feries: Feries = AUCUN_FERIE): number {
+  if (manqueTache(t, absents, feries) || p.debut > p.fin) return 0;
+  return joursPresents(t, absents, p, feries).dansPeriode;
+}
+
 // Heures de la tâche tombant dans `p` (non arrondies) : durée × jours présents
 // de la fenêtre situés dans `p` ÷ jours présents de toute la fenêtre.
 export function heuresTache(t: Tache, absents: Set<string>, p: Periode, feries: Feries = AUCUN_FERIE): number {
   if (manqueTache(t, absents, feries) || p.debut > p.fin) return 0;
-  const presents = joursOuvres({ debut: t.debut!, fin: t.echeance! }, feries).filter((j) => !absents.has(j));
-  const dansPeriode = presents.filter((j) => j >= p.debut && j <= p.fin).length;
-  return (t.heures! * dansPeriode) / presents.length;
+  const { dansPeriode, total } = joursPresents(t, absents, p, feries);
+  return (t.heures! * dansPeriode) / total;
 }
 
 export type Salarie = {
@@ -114,7 +125,7 @@ export function periodeComptee(mois: string, s: Salarie, aujourdhui: string): Pe
   return debut <= fin ? { debut, fin } : null;
 }
 
-export type LigneFeuille = { id: string; heures: number; manque: Manque | null };
+export type LigneFeuille = { id: string; jours: number; heures: number; manque: Manque | null };
 
 export type Feuille = {
   heuresImputees: number;
@@ -132,6 +143,7 @@ export function feuilleDuMois(mois: string, s: Salarie, taches: Tache[], aujourd
   const heuresDisponibles = (ouvres.length - joursAbsence) * HEURES_PAR_JOUR;
   const lignes = taches.map((t) => ({
     id: t.id,
+    jours: p ? joursTache(t, absents, p, feries) : 0,
     heures: p ? arrondi(heuresTache(t, absents, p, feries)) : 0,
     manque: manqueTache(t, absents, feries),
   }));

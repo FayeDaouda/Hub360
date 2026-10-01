@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarX, Clock, Gauge, Hourglass } from 'lucide-react';
+import { CalendarClock, CalendarX, Clock, Gauge } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { formatHeures, getMonTemps, HEURES_PAR_JOUR, libelleMois, STATUT_FEUILLE } from '@/lib/temps';
 import type { MonTemps as DonneesMonTemps } from '@/lib/types';
@@ -9,12 +9,12 @@ import { KpiStrip } from '@/components/admin/kpi-strip';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Impossible de charger ton temps.');
+const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Impossible de charger votre temps.');
 
-// « Mon espace » · Mon temps (RH lot 4) : la feuille du mois, calculée
-// automatiquement à partir des blocs assignés (durée standard répartie du
-// début à l'échéance), hors absences validées. Lecture seule. Le détail par
-// tâche (prévu · imputé) vit dans « Mes performances ».
+// « Mon espace » · Mon temps (RH lot 4, maquette du boss) : la feuille du
+// mois, calculée automatiquement à partir des tâches assignées (durée
+// standard répartie sur les jours ouvrés de la fenêtre), hors absences
+// validées. Lecture seule ; la RH contrôle chaque mois.
 export function MonTemps({ slug }: { slug: string }) {
   const [donnees, setDonnees] = useState<DonneesMonTemps | null>(null);
   const [mois, setMois] = useState<string | undefined>(undefined);
@@ -38,7 +38,10 @@ export function MonTemps({ slug }: { slug: string }) {
     );
   }
   const { feuille } = donnees;
-  const statut = STATUT_FEUILLE[feuille.statut];
+  const controle =
+    feuille.statut === 'controlee' && feuille.controleLe
+      ? `contrôlée le ${jjmmaaaa(feuille.controleLe)}`
+      : STATUT_FEUILLE[feuille.statut].libelle.toLowerCase();
 
   return (
     <>
@@ -50,6 +53,7 @@ export function MonTemps({ slug }: { slug: string }) {
             </button>
           ))}
         </div>
+        <span className="me-pastille">Contrôle RH : {controle}</span>
       </div>
       {erreur && <p className="field-erreur">{erreur}</p>}
 
@@ -57,46 +61,42 @@ export function MonTemps({ slug }: { slug: string }) {
         tuiles={[
           {
             cle: 'imputees',
-            label: `Temps imputé · ${libelleMois(feuille.mois)}`,
+            label: 'Heures imputées',
             valeur: formatHeures(feuille.heuresImputees),
-            sousTexte: feuille.statut === 'en_cours' ? 'jusqu’à aujourd’hui · calcul automatique' : 'calcul automatique',
+            sousTexte: `${feuille.lignes.length} assignation(s)`,
             icone: Clock,
           },
           {
-            cle: 'occupation',
-            label: 'Occupation',
-            valeur: feuille.occupation == null ? '—' : `${feuille.occupation} %`,
-            sousTexte: `sur ${formatHeures(feuille.heuresDisponibles)} disponibles`,
-            icone: Gauge,
+            cle: 'disponibles',
+            label: 'Heures disponibles',
+            valeur: formatHeures(feuille.heuresDisponibles),
+            sousTexte: `jours ouvrés écoulés × ${HEURES_PAR_JOUR} h`,
+            icone: CalendarClock,
           },
           {
             cle: 'absences',
             label: 'Absences',
             valeur: `${feuille.joursAbsence} j`,
-            sousTexte: 'absences validées, déduites',
+            sousTexte: 'congés et absences validés',
             icone: CalendarX,
           },
           {
-            cle: 'controle',
-            label: 'Contrôle RH',
-            valeur: feuille.statut === 'controlee' && feuille.controleLe ? jjmmaaaa(feuille.controleLe) : statut.libelle,
-            sousTexte: feuille.statut === 'controlee' ? 'feuille contrôlée, chiffres figés' : 'la RH contrôle les mois clos',
-            icone: Hourglass,
+            cle: 'occupation',
+            label: 'Taux d’occupation',
+            valeur: `${feuille.occupation ?? 0} %`,
+            sousTexte: 'imputé / disponible',
+            icone: Gauge,
           },
         ]}
       />
 
       <section className="panel glass-panel dmd-section temps-panel">
-        <h2 className="dmd-titre">Détail de {libelleMois(feuille.mois)}</h2>
+        <h2 className="dmd-titre">Détail du calcul · {libelleMois(feuille.mois)}</h2>
+        <LignesCalcul lignes={feuille.lignes} variante="salarie" />
         <p className="dmd-note">
-          Disponibles : jours ouvrés de présence × {HEURES_PAR_JOUR} h. Chaque bloc compte pour la part de sa durée
-          standard qui tombe dans le mois. Personne ne saisit ni ne modifie ces heures.
+          Calcul automatique : durée standard de chaque tâche assignée, répartie sur les jours ouvrés de sa fenêtre, hors
+          absences validées. Vous ne saisissez rien ; la RH contrôle la feuille chaque mois.
         </p>
-        {feuille.lignes.length === 0 ? (
-          <p className="empty-state">Aucun bloc assigné dont la fenêtre touche ce mois.</p>
-        ) : (
-          <LignesCalcul lignes={feuille.lignes} />
-        )}
       </section>
     </>
   );

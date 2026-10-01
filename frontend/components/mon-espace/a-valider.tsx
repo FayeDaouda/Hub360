@@ -7,13 +7,15 @@ import { ApiError } from '@/lib/client-api';
 import { deciderTache, getTachesAValider } from '@/lib/mon-espace';
 import { LIBELLE_SECTION } from '@/lib/temps';
 import type { TacheAValider } from '@/lib/types';
-import { AbsencesADecider } from '@/components/absences/absences-a-decider';
+import { DemandesEquipe } from './demandes-equipe';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const SECTION_URL = { avant_projet: 'avant-projet', permis: 'permis', execution: 'execution' } as const;
 
-// « Mon espace » · À valider (RH lot 5c) : ce qui attend la décision du N+1 —
-// les tâches remises par son équipe et les demandes d'absence (lot 2).
+// « Mon espace » · À valider (maquette du boss) : les demandes de l'équipe
+// dont on est le N+1 ; et, quand il y en a, les tâches remises par l'équipe
+// (blocs des sections, lot 5c) — absentes de la maquette, montrées seulement
+// si elles existent.
 export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: number) => void }) {
   const [taches, setTaches] = useState<TacheAValider[] | null>(null);
   const [absences, setAbsences] = useState(0);
@@ -41,20 +43,18 @@ export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: numbe
 
   return (
     <>
-      <AbsencesADecider slug={slug} onCompte={setAbsences} />
-      <section className="panel glass-panel dmd-section">
-        <h2 className="dmd-titre">Tâches remises à valider · {taches.length}</h2>
-        {erreur && <p className="field-erreur">{erreur}</p>}
-        {taches.length === 0 ? (
-          <p className="empty-state">Aucune tâche remise n’attend ta validation.</p>
-        ) : (
+      <DemandesEquipe slug={slug} onCompte={setAbsences} />
+      {erreur && <p className="field-erreur">{erreur}</p>}
+      {taches.length > 0 && (
+        <section className="panel glass-panel dmd-section">
+          <h2 className="dmd-titre">Tâches remises à valider · {taches.length}</h2>
           <ul className="dmd-liste">
             {taches.map((t) => (
               <LigneAValider key={t.id} slug={slug} t={t} onDecide={setTaches} />
             ))}
           </ul>
-        )}
-      </section>
+        </section>
+      )}
     </>
   );
 }

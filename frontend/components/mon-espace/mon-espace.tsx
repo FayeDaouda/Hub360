@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ApiError } from '@/lib/client-api';
-import { useSessionCourante } from '@/lib/layout-contexte';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { getMonEspace, getTachesAValider } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
@@ -44,15 +44,19 @@ export function MonEspace({ slug }: { slug: string }) {
   const [dossier, setDossier] = useState<ProfilMonEspace | null | undefined>(undefined);
   const [erreur, setErreur] = useState<string | null>(null);
   const onglets = useRef<HTMLDivElement>(null);
-  // Tâches remises + absences en attente de ma décision (N+1) : l'onglet
-  // « À valider » n'apparaît que s'il y a quelque chose (ou s'il est ouvert).
+  // Tâches remises + absences en attente de ma décision (N+1) : compteur de
+  // l'onglet « À valider » (toujours affiché, maquette du boss).
   const [aValider, setAValider] = useState(0);
   const compter = useCallback((n: number) => setAValider(n), []);
+
+  // Titre (maquette) : « Mon espace · Prénom Nom » — celui du dossier RH, sinon du compte.
+  const nomAffiche = dossier ? `${dossier.prenom} ${dossier.nom}`.trim() : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
+  useTitrePage(dossier === undefined ? 'Mon espace' : `Mon espace · ${nomAffiche}`);
 
   useEffect(() => {
     getMonEspace(slug)
       .then((r) => setDossier(r.dossier))
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger ton espace.'));
+      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre espace.'));
     Promise.all([getTachesAValider(slug), getAbsencesAValider(slug)])
       .then(([t, a]) => setAValider(t.length + a.length))
       .catch(() => setAValider(0));
@@ -86,25 +90,22 @@ export function MonEspace({ slug }: { slug: string }) {
         <span className="mes-initiales" aria-hidden>
           {`${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase()}
         </span>
-        <div>
-          <h2 className="mes-nom">{`${prenom} ${nom}`.trim()}</h2>
-          {dossier && (
-            <p className="cell-sub mes-sous-titre">
-              {[
+        <p className="mes-sous-titre">
+          {dossier
+            ? [
                 dossier.poste,
                 dossier.societe,
-                dossier.cellule,
+                dossier.cellule ?? 'sans cellule',
                 `${LIBELLE_CONTRAT[dossier.typeContrat]}${dossier.dateEntree ? ` depuis le ${jjmmaaaa(dossier.dateEntree)}` : ''}`,
               ]
                 .filter(Boolean)
-                .join(' · ')}
-            </p>
-          )}
-        </div>
+                .join(' · ')
+            : 'Aucun dossier du personnel relié à ce compte'}
+        </p>
       </div>
 
       <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
-        {ONGLETS.filter((o) => o.cle !== 'a-valider' || aValider > 0 || onglet === o.cle).map((o) => (
+        {ONGLETS.map((o) => (
           <button
             key={o.cle}
             type="button"
@@ -120,8 +121,8 @@ export function MonEspace({ slug }: { slug: string }) {
 
       {courant.dossierRequis && !dossier ? (
         <p className="empty-state">
-          Aucun dossier du personnel n’est relié à ton compte : la RH doit l’ouvrir (ou le relier) avant que cette rubrique
-          soit disponible.
+          Aucun dossier du personnel n’est relié à votre compte : la RH doit l’ouvrir (ou le relier) avant que cette
+          rubrique soit disponible.
         </p>
       ) : onglet === 'performances' ? (
         <MesPerformances slug={slug} />

@@ -3,76 +3,101 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { AlarmClock, CircleCheck, FolderKanban, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMaCellule } from '@/lib/mon-espace';
-import { NIVEAUX_COLLABORATEUR, PHASES, type MaCellule as DonneesCellule } from '@/lib/types';
+import { NIVEAUX_COLLABORATEUR, PHASES, type MaCellule as DonneesCellule, type StatsPerformances } from '@/lib/types';
+import { KpiStrip } from '@/components/admin/kpi-strip';
 
-// « Mon espace » · Ma cellule (RH lot 5d) : les membres de la cellule (chef
-// repéré) et les projets en cours qu'elle suit.
+// « Mon espace » · Ma cellule (maquette du boss) : projets pilotés, tâches en
+// cours, en retard et remises à temps de toute la cellule ; ses membres et son
+// pilote (chef de team) ; ses projets. Aucun montant. Même écran sans cellule.
 export function MaCellule({ slug }: { slug: string }) {
   const base = usePathname().split('/mon-espace')[0];
-  const [cellule, setCellule] = useState<DonneesCellule | null | undefined>(undefined);
+  const [donnees, setDonnees] = useState<{ cellule: DonneesCellule | null; stats: StatsPerformances } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
     getMaCellule(slug)
-      .then((r) => setCellule(r.cellule))
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger ta cellule.'));
+      .then(setDonnees)
+      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre cellule.'));
   }, [slug]);
 
   if (erreur) return <p className="empty-state">{erreur}</p>;
-  if (cellule === undefined) {
+  if (!donnees) {
     return (
       <div className="admin-skeleton" aria-hidden>
         <div className="skeleton admin-skeleton-panel" />
       </div>
     );
   }
-  if (!cellule) return <p className="empty-state">Tu n’es rattaché(e) à aucune cellule.</p>;
+  const { cellule, stats } = donnees;
+  const rd = stats.respectDelais;
+  const projets = cellule?.projets ?? [];
 
   return (
-    <div className="dmd-grille">
-      <section className="panel glass-panel dmd-section">
-        <h2 className="dmd-titre">
-          {cellule.nom} · {cellule.membres.length} membre(s)
-        </h2>
-        <ul className="dmd-liste">
-          {cellule.membres.map((m) => (
-            <li key={m.id} className="dmd-ligne">
-              <span>
-                <strong>{m.nom}</strong>
-                <span className="cell-sub">
-                  {m.role} · {NIVEAUX_COLLABORATEUR[m.niveau]}
-                </span>
-              </span>
-              <span className="dmd-actions">
-                {m.estChef && <span className="pill pill--info">Chef de cellule</span>}
-                {m.estMoi && <span className="pill pill--neutre">Toi</span>}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="panel glass-panel dmd-section">
-        <h2 className="dmd-titre">Projets suivis · {cellule.projets.length}</h2>
-        {cellule.projets.length === 0 ? (
-          <p className="empty-state">Aucun projet en cours pour la cellule.</p>
-        ) : (
-          <ul className="dmd-liste">
-            {cellule.projets.map((p) => (
-              <li key={p.id} className="dmd-ligne">
-                <span>
-                  <Link className="lien-inline" href={`${base}/projets/${p.id}`}>
-                    <strong>{p.code}</strong>
-                  </Link>
-                  <span className="cell-sub">{p.programme}</span>
-                </span>
-                <span className="pill pill--neutre">{PHASES[p.phase]}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+    <>
+      <KpiStrip
+        tuiles={[
+          { cle: 'projets', label: 'Projets pilotés', valeur: projets.length, sousTexte: 'projets signés de la cellule', icone: FolderKanban },
+          { cle: 'en-cours', label: 'Tâches en cours', valeur: stats.enCours, sousTexte: 'toute la cellule', icone: ListTodo },
+          { cle: 'retard', label: 'En retard', valeur: stats.enRetard, sousTexte: 'tâches hors délai', icone: AlarmClock, alerte: stats.enRetard > 0 },
+          {
+            cle: 'a-temps',
+            label: 'Tâches remises à temps',
+            valeur: rd.pct == null ? '—' : `${rd.pct} %`,
+            sousTexte: `${stats.validees} validées dans la cellule`,
+            icone: CircleCheck,
+          },
+        ]}
+      />
+      <div className="me-colonnes">
+        <section className="panel glass-panel dmd-section me-cellule">
+          <div className="me-cellule-tete">
+            <h2 className="dmd-titre">{cellule?.nom ?? 'sans cellule'}</h2>
+            <span className="dmd-note">{cellule?.pilote ? `Pilote : ${cellule.pilote}` : 'Pilote à désigner'}</span>
+          </div>
+          {cellule && (
+            <ul className="dmd-liste">
+              {cellule.membres.map((m) => (
+                <li key={m.id} className="dmd-ligne">
+                  <span>
+                    <strong>{m.nom}</strong>
+                    <span className="cell-sub">
+                      {m.role} · {NIVEAUX_COLLABORATEUR[m.niveau]}
+                    </span>
+                  </span>
+                  <span className="dmd-actions">
+                    {m.estChef && <span className="pill pill--info">Pilote</span>}
+                    {m.estMoi && <span className="pill pill--neutre">Vous</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="dmd-note me-pied">L’équipe est évaluée sur ses projets. Aucun montant n’est affiché aux équipes.</p>
+        </section>
+        <section className="panel glass-panel dmd-section">
+          <h2 className="dmd-titre">Projets pilotés par la cellule</h2>
+          {projets.length === 0 ? (
+            <p className="dmd-note">Aucun projet affecté à la cellule.</p>
+          ) : (
+            <ul className="dmd-liste">
+              {projets.map((p) => (
+                <li key={p.id} className="dmd-ligne">
+                  <span>
+                    <Link className="lien-inline" href={`${base}/projets/${p.id}`}>
+                      <strong>{p.code}</strong>
+                    </Link>
+                    <span className="cell-sub">{p.programme}</span>
+                  </span>
+                  <span className="pill pill--neutre">{PHASES[p.phase]}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    </>
   );
 }
