@@ -3,6 +3,7 @@ import type {
   Facturation,
   FactureCentrale,
   JalonFacture,
+  LeadFacturable,
   ModePaiement,
   ProjetRef,
   StatutFacture,
@@ -206,4 +207,43 @@ export function supprimerPaiement(
     `${base(projetId)}/${factureId}/paiements/${paiementId}`,
     { method: 'DELETE' },
   );
+}
+
+// -----------------------------------------------------------------------------
+// Facture directe d'un lead (sans offre) — maquette Finances, oct. 2026 :
+// préparée « à valider par le CFO avant émission », puis émise par lui.
+//   GET    …/factures/leads
+//   POST   …/factures/directes            { dossierCrmId, lignes }
+//   GET    …/factures/:id
+//   POST   …/factures/:id/emission        (validation CFO = émission)
+//   DELETE …/factures/:id                 (brouillon)
+//   POST   …/factures/:id/paiements
+// Valent pour toute facture (celle d'un projet suit les règles du projet).
+// -----------------------------------------------------------------------------
+
+export function getLeadsFacturables(slug: string): Promise<LeadFacturable[]> {
+  return apiSociete(slug, '/factures/leads');
+}
+
+export function creerFactureDirecte(
+  slug: string,
+  body: { dossierCrmId: string; lignes: { designation: string; montantHt: number }[] },
+): Promise<FactureCentrale> {
+  return apiSociete(slug, '/factures/directes', { method: 'POST', body });
+}
+
+export function getFactureCentrale(slug: string, id: string): Promise<FactureCentrale> {
+  return apiSociete(slug, `/factures/${id}`);
+}
+
+export function emettreFactureCentrale(slug: string, id: string): Promise<FactureCentrale> {
+  return apiSociete(slug, `/factures/${id}/emission`, { method: 'POST' });
+}
+
+export function supprimerFactureCentrale(slug: string, id: string): Promise<{ ok: true }> {
+  return apiSociete(slug, `/factures/${id}`, { method: 'DELETE' });
+}
+
+export function ajouterPaiementCentrale(slug: string, id: string, body: NouveauPaiement): Promise<FactureCentrale> {
+  return apiSociete(slug, `/factures/${id}/paiements`, { method: 'POST', body });
 }

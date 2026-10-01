@@ -1805,8 +1805,14 @@ export type FactureCentrale = {
   projetId: string | null;
   projet: { id: string; code: string; programme: string } | null;
   client: { id: string; nom: string } | null;
+  // Facture directe d'un lead (sans offre) ; null sinon.
+  dossierCrm: { id: string; code: string } | null;
+  paiements: Paiement[];
   lignes: LigneFacture[];
 };
+
+// Lead du CRM proposé pour une facture directe (dossiers non archivés).
+export type LeadFacturable = { id: string; code: string; client: string; localisation: string; statut: StatutCrm };
 
 // MIROIR du backend devis/domaine.ts::refDevis
 export function refDevis(numero: number | null, dateEnvoi: string | null): string | null {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Archive, ArrowRight, X } from 'lucide-react';
 import {
   GAMMES,
@@ -45,6 +46,7 @@ type Props = {
   onRattacher: (localiteId: string) => Promise<void>;
   onChangerProprietaire: (proprietaireId: string) => Promise<void>;
   onArchiver: () => Promise<void>;
+  peutFacturer: boolean; // finances_factures ≥ écriture : facture directe du lead
   onModifierFiche: (champs: ModifierFichePayload) => Promise<void>;
 };
 
@@ -99,6 +101,7 @@ export function DetailDossierModal({
   onRattacher,
   onChangerProprietaire,
   onArchiver,
+  peutFacturer,
   onModifierFiche,
 }: Props) {
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
@@ -421,6 +424,13 @@ export function DetailDossierModal({
               onLienEmis={setLienEmis}
             />
             <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
+            {/* Facture directe du lead, sans offre (maquette Finances) : préparée
+                dans Finances, validée par le CFO avant émission. */}
+            {peutFacturer && (
+              <Link className="btn-ghost fiche-crm-facture" href={`/admin/${slug}/facturation?nouvelle=${projet.id}`}>
+                Émettre une facture directe (Finances)
+              </Link>
+            )}
           </section>
         )}
       </aside>

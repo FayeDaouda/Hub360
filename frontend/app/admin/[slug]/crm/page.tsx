@@ -487,6 +487,7 @@ export default function CrmPage({ params }: Props) {
           localites={localites}
           peutEcrire={peutEcrire}
           peutPreparerOffre={peutPreparerOffre}
+          peutFacturer={niveauSuffisant(session, 'finances_factures', 'ecriture')}
           catalogue={catalogue}
           onMaj={rafraichir}
           peutReassigner={estDirectionOuCio}

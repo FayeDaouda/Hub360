@@ -586,6 +586,7 @@ model DossierCrm {
   offres               Devis[] // la plus récente = l'offre en cours (étape F)
   contrat              Contrat? // étape G — sa signature déclenche l'Onboard
   notifications        Notification[]
+  factures             Facture[] // factures directes (sans offre)
 
   @@unique([societeId, code])
   @@index([localiteId])
@@ -1743,6 +1744,10 @@ model Facture {
   // Mensualité d'une ligne SU / EX de l'offre (facturation mensuelle
   // manuelle, CGV : forfait mensuel) — une facture par mois facturé.
   ligneDevisId      String?       @map("ligne_devis_id")
+  // Facture directe d'un lead (sans offre) : préparée depuis le CRM ou
+  // Finances, validée par le CFO avant émission (« À valider CFO »). Le
+  // projet est rattaché quand il existe (Onboard).
+  dossierCrmId      String?       @map("dossier_crm_id")
   creeLe            DateTime      @default(now()) @map("cree_le")
   emiseLe           DateTime?     @map("emise_le")
   annuleeLe         DateTime?     @map("annulee_le")
@@ -1754,6 +1759,7 @@ model Facture {
   devisOrigine    Devis?         @relation("DevisConversion", fields: [devisOrigineId], references: [id])
   devisEcheancier Devis?         @relation("DevisEcheancier", fields: [devisEcheancierId], references: [id], onDelete: SetNull)
   ligneDevis      LigneDevis?    @relation(fields: [ligneDevisId], references: [id], onDelete: SetNull)
+  dossierCrm      DossierCrm?    @relation(fields: [dossierCrmId], references: [id], onDelete: Restrict)
   paiements       Paiement[]
   lignes          LigneFacture[]
 

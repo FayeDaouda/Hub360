@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -24,12 +25,14 @@ import { FAMILLES_MENSUELLES, planFacturationOffre } from '../domaine/facturatio
 import { montantRefacture, statutReglementBureau } from '../domaine/refacturation-etudes';
 import {
   AjouterPaiementDto,
+  CreerFactureDirecteDto,
   CreerEcheancierDto,
   CreerFactureDto,
   PatchFactureDto,
 } from './dto';
 import { EmailService } from '../../email/email.service';
 import { OuvertureProjetService } from '../gabarit/ouverture.service';
+import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './facture-directe';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -157,7 +160,7 @@ export class FacturationService {
     await this.avecSequence(societeId, async (tx, numero) => {
       const r = await tx.facture.updateMany({
         where: { id: facture.id, statut: 'brouillon' },
-        data: { numero, statut: 'emise', emiseLe: new Date() },
+        data: { numero, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(facture) },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
       if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
@@ -275,11 +278,12 @@ export class FacturationService {
   // clientId propre, jamais dupliqué depuis projet.clientId.
   async findAllPourSociete(
     societeId: string,
-    filtres: { statut?: FactureStatut; projetId?: string; clientId?: string },
+    filtres: { statut?: FactureStatut; projetId?: string; clientId?: string; id?: string },
   ) {
     const factures = await this.prisma.facture.findMany({
       where: {
         societeId,
+        id: filtres.id,
         statut: filtres.statut,
         projetId: filtres.projetId,
         ...(filtres.clientId
@@ -287,6 +291,7 @@ export class FacturationService {
               OR: [
                 { projet: { clientId: filtres.clientId } },
                 { devisOrigine: { clientId: filtres.clientId } },
+                { dossierCrm: { clientId: filtres.clientId } },
               ],
             }
           : {}),
@@ -295,6 +300,7 @@ export class FacturationService {
         paiements: true,
         projet: { select: { id: true, code: true, programme: true, client: true } },
         devisOrigine: { select: { numero: true, client: true } },
+        dossierCrm: { select: { id: true, code: true, client: true } },
         lignes: { orderBy: { ordre: 'asc' } },
       },
       orderBy: [{ creeLe: 'desc' }],
@@ -310,7 +316,7 @@ export class FacturationService {
         { statut: f.statut, echeanceLe: f.echeanceLe, montantTtc, montantPaye },
         aujourdhui,
       );
-      const client = f.projet?.client ?? f.devisOrigine?.client ?? null;
+      const client = f.projet?.client ?? f.devisOrigine?.client ?? f.dossierCrm?.client ?? null;
       return {
         id: f.id,
         numero: f.numero,
@@ -338,9 +344,122 @@ export class FacturationService {
         projetId: f.projetId,
         projet: f.projet ? { id: f.projet.id, code: f.projet.code, programme: f.projet.programme } : null,
         client: client ? { id: client.id, nom: client.nom } : null,
+        // Facture directe d'un lead (sans offre) ; null sinon.
+        dossierCrm: f.dossierCrm ? { id: f.dossierCrm.id, code: f.dossierCrm.code } : null,
+        paiements: f.paiements
+          .map((p) => ({ id: p.id, date: p.date, montant: p.montant.toNumber(), mode: p.mode, reference: p.reference }))
+          .sort((a, b) => a.date.localeCompare(b.date)),
         lignes: f.lignes.map(versLigneFacture),
       };
     });
+  }
+
+  // --- Facture directe d'un lead (sans offre) — maquette Finances, oct. 2026 ---
+  // Leads facturables : dossiers CRM non archivés de la société.
+  async leadsFacturables(societeId: string) {
+    const dossiers = await this.prisma.dossierCrm.findMany({
+      where: { societeId, archiveLe: null },
+      select: { id: true, code: true, statut: true, localisation: true, localite: { select: { nom: true } }, client: { select: { nom: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return dossiers.map((d) => ({
+      id: d.id,
+      code: d.code,
+      client: d.client.nom,
+      localisation: d.localite?.nom ?? d.localisation,
+      statut: d.statut,
+    }));
+  }
+
+  // Préparée « à valider par le CFO avant émission » : brouillon, sans numéro,
+  // ni envoyée ni comptée tant que le CFO ne l'a pas émise. Rattachée au
+  // projet du lead s'il existe déjà (Onboard).
+  async creerFactureDirecte(societeId: string, dto: CreerFactureDirecteDto) {
+    let lignes: ReturnType<typeof lignesFactureDirecte>;
+    try {
+      lignes = lignesFactureDirecte(dto.lignes);
+    } catch (e) {
+      if (e instanceof ErreurFactureDirecte) throw new BadRequestException(e.message);
+      throw e;
+    }
+    const dossier = await this.prisma.dossierCrm.findFirst({
+      where: { id: dto.dossierCrmId, societeId },
+      select: { id: true, nature: true, archiveLe: true, projet: { select: { id: true } } },
+    });
+    if (!dossier) throw new NotFoundException('Lead introuvable');
+    if (dossier.archiveLe) throw new ConflictException('Lead archivé : aucune facture ne s’y prépare.');
+    const f = await this.prisma.facture.create({
+      data: {
+        societeId,
+        dossierCrmId: dossier.id,
+        projetId: dossier.projet?.id ?? null,
+        type: typeFactureDepuisNature(dossier.nature),
+        tauxTva: TAUX_TVA_DEFAUT,
+        libelle: lignes[0].designation,
+        montantHt: lignes.reduce((t, l) => t + l.montantHt, 0),
+        lignes: { create: lignes.map((l, ordre) => ({ ...l, ordre })) },
+      },
+      select: { id: true },
+    });
+    return this.factureCentrale(societeId, f.id);
+  }
+
+  async factureCentrale(societeId: string, factureId: string) {
+    const [f] = await this.findAllPourSociete(societeId, { id: factureId });
+    if (!f) throw new NotFoundException('Facture introuvable');
+    return f;
+  }
+
+  // Actions depuis Finances, par l'id de la facture : celle d'un projet suit
+  // les règles du projet (F1 ouvre le projet, etc.) ; une facture directe sans
+  // projet, les mêmes règles de numérotation et de statut.
+  async emettreParId(societeId: string, factureId: string) {
+    const f = await this.facturePourAction(societeId, factureId);
+    if (f.projetId) {
+      await this.emettre(societeId, f.projetId, factureId);
+      return this.factureCentrale(societeId, factureId);
+    }
+    if (f.statut !== 'brouillon') throw new ConflictException('Facture déjà émise.');
+    if (f.montantHt.lte(0)) throw new UnprocessableEntityException("Renseignez un montant HT avant d'émettre la facture.");
+    await this.avecSequence(societeId, async (tx, numero) => {
+      const r = await tx.facture.updateMany({
+        where: { id: f.id, statut: 'brouillon' },
+        data: { numero, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(f) },
+      });
+      if (r.count === 0) throw new ConflictException('Facture déjà émise.');
+    });
+    return this.factureCentrale(societeId, factureId);
+  }
+
+  async supprimerParId(societeId: string, factureId: string) {
+    const f = await this.facturePourAction(societeId, factureId);
+    if (f.projetId) {
+      await this.supprimer(societeId, f.projetId, factureId);
+      return { ok: true };
+    }
+    const { count } = await this.prisma.facture.deleteMany({ where: { id: f.id, statut: 'brouillon' } });
+    if (count === 0) throw new ConflictException('Facture émise — non modifiable. Créez un avoir pour la corriger.');
+    return { ok: true };
+  }
+
+  async ajouterPaiementParId(societeId: string, factureId: string, dto: AjouterPaiementDto) {
+    const f = await this.facturePourAction(societeId, factureId);
+    if (f.projetId) {
+      await this.ajouterPaiement(societeId, f.projetId, factureId, dto);
+      return this.factureCentrale(societeId, factureId);
+    }
+    if (f.estAvoir) throw new ConflictException('Un avoir ne reçoit pas de paiement.');
+    if (f.statut !== 'emise') throw new ConflictException('Seule une facture émise reçoit des paiements.');
+    await this.prisma.paiement.create({
+      data: { factureId: f.id, date: dto.date, montant: dto.montant, mode: dto.mode ?? null, reference: dto.reference?.trim() ?? '' },
+    });
+    return this.factureCentrale(societeId, factureId);
+  }
+
+  private async facturePourAction(societeId: string, factureId: string) {
+    const f = await this.prisma.facture.findFirst({ where: { id: factureId, societeId } });
+    if (!f) throw new NotFoundException('Facture introuvable');
+    return f;
   }
 
   // Relance MANUELLE d'une facture en retard — cf. cadrage « Devis »
@@ -904,4 +1023,11 @@ function versLigneFacture(l: {
     montantBase: l.montantBase?.toNumber() ?? null,
     blocEtudeId: l.blocEtudeId,
   };
+}
+
+// Échéance posée à l'émission : celle déjà fixée, sinon pour une facture
+// directe d'un lead, payable à 15 jours (maquette Finances).
+function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string | null }): string | null {
+  if (f.echeanceLe) return f.echeanceLe;
+  return f.dossierCrmId ? echeanceDirecte(new Date().toISOString().slice(0, 10)) : null;
 }

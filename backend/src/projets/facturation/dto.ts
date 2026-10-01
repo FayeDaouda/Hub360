@@ -79,3 +79,20 @@ export class CreerMensualiteDto {
 export class RefacturerEtudesDto {
   @IsArray() @ArrayNotEmpty() @IsString({ each: true }) blocIds!: string[];
 }
+
+// Facture directe d'un lead (sans offre) — maquette Finances, oct. 2026 :
+// « pour une prestation facturée directement depuis le lead, par exemple un
+// diagnostic CO0 au forfait ». Lignes libres (désignation + montant HT).
+export class LigneFactureDirecteDto {
+  @IsString() @MaxLength(200) designation!: string;
+  @IsNumber() @Min(1) @Max(100_000_000_000) montantHt!: number;
+}
+
+export class CreerFactureDirecteDto {
+  @IsString() dossierCrmId!: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => LigneFactureDirecteDto)
+  lignes!: LigneFactureDirecteDto[];
+}

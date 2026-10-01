@@ -556,6 +556,8 @@ export class CrmService {
       },
       include: { client: true, cellules: true },
     });
+    // Factures directes du lead (sans offre) : rattachées au projet ouvert.
+    await tx.facture.updateMany({ where: { dossierCrmId: d.id, projetId: null }, data: { projetId: p.id } });
     let facturesPreparees = 0;
     if (offreAcceptee) {
       await tx.devis.update({

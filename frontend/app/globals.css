@@ -13200,3 +13200,86 @@ a.notif-item:hover {
     display: none;
   }
 }
+
+/* ---------- Finances · facture directe d'un lead (maquette, oct. 2026) ---------- */
+.nfd-bloc {
+  gap: 0.7rem;
+}
+.nfd-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 11rem) auto;
+  gap: 0.5rem;
+}
+.nfd-totaux {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem 1.4rem;
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+}
+.nfd-totaux strong {
+  color: var(--text);
+}
+.nfd-totaux .nfd-ttc,
+.nfd-ttc {
+  color: var(--fuchsia);
+}
+:root[data-theme='dark'] .nfd-ttc {
+  color: color-mix(in oklch, var(--fuchsia) 60%, white);
+}
+.nfd-preparer {
+  justify-self: stretch;
+}
+.fac-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.fac-titre .pill {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+}
+.fac-document {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.fac-paiement {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+}
+.fac-paiement .dmd-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.fac-bouton {
+  justify-self: start;
+}
+.fac-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+.factu-ligne {
+  cursor: pointer;
+}
+.fiche-crm-facture {
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.6rem;
+}
+@media (max-width: 640px) {
+  .nfd-ligne {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .nfd-ligne input:first-child {
+    grid-column: 1 / -1;
+  }
+  .fac-paiement {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

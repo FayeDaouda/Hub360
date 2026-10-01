@@ -67,6 +67,8 @@ function monter(
     projet: {
       create: jest.fn().mockResolvedValue({ id: 'P1', client: DOSSIER.client, cellules: [] }),
     },
+    // Factures directes du lead, rattachées au projet à l'Onboard.
+    facture: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));
@@ -247,6 +249,8 @@ describe('CrmService.agir', () => {
       commentaire: 'Contrat signé.',
     });
     expect(prisma.projet.create).toHaveBeenCalledTimes(1);
+    // Factures directes du lead (sans offre) rattachées au projet ouvert.
+    expect(prisma.facture.updateMany).toHaveBeenCalledWith({ where: { dossierCrmId: 'D1', projetId: null }, data: { projetId: 'P1' } });
     expect(prisma.devis.update).toHaveBeenCalledWith({
       where: { id: 'O1' },
       data: { projetId: 'P1', statut: 'transforme' },

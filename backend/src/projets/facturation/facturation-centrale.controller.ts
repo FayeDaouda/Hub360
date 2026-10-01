@@ -1,10 +1,11 @@
-import { Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { FactureStatut } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../../commun/back-office.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { FacturationService } from './facturation.service';
+import { AjouterPaiementDto, CreerFactureDirecteDto } from './dto';
 
 type R = { user: { societeId: string } };
 
@@ -41,6 +42,46 @@ export class FacturationCentraleController {
   @RequiertPermission('finances_charges', 'lecture')
   bureauxARegler(@Req() req: R) {
     return this.facturation.bureauxARegler(req.user.societeId);
+  }
+
+  // --- Facture directe d'un lead (sans offre) — maquette Finances, oct. 2026 ---
+  // Segments fixes, déclarés avant les routes ':id'.
+  @Get('leads')
+  @RequiertPermission('finances_factures', 'ecriture')
+  leads(@Req() req: R) {
+    return this.facturation.leadsFacturables(req.user.societeId);
+  }
+
+  // Préparée par qui a l'écriture ; « à valider par le CFO avant émission ».
+  @Post('directes')
+  @RequiertPermission('finances_factures', 'ecriture')
+  creerDirecte(@Req() req: R, @Body() dto: CreerFactureDirecteDto) {
+    return this.facturation.creerFactureDirecte(req.user.societeId, dto);
+  }
+
+  @Get(':id')
+  @RequiertPermission('finances_factures', 'lecture')
+  detail(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.facturation.factureCentrale(req.user.societeId, id);
+  }
+
+  // Validation par le CFO = émission (numéro, échéance).
+  @Post(':id/emission')
+  @RequiertPermission('finances_factures', 'validation')
+  emettre(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.facturation.emettreParId(req.user.societeId, id);
+  }
+
+  @Delete(':id')
+  @RequiertPermission('finances_factures', 'ecriture')
+  supprimer(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.facturation.supprimerParId(req.user.societeId, id);
+  }
+
+  @Post(':id/paiements')
+  @RequiertPermission('finances_factures', 'validation')
+  paiement(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AjouterPaiementDto) {
+    return this.facturation.ajouterPaiementParId(req.user.societeId, id, dto);
   }
 
   @Post(':id/relance')

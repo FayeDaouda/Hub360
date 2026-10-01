@@ -62,6 +62,8 @@ import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
 import { ImpressionDocument } from '@/components/impression-document';
 import type { DocumentFacturationProps } from '@/components/document-facturation';
+import { NouvelleFactureDirecte } from '@/components/finances/nouvelle-facture-directe';
+import { FacturePanneau } from '@/components/finances/facture-panneau';
 
 type Props = { params: { slug: string } };
 
@@ -83,6 +85,15 @@ const PILL_FACTURE: Record<StatutFactureEffectif, string> = {
   annulee: 'pill--neutre',
 };
 
+// Facture directe d'un lead préparée, pas encore émise : à valider par le CFO.
+const aValiderCfo = (f: FactureCentrale) => f.statut === 'brouillon' && !!f.dossierCrm;
+const statutFacture = (f: FactureCentrale) =>
+  f.estAvoir
+    ? { libelle: 'Avoir', classe: 'pill--neutre' }
+    : aValiderCfo(f)
+      ? { libelle: 'À valider CFO', classe: 'pill--attention' }
+      : { libelle: STATUTS_FACTURE[f.statutEffectif], classe: PILL_FACTURE[f.statutEffectif] };
+
 function moisCourant(): string {
   return new Date().toISOString().slice(0, 7); // AAAA-MM
 }
@@ -102,6 +113,7 @@ export default function FacturationCentralePage({ params }: Props) {
     devisEcriture: niveauSuffisant(session, 'finances_devis', 'ecriture'),
     devisValidation: niveauSuffisant(session, 'finances_devis', 'validation'),
     facturesEcriture: niveauSuffisant(session, 'finances_factures', 'ecriture'),
+    facturesValidation: niveauSuffisant(session, 'finances_factures', 'validation'),
     catalogue: session.role === 'societe_admin',
     // Bureaux d'études à régler : donnée de charges (CFO).
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
@@ -117,12 +129,21 @@ export default function FacturationCentralePage({ params }: Props) {
   const [factures, setFactures] = useState<FactureCentrale[] | null>(null);
   // ?onglet=factures : arrivée depuis la notification « contrat signé » (les
   // factures brouillon de l'Onboard) — aussi quand la page est déjà ouverte.
-  const ongletDemande = searchParams.get('onglet') === 'factures' ? 'factures' : null;
+  // ?nouvelle=<dossier> : « Émettre une facture directe » depuis la fiche CRM.
+  const nouvelleDemandee = searchParams.get('nouvelle');
+  const ongletDemande = searchParams.get('onglet') === 'factures' || nouvelleDemandee ? 'factures' : null;
   const [onglet, setOnglet] = useState<'devis' | 'factures'>(ongletDemande ?? 'devis');
   useEffect(() => {
     if (ongletDemande) setOnglet(ongletDemande);
   }, [ongletDemande]);
   const [modalDevis, setModalDevis] = useState(false);
+  // Facture directe : panneau de préparation (lead présélectionné ou non), puis
+  // panneau de la facture (statut, document, encaissements).
+  const [nouvelle, setNouvelle] = useState<{ dossier?: string } | null>(null);
+  const [factureOuverte, setFactureOuverte] = useState<string | null>(null);
+  useEffect(() => {
+    if (nouvelleDemandee) setNouvelle({ dossier: nouvelleDemandee });
+  }, [nouvelleDemandee]);
   const [modalCatalogue, setModalCatalogue] = useState(false);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -175,6 +196,7 @@ export default function FacturationCentralePage({ params }: Props) {
         .filter((x) => x.statut === 'emise' && !x.estAvoir && (x.emiseLe ?? '').slice(0, 7) === mois)
         .reduce((s, x) => s + x.montantTtc, 0),
       retards: f.filter((x) => x.statutEffectif === 'en_retard').length,
+      aValider: f.filter(aValiderCfo).length,
     };
   }, [devis, factures]);
 
@@ -203,8 +225,8 @@ export default function FacturationCentralePage({ params }: Props) {
       typeDocument: 'Facture',
       societe,
       reference: f.reference,
-      statutLabel: f.estAvoir ? 'Avoir' : STATUTS_FACTURE[f.statutEffectif],
-      statutClasse: f.estAvoir ? 'pill--neutre' : PILL_FACTURE[f.statutEffectif],
+      statutLabel: statutFacture(f).libelle,
+      statutClasse: statutFacture(f).classe,
       dateEmission: formatDate(f.emiseLe ?? f.creeLe),
       dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
       estAvoir: f.estAvoir,
@@ -284,6 +306,11 @@ export default function FacturationCentralePage({ params }: Props) {
               <Package size={15} strokeWidth={1.75} aria-hidden /> Catalogue
             </button>
           )}
+          {droits.facturesEcriture && (
+            <button type="button" className="btn-ghost" onClick={() => setNouvelle({})}>
+              <Plus size={15} strokeWidth={2} aria-hidden /> Nouvelle facture
+            </button>
+          )}
           {droits.devisEcriture && (
             <button type="button" className="btn-primary" onClick={() => setModalDevis(true)}>
               <Plus size={15} strokeWidth={2} aria-hidden /> Nouveau devis
@@ -341,6 +368,7 @@ export default function FacturationCentralePage({ params }: Props) {
             cle: 'factures-impayees',
             label: 'Factures impayées',
             valeur: kpi.facturesImpayees,
+            sousTexte: kpi.aValider ? `${kpi.aValider} facture(s) directe(s) à valider par le CFO` : undefined,
             icone: FileWarning,
             degrade: DEGRADE_KPI['factures-impayees'],
           },
@@ -584,22 +612,22 @@ export default function FacturationCentralePage({ params }: Props) {
             </thead>
             <tbody>
               {facturesFiltrees.map((f) => (
-                <tr key={f.id}>
+                <tr key={f.id} className="factu-ligne" onClick={() => setFactureOuverte(f.id)}>
                   <td data-label="Réf.">
-                    {f.reference ?? <span className="cell-sub">brouillon</span>}
+                    <button type="button" className="crm-code" onClick={(e) => { e.stopPropagation(); setFactureOuverte(f.id); }}>
+                      {f.reference ?? 'brouillon'}
+                    </button>
                   </td>
                   <td data-label="Client">{f.client?.nom ?? <span className="cell-sub">—</span>}</td>
                   <td data-label="Projet">
-                    {f.projet ? f.projet.programme : <span className="cell-sub">libre</span>}
+                    {f.projet ? f.projet.programme || f.projet.code : f.dossierCrm ? (
+                      <span className="cell-sub">directe · {f.dossierCrm.code}</span>
+                    ) : (
+                      <span className="cell-sub">libre</span>
+                    )}
                   </td>
                   <td data-label="Statut">
-                    {f.estAvoir ? (
-                      <span className="pill pill--neutre">Avoir</span>
-                    ) : (
-                      <span className={`pill ${PILL_FACTURE[f.statutEffectif]}`}>
-                        {STATUTS_FACTURE[f.statutEffectif]}
-                      </span>
-                    )}
+                    <span className={`pill ${statutFacture(f).classe}`}>{statutFacture(f).libelle}</span>
                   </td>
                   <td data-label="TTC">{formatMontantCompact(f.montantTtc)}</td>
                   <td data-label="Payé">
@@ -609,7 +637,7 @@ export default function FacturationCentralePage({ params }: Props) {
                     {f.estAvoir || f.statut === 'annulee' ? '—' : formatMontantCompact(f.resteAPayer)}
                   </td>
                   <td data-label="Échéance">{f.echeanceLe ?? '—'}</td>
-                  <td data-label="" className="cell-actions">
+                  <td data-label="" className="cell-actions" onClick={(e) => e.stopPropagation()}>
                     <span className="factu-actions">
                       {f.projet && (
                         <Link
@@ -664,6 +692,41 @@ export default function FacturationCentralePage({ params }: Props) {
           onChange={setCatalogue}
         />
       )}
+
+      {nouvelle && (
+        <NouvelleFactureDirecte
+          slug={params.slug}
+          dossierPresel={nouvelle.dossier}
+          onClose={() => setNouvelle(null)}
+          onCreee={(f) => {
+            setNouvelle(null);
+            setFactures((l) => [f, ...(l ?? []).filter((x) => x.id !== f.id)]);
+            setFactureOuverte(f.id);
+          }}
+        />
+      )}
+      {factureOuverte &&
+        (() => {
+          const f = (factures ?? []).find((x) => x.id === factureOuverte);
+          if (!f) return null;
+          return (
+            <FacturePanneau
+              slug={params.slug}
+              facture={f}
+              document={documentDepuisFacture(f)}
+              statut={statutFacture(f)}
+              societeNom={societe?.nom ?? 'la société'}
+              droits={{ ecriture: droits.facturesEcriture, validation: droits.facturesValidation }}
+              onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
+              onSupprimee={() => {
+                setFactureOuverte(null);
+                setFactures((l) => (l ?? []).filter((x) => x.id !== f.id));
+              }}
+              onTelecharger={() => setDocumentAImprimer(documentDepuisFacture(f))}
+              onClose={() => setFactureOuverte(null)}
+            />
+          );
+        })()}
 
       <ImpressionDocument doc={documentAImprimer} onImprime={() => setDocumentAImprimer(null)} />
     </>
