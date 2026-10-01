@@ -122,7 +122,7 @@ function versResumeOffre(o: Devis & { lignes: LigneDevis[] }) {
   const aujourdhui = new Date().toISOString().slice(0, 10);
   return {
     id: o.id,
-    reference: refDevis(o.numero, o.dateEnvoi),
+    reference: refDevis(o),
     statutEffectif: statutDevisEffectif(o, aujourdhui),
     objet: o.objet,
     nbLignes: o.lignes.length,

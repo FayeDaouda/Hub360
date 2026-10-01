@@ -100,7 +100,7 @@ export class ProjetsOuvertsService {
         cellules: { include: { cellule: { include: { dispatcher: { select: { id: true, prenom: true, nom: true } } } } } },
         gabaritVersion: { select: { code: true, libelle: true } },
         factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { jalon: true, statut: true } },
-        devis: { where: { statut: 'transforme' }, select: { numero: true, dateEnvoi: true }, take: 1 },
+        devis: { where: { statut: 'transforme' }, select: { numero: true, dateEnvoi: true, codeDossier: true, rangDossier: true }, take: 1 },
         societe: { select: { contratSignataireNom: true } },
       },
     });
@@ -140,7 +140,7 @@ export class ProjetsOuvertsService {
       cellule: cellule ? { nom: cellule.nom, chef: nom(chef) } : null,
       pilote: pilote === 'head_of_engineering' ? 'Head of Engineering (à recruter)' : dplg ?? 'Architecte DPLG',
       version: p.gabaritVersion,
-      offre: p.devis[0] ? refDevis(p.devis[0].numero, p.devis[0].dateEnvoi) : null,
+      offre: p.devis[0] ? refDevis(p.devis[0]) : null,
       ouvertLe: p.ouvertLe,
       livraisonLe: dateDuJour(p.ouvertLe!, horizon, feries),
       jour: rangOuvre(p.ouvertLe!, jour, feries),

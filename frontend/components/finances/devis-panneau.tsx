@@ -1,0 +1,151 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { CheckCircle2, Copy, Download, ReceiptText, Send, X, XCircle } from 'lucide-react';
+import { convertirDevis, envoyerDevis, marquerReponseDevis, supprimerDevis } from '@/lib/devis';
+import { jjmmaaaa, statutDevis } from '@/lib/finances';
+import type { Devis } from '@/lib/types';
+import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
+
+type Props = {
+  slug: string;
+  devis: Devis;
+  document: DocumentFacturationProps | null;
+  droits: { devisEcriture: boolean; devisValidation: boolean; facturesEcriture: boolean };
+  onMaj: () => void; // recharge les listes
+  onClose: () => void;
+  onTelecharger: () => void;
+};
+
+// Devis en panneau latéral (Finances) : document et gestes selon le statut.
+// Une offre de dossier se prépare et se soumet au CFO depuis le CRM (lien) ;
+// un devis libre s'envoie, se marque accepté ou refusé, puis se convertit.
+export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose, onTelecharger }: Props) {
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [lien, setLien] = useState<{ url: string; emailEnvoye: boolean } | null>(null);
+  const s = statutDevis(d);
+
+  useEffect(() => {
+    const echap = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', echap);
+    return () => window.removeEventListener('keydown', echap);
+  }, [onClose]);
+
+  async function agir(fn: () => Promise<unknown>, apres?: () => void) {
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await fn();
+      onMaj();
+      apres?.();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'L’action a échoué.');
+    } finally {
+      setEnCours(false);
+    }
+  }
+
+  return (
+    <div className="fiche-crm-fond" onClick={onClose}>
+      <aside className="fiche-crm" role="dialog" aria-modal="true" aria-labelledby="fp-devis" onClick={(e) => e.stopPropagation()}>
+        <header className="fiche-crm-entete">
+          <div>
+            <p className="fiche-crm-titre">{d.dossierCrm ? 'Offre commerciale' : 'Devis'}</p>
+            <h2 id="fp-devis" className="fiche-crm-code fac-titre">
+              {d.reference ?? 'Brouillon'}
+              <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
+            </h2>
+            <p className="fiche-crm-meta">
+              {[d.client.nom, d.dossierCrm?.code, `créé le ${jjmmaaaa(d.creeLe)}`, d.dateValidite && `valable jusqu’au ${jjmmaaaa(d.dateValidite)}`]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          </div>
+          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
+            <X size={18} strokeWidth={1.75} />
+          </button>
+        </header>
+
+        {d.dossierCrm && d.statut === 'brouillon' && (
+          <div className="fiche-crm-alerte" role="note">
+            <strong>Offre du lead {d.dossierCrm.code} : elle se prépare et se soumet au CFO depuis la fiche du CRM.</strong>
+            <Link className="lien-inline" href={`/admin/${slug}/crm?dossier=${d.dossierCrm.id}`}>
+              Ouvrir la fiche CRM
+            </Link>
+          </div>
+        )}
+
+        {lien && (
+          <div className="crm-banner" role="status">
+            <span>
+              {lien.emailEnvoye ? 'Devis envoyé par e-mail au client.' : 'E-mail non envoyé : transmettez le lien au client.'} <code>{lien.url}</code>
+            </span>
+            <button type="button" className="lien-inline" onClick={() => navigator.clipboard?.writeText(lien.url)}>
+              <Copy size={12} strokeWidth={2} aria-hidden /> Copier
+            </button>
+          </div>
+        )}
+
+        {document && (
+          <div className="fac-document">
+            <DocumentFacturation {...document} />
+          </div>
+        )}
+
+        {erreur && <p className="field-erreur">{erreur}</p>}
+        <div className="fac-actions">
+          {!d.dossierCrm && d.statut === 'brouillon' && droits.devisValidation && (
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={enCours}
+              onClick={() =>
+                agir(async () => {
+                  const r = await envoyerDevis(slug, d.id);
+                  setLien({ url: r.lienPublic, emailEnvoye: r.emailEnvoye });
+                })
+              }
+            >
+              <Send size={14} strokeWidth={2} aria-hidden /> Envoyer
+            </button>
+          )}
+          {d.statut === 'envoye' && droits.devisEcriture && (
+            <>
+              <button type="button" className="btn-ghost" disabled={enCours} onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'accepte'))}>
+                <CheckCircle2 size={14} strokeWidth={2} aria-hidden /> Accepté
+              </button>
+              <button type="button" className="btn-ghost" disabled={enCours} onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'refuse'))}>
+                <XCircle size={14} strokeWidth={2} aria-hidden /> Refusé
+              </button>
+            </>
+          )}
+          {d.statut === 'accepte' && !d.dossierCrm && droits.facturesEcriture && (
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={enCours}
+              onClick={() => window.confirm('Convertir ce devis en facture ?') && agir(() => convertirDevis(slug, d.id), onClose)}
+            >
+              <ReceiptText size={14} strokeWidth={2} aria-hidden /> Convertir en facture
+            </button>
+          )}
+          {!d.dossierCrm && d.statut === 'brouillon' && droits.devisEcriture && (
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={enCours}
+              onClick={() => window.confirm('Supprimer ce brouillon de devis ?') && agir(() => supprimerDevis(slug, d.id), onClose)}
+            >
+              Supprimer le brouillon
+            </button>
+          )}
+          <button type="button" className="btn-ghost" onClick={onTelecharger}>
+            <Download size={14} strokeWidth={2} aria-hidden /> Télécharger
+          </button>
+        </div>
+      </aside>
+    </div>
+  );
+}

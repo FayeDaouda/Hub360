@@ -1,16 +1,22 @@
 import { StatutDevis } from '@prisma/client';
 import { ventilationTva } from '../projets/domaine/gardes';
 
-// Référence d'affichage d'un devis — même motif que refFacture (format
-// PROVISOIRE, cf. projets/domaine/config.ts::refFacture). La donnée qui fait
-// foi est le numéro séquentiel (Devis.numero) ; cette chaîne n'est qu'un rendu.
-export function refDevis(
-  numero: number | null,
-  dateEnvoi: Date | string | null,
-): string | null {
-  if (numero == null) return null;
-  const annee = (dateEnvoi ? new Date(dateEnvoi) : new Date()).getFullYear();
-  return `DEV${annee}-${String(numero).padStart(4, '0')}`;
+// Référence d'un devis (maquette Finances, oct. 2026) : une offre de dossier
+// porte le code du dossier + « OF » + son rang (« KSN_DIA.26-OF1 »), attribués
+// à la création ; un devis libre, la séquence de la société à l'envoi
+// (DEV + année + numéro).
+export type ReferenceDevis = {
+  numero: number | null;
+  dateEnvoi: Date | string | null;
+  codeDossier: string | null;
+  rangDossier: number | null;
+};
+
+export function refDevis(d: ReferenceDevis): string | null {
+  if (d.codeDossier && d.rangDossier != null) return `${d.codeDossier}-OF${d.rangDossier}`;
+  if (d.numero == null) return null;
+  const annee = (d.dateEnvoi ? new Date(d.dateEnvoi) : new Date()).getFullYear();
+  return `DEV${annee}-${String(d.numero).padStart(4, '0')}`;
 }
 
 export type StatutDevisEffectif = StatutDevis | 'expire';

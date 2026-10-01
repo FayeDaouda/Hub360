@@ -3,112 +3,60 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  BellRing,
-  CheckCircle2,
-  Copy,
-  Download,
-  FileWarning,
-  Package,
-  Plus,
-  ReceiptText,
-  Send,
-  Trash2,
-  XCircle,
-} from 'lucide-react';
+import { BadgePercent, CircleDollarSign, Hourglass, Package, Plus, ReceiptText, Wallet } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getClients } from '@/lib/crm';
-import {
-  getBureauxARegler,
-  getFacturesCentrale,
-  getProjetsFacturation,
-  relancerFacture,
-} from '@/lib/facturation';
+import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
+import { getDevisListe, getProduitsServices } from '@/lib/devis';
+import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
 import {
-  convertirDevis,
-  envoyerDevis,
-  getDevisListe,
-  getProduitsServices,
-  marquerReponseDevis,
-  supprimerDevis,
-} from '@/lib/devis';
-import {
-  STATUTS_DEVIS,
-  STATUTS_FACTURE,
+  TAUX_TVA_DEFAUT,
+  type BureauARegler,
   type Client,
   type Devis,
   type FactureCentrale,
   type ProduitService,
-  type BureauARegler,
   type ProjetRef,
-  type StatutDevisEffectif,
-  type StatutFactureEffectif,
 } from '@/lib/types';
-import { formatMontantCompact } from '@/lib/format';
+import { formatMontant, formatMontantCompact } from '@/lib/format';
 import { KpiStrip } from '@/components/admin/kpi-strip';
-
-// Même palette de dégradés que le tableau de bord, le CRM et les projets
-// (demande boss, sept. 2026) — « Retards » garde le dégradé chaud qui
-// portait auparavant `alerte`/`attenue` conditionnels ; le dégradé porte
-// maintenant lui-même le signal, plus besoin de bascule selon `kpi.retards`.
-const DEGRADE_KPI: Record<string, { a: string; b: string }> = {
-  'devis-attente': { a: '#2e3192', b: '#1bffff' }, // Ocean Blue
-  'factures-impayees': { a: '#764ba2', b: '#667eea' }, // Plum Plate
-  'ca-facture': { a: '#11998e', b: '#38ef7d' }, // Quepal
-  retards: { a: '#ff5f6d', b: '#ffc371' }, // Sweet Morning
-};
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
 import { ImpressionDocument } from '@/components/impression-document';
 import type { DocumentFacturationProps } from '@/components/document-facturation';
 import { NouvelleFactureDirecte } from '@/components/finances/nouvelle-facture-directe';
 import { FacturePanneau } from '@/components/finances/facture-panneau';
+import { DevisPanneau } from '@/components/finances/devis-panneau';
+import { OngletDevis } from '@/components/finances/onglet-devis';
+import { OngletFactures } from '@/components/finances/onglet-factures';
 
+// Dégradés des 5 tuiles (maquette Finances, oct. 2026) : bleu, sarcelle,
+// orange, jaune, rose — même famille que le tableau de bord et le CRM.
+const DEGRADE_KPI = {
+  offres: { a: '#2e3192', b: '#1bffff' },
+  transformation: { a: '#11998e', b: '#38ef7d' },
+  facture: { a: '#f12711', b: '#f5af19' },
+  encaisse: { a: '#f7971e', b: '#ffd200' },
+  reste: { a: '#ec008c', b: '#fc6767' },
+};
+
+type Onglet = 'devis' | 'factures';
 type Props = { params: { slug: string } };
-
-const PILL_DEVIS: Record<StatutDevisEffectif, string> = {
-  brouillon: 'pill--neutre',
-  envoye: 'pill--info',
-  accepte: 'pill--succes',
-  refuse: 'pill--risque',
-  expire: 'pill--risque',
-  transforme: 'pill--succes',
-};
-
-const PILL_FACTURE: Record<StatutFactureEffectif, string> = {
-  brouillon: 'pill--neutre',
-  emise: 'pill--info',
-  partiellement_payee: 'pill--attention',
-  payee: 'pill--succes',
-  en_retard: 'pill--risque',
-  annulee: 'pill--neutre',
-};
-
-// Facture directe d'un lead préparée, pas encore émise : à valider par le CFO.
-const aValiderCfo = (f: FactureCentrale) => f.statut === 'brouillon' && !!f.dossierCrm;
-const statutFacture = (f: FactureCentrale) =>
-  f.estAvoir
-    ? { libelle: 'Avoir', classe: 'pill--neutre' }
-    : aValiderCfo(f)
-      ? { libelle: 'À valider CFO', classe: 'pill--attention' }
-      : { libelle: STATUTS_FACTURE[f.statutEffectif], classe: PILL_FACTURE[f.statutEffectif] };
-
-function moisCourant(): string {
-  return new Date().toISOString().slice(0, 7); // AAAA-MM
-}
 
 function formatDate(iso: string): string {
   const d = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export default function FacturationCentralePage({ params }: Props) {
-  useTitrePage('Facturation');
+// Finances · Devis et factures (maquette du boss, oct. 2026) : direction
+// seulement (matrice finances_*), les équipes ne voient aucun montant.
+export default function FinancesPage({ params }: Props) {
+  useTitrePage('Finances · Devis et factures');
   const societe = useSocieteCourante();
   const session = useSessionCourante();
-  // Droits par la matrice (étape H5) — affichage seulement, le serveur
-  // revérifie. Catalogue : gestion réservée à l'administration.
+  // Droits par la matrice — affichage seulement, le serveur revérifie.
+  // Catalogue : gestion réservée à l'administration.
   const droits = {
     devisEcriture: niveauSuffisant(session, 'finances_devis', 'ecriture'),
     devisValidation: niveauSuffisant(session, 'finances_devis', 'validation'),
@@ -118,7 +66,6 @@ export default function FacturationCentralePage({ params }: Props) {
     // Bureaux d'études à régler : donnée de charges (CFO).
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
   };
-  const [bureaux, setBureaux] = useState<BureauARegler[]>([]);
   const searchParams = useSearchParams();
   const projetFiltre = searchParams.get('projetId') ?? undefined;
 
@@ -127,38 +74,30 @@ export default function FacturationCentralePage({ params }: Props) {
   const [catalogue, setCatalogue] = useState<ProduitService[]>([]);
   const [devis, setDevis] = useState<Devis[] | null>(null);
   const [factures, setFactures] = useState<FactureCentrale[] | null>(null);
-  // ?onglet=factures : arrivée depuis la notification « contrat signé » (les
-  // factures brouillon de l'Onboard) — aussi quand la page est déjà ouverte.
-  // ?nouvelle=<dossier> : « Émettre une facture directe » depuis la fiche CRM.
+  const [bureaux, setBureaux] = useState<BureauARegler[]>([]);
+  // ?onglet=factures : notification « contrat signé » (factures brouillon de
+  // l'Onboard). ?nouvelle=<dossier> : « Émettre une facture directe » depuis la
+  // fiche CRM. ?facture=<id> : notification « facture à valider » (CFO).
   const nouvelleDemandee = searchParams.get('nouvelle');
-  // ?facture=<id> : notification « facture à valider » (CFO) — la facture ouverte.
   const factureDemandee = searchParams.get('facture');
-  const ongletDemande = searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee ? 'factures' : null;
-  const [onglet, setOnglet] = useState<'devis' | 'factures'>(ongletDemande ?? 'devis');
+  const ongletDemande: Onglet | null =
+    searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee ? 'factures' : null;
+  const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? 'devis');
   useEffect(() => {
     if (ongletDemande) setOnglet(ongletDemande);
   }, [ongletDemande]);
   const [modalDevis, setModalDevis] = useState(false);
-  // Facture directe : panneau de préparation (lead présélectionné ou non), puis
-  // panneau de la facture (statut, document, encaissements).
+  const [modalCatalogue, setModalCatalogue] = useState(false);
   const [nouvelle, setNouvelle] = useState<{ dossier?: string } | null>(null);
   const [factureOuverte, setFactureOuverte] = useState<string | null>(null);
+  const [devisOuvert, setDevisOuvert] = useState<string | null>(null);
   useEffect(() => {
     if (nouvelleDemandee) setNouvelle({ dossier: nouvelleDemandee });
   }, [nouvelleDemandee]);
   useEffect(() => {
     if (factureDemandee) setFactureOuverte(factureDemandee);
   }, [factureDemandee]);
-  const [modalCatalogue, setModalCatalogue] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
-  const [lienEnvoye, setLienEnvoye] = useState<{
-    reference: string | null;
-    lien: string;
-    emailEnvoye: boolean;
-  } | null>(null);
   const [documentAImprimer, setDocumentAImprimer] = useState<DocumentFacturationProps | null>(null);
-  const [relanceMsg, setRelanceMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getClients(params.slug).then(setClients);
@@ -174,46 +113,25 @@ export default function FacturationCentralePage({ params }: Props) {
     if (droits.charges) getBureauxARegler(params.slug).then(setBureaux).catch(() => setBureaux([]));
   }
 
-  const devisFiltres = useMemo(
-    () => (devis ?? []).filter((d) => !projetFiltre || d.projetId === projetFiltre),
-    [devis, projetFiltre],
-  );
+  const devisFiltres = useMemo(() => (devis ?? []).filter((d) => !projetFiltre || d.projetId === projetFiltre), [devis, projetFiltre]);
   const facturesFiltrees = useMemo(
-    () => (factures ?? []).filter((f) => !projetFiltre || f.projetId === projetFiltre),
+    () => (factures ?? []).filter((f) => dansListeFactures(f) && (!projetFiltre || f.projetId === projetFiltre)),
     [factures, projetFiltre],
   );
-  const projetFiltreNom = useMemo(
-    () => projets.find((p) => p.id === projetFiltre)?.programme,
-    [projets, projetFiltre],
-  );
-
-  const kpi = useMemo(() => {
-    const d = devis ?? [];
-    const f = factures ?? [];
-    const mois = moisCourant();
-    return {
-      devisEnAttente: d.filter((x) => x.statutEffectif === 'envoye').length,
-      avenantsEnRetard: d.filter((x) => x.alerteAvenant).length,
-      facturesImpayees: f.filter(
-        (x) => x.statutEffectif === 'emise' || x.statutEffectif === 'partiellement_payee',
-      ).length,
-      caFacturePeriode: f
-        .filter((x) => x.statut === 'emise' && !x.estAvoir && (x.emiseLe ?? '').slice(0, 7) === mois)
-        .reduce((s, x) => s + x.montantTtc, 0),
-      retards: f.filter((x) => x.statutEffectif === 'en_retard').length,
-      aValider: f.filter(aValiderCfo).length,
-    };
-  }, [devis, factures]);
+  const nomsProjets = useMemo(() => new Map(projets.map((p) => [p.id, p.code])), [projets]);
+  const projetFiltreNom = projets.find((p) => p.id === projetFiltre)?.programme;
+  const kpi = useMemo(() => indicateursFinances(devisFiltres, facturesFiltrees), [devisFiltres, facturesFiltrees]);
 
   function documentDepuisDevis(d: Devis): DocumentFacturationProps | null {
     if (!societe) return null;
+    const s = statutDevis(d);
     return {
       typeDocument: 'Devis',
       societe,
       reference: d.reference,
-      statutLabel: STATUTS_DEVIS[d.statutEffectif],
-      statutClasse: PILL_DEVIS[d.statutEffectif],
-      dateEmission: d.dateEnvoi ? formatDate(d.dateEnvoi) : formatDate(d.creeLe),
+      statutLabel: s.libelle,
+      statutClasse: `pill--${s.ton}`,
+      dateEmission: formatDate(d.dateEnvoi ?? d.creeLe),
       dateValidite: d.dateValidite ? formatDate(d.dateValidite) : null,
       clientNom: d.client.nom,
       objet: d.objet,
@@ -226,12 +144,13 @@ export default function FacturationCentralePage({ params }: Props) {
 
   function documentDepuisFacture(f: FactureCentrale): DocumentFacturationProps | null {
     if (!societe) return null;
+    const s = statutFacture(f);
     return {
       typeDocument: 'Facture',
       societe,
       reference: f.reference,
-      statutLabel: statutFacture(f).libelle,
-      statutClasse: statutFacture(f).classe,
+      statutLabel: s.libelle,
+      statutClasse: `pill--${s.ton}`,
       dateEmission: formatDate(f.emiseLe ?? f.creeLe),
       dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
       estAvoir: f.estAvoir,
@@ -244,10 +163,7 @@ export default function FacturationCentralePage({ params }: Props) {
           ? f.lignes.map((l) => ({
               id: l.id,
               designation: l.designation,
-              detail:
-                l.montantBase != null
-                  ? `Facture du bureau ${formatMontantCompact(l.montantBase)} HT + 10 % de coordination`
-                  : null,
+              detail: l.montantBase != null ? `Facture du bureau ${formatMontantCompact(l.montantBase)} HT + 10 % de coordination` : null,
               quantite: 1,
               prixUnitaire: l.montantHt,
               montantHt: l.montantHt,
@@ -267,44 +183,17 @@ export default function FacturationCentralePage({ params }: Props) {
     };
   }
 
-  async function action<T>(fn: () => Promise<T>): Promise<T | null> {
-    setBusy(true);
-    setErreur(null);
-    try {
-      const r = await fn();
-      recharger();
-      return r;
-    } catch (e) {
-      setErreur(e instanceof Error ? e.message : 'Une erreur est survenue.');
-      return null;
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function relancer(f: FactureCentrale) {
-    setBusy(true);
-    setErreur(null);
-    setRelanceMsg(null);
-    try {
-      const { envoye } = await relancerFacture(params.slug, f.id);
-      setRelanceMsg(
-        envoye
-          ? `Relance envoyée à ${f.client?.nom ?? 'ce client'}.`
-          : `Email non envoyé (transport indisponible) — contactez ${f.client?.nom ?? 'ce client'} autrement.`,
-      );
-    } catch (e) {
-      setErreur(e instanceof Error ? e.message : 'La relance a échoué.');
-    } finally {
-      setBusy(false);
-    }
-  }
+  const pluriel = (n: number, mot: string) => `${n} ${mot}(s)`;
+  const devisPanneau = devisOuvert ? (devis ?? []).find((d) => d.id === devisOuvert) : undefined;
+  const facturePanneau = factureOuverte ? (factures ?? []).find((f) => f.id === factureOuverte) : undefined;
 
   return (
     <>
-      <div className="panel-tete">
-        {/* Pas de titre ici : le topbar (useTitrePage) affiche déjà "Facturation" —
-            même convention que CRM/Projets/Équipe, qui ne le répètent pas. */}
+      <div className="fin-entete">
+        <p className="fin-sous-titre">
+          Direction {societe?.nom ?? ''} : devis et factures. CFO, CEO, CTO, CIO : tout, y compris tableau de bord et
+          rentabilité. Les équipes ne voient aucun montant.
+        </p>
         <div className="factu-actions-tete">
           {droits.catalogue && (
             <button type="button" className="btn-ghost" onClick={() => setModalCatalogue(true)}>
@@ -323,8 +212,8 @@ export default function FacturationCentralePage({ params }: Props) {
           )}
         </div>
       </div>
-      {/* Bureaux d'études à régler (CGV art. 5 : après encaissement du
-          client) — rappel pour la CFO, toute la société. */}
+
+      {/* Bureaux d'études à régler (CGV art. 5 : après encaissement du client). */}
       {bureaux.length > 0 && (
         <div className="crm-banner" role="status">
           <span>
@@ -335,10 +224,7 @@ export default function FacturationCentralePage({ params }: Props) {
             {bureaux.map((b, i) => (
               <span key={b.blocId}>
                 {i > 0 && ' · '}
-                <Link
-                  href={`/admin/${params.slug}/projets/${b.projet.id}/facturation`}
-                  className="lien-inline"
-                >
+                <Link href={`/admin/${params.slug}/projets/${b.projet.id}/facturation`} className="lien-inline">
                   {b.bureau} — {b.libelle} ({b.projet.code}
                   {b.montantBureauHt != null && `, ${formatMontantCompact(b.montantBureauHt)} HT`})
                 </Link>
@@ -356,347 +242,81 @@ export default function FacturationCentralePage({ params }: Props) {
         </p>
       )}
 
-      <KpiStrip
-        tuiles={[
-          {
-            cle: 'devis-attente',
-            label: 'Devis en attente de réponse',
-            valeur: kpi.devisEnAttente,
-            sousTexte: kpi.avenantsEnRetard
-              ? `${kpi.avenantsEnRetard} avenant(s) non accepté(s) hors délai`
-              : undefined,
-            alerte: kpi.avenantsEnRetard > 0,
-            icone: Send,
-            degrade: DEGRADE_KPI['devis-attente'],
-          },
-          {
-            cle: 'factures-impayees',
-            label: 'Factures impayées',
-            valeur: kpi.facturesImpayees,
-            sousTexte: kpi.aValider ? `${kpi.aValider} facture(s) directe(s) à valider par le CFO` : undefined,
-            icone: FileWarning,
-            degrade: DEGRADE_KPI['factures-impayees'],
-          },
-          {
-            cle: 'ca-facture',
-            label: 'CA facturé (ce mois)',
-            valeur: formatMontantCompact(kpi.caFacturePeriode),
-            degrade: DEGRADE_KPI['ca-facture'],
-          },
-          {
-            cle: 'retards',
-            label: 'Retards',
-            valeur: kpi.retards,
-            degrade: DEGRADE_KPI.retards,
-          },
-        ]}
-      />
+      <div className="fin-kpi">
+        <KpiStrip
+          tuiles={[
+            {
+              cle: 'offres',
+              label: 'Offres en cours',
+              valeur: formatMontant(kpi.offresEnCours.montant),
+              sousTexte: `${pluriel(kpi.offresEnCours.nombre, 'offre')} en validation ou chez le client`,
+              icone: Hourglass,
+              degrade: DEGRADE_KPI.offres,
+            },
+            {
+              cle: 'transformation',
+              label: 'Taux de transformation',
+              valeur: kpi.transformation.pct == null ? '—' : `${kpi.transformation.pct} %`,
+              sousTexte: `${pluriel(kpi.transformation.acceptes, 'acceptée')} · ${pluriel(kpi.transformation.refuses, 'refusée')}`,
+              icone: BadgePercent,
+              degrade: DEGRADE_KPI.transformation,
+            },
+            {
+              cle: 'facture',
+              label: 'Facturé TTC',
+              valeur: formatMontant(kpi.facture.montant),
+              sousTexte: `${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
+              icone: ReceiptText,
+              degrade: DEGRADE_KPI.facture,
+            },
+            {
+              cle: 'encaisse',
+              label: 'Encaissé',
+              valeur: formatMontant(kpi.encaisse.montant),
+              sousTexte: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
+              icone: Wallet,
+              degrade: DEGRADE_KPI.encaisse,
+            },
+            {
+              cle: 'reste',
+              label: 'Reste à encaisser',
+              valeur: formatMontant(kpi.resteAEncaisser.montant),
+              sousTexte: `${pluriel(kpi.resteAEncaisser.enRetard, 'facture')} en retard`,
+              icone: CircleDollarSign,
+              degrade: DEGRADE_KPI.reste,
+            },
+          ]}
+        />
+      </div>
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
-      {lienEnvoye && (
-        <div className="crm-banner" role="status">
-          <span>
-            {lienEnvoye.emailEnvoye
-              ? `Devis ${lienEnvoye.reference} envoyé par email au client.`
-              : `Devis ${lienEnvoye.reference} créé — email non envoyé (client sans adresse, ou envoi indisponible).`}{' '}
-            Lien de secours (ne sera plus réaffiché ensuite) :{' '}
-            <code>{lienEnvoye.lien}</code>{' '}
-            <button
-              type="button"
-              className="lien-inline"
-              onClick={() => navigator.clipboard?.writeText(lienEnvoye.lien)}
-            >
-              <Copy size={12} strokeWidth={2} aria-hidden /> Copier
-            </button>
-          </span>
-          <button type="button" aria-label="Fermer" onClick={() => setLienEnvoye(null)}>
-            ×
+      <div className="fin-onglets">
+        <div className="vue-toggle" role="tablist" aria-label="Finances">
+          <button type="button" role="tab" aria-selected={onglet === 'devis'} className={onglet === 'devis' ? 'is-active' : ''} onClick={() => setOnglet('devis')}>
+            Devis · {devis ? devisFiltres.length : '…'}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={onglet === 'factures'}
+            className={onglet === 'factures' ? 'is-active' : ''}
+            onClick={() => setOnglet('factures')}
+          >
+            Factures · {factures ? facturesFiltrees.length : '…'}
           </button>
         </div>
-      )}
-      {relanceMsg && (
-        <div className="crm-banner" role="status">
-          <span>{relanceMsg}</span>
-          <button type="button" aria-label="Fermer" onClick={() => setRelanceMsg(null)}>
-            ×
-          </button>
-        </div>
-      )}
-
-      <div className="vue-toggle" role="tablist">
-        <button
-          type="button"
-          className={onglet === 'devis' ? 'is-active' : ''}
-          onClick={() => setOnglet('devis')}
-        >
-          Devis {devis ? `(${devisFiltres.length})` : ''}
-        </button>
-        <button
-          type="button"
-          className={onglet === 'factures' ? 'is-active' : ''}
-          onClick={() => setOnglet('factures')}
-        >
-          Factures {factures ? `(${facturesFiltrees.length})` : ''}
-        </button>
+        <span className="pill pill--neutre fin-devise">Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %</span>
       </div>
 
       {onglet === 'devis' ? (
         !devis ? (
           <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
-        ) : devisFiltres.length === 0 ? (
-          <p className="images-vide">Aucun devis. Créez-en un ci-dessus.</p>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Réf.</th>
-                  <th>Client</th>
-                  <th>Projet</th>
-                  <th>Objet</th>
-                  <th>Statut</th>
-                  <th>TTC</th>
-                  <th>Validité</th>
-                  <th aria-label="Actions" />
-                </tr>
-              </thead>
-              <tbody>
-                {devisFiltres.map((d) => {
-                  const projet = projets.find((p) => p.id === d.projetId);
-                  const factureLiee = (factures ?? []).find((f) => f.devisOrigineId === d.id);
-                  return (
-                    <tr key={d.id}>
-                      <td data-label="Réf.">
-                        {d.reference ?? <span className="cell-sub">brouillon</span>}
-                      </td>
-                      <td data-label="Client">{d.client.nom}</td>
-                      <td data-label="Projet">
-                        {projet ? (
-                          projet.programme
-                        ) : d.dossierCrm ? (
-                          <span className="cell-sub">Offre CRM · {d.dossierCrm.code}</span>
-                        ) : (
-                          <span className="cell-sub">libre</span>
-                        )}
-                      </td>
-                      <td data-label="Objet">{d.objet || <span className="cell-sub">—</span>}</td>
-                      <td data-label="Statut">
-                        <span className={`pill ${PILL_DEVIS[d.statutEffectif]}`}>
-                          {STATUTS_DEVIS[d.statutEffectif]}
-                        </span>
-                        {d.alerteAvenant && (
-                          <span
-                            className="pill pill--risque factu-alerte-avenant"
-                            title={`Délai d’acceptation réglé : ${d.alerteAvenant.seuil} jours (Réglages)`}
-                          >
-                            Avenant non accepté · {d.alerteAvenant.jours} j
-                          </span>
-                        )}
-                      </td>
-                      <td data-label="TTC">{formatMontantCompact(d.montantTtc)}</td>
-                      <td data-label="Validité">{d.dateValidite ?? '—'}</td>
-                      <td data-label="" className="cell-actions">
-                        <span className="factu-actions">
-                          {/* Offre d'un dossier CRM : préparée et envoyée depuis la
-                              fiche du dossier (validation DAF), jamais d'ici. */}
-                          {d.statut === 'brouillon' && d.dossierCrm && (
-                            <span className="cell-sub">via le CRM</span>
-                          )}
-                          {d.statut === 'brouillon' && !d.dossierCrm && droits.devisEcriture && (
-                            <>
-                              {droits.devisValidation && (
-                                <button
-                                  type="button"
-                                  className="lien-inline"
-                                  disabled={busy}
-                                  onClick={async () => {
-                                    const r = await action(() => envoyerDevis(params.slug, d.id));
-                                    if (r) {
-                                      setLienEnvoye({
-                                        reference: r.reference,
-                                        lien: r.lienPublic,
-                                        emailEnvoye: r.emailEnvoye,
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Send size={12} strokeWidth={2} aria-hidden /> Envoyer
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="lien-inline btn-ghost--danger"
-                                disabled={busy}
-                                onClick={() => {
-                                  if (window.confirm('Supprimer ce brouillon ?')) {
-                                    void action(() => supprimerDevis(params.slug, d.id));
-                                  }
-                                }}
-                              >
-                                <Trash2 size={12} strokeWidth={2} aria-hidden />
-                              </button>
-                            </>
-                          )}
-                          {d.statut === 'envoye' && droits.devisEcriture && (
-                            <>
-                              <button
-                                type="button"
-                                className="lien-inline"
-                                disabled={busy}
-                                onClick={() =>
-                                  action(() => marquerReponseDevis(params.slug, d.id, 'accepte'))
-                                }
-                              >
-                                <CheckCircle2 size={12} strokeWidth={2} aria-hidden /> Accepté
-                              </button>
-                              <button
-                                type="button"
-                                className="lien-inline"
-                                disabled={busy}
-                                onClick={() =>
-                                  action(() => marquerReponseDevis(params.slug, d.id, 'refuse'))
-                                }
-                              >
-                                <XCircle size={12} strokeWidth={2} aria-hidden /> Refusé
-                              </button>
-                            </>
-                          )}
-                          {d.statut === 'accepte' && droits.facturesEcriture && (
-                            <button
-                              type="button"
-                              className="lien-inline"
-                              disabled={busy}
-                              onClick={() => {
-                                if (window.confirm('Convertir ce devis en facture ?')) {
-                                  void action(() => convertirDevis(params.slug, d.id));
-                                }
-                              }}
-                            >
-                              <ReceiptText size={12} strokeWidth={2} aria-hidden /> Convertir en
-                              facture
-                            </button>
-                          )}
-                          {d.statut === 'transforme' && factureLiee && (
-                            <span className="cell-sub">→ {factureLiee.reference}</span>
-                          )}
-                          <button
-                            type="button"
-                            className="lien-inline"
-                            onClick={() => setDocumentAImprimer(documentDepuisDevis(d))}
-                          >
-                            <Download size={12} strokeWidth={2} aria-hidden /> Télécharger
-                          </button>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <OngletDevis devis={devisFiltres} projets={nomsProjets} onOuvrir={(d) => setDevisOuvert(d.id)} />
         )
       ) : !factures ? (
         <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
-      ) : facturesFiltrees.length === 0 ? (
-        <p className="images-vide">Aucune facture émise.</p>
       ) : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Réf.</th>
-                <th>Client</th>
-                <th>Projet</th>
-                <th>Statut</th>
-                <th>TTC</th>
-                <th>Payé</th>
-                <th>Reste</th>
-                <th>Échéance</th>
-                <th aria-label="Voir" />
-              </tr>
-            </thead>
-            <tbody>
-              {facturesFiltrees.map((f) => (
-                <tr key={f.id} className="factu-ligne" onClick={() => setFactureOuverte(f.id)}>
-                  <td data-label="Réf.">
-                    <span className="cell-stack">
-                      {/* Référence « CODE-n » (maquette) ; un brouillon montre celle
-                          qu'il prendra à la validation, en retrait. */}
-                      <button
-                        type="button"
-                        className={`crm-code${f.reference ? '' : ' factu-ref-prevue'}`}
-                        title={f.reference ? undefined : 'Référence attribuée à la validation'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFactureOuverte(f.id);
-                        }}
-                      >
-                        {f.reference ?? f.referencePrevue ?? 'brouillon'}
-                      </button>
-                      {f.dossierCrm ? (
-                        <span className="cell-sub">directe</span>
-                      ) : (
-                        f.tranche && (
-                          <span className="cell-sub">
-                            {f.tranche.rang}/{f.tranche.total}
-                          </span>
-                        )
-                      )}
-                    </span>
-                  </td>
-                  <td data-label="Client">{f.client?.nom ?? <span className="cell-sub">—</span>}</td>
-                  <td data-label="Projet">
-                    {f.projet ? f.projet.programme || f.projet.code : f.dossierCrm ? (
-                      <span className="cell-sub">directe · {f.dossierCrm.code}</span>
-                    ) : (
-                      <span className="cell-sub">libre</span>
-                    )}
-                  </td>
-                  <td data-label="Statut">
-                    <span className={`pill ${statutFacture(f).classe}`}>{statutFacture(f).libelle}</span>
-                  </td>
-                  <td data-label="TTC">{formatMontantCompact(f.montantTtc)}</td>
-                  <td data-label="Payé">
-                    {f.montantPaye ? formatMontantCompact(f.montantPaye) : '—'}
-                  </td>
-                  <td data-label="Reste">
-                    {f.estAvoir || f.statut === 'annulee' ? '—' : formatMontantCompact(f.resteAPayer)}
-                  </td>
-                  <td data-label="Échéance">{f.echeanceLe ?? '—'}</td>
-                  <td data-label="" className="cell-actions" onClick={(e) => e.stopPropagation()}>
-                    <span className="factu-actions">
-                      {f.projet && (
-                        <Link
-                          href={`/admin/${params.slug}/projets/${f.projet.id}/facturation`}
-                          className="lien-inline"
-                        >
-                          Gérer
-                        </Link>
-                      )}
-                      {f.statutEffectif === 'en_retard' && droits.facturesEcriture && (
-                        <button
-                          type="button"
-                          className="lien-inline"
-                          disabled={busy}
-                          onClick={() => relancer(f)}
-                        >
-                          <BellRing size={12} strokeWidth={2} aria-hidden /> Relancer
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="lien-inline"
-                        onClick={() => setDocumentAImprimer(documentDepuisFacture(f))}
-                      >
-                        <Download size={12} strokeWidth={2} aria-hidden /> Télécharger
-                      </button>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <OngletFactures factures={facturesFiltrees} onOuvrir={(f) => setFactureOuverte(f.id)} />
       )}
 
       {modalDevis && (
@@ -711,12 +331,7 @@ export default function FacturationCentralePage({ params }: Props) {
         />
       )}
       {modalCatalogue && (
-        <CatalogueProduitsModal
-          slug={params.slug}
-          produits={catalogue}
-          onClose={() => setModalCatalogue(false)}
-          onChange={setCatalogue}
-        />
+        <CatalogueProduitsModal slug={params.slug} produits={catalogue} onClose={() => setModalCatalogue(false)} onChange={setCatalogue} />
       )}
 
       {nouvelle && (
@@ -731,28 +346,34 @@ export default function FacturationCentralePage({ params }: Props) {
           }}
         />
       )}
-      {factureOuverte &&
-        (() => {
-          const f = (factures ?? []).find((x) => x.id === factureOuverte);
-          if (!f) return null;
-          return (
-            <FacturePanneau
-              slug={params.slug}
-              facture={f}
-              document={documentDepuisFacture(f)}
-              statut={statutFacture(f)}
-              societeNom={societe?.nom ?? 'la société'}
-              droits={{ ecriture: droits.facturesEcriture, validation: droits.facturesValidation }}
-              onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
-              onSupprimee={() => {
-                setFactureOuverte(null);
-                setFactures((l) => (l ?? []).filter((x) => x.id !== f.id));
-              }}
-              onTelecharger={() => setDocumentAImprimer(documentDepuisFacture(f))}
-              onClose={() => setFactureOuverte(null)}
-            />
-          );
-        })()}
+      {devisPanneau && (
+        <DevisPanneau
+          slug={params.slug}
+          devis={devisPanneau}
+          document={documentDepuisDevis(devisPanneau)}
+          droits={droits}
+          onMaj={recharger}
+          onClose={() => setDevisOuvert(null)}
+          onTelecharger={() => setDocumentAImprimer(documentDepuisDevis(devisPanneau))}
+        />
+      )}
+      {facturePanneau && (
+        <FacturePanneau
+          slug={params.slug}
+          facture={facturePanneau}
+          document={documentDepuisFacture(facturePanneau)}
+          statut={{ libelle: statutFacture(facturePanneau).libelle, classe: `pill--${statutFacture(facturePanneau).ton}` }}
+          societeNom={societe?.nom ?? 'la société'}
+          droits={{ ecriture: droits.facturesEcriture, validation: droits.facturesValidation }}
+          onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
+          onSupprimee={() => {
+            setFactureOuverte(null);
+            setFactures((l) => (l ?? []).filter((x) => x.id !== facturePanneau.id));
+          }}
+          onTelecharger={() => setDocumentAImprimer(documentDepuisFacture(facturePanneau))}
+          onClose={() => setFactureOuverte(null)}
+        />
+      )}
 
       <ImpressionDocument doc={documentAImprimer} onImprime={() => setDocumentAImprimer(null)} />
     </>

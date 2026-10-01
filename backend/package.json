@@ -17,6 +17,7 @@
     "catalogue:importer": "ts-node prisma/scripts/importer-catalogue.ts",
     "prisma:studio": "prisma studio",
     "comptes-demo": "ts-node prisma/comptes-demo.ts",
+    "finances-demo": "ts-node prisma/finances-demo.ts",
     "rh-dossiers-init": "ts-node prisma/rh-dossiers-init.ts"
   },
   "dependencies": {

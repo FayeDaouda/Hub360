@@ -20,6 +20,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
 import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
+import { creerFinancesDemo } from './finances-demo';
 
 const prisma = new PrismaClient();
 
@@ -1071,6 +1072,9 @@ async function main() {
       });
     }
   }
+
+  // --- Devis et factures fictifs (onglets Finances) — cf. finances-demo.ts ---
+  await creerFinancesDemo(prisma, grey.id);
 
   // --- Notifications de démo pour Rokhaya (compte collaborateur actif) ------
   // Les alertes d'échéance sont dérivées à la lecture (pas stockées) ; ici on

@@ -129,9 +129,19 @@ export class DevisService {
       dto.lignes,
       await this.contexteLignes(societeId, dto),
     );
+    // Offre d'un dossier : référence « CODE-OFn » attribuée dès la création
+    // (rang suivant du dossier ; collision concurrente → contrainte unique).
+    const dossier = dto.dossierCrmId
+      ? await this.prisma.dossierCrm.findUnique({ where: { id: dto.dossierCrmId }, select: { code: true } })
+      : null;
+    const rang = dossier
+      ? ((await this.prisma.devis.aggregate({ where: { societeId, codeDossier: dossier.code }, _max: { rangDossier: true } }))._max.rangDossier ?? 0) + 1
+      : null;
     const devis = await this.prisma.devis.create({
       data: {
         societeId,
+        codeDossier: dossier?.code ?? null,
+        rangDossier: rang,
         projetId: dto.projetId ?? null,
         dossierCrmId: dto.dossierCrmId ?? null,
         clientId: dto.clientId,
@@ -365,7 +375,7 @@ export class DevisService {
     const factureId = await this.facturation.creerDepuisDevis(societeId, {
       projetId: devis.projetId,
       type,
-      libelle: `${refDevis(devis.numero, devis.dateEnvoi)} converti — ${devis.lignes.length} ligne${devis.lignes.length > 1 ? 's' : ''}`,
+      libelle: `${refDevis(devis)} converti — ${devis.lignes.length} ligne${devis.lignes.length > 1 ? 's' : ''}`,
       montantHt,
       tauxTva: tauxTvaEffectif,
       devisOrigineId: devis.id,
@@ -811,13 +821,14 @@ export class DevisService {
     return {
       id: d.id,
       numero: d.numero,
-      reference: refDevis(d.numero, d.dateEnvoi),
+      reference: refDevis(d),
       statut: d.statut,
       statutEffectif: statutDevisEffectif(d, jourCourant()),
       objet: d.objet,
       client: versClient(d.client),
       projetId: d.projetId,
-      dossierCrm: d.dossierCrm ? { id: d.dossierCrm.id, code: d.dossierCrm.code } : null,
+      // statut : la situation du lead (« En validation CFO » d'une offre soumise).
+      dossierCrm: d.dossierCrm ? { id: d.dossierCrm.id, code: d.dossierCrm.code, statut: d.dossierCrm.statut } : null,
       dateValidite: d.dateValidite,
       dateEnvoi: d.dateEnvoi,
       dateReponse: d.dateReponse,
@@ -844,7 +855,7 @@ export class DevisService {
     const { lignes, montantHt, montantTva, montantTtc } = this.calculerLignes(d.lignes);
     const statutEffectif = statutDevisEffectif(d, jourCourant());
     return {
-      reference: refDevis(d.numero, d.dateEnvoi),
+      reference: refDevis(d),
       statutEffectif,
       peutRepondre: statutEffectif === 'envoye',
       objet: d.objet,

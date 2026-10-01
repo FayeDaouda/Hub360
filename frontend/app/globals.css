@@ -13287,3 +13287,171 @@ a.notif-item:hover {
   opacity: 0.7;
   font-style: italic;
 }
+
+/* ---------------------------------------------------------------------------
+   Finances · Devis et factures (maquette du boss, oct. 2026)
+   --------------------------------------------------------------------------- */
+.admin-nav-tag--statut {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.fin-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.fin-sous-titre {
+  flex: 1 1 22rem;
+  margin: 0;
+  max-width: 46rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.fin-entete .factu-actions-tete {
+  margin-left: 0;
+}
+/* 5 tuiles sur une ligne quand la place le permet (maquette). */
+@media (min-width: 1200px) {
+  .fin-kpi .kpi-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.fin-kpi .kpi-tuile-valeur {
+  font-size: 1.35rem;
+  overflow-wrap: anywhere;
+}
+/* Mobile : montants complets en FCFA, trop longs pour 4 colonnes — 2 par
+   rangée, la 5e sur toute la largeur. */
+@media (max-width: 560px) {
+  .fin-kpi .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fin-kpi .kpi-tuile:last-child {
+    grid-column: 1 / -1;
+  }
+  .fin-kpi .kpi-tuile-valeur {
+    font-size: 1.05rem;
+    overflow-wrap: normal;
+  }
+}
+.fin-onglets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+.fin-onglets .vue-toggle {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fin-onglets .vue-toggle button {
+  white-space: nowrap;
+}
+.fin-devise {
+  font-family: var(--font-sans);
+}
+.fin-filtres {
+  margin-bottom: 0.9rem;
+}
+/* Ombres de défilement : leur « couvercle » opaque dessinait une bande sombre
+   sur le verre du panneau, même sans débordement. */
+.fin-table-wrap {
+  background: none;
+}
+.fin-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.fin-mois td {
+  padding-top: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+}
+.fin-mois td.num {
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.fin-ligne {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fin-ligne:hover td {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.fin-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.fin-code--leger {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.fin-alerte {
+  margin-left: 0.35rem;
+}
+.fin-retard {
+  color: var(--danger);
+  font-weight: 600;
+}
+.fin-encaisse {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 7rem;
+}
+.fin-barre {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.fin-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sauge);
+}
+.fin-pied {
+  margin: 0.9rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+@media (max-width: 720px) {
+  /* Cartes empilées : l'en-tête de mois devient un intertitre sans cadre. */
+  .admin-table .fin-mois {
+    display: flex;
+    justify-content: space-between;
+    border: none;
+    padding: 0.4rem 0.1rem 0;
+  }
+  .admin-table .fin-mois td {
+    width: auto;
+    padding: 0;
+    border: none;
+    margin: 0;
+  }
+  .admin-table .fin-mois td::before {
+    content: none;
+  }
+  .admin-table .fin-mois td:empty {
+    display: none;
+  }
+  .fin-encaisse {
+    align-items: flex-end;
+  }
+}

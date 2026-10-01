@@ -1883,6 +1883,11 @@ model Devis {
   // 7 jours. null = devis hors CRM (Facturation). Rattachée au projet
   // (projetId) au passage du dossier à « onboard ».
   dossierCrmId      String?     @map("dossier_crm_id")
+  // Référence d'une offre de dossier (maquette Finances, oct. 2026) : code du
+  // dossier + « OF » + rang de l'offre dans ce dossier (« KSN_DIA.26-OF1 »),
+  // attribués à la création. null = devis libre : référence DEV-AAAA-NNNN.
+  codeDossier       String?     @map("code_dossier")
+  rangDossier       Int?        @map("rang_dossier")
   // Relances manuelles (J+3, J+6 — « relance à faire » dérivé à la lecture,
   // aucun scheduler) : compteur pour savoir laquelle est due.
   relancesEnvoyees  Int         @default(0) @map("relances_envoyees")
@@ -1902,6 +1907,7 @@ model Devis {
   contrats           Contrat[]
 
   @@unique([societeId, numero])
+  @@unique([societeId, codeDossier, rangDossier])
   @@index([projetId])
   @@index([clientId])
   @@index([dossierCrmId])

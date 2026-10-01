@@ -92,7 +92,7 @@ export class ContratsService {
     return {
       contrat: dossier.contrat ? this.formater(dossier.contrat) : null,
       preparation: {
-        offreAcceptee: offre ? { id: offre.id, reference: refDevis(offre.numero, offre.dateEnvoi), montantHt, montantTtc: requis!.montantTtc } : null,
+        offreAcceptee: offre ? { id: offre.id, reference: refDevis(offre), montantHt, montantTtc: requis!.montantTtc } : null,
         modePrevu: mode,
         seuilSurMesureHt: seuil,
         // Qui signe pour la société : le CEO au-delà du seuil (TTC), sinon l'Architecte DPLG.
@@ -318,7 +318,7 @@ export class ContratsService {
       document: c.documentNom ? { nom: c.documentNom } : null,
       signataire: { nom: c.signataireNom, fonction: c.signataireFonction },
       offre: {
-        reference: refDevis(c.devis.numero, c.devis.dateEnvoi),
+        reference: refDevis(c.devis),
         montantHt: c.montantOffreHt.toNumber(),
         montantTtc,
       },
@@ -456,7 +456,7 @@ export class ContratsService {
     x: {
       societe: string;
       dossier: { code: string; programme: string; localisation: string; client: { nom: string } };
-      offre: { numero: number | null; dateEnvoi: Date | null; lignes: { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[] };
+      offre: { numero: number | null; dateEnvoi: Date | null; codeDossier: string | null; rangDossier: number | null; lignes: { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[] };
       montantHt: number;
       signataire: { nom: string; fonction: string };
     },
@@ -468,7 +468,7 @@ export class ContratsService {
       code_dossier: x.dossier.code,
       programme: x.dossier.programme,
       localisation: x.dossier.localisation,
-      reference_offre: refDevis(x.offre.numero, x.offre.dateEnvoi) ?? '',
+      reference_offre: refDevis(x.offre) ?? '',
       montant_offre_ht: formatFcfa(x.montantHt),
       montant_offre_ttc: formatFcfa(montantTtc),
       date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),

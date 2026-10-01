@@ -1,0 +1,129 @@
+'use client';
+
+import { useState } from 'react';
+import { dansFiltreFacture, jjmmaaaa, libelleMois, parMois, payeeLe, statutFacture, type FiltreFacture } from '@/lib/finances';
+import { formatMontant } from '@/lib/format';
+import type { FactureCentrale } from '@/lib/types';
+
+const FILTRES: { cle: FiltreFacture; libelle: string }[] = [
+  { cle: 'tout', libelle: 'Tout' },
+  { cle: 'non_payees', libelle: 'Non payées' },
+  { cle: 'en_retard', libelle: 'En retard' },
+  { cle: 'encaissees', libelle: 'Encaissées' },
+];
+
+const aujourdhui = () => new Date().toISOString().slice(0, 10);
+
+// Finances · Factures (maquette) : filtres, factures groupées par mois de
+// création avec le total TTC du mois, encaissé et barre de progression ; une
+// ligne ouvre la facture.
+export function OngletFactures({ factures, onOuvrir }: { factures: FactureCentrale[]; onOuvrir: (f: FactureCentrale) => void }) {
+  const [filtre, setFiltre] = useState<FiltreFacture>('tout');
+  const visibles = factures.filter((f) => dansFiltreFacture(f, filtre));
+
+  return (
+    <section className="panel glass-panel fin-liste">
+      <div className="vue-toggle crm-situations fin-filtres" role="group" aria-label="Filtrer les factures">
+        {FILTRES.map((f) => (
+          <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
+            {f.libelle} <span className="crm-compte">{factures.filter((x) => dansFiltreFacture(x, f.cle)).length}</span>
+          </button>
+        ))}
+      </div>
+      <div className="admin-table-wrap fin-table-wrap">
+        <table className="admin-table fin-table">
+          <thead>
+            <tr>
+              <th>Numéro</th>
+              <th>Client</th>
+              <th>Créée le</th>
+              <th>Échéance</th>
+              <th>Payée</th>
+              <th className="num">Total TTC</th>
+              <th>Encaissé</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibles.length === 0 && (
+              <tr>
+                <td colSpan={8} className="me-vide">
+                  Aucune facture dans ce filtre.
+                </td>
+              </tr>
+            )}
+            {parMois(visibles).map((g) => (
+              <MoisFactures key={g.mois} mois={g.mois} factures={g.elements} onOuvrir={onOuvrir} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="fin-pied">Cliquer une ligne ouvre le document. Aucun document ne se supprime : une facture se corrige par un avoir.</p>
+    </section>
+  );
+}
+
+function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: FactureCentrale[]; onOuvrir: (f: FactureCentrale) => void }) {
+  return (
+    <>
+      <tr className="fin-mois">
+        <td colSpan={5}>{libelleMois(mois)}</td>
+        <td className="num">{formatMontant(factures.reduce((s, f) => s + f.montantTtc, 0))}</td>
+        <td colSpan={2} />
+      </tr>
+      {factures.map((f) => {
+        const s = statutFacture(f);
+        const payee = payeeLe(f);
+        const pct = f.montantTtc > 0 ? Math.min(100, Math.round((f.montantPaye / f.montantTtc) * 100)) : 0;
+        const code = f.dossierCrm?.code ?? f.projet?.code ?? null;
+        return (
+          <tr key={f.id} className="fin-ligne" onClick={() => onOuvrir(f)}>
+            <td data-label="Numéro">
+              <span className="cell-stack">
+                <span className={`fin-code${f.reference ? '' : ' factu-ref-prevue'}`} title={f.reference ? undefined : 'Référence attribuée à la validation'}>
+                  {f.reference ?? f.referencePrevue ?? 'brouillon'}
+                </span>
+                {f.dossierCrm ? (
+                  <span className="cell-sub">directe</span>
+                ) : (
+                  f.tranche && (
+                    <span className="cell-sub">
+                      {f.tranche.rang}/{f.tranche.total}
+                    </span>
+                  )
+                )}
+              </span>
+            </td>
+            <td data-label="Client">
+              <span className="cell-stack">
+                <strong>{f.client?.nom ?? '—'}</strong>
+                {code && <span className="cell-sub fin-code fin-code--leger">{code}</span>}
+              </span>
+            </td>
+            <td data-label="Créée le">{jjmmaaaa(f.creeLe)}</td>
+            <td data-label="Échéance" className={f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < aujourdhui() ? 'fin-retard' : undefined}>
+              {f.echeanceLe ? jjmmaaaa(f.echeanceLe) : '—'}
+            </td>
+            <td data-label="Payée">{payee ? jjmmaaaa(payee) : ''}</td>
+            <td data-label="Total TTC" className="num">
+              <strong>{formatMontant(f.montantTtc)}</strong>
+            </td>
+            <td data-label="Encaissé">
+              {!f.estAvoir && (
+                <span className="fin-encaisse">
+                  <strong>{formatMontant(f.montantPaye)}</strong>
+                  <span className="fin-barre" aria-hidden>
+                    <span style={{ width: `${pct}%` }} />
+                  </span>
+                </span>
+              )}
+            </td>
+            <td data-label="Statut">
+              <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
+            </td>
+          </tr>
+        );
+      })}
+    </>
+  );
+}

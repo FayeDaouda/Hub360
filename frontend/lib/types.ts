@@ -1701,7 +1701,7 @@ export type Devis = {
   client: Client;
   projetId: string | null;
   // Offre d'un dossier CRM (étape F) — null pour un devis hors CRM.
-  dossierCrm: { id: string; code: string } | null;
+  dossierCrm: { id: string; code: string; statut: StatutCrm } | null; // statut : situation du lead (« En validation CFO »)
   dateValidite: string | null; // AAAA-MM-JJ
   dateEnvoi: string | null; // ISO 8601
   dateReponse: string | null;
@@ -1832,10 +1832,12 @@ export type LeadFacturable = {
 };
 
 // MIROIR du backend devis/domaine.ts::refDevis
-export function refDevis(numero: number | null, dateEnvoi: string | null): string | null {
-  if (numero == null) return null;
-  const annee = (dateEnvoi ? new Date(dateEnvoi) : new Date()).getFullYear();
-  return `DEV${annee}-${String(numero).padStart(4, '0')}`;
+// Offre de dossier : « CODE-OFn » (maquette Finances) ; devis libre : DEV-AAAA-NNNN.
+export function refDevis(d: { numero: number | null; dateEnvoi: string | null; codeDossier: string | null; rangDossier: number | null }): string | null {
+  if (d.codeDossier && d.rangDossier != null) return `${d.codeDossier}-OF${d.rangDossier}`;
+  if (d.numero == null) return null;
+  const annee = (d.dateEnvoi ? new Date(d.dateEnvoi) : new Date()).getFullYear();
+  return `DEV${annee}-${String(d.numero).padStart(4, '0')}`;
 }
 
 // MIROIR du backend devis/domaine.ts::statutDevisEffectif

@@ -40,6 +40,8 @@ type NavItem = {
   // `chemin` relatif à /admin/[slug] ; absent = module pas encore disponible
   // (rendu inerte plutôt qu'un lien mort).
   chemin?: string;
+  // Étiquette de sidebar (ex. « restreint » : module réservé à la direction).
+  tag?: string;
 };
 
 // La navigation suit le flux réel : CRM → Projets, l'équipe à part.
@@ -50,7 +52,7 @@ const NAV: NavItem[] = [
   { cle: 'tableau-de-bord', libelle: 'Tableau de bord', icone: LayoutDashboard, chemin: '' },
   { cle: 'crm', libelle: 'CRM', icone: Contact, chemin: 'crm' },
   { cle: 'projets', libelle: 'Projets', icone: FolderKanban, chemin: 'projets' },
-  { cle: 'facturation', libelle: 'Facturation', icone: ReceiptText, chemin: 'facturation' },
+  { cle: 'facturation', libelle: 'Finances', icone: ReceiptText, chemin: 'facturation', tag: 'restreint' },
   { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
   { cle: 'equipe', libelle: 'Équipe', icone: Users, chemin: 'equipe' },
   { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
@@ -211,8 +213,10 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               <>
                 <Icone size={18} strokeWidth={1.75} aria-hidden />
                 <span className="admin-nav-label">{item.libelle}</span>
-                {item.chemin === undefined && (
+                {item.chemin === undefined ? (
                   <span className="admin-nav-tag">bientôt</span>
+                ) : (
+                  item.tag && <span className="admin-nav-tag admin-nav-tag--statut">{item.tag}</span>
                 )}
               </>
             );

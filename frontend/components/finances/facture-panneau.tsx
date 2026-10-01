@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, X } from 'lucide-react';
-import { ajouterPaiementCentrale, emettreFactureCentrale, supprimerFactureCentrale } from '@/lib/facturation';
+import Link from 'next/link';
+import { BellRing, Download, X } from 'lucide-react';
+import { ajouterPaiementCentrale, emettreFactureCentrale, relancerFacture, supprimerFactureCentrale } from '@/lib/facturation';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
@@ -30,6 +31,7 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [paiement, setPaiement] = useState<{ date: string; montant: string; mode: ModePaiement | '' } | null>(null);
+  const [relance, setRelance] = useState<string | null>(null);
 
   useEffect(() => {
     const echap = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -167,6 +169,7 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
           </section>
         )}
 
+        {relance && <p className="fiche-crm-aide" role="status">{relance}</p>}
         {erreur && <p className="field-erreur">{erreur}</p>}
         <div className="fac-actions">
           {brouillon && droits.validation && (
@@ -189,6 +192,27 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
             >
               Supprimer le brouillon
             </button>
+          )}
+          {f.statutEffectif === 'en_retard' && droits.ecriture && (
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={enCours}
+              onClick={() =>
+                agir(async () => {
+                  const { envoye } = await relancerFacture(slug, f.id);
+                  const client = f.client?.nom ?? 'ce client';
+                  setRelance(envoye ? `Relance envoyée à ${client}.` : `E-mail non envoyé (transport indisponible) : contactez ${client} autrement.`);
+                })
+              }
+            >
+              <BellRing size={14} strokeWidth={2} aria-hidden /> Relancer
+            </button>
+          )}
+          {f.projet && (
+            <Link className="btn-ghost" href={`/admin/${slug}/projets/${f.projet.id}/facturation`}>
+              Gérer dans le projet
+            </Link>
           )}
           <button type="button" className="btn-ghost" onClick={onTelecharger}>
             <Download size={14} strokeWidth={2} aria-hidden /> Télécharger

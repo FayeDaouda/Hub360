@@ -31,7 +31,7 @@ export function lienNotificationAdmin(
   session: Session | null,
 ): string | null {
   if (n.type === 'contrat_signe' && n.projetId && niveauSuffisant(session, 'finances_factures', 'validation')) {
-    return `/admin/${slug}/facturation?projetId=${n.projetId}&onglet=factures`;
+    return `/admin/${slug}/projets/${n.projetId}/facturation`;
   }
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).
   if (n.type === 'facture_a_valider') {
