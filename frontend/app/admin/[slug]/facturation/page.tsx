@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { BadgePercent, CircleDollarSign, Hourglass, Package, Plus, ReceiptText, Wallet } from 'lucide-react';
+import { Banknote, Clock, FileText, Package, Plus, TrendingUp } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getClients } from '@/lib/crm';
 import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation } from '@/lib/facturation';
@@ -30,18 +30,19 @@ import { FacturePanneau } from '@/components/finances/facture-panneau';
 import { DevisPanneau } from '@/components/finances/devis-panneau';
 import { OngletDevis } from '@/components/finances/onglet-devis';
 import { OngletFactures } from '@/components/finances/onglet-factures';
+import { TableauDeBordFinances } from '@/components/finances/tableau-de-bord';
 
-// Dégradés des 5 tuiles (maquette Finances, oct. 2026) : bleu, sarcelle,
-// orange, jaune, rose — même famille que le tableau de bord et le CRM.
+// Dégradés des 5 tuiles, relevés sur la maquette Finances (oct. 2026) :
+// pervenche, sarcelle, orange, moutarde, rose.
 const DEGRADE_KPI = {
-  offres: { a: '#2e3192', b: '#1bffff' },
-  transformation: { a: '#11998e', b: '#38ef7d' },
-  facture: { a: '#f12711', b: '#f5af19' },
-  encaisse: { a: '#f7971e', b: '#ffd200' },
-  reste: { a: '#ec008c', b: '#fc6767' },
+  offres: { a: '#5a63e8', b: '#8f9cf7' },
+  transformation: { a: '#3fa9b5', b: '#7dd6cf' },
+  facture: { a: '#ea6f3c', b: '#f29b5e' },
+  encaisse: { a: '#e3a92c', b: '#efcb55' },
+  reste: { a: '#d23c7c', b: '#ef6fae' },
 };
 
-type Onglet = 'devis' | 'factures';
+type Onglet = 'tableau' | 'devis' | 'factures';
 type Props = { params: { slug: string } };
 
 function formatDate(iso: string): string {
@@ -65,6 +66,8 @@ export default function FinancesPage({ params }: Props) {
     catalogue: session.role === 'societe_admin',
     // Bureaux d'études à régler : donnée de charges (CFO).
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
+    // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
+    tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
   };
   const searchParams = useSearchParams();
   const projetFiltre = searchParams.get('projetId') ?? undefined;
@@ -82,7 +85,7 @@ export default function FinancesPage({ params }: Props) {
   const factureDemandee = searchParams.get('facture');
   const ongletDemande: Onglet | null =
     searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee ? 'factures' : null;
-  const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? 'devis');
+  const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? (droits.tableauDeBord ? 'tableau' : 'devis'));
   useEffect(() => {
     if (ongletDemande) setOnglet(ongletDemande);
   }, [ongletDemande]);
@@ -250,7 +253,7 @@ export default function FinancesPage({ params }: Props) {
               label: 'Offres en cours',
               valeur: formatMontant(kpi.offresEnCours.montant),
               sousTexte: `${pluriel(kpi.offresEnCours.nombre, 'offre')} en validation ou chez le client`,
-              icone: Hourglass,
+              icone: FileText,
               degrade: DEGRADE_KPI.offres,
             },
             {
@@ -258,7 +261,7 @@ export default function FinancesPage({ params }: Props) {
               label: 'Taux de transformation',
               valeur: kpi.transformation.pct == null ? '—' : `${kpi.transformation.pct} %`,
               sousTexte: `${pluriel(kpi.transformation.acceptes, 'acceptée')} · ${pluriel(kpi.transformation.refuses, 'refusée')}`,
-              icone: BadgePercent,
+              icone: TrendingUp,
               degrade: DEGRADE_KPI.transformation,
             },
             {
@@ -266,7 +269,7 @@ export default function FinancesPage({ params }: Props) {
               label: 'Facturé TTC',
               valeur: formatMontant(kpi.facture.montant),
               sousTexte: `${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
-              icone: ReceiptText,
+              icone: FileText,
               degrade: DEGRADE_KPI.facture,
             },
             {
@@ -274,7 +277,7 @@ export default function FinancesPage({ params }: Props) {
               label: 'Encaissé',
               valeur: formatMontant(kpi.encaisse.montant),
               sousTexte: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
-              icone: Wallet,
+              icone: Banknote,
               degrade: DEGRADE_KPI.encaisse,
             },
             {
@@ -282,7 +285,7 @@ export default function FinancesPage({ params }: Props) {
               label: 'Reste à encaisser',
               valeur: formatMontant(kpi.resteAEncaisser.montant),
               sousTexte: `${pluriel(kpi.resteAEncaisser.enRetard, 'facture')} en retard`,
-              icone: CircleDollarSign,
+              icone: Clock,
               degrade: DEGRADE_KPI.reste,
             },
           ]}
@@ -291,6 +294,17 @@ export default function FinancesPage({ params }: Props) {
 
       <div className="fin-onglets">
         <div className="vue-toggle" role="tablist" aria-label="Finances">
+          {droits.tableauDeBord && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={onglet === 'tableau'}
+              className={onglet === 'tableau' ? 'is-active' : ''}
+              onClick={() => setOnglet('tableau')}
+            >
+              Tableau de bord
+            </button>
+          )}
           <button type="button" role="tab" aria-selected={onglet === 'devis'} className={onglet === 'devis' ? 'is-active' : ''} onClick={() => setOnglet('devis')}>
             Devis · {devis ? devisFiltres.length : '…'}
           </button>
@@ -307,7 +321,13 @@ export default function FinancesPage({ params }: Props) {
         <span className="pill pill--neutre fin-devise">Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %</span>
       </div>
 
-      {onglet === 'devis' ? (
+      {onglet === 'tableau' ? (
+        !devis || !factures ? (
+          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        ) : (
+          <TableauDeBordFinances devis={devisFiltres} factures={facturesFiltrees} catalogue={catalogue} />
+        )
+      ) : onglet === 'devis' ? (
         !devis ? (
           <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
         ) : (

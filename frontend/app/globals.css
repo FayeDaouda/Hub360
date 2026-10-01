@@ -13325,6 +13325,18 @@ a.notif-item:hover {
   font-size: 1.35rem;
   overflow-wrap: anywhere;
 }
+/* Entre mobile et grand écran : 3 + 2 plutôt qu'une 5e tuile orpheline. */
+@media (min-width: 561px) and (max-width: 1199px) {
+  .fin-kpi .kpi-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .fin-kpi .kpi-tuile {
+    grid-column: span 2;
+  }
+  .fin-kpi .kpi-tuile:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
 /* Mobile : montants complets en FCFA, trop longs pour 4 colonnes — 2 par
    rangée, la 5e sur toute la largeur. */
 @media (max-width: 560px) {
@@ -13430,6 +13442,303 @@ a.notif-item:hover {
   margin: 0.9rem 0 0;
   color: var(--text-muted);
   font-size: 0.78rem;
+}
+/* Tableau de bord : 2 colonnes (≈ 3/5 – 2/5), une seule sous 1100 px. */
+.fin-tdb {
+  --fin-vert: #7fd4a0;
+  --fin-piste: color-mix(in srgb, var(--text) 10%, transparent);
+  --fin-gris: color-mix(in srgb, var(--text) 26%, transparent);
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 1.1rem;
+}
+.fin-carte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.4rem 1.6rem;
+}
+.fin-carte-titre {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.fin-carte-sous-titre {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.fin-carte-pied {
+  margin-top: auto;
+  padding-top: 1.2rem;
+}
+.fin-carte-pied .fin-pied {
+  margin: 0;
+}
+.fin-ouvertes {
+  flex-direction: row;
+  align-items: center;
+  gap: 2rem;
+}
+.fin-ouvertes-liste {
+  flex: 1;
+  min-width: 0;
+}
+.fin-ouvertes ul {
+  display: grid;
+  gap: 1.25rem;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fin-ouvertes li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+.fin-ouvertes li strong {
+  white-space: nowrap;
+}
+.fin-compteur {
+  display: inline-grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.fin-compteur--non-echue {
+  background: #f6e2a6;
+  color: #6b4e00;
+}
+.fin-compteur--retard {
+  background: #fde3cc;
+  color: #a14c0b;
+}
+.fin-compteur--retard-long {
+  background: #fbd3e3;
+  color: #a3194f;
+}
+.fin-anneau {
+  position: relative;
+  flex-shrink: 0;
+  width: 13.5rem;
+  aspect-ratio: 1;
+}
+.fin-anneau svg {
+  width: 100%;
+  height: 100%;
+}
+.fin-anneau circle {
+  fill: none;
+  stroke-width: 15;
+}
+.fin-anneau-piste {
+  stroke: var(--fin-piste);
+}
+.fin-anneau-segment--0 {
+  stroke: #f3d68e;
+}
+.fin-anneau-segment--1 {
+  stroke: #ec8b3e;
+}
+.fin-anneau-segment--2 {
+  stroke: #d4483f;
+}
+.fin-anneau p {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  margin: 0;
+  text-align: center;
+}
+.fin-anneau p span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.fin-anneau p strong {
+  font-size: 1rem;
+}
+.fin-barres {
+  display: grid;
+  gap: 0.95rem;
+  margin: 1.1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fin-barres li {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.88rem;
+}
+.fin-barres-libelle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fin-barres strong {
+  min-width: 7.5rem;
+  text-align: right;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.fin-jauge {
+  position: relative;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--fin-piste);
+  overflow: hidden;
+}
+.fin-jauge > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+}
+.fin-jauge-facture {
+  background: var(--fin-gris);
+}
+.fin-jauge-encaisse {
+  background: var(--fin-vert);
+}
+.fin-legende {
+  display: flex;
+  gap: 1.2rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.fin-legende span::before {
+  content: '';
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-right: 0.4rem;
+  border-radius: 3px;
+  vertical-align: -0.05rem;
+}
+.fin-legende-encaisse::before {
+  background: var(--fin-vert);
+}
+.fin-legende-facture::before {
+  background: var(--fin-gris);
+}
+.fin-ventes-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 3rem;
+}
+.fin-ventes-total {
+  margin: 0.4rem 0 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fin-ventes-mois {
+  margin: 0.3rem 0 0.15rem;
+  /* Assombri en clair, éclairci en sombre : lisible sur les deux thèmes. */
+  color: color-mix(in srgb, var(--fin-vert) 65%, var(--text));
+  font-size: 1.5rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fin-histo {
+  position: relative;
+  height: 12rem;
+  margin-top: 1.8rem;
+  padding-left: 1.4rem;
+}
+.fin-histo-grille {
+  position: absolute;
+  inset: 0 0 0 1.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.fin-histo-grille span {
+  border-top: 1px solid var(--fin-piste);
+}
+.fin-histo-zero {
+  position: absolute;
+  left: 0;
+  bottom: -0.45rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.fin-histo-barres {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.6rem;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fin-histo-barres li {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.fin-histo-facture {
+  display: flex;
+  align-items: flex-end;
+  width: min(100%, 2.2rem);
+  min-height: 3px;
+  border-radius: 4px 4px 0 0;
+  background: var(--fin-gris);
+  overflow: hidden;
+}
+.fin-histo-encaisse {
+  width: 100%;
+  background: var(--fin-vert);
+}
+@media (max-width: 1100px) {
+  .fin-tdb {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .fin-carte {
+    padding: 1.1rem 1rem;
+  }
+  .fin-ouvertes {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.4rem;
+  }
+  .fin-anneau {
+    align-self: center;
+    width: 13rem;
+  }
+  .fin-barres li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.8rem;
+  }
+  .fin-barres .fin-jauge {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .fin-barres strong {
+    min-width: 0;
+  }
+  .fin-ventes-total {
+    font-size: 1.45rem;
+  }
+  .fin-ventes-mois {
+    font-size: 1.2rem;
+  }
+  .fin-histo-barres {
+    gap: 0.25rem;
+  }
 }
 @media (max-width: 720px) {
   /* Cartes empilées : l'en-tête de mois devient un intertitre sans cadre. */

@@ -341,6 +341,9 @@ export class FacturationService {
         estAvoir: f.estAvoir,
         factureOrigineId: f.factureOrigineId,
         devisOrigineId: f.devisOrigineId,
+        // Offre d'origine (tranche) ou ligne d'offre (mensualité) : répartition par prestation.
+        devisEcheancierId: f.devisEcheancierId,
+        ligneDevisId: f.ligneDevisId,
         creeLe: f.creeLe,
         emiseLe: f.emiseLe,
         annuleeLe: f.annuleeLe,

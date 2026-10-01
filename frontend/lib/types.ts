@@ -1802,6 +1802,8 @@ export type FactureCentrale = {
   estAvoir: boolean;
   factureOrigineId: string | null;
   devisOrigineId: string | null;
+  devisEcheancierId: string | null; // offre dont la facture est une tranche
+  ligneDevisId: string | null; // ligne d'offre facturée au mois (SU / EX)
   creeLe: string;
   emiseLe: string | null;
   annuleeLe: string | null;

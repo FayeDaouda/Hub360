@@ -2,6 +2,7 @@ import {
   STATUTS_DEVIS,
   type Devis,
   type FactureCentrale,
+  type ProduitService,
 } from './types';
 
 // -----------------------------------------------------------------------------
@@ -104,7 +105,9 @@ export function indicateursFinances(devis: Devis[], factures: FactureCentrale[])
   const enCours = devis.filter((d) => filtreDevis(d) === 'en_cours');
   const acceptes = devis.filter((d) => filtreDevis(d) === 'acceptes').length;
   const refuses = devis.filter((d) => d.statutEffectif === 'refuse').length;
-  const emises = factures.filter((f) => f.statut === 'emise');
+  // Facturé net : tout document émis, avoirs (négatifs) compris — une facture
+  // annulée et son avoir s'annulent.
+  const emises = factures.filter(estEmise);
   const factureTtc = emises.reduce((s, f) => s + f.montantTtc, 0);
   const encaisse = factures.reduce((s, f) => s + (f.estAvoir ? 0 : f.montantPaye), 0);
   return {
@@ -113,10 +116,121 @@ export function indicateursFinances(devis: Devis[], factures: FactureCentrale[])
     facture: { montant: factureTtc, emises: emises.filter((f) => !f.estAvoir).length, aValider: factures.filter(aValiderCfo).length },
     encaisse: { montant: encaisse, pct: factureTtc > 0 ? Math.round((encaisse / factureTtc) * 100) : null },
     resteAEncaisser: {
-      montant: emises.filter((f) => !f.estAvoir).reduce((s, f) => s + Math.max(0, f.resteAPayer), 0),
+      montant: factures.filter(estOuverte).reduce((s, f) => s + f.resteAPayer, 0),
       enRetard: factures.filter((f) => f.statutEffectif === 'en_retard').length,
     },
   };
+}
+
+// --- Tableau de bord ----------------------------------------------------------------
+export const estEmise = (f: FactureCentrale) => f.statut !== 'brouillon';
+// Facture ouverte : émise, pas un avoir, pas soldée.
+export const estOuverte = (f: FactureCentrale) => f.statut === 'emise' && !f.estAvoir && f.resteAPayer > 0;
+
+export type Tranche = { nombre: number; montant: number };
+
+// Factures ouvertes par ancienneté de l'échéance (montants restant dus).
+export function facturesOuvertes(factures: FactureCentrale[]) {
+  const vide = (): Tranche => ({ nombre: 0, montant: 0 });
+  const r = { nonEchues: vide(), retardMoins30: vide(), retardPlus30: vide(), total: vide() };
+  for (const f of factures.filter(estOuverte)) {
+    const t = f.statutEffectif !== 'en_retard' ? r.nonEchues : f.joursRetard < 30 ? r.retardMoins30 : r.retardPlus30;
+    for (const x of [t, r.total]) {
+      x.nombre++;
+      x.montant += f.resteAPayer;
+    }
+  }
+  return r;
+}
+
+// Les 12 derniers mois (AAAA-MM), du plus ancien au mois courant.
+export function douzeDerniersMois(maintenant = new Date()): string[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(maintenant.getFullYear(), maintenant.getMonth() - 11 + i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
+// Documents émis sur les 12 derniers mois (mois d'émission).
+function emisesDouzeMois(factures: FactureCentrale[], mois: string[]) {
+  const debut = mois[0];
+  return factures.filter((f) => estEmise(f) && f.emiseLe && f.emiseLe.slice(0, 7) >= debut);
+}
+
+export type Barre = { cle: string; libelle: string; facture: number; encaisse: number };
+
+// Ventes : facturé TTC par mois d'émission, et ce qui en est encaissé.
+export function ventesMensuelles(factures: FactureCentrale[], maintenant = new Date()): Barre[] {
+  const mois = douzeDerniersMois(maintenant);
+  const parMois = new Map(mois.map((m) => [m, { facture: 0, encaisse: 0 }]));
+  for (const f of emisesDouzeMois(factures, mois)) {
+    const m = parMois.get(f.emiseLe!.slice(0, 7));
+    if (!m) continue;
+    m.facture += f.montantTtc;
+    m.encaisse += f.estAvoir ? 0 : f.montantPaye;
+  }
+  return mois.map((m) => ({ cle: m, libelle: libelleMois(m), ...parMois.get(m)! }));
+}
+
+const premiers = (barres: Barre[], n: number) =>
+  barres.filter((b) => b.facture > 0).sort((a, b) => b.facture - a.facture).slice(0, n);
+
+// Clients principaux : facturé TTC et part encaissée, 12 derniers mois.
+export function clientsPrincipaux(factures: FactureCentrale[], n = 5, maintenant = new Date()): Barre[] {
+  const parClient = new Map<string, Barre>();
+  for (const f of emisesDouzeMois(factures, douzeDerniersMois(maintenant))) {
+    if (!f.client) continue;
+    const b = parClient.get(f.client.id) ?? { cle: f.client.id, libelle: f.client.nom, facture: 0, encaisse: 0 };
+    b.facture += f.montantTtc;
+    b.encaisse += f.estAvoir ? 0 : f.montantPaye;
+    parClient.set(f.client.id, b);
+  }
+  return premiers([...parClient.values()], n);
+}
+
+export const HORS_DEVIS = 'Hors devis';
+
+// Produits principaux : facturé HT par prestation, 12 derniers mois. Chaque
+// facture se répartit sur les lignes de l'offre acceptée dont elle vient, au
+// prorata de leur HT (une tranche couvre la même part de chaque ligne) ; une
+// mensualité va à sa ligne ; un avoir suit la facture qu'il annule ; une
+// facture sans offre est « hors devis ».
+export function produitsPrincipaux(
+  factures: FactureCentrale[],
+  devis: Devis[],
+  catalogue: ProduitService[],
+  n = 5,
+  maintenant = new Date(),
+): Barre[] {
+  const offres = new Map(devis.map((d) => [d.id, d]));
+  const lignes = new Map(devis.flatMap((d) => d.lignes.map((l) => [l.id, l] as const)));
+  const codes = new Map(catalogue.map((p) => [p.id, p.code ?? p.designation]));
+  const parId = new Map(factures.map((f) => [f.id, f]));
+  const libelle = (l: Devis['lignes'][number]) => (l.produitServiceId && codes.get(l.produitServiceId)) || l.designation;
+  const parProduit = new Map<string, Barre>();
+  const ajouter = (cle: string, ht: number, encaisseHt: number) => {
+    const b = parProduit.get(cle) ?? { cle, libelle: cle, facture: 0, encaisse: 0 };
+    b.facture += ht;
+    b.encaisse += encaisseHt;
+    parProduit.set(cle, b);
+  };
+  for (const f of emisesDouzeMois(factures, douzeDerniersMois(maintenant))) {
+    const source = (f.estAvoir && f.factureOrigineId && parId.get(f.factureOrigineId)) || f;
+    const partEncaissee = !f.estAvoir && f.montantTtc > 0 ? Math.min(1, f.montantPaye / f.montantTtc) : 0;
+    const ligne = source.ligneDevisId ? lignes.get(source.ligneDevisId) : undefined;
+    const offre = offres.get(source.devisEcheancierId ?? source.devisOrigineId ?? '');
+    if (ligne) {
+      ajouter(libelle(ligne), f.montantHt, f.montantHt * partEncaissee);
+    } else if (offre && offre.montantHt > 0) {
+      for (const l of offre.lignes) {
+        const ht = (f.montantHt * l.montantHt) / offre.montantHt;
+        ajouter(libelle(l), ht, ht * partEncaissee);
+      }
+    } else {
+      ajouter(HORS_DEVIS, f.montantHt, f.montantHt * partEncaissee);
+    }
+  }
+  return premiers([...parProduit.values()], n);
 }
 
 // --- Renseignements société (pied de documents) --------------------------------------
