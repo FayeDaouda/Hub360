@@ -6,6 +6,7 @@ import { Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNotificationsPoll } from '@/lib/use-notifications-poll';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { NotifToast } from '@/components/notif-toast';
+import { libelleAlerteDerivee } from '@/lib/notifications';
 
 function ilYa(iso: string): string {
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
@@ -113,7 +114,7 @@ export function ClocheNotifications({ slug }: { slug: string }) {
                     <span className="notif-txt">
                       <span className="notif-titre">{n.titre}</span>
                       <span className="notif-meta">
-                        {n.derivee ? 'Échéance' : ilYa(n.date)}
+                        {n.derivee ? libelleAlerteDerivee(n) : ilYa(n.date)}
                       </span>
                     </span>
                   </>

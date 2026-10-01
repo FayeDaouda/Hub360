@@ -5,9 +5,10 @@ import {
 } from './nomenclature';
 
 // Nomenclature CLIENT_LOC.AA — miroir de frontend/lib/nomenclature.ts.
-// On couvre la règle validée (initiales sans plafond, sigle pour une personne
-// morale, code localité, suffixe -2) et les entrées « pénibles » : la
-// fonction ne plante jamais, elle renvoie '' quand une information manque.
+// On couvre la règle validée (initiales sans plafond, raison sociale ou sigle
+// antérieur pour une personne morale, code localité, suffixe -2) et les
+// entrées « pénibles » : la fonction ne plante jamais, elle renvoie '' quand
+// une information manque.
 
 const A2026 = new Date('2026-06-15T00:00:00Z');
 
@@ -80,7 +81,7 @@ describe('genererCodeDossier', () => {
     ).toBe('ENA_SAC.26');
   });
 
-  it('personne morale : sigle de la fiche, jamais dérivé du nom', () => {
+  it('personne morale antérieure : son sigle reste son segment', () => {
     expect(
       genererCodeDossier(
         { nom: 'Teranga Capital', type: 'entreprise', sigle: 'TERANGA' },
@@ -93,10 +94,41 @@ describe('genererCodeDossier', () => {
     ).toBe('SNF_YOF.26');
   });
 
-  it('personne morale sans sigle → vide (pas de repli sur le nom)', () => {
+  it('personne morale sans sigle : initiales de la raison sociale', () => {
     expect(
       genererCodeDossier({ nom: 'Teranga Capital', type: 'entreprise', sigle: null }, 'ALM', A2026),
-    ).toBe('');
+    ).toBe('TC_ALM.26');
+    expect(
+      genererCodeDossier({ nom: 'Société de Construction du Sénégal', type: 'entreprise' }, 'POI', A2026),
+    ).toBe('SCS_POI.26');
+  });
+
+  it('personne morale : forme juridique et mots de liaison ignorés', () => {
+    // Exemple de la maquette : il ne reste qu'un mot → ses 3 premières lettres.
+    expect(genererCodeDossier({ nom: 'SCI Les Filaos', type: 'sci' }, 'ALM', A2026)).toBe(
+      'FIL_ALM.26',
+    );
+    expect(
+      genererCodeDossier({ nom: 'Teranga Capital SA', type: 'entreprise' }, 'NGO', A2026),
+    ).toBe('TC_NGO.26');
+    expect(
+      genererCodeDossier({ nom: 'Fall & Fils SARL', type: 'entreprise' }, 'YOF', A2026),
+    ).toBe('FF_YOF.26');
+    expect(
+      genererCodeDossier({ nom: "Groupe d'Études et de Conseil", type: 'entreprise' }, 'SAC', A2026),
+    ).toBe('GEC_SAC.26');
+  });
+
+  it('personne morale : forme juridique pointée = un seul mot ignoré', () => {
+    expect(
+      genererCodeDossier({ nom: 'S.A.R.L. Teranga Capital', type: 'entreprise' }, 'ALM', A2026),
+    ).toBe('TC_ALM.26');
+  });
+
+  it('raison sociale faite uniquement de mots ignorés → on garde tout', () => {
+    expect(genererCodeDossier({ nom: 'SARL', type: 'entreprise' }, 'ALM', A2026)).toBe(
+      'SAR_ALM.26',
+    );
   });
 
   it('nom ou localité manquants → vide, ne plante pas', () => {

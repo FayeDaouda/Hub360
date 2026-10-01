@@ -273,10 +273,10 @@ export type Projet = {
   verrouillee: boolean;
   creeLe: string; // ISO 8601
   creePar: Personne | null; // null = dossier antérieur à l'étape C1
-  apporteur: Apporteur | null; // null = dossier antérieur (non renseigné)
-  // Présente seulement pour qui a finances_charges en lecture (clé absente
-  // sinon) ; null = aucune commission.
-  commissionApporteur?: number | null;
+  // null = aucun apporteur (affaire directe), ou dossier antérieur à la fiche.
+  apporteur: Apporteur | null;
+  // % attribué — partie de la fiche apporteur ; null = aucun.
+  commissionApporteur: number | null;
   proprietaire: Personne | null; // null = « à assigner »
   // CO1/CO2/CO3 — fixée à l'envoi de l'offre (null avant). SU en découle.
   categorieConception: string | null;
@@ -311,37 +311,36 @@ export type Personne = { id: string; nom: string };
 
 export type TypeApporteur = 'interne' | 'externe';
 
+// Interne = dossiers antérieurs seulement (plus proposé à la création).
 export type Apporteur =
   | { type: 'interne'; utilisateur: Personne | null }
-  | { type: 'externe'; nom: string; telephone?: string; email?: string };
+  | { type: 'externe'; nom: string; structure?: string; telephone?: string; email?: string };
+
+// Fiche apporteur saisie (création, puis modification par le COO seul) :
+// aucun apporteur (affaire directe), ou un tiers avec nom et % attribué.
+export type ApporteurSaisi =
+  | { type: 'aucun' }
+  | {
+      type: 'externe';
+      nom: string;
+      structure?: string;
+      telephone?: string;
+      email?: string;
+      commission: number;
+    };
 
 // Pas fixes validés (sept. 2026) — mêmes valeurs que le serveur et la base.
 export const PAS_COMMISSION = [3, 3.5, 4, 4.5, 5] as const;
 
-// Charge utile du formulaire « Nouveau projet ». `client` = soit l'id d'un
-// client existant, soit les champs d'un nouveau client à créer au passage.
-// `code` est généré côté service, pas saisi.
-// Lead incomplet permis : seuls client et localité (le code) sont requis.
+// Charge utile de la modale « Nouveau projet » (maquette, oct. 2026) :
+// client (existant, ou nouveau avec sa nature), localité et fiche apporteur.
+// Le reste se complète sur la fiche ; le code et le propriétaire (Dir. GC)
+// sont résolus côté serveur.
 export type NouveauProjetPayload = {
   nature: NatureDossier;
-  categorie?: Categorie;
   localiteId: string; // le libellé `localisation` est déduit côté serveur
-  type?: TypeBien;
-  nbPlanches?: number;
-  surfaceTerrain?: number;
-  // `sigle` à côté de `id` : complète une personne morale qui n'en a pas.
-  client: { id: string; sigle?: string } | { nouveau: Omit<Client, 'id'> };
-  standing?: Standing;
-  gamme?: Gamme;
-  programme?: string;
-  // Pas de statut : tout dossier naît « Nouveau projet » (côté serveur).
-  // Interne = le créateur (rien d'autre à envoyer) ; externe = tiers saisi.
-  apporteur:
-    | { type: 'interne' }
-    | { type: 'externe'; nom: string; telephone?: string; email?: string };
-  commissionApporteur?: number | null; // exige finances_charges en écriture
-  proprietaireId?: string; // requis seulement s'il y a plusieurs Dir. GC
-  // Pas de code : toujours généré côté serveur (CLIENT_LOC.AA, -2 si doublon).
+  client: { id: string } | { nouveau: { nom: string; type: TypeClient } };
+  apporteur: ApporteurSaisi;
 };
 
 // Complétion de la fiche (« Caractéristiques du projet ») : un champ à la
@@ -524,7 +523,10 @@ export type NotificationType =
   | 'tache_remise'
   | 'tache_validee'
   | 'tache_renvoyee'
-  | 'mention_projet'; // @mention dans un fil de projet (maquette « Projets »)
+  | 'mention_projet' // @mention dans un fil de projet (maquette « Projets »)
+  // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
+  // incomplet 72 h après sa création — ouvre la fiche dans le CRM.
+  | 'fiche_a_completer';
 
 export type NotificationItem = {
   id: string;

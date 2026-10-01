@@ -434,7 +434,7 @@ export default function CrmPage({ params }: Props) {
                                   {ap
                                     ? [
                                         projet.commissionApporteur != null && `${formatNombre(projet.commissionApporteur)} %`,
-                                        ap.type === 'interne' ? 'Interne' : ap.telephone,
+                                        ap.type === 'interne' ? 'Interne' : ap.structure || ap.telephone,
                                       ]
                                         .filter(Boolean)
                                         .join(' · ')

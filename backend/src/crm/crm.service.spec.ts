@@ -7,8 +7,7 @@ import { CrmService } from './crm.service';
 
 // Deux points de décision privés, appelés par leur nom : le code (toujours
 // généré, suffixe -2/-3 en cas de collision, 400 si une information manque)
-// et le client (sigle obligatoire pour une personne morale, complété sur la
-// fiche existante si elle n'en a pas).
+// et le client (existant inchangé, ou créé tel que saisi — plus de sigle).
 
 type Prive = {
   resoudreCode: (
@@ -55,64 +54,52 @@ describe('CrmService.resoudreCode', () => {
     );
   });
 
-  it('personne morale sans sigle → 400, aucun code de repli', async () => {
+  it('personne morale sans sigle → initiales de la raison sociale', async () => {
     const prisma = prismaMock();
     await expect(
       svc(prisma).resoudreCode(
         prisma,
         'S1',
-        { nom: 'Teranga Capital', type: 'entreprise', sigle: null },
+        { nom: 'SCI Les Filaos', type: 'sci', sigle: null },
         'ALM',
       ),
+    ).resolves.toBe(`FIL_ALM.${annee}`);
+  });
+
+  it('nom vide → 400, aucun code de repli', async () => {
+    const prisma = prismaMock();
+    await expect(
+      svc(prisma).resoudreCode(prisma, 'S1', { nom: ' ', type: 'entreprise', sigle: null }, 'ALM'),
     ).rejects.toThrow(BadRequestException);
   });
 });
 
 describe('CrmService.resoudreClient', () => {
-  it('nouveau particulier → sigle ignoré (null)', async () => {
+  it('nouvelle personne morale → créée telle que saisie, sans sigle', async () => {
     const prisma = prismaMock();
     await svc(prisma).resoudreClient(prisma, 'S1', {
-      nouveau: { nom: 'Awa Sow', type: 'particulier', sigle: 'XYZ' },
+      nouveau: { nom: 'SCI Les Filaos', type: 'entreprise' },
     });
-    expect(prisma.client.create.mock.calls[0][0].data.sigle).toBeNull();
-  });
-
-  it('nouvelle personne morale → sigle normalisé et enregistré', async () => {
-    const prisma = prismaMock();
-    await svc(prisma).resoudreClient(prisma, 'S1', {
-      nouveau: { nom: 'SCI Ndiaye Frères', type: 'sci', sigle: ' s.n.f ' },
+    expect(prisma.client.create).toHaveBeenCalledWith({
+      data: { societeId: 'S1', nom: 'SCI Les Filaos', type: 'entreprise' },
     });
-    expect(prisma.client.create.mock.calls[0][0].data.sigle).toBe('SNF');
   });
 
-  it('nouvelle personne morale sans sigle → 400, rien créé', async () => {
-    const prisma = prismaMock();
-    await expect(
-      svc(prisma).resoudreClient(prisma, 'S1', {
-        nouveau: { nom: 'Teranga Capital', type: 'entreprise' },
-      }),
-    ).rejects.toThrow('Le sigle est obligatoire');
-    expect(prisma.client.create).not.toHaveBeenCalled();
-  });
-
-  it('personne morale existante sans sigle → complétée sur sa fiche', async () => {
+  it('client existant → sa fiche ne change pas', async () => {
     const prisma = prismaMock({
       client: { id: 'C1', nom: 'Teranga Capital', type: 'entreprise', sigle: null },
     });
-    const c = await svc(prisma).resoudreClient(prisma, 'S1', { id: 'C1', sigle: 'tc' });
-    expect(prisma.client.update).toHaveBeenCalledWith({
-      where: { id: 'C1' },
-      data: { sigle: 'TC' },
+    await expect(svc(prisma).resoudreClient(prisma, 'S1', { id: 'C1' })).resolves.toMatchObject({
+      id: 'C1',
     });
-    expect(c).toMatchObject({ sigle: 'TC' });
+    expect(prisma.client.update).not.toHaveBeenCalled();
   });
 
-  it('personne morale existante avec sigle → inchangée, sigle fourni ignoré', async () => {
-    const prisma = prismaMock({
-      client: { id: 'C1', nom: 'Teranga Capital', type: 'entreprise', sigle: 'TC' },
-    });
-    await svc(prisma).resoudreClient(prisma, 'S1', { id: 'C1', sigle: 'AUTRE' });
-    expect(prisma.client.update).not.toHaveBeenCalled();
+  it('client d’une autre société → 404', async () => {
+    const prisma = prismaMock({ client: null });
+    await expect(svc(prisma).resoudreClient(prisma, 'S1', { id: 'AUTRE' })).rejects.toThrow(
+      'Client introuvable',
+    );
   });
 });
 
@@ -139,8 +126,8 @@ describe('CrmService.resoudreProprietaire', () => {
     await expect(avecTitulaires(['U1'])()).resolves.toBe('U1');
   });
 
-  it('plusieurs titulaires sans choix → 400, pas de choix arbitraire', async () => {
-    await expect(avecTitulaires(['U1', 'U2'])()).rejects.toThrow('choisis le propriétaire');
+  it('plusieurs titulaires sans choix → null (« à assigner »), pas de choix arbitraire', async () => {
+    await expect(avecTitulaires(['U1', 'U2'])()).resolves.toBeNull();
   });
 
   it('choix explicite parmi les titulaires → retenu', async () => {
@@ -152,50 +139,131 @@ describe('CrmService.resoudreProprietaire', () => {
   });
 });
 
-// Commission d'apporteur : donnée finances_charges.
-describe('CrmService — commission d’apporteur', () => {
+// Fiche apporteur (maquette « Nouveau projet ») : obligatoire, validée et
+// verrouillée à la création — % attribué compris, saisi par le créateur —
+// puis modifiable par le COO seul.
+describe('CrmService — fiche apporteur', () => {
   const DTO = {
     nature: 'mandat_client',
-    categorie: 'conception',
     localiteId: 'L1',
-    type: 'villa',
-    nbPlanches: 2,
-    surfaceTerrain: 0,
-    standing: 'moyen',
-    gamme: 'milieu',
-    programme: 'X',
-    statut: 'nouveau',
     client: { id: 'C1' },
-    apporteur: { type: 'externe', nom: 'Me Ndiaye' },
-    commissionApporteur: 4,
+    apporteur: { type: 'aucun' },
   };
+  const CLIENT = { id: 'C1', nom: 'Awa Sow', type: 'particulier', sigle: null };
+  // Données écrites, telles que le service les passe à Prisma.
+  type Ecrit = Record<string, unknown> & { transitions: { create: Record<string, unknown> } };
+  // Relecture du dossier après écriture : la forme minimale que versDossierCrm lit.
+  const relu = ({ data }: { data: Ecrit }) =>
+    Promise.resolve({
+      id: 'D1',
+      code: 'AS_ALM.26',
+      statut: 'nouveau_projet',
+      programme: '',
+      commissionApporteur: null,
+      ...data,
+      client: CLIENT,
+      localite: null,
+      creePar: null,
+      apporteurUtilisateur: null,
+      proprietaire: null,
+      archivePar: null,
+      offres: [],
+    });
 
-  it('saisie sans finances_charges en écriture → 403 avant toute écriture', async () => {
-    const prisma = { $transaction: jest.fn() };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
-    await expect(
-      s.creer('S1', { userId: 'U', role: 'COO', permissions: { finances_charges: 'lecture' } }, DTO as never),
-    ).rejects.toThrow(ForbiddenException);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('lead sans planches → créé quand même (à compléter avant l’offre)', async () => {
-    const prisma = { $transaction: jest.fn().mockResolvedValue({ id: 'D-neuf' }) };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
-    await s.creer(
-      'S1',
-      { userId: 'U', role: 'COO', permissions: {} },
-      { ...DTO, nbPlanches: 0, commissionApporteur: null } as never,
-    );
-    expect(prisma.$transaction).toHaveBeenCalled();
-  });
-
-  it('lecture : clé absente sans le droit, présente avec', () => {
-    const s = new CrmService({} as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService) as unknown as {
-      optsFormat: (a: unknown) => { voitCommission: boolean };
+  function svcCreation() {
+    const tx = {
+      client: { findFirst: jest.fn().mockResolvedValue(CLIENT) },
+      localite: { findUnique: jest.fn().mockResolvedValue({ id: 'L1', code: 'ALM', nom: 'Almadies' }) },
+      utilisateur: { findMany: jest.fn().mockResolvedValue([]) },
+      dossierCrm: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(relu) },
     };
-    expect(s.optsFormat({ permissions: {} }).voitCommission).toBe(false);
-    expect(s.optsFormat({ permissions: { finances_charges: 'lecture' } }).voitCommission).toBe(true);
+    const prisma = { $transaction: jest.fn((f: (t: typeof tx) => unknown) => f(tx)) };
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    return { s, tx };
+  }
+  const cio = { userId: 'U-CIO', role: 'CIO (transverse)', permissions: { crm: 'ecriture' as const } };
+
+  it('affaire directe → colonnes à null, tracée sur la ligne de création', async () => {
+    const { s, tx } = svcCreation();
+    await s.creer('S1', cio, DTO as never);
+    const data = tx.dossierCrm.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      apporteurType: null,
+      apporteurUtilisateurId: null,
+      apporteurNom: null,
+      apporteurStructure: null,
+      commissionApporteur: null,
+    });
+    expect(data.transitions.create.commentaire).toBe(
+      'Fiche apporteur : affaire directe, validée et verrouillée',
+    );
+  });
+
+  it('apporteur externe → fiche complète, % saisi sans droit Finances', async () => {
+    const { s, tx } = svcCreation();
+    const projet = await s.creer('S1', cio, {
+      ...DTO,
+      apporteur: {
+        type: 'externe',
+        nom: ' Aïssatou Ba ',
+        structure: 'Notaire',
+        telephone: '+221 77 000 00 00',
+        commission: 4,
+      },
+    } as never);
+    const data = tx.dossierCrm.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({
+      apporteurType: 'externe',
+      apporteurNom: 'Aïssatou Ba',
+      apporteurStructure: 'Notaire',
+      apporteurTelephone: '+221 77 000 00 00',
+      apporteurEmail: null,
+      commissionApporteur: 4,
+    });
+    expect(data.transitions.create.commentaire).toBe(
+      'Fiche apporteur : Aïssatou Ba (Notaire), validée et verrouillée',
+    );
+    // Partie de la fiche apporteur : toujours dans la réponse.
+    expect(projet.commissionApporteur).toBe(4);
+  });
+
+  function svcModif(dossier: object | null) {
+    const prisma = {
+      dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), update: jest.fn(relu) },
+    };
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    return { s, prisma };
+  }
+  const coo = { userId: 'U-COO', role: 'COO', permissions: { crm: 'ecriture' as const } };
+  const NOUVELLE = { type: 'externe', nom: 'Aïssatou Ba', commission: 3.5 } as never;
+
+  it.each(['societe_admin', 'CIO (transverse)', 'Dir. GC'])(
+    'modification par %s → 403, rien écrit (le COO seul)',
+    async (role) => {
+      const { s, prisma } = svcModif({ statut: 'nouveau_projet', archiveLe: null });
+      await expect(
+        s.modifierApporteur('S1', { userId: 'X', role, permissions: {} }, 'D1', NOUVELLE),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.dossierCrm.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('modification par le COO → fiche remplacée, événement tracé sans changer d’étape', async () => {
+    const { s, prisma } = svcModif({ statut: 'offre_envoyee', archiveLe: null });
+    await s.modifierApporteur('S1', coo, 'D1', NOUVELLE);
+    const data = prisma.dossierCrm.update.mock.calls[0][0].data;
+    expect(data).toMatchObject({ apporteurType: 'externe', apporteurNom: 'Aïssatou Ba', commissionApporteur: 3.5 });
+    expect(data.transitions.create).toEqual({
+      de: 'offre_envoyee',
+      vers: 'offre_envoyee',
+      parId: 'U-COO',
+      commentaire: 'Fiche apporteur modifiée : Aïssatou Ba',
+    });
+  });
+
+  it('lead archivé → 409, même pour le COO', async () => {
+    const { s } = svcModif({ statut: 'nouveau_projet', archiveLe: new Date() });
+    await expect(s.modifierApporteur('S1', coo, 'D1', NOUVELLE)).rejects.toThrow(ConflictException);
   });
 });
 

@@ -5,8 +5,9 @@ import { niveauSuffisant } from './auth';
 // Notifications du collaborateur connecté. API NestJS :
 //   GET   /api/societes/:slug/notifications          → { nonLues, elements[] }
 //   PATCH /api/societes/:slug/notifications/lecture   → marque toutes lues
-// Les alertes d'échéance d'avant-projet sont dérivées côté serveur (non
-// stockées), renvoyées avec `derivee: true` en tête du flux.
+// Les alertes dérivées (relance d'un lead CRM incomplet après 72 h) sont
+// calculées côté serveur (non stockées), renvoyées avec `derivee: true` en
+// tête du flux.
 
 export function getNotifications(slug: string): Promise<FluxNotifications> {
   return apiSociete<FluxNotifications>(slug, '/notifications');
@@ -37,4 +38,10 @@ export function lienNotificationAdmin(
   if (n.type === 'mention_projet' && n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;
   if (n.projetId) return `/admin/${slug}/projets/${n.projetId}`;
   return null;
+}
+
+// Mention d'une alerte dérivée à la place de « il y a … » (elle n'a pas de
+// moment d'envoi : elle tient tant que sa condition tient).
+export function libelleAlerteDerivee(n: Pick<NotificationItem, 'type'>): string {
+  return n.type === 'fiche_a_completer' ? 'Relance' : 'Échéance';
 }

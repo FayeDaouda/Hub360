@@ -7007,11 +7007,167 @@ textarea.field-input {
   }
 }
 
-.code-apercu {
-  font-weight: 600;
-  font-size: 0.95rem;
+/* -- Modale « Nouveau projet » (maquette du boss, oct. 2026) ------------
+   Carte du code en dégradé violet HUB, nature du client en bascule Argile,
+   fiche apporteur cernée d'ambre tant qu'elle reste à remplir. */
+.nouveau-projet {
+  max-width: 600px;
+}
+.nouveau-projet .modal-body {
+  gap: 1.15rem;
+}
+.nouveau-projet-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.nouveau-projet-surtitre {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.nouveau-projet-code {
+  display: grid;
+  gap: 0.4rem;
+  padding: 1.3rem 1.4rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, var(--violet-hub), #8c93f2);
+  color: #fff;
+  box-shadow: 0 10px 28px -12px color-mix(in oklch, var(--violet-hub) 70%, transparent);
+}
+.nouveau-projet-code .nouveau-projet-surtitre {
+  opacity: 0.85;
+}
+.nouveau-projet-code > span:last-child {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.nouveau-projet-code-valeur {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: clamp(1.9rem, 7vw, 2.6rem);
+  font-weight: 700;
   letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.nouveau-projet-nature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.nouveau-projet-nature button {
+  padding: 0.6rem 0.5rem;
+  border: none;
+  border-radius: calc(var(--radius-md) - 4px);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.nouveau-projet-nature button:hover:not(.is-actif) {
+  color: var(--text);
+}
+.nouveau-projet-nature button.is-actif {
+  background: var(--argile);
+  color: #fff;
+}
+.nouveau-projet-nature button:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 2px;
+}
+.fiche-apporteur {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--ocre);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.15s ease;
+}
+.fiche-apporteur.is-directe {
+  border-color: var(--border);
+}
+.fiche-apporteur-titre {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.fiche-apporteur-titre strong {
+  color: var(--text);
+}
+.fiche-apporteur-case {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.fiche-apporteur-case input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--violet-hub);
+}
+.fiche-apporteur-grille {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.fiche-apporteur-grille .field-label {
+  font-weight: 700;
+  color: var(--text);
+}
+@media (max-width: 480px) {
+  .fiche-apporteur-grille {
+    grid-template-columns: 1fr;
+  }
+}
+.fiche-apporteur-edition {
+  display: grid;
+  gap: 0.8rem;
+}
+.fiche-apporteur-modifier {
+  justify-self: start;
+  margin-top: 0.3rem;
+}
+.nouveau-projet-passation {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.nouveau-projet-passation strong {
+  font-size: 1rem;
+  color: var(--text);
+}
+.nouveau-projet-suite {
+  margin: 0;
+}
+.nouveau-projet-valider {
+  justify-content: center;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  font-size: 0.95rem;
+}
+/* Tant qu'il manque quelque chose : bouton en pointillés qui dit quoi. */
+.nouveau-projet-valider.is-bloque {
+  background: none;
+  border: 1px dashed var(--border-hover);
+  color: var(--text-muted);
+  opacity: 1;
 }
 
 .localite-select {

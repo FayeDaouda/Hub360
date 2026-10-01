@@ -1,4 +1,5 @@
 import type {
+  ApporteurSaisi,
   Client,
   Personne,
   ModifierFichePayload,
@@ -23,6 +24,7 @@ import { CATEGORIES } from './types';
 //   POST  /api/societes/:slug/dossiers/:id/archivage
 //   GET   /api/societes/:slug/dossiers/proprietaires-possibles
 //   PATCH /api/societes/:slug/dossiers/:id/proprietaire  { proprietaireId }
+//   PATCH /api/societes/:slug/dossiers/:id/apporteur     (COO seul)
 // Passer un dossier à « onboard » déclenche la transaction pivot côté serveur
 // (création du projet d'exécution + coquille avant-projet, idempotente).
 // -----------------------------------------------------------------------------
@@ -101,6 +103,12 @@ export function archiverDossier(slug: string, id: string): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/archivage`, { method: 'POST' });
 }
 
+// Fiche apporteur verrouillée depuis la création : le COO seul la modifie
+// (le serveur le vérifie).
+export function modifierApporteur(slug: string, id: string, apporteur: ApporteurSaisi): Promise<Projet> {
+  return apiSociete(slug, `/dossiers/${id}/apporteur`, { method: 'PATCH', body: apporteur });
+}
+
 export function changerProprietaire(
   slug: string,
   id: string,
@@ -119,7 +127,8 @@ export function changerProprietaire(
 // Catégorie affichée (maquette) : « Développement » = promotion interne ;
 // null = « À choisir » (lead créé sans catégorie).
 export function libelleCategorie(p: Projet): string | null {
-  if (p.nature === 'promotion_interne') return 'Développement';
+  // « Développement » est une catégorie à part entière (doc oct. 2026),
+  // indépendante de la nature de la mission ; null = « À choisir ».
   return p.categorie ? CATEGORIES[p.categorie] : null;
 }
 

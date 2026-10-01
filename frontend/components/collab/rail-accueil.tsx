@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getNotifications } from '@/lib/notifications';
+import { getNotifications, libelleAlerteDerivee } from '@/lib/notifications';
 import type { FluxNotifications } from '@/lib/types';
 import { RadialGauge } from '@/components/admin/radial-gauge';
 
@@ -52,7 +52,7 @@ export function RailAccueil({
                   <span className="notif-txt">
                     <span className="notif-titre">{n.titre}</span>
                     <span className="notif-meta">
-                      {n.derivee ? 'Échéance' : ilYa(n.date)}
+                      {n.derivee ? libelleAlerteDerivee(n) : ilYa(n.date)}
                     </span>
                   </span>
                 </>

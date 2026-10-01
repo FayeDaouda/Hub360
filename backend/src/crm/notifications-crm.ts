@@ -17,6 +17,7 @@
 // NotificationsService.notifierDossierCrm.
 
 import type { ActionCrm } from './cycle';
+import { ChampsFiche, TOTAL_CHAMPS_FICHE, champsManquants } from './fiche';
 
 export type EvenementCrm =
   | 'dossier_soumis'
@@ -104,3 +105,28 @@ export function planNotificationsCrm(
   }
   return [...plan].map(([destinataireId, titre]) => ({ destinataireId, titre }));
 }
+
+// Relance d'un lead resté incomplet (maquette « Nouveau projet », oct. 2026 :
+// « les autres champs se complètent ensuite dans la fiche, sous 72 h. Au-delà,
+// le HUB crée une relance »). Alerte DÉRIVÉE à la lecture du flux, jamais
+// stockée : elle s'éteint d'elle-même dès que la fiche est complète, archivée
+// ou sortie de « Nouveau projet ». Destinataires (NotificationsService) : le
+// propriétaire ; un lead « à assigner » relance tous les titulaires Dir. GC.
+export const DELAI_RELANCE_FICHE_MS = 72 * 3600 * 1000;
+
+// null = pas (ou plus) de relance pour ce dossier à cet instant.
+export function relanceFicheIncomplete(
+  d: ChampsFiche & { createdAt: Date },
+  maintenant: Date,
+): { titre: string; date: Date } | null {
+  const echue = new Date(d.createdAt.getTime() + DELAI_RELANCE_FICHE_MS);
+  if (echue > maintenant) return null;
+  const manquants = champsManquants(d);
+  if (!manquants.length) return null;
+  const faits = TOTAL_CHAMPS_FICHE - manquants.length;
+  return {
+    titre: `${d.code} — fiche ${faits}/${TOTAL_CHAMPS_FICHE} depuis plus de 72 h : à compléter avant l’offre`,
+    date: echue,
+  };
+}
+

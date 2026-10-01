@@ -9,13 +9,16 @@ type Props = {
   valeur: string; // id de la localité choisie, '' si aucune
   onChange: (id: string) => void;
   idChamp?: string;
+  // false = la liste seule, sans le filtre texte (modale « Nouveau projet »
+  // de la maquette) — le <select> natif garde la saisie au clavier.
+  filtre?: boolean;
 };
 
 // Choix d'une localité du référentiel : un filtre texte au-dessus d'un
 // <select> natif groupé (zone — département/région/zone). Natif plutôt qu'une
 // combobox maison : sélecteur système sur mobile, clavier et lecteurs d'écran
 // gérés d'office. L'intervenant ne tape jamais le code, il le voit seulement.
-export function LocaliteSelect({ localites, valeur, onChange, idChamp }: Props) {
+export function LocaliteSelect({ localites, valeur, onChange, idChamp, filtre: avecFiltre = true }: Props) {
   const [filtre, setFiltre] = useState('');
 
   const groupes = useMemo(() => {
@@ -48,15 +51,17 @@ export function LocaliteSelect({ localites, valeur, onChange, idChamp }: Props) 
 
   return (
     <div className="localite-select">
-      <input
-        type="search"
-        className="field-input"
-        value={filtre}
-        onChange={(e) => filtrer(e.target.value)}
-        placeholder="Rechercher (nom, code, région)…"
-        aria-label="Filtrer les localités"
-        disabled={!localites}
-      />
+      {avecFiltre && (
+        <input
+          type="search"
+          className="field-input"
+          value={filtre}
+          onChange={(e) => filtrer(e.target.value)}
+          placeholder="Rechercher (nom, code, région)…"
+          aria-label="Filtrer les localités"
+          disabled={!localites}
+        />
+      )}
       <select
         id={idChamp}
         className="field-input"

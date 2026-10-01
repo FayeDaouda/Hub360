@@ -52,9 +52,9 @@ export function versDossierCrm(
     archivePar: PersonneRef;
     offres: (Devis & { lignes: LigneDevis[] })[];
   },
-  // Commission (finances_charges) et offre (finances_devis) : absentes de la
-  // réponse (clé omise, pas null) pour qui n'a pas le droit en lecture.
-  opts: { voitCommission: boolean; voitOffre: boolean },
+  // Offre (finances_devis) : absente de la réponse (clé omise, pas null) pour
+  // qui n'a pas le droit en lecture.
+  opts: { voitOffre: boolean },
 ) {
   return {
     id: d.id,
@@ -78,7 +78,8 @@ export function versDossierCrm(
     verrouillee: !ficheModifiable(d.statut),
     creeLe: d.createdAt,
     creePar: versPersonne(d.creePar),
-    // null = dossier antérieur à l'étape C1 (non renseigné).
+    // null = aucun apporteur (affaire directe), ou dossier antérieur à la
+    // fiche apporteur.
     apporteur:
       d.apporteurType === 'interne'
         ? { type: 'interne' as const, utilisateur: versPersonne(d.apporteurUtilisateur) }
@@ -86,14 +87,15 @@ export function versDossierCrm(
           ? {
               type: 'externe' as const,
               nom: d.apporteurNom ?? '',
+              structure: d.apporteurStructure ?? undefined,
               telephone: d.apporteurTelephone ?? undefined,
               email: d.apporteurEmail ?? undefined,
             }
           : null,
-    ...(opts.voitCommission && {
-      commissionApporteur:
-        d.commissionApporteur === null ? null : Number(d.commissionApporteur),
-    }),
+    // % attribué — partie de la fiche apporteur, lue par les rôles CRM
+    // (maquette « Nouveau projet », oct. 2026). null = aucun.
+    commissionApporteur:
+      d.commissionApporteur === null ? null : Number(d.commissionApporteur),
     // null = « à assigner ».
     proprietaire: versPersonne(d.proprietaire),
     // null = lead actif ; sinon figé, consultable dans « Archivés ».

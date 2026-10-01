@@ -24,6 +24,7 @@ import { ContratDossier } from './contrat-dossier';
 import { OffreDossierModal } from './offre-dossier-modal';
 import { LocaliteSelect } from './localite-select';
 import { CaracteristiquesProjet } from './caracteristiques-projet';
+import { FicheApporteurSection } from './fiche-apporteur-section';
 
 type Props = {
   slug: string;
@@ -56,9 +57,17 @@ const ETAPES: { statut: StatutCrm; libelle: string }[] = [
   { statut: 'onboard', libelle: 'Onboard' },
 ];
 
-// Une ligne d'historique lisible par transition du cycle.
-function libelleTransition(t: TransitionDossier): string {
+// Lignes d'historique lisibles d'une transition du cycle. La création (de =
+// null) garde en commentaire la fiche apporteur validée ; de = vers = un
+// événement de la fiche (apporteur modifié par le COO), sans changer d'étape.
+function libellesTransition(t: TransitionDossier): string[] {
   const par = t.par?.nom ? ` par ${t.par.nom}` : '';
+  if (!t.de && t.vers === 'nouveau_projet' && t.commentaire) return [t.commentaire, `Fiche créée${par}`];
+  if (t.de && t.de === t.vers) return [`${t.commentaire ?? 'Fiche modifiée'}${par}`];
+  return [libelleTransition(t, par)];
+}
+
+function libelleTransition(t: TransitionDossier, par: string): string {
   const motif = t.commentaire ? ` : ${t.commentaire}` : '';
   if (!t.de) return `Fiche créée${par}`;
   if (t.vers === 'en_validation') return `Offre soumise au CFO${par}`;
@@ -99,6 +108,8 @@ export function DetailDossierModal({
   const [reassignation, setReassignation] = useState(false);
   const [erreurProprio, setErreurProprio] = useState<string | null>(null);
   const [historique, setHistorique] = useState<TransitionDossier[] | null>(null);
+  // Un événement de la fiche (apporteur modifié) n'en change pas le statut.
+  const [versionHistorique, setVersionHistorique] = useState(0);
   const [localiteId, setLocaliteId] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -107,12 +118,13 @@ export function DetailDossierModal({
   const [archivage, setArchivage] = useState(false);
   const [erreurArchive, setErreurArchive] = useState<string | null>(null);
 
-  // Rechargé à chaque changement de statut (nouvelle ligne de journal).
+  // Rechargé à chaque changement de statut ou événement de la fiche
+  // (nouvelle ligne de journal).
   useEffect(() => {
     getHistorique(slug, projet.id)
       .then(setHistorique)
       .catch(() => setHistorique([]));
-  }, [slug, projet.id, projet.statut]);
+  }, [slug, projet.id, projet.statut, versionHistorique]);
 
   useEffect(() => {
     const echap = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -168,7 +180,6 @@ export function DetailDossierModal({
   // Dossier antérieur au référentiel : à rattacher à une localité.
   const rattachable = !projet.localite && peutEcrire && !archive;
   const rang = ETAPES.findIndex((e) => e.statut === projet.statut);
-  const ap = projet.apporteur;
   const manquant = (texte = 'à renseigner') => <span className="crm-manquant">{texte}</span>;
 
   const champs: { libelle: string; valeur: React.ReactNode; aide: string }[] = [
@@ -291,51 +302,14 @@ export function DetailDossierModal({
         </section>
         )}
 
-        <section className="fiche-crm-section">
-          <div className="fiche-crm-titre-ligne">
-            <h3 className="fiche-crm-titre">Fiche apporteur d’affaire</h3>
-            <span className="fiche-crm-badge fiche-crm-badge--ok">Validée · verrouillée</span>
-          </div>
-          <div className="fiche-crm-carte">
-            {!ap ? (
-              <strong>Aucun apporteur · affaire directe</strong>
-            ) : (
-              <dl className="fiche-crm-apporteur">
-                <div>
-                  <dt>Nom et prénom</dt>
-                  <dd>{ap.type === 'interne' ? ap.utilisateur?.nom ?? 'Compte supprimé' : ap.nom}</dd>
-                </div>
-                <div>
-                  <dt>Relation</dt>
-                  <dd>{ap.type === 'interne' ? 'Apporteur interne' : 'Apporteur externe'}</dd>
-                </div>
-                {'commissionApporteur' in projet && (
-                  <div>
-                    <dt>% attribué</dt>
-                    <dd className="fiche-crm-pourcent">{projet.commissionApporteur == null ? '—' : `${formatNombre(projet.commissionApporteur)} %`}</dd>
-                  </div>
-                )}
-                {ap.type === 'externe' && (
-                  <>
-                    <div>
-                      <dt>Téléphone</dt>
-                      <dd>{ap.telephone || '—'}</dd>
-                    </div>
-                    <div>
-                      <dt>E-mail</dt>
-                      <dd>{ap.email || '—'}</dd>
-                    </div>
-                  </>
-                )}
-                <div>
-                  <dt>Validée le</dt>
-                  <dd>{jjmmaaaa(projet.creeLe)}</dd>
-                </div>
-              </dl>
-            )}
-            <p className="fiche-crm-aide">Établie et validée d’office à la création. Non modifiable, y compris par l’administrateur.</p>
-          </div>
-        </section>
+        <FicheApporteurSection
+          slug={slug}
+          projet={projet}
+          onModifie={async () => {
+            await onMaj();
+            setVersionHistorique((v) => v + 1);
+          }}
+        />
 
         <section className="fiche-crm-section">
           <h3 className="fiche-crm-titre">Passation de la fiche</h3>
@@ -380,12 +354,14 @@ export function DetailDossierModal({
             <p className="fiche-crm-aide">Aucun événement enregistré.</p>
           ) : (
             <ol className="fiche-crm-historique">
-              {historique.map((t) => (
-                <li key={t.id}>
-                  <time>{jjmmaaaa(t.le)}</time>
-                  <span>{libelleTransition(t)}</span>
-                </li>
-              ))}
+              {historique.flatMap((t) =>
+                libellesTransition(t).map((libelle, i) => (
+                  <li key={`${t.id}-${i}`}>
+                    <time>{jjmmaaaa(t.le)}</time>
+                    <span>{libelle}</span>
+                  </li>
+                )),
+              )}
               {archive && (
                 <li>
                   <time>{jjmmaaaa(archive.le)}</time>

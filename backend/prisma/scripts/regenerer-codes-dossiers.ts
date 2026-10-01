@@ -14,8 +14,8 @@ import { codeAvecVariante, genererCodeDossier } from '../../src/crm/nomenclature
 //
 // Ordre : par date de création dans chaque société (le premier garde la
 // base, les suivants prennent -2, -3…), année = celle de la création.
-// Un dossier sans localité ou dont la personne morale n'a pas de sigle est
-// signalé et laissé tel quel — le script n'invente aucune donnée.
+// Un dossier sans localité ou dont le client n'a pas de nom est signalé et
+// laissé tel quel — le script n'invente aucune donnée.
 
 const prisma = new PrismaClient();
 
@@ -41,7 +41,7 @@ async function main() {
     }
     const base = genererCodeDossier(d.client, d.localite.code, d.createdAt);
     if (!base) {
-      bloques.push(`${d.code} — sigle manquant pour le client « ${d.client.nom} »`);
+      bloques.push(`${d.code} — nom du client manquant`);
       pris.add(d.code);
       continue;
     }

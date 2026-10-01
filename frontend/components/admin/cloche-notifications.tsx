@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNotificationsPoll } from '@/lib/use-notifications-poll';
-import { lienNotificationAdmin } from '@/lib/notifications';
+import { libelleAlerteDerivee, lienNotificationAdmin } from '@/lib/notifications';
 import type { Session } from '@/lib/types';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { NotifToast } from '@/components/notif-toast';
@@ -117,7 +117,7 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
                     <span className="notif-txt">
                       <span className="notif-titre">{n.titre}</span>
                       <span className="notif-meta">
-                        {n.derivee ? 'Échéance' : ilYa(n.date)}
+                        {n.derivee ? libelleAlerteDerivee(n) : ilYa(n.date)}
                       </span>
                     </span>
                   </>

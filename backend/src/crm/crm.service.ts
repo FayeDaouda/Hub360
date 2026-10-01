@@ -24,14 +24,9 @@ import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
-import { CreerDossierDto, ModifierFicheDto } from './dto';
+import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
 import { motifFicheIncomplete } from './fiche';
-import {
-  codeAvecVariante,
-  estPersonneMorale,
-  genererCodeDossier,
-  normaliserSigle,
-} from './nomenclature';
+import { codeAvecVariante, genererCodeDossier } from './nomenclature';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
@@ -52,9 +47,9 @@ const INCLUDE_DOSSIER = {
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
 } as const;
 
-// Commission d'apporteur = sortie d'argent vers un tiers → module
-// finances_charges (décision sept. 2026), pas finances_marges.
-const MODULE_COMMISSION = 'finances_charges';
+// Seul rôle habilité à modifier la fiche apporteur après sa création — pas
+// même l'administration (maquette « Nouveau projet », oct. 2026).
+export const ROLE_MODIF_APPORTEUR = 'COO';
 
 @Injectable()
 export class CrmService {
@@ -95,15 +90,7 @@ export class CrmService {
     if (!dto.client.id && !dto.client.nouveau) {
       throw new BadRequestException('client.id ou client.nouveau est requis');
     }
-    const commission = dto.commissionApporteur ?? null;
-    if (
-      commission !== null &&
-      !aLaPermission(acteur.permissions, MODULE_COMMISSION, 'ecriture')
-    ) {
-      throw new ForbiddenException(
-        'Renseigner la commission d’un apporteur demande l’accès en écriture aux charges.',
-      );
-    }
+    const apporteur = champsApporteur(dto.apporteur);
 
     return this.prisma.$transaction(async (tx) => {
       const client = await this.resoudreClient(tx, societeId, dto.client);
@@ -119,8 +106,6 @@ export class CrmService {
         societeId,
         dto.proprietaireId,
       );
-      const externe = dto.apporteur.type === 'externe';
-
       const dossier = await tx.dossierCrm.create({
         data: {
           societeId,
@@ -142,16 +127,19 @@ export class CrmService {
           // Toujours créé au début du cycle (plus de statut choisi à la
           // création : on ne saute plus d'étape) — première ligne du journal.
           statut: 'nouveau_projet',
-          transitions: { create: { vers: 'nouveau_projet', parId: acteur.userId } },
+          // Le commentaire de la ligne de création garde la fiche apporteur
+          // telle que validée (l'historique la montre même après une
+          // modification du COO).
+          transitions: {
+            create: {
+              vers: 'nouveau_projet',
+              parId: acteur.userId,
+              commentaire: `Fiche apporteur : ${resumeApporteur(dto.apporteur)}, validée et verrouillée`,
+            },
+          },
           clientId: client.id,
           creeParId: acteur.userId,
-          apporteurType: dto.apporteur.type,
-          // Interne : toujours le créateur — jamais choisi dans le formulaire.
-          apporteurUtilisateurId: externe ? null : acteur.userId,
-          apporteurNom: externe ? dto.apporteur.nom!.trim() : null,
-          apporteurTelephone: externe ? dto.apporteur.telephone?.trim() || null : null,
-          apporteurEmail: externe ? dto.apporteur.email?.trim() || null : null,
-          commissionApporteur: commission,
+          ...apporteur,
           proprietaireId,
         },
         include: INCLUDE_DOSSIER,
@@ -194,6 +182,47 @@ export class CrmService {
     const maj = await this.prisma.dossierCrm.update({
       where: { id },
       data: { proprietaireId },
+      include: INCLUDE_DOSSIER,
+    });
+    return versDossierCrm(maj, this.optsFormat(acteur));
+  }
+
+  // Modifie la fiche apporteur, verrouillée depuis la création : le COO seul
+  // (pas même l'administration). Toute étape du cycle, hors lead archivé ;
+  // la modification est tracée dans l'historique de la fiche.
+  async modifierApporteur(
+    societeId: string,
+    acteur: Acteur,
+    id: string,
+    dto: ApporteurDto,
+  ) {
+    if (acteur.role !== ROLE_MODIF_APPORTEUR) {
+      throw new ForbiddenException(
+        `Après création, seul le ${ROLE_MODIF_APPORTEUR} peut modifier la fiche apporteur.`,
+      );
+    }
+    const dossier = await this.prisma.dossierCrm.findFirst({
+      where: { id, societeId },
+      select: { statut: true, archiveLe: true },
+    });
+    if (!dossier) throw new NotFoundException('Dossier introuvable');
+    exigerNonArchive(dossier);
+
+    const maj = await this.prisma.dossierCrm.update({
+      where: { id },
+      data: {
+        ...champsApporteur(dto),
+        // Même statut avant et après : événement de la fiche, pas une
+        // étape du cycle (cf. DossierCrmTransition).
+        transitions: {
+          create: {
+            de: dossier.statut,
+            vers: dossier.statut,
+            parId: acteur.userId,
+            commentaire: `Fiche apporteur modifiée : ${resumeApporteur(dto)}`,
+          },
+        },
+      },
       include: INCLUDE_DOSSIER,
     });
     return versDossierCrm(maj, this.optsFormat(acteur));
@@ -609,7 +638,6 @@ export class CrmService {
 
   private optsFormat(acteur: Acteur) {
     return {
-      voitCommission: aLaPermission(acteur.permissions, MODULE_COMMISSION, 'lecture'),
       // Montant de l'offre = donnée devis : absente pour qui n'a pas
       // finances_devis en lecture (le COO voit le cycle, pas le chiffrage).
       voitOffre: aLaPermission(acteur.permissions, 'finances_devis', 'lecture'),
@@ -636,8 +664,9 @@ export class CrmService {
   }
 
   // Propriétaire à enregistrer. Choisi explicitement → doit être titulaire du
-  // rôle. Sinon : un seul titulaire → lui ; aucun → null (« à assigner »,
-  // jamais bloquant) ; plusieurs → pas de choix arbitraire, 400.
+  // rôle. Sinon : un seul titulaire → lui ; aucun ou plusieurs → null (« à
+  // assigner », jamais bloquant : la modale ne propose plus de choix, la
+  // fiche se réassigne ensuite).
   private async resoudreProprietaire(
     tx: Prisma.TransactionClient,
     societeId: string,
@@ -652,50 +681,21 @@ export class CrmService {
       }
       return choisi;
     }
-    if (titulaires.length === 0) return null;
-    if (titulaires.length === 1) return titulaires[0].id;
-    throw new BadRequestException(
-      `Plusieurs titulaires du rôle ${ROLE_PROPRIETAIRE_DOSSIER} : choisis le propriétaire du dossier.`,
-    );
+    return titulaires.length === 1 ? titulaires[0].id : null;
   }
 
-  // Client du dossier : existant ou créé au passage. Une personne morale doit
-  // avoir un sigle (segment CLIENT du code) — celui de la fiche, ou celui
-  // fourni ici pour compléter une fiche qui n'en a pas encore (il est alors
-  // enregistré sur le client, pas seulement utilisé pour ce code).
+  // Client du dossier : existant (sa fiche ne change pas) ou créé au passage.
   private async resoudreClient(
     tx: Prisma.TransactionClient,
     societeId: string,
     ref: CreerDossierDto['client'],
   ): Promise<Client> {
     if (ref.nouveau) {
-      const { sigle, ...champs } = ref.nouveau;
-      return tx.client.create({
-        data: {
-          societeId,
-          ...champs,
-          sigle: estPersonneMorale(champs.type) ? this.exigerSigle(sigle) : null,
-        },
-      });
+      return tx.client.create({ data: { societeId, ...ref.nouveau } });
     }
-
     const client = await tx.client.findFirst({ where: { id: ref.id, societeId } });
     if (!client) throw new NotFoundException('Client introuvable');
-    if (!estPersonneMorale(client.type) || client.sigle) return client;
-    return tx.client.update({
-      where: { id: client.id },
-      data: { sigle: this.exigerSigle(ref.sigle) },
-    });
-  }
-
-  private exigerSigle(saisi: string | undefined): string {
-    const sigle = normaliserSigle(saisi ?? '');
-    if (!sigle) {
-      throw new BadRequestException(
-        'Le sigle est obligatoire pour une société, une SCI ou une institution.',
-      );
-    }
-    return sigle;
+    return client;
   }
 
   // Code du dossier, toujours généré (jamais saisi) selon la nomenclature
@@ -710,7 +710,7 @@ export class CrmService {
     const base = genererCodeDossier(client, codeLocalite);
     if (!base) {
       throw new BadRequestException(
-        'Impossible de générer le code : nom ou sigle du client manquant.',
+        'Impossible de générer le code : nom du client manquant.',
       );
     }
     const pris = new Set(
@@ -730,4 +730,27 @@ function exigerNonArchive(dossier: { archiveLe: Date | null }) {
   if (dossier.archiveLe) {
     throw new ConflictException('Lead archivé : consultable seulement.');
   }
+}
+
+// Colonnes de la fiche apporteur. « Aucun » = affaire directe : tout à null
+// (comme un dossier antérieur à la fiche). Un apporteur interne n'est plus
+// saisi : apporteurUtilisateurId repasse à null à toute modification.
+function champsApporteur(a: ApporteurDto) {
+  const externe = a.type === 'externe';
+  return {
+    apporteurType: externe ? ('externe' as const) : null,
+    apporteurUtilisateurId: null,
+    apporteurNom: externe ? a.nom!.trim() : null,
+    apporteurStructure: externe ? a.structure?.trim() || null : null,
+    apporteurTelephone: externe ? a.telephone?.trim() || null : null,
+    apporteurEmail: externe ? a.email?.trim() || null : null,
+    commissionApporteur: externe ? a.commission! : null,
+  };
+}
+
+// Libellé de l'historique : « affaire directe » ou « Aïssatou Ba (Notaire) ».
+function resumeApporteur(a: ApporteurDto): string {
+  if (a.type !== 'externe') return 'affaire directe';
+  const structure = a.structure?.trim();
+  return structure ? `${a.nom!.trim()} (${structure})` : a.nom!.trim();
 }

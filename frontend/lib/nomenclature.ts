@@ -6,14 +6,20 @@
 //                                      l'ordre saisi (état civil), sans plafond,
 //                                      titres et « et » ignorés ; s'il ne reste
 //                                      qu'un mot → ses 3 premières lettres
-//             sci / entreprise /     → sigle de la fiche client, tel que
-//             institution              l'entreprise l'a choisi (jamais dérivé)
+//             personne morale        → initiales de la raison sociale, formes
+//             (sci / entreprise /      juridiques (SA, SARL…) et mots de liaison
+//             institution)             ignorés ; un seul mot → ses 3 premières
+//                                      lettres (maquette « Nouveau projet »,
+//                                      oct. 2026). Un client antérieur qui a un
+//                                      sigle garde ce sigle : ses codes restent
+//                                      cohérents d'un projet à l'autre.
 //     LOC     code 3 lettres de la localité du référentiel
 //     AA      2 derniers chiffres de l'année de création
 //
 //   Exemples : Daouda Faye Sow · Almadies · 2026      → DFS_ALM.26
 //              M. et Mme Diouf · Ngor                 → DIO_NGO.26
 //              Teranga Capital (sigle TC) · Point E  → TC_POI.26
+//              SCI Les Filaos · Almadies              → FIL_ALM.26
 //              2ᵉ dossier identique                   → DFS_ALM.26-2
 //
 // MIROIR de backend/src/crm/nomenclature.ts — garder les deux fichiers
@@ -64,27 +70,88 @@ export function estPersonneMorale(type: string): boolean {
   return type !== "particulier";
 }
 
-// Segment CLIENT. Chaîne vide si l'information manque (nom vide, ou sigle
-// absent pour une personne morale) — l'appelant décide quoi en faire.
-function segmentClient(client: {
-  nom: string;
-  type: string;
-  sigle?: string | null;
-}): string {
-  if (estPersonneMorale(client.type))
-    return normaliserSigle(client.sigle ?? "");
-  const tous = mots(client.nom);
-  const utiles = tous.filter((m) => !MOTS_IGNORES.has(m.toLowerCase()));
-  // Nom fait uniquement de mots ignorés (« Monsieur ») : on garde tout
-  // plutôt que de bloquer la création.
-  const retenus = utiles.length > 0 ? utiles : tous;
-  // Un seul mot → ses 3 premières lettres (une initiale seule est trop
-  // courte, trop de collisions) ; sinon 1ʳᵉ lettre de chaque mot.
+// Formes juridiques (OHADA et usuelles) et mots de liaison ignorés dans une
+// raison sociale — comparés sans accents, en minuscules, points retirés :
+// « SCI Les Filaos » → Filaos, « S.A.R.L. Teranga Capital » → Teranga Capital.
+const FORMES_JURIDIQUES = new Set([
+  "sa",
+  "sas",
+  "sasu",
+  "sarl",
+  "suarl",
+  "eurl",
+  "snc",
+  "scs",
+  "sci",
+  "scp",
+  "gie",
+  "scoops",
+]);
+
+const MOTS_LIAISON = new Set([
+  "le",
+  "la",
+  "les",
+  "l",
+  "de",
+  "du",
+  "des",
+  "d",
+  "et",
+  "&",
+  "en",
+  "au",
+  "aux",
+  "a",
+  "un",
+  "une",
+  "pour",
+  "sur",
+]);
+
+// Un seul mot → ses 3 premières lettres (une initiale seule est trop courte,
+// trop de collisions) ; sinon 1ʳᵉ lettre de chaque mot.
+function initiales(retenus: string[]): string {
   const segment =
     retenus.length === 1
       ? retenus[0].slice(0, 3)
       : retenus.map((m) => m[0]).join("");
   return segment.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+// Raison sociale : les points tombent d'abord (« S.A.R.L. » → SARL, une
+// seule forme juridique et non quatre initiales), puis tout ce qui n'est ni
+// lettre, ni chiffre, ni « & » sépare les mots.
+function segmentRaisonSociale(nom: string): string {
+  const tous = sansAccents(nom)
+    .replace(/\./g, "")
+    .split(/[^A-Za-z0-9&]+/)
+    .filter(Boolean);
+  const utiles = tous.filter((m) => {
+    const mot = m.toLowerCase();
+    return !FORMES_JURIDIQUES.has(mot) && !MOTS_LIAISON.has(mot);
+  });
+  // Raison sociale faite uniquement de mots ignorés (« SARL ») : on garde
+  // tout plutôt que de bloquer la création.
+  return initiales(utiles.length > 0 ? utiles : tous);
+}
+
+// Segment CLIENT. Chaîne vide si le nom manque — l'appelant décide quoi en
+// faire (l'aperçu de la modale affiche « ??? » à sa place).
+export function segmentClient(client: {
+  nom: string;
+  type: string;
+  sigle?: string | null;
+}): string {
+  if (estPersonneMorale(client.type)) {
+    // Client antérieur à la maquette : son sigle reste son segment.
+    return normaliserSigle(client.sigle ?? "") || segmentRaisonSociale(client.nom);
+  }
+  const tous = mots(client.nom);
+  const utiles = tous.filter((m) => !MOTS_IGNORES.has(m.toLowerCase()));
+  // Nom fait uniquement de mots ignorés (« Monsieur ») : on garde tout
+  // plutôt que de bloquer la création.
+  return initiales(utiles.length > 0 ? utiles : tous);
 }
 
 // Code de base (sans suffixe de doublon). Chaîne vide si une information

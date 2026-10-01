@@ -4,8 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_DAF, ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import {
   ContexteNotificationCrm,
+  DELAI_RELANCE_FICHE_MS,
   EvenementCrm,
   planNotificationsCrm,
+  relanceFicheIncomplete,
 } from '../crm/notifications-crm';
 
 const MAX_STOCKEES = 30;
@@ -17,13 +19,14 @@ type ProjetContexte = {
   celluleIds: string[];
 };
 
-// `derivee` : calculée à la volée plutôt que stockée (aucune source ne le
-// fait plus depuis le retrait du verrou de validation avant-projet, sept.
-// 2026 — l'échéance dérivée qui l'utilisait a disparu avec lui) ; le
-// mécanisme reste en place, prêt pour une future alerte dérivée.
+// `derivee` : calculée à la volée plutôt que stockée, jamais « lue » — seule
+// source aujourd'hui : la relance d'un lead CRM incomplet après 72 h. Son
+// type n'existe pas en base (rien n'est stocké).
+export type TypeAlerteDerivee = 'fiche_a_completer';
+
 export type NotificationItem = {
-  id: string; // uuid (stockée)
-  type: NotificationType;
+  id: string; // uuid (stockée) ; « relance-fiche-<dossier> » (dérivée)
+  type: NotificationType | TypeAlerteDerivee;
   titre: string;
   projetId: string | null;
   projetCode: string | null;
@@ -158,10 +161,9 @@ export class NotificationsService {
     return [...new Set(lignes.map((l) => l.utilisateurId))];
   }
 
-  // -- Lecture : flux du collaborateur connecté -----------------------------
-  // Plus de source dérivée depuis le retrait du verrou de validation
-  // avant-projet (sept. 2026) — `elementsStockes` seul alimente le flux ;
-  // `derivee` reste sur NotificationItem pour une future source.
+  // -- Lecture : flux de l'utilisateur connecté -----------------------------
+  // Alertes dérivées en tête (actives tant que leur condition tient, comptées
+  // dans nonLues), puis les notifications stockées.
   async flux(societeId: string, utilisateurId: string) {
     const stockees = await this.prisma.notification.findMany({
       where: { destinataireId: utilisateurId, societeId },
@@ -182,9 +184,65 @@ export class NotificationsService {
       derivee: false,
     }));
 
-    const nonLues = elementsStockes.filter((e) => !e.lu).length;
+    const derivees = await this.relancesFiche(societeId, utilisateurId, new Date());
+    const nonLues = derivees.length + elementsStockes.filter((e) => !e.lu).length;
 
-    return { nonLues, elements: elementsStockes };
+    return { nonLues, elements: [...derivees, ...elementsStockes] };
+  }
+
+  // Leads « Nouveau projet » incomplets depuis plus de 72 h dont l'utilisateur
+  // pilote la fiche — ou, « à assigner », s'il est titulaire Dir. GC (cf.
+  // crm/notifications-crm.ts::relanceFicheIncomplete).
+  private async relancesFiche(
+    societeId: string,
+    utilisateurId: string,
+    maintenant: Date,
+  ): Promise<NotificationItem[]> {
+    const dirGc = await this.titulairesRole(societeId, ROLE_PROPRIETAIRE_DOSSIER);
+    const dossiers = await this.prisma.dossierCrm.findMany({
+      where: {
+        societeId,
+        statut: 'nouveau_projet',
+        archiveLe: null,
+        createdAt: { lte: new Date(maintenant.getTime() - DELAI_RELANCE_FICHE_MS) },
+        OR: [
+          { proprietaireId: utilisateurId },
+          ...(dirGc.includes(utilisateurId) ? [{ proprietaireId: null }] : []),
+        ],
+      },
+      select: {
+        id: true,
+        code: true,
+        categorie: true,
+        localiteId: true,
+        type: true,
+        surfaceTerrain: true,
+        nbPlanches: true,
+        clientId: true,
+        standing: true,
+        gamme: true,
+        programme: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return dossiers.flatMap((d) => {
+      const relance = relanceFicheIncomplete(d, maintenant);
+      if (!relance) return [];
+      return [
+        {
+          id: `relance-fiche-${d.id}`,
+          type: 'fiche_a_completer' as const,
+          titre: relance.titre,
+          projetId: null,
+          projetCode: null,
+          dossierCrmId: d.id,
+          date: relance.date,
+          lu: false,
+          derivee: true,
+        },
+      ];
+    });
   }
 
   async marquerLues(societeId: string, utilisateurId: string) {

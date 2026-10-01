@@ -19,17 +19,15 @@ import {
   Gamme,
   NatureDossier,
   Standing,
-  TypeApporteur,
   TypeBien,
   TypeClient,
 } from '@prisma/client';
 
+// Plus de sigle à la création (maquette « Nouveau projet », oct. 2026) : le
+// segment CLIENT d'une personne morale se tire de sa raison sociale.
 class NouveauClientDto {
   @IsString() @MinLength(1) nom!: string;
   @IsEnum(TypeClient) type!: TypeClient;
-  // Obligatoire pour une personne morale (contrôlé par le service, qui connaît
-  // le type) ; ignoré pour un particulier.
-  @IsOptional() @IsString() @MaxLength(20) sigle?: string;
   @IsOptional() @IsString() contact?: string;
   @IsOptional() @IsString() email?: string;
   @IsOptional() @IsString() telephone?: string;
@@ -38,25 +36,33 @@ class NouveauClientDto {
 class ClientRefDto {
   @IsOptional() @IsString() id?: string;
   @IsOptional() @ValidateNested() @Type(() => NouveauClientDto) nouveau?: NouveauClientDto;
-  // Complète le sigle d'une personne morale existante qui n'en a pas encore.
-  @IsOptional() @IsString() @MaxLength(20) sigle?: string;
 }
 
 // Pas fixes validés (sept. 2026) — mêmes valeurs que la contrainte base
 // dossiers_crm_commission_apporteur_pas.
 export const PAS_COMMISSION = [3, 3.5, 4, 4.5, 5] as const;
 
-// Interne = le créateur lui-même (rempli côté serveur, rien à saisir) ;
-// externe = tiers, nom obligatoire + coordonnées facultatives.
-class ApporteurDto {
-  @IsEnum(TypeApporteur) type!: TypeApporteur;
+// Fiche apporteur d'affaire (maquette « Nouveau projet », oct. 2026) :
+// obligatoire — soit « aucun apporteur (affaire directe) », soit un tiers
+// avec nom et % attribué ; structure et coordonnées facultatives. Validée et
+// verrouillée à la création, puis modifiable par le COO seul (même DTO).
+// Plus d'apporteur « interne » à la création ; les dossiers antérieurs qui en
+// ont un le gardent.
+export const TYPES_APPORTEUR_SAISIS = ['aucun', 'externe'] as const;
+
+export class ApporteurDto {
+  @IsIn(TYPES_APPORTEUR_SAISIS) type!: (typeof TYPES_APPORTEUR_SAISIS)[number];
   @ValidateIf((a: ApporteurDto) => a.type === 'externe')
   @IsString()
   @MinLength(1)
   @MaxLength(120)
   nom?: string;
+  @IsOptional() @IsString() @MaxLength(120) structure?: string;
   @IsOptional() @IsString() @MaxLength(40) telephone?: string;
   @IsOptional() @IsEmail() @MaxLength(120) email?: string;
+  @ValidateIf((a: ApporteurDto) => a.type === 'externe')
+  @IsIn(PAS_COMMISSION)
+  commission?: number;
 }
 
 // Un lead peut être créé incomplet (maquette CRM) : seuls le client et la
@@ -78,10 +84,8 @@ export class CreerDossierDto {
   @IsOptional() @IsString() @MaxLength(200) programme?: string;
   @ValidateNested() @Type(() => ClientRefDto) client!: ClientRefDto;
   @ValidateNested() @Type(() => ApporteurDto) apporteur!: ApporteurDto;
-  // null/absent = aucune commission. Exige finances_charges ≥ écriture.
-  @IsOptional() @IsIn(PAS_COMMISSION) commissionApporteur?: number | null;
-  // Obligatoire seulement s'il y a plusieurs titulaires Dir. GC (sinon choisi
-  // d'office, ou « à assigner » s'il n'y en a aucun).
+  // Facultatif : sans choix, un titulaire Dir. GC unique est retenu d'office ;
+  // aucun ou plusieurs → « à assigner », réassignable sur la fiche.
   @IsOptional() @IsString() proprietaireId?: string;
   // Pas de champ `code` : il est toujours généré (CLIENT_LOC.AA, -2 si
   // doublon), jamais saisi à la main (règle validée, sept. 2026).

@@ -536,13 +536,17 @@ model DossierCrm {
   clientId               String         @map("client_id")
   // -- « Qui » (étape C1, sept. 2026). Tous null sur les dossiers antérieurs.
   creeParId              String?        @map("cree_par_id")
-  // Apporteur d'affaire, figé à la création : interne = le créateur lui-même
-  // (compte HUB, rempli automatiquement) ; externe = tiers saisi (nom +
-  // coordonnées). Commission = taux à pas fixes (3 à 5 %), null = aucune —
-  // donnée financière, lue/écrite sous le module finances_charges.
+  // Fiche apporteur d'affaire, validée et verrouillée à la création, puis
+  // modifiable par le COO seul (maquette « Nouveau projet », oct. 2026).
+  // null = aucun apporteur (affaire directe) — ou dossier antérieur à la
+  // fiche ; externe = tiers saisi (nom, structure, coordonnées, % attribué) ;
+  // interne = le créateur lui-même, plus proposé à la création (dossiers
+  // antérieurs seulement). Commission = % attribué, pas fixes (3 à 5 %) —
+  // partie de la fiche apporteur, lue par les rôles CRM.
   apporteurType          TypeApporteur? @map("apporteur_type")
   apporteurUtilisateurId String?        @map("apporteur_utilisateur_id")
   apporteurNom           String?        @map("apporteur_nom")
+  apporteurStructure     String?        @map("apporteur_structure") // « Notaire, partenaire… »
   apporteurTelephone     String?        @map("apporteur_telephone")
   apporteurEmail         String?        @map("apporteur_email")
   commissionApporteur    Decimal?       @map("commission_apporteur") @db.Decimal(3, 1)
@@ -584,6 +588,10 @@ model DossierCrm {
 //    à la création, `de` null). Porte le motif d'un passage à « perdu » et le
 //    commentaire de la DAF quand elle renvoie un dossier — trace d'audit (qui
 //    a validé quoi) et base des futurs calculs de délais du pipeline.
+// Journal de la fiche : une ligne par changement de statut. de = vers = un
+// événement de la fiche sans changement d'étape (fiche apporteur modifiée par
+// le COO), décrit par `commentaire`. de = null = création ; son commentaire
+// garde la fiche apporteur telle que validée.
 model DossierCrmTransition {
   id          String     @id @default(uuid())
   dossierId   String     @map("dossier_id")

@@ -16,6 +16,7 @@ import { RequiertPermission } from '../commun/permission.decorator';
 import { Acteur, CrmService } from './crm.service';
 import {
   ActionDossierDto,
+  ApporteurDto,
   ChangerProprietaireDto,
   CreerDossierDto,
   ModifierFicheDto,
@@ -83,6 +84,14 @@ export class CrmController {
       id,
       dto.proprietaireId,
     );
+  }
+
+  // Fiche apporteur verrouillée depuis la création : le service n'autorise
+  // que le COO (cf. modifierApporteur).
+  @Patch(':id/apporteur')
+  @RequiertPermission('crm', 'ecriture')
+  modifierApporteur(@Req() req: Req, @Param('id') id: string, @Body() dto: ApporteurDto) {
+    return this.crm.modifierApporteur(req.user.societeId, req.user, id, dto);
   }
 
   // Même garde que la réassignation (Direction GC, administration, CIO),

@@ -3,29 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { creerProjet } from '@/lib/crm';
-import { aLaPermission, getSession } from '@/lib/auth';
+import { getSession } from '@/lib/auth';
+import { libelleRole } from '@/lib/groupe';
 import { LocaliteSelect } from './localite-select';
-import { estPersonneMorale, genererCodeDossier, normaliserSigle } from '@/lib/nomenclature';
 import {
-  CATEGORIES,
-  GAMMES,
-  NATURES_DOSSIER,
-  STANDINGS,
-  TYPES_BIEN,
-  TYPES_CLIENT,
-  type Categorie,
-  type Client,
-  type Gamme,
-  type Localite,
-  type NatureDossier,
-  type NouveauProjetPayload,
-  PAS_COMMISSION,
-  type Personne,
-  type Projet,
-  type Standing,
-  type TypeBien,
-  type TypeClient,
-} from '@/lib/types';
+  FicheApporteurChamps,
+  SAISIE_APPORTEUR_VIDE,
+  versApporteurSaisi,
+  type SaisieApporteur,
+} from './fiche-apporteur-champs';
+import { segmentClient } from '@/lib/nomenclature';
+import type { Client, Localite, NouveauProjetPayload, Personne, Projet, TypeClient } from '@/lib/types';
 
 const NOUVEAU_CLIENT = '__nouveau__';
 
@@ -39,90 +27,59 @@ type Props = {
   onCree: (projet: Projet) => void;
 };
 
-// Petit helper pour les <select> pilotés par un Record<clé, libellé>.
-function options<T extends string>(map: Record<T, string>) {
-  return (Object.keys(map) as T[]).map((cle) => (
-    <option key={cle} value={cle}>
-      {map[cle]}
-    </option>
-  ));
-}
-
-// Champ facultatif à la création : vide = « à choisir » sur la fiche.
-const aChoisir = <option value="">— Choisir —</option>;
-
-export function NouveauProjetModal({
-  slug,
-  clients,
-  localites,
-  proprietaires,
-  onClose,
-  onCree,
-}: Props) {
-  // Verrouillé sur Mandat client (demande boss, sept. 2026) : Promotion
-  // interne reste dans l'enum côté schéma (pas une suppression) mais n'est
-  // plus proposée à la création tant que la consigne n'est pas levée.
-  const nature: NatureDossier = 'mandat_client';
-  // Lead incomplet permis (maquette CRM) : rien de pré-choisi — un champ
-  // laissé vide se complète sur la fiche avant l'offre.
-  const [categorie, setCategorie] = useState<Categorie | ''>('');
+// « Nouveau projet » (maquette du boss, oct. 2026) : le client, sa nature, la
+// localité et la fiche apporteur, rien d'autre — le code se compose sous les
+// yeux. Type, terrain, planches, standing, gamme et programme se complètent
+// ensuite sur la fiche (relance du HUB au-delà de 72 h).
+export function NouveauProjetModal({ slug, clients, localites, proprietaires, onClose, onCree }: Props) {
+  const [clientId, setClientId] = useState(NOUVEAU_CLIENT);
+  const [morale, setMorale] = useState(false);
+  const [nom, setNom] = useState('');
   const [localiteId, setLocaliteId] = useState('');
-  const [type, setType] = useState<TypeBien | ''>('');
-  const [nbPlanches, setNbPlanches] = useState('');
-  const [surfaceTerrain, setSurfaceTerrain] = useState('');
-  const [programme, setProgramme] = useState('');
-  const [standing, setStanding] = useState<Standing | ''>('');
-  const [gamme, setGamme] = useState<Gamme | ''>('');
-  const [clientId, setClientId] = useState('');
-  const [nouveauNom, setNouveauNom] = useState('');
-  const [nouveauType, setNouveauType] = useState<TypeClient>('particulier');
-  const [nouveauContact, setNouveauContact] = useState('');
-  const [nouveauEmail, setNouveauEmail] = useState('');
-  const [nouveauTel, setNouveauTel] = useState('');
-  // Sigle d'une nouvelle personne morale, ou d'une existante qui n'en a pas.
-  const [sigle, setSigle] = useState('');
-
-  // Apporteur d'affaire : interne = moi (le créateur), externe = tiers.
-  const [apporteurType, setApporteurType] = useState<'interne' | 'externe'>('interne');
-  const [apporteurNom, setApporteurNom] = useState('');
-  const [apporteurTel, setApporteurTel] = useState('');
-  const [apporteurEmail, setApporteurEmail] = useState('');
-  const [commission, setCommission] = useState(''); // '' = aucune
-  const [proprietaireId, setProprietaireId] = useState('');
+  const [apporteur, setApporteur] = useState<SaisieApporteur>(SAISIE_APPORTEUR_VIDE);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
-  // Lus une fois : la session ne change pas pendant la vie de la modale.
-  const [moi] = useState(() => {
-    const u = getSession()?.utilisateur;
-    return u ? `${u.prenom} ${u.nom}` : 'moi';
-  });
-  const [peutSaisirCommission] = useState(() => aLaPermission('finances_charges', 'ecriture'));
-  const choixProprietaire = (proprietaires?.length ?? 0) > 1;
-  const premierChamp = useRef<HTMLInputElement>(null);
-  const localite = localites?.find((l) => l.id === localiteId) ?? null;
+  // Lue une fois : la session ne change pas pendant la vie de la modale.
+  const [session] = useState(getSession);
+  const champNom = useRef<HTMLInputElement>(null);
 
   const clientNouveau = clientId === NOUVEAU_CLIENT;
-
   const clientExistant = clientNouveau ? null : clients.find((c) => c.id === clientId) ?? null;
-  // Champ sigle : nouvelle personne morale, ou personne morale existante dont
-  // la fiche n'a pas encore de sigle (il y sera enregistré).
-  const sigleRequis = clientNouveau
-    ? estPersonneMorale(nouveauType)
-    : !!clientExistant && estPersonneMorale(clientExistant.type) && !clientExistant.sigle;
+  // Personne morale : stockée « entreprise » (le détail SCI / institution se
+  // règle sur la fiche client) ; seule la règle du code en dépend.
+  const typeNouveau: TypeClient = morale ? 'entreprise' : 'particulier';
+  const localite = localites?.find((l) => l.id === localiteId) ?? null;
 
-  // Aperçu du code — toujours généré, jamais saisi (le -2/-3 éventuel est
-  // tranché par le serveur, qui connaît les codes déjà pris).
-  const apercuCode = genererCodeDossier(
-    clientNouveau
-      ? { nom: nouveauNom, type: nouveauType, sigle }
-      : clientExistant
-        ? { ...clientExistant, sigle: clientExistant.sigle || sigle }
-        : { nom: '', type: 'particulier' },
-    localite?.code ?? '',
-  );
+  // Aperçu du code, segment par segment (« ??? » tant qu'il manque) — le
+  // -2/-3 éventuel est tranché par le serveur, qui connaît les codes pris.
+  const segment = clientNouveau ? segmentClient({ nom, type: typeNouveau }) : clientExistant ? segmentClient(clientExistant) : '';
+  const code = `${segment || '???'}_${localite?.code ?? '???'}.${String(new Date().getFullYear()).slice(-2)}`;
+
+  const apporteurSaisi = versApporteurSaisi(apporteur);
+  const clientSaisi = clientNouveau ? !!nom.trim() : !!clientExistant;
+  const blocage = !clientSaisi
+    ? 'Saisir le client pour continuer'
+    : !localiteId
+      ? 'Choisir la localisation pour continuer'
+      : !apporteurSaisi
+        ? 'Compléter la fiche apporteur pour continuer'
+        : null;
+
+  // Passation : le rôle du créateur, puis qui pilotera la fiche (le Dir. GC
+  // propriétaire, choisi d'office par le serveur s'il est seul).
+  const moi = session?.utilisateur.id;
+  const pilote = proprietaires?.length === 1 ? proprietaires[0] : null;
+  const passation =
+    proprietaires === null
+      ? '…'
+      : pilote?.id === moi
+        ? 'Vous créez et pilotez la fiche.'
+        : pilote
+          ? `${pilote.nom} (Direction GC) pilote ensuite la fiche jusqu’au contrat.`
+          : 'Propriétaire à assigner ensuite sur la fiche (Direction GC).';
 
   useEffect(() => {
-    premierChamp.current?.focus();
+    champNom.current?.focus();
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
     }
@@ -132,64 +89,22 @@ export function NouveauProjetModal({
 
   async function soumettre(e: React.FormEvent) {
     e.preventDefault();
+    if (blocage || !apporteurSaisi) return;
     setErreur(null);
-
-    if (!localiteId) return setErreur('Choisis une localité dans la liste.');
-    if (!clientId) return setErreur('Choisis un client (ou crée-en un).');
-    if (clientNouveau && !nouveauNom.trim())
-      return setErreur('Le nom du nouveau client est requis.');
-    if (apporteurType === 'externe' && !apporteurNom.trim())
-      return setErreur('Le nom de l’apporteur externe est requis.');
-    if (choixProprietaire && !proprietaireId)
-      return setErreur('Choisis le propriétaire du dossier.');
-    if (sigleRequis && !normaliserSigle(sigle))
-      return setErreur('Le sigle est obligatoire pour une société, une SCI ou une institution.');
-
-    const client: NouveauProjetPayload['client'] = clientNouveau
-      ? {
-          nouveau: {
-            nom: nouveauNom.trim(),
-            type: nouveauType,
-            sigle: sigleRequis ? sigle.trim() : undefined,
-            contact: nouveauContact.trim() || undefined,
-            email: nouveauEmail.trim() || undefined,
-            telephone: nouveauTel.trim() || undefined,
-          },
-        }
-      : { id: clientId, sigle: sigleRequis ? sigle.trim() : undefined };
-
+    const payload: NouveauProjetPayload = {
+      // Verrouillé sur Mandat client (demande boss, sept. 2026) : Promotion
+      // interne reste dans l'enum mais n'est pas proposée à la création.
+      nature: 'mandat_client',
+      localiteId,
+      client: clientNouveau ? { nouveau: { nom: nom.trim(), type: typeNouveau } } : { id: clientId },
+      apporteur: apporteurSaisi,
+    };
     setEnvoi(true);
     try {
-      const projet = await creerProjet(slug, {
-        nature,
-        categorie: categorie || undefined,
-        localiteId,
-        type: type || undefined,
-        nbPlanches: nbPlanches ? Number(nbPlanches) : undefined,
-        surfaceTerrain: surfaceTerrain ? Number(surfaceTerrain) : undefined,
-        client,
-        standing: standing || undefined,
-        gamme: gamme || undefined,
-        programme: programme.trim() || undefined,
-        apporteur:
-          apporteurType === 'interne'
-            ? { type: 'interne' }
-            : {
-                type: 'externe',
-                nom: apporteurNom.trim(),
-                telephone: apporteurTel.trim() || undefined,
-                email: apporteurEmail.trim() || undefined,
-              },
-        commissionApporteur:
-          peutSaisirCommission && commission ? Number(commission) : undefined,
-        proprietaireId: proprietaireId || undefined,
-      });
-      onCree(projet);
+      onCree(await creerProjet(slug, payload));
       onClose();
-    } catch (e) {
-      setErreur(
-        e instanceof Error && e.message ? e.message : 'La création a échoué. Réessaie.',
-      );
+    } catch (err) {
+      setErreur(err instanceof Error && err.message ? err.message : 'La création a échoué. Réessaie.');
       setEnvoi(false);
     }
   }
@@ -197,7 +112,7 @@ export function NouveauProjetModal({
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal"
+        className="modal nouveau-projet"
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-titre"
@@ -211,33 +126,82 @@ export function NouveauProjetModal({
         </header>
 
         <form className="modal-body" onSubmit={soumettre}>
-          <p className="field-aide">
-            Côté projet, seuls la localisation et le client sont requis : ils composent le code. Le reste se complète sur la
-            fiche, avant l’offre.
-          </p>
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Nature</span>
-              <select className="field-input" value={nature} disabled>
-                {options({ mandat_client: NATURES_DOSSIER.mandat_client })}
-              </select>
-              <span className="field-hint">Promotion interne temporairement indisponible</span>
-            </label>
-            <label className="field">
-              <span className="field-label">Catégorie</span>
-              <select
-                className="field-input"
-                value={categorie}
-                onChange={(e) => setCategorie(e.target.value as Categorie | '')}
-              >
-                {aChoisir}
-                {options(CATEGORIES)}
-              </select>
-            </label>
+          <div className="nouveau-projet-code">
+            <span className="nouveau-projet-surtitre">Code projet généré</span>
+            <strong className="nouveau-projet-code-valeur" aria-live="polite">
+              {code}
+            </strong>
+            <span>Le code se compose au fur et à mesure de la saisie.</span>
           </div>
 
           <div className="field">
-            <label className="field-label" htmlFor="nouveau-projet-localite">
+            <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-client">
+              Client
+            </label>
+            <select
+              id="nouveau-projet-client"
+              className="field-input"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+            >
+              <option value={NOUVEAU_CLIENT}>+ Nouveau client</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nom}
+                </option>
+              ))}
+            </select>
+            <span className="field-aide">
+              Un client existant garde sa fiche, ses contacts et son adresse ; le nouveau projet s’y rattache.
+            </span>
+          </div>
+
+          {clientNouveau && (
+            <>
+              <div className="field">
+                <span className="field-label nouveau-projet-label" id="nouveau-projet-nature">
+                  Nature du client
+                </span>
+                <div className="nouveau-projet-nature" role="radiogroup" aria-labelledby="nouveau-projet-nature">
+                  {[false, true].map((m) => (
+                    <button
+                      key={String(m)}
+                      type="button"
+                      role="radio"
+                      aria-checked={morale === m}
+                      className={morale === m ? 'is-actif' : undefined}
+                      onClick={() => setMorale(m)}
+                    >
+                      {m ? 'Personne morale' : 'Personne physique'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="field">
+                <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-nom">
+                  {morale ? 'Raison sociale' : 'Prénom(s) et nom'}
+                </label>
+                <input
+                  ref={champNom}
+                  id="nouveau-projet-nom"
+                  className="field-input"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder={morale ? 'ex. SCI Les Filaos' : 'ex. Dior Fall Sourang'}
+                  maxLength={160}
+                />
+                <span className="field-aide">
+                  {morale
+                    ? 'Les initiales ignorent les mots de liaison et la forme juridique (SA, SARL…).'
+                    : 'Dans l’ordre de l’état civil : une lettre par prénom et par nom.'}
+                </span>
+              </div>
+            </>
+          )}
+
+          <div className="field">
+            <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-localite">
               Localisation
             </label>
             <LocaliteSelect
@@ -245,323 +209,46 @@ export function NouveauProjetModal({
               valeur={localiteId}
               onChange={setLocaliteId}
               idChamp="nouveau-projet-localite"
+              filtre={false}
             />
             <span className="field-aide">
-              Absente de la liste ? Demande à la direction de l’ajouter (Paramètres → Localités).
+              Choisie dans le référentiel des localités. Le code{localite ? ` (ici ${localite.code})` : ''} n’est jamais
+              tapé à la main.
             </span>
           </div>
 
-          <label className="field">
-            <span className="field-label">Programme</span>
-            <input
-              ref={premierChamp}
-              className="field-input"
-              value={programme}
-              onChange={(e) => setProgramme(e.target.value)}
-              placeholder="ex : Les Terrasses de Ngor"
-            />
-          </label>
-
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Type</span>
-              <select
-                className="field-input"
-                value={type}
-                onChange={(e) => setType(e.target.value as TypeBien | '')}
-              >
-                {aChoisir}
-                {options(TYPES_BIEN)}
-              </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Nombre de planches</span>
-              <input
-                className="field-input"
-                type="number"
-                min="0"
-                value={nbPlanches}
-                onChange={(e) => setNbPlanches(e.target.value)}
-                placeholder="ex : 3"
-              />
-              {/* CGV art. 4 — base du tarif de conception (CO). */}
-              <span className="field-aide">
-                Niveaux distincts à dessiner (des niveaux identiques = 1 planche).
-              </span>
-            </label>
+          <div
+            className={`fiche-apporteur${apporteur.aucun ? ' is-directe' : ''}`}
+            role="group"
+            aria-labelledby="nouveau-projet-apporteur"
+          >
+            <p className="fiche-apporteur-titre" id="nouveau-projet-apporteur">
+              <strong>Fiche apporteur d’affaire</strong> (obligatoire · validée et verrouillée à la création)
+            </p>
+            <FicheApporteurChamps saisie={apporteur} onChange={setApporteur} idPrefixe="nouveau-projet-apporteur" />
+            <span className="field-aide">Après création, seul le COO pourra modifier cette fiche.</span>
           </div>
 
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Surface terrain (m²)</span>
-              <input
-                className="field-input"
-                type="number"
-                min="0"
-                value={surfaceTerrain}
-                onChange={(e) => setSurfaceTerrain(e.target.value)}
-                placeholder="ex : 320"
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">Standing</span>
-              <select
-                className="field-input"
-                value={standing}
-                onChange={(e) => setStanding(e.target.value as Standing | '')}
-              >
-                {aChoisir}
-                {options(STANDINGS)}
-              </select>
-            </label>
+          <div className="nouveau-projet-passation">
+            <span className="nouveau-projet-surtitre">Créée par (automatique)</span>
+            <strong>{session ? libelleRole(session.role) : '—'}</strong>
+            <span>{passation}</span>
           </div>
 
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Gamme</span>
-              <select
-                className="field-input"
-                value={gamme}
-                onChange={(e) => setGamme(e.target.value as Gamme | '')}
-              >
-                {aChoisir}
-                {options(GAMMES)}
-              </select>
-            </label>
-            {/* Plus de statut ici : tout dossier naît « Nouveau projet ». */}
-            <span aria-hidden />
-          </div>
-
-          <label className="field">
-            <span className="field-label">Client</span>
-            <select
-              className="field-input"
-              value={clientId}
-              onChange={(e) => {
-                setClientId(e.target.value);
-                setSigle('');
-              }}
-            >
-              <option value="">Choisir…</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nom} — {TYPES_CLIENT[c.type]}
-                </option>
-              ))}
-              <option value={NOUVEAU_CLIENT}>＋ Nouveau client…</option>
-            </select>
-          </label>
-
-          {!clientNouveau && sigleRequis && (
-            <label className="field">
-              <span className="field-label">Sigle du client</span>
-              <input
-                className="field-input"
-                value={sigle}
-                onChange={(e) => setSigle(e.target.value.toUpperCase())}
-                placeholder="ex : TC"
-                maxLength={20}
-              />
-              <span className="field-aide">
-                Cette fiche n’a pas encore de sigle : il y sera enregistré et servira au code.
-              </span>
-            </label>
-          )}
-
-          {clientNouveau && (
-            <div className="field-bloc">
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Nom du client</span>
-                  <input
-                    className="field-input"
-                    value={nouveauNom}
-                    onChange={(e) => setNouveauNom(e.target.value)}
-                    placeholder="ex : SCI Ndiaye Frères"
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Type</span>
-                  <select
-                    className="field-input"
-                    value={nouveauType}
-                    onChange={(e) => setNouveauType(e.target.value as TypeClient)}
-                  >
-                    {options(TYPES_CLIENT)}
-                  </select>
-                </label>
-              </div>
-              {sigleRequis && (
-                <label className="field">
-                  <span className="field-label">Sigle</span>
-                  <input
-                    className="field-input"
-                    value={sigle}
-                    onChange={(e) => setSigle(e.target.value.toUpperCase())}
-                    placeholder="ex : SNF"
-                    maxLength={20}
-                  />
-                  <span className="field-aide">
-                    Le sigle que l’entreprise utilise elle-même — il forme le début du code.
-                  </span>
-                </label>
-              )}
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Contact (facultatif)</span>
-                  <input
-                    className="field-input"
-                    value={nouveauContact}
-                    onChange={(e) => setNouveauContact(e.target.value)}
-                    placeholder="Personne référente"
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Téléphone (facultatif)</span>
-                  <input
-                    className="field-input"
-                    value={nouveauTel}
-                    onChange={(e) => setNouveauTel(e.target.value)}
-                    placeholder="+221…"
-                  />
-                </label>
-              </div>
-              <label className="field">
-                <span className="field-label">Email (facultatif)</span>
-                <input
-                  className="field-input"
-                  type="email"
-                  value={nouveauEmail}
-                  onChange={(e) => setNouveauEmail(e.target.value)}
-                  placeholder="contact@…"
-                />
-              </label>
-            </div>
-          )}
-
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Apporteur d’affaire</span>
-              <select
-                className="field-input"
-                value={apporteurType}
-                onChange={(e) => setApporteurType(e.target.value as 'interne' | 'externe')}
-              >
-                <option value="interne">Moi-même ({moi})</option>
-                <option value="externe">Un tiers externe…</option>
-              </select>
-            </label>
-            {peutSaisirCommission ? (
-              <label className="field">
-                <span className="field-label">Commission apporteur</span>
-                <select
-                  className="field-input"
-                  value={commission}
-                  onChange={(e) => setCommission(e.target.value)}
-                >
-                  <option value="">Aucune</option>
-                  {PAS_COMMISSION.map((p) => (
-                    <option key={p} value={p}>
-                      {String(p).replace('.', ',')} %
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <span aria-hidden />
-            )}
-          </div>
-
-          {apporteurType === 'externe' && (
-            <div className="field-bloc">
-              <label className="field">
-                <span className="field-label">Nom de l’apporteur</span>
-                <input
-                  className="field-input"
-                  value={apporteurNom}
-                  onChange={(e) => setApporteurNom(e.target.value)}
-                  placeholder="ex : Me Aliou Ndiaye (notaire)"
-                  maxLength={120}
-                />
-              </label>
-              <div className="field-row">
-                <label className="field">
-                  <span className="field-label">Téléphone (facultatif)</span>
-                  <input
-                    className="field-input"
-                    value={apporteurTel}
-                    onChange={(e) => setApporteurTel(e.target.value)}
-                    placeholder="+221…"
-                    maxLength={40}
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Email (facultatif)</span>
-                  <input
-                    className="field-input"
-                    type="email"
-                    value={apporteurEmail}
-                    onChange={(e) => setApporteurEmail(e.target.value)}
-                    placeholder="contact@…"
-                    maxLength={120}
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-
-          <div className="field">
-            <span className="field-label">Propriétaire du dossier</span>
-            {proprietaires === null ? (
-              <span className="field-aide">Chargement…</span>
-            ) : choixProprietaire ? (
-              <select
-                className="field-input"
-                value={proprietaireId}
-                onChange={(e) => setProprietaireId(e.target.value)}
-                aria-label="Propriétaire du dossier"
-              >
-                <option value="">Choisir parmi les Dir. GC…</option>
-                {proprietaires.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nom}
-                  </option>
-                ))}
-              </select>
-            ) : proprietaires.length === 1 ? (
-              <span className="detail-dossier-valeur">{proprietaires[0].nom}</span>
-            ) : (
-              <span className="detail-dossier-valeur">
-                <span className="pill pill--attention">À assigner</span>
-              </span>
-            )}
-            <span className="field-aide">
-              {proprietaires?.length === 0
-                ? 'Aucun titulaire du rôle Dir. GC : le dossier sera créé « à assigner ».'
-                : 'Le responsable Dir. GC qui suit le dossier — réassignable ensuite.'}
-            </span>
-          </div>
-
-          <div className="field">
-            <span className="field-label">Code projet</span>
-            <span className="code-apercu">{apercuCode || '—'}</span>
-            <span className="field-aide">
-              {apercuCode
-                ? 'Généré automatiquement (-2, -3… si ce code existe déjà).'
-                : 'Généré à partir du client et de la localité — jamais saisi à la main.'}
-            </span>
-          </div>
+          <p className="field-aide nouveau-projet-suite">
+            Les autres champs (type, terrain, planches, standing, gamme, programme) se complètent ensuite dans la fiche,
+            par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
+          </p>
 
           {erreur && <p className="field-erreur">{erreur}</p>}
 
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" onClick={onClose}>
-              Annuler
-            </button>
-            <button type="submit" className="btn-primary" disabled={envoi}>
-              {envoi ? 'Création…' : 'Créer le projet'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            className={`btn-primary nouveau-projet-valider${blocage ? ' is-bloque' : ''}`}
+            disabled={!!blocage || envoi}
+          >
+            {envoi ? 'Création…' : blocage ?? 'Créer le projet'}
+          </button>
         </form>
       </div>
     </div>
