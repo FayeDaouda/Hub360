@@ -96,6 +96,10 @@ export class DemandesService {
   async deposerAbsence(a: Acteur, dto: DeposerAbsenceDto) {
     const { collab, dossier } = await this.moi(a);
     if (dto.dateFin < dto.dateDebut) throw new BadRequestException('La date de fin précède la date de début.');
+    // Maquette : motif « facultatif pour un congé payé », donc requis sinon.
+    if (dto.type !== 'conge_paye' && !dto.commentaire?.trim()) {
+      throw new BadRequestException('Le motif est requis pour une absence autre qu’un congé payé.');
+    }
     const jours = joursOuvrables(dto.dateDebut, dto.dateFin, await this.feries(dossier.societeId));
     if (jours === 0) throw new BadRequestException('Aucun jour ouvrable sur cette période.');
     const n1 = this.n1Pour(a.role, collab);
@@ -146,6 +150,10 @@ export class DemandesService {
   }
 
   async deposerRemboursement(a: Acteur, dto: DeposerRemboursementDto) {
+    // Maquette : « Facture et ordonnance jointes (obligatoire) ».
+    if (!dto.justificatifs?.length) {
+      throw new BadRequestException('Joignez la facture et l’ordonnance.');
+    }
     const { dossier } = await this.moi(a);
     return this.prisma.demandeRemboursement.create({
       data: {

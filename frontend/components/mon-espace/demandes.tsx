@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { CalendarCheck, CalendarDays, HeartPulse, Hourglass } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier } from '@/lib/fichiers';
 import {
@@ -19,12 +18,69 @@ import {
 } from '@/lib/demandes';
 import { formatMontant } from '@/lib/format';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 
 type Fichier = { nom: string; url: string };
 type MesDemandes = { solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] };
 
 const msg = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : e instanceof Error ? e.message : repli);
+
+// Dates saisies au format de la maquette (JJ/MM/AAAA) ; null si invalide.
+function versIso(jjmmaaaa: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(jjmmaaaa.trim());
+  if (!m) return null;
+  const iso = `${m[3]}-${m[2]}-${m[1]}`;
+  const d = new Date(`${iso}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : null;
+}
+
+// Pièce jointe présentée comme la case de la maquette (« Justificatif joint ») :
+// cocher ouvre le sélecteur de fichiers ; la case est cochée dès qu'un fichier
+// est joint (décocher le retire).
+function CaseJointe({
+  libelle,
+  fichiers,
+  multiple,
+  onChange,
+  onErreur,
+}: {
+  libelle: string;
+  fichiers: Fichier[];
+  multiple?: boolean;
+  onChange: (f: Fichier[]) => void;
+  onErreur: (m: string) => void;
+}) {
+  return (
+    <label className="me-case-jointe">
+      <input
+        type="checkbox"
+        checked={fichiers.length > 0}
+        onChange={(e) => {
+          if (!e.target.checked) onChange([]);
+        }}
+        onClick={(e) => {
+          if (fichiers.length === 0) {
+            e.preventDefault();
+            (e.currentTarget.parentElement?.querySelector('input[type=file]') as HTMLInputElement | null)?.click();
+          }
+        }}
+      />
+      <span>
+        {libelle}
+        {fichiers.length > 0 && <span className="cell-sub"> · {fichiers.map((f) => f.nom).join(', ')}</span>}
+      </span>
+      <input
+        type="file"
+        hidden
+        multiple={multiple}
+        onChange={(e) =>
+          Promise.all(Array.from(e.target.files ?? []).map(lireFichier))
+            .then((l) => onChange(l.map(({ nom, url }) => ({ nom, url }))))
+            .catch((err) => onErreur(msg(err, 'Fichier illisible.')))
+        }
+      />
+    </label>
+  );
+}
 
 function useMesDemandes(slug: string) {
   const [donnees, setDonnees] = useState<MesDemandes | null>(null);
@@ -32,7 +88,7 @@ function useMesDemandes(slug: string) {
   const charger = useCallback(() => {
     getMesDemandes(slug)
       .then(setDonnees)
-      .catch((e) => setErreur(msg(e, 'Impossible de charger tes demandes.')));
+      .catch((e) => setErreur(msg(e, 'Impossible de charger vos demandes.')));
   }, [slug]);
   useEffect(charger, [charger]);
   return { donnees, erreur, charger };
@@ -46,9 +102,9 @@ function Chargement() {
   );
 }
 
-// « Mon espace » · Congés et absences (RH lot 2) : solde, demande, suivi (la
-// file du N+1 vit dans l'onglet « À valider »). Règles de solde = hypothèses
-// de travail (cf. regles-conges.ts).
+// « Mon espace » · Congés et absences (RH lot 2, maquette du boss) : solde
+// de l'année, demande, suivi (la file du N+1 vit dans « À valider »). Règles
+// de solde = hypothèses de travail (cf. regles-conges.ts).
 export function CongesAbsences({ slug }: { slug: string }) {
   const { donnees, erreur, charger } = useMesDemandes(slug);
   if (erreur) return <p className="empty-state">{erreur}</p>;
@@ -56,36 +112,26 @@ export function CongesAbsences({ slug }: { slug: string }) {
   const { solde, absences } = donnees;
 
   return (
-    <>
-      <KpiStrip
-        tuiles={[
-          { cle: 'dispo', label: 'Congés disponibles', valeur: solde.disponible, sousTexte: 'jours ouvrables', icone: CalendarCheck },
-          { cle: 'acquis', label: 'Acquis', valeur: solde.acquis, sousTexte: '2 j par mois complet (hypothèse)', icone: CalendarDays },
-          { cle: 'attente', label: 'En attente', valeur: solde.enAttente, sousTexte: `${solde.pris} j déjà pris`, icone: Hourglass },
-        ]}
-      />
-
-      <div className="dmd-grille">
-        <FormAbsence slug={slug} onFait={charger} />
-        <section className="panel glass-panel dmd-section">
-          <h2 className="dmd-titre">Mes absences</h2>
-          {absences.length === 0 ? (
-            <p className="empty-state">Aucune demande pour l’instant.</p>
-          ) : (
-            <ul className="dmd-liste">
-              {absences.map((d) => (
-                <LigneAbsence key={d.id} slug={slug} d={d} onFait={charger} />
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-    </>
+    <div className="me-colonnes me-colonnes--egales">
+      <FormAbsence slug={slug} solde={solde} onFait={charger} />
+      <section className="panel glass-panel dmd-section">
+        <h2 className="dmd-titre">Mes demandes</h2>
+        {absences.length === 0 ? (
+          <p className="dmd-note">Aucune demande.</p>
+        ) : (
+          <ul className="dmd-liste">
+            {absences.map((d) => (
+              <LigneAbsence key={d.id} slug={slug} d={d} onFait={charger} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }
 
-// « Mon espace » · Remboursements santé (RH lot 2) : soumise → transmise →
-// remboursée / rejetée, sans aucune donnée médicale.
+// « Mon espace » · Remboursements santé (RH lot 2, maquette du boss) :
+// soumise → transmise → remboursée / rejetée, sans aucune donnée médicale.
 export function RemboursementsSante({ slug }: { slug: string }) {
   const { donnees, erreur, charger } = useMesDemandes(slug);
   if (erreur) return <p className="empty-state">{erreur}</p>;
@@ -93,12 +139,12 @@ export function RemboursementsSante({ slug }: { slug: string }) {
   const { remboursements } = donnees;
 
   return (
-    <div className="dmd-grille">
+    <div className="me-colonnes me-colonnes--egales">
       <FormRemboursement slug={slug} onFait={charger} />
       <section className="panel glass-panel dmd-section">
-        <h2 className="dmd-titre">Mes remboursements santé</h2>
+        <h2 className="dmd-titre">Mes demandes de remboursement</h2>
         {remboursements.length === 0 ? (
-          <p className="empty-state">Aucune demande de remboursement.</p>
+          <p className="dmd-note">Aucune demande.</p>
         ) : (
           <ul className="dmd-liste">
             {remboursements.map((r) => (
@@ -168,23 +214,28 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
   );
 }
 
-function FormAbsence({ slug, onFait }: { slug: string; onFait: () => void }) {
+function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges; onFait: () => void }) {
   const [type, setType] = useState<TypeAbsence>('conge_paye');
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
-  const [commentaire, setCommentaire] = useState('');
-  const [fichier, setFichier] = useState<Fichier | null>(null);
+  const [motif, setMotif] = useState('');
+  const [fichiers, setFichiers] = useState<Fichier[]>([]);
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
+  const isoDebut = versIso(debut);
+  const isoFin = versIso(fin);
+  const motifRequis = type !== 'conge_paye';
+  const pret = !!isoDebut && !!isoFin && (!motifRequis || !!motif.trim());
 
   async function envoyer(e: FormEvent) {
     e.preventDefault();
+    if (!isoDebut || !isoFin) return;
     setEtat({ envoi: true, erreur: null });
     try {
-      await deposerAbsence(slug, { type, dateDebut: debut, dateFin: fin, commentaire: commentaire || undefined, justificatif: fichier ?? undefined });
+      await deposerAbsence(slug, { type, dateDebut: isoDebut, dateFin: isoFin, commentaire: motif.trim() || undefined, justificatif: fichiers[0] });
       setDebut('');
       setFin('');
-      setCommentaire('');
-      setFichier(null);
+      setMotif('');
+      setFichiers([]);
       setEtat({ envoi: false, erreur: null });
       onFait();
     } catch (err) {
@@ -194,9 +245,27 @@ function FormAbsence({ slug, onFait }: { slug: string; onFait: () => void }) {
 
   return (
     <form className="panel glass-panel dmd-section" onSubmit={envoyer}>
-      <h2 className="dmd-titre">
-        <CalendarDays size={18} strokeWidth={1.75} aria-hidden /> Demander une absence
-      </h2>
+      <h2 className="dmd-titre">Demander une absence ou un congé</h2>
+      <div className="me-solde">
+        {(
+          [
+            ['Report', solde.report],
+            [`Acquis ${solde.annee}`, solde.acquis],
+            ['Pris', solde.pris],
+            ['Restant', solde.disponible],
+          ] as const
+        ).map(([libelle, j]) => (
+          <div key={libelle} className={libelle === 'Restant' ? 'is-restant' : undefined}>
+            <span>{libelle}</span>
+            <strong>{j} j</strong>
+          </div>
+        ))}
+      </div>
+      <p className="dmd-note">
+        Règle simulée : 2 jours ouvrables acquis par mois de service (à confirmer par la RH) ; décompte hors dimanches et
+        jours fériés des Réglages.
+        {solde.enAttente > 0 && ` Dont ${solde.enAttente} j en attente de décision, réservés.`}
+      </p>
       <label className="field">
         <span className="field-label">Type</span>
         <select className="field-input" value={type} onChange={(e) => setType(e.target.value as TypeAbsence)}>
@@ -210,52 +279,52 @@ function FormAbsence({ slug, onFait }: { slug: string; onFait: () => void }) {
       <div className="rh-grille">
         <label className="field">
           <span className="field-label">Du</span>
-          <input type="date" className="field-input" required value={debut} onChange={(e) => setDebut(e.target.value)} />
+          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={debut} onChange={(e) => setDebut(e.target.value)} />
         </label>
         <label className="field">
-          <span className="field-label">Au</span>
-          <input type="date" className="field-input" required min={debut || undefined} value={fin} onChange={(e) => setFin(e.target.value)} />
+          <span className="field-label">Au (inclus)</span>
+          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={fin} onChange={(e) => setFin(e.target.value)} />
         </label>
       </div>
       <label className="field">
-        <span className="field-label">Commentaire (facultatif)</span>
-        <textarea className="field-input" rows={2} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
+        <span className="field-label">Motif</span>
+        <textarea
+          className="field-input"
+          rows={2}
+          maxLength={1000}
+          placeholder={motifRequis ? 'Obligatoire pour ce type d’absence' : 'Facultatif pour un congé payé'}
+          value={motif}
+          onChange={(e) => setMotif(e.target.value)}
+        />
       </label>
-      {type !== 'conge_paye' && (
-        <label className="field">
-          <span className="field-label">Justificatif (facultatif)</span>
-          <input
-            type="file"
-            className="field-input"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) lireFichier(f).then(setFichier).catch((err) => setEtat({ envoi: false, erreur: msg(err, 'Fichier illisible.') }));
-            }}
-          />
-        </label>
-      )}
-      <p className="dmd-note">Dimanches exclus, samedi compté. Jours fériés pas encore déduits.</p>
+      <CaseJointe libelle="Justificatif joint" fichiers={fichiers} onChange={setFichiers} onErreur={(m) => setEtat({ envoi: false, erreur: m })} />
+      {(!isoDebut || !isoFin) && <p className="me-consigne">Renseignez les dates (JJ/MM/AAAA).</p>}
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
-      <button type="submit" className="btn-primary" disabled={etat.envoi}>
-        {etat.envoi ? 'Envoi…' : 'Envoyer au N+1'}
+      <button type="submit" className="btn-primary me-envoyer" disabled={etat.envoi || !pret}>
+        {etat.envoi ? 'Envoi…' : 'Envoyer à mon N+1'}
       </button>
+      <p className="dmd-note me-pied">Circuit (manuel §3.7) : vous → votre N+1 (décision) → RH Holding (validation finale et paie).</p>
     </form>
   );
 }
 
 function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void }) {
-  const [categorie, setCategorie] = useState<CategorieSoins>('pharmacie');
+  const [categorie, setCategorie] = useState<CategorieSoins>('consultation');
   const [beneficiaire, setBeneficiaire] = useState('moi');
   const [dateSoins, setDateSoins] = useState('');
   const [montant, setMontant] = useState('');
   const [fichiers, setFichiers] = useState<Fichier[]>([]);
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
+  const isoSoins = versIso(dateSoins);
+  const somme = Number(montant.replace(/\s/g, ''));
+  const pret = !!isoSoins && Number.isInteger(somme) && somme > 0 && fichiers.length > 0;
 
   async function envoyer(e: FormEvent) {
     e.preventDefault();
+    if (!isoSoins) return;
     setEtat({ envoi: true, erreur: null });
     try {
-      await deposerRemboursement(slug, { categorie, beneficiaire, dateSoins, montant: Number(montant), justificatifs: fichiers });
+      await deposerRemboursement(slug, { categorie, beneficiaire, dateSoins: isoSoins, montant: somme, justificatifs: fichiers });
       setDateSoins('');
       setMontant('');
       setFichiers([]);
@@ -268,19 +337,15 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
 
   return (
     <form className="panel glass-panel dmd-section" onSubmit={envoyer}>
-      <h2 className="dmd-titre">
-        <HeartPulse size={18} strokeWidth={1.75} aria-hidden /> Remboursement santé
-      </h2>
+      <h2 className="dmd-titre">Demander un remboursement santé</h2>
+      <p className="dmd-note">
+        Frais médicaux avancés par vous ou vos ayants droit, transmis par la RH à l’assurance (IPM ou assureur). Aucun
+        diagnostic n’est demandé ; la demande n’est visible que par vous et la RH.
+      </p>
       <div className="rh-grille">
         <label className="field">
-          <span className="field-label">Catégorie</span>
-          <select className="field-input" value={categorie} onChange={(e) => setCategorie(e.target.value as CategorieSoins)}>
-            {Object.entries(LIBELLE_SOINS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
+          <span className="field-label">Date des soins</span>
+          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={dateSoins} onChange={(e) => setDateSoins(e.target.value)} />
         </label>
         <label className="field">
           <span className="field-label">Bénéficiaire</span>
@@ -291,32 +356,34 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
           </select>
         </label>
         <label className="field">
-          <span className="field-label">Date des soins</span>
-          <input type="date" className="field-input" required value={dateSoins} onChange={(e) => setDateSoins(e.target.value)} />
+          <span className="field-label">Nature des frais</span>
+          <select className="field-input" value={categorie} onChange={(e) => setCategorie(e.target.value as CategorieSoins)}>
+            {Object.entries(LIBELLE_SOINS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="field">
-          <span className="field-label">Montant (FCFA)</span>
-          <input type="number" min={1} step={1} className="field-input" required value={montant} onChange={(e) => setMontant(e.target.value)} />
+          <span className="field-label">Montant payé (FCFA)</span>
+          <input className="field-input" inputMode="numeric" placeholder="ex. 25000" value={montant} onChange={(e) => setMontant(e.target.value)} />
         </label>
       </div>
-      <label className="field">
-        <span className="field-label">Factures / ordonnances (facultatif)</span>
-        <input
-          type="file"
-          multiple
-          className="field-input"
-          onChange={(e) =>
-            Promise.all(Array.from(e.target.files ?? []).map(lireFichier))
-              .then((l) => setFichiers(l.map(({ nom, url }) => ({ nom, url }))))
-              .catch((err) => setEtat({ envoi: false, erreur: msg(err, 'Fichier illisible.') }))
-          }
-        />
-      </label>
-      <p className="dmd-note">Aucun diagnostic ni information médicale : seulement la catégorie et le montant.</p>
+      <CaseJointe
+        libelle="Facture et ordonnance jointes (obligatoire)"
+        multiple
+        fichiers={fichiers}
+        onChange={setFichiers}
+        onErreur={(m) => setEtat({ envoi: false, erreur: m })}
+      />
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
-      <button type="submit" className="btn-primary" disabled={etat.envoi}>
-        {etat.envoi ? 'Envoi…' : 'Soumettre à la RH'}
+      <button type="submit" className="btn-primary me-envoyer" disabled={etat.envoi || !pret}>
+        {etat.envoi ? 'Envoi…' : 'Envoyer à la RH'}
       </button>
+      <p className="dmd-note me-pied">
+        Suivi : soumise → transmise à l’assurance → remboursée (montant crédité sur votre moyen de paiement enregistré).
+      </p>
     </form>
   );
 }

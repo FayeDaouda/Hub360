@@ -2053,7 +2053,8 @@ export type DemandeAbsence = {
   salarie?: { prenom: string; nom: string; poste?: string; matricule?: string };
 };
 
-export type SoldeConges = { acquis: number; pris: number; enAttente: number; disponible: number };
+// Année civile en cours (maquette : Report · Acquis 2026 · Pris · Restant) ; disponible = restant.
+export type SoldeConges = { annee: number; report: number; acquis: number; pris: number; enAttente: number; disponible: number };
 
 export type CategorieSoins = 'pharmacie' | 'consultation' | 'analyses_imagerie' | 'hospitalisation' | 'dentaire_optique' | 'autre';
 export type StatutRemboursement = 'soumise' | 'transmise' | 'remboursee' | 'rejetee';

@@ -95,6 +95,17 @@ describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   it('compte sans dossier du personnel → 404', async () => {
     await expect(deposer('collaborateur', null)).rejects.toThrow('Aucun dossier');
   });
+  it('maquette : motif facultatif pour un congé payé, requis sinon', async () => {
+    const maladie = { type: 'maladie' as const, dateDebut: '2026-10-05', dateFin: '2026-10-06' };
+    await expect(svc().s.deposerAbsence({ userId: 'U', societeId: 'S', role: 'Salarié' }, maladie)).rejects.toThrow('motif est requis');
+  });
+});
+
+describe('DemandesService.deposerRemboursement', () => {
+  it('maquette : facture et ordonnance obligatoires', async () => {
+    const corps = { categorie: 'consultation' as const, beneficiaire: 'moi' as const, dateSoins: '2026-09-28', montant: 25_000 };
+    await expect(svc().s.deposerRemboursement({ userId: 'U', societeId: 'S', role: 'Salarié' }, corps)).rejects.toThrow('facture');
+  });
 });
 
 describe('DemandesService.validationRh', () => {
