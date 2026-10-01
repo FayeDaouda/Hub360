@@ -11,6 +11,7 @@ const LIBELLE_TEMPS: Record<Exclude<Temps['type'], 'heures' | 'par_unite' | 'tot
   sans: () => 'sans temps atelier',
   partage: (t) => (t as Extract<Temps, { type: 'partage' }>).libelle,
   charge_gc: () => 'charge GC : durée dans Règles et délais',
+  part_carte: () => 'part du temps de la carte',
 };
 const suffixe = (t: Temps) => (t.type === 'par_unite' ? `h par ${t.unite}` : t.type === 'total' ? 'h au total' : 'h');
 
@@ -30,7 +31,9 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
           m.set(cle(c.cle, tache, 'debut'), cible.fenetre.debut);
           m.set(cle(c.cle, tache, 'fin'), cible.fenetre.fin);
         }
-        if (cible.temps && 'heures' in cible.temps) m.set(cle(c.cle, tache, 'heures'), cible.temps.heures);
+        // Seuls ces temps se modifient (le partagé est un libellé, cf. backend).
+        const t = cible.temps;
+        if (t && (t.type === 'heures' || t.type === 'par_unite' || t.type === 'total')) m.set(cle(c.cle, tache, 'heures'), t.heures);
       }
     }
     return m;

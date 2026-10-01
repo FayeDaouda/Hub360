@@ -11848,3 +11848,482 @@ a.notif-item:hover {
   }
 }
 
+
+/* ---------- Projets · gabarit (maquette « Projets » du boss, vue CIO) ---------- */
+.po {
+  display: grid;
+  gap: 1.1rem;
+  min-width: 0;
+}
+.po-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+}
+.po-sous-titre {
+  flex: 1 1 28rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+.po-entete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.po-acces {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.po-aide {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.po-kicker {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.po-kicker--code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+.po-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+.po-code--grand {
+  font-size: 1.45rem;
+}
+
+/* Tuiles */
+.po-tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.po-tuile {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 1.2rem;
+}
+.po-tuile-libelle {
+  font-size: 0.92rem;
+}
+.po-tuile-valeur {
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+.po-ton--validation {
+  color: var(--iris);
+}
+.po-ton--risque {
+  color: var(--fuchsia);
+}
+.po-ton--attention {
+  color: var(--ocre);
+}
+
+/* Colonnes : projets ouverts | dossier */
+.po-colonnes {
+  display: grid;
+  grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+}
+.po-liste {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.po-liste-titre {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.po-liste ul {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-projet {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-projet:hover {
+  border-color: color-mix(in oklch, var(--fuchsia) 45%, var(--border));
+}
+.po-projet.is-actif,
+.po-etape.is-actif,
+.po-tache.is-actif {
+  border-color: var(--fuchsia);
+  background: color-mix(in oklch, var(--fuchsia) 9%, transparent);
+}
+.po-projet-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.po-barre {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.po-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sauge);
+}
+
+/* Pastilles (fonds translucides : lisibles en clair comme en sombre) */
+.po-pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.po-pastille {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: color-mix(in oklch, var(--text-muted) 16%, transparent);
+}
+.po-pastille--succes {
+  background: color-mix(in oklch, var(--sauge) 20%, transparent);
+  color: var(--sauge);
+}
+.po-pastille--attention {
+  background: color-mix(in oklch, var(--ocre) 22%, transparent);
+  color: color-mix(in oklch, var(--ocre) 75%, var(--text));
+}
+.po-pastille--risque {
+  background: color-mix(in oklch, var(--fuchsia) 18%, transparent);
+  color: var(--fuchsia);
+}
+.po-pastille--info {
+  background: color-mix(in oklch, var(--azur) 18%, transparent);
+  color: var(--azur);
+}
+.po-pastille--validation {
+  background: color-mix(in oklch, var(--iris) 18%, transparent);
+  color: var(--iris);
+}
+.po-pastille--eteint {
+  background: transparent;
+  color: var(--text-muted);
+}
+/* Sombre : texte éclairci (currentColor renverrait la couleur du parent). */
+:root[data-theme='dark'] .po-pastille--succes {
+  color: color-mix(in oklch, var(--sauge) 55%, white);
+}
+:root[data-theme='dark'] .po-pastille--risque {
+  color: color-mix(in oklch, var(--fuchsia) 55%, white);
+}
+:root[data-theme='dark'] .po-pastille--info {
+  color: color-mix(in oklch, var(--azur) 55%, white);
+}
+:root[data-theme='dark'] .po-pastille--validation {
+  color: color-mix(in oklch, var(--iris) 55%, white);
+}
+
+/* Dossier */
+.po-dossier {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.1rem 1.25rem;
+}
+.po-dossier-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+.po-dossier-tete > div:first-child {
+  flex: 1 1 26rem;
+  min-width: 0;
+}
+.po-dossier-titre {
+  margin: 0.15rem 0 0.25rem;
+  font-size: 1.05rem;
+}
+.po-dossier-jour {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 0.2rem;
+  text-align: right;
+}
+.po-dossier-jour strong {
+  font-size: 1.35rem;
+}
+.po-etapes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+.po-etape {
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-etape-tete {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.po-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  align-items: start;
+  gap: 1rem;
+}
+.po-cartes {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+.po-carte {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.po-carte-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.po-carte-tete h3 {
+  margin: 0.15rem 0 0;
+  font-size: 1.02rem;
+}
+.po-carte-droite {
+  display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+  text-align: right;
+}
+.po-carte-descriptif {
+  margin: 0;
+}
+.po-carte.is-eteinte .po-tache,
+.po-tache.is-eteinte {
+  opacity: 0.55;
+}
+.po-attente {
+  margin: 0;
+  color: color-mix(in oklch, var(--ocre) 80%, var(--text));
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.po-taches {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-tache {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) 2.8rem 3rem auto;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 4%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-tache:hover {
+  border-color: color-mix(in oklch, var(--fuchsia) 40%, var(--border));
+}
+.po-tache-libelle {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  font-size: 0.92rem;
+}
+.po-tache-assigne,
+.po-tache-heures,
+.po-tache-echeance {
+  font-size: 0.88rem;
+}
+.po-tache-heures,
+.po-tache-echeance {
+  font-variant-numeric: tabular-nums;
+}
+.po-tache .po-pastille {
+  justify-self: end;
+}
+.po-retard {
+  color: var(--fuchsia);
+}
+.po-avance {
+  color: var(--sauge);
+  font-weight: 700;
+}
+
+/* Panneau de la tâche */
+.po-panneau {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border);
+}
+.po-panneau--vide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.po-panneau-titre {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.po-panneau-lignes {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.po-panneau-lignes > div {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.po-panneau-lignes dt {
+  color: var(--text-muted);
+}
+.po-panneau-lignes dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.po-panneau-note {
+  margin: 0;
+  font-weight: 600;
+}
+.po-descriptif {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 9%, transparent);
+}
+.po-descriptif p:last-child {
+  margin: 0;
+  white-space: pre-line;
+}
+.po-panneau-bloc {
+  display: grid;
+  gap: 0.25rem;
+}
+.po-panneau-bloc p {
+  margin: 0;
+}
+.po-vide {
+  padding: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+  .po-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .po-panneau {
+    position: static;
+    padding: 1rem 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+@media (max-width: 1000px) {
+  .po-colonnes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .po-tuiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .po-liste ul {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15rem, 80%);
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+}
+@media (max-width: 640px) {
+  .po-dossier {
+    padding: 0.9rem;
+  }
+  .po-dossier-jour {
+    justify-items: start;
+    text-align: left;
+  }
+  .po-etapes {
+    grid-template-columns: repeat(6, minmax(8rem, 1fr));
+  }
+  .po-tache {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.35rem 0.75rem;
+  }
+  .po-tache-libelle {
+    grid-column: 1 / -1;
+  }
+  .po-tache .po-pastille {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .po-carte-droite {
+    justify-items: start;
+    text-align: left;
+  }
+  .po-panneau-lignes > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}

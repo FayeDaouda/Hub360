@@ -29,6 +29,7 @@ import {
   PatchFactureDto,
 } from './dto';
 import { EmailService } from '../../email/email.service';
+import { OuvertureProjetService } from '../gabarit/ouverture.service';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -42,6 +43,7 @@ export class FacturationService {
     private prisma: PrismaService,
     private email: EmailService,
     private reglages: ReglagesService,
+    private ouverture: OuvertureProjetService,
   ) {}
 
   // Soumission du dossier à la DAF (cycle CRM, dans sa transaction) : l'offre
@@ -144,6 +146,12 @@ export class FacturationService {
         "Renseignez un montant HT avant d'émettre la facture.",
       );
     }
+    // F1 (acompte à la signature) ouvre le projet selon son gabarit
+    // (Réglages · « Ouverture du projet ») : J1 = jour d'émission.
+    const ouverture =
+      facture.jalon === 'signature' && !facture.estAvoir
+        ? await this.ouverture.preparer(projetId, new Date().toISOString().slice(0, 10))
+        : null;
     // Transition conditionnée sur `statut` dans la transaction : deux émissions
     // concurrentes du même brouillon ne peuvent pas consommer deux numéros.
     await this.avecSequence(societeId, async (tx, numero) => {
@@ -152,6 +160,7 @@ export class FacturationService {
         data: { numero, statut: 'emise', emiseLe: new Date() },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
+      if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
     });
     return this.formater(projetId);
   }

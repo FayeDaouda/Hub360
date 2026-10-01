@@ -12,11 +12,19 @@ export type Temps =
   | { type: 'heures'; heures: number } // « 40 h »
   | { type: 'par_unite'; heures: number; unite: 'pièce' | 'vue' } // « 8 h par pièce »
   | { type: 'total'; heures: number } // « 24 h au total »
-  | { type: 'partage'; libelle: string } // « commandes ETB, ETL et BC : 8 h partagées »
+  | { type: 'partage'; libelle: string; heures?: number } // « commandes ETB, ETL et BC : 8 h partagées »
   | { type: 'charge_gc'; charge: 'notice' | 'cachet' | 'timbre' } // durée dans Règles et délais
+  | { type: 'part_carte' } // part égale du temps « au total » de la carte
   | { type: 'sans' }; // « sans temps atelier »
 
-export type TacheGabarit = { cle: string; libelle: string; fenetre?: Fenetre; temps: Temps };
+export type TacheGabarit = {
+  cle: string;
+  libelle: string;
+  fenetre?: Fenetre;
+  temps: Temps;
+  descriptif?: string; // panneau de la tâche (maquette Projets)
+  sourceNative?: boolean; // « source native exigée »
+};
 
 export type CarteGabarit = {
   cle: string;
@@ -26,7 +34,13 @@ export type CarteGabarit = {
   temps?: Temps; // temps porté par la carte (par unité ou au total)
   client?: boolean; // étiquette CLIENT · hors budget atelier
   desactivee?: boolean; // carte vide, désactivée
+  motifDesactivation?: string; // affiché « Désactivée · … » dans le projet
   fichiers?: boolean; // rubriques de fichiers (pas de tâche)
+  descriptif?: string; // texte de la carte dans le projet (maquette Projets)
+  etiquette?: string; // « Inclus au CO », « IM par pièce », « Par vue »
+  // La carte reste verrouillée tant que ces tâches (« carte.tâche ») ne sont
+  // pas validées : « S'ouvre quand ces tâches sont validées ».
+  ouvreApres?: string[];
   taches: TacheGabarit[];
 };
 

@@ -194,6 +194,13 @@ export class ReglagesService {
     return (l ? l.valeur : def.defaut) as T;
   }
 
+  // Version en service d'un gabarit de la société (ouverture d'un projet) ;
+  // null si la société n'a pas ce gabarit.
+  async gabaritEnService(societeId: string, code: string) {
+    const g = (await this.gabaritsDe(societeId))?.find((x) => x.code === code);
+    return g ? this.versionEnService(societeId, code, g.contenu) : null;
+  }
+
   // Parts F1 / F2 / F3 en service.
   partsFactures(societeId: string): Promise<PartsFactures> {
     return this.regle<PartsFactures>(societeId, 'parts_factures');

@@ -283,7 +283,10 @@ async function main() {
         // supervision (CrmService.peutReassigner) — il doit pouvoir entrer
         // dans le CRM et y agir, pas seulement consulter.
         crm: 'ecriture',
-        projets: 'aucun',
+        // ecriture (01/10/2026) : maquette « Projets » du boss — le CIO lit
+        // tous les projets ouverts et assigne (« Lecture et assignation ·
+        // accès complet ») ; la validation reste au chef de team / DPLG.
+        projets: 'ecriture',
         finances_devis: 'aucun',
         finances_factures: 'aucun',
         finances_marges: 'aucun',

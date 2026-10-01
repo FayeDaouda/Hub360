@@ -122,6 +122,7 @@ model Utilisateur {
   dossiersApportes                   DossierCrm[]              @relation("DossierApporteur")
   dossiersPossedes                   DossierCrm[]              @relation("DossierProprietaire")
   dossiersArchives                   DossierCrm[]              @relation("DossierArchivePar")
+  tachesProjetValidees               TacheProjet[]             @relation("TacheProjetValideePar")
   transitionsDossier                 DossierCrmTransition[]    @relation("TransitionDossierPar")
   remuneration                       Remuneration?
 
@@ -705,25 +706,33 @@ model AnnexeContrat {
 // -- Projet : l'instance d'exécution. Champs métier = snapshot du dossier --
 
 model Projet {
-  id           String        @id @default(uuid())
-  societeId    String        @map("societe_id")
-  dossierCrmId String        @unique @map("dossier_crm_id")
-  code         String
+  id               String        @id @default(uuid())
+  societeId        String        @map("societe_id")
+  dossierCrmId     String        @unique @map("dossier_crm_id")
+  code             String
   // snapshot pris à la validation du dossier
-  nature       NatureDossier
-  categorie    Categorie
-  programme    String
-  localisation String
-  type         TypeBien
-  clientId     String        @map("client_id")
+  nature           NatureDossier
+  categorie        Categorie
+  programme        String
+  localisation     String
+  type             TypeBien
+  clientId         String        @map("client_id")
   // localisation géo — pin posé à la main, copié du dossier au pivot
-  latitude     Float?
-  longitude    Float?
+  latitude         Float?
+  longitude        Float?
   // exécution
-  statut       StatutProjet  @default(a_assigner)
-  phase        Phase         @default(avant_projet)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  statut           StatutProjet  @default(a_assigner)
+  phase            Phase         @default(avant_projet)
+  // Ouverture selon le gabarit (Réglages · « Ouverture du projet » : à
+  // l'émission de F1) : J1 et la version recopiée en cartes et tâches. null =
+  // pas encore ouvert (ou catégorie sans gabarit).
+  ouvertLe         String?       @map("ouvert_le") // J1, AAAA-MM-JJ
+  gabaritVersionId String?       @map("gabarit_version_id")
+  // Budget atelier en service à l'ouverture (Réglages) : horizon J1 →
+  // livraison = budget / 8 h. Figé, comme les fenêtres.
+  budgetHeures     Int?          @map("budget_heures")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
   societe                  Societe                   @relation(fields: [societeId], references: [id], onDelete: Cascade)
   dossierCrm               DossierCrm                @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
@@ -748,6 +757,9 @@ model Projet {
   factures                 Facture[]
   devis                    Devis[]
   validationsTaches        ValidationTache[]
+  gabaritVersion           GabaritVersion?           @relation(fields: [gabaritVersionId], references: [id])
+  cartes                   CarteProjet[]
+  taches                   TacheProjet[]
 
   @@map("projets")
 }
@@ -837,6 +849,7 @@ model Collaborateur {
   blocsPermisResponsable       BlocPermis[]       @relation("BlocPermisResponsable")
   blocsExecutionResponsable    BlocExecution[]    @relation("BlocExecutionResponsable")
   blocsUnbordResponsable       BlocUnbord[]       @relation("BlocUnbordResponsable")
+  tachesProjet                 TacheProjet[]      @relation("TacheProjetAssigne")
 
   dossierPersonnel DossierPersonnel?
 
@@ -2281,10 +2294,86 @@ model GabaritVersion {
   creeParId String?  @map("cree_par_id") // audit, pas de FK
   createdAt DateTime @default(now()) @map("created_at")
 
-  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  societe Societe  @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  projets Projet[]
 
   @@unique([societeId, code, numero])
   @@map("gabarit_versions")
+}
+
+// Gabarit recopié dans un projet à son ouverture (maquette « Projets » du
+// boss) : étapes → cartes → tâches, fenêtres en jours ouvrés depuis J1 et
+// dates calendaires figées (jours fériés déduits). Une version du gabarit
+// enregistrée ensuite ne touche plus ce projet.
+model CarteProjet {
+  id            String   @id @default(uuid())
+  projetId      String   @map("projet_id")
+  etapeNumero   Int      @map("etape_numero")
+  etapeCle      String   @map("etape_cle")
+  etapeLibelle  String   @map("etape_libelle")
+  cle           String
+  libelle       String
+  ordre         Int
+  note          String?
+  descriptif    String?
+  etiquette     String?
+  debutJ        Int?     @map("debut_j")
+  finJ          Int?     @map("fin_j")
+  debutLe       String?  @map("debut_le") // AAAA-MM-JJ
+  finLe         String?  @map("fin_le")
+  temps         Json? // temps porté par la carte (par unité, au total)
+  client        Boolean  @default(false) // CLIENT · hors budget atelier
+  fichiers      Boolean  @default(false) // rubriques de fichiers, sans tâche
+  // null = active ; sinon le motif affiché (« Désactivée · … »).
+  desactivation String?
+  ouvreApres    String[] @default([]) @map("ouvre_apres") // « carte.tâche »
+
+  projet Projet        @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  taches TacheProjet[]
+
+  @@unique([projetId, cle])
+  @@map("cartes_projet")
+}
+
+enum StatutTacheProjet {
+  a_faire // pas encore remise : à venir / en cours / en retard selon les dates
+  a_valider // remise vNN en attente de validation
+  reprise // renvoyée, vNN+1 attendue
+  validee
+  non_necessaire
+}
+
+model TacheProjet {
+  id           String            @id @default(uuid())
+  projetId     String            @map("projet_id")
+  carteId      String            @map("carte_id")
+  cle          String
+  libelle      String
+  ordre        Int
+  descriptif   String?
+  sourceNative Boolean           @default(false) @map("source_native")
+  debutJ       Int?              @map("debut_j") // fenêtre propre ; sinon celle de la carte
+  finJ         Int?              @map("fin_j")
+  debutLe      String?           @map("debut_le")
+  finLe        String?           @map("fin_le") // échéance de référence (délai figé)
+  temps        Json // copie du gabarit
+  heures       Decimal?          @db.Decimal(6, 1) // temps standard résolu ; null = sans temps atelier
+  statut       StatutTacheProjet @default(a_faire)
+  motif        String? // raison de « Non nécessaire »
+  assigneId    String?           @map("assigne_id")
+  version      Int               @default(0) // dernière remise (1 = v01)
+  valideeLe    DateTime?         @map("validee_le")
+  valideeParId String?           @map("validee_par_id")
+
+  projet     Projet         @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  carte      CarteProjet    @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  assigne    Collaborateur? @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
+  valideePar Utilisateur?   @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
+
+  @@unique([carteId, cle])
+  @@index([projetId])
+  @@index([assigneId])
+  @@map("taches_projet")
 }
 
 // Règles et délais, objectifs des indicateurs : une ligne seulement pour une

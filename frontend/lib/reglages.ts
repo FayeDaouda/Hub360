@@ -13,8 +13,9 @@ export type Temps =
   | { type: 'heures'; heures: number }
   | { type: 'par_unite'; heures: number; unite: 'pièce' | 'vue' }
   | { type: 'total'; heures: number }
-  | { type: 'partage'; libelle: string }
+  | { type: 'partage'; libelle: string; heures?: number }
   | { type: 'charge_gc'; charge: 'notice' | 'cachet' | 'timbre' }
+  | { type: 'part_carte' } // part égale du temps « au total » de la carte
   | { type: 'sans' };
 export type TacheGabarit = { cle: string; libelle: string; fenetre?: Fenetre; temps: Temps };
 export type CarteGabarit = {
