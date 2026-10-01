@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
@@ -43,6 +43,17 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
   const [etape, setEtape] = useState(1);
   const [selection, setSelection] = useState<Selection>(null);
+  // Écran tenu dans la fenêtre (desktop, cf. globals.css) : la hauteur
+  // disponible part du haut réel de la page, mesuré (barre du haut comprise).
+  const racine = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = racine.current;
+    if (!el) return;
+    const mesurer = () => el.style.setProperty('--po-haut', `${el.getBoundingClientRect().top + window.scrollY}px`);
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    return () => window.removeEventListener('resize', mesurer);
+  }, []);
   // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
   const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
   const [assignables, setAssignables] = useState<Assignable[] | null>(null);
@@ -91,7 +102,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const acces = peutAssigner ? 'Lecture et assignation · accès complet' : 'Lecture seule';
 
   return (
-    <div className="po">
+    <div className="po" ref={racine}>
       <div className="po-entete">
         <p className="po-sous-titre">
           Étapes → cartes → tâches générées depuis le devis signé à l’émission de F1
@@ -284,7 +295,8 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
       </div>
 
       <div className="po-corps">
-        <div className="po-cartes">
+        {/* key : changer d'étape repart du haut de la liste des cartes. */}
+        <div className="po-cartes" key={etape}>
           {cartes.map((c) => (
             <Carte
               key={c.id}
@@ -298,6 +310,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
         </div>
         {choisie ? (
           <TachePanneau
+            key={choisie.tache.id}
             slug={slug}
             projetId={d.id}
             code={d.code}
@@ -309,7 +322,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
             onMaj={onMaj}
           />
         ) : carteFil ? (
-          <CartePanneau slug={slug} projetId={d.id} carte={carteFil} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
+          <CartePanneau key={carteFil.id} slug={slug} projetId={d.id} carte={carteFil} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
         ) : (
           <p className="po-panneau po-panneau--vide">
             Cliquez une tâche pour voir son descriptif, l’assigner ou en discuter. Chaque carte a aussi son fil de discussion.

@@ -12430,24 +12430,9 @@ a.notif-item:hover {
   .po-etapes {
     grid-template-columns: repeat(6, minmax(8rem, 1fr));
   }
-  .po-tache {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 0.35rem 0.75rem;
-  }
-  .po-tache-libelle {
-    grid-column: 1 / -1;
-  }
-  .po-tache-etat {
-    grid-column: 1 / -1;
-    justify-items: start;
-  }
   .po-carte-droite {
     justify-items: start;
     text-align: left;
-  }
-  .po-panneau-lignes > div {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.1rem;
   }
 }
 
@@ -12701,5 +12686,173 @@ a.notif-item:hover {
 @media (max-width: 1100px) {
   .me-documents {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Lignes de tâche et panneau selon la largeur réellement disponible (colonne
+   des cartes étroite à côté du panneau, mobile) plutôt que celle de l'écran. */
+.po-cartes {
+  container: po-cartes / inline-size;
+}
+.po-panneau {
+  container: po-panneau / inline-size;
+}
+@container po-cartes (max-width: 620px) {
+  .po-tache {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    gap: 0.35rem 0.75rem;
+  }
+  .po-tache-libelle {
+    grid-column: 1 / -1;
+  }
+}
+@container po-cartes (max-width: 420px) {
+  .po-tache {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .po-tache-etat {
+    grid-column: 1 / -1;
+    justify-items: start;
+  }
+}
+@container po-panneau (max-width: 360px) {
+  .po-panneau-lignes > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+@media (min-width: 1201px) {
+  /* Les six étapes tiennent sur la largeur du dossier, sans défilement. */
+  .po-etapes {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .po-etape-tete {
+    gap: 0.3rem;
+    font-size: 0.7rem;
+  }
+  /* « J43 / 40 » reste à droite du titre. */
+  .po-dossier-tete {
+    flex-wrap: nowrap;
+  }
+  .po-dossier-tete > div:first-child {
+    flex: 1 1 0;
+  }
+  .po-dossier-jour {
+    flex: none;
+    max-width: 22rem;
+  }
+}
+
+/* Projets · gabarit, desktop : l'écran tient dans la fenêtre, sans défilement
+   de page. « Projets ouverts » défile en interne ; le dossier garde son
+   en-tête et ses étapes fixes, et deux zones défilent séparément : les cartes
+   de l'étape et le panneau (tâche ou fil de la carte). --po-haut = haut de la
+   page, mesuré (projets-ouverts.tsx). Tablette, mobile et fenêtres basses
+   (< 820 px, où les zones seraient trop étroites) : défilement normal. */
+@media (min-width: 1201px) and (min-height: 820px) {
+  .admin-main:has(.po) {
+    padding-bottom: 1.5rem;
+  }
+  .po {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--po-haut, 8rem) - 1.5rem);
+    overflow: hidden;
+  }
+  .po > * {
+    flex: none;
+  }
+  .po > .po-colonnes {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .po-liste,
+  .po-dossier {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .po-liste > *,
+  .po-dossier > * {
+    flex: none;
+  }
+  .po-liste > ul,
+  .po-dossier > .po-corps {
+    flex: 1;
+    min-height: 0;
+  }
+  .po-liste > ul {
+    align-content: start;
+    overflow-y: auto;
+    padding-right: 0.3rem;
+  }
+  .po-corps {
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .po-cartes,
+  .po-corps > .po-panneau {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .po-cartes {
+    align-content: start;
+    padding-right: 0.4rem;
+  }
+  .po-corps > .po-panneau {
+    position: static;
+    align-content: start;
+    padding-right: 0.4rem;
+  }
+  /* En-têtes resserrés : la hauteur gagnée va aux zones qui défilent. */
+  .po {
+    gap: 0.9rem;
+  }
+  .po-tuile {
+    gap: 0.15rem;
+    padding: 0.7rem 1rem;
+  }
+  .po-tuile-valeur {
+    font-size: 1.5rem;
+  }
+  .po-dossier {
+    gap: 0.8rem;
+    padding: 0.9rem 1.1rem;
+  }
+  .po-dossier-titre {
+    margin: 0.1rem 0 0.15rem;
+  }
+  .po-dossier-tete .po-pastilles {
+    margin-top: 0.35rem;
+  }
+  .po-etape {
+    gap: 0.15rem;
+    padding: 0.5rem 0.7rem;
+  }
+  .po-etape strong {
+    font-size: 0.92rem;
+  }
+  /* Barres de défilement discrètes, assorties au verre. */
+  .po-liste > ul,
+  .po-cartes,
+  .po-corps > .po-panneau {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--text-muted) 45%, transparent) transparent;
+  }
+  .po-liste > ul::-webkit-scrollbar,
+  .po-cartes::-webkit-scrollbar,
+  .po-corps > .po-panneau::-webkit-scrollbar {
+    width: 6px;
+  }
+  .po-liste > ul::-webkit-scrollbar-thumb,
+  .po-cartes::-webkit-scrollbar-thumb,
+  .po-corps > .po-panneau::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--text-muted) 45%, transparent);
   }
 }
