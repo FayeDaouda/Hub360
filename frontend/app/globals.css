@@ -13371,7 +13371,29 @@ a.notif-item:hover {
   font-family: var(--font-sans);
 }
 .fin-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-bottom: 0.9rem;
+}
+.fin-filtres button {
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fin-filtres button:hover {
+  background: color-mix(in srgb, var(--text) 13%, transparent);
+}
+.fin-filtres button.is-active {
+  background: color-mix(in oklch, var(--argile) 85%, transparent);
+  color: #fff;
 }
 /* Ombres de défilement : leur « couvercle » opaque dessinait une bande sombre
    sur le verre du panneau, même sans débordement. */
@@ -13379,22 +13401,13 @@ a.notif-item:hover {
   background: none;
 }
 .fin-table .num {
-  text-align: right;
   white-space: nowrap;
 }
 .fin-mois td {
-  padding-top: 1rem;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  background: none;
-}
-.fin-mois td.num {
   color: var(--text);
-  text-transform: none;
-  letter-spacing: 0;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
 }
 .fin-ligne {
   cursor: pointer;
@@ -13740,7 +13753,40 @@ a.notif-item:hover {
     gap: 0.25rem;
   }
 }
+/* Desktop : la liste occupe le reste de la fenêtre et défile en interne,
+   en-tête de colonnes et pied fixes (maquette). --fin-haut : cf.
+   use-haut-mesure.ts. Mobile et fenêtres basses : défilement normal. */
+@media (min-width: 721px) and (min-height: 700px) {
+  .admin-main:has(.fin-liste) {
+    padding-bottom: 1.5rem;
+  }
+  .fin-liste {
+    display: flex;
+    flex-direction: column;
+    height: max(24rem, calc(100dvh - var(--fin-haut, 26rem) - 1.5rem));
+  }
+  .fin-liste > * {
+    flex: none;
+  }
+  .fin-liste > .fin-table-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .fin-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
 @media (max-width: 720px) {
+  .admin-table .fin-mois td {
+    background: none;
+  }
   /* Cartes empilées : l'en-tête de mois devient un intertitre sans cadre. */
   .admin-table .fin-mois {
     display: flex;

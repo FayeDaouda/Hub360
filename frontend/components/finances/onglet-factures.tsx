@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { dansFiltreFacture, jjmmaaaa, libelleMois, parMois, payeeLe, statutFacture, type FiltreFacture } from '@/lib/finances';
 import { formatMontant } from '@/lib/format';
+import { useHautMesure } from './use-haut-mesure';
 import type { FactureCentrale } from '@/lib/types';
 
 const FILTRES: { cle: FiltreFacture; libelle: string }[] = [
@@ -21,12 +22,14 @@ export function OngletFactures({ factures, onOuvrir }: { factures: FactureCentra
   const [filtre, setFiltre] = useState<FiltreFacture>('tout');
   const visibles = factures.filter((f) => dansFiltreFacture(f, filtre));
 
+  const cadre = useHautMesure<HTMLElement>();
+
   return (
-    <section className="panel glass-panel fin-liste">
-      <div className="vue-toggle crm-situations fin-filtres" role="group" aria-label="Filtrer les factures">
+    <section ref={cadre} className="panel glass-panel fin-liste">
+      <div className="fin-filtres" role="group" aria-label="Filtrer les factures">
         {FILTRES.map((f) => (
           <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
-            {f.libelle} <span className="crm-compte">{factures.filter((x) => dansFiltreFacture(x, f.cle)).length}</span>
+            {f.libelle} ({factures.filter((x) => dansFiltreFacture(x, f.cle)).length})
           </button>
         ))}
       </div>
