@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ModePaiementSalaire, SituationFamiliale } from '@prisma/client';
 import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -44,6 +44,16 @@ export class MonEspaceController {
   @Post('paiement')
   paiement(@Req() req: R, @Body() dto: DemandePaiementDto) {
     return this.monEspace.demanderPaiement(req.user, dto);
+  }
+
+  @Post('attestations')
+  demanderAttestation(@Req() req: R) {
+    return this.monEspace.demanderAttestation(req.user);
+  }
+
+  @Get('attestations/:id')
+  attestation(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.monEspace.attestation(req.user, id);
   }
 
   @Get('bulletins/:mois')

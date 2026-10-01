@@ -37,8 +37,18 @@ export const deciderAbsence = (
   corps: { decision: DecisionN1; delegations?: { livrable: string; collaborateurId: string }[]; nonDelegables?: string[]; dateDebut?: string; dateFin?: string; motif?: MotifRefusAbsence; commentaire?: string },
 ) => apiSociete<DemandeAbsence>(slug, `/absences/${id}/decision`, { method: 'POST', body: corps });
 
+// Attestation de travail demandée par un salarié (Mon espace), délivrée par la RH.
+export type AttestationRh = {
+  id: string;
+  demandeLe: string;
+  delivreeLe: string | null;
+  nom: string | null;
+  dossier: { id: string; prenom: string; nom: string; matricule: string };
+};
 export const getDemandesRh = (slug: string) =>
-  apiSociete<{ absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] }>(slug, '/rh/demandes');
+  apiSociete<{ absences: DemandeAbsence[]; remboursements: DemandeRemboursement[]; attestations: AttestationRh[] }>(slug, '/rh/demandes');
+export const delivrerAttestation = (slug: string, id: string, fichier: { nom: string; url: string }) =>
+  apiSociete<{ ok: true }>(slug, `/rh/demandes/attestations/${id}/delivrance`, { method: 'POST', body: fichier });
 export const validerAbsenceRh = (slug: string, id: string, valide: boolean, motif?: string) =>
   apiSociete<DemandeAbsence>(slug, `/rh/demandes/absences/${id}/validation`, { method: 'POST', body: { valide, motif } });
 export const transmettreRemboursement = (slug: string, id: string) =>

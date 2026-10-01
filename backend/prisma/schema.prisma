@@ -2038,6 +2038,7 @@ model DossierPersonnel {
   pieces            PieceDossierPersonnel[]
   absences          DemandeAbsence[]
   remboursements    DemandeRemboursement[]
+  attestations      DemandeAttestation[]
   pointsIntegration PointIntegration[]
   controlesTemps    ControleFeuilleTemps[]
   bulletins         BulletinPaie[]
@@ -2153,6 +2154,24 @@ enum StatutRemboursement {
 
 // Aucun diagnostic : seulement la catégorie de dépense, le bénéficiaire, la
 // date, le montant et les justificatifs (circuit administratif).
+// Attestation de travail sur demande (maquette « Mon espace › Mes
+// documents ») : le salarié la demande, la RH la délivre en déposant le
+// document signé ; il la télécharge ensuite.
+model DemandeAttestation {
+  id            String    @id @default(uuid())
+  dossierId     String    @map("dossier_id")
+  demandeLe     DateTime  @default(now()) @map("demande_le")
+  delivreeLe    DateTime? @map("delivree_le")
+  delivreeParId String?   @map("delivree_par_id") // audit, pas de FK
+  nom           String?
+  cle           String? // data URI (seam S3, comme les autres pièces)
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@index([dossierId])
+  @@map("demandes_attestation")
+}
+
 model DemandeRemboursement {
   id               String              @id @default(uuid())
   dossierId        String              @map("dossier_id")

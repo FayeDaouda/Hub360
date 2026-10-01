@@ -12639,3 +12639,67 @@ a.notif-item:hover {
   border-radius: var(--radius-md);
   background: color-mix(in oklch, var(--ocre) 12%, transparent);
 }
+.me-documents {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+.me-documents > .dmd-section {
+  align-content: start;
+}
+.me-docs {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.me-doc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 9%, transparent);
+}
+.me-doc-pdf {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 0.6rem;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+.me-doc-pdf--contrat {
+  background: var(--fuchsia);
+}
+.me-doc-pdf--bulletin {
+  background: var(--iris);
+}
+.me-doc-texte {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.me-doc-lien {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--iris);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+:root[data-theme='dark'] .me-doc-lien {
+  color: color-mix(in oklch, var(--iris) 45%, white);
+}
+@media (max-width: 1100px) {
+  .me-documents {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

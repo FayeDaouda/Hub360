@@ -40,6 +40,9 @@ async function telecharger(slug: string, chemin: string) {
 }
 export const telechargerDocument = (slug: string, type: TypePieceDossier) => telecharger(slug, `/mon-espace/documents/${type}`);
 export const telechargerBulletin = (slug: string, mois: string) => telecharger(slug, `/mon-espace/bulletins/${mois}`);
+export const telechargerAttestation = (slug: string, id: string) => telecharger(slug, `/mon-espace/attestations/${id}`);
+export const demanderAttestation = (slug: string) =>
+  apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/attestations', { method: 'POST', body: {} });
 
 export const LIBELLE_PAIEMENT_SALAIRE: Record<ModePaiementSalaire, string> = {
   virement: 'Virement',

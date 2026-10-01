@@ -2200,7 +2200,11 @@ export type ProfilMonEspace = {
   mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string } | null;
   documents: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
   bulletins: BulletinPaie[];
+  attestations: AttestationTravail[]; // la plus récente d'abord
 };
+
+// Attestation de travail sur demande : délivrée par la RH (delivreeLe non null).
+export type AttestationTravail = { id: string; demandeLe: string; delivreeLe: string | null; nom: string | null };
 
 // --- RH · Remise et validation des tâches (lot 5c) -----------------------------
 export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'en_cours' | 'a_venir' | 'a_planifier';

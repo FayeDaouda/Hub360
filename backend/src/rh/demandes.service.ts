@@ -305,7 +305,7 @@ export class DemandesService {
 
   // --- RH -----------------------------------------------------------------------
   async listeRh() {
-    const [absences, remboursements] = await Promise.all([
+    const [absences, remboursements, attestations] = await Promise.all([
       this.prisma.demandeAbsence.findMany({
         include: { dossier: { select: { id: true, prenom: true, nom: true, matricule: true } } },
         orderBy: { dateDebut: 'desc' },
@@ -317,8 +317,29 @@ export class DemandesService {
         },
         orderBy: { createdAt: 'desc' },
       }),
+      this.prisma.demandeAttestation.findMany({
+        select: {
+          id: true,
+          demandeLe: true,
+          delivreeLe: true,
+          nom: true,
+          dossier: { select: { id: true, prenom: true, nom: true, matricule: true } },
+        },
+        orderBy: { demandeLe: 'desc' },
+      }),
     ]);
-    return { absences: absences.map((d) => ({ ...versAbsence(d), salarie: d.dossier })), remboursements };
+    return { absences: absences.map((d) => ({ ...versAbsence(d), salarie: d.dossier })), remboursements, attestations };
+  }
+
+  // Attestation de travail : la RH la délivre en déposant le document signé.
+  async delivrerAttestation(a: Acteur, id: string, fichier: { nom: string; url: string }) {
+    if (!fichier.url.startsWith('data:')) throw new BadRequestException('Fichier invalide.');
+    const { count } = await this.prisma.demandeAttestation.updateMany({
+      where: { id, delivreeLe: null },
+      data: { delivreeLe: new Date(), delivreeParId: a.userId, nom: fichier.nom, cle: fichier.url },
+    });
+    if (count === 0) throw new ConflictException('Attestation introuvable ou déjà délivrée.');
+    return { ok: true };
   }
 
   async validationRh(a: Acteur, id: string, valide: boolean, motif?: string) {

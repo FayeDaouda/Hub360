@@ -139,7 +139,7 @@ export function MonEspace({ slug }: { slug: string }) {
       ) : onglet === 'informations' ? (
         <MesInformations slug={slug} dossier={dossier!} onMaj={setDossier} />
       ) : (
-        <MesDocuments slug={slug} dossier={dossier!} />
+        <MesDocuments slug={slug} dossier={dossier!} onMaj={setDossier} />
       )}
     </>
   );

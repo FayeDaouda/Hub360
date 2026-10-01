@@ -15,6 +15,7 @@ const INCLURE = {
   collaborateur: { select: { cellule: { select: { nom: true } } } },
   pieces: { where: { type: { in: DOCUMENTS_SALARIE } }, select: { type: true, nom: true, createdAt: true } },
   bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
+  attestations: { select: { id: true, demandeLe: true, delivreeLe: true, nom: true }, orderBy: { demandeLe: 'desc' } },
 } satisfies Prisma.DossierPersonnelInclude;
 type DossierProfil = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE }>;
 
@@ -62,6 +63,23 @@ export class MonEspaceService {
       },
     });
     return this.profil(a);
+  }
+
+  // « Demander une attestation de travail » : une seule demande en attente à
+  // la fois ; la RH la délivre (onglet RH › Demandes).
+  async demanderAttestation(a: Acteur) {
+    const id = await this.idDossier(a);
+    const enAttente = await this.prisma.demandeAttestation.count({ where: { dossierId: id, delivreeLe: null } });
+    if (enAttente) throw new ConflictException('Une attestation est déjà demandée : la RH la prépare.');
+    await this.prisma.demandeAttestation.create({ data: { dossierId: id } });
+    return this.profil(a);
+  }
+
+  async attestation(a: Acteur, attestationId: string) {
+    const id = await this.idDossier(a);
+    const at = await this.prisma.demandeAttestation.findFirst({ where: { id: attestationId, dossierId: id }, select: { nom: true, cle: true } });
+    if (!at?.cle) throw new NotFoundException('Attestation pas encore délivrée par la RH.');
+    return { nom: at.nom ?? 'attestation-de-travail', url: at.cle };
   }
 
   // « Soumettre à la RH » : le nouveau moyen de paiement attend la validation
@@ -199,5 +217,6 @@ function versProfil(d: DossierProfil) {
       return { type, nom: p?.nom ?? null, ajouteLe: p?.createdAt ?? null };
     }),
     bulletins: d.bulletins.map((b) => ({ mois: b.mois, nom: b.nom, deposeLe: b.updatedAt })),
+    attestations: d.attestations,
   };
 }

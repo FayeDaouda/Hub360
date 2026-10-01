@@ -1,10 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarCheck, HeartPulse, Paperclip } from 'lucide-react';
+import { CalendarCheck, FileSignature, HeartPulse, Paperclip } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
+import { lireFichier } from '@/lib/fichiers';
 import {
+  delivrerAttestation,
   getDemandesRh,
+  type AttestationRh,
   jjmm,
   LIBELLE_SOINS,
   LIBELLE_TYPE_ABSENCE,
@@ -23,9 +26,14 @@ import { KpiStrip } from '@/components/admin/kpi-strip';
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
 // Onglet « Demandes » de la page RH (lot 2) : validation finale des absences
-// (après accord du N+1) et suivi des remboursements santé.
+// (après accord du N+1), suivi des remboursements santé, et attestations de
+// travail demandées dans « Mon espace » (la RH dépose le document signé).
 export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean }) {
-  const [donnees, setDonnees] = useState<{ absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] } | null>(null);
+  const [donnees, setDonnees] = useState<{
+    absences: DemandeAbsence[];
+    remboursements: DemandeRemboursement[];
+    attestations: AttestationRh[];
+  } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [toutes, setToutes] = useState(false);
 
@@ -52,6 +60,9 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
   const rembATraiter = donnees.remboursements.filter((r) => r.statut === 'soumise' || r.statut === 'transmise');
   const absences = toutes ? donnees.absences : absencesATraiter;
   const remboursements = toutes ? donnees.remboursements : rembATraiter;
+  const attestATraiter = donnees.attestations.filter((a) => !a.delivreeLe);
+  const attestations = toutes ? donnees.attestations : attestATraiter;
+  const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
   return (
     <>
@@ -59,6 +70,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
         tuiles={[
           { cle: 'abs', label: 'Absences à valider', valeur: absencesATraiter.length, sousTexte: 'accord du N+1 obtenu', icone: CalendarCheck, alerte: absencesATraiter.length > 0 },
           { cle: 'remb', label: 'Remboursements en cours', valeur: rembATraiter.length, sousTexte: 'soumis ou transmis', icone: HeartPulse, alerte: rembATraiter.length > 0 },
+          { cle: 'attest', label: 'Attestations à délivrer', valeur: attestATraiter.length, sousTexte: 'attestations de travail demandées', icone: FileSignature, alerte: attestATraiter.length > 0 },
         ]}
       />
       <div className="rh-outils">
@@ -168,6 +180,52 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                     >
                       Rejeter
                     </button>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel glass-panel dmd-section">
+        <h2 className="dmd-titre">Attestations de travail</h2>
+        {attestations.length === 0 ? (
+          <p className="empty-state">Aucune attestation à délivrer.</p>
+        ) : (
+          <ul className="dmd-liste">
+            {attestations.map((a) => (
+              <li key={a.id} className="dmd-ligne">
+                <span>
+                  <strong>
+                    {a.dossier.prenom} {a.dossier.nom}
+                  </strong>
+                  <span className="cell-sub">
+                    {a.dossier.matricule} · demandée le {jjmmaaaa(a.demandeLe)}
+                    {a.delivreeLe && ` · délivrée le ${jjmmaaaa(a.delivreeLe)} (${a.nom})`}
+                  </span>
+                </span>
+                <span className="dmd-actions">
+                  {a.delivreeLe ? (
+                    <span className="pill pill--succes">Délivrée</span>
+                  ) : (
+                    ecriture && (
+                      <label className="btn-primary btn-primary--sm">
+                        <Paperclip size={14} aria-hidden /> Joindre l’attestation signée
+                        <input
+                          type="file"
+                          hidden
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f)
+                              agir(async () => {
+                                const { nom, url } = await lireFichier(f);
+                                return delivrerAttestation(slug, a.id, { nom, url });
+                              });
+                          }}
+                        />
+                      </label>
+                    )
                   )}
                 </span>
               </li>

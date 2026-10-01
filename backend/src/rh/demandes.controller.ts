@@ -14,6 +14,7 @@ import {
   ReponseAutresDatesDto,
   ValidationRhDto,
 } from './demandes.dto';
+import { PieceDto } from './dto';
 
 type R = { user: { userId: string; societeId: string; role: string } };
 
@@ -99,6 +100,11 @@ export class DemandesRhController {
   @Post('absences/:id/validation')
   valider(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ValidationRhDto) {
     return this.demandes.validationRh(req.user, id, dto.valide, dto.motif);
+  }
+
+  @Post('attestations/:id/delivrance')
+  delivrer(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: PieceDto) {
+    return this.demandes.delivrerAttestation(req.user, id, dto);
   }
 
   @Post('remboursements/:id/transmission')

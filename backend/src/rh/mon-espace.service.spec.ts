@@ -12,10 +12,12 @@ const DOSSIER = {
   missionResultat: '', missionLivrables: '', missionKpi: '', missionSignalAlerte: '',
   societe: { nom: 'Grey Concrete' }, collaborateur: null, pieces: [{ type: 'contrat_signe', nom: 'contrat.pdf', createdAt: new Date() }],
   bulletins: [{ mois: '2026-08', nom: 'bulletin-08.pdf', updatedAt: new Date() }],
+  attestations: [],
 };
 
-function svc(dossier: object | null = DOSSIER) {
+function svc(dossier: object | null = DOSSIER, attestationsEnAttente = 0) {
   const prisma = {
+    demandeAttestation: { count: jest.fn().mockResolvedValue(attestationsEnAttente), create: jest.fn() },
     dossierPersonnel: {
       findFirst: jest.fn().mockResolvedValue(dossier),
       findUniqueOrThrow: jest.fn().mockResolvedValue(dossier),
@@ -86,5 +88,12 @@ describe('MonEspaceService', () => {
     const { s: service, prisma } = svc();
     await service.majCoordonnees({ userId: 'U' }, { adresse: ' Sacré-Cœur 3 ', enfantsACharge: 2, situationFamiliale: 'marie' });
     expect((prisma.dossierPersonnel.update as jest.Mock).mock.calls[0][0].data).toMatchObject({ adresse: 'Sacré-Cœur 3', enfantsACharge: 2, situationFamiliale: 'marie' });
+  });
+
+  it('attestation de travail : une demande à la fois, la RH la délivre', async () => {
+    const { s: service, prisma } = svc();
+    await service.demanderAttestation({ userId: 'U' });
+    expect((prisma.demandeAttestation.create as jest.Mock).mock.calls[0][0]).toEqual({ data: { dossierId: 'D1' } });
+    await expect(svc(DOSSIER, 1).s.demanderAttestation({ userId: 'U' })).rejects.toThrow('déjà demandée');
   });
 });
