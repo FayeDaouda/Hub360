@@ -62,15 +62,34 @@ export class ProduitsServicesService {
   }
 
   async patch(societeId: string, id: string, dto: PatchProduitServiceDto) {
-    await this.charger(societeId, id);
-    const p = await this.prisma.produitService.update({
-      where: { id },
-      data: {
-        designation: dto.designation?.trim(),
-        prixUnitaire: dto.prixUnitaire,
-        tauxTva: dto.tauxTva,
-        description: dto.description?.trim(),
-      },
+    const avant = await this.charger(societeId, id);
+    const p = await this.prisma.$transaction(async (tx) => {
+      const maj = await tx.produitService.update({
+        where: { id },
+        data: {
+          designation: dto.designation?.trim(),
+          prixUnitaire: dto.prixUnitaire,
+          tauxTva: dto.tauxTva,
+          description: dto.description?.trim(),
+        },
+      });
+      // Grille verrouillée (maquette Finances, oct. 2026) : un nouveau tarif
+      // s'applique aux lignes des devis encore en brouillon ; une offre soumise
+      // au CFO (lead « En validation ») garde les prix du jour de sa soumission.
+      // Les prix modifiables à la saisie ne sont jamais écrasés.
+      if (!avant.prixModifiable && (dto.prixUnitaire != null || dto.tauxTva != null)) {
+        await tx.ligneDevis.updateMany({
+          where: {
+            produitServiceId: id,
+            devis: {
+              statut: 'brouillon',
+              OR: [{ dossierCrmId: null }, { dossierCrm: { statut: { not: 'en_validation' } } }],
+            },
+          },
+          data: { prixUnitaire: dto.prixUnitaire ?? undefined, tauxTva: dto.tauxTva },
+        });
+      }
+      return maj;
     });
     return formater(p);
   }

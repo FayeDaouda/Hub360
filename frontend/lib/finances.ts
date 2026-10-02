@@ -10,6 +10,10 @@ import {
 // regroupement par mois et tuiles — calculés sur les listes déjà chargées.
 // -----------------------------------------------------------------------------
 
+// Frais de coordination des études refacturées (CGV art. 5) — miroir de
+// TAUX_COORDINATION_ET (backend, projets/domaine/refacturation-etudes.ts).
+export const TAUX_COORDINATION_ET = 10; // %
+
 export type Ton = 'succes' | 'attention' | 'risque' | 'info' | 'neutre';
 export type Etiquette = { libelle: string; ton: Ton };
 

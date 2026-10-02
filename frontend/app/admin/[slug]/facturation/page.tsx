@@ -31,6 +31,7 @@ import { DevisPanneau } from '@/components/finances/devis-panneau';
 import { OngletDevis } from '@/components/finances/onglet-devis';
 import { OngletFactures } from '@/components/finances/onglet-factures';
 import { TableauDeBordFinances } from '@/components/finances/tableau-de-bord';
+import { GrilleTarifaire } from '@/components/finances/grille-tarifaire';
 
 // Dégradés des 5 tuiles, relevés sur la maquette Finances (oct. 2026) :
 // pervenche, sarcelle, orange, moutarde, rose.
@@ -91,6 +92,7 @@ export default function FinancesPage({ params }: Props) {
   }, [ongletDemande]);
   const [modalDevis, setModalDevis] = useState(false);
   const [modalCatalogue, setModalCatalogue] = useState(false);
+  const [grille, setGrille] = useState(false);
   const [nouvelle, setNouvelle] = useState<{ dossier?: string } | null>(null);
   const [factureOuverte, setFactureOuverte] = useState<string | null>(null);
   const [devisOuvert, setDevisOuvert] = useState<string | null>(null);
@@ -198,6 +200,9 @@ export default function FinancesPage({ params }: Props) {
           rentabilité. Les équipes ne voient aucun montant.
         </p>
         <div className="factu-actions-tete">
+          <button type="button" className="btn-ghost fin-bouton-grille" onClick={() => setGrille(true)}>
+            Grille tarifaire
+          </button>
           {droits.catalogue && (
             <button type="button" className="btn-ghost" onClick={() => setModalCatalogue(true)}>
               <Package size={15} strokeWidth={1.75} aria-hidden /> Catalogue
@@ -354,6 +359,7 @@ export default function FinancesPage({ params }: Props) {
         <CatalogueProduitsModal slug={params.slug} produits={catalogue} onClose={() => setModalCatalogue(false)} onChange={setCatalogue} />
       )}
 
+      {grille && societe && <GrilleTarifaire societe={societe} catalogue={catalogue} onClose={() => setGrille(false)} />}
       {nouvelle && (
         <NouvelleFactureDirecte
           slug={params.slug}

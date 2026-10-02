@@ -13456,6 +13456,126 @@ a.notif-item:hover {
   color: var(--text-muted);
   font-size: 0.78rem;
 }
+/* Grille tarifaire et société (panneau, lecture seule) */
+.fin-bouton-grille {
+  border-color: color-mix(in srgb, var(--iris) 45%, var(--border));
+  background: color-mix(in srgb, var(--iris) 12%, transparent);
+}
+.grille {
+  gap: 1rem;
+}
+.grille-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.grille-tete h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.grille-tete .modal-close {
+  margin-left: auto;
+}
+.grille-verrou {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sauge) 18%, transparent);
+  color: color-mix(in srgb, var(--sauge) 70%, var(--text));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.grille-intro {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.grille-liste {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.grille-liste li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.grille-liste li > span:first-child {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.grille-liste strong {
+  font-size: 0.92rem;
+}
+.grille-liste small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.grille-prix {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  min-width: 9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.grille-prix svg {
+  color: var(--text-muted);
+}
+.grille-section {
+  margin: 0.6rem 0 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.grille-societe {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.grille-societe div {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-size: 0.88rem;
+}
+.grille-societe dt {
+  font-weight: 700;
+}
+.grille-societe dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.grille-note {
+  margin: 0;
+  color: var(--ocre);
+  font-size: 0.8rem;
+}
+@media (max-width: 560px) {
+  .grille-prix {
+    min-width: 0;
+  }
+  .grille-societe div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+
 /* Tableau de bord : 2 colonnes (≈ 3/5 – 2/5), une seule sous 1100 px. */
 .fin-tdb {
   --fin-vert: #7fd4a0;
