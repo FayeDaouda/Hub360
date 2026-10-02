@@ -12,8 +12,9 @@ import { DELAI_PAIEMENT_DIRECTE_JOURS } from '../src/projets/facturation/facture
 // échéance 15 j) ; seuls les scénarios et les dates sont inventés, étalés sur
 // les mois passés pour peupler les onglets et le tableau de bord.
 //
-// Utilisé par seed.ts ET exécutable seul (npm run finances-demo) : n'écrit
-// rien si la société a déjà un devis ou une facture (non destructif).
+// Utilisé par seed.ts ET exécutable seul (npm run finances-demo) : ne crée
+// rien si la société a déjà un devis ou une facture (non destructif) ; la
+// chronologie des leads, elle, se réaligne à chaque passage.
 
 const PARTS_DEFAUT = REGLES.find((r) => r.cle === 'parts_factures')!.defaut as PartsFactures;
 
@@ -33,9 +34,48 @@ const SCENARIO: Record<string, { emises: number; derniere: Sort }> = {
   livre: { emises: 3, derniere: 'payee' },
 };
 
+// Délais prévisionnels de démonstration (jours après le bon pour accord).
+const DELAIS_DEMO: Record<string, number> = { 'CO:F1': 0, 'CO:F2': 60, 'CO:F3': 150, 'IM:18': 90 };
+
 export async function creerFinancesDemo(prisma: PrismaClient, societeId: string): Promise<{ devis: number; factures: number }> {
   const deja = (await prisma.devis.count({ where: { societeId } })) + (await prisma.facture.count({ where: { societeId } }));
   if (deja > 0) return { devis: 0, factures: 0 };
+  const r = await creer(prisma, societeId);
+  await alignerChronologie(prisma, societeId);
+  return r;
+}
+
+// Chronologie des leads alignée sur leurs offres (Feuille de temps) : lead
+// créé 3 j avant l'offre, soumis au CFO le lendemain, offre envoyée, bon pour
+// accord, onboard le lendemain (signature du contrat), perdu à la réponse.
+// Idempotent : rejouable sur une base déjà peuplée.
+export async function alignerChronologie(prisma: PrismaClient, societeId: string) {
+  const offres = await prisma.devis.findMany({
+    where: { societeId, dossierCrmId: { not: null }, rangDossier: 1 },
+    select: { dossierCrmId: true, creeLe: true, dateEnvoi: true, dateReponse: true, statut: true },
+  });
+  for (const o of offres) {
+    const dossierId = o.dossierCrmId!;
+    const dates: [string, Date | null][] = [
+      ['nouveau_projet', plus(o.creeLe, -3)],
+      ['en_validation', plus(o.creeLe, 1)],
+      ['offre_envoyee', o.dateEnvoi],
+      ['onboard', o.statut === 'accepte' && o.dateReponse ? plus(o.dateReponse, 1) : null],
+      ['perdu', o.statut === 'refuse' ? o.dateReponse : null],
+    ];
+    await prisma.dossierCrm.update({ where: { id: dossierId }, data: { createdAt: plus(o.creeLe, -3) } });
+    for (const [vers, le] of dates) {
+      if (!le) continue;
+      const maj = await prisma.dossierCrmTransition.updateMany({ where: { dossierId, vers: vers as never }, data: { creeLe: le } });
+      // Offre soumise par la démo (lead « En validation ») : sa transition.
+      if (maj.count === 0 && vers === 'en_validation' && o.statut === 'brouillon') {
+        await prisma.dossierCrmTransition.create({ data: { dossierId, de: 'nouveau_projet', vers: 'en_validation', creeLe: le } });
+      }
+    }
+  }
+}
+
+async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: number; factures: number }> {
 
   const catalogue = new Map(
     (await prisma.produitService.findMany({ where: { societeId, supprime: false } })).map((p) => [p.code ?? '', p]),
@@ -108,6 +148,7 @@ export async function creerFinancesDemo(prisma: PrismaClient, societeId: string)
         dateValidite: envoi ? ajouterJours(jour(envoi), VALIDITE_OFFRE_JOURS) : null,
         dateReponse: statut === 'accepte' || statut === 'refuse' ? plus(envoi!, 4) : null,
         partsFactures: PARTS_DEFAUT,
+        delaisEcheancier: statut === 'accepte' ? DELAIS_DEMO : undefined,
         lignes: { create: lignesOffre(d, i) },
       },
       include: { lignes: { include: { produitService: { select: { code: true, famille: true } } } } },
@@ -154,6 +195,7 @@ export async function creerFinancesDemo(prisma: PrismaClient, societeId: string)
           montantHt: f.montantHt,
           tauxTva: f.tauxTva,
           devisEcheancierId: offreId,
+          cleEcheance: f.cle,
           creeLe: emiseLe ?? plus(debut, 6),
         },
         emiseLe,
@@ -215,7 +257,12 @@ if (require.main === module) {
   (async () => {
     const grey = await prisma.societe.findUniqueOrThrow({ where: { slug: 'grey-concrete' } });
     const r = await creerFinancesDemo(prisma, grey.id);
-    console.log(r.devis + r.factures ? `Finances de démonstration : ${r.devis} devis, ${r.factures} factures.` : 'Devis ou factures déjà présents : rien écrit.');
+    if (r.devis + r.factures === 0) await alignerChronologie(prisma, grey.id);
+    console.log(
+      r.devis + r.factures
+        ? `Finances de démonstration : ${r.devis} devis, ${r.factures} factures.`
+        : 'Devis ou factures déjà présents : rien créé, chronologie des leads réalignée.',
+    );
   })()
     .catch((e) => {
       console.error(e);

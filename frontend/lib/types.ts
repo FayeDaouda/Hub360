@@ -1726,6 +1726,44 @@ export type Devis = {
   creeLe: string;
 };
 
+// Finances · Feuille de temps d'un dossier (backend : finances/feuille-temps).
+export type DelaiTranche =
+  | { etat: 'payee' | 'a_echoir' | 'en_retard' | 'a_facturer' | 'facturation_en_retard'; jours: number }
+  | { etat: 'non_planifiee' };
+
+export type FeuilleTemps = {
+  dossier: { id: string; code: string; statut: StatutCrm; client: { id: string; nom: string }; projet: { id: string; code: string } | null };
+  offre: { id: string; reference: string | null; statut: StatutDevis; montantHt: number } | null;
+  dernierEvenement: string | null;
+  pipe: { cle: string; libelle: string; date: string | null; ecartJours: number | null; cible: string | null; horsCible: boolean }[];
+  indicateurs: {
+    cycleCommercialJours: number | null;
+    signatureEncaissementJours: number | null;
+    heuresImputees: number | null;
+    heuresPrevues: number | null;
+    honorairesParHeure: number | null;
+  };
+  facturation: {
+    cle: string;
+    famille: string;
+    tranche: string;
+    declencheur: string;
+    reference: string | null;
+    montantTtc: number;
+    prevue: string | null;
+    facturee: string | null;
+    echeance: string | null;
+    payee: string | null;
+    delai: DelaiTranche;
+  }[];
+  temps: {
+    total: number;
+    prevues: number | null;
+    repartition: { etape: string; heures: number }[];
+    taches: { id: string; etape: string; libelle: string; debut: string | null; assigne: string; heuresStandard: number | null; joursEcoules: number; heures: number }[];
+  } | null;
+};
+
 // Échéance de l'échéancier d'une offre (backend : facturation-offre.ts).
 export type EcheanceOffre = {
   cle: string | null; // null = facturation au mois (pas de délai)

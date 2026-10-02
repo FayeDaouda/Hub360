@@ -34,6 +34,7 @@ import { OngletFactures } from '@/components/finances/onglet-factures';
 import { TableauDeBordFinances } from '@/components/finances/tableau-de-bord';
 import { GrilleTarifaire } from '@/components/finances/grille-tarifaire';
 import { OffrePanneau } from '@/components/finances/offre-panneau';
+import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
 
 // Dégradés des 5 tuiles, relevés sur la maquette Finances (oct. 2026) :
 // pervenche, sarcelle, orange, moutarde, rose.
@@ -45,7 +46,7 @@ const DEGRADE_KPI = {
   reste: { a: '#d23c7c', b: '#ef6fae' },
 };
 
-type Onglet = 'tableau' | 'devis' | 'factures';
+type Onglet = 'tableau' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
 
 function formatDate(iso: string): string {
@@ -118,8 +119,8 @@ export default function FinancesPage({ params }: Props) {
     else if (devisDemande) setOffre({ devisId: devisDemande });
   }, [offreDemandee, devisDemande]);
   useEffect(() => {
-    if (offre && !leads) getProjets(params.slug).then(setLeads).catch(() => setLeads([]));
-  }, [offre, leads, params.slug]);
+    if ((offre || onglet === 'temps') && !leads) getProjets(params.slug).then(setLeads).catch(() => setLeads([]));
+  }, [offre, onglet, leads, params.slug]);
   useEffect(() => {
     if (factureDemandee) setFactureOuverte(factureDemandee);
   }, [factureDemandee]);
@@ -344,6 +345,11 @@ export default function FinancesPage({ params }: Props) {
           >
             Factures · {factures ? facturesFiltrees.length : '…'}
           </button>
+          {droits.tableauDeBord && (
+            <button type="button" role="tab" aria-selected={onglet === 'temps'} className={onglet === 'temps' ? 'is-active' : ''} onClick={() => setOnglet('temps')}>
+              Feuille de temps
+            </button>
+          )}
         </div>
         <span className="pill pill--neutre fin-devise">Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %</span>
       </div>
@@ -354,6 +360,13 @@ export default function FinancesPage({ params }: Props) {
         ) : (
           <TableauDeBordFinances devis={devisFiltres} factures={facturesFiltrees} catalogue={catalogue} />
         )
+      ) : onglet === 'temps' ? (
+        <OngletFeuilleTemps
+          slug={params.slug}
+          dossiers={leads}
+          onVoirFactures={() => setOnglet('factures')}
+          onOuvrirOffre={(id) => setDevisOuvert(id)}
+        />
       ) : onglet === 'devis' ? (
         !devis ? (
           <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />

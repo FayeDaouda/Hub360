@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { versClient } from '../commun/format-contrat';
 import { chargerProjet } from '../projets/projet-acces';
 import { typeFactureDepuisNature, type PartsFactures } from '../projets/domaine/config';
-import { delaisValides, echeancierOffre, type LigneOffre } from '../projets/domaine/facturation-offre';
+import { delaisValides, echeancierOffre, lignesOffreDepuisDevis } from '../projets/domaine/facturation-offre';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { EmailService } from '../email/email.service';
@@ -922,15 +922,7 @@ export class DevisService {
   // Parts figées à la soumission ; avant, celles en service (Réglages).
   private async echeancier(societeId: string, d: DevisAvecDetail) {
     const parts = (d.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
-    const lignes: LigneOffre[] = this.calculerLignes(d.lignes).lignes.map((l, i) => ({
-      code: d.lignes[i].produitService?.code ?? null,
-      famille: d.lignes[i].produitService?.famille ?? null,
-      designation: l.designation,
-      montantHt: l.montantHt,
-      tauxTva: l.tauxTva,
-      quantite: l.quantite,
-    }));
-    return echeancierOffre(lignes, parts, (d.delaisEcheancier as Record<string, number> | null) ?? {});
+    return echeancierOffre(lignesOffreDepuisDevis(d.lignes), parts, (d.delaisEcheancier as Record<string, number> | null) ?? {});
   }
 
   // Vue CLIENT (lien public, sans compte) — expose le strict nécessaire pour

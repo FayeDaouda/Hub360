@@ -13,6 +13,7 @@ import { EquipeModule } from './equipe/equipe.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { DevisModule } from './devis/devis.module';
+import { FinancesModule } from './finances/finances.module';
 import { RolesModule } from './roles/roles.module';
 import { GroupeModule } from './groupe/groupe.module';
 import { RhModule } from './rh/rh.module';
@@ -43,6 +44,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     NotificationsModule,
     ChatModule,
     DevisModule,
+    FinancesModule,
     RolesModule,
     GroupeModule,
     RhModule,

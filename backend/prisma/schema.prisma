@@ -1756,6 +1756,9 @@ model Facture {
   // images, autres lignes) — plusieurs par offre, d'où ce lien distinct de
   // devisOrigineId (conversion 1 devis → 1 facture, devis libres).
   devisEcheancierId String?       @map("devis_echeancier_id")
+  // Échéance de l'offre que la facture règle (clé de facturation-offre.ts :
+  // CO:F1, DPC:solde, IM:18…) — rapprochement avec le délai prévu (Finances).
+  cleEcheance       String?       @map("cle_echeance")
   // Mensualité d'une ligne SU / EX de l'offre (facturation mensuelle
   // manuelle, CGV : forfait mensuel) — une facture par mois facturé.
   ligneDevisId      String?       @map("ligne_devis_id")

@@ -21,7 +21,7 @@ import {
   statutFactureEffectif,
   ventilationTva,
 } from '../domaine/gardes';
-import { FAMILLES_MENSUELLES, planFacturationOffre } from '../domaine/facturation-offre';
+import { FAMILLES_MENSUELLES, lignesOffreDepuisDevis, planFacturationOffre } from '../domaine/facturation-offre';
 import { montantRefacture, statutReglementBureau } from '../domaine/refacturation-etudes';
 import {
   AjouterPaiementDto,
@@ -628,16 +628,7 @@ export class FacturationService {
     // Parts figées sur l'offre (soumission à la DAF) ; à défaut, réglage en service.
     const offre = await tx.devis.findUnique({ where: { id: devisId }, select: { partsFactures: true } });
     const parts = (offre?.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
-    const plan = planFacturationOffre(
-      lignes.map((l) => ({
-        code: l.produitService?.code ?? null,
-        famille: l.produitService?.famille ?? null,
-        designation: l.designation,
-        montantHt: Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()),
-        tauxTva: l.tauxTva.toNumber(),
-      })),
-      parts,
-    );
+    const plan = planFacturationOffre(lignesOffreDepuisDevis(lignes), parts);
     await tx.facture.createMany({
       data: plan.map((f) => ({
         societeId,
@@ -648,6 +639,7 @@ export class FacturationService {
         montantHt: f.montantHt,
         tauxTva: f.tauxTva,
         devisEcheancierId: devisId,
+        cleEcheance: f.cle,
       })),
     });
     return plan.length;

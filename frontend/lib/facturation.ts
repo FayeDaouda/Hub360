@@ -2,6 +2,7 @@ import type {
   BureauARegler,
   Facturation,
   FactureCentrale,
+  FeuilleTemps,
   JalonFacture,
   LeadFacturable,
   ModePaiement,
@@ -246,4 +247,9 @@ export function supprimerFactureCentrale(slug: string, id: string): Promise<{ ok
 
 export function ajouterPaiementCentrale(slug: string, id: string, body: NouveauPaiement): Promise<FactureCentrale> {
   return apiSociete(slug, `/factures/${id}/paiements`, { method: 'POST', body });
+}
+
+// Finances · Feuille de temps d'un dossier (finances_marges lecture).
+export function getFeuilleTemps(slug: string, dossierId: string): Promise<FeuilleTemps> {
+  return apiSociete<FeuilleTemps>(slug, `/finances/feuille-temps/${dossierId}`);
 }

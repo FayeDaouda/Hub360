@@ -28,6 +28,22 @@ export type LigneOffre = {
   quantite?: number; // mois facturés d'une ligne SU / EX (échéancier affiché)
 };
 
+// Lignes d'un devis (Prisma) → lignes d'offre du plan. HT = quantité × prix,
+// arrondi au franc (même calcul que le devis).
+type Nombre = { toNumber(): number };
+export function lignesOffreDepuisDevis(
+  lignes: { designation: string; quantite: Nombre; prixUnitaire: Nombre; tauxTva: Nombre; produitService: { code: string | null; famille: string | null } | null }[],
+): LigneOffre[] {
+  return lignes.map((l) => ({
+    code: l.produitService?.code ?? null,
+    famille: l.produitService?.famille ?? null,
+    designation: l.designation,
+    montantHt: Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()),
+    tauxTva: l.tauxTva.toNumber(),
+    quantite: l.quantite.toNumber(),
+  }));
+}
+
 export type FacturePrevue = {
   jalon: JalonFacture | null;
   libelle: string;
