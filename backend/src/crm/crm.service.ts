@@ -578,12 +578,19 @@ export class CrmService {
   // l'offre acceptée pour « onboarder » (rattachement au projet), null sinon.
   private async verifierOffre(dossierId: string, action: ActionCrm): Promise<string | null> {
     if (action === 'soumettre') {
-      const prete = await this.prisma.devis.count({
-        where: { dossierCrmId: dossierId, statut: 'brouillon', lignes: { some: {} } },
+      // Le brouillon tolère des lignes pas encore chiffrées (maquette
+      // Finances) ; le CFO ne reçoit qu'une offre entièrement chiffrée.
+      const offre = await this.prisma.devis.findFirst({
+        where: { dossierCrmId: dossierId, statut: 'brouillon' },
+        select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
       });
-      if (prete === 0) {
+      const lignes = offre?.lignes ?? [];
+      if (!lignes.some((l) => l.quantite.toNumber() > 0 && l.prixUnitaire.toNumber() > 0)) {
+        throw new ConflictException('Ajoute au moins une prestation chiffrée à l’offre avant de la soumettre au CFO.');
+      }
+      if (lignes.some((l) => l.quantite.toNumber() <= 0)) {
         throw new ConflictException(
-          'Prépare l’offre (au moins une ligne) avant de soumettre le dossier à la DAF.',
+          'Offre : une ligne n’est pas chiffrée (quantité, surface ou planches manquantes) — complète-la ou retire-la avant de la soumettre au CFO.',
         );
       }
     }
@@ -700,7 +707,10 @@ export class CrmService {
     ref: CreerDossierDto['client'],
   ): Promise<Client> {
     if (ref.nouveau) {
-      return tx.client.create({ data: { societeId, ...ref.nouveau } });
+      // Référence CL-NNNN : rang suivant de la société (collision concurrente →
+      // contrainte unique, la création échoue plutôt que de doublonner).
+      const dernier = await tx.client.aggregate({ where: { societeId }, _max: { numero: true } });
+      return tx.client.create({ data: { societeId, numero: (dernier._max.numero ?? 0) + 1, ...ref.nouveau } });
     }
     const client = await tx.client.findFirst({ where: { id: ref.id, societeId } });
     if (!client) throw new NotFoundException('Client introuvable');

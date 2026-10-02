@@ -26,15 +26,20 @@ import { montantTtcLignes, refDevis, relanceAFaire, statutDevisEffectif } from '
 type RefNommee = { prenom: string; nom: string } | null;
 const nomComplet = (r: RefNommee) => (r ? `${r.prenom} ${r.nom}`.trim() : null);
 
+// Référence client « CL-0009 » (maquette Finances) ; null = client sans rang.
+export const refClient = (numero: number | null) => (numero == null ? null : `CL-${String(numero).padStart(4, '0')}`);
+
 export function versClient(c: Client) {
   return {
     id: c.id,
+    reference: refClient(c.numero),
     nom: c.nom,
     type: c.type,
     sigle: c.sigle ?? undefined,
     contact: c.contact ?? undefined,
     email: c.email ?? undefined,
     telephone: c.telephone ?? undefined,
+    adresse: c.adresse,
   };
 }
 

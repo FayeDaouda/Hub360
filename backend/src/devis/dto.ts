@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsIn,
+  IsObject,
   IsInt,
   IsNumber,
   IsOptional,
@@ -21,7 +22,9 @@ export class LigneDevisDto {
   // jamais une contrainte (cf. cadrage « Devis »).
   @IsOptional() @IsString() produitServiceId?: string;
   @IsString() @MinLength(1) @MaxLength(200) designation!: string;
-  @IsNumber() @Min(0.01) quantite!: number;
+  // 0 toléré sur le brouillon d'une offre de lead seulement (ligne pas encore
+  // chiffrée — la soumission au CFO l'exige) ; ailleurs le serveur le refuse.
+  @IsNumber() @Min(0) quantite!: number;
   // Ligne CO (tarif × surface × planches) — la quantité est alors recalculée
   // par le serveur ; planches imposées par le dossier pour une offre CRM.
   @IsOptional() @IsInt() @Min(1) surfaceM2?: number;
@@ -58,6 +61,12 @@ export class PatchDevisDto {
   @ValidateNested({ each: true })
   @Type(() => LigneDevisDto)
   lignes?: LigneDevisDto[];
+  // Offre de lead (maquette Finances) : message d'introduction (null ou vide =
+  // texte généré), délais prévisionnels par échéance (jours après signature),
+  // adresse du client reprise sur les devis et factures.
+  @IsOptional() @IsString() @MaxLength(3000) messageIntroduction?: string | null;
+  @IsOptional() @IsObject() delaisEcheancier?: Record<string, number>;
+  @IsOptional() @IsString() @MaxLength(500) adresseClient?: string;
 }
 
 // POST …/devis/:id/reponse — validation MANUELLE par l'admin (le client a

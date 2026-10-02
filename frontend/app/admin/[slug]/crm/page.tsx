@@ -16,7 +16,6 @@ import {
   rattacherLocalite,
 } from '@/lib/crm';
 import { getLocalites } from '@/lib/localites';
-import { getProduitsServices } from '@/lib/devis';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { type ActionCrm } from '@/lib/cycle-crm';
@@ -27,7 +26,6 @@ import {
   type Client,
   type Localite,
   type Personne,
-  type ProduitService,
   type ModifierFichePayload,
   type Projet,
   type StatutCrm,
@@ -77,11 +75,9 @@ export default function CrmPage({ params }: Props) {
   // Lecture seule pour un rôle qui n'a que la lecture sur le CRM (CFO, CEO…)
   // — affichage seulement, le serveur refuse de toute façon l'écriture.
   const peutEcrire = niveauSuffisant(session, 'crm', 'ecriture');
-  // Offre d'un dossier (étape F) : voir = finances_devis lecture, préparer /
-  // relancer / saisir la réponse = écriture (le Dir. GC, pas le COO).
-  const voitOffres = niveauSuffisant(session, 'finances_devis', 'lecture');
+  // Offre d'un dossier (étape F) : préparer (dans Finances) / relancer /
+  // saisir la réponse = finances_devis écriture (le Dir. GC, pas le COO).
   const peutPreparerOffre = niveauSuffisant(session, 'finances_devis', 'ecriture');
-  const [catalogue, setCatalogue] = useState<ProduitService[]>([]);
   const [projets, setProjets] = useState<Projet[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   // Référentiel des localités — chargé une fois, partagé par la création et
@@ -104,16 +100,24 @@ export default function CrmPage({ params }: Props) {
     getClients(params.slug).then(setClients);
     getLocalites(params.slug).then(setLocalites);
     getProprietairesPossibles(params.slug).then(setProprietaires);
-    // Catalogue : liste de choix des lignes d'offre (lecture ouverte aux
-    // préparateurs d'offre) — inutile à charger sinon.
-    if (voitOffres) getProduitsServices(params.slug).then(setCatalogue).catch(() => setCatalogue([]));
-  }, [params.slug, voitOffres]);
+  }, [params.slug]);
 
   // Lien direct vers un dossier (?dossier=… — notifications du cycle CRM) :
   // ouvre sa fiche puis retire le paramètre, pour qu'un rechargement ne la
   // rouvre pas et qu'un nouveau clic sur la notification la rouvre.
   const router = useRouter();
-  const dossierDemande = useSearchParams().get('dossier');
+  const parametres = useSearchParams();
+  const dossierDemande = parametres.get('dossier');
+  // « Nouveau client » depuis Finances (?nouveau=1&depuis=finances) : la
+  // création du lead s'ouvre, puis sa fiche, dont le bouton « Continuer vers
+  // le devis » ramène dans Finances.
+  const [depuisFinances, setDepuisFinances] = useState(false);
+  useEffect(() => {
+    if (parametres.get('nouveau') !== '1') return;
+    setModalOuvert(true);
+    setDepuisFinances(parametres.get('depuis') === 'finances');
+    router.replace(`/admin/${params.slug}/crm`, { scroll: false });
+  }, [parametres, params.slug, router]);
   useEffect(() => {
     if (!dossierDemande || !projets) return;
     if (projets.some((p) => p.id === dossierDemande)) setDetailId(dossierDemande);
@@ -184,6 +188,7 @@ export default function CrmPage({ params }: Props) {
     );
     setNouveauId(projet.id);
     setRecherche('');
+    if (depuisFinances) setDetailId(projet.id);
   }
 
   // Action du cycle depuis la fiche détail. Pas de maj optimiste : le
@@ -488,7 +493,7 @@ export default function CrmPage({ params }: Props) {
           peutEcrire={peutEcrire}
           peutPreparerOffre={peutPreparerOffre}
           peutFacturer={niveauSuffisant(session, 'finances_factures', 'ecriture')}
-          catalogue={catalogue}
+          depuisFinances={depuisFinances}
           onMaj={rafraichir}
           peutReassigner={estDirectionOuCio}
           peutArchiver={estDirectionOuCio}

@@ -451,6 +451,9 @@ enum TypeClient {
 model Client {
   id        String     @id @default(uuid())
   societeId String     @map("societe_id")
+  // Référence client « CL-0009 » (maquette Finances, oct. 2026) : rang dans la
+  // société, attribué à la création.
+  numero    Int?
   nom       String
   type      TypeClient
   // Sigle choisi par l'entreprise elle-même — obligatoire pour une personne
@@ -461,6 +464,8 @@ model Client {
   contact   String?
   email     String?
   telephone String?
+  // Adresse reprise sur les devis et les factures ; "" = à renseigner.
+  adresse   String     @default("")
   createdAt DateTime   @default(now()) @map("created_at")
 
   societe  Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
@@ -468,6 +473,7 @@ model Client {
   projets  Projet[]
   devis    Devis[]
 
+  @@unique([societeId, numero])
   @@map("clients")
 }
 
@@ -1861,41 +1867,47 @@ enum StatutDevis {
 }
 
 model Devis {
-  id                String      @id @default(uuid())
-  societeId         String      @map("societe_id")
-  projetId          String?     @map("projet_id") // nullable — devis « libre » possible
-  clientId          String      @map("client_id") // toujours un client du CRM, jamais ressaisi
-  numero            Int? // rang séquentiel par société — null tant que brouillon, comme Facture
-  statut            StatutDevis @default(brouillon)
-  objet             String      @default("")
-  dateValidite      String?     @map("date_validite") // AAAA-MM-JJ (date agenda)
-  dateEnvoi         DateTime?   @map("date_envoi")
-  dateReponse       DateTime?   @map("date_reponse")
+  id                  String      @id @default(uuid())
+  societeId           String      @map("societe_id")
+  projetId            String?     @map("projet_id") // nullable — devis « libre » possible
+  clientId            String      @map("client_id") // toujours un client du CRM, jamais ressaisi
+  numero              Int? // rang séquentiel par société — null tant que brouillon, comme Facture
+  statut              StatutDevis @default(brouillon)
+  objet               String      @default("")
+  dateValidite        String?     @map("date_validite") // AAAA-MM-JJ (date agenda)
+  dateEnvoi           DateTime?   @map("date_envoi")
+  dateReponse         DateTime?   @map("date_reponse")
   // Jeton d'acceptation/refus sans compte — même convention QUE
   // Invitation.tokenHash (cf. auth/jetons.ts) : on ne stocke QUE le SHA-256,
   // jamais le jeton en clair (une fuite de base ne permet aucun rejeu). Le
   // clair ne vit que dans le lien envoyé par email, généré à l'envoi et
   // jamais ré-exposé ensuite — un renvoi régénère un nouveau jeton.
-  tokenPublicHash   String?     @unique @map("token_public_hash")
-  creeLe            DateTime    @default(now()) @map("cree_le")
+  tokenPublicHash     String?     @unique @map("token_public_hash")
+  creeLe              DateTime    @default(now()) @map("cree_le")
   // Offre d'un dossier CRM (étape F) : préparée en « Nouveau projet »,
   // envoyée UNIQUEMENT par la validation DAF (cycle du dossier), validité
   // 7 jours. null = devis hors CRM (Facturation). Rattachée au projet
   // (projetId) au passage du dossier à « onboard ».
-  dossierCrmId      String?     @map("dossier_crm_id")
+  dossierCrmId        String?     @map("dossier_crm_id")
   // Référence d'une offre de dossier (maquette Finances, oct. 2026) : code du
   // dossier + « OF » + rang de l'offre dans ce dossier (« KSN_DIA.26-OF1 »),
   // attribués à la création. null = devis libre : référence DEV-AAAA-NNNN.
-  codeDossier       String?     @map("code_dossier")
-  rangDossier       Int?        @map("rang_dossier")
+  codeDossier         String?     @map("code_dossier")
+  rangDossier         Int?        @map("rang_dossier")
   // Relances manuelles (J+3, J+6 — « relance à faire » dérivé à la lecture,
   // aucun scheduler) : compteur pour savoir laquelle est due.
-  relancesEnvoyees  Int         @default(0) @map("relances_envoyees")
+  relancesEnvoyees    Int         @default(0) @map("relances_envoyees")
   // Parts F1 / F2 / F3 (%) figées à la soumission du dossier à la DAF
   // (Réglages · Règles et délais) : une offre déjà soumise garde ses parts,
   // même si le réglage change ensuite. null = jamais soumise (réglage courant).
-  partsFactures     Json?       @map("parts_factures")
-  derniereRelanceLe DateTime?   @map("derniere_relance_le")
+  partsFactures       Json?       @map("parts_factures")
+  // Message d'introduction du document ; null = texte généré depuis la fiche
+  // du lead et les lignes (maquette Finances), tant que personne ne l'a réécrit.
+  messageIntroduction String?     @map("message_introduction")
+  // Délais prévisionnels de l'échéancier, en jours après la signature, par
+  // échéance (clé de facturation-offre.ts) — saisis sur le brouillon, figés ensuite.
+  delaisEcheancier    Json?       @map("delais_echeancier")
+  derniereRelanceLe   DateTime?   @map("derniere_relance_le")
 
   societe            Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
   projet             Projet?      @relation(fields: [projetId], references: [id], onDelete: SetNull)

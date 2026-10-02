@@ -1,4 +1,4 @@
-import { planFacturationOffre, repartir } from './facturation-offre';
+import { delaisValides, echeancierOffre, planFacturationOffre, repartir } from './facturation-offre';
 
 // Plan de facturation d'une offre acceptée (étape H2) — CGV art. 4, 6, 7.
 const ligne = (code: string | null, famille: string | null, montantHt: number, tauxTva = 18) => ({
@@ -61,7 +61,17 @@ describe('planFacturationOffre', () => {
   it('images : une facture à part, jamais dans le 40/40/20', () => {
     const im = plan.filter((f) => f.libelle.startsWith('Images'));
     expect(im).toEqual([
-      { jalon: null, libelle: 'Images intérieures — IM1, IM2', montantHt: 250_000, tauxTva: 18 },
+      {
+        jalon: null,
+        libelle: 'Images intérieures — IM1, IM2',
+        montantHt: 250_000,
+        tauxTva: 18,
+        cle: 'IM:18',
+        famille: 'Images intérieures',
+        echeance: 'Unique',
+        part: 100,
+        declencheur: null,
+      },
     ]);
   });
 
@@ -83,5 +93,41 @@ describe('planFacturationOffre', () => {
   it('taux de TVA différents → factures séparées (une facture = un taux)', () => {
     const p = planFacturationOffre([ligne('IM1', 'IM', 100, 18), ligne('IM2', 'IM', 100, 0)], { F1: 40, F2: 40, F3: 20 });
     expect(p.map((f) => f.tauxTva).sort()).toEqual([0, 18]);
+  });
+});
+
+// Échéancier affiché sur l'offre (maquette Finances) : plan + délais saisis + mensualités.
+describe('echeancierOffre', () => {
+  const parts = { F1: 40, F2: 40, F3: 20 };
+  const lignes = [
+    ligne('CO1', 'CO', 1_000_000),
+    ligne('DPC', 'PC', 400_000),
+    { ...ligne('SU1', 'SU', 900_000), quantite: 3 },
+  ];
+  const e = echeancierOffre(lignes, parts, { 'CO:F1': 0, 'CO:F2': 45, 'DPC:solde': 60 });
+
+  it('conception F1/F2/F3, permis avance/solde, puis le suivi au mois', () => {
+    expect(e.map((x) => [x.cle, x.echeance, x.part, x.declencheur])).toEqual([
+      ['CO:F1', 'F1', 40, 'Signature du contrat'],
+      ['CO:F2', 'F2', 40, 'Fin de l’APD'],
+      ['CO:F3', 'F3', 20, 'Livraison des plans d’exécution'],
+      ['DPC:avance', 'Avance', 50, 'Commande'],
+      ['DPC:solde', 'Solde', 50, 'Remise du livrable'],
+      [null, '3 mensualités', null, 'Chaque mois'],
+    ]);
+  });
+
+  it('délais saisis repris par clé, montants TTC', () => {
+    expect(e.map((x) => x.delaiJours)).toEqual([0, 45, null, null, 60, null]);
+    expect(e[0].montantTtc).toBe(472_000); // 400 000 HT + 18 %
+    expect(e[5].montantTtc).toBe(1_062_000);
+  });
+
+  it('délais : échéance connue, entier de 0 à 730 jours', () => {
+    const cles = e.flatMap((x) => (x.cle ? [x.cle] : []));
+    expect(delaisValides({ 'CO:F2': 30 }, cles)).toBeNull();
+    expect(delaisValides({ 'CO9:F1': 30 }, cles)).toMatch(/inconnue/);
+    expect(delaisValides({ 'CO:F2': 2.5 }, cles)).toMatch(/entier/);
+    expect(delaisValides({ 'CO:F2': -1 }, cles)).toMatch(/entier/);
   });
 });

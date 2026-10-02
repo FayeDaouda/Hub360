@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Banknote, Clock, FileText, Package, Plus, TrendingUp } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
-import { getClients } from '@/lib/crm';
+import { getClients, getProjets } from '@/lib/crm';
 import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
@@ -17,6 +17,7 @@ import {
   type Devis,
   type FactureCentrale,
   type ProduitService,
+  type Projet,
   type ProjetRef,
 } from '@/lib/types';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
@@ -32,6 +33,7 @@ import { OngletDevis } from '@/components/finances/onglet-devis';
 import { OngletFactures } from '@/components/finances/onglet-factures';
 import { TableauDeBordFinances } from '@/components/finances/tableau-de-bord';
 import { GrilleTarifaire } from '@/components/finances/grille-tarifaire';
+import { OffrePanneau } from '@/components/finances/offre-panneau';
 
 // Dégradés des 5 tuiles, relevés sur la maquette Finances (oct. 2026) :
 // pervenche, sarcelle, orange, moutarde, rose.
@@ -82,10 +84,18 @@ export default function FinancesPage({ params }: Props) {
   // ?onglet=factures : notification « contrat signé » (factures brouillon de
   // l'Onboard). ?nouvelle=<dossier> : « Émettre une facture directe » depuis la
   // fiche CRM. ?facture=<id> : notification « facture à valider » (CFO).
+  // ?offre=<dossier> / ?devis=<id> : offre d'un lead à préparer / à reprendre,
+  // depuis la fiche CRM (« Continuer vers le devis », « Modifier l'offre »).
   const nouvelleDemandee = searchParams.get('nouvelle');
   const factureDemandee = searchParams.get('facture');
+  const offreDemandee = searchParams.get('offre');
+  const devisDemande = searchParams.get('devis');
   const ongletDemande: Onglet | null =
-    searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee ? 'factures' : null;
+    searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee
+      ? 'factures'
+      : offreDemandee || devisDemande
+        ? 'devis'
+        : null;
   const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? (droits.tableauDeBord ? 'tableau' : 'devis'));
   useEffect(() => {
     if (ongletDemande) setOnglet(ongletDemande);
@@ -96,9 +106,20 @@ export default function FinancesPage({ params }: Props) {
   const [nouvelle, setNouvelle] = useState<{ dossier?: string } | null>(null);
   const [factureOuverte, setFactureOuverte] = useState<string | null>(null);
   const [devisOuvert, setDevisOuvert] = useState<string | null>(null);
+  // Offre d'un lead en préparation (panneau « Nouvelle offre ») ; leads du CRM
+  // chargés à la première ouverture.
+  const [offre, setOffre] = useState<{ devisId?: string; dossier?: string } | null>(null);
+  const [leads, setLeads] = useState<Projet[] | null>(null);
   useEffect(() => {
     if (nouvelleDemandee) setNouvelle({ dossier: nouvelleDemandee });
   }, [nouvelleDemandee]);
+  useEffect(() => {
+    if (offreDemandee) setOffre({ dossier: offreDemandee });
+    else if (devisDemande) setOffre({ devisId: devisDemande });
+  }, [offreDemandee, devisDemande]);
+  useEffect(() => {
+    if (offre && !leads) getProjets(params.slug).then(setLeads).catch(() => setLeads([]));
+  }, [offre, leads, params.slug]);
   useEffect(() => {
     if (factureDemandee) setFactureOuverte(factureDemandee);
   }, [factureDemandee]);
@@ -214,7 +235,8 @@ export default function FinancesPage({ params }: Props) {
             </button>
           )}
           {droits.devisEcriture && (
-            <button type="button" className="btn-primary" onClick={() => setModalDevis(true)}>
+            // Filtré sur un projet : devis complémentaire (TS) ; sinon offre d'un lead.
+            <button type="button" className="btn-primary" onClick={() => (projetFiltre ? setModalDevis(true) : setOffre({}))}>
               <Plus size={15} strokeWidth={2} aria-hidden /> Nouveau devis
             </button>
           )}
@@ -336,7 +358,14 @@ export default function FinancesPage({ params }: Props) {
         !devis ? (
           <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
         ) : (
-          <OngletDevis devis={devisFiltres} projets={nomsProjets} onOuvrir={(d) => setDevisOuvert(d.id)} />
+          <OngletDevis
+            devis={devisFiltres}
+            projets={nomsProjets}
+            // Brouillon d'offre d'un lead encore en « Nouveau projet » : il se retravaille.
+            onOuvrir={(d) =>
+              d.statut === 'brouillon' && d.dossierCrm?.statut === 'nouveau_projet' ? setOffre({ devisId: d.id }) : setDevisOuvert(d.id)
+            }
+          />
         )
       ) : !factures ? (
         <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
@@ -369,6 +398,24 @@ export default function FinancesPage({ params }: Props) {
             setNouvelle(null);
             setFactures((l) => [f, ...(l ?? []).filter((x) => x.id !== f.id)]);
             setFactureOuverte(f.id);
+          }}
+        />
+      )}
+      {offre && societe && (
+        <OffrePanneau
+          slug={params.slug}
+          societe={societe}
+          catalogue={catalogue}
+          leads={leads}
+          devisId={offre.devisId}
+          dossierPresel={offre.dossier}
+          onMaj={() => {
+            recharger();
+            setLeads(null);
+          }}
+          onClose={() => {
+            setOffre(null);
+            recharger();
           }}
         />
       )}

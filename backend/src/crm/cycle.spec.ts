@@ -46,7 +46,8 @@ function monter(
   opts: {
     basculees?: number;
     projet?: object | null;
-    brouillonsPrets?: number; // brouillons d'offre avec ≥ 1 ligne
+    // Lignes du brouillon d'offre [quantité, prix] ; null = aucun brouillon.
+    lignesBrouillon?: [number, number][] | null;
     offres?: Offre[]; // offres envoyées / acceptées du dossier
   } = {},
 ) {
@@ -60,7 +61,16 @@ function monter(
     },
     dossierCrmTransition: { create: jest.fn().mockResolvedValue({}) },
     devis: {
-      count: jest.fn().mockResolvedValue(opts.brouillonsPrets ?? 1),
+      findFirst: jest.fn().mockResolvedValue(
+        opts.lignesBrouillon === null
+          ? null
+          : {
+              lignes: (opts.lignesBrouillon ?? [[1, 100_000]]).map(([q, p]) => ({
+                quantite: { toNumber: () => q },
+                prixUnitaire: { toNumber: () => p },
+              })),
+            },
+      ),
       findMany: jest.fn().mockResolvedValue(opts.offres ?? []),
       update: jest.fn().mockResolvedValue({}),
     },
@@ -279,10 +289,20 @@ describe('CrmService.agir', () => {
 describe('CrmService.agir — offre', () => {
   const demain = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
-  it('soumettre sans offre prête (brouillon avec lignes) → 409', async () => {
-    const { svc, prisma } = monter('nouveau_projet', { brouillonsPrets: 0 });
+  it('soumettre sans prestation chiffrée → 409', async () => {
+    for (const lignesBrouillon of [null, [], [[1, 0]]] as ([number, number][] | null)[]) {
+      const { svc, prisma } = monter('nouveau_projet', { lignesBrouillon });
+      await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
+        'au moins une prestation chiffrée',
+      );
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    }
+  });
+
+  it('soumettre avec une ligne pas encore chiffrée (brouillon tolérant) → 409', async () => {
+    const { svc, prisma } = monter('nouveau_projet', { lignesBrouillon: [[1, 100_000], [0, 5_000]] });
     await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
-      'Prépare l’offre',
+      'une ligne n’est pas chiffrée',
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });

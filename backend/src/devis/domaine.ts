@@ -112,3 +112,21 @@ export function alerteAvenant(
   const jours = joursEntre(d.dateEnvoi.toISOString().slice(0, 10), aujourdhui);
   return jours > seuilJours ? { jours, seuil: seuilJours } : null;
 }
+
+// Message d'introduction d'une offre de lead (maquette Finances, oct. 2026),
+// pré-rempli depuis la fiche et les lignes tant que personne ne l'a réécrit.
+// « CO1 — Conception — … » s'écrit « CO1 · Conception — … » dans la liste.
+export function messageIntroductionParDefaut(o: {
+  societe: string;
+  lieu: string | null;
+  programme: string;
+  prestations: string[];
+}): string {
+  const lieu = o.lieu ? ` sis à ${o.lieu}` : '';
+  const programme = o.programme.trim() || 'programme à préciser';
+  const liste = o.prestations.map((d) => `· ${d.replace(/^(\S+) — /, '$1 · ')}`).join('\n');
+  return (
+    `Dans le cadre de notre accompagnement pour le projet${lieu}, décrit comme suit (${programme}), ` +
+    `${o.societe} intervient exclusivement sur les prestations suivantes :${liste ? `\n\n${liste}` : ''}`
+  );
+}

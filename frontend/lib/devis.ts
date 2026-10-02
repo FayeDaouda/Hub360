@@ -56,10 +56,18 @@ export function creerDevis(slug: string, body: NouveauDevis): Promise<Devis> {
   return apiSociete<Devis>(slug, '/devis', { method: 'POST', body });
 }
 
+// Document d'une offre de lead (maquette Finances) : message d'introduction
+// (null ou "" = texte généré), délais de l'échéancier, adresse du client.
+export type DocumentOffre = {
+  messageIntroduction?: string | null;
+  delaisEcheancier?: Record<string, number>;
+  adresseClient?: string;
+};
+
 export function majDevis(
   slug: string,
   id: string,
-  patch: Partial<NouveauDevis>,
+  patch: Partial<NouveauDevis> & DocumentOffre,
 ): Promise<Devis> {
   return apiSociete<Devis>(slug, `/devis/${id}`, { method: 'PATCH', body: patch });
 }

@@ -13576,6 +13576,505 @@ a.notif-item:hover {
   }
 }
 
+/* Nouvelle offre (panneau, maquette Finances) ------------------------------ */
+.fiche-crm.offre {
+  width: min(58rem, 100vw);
+  gap: 1.1rem;
+}
+.offre-carte {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.offre-section {
+  display: grid;
+  gap: 0.7rem;
+}
+.offre-titre-section {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.offre-titre-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+.offre-badge {
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iris) 22%, transparent);
+  color: color-mix(in srgb, var(--iris) 55%, var(--text));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.offre-aide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.offre-bascule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.offre-bascule button {
+  padding: 0.7rem 0.8rem;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.offre-bascule button.is-active {
+  background: color-mix(in oklch, var(--argile) 85%, transparent);
+  color: #fff;
+}
+.offre-choix {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.offre-choix small {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.78rem;
+}
+.offre-nouveau {
+  display: grid;
+  justify-items: start;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--iris) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--iris) 12%, transparent);
+  font-size: 0.88rem;
+}
+.offre-nouveau p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+/* Bouton pervenche de la maquette (renvoi vers le CRM), pas l'accent rose. */
+.btn-primary.offre-nouveau-bouton {
+  background: #5a63e8;
+  border-color: #5a63e8;
+  text-decoration: none;
+}
+.btn-primary.offre-nouveau-bouton:hover {
+  background: #4b53d6;
+}
+
+/* Document (papier clair dans les deux thèmes, comme le devis imprimé). */
+.offre-document {
+  --papier-texte: #1d1d24;
+  --papier-gris: #6b6b74;
+  display: grid;
+  gap: 1rem;
+  padding: 1.3rem 1.4rem;
+  border-radius: var(--radius-md);
+  background: #f6f4ef;
+  color: var(--papier-texte);
+}
+.offre-document-tete,
+.offre-document-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.2rem;
+}
+.offre-document-corps {
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  padding-top: 1rem;
+  border-top: 1px solid #dcd8cf;
+}
+.offre-client,
+.offre-emetteur,
+.offre-message {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+.offre-emetteur {
+  justify-items: end;
+  text-align: right;
+  color: var(--papier-gris);
+}
+.offre-emetteur strong {
+  color: var(--papier-texte);
+}
+.offre-type {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--papier-texte);
+}
+.offre-etiquette {
+  color: var(--papier-gris);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.offre-client strong {
+  font-size: 1rem;
+}
+.offre-client > span:not(.offre-etiquette) {
+  color: var(--papier-gris);
+}
+.offre-document textarea {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #d6d2c8;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--papier-texte);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.offre-document textarea:focus {
+  outline: 2px solid color-mix(in oklch, var(--argile) 55%, transparent);
+  outline-offset: 1px;
+}
+.offre-document textarea.offre-a-renseigner {
+  border-color: var(--ocre);
+}
+.offre-message small {
+  color: var(--papier-gris);
+  font-size: 0.72rem;
+}
+.offre-references {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 0.45rem 1.2rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+.offre-references dt {
+  color: var(--papier-gris);
+}
+.offre-references dd {
+  margin: 0;
+  font-weight: 700;
+}
+.offre-lead {
+  margin: 0;
+  font-weight: 700;
+}
+.offre-alerte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--ocre) 14%, transparent);
+  color: color-mix(in oklch, var(--ocre) 80%, var(--text));
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.offre-programme {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem 1rem;
+  margin: 0;
+}
+.offre-programme dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.offre-programme dd {
+  margin: 0.15rem 0 0;
+  font-weight: 700;
+}
+.offre-a-completer {
+  color: color-mix(in oklch, var(--ocre) 80%, var(--text));
+}
+.offre-programme-resume {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.offre-commodites {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Prestations et échéancier : grilles qui s'empilent en cartes sur mobile. */
+.offre-lignes,
+.offre-echeancier {
+  display: grid;
+  gap: 0.5rem;
+}
+.offre-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 0.95fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr) 2.4rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.offre-ligne.offre-ligne--tete,
+.offre-echeance.offre-echeance--tete {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.offre-designation {
+  display: grid;
+  gap: 0.2rem;
+}
+.offre-designation small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.offre-unite {
+  color: var(--text-muted);
+}
+.offre-prix {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.offre-prix svg,
+.offre-prix small {
+  color: var(--text-muted);
+}
+.offre-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.offre-ecart {
+  border-color: var(--ocre) !important;
+  box-shadow: 0 0 0 1px var(--ocre);
+}
+.offre-retirer {
+  display: inline-grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.offre-retirer:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.offre-ajouter {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px dashed color-mix(in srgb, var(--text) 35%, transparent);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.offre-totaux {
+  justify-self: end;
+  display: grid;
+  gap: 0.45rem;
+  width: min(100%, 22rem);
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.offre-totaux p {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.offre-totaux-ttc {
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border);
+  align-items: baseline;
+}
+.offre-totaux-ttc strong {
+  color: var(--argile);
+  font-size: 1.35rem;
+}
+.offre-echeances-total {
+  color: color-mix(in srgb, #7fd4a0 65%, var(--text));
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.offre-echeance {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.offre-note {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: #f6f4ef;
+  color: #1d1d24;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.offre-articles {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.offre-articles > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 1.45fr);
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.offre-articles > div + div {
+  border-top: 1px solid var(--border);
+}
+.offre-articles dt {
+  font-weight: 700;
+}
+.offre-articles dd {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+}
+.offre-articles dd p {
+  margin: 0;
+}
+.offre-articles dd p + p {
+  margin-top: 0.35rem;
+}
+.offre-lettre,
+.offre-numero {
+  display: inline-block;
+  min-width: 1.8rem;
+  font-weight: 800;
+}
+.offre-lettre {
+  color: var(--argile);
+}
+.offre-numero {
+  color: color-mix(in srgb, var(--iris) 60%, var(--text));
+}
+.offre-articles--cgv {
+  max-height: 26rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.offre-soumission {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.offre-soumettre {
+  width: 100%;
+  justify-content: center;
+  padding: 0.85rem 1rem;
+  border: 1px dashed color-mix(in srgb, var(--text) 30%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+}
+.offre-soumettre.btn-primary {
+  border-style: solid;
+  color: #fff;
+}
+@media (max-width: 720px) {
+  .offre-document-tete,
+  .offre-document-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .offre-emetteur {
+    justify-items: start;
+    text-align: left;
+  }
+  .offre-programme {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .offre-ligne--tete,
+  .offre-echeance--tete {
+    display: none;
+  }
+  .offre-ligne,
+  .offre-echeance {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .offre-ligne > [data-label]::before,
+  .offre-echeance > [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .offre-designation {
+    grid-column: 1 / -1;
+  }
+  .offre-num {
+    text-align: left;
+  }
+  .offre-prix {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .offre-prix::before {
+    flex-basis: 100%;
+  }
+  .offre-articles > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.3rem;
+  }
+}
+
 /* Tableau de bord : 2 colonnes (≈ 3/5 – 2/5), une seule sous 1100 px. */
 .fin-tdb {
   --fin-vert: #7fd4a0;

@@ -11,7 +11,6 @@ import {
   type Localite,
   type ModifierFichePayload,
   type Personne,
-  type ProduitService,
   type Projet,
   type StatutCrm,
   type TransitionDossier,
@@ -22,7 +21,6 @@ import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } fro
 import { CycleDossier } from './cycle-dossier';
 import { OffreDossier } from './offre-dossier';
 import { ContratDossier } from './contrat-dossier';
-import { OffreDossierModal } from './offre-dossier-modal';
 import { LocaliteSelect } from './localite-select';
 import { CaracteristiquesProjet } from './caracteristiques-projet';
 import { FicheApporteurSection } from './fiche-apporteur-section';
@@ -37,7 +35,8 @@ type Props = {
   peutReassigner: boolean;
   peutArchiver: boolean; // Direction GC ou CIO (même règle que la réassignation)
   peutPreparerOffre: boolean; // finances_devis ≥ écriture
-  catalogue: ProduitService[];
+  // Arrivé de Finances (« Nouveau client ») : l'offre s'y prépare ensuite.
+  depuisFinances?: boolean;
   onMaj: () => Promise<void>; // recharge le dossier (après une action sur l'offre)
   onClose: () => void;
   // Rejeter la promesse garde le panneau d'action ouvert + affiche l'erreur.
@@ -94,7 +93,7 @@ export function DetailDossierModal({
   peutReassigner,
   peutArchiver,
   peutPreparerOffre,
-  catalogue,
+  depuisFinances = false,
   onMaj,
   onClose,
   onAgir,
@@ -107,8 +106,6 @@ export function DetailDossierModal({
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
   // fois, affiché jusqu'à fermeture.
   const [lienEmis, setLienEmis] = useState<OffreEmise | null>(null);
-  // Modale d'offre : undefined = fermée ; { offreId } = brouillon / création.
-  const [edition, setEdition] = useState<{ offreId?: string } | undefined>(undefined);
   const [reassignation, setReassignation] = useState(false);
   const [erreurProprio, setErreurProprio] = useState<string | null>(null);
   const [historique, setHistorique] = useState<TransitionDossier[] | null>(null);
@@ -418,7 +415,7 @@ export function DetailDossierModal({
               slug={slug}
               projet={projet}
               peutPreparer={peutPreparerOffre}
-              onPreparer={(offreId) => setEdition({ offreId })}
+              depuisFinances={depuisFinances}
               onMaj={onMaj}
               lienEmis={lienEmis}
               onLienEmis={setLienEmis}
@@ -434,16 +431,6 @@ export function DetailDossierModal({
           </section>
         )}
       </aside>
-      {edition && (
-        <OffreDossierModal
-          slug={slug}
-          projet={projet}
-          offreId={edition.offreId}
-          catalogue={catalogue}
-          onClose={() => setEdition(undefined)}
-          onEnregistre={() => void onMaj()}
-        />
-      )}
     </div>
   );
 }

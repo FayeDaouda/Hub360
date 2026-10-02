@@ -26,6 +26,7 @@ function prismaMock(opts: { codes?: string[]; client?: object | null } = {}) {
     },
     client: {
       findFirst: jest.fn().mockResolvedValue(opts.client ?? null),
+      aggregate: jest.fn().mockResolvedValue({ _max: { numero: 8 } }),
       create: jest.fn(({ data }) => Promise.resolve({ id: 'C-neuf', ...data })),
       update: jest.fn(({ data }) => Promise.resolve({ ...opts.client, ...data })),
     },
@@ -75,13 +76,13 @@ describe('CrmService.resoudreCode', () => {
 });
 
 describe('CrmService.resoudreClient', () => {
-  it('nouvelle personne morale → créée telle que saisie, sans sigle', async () => {
+  it('nouvelle personne morale → créée telle que saisie, sans sigle, référence suivante (CL-0009)', async () => {
     const prisma = prismaMock();
     await svc(prisma).resoudreClient(prisma, 'S1', {
       nouveau: { nom: 'SCI Les Filaos', type: 'entreprise' },
     });
     expect(prisma.client.create).toHaveBeenCalledWith({
-      data: { societeId: 'S1', nom: 'SCI Les Filaos', type: 'entreprise' },
+      data: { societeId: 'S1', numero: 9, nom: 'SCI Les Filaos', type: 'entreprise' },
     });
   });
 

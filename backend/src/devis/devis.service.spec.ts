@@ -173,8 +173,10 @@ describe('DevisService — catalogue réel', () => {
     tauxTva: dec(18),
     ...o,
   });
-  const LIBRE = { planchesImposees: null, categorieCo: null, devisProjet: false };
-  const PROJET_CO2 = { planchesImposees: null, categorieCo: 'CO2', devisProjet: true };
+  const LIBRE = { offreDossier: false, categorieCo: null, devisProjet: false };
+  const PROJET_CO2 = { offreDossier: false, categorieCo: 'CO2', devisProjet: true };
+  // Offre d'un lead : brouillon tolérant.
+  const OFFRE = { offreDossier: true, categorieCo: null, devisProjet: false };
   const CATALOGUE = [
     produit({ id: 'CO1', code: 'CO1', famille: 'CO', modeCalcul: 'surface_planches', prixUnitaire: dec(5000) }),
     produit({ id: 'CO2', code: 'CO2', famille: 'CO', modeCalcul: 'surface_planches', prixUnitaire: dec(7000) }),
@@ -204,27 +206,38 @@ describe('DevisService — catalogue réel', () => {
     appliquerCatalogue: (
       s: string,
       l: object[],
-      ctx: { planchesImposees: number | null; categorieCo: string | null; devisProjet: boolean },
+      ctx: { offreDossier: boolean; categorieCo: string | null; devisProjet: boolean },
     ) => Promise<{ quantite: number; prixUnitaire: number; surfaceM2: number | null; planches: number | null }[]>;
   };
   const ligne = (o: object) => ({ designation: 'x', quantite: 1, prixUnitaire: 1, ...o });
 
-  it('CO : tarif imposé, quantité = surface × planches du dossier', async () => {
+  it('CO : tarif imposé, quantité = surface × planches saisies (pré-remplies depuis la fiche à l’écran)', async () => {
     const [l] = await service.appliquerCatalogue(
       'S1',
-      [ligne({ produitServiceId: 'CO1', surfaceM2: 250, planches: 99, prixUnitaire: 1 })],
-      { planchesImposees: 2, categorieCo: null, devisProjet: false },
+      [ligne({ produitServiceId: 'CO1', surfaceM2: 250, planches: 3, prixUnitaire: 1 })],
+      OFFRE,
     );
-    expect(l).toMatchObject({ prixUnitaire: 5000, surfaceM2: 250, planches: 2, quantite: 500 });
+    expect(l).toMatchObject({ prixUnitaire: 5000, surfaceM2: 250, planches: 3, quantite: 750 });
   });
 
-  it('CO sans surface, ou dossier sans planches → 422', async () => {
+  it('CO sans surface ou sans planches : 422 sur un devis, 0 sur le brouillon d’une offre de lead', async () => {
     await expect(
-      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1' })], { planchesImposees: 2, categorieCo: null, devisProjet: false }),
+      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1', planches: 2 })], LIBRE),
     ).rejects.toThrow('surface (m²) requise');
     await expect(
-      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1', surfaceM2: 100 })], { planchesImposees: 0, categorieCo: null, devisProjet: false }),
-    ).rejects.toThrow('nombre de planches du dossier');
+      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1', surfaceM2: 100 })], LIBRE),
+    ).rejects.toThrow('nombre de planches requis');
+    const [brouillon] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1', surfaceM2: 100 })], OFFRE);
+    expect(brouillon).toMatchObject({ prixUnitaire: 5000, surfaceM2: 100, planches: null, quantite: 0 });
+  });
+
+  it('quantité 0 : refusée sur un devis, tolérée sur le brouillon d’une offre de lead', async () => {
+    await expect(
+      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'TS-MIN', quantite: 0 })], PROJET_CO2),
+    ).rejects.toThrow('quantité requise');
+    await expect(service.appliquerCatalogue('S1', [ligne({ quantite: 0 })], LIBRE)).rejects.toThrow('quantité requise');
+    const [l] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'DPC', quantite: 0 })], OFFRE);
+    expect(l.quantite).toBe(0);
   });
 
   it('deux lignes CO → 422', async () => {
@@ -232,7 +245,7 @@ describe('DevisService — catalogue réel', () => {
       service.appliquerCatalogue(
         'S1',
         [ligne({ produitServiceId: 'CO1', surfaceM2: 1 }), ligne({ produitServiceId: 'CO2', surfaceM2: 1 })],
-        { planchesImposees: 1, categorieCo: null, devisProjet: false },
+        OFFRE,
       ),
     ).rejects.toThrow('Une seule ligne de conception');
   });
@@ -242,19 +255,19 @@ describe('DevisService — catalogue réel', () => {
       service.appliquerCatalogue(
         'S1',
         [ligne({ produitServiceId: 'CO1', surfaceM2: 1 }), ligne({ produitServiceId: 'SU2', quantite: 3 })],
-        { planchesImposees: 1, categorieCo: null, devisProjet: false },
+        OFFRE,
       ),
     ).rejects.toThrow('ne correspond pas à la catégorie CO1');
     const [, su] = await service.appliquerCatalogue(
       'S1',
       [ligne({ produitServiceId: 'CO1', surfaceM2: 1 }), ligne({ produitServiceId: 'SU1', quantite: 3, prixUnitaire: 1 })],
-      { planchesImposees: 1, categorieCo: null, devisProjet: false },
+      OFFRE,
     );
     expect(su).toMatchObject({ prixUnitaire: 300000, quantite: 3 });
   });
 
   it('SU sans ligne CO : catégorie figée du dossier, sinon 422', async () => {
-    const [su] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU2', quantite: 2 })], { planchesImposees: 1, categorieCo: 'CO2', devisProjet: false });
+    const [su] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU2', quantite: 2 })], { ...OFFRE, categorieCo: 'CO2' });
     expect(su.prixUnitaire).toBe(500000);
     await expect(
       service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU1' })], LIBRE),

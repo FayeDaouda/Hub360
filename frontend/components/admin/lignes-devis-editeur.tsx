@@ -129,6 +129,30 @@ export function lignesSaisies(
   return { lignes: valides };
 }
 
+// Les lignes SU suivent la catégorie CO (le suivi de chantier se déduit, il
+// ne se choisit pas) et TS-MAJ prend le tarif de cette catégorie. `categorieCo`
+// : catégorie connue hors des lignes (dossier, projet).
+export function synchroniserCategorie(ls: LigneForm[], catalogue: ProduitService[], categorieCo: string | null): LigneForm[] {
+  const produitDe = (l: LigneForm) => catalogue.find((p) => p.id === l.produitServiceId);
+  const cat = ls.map(produitDe).find((p) => p?.modeCalcul === 'surface_planches')?.code ?? categorieCo;
+  const su = catalogue.find((p) => p.coAssocie && p.coAssocie === cat);
+  const tarifCo = catalogue.find((c) => c.code === cat)?.prixUnitaire ?? null;
+  return ls.map((l) => {
+    const p = produitDe(l);
+    if (p?.modeCalcul === 'tarif_co_surface_planches') {
+      return { ...l, prixUnitaire: tarifCo != null ? String(tarifCo) : '' };
+    }
+    if (!p?.coAssocie || !su || p.id === su.id) return l;
+    return {
+      ...l,
+      produitServiceId: su.id,
+      designation: su.designation,
+      prixUnitaire: su.prixUnitaire != null ? String(su.prixUnitaire) : '',
+      tauxTva: String(su.tauxTva),
+    };
+  });
+}
+
 // Familles du catalogue réel, dans l'ordre d'une offre.
 const FAMILLES: { code: string; libelle: string }[] = [
   { code: 'CO', libelle: 'Conception' },
@@ -184,29 +208,9 @@ export function LignesDevisEditeur({
   }
   const categorie = categorieDe(lignes);
 
-  // Toute modification passe ici : les lignes SU suivent la catégorie CO
-  // (le suivi de chantier se déduit, il ne se choisit pas).
+  // Toute modification passe ici : les lignes SU (et TS-MAJ) suivent la catégorie CO.
   function changer(ls: LigneForm[]) {
-    const cat = categorieDe(ls);
-    const su = catalogue.find((p) => p.coAssocie && p.coAssocie === cat);
-    onChange(
-      ls.map((l) => {
-        const p = produitDe(l);
-        // TS-MAJ suit aussi la catégorie : son prix est le tarif CO.
-        if (p?.modeCalcul === 'tarif_co_surface_planches') {
-          const t = tarifCo(cat);
-          return { ...l, prixUnitaire: t != null ? String(t) : '' };
-        }
-        if (!p?.coAssocie || !su || p.id === su.id) return l;
-        return {
-          ...l,
-          produitServiceId: su.id,
-          designation: su.designation,
-          prixUnitaire: su.prixUnitaire != null ? String(su.prixUnitaire) : '',
-          tauxTva: String(su.tauxTva),
-        };
-      }),
-    );
+    onChange(synchroniserCategorie(ls, catalogue, categorieCo));
   }
 
   function majLigne(i: number, patch: Partial<LigneForm>) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Copy } from 'lucide-react';
 import { marquerReponseDevis, relancerDevis } from '@/lib/devis';
 import { completudeFiche, type OffreEmise } from '@/lib/crm';
@@ -11,7 +12,8 @@ type Props = {
   slug: string;
   projet: Projet;
   peutPreparer: boolean; // finances_devis ≥ écriture
-  onPreparer: (offreId?: string) => void; // ouvre la modale (création / brouillon)
+  // Arrivé de Finances (« Nouveau client ») : « Continuer vers le devis ».
+  depuisFinances?: boolean;
   onMaj: () => Promise<void>; // recharge le dossier après une action
   // Lien émis (validation DAF ou relance) — le clair n'existe qu'à cet instant.
   lienEmis: OffreEmise | null;
@@ -37,7 +39,7 @@ export function OffreDossier({
   slug,
   projet,
   peutPreparer,
-  onPreparer,
+  depuisFinances = false,
   onMaj,
   lienEmis,
   onLienEmis,
@@ -49,6 +51,11 @@ export function OffreDossier({
   const offre: Offre | null = projet.offre ?? null;
   const modifiable = projet.statut === 'nouveau_projet' && peutPreparer;
   const fiche = completudeFiche(projet);
+  // L'offre se prépare dans Finances (panneau « Nouvelle offre », maquette
+  // oct. 2026) : création pour ce lead, ou reprise du brouillon.
+  const lienOffre = (offreId?: string) =>
+    offreId ? `/admin/${slug}/facturation?devis=${offreId}` : `/admin/${slug}/facturation?offre=${projet.id}`;
+  const libelleCreer = depuisFinances ? 'Continuer vers le devis' : 'Créer une offre';
 
   async function agir(fn: () => Promise<unknown>) {
     setEnCours(true);
@@ -148,34 +155,35 @@ export function OffreDossier({
           {/* Maquette : bloqué tant que la fiche n'est pas complète (le serveur
               refuse aussi — le tarif CO dépend des planches et de la catégorie). */}
           {modifiable && !offre && fiche.faits === fiche.total && (
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onPreparer()}>
-              Créer une offre
-            </button>
+            <Link className={depuisFinances ? 'btn-primary' : 'btn-ghost btn-ghost--sm'} href={lienOffre()}>
+              {libelleCreer}
+            </Link>
           )}
           {modifiable && !offre && fiche.faits < fiche.total && (
             <div className="offre-bloquee">
               <button type="button" className="offre-bloquee-bouton" disabled>
-                Créer une offre
+                {libelleCreer}
               </button>
               <span className="field-aide">
-                Bloqué : compléter la fiche ({fiche.faits}/{fiche.total}).
+                Bloqué : compléter la fiche ({fiche.faits}/{fiche.total}). Une offre peut aussi être préparée en
+                brouillon{' '}
+                <Link className="lien-inline" href={lienOffre()}>
+                  depuis Finances
+                </Link>
+                .
               </span>
             </div>
           )}
           {modifiable && offre?.statutEffectif === 'brouillon' && (
-            <button
-              type="button"
-              className="btn-ghost btn-ghost--sm"
-              onClick={() => onPreparer(offre.id)}
-            >
+            <Link className="btn-ghost btn-ghost--sm" href={lienOffre(offre.id)}>
               Modifier l’offre
-            </button>
+            </Link>
           )}
           {/* Après expiration + « Refaire une offre », on repart d'un brouillon neuf. */}
           {modifiable && offre && offre.statutEffectif === 'expire' && (
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onPreparer()}>
+            <Link className="btn-ghost btn-ghost--sm" href={lienOffre()}>
               Préparer une nouvelle offre
-            </button>
+            </Link>
           )}
           {offre?.statutEffectif === 'envoye' && (
             <>

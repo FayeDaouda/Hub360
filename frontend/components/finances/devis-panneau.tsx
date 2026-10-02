@@ -70,7 +70,11 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
 
         {d.dossierCrm && d.statut === 'brouillon' && (
           <div className="fiche-crm-alerte" role="note">
-            <strong>Offre du lead {d.dossierCrm.code} : elle se prépare et se soumet au CFO depuis la fiche du CRM.</strong>
+            <strong>
+              {d.dossierCrm.statut === 'en_validation'
+                ? `Offre du lead ${d.dossierCrm.code} soumise au CFO : sa validation, depuis la fiche du CRM, l’envoie au client.`
+                : `Offre du lead ${d.dossierCrm.code} : elle ne se modifie qu’en « Nouveau projet ».`}
+            </strong>
             <Link className="lien-inline" href={`/admin/${slug}/crm?dossier=${d.dossierCrm.id}`}>
               Ouvrir la fiche CRM
             </Link>

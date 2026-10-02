@@ -112,6 +112,7 @@ export const TYPES_CLIENT: Record<TypeClient, string> = {
 // avec historique et fiche réutilisable).
 export type Client = {
   id: string;
+  reference?: string | null; // « CL-0009 » — rang du client dans la société
   nom: string;
   type: TypeClient;
   // Sigle choisi par l'entreprise — obligatoire pour une personne morale,
@@ -120,6 +121,7 @@ export type Client = {
   contact?: string; // personne référente
   email?: string;
   telephone?: string;
+  adresse?: string; // reprise sur les devis et factures ; "" = à renseigner
 };
 
 // Type de projet (doc « Création de projet côté CRM » §3.3, oct. 2026).
@@ -1714,7 +1716,25 @@ export type Devis = {
   montantHt: number;
   montantTva: number;
   montantTtc: number;
+  // Offre de lead (maquette Finances) : message d'introduction (généré tant
+  // que personne ne l'a réécrit) et délais de l'échéancier par échéance.
+  messageIntroduction: string;
+  messageIntroductionPersonnalise: boolean;
+  delaisEcheancier: Record<string, number>;
+  // Détail seulement (consultation, création, modification) ; null hors offre de lead.
+  echeancier?: EcheanceOffre[] | null;
   creeLe: string;
+};
+
+// Échéance de l'échéancier d'une offre (backend : facturation-offre.ts).
+export type EcheanceOffre = {
+  cle: string | null; // null = facturation au mois (pas de délai)
+  famille: string;
+  echeance: string; // F1 / F2 / F3, Avance / Solde, Unique, « 3 mensualités »
+  part: number | null; // %
+  declencheur: string;
+  delaiJours: number | null; // jours après la signature
+  montantTtc: number;
 };
 
 // Réponse de POST …/devis/:id/envoi UNIQUEMENT — le jeton clair du lien

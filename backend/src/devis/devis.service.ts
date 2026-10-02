@@ -8,7 +8,8 @@ import { Prisma, StatutDevis } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { versClient } from '../commun/format-contrat';
 import { chargerProjet } from '../projets/projet-acces';
-import { typeFactureDepuisNature } from '../projets/domaine/config';
+import { typeFactureDepuisNature, type PartsFactures } from '../projets/domaine/config';
+import { delaisValides, echeancierOffre, type LigneOffre } from '../projets/domaine/facturation-offre';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { EmailService } from '../email/email.service';
@@ -20,18 +21,20 @@ import {
   VALIDITE_OFFRE_JOURS,
   ajouterJours,
   alerteAvenant,
+  messageIntroductionParDefaut,
   refDevis,
   relanceAFaire,
   statutDevisEffectif,
 } from './domaine';
 import { CreerDevisDto, LigneDevisDto, PatchDevisDto } from './dto';
-import { motifFicheIncomplete } from '../crm/fiche';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
 // Ce que le devis porte, pour appliquer le catalogue (cf. contexteLignes).
 type ContexteLignes = {
-  planchesImposees: number | null; // offre CRM : planches du dossier
+  // Offre d'un lead : brouillon tolérant — une ligne pas encore chiffrée
+  // s'enregistre à 0, la soumission au CFO l'exige complète.
+  offreDossier: boolean;
   categorieCo: string | null; // CO1 / CO2 / CO3 déjà connue (dossier / projet)
   devisProjet: boolean; // devis complémentaire d'un projet — seul lieu des TS
 };
@@ -39,9 +42,20 @@ type ContexteLignes = {
 const AVEC_DETAIL = {
   client: true,
   societe: { select: { nom: true } },
-  dossierCrm: { select: { id: true, statut: true, code: true, archiveLe: true } },
-  // famille : repérer un avenant (lignes TS) sans relire le catalogue.
-  lignes: { orderBy: { ordre: 'asc' as const }, include: { produitService: { select: { famille: true } } } },
+  // localisation, programme : message d'introduction généré (offre de lead).
+  dossierCrm: {
+    select: {
+      id: true,
+      statut: true,
+      code: true,
+      archiveLe: true,
+      localisation: true,
+      programme: true,
+      localite: { select: { nom: true } },
+    },
+  },
+  // famille : repérer un avenant (lignes TS) ; code + famille : échéancier.
+  lignes: { orderBy: { ordre: 'asc' as const }, include: { produitService: { select: { famille: true, code: true } } } },
 } satisfies Prisma.DevisInclude;
 
 type DevisAvecDetail = Prisma.DevisGetPayload<{ include: typeof AVEC_DETAIL }>;
@@ -118,7 +132,7 @@ export class DevisService {
   }
 
   async get(societeId: string, id: string) {
-    return this.formater(await this.charger(societeId, id), await this.seuilAvenant(societeId));
+    return this.detail(societeId, await this.charger(societeId, id), await this.seuilAvenant(societeId));
   }
 
   async creer(societeId: string, dto: CreerDevisDto) {
@@ -152,7 +166,7 @@ export class DevisService {
       },
       include: AVEC_DETAIL,
     });
-    return this.formater(devis);
+    return this.detail(societeId, devis);
   }
 
   async patch(societeId: string, id: string, dto: PatchDevisDto) {
@@ -160,12 +174,15 @@ export class DevisService {
     if (devis.dossierCrm) {
       this.exigerOffreModifiable(devis.dossierCrm);
       // Client, projet et validité d'une offre sont fixés par le dossier et
-      // par l'envoi — seuls l'objet et les lignes se retravaillent.
+      // par l'envoi — le document (objet, lignes, message, délais, adresse du
+      // client) se retravaille.
       if (dto.clientId || dto.projetId !== undefined || dto.dateValidite !== undefined) {
         throw new UnprocessableEntityException(
-          'Offre de dossier CRM : seuls l’objet et les lignes sont modifiables.',
+          'Offre de dossier CRM : le client, le projet et la validité ne se modifient pas.',
         );
       }
+    } else if (dto.delaisEcheancier !== undefined || dto.messageIntroduction !== undefined) {
+      throw new UnprocessableEntityException('Message et échéancier : propres aux offres d’un lead.');
     }
     if (dto.clientId || dto.projetId !== undefined || dto.lignes) {
       await this.validerReferences(
@@ -186,18 +203,41 @@ export class DevisService {
           }),
         )
       : undefined;
-    const maj = await this.prisma.devis.update({
-      where: { id: devis.id },
-      data: {
-        clientId: dto.clientId,
-        projetId: dto.projetId === null ? null : dto.projetId,
-        objet: dto.objet?.trim(),
-        dateValidite: dto.dateValidite,
-        lignes: lignes ? { deleteMany: {}, create: lignes } : undefined,
-      },
-      include: AVEC_DETAIL,
+    const maj = await this.prisma.$transaction(async (tx) => {
+      if (dto.adresseClient !== undefined) {
+        await tx.client.update({ where: { id: devis.clientId }, data: { adresse: dto.adresseClient.trim() } });
+      }
+      const ecrit = await tx.devis.update({
+        where: { id: devis.id },
+        data: {
+          clientId: dto.clientId,
+          projetId: dto.projetId === null ? null : dto.projetId,
+          objet: dto.objet?.trim(),
+          dateValidite: dto.dateValidite,
+          // "" ou null : retour au texte généré.
+          messageIntroduction:
+            dto.messageIntroduction === undefined ? undefined : dto.messageIntroduction?.trim() || null,
+          lignes: lignes ? { deleteMany: {}, create: lignes } : undefined,
+        },
+        include: AVEC_DETAIL,
+      });
+      if (!ecrit.dossierCrm || (!lignes && dto.delaisEcheancier === undefined)) return ecrit;
+      // Délais : la saisie complète remplace les précédents, et chacun doit
+      // viser une échéance de l'offre ; ceux d'échéances disparues (ligne
+      // retirée) sont oubliés.
+      const cles = (await this.echeancier(societeId, ecrit)).flatMap((e) => (e.cle ? [e.cle] : []));
+      if (dto.delaisEcheancier) {
+        const motif = delaisValides(dto.delaisEcheancier, cles);
+        if (motif) throw new UnprocessableEntityException(motif);
+      }
+      const delais = dto.delaisEcheancier ?? (ecrit.delaisEcheancier as Record<string, number> | null) ?? {};
+      return tx.devis.update({
+        where: { id: devis.id },
+        data: { delaisEcheancier: Object.fromEntries(Object.entries(delais).filter(([cle]) => cles.includes(cle))) },
+        include: AVEC_DETAIL,
+      });
     });
-    return this.formater(maj);
+    return this.detail(societeId, maj);
   }
 
   async supprimer(societeId: string, id: string) {
@@ -510,10 +550,8 @@ export class DevisService {
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     this.exigerOffreModifiable(dossier);
-    // « Créer une offre » reste bloqué tant que la fiche n'est pas complète
-    // (maquette CRM) : le tarif CO dépend des planches et de la catégorie.
-    const incomplete = motifFicheIncomplete(dossier, 'avant de créer l’offre');
-    if (incomplete) throw new ConflictException(incomplete);
+    // Fiche incomplète : l'offre se prépare quand même en brouillon (maquette
+    // Finances) ; c'est la soumission au CFO qui exige la fiche complète.
     if (dto.clientId !== dossier.clientId || dto.projetId) {
       throw new UnprocessableEntityException(
         'Une offre de dossier CRM porte sur le client du dossier, sans projet.',
@@ -573,10 +611,10 @@ export class DevisService {
     if (devis.dossierCrmId) {
       const d = await this.prisma.dossierCrm.findFirst({
         where: { id: devis.dossierCrmId, societeId },
-        select: { nbPlanches: true, categorieConception: true },
+        select: { categorieConception: true },
       });
       return {
-        planchesImposees: d?.nbPlanches ?? 0,
+        offreDossier: true,
         categorieCo: d?.categorieConception ?? null,
         devisProjet: false,
       };
@@ -587,12 +625,12 @@ export class DevisService {
         select: { dossierCrm: { select: { categorieConception: true } } },
       });
       return {
-        planchesImposees: null,
+        offreDossier: false,
         categorieCo: p?.dossierCrm?.categorieConception ?? null,
         devisProjet: true,
       };
     }
-    return { planchesImposees: null, categorieCo: null, devisProjet: false };
+    return { offreDossier: false, categorieCo: null, devisProjet: false };
   }
 
   // Lignes prêtes à écrire, règles du catalogue réel appliquées CÔTÉ SERVEUR
@@ -601,8 +639,11 @@ export class DevisService {
   //     TVA comprise, quelle que soit la valeur reçue ;
   //   · CO (surface_planches) : quantité = surface × planches (surface terrain
   //     du dossier par défaut à l'écran — décision du boss, maintenue malgré
-  //     le libellé « surface à concevoir » des CGV art. 4) —
-  //     planches du dossier pour une offre CRM ; une seule ligne CO par devis ;
+  //     le libellé « surface à concevoir » des CGV art. 4) — surface et
+  //     planches pré-remplies depuis la fiche à l'écran, modifiables (maquette
+  //     Finances : écart signalé en ambre) ; une seule ligne CO par devis ;
+  //   · brouillon d'offre de lead : une ligne pas encore chiffrée (surface,
+  //     planches ou quantité manquantes) s'enregistre à 0 ;
   //   · SU : jamais choisi — doit correspondre à la catégorie CO (ligne CO du
   //     devis, sinon catégorie du dossier / du projet) ;
   //   · TS (CGV art. 8) : uniquement sur un devis complémentaire rattaché à un
@@ -652,7 +693,12 @@ export class DevisService {
         planches: null as number | null,
         ordre,
       };
-      if (!p) return base;
+      if (!p) {
+        if (base.quantite <= 0 && !ctx.offreDossier) {
+          throw new UnprocessableEntityException(`${base.designation} : quantité requise.`);
+        }
+        return base;
+      }
 
       if (p.famille === 'TS' && !ctx.devisProjet) {
         throw new UnprocessableEntityException(
@@ -692,20 +738,21 @@ export class DevisService {
         );
       }
       if (p.modeCalcul === 'surface_planches') {
-        const planches = ctx.planchesImposees ?? l.planches;
-        if (!planches || planches < 1) {
+        const planches = l.planches ?? null;
+        const surface = l.surfaceM2 ?? null;
+        if (!planches || !surface) {
+          if (ctx.offreDossier) return { ...base, surfaceM2: surface, planches, quantite: 0 };
           throw new UnprocessableEntityException(
-            ctx.planchesImposees !== null
-              ? 'Renseigne le nombre de planches du dossier avant d’ajouter la ligne de conception.'
-              : 'Ligne de conception : nombre de planches requis.',
+            !planches ? 'Ligne de conception : nombre de planches requis.' : 'Ligne de conception : surface (m²) requise.',
           );
         }
-        if (!l.surfaceM2 || l.surfaceM2 < 1) {
-          throw new UnprocessableEntityException('Ligne de conception : surface (m²) requise.');
-        }
-        base.surfaceM2 = l.surfaceM2;
+        base.surfaceM2 = surface;
         base.planches = planches;
-        base.quantite = l.surfaceM2 * planches;
+        base.quantite = surface * planches;
+        return base;
+      }
+      if (base.quantite <= 0 && !ctx.offreDossier) {
+        throw new UnprocessableEntityException(`${base.designation} : quantité requise.`);
       }
       return base;
     });
@@ -844,8 +891,46 @@ export class DevisService {
       montantHt,
       montantTva,
       montantTtc,
+      // Offre de lead : message d'introduction (généré tant que personne ne
+      // l'a réécrit) et délais prévisionnels de l'échéancier.
+      messageIntroduction: d.messageIntroduction ?? this.messageGenere(d),
+      messageIntroductionPersonnalise: d.messageIntroduction != null,
+      delaisEcheancier: (d.delaisEcheancier as Record<string, number> | null) ?? {},
       creeLe: d.creeLe,
     };
+  }
+
+  private messageGenere(d: DevisAvecDetail): string {
+    if (!d.dossierCrm) return '';
+    return messageIntroductionParDefaut({
+      societe: d.societe.nom,
+      lieu: d.dossierCrm.localite?.nom ?? (d.dossierCrm.localisation.trim() || null),
+      programme: d.dossierCrm.programme,
+      prestations: d.lignes.map((l) => l.designation),
+    });
+  }
+
+  // Détail d'un devis (consultation, création, modification) : la ligne de
+  // liste, plus l'échéancier d'une offre de lead (maquette Finances).
+  private async detail(societeId: string, d: DevisAvecDetail, seuilAvenant: number | null = null) {
+    return {
+      ...this.formater(d, seuilAvenant),
+      echeancier: d.dossierCrm ? await this.echeancier(societeId, d) : null,
+    };
+  }
+
+  // Parts figées à la soumission ; avant, celles en service (Réglages).
+  private async echeancier(societeId: string, d: DevisAvecDetail) {
+    const parts = (d.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
+    const lignes: LigneOffre[] = this.calculerLignes(d.lignes).lignes.map((l, i) => ({
+      code: d.lignes[i].produitService?.code ?? null,
+      famille: d.lignes[i].produitService?.famille ?? null,
+      designation: l.designation,
+      montantHt: l.montantHt,
+      tauxTva: l.tauxTva,
+      quantite: l.quantite,
+    }));
+    return echeancierOffre(lignes, parts, (d.delaisEcheancier as Record<string, number> | null) ?? {});
   }
 
   // Vue CLIENT (lien public, sans compte) — expose le strict nécessaire pour

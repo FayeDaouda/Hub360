@@ -510,7 +510,7 @@ async function main() {
       { nom: 'Awa Ba', type: 'particulier' as const, telephone: '+221 76 210 33 44' },
       { nom: 'Résidences Atlantique SARL', type: 'entreprise' as const, contact: 'Moustapha Gaye', email: 'contact@residences-atlantique.sn' },
       { nom: 'Grey Holding', type: 'entreprise' as const, contact: 'Direction générale' },
-    ].map((c) => prisma.client.create({ data: { societeId: grey.id, ...c } })),
+    ].map((c, i) => prisma.client.create({ data: { societeId: grey.id, numero: i + 1, ...c } })),
   );
   const cli = (i: number) => clients[i].id;
 
