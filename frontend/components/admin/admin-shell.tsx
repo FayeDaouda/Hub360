@@ -54,7 +54,7 @@ const NAV: NavItem[] = [
   { cle: 'projets', libelle: 'Projets', icone: FolderKanban, chemin: 'projets' },
   { cle: 'facturation', libelle: 'Finances', icone: ReceiptText, chemin: 'facturation', tag: 'restreint' },
   { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
-  { cle: 'equipe', libelle: 'Équipe', icone: Users, chemin: 'equipe' },
+  { cle: 'equipe', libelle: 'Équipes', icone: Users, chemin: 'equipe' },
   { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
 ];
 

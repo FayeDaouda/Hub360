@@ -1,3 +1,4 @@
+import { quitterCellule } from './cellules.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -129,19 +130,11 @@ export class CollaborateursService {
         : { disconnect: true };
     }
 
-    // Un dispatcher qui quitte sa cellule ne peut plus en être le dispatcher
-    // — sans ce nettoyage, Cellule.dispatcherId pointerait vers quelqu'un
-    // qui n'en est plus membre (le FK ne le sait pas, ce n'est pas une
-    // suppression de fiche, juste un changement de cellule).
-    if (
-      dto.celluleId !== undefined &&
-      dto.celluleId !== actuel.celluleId &&
-      actuel.celluleId
-    ) {
-      await this.prisma.cellule.updateMany({
-        where: { id: actuel.celluleId, dispatcherId: id },
-        data: { dispatcherId: null },
-      });
+    // Changement de cellule : le poste occupé dans l'ancienne se libère et
+    // un dispatcher n'en est plus le dispatcher — sans ce nettoyage,
+    // Cellule.dispatcherId pointerait vers quelqu'un qui n'en est plus membre.
+    if (dto.celluleId !== undefined && dto.celluleId !== actuel.celluleId && actuel.celluleId) {
+      await this.prisma.$transaction((tx) => quitterCellule(tx, id, actuel.celluleId));
     }
 
     // Activer / désactiver le compte lié (kill switch = Utilisateur.actif).

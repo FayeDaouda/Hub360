@@ -8,14 +8,20 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { NiveauCollaborateur } from '@prisma/client';
+import { ClienteleCellule, NiveauCollaborateur, ProcessusCellule, StatutCellule } from '@prisma/client';
 
 // Date « agenda » AAAA-MM-JJ (même convention que les dates d'avant-projet /
 // d'exécution). `null` = effacer la valeur.
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Création (maquette « Équipes ») : le code SOCIÉTÉ-PROCESSUS-NN est attribué
+// par le serveur ; le pilote, facultatif, rejoint la cellule qu'il pilote.
 export class CreerCelluleDto {
+  @IsEnum(ProcessusCellule) processus!: ProcessusCellule;
   @IsString() @MinLength(1) @MaxLength(120) nom!: string;
+  @IsOptional() @IsEnum(ClienteleCellule) clientele?: ClienteleCellule;
+  @IsOptional() @IsEnum(StatutCellule) statut?: StatutCellule;
+  @IsOptional() @IsString() piloteId?: string | null;
 }
 
 export class MajCelluleDto {

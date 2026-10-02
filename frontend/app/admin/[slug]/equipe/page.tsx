@@ -17,7 +17,9 @@ import {
   supprimerCollaborateur,
 } from '@/lib/equipe';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
-import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
+import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
+import { vueEquipesMaquette } from '@/lib/acces-back-office';
+import { Equipes } from '@/components/equipes/equipes';
 import {
   NIVEAUX_COLLABORATEUR,
   NIVEAUX_ORDRE,
@@ -41,7 +43,21 @@ type CelluleModalEtat =
   | { mode: 'creer' }
   | { mode: 'renommer'; cel: { id: string; nom: string } };
 
+// Vue CIO, CTO et CEO : la maquette « Équipes » du boss ; les autres rôles
+// gardent la page par cellules jusqu'à leur tour.
 export default function EquipePage({ params }: Props) {
+  const session = useSessionCourante();
+  const societe = useSocieteCourante();
+  if (vueEquipesMaquette(session)) return <PageEquipes slug={params.slug} societe={societe?.nom ?? ''} ecriture={niveauEquipeEcriture(session)} />;
+  return <EquipeParCellules params={params} />;
+}
+
+function PageEquipes({ slug, societe, ecriture }: { slug: string; societe: string; ecriture: boolean }) {
+  useTitrePage(societe ? `Équipes · ${societe}` : 'Équipes');
+  return <Equipes slug={slug} ecriture={ecriture} />;
+}
+
+function EquipeParCellules({ params }: Props) {
   useTitrePage('Équipe');
   const ecriture = niveauEquipeEcriture(useSessionCourante());
   const [cellules, setCellules] = useState<Cellule[] | null>(null);
@@ -286,7 +302,9 @@ export default function EquipePage({ params }: Props) {
           onClose={() => setCelluleModal(null)}
           onSubmit={async (nom) => {
             if (celluleModal.mode === 'creer') {
-              await creerCellule(params.slug, nom);
+              // Le processus (nomenclature ISO 9001) se choisit dans la page
+              // Équipes ; ici, réalisation architecturale par défaut.
+              await creerCellule(params.slug, { processus: 'ARC', nom });
             } else {
               await renommerCellule(params.slug, celluleModal.cel.id, nom);
             }

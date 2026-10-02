@@ -21,6 +21,7 @@ import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
 import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
 import { creerFinancesDemo } from './finances-demo';
+import { organiserEquipesDemo } from './equipes-demo';
 
 const prisma = new PrismaClient();
 
@@ -300,7 +301,9 @@ async function main() {
         finances_factures: 'ecriture',
         finances_marges: 'lecture',
         finances_charges: 'lecture',
-        equipe: 'aucun',
+        // ecriture (02/10/2026, décision du boss) : maquette « Équipes » — le
+        // CIO crée les cellules et réaffecte ; CTO et CEO restent en lecture.
+        equipe: 'ecriture',
         rh: 'aucun',
         mon_espace: 'lecture',
         pilotage: 'aucun',
@@ -549,25 +552,15 @@ async function main() {
     ]],
   ];
 
-  const cellules: Record<string, string> = {};
-  for (const [nom, membres] of cellulesSeed) {
-    const cel = await prisma.cellule.create({
-      data: {
-        societeId: grey.id,
-        nom,
-        membres: {
-          create: membres.map(([prenom, n, role, niveau]) => ({
-            societeId: grey.id,
-            prenom,
-            nom: n,
-            role,
-            niveau,
-          })),
-        },
-      },
-    });
-    cellules[nom] = cel.id;
-  }
+  // Collaborateurs créés ici, puis organisés en cellules selon la maquette
+  // « Équipes » (codes ISO 9001, pilotes, postes) — cf. equipes-demo.ts, qui
+  // rend la clé de chaque groupe ci-dessus (rattachement des projets).
+  await prisma.collaborateur.createMany({
+    data: cellulesSeed.flatMap(([, membres]) =>
+      membres.map(([prenom, n, role, niveau]) => ({ societeId: grey.id, prenom, nom: n, role, niveau })),
+    ),
+  });
+  const cellules = await organiserEquipesDemo(prisma, grey.id);
 
   // 2 collaborateurs sans cellule (retirés, pas encore réaffectés) — exerce le
   // bloc « Sans cellule » de la page Équipe.

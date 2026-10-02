@@ -209,8 +209,12 @@ export function versCellule(
   return {
     id: cel.id,
     nom: cel.nom,
+    code: cel.code, // « GC-ARC-01 » (nomenclature ISO 9001)
+    processus: cel.processus,
+    clientele: cel.clientele,
+    statut: cel.statut,
     // Désigné par l'admin — habilité à répartir les tâches à ses coéquipiers
-    // (décision boss, sept. 2026).
+    // (décision boss, sept. 2026) ; pilote de la cellule (§5.3).
     dispatcherId: cel.dispatcherId,
     collaborateurs: cel.membres.map(versCollaborateur),
   };

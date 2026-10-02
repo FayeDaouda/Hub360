@@ -1,8 +1,12 @@
 import type {
   Cellule,
+  ClienteleCellule,
   Collaborateur,
   IndicateursCollaborateur,
   NiveauCollaborateur,
+  ProcessusCellule,
+  StatutCellule,
+  VueEquipes,
 } from './types';
 import { apiSociete } from './client-api';
 
@@ -33,8 +37,22 @@ export function getCollaborateurs(
   return apiSociete<Collaborateur[]>(slug, `/collaborateurs${suffixe}`);
 }
 
-export function creerCellule(slug: string, nom: string): Promise<Cellule> {
-  return apiSociete<Cellule>(slug, '/cellules', { method: 'POST', body: { nom } });
+// Code SOCIÉTÉ-PROCESSUS-NN attribué par le serveur ; le pilote rejoint la cellule.
+export type NouvelleCellule = {
+  processus: ProcessusCellule;
+  nom: string;
+  clientele?: ClienteleCellule;
+  statut?: StatutCellule;
+  piloteId?: string | null;
+};
+
+export function creerCellule(slug: string, cellule: NouvelleCellule): Promise<Cellule> {
+  return apiSociete<Cellule>(slug, '/cellules', { method: 'POST', body: cellule });
+}
+
+// Page « Équipes » (maquette du boss) : indicateurs, cellules, listes.
+export function getVueEquipes(slug: string): Promise<VueEquipes> {
+  return apiSociete<VueEquipes>(slug, '/equipes');
 }
 
 export function renommerCellule(

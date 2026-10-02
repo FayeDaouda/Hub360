@@ -48,6 +48,14 @@ export function vueProjetsGabarit(session: Session): boolean {
   return session.role === ROLE_CIO || session.role === ROLE_CTO;
 }
 
+export const ROLE_CEO = 'CEO (transverse)';
+
+// Équipes (maquette du boss, oct. 2026) : CIO, CTO et CEO ; les autres rôles
+// gardent la page par cellules jusqu'à leur tour. L'écriture suit la matrice.
+export function vueEquipesMaquette(session: Session): boolean {
+  return [ROLE_CIO, ROLE_CTO, ROLE_CEO].includes(session.role);
+}
+
 // Administration du HUB (/groupe : comptes, rôles, salaires) — même règle
 // que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte
 // technique holding_admin (secours).

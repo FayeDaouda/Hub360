@@ -420,11 +420,60 @@ export type Collaborateur = {
 
 export type Cellule = {
   id: string;
-  nom: string;
+  nom: string; // nom d'usage
+  code: string; // « GC-ARC-01 » (nomenclature ISO 9001, jamais réutilisé)
+  processus: ProcessusCellule;
+  clientele: ClienteleCellule;
+  statut: StatutCellule;
   // Membre habilité à répartir les tâches aux autres (décision boss, sept.
-  // 2026) — un seul par cellule, désigné par l'admin, doit être membre.
+  // 2026) — un seul par cellule, désigné par l'admin, doit être membre ;
+  // pilote de la cellule dans la page Équipes.
   dispatcherId: string | null;
   collaborateurs: Collaborateur[];
+};
+
+// Équipes (maquette du boss, oct. 2026) — backend : equipe/equipes.service.ts.
+export type ProcessusCellule = 'DIR' | 'ARC' | 'INT' | 'ETU';
+export type ClienteleCellule = 'externes' | 'holding' | 'tous' | 'sans_objet';
+export type StatutCellule = 'active' | 'a_constituer' | 'reportee';
+export type EtatPosteCellule = 'occupe' | 'ouvert' | 'reporte' | 'a_recruter' | 'externe';
+
+export type CelluleEquipe = {
+  id: string;
+  code: string;
+  processus: ProcessusCellule;
+  nom: string;
+  clientele: ClienteleCellule;
+  statut: StatutCellule;
+  pilote: { id: string; nom: string } | null;
+  pctATemps: number | null; // null = pas encore d'étape livrée
+  postes: { id: string; libelle: string; etat: EtatPosteCellule; titulaire: { id: string; nom: string } | null }[];
+  membres: {
+    id: string;
+    nom: string;
+    role: string;
+    poste: string | null;
+    estPilote: boolean;
+    taches: number; // tâches du mois en cours
+    heures: number; // heures imputées ce mois, à ce jour
+    pctATemps: number | null;
+  }[];
+};
+
+export type VueEquipes = {
+  indicateurs: {
+    cellules: { actives: number; total: number };
+    salariesAAffecter: number;
+    projetsSignes: { total: number; nonAffectes: number };
+    etapes: { enCours: number; enRetard: number; pctATemps: number | null };
+    absencesEnAttente: number;
+  };
+  cellules: CelluleEquipe[];
+  salariesAAffecter: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; dateArrivee: string | null }[];
+  projets: { id: string; code: string; programme: string; client: string; cellules: { code: string; nom: string }[] }[];
+  etapesEnCours: { id: string; projet: string; etape: string; libelle: string; assigne: string | null; echeance: string | null; enRetard: boolean }[];
+  collaborateurs: { id: string; nom: string; cellule: string | null }[];
+  prochainsCodes: Record<ProcessusCellule, string>;
 };
 
 // Fiche du collaborateur connecté — `GET …/mon-profil`, résolue depuis le

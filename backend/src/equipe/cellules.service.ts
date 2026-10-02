@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { versCellule } from '../commun/format-contrat';
 import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
+import { codeCellule, prefixeSociete } from './equipes-regles';
 
 // membres + le strict minimum du compte lié (jamais motDePasseHash).
 const MEMBRES = {
@@ -48,10 +49,39 @@ export class CellulesService {
     return cellules.map(formater);
   }
 
+  // Code SOCIÉTÉ-PROCESSUS-NN : numéro suivant du compteur (jamais réutilisé,
+  // même après suppression). Le pilote rejoint la cellule qu'il pilote — il en
+  // répartit les tâches, il doit en être membre (cf. definirDispatcher) — et
+  // quitte l'ancienne (poste libéré, plus dispatcher là-bas).
   async creer(societeId: string, dto: CreerCelluleDto) {
-    const cellule = await this.prisma.cellule.create({
-      data: { societeId, nom: dto.nom },
-      include: MEMBRES,
+    const societe = await this.prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } });
+    const pilote = dto.piloteId
+      ? await this.prisma.collaborateur.findFirst({ where: { id: dto.piloteId, societeId } })
+      : null;
+    if (dto.piloteId && !pilote) throw new UnprocessableEntityException('Pilote introuvable dans la société.');
+    const cellule = await this.prisma.$transaction(async (tx) => {
+      const { dernier } = await tx.compteurCellule.upsert({
+        where: { societeId_processus: { societeId, processus: dto.processus } },
+        create: { societeId, processus: dto.processus, dernier: 1 },
+        update: { dernier: { increment: 1 } },
+      });
+      const cel = await tx.cellule.create({
+        data: {
+          societeId,
+          nom: dto.nom.trim(),
+          processus: dto.processus,
+          numero: dernier,
+          code: codeCellule(prefixeSociete(societe.nom), dto.processus, dernier),
+          clientele: dto.clientele,
+          statut: dto.statut,
+        },
+      });
+      if (pilote) {
+        await quitterCellule(tx, pilote.id, pilote.celluleId);
+        await tx.collaborateur.update({ where: { id: pilote.id }, data: { celluleId: cel.id } });
+        await tx.cellule.update({ where: { id: cel.id }, data: { dispatcherId: pilote.id } });
+      }
+      return tx.cellule.findUniqueOrThrow({ where: { id: cel.id }, include: MEMBRES });
     });
     return formater(cellule);
   }
@@ -107,4 +137,15 @@ export class CellulesService {
     if (!cellule) throw new NotFoundException('Cellule introuvable');
     return cellule;
   }
+}
+
+// Un collaborateur qui quitte sa cellule y libère son poste (« poste ouvert ·
+// à affecter ») et n'en est plus le pilote (dispatcher).
+export async function quitterCellule(tx: Prisma.TransactionClient, collaborateurId: string, celluleId: string | null) {
+  if (!celluleId) return;
+  await tx.posteCellule.updateMany({
+    where: { celluleId, titulaireId: collaborateurId },
+    data: { titulaireId: null, etat: 'ouvert' },
+  });
+  await tx.cellule.updateMany({ where: { id: celluleId, dispatcherId: collaborateurId }, data: { dispatcherId: null } });
 }

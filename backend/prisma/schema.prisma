@@ -58,6 +58,7 @@ model Societe {
   dossiers              DossierCrm[]
   projets               Projet[]
   cellules              Cellule[]
+  compteursCellule      CompteurCellule[]
   collaborateurs        Collaborateur[]
   canaux                Canal[]
   factures              Facture[]
@@ -803,8 +804,8 @@ model Projet {
 //    Collaborateur, inchangé).
 
 model Cellule {
-  id           String   @id @default(uuid())
-  societeId    String   @map("societe_id")
+  id           String           @id @default(uuid())
+  societeId    String           @map("societe_id")
   nom          String
   // Le membre de CETTE cellule habilité à répartir les tâches aux autres
   // (décision boss, sept. 2026) — un seul par cellule, désigné par l'admin
@@ -812,16 +813,86 @@ model Cellule {
   // « responsable d'un bloc » pour Permis/Exécution). Doit appartenir à la
   // cellule (vérifié en service, pas en contrainte DB) ; SetNull si retiré
   // de l'équipe ou si son compte est supprimé.
-  dispatcherId String?  @map("dispatcher_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  dispatcherId String?          @map("dispatcher_id")
+  // Nomenclature ISO 9001 (maquette « Équipes », oct. 2026) : code
+  // SOCIÉTÉ-PROCESSUS-NN, stable et jamais réutilisé (CompteurCellule) ; le
+  // nom d'usage (`nom`) et la clientèle peuvent évoluer. Le pilote (§5.3) est
+  // le dispatcher ci-dessus (« chef de team »).
+  processus    ProcessusCellule
+  numero       Int
+  code         String
+  clientele    ClienteleCellule @default(externes)
+  statut       StatutCellule    @default(active)
+  createdAt    DateTime         @default(now()) @map("created_at")
 
   societe    Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
   membres    Collaborateur[] @relation("CelluleMembre")
   dispatcher Collaborateur?  @relation("CelluleDispatcher", fields: [dispatcherId], references: [id], onDelete: SetNull)
   projets    ProjetCellule[]
   canal      Canal? // fil de discussion permanent de la cellule (0..1)
+  postes     PosteCellule[]
 
+  @@unique([societeId, code])
   @@map("cellules")
+}
+
+// Processus d'une cellule (ISO 9001) : DIR §5 / §9.3, ARC et INT §8.3, ETU §8.4.
+enum ProcessusCellule {
+  DIR
+  ARC
+  INT
+  ETU
+}
+
+enum ClienteleCellule {
+  externes // clients externes
+  holding // interne (Holding)
+  tous // tous projets
+  sans_objet
+}
+
+enum StatutCellule {
+  active
+  a_constituer
+  reportee
+}
+
+enum EtatPosteCellule {
+  occupe // un titulaire
+  ouvert // poste ouvert, à affecter
+  reporte
+  a_recruter
+  externe // prestataires (bureaux d'études)
+}
+
+// Postes d'une cellule (CAD L1, Head of Interior Architecture…), dans l'ordre.
+model PosteCellule {
+  id          String           @id @default(uuid())
+  celluleId   String           @map("cellule_id")
+  libelle     String
+  ordre       Int              @default(0)
+  etat        EtatPosteCellule @default(ouvert)
+  titulaireId String?          @map("titulaire_id")
+
+  cellule   Cellule        @relation(fields: [celluleId], references: [id], onDelete: Cascade)
+  titulaire Collaborateur? @relation("PosteTitulaire", fields: [titulaireId], references: [id], onDelete: SetNull)
+
+  @@index([celluleId])
+  @@index([titulaireId])
+  @@map("postes_cellule")
+}
+
+// Dernier numéro attribué par société et processus : un code de cellule
+// n'est jamais réutilisé, même après suppression.
+model CompteurCellule {
+  societeId String           @map("societe_id")
+  processus ProcessusCellule
+  dernier   Int
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@id([societeId, processus])
+  @@map("compteurs_cellule")
 }
 
 // Table de liaison Projet <-> Cellule (many-to-many). Pas de champ propre
@@ -881,6 +952,7 @@ model Collaborateur {
   blocsExecutionResponsable    BlocExecution[]    @relation("BlocExecutionResponsable")
   blocsUnbordResponsable       BlocUnbord[]       @relation("BlocUnbordResponsable")
   tachesProjet                 TacheProjet[]      @relation("TacheProjetAssigne")
+  postesCellule                PosteCellule[]     @relation("PosteTitulaire")
 
   dossierPersonnel DossierPersonnel?
 
