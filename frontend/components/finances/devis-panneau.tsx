@@ -145,6 +145,11 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               Supprimer le brouillon
             </button>
           )}
+          {d.projetId && (d.statut === 'accepte' || d.statut === 'transforme') && droits.facturesEcriture && (
+            <Link className="btn-primary" href={`/admin/${slug}/projets/${d.projetId}/facturation`}>
+              <ReceiptText size={14} strokeWidth={2} aria-hidden /> Facturer les tranches
+            </Link>
+          )}
           <button type="button" className="btn-ghost" onClick={onTelecharger}>
             <Download size={14} strokeWidth={2} aria-hidden /> Télécharger
           </button>

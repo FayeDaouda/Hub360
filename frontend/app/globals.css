@@ -11663,6 +11663,35 @@ a.notif-item:hover {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
+/* Registre : textes longs sur une ligne, complets en infobulle (maquette). */
+.crm-tronque {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crm-tronque--programme {
+  max-width: 15rem;
+}
+.crm-tronque--apporteur {
+  max-width: 13rem;
+}
+/* Offre acceptée : l'action se passe dans Finances (maquette CTO). */
+.offre-dossier--acceptee {
+  display: grid;
+  gap: 0.5rem;
+  text-align: center;
+}
+.offre-dossier-cta {
+  justify-content: center;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+.offre-dossier-suite {
+  margin: 0;
+}
 .crm-pied {
   margin: 0.75rem 0 0;
   color: var(--text-muted);
@@ -13271,6 +13300,9 @@ a.notif-item:hover {
   justify-content: center;
   width: 100%;
   margin-top: 0.6rem;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
 }
 @media (max-width: 640px) {
   .nfd-ligne {

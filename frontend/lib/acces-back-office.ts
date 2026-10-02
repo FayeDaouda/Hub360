@@ -39,6 +39,14 @@ const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin', 'collaborateur']);
 // Le CIO est le super admin du HUB (décision 28/09/2026) — même nom de rôle
 // que backend/src/commun/societe-admin-ou-cio.guard.ts (ROLE_CIO).
 export const ROLE_CIO = 'CIO (transverse)';
+export const ROLE_CTO = 'CTO (transverse)';
+
+// Projets · gabarit (maquettes du boss) : ouvert rôle par rôle, au fil des
+// maquettes reçues — CIO puis CTO (oct. 2026) ; les autres gardent la vue
+// par phases jusqu'à leur tour.
+export function vueProjetsGabarit(session: Session): boolean {
+  return session.role === ROLE_CIO || session.role === ROLE_CTO;
+}
 
 // Administration du HUB (/groupe : comptes, rôles, salaires) — même règle
 // que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte

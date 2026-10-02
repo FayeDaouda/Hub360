@@ -427,14 +427,20 @@ export default function CrmPage({ params }: Props) {
                             </td>
                             <td data-label="Type">{projet.type ? TYPES_BIEN[projet.type] : '—'}</td>
                             <td data-label="Programme">
-                              {projet.programme.trim() ? projet.programme : <span className="crm-manquant">Fiche Programme à remplir</span>}
+                              {projet.programme.trim() ? (
+                                <span className="crm-tronque crm-tronque--programme" title={projet.programme}>
+                                  {projet.programme}
+                                </span>
+                              ) : (
+                                <span className="crm-manquant">Fiche Programme à remplir</span>
+                              )}
                             </td>
                             <td data-label="Apporteur">
                               <span className="cell-stack">
                                 <span className="cell-fort">
                                   {ap?.type === 'externe' ? ap.nom : ap?.type === 'interne' ? ap.utilisateur?.nom ?? 'Apporteur interne' : 'Affaire directe'}
                                 </span>
-                                <span className="cell-sub">
+                                <span className="cell-sub crm-tronque crm-tronque--apporteur">
                                   {ap
                                     ? [
                                         projet.commissionApporteur != null && `${formatNombre(projet.commissionApporteur)} %`,

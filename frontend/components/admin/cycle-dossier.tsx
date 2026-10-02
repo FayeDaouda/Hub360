@@ -83,6 +83,10 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
     }
   }
 
+  // Ni action possible ni note : le statut est déjà dans la barre « Situation »
+  // et le verrou en tête de fiche (maquette CTO, oct. 2026).
+  if (actions.length === 0 && !renvoi && !perte?.commentaire) return null;
+
   return (
     <section className="cycle-dossier" aria-label="Cycle commercial">
       <div className="cycle-dossier-tete">

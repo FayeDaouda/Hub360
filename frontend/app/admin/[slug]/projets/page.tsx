@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { getProjetsExecution } from '@/lib/projets';
 import { getCellules } from '@/lib/equipe';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
-import { ROLE_CIO } from '@/lib/acces-back-office';
+import { vueProjetsGabarit } from '@/lib/acces-back-office';
 import { ProjetsOuverts } from '@/components/projets-ouverts/projets-ouverts';
 
 // Leaflet touche `window` → pas de SSR.
@@ -36,11 +36,11 @@ type Vue = 'grille' | 'phase' | 'carte';
 // Toutes les phases, dans l'ordre — sert de colonnes pour la vue « par phase ».
 const ORDRE_PHASES: Phase[] = ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'];
 
-// Vue CIO : la maquette « Projets » du boss (projets ouverts selon le
+// Vue CIO et CTO : la maquette « Projets » du boss (projets ouverts selon le
 // gabarit) ; les autres rôles gardent la vue par phases jusqu'à leur tour.
 export default function ProjetsPage({ params }: Props) {
   const session = useSessionCourante();
-  return session.role === ROLE_CIO ? <ProjetsOuverts slug={params.slug} /> : <ProjetsParPhase params={params} />;
+  return vueProjetsGabarit(session) ? <ProjetsOuverts slug={params.slug} /> : <ProjetsParPhase params={params} />;
 }
 
 function ProjetsParPhase({ params }: Props) {

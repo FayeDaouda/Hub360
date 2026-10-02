@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
+import { sectionAccessible } from '@/lib/acces-back-office';
 import {
   getAssignables,
   getDossierProjet,
@@ -109,9 +110,12 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
           {horizon !== null && ` · ${horizon} jours ouvrés (${tableau!.budgetHeures} h)`}, délais figés, validation par le chef de team.
         </p>
         <div className="po-entete-actions">
-          <Link className="btn-ghost" href={`/admin/${slug}/reglages?section=gabarit`}>
-            Gabarit et paramètres
-          </Link>
+          {/* Réglages : réservés au CIO (page Paramètres hors matrice). */}
+          {sectionAccessible(session, 'parametres') && (
+            <Link className="btn-ghost" href={`/admin/${slug}/reglages?section=gabarit`}>
+              Gabarit et paramètres
+            </Link>
+          )}
           <span className="po-acces">{acces}</span>
         </div>
       </div>

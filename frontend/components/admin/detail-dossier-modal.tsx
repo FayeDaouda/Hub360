@@ -268,7 +268,7 @@ export function DetailDossierModal({
             {!editable && (
               <>
                 <div className="fiche-crm-titre-ligne">
-                  <h3 className="fiche-crm-titre">Les champs de la fiche</h3>
+                  <h3 className="fiche-crm-titre">Les 9 champs de la fiche</h3>
                   {projet.verrouillee && <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>}
                 </div>
                 <dl className="fiche-crm-champs">

@@ -116,8 +116,17 @@ export default function FinancesPage({ params }: Props) {
   }, [nouvelleDemandee]);
   useEffect(() => {
     if (offreDemandee) setOffre({ dossier: offreDemandee });
-    else if (devisDemande) setOffre({ devisId: devisDemande });
-  }, [offreDemandee, devisDemande]);
+  }, [offreDemandee]);
+  // ?devis=<id> : un brouillon d'offre de lead se retravaille dans l'éditeur ;
+  // toute autre offre s'ouvre en document (ex. offre acceptée, depuis le CRM).
+  const devisCharges = devis !== null;
+  useEffect(() => {
+    if (!devisDemande || !devisCharges) return;
+    const d = (devis ?? []).find((x) => x.id === devisDemande);
+    if (d?.statut === 'brouillon' && d.dossierCrm?.statut === 'nouveau_projet') setOffre({ devisId: d.id });
+    else if (d) setDevisOuvert(d.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devisDemande, devisCharges]);
   useEffect(() => {
     if ((offre || onglet === 'temps') && !leads) getProjets(params.slug).then(setLeads).catch(() => setLeads([]));
   }, [offre, onglet, leads, params.slug]);
