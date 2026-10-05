@@ -307,7 +307,9 @@ async function main() {
         equipe: 'ecriture',
         rh: 'aucun',
         mon_espace: 'lecture',
-        pilotage: 'aucun',
+        // lecture (05/10/2026, demande du boss) : page Pilotage, comme le CTO ;
+        // ses actions vont par fonction (émetteur, CTO / CEO, responsable).
+        pilotage: 'lecture',
         documents: 'aucun',
         communication: 'aucun',
       },
