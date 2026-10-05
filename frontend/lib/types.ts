@@ -2417,3 +2417,61 @@ export type MaCellule = {
   membres: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; estChef: boolean; estMoi: boolean }[];
   projets: { id: string; code: string; programme: string; phase: Phase }[];
 };
+
+// --- Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026) ----
+
+export type EvaluationIndicateur = 'dans_objectif' | 'hors_objectif' | 'a_fixer' | 'sans_donnee';
+
+export type IndicateurPilotage = {
+  cle: string;
+  titre: string;
+  valeur: number | null;
+  affichage: string;
+  evaluation: EvaluationIndicateur;
+  atteintPropose: boolean; // objectif à fixer, valeur proposée atteinte
+  texteObjectif: string;
+  source: string;
+};
+
+export type StatutReporting = 'a_deposer' | 'en_retard' | 'depose' | 'depose_en_retard';
+
+export type ReportingPilotage = {
+  type: 'direction' | 'rh';
+  mois: string; // AAAA-MM
+  periode: string; // « septembre 2026 »
+  titre: string;
+  emetteur: string;
+  destinataire: string;
+  echeance: string; // AAAA-MM-JJ
+  statut: StatutReporting;
+  deposeLe: string | null;
+  contenu: { libelle: string; valeur: string }[] | null; // null = aucune rubrique définie
+  peutDeposer: boolean;
+};
+
+export type StatutDecision = 'ouverte' | 'echeance_depassee' | 'close';
+
+export type DecisionRegistre = {
+  id: string;
+  numero: string; // D-014
+  date: string;
+  instance: string;
+  origine: 'saisie' | 'hub';
+  texte: string;
+  responsable: string;
+  echeance: string | null;
+  statut: StatutDecision;
+  closeLe: string | null;
+  peutCloturer: boolean;
+};
+
+export type ResponsableDecision = { role: string; libelle: string } | { collaborateurId: string; libelle: string };
+
+export type VuePilotage = {
+  mois: string; // « octobre 2026 »
+  tuiles: { horsObjectif: number; suivis: number; reportingsADeposer: number; decisionsOuvertes: number };
+  indicateurs: IndicateurPilotage[];
+  reportings: ReportingPilotage[];
+  decisions: DecisionRegistre[];
+  saisie: { instances: string[]; responsables: ResponsableDecision[] } | null; // null = pas de saisie
+};

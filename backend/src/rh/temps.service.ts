@@ -107,11 +107,16 @@ export class TempsService {
 
   // --- Feuilles de temps (RH, périmètre groupe) ----------------------------
 
-  async feuilles(mois?: string) {
+  // Périmètre groupe (page RH) ; `societeId` le restreint à une société
+  // (Pilotage · feuilles de temps contrôlées).
+  async feuilles(mois?: string, societeId?: string) {
     const jour = aujourdhui();
     const cible = moisValide(mois ?? dernierMoisClos(jour), jour);
     const dossiers = await this.prisma.dossierPersonnel.findMany({
-      where: { OR: [{ archiveLe: null }, { archiveLe: { gte: new Date(`${MOIS_DEBUT_FEUILLES}-01T00:00:00Z`) } }] },
+      where: {
+        ...(societeId ? { societeId } : {}),
+        OR: [{ archiveLe: null }, { archiveLe: { gte: new Date(`${MOIS_DEBUT_FEUILLES}-01T00:00:00Z`) } }],
+      },
       include: INCLUDE_DOSSIER,
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     });

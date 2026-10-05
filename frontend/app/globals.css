@@ -14631,6 +14631,285 @@ a.notif-item:hover {
   }
 }
 
+/* Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026). */
+.pi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
+}
+.pi-tuile {
+  border: 1px solid var(--border);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.pi-tuile:hover {
+  border-color: color-mix(in oklch, var(--argile) 45%, var(--border));
+}
+.pi-tuile.is-active {
+  border: 2px solid var(--argile);
+}
+.pi .fin-onglets {
+  margin-bottom: 0;
+}
+.pi-indicateurs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+.pi-indicateur {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  padding: 1.1rem 1.3rem;
+}
+.pi-indicateur-tete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.pi-indicateur-tete h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.pi-indicateur-tete .pill {
+  flex-shrink: 0;
+}
+.pi-valeur {
+  font-size: 2rem;
+  line-height: 1.15;
+}
+.pi-valeur--hors {
+  color: var(--fuchsia);
+}
+.pi-valeur--ok {
+  color: color-mix(in srgb, #7fd4a0 75%, var(--text));
+}
+.pi-objectif,
+.pi-source,
+.pi-aide,
+.pi-note {
+  margin: 0;
+}
+.pi-objectif {
+  font-size: 0.9rem;
+}
+.pi-source,
+.pi-aide,
+.pi-note {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.pi-colonnes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+.pi-liste,
+.pi-fiche {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 1.2rem 1.4rem;
+}
+.pi-liste h2,
+.pi-fiche h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.pi-fiche h2 {
+  font-size: 1.3rem;
+}
+.pi-fiche-statut {
+  justify-self: start;
+}
+.pi-table {
+  display: grid;
+  gap: 0.45rem;
+}
+.pi-ligne {
+  display: grid;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.9rem;
+  font-size: 0.86rem;
+  text-align: left;
+}
+.pi-ligne > * {
+  min-width: 0;
+}
+.pi-ligne--tete {
+  padding-block: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pi-ligne--reporting {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 0.9fr) minmax(0, 1.5fr);
+}
+.pi-ligne--choix {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.pi-ligne--choix:hover {
+  border-color: color-mix(in oklch, var(--argile) 45%, var(--border));
+}
+.pi-ligne--choix.is-active {
+  border: 2px solid var(--argile);
+  background: color-mix(in srgb, var(--argile) 10%, transparent);
+}
+.pi-ligne--decision {
+  grid-template-columns: 4rem 5.6rem minmax(0, 1.1fr) minmax(0, 2.4fr) minmax(0, 1fr) 5.6rem minmax(0, 1.5fr);
+  padding-inline: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+}
+.pi-ligne--decision.pi-ligne--tete {
+  border-top: 0;
+}
+.pi-instance {
+  display: grid;
+  gap: 0.1rem;
+}
+.pi-instance small {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+.pi-echeance--depassee {
+  color: var(--fuchsia);
+}
+/* « Ouverte » : pastille claire bleue, même famille que .pill--risque (fond fixe). */
+.pill--azur {
+  background: #e3ebfb;
+  color: color-mix(in oklch, var(--azur) 70%, black);
+}
+.pi-statut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+.pi-cloturer {
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+}
+.pi-rubriques {
+  display: grid;
+  margin: 0;
+}
+.pi-rubriques div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 0.8rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pi-rubriques dt {
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+}
+.pi-rubriques dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.pi-deposer {
+  justify-self: start;
+}
+.pi-registre-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+.pi-registre-tete > div:first-child {
+  display: grid;
+  gap: 0.3rem;
+}
+.pi-registre-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.pi-saisie {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+.pi-saisie-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+@media (max-width: 1200px) {
+  .pi-indicateurs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pi-colonnes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 1000px) {
+  .pi-ligne--tete {
+    display: none;
+  }
+  .pi-ligne--reporting {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem 0.8rem;
+  }
+  .pi-ligne--reporting > :nth-child(5) {
+    grid-column: 1 / -1;
+  }
+  .pi-ligne--decision {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.3rem 0.8rem;
+    padding-block: 0.85rem;
+  }
+  .pi-ligne--decision > .pi-instance,
+  .pi-ligne--decision > .pi-texte,
+  .pi-ligne--decision > .pi-statut {
+    grid-column: 1 / -1;
+  }
+  .pi-ligne--decision > .pi-instance {
+    grid-row: 2;
+  }
+}
+@media (max-width: 560px) {
+  .pi-indicateurs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pi-liste,
+  .pi-fiche,
+  .pi-indicateur {
+    padding: 1rem;
+  }
+  .pi-rubriques div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.2rem;
+  }
+  .pi-saisie-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Tableau de bord : 2 colonnes (≈ 3/5 – 2/5), une seule sous 1100 px. */
 .fin-tdb {
   --fin-vert: #7fd4a0;

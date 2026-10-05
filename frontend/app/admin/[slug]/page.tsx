@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getTableauBordSociete } from '@/lib/tableau-bord';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import type {
   PeriodeTableauBord,
   StatutJalon,
@@ -26,6 +26,7 @@ import { formatDateCourte } from '@/lib/format';
 import { StatCard } from '@/components/admin/stat-card';
 import { AreaChart } from '@/components/admin/area-chart';
 import { RadialGauge } from '@/components/admin/radial-gauge';
+import { Pilotage } from '@/components/pilotage/pilotage';
 
 type Props = {
   params: { slug: string };
@@ -84,9 +85,21 @@ function labelDateJalon(dateIso: string): string {
   return formatDateCourte(dateIso);
 }
 
-// Back-office d'une société — réservé à societe_admin (auth + redirect gérés
-// par app/admin/[slug]/layout.tsx, voir destinationForSession).
+// Rôles de la matrice (module pilotage) : Pilotage · tableau de bord Holding
+// (maquettes du boss) ; l'admin société garde son tableau de bord. Accès
+// gérés par app/admin/[slug]/layout.tsx (sectionAccessible).
 export default function AdminPage({ params }: Props) {
+  const session = useSessionCourante();
+  if (session.role !== 'societe_admin') return <PagePilotage slug={params.slug} />;
+  return <TableauDeBordSociete params={params} />;
+}
+
+function PagePilotage({ slug }: { slug: string }) {
+  useTitrePage('Pilotage · tableau de bord Holding');
+  return <Pilotage slug={slug} />;
+}
+
+function TableauDeBordSociete({ params }: Props) {
   useTitrePage('Tableau de bord');
   const [periode, setPeriode] = useState<PeriodeTableauBord>('mois');
   const [tableau, setTableau] = useState<TableauBordSociete | null>(null);

@@ -19,6 +19,7 @@
     "comptes-demo": "ts-node prisma/comptes-demo.ts",
     "finances-demo": "ts-node prisma/finances-demo.ts",
     "equipes-demo": "ts-node prisma/equipes-demo.ts",
+    "pilotage-demo": "ts-node prisma/pilotage-demo.ts",
     "rh-dossiers-init": "ts-node prisma/rh-dossiers-init.ts"
   },
   "dependencies": {

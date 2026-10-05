@@ -22,6 +22,7 @@ import { CatalogueSource, importerCatalogue } from './catalogue';
 import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
 import { creerFinancesDemo } from './finances-demo';
 import { organiserEquipesDemo } from './equipes-demo';
+import { creerPilotageDemo } from './pilotage-demo';
 
 const prisma = new PrismaClient();
 
@@ -1068,6 +1069,9 @@ async function main() {
 
   // --- Devis et factures fictifs (onglets Finances) — cf. finances-demo.ts ---
   await creerFinancesDemo(prisma, grey.id);
+
+  // --- Décisions fictives au registre (Pilotage) — cf. pilotage-demo.ts -----
+  await creerPilotageDemo(prisma, grey.id);
 
   // --- Notifications de démo pour Rokhaya (compte collaborateur actif) ------
   // Les alertes d'échéance sont dérivées à la lecture (pas stockées) ; ici on

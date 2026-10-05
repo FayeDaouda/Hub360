@@ -1,0 +1,120 @@
+'use client';
+
+import { useState } from 'react';
+import { deposerReporting } from '@/lib/pilotage';
+import type { ReportingPilotage, StatutReporting, VuePilotage } from '@/lib/types';
+
+const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+
+function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
+  const statuts: Record<StatutReporting, { classe: string; libelle: string }> = {
+    a_deposer: { classe: 'pill--attention', libelle: r.contenu ? 'À déposer · prérempli' : 'À déposer' },
+    en_retard: { classe: 'pill--risque', libelle: 'En retard · alerte CODIR' },
+    depose: { classe: 'pill--succes', libelle: `Déposé le ${jjmmaaaa(r.deposeLe ?? '')}` },
+    depose_en_retard: { classe: 'pill--risque', libelle: 'Déposé en retard · alerte CODIR' },
+  };
+  return statuts[r.statut];
+}
+
+// Reportings mensuels (manuel §9.4) : liste à gauche, fiche à droite —
+// préremplie depuis le HUB tant qu'elle n'est pas déposée, figée ensuite.
+export function Reportings({ slug, reportings, onVue }: { slug: string; reportings: ReportingPilotage[]; onVue: (v: VuePilotage) => void }) {
+  const cle = (r: ReportingPilotage) => `${r.type}:${r.mois}`;
+  const premier = reportings.find((r) => r.statut === 'a_deposer' || r.statut === 'en_retard') ?? reportings[0];
+  const [choisi, setChoisi] = useState<string | null>(premier ? cle(premier) : null);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const r = reportings.find((x) => cle(x) === choisi) ?? null;
+
+  async function deposer(x: ReportingPilotage) {
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      onVue(await deposerReporting(slug, x.type, x.mois));
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'Le dépôt a échoué.');
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  return (
+    <div className="pi-colonnes">
+      <section className="panel glass-panel pi-liste">
+        <h2>Reportings mensuels (manuel §9.4)</h2>
+        <p className="pi-aide">Chaque émetteur dépose à J+5 ; un reporting en retard est une alerte signalée au CODIR (§4.3).</p>
+        {reportings.length === 0 ? (
+          <p className="pi-aide">Aucun mois clos à reporter pour l’instant.</p>
+        ) : (
+          <div className="pi-table" role="table">
+            <div className="pi-ligne pi-ligne--tete pi-ligne--reporting" role="row">
+              <span role="columnheader">Reporting</span>
+              <span role="columnheader">Période</span>
+              <span role="columnheader">Émetteur → destinataire</span>
+              <span role="columnheader">Échéance</span>
+              <span role="columnheader">Statut</span>
+            </div>
+            {reportings.map((x) => {
+              const pill = pillStatut(x);
+              return (
+                <button
+                  key={cle(x)}
+                  type="button"
+                  role="row"
+                  className={`pi-ligne pi-ligne--reporting pi-ligne--choix${choisi === cle(x) ? ' is-active' : ''}`}
+                  onClick={() => setChoisi(cle(x))}
+                >
+                  <strong role="cell">{x.titre}</strong>
+                  <span role="cell">{x.periode}</span>
+                  <span role="cell">
+                    {x.emetteur} → {x.destinataire}
+                  </span>
+                  <span role="cell">{jjmmaaaa(x.echeance)}</span>
+                  <span role="cell">
+                    <span className={`pill ${pill.classe}`}>{pill.libelle}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {r && (
+        <section className="panel glass-panel pi-fiche">
+          <p className="po-kicker">
+            {r.emetteur} → {r.destinataire} · échéance {jjmmaaaa(r.echeance)}
+          </p>
+          <h2>
+            {r.titre} · {r.periode}
+          </h2>
+          <span className={`pill ${pillStatut(r).classe} pi-fiche-statut`}>{pillStatut(r).libelle}</span>
+          {r.contenu ? (
+            <dl className="pi-rubriques">
+              {r.contenu.map((c) => (
+                <div key={c.libelle}>
+                  <dt>{c.libelle}</dt>
+                  <dd>{c.valeur}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="pi-aide">Contenu à fournir : aucune rubrique n’est encore définie pour ce reporting.</p>
+          )}
+          {!r.deposeLe && r.contenu && (
+            <p className="pi-note">
+              Prérempli automatiquement depuis le HUB : l’émetteur relit puis dépose. Sans dépôt au {jjmmaaaa(r.echeance)}, une alerte est
+              inscrite au registre pour le CODIR.
+            </p>
+          )}
+          {erreur && <p className="field-erreur">{erreur}</p>}
+          {r.peutDeposer && (
+            <button type="button" className="btn-primary pi-deposer" disabled={envoi} onClick={() => deposer(r)}>
+              {envoi ? 'Dépôt…' : 'Déposer le reporting'}
+            </button>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}

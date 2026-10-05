@@ -59,6 +59,8 @@ model Societe {
   projets               Projet[]
   cellules              Cellule[]
   compteursCellule      CompteurCellule[]
+  reportings            ReportingMensuel[]
+  decisions             DecisionRegistre[]
   collaborateurs        Collaborateur[]
   canaux                Canal[]
   factures              Facture[]
@@ -2637,4 +2639,61 @@ model JournalReglage {
 
   @@index([societeId, createdAt])
   @@map("journal_reglages")
+}
+
+// Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026).
+
+enum TypeReporting {
+  direction // Reporting {société} : Direction GC → CTO
+  rh // Reporting RH : RH → CFO
+}
+
+// Reporting mensuel DÉPOSÉ (manuel §9.4) — une ligne au dépôt seulement ;
+// avant, il est prérempli à la volée. `contenu` fige ce que l'émetteur a relu.
+model ReportingMensuel {
+  id          String        @id @default(uuid())
+  societeId   String        @map("societe_id")
+  type        TypeReporting
+  mois        String // AAAA-MM
+  deposeLe    DateTime      @default(now()) @map("depose_le")
+  deposeParId String?       @map("depose_par_id") // audit, pas de FK
+  contenu     Json?
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, type, mois])
+  @@map("reportings_mensuels")
+}
+
+enum OrigineDecision {
+  saisie // décision d'une instance, saisie dans le HUB
+  hub // inscrite par le HUB depuis l'événement qui la porte
+}
+
+// Registre des décisions (manuel §4.1) : décision, responsable, échéance.
+// Numéro D-NNN séquentiel par société, jamais réutilisé. Une décision
+// inscrite par le HUB a une `cleOrigine` (idempotence) et se clôt seule.
+model DecisionRegistre {
+  id                         String          @id @default(uuid())
+  societeId                  String          @map("societe_id")
+  numero                     Int
+  date                       String // AAAA-MM-JJ
+  instance                   String // « CODIR », « RH · congés », « Projets · AM_SL.26 »…
+  origine                    OrigineDecision
+  cleOrigine                 String?         @map("cle_origine")
+  texte                      String
+  responsable                String // libellé affiché
+  responsableRole            String?         @map("responsable_role")
+  responsableCollaborateurId String?         @map("responsable_collaborateur_id") // pas de FK : le libellé reste
+  echeance                   String? // AAAA-MM-JJ
+  closeLe                    DateTime?       @map("close_le")
+  closeParId                 String?         @map("close_par_id")
+  creeParId                  String?         @map("cree_par_id")
+  createdAt                  DateTime        @default(now()) @map("created_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, numero])
+  @@unique([societeId, cleOrigine])
+  @@map("decisions_registre")
 }

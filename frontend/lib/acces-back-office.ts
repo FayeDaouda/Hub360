@@ -12,6 +12,7 @@ import type { Session } from './types';
 // n'acceptent encore que lui (ouverture section par section : C2 = CRM,
 // H5 = Facturation).
 const SECTIONS_DIRECTION: Record<string, string> = {
+  'tableau-de-bord': 'pilotage', // Pilotage · tableau de bord Holding (maquette)
   crm: 'crm', // clé de nav → module de la matrice
   projets: 'projets',
   equipe: 'equipe',

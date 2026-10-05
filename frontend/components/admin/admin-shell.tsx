@@ -49,7 +49,7 @@ type NavItem = {
 // `categorie` de chaque projet, filtrable dans Projets. Pas de « Documents »
 // tant qu'il n'y a pas de modèle derrière (on ne met pas de lien mort).
 const NAV: NavItem[] = [
-  { cle: 'tableau-de-bord', libelle: 'Tableau de bord', icone: LayoutDashboard, chemin: '' },
+  { cle: 'tableau-de-bord', libelle: 'Pilotage', icone: LayoutDashboard, chemin: '' },
   { cle: 'crm', libelle: 'CRM', icone: Contact, chemin: 'crm' },
   { cle: 'projets', libelle: 'Projets', icone: FolderKanban, chemin: 'projets' },
   { cle: 'facturation', libelle: 'Finances', icone: ReceiptText, chemin: 'facturation', tag: 'restreint' },

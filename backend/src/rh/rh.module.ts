@@ -34,5 +34,6 @@ import {
     MesTachesController,
     ValidationsTachesController,
   ],
+  exports: [TempsService], // Pilotage : feuilles de temps contrôlées
 })
 export class RhModule {}

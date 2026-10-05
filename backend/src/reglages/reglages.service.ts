@@ -186,9 +186,10 @@ export class ReglagesService {
     return new Map(societeIds.map((id) => [id, parSociete.get(id) ?? new Set<string>()]));
   }
 
-  // Valeur en service d'une règle (réglage, sinon valeur par défaut).
+  // Valeur en service d'une règle ou d'un objectif (réglage, sinon valeur
+  // par défaut).
   async regle<T>(societeId: string, cle: string): Promise<T> {
-    const def = REGLES.find((d) => d.cle === cle);
+    const def = [...REGLES, ...OBJECTIFS].find((d) => d.cle === cle);
     if (!def) throw new Error(`Règle inconnue : ${cle}`);
     const l = await this.prisma.reglageSociete.findUnique({ where: { societeId_cle: { societeId, cle } } });
     return (l ? l.valeur : def.defaut) as T;
