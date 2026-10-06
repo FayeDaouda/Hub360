@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { ROLE_DIR_GC, sectionAccessible } from '@/lib/acces-back-office';
+import { ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
   ajouterTs,
   getAssignables,
@@ -61,6 +61,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
   const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
   const dplg = session.role === ROLE_DIR_GC;
+  const salarie = session.role === ROLE_SALARIE;
   const [assignables, setAssignables] = useState<Assignable[] | null>(null);
   const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
 
@@ -130,7 +131,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const horizon = tableau ? Math.round(tableau.budgetHeures / HEURES_PAR_JOUR) : null;
   const acces = dplg
     ? 'Architecte DPLG : assignation, désactivation, prolongations, validation en suppléance'
-    : peutAssigner
+    : salarie
+      ? 'Salarié : remise, prolongation, discussion ; le chef de team valide'
+      : peutAssigner
       ? 'Lecture et assignation · accès complet'
       : 'Lecture seule';
 
@@ -155,7 +158,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       {erreur && <p className="field-erreur">{erreur}</p>}
 
       <div className="po-tuiles">
-        {dplg ? (
+        {dplg || salarie ? (
           <Tuile
             libelle="À valider par vous"
             valeur={tableau?.kpi.aValiderParVous.length}
@@ -173,12 +176,16 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
           aide="le retard est qualifié par le chef de team ou le DPLG"
           ton="attention"
         />
-        <Tuile
-          libelle="Signalements et mentions"
-          valeur={tableau ? tableau.kpi.tsNonAcceptes + tableau.kpi.mentions : undefined}
-          aide={tableau ? `${tableau.kpi.tsNonAcceptes} TS non accepté(s) · ${tableau.kpi.mentions} tâche(s)` : ''}
-          ton="risque"
-        />
+        {salarie ? (
+          <Tuile libelle="Signalements et mentions" valeur={tableau?.kpi.mentions} aide="mises à jour à reporter, @mentions" ton="risque" />
+        ) : (
+          <Tuile
+            libelle="Signalements et mentions"
+            valeur={tableau ? tableau.kpi.tsNonAcceptes + tableau.kpi.mentions : undefined}
+            aide={tableau ? `${tableau.kpi.tsNonAcceptes} TS non accepté(s) · ${tableau.kpi.mentions} tâche(s)` : ''}
+            ton="risque"
+          />
+        )}
       </div>
 
       {tableau && tableau.projets.length === 0 ? (

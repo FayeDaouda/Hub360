@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../prisma/prisma.service';
 
 // Validation d'une remise (maquettes « Projets ») : le chef de team valide ;
@@ -5,6 +6,15 @@ import type { PrismaService } from '../../prisma/prisma.service';
 // supplée le chef de team partout. Personne ne valide sa propre tâche.
 
 export const ROLE_DPLG = 'Dir. GC';
+
+// Salarié (matrice : projets en lecture, 06/10/2026) : il ne voit que les
+// projets où une tâche lui est assignée.
+export const ROLE_SALARIE = 'Salarié';
+
+export function perimetreProjets(role: string, collaborateurId: string | null): Prisma.ProjetWhereInput {
+  if (role !== ROLE_SALARIE) return {};
+  return { cartes: { some: { taches: { some: { assigneId: collaborateurId ?? '__aucun__' } } } } };
+}
 
 export type Decideur = { role: string; collaborateurId: string | null };
 

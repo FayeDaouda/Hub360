@@ -237,7 +237,9 @@ async function main() {
       transverse: false,
       permissions: {
         crm: 'aucun',
-        projets: 'aucun',
+        // lecture (06/10/2026, maquette Salarié validée par le user) : limitée
+        // aux projets où une tâche lui est assignée (projets/gabarit/validation.ts).
+        projets: 'lecture',
         finances_devis: 'aucun',
         finances_factures: 'aucun',
         finances_marges: 'aucun',

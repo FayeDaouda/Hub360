@@ -45,12 +45,15 @@ export const ROLE_CTO = 'CTO (transverse)';
 // Dir. GC = Architecte DPLG (validation en suppléance, ajout en TS) — même
 // nom que backend/src/projets/gabarit/validation.ts (ROLE_DPLG).
 export const ROLE_DIR_GC = 'Dir. GC';
+// Salarié : projets en lecture, limités à ceux où il a une tâche — même nom
+// que backend/src/projets/gabarit/validation.ts (ROLE_SALARIE).
+export const ROLE_SALARIE = 'Salarié';
 
 // Projets · gabarit (maquettes du boss) : ouvert rôle par rôle, au fil des
-// maquettes reçues — CIO, CTO puis Dir. GC (oct. 2026) ; les autres gardent
+// maquettes reçues — CIO, CTO, Dir. GC puis Salarié (oct. 2026) ; les autres gardent
 // la vue par phases jusqu'à leur tour.
 export function vueProjetsGabarit(session: Session): boolean {
-  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC].includes(session.role);
+  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC, ROLE_SALARIE].includes(session.role);
 }
 
 export const ROLE_CEO = 'CEO (transverse)';

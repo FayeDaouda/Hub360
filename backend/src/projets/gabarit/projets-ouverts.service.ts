@@ -6,7 +6,7 @@ import type { Temps } from '../../reglages/gabarit';
 import { alerteAvenant, refDevis } from '../../devis/domaine';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
-import { collaborateurDuCompte, peutDecider, ROLE_DPLG, type Decideur } from './validation';
+import { collaborateurDuCompte, perimetreProjets, peutDecider, ROLE_DPLG, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import {
   attentesFactures,
@@ -55,8 +55,9 @@ export class ProjetsOuvertsService {
   ) {}
 
   async tableau(societeId: string, acteur: Acteur) {
+    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
     const projets = await this.prisma.projet.findMany({
-      where: { societeId, ouvertLe: { not: null } },
+      where: { societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
       orderBy: { ouvertLe: 'asc' },
       include: {
         ...AVEC_TACHES,
@@ -64,7 +65,6 @@ export class ProjetsOuvertsService {
         cellules: { include: { cellule: { select: { nom: true, dispatcherId: true } } } },
       },
     });
-    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
     const feries = await this.feries(societeId);
     const jour = aujourdhui();
     const resumes = projets.map((p) => {
@@ -108,8 +108,9 @@ export class ProjetsOuvertsService {
   }
 
   async dossier(societeId: string, projetId: string, acteur: Acteur) {
+    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
     const p = await this.prisma.projet.findFirst({
-      where: { id: projetId, societeId, ouvertLe: { not: null } },
+      where: { id: projetId, societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
       include: {
         ...AVEC_TACHES,
         client: { select: { nom: true, type: true } },
@@ -126,7 +127,6 @@ export class ProjetsOuvertsService {
     const { etapes, etatsCartes, etatsTaches } = this.etats(p, jour, feries);
     const cellule = p.cellules[0]?.cellule ?? null;
     const chef = cellule?.dispatcher ?? null;
-    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
     const dplgConnecte = acteur.role === ROLE_DPLG || acteur.role === 'societe_admin';
     const dplg = p.societe.contratSignataireNom?.trim() || null;
     const pilote = await this.reglages.regle<string>(societeId, 'pilote_etudes');

@@ -18,6 +18,7 @@ import { MesPerformances } from './performances';
 
 const ONGLETS = [
   { cle: 'performances', libelle: 'Mes performances', dossierRequis: false },
+  { cle: 'mission', libelle: 'Ma carte de mission', dossierRequis: true },
   { cle: 'a-valider', libelle: 'À valider', dossierRequis: false },
   { cle: 'temps', libelle: 'Mon temps', dossierRequis: false },
   { cle: 'cellule', libelle: 'Ma cellule', dossierRequis: false },
@@ -30,16 +31,22 @@ type Onglet = (typeof ONGLETS)[number]['cle'];
 
 const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
 
+// Rôles qui ne valident rien (maquettes RH et Salarié) : « À valider »
+// n'apparaît pour eux que si quelque chose les attend.
+const SANS_VALIDATION = new Set(['RH', 'Salarié', 'collaborateur']);
+// Salarié pas encore affecté à une équipe : bandeau d'explication (maquette).
+const EQUIPE_ATTENDUE = new Set(['Salarié', 'collaborateur']);
+
 // « Mon espace » (RH lot 5) : l'espace personnel de chaque compte, direction
 // comprise, monté dans le back-office comme dans l'espace collaborateur.
 // L'onglet vit dans l'URL (?onglet=) pour les liens directs.
 export function MonEspace({ slug }: { slug: string }) {
-  const { utilisateur } = useSessionCourante();
+  const { utilisateur, role } = useSessionCourante();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const demande = params.get('onglet');
-  const onglet: Onglet = ONGLETS.some((o) => o.cle === demande) ? (demande as Onglet) : ONGLETS[0].cle;
+  const demandeOnglet: Onglet = ONGLETS.some((o) => o.cle === demande) ? (demande as Onglet) : ONGLETS[0].cle;
 
   const [dossier, setDossier] = useState<ProfilMonEspace | null | undefined>(undefined);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -67,7 +74,7 @@ export function MonEspace({ slug }: { slug: string }) {
     onglets.current
       ?.querySelector<HTMLElement>('[aria-selected="true"]')
       ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [onglet, dossier]);
+  }, [demandeOnglet, dossier]);
 
   if (erreur) return <p className="empty-state">{erreur}</p>;
   if (dossier === undefined) {
@@ -78,6 +85,11 @@ export function MonEspace({ slug }: { slug: string }) {
     );
   }
 
+  // Carte de mission : seulement quand la RH l'a rédigée (nouvel arrivant).
+  const visibles = ONGLETS.filter(
+    (o) => (o.cle !== 'mission' || !!dossier?.mission) && (o.cle !== 'a-valider' || aValider > 0 || !SANS_VALIDATION.has(role)),
+  );
+  const onglet: Onglet = visibles.some((o) => o.cle === demandeOnglet) ? demandeOnglet : visibles[0].cle;
   const courant = ONGLETS.find((o) => o.cle === onglet)!;
   // Sans dossier RH : le nom du compte connecté.
   const prenom = dossier?.prenom ?? utilisateur.prenom;
@@ -105,7 +117,7 @@ export function MonEspace({ slug }: { slug: string }) {
       </div>
 
       <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
-        {ONGLETS.map((o) => (
+        {visibles.map((o) => (
           <button
             key={o.cle}
             type="button"
@@ -119,6 +131,13 @@ export function MonEspace({ slug }: { slug: string }) {
         ))}
       </div>
 
+      {dossier && !dossier.cellule && EQUIPE_ATTENDUE.has(role) && (
+        <p className="mes-bandeau" role="status">
+          Votre dossier est créé par la RH. Vous n’êtes pas encore affecté à une équipe : votre responsable de société le fera depuis
+          la rubrique Équipes. Vos performances apparaîtront dès votre premier livrable assigné.
+        </p>
+      )}
+
       {courant.dossierRequis && !dossier ? (
         <p className="empty-state">
           Aucun dossier du personnel n’est relié à votre compte : la RH doit l’ouvrir (ou le relier) avant que cette
@@ -126,6 +145,8 @@ export function MonEspace({ slug }: { slug: string }) {
         </p>
       ) : onglet === 'performances' ? (
         <MesPerformances slug={slug} />
+      ) : onglet === 'mission' ? (
+        <CarteMission mission={dossier!.mission!} />
       ) : onglet === 'a-valider' ? (
         <AValider slug={slug} onCompte={compter} />
       ) : onglet === 'temps' ? (
@@ -142,5 +163,29 @@ export function MonEspace({ slug }: { slug: string }) {
         <MesDocuments slug={slug} dossier={dossier!} onMaj={setDossier} />
       )}
     </>
+  );
+}
+
+// Carte de mission du nouvel arrivant (manuel §3.3), rédigée par la RH.
+function CarteMission({ mission }: { mission: NonNullable<ProfilMonEspace['mission']> }) {
+  const rubriques: [string, string][] = [
+    ['Résultat attendu', mission.resultat],
+    ['Livrables', mission.livrables],
+    ['KPI', mission.kpi],
+    ['Signal d’alerte', mission.signalAlerte],
+  ];
+  return (
+    <section className="panel glass-panel pi-fiche">
+      <h2>Ma carte de mission</h2>
+      <p className="pi-aide">Rédigée par la RH à votre arrivée ; elle sert de repère jusqu’à la confirmation de votre intégration (90 jours).</p>
+      <dl className="pi-rubriques">
+        {rubriques.map(([libelle, valeur]) => (
+          <div key={libelle}>
+            <dt>{libelle}</dt>
+            <dd>{valeur.trim() || '—'}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
