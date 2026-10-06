@@ -6,7 +6,7 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AjouterTsDto, AssignerTacheDto, DeciderTacheDto, PublierCommentaireDto } from './dto';
+import { AjouterTsDto, AssignerTacheDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto } from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
 type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
@@ -68,9 +68,25 @@ export class ProjetsOuvertsController {
     return this.taches.remettre(req.user.societeId, req.user, id, tacheId);
   }
 
+  // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG
+  // (droits vérifiés par le service).
+  @Post(':id/taches/:tacheId/prolongation')
+  @RequiertPermission('projets', 'lecture')
+  demanderProlongation(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DemanderProlongationTacheDto) {
+    return this.taches.demanderProlongation(req.user.societeId, req.user, id, tacheId, dto.jusquau, dto.motif);
+  }
+
+  @Post(':id/taches/:tacheId/prolongation/decision')
+  @RequiertPermission('projets', 'lecture')
+  deciderProlongation(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DeciderProlongationTacheDto) {
+    return this.taches.deciderProlongation(req.user.societeId, req.user, id, tacheId, dto.accorder);
+  }
+
   // Remise : valider ou renvoyer en reprise (droits vérifiés par le service).
+  // Lecture suffit : le chef de team peut être Salarié ; le service vérifie
+  // qu'il s'agit du chef de team du projet ou de l'Architecte DPLG.
   @Post(':id/taches/:tacheId/decision')
-  @RequiertPermission('projets', 'ecriture')
+  @RequiertPermission('projets', 'lecture')
   decider(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DeciderTacheDto) {
     return this.taches.decider(req.user.societeId, req.user, id, tacheId, dto.decision, dto.motif);
   }

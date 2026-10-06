@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
 
 // PATCH …/projets-ouverts/:id/taches/:tacheId/assignation — null = retirer.
 export class AssignerTacheDto {
@@ -27,4 +27,15 @@ export class DeciderTacheDto {
 export class AjouterTsDto {
   @IsString() carteId!: string;
   @IsString() @MinLength(2) @MaxLength(80) element!: string;
+}
+
+// POST …/taches/:tacheId/prolongation — par la personne assignée.
+export class DemanderProlongationTacheDto {
+  @Matches(/^\d{4}-\d{2}-\d{2}$/) jusquau!: string;
+  @IsString() @MinLength(3) @MaxLength(500) motif!: string;
+}
+
+// POST …/taches/:tacheId/prolongation/decision — chef de team ou DPLG.
+export class DeciderProlongationTacheDto {
+  @IsBoolean() accorder!: boolean;
 }

@@ -6,7 +6,7 @@ import type { Temps } from '../../reglages/gabarit';
 import { alerteAvenant, refDevis } from '../../devis/domaine';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
-import { collaborateurDuCompte, perimetreProjets, peutDecider, ROLE_DPLG, type Decideur } from './validation';
+import { collaborateurDuCompte, perimetreProjets, peutDecider, peutQualifier, ROLE_DPLG, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import {
   attentesFactures,
@@ -36,6 +36,7 @@ const AVEC_TACHES = {
         include: {
           assigne: { select: { id: true, prenom: true, nom: true, cellule: { select: { nom: true } } } },
           valideePar: { select: { prenom: true, nom: true } },
+          prolongations: { orderBy: { demandeLe: 'desc' } },
         },
       },
     },
@@ -44,6 +45,12 @@ const AVEC_TACHES = {
 
 type ProjetAvecTaches = Prisma.ProjetGetPayload<{ include: typeof AVEC_TACHES }>;
 type Acteur = { userId: string; role: string };
+
+type Prolongations = ProjetAvecTaches['cartes'][number]['taches'][number]['prolongations'];
+// Dernière prolongation accordée (date jusqu'à laquelle le retard est qualifié)
+// et demande en attente de décision.
+const prolongationAccordee = (l: Prolongations) => l.find((p) => p.decision === 'accordee')?.jusquau ?? null;
+const prolongationEnAttente = (l: Prolongations) => l.find((p) => p.decision === null) ?? null;
 
 const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = { F1: 'signature', F2: 'avant_projet', F3: 'livraison' };
 
@@ -99,8 +106,8 @@ export class ProjetsOuvertsService {
           ),
         ),
         tachesEnRetard: resumes.reduce((s, r) => s + r.enRetard, 0),
-        // Prolongations : lot suivant (aucune donnée encore).
-        prolongations: 0,
+        // Demandes de prolongation en attente de décision (projets visibles).
+        prolongations: taches.filter((t) => prolongationEnAttente(t.prolongations)).length,
         tsNonAcceptes: await this.tsNonAcceptes(societeId, projets.map((p) => p.id), jour),
         mentions: await this.mentionsOuvertes(projets.map((p) => p.id)),
       },
@@ -215,6 +222,22 @@ export class ProjetsOuvertsService {
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
           validation: validation(t.temps as Temps, t.assigneId),
           peutDecider: peutDecider(decideur, t, chef?.id ?? null),
+          prolongation: {
+            enAttente: (() => {
+              const p = prolongationEnAttente(t.prolongations);
+              return p ? { jusquau: p.jusquau, motif: p.motif, le: iso(p.demandeLe) } : null;
+            })(),
+            accordeeJusquau: prolongationAccordee(t.prolongations),
+          },
+          // Prolongation : l'assigné la demande (tâche ni validée ni « non
+          // nécessaire », aucune demande en attente) ; chef de team ou DPLG décide.
+          peutDemanderProlongation:
+            !!decideur.collaborateurId &&
+            t.assigneId === decideur.collaborateurId &&
+            !['validee', 'non_necessaire'].includes(t.statut) &&
+            !c.desactivation &&
+            !prolongationEnAttente(t.prolongations),
+          peutDeciderProlongation: !!prolongationEnAttente(t.prolongations) && peutQualifier(decideur, t.assigneId, chef?.id ?? null),
           // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
           peutRemettre:
             !!decideur.collaborateurId &&
@@ -253,6 +276,7 @@ export class ProjetsOuvertsService {
         finLe: t.finLe,
         version: t.version,
         valideeLe: iso(t.valideeLe),
+        prolongeeJusquau: prolongationAccordee(t.prolongations),
       })),
     }));
   }

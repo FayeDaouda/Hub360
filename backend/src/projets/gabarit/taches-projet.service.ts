@@ -1,10 +1,10 @@
-import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import type { Temps } from '../../reglages/gabarit';
 import { motifNonAssignable, tachesAssignees } from './assignation';
-import { collaborateurDuCompte, peutDecider, ROLE_DPLG } from './validation';
+import { collaborateurDuCompte, peutDecider, peutQualifier, ROLE_DPLG } from './validation';
 
 type Acteur = { userId: string };
 type ActeurRole = Acteur & { role: string };
@@ -236,6 +236,84 @@ export class TachesProjetService {
       await tx.projet.update({ where: { id: projetId }, data: { budgetHeures: { increment: temps.heures } } });
       return tache;
     });
+  }
+
+  // Demande de prolongation (assigné) : nouvelle date + motif. L'échéance de
+  // référence reste figée (choix du 06/10/2026) : accordée, la prolongation
+  // qualifie le retard jusqu'à cette date.
+  async demanderProlongation(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, jusquau: string, motif: string) {
+    const tache = await this.chargerPourProlongation(societeId, projetId, tacheId);
+    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée demande une prolongation.');
+    if (tache.statut === 'validee' || tache.statut === 'non_necessaire') throw new ConflictException('Tâche close : pas de prolongation.');
+    if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : pas de prolongation.');
+    if (tache.prolongations.some((p) => p.decision === null)) throw new ConflictException('Une demande de prolongation attend déjà une décision.');
+    const plancher = [tache.finLe, tache.prolongations.find((p) => p.decision === 'accordee')?.jusquau].filter((d): d is string => !!d).sort().at(-1);
+    if (plancher && jusquau <= plancher) throw new BadRequestException(`La nouvelle date doit dépasser le ${plancher.split('-').reverse().join('/')}.`);
+
+    await this.prisma.$transaction([
+      this.prisma.prolongationTache.create({ data: { tacheId: tache.id, jusquau, motif: motif.trim(), demandeParId: acteur.userId } }),
+      this.prisma.evenementTacheProjet.create({
+        data: { tacheId: tache.id, type: 'prolongation', parId: acteur.userId, detail: `Prolongation demandée jusqu’au ${jusquau.split('-').reverse().join('/')} : ${motif.trim()}` },
+      }),
+    ]);
+    const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
+    const decideurs = chefId && chefId !== collaborateurId ? await this.comptesDe([chefId]) : await this.comptesDplg(societeId);
+    await this.notifier(societeId, projetId, tache.projet.code, 'prolongation_demandee', `Prolongation demandée · ${tache.projet.code} · ${tache.libelle}`, acteur.userId, decideurs);
+    return { ok: true };
+  }
+
+  // Décision (chef de team, sauf sa propre tâche ; Architecte DPLG partout).
+  async deciderProlongation(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, accorder: boolean) {
+    const tache = await this.chargerPourProlongation(societeId, projetId, tacheId);
+    const demande = tache.prolongations.find((p) => p.decision === null);
+    if (!demande) throw new ConflictException('Aucune demande de prolongation en attente.');
+    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
+    if (!peutQualifier({ role: acteur.role, collaborateurId }, tache.assigneId, chefId)) {
+      throw new ForbiddenException('Le retard est qualifié par le chef de team ou l’Architecte DPLG, jamais sur sa propre tâche.');
+    }
+    const date = demande.jusquau.split('-').reverse().join('/');
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.prolongationTache.updateMany({
+        where: { id: demande.id, decision: null },
+        data: { decision: accorder ? 'accordee' : 'refusee', decideeLe: new Date(), decideeParId: acteur.userId },
+      });
+      if (!count) throw new ConflictException('La demande a déjà été tranchée.');
+      await tx.evenementTacheProjet.create({
+        data: { tacheId: tache.id, type: 'prolongation', parId: acteur.userId, detail: accorder ? `Prolongation accordée jusqu’au ${date} (retard qualifié)` : `Prolongation jusqu’au ${date} refusée` },
+      });
+    });
+    if (tache.assigneId) {
+      await this.notifier(
+        societeId,
+        projetId,
+        tache.projet.code,
+        'prolongation_decidee',
+        `Prolongation ${accorder ? 'accordée' : 'refusée'} · ${tache.projet.code} · ${tache.libelle}`,
+        acteur.userId,
+        await this.comptesDe([tache.assigneId]),
+      );
+    }
+    return { decision: accorder ? 'accordee' : 'refusee' };
+  }
+
+  private async chargerPourProlongation(societeId: string, projetId: string, tacheId: string) {
+    const tache = await this.prisma.tacheProjet.findFirst({
+      where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
+      select: {
+        id: true,
+        libelle: true,
+        statut: true,
+        finLe: true,
+        assigneId: true,
+        carte: { select: { desactivation: true } },
+        prolongations: { orderBy: { demandeLe: 'desc' }, select: { id: true, jusquau: true, decision: true } },
+        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+      },
+    });
+    if (!tache) throw new NotFoundException('Tâche introuvable');
+    return tache;
   }
 
   // Une tâche dont dépend la carte (« carte.tâche ») n'est pas encore faite.

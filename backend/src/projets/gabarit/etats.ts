@@ -14,6 +14,9 @@ export type TacheSource = {
   finLe: string | null;
   version: number;
   valideeLe: string | null; // AAAA-MM-JJ
+  // Prolongation accordée : le retard est qualifié jusqu'à cette date ;
+  // l'échéance de référence (finLe) reste figée.
+  prolongeeJusquau?: string | null;
 };
 
 export type CarteSource = {
@@ -34,6 +37,7 @@ export type EtatTache =
   | { code: 'a_valider'; version: number }
   | { code: 'reprise'; version: number }
   | { code: 'en_retard'; jours: number }
+  | { code: 'prolongee'; jusquau: string; jours: number } // retard qualifié (jours depuis la référence)
   | { code: 'en_cours' }
   | { code: 'a_venir' };
 
@@ -81,7 +85,10 @@ export function etatTache(t: TacheSource, carte: EtatCarte, aujourdhui: string, 
   if (t.statut === 'a_valider') return { code: 'a_valider', version: t.version };
   if (t.statut === 'reprise') return { code: 'reprise', version: t.version + 1 };
   if (carte.code === 'verrouillee') return { code: 'verrouillee' };
-  if (t.finLe && aujourdhui > t.finLe) return { code: 'en_retard', jours: joursDeRetard(t.finLe, aujourdhui) };
+  if (t.finLe && aujourdhui > t.finLe) {
+    const jours = joursDeRetard(t.finLe, aujourdhui);
+    return t.prolongeeJusquau && aujourdhui <= t.prolongeeJusquau ? { code: 'prolongee', jusquau: t.prolongeeJusquau, jours } : { code: 'en_retard', jours };
+  }
   if (t.debutLe && aujourdhui >= t.debutLe) return { code: 'en_cours' };
   return { code: 'a_venir' };
 }
@@ -92,7 +99,7 @@ export function resumeEtape(numero: number, etats: { tache: TacheSource; etat: E
   const comptees = etats.filter((e) => e.etat.code !== 'desactivee' && e.etat.code !== 'non_necessaire');
   const faites = comptees.filter((e) => e.etat.code === 'validee').length;
   const enRetard = comptees.filter((e) => e.etat.code === 'en_retard').length;
-  const demarree = comptees.some((e) => ['en_cours', 'validee', 'a_valider', 'reprise'].includes(e.etat.code));
+  const demarree = comptees.some((e) => ['en_cours', 'prolongee', 'validee', 'a_valider', 'reprise'].includes(e.etat.code));
   const etat: EtatEtape =
     enRetard > 0 ? 'en_retard' : comptees.length > 0 && faites === comptees.length ? 'terminee' : demarree ? 'en_cours' : 'a_venir';
   return { numero, faites, total: comptees.length, enRetard, etat };

@@ -2479,6 +2479,7 @@ enum TypeEvenementTache {
   remise
   validation
   reprise
+  prolongation // demande ou décision de prolongation
 }
 
 model EvenementTacheProjet {
@@ -2590,12 +2591,13 @@ model TacheProjet {
   valideeLe    DateTime?         @map("validee_le")
   valideeParId String?           @map("validee_par_id")
 
-  projet       Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  carte        CarteProjet            @relation(fields: [carteId], references: [id], onDelete: Cascade)
-  assigne      Collaborateur?         @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
-  valideePar   Utilisateur?           @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
-  evenements   EvenementTacheProjet[]
-  commentaires CommentaireProjet[]
+  projet        Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  carte         CarteProjet            @relation(fields: [carteId], references: [id], onDelete: Cascade)
+  assigne       Collaborateur?         @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
+  valideePar    Utilisateur?           @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)
+  evenements    EvenementTacheProjet[]
+  commentaires  CommentaireProjet[]
+  prolongations ProlongationTache[]
 
   @@unique([carteId, cle])
   @@index([projetId])
@@ -2696,4 +2698,31 @@ model DecisionRegistre {
   @@unique([societeId, numero])
   @@unique([societeId, cleOrigine])
   @@map("decisions_registre")
+}
+
+enum DecisionProlongation {
+  accordee
+  refusee
+}
+
+// Prolongation d'une tâche du gabarit (maquette « Projets », vue Salarié) :
+// l'assigné demande (date + motif), le chef de team ou le DPLG décide.
+// Choix du 06/10/2026 : l'échéance de référence reste figée — une
+// prolongation accordée QUALIFIE le retard (la tâche n'est plus « en
+// retard » jusqu'à `jusquau`), les indicateurs restent mesurés sur l'origine.
+model ProlongationTache {
+  id           String                @id @default(uuid())
+  tacheId      String                @map("tache_id")
+  jusquau      String // AAAA-MM-JJ demandé
+  motif        String
+  demandeLe    DateTime              @default(now()) @map("demande_le")
+  demandeParId String?               @map("demande_par_id") // audit, pas de FK
+  decision     DecisionProlongation?
+  decideeLe    DateTime?             @map("decidee_le")
+  decideeParId String?               @map("decidee_par_id")
+
+  tache TacheProjet @relation(fields: [tacheId], references: [id], onDelete: Cascade)
+
+  @@index([tacheId])
+  @@map("prolongations_taches")
 }

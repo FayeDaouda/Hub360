@@ -49,6 +49,7 @@ export type EtatTache =
   | { code: 'a_valider'; version: number }
   | { code: 'reprise'; version: number }
   | { code: 'en_retard'; jours: number }
+  | { code: 'prolongee'; jusquau: string; jours: number } // retard qualifié par une prolongation accordée
   | { code: 'en_cours' }
   | { code: 'a_venir' };
 
@@ -82,6 +83,11 @@ export type TacheOuverte = {
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
   peutDecider: boolean; // remise à trancher par la personne connectée
   peutRemettre: boolean; // la personne connectée est l'assignée, tâche ouverte
+  // Prolongation : l'échéance de référence reste figée ; accordée, elle
+  // qualifie le retard jusqu'à `accordeeJusquau`.
+  prolongation: { enAttente: { jusquau: string; motif: string; le: string | null } | null; accordeeJusquau: string | null };
+  peutDemanderProlongation: boolean;
+  peutDeciderProlongation: boolean;
   fil: number; // messages du fil de la tâche
   etat: EtatTache;
 };
@@ -174,6 +180,18 @@ export function remettreTache(slug: string, projetId: string, tacheId: string) {
   return apiSociete<{ statut: string; version: number }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/remise`, { method: 'POST' });
 }
 
+// Prolongation : demande de l'assigné, décision du chef de team ou du DPLG.
+export function demanderProlongation(slug: string, projetId: string, tacheId: string, jusquau: string, motif: string) {
+  return apiSociete<{ ok: true }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation`, { method: 'POST', body: { jusquau, motif } });
+}
+
+export function deciderProlongation(slug: string, projetId: string, tacheId: string, accorder: boolean) {
+  return apiSociete<{ decision: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation/decision`, {
+    method: 'POST',
+    body: { accorder },
+  });
+}
+
 // Remise : valider, ou renvoyer en reprise avec un motif.
 export function deciderTache(slug: string, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
   return apiSociete<{ statut: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/decision`, {
@@ -238,6 +256,8 @@ export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };
     case 'en_retard':
       return { libelle: `En attente · retard ${e.jours} j`, ton: 'risque' };
+    case 'prolongee':
+      return { libelle: `Retard qualifié · jusqu’au ${jjmm(e.jusquau)}`, ton: 'attention' };
     case 'en_cours':
       return { libelle: 'En cours', ton: 'info' };
     case 'verrouillee':

@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import {
   assignerTache,
+  deciderProlongation,
   deciderTache,
+  demanderProlongation,
   remettreTache,
   getHistoriqueTache,
   jjmmaaaa,
@@ -41,6 +43,9 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [historique, setHistorique] = useState<EvenementTache[] | null>(null);
   const [renvoi, setRenvoi] = useState(false);
   const [motif, setMotif] = useState('');
+  const [prolonger, setProlonger] = useState(false);
+  const [jusquau, setJusquau] = useState('');
+  const [motifProlongation, setMotifProlongation] = useState('');
 
   // Rechargé quand la tâche change ou que son assigné change (nouvelle ligne).
   useEffect(() => {
@@ -59,16 +64,21 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     setErreur(null);
     setRenvoi(false);
     setMotif('');
+    setProlonger(false);
+    setJusquau('');
+    setMotifProlongation('');
   }, [tache.id]);
 
-  async function remettre() {
+  // Toute action du panneau : erreur affichée, dossier relu ensuite.
+  async function agir(action: () => Promise<unknown>, repli: string, apres?: () => void) {
     setEnCours(true);
     setErreur(null);
     try {
-      await remettreTache(slug, projetId, tache.id);
+      await action();
+      apres?.();
       await onMaj();
     } catch (e) {
-      setErreur(e instanceof Error && e.message ? e.message : 'La remise a échoué.');
+      setErreur(e instanceof Error && e.message ? e.message : repli);
     } finally {
       setEnCours(false);
     }
@@ -133,6 +143,9 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       </span>,
     ]);
   }
+  if (tache.prolongation.accordeeJusquau) {
+    lignes.push(['Prolongation', `accordée jusqu’au ${jjmmaaaa(tache.prolongation.accordeeJusquau)} · retard qualifié, échéance de référence inchangée`]);
+  }
   if (tache.valideeLe) {
     lignes.push(['Validée', `le ${jjmmaaaa(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`]);
   }
@@ -176,11 +189,87 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               : `Votre remise part en validation auprès de : ${v.nom ?? 'à désigner'} (${v.role}).`}
           </p>
           <div className="po-decision">
-            <button type="button" className="btn-primary" disabled={enCours} onClick={remettre}>
+            <button type="button" className="btn-primary" disabled={enCours} onClick={() => agir(() => remettreTache(slug, projetId, tache.id), 'La remise a échoué.')}>
               {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Remettre la tâche'}
             </button>
           </div>
-          {!assignable && erreur && <p className="field-erreur">{erreur}</p>}
+        </div>
+      )}
+      {erreur && <p className="field-erreur">{erreur}</p>}
+      {tache.prolongation.enAttente && (
+        <div className="po-panneau-bloc">
+          <p className="po-kicker">Prolongation demandée</p>
+          <p className="po-aide">
+            Jusqu’au {jjmmaaaa(tache.prolongation.enAttente.jusquau)} : {tache.prolongation.enAttente.motif}
+          </p>
+          {tache.peutDeciderProlongation ? (
+            <div className="po-decision">
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={enCours}
+                onClick={() => agir(() => deciderProlongation(slug, projetId, tache.id, false), 'La décision a échoué.')}
+              >
+                Refuser
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={enCours}
+                onClick={() => agir(() => deciderProlongation(slug, projetId, tache.id, true), 'La décision a échoué.')}
+              >
+                Accorder (retard qualifié)
+              </button>
+            </div>
+          ) : (
+            <p className="po-aide">En attente de la décision du chef de team ou de l’Architecte DPLG.</p>
+          )}
+        </div>
+      )}
+      {tache.peutDemanderProlongation && (
+        <div className="po-panneau-bloc">
+          {prolonger ? (
+            <>
+              <p className="po-kicker">Demander une prolongation</p>
+              <p className="po-aide">L’échéance de référence reste figée : accordée, la prolongation qualifie le retard jusqu’à la nouvelle date.</p>
+              <label className="po-panneau-label" htmlFor="po-jusquau">
+                Nouvelle date
+              </label>
+              <input id="po-jusquau" className="field-input" type="date" value={jusquau} min={tache.finLe ?? undefined} onChange={(e) => setJusquau(e.target.value)} />
+              <label className="po-panneau-label" htmlFor="po-motif-prolongation">
+                Motif
+              </label>
+              <textarea
+                id="po-motif-prolongation"
+                className="field-input"
+                rows={2}
+                maxLength={500}
+                value={motifProlongation}
+                onChange={(e) => setMotifProlongation(e.target.value)}
+              />
+              <div className="po-decision">
+                <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setProlonger(false)}>
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={enCours || !jusquau || motifProlongation.trim().length < 3}
+                  onClick={() =>
+                    agir(() => demanderProlongation(slug, projetId, tache.id, jusquau, motifProlongation.trim()), 'La demande a échoué.', () => setProlonger(false))
+                  }
+                >
+                  Envoyer la demande
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="po-decision">
+              <button type="button" className="btn-ghost" onClick={() => setProlonger(true)}>
+                Demander une prolongation
+              </button>
+            </div>
+          )}
         </div>
       )}
       {tache.peutDecider && (
@@ -211,7 +300,6 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               </button>
             </div>
           )}
-          {!assignable && erreur && <p className="field-erreur">{erreur}</p>}
         </div>
       )}
       {assignable && (
@@ -240,7 +328,6 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               <span>Toute la carte « {carte.libelle} » (ses tâches encore ouvertes)</span>
             </label>
           )}
-          {erreur && <p className="field-erreur">{erreur}</p>}
         </div>
       )}
       <div className="po-panneau-bloc">
