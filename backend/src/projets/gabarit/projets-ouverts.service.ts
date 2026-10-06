@@ -6,6 +6,8 @@ import type { Temps } from '../../reglages/gabarit';
 import { alerteAvenant, refDevis } from '../../devis/domaine';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
+import { collaborateurDuCompte, peutDecider, ROLE_DPLG, type Decideur } from './validation';
+import { UNITE_TS } from './taches-projet.service';
 import {
   attentesFactures,
   etatCarte,
@@ -41,6 +43,7 @@ const AVEC_TACHES = {
 } satisfies Prisma.ProjetInclude;
 
 type ProjetAvecTaches = Prisma.ProjetGetPayload<{ include: typeof AVEC_TACHES }>;
+type Acteur = { userId: string; role: string };
 
 const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = { F1: 'signature', F2: 'avant_projet', F3: 'livraison' };
 
@@ -51,12 +54,17 @@ export class ProjetsOuvertsService {
     private reglages: ReglagesService,
   ) {}
 
-  async tableau(societeId: string) {
+  async tableau(societeId: string, acteur: Acteur) {
     const projets = await this.prisma.projet.findMany({
       where: { societeId, ouvertLe: { not: null } },
       orderBy: { ouvertLe: 'asc' },
-      include: { ...AVEC_TACHES, client: { select: { nom: true } }, cellules: { include: { cellule: { select: { nom: true } } } } },
+      include: {
+        ...AVEC_TACHES,
+        client: { select: { nom: true } },
+        cellules: { include: { cellule: { select: { nom: true, dispatcherId: true } } } },
+      },
     });
+    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
     const feries = await this.feries(societeId);
     const jour = aujourdhui();
     const resumes = projets.map((p) => {
@@ -82,6 +90,14 @@ export class ProjetsOuvertsService {
       projets: resumes,
       kpi: {
         remisesAValider: taches.filter((t) => t.statut === 'a_valider').length,
+        // Remises que la personne connectée peut trancher (jamais les siennes).
+        aValiderParVous: projets.flatMap((p) =>
+          p.cartes.flatMap((c) =>
+            c.taches
+              .filter((t) => peutDecider(decideur, t, p.cellules[0]?.cellule.dispatcherId ?? null))
+              .map((t) => ({ projetId: p.id, tacheId: t.id })),
+          ),
+        ),
         tachesEnRetard: resumes.reduce((s, r) => s + r.enRetard, 0),
         // Prolongations : lot suivant (aucune donnée encore).
         prolongations: 0,
@@ -91,7 +107,7 @@ export class ProjetsOuvertsService {
     };
   }
 
-  async dossier(societeId: string, projetId: string) {
+  async dossier(societeId: string, projetId: string, acteur: Acteur) {
     const p = await this.prisma.projet.findFirst({
       where: { id: projetId, societeId, ouvertLe: { not: null } },
       include: {
@@ -110,6 +126,8 @@ export class ProjetsOuvertsService {
     const { etapes, etatsCartes, etatsTaches } = this.etats(p, jour, feries);
     const cellule = p.cellules[0]?.cellule ?? null;
     const chef = cellule?.dispatcher ?? null;
+    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
+    const dplgConnecte = acteur.role === ROLE_DPLG || acteur.role === 'societe_admin';
     const dplg = p.societe.contratSignataireNom?.trim() || null;
     const pilote = await this.reglages.regle<string>(societeId, 'pilote_etudes');
     const horizon = this.horizon(p.budgetHeures);
@@ -147,6 +165,13 @@ export class ProjetsOuvertsService {
       horizon,
       budgetHeures: p.budgetHeures,
       factures: { F1: facture('F1'), F2: facture('F2'), F3: facture('F3') },
+      // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
+      optionsTs: dplgConnecte
+        ? p.cartes.flatMap((c) => {
+            const t = c.temps as Temps | null;
+            return t?.type === 'par_unite' && !c.desactivation ? [{ carteId: c.id, libelle: UNITE_TS[t.unite], heures: t.heures }] : [];
+          })
+        : [],
       attentes: attentesFactures(etapes, this.sources(p)),
       etapes: etapes.map((e) => {
         const c = p.cartes.find((x) => x.etapeNumero === e.numero)!;
@@ -189,6 +214,7 @@ export class ProjetsOuvertsService {
           valideePar: nom(t.valideePar),
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
           validation: validation(t.temps as Temps, t.assigneId),
+          peutDecider: peutDecider(decideur, t, chef?.id ?? null),
           fil: filDe(c.id, t.id),
           etat: etatsTaches.get(t.id)!,
         })),

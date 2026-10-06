@@ -14631,6 +14631,28 @@ a.notif-item:hover {
   }
 }
 
+/* Projets · Architecte DPLG : ajout en TS, décision sur une remise. */
+.po-ts {
+  display: grid;
+  gap: 0.4rem;
+}
+.po-ts-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  gap: 0.6rem;
+}
+.po-decision {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+@media (max-width: 720px) {
+  .po-ts-ligne {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026). */
 .pi {
   display: grid;

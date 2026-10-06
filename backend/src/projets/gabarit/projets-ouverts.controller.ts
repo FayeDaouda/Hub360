@@ -5,10 +5,10 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AssignerTacheDto, PublierCommentaireDto } from './dto';
+import { AjouterTsDto, AssignerTacheDto, DeciderTacheDto, PublierCommentaireDto } from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
-type R = { user: { societeId: string; userId: string } };
+type R = { user: { societeId: string; userId: string; role: string } };
 
 // Projets ouverts selon le gabarit (maquette « Projets » du boss).
 @Controller('societes/:slug/projets-ouverts')
@@ -23,7 +23,7 @@ export class ProjetsOuvertsController {
   @Get()
   @RequiertPermission('projets', 'lecture')
   tableau(@Req() req: R) {
-    return this.projets.tableau(req.user.societeId);
+    return this.projets.tableau(req.user.societeId, req.user);
   }
 
   // Segment fixe, déclaré avant ':id'.
@@ -42,7 +42,7 @@ export class ProjetsOuvertsController {
   @Get(':id')
   @RequiertPermission('projets', 'lecture')
   dossier(@Req() req: R, @Param('id') id: string) {
-    return this.projets.dossier(req.user.societeId, id);
+    return this.projets.dossier(req.user.societeId, id, req.user);
   }
 
   @Get(':id/taches/:tacheId/historique')
@@ -56,6 +56,19 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'ecriture')
   assigner(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: AssignerTacheDto) {
     return this.taches.assigner(req.user.societeId, req.user, id, tacheId, dto.collaborateurId, !!dto.carte);
+  }
+
+  // Remise : valider ou renvoyer en reprise (droits vérifiés par le service).
+  @Post(':id/taches/:tacheId/decision')
+  @RequiertPermission('projets', 'ecriture')
+  decider(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DeciderTacheDto) {
+    return this.taches.decider(req.user.societeId, req.user, id, tacheId, dto.decision, dto.motif);
+  }
+
+  @Post(':id/ts')
+  @RequiertPermission('projets', 'ecriture')
+  ajouterTs(@Req() req: R, @Param('id') id: string, @Body() dto: AjouterTsDto) {
+    return this.taches.ajouterTs(req.user.societeId, req.user, id, dto.carteId, dto.element);
   }
 
   // Fil d'une carte (?carte=) ou d'une tâche (?tache=).

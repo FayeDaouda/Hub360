@@ -30,7 +30,15 @@ export type TableauProjets = {
   gabarit: string;
   budgetHeures: number; // en service (Réglages) ; horizon = budget / 8 h
   projets: ProjetOuvertResume[];
-  kpi: { remisesAValider: number; tachesEnRetard: number; prolongations: number; tsNonAcceptes: number; mentions: number };
+  kpi: {
+    remisesAValider: number;
+    // Remises que la personne connectée peut trancher (jamais les siennes).
+    aValiderParVous: { projetId: string; tacheId: string }[];
+    tachesEnRetard: number;
+    prolongations: number;
+    tsNonAcceptes: number;
+    mentions: number;
+  };
 };
 
 export type EtatTache =
@@ -72,6 +80,7 @@ export type TacheOuverte = {
   valideePar: string | null;
   assigne: { id: string; nom: string; cellule: string | null } | null;
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
+  peutDecider: boolean; // remise à trancher par la personne connectée
   fil: number; // messages du fil de la tâche
   etat: EtatTache;
 };
@@ -123,6 +132,8 @@ export type DossierProjetOuvert = {
   horizon: number;
   budgetHeures: number | null;
   factures: Record<'F1' | 'F2' | 'F3', EtatFacture>;
+  // « Ajouter en TS » (Architecte DPLG) ; vide = pas le droit.
+  optionsTs: { carteId: string; libelle: string; heures: number }[];
   attentes: { F2: string[]; F3: string[] };
   etapes: EtapeOuverte[];
   cartes: CarteOuverte[];
@@ -155,6 +166,19 @@ export function assignerTache(
     method: 'PATCH',
     body: { collaborateurId, carte },
   });
+}
+
+// Remise : valider, ou renvoyer en reprise avec un motif.
+export function deciderTache(slug: string, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
+  return apiSociete<{ statut: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/decision`, {
+    method: 'POST',
+    body: { decision, ...(motif ? { motif } : {}) },
+  });
+}
+
+// Élément demandé par le client, ajouté en TS à une carte « par unité ».
+export function ajouterTs(slug: string, projetId: string, carteId: string, element: string) {
+  return apiSociete<{ id: string; libelle: string }>(slug, `/projets-ouverts/${projetId}/ts`, { method: 'POST', body: { carteId, element } });
 }
 
 // Fil de discussion d'une carte ou d'une tâche (un niveau de réponse).

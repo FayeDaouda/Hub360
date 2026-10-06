@@ -42,19 +42,24 @@ const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin', 'collaborateur']);
 export const ROLE_CIO = 'CIO (transverse)';
 export const ROLE_CTO = 'CTO (transverse)';
 
+// Dir. GC = Architecte DPLG (validation en suppléance, ajout en TS) — même
+// nom que backend/src/projets/gabarit/validation.ts (ROLE_DPLG).
+export const ROLE_DIR_GC = 'Dir. GC';
+
 // Projets · gabarit (maquettes du boss) : ouvert rôle par rôle, au fil des
-// maquettes reçues — CIO puis CTO (oct. 2026) ; les autres gardent la vue
-// par phases jusqu'à leur tour.
+// maquettes reçues — CIO, CTO puis Dir. GC (oct. 2026) ; les autres gardent
+// la vue par phases jusqu'à leur tour.
 export function vueProjetsGabarit(session: Session): boolean {
-  return session.role === ROLE_CIO || session.role === ROLE_CTO;
+  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC].includes(session.role);
 }
 
 export const ROLE_CEO = 'CEO (transverse)';
 
-// Équipes (maquette du boss, oct. 2026) : CIO, CTO et CEO ; les autres rôles
-// gardent la page par cellules jusqu'à leur tour. L'écriture suit la matrice.
+// Équipes (maquette du boss, oct. 2026) : CIO, CTO, CEO et Dir. GC ; les
+// autres rôles gardent la page par cellules jusqu'à leur tour. L'écriture
+// suit la matrice.
 export function vueEquipesMaquette(session: Session): boolean {
-  return [ROLE_CIO, ROLE_CTO, ROLE_CEO].includes(session.role);
+  return [ROLE_CIO, ROLE_CTO, ROLE_CEO, ROLE_DIR_GC].includes(session.role);
 }
 
 // Administration du HUB (/groupe : comptes, rôles, salaires) — même règle

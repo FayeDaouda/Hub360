@@ -6,8 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { sectionAccessible } from '@/lib/acces-back-office';
+import { ROLE_DIR_GC, sectionAccessible } from '@/lib/acces-back-office';
 import {
+  ajouterTs,
   getAssignables,
   getDossierProjet,
   getMentionnables,
@@ -44,6 +45,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
   const [etape, setEtape] = useState(1);
   const [selection, setSelection] = useState<Selection>(null);
+  // « À valider par vous » : la remise à ouvrir une fois son dossier chargé.
+  const [aOuvrir, setAOuvrir] = useState<{ projetId: string; tacheId: string } | null>(null);
   // Écran tenu dans la fenêtre (desktop, cf. globals.css) : la hauteur
   // disponible part du haut réel de la page, mesuré (barre du haut comprise).
   const racine = useRef<HTMLDivElement>(null);
@@ -57,19 +60,25 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   }, []);
   // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
   const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
+  const dplg = session.role === ROLE_DIR_GC;
   const [assignables, setAssignables] = useState<Assignable[] | null>(null);
   const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
 
   useTitrePage(`Projets · gabarit ${tableau?.gabarit ?? 'GC-CONCEPTION'}`);
 
+  const chargerTableau = useCallback(
+    () =>
+      getTableauProjets(slug)
+        .then((t) => {
+          setTableau(t);
+          setProjetId((id) => id ?? t.projets[0]?.id ?? null);
+        })
+        .catch((e) => setErreur(e instanceof Error ? e.message : 'Lecture impossible.')),
+    [slug],
+  );
   useEffect(() => {
-    getTableauProjets(slug)
-      .then((t) => {
-        setTableau(t);
-        setProjetId((id) => id ?? t.projets[0]?.id ?? null);
-      })
-      .catch((e) => setErreur(e instanceof Error ? e.message : 'Lecture impossible.'));
-  }, [slug]);
+    chargerTableau();
+  }, [chargerTableau]);
 
   useEffect(() => {
     if (!peutAssigner) return;
@@ -81,10 +90,29 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       .catch(() => setMentionnables(null));
   }, [slug, peutAssigner]);
 
-  // Après une écriture : le dossier relu, la tâche choisie gardée.
+  // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
   const recharger = useCallback(async () => {
     if (projetId) setDossier(await getDossierProjet(slug, projetId));
-  }, [slug, projetId]);
+    await chargerTableau();
+  }, [slug, projetId, chargerTableau]);
+
+  // Ouvre l'étape et le panneau de la remise demandée, dossier chargé.
+  useEffect(() => {
+    if (!aOuvrir || dossier?.id !== aOuvrir.projetId) return;
+    const carte = dossier.cartes.find((c) => c.taches.some((t) => t.id === aOuvrir.tacheId));
+    if (carte) {
+      setEtape(carte.etapeNumero);
+      setSelection({ type: 'tache', id: aOuvrir.tacheId });
+    }
+    setAOuvrir(null);
+  }, [aOuvrir, dossier]);
+
+  function ouvrirRemiseAValider() {
+    const premiere = tableau?.kpi.aValiderParVous[0];
+    if (!premiere) return;
+    setAOuvrir(premiere);
+    setProjetId(premiere.projetId);
+  }
 
   useEffect(() => {
     if (!projetId) return;
@@ -100,7 +128,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   }, [slug, projetId]);
 
   const horizon = tableau ? Math.round(tableau.budgetHeures / HEURES_PAR_JOUR) : null;
-  const acces = peutAssigner ? 'Lecture et assignation · accès complet' : 'Lecture seule';
+  const acces = dplg
+    ? 'Architecte DPLG : assignation, désactivation, prolongations, validation en suppléance'
+    : peutAssigner
+      ? 'Lecture et assignation · accès complet'
+      : 'Lecture seule';
 
   return (
     <div className="po" ref={racine}>
@@ -123,7 +155,17 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       {erreur && <p className="field-erreur">{erreur}</p>}
 
       <div className="po-tuiles">
-        <Tuile libelle="Remises à valider" valeur={tableau?.kpi.remisesAValider} aide="tous projets · chef de team ou DPLG" ton="validation" />
+        {dplg ? (
+          <Tuile
+            libelle="À valider par vous"
+            valeur={tableau?.kpi.aValiderParVous.length}
+            aide="jamais sa propre tâche · cliquer pour valider"
+            ton="validation"
+            onClick={tableau?.kpi.aValiderParVous.length ? ouvrirRemiseAValider : undefined}
+          />
+        ) : (
+          <Tuile libelle="Remises à valider" valeur={tableau?.kpi.remisesAValider} aide="tous projets · chef de team ou DPLG" ton="validation" />
+        )}
         <Tuile libelle="Tâches en retard" valeur={tableau?.kpi.tachesEnRetard} aide="échéance de référence dépassée" ton="risque" />
         <Tuile
           libelle="Prolongations à décider"
@@ -207,13 +249,22 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   );
 }
 
-function Tuile({ libelle, valeur, aide, ton }: { libelle: string; valeur: number | undefined; aide: string; ton: string }) {
-  return (
-    <div className="panel glass-panel po-tuile">
+type PropsTuile = { libelle: string; valeur: number | undefined; aide: string; ton: string; onClick?: () => void };
+
+function Tuile({ libelle, valeur, aide, ton, onClick }: PropsTuile) {
+  const contenu = (
+    <>
       <span className="po-tuile-libelle">{libelle}</span>
       <strong className={`po-tuile-valeur po-ton--${ton}`}>{valeur ?? '…'}</strong>
       <span className="po-aide">{aide}</span>
-    </div>
+    </>
+  );
+  return onClick ? (
+    <button type="button" className="panel glass-panel po-tuile pi-tuile" onClick={onClick}>
+      {contenu}
+    </button>
+  ) : (
+    <div className="panel glass-panel po-tuile">{contenu}</div>
   );
 }
 
@@ -298,6 +349,8 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
         })}
       </div>
 
+      {d.optionsTs.length > 0 && <AjoutTs slug={slug} dossier={d} onMaj={onMaj} />}
+
       <div className="po-corps">
         {/* key : changer d'étape repart du haut de la liste des cartes. */}
         <div className="po-cartes" key={etape}>
@@ -334,6 +387,55 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
         )}
       </div>
     </>
+  );
+}
+
+// « Ajouter en TS » (Architecte DPLG) : l'élément demandé par le client
+// devient une tâche de la carte choisie, son temps s'ajoute au budget atelier.
+function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierProjetOuvert; onMaj: () => Promise<void> }) {
+  const [carteId, setCarteId] = useState(d.optionsTs[0].carteId);
+  const [element, setElement] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
+
+  async function ajouter() {
+    setEnvoi(true);
+    setMessage(null);
+    try {
+      const t = await ajouterTs(slug, d.id, carteId, element.trim());
+      setElement('');
+      setMessage({ ok: true, texte: `${t.libelle} ajoutée au projet.` });
+      await onMaj();
+    } catch (e) {
+      setMessage({ ok: false, texte: e instanceof Error && e.message ? e.message : 'L’ajout en TS a échoué.' });
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  return (
+    <div className="po-ts">
+      <div className="po-ts-ligne">
+        <select className="field-input" aria-label="Type d’élément" value={carteId} onChange={(e) => setCarteId(e.target.value)}>
+          {d.optionsTs.map((o) => (
+            <option key={o.carteId} value={o.carteId}>
+              {o.libelle} ({o.heures} h)
+            </option>
+          ))}
+        </select>
+        <input
+          className="field-input"
+          value={element}
+          maxLength={80}
+          placeholder="Élément ajouté par le client (ex. Bureau)"
+          onChange={(e) => setElement(e.target.value)}
+        />
+        <button type="button" className="btn-primary" disabled={envoi || element.trim().length < 2} onClick={ajouter}>
+          {envoi ? 'Ajout…' : 'Ajouter en TS'}
+        </button>
+      </div>
+      {message && <p className={message.ok ? 'po-aide' : 'field-erreur'}>{message.texte}</p>}
+    </div>
   );
 }
 

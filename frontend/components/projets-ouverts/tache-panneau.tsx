@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   assignerTache,
+  deciderTache,
   getHistoriqueTache,
   jjmmaaaa,
   numeroEtape,
@@ -37,6 +38,8 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [historique, setHistorique] = useState<EvenementTache[] | null>(null);
+  const [renvoi, setRenvoi] = useState(false);
+  const [motif, setMotif] = useState('');
 
   // Rechargé quand la tâche change ou que son assigné change (nouvelle ligne).
   useEffect(() => {
@@ -53,7 +56,24 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   useEffect(() => {
     setALaCarte(false);
     setErreur(null);
+    setRenvoi(false);
+    setMotif('');
   }, [tache.id]);
+
+  async function decider(decision: 'valider' | 'renvoyer') {
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await deciderTache(slug, projetId, tache.id, decision, decision === 'renvoyer' ? motif.trim() : undefined);
+      setRenvoi(false);
+      setMotif('');
+      await onMaj();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'La décision a échoué.');
+    } finally {
+      setEnCours(false);
+    }
+  }
 
   async function assigner(collaborateurId: string) {
     setEnCours(true);
@@ -129,6 +149,37 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
         <div className="po-descriptif">
           <p className="po-kicker">Descriptif</p>
           <p>{tache.descriptif}</p>
+        </div>
+      )}
+      {tache.peutDecider && (
+        <div className="po-panneau-bloc">
+          <p className="po-kicker">Remise v{String(tache.version).padStart(2, '0')} à valider</p>
+          {renvoi ? (
+            <>
+              <label className="po-panneau-label" htmlFor="po-motif">
+                Motif de la reprise
+              </label>
+              <textarea id="po-motif" className="field-input" rows={2} maxLength={500} value={motif} onChange={(e) => setMotif(e.target.value)} />
+              <div className="po-decision">
+                <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setRenvoi(false)}>
+                  Annuler
+                </button>
+                <button type="button" className="btn-primary" disabled={enCours || motif.trim().length < 3} onClick={() => decider('renvoyer')}>
+                  Renvoyer en reprise
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="po-decision">
+              <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setRenvoi(true)}>
+                Renvoyer en reprise
+              </button>
+              <button type="button" className="btn-primary" disabled={enCours} onClick={() => decider('valider')}>
+                Valider la remise
+              </button>
+            </div>
+          )}
+          {!assignable && erreur && <p className="field-erreur">{erreur}</p>}
         </div>
       )}
       {assignable && (
