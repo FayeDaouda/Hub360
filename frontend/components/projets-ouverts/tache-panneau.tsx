@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   assignerTache,
   deciderTache,
+  remettreTache,
   getHistoriqueTache,
   jjmmaaaa,
   numeroEtape,
@@ -59,6 +60,19 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     setRenvoi(false);
     setMotif('');
   }, [tache.id]);
+
+  async function remettre() {
+    setEnCours(true);
+    setErreur(null);
+    try {
+      await remettreTache(slug, projetId, tache.id);
+      await onMaj();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'La remise a échoué.');
+    } finally {
+      setEnCours(false);
+    }
+  }
 
   async function decider(decision: 'valider' | 'renvoyer') {
     setEnCours(true);
@@ -149,6 +163,24 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
         <div className="po-descriptif">
           <p className="po-kicker">Descriptif</p>
           <p>{tache.descriptif}</p>
+        </div>
+      )}
+      {tache.peutRemettre && (
+        <div className="po-panneau-bloc">
+          <p className="po-kicker">
+            {tache.statut === 'reprise' ? 'Reprise demandée' : 'À remettre'} · v{String(tache.version + 1).padStart(2, '0')}
+          </p>
+          <p className="po-aide">
+            {v.mode === 'depot'
+              ? 'Le dépôt du justificatif vaut validation (exception écrite au principe 4).'
+              : `Votre remise part en validation auprès de : ${v.nom ?? 'à désigner'} (${v.role}).`}
+          </p>
+          <div className="po-decision">
+            <button type="button" className="btn-primary" disabled={enCours} onClick={remettre}>
+              {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Remettre la tâche'}
+            </button>
+          </div>
+          {!assignable && erreur && <p className="field-erreur">{erreur}</p>}
         </div>
       )}
       {tache.peutDecider && (

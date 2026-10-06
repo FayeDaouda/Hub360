@@ -81,15 +81,20 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     chargerTableau();
   }, [chargerTableau]);
 
+  // Fil en écriture : qui écrit sur Projets, et le Salarié sur ses projets.
+  const peutEcrireFil = peutAssigner || salarie;
   useEffect(() => {
-    if (!peutAssigner) return;
-    getAssignables(slug)
-      .then(setAssignables)
-      .catch(() => setAssignables(null));
-    getMentionnables(slug)
-      .then(setMentionnables)
-      .catch(() => setMentionnables(null));
-  }, [slug, peutAssigner]);
+    if (peutAssigner) {
+      getAssignables(slug)
+        .then(setAssignables)
+        .catch(() => setAssignables(null));
+    }
+    if (peutEcrireFil) {
+      getMentionnables(slug)
+        .then(setMentionnables)
+        .catch(() => setMentionnables(null));
+    }
+  }, [slug, peutAssigner, peutEcrireFil]);
 
   // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
   const recharger = useCallback(async () => {
@@ -245,7 +250,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                 onSelection={setSelection}
                 assignables={peutAssigner ? assignables : null}
                 moiId={session.utilisateur.id}
-                mentionnables={peutAssigner ? mentionnables : null}
+                mentionnables={peutEcrireFil ? mentionnables : null}
                 onMaj={recharger}
               />
             )}

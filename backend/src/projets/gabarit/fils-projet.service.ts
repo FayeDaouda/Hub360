@@ -1,4 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { NiveauPermission } from '@prisma/client';
+import { aLaPermission } from '../../commun/permission.guard';
+import { collaborateurDuCompte, perimetreProjets, ROLE_SALARIE } from './validation';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { estOuvert, motifRefusResolution } from './fil';
@@ -45,6 +48,27 @@ export class FilsProjetService {
       ouvert: estOuvert({ ...r, reponses: r.reponses.length }),
       reponses: r.reponses.map((x) => this.format(x)),
     }));
+  }
+
+  // Salarié : il ne lit que les projets où une tâche lui est assignée.
+  async verifierLecture(societeId: string, acteur: Acteur & { role: string }, projetId: string) {
+    if (acteur.role !== ROLE_SALARIE) return;
+    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    const p = await this.prisma.projet.findFirst({ where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) }, select: { id: true } });
+    if (!p) throw new NotFoundException('Projet introuvable');
+  }
+
+  // Écrire dans un fil : écriture sur Projets (matrice), ou Salarié sur un
+  // projet où une tâche lui est assignée (maquette : « remise, prolongation,
+  // discussion »).
+  async verifierEcriture(societeId: string, acteur: Acteur & { role: string; permissions?: Record<string, NiveauPermission> }, projetId: string) {
+    if (aLaPermission(acteur.permissions, 'projets', 'ecriture')) return;
+    if (acteur.role === ROLE_SALARIE) {
+      const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+      const p = await this.prisma.projet.findFirst({ where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) }, select: { id: true } });
+      if (p) return;
+    }
+    throw new ForbiddenException('Écrire dans ce fil demande l’écriture sur Projets, ou une tâche assignée dans ce projet.');
   }
 
   async publier(

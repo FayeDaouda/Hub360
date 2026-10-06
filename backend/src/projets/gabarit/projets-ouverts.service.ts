@@ -215,6 +215,12 @@ export class ProjetsOuvertsService {
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
           validation: validation(t.temps as Temps, t.assigneId),
           peutDecider: peutDecider(decideur, t, chef?.id ?? null),
+          // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
+          peutRemettre:
+            !!decideur.collaborateurId &&
+            t.assigneId === decideur.collaborateurId &&
+            (t.statut === 'a_faire' || t.statut === 'reprise') &&
+            etatsCartes.get(c.id)!.code === 'ouverte',
           fil: filDe(c.id, t.id),
           etat: etatsTaches.get(t.id)!,
         })),

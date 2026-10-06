@@ -81,6 +81,7 @@ export type TacheOuverte = {
   assigne: { id: string; nom: string; cellule: string | null } | null;
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
   peutDecider: boolean; // remise à trancher par la personne connectée
+  peutRemettre: boolean; // la personne connectée est l'assignée, tâche ouverte
   fil: number; // messages du fil de la tâche
   etat: EtatTache;
 };
@@ -166,6 +167,11 @@ export function assignerTache(
     method: 'PATCH',
     body: { collaborateurId, carte },
   });
+}
+
+// Remise par la personne assignée (sans temps atelier : le dépôt vaut validation).
+export function remettreTache(slug: string, projetId: string, tacheId: string) {
+  return apiSociete<{ statut: string; version: number }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/remise`, { method: 'POST' });
 }
 
 // Remise : valider, ou renvoyer en reprise avec un motif.

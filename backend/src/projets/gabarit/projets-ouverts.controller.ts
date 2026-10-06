@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { NiveauPermission } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../../commun/back-office.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
@@ -8,7 +9,7 @@ import { TachesProjetService } from './taches-projet.service';
 import { AjouterTsDto, AssignerTacheDto, DeciderTacheDto, PublierCommentaireDto } from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
-type R = { user: { societeId: string; userId: string; role: string } };
+type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
 
 // Projets ouverts selon le gabarit (maquette « Projets » du boss).
 @Controller('societes/:slug/projets-ouverts')
@@ -47,7 +48,8 @@ export class ProjetsOuvertsController {
 
   @Get(':id/taches/:tacheId/historique')
   @RequiertPermission('projets', 'lecture')
-  historique(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
+  async historique(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
+    await this.fils.verifierLecture(req.user.societeId, req.user, id);
     return this.taches.historique(req.user.societeId, id, tacheId);
   }
 
@@ -56,6 +58,14 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'ecriture')
   assigner(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: AssignerTacheDto) {
     return this.taches.assigner(req.user.societeId, req.user, id, tacheId, dto.collaborateurId, !!dto.carte);
+  }
+
+  // Remise par la personne assignée (vérifié par le service) — le Salarié n'a
+  // que la lecture sur Projets.
+  @Post(':id/taches/:tacheId/remise')
+  @RequiertPermission('projets', 'lecture')
+  remettre(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
+    return this.taches.remettre(req.user.societeId, req.user, id, tacheId);
   }
 
   // Remise : valider ou renvoyer en reprise (droits vérifiés par le service).
@@ -74,19 +84,23 @@ export class ProjetsOuvertsController {
   // Fil d'une carte (?carte=) ou d'une tâche (?tache=).
   @Get(':id/fil')
   @RequiertPermission('projets', 'lecture')
-  fil(@Req() req: R, @Param('id') id: string, @Query('carte') carteId?: string, @Query('tache') tacheId?: string) {
+  async fil(@Req() req: R, @Param('id') id: string, @Query('carte') carteId?: string, @Query('tache') tacheId?: string) {
+    await this.fils.verifierLecture(req.user.societeId, req.user, id);
     return this.fils.lire(req.user.societeId, id, { carteId, tacheId });
   }
 
+  // Écriture sur Projets, ou Salarié sur un de ses projets (cf. verifierEcriture).
   @Post(':id/fil')
-  @RequiertPermission('projets', 'ecriture')
-  publier(@Req() req: R, @Param('id') id: string, @Body() dto: PublierCommentaireDto) {
+  @RequiertPermission('projets', 'lecture')
+  async publier(@Req() req: R, @Param('id') id: string, @Body() dto: PublierCommentaireDto) {
+    await this.fils.verifierEcriture(req.user.societeId, req.user, id);
     return this.fils.publier(req.user.societeId, req.user, id, dto);
   }
 
   @Post(':id/fil/:commentaireId/resolution')
-  @RequiertPermission('projets', 'ecriture')
-  resoudre(@Req() req: R, @Param('id') id: string, @Param('commentaireId') commentaireId: string) {
+  @RequiertPermission('projets', 'lecture')
+  async resoudre(@Req() req: R, @Param('id') id: string, @Param('commentaireId') commentaireId: string) {
+    await this.fils.verifierEcriture(req.user.societeId, req.user, id);
     return this.fils.resoudre(req.user.societeId, req.user, id, commentaireId);
   }
 }

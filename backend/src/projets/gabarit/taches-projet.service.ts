@@ -1,6 +1,7 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import type { Temps } from '../../reglages/gabarit';
 import { motifNonAssignable, tachesAssignees } from './assignation';
 import { collaborateurDuCompte, peutDecider, ROLE_DPLG } from './validation';
@@ -17,7 +18,12 @@ const nom = (p: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p
 // tâche touchée.
 @Injectable()
 export class TachesProjetService {
-  constructor(private prisma: PrismaService) {}
+  private log = new Logger(TachesProjetService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   // Collaborateurs proposés dans « Assigner » (« Moussa Diop · GC-ARC-02 »).
   async assignables(societeId: string) {
@@ -79,6 +85,62 @@ export class TachesProjetService {
     return { modifiees };
   }
 
+  // Remise (maquette « Projets », vue Salarié) : seul l'assigné remet sa tâche,
+  // ouverte (carte non verrouillée), à faire ou en reprise. Sans temps
+  // atelier, le dépôt vaut validation (exception écrite au principe 4) ;
+  // sinon la remise vNN attend le chef de team (ou le DPLG pour la tâche du chef).
+  async remettre(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string) {
+    const tache = await this.prisma.tacheProjet.findFirst({
+      where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
+      select: {
+        id: true,
+        libelle: true,
+        statut: true,
+        version: true,
+        temps: true,
+        assigneId: true,
+        carte: { select: { desactivation: true, ouvreApres: true } },
+        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+      },
+    });
+    if (!tache) throw new NotFoundException('Tâche introuvable');
+    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée remet sa tâche.');
+    if (tache.statut !== 'a_faire' && tache.statut !== 'reprise') throw new ConflictException('Cette tâche n’attend pas de remise.');
+    if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : rien à remettre.');
+    if (await this.carteVerrouillee(projetId, tache.carte.ouvreApres)) {
+      throw new ConflictException('La carte s’ouvre quand les tâches dont elle dépend sont validées.');
+    }
+
+    const version = tache.version + 1;
+    const vNN = `v${String(version).padStart(2, '0')}`;
+    const depot = (tache.temps as Temps).type === 'sans';
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.tacheProjet.updateMany({
+        where: { id: tache.id, statut: { in: ['a_faire', 'reprise'] } },
+        data: depot
+          ? { statut: 'validee', version, valideeLe: new Date(), valideeParId: acteur.userId }
+          : { statut: 'a_valider', version },
+      });
+      if (!count) throw new ConflictException('La tâche a changé entre-temps.');
+      await tx.evenementTacheProjet.create({
+        data: { tacheId: tache.id, type: 'remise', parId: acteur.userId, detail: `Remise ${vNN}` },
+      });
+      if (depot) {
+        await tx.evenementTacheProjet.create({
+          data: { tacheId: tache.id, type: 'validation', parId: acteur.userId, detail: 'Dépôt du justificatif : vaut validation' },
+        });
+      }
+    });
+
+    if (!depot) {
+      const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
+      const valideurs = chefId && chefId !== collaborateurId ? await this.comptesDe([chefId]) : await this.comptesDplg(societeId);
+      await this.notifier(societeId, projetId, tache.projet.code, 'tache_remise', `Remise ${vNN} à valider · ${tache.projet.code} · ${tache.libelle}`, acteur.userId, valideurs);
+    }
+    return { statut: depot ? 'validee' : 'a_valider', version };
+  }
+
   // Valider une remise, ou la renvoyer en reprise (motif) — chef de team,
   // Architecte DPLG (tâches du chef, suppléance) ; jamais sa propre tâche.
   async decider(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
@@ -88,8 +150,9 @@ export class TachesProjetService {
         id: true,
         statut: true,
         version: true,
+        libelle: true,
         assigneId: true,
-        projet: { select: { cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
@@ -121,6 +184,19 @@ export class TachesProjetService {
             : { tacheId: tache.id, type: 'reprise', parId: acteur.userId, detail: `Remise ${vNN} renvoyée en reprise : ${motif!.trim()}` },
       });
     });
+    if (tache.assigneId) {
+      await this.notifier(
+        societeId,
+        projetId,
+        tache.projet.code,
+        decision === 'valider' ? 'tache_validee' : 'tache_renvoyee',
+        decision === 'valider'
+          ? `Remise ${vNN} validée · ${tache.projet.code} · ${tache.libelle}`
+          : `Remise ${vNN} renvoyée en reprise · ${tache.projet.code} · ${tache.libelle}`,
+        acteur.userId,
+        await this.comptesDe([tache.assigneId]),
+      );
+    }
     return { statut: decision === 'valider' ? 'validee' : 'reprise' };
   }
 
@@ -160,6 +236,45 @@ export class TachesProjetService {
       await tx.projet.update({ where: { id: projetId }, data: { budgetHeures: { increment: temps.heures } } });
       return tache;
     });
+  }
+
+  // Une tâche dont dépend la carte (« carte.tâche ») n'est pas encore faite.
+  private async carteVerrouillee(projetId: string, refs: string[]): Promise<boolean> {
+    for (const ref of refs) {
+      const [carte, cle] = ref.split('.');
+      const t = await this.prisma.tacheProjet.findFirst({ where: { projetId, cle, carte: { cle: carte } }, select: { statut: true } });
+      if (t && t.statut !== 'validee' && t.statut !== 'non_necessaire') return true;
+    }
+    return false;
+  }
+
+  // Comptes HUB des collaborateurs (fiche reliée directement ou via le dossier RH).
+  private async comptesDe(collaborateurIds: string[]): Promise<string[]> {
+    const c = await this.prisma.collaborateur.findMany({
+      where: { id: { in: collaborateurIds } },
+      select: { utilisateurId: true, dossierPersonnel: { select: { utilisateurId: true } } },
+    });
+    return [...new Set(c.flatMap((x) => [x.utilisateurId, x.dossierPersonnel?.utilisateurId].filter((id): id is string => !!id)))];
+  }
+
+  // Comptes de l'Architecte DPLG (rôle Dir. GC) de la société.
+  private async comptesDplg(societeId: string): Promise<string[]> {
+    const r = await this.prisma.utilisateurSocieteRole.findMany({
+      where: { societeId, role: { nom: ROLE_DPLG }, utilisateur: { actif: true } },
+      select: { utilisateurId: true },
+    });
+    return r.map((x) => x.utilisateurId);
+  }
+
+  // Best-effort : une notification manquée ne fait pas échouer l'action.
+  private async notifier(societeId: string, projetId: string, code: string, type: NotificationType, titre: string, parId: string, destinataireIds: string[]) {
+    const cibles = destinataireIds.filter((id) => id !== parId);
+    if (!cibles.length) return;
+    try {
+      await this.notifications.pousser({ societeId, projet: { id: projetId, code, celluleIds: [] }, type, titre, parId, destinataireIds: cibles });
+    } catch (e) {
+      this.log.error(`Notification ${type} non envoyée : ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   async historique(societeId: string, projetId: string, tacheId: string) {
