@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarClock, UserCheck } from 'lucide-react';
+import { UserCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { confirmerIntegration, enregistrerPointIntegration, getIntegrations, LIBELLE_CONTRAT } from '@/lib/rh';
 import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
 
 const jjmm = (iso: string) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
@@ -44,18 +43,6 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
 
   return (
     <>
-      <KpiStrip
-        tuiles={[
-          {
-            cle: 'integ',
-            label: 'Intégrations en cours',
-            valeur: liste.length,
-            sousTexte: `${aTraiter} point(s) à traiter · cap des 90 jours`,
-            icone: CalendarClock,
-            alerte: aTraiter > 0,
-          },
-        ]}
-      />
       <div className="integ">
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Intégration des nouveaux · cap des 90 jours</h2>

@@ -1,7 +1,7 @@
 'use client';
 
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { Archive, ArchiveRestore, CalendarClock, FileWarning, Paperclip, Plus, Users, X } from 'lucide-react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Archive, ArchiveRestore, Paperclip, Plus, X } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { ApiError } from '@/lib/client-api';
@@ -15,6 +15,7 @@ import {
   retirerBulletin,
   finProche,
   getDossiers,
+  getIntegrations,
   getOptionsDossiers,
   getPieceDossier,
   joindrePieceDossier,
@@ -23,10 +24,10 @@ import {
   PIECES,
   type MajDossier,
 } from '@/lib/rh';
-import { libelleMois } from '@/lib/temps';
+import { getFeuillesTemps, libelleMois } from '@/lib/temps';
+import { getDemandesRh } from '@/lib/demandes';
 import { LIBELLE_PAIEMENT_SALAIRE } from '@/lib/mon-espace';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
 import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
@@ -54,10 +55,17 @@ function messageErreur(e: unknown, repli: string) {
   return e instanceof ApiError ? e.message : repli;
 }
 
-// RH · Dossiers du personnel du groupe (lot 1). Module « rh » de la matrice :
-// RH en écriture, CFO et CEO en lecture. Le serveur revérifie tout.
+type Onglet = 'personnel' | 'temps' | 'integration' | 'demandes';
+type Compteurs = { feuilles: number; demandes: number; integrations: number; points: number };
+
+// « Grey Concrete » → « Concrete » (tuile Effectif, maquette).
+const nomCourt = (nom: string) => nom.trim().split(/\s+/).at(-1) ?? nom;
+
+// RH · Groupe (maquette du boss) : six tuiles et quatre onglets — dossiers du
+// personnel, feuilles de temps, intégration, demandes. Module « rh » de la
+// matrice : RH en écriture, CFO et CEO en lecture. Le serveur revérifie tout.
 export default function RhPage({ params }: Props) {
-  useTitrePage('Ressources humaines');
+  useTitrePage('Ressources humaines · Groupe');
   const session = useSessionCourante();
   const ecriture = session.role === 'societe_admin' || niveauSuffisant(session, 'rh', 'ecriture');
 
@@ -68,7 +76,27 @@ export default function RhPage({ params }: Props) {
   const [filtre, setFiltre] = useState<'incomplets' | 'fins' | null>(null);
   const [archives, setArchives] = useState(false);
   const [ouvert, setOuvert] = useState<DossierPersonnel | 'nouveau' | null>(null);
-  const [onglet, setOnglet] = useState<'personnel' | 'temps' | 'integration' | 'demandes'>('personnel');
+  const [onglet, setOnglet] = useState<Onglet>('personnel');
+  const [compteurs, setCompteurs] = useState<Compteurs | null>(null);
+
+  // Tuiles des autres onglets : relues à chaque changement d'onglet, pour
+  // refléter ce qui vient d'y être traité.
+  const chargerCompteurs = useCallback(() => {
+    Promise.all([getFeuillesTemps(params.slug), getDemandesRh(params.slug), getIntegrations(params.slug)])
+      .then(([f, d, i]) =>
+        setCompteurs({
+          feuilles: f.periodes.reduce((n, p) => n + p.aControler, 0),
+          demandes:
+            d.absences.filter((a) => a.statut === 'accord_n1').length +
+            d.remboursements.filter((r) => r.statut === 'soumise' || r.statut === 'transmise').length +
+            d.attestations.filter((a) => !a.delivreeLe).length,
+          integrations: i.length,
+          points: i.reduce((n, x) => n + x.aTraiter, 0),
+        }),
+      )
+      .catch(() => setCompteurs(null));
+  }, [params.slug]);
+  useEffect(chargerCompteurs, [chargerCompteurs, onglet]);
 
   useEffect(() => {
     Promise.all([getDossiers(params.slug), getOptionsDossiers(params.slug)])
@@ -108,86 +136,131 @@ export default function RhPage({ params }: Props) {
   const parSociete = options.societes.map((s) => ({ ...s, n: actifs.filter((d) => d.societeId === s.id).length }));
   const incomplets = actifs.filter((d) => d.completude.pourcentage < 100).length;
   const fins = actifs.filter((d) => finProche(d)).length;
-  const basculerFiltre = (f: 'incomplets' | 'fins') => setFiltre((x) => (x === f ? null : f));
 
-  const onglets = (
-    <div className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique RH">
-      {(['personnel', 'temps', 'integration', 'demandes'] as const).map((o) => (
-        <button key={o} type="button" role="tab" aria-selected={onglet === o} className={onglet === o ? 'is-active' : ''} onClick={() => setOnglet(o)}>
-          {{ personnel: 'Personnel', temps: 'Feuilles de temps', integration: 'Intégration', demandes: 'Demandes' }[o]}
-        </button>
-      ))}
-    </div>
-  );
-  if (onglet === 'temps') {
-    return (
-      <>
-        {onglets}
-        <FeuillesTempsRh slug={params.slug} ecriture={ecriture} />
-      </>
-    );
-  }
-  if (onglet === 'integration') {
-    return (
-      <>
-        {onglets}
-        <IntegrationRh slug={params.slug} ecriture={ecriture} />
-      </>
-    );
-  }
-  if (onglet === 'demandes') {
-    return (
-      <>
-        {onglets}
-        <DemandesRh slug={params.slug} ecriture={ecriture} />
-      </>
-    );
-  }
+  const paiementsAValider = actifs.filter((d) => d.paiementDemandeMode).length;
+  const ouvrir = (o: Onglet, f: 'incomplets' | 'fins' | null = null) => {
+    setOnglet(o);
+    setFiltre(f);
+  };
+  const tuiles: { cle: string; libelle: string; valeur: number | null; aide: string; actif: boolean; onClick: () => void; ton?: string }[] = [
+    {
+      cle: 'effectif',
+      libelle: 'Effectif du groupe',
+      valeur: actifs.length,
+      aide: parSociete.map((s) => `${nomCourt(s.nom)} ${s.n}`).join(' · '),
+      actif: onglet === 'personnel' && !filtre,
+      onClick: () => ouvrir('personnel'),
+    },
+    {
+      cle: 'incomplets',
+      libelle: 'Dossiers incomplets',
+      valeur: incomplets,
+      aide: 'pièces ou champs manquants',
+      actif: onglet === 'personnel' && filtre === 'incomplets',
+      onClick: () => ouvrir('personnel', filtre === 'incomplets' ? null : 'incomplets'),
+      ton: incomplets ? 'attention' : undefined,
+    },
+    {
+      cle: 'feuilles',
+      libelle: 'Feuilles de temps à contrôler',
+      valeur: compteurs?.feuilles ?? null,
+      aide: 'mois clos · calcul automatique',
+      actif: onglet === 'temps',
+      onClick: () => ouvrir('temps'),
+      ton: compteurs?.feuilles ? 'attention' : undefined,
+    },
+    {
+      cle: 'demandes',
+      libelle: 'Demandes à traiter',
+      valeur: compteurs ? compteurs.demandes + paiementsAValider : null,
+      aide: 'absences, remboursements, paie, attestations',
+      actif: onglet === 'demandes',
+      onClick: () => ouvrir('demandes'),
+      ton: compteurs?.demandes || paiementsAValider ? 'attention' : undefined,
+    },
+    {
+      cle: 'integration',
+      libelle: 'Intégrations en cours',
+      valeur: compteurs?.integrations ?? null,
+      aide: `${compteurs?.points ?? 0} point(s) à traiter · cap des 90 jours`,
+      actif: onglet === 'integration',
+      onClick: () => ouvrir('integration'),
+      ton: compteurs?.points ? 'attention' : undefined,
+    },
+    {
+      cle: 'fins',
+      libelle: 'Fins de contrat < 6 mois',
+      valeur: fins,
+      aide: 'CDD et stages à anticiper',
+      actif: onglet === 'personnel' && filtre === 'fins',
+      onClick: () => ouvrir('personnel', filtre === 'fins' ? null : 'fins'),
+      ton: fins ? 'attention' : undefined,
+    },
+  ];
+  const compte = (n: number | undefined | null) => (n == null ? '' : ` · ${n}`);
 
-  return (
+  const entete = (
     <>
-      {onglets}
       <div className="rh-entete">
-        <p className="rh-sous-titre">
-          Dossiers du personnel des sociétés du groupe. Accès : RH (modification), CFO et CEO
-          (consultation).
-        </p>
+        <p className="rh-sous-titre">Dossiers du personnel des sociétés du groupe. Accès : RH, CFO et CEO (manuel §3.7, League Admin).</p>
         {ecriture && (
           <button type="button" className="btn-primary" onClick={() => setOuvert('nouveau')}>
             <Plus size={16} strokeWidth={2} aria-hidden /> Nouveau salarié
           </button>
         )}
       </div>
+      <div className="rh-tuiles">
+        {tuiles.map((t) => (
+          <button key={t.cle} type="button" className={`panel glass-panel po-tuile pi-tuile${t.actif ? ' is-active' : ''}`} onClick={t.onClick}>
+            <span className="po-tuile-libelle">{t.libelle}</span>
+            <strong className={`po-tuile-valeur${t.ton ? ` po-ton--${t.ton}` : ''}`}>{t.valeur ?? '…'}</strong>
+            <span className="po-aide">{t.aide}</span>
+          </button>
+        ))}
+      </div>
+      <div className="fin-onglets">
+        <div className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique RH">
+          {(
+            [
+              ['personnel', 'Personnel'],
+              ['temps', `Feuilles de temps${compte(compteurs?.feuilles)}`],
+              ['integration', `Intégration${compte(compteurs?.integrations)}`],
+              ['demandes', `Demandes${compte(compteurs ? compteurs.demandes + paiementsAValider : null)}`],
+            ] as const
+          ).map(([o, libelle]) => (
+            <button key={o} type="button" role="tab" aria-selected={onglet === o} className={onglet === o ? 'is-active' : ''} onClick={() => ouvrir(o)}>
+              {libelle}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+  const fiche = ouvert && (
+    <FicheDossier
+      slug={params.slug}
+      dossier={ouvert === 'nouveau' ? null : ouvert}
+      options={options}
+      ecriture={ecriture}
+      onChange={remplacer}
+      onClose={() => setOuvert(null)}
+    />
+  );
+  if (onglet !== 'personnel') {
+    return (
+      <>
+        {entete}
+        {onglet === 'temps' && <FeuillesTempsRh slug={params.slug} ecriture={ecriture} />}
+        {onglet === 'integration' && <IntegrationRh slug={params.slug} ecriture={ecriture} />}
+        {onglet === 'demandes' && <DemandesRh slug={params.slug} ecriture={ecriture} />}
+        {fiche}
+      </>
+    );
+  }
 
-      <KpiStrip
-        tuiles={[
-          {
-            cle: 'effectif',
-            label: 'Effectif du groupe',
-            valeur: actifs.length,
-            sousTexte: parSociete.map((s) => `${s.nom} ${s.n}`).join(' · '),
-            icone: Users,
-          },
-          {
-            cle: 'incomplets',
-            label: 'Dossiers incomplets',
-            valeur: incomplets,
-            sousTexte: 'pièces ou champs manquants',
-            icone: FileWarning,
-            alerte: incomplets > 0,
-            action: { type: 'filtre', actif: filtre === 'incomplets', onClick: () => basculerFiltre('incomplets') },
-          },
-          {
-            cle: 'fins',
-            label: 'Fins de contrat < 6 mois',
-            valeur: fins,
-            sousTexte: 'CDD et stages à anticiper',
-            icone: CalendarClock,
-            alerte: fins > 0,
-            action: { type: 'filtre', actif: filtre === 'fins', onClick: () => basculerFiltre('fins') },
-          },
-        ]}
-      />
+  return (
+    <>
+      {entete}
 
       <section className="panel glass-panel rh-liste">
         <div className="rh-outils">
@@ -265,16 +338,7 @@ export default function RhPage({ params }: Props) {
         )}
       </section>
 
-      {ouvert && (
-        <FicheDossier
-          slug={params.slug}
-          dossier={ouvert === 'nouveau' ? null : ouvert}
-          options={options}
-          ecriture={ecriture}
-          onChange={remplacer}
-          onClose={() => setOuvert(null)}
-        />
-      )}
+      {fiche}
     </>
   );
 }
@@ -425,6 +489,8 @@ function FicheDossier({
 
   const collabs = options.collaborateursSansDossier.filter((c) => c.societeId === form.societeId);
   const titre = dossier ? `${dossier.prenom} ${dossier.nom}`.trim() || 'Sans nom' : 'Nouveau salarié';
+  const societeNom = options.societes.find((s) => s.id === form.societeId)?.nom;
+  const sousTitre = `${form.poste?.trim() || 'poste à renseigner'} · ${societeNom ?? 'société à renseigner'}`;
   const champ = (cle: keyof MajDossier, libelle: string, props: Record<string, unknown> = {}) => (
     <label className="field">
       <span className="field-label">{libelle}</span>
@@ -439,12 +505,13 @@ function FicheDossier({
   );
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop rh-tiroir" onClick={onClose}>
       <div className="modal rh-fiche" role="dialog" aria-modal="true" aria-label={titre} onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <div>
-            <span className="cell-sub">Dossier du personnel{dossier ? ` · ${dossier.matricule}` : ''}</span>
+            <span className="po-kicker">Dossier du personnel{dossier ? ` · ${dossier.matricule}` : ''}</span>
             <h2>{titre}</h2>
+            <span className="cell-sub">{sousTitre}</span>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
             <X size={18} strokeWidth={1.75} />
@@ -467,6 +534,10 @@ function FicheDossier({
               {dossier.archiveLe && <span className="pill pill--neutre">Archivé</span>}
             </div>
           )}
+          <p className="rh-note">
+            Nouvel arrivant : la carte de mission doit être validée (budget CFO, décision d’embauche) avant l’affectation à une cellule
+            (manuel §3.3).
+          </p>
 
           <fieldset disabled={!ecriture} className="fieldset-nu">
             <h3 className="rh-section">Affectation et contrat</h3>

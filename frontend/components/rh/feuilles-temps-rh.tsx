@@ -13,7 +13,6 @@ import {
   STATUT_FEUILLE,
 } from '@/lib/temps';
 import type { FeuilleTempsSalarie, FeuillesTemps } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
 import { LignesCalcul } from './lignes-calcul';
 
@@ -52,18 +51,6 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
 
   return (
     <>
-      <KpiStrip
-        tuiles={[
-          {
-            cle: 'feuilles',
-            label: 'Feuilles de temps à contrôler',
-            valeur: aControler,
-            sousTexte: 'mois clos · calcul automatique',
-            icone: ClipboardCheck,
-            alerte: aControler > 0,
-          },
-        ]}
-      />
       <div className="temps-grille">
         <section className="panel glass-panel dmd-section temps-panel">
           <div className="temps-entete">

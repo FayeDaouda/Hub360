@@ -10811,6 +10811,47 @@ a.notif-item:hover {
 .rh-fiche {
   max-width: 980px;
 }
+/* Fiche du dossier en panneau latéral (maquette RH · Groupe). */
+.modal-backdrop.rh-tiroir {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+.rh-tiroir .rh-fiche {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  height: 100%;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+.rh-tiroir .rh-fiche .modal-body {
+  flex: 1;
+  max-height: none;
+}
+.rh-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.rh-tuiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+@media (max-width: 1300px) {
+  .rh-tuiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .rh-tuiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rh-tiroir .rh-fiche {
+    border-radius: 0;
+  }
+}
 .rh-fiche .modal-body {
   max-height: min(78vh, 900px);
   overflow-y: auto;

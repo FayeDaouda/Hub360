@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarCheck, FileSignature, HeartPulse, Paperclip } from 'lucide-react';
+import { Paperclip } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier } from '@/lib/fichiers';
 import {
@@ -21,7 +21,6 @@ import {
 } from '@/lib/demandes';
 import { formatMontant } from '@/lib/format';
 import type { DemandeAbsence, DemandeRemboursement } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -66,13 +65,6 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
 
   return (
     <>
-      <KpiStrip
-        tuiles={[
-          { cle: 'abs', label: 'Absences à valider', valeur: absencesATraiter.length, sousTexte: 'accord du N+1 obtenu', icone: CalendarCheck, alerte: absencesATraiter.length > 0 },
-          { cle: 'remb', label: 'Remboursements en cours', valeur: rembATraiter.length, sousTexte: 'soumis ou transmis', icone: HeartPulse, alerte: rembATraiter.length > 0 },
-          { cle: 'attest', label: 'Attestations à délivrer', valeur: attestATraiter.length, sousTexte: 'attestations de travail demandées', icone: FileSignature, alerte: attestATraiter.length > 0 },
-        ]}
-      />
       <div className="rh-outils">
         <label className="rh-archives">
           <input type="checkbox" checked={toutes} onChange={(e) => setToutes(e.target.checked)} />
