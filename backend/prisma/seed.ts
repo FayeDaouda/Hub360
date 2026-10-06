@@ -184,7 +184,9 @@ async function main() {
       transverse: false,
       permissions: {
         crm: 'ecriture',
-        projets: 'lecture',
+        // aucun (06/10/2026, maquette COO validée par le user) : pas de Projets
+        // dans son menu ; Pilotage ouvert en lecture (ci-dessous).
+        projets: 'aucun',
         finances_devis: 'aucun',
         finances_factures: 'aucun',
         finances_marges: 'aucun',
@@ -192,7 +194,7 @@ async function main() {
         equipe: 'aucun',
         rh: 'aucun',
         mon_espace: 'ecriture',
-        pilotage: 'aucun',
+        pilotage: 'lecture',
         documents: 'lecture',
         communication: 'ecriture',
       },
