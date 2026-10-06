@@ -72,7 +72,8 @@ import { FacturationCentraleController } from './facturation/facturation-central
     FacturationCentraleController,
   ],
   // FacturationService exporté pour DevisModule (conversion d'un devis
-  // accepté en facture, cf. FacturationService.creerDepuisDevis).
-  exports: [FacturationService],
+  // accepté en facture, cf. FacturationService.creerDepuisDevis) ;
+  // TachesProjetService pour Mon espace (RhModule : remise, validation).
+  exports: [FacturationService, TachesProjetService],
 })
 export class ProjetsModule {}

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { AlarmClock, CircleCheck, Clock, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMesTaches, remettreTache, STATUT_TACHE } from '@/lib/mon-espace';
-import { formatHeures, getMonTemps, LIBELLE_MANQUE, LIBELLE_SECTION, libelleMois } from '@/lib/temps';
+import { formatHeures, getMonTemps, LIBELLE_MANQUE, libelleMois } from '@/lib/temps';
 import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
@@ -17,7 +17,9 @@ const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const ecartJours = (de: string, a: string) =>
   Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
-const SECTION_URL = { avant_projet: 'avant-projet', permis: 'permis', execution: 'execution' } as const;
+// Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
+const lienProjet = (base: string, projetId: string) =>
+  base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
 
 const FILTRES: { cle: Filtre; libelle: string; garde: (t: TacheMonEspace) => boolean }[] = [
   { cle: 'toutes', libelle: 'Toutes', garde: () => true },
@@ -154,14 +156,14 @@ export function MesPerformances({ slug }: { slug: string }) {
               {visibles.map((t) => (
                 <tr key={t.id}>
                   <td className="rh-matricule">
-                    <Link className="lien-inline" href={`${base}/projets/${t.projetId}/${SECTION_URL[t.section]}`}>
+                    <Link className="lien-inline" href={lienProjet(base, t.projetId)}>
                       {t.projetCode}
                     </Link>
                   </td>
                   <td data-label="Tâche">
                     {t.libelle}
                     <span className="cell-sub">
-                      {LIBELLE_SECTION[t.section]} · {t.projetProgramme}
+                      {t.projetClient} · {t.etape}
                     </span>
                   </td>
                   <td data-label="Durée std" className="num">
@@ -196,7 +198,7 @@ export function MesPerformances({ slug }: { slug: string }) {
       {aRemettre && (
         <ConfirmModal
           titre="Remettre la tâche"
-          message={`« ${aRemettre.libelle} » (${aRemettre.projetCode}) part en validation chez votre N+1. Vous ne pourrez plus la remettre tant qu’il ne l’a pas validée ou renvoyée.`}
+          message={`« ${aRemettre.libelle} » (${aRemettre.projetCode}) part en validation chez votre chef de team (ou l’Architecte DPLG). Vous ne pourrez plus la remettre tant qu’elle n’est pas validée ou renvoyée en reprise.`}
           confirmer="Remettre"
           onConfirm={async () => {
             setDonnees(await remettreTache(slug, aRemettre));

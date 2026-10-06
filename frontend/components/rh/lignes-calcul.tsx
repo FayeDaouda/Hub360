@@ -28,7 +28,7 @@ export function LignesCalcul({ lignes, variante = 'rh' }: { lignes: LigneCalculT
               <td data-label="Bloc">
                 {l.libelle}
                 <span className="cell-sub">
-                  {LIBELLE_SECTION[l.section]} · {l.projetProgramme}
+                  {l.etape ?? (l.section ? LIBELLE_SECTION[l.section] : '')} · {l.projetProgramme}
                 </span>
               </td>
               <td data-label="Fenêtre">
@@ -73,7 +73,7 @@ function LignesSalarie({ lignes }: { lignes: LigneCalculTemps[] }) {
               <td data-label="Tâche">
                 {l.libelle}
                 <span className="cell-sub">
-                  du {jjmm(l.debut)} au {jjmm(l.echeance)} · {LIBELLE_SECTION[l.section]}
+                  du {jjmm(l.debut)} au {jjmm(l.echeance)} · {l.etape ?? (l.section ? LIBELLE_SECTION[l.section] : '')}
                 </span>
               </td>
               <td data-label="Durée std" className="num">{l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}</td>

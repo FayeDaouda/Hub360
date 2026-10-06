@@ -1,4 +1,4 @@
-import { Prisma, SectionTache } from '@prisma/client';
+import { SectionTache, StatutTacheProjet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   GROUPES_CHECKLIST_AVP,
@@ -7,11 +7,8 @@ import {
 } from '../projets/domaine/config';
 import type { Tache } from './regles-temps';
 
-// RH · Temps (lot 4) : une tâche assignée = un bloc de checklist dont le
-// collaborateur est responsable (assignation par bloc, décision boss). Seuls
-// les blocs ACTIFS des gabarits comptent : un bloc retiré d'une checklist
-// (ex. Études/Plans en Exécution) peut rester en base, il ne produit plus
-// d'heures.
+// Blocs des checklists (lot 4) : référentiel des durées standard par bloc
+// (Paramètres), conservé pour l'historique.
 export const SECTIONS_TACHES: {
   section: SectionTache;
   libelle: string;
@@ -26,73 +23,80 @@ export function groupeConnu(section: string, groupe: string): boolean {
   return SECTIONS_TACHES.some((s) => s.section === section && s.groupes.some((g) => g.groupe === groupe));
 }
 
-const libelleGroupe = (section: SectionTache, groupe: string) =>
-  SECTIONS_TACHES.find((s) => s.section === section)?.groupes.find((g) => g.groupe === groupe)?.libelle ?? groupe;
-
-export type TacheAssignee = Tache & {
-  collaborateurId: string;
-  section: SectionTache;
-  groupe: string;
-  libelle: string;
-  projetId: string;
-  projetCode: string;
-  projetProgramme: string;
-};
-
-const PROJET = { id: true, code: true, programme: true, societeId: true } satisfies Prisma.ProjetSelect;
-const BLOC = { groupe: true, debut: true, echeance: true, responsableId: true } as const;
-
-type BlocCharge = {
-  groupe: string;
-  debut: string | null;
-  echeance: string | null;
-  responsableId: string | null;
-  projet: { id: string; code: string; programme: string; societeId: string };
-};
-
 const cleDuree = (societeId: string, section: string, groupe: string) => `${societeId}:${section}:${groupe}`;
 
-// Durées du référentiel société, lues en direct (null = non définie).
+// Durées du référentiel société par bloc (Paramètres · Durées standard),
+// lues en direct (null = non définie). Plus utilisées pour les heures depuis
+// le gabarit : la durée est portée par la tâche.
 export async function chargerDurees(prisma: PrismaService, societeIds: string[]) {
   const lignes = await prisma.dureeStandardTache.findMany({ where: { societeId: { in: societeIds } } });
   return new Map(lignes.map((l) => [cleDuree(l.societeId, l.section, l.groupe), Number(l.heures)]));
 }
 
+// Une tâche assignée = une tâche du gabarit (TacheProjet) assignée au
+// collaborateur, depuis le passage de Mon espace et des feuilles de temps sur
+// le gabarit (oct. 2026). Durée standard et fenêtre figées sur la tâche ;
+// les tâches « non nécessaires » et celles d'une carte désactivée ne comptent pas.
+// Les blocs de checklist (lot 4) ne produisent plus d'heures.
+export type TacheAssignee = Tache & {
+  collaborateurId: string;
+  libelle: string;
+  etape: string; // « 02 · Avant-projet »
+  carte: string;
+  projetId: string;
+  projetCode: string;
+  projetProgramme: string;
+  projetClient: string;
+  statut: StatutTacheProjet;
+  version: number;
+  valideeLe: Date | null;
+  remisLe: Date | null; // dernière remise
+  renvoiMotif: string | null; // dernier renvoi en reprise
+};
+
+const numeroEtape = (n: number) => String(n).padStart(2, '0');
+
 export async function chargerTachesAssignees(prisma: PrismaService, collaborateurIds: string[]): Promise<TacheAssignee[]> {
   if (collaborateurIds.length === 0) return [];
-  const responsableId = { in: collaborateurIds };
-  const [avp, permis, execution] = await Promise.all([
-    prisma.blocChecklistAvp.findMany({
-      where: { responsableId, groupe: { in: GROUPES_CHECKLIST_AVP.map((g) => g.groupe) } },
-      select: { ...BLOC, avantProjet: { select: { projet: { select: PROJET } } } },
-    }),
-    prisma.blocPermis.findMany({
-      where: { responsableId, groupe: { in: GROUPES_CHECKLIST_PERMIS.map((g) => g.groupe) } },
-      select: { ...BLOC, permis: { select: { projet: { select: PROJET } } } },
-    }),
-    prisma.blocExecution.findMany({
-      where: { responsableId, groupe: { in: GROUPES_CHECKLIST_EXECUTION.map((g) => g.groupe) } },
-      select: { ...BLOC, projet: { select: PROJET } },
-    }),
-  ]);
-  const blocs: [SectionTache, BlocCharge][] = [
-    ...avp.map(({ avantProjet, ...b }) => ['avant_projet', { ...b, projet: avantProjet.projet }] as [SectionTache, BlocCharge]),
-    ...permis.map(({ permis: p, ...b }) => ['permis', { ...b, projet: p.projet }] as [SectionTache, BlocCharge]),
-    ...execution.map((b) => ['execution', b] as [SectionTache, BlocCharge]),
-  ];
-  const durees = await chargerDurees(prisma, [...new Set(blocs.map(([, b]) => b.projet.societeId))]);
-
-  return blocs.map(([section, b]) => ({
-    id: `${section}:${b.projet.id}:${b.groupe}`,
-    collaborateurId: b.responsableId!,
-    section,
-    groupe: b.groupe,
-    libelle: libelleGroupe(section, b.groupe),
-    projetId: b.projet.id,
-    projetCode: b.projet.code,
-    projetProgramme: b.projet.programme,
-    debut: b.debut,
-    echeance: b.echeance,
-    heures: durees.get(cleDuree(b.projet.societeId, section, b.groupe)) ?? null,
-  }));
+  const taches = await prisma.tacheProjet.findMany({
+    where: { assigneId: { in: collaborateurIds }, statut: { not: 'non_necessaire' }, carte: { desactivation: null }, projet: { ouvertLe: { not: null } } },
+    select: {
+      id: true,
+      assigneId: true,
+      libelle: true,
+      debutLe: true,
+      finLe: true,
+      heures: true,
+      statut: true,
+      version: true,
+      valideeLe: true,
+      carte: { select: { libelle: true, etapeNumero: true, etapeLibelle: true } },
+      projet: { select: { id: true, code: true, programme: true, client: { select: { nom: true } } } },
+      evenements: { where: { type: { in: ['remise', 'reprise'] } }, orderBy: { creeLe: 'desc' }, select: { type: true, detail: true, creeLe: true } },
+    },
+  });
+  return taches.map((t) => {
+    const remise = t.evenements.find((e) => e.type === 'remise') ?? null;
+    const reprise = t.evenements.find((e) => e.type === 'reprise') ?? null;
+    return {
+      id: t.id,
+      collaborateurId: t.assigneId!,
+      libelle: t.libelle,
+      etape: `${numeroEtape(t.carte.etapeNumero)} · ${t.carte.etapeLibelle}`,
+      carte: t.carte.libelle,
+      projetId: t.projet.id,
+      projetCode: t.projet.code,
+      projetProgramme: t.projet.programme,
+      projetClient: t.projet.client.nom,
+      debut: t.debutLe,
+      echeance: t.finLe,
+      heures: t.heures === null ? null : Number(t.heures),
+      statut: t.statut,
+      version: t.version,
+      valideeLe: t.valideeLe,
+      remisLe: remise?.creeLe ?? null,
+      // « Remise vNN renvoyée en reprise : motif » → motif
+      renvoiMotif: t.statut === 'reprise' && reprise ? reprise.detail.replace(/^.*?reprise : /, '') : null,
+    };
+  });
 }

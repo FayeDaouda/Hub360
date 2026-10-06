@@ -2277,7 +2277,8 @@ export type EtatTacheTemps = 'a_venir' | 'en_cours' | 'terminee';
 
 export type LigneCalculTemps = {
   id: string;
-  section: SectionTache;
+  etape?: string; // étape du gabarit (« 02 · Avant-projet »)
+  section?: SectionTache; // feuilles figées avant le passage au gabarit (oct. 2026)
   libelle: string;
   projetCode: string;
   projetProgramme: string;
@@ -2368,14 +2369,17 @@ export type AttestationTravail = { id: string; demandeLe: string; delivreeLe: st
 // --- RH · Remise et validation des tâches (lot 5c) -----------------------------
 export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'en_cours' | 'a_venir' | 'a_planifier';
 
+// Tâche du gabarit assignée (TacheProjet), depuis oct. 2026.
 export type TacheMonEspace = {
   id: string;
-  section: SectionTache;
-  groupe: string;
+  etape: string; // « 02 · Avant-projet »
+  carte: string;
   libelle: string;
   projetId: string;
   projetCode: string;
   projetProgramme: string;
+  projetClient: string;
+  version: number;
   debut: string | null;
   echeance: string | null;
   dureeStandard: number | null;
@@ -2398,16 +2402,16 @@ export type StatsPerformances = {
 
 export type TacheAValider = {
   id: string;
-  section: SectionTache;
-  groupe: string;
+  etape: string;
   libelle: string;
+  version: number;
   projetId: string;
   projetCode: string;
   projetProgramme: string;
   responsable: string;
   debut: string | null;
   echeance: string | null;
-  remisLe: string;
+  remisLe: string | null;
 };
 
 // Mon espace · Ma cellule (lot 5d) : l'équipe et les projets qu'elle suit.

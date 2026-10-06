@@ -5,17 +5,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ApiError } from '@/lib/client-api';
 import { deciderTache, getTachesAValider } from '@/lib/mon-espace';
-import { LIBELLE_SECTION } from '@/lib/temps';
 import type { TacheAValider } from '@/lib/types';
 import { DemandesEquipe } from './demandes-equipe';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const SECTION_URL = { avant_projet: 'avant-projet', permis: 'permis', execution: 'execution' } as const;
+// Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
+const lienProjet = (base: string, projetId: string) =>
+  base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
 
 // « Mon espace » · À valider (maquette du boss) : les demandes de l'équipe
-// dont on est le N+1 ; et, quand il y en a, les tâches remises par l'équipe
-// (blocs des sections, lot 5c) — absentes de la maquette, montrées seulement
-// si elles existent.
+// dont on est le N+1 ; et, quand il y en a, les remises des tâches du
+// gabarit que l'on valide (chef de team, Architecte DPLG en suppléance).
 export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: number) => void }) {
   const [taches, setTaches] = useState<TacheAValider[] | null>(null);
   const [absences, setAbsences] = useState(0);
@@ -64,7 +64,7 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
   const [renvoi, setRenvoi] = useState(false);
   const [motif, setMotif] = useState('');
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
-  const enRetard = !!t.echeance && t.remisLe.slice(0, 10) > t.echeance;
+  const enRetard = !!t.echeance && !!t.remisLe && t.remisLe.slice(0, 10) > t.echeance;
 
   async function decider(decision: 'valider' | 'renvoyer') {
     setEtat({ envoi: true, erreur: null });
@@ -82,10 +82,10 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
           {t.responsable} · {t.libelle}
         </strong>
         <span className="cell-sub">
-          <Link className="lien-inline" href={`${base}/projets/${t.projetId}/${SECTION_URL[t.section]}`}>
+          <Link className="lien-inline" href={lienProjet(base, t.projetId)}>
             {t.projetCode}
           </Link>{' '}
-          · {LIBELLE_SECTION[t.section]} · remis le {jjmmaaaa(t.remisLe)}
+          · {t.etape} · remise v{String(t.version).padStart(2, '0')}{t.remisLe && ` le ${jjmmaaaa(t.remisLe)}`}
           {t.echeance && ` · échéance ${jjmmaaaa(t.echeance)}`}
         </span>
         {enRetard && <span className="cell-sub temps-alerte">Remis après l’échéance</span>}

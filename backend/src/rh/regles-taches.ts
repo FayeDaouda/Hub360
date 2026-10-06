@@ -37,3 +37,16 @@ export function statsPerformances(taches: { statut: StatutTache; echeance: strin
     },
   };
 }
+
+// Tâche du gabarit (TacheProjet) : son statut enregistré tient lieu d'état
+// de validation (remise vNN à valider, reprise, validée).
+export function etatValidationGabarit(t: {
+  statut: 'a_faire' | 'a_valider' | 'reprise' | 'validee' | 'non_necessaire';
+  remisLe: Date | null;
+  valideeLe: Date | null;
+}): EtatValidation {
+  if (t.statut === 'validee') return { remisLe: t.remisLe, valideLe: t.valideeLe ?? new Date(0), renvoyeLe: null };
+  if (t.statut === 'a_valider') return { remisLe: t.remisLe ?? new Date(0), valideLe: null, renvoyeLe: null };
+  if (t.statut === 'reprise') return { remisLe: null, valideLe: null, renvoyeLe: new Date(0) };
+  return null;
+}

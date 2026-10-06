@@ -3,8 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from './temps.service';
 
-const PROJET = { id: 'P1', code: 'PN_S.26', programme: 'Villa', societeId: 'S1' };
-const BLOC = { groupe: 'dossier_permis', debut: '2026-09-14', echeance: '2026-09-18', responsableId: 'C1', permis: { projet: PROJET } };
+// Tâche du gabarit assignée (TacheProjet), telle que lue par chargerTachesAssignees.
+const TACHE = {
+  id: 'T1', assigneId: 'C1', libelle: 'Dossier de permis', debutLe: '2026-09-14', finLe: '2026-09-18', heures: 16,
+  statut: 'a_faire', version: 0, valideeLe: null, evenements: [],
+  carte: { libelle: 'Permis de construire', etapeNumero: 4, etapeLibelle: 'Autorisations' },
+  projet: { id: 'P1', code: 'PN_S.26', programme: 'Villa', client: { nom: 'Pape Ndiaye' } },
+};
 const DOSSIER = {
   id: 'D1', matricule: 'GH-0001', prenom: 'Awa', nom: 'Ndiaye', poste: 'CAD L1', dateEntree: '2024-01-03', archiveLe: null,
   societe: { nom: 'Grey Concrete' }, collaborateur: { id: 'C1', cellule: { nom: 'Archi 2' } }, absences: [],
@@ -12,7 +17,7 @@ const DOSSIER = {
 };
 const SANS_FICHE = { ...DOSSIER, id: 'D2', matricule: 'GH-0002', collaborateur: null };
 
-function svc(o: { dossier?: object; blocs?: object[]; collab?: object | null } = {}) {
+function svc(o: { dossier?: object; taches?: object[]; collab?: object | null } = {}) {
   const d = { ...DOSSIER, ...o.dossier };
   const prisma = {
     dossierPersonnel: {
@@ -20,9 +25,7 @@ function svc(o: { dossier?: object; blocs?: object[]; collab?: object | null } =
       findUnique: jest.fn().mockResolvedValue(d),
       findFirst: jest.fn().mockResolvedValue(o.collab === null ? null : d),
     },
-    blocChecklistAvp: { findMany: jest.fn().mockResolvedValue([]) },
-    blocPermis: { findMany: jest.fn().mockResolvedValue(o.blocs ?? [BLOC]) },
-    blocExecution: { findMany: jest.fn().mockResolvedValue([]) },
+    tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? [TACHE]) },
     dureeStandardTache: {
       findMany: jest.fn().mockResolvedValue([{ societeId: 'S1', section: 'permis', groupe: 'dossier_permis', heures: 16 }]),
       upsert: jest.fn(),
@@ -56,10 +59,10 @@ describe('TempsService', () => {
     for (const m of ['2026-08', '2026-11', '2026-13']) await expect(svc().s.feuilles(m)).rejects.toThrow(BadRequestException);
   });
 
-  it('un bloc sans durée standard ou sans début ne produit aucune heure', async () => {
-    const r = await svc({ blocs: [{ ...BLOC, groupe: 'procedure' }, { ...BLOC, debut: null }] }).s.feuilles('2026-09');
+  it('une tâche sans temps atelier ou sans début ne produit aucune heure', async () => {
+    const r = await svc({ taches: [{ ...TACHE, heures: null }, { ...TACHE, id: 'T2', debutLe: null }] }).s.feuilles('2026-09');
     expect(r.feuilles[0]).toMatchObject({ heuresImputees: 0, statut: 'sans_heures', blocsNonPlanifies: 1 });
-    expect(r.feuilles[0].lignes).toEqual([expect.objectContaining({ manque: 'duree' })]);
+    expect(r.feuilles[0].lignes).toEqual([expect.objectContaining({ manque: 'duree', etape: '04 · Autorisations' })]);
   });
 
   it('contrôle : mois clos seulement, une seule fois, chiffres figés', async () => {

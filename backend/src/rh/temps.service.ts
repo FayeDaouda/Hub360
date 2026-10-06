@@ -25,7 +25,10 @@ export type StatutFeuille = 'en_cours' | 'a_controler' | 'sans_heures' | 'contro
 // Ligne de calcul d'une feuille (aussi figée telle quelle au contrôle).
 export type LigneCalcul = {
   id: string;
-  section: SectionTache;
+  // Étape du gabarit (« 02 · Avant-projet ») ; les feuilles figées avant le
+  // passage au gabarit (oct. 2026) portent la section du bloc à la place.
+  etape?: string;
+  section?: SectionTache;
   libelle: string;
   projetCode: string;
   projetProgramme: string;
@@ -249,7 +252,7 @@ function calculer(
     };
   }
 
-  // Détail du mois : les blocs dont la fenêtre touche le mois.
+  // Détail du mois : les tâches dont la fenêtre touche le mois.
   const m = bornesMois(mois);
   const duMois = taches.filter((t) => planifiee(t) && t.debut! <= m.fin && t.echeance! >= m.debut);
   const f = feuilleDuMois(mois, salarie, duMois, jour, feries);
@@ -265,7 +268,7 @@ function calculer(
     controleLe: null,
     lignes: duMois.map((t, i) => ({
       id: t.id,
-      section: t.section,
+      etape: t.etape,
       libelle: t.libelle,
       projetCode: t.projetCode,
       projetProgramme: t.projetProgramme,

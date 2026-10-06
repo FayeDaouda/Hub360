@@ -1,13 +1,13 @@
-import { Body, Controller, Get, Param, ParseEnumPipe, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
-import { SectionTache } from '@prisma/client';
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { IsIn, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { TachesService } from './taches.service';
 
 class DecisionTacheDto {
   @IsIn(['valider', 'renvoyer']) decision: 'valider' | 'renvoyer';
-  @IsOptional() @IsString() @MaxLength(1000) motif?: string;
+  // Renvoi en reprise : motif obligatoire (mêmes règles que la page Projets).
+  @ValidateIf((o) => o.decision === 'renvoyer') @IsString() @MinLength(3) @MaxLength(500) motif?: string;
 }
 
 type R = { user: { userId: string; societeId: string; role: string } };
@@ -23,19 +23,15 @@ export class MesTachesController {
     return this.taches.mesTaches(req.user);
   }
 
-  @Post(':section/:projetId/:groupe/remise')
-  remettre(
-    @Req() req: R,
-    @Param('section', new ParseEnumPipe(SectionTache)) section: SectionTache,
-    @Param('projetId', ParseUUIDPipe) projetId: string,
-    @Param('groupe') groupe: string,
-  ) {
-    return this.taches.remettre(req.user, { section, projetId, groupe });
+  // Tâche du gabarit : le service vérifie que la personne connectée en est l'assignée.
+  @Post(':projetId/:tacheId/remise')
+  remettre(@Req() req: R, @Param('projetId', ParseUUIDPipe) projetId: string, @Param('tacheId', ParseUUIDPipe) tacheId: string) {
+    return this.taches.remettre(req.user, projetId, tacheId);
   }
 }
 
-// Le N+1 (chef de cellule, Dir. GC, admin) : le service vérifie qu'il l'est
-// bien pour chaque tâche.
+// Le valideur (chef de team, Architecte DPLG, admin) : le service vérifie
+// qu'il l'est bien pour chaque tâche.
 @Controller('societes/:slug/taches')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class ValidationsTachesController {
@@ -46,14 +42,13 @@ export class ValidationsTachesController {
     return this.taches.aValider(req.user);
   }
 
-  @Post(':section/:projetId/:groupe/decision')
+  @Post(':projetId/:tacheId/decision')
   decider(
     @Req() req: R,
-    @Param('section', new ParseEnumPipe(SectionTache)) section: SectionTache,
     @Param('projetId', ParseUUIDPipe) projetId: string,
-    @Param('groupe') groupe: string,
+    @Param('tacheId', ParseUUIDPipe) tacheId: string,
     @Body() dto: DecisionTacheDto,
   ) {
-    return this.taches.decider(req.user, { section, projetId, groupe }, dto);
+    return this.taches.decider(req.user, projetId, tacheId, dto);
   }
 }

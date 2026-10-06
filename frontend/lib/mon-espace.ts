@@ -50,20 +50,19 @@ export const LIBELLE_PAIEMENT_SALAIRE: Record<ModePaiementSalaire, string> = {
   orange_money: 'Orange Money',
 };
 
-// Remise et validation des tâches (lot 5c).
-//   GET  …/mon-espace/taches                                  mes tâches + stats
-//   POST …/mon-espace/taches/:section/:projetId/:groupe/remise
-//   GET  …/taches/a-valider                                   file du N+1
-//   POST …/taches/:section/:projetId/:groupe/decision         { decision, motif? }
+// Remise et validation des tâches du gabarit (mêmes règles que Projets) :
+//   GET  …/mon-espace/taches                              mes tâches + stats
+//   POST …/mon-espace/taches/:projetId/:tacheId/remise
+//   GET  …/taches/a-valider                               remises qui m'attendent
+//   POST …/taches/:projetId/:tacheId/decision             { decision, motif? }
 type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
-const chemin = (t: { section: string; projetId: string; groupe: string }) => `${t.section}/${t.projetId}/${t.groupe}`;
 
 export const getMesTaches = (slug: string) => apiSociete<MesTaches>(slug, '/mon-espace/taches');
 export const remettreTache = (slug: string, t: TacheMonEspace) =>
-  apiSociete<MesTaches>(slug, `/mon-espace/taches/${chemin(t)}/remise`, { method: 'POST', body: {} });
+  apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/remise`, { method: 'POST', body: {} });
 export const getTachesAValider = (slug: string) => apiSociete<TacheAValider[]>(slug, '/taches/a-valider');
 export const deciderTache = (slug: string, t: TacheAValider, decision: 'valider' | 'renvoyer', motif?: string) =>
-  apiSociete<TacheAValider[]>(slug, `/taches/${chemin(t)}/decision`, { method: 'POST', body: { decision, motif } });
+  apiSociete<TacheAValider[]>(slug, `/taches/${t.projetId}/${t.id}/decision`, { method: 'POST', body: { decision, ...(motif ? { motif } : {}) } });
 
 export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }> = {
   validee: { libelle: 'Validée', pill: 'pill--succes' },

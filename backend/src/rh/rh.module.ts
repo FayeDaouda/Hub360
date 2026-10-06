@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ReglagesModule } from '../reglages/reglages.module';
+import { ProjetsModule } from '../projets/projets.module';
 import { DossiersPersonnelController } from './dossiers.controller';
 import { DossiersPersonnelService } from './dossiers.service';
 import { DemandesService } from './demandes.service';
@@ -19,7 +20,7 @@ import {
 } from './demandes.controller';
 
 @Module({
-  imports: [NotificationsModule, ReglagesModule],
+  imports: [NotificationsModule, ReglagesModule, ProjetsModule], // ProjetsModule : remise / validation des tâches du gabarit
   providers: [DossiersPersonnelService, DemandesService, IntegrationService, TempsService, MonEspaceService, TachesService],
   controllers: [
     DossiersPersonnelController,
