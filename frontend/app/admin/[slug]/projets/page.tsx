@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { getProjetsExecution } from '@/lib/projets';
 import { getCellules } from '@/lib/equipe';
+import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { vueProjetsGabarit } from '@/lib/acces-back-office';
 import { ProjetsOuverts } from '@/components/projets-ouverts/projets-ouverts';
@@ -50,10 +51,14 @@ function ProjetsParPhase({ params }: Props) {
   const [recherche, setRecherche] = useState('');
   const [vue, setVue] = useState<Vue>('grille');
 
+  // Noms des cellules : seulement pour qui lit Équipe (le CFO, par exemple,
+  // n'y a pas accès) ; sinon les projets s'affichent sans nom de cellule.
+  const session = useSessionCourante();
+  const lireCellules = session.role === 'societe_admin' || niveauSuffisant(session, 'equipe', 'lecture');
   useEffect(() => {
     getProjetsExecution(params.slug).then(setProjets);
-    getCellules(params.slug).then(setCellules).catch(() => setCellules([]));
-  }, [params.slug]);
+    if (lireCellules) getCellules(params.slug).then(setCellules).catch(() => setCellules([]));
+  }, [params.slug, lireCellules]);
 
   const nomCellule = useMemo(() => {
     const map = new Map(cellules.map((c) => [c.id, c.nom]));
