@@ -1,10 +1,14 @@
 import { apiSociete } from './client-api';
-import type { VuePilotage } from './types';
+import type { AttentionPilotage, VuePilotage } from './types';
 
 // Pilotage · tableau de bord Holding : chaque action renvoie la vue à jour.
 
 export function getPilotage(slug: string): Promise<VuePilotage> {
   return apiSociete<VuePilotage>(slug, '/pilotage');
+}
+
+export function getAttention(slug: string): Promise<AttentionPilotage> {
+  return apiSociete<AttentionPilotage>(slug, '/pilotage/attention');
 }
 
 export function deposerReporting(slug: string, type: 'direction' | 'rh', mois: string): Promise<VuePilotage> {

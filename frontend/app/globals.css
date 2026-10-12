@@ -14711,6 +14711,134 @@ a.notif-item:hover {
   grid-template-columns: minmax(0, 1fr);
   gap: 1.1rem;
 }
+/* « À votre attention » — accueil du CEO, au-dessus du Pilotage. Chaque
+   rubrique porte sa couleur (--pa-couleur) ; teintes via transparent,
+   jamais via blanc (mode sombre). */
+.pa {
+  display: grid;
+  gap: 0.75rem;
+}
+.pa-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+.pa-entete h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.pa-compte {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.pa-vide {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  color: var(--text-muted);
+}
+.pa-rubriques {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.pa-rubrique {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 1rem 1.1rem;
+  border-top: 3px solid var(--pa-couleur, var(--argile));
+}
+.pa-rubrique-titre {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.98rem;
+}
+.pa-icone {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--pa-couleur, var(--argile)) 16%, transparent);
+  color: var(--pa-couleur, var(--argile));
+}
+.pa-nombre {
+  margin-left: auto;
+  min-width: 1.6rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--pa-couleur, var(--argile)) 18%, transparent);
+  font-size: 0.82rem;
+  text-align: center;
+}
+.pa-liste {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pa-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.pa-ligne:hover,
+.pa-ligne:focus-visible {
+  border-color: color-mix(in oklch, var(--pa-couleur, var(--argile)) 55%, var(--border));
+  background: color-mix(in oklch, var(--pa-couleur, var(--argile)) 7%, transparent);
+}
+.pa-texte {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+.pa-texte strong {
+  overflow: hidden;
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pa-ligne .pill {
+  flex-shrink: 0;
+}
+.pa-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.pa-plus {
+  justify-self: start;
+}
+@media (max-width: 560px) {
+  .pa-ligne {
+    flex-wrap: wrap;
+  }
+  .pa-texte {
+    flex-basis: calc(100% - 28px);
+  }
+  .pa-texte strong {
+    white-space: normal;
+  }
+}
 .pi-tuile {
   border: 1px solid var(--border);
   color: inherit;

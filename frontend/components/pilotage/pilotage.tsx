@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getPilotage } from '@/lib/pilotage';
-import type { IndicateurPilotage, VuePilotage } from '@/lib/types';
+import { useEffect, useRef, useState } from 'react';
+import { ROLE_CEO } from '@/lib/acces-back-office';
+import { useSessionCourante } from '@/lib/layout-contexte';
+import { getAttention, getPilotage } from '@/lib/pilotage';
+import type { AttentionPilotage, IndicateurPilotage, VuePilotage } from '@/lib/types';
+import { Attention } from './attention';
 import { Reportings } from './reportings';
 import { Registre } from './registre';
 
@@ -22,15 +25,32 @@ const tonValeur = (i: IndicateurPilotage) =>
 // trois onglets — indicateurs du manuel, reportings mensuels, registre des
 // décisions. Chaque action renvoie la vue entière, remplacée telle quelle.
 export function Pilotage({ slug }: { slug: string }) {
+  const session = useSessionCourante();
+  // Accueil du CEO : « À votre attention » au-dessus du tableau de bord.
+  const accueilCeo = session.role === ROLE_CEO;
   const [vue, setVue] = useState<VuePilotage | null>(null);
+  const [attention, setAttention] = useState<AttentionPilotage | null>(null);
   const [onglet, setOnglet] = useState<Onglet>('indicateurs');
   const [erreur, setErreur] = useState<string | null>(null);
+  const ongletsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getPilotage(slug)
       .then(setVue)
       .catch((e) => setErreur(e instanceof Error && e.message ? e.message : 'Pilotage indisponible.'));
   }, [slug]);
+  useEffect(() => {
+    if (!accueilCeo) return;
+    getAttention(slug)
+      .then(setAttention)
+      .catch(() => setAttention(null));
+  }, [slug, accueilCeo]);
+
+  // Depuis « À votre attention » : l'onglet concerné, amené à l'écran.
+  const ouvrir = (o: Onglet) => {
+    setOnglet(o);
+    requestAnimationFrame(() => ongletsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
   const t = vue.tuiles;
@@ -57,6 +77,7 @@ export function Pilotage({ slug }: { slug: string }) {
         Indicateurs du manuel, reportings mensuels et registre des décisions. Ce qui n’est pas dans le HUB n’existe pas pour la gouvernance
         (§3.7).
       </p>
+      {accueilCeo && attention && <Attention slug={slug} attention={attention} vue={vue} onOnglet={ouvrir} />}
       <div className="po-tuiles">
         {tuiles.map((x) => (
           <button
@@ -72,7 +93,7 @@ export function Pilotage({ slug }: { slug: string }) {
         ))}
       </div>
 
-      <div className="fin-onglets">
+      <div className="fin-onglets" ref={ongletsRef}>
         <div className="vue-toggle" role="tablist" aria-label="Pilotage">
           {(
             [

@@ -35,6 +35,6 @@ import {
     MesTachesController,
     ValidationsTachesController,
   ],
-  exports: [TempsService], // Pilotage : feuilles de temps contrôlées
+  exports: [TempsService, DemandesService], // Pilotage : feuilles de temps contrôlées, absences à valider (N+1)
 })
 export class RhModule {}

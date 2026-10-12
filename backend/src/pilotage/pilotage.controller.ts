@@ -5,9 +5,10 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { SaisirDecisionDto } from './dto';
+import { AttentionService, type ActeurAttention } from './attention.service';
 import { type Acteur, PilotageService } from './pilotage.service';
 
-type R = { user: Acteur };
+type R = { user: Acteur & Pick<ActeurAttention, 'permissions'> };
 
 // Pilotage · tableau de bord Holding. Lecture selon la matrice (module
 // pilotage) ; les actions vont « par fonction » (choix du 05/10/2026) :
@@ -17,11 +18,20 @@ type R = { user: Acteur };
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 @RequiertPermission('pilotage', 'lecture')
 export class PilotageController {
-  constructor(private pilotage: PilotageService) {}
+  constructor(
+    private pilotage: PilotageService,
+    private attentionService: AttentionService,
+  ) {}
 
   @Get()
   vue(@Req() req: R) {
     return this.pilotage.vue(req.user);
+  }
+
+  // « À votre attention » (accueil du CEO) : chaque rubrique selon la matrice.
+  @Get('attention')
+  attention(@Req() req: R) {
+    return this.attentionService.attention(req.user);
   }
 
   @Post('reportings/:type/:mois/depot')

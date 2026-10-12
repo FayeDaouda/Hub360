@@ -255,6 +255,81 @@ export class ProjetsOuvertsService {
     };
   }
 
+  // Ce qui demande l'attention de la direction (accueil du CEO, Pilotage) —
+  // mêmes états que la vue Projets : tâches en retard par projet ouvert (dont
+  // retards qualifiés par une prolongation), tranches F1 à F3 prêtes et pas
+  // encore émises, avenants TS non acceptés au-delà du délai réglé.
+  async alertes(societeId: string) {
+    const jour = aujourdhui();
+    const [projets, nonOuverts, feries, seuilTs] = await Promise.all([
+      this.prisma.projet.findMany({
+        where: { societeId, ouvertLe: { not: null } },
+        orderBy: { ouvertLe: 'asc' },
+        include: {
+          ...AVEC_TACHES,
+          client: { select: { nom: true } },
+          factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { id: true, jalon: true, statut: true } },
+        },
+      }),
+      // F1 émise = projet ouvert : un projet signé dont F1 attend encore.
+      this.prisma.projet.findMany({
+        where: { societeId, ouvertLe: null, factures: { some: { jalon: 'signature', statut: 'brouillon', estAvoir: false } } },
+        select: {
+          id: true,
+          code: true,
+          client: { select: { nom: true } },
+          factures: { where: { jalon: 'signature', statut: 'brouillon', estAvoir: false }, select: { id: true }, take: 1 },
+        },
+      }),
+      this.feries(societeId),
+      this.reglages.regle<number>(societeId, 'alerte_avenant_jours'),
+    ]);
+    const devisTs = await this.prisma.devis.findMany({
+      where: { societeId, projetId: { in: projets.map((p) => p.id) }, statut: 'envoye' },
+      select: {
+        id: true,
+        projetId: true,
+        statut: true,
+        dateValidite: true,
+        dateEnvoi: true,
+        lignes: { orderBy: { ordre: 'asc' }, select: { designation: true, produitService: { select: { famille: true } } } },
+      },
+    });
+
+    const retards: { projetId: string; code: string; client: string; enRetard: number; prolongees: number; joursMax: number }[] = [];
+    const tranches: { projetId: string; code: string; client: string; tranche: 'F1' | 'F2' | 'F3'; factureId: string | null }[] = nonOuverts.map((p) => ({
+      projetId: p.id,
+      code: p.code,
+      client: p.client.nom,
+      tranche: 'F1' as const,
+      factureId: p.factures[0]?.id ?? null,
+    }));
+    for (const p of projets) {
+      const { etapes, etatsTaches } = this.etats(p, jour, feries);
+      const etats = [...etatsTaches.values()];
+      const enRetard = etats.filter((e) => e.code === 'en_retard').length;
+      const prolongees = etats.filter((e) => e.code === 'prolongee').length;
+      if (enRetard || prolongees) {
+        const joursMax = Math.max(...etats.map((e) => (e.code === 'en_retard' ? e.jours : 0)));
+        retards.push({ projetId: p.id, code: p.code, client: p.client.nom, enRetard, prolongees, joursMax });
+      }
+      const attentes = attentesFactures(etapes, this.sources(p));
+      for (const f of ['F2', 'F3'] as const) {
+        const fs = p.factures.filter((x) => x.jalon === JALON_PAR_FACTURE[f]);
+        if (attentes[f].length || fs.some((x) => x.statut === 'emise')) continue;
+        tranches.push({ projetId: p.id, code: p.code, client: p.client.nom, tranche: f, factureId: fs[0]?.id ?? null });
+      }
+    }
+    const codeDe = new Map(projets.map((p) => [p.id, p.code]));
+    const ts = devisTs.flatMap((d) => {
+      const alerte = alerteAvenant({ ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) }, jour, seuilTs);
+      if (!alerte) return [];
+      const designations = d.lignes.filter((l) => l.produitService?.famille === 'TS').map((l) => l.designation);
+      return [{ devisId: d.id, projetId: d.projetId!, code: codeDe.get(d.projetId!) ?? '—', objet: designations.join(' · '), jours: alerte.jours, seuil: alerte.seuil }];
+    });
+    return { retards, tranches, ts };
+  }
+
   // --- internes -----------------------------------------------------------------------
   private horizon(budgetHeures: number | null) {
     return Math.max(1, Math.round((budgetHeures ?? 320) / HEURES_PAR_JOUR));

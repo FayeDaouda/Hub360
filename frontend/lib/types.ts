@@ -2473,6 +2473,28 @@ export type DecisionRegistre = {
   peutCloturer: boolean;
 };
 
+// « À votre attention » (accueil du CEO, Pilotage) — backend
+// pilotage/attention.service.ts. null = rubrique hors des droits du compte.
+export type AttentionPilotage = {
+  retards: { projetId: string; code: string; client: string; enRetard: number; prolongees: number; joursMax: number }[] | null;
+  factures:
+    | {
+        etat: 'a_emettre' | 'impayee';
+        factureId: string | null;
+        projetId: string | null;
+        code: string;
+        client: string;
+        tranche: 'F1' | 'F2' | 'F3' | null;
+        reference: string | null;
+        montantTtc: number | null; // à émettre : TTC ; impayée : reste dû
+        joursRetard: number;
+        parVous: boolean; // validation offerte à ce compte (CEO : au-delà du seuil)
+      }[]
+    | null;
+  ts: { devisId: string; projetId: string; code: string; objet: string; jours: number; seuil: number }[] | null;
+  absences: { id: string; salarie: string; type: TypeAbsence; dateDebut: string; dateFin: string; jours: number }[];
+};
+
 export type ResponsableDecision = { role: string; libelle: string } | { collaborateurId: string; libelle: string };
 
 export type VuePilotage = {
