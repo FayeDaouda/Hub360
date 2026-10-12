@@ -2,7 +2,22 @@
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Archive, ArchiveRestore, Paperclip, Plus, X } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  CalendarClock,
+  FileWarning,
+  Inbox,
+  Paperclip,
+  Plus,
+  Timer,
+  UserPlus,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import { KpiStrip } from '@/components/admin/kpi-strip';
+import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { ApiError } from '@/lib/client-api';
@@ -147,7 +162,9 @@ export default function RhPage({ params }: Props) {
     setOnglet(o);
     setFiltre(f);
   };
-  const tuiles: { cle: string; libelle: string; valeur: number | null; aide: string; actif: boolean; onClick: () => void; ton?: string }[] = [
+  // Couleur = sens (lib/couleurs-etat.ts) : ambre à traiter, rouge en
+  // retard / hors objectif, vert rien en attente, iris sans objectif.
+  const tuiles: { cle: string; libelle: string; valeur: number | null; aide: string; actif: boolean; onClick: () => void; icone: LucideIcon; etat: EtatTuile }[] = [
     {
       cle: 'effectif',
       libelle: 'Effectif du groupe',
@@ -155,6 +172,8 @@ export default function RhPage({ params }: Props) {
       aide: parSociete.map((s) => `${nomCourt(s.nom)} ${s.n}`).join(' · '),
       actif: onglet === 'personnel' && !filtre,
       onClick: () => ouvrir('personnel'),
+      icone: Users,
+      etat: 'marque',
     },
     {
       cle: 'incomplets',
@@ -163,7 +182,8 @@ export default function RhPage({ params }: Props) {
       aide: 'pièces ou champs manquants',
       actif: onglet === 'personnel' && filtre === 'incomplets',
       onClick: () => ouvrir('personnel', filtre === 'incomplets' ? null : 'incomplets'),
-      ton: incomplets ? 'attention' : undefined,
+      icone: FileWarning,
+      etat: etatATraiter(incomplets),
     },
     {
       cle: 'feuilles',
@@ -172,7 +192,9 @@ export default function RhPage({ params }: Props) {
       aide: 'mois clos · calcul automatique',
       actif: onglet === 'temps',
       onClick: () => ouvrir('temps'),
-      ton: compteurs?.feuilles ? 'attention' : undefined,
+      icone: Timer,
+      // Objectif du Pilotage : 100 % des mois clos contrôlés.
+      etat: compteurs ? etatEnRetard(compteurs.feuilles) : 'marque',
     },
     {
       cle: 'demandes',
@@ -181,7 +203,8 @@ export default function RhPage({ params }: Props) {
       aide: 'absences, remboursements, paie, attestations',
       actif: onglet === 'demandes',
       onClick: () => ouvrir('demandes'),
-      ton: compteurs?.demandes || paiementsAValider ? 'attention' : undefined,
+      icone: Inbox,
+      etat: compteurs ? etatATraiter(compteurs.demandes + paiementsAValider) : 'marque',
     },
     {
       cle: 'integration',
@@ -190,7 +213,9 @@ export default function RhPage({ params }: Props) {
       aide: `${compteurs?.points ?? 0} point(s) à traiter · cap des 90 jours`,
       actif: onglet === 'integration',
       onClick: () => ouvrir('integration'),
-      ton: compteurs?.points ? 'attention' : undefined,
+      icone: UserPlus,
+      // Point J+30 / 60 / 90 échu non fait = en retard.
+      etat: compteurs ? etatEnRetard(compteurs.points) : 'marque',
     },
     {
       cle: 'fins',
@@ -199,7 +224,8 @@ export default function RhPage({ params }: Props) {
       aide: 'CDD et stages à anticiper',
       actif: onglet === 'personnel' && filtre === 'fins',
       onClick: () => ouvrir('personnel', filtre === 'fins' ? null : 'fins'),
-      ton: fins ? 'attention' : undefined,
+      icone: CalendarClock,
+      etat: etatATraiter(fins),
     },
   ];
   const compte = (n: number | undefined | null) => (n == null ? '' : ` · ${n}`);
@@ -214,14 +240,18 @@ export default function RhPage({ params }: Props) {
           </button>
         )}
       </div>
-      <div className="rh-tuiles">
-        {tuiles.map((t) => (
-          <button key={t.cle} type="button" className={`panel glass-panel po-tuile pi-tuile${t.actif ? ' is-active' : ''}`} onClick={t.onClick}>
-            <span className="po-tuile-libelle">{t.libelle}</span>
-            <strong className={`po-tuile-valeur${t.ton ? ` po-ton--${t.ton}` : ''}`}>{t.valeur ?? '…'}</strong>
-            <span className="po-aide">{t.aide}</span>
-          </button>
-        ))}
+      <div className="rh-kpi">
+        <KpiStrip
+          tuiles={tuiles.map((t) => ({
+            cle: t.cle,
+            label: t.libelle,
+            valeur: t.valeur ?? '…',
+            sousTexte: t.aide,
+            icone: t.icone,
+            degrade: DEGRADE_ETAT[t.etat],
+            action: { type: 'filtre' as const, actif: t.actif, onClick: t.onClick },
+          }))}
+        />
       </div>
       <div className="fin-onglets">
         <div className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique RH">

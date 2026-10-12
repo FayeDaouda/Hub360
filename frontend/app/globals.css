@@ -10858,19 +10858,16 @@ a.notif-item:hover {
   color: var(--text-muted);
   font-size: 0.82rem;
 }
-.rh-tuiles {
-  display: grid;
+.rh-kpi .kpi-strip {
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.9rem;
-  margin-bottom: 1rem;
 }
 @media (max-width: 1300px) {
-  .rh-tuiles {
+  .rh-kpi .kpi-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 @media (max-width: 640px) {
-  .rh-tuiles {
+  .rh-kpi .kpi-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .rh-tiroir .rh-fiche {
@@ -12229,13 +12226,14 @@ a.notif-item:hover {
   cursor: pointer;
 }
 .po-projet:hover {
-  border-color: color-mix(in oklch, var(--fuchsia) 45%, var(--border));
+  border-color: color-mix(in oklch, var(--brand) 45%, var(--border));
 }
+/* Sélection = élément actif : iris (--brand), comme la barre latérale. */
 .po-projet.is-actif,
 .po-etape.is-actif,
 .po-tache.is-actif {
-  border-color: var(--fuchsia);
-  background: color-mix(in oklch, var(--fuchsia) 9%, transparent);
+  border-color: var(--brand);
+  background: color-mix(in oklch, var(--brand) 10%, transparent);
 }
 .po-projet-tete {
   display: flex;

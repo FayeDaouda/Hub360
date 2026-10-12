@@ -14,3 +14,15 @@ export const DEGRADE_ETAT: Record<EtatTuile, { a: string; b: string }> = {
   succes: { a: '#26734a', b: '#3a9462' },
   marque: { a: '#6b2fb8', b: '#8c55d6' },
 };
+
+// Mêmes règles que backend/src/pilotage/chiffres.service.ts.
+export const etatATraiter = (n: number): EtatTuile => (n > 0 ? 'attention' : 'succes');
+export const etatEnRetard = (n: number): EtatTuile => (n > 0 ? 'risque' : 'succes');
+// Rouge si un délai est dépassé, ambre s'il reste à traiter dans les délais.
+export const etatSelonDelai = (total: number, depasses: number): EtatTuile =>
+  depasses > 0 ? 'risque' : etatATraiter(total);
+
+// Délais du cycle CRM : fiche à compléter sous 72 h (relance du HUB),
+// offre validée par le CFO sous 48 h (tuile de la maquette).
+export const DELAI_FICHE_MS = 72 * 3600 * 1000;
+export const DELAI_CFO_MS = 48 * 3600 * 1000;

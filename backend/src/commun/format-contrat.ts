@@ -56,6 +56,7 @@ export function versDossierCrm(
     proprietaire: PersonneRef;
     archivePar: PersonneRef;
     offres: (Devis & { lignes: LigneDevis[] })[];
+    transitions?: { creeLe: Date }[];
   },
   // Offre (finances_devis) : absente de la réponse (clé omise, pas null) pour
   // qui n'a pas le droit en lecture.
@@ -115,6 +116,8 @@ export function versDossierCrm(
     // Offre envoyée restée sans réponse au-delà de sa validité (« Expirée »
     // du registre) : le seul statut, visible sans droit Finances — ni montant
     // ni contenu de l'offre.
+    // Soumis au CFO le… (en validation seulement) : délai de 48 h.
+    soumisLe: d.statut === 'en_validation' ? (d.transitions?.[0]?.creeLe ?? null) : null,
     offreExpiree:
       d.statut === 'offre_envoyee' &&
       !!d.offres[0] &&

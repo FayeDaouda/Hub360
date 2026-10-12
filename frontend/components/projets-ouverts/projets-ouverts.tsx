@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { MessageCircle } from 'lucide-react';
+import { AtSign, CalendarPlus, CheckCheck, Hourglass, MessageCircle } from 'lucide-react';
+import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
+import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
@@ -167,35 +169,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
 
       {erreur && <p className="field-erreur">{erreur}</p>}
 
-      <div className="po-tuiles">
-        {dplg || salarie ? (
-          <Tuile
-            libelle="À valider par vous"
-            valeur={tableau?.kpi.aValiderParVous.length}
-            aide="jamais sa propre tâche · cliquer pour valider"
-            ton="validation"
-            onClick={tableau?.kpi.aValiderParVous.length ? ouvrirRemiseAValider : undefined}
-          />
-        ) : (
-          <Tuile libelle="Remises à valider" valeur={tableau?.kpi.remisesAValider} aide="tous projets · chef de team ou DPLG" ton="validation" />
-        )}
-        <Tuile libelle="Tâches en retard" valeur={tableau?.kpi.tachesEnRetard} aide="échéance de référence dépassée" ton="risque" />
-        <Tuile
-          libelle="Prolongations à décider"
-          valeur={tableau?.kpi.prolongations}
-          aide="le retard est qualifié par le chef de team ou le DPLG"
-          ton="attention"
-        />
-        {salarie ? (
-          <Tuile libelle="Signalements et mentions" valeur={tableau?.kpi.mentions} aide="mises à jour à reporter, @mentions" ton="risque" />
-        ) : (
-          <Tuile
-            libelle="Signalements et mentions"
-            valeur={tableau ? tableau.kpi.tsNonAcceptes + tableau.kpi.mentions : undefined}
-            aide={tableau ? `${tableau.kpi.tsNonAcceptes} TS non accepté(s) · ${tableau.kpi.mentions} tâche(s)` : ''}
-            ton="risque"
-          />
-        )}
+      <div className="po-kpi">
+        <KpiStrip tuiles={tuilesProjets(tableau, dplg || salarie, salarie, ouvrirRemiseAValider)} />
       </div>
 
       {tableau && tableau.projets.length === 0 ? (
@@ -266,23 +241,64 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   );
 }
 
-type PropsTuile = { libelle: string; valeur: number | undefined; aide: string; ton: string; onClick?: () => void };
-
-function Tuile({ libelle, valeur, aide, ton, onClick }: PropsTuile) {
-  const contenu = (
-    <>
-      <span className="po-tuile-libelle">{libelle}</span>
-      <strong className={`po-tuile-valeur po-ton--${ton}`}>{valeur ?? '…'}</strong>
-      <span className="po-aide">{aide}</span>
-    </>
-  );
-  return onClick ? (
-    <button type="button" className="panel glass-panel po-tuile pi-tuile" onClick={onClick}>
-      {contenu}
-    </button>
-  ) : (
-    <div className="panel glass-panel po-tuile">{contenu}</div>
-  );
+// Tuiles du tableau (couleur = sens, lib/couleurs-etat.ts) : ambre à
+// traiter, rouge en retard (tâches, TS non acceptés), vert rien en attente.
+function tuilesProjets(
+  tableau: TableauProjets | null,
+  valideur: boolean,
+  salarie: boolean,
+  ouvrirRemise: () => void,
+): KpiTuile[] {
+  const k = tableau?.kpi;
+  const n = (v: number | undefined) => (v === undefined ? '…' : v);
+  const etat = (v: number | undefined, f: (x: number) => EtatTuile) => DEGRADE_ETAT[v === undefined ? 'marque' : f(v)];
+  const aValider = k?.aValiderParVous.length;
+  const signalements = k ? (salarie ? k.mentions : k.tsNonAcceptes + k.mentions) : undefined;
+  return [
+    valideur
+      ? {
+          cle: 'a-valider',
+          label: 'À valider par vous',
+          valeur: n(aValider),
+          sousTexte: 'jamais sa propre tâche · cliquer pour valider',
+          icone: CheckCheck,
+          degrade: etat(aValider, etatATraiter),
+          ...(aValider ? { action: { type: 'popup' as const, onClick: ouvrirRemise } } : {}),
+        }
+      : {
+          cle: 'remises',
+          label: 'Remises à valider',
+          valeur: n(k?.remisesAValider),
+          sousTexte: 'tous projets · chef de team ou DPLG',
+          icone: CheckCheck,
+          degrade: etat(k?.remisesAValider, etatATraiter),
+        },
+    {
+      cle: 'retard',
+      label: 'Tâches en retard',
+      valeur: n(k?.tachesEnRetard),
+      sousTexte: 'échéance de référence dépassée',
+      icone: Hourglass,
+      degrade: etat(k?.tachesEnRetard, etatEnRetard),
+    },
+    {
+      cle: 'prolongations',
+      label: 'Prolongations à décider',
+      valeur: n(k?.prolongations),
+      sousTexte: 'le retard est qualifié par le chef de team ou le DPLG',
+      icone: CalendarPlus,
+      degrade: etat(k?.prolongations, etatATraiter),
+    },
+    {
+      cle: 'signalements',
+      label: 'Signalements et mentions',
+      valeur: n(signalements),
+      sousTexte: salarie || !k ? 'mises à jour à reporter, @mentions' : `${k.tsNonAcceptes} TS non accepté(s) · ${k.mentions} tâche(s)`,
+      icone: AtSign,
+      // TS au-delà du délai réglé = en retard ; mention ouverte = à traiter.
+      degrade: DEGRADE_ETAT[!k ? 'marque' : !salarie && k.tsNonAcceptes > 0 ? 'risque' : etatATraiter(k.mentions)],
+    },
+  ];
 }
 
 type PropsDossier = {

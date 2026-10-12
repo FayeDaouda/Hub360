@@ -47,6 +47,8 @@ const INCLUDE_DOSSIER = {
   archivePar: PERSONNE,
   // L'offre en cours = la plus récente (étape F) — résumée dans la réponse.
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
+  // Dernière soumission au CFO : délai de 48 h (tuile « En attente CFO »).
+  transitions: { where: { vers: 'en_validation' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
 } as const;
 
 // Seul rôle habilité à modifier la fiche apporteur après sa création — pas

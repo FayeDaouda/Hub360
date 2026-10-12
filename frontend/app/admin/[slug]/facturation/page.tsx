@@ -23,6 +23,7 @@ import {
 } from '@/lib/types';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
 import { KpiStrip } from '@/components/admin/kpi-strip';
+import { DEGRADE_ETAT, etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
 import { ImpressionDocument } from '@/components/impression-document';
@@ -36,16 +37,6 @@ import { TableauDeBordFinances } from '@/components/finances/tableau-de-bord';
 import { GrilleTarifaire } from '@/components/finances/grille-tarifaire';
 import { OffrePanneau } from '@/components/finances/offre-panneau';
 import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
-
-// Dégradés des 5 tuiles, relevés sur la maquette Finances (oct. 2026) :
-// pervenche, sarcelle, orange, moutarde, rose.
-const DEGRADE_KPI = {
-  offres: { a: '#5a63e8', b: '#8f9cf7' },
-  transformation: { a: '#3fa9b5', b: '#7dd6cf' },
-  facture: { a: '#ea6f3c', b: '#f29b5e' },
-  encaisse: { a: '#e3a92c', b: '#efcb55' },
-  reste: { a: '#d23c7c', b: '#ef6fae' },
-};
 
 type Onglet = 'tableau' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
@@ -294,7 +285,7 @@ export default function FinancesPage({ params }: Props) {
               valeur: formatMontant(kpi.offresEnCours.montant),
               sousTexte: `${pluriel(kpi.offresEnCours.nombre, 'offre')} en validation ou chez le client`,
               icone: FileText,
-              degrade: DEGRADE_KPI.offres,
+              degrade: DEGRADE_ETAT.marque,
             },
             {
               cle: 'transformation',
@@ -302,7 +293,7 @@ export default function FinancesPage({ params }: Props) {
               valeur: kpi.transformation.pct == null ? '—' : `${kpi.transformation.pct} %`,
               sousTexte: `${pluriel(kpi.transformation.acceptes, 'acceptée')} · ${pluriel(kpi.transformation.refuses, 'refusée')}`,
               icone: TrendingUp,
-              degrade: DEGRADE_KPI.transformation,
+              degrade: DEGRADE_ETAT.marque,
             },
             {
               cle: 'facture',
@@ -310,7 +301,7 @@ export default function FinancesPage({ params }: Props) {
               valeur: formatMontant(kpi.facture.montant),
               sousTexte: `${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
               icone: FileText,
-              degrade: DEGRADE_KPI.facture,
+              degrade: DEGRADE_ETAT.marque,
             },
             {
               cle: 'encaisse',
@@ -318,7 +309,7 @@ export default function FinancesPage({ params }: Props) {
               valeur: formatMontant(kpi.encaisse.montant),
               sousTexte: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
               icone: Banknote,
-              degrade: DEGRADE_KPI.encaisse,
+              degrade: DEGRADE_ETAT.marque,
             },
             {
               cle: 'reste',
@@ -326,7 +317,7 @@ export default function FinancesPage({ params }: Props) {
               valeur: formatMontant(kpi.resteAEncaisser.montant),
               sousTexte: `${pluriel(kpi.resteAEncaisser.enRetard, 'facture')} en retard`,
               icone: Clock,
-              degrade: DEGRADE_KPI.reste,
+              degrade: DEGRADE_ETAT[etatEnRetard(kpi.resteAEncaisser.enRetard)],
             },
           ]}
         />
