@@ -53,8 +53,10 @@ const TUILES: Record<string, { libelle: string; icone: LucideIcon; montant?: boo
   integration: { libelle: 'Points d’intégration à faire', icone: UserPlus, chemin: 'rh?onglet=integration' },
 };
 
+// Valeur d'un indicateur : rouge hors objectif, vert atteint, couleur de
+// texte normale tant que l'objectif n'est pas fixé (couleur = sens).
 const tonValeur = (i: IndicateurPilotage) =>
-  i.evaluation === 'hors_objectif' ? ' pi-valeur--hors' : i.evaluation === 'dans_objectif' || i.atteintPropose ? ' pi-valeur--ok' : '';
+  i.evaluation === 'hors_objectif' ? ' pi-valeur--hors' : i.evaluation === 'dans_objectif' ? ' pi-valeur--ok' : '';
 
 // Pilotage · tableau de bord Holding (maquettes du boss) : chiffres clés
 // selon le rôle, « À votre attention » (CEO), puis trois onglets — indicateurs du manuel, reportings mensuels, registre des

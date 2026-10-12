@@ -2869,49 +2869,16 @@ a.admin-nav-item:hover {
    .admin-nav-item--<cle> ne pose que 2 variables, comme .projet-carte--* et
    .phase-etape--* — un seul point de vérité par couleur. */
 .admin-nav-item.is-active {
-  background: color-mix(in oklch, var(--nav-solide, var(--iris)) 18%, transparent);
+  background: color-mix(in oklch, var(--brand) 22%, transparent);
   color: #fff;
   font-weight: 600;
   box-shadow:
-    inset 0 0 0 1.5px color-mix(in oklch, var(--nav-solide, var(--iris)) 60%, transparent),
-    0 0 20px color-mix(in oklch, var(--nav-solide, var(--iris)) 35%, transparent);
+    inset 0 0 0 1.5px color-mix(in oklch, var(--brand) 70%, transparent),
+    0 0 20px color-mix(in oklch, var(--brand) 35%, transparent);
 }
 
-.admin-nav-item--tableau-de-bord.is-active {
-  --nav-solide: var(--azur);
-  --nav-fonce: var(--azur-fonce);
-}
-.admin-nav-item--crm.is-active {
-  --nav-solide: var(--turquoise);
-  --nav-fonce: var(--turquoise-fonce);
-}
-.admin-nav-item--projets.is-active {
-  --nav-solide: var(--sauge);
-  --nav-fonce: var(--sauge-fonce);
-}
-.admin-nav-item--equipe.is-active {
-  --nav-solide: var(--iris);
-  --nav-fonce: var(--iris-fonce);
-}
-.admin-nav-item--facturation.is-active {
-  --nav-solide: var(--argile);
-  --nav-fonce: var(--argile-fonce);
-}
-/* Nav collaborateur (Accueil/Mes projets/Mes indicateurs/Mon équipe) —
-   partage ce même bloc de règles (classe .admin-nav-item, cf.
-   collab-shell.tsx) : Projets et Équipe retombent déjà sur les 2 règles
-   ci-dessus. Accueil fait écho à Tableau de bord (même rôle, vue
-   d'ensemble) ; Indicateurs prend Turquoise, libre côté collaborateur (pas
-   de CRM ici). */
-.admin-nav-item--accueil.is-active {
-  --nav-solide: var(--azur);
-  --nav-fonce: var(--azur-fonce);
-}
-.admin-nav-item--indicateurs.is-active {
-  --nav-solide: var(--turquoise);
-  --nav-fonce: var(--turquoise-fonce);
-}
-
+/* Une seule couleur active dans tout le HUB (décision du 12/10/2026) : la
+   couleur de marque, iris (--brand) — plus de teinte par section. */
 .admin-nav-item.is-soon {
   opacity: 0.5;
   cursor: default;
@@ -3734,6 +3701,14 @@ button:focus-visible .repli-icone {
   --pill-nature-promotion-interne: #8a6420;
   --pill-phase: #75695a;
   --pill-azur: #4463bd;
+  /* Valeurs chiffrées (texte, pas de fond) : rouge hors objectif, vert
+     atteint — mêmes teintes que les pastilles, éclaircies en sombre. */
+  --valeur-risque: var(--pill-risque);
+  --valeur-succes: var(--pill-succes);
+}
+:root[data-theme='dark'] {
+  --valeur-risque: #f2867b;
+  --valeur-succes: #6fcf97;
 }
 
 .pill {
@@ -6360,13 +6335,13 @@ textarea.field-input {
 }
 
 .vue-toggle button.is-active {
-  background: color-mix(in oklch, var(--argile) 85%, transparent);
+  background: color-mix(in oklch, var(--brand) 88%, transparent);
   color: #fff;
   backdrop-filter: blur(6px) saturate(150%);
   -webkit-backdrop-filter: blur(6px) saturate(150%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 4px 10px color-mix(in oklch, var(--argile-fonce) 28%, transparent);
+    0 4px 10px color-mix(in oklch, var(--iris-fonce) 28%, transparent);
 }
 
 /* Vue « par phase » : sections empilées, une par phase occupée */
@@ -14880,10 +14855,10 @@ a.notif-item:hover {
   line-height: 1.15;
 }
 .pi-valeur--hors {
-  color: var(--fuchsia);
+  color: var(--valeur-risque);
 }
 .pi-valeur--ok {
-  color: color-mix(in srgb, #7fd4a0 75%, var(--text));
+  color: var(--valeur-succes);
 }
 .pi-objectif,
 .pi-source,
