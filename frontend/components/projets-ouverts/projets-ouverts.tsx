@@ -142,7 +142,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     : salarie
       ? 'Salarié : remise, prolongation, discussion ; le chef de team valide'
       : ceo
-        ? 'CEO : lecture et commentaires ; aucune action sur les tâches'
+        ? 'Consultation et commentaires'
         : peutAssigner
           ? 'Lecture et assignation · accès complet'
           : 'Lecture seule';
