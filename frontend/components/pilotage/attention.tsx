@@ -91,7 +91,7 @@ export function Attention({
             ? { libelle: 'En retard', ton: 'risque' }
             : f.parVous
               ? { libelle: 'À valider par vous', ton: 'attention' }
-              : { libelle: 'À émettre', ton: 'neutre' },
+              : { libelle: 'À émettre', ton: 'attention' },
         href: f.factureId
           ? `${base}/facturation?facture=${f.factureId}`
           : `${base}/projets/${f.projetId}/facturation`,

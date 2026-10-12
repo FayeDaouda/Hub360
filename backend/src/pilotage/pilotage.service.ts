@@ -116,7 +116,7 @@ export class PilotageService {
           select: { statut: true, finLe: true, debutLe: true, heures: true, valideeLe: true, evenements: { where: { type: 'reprise' }, select: { id: true }, take: 1 } },
         }),
         this.chargeEquipes(societeId, mois, jour),
-        this.prisma.reportingMensuel.findMany({ where: { societeId }, select: { mois: true, deposeLe: true } }),
+        this.prisma.reportingMensuel.findMany({ where: { societeId }, select: { type: true, mois: true, deposeLe: true } }),
         this.prisma.decisionRegistre.findMany({ where: { societeId, closeLe: null }, select: { echeance: true, closeLe: true } }),
       ]);
 
@@ -125,7 +125,17 @@ export class PilotageService {
     const aTemps = partATemps(
       taches.map((t) => ({ debut: t.debutLe, echeance: t.finLe, heures: t.heures == null ? null : Number(t.heures), statut: t.statut, valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null })),
     );
-    const deposes = reportings.map((r) => ({ ...r, aLHeure: jourIso(r.deposeLe) <= echeanceReporting(r.mois) }));
+    // Reportings dus : déposés, ou dont l'échéance (J+5) est passée — un
+    // reporting non déposé à temps compte comme manqué (0 / 2 si aucun).
+    const types: TypeReporting[] = ['direction', 'rh'];
+    const dus = moisAReporter(jour).flatMap((mois) =>
+      types.flatMap((type) => {
+        const depot = reportings.find((r) => r.type === type && r.mois === mois);
+        if (!depot && jour <= echeanceReporting(mois)) return [];
+        return [{ aLHeure: !!depot && jourIso(depot.deposeLe) <= echeanceReporting(mois) }];
+      }),
+    );
+    const aLHeureReportings = dus.filter((r) => r.aLHeure).length;
     const depassees = decisions.filter((d) => statutDecision({ echeance: d.echeance, closeLe: null }, jour) === 'echeance_depassee').length;
 
     const indicateur = (
@@ -141,7 +151,7 @@ export class PilotageService {
     const pct = (v: number | null) => (v == null ? '—' : `${v} %`);
     const conversion = pourcentage(avecSuivi, signees);
     const reprises = pourcentage(validees.filter((t) => t.evenements.length > 0).length, validees.length);
-    const ponctualite = pourcentage(deposes.filter((r) => r.aLHeure).length, deposes.length);
+    const ponctualite = pourcentage(aLHeureReportings, dus.length);
     const controle = pourcentage(feuilles.controlees, feuilles.total);
 
     return [
@@ -194,10 +204,10 @@ export class PilotageService {
         'reportings_j5',
         'Reportings déposés à J+5',
         ponctualite,
-        pct(ponctualite),
+        dus.length ? `${aLHeureReportings} / ${dus.length}` : '—',
         { type: 'minimum', valeur: 100 },
         'Objectif : 100 % (manuel §4.3)',
-        deposes.length ? `${deposes.filter((r) => r.aLHeure).length} à l'heure sur ${deposes.length} déposé(s)` : 'Aucun reporting déposé',
+        dus.length ? `${aLHeureReportings} déposé(s) à l'heure sur ${dus.length} dû(s)` : 'Aucun reporting encore dû',
       ),
       indicateur(
         'feuilles_controlees',
