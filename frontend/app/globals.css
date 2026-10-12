@@ -2718,6 +2718,14 @@ button {
      découper la pilule qui déborde volontairement dessus. */
 }
 
+/* Mode clair : le voile à 55 % devenait un gris-bleu terne sur le fond
+   lavande (barre « éteinte ») — même barre sombre, plus dense, libellés
+   secondaires plus nets. */
+:root:not([data-theme='dark']) .admin-sidebar {
+  --sidebar-text-muted: rgba(245, 243, 252, 0.74);
+  background: rgba(16, 19, 38, 0.9);
+}
+
 .admin-sidebar-scroll {
   position: relative;
   z-index: 1;
@@ -14751,6 +14759,8 @@ a.notif-item:hover {
 }
 .pa-rubrique {
   display: grid;
+  /* minmax(0, …) : une ligne longue se replie au lieu d'élargir la carte. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
   min-width: 0;
   padding: 1rem 1.1rem;
@@ -14818,10 +14828,16 @@ a.notif-item:hover {
   flex: 1;
 }
 .pa-texte strong {
+  /* Deux lignes, puis points de suspension (texte entier au survol). */
+  display: -webkit-box;
   overflow: hidden;
   font-size: 0.92rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.pa-texte .cell-sub {
+  white-space: normal;
 }
 .pa-ligne .pill {
   flex-shrink: 0;
@@ -14839,9 +14855,6 @@ a.notif-item:hover {
   }
   .pa-texte {
     flex-basis: calc(100% - 28px);
-  }
-  .pa-texte strong {
-    white-space: normal;
   }
 }
 .pi .fin-onglets {

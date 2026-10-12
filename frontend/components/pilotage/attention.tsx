@@ -88,7 +88,7 @@ export function Attention({
             : `${f.reference ?? 'Facture'} · échue depuis ${f.joursRetard} j · reste ${formatMontant(f.montantTtc ?? 0)}`,
         pill:
           f.etat === 'impayee'
-            ? { libelle: 'Impayée', ton: 'risque' }
+            ? { libelle: 'En retard', ton: 'risque' }
             : f.parVous
               ? { libelle: 'À valider par vous', ton: 'validation' }
               : { libelle: 'À émettre', ton: 'neutre' },
@@ -204,11 +204,11 @@ function RubriqueAttention({ rubrique: r }: { rubrique: Rubrique }) {
           return (
             <li key={l.cle}>
               {'href' in l ? (
-                <Link href={l.href} className="pa-ligne">
+                <Link href={l.href} className="pa-ligne" title={`${l.titre} — ${l.detail}`}>
                   {contenu}
                 </Link>
               ) : (
-                <button type="button" className="pa-ligne" onClick={l.onClick}>
+                <button type="button" className="pa-ligne" title={`${l.titre} — ${l.detail}`} onClick={l.onClick}>
                   {contenu}
                 </button>
               )}

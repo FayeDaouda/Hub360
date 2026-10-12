@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   ReceiptText,
-  Search,
   Settings,
   ShieldCheck,
   UserRound,
@@ -52,7 +51,7 @@ const NAV: NavItem[] = [
   { cle: 'tableau-de-bord', libelle: 'Pilotage', icone: LayoutDashboard, chemin: '' },
   { cle: 'crm', libelle: 'CRM', icone: Contact, chemin: 'crm' },
   { cle: 'projets', libelle: 'Projets', icone: FolderKanban, chemin: 'projets' },
-  { cle: 'facturation', libelle: 'Finances', icone: ReceiptText, chemin: 'facturation', tag: 'restreint' },
+  { cle: 'facturation', libelle: 'Finances', icone: ReceiptText, chemin: 'facturation' },
   { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
   { cle: 'equipe', libelle: 'Équipes', icone: Users, chemin: 'equipe' },
   { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
@@ -356,10 +355,6 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             <h1 className="admin-title">{titre}</h1>
           </div>
           <div className="admin-topbar-actions">
-            <div className="admin-search">
-              <Search size={16} strokeWidth={1.75} aria-hidden />
-              <input type="search" placeholder="Rechercher — bientôt" disabled />
-            </div>
             <ChatWidget slug={session.societe.slug} moiId={session.utilisateur.id} />
             <ClocheNotifications slug={session.societe.slug} session={session} />
             <ThemeToggle />
