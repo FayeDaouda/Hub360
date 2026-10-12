@@ -251,7 +251,7 @@ export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
       if (e.ecart && e.ecart < 0) return { libelle: `Validé · +${-e.ecart} h`, ton: 'attention' };
       return { libelle: 'Validé', ton: 'succes' };
     case 'a_valider':
-      return { libelle: `À valider · ${v(e.version)}`, ton: 'validation' };
+      return { libelle: `À valider · ${v(e.version)}`, ton: 'attention' };
     case 'reprise':
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };
     case 'en_retard':
@@ -263,9 +263,9 @@ export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
     case 'verrouillee':
       return { libelle: 'Verrouillée', ton: 'neutre' };
     case 'non_necessaire':
-      return { libelle: 'Non nécessaire', ton: 'eteint' };
+      return { libelle: 'Non nécessaire', ton: 'neutre' };
     case 'desactivee':
-      return { libelle: 'Désactivée', ton: 'eteint' };
+      return { libelle: 'Désactivée', ton: 'neutre' };
     default:
       return { libelle: 'À venir', ton: 'neutre' };
   }
@@ -293,7 +293,9 @@ export function pastilleEtape(e: EtapeOuverte): { libelle: string; ton: Ton } {
   return { libelle: 'À venir', ton: 'neutre' };
 }
 
-export type Ton = 'succes' | 'attention' | 'risque' | 'info' | 'validation' | 'neutre' | 'eteint';
+// Mêmes tons que les pastilles .pill--* (couleur = sens) : « à valider »
+// attend une décision → attention ; désactivé / non nécessaire → neutre.
+export type Ton = 'succes' | 'attention' | 'risque' | 'info' | 'neutre';
 
 // Temps standard d'une tâche, tel qu'affiché dans la ligne (maquette : « 8 h »,
 // « 3,4 h », « — » sans temps atelier).

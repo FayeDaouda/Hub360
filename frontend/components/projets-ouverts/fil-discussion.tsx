@@ -94,7 +94,7 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
                   </div>
                 ))}
                 <div className="po-fil-actions">
-                  {c.ouvert && <span className="po-pastille po-pastille--attention">Ouvert</span>}
+                  {c.ouvert && <span className="pill pill--attention">Ouvert</span>}
                   {c.resoluLe && <span className="po-aide">Résolu le {jjmmaaaa(c.resoluLe)}</span>}
                   {mentionnables && c.reponses.length === 0 && !c.resoluLe && (
                     <button type="button" className="po-lien" onClick={() => setReponseA(c)}>

@@ -157,8 +157,8 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       </p>
       <h3 className="po-panneau-titre">{tache.libelle}</h3>
       <div className="po-pastilles">
-        <span className={`po-pastille po-pastille--${pastille.ton}`}>{pastille.libelle}</span>
-        {tache.sourceNative && <span className="po-pastille po-pastille--validation">source native exigée</span>}
+        <span className={`pill pill--${pastille.ton}`}>{pastille.libelle}</span>
+        {tache.sourceNative && <span className="pill pill--neutre">source native exigée</span>}
       </div>
       <dl className="po-panneau-lignes">
         {lignes.map(([dt, dd]) => (

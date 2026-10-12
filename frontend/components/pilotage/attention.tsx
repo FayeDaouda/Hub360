@@ -27,7 +27,7 @@ type Ligne = {
   cle: string;
   titre: string;
   detail: string;
-  pill?: { libelle: string; ton: 'risque' | 'attention' | 'validation' | 'neutre' };
+  pill?: { libelle: string; ton: 'risque' | 'attention' | 'neutre' };
 } & ({ href: string } | { onClick: () => void });
 
 type Rubrique = { cle: string; titre: string; icone: ReactNode; couleur: string; lignes: Ligne[] };
@@ -90,7 +90,7 @@ export function Attention({
           f.etat === 'impayee'
             ? { libelle: 'En retard', ton: 'risque' }
             : f.parVous
-              ? { libelle: 'À valider par vous', ton: 'validation' }
+              ? { libelle: 'À valider par vous', ton: 'attention' }
               : { libelle: 'À émettre', ton: 'neutre' },
         href: f.factureId
           ? `${base}/facturation?facture=${f.factureId}`
@@ -151,7 +151,7 @@ export function Attention({
         cle: a.id,
         titre: a.salarie,
         detail: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${pluriel(a.jours, 'jour')} · du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)}`,
-        pill: { libelle: 'Vous êtes N+1', ton: 'validation' },
+        pill: { libelle: 'Vous êtes N+1', ton: 'attention' },
         href: `${base}/mon-espace?onglet=a-valider`,
       })),
     },

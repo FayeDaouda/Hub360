@@ -224,7 +224,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                     >
                       <span className="po-projet-tete">
                         <span className="po-code">{p.code}</span>
-                        <span className={`po-pastille po-pastille--${p.enRetard ? 'risque' : 'succes'}`}>
+                        <span className={`pill pill--${p.enRetard ? 'risque' : 'succes'}`}>
                           {p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
                         </span>
                       </span>
@@ -321,7 +321,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
           </p>
           <div className="po-pastilles">
             {factures.map((f) => (
-              <span key={f.libelle} className={`po-pastille po-pastille--${f.ton}`}>
+              <span key={f.libelle} className={`pill pill--${f.ton}`}>
                 {f.libelle}
               </span>
             ))}
@@ -360,7 +360,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
                 </span>
               </span>
               <strong>{e.libelle}</strong>
-              <span className={`po-pastille po-pastille--${p.ton}`}>{p.libelle}</span>
+              <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
             </button>
           );
         })}
@@ -483,10 +483,10 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil }: PropsCarte) {
           <h3>{c.libelle}</h3>
         </div>
         <div className="po-carte-droite">
-          <span className={`po-pastille po-pastille--${p.ton}`}>{p.libelle}</span>
+          <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
           {fenetre && <span className="po-aide">{fenetre}</span>}
           {etiquettes.map((e) => (
-            <span key={e} className="po-pastille po-pastille--validation">
+            <span key={e} className="pill pill--neutre">
               {e}
             </span>
           ))}
@@ -524,7 +524,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil }: PropsCarte) {
                   <span className="po-tache-heures">{heuresTache(t)}</span>
                   <span className={`po-tache-echeance${t.etat.code === 'en_retard' ? ' po-retard' : ''}`}>{t.finLe ? jjmm(t.finLe) : '—'}</span>
                   <span className="po-tache-etat">
-                    <span className={`po-pastille po-pastille--${pt.ton}`}>{pt.libelle}</span>
+                    <span className={`pill pill--${pt.ton}`}>{pt.libelle}</span>
                     {t.fil > 0 && (
                       <span className="po-tache-fil" aria-label={`${t.fil} message(s)`}>
                         <MessageCircle size={13} strokeWidth={2} aria-hidden /> {t.fil}

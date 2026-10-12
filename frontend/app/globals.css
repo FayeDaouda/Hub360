@@ -12287,54 +12287,6 @@ a.notif-item:hover {
   gap: 0.4rem;
   margin-top: 0.5rem;
 }
-.po-pastille {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-  background: color-mix(in oklch, var(--text-muted) 16%, transparent);
-}
-.po-pastille--succes {
-  background: color-mix(in oklch, var(--sauge) 20%, transparent);
-  color: var(--sauge);
-}
-.po-pastille--attention {
-  background: color-mix(in oklch, var(--ocre) 22%, transparent);
-  color: color-mix(in oklch, var(--ocre) 75%, var(--text));
-}
-.po-pastille--risque {
-  background: color-mix(in oklch, var(--fuchsia) 18%, transparent);
-  color: var(--fuchsia);
-}
-.po-pastille--info {
-  background: color-mix(in oklch, var(--azur) 18%, transparent);
-  color: var(--azur);
-}
-.po-pastille--validation {
-  background: color-mix(in oklch, var(--iris) 18%, transparent);
-  color: var(--iris);
-}
-.po-pastille--eteint {
-  background: transparent;
-  color: var(--text-muted);
-}
-/* Sombre : texte éclairci (currentColor renverrait la couleur du parent). */
-:root[data-theme='dark'] .po-pastille--succes {
-  color: color-mix(in oklch, var(--sauge) 55%, white);
-}
-:root[data-theme='dark'] .po-pastille--risque {
-  color: color-mix(in oklch, var(--fuchsia) 55%, white);
-}
-:root[data-theme='dark'] .po-pastille--info {
-  color: color-mix(in oklch, var(--azur) 55%, white);
-}
-:root[data-theme='dark'] .po-pastille--validation {
-  color: color-mix(in oklch, var(--iris) 55%, white);
-}
-
 /* Dossier */
 .po-dossier {
   display: grid;
