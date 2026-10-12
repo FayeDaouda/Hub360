@@ -18,8 +18,16 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 // Finances · Factures (maquette) : filtres, factures groupées par mois de
 // création avec le total TTC du mois, encaissé et barre de progression ; une
 // ligne ouvre la facture.
-export function OngletFactures({ factures, onOuvrir }: { factures: FactureCentrale[]; onOuvrir: (f: FactureCentrale) => void }) {
-  const [filtre, setFiltre] = useState<FiltreFacture>('tout');
+export function OngletFactures({
+  factures,
+  onOuvrir,
+  filtreInitial = 'tout',
+}: {
+  factures: FactureCentrale[];
+  onOuvrir: (f: FactureCentrale) => void;
+  filtreInitial?: FiltreFacture; // ?filtre= (tuile « Reste à encaisser en retard » du Pilotage)
+}) {
+  const [filtre, setFiltre] = useState<FiltreFacture>(filtreInitial);
   const visibles = factures.filter((f) => dansFiltreFacture(f, filtre));
 
   const cadre = useHautMesure<HTMLElement>();

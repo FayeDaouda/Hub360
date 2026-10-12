@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Archive, ArchiveRestore, Paperclip, Plus, X } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
@@ -76,7 +77,11 @@ export default function RhPage({ params }: Props) {
   const [filtre, setFiltre] = useState<'incomplets' | 'fins' | null>(null);
   const [archives, setArchives] = useState(false);
   const [ouvert, setOuvert] = useState<DossierPersonnel | 'nouveau' | null>(null);
-  const [onglet, setOnglet] = useState<Onglet>('personnel');
+  // ?onglet= : lien direct (tuiles RH du Pilotage).
+  const ongletDemande = useSearchParams().get('onglet');
+  const [onglet, setOnglet] = useState<Onglet>(
+    ongletDemande === 'temps' || ongletDemande === 'integration' || ongletDemande === 'demandes' ? ongletDemande : 'personnel',
+  );
   const [compteurs, setCompteurs] = useState<Compteurs | null>(null);
 
   // Tuiles des autres onglets : relues à chaque changement d'onglet, pour

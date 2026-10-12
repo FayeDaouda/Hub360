@@ -183,7 +183,7 @@ function RubriqueAttention({ rubrique: r }: { rubrique: Rubrique }) {
   const [tout, setTout] = useState(false);
   const lignes = tout ? r.lignes : r.lignes.slice(0, LIGNES_VISIBLES);
   return (
-    <section className="panel glass-panel pa-rubrique" style={{ ['--pa-couleur' as string]: r.couleur }}>
+    <section id={`pa-${r.cle}`} className="panel glass-panel pa-rubrique" style={{ ['--pa-couleur' as string]: r.couleur }}>
       <h3 className="pa-rubrique-titre">
         <span className="pa-icone">{r.icone}</span>
         {r.titre}

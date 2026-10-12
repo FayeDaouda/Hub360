@@ -1,8 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CalendarClock, FolderPlus, Gauge, Scale } from 'lucide-react';
+import {
+  AlarmClock,
+  Banknote,
+  CalendarCheck,
+  Clock3,
+  FileWarning,
+  FolderKanban,
+  FolderOpen,
+  HeartPulse,
+  ReceiptText,
+  Send,
+  Timer,
+  UserPlus,
+  type LucideIcon,
+} from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
+import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
+import { formatMontant } from '@/lib/format';
 import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getAttention, getPilotage } from '@/lib/pilotage';
@@ -20,19 +36,28 @@ const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string
   sans_donnee: null,
 };
 
-// Une couleur par tuile (demande du boss : KPI en couleurs, comme Finances).
-const DEGRADE_KPI = {
-  hors: { a: '#d23c7c', b: '#ef6fae' },
-  nouveaux: { a: '#5a63e8', b: '#8f9cf7' },
-  reportings: { a: '#ea6f3c', b: '#f29b5e' },
-  decisions: { a: '#3fa9b5', b: '#7dd6cf' },
+// Libellé, icône et destination de chaque chiffre clé (valeurs et état :
+// serveur). Montants en FCFA ; le reste en nombre.
+const TUILES: Record<string, { libelle: string; icone: LucideIcon; montant?: boolean; chemin: string }> = {
+  facture_mois: { libelle: 'Facturé du mois', icone: ReceiptText, montant: true, chemin: 'facturation?onglet=factures' },
+  encaisse_mois: { libelle: 'Encaissé du mois', icone: Banknote, montant: true, chemin: 'facturation?onglet=factures' },
+  reste_retard: { libelle: 'Reste à encaisser en retard', icone: AlarmClock, montant: true, chemin: 'facturation?onglet=factures&filtre=en_retard' },
+  projets_ouverts: { libelle: 'Projets ouverts', icone: FolderKanban, chemin: 'projets' },
+  pipeline: { libelle: 'Pipeline actif', icone: FolderOpen, chemin: 'crm' },
+  fiches: { libelle: 'Fiches à compléter', icone: FileWarning, chemin: 'crm' },
+  cfo: { libelle: 'En attente CFO', icone: Clock3, chemin: 'crm' },
+  client: { libelle: 'Chez le client', icone: Send, chemin: 'crm' },
+  absences: { libelle: 'Absences à valider', icone: CalendarCheck, chemin: 'rh?onglet=demandes' },
+  remboursements: { libelle: 'Remboursements à traiter', icone: HeartPulse, chemin: 'rh?onglet=demandes' },
+  feuilles: { libelle: 'Feuilles de temps à contrôler', icone: Timer, chemin: 'rh?onglet=temps' },
+  integration: { libelle: 'Points d’intégration à faire', icone: UserPlus, chemin: 'rh?onglet=integration' },
 };
 
 const tonValeur = (i: IndicateurPilotage) =>
   i.evaluation === 'hors_objectif' ? ' pi-valeur--hors' : i.evaluation === 'dans_objectif' || i.atteintPropose ? ' pi-valeur--ok' : '';
 
-// Pilotage · tableau de bord Holding (maquettes du boss) : tuiles, puis
-// trois onglets — indicateurs du manuel, reportings mensuels, registre des
+// Pilotage · tableau de bord Holding (maquettes du boss) : chiffres clés
+// selon le rôle, « À votre attention » (CEO), puis trois onglets — indicateurs du manuel, reportings mensuels, registre des
 // décisions. Chaque action renvoie la vue entière, remplacée telle quelle.
 export function Pilotage({ slug }: { slug: string }) {
   const session = useSessionCourante();
@@ -64,41 +89,33 @@ export function Pilotage({ slug }: { slug: string }) {
 
   if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
   const t = vue.tuiles;
-  const nouveaux = vue.indicateurs.find((i) => i.cle === 'nouveaux_projets');
-  const tuiles = [
-    { cle: 'hors' as const, onglet: 'indicateurs' as Onglet, libelle: 'Indicateurs hors objectif', valeur: String(t.horsObjectif), aide: `sur ${t.suivis} suivis`, icone: Gauge },
-    {
-      cle: 'nouveaux' as const,
-      onglet: 'indicateurs' as Onglet,
-      libelle: 'Nouveaux projets de conception',
-      valeur: nouveaux?.affichage ?? '—',
-      aide: `${vue.mois} · objectif du manuel`,
-      icone: FolderPlus,
-    },
-    { cle: 'reportings' as const, onglet: 'reportings' as Onglet, libelle: 'Reportings', valeur: String(t.reportingsADeposer), aide: 'à déposer · J+5', icone: CalendarClock },
-    { cle: 'decisions' as const, onglet: 'registre' as Onglet, libelle: 'Décisions ouvertes', valeur: String(t.decisionsOuvertes), aide: 'registre des décisions', icone: Scale },
-  ];
-  // La tuile mise en avant : la première de l'onglet ouvert.
-  const tuileActive = tuiles.find((x) => x.onglet === onglet)?.cle;
-
+  // « Reste à encaisser en retard » : la carte Factures de « À votre
+  // attention » quand elle est affichée (CEO), sinon Finances filtrées.
+  const carteFactures = accueilCeo && !!attention?.factures?.length;
+  const lien = (cle: string) =>
+    cle === 'reste_retard' && carteFactures ? '#pa-factures' : `/admin/${slug}/${TUILES[cle]?.chemin ?? ''}`;
   return (
     <div className="pi">
       <p className="eq-sous-titre">
         Indicateurs du manuel, reportings mensuels et registre des décisions. Ce qui n’est pas dans le HUB n’existe pas pour la gouvernance
         (§3.7).
       </p>
+      {vue.chiffres && (
+        <KpiStrip
+          tuiles={vue.chiffres.tuiles
+            .filter((x) => TUILES[x.cle])
+            .map((x) => ({
+              cle: x.cle,
+              label: TUILES[x.cle].libelle,
+              valeur: TUILES[x.cle].montant ? formatMontant(x.valeur) : String(x.valeur),
+              sousTexte: x.aide,
+              icone: TUILES[x.cle].icone,
+              degrade: DEGRADE_ETAT[x.etat],
+              action: { type: 'lien' as const, href: lien(x.cle) },
+            }))}
+        />
+      )}
       {accueilCeo && attention && <Attention slug={slug} attention={attention} vue={vue} onOnglet={ouvrir} />}
-      <KpiStrip
-        tuiles={tuiles.map((x) => ({
-          cle: x.cle,
-          label: x.libelle,
-          valeur: x.valeur,
-          sousTexte: x.aide,
-          icone: x.icone,
-          degrade: DEGRADE_KPI[x.cle],
-          action: { type: 'filtre' as const, actif: tuileActive === x.cle, onClick: () => setOnglet(x.onglet) },
-        }))}
-      />
 
       <div className="fin-onglets" ref={ongletsRef}>
         <div className="vue-toggle" role="tablist" aria-label="Pilotage">

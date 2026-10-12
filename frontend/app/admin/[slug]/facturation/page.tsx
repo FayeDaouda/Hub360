@@ -395,7 +395,11 @@ export default function FinancesPage({ params }: Props) {
       ) : !factures ? (
         <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
       ) : (
-        <OngletFactures factures={facturesFiltrees} onOuvrir={(f) => setFactureOuverte(f.id)} />
+        <OngletFactures
+          factures={facturesFiltrees}
+          onOuvrir={(f) => setFactureOuverte(f.id)}
+          filtreInitial={searchParams.get('filtre') === 'en_retard' ? 'en_retard' : 'tout'}
+        />
       )}
 
       {modalDevis && (

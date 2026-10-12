@@ -5,13 +5,14 @@ import { ReglagesModule } from '../reglages/reglages.module';
 import { RhModule } from '../rh/rh.module';
 import { PilotageController } from './pilotage.controller';
 import { AttentionService } from './attention.service';
+import { ChiffresPilotageService } from './chiffres.service';
 import { PilotageService } from './pilotage.service';
 
 @Module({
   // Réglages : objectifs, jours fériés ; RH : feuilles de temps, absences à
   // valider ; Projets et Finances : alertes de l'accueil CEO.
   imports: [ReglagesModule, RhModule, ProjetsModule, FinancesModule],
-  providers: [PilotageService, AttentionService],
+  providers: [PilotageService, AttentionService, ChiffresPilotageService],
   controllers: [PilotageController],
 })
 export class PilotageModule {}

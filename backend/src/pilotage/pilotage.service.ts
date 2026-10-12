@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, type TypeReporting } from '@prisma/client';
+import { Prisma, type NiveauPermission, type TypeReporting } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from '../rh/temps.service';
@@ -19,9 +19,10 @@ import {
   statutDecision,
   statutReporting,
 } from './pilotage-regles';
+import { ChiffresPilotageService } from './chiffres.service';
 import type { SaisirDecisionDto } from './dto';
 
-export type Acteur = { userId: string; societeId: string; role: string };
+export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
 // Rôles qui saisissent et clôturent les décisions des instances (choix du
 // 05/10/2026 : « par fonction », la matrice reste en lecture).
@@ -64,15 +65,18 @@ export class PilotageService {
     private prisma: PrismaService,
     private reglages: ReglagesService,
     private temps: TempsService,
+    private chiffres: ChiffresPilotageService,
   ) {}
 
   async vue(a: Acteur) {
     const jour = aujourdhui();
     await this.synchroniserRegistre(a.societeId, jour);
-    const [indicateurs, reportings, registre] = await Promise.all([
-      this.indicateurs(a.societeId, jour),
+    const feuilles = await this.feuillesControlees(a.societeId, jour);
+    const [indicateurs, reportings, registre, chiffres] = await Promise.all([
+      this.indicateurs(a.societeId, jour, feuilles),
       this.reportings(a, jour),
       this.registre(a, jour),
+      this.chiffres.tuiles(a, jour, feuilles),
     ]);
     const suivis = indicateurs.filter((i) => i.evaluation !== 'sans_donnee');
     return {
@@ -83,6 +87,8 @@ export class PilotageService {
         reportingsADeposer: reportings.filter((r) => r.statut === 'a_deposer' || r.statut === 'en_retard').length,
         decisionsOuvertes: registre.decisions.filter((d) => d.statut !== 'close').length,
       },
+      // Chiffres clés en tête de page, selon la matrice (chiffres.service.ts).
+      chiffres,
       indicateurs,
       reportings,
       ...registre,
@@ -91,10 +97,10 @@ export class PilotageService {
 
   // --- Indicateurs -----------------------------------------------------------
 
-  private async indicateurs(societeId: string, jour: string) {
+  private async indicateurs(societeId: string, jour: string, feuilles: { total: number; controlees: number }) {
     const mois = moisDe(jour);
     const { debut, fin } = bornesMois(mois);
-    const [objNouveaux, objConversion, objATemps, objCharge, objReprises, nouveaux, offres, taches, charge, reportings, feuilles, decisions] =
+    const [objNouveaux, objConversion, objATemps, objCharge, objReprises, nouveaux, offres, taches, charge, reportings, decisions] =
       await Promise.all([
         this.reglages.regle<number | null>(societeId, 'objectif_nouveaux_projets'),
         this.reglages.regle<number | null>(societeId, 'objectif_conversion_chantier'),
@@ -111,7 +117,6 @@ export class PilotageService {
         }),
         this.chargeEquipes(societeId, mois, jour),
         this.prisma.reportingMensuel.findMany({ where: { societeId }, select: { mois: true, deposeLe: true } }),
-        this.feuillesControlees(societeId, jour),
         this.prisma.decisionRegistre.findMany({ where: { societeId, closeLe: null }, select: { echeance: true, closeLe: true } }),
       ]);
 

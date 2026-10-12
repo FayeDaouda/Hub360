@@ -2504,4 +2504,9 @@ export type VuePilotage = {
   reportings: ReportingPilotage[];
   decisions: DecisionRegistre[];
   saisie: { instances: string[]; responsables: ResponsableDecision[] } | null; // null = pas de saisie
+  // Chiffres clés en tête de page, selon la matrice (backend pilotage/chiffres.service.ts).
+  chiffres: {
+    jeu: 'finances' | 'crm' | 'rh';
+    tuiles: { cle: string; valeur: number; aide: string; etat: 'risque' | 'attention' | 'succes' | 'marque' }[];
+  } | null;
 };
