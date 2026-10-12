@@ -263,7 +263,10 @@ async function main() {
         finances_charges: 'validation',
         equipe: 'lecture',
         rh: 'lecture',
-        mon_espace: 'aucun',
+        // ecriture (12/10/2026, décision du boss) : son propre espace (congés,
+        // remboursements, documents) et l'onglet « À valider » — il est le
+        // N+1 des directeurs (COO, CFO, CTO, CIO ; rh/demandes.service.ts).
+        mon_espace: 'ecriture',
         pilotage: 'lecture',
         documents: 'lecture',
         communication: 'lecture',

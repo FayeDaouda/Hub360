@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ROLE_CEO } from '@/lib/acces-back-office';
 import { ApiError } from '@/lib/client-api';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getAbsencesAValider } from '@/lib/demandes';
@@ -36,6 +37,11 @@ const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
 const SANS_VALIDATION = new Set(['RH', 'Salarié', 'collaborateur']);
 // Salarié pas encore affecté à une équipe : bandeau d'explication (maquette).
 const EQUIPE_ATTENDUE = new Set(['Salarié', 'collaborateur']);
+// Rôles hors circuit des tâches (le CEO n'en reçoit jamais) : ni
+// performances, ni temps, ni cellule — son espace s'ouvre sur « À valider »
+// (N+1 des directeurs) et ses demandes personnelles.
+const SANS_TACHES = new Set([ROLE_CEO]);
+const ONGLETS_TACHES = new Set<Onglet>(['performances', 'temps', 'cellule']);
 
 // « Mon espace » (RH lot 5) : l'espace personnel de chaque compte, direction
 // comprise, monté dans le back-office comme dans l'espace collaborateur.
@@ -87,7 +93,10 @@ export function MonEspace({ slug }: { slug: string }) {
 
   // Carte de mission : seulement quand la RH l'a rédigée (nouvel arrivant).
   const visibles = ONGLETS.filter(
-    (o) => (o.cle !== 'mission' || !!dossier?.mission) && (o.cle !== 'a-valider' || aValider > 0 || !SANS_VALIDATION.has(role)),
+    (o) =>
+      (o.cle !== 'mission' || !!dossier?.mission) &&
+      (o.cle !== 'a-valider' || aValider > 0 || !SANS_VALIDATION.has(role)) &&
+      !(SANS_TACHES.has(role) && ONGLETS_TACHES.has(o.cle)),
   );
   const onglet: Onglet = visibles.some((o) => o.cle === demandeOnglet) ? demandeOnglet : visibles[0].cle;
   const courant = ONGLETS.find((o) => o.cle === onglet)!;
@@ -107,7 +116,7 @@ export function MonEspace({ slug }: { slug: string }) {
             ? [
                 dossier.poste,
                 dossier.societe,
-                dossier.cellule ?? 'sans cellule',
+                dossier.cellule ?? (SANS_TACHES.has(role) ? null : 'sans cellule'),
                 `${LIBELLE_CONTRAT[dossier.typeContrat]}${dossier.dateEntree ? ` depuis le ${jjmmaaaa(dossier.dateEntree)}` : ''}`,
               ]
                 .filter(Boolean)
