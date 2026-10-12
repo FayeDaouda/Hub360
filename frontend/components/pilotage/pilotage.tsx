@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { CalendarClock, FolderPlus, Gauge, Scale } from 'lucide-react';
+import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getAttention, getPilotage } from '@/lib/pilotage';
@@ -16,6 +18,14 @@ const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string
   dans_objectif: { classe: 'pill--succes', libelle: 'Dans l’objectif' },
   a_fixer: { classe: 'pill--neutre', libelle: 'Objectif à fixer' },
   sans_donnee: null,
+};
+
+// Une couleur par tuile (demande du boss : KPI en couleurs, comme Finances).
+const DEGRADE_KPI = {
+  hors: { a: '#d23c7c', b: '#ef6fae' },
+  nouveaux: { a: '#5a63e8', b: '#8f9cf7' },
+  reportings: { a: '#ea6f3c', b: '#f29b5e' },
+  decisions: { a: '#3fa9b5', b: '#7dd6cf' },
 };
 
 const tonValeur = (i: IndicateurPilotage) =>
@@ -55,18 +65,18 @@ export function Pilotage({ slug }: { slug: string }) {
   if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
   const t = vue.tuiles;
   const nouveaux = vue.indicateurs.find((i) => i.cle === 'nouveaux_projets');
-  const tuiles: { cle: string; onglet: Onglet; libelle: string; valeur: string; aide: string; ton?: string }[] = [
-    { cle: 'hors', onglet: 'indicateurs', libelle: 'Indicateurs hors objectif', valeur: String(t.horsObjectif), aide: `sur ${t.suivis} suivis`, ton: t.horsObjectif ? 'risque' : undefined },
+  const tuiles = [
+    { cle: 'hors' as const, onglet: 'indicateurs' as Onglet, libelle: 'Indicateurs hors objectif', valeur: String(t.horsObjectif), aide: `sur ${t.suivis} suivis`, icone: Gauge },
     {
-      cle: 'nouveaux',
-      onglet: 'indicateurs',
+      cle: 'nouveaux' as const,
+      onglet: 'indicateurs' as Onglet,
       libelle: 'Nouveaux projets de conception',
       valeur: nouveaux?.affichage ?? '—',
       aide: `${vue.mois} · objectif du manuel`,
-      ton: nouveaux?.evaluation === 'hors_objectif' ? 'attention' : undefined,
+      icone: FolderPlus,
     },
-    { cle: 'reportings', onglet: 'reportings', libelle: 'Reportings', valeur: String(t.reportingsADeposer), aide: 'à déposer · J+5' },
-    { cle: 'decisions', onglet: 'registre', libelle: 'Décisions ouvertes', valeur: String(t.decisionsOuvertes), aide: 'registre des décisions' },
+    { cle: 'reportings' as const, onglet: 'reportings' as Onglet, libelle: 'Reportings', valeur: String(t.reportingsADeposer), aide: 'à déposer · J+5', icone: CalendarClock },
+    { cle: 'decisions' as const, onglet: 'registre' as Onglet, libelle: 'Décisions ouvertes', valeur: String(t.decisionsOuvertes), aide: 'registre des décisions', icone: Scale },
   ];
   // La tuile mise en avant : la première de l'onglet ouvert.
   const tuileActive = tuiles.find((x) => x.onglet === onglet)?.cle;
@@ -78,20 +88,17 @@ export function Pilotage({ slug }: { slug: string }) {
         (§3.7).
       </p>
       {accueilCeo && attention && <Attention slug={slug} attention={attention} vue={vue} onOnglet={ouvrir} />}
-      <div className="po-tuiles">
-        {tuiles.map((x) => (
-          <button
-            key={x.cle}
-            type="button"
-            className={`panel glass-panel po-tuile pi-tuile${tuileActive === x.cle ? ' is-active' : ''}`}
-            onClick={() => setOnglet(x.onglet)}
-          >
-            <span className="po-tuile-libelle">{x.libelle}</span>
-            <strong className={`po-tuile-valeur${x.ton ? ` po-ton--${x.ton}` : ''}`}>{x.valeur}</strong>
-            <span className="po-aide">{x.aide}</span>
-          </button>
-        ))}
-      </div>
+      <KpiStrip
+        tuiles={tuiles.map((x) => ({
+          cle: x.cle,
+          label: x.libelle,
+          valeur: x.valeur,
+          sousTexte: x.aide,
+          icone: x.icone,
+          degrade: DEGRADE_KPI[x.cle],
+          action: { type: 'filtre' as const, actif: tuileActive === x.cle, onClick: () => setOnglet(x.onglet) },
+        }))}
+      />
 
       <div className="fin-onglets" ref={ongletsRef}>
         <div className="vue-toggle" role="tablist" aria-label="Pilotage">

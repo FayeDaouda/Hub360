@@ -14839,20 +14839,6 @@ a.notif-item:hover {
     white-space: normal;
   }
 }
-.pi-tuile {
-  border: 1px solid var(--border);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-.pi-tuile:hover {
-  border-color: color-mix(in oklch, var(--argile) 45%, var(--border));
-}
-.pi-tuile.is-active {
-  border: 2px solid var(--argile);
-}
 .pi .fin-onglets {
   margin-bottom: 0;
 }
