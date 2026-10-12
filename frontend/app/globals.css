@@ -3780,20 +3780,16 @@ button:focus-visible .repli-icone {
   --pill-fond: var(--pill-validation);
 }
 .statut-select--aucun {
-  background-color: var(--admin-fond);
-  color: var(--text-muted);
+  --pill-fond: var(--pill-aucun);
 }
 .statut-select--lecture {
-  background-color: var(--turquoise-tint);
-  color: var(--turquoise-fonce);
+  --pill-fond: var(--pill-lecture);
 }
 .statut-select--ecriture {
-  background-color: var(--argile-tint);
-  color: var(--argile-fonce);
+  --pill-fond: var(--pill-ecriture);
 }
 .statut-select--validation {
-  background-color: var(--sauge-tint);
-  color: var(--sauge-fonce);
+  --pill-fond: var(--pill-validation);
 }
 
 /* Pastille posée sur une surface colorée (tuile KPI, carte sur un halo) :
@@ -4634,8 +4630,10 @@ button:focus-visible .repli-icone {
    modale d'assignation aux sous-groupes.
    ========================================================================== */
 
-/* <select> de statut dans le tableau — allure de pastille, couleur selon
-   la valeur. Reste un select natif (accessible, éditable au clavier). */
+/* <select> de statut — allure de pastille : mêmes variables --pill-* que
+   .pill (fond plein, texte blanc), couleur selon la valeur. Reste un select
+   natif (accessible, éditable au clavier). Les variantes --* servent aussi
+   de couleur aux pastilles de statut CRM (.pill.statut-select--*). */
 .statut-select {
   font-family: inherit;
   font-size: 0.74rem;
@@ -4643,6 +4641,8 @@ button:focus-visible .repli-icone {
   padding: 0.25rem 1.4rem 0.25rem 0.6rem;
   border-radius: 999px;
   border: 1px solid transparent;
+  background-color: var(--pill-fond, var(--pill-neutre));
+  color: #fff;
   cursor: pointer;
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
@@ -4657,32 +4657,68 @@ button:focus-visible .repli-icone {
   outline-offset: 1px;
 }
 
-/* Même grammaire que les pastilles : Argile (à traiter) · Iris (chez la
-   DAF) · Ocre (offre en cours) · Sauge (acquis) · rouge (perdu). Mapping
-   statut → variante : lib/cycle-crm.ts::CLASSE_STATUT. */
+/* Cycle CRM, couleur = sens : gris (nouveau, rien d'engagé) · ambre (chez
+   la DAF, attend une décision) · bleu (offre en cours chez le client) ·
+   vert (acquis) · rouge (perdu). Mapping statut → variante :
+   lib/cycle-crm.ts::CLASSE_STATUT. */
 .statut-select--nouveau {
-  background-color: var(--argile-tint);
-  color: var(--argile-fonce);
+  --pill-fond: var(--pill-neutre);
 }
 
 .statut-select--daf {
-  background-color: var(--iris-tint);
-  color: var(--iris-fonce);
+  --pill-fond: var(--pill-attention);
 }
 
 .statut-select--devis {
-  background-color: var(--ocre-tint);
-  color: var(--ocre-fonce);
+  --pill-fond: var(--pill-info);
 }
 
 .statut-select--valide {
-  background-color: var(--sauge-tint);
-  color: var(--sauge-fonce);
+  --pill-fond: var(--pill-succes);
 }
 
 .statut-select--annule {
-  background-color: #f6e3e1;
-  color: var(--danger);
+  --pill-fond: var(--pill-risque);
+}
+
+/* Liste ouverte : chaque option dans sa couleur, texte blanc. Chrome récent
+   (select personnalisable, base-select) dessine la liste dans la page ;
+   ailleurs, les options gardent ce style là où le navigateur l'applique
+   (Firefox) — la liste système de Safari l'ignore. */
+.statut-select option {
+  background-color: var(--pill-fond, var(--pill-neutre));
+  color: #fff;
+}
+@supports (appearance: base-select) {
+  .statut-select,
+  .statut-select::picker(select) {
+    appearance: base-select;
+  }
+  .statut-select::picker-icon {
+    display: none; /* flèche dessinée par background-image */
+  }
+  .statut-select::picker(select) {
+    padding: 0.3rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+  .statut-select option {
+    margin: 0.15rem 0;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .statut-select option::checkmark {
+    display: none;
+  }
+  .statut-select option:hover,
+  .statut-select option:focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--pill-fond, var(--pill-neutre)) 60%, transparent);
+    outline-offset: 1px;
+  }
 }
 
 /* Bandeau d'information (validation CRM -> projet créé) */

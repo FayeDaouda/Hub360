@@ -151,7 +151,7 @@ export function RolesPanel({ slug }: { slug: string }) {
                         }
                       >
                         {NIVEAUX.map((n) => (
-                          <option key={n.cle} value={n.cle}>
+                          <option key={n.cle} value={n.cle} className={`statut-select--${n.cle}`}>
                             {n.libelle}
                           </option>
                         ))}
