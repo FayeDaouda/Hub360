@@ -3702,7 +3702,32 @@ button:focus-visible .repli-icone {
   flex-shrink: 0;
 }
 
-/* Pastilles de statut, réutilisées par les jalons et le tableau */
+/* Pastilles de statut (refonte du 12/10/2026) — fond plein + texte blanc,
+   mêmes couleurs dans les deux thèmes. Une seule source : les variables
+   --pill-* ci-dessous ; une variante ne fait que choisir son --pill-fond.
+   Teintes foncées et adoucies, vérifiées : blanc ≥ 4,5:1 (AA) sur chacune,
+   et pastille ≥ 3:1 sur le fond sombre (#12162b) comme sur le clair. */
+:root {
+  /* 5 statuts */
+  --pill-succes: #2e7d4f; /* vert — fait, validé, dans l'objectif */
+  --pill-info: #346cb3; /* bleu — en cours, information */
+  --pill-attention: #9a5b00; /* ambre — à surveiller */
+  --pill-risque: #be4136; /* rouge — en retard, dépassé, hors objectif */
+  --pill-neutre: #687083; /* gris — à fixer, brouillon (indépendant du fond) */
+  /* Matrice des rôles */
+  --pill-aucun: #626979;
+  --pill-lecture: #1d7480;
+  --pill-ecriture: #b23c72;
+  --pill-validation: #3d7a34;
+  /* Catégories, natures de dossier, phase, azur */
+  --pill-cat-conception: #1f7a68;
+  --pill-cat-amenagement: #8a6a3c;
+  --pill-nature-mandat-client: #5c6680;
+  --pill-nature-promotion-interne: #8a6420;
+  --pill-phase: #75695a;
+  --pill-azur: #4463bd;
+}
+
 .pill {
   display: inline-block;
   font-size: 0.72rem;
@@ -3710,40 +3735,41 @@ button:focus-visible .repli-icone {
   padding: 0.22rem 0.6rem;
   border-radius: 999px;
   white-space: nowrap;
+  background: var(--pill-fond, var(--pill-neutre));
+  color: #fff;
+  /* Documents imprimés (facture) : garder le fond, sinon texte blanc sur blanc. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
-/* Système de statut — 3 familles délibérées :
-   Argile = actif / en cours / chantier · Sauge = validé / positif ·
-   Ocre = attention. Toujours fond tinté + texte dans la teinte foncée. */
-.pill--neutre {
-  background: var(--admin-fond);
-  color: var(--text-muted);
+.pill--succes {
+  --pill-fond: var(--pill-succes);
 }
-
 .pill--info {
-  background: var(--argile-tint);
-  color: var(--argile-fonce);
+  --pill-fond: var(--pill-info);
+}
+.pill--attention {
+  --pill-fond: var(--pill-attention);
+}
+.pill--risque {
+  --pill-fond: var(--pill-risque);
+}
+.pill--neutre {
+  --pill-fond: var(--pill-neutre);
 }
 
-/* Niveau de permission (matrice de rôles, page Paramètres) — même famille
-   « fond tinté + texte foncé » que le reste des pills, pas une palette à
-   part. aucun = neutre, lecture = turquoise (info), ecriture/validation
-   reprennent argile/sauge comme le reste de l'appli. */
+/* Niveau de permission (matrice des rôles). */
 .pill--aucun {
-  background: var(--admin-fond);
-  color: var(--text-muted);
+  --pill-fond: var(--pill-aucun);
 }
 .pill--lecture {
-  background: var(--turquoise-tint);
-  color: var(--turquoise-fonce);
+  --pill-fond: var(--pill-lecture);
 }
 .pill--ecriture {
-  background: var(--argile-tint);
-  color: var(--argile-fonce);
+  --pill-fond: var(--pill-ecriture);
 }
 .pill--validation {
-  background: var(--sauge-tint);
-  color: var(--sauge-fonce);
+  --pill-fond: var(--pill-validation);
 }
 .statut-select--aucun {
   background-color: var(--admin-fond);
@@ -3762,19 +3788,13 @@ button:focus-visible .repli-icone {
   color: var(--sauge-fonce);
 }
 
-.pill--succes {
-  background: var(--sauge-tint);
-  color: var(--sauge-fonce);
-}
-
-.pill--attention {
-  background: var(--ocre-tint);
-  color: var(--ocre-fonce);
-}
-
-.pill--risque {
-  background: #f6e3e1;
-  color: var(--danger);
+/* Pastille posée sur une surface colorée (tuile KPI, carte sur un halo) :
+   inversée — fond blanc, texte de la couleur du statut ; liseré discret
+   pour garder sa forme sur un fond clair. À poser APRÈS les variantes. */
+.pill--sur-couleur {
+  background: #fff;
+  color: var(--pill-fond, var(--pill-neutre));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--pill-fond, var(--pill-neutre)) 35%, transparent);
 }
 
 /* Tableau */
@@ -4968,8 +4988,7 @@ button:focus-visible .repli-icone {
 }
 
 .pill--phase {
-  background: #ece7dd;
-  color: #55514a;
+  --pill-fond: var(--pill-phase);
 }
 
 .dossier-skeleton {
@@ -5523,16 +5542,13 @@ button:focus-visible .repli-icone {
   }
 }
 
-/* Pastille de catégorie (Conception / Aménagement) — CRM, dossiers, fiche.
-   Famille Sauge tintée ; l'Aménagement se distingue par une nuance sable. */
+/* Pastille de catégorie (Conception / Aménagement) — CRM, dossiers, fiche. */
 .pill--cat-conception {
-  background: var(--sauge-tint);
-  color: var(--sauge-fonce);
+  --pill-fond: var(--pill-cat-conception);
 }
 
 .pill--cat-amenagement {
-  background: #efe7db;
-  color: #6b5a3f;
+  --pill-fond: var(--pill-cat-amenagement);
 }
 
 .dossier-sur,
@@ -6155,16 +6171,13 @@ textarea.field-input {
   }
 }
 
-/* Pastille de nature (mandat client / promotion interne) — CRM, fiche projet.
-   Même fond Sable ; la nature se lit à la teinte du texte. */
+/* Pastille de nature (mandat client / promotion interne) — CRM, fiche projet. */
 .pill--nature-mandat_client {
-  background: var(--admin-fond);
-  color: #55514a;
+  --pill-fond: var(--pill-nature-mandat-client);
 }
 
 .pill--nature-promotion_interne {
-  background: var(--admin-fond);
-  color: #7a5c22;
+  --pill-fond: var(--pill-nature-promotion-interne);
 }
 
 /* Pré-bilan versionné (section Avant-projet) — matrice postes × versions */
@@ -6742,14 +6755,6 @@ textarea.field-input {
 }
 .foncier-item--attente {
   border-color: var(--ocre);
-}
-.foncier-item--fait .pill--succes {
-  background: var(--sauge);
-  color: #fff;
-}
-.foncier-item--attente .pill--attention {
-  background: var(--ocre);
-  color: #fff;
 }
 .foncier-item-tete {
   display: flex;
@@ -14980,10 +14985,9 @@ a.notif-item:hover {
 .pi-echeance--depassee {
   color: var(--fuchsia);
 }
-/* « Ouverte » : pastille claire bleue, même famille que .pill--risque (fond fixe). */
+/* « Ouverte » (registre des décisions). */
 .pill--azur {
-  background: #e3ebfb;
-  color: color-mix(in oklch, var(--azur) 70%, black);
+  --pill-fond: var(--pill-azur);
 }
 .pi-statut {
   display: flex;

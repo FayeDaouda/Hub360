@@ -16,7 +16,8 @@ type Onglet = 'indicateurs' | 'reportings' | 'registre';
 const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string; libelle: string } | null> = {
   hors_objectif: { classe: 'pill--risque', libelle: 'Hors objectif' },
   dans_objectif: { classe: 'pill--succes', libelle: 'Dans l’objectif' },
-  a_fixer: { classe: 'pill--neutre', libelle: 'Objectif à fixer' },
+  // Carte posée sur un halo coloré : pastille inversée (fond blanc).
+  a_fixer: { classe: 'pill--neutre pill--sur-couleur', libelle: 'Objectif à fixer' },
   sans_donnee: null,
 };
 
