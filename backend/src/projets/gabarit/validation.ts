@@ -13,19 +13,20 @@ export const ROLE_DPLG = 'Dir. GC';
 // (chef de team : il valide les remises de son équipe).
 export const ROLE_SALARIE = 'Salarié';
 
-// CEO (étape 1, 12/10/2026) : vue gabarit en lecture, projets à « lecture »
-// dans la matrice. Exception ciblée : il écrit dans les fils de discussion,
-// sans aucune action de circuit (remise, validation, renvoi, assignation,
-// prolongation, TS) — refusées ici quel que soit son niveau.
+// CEO et CFO (étape 1, 12/10/2026) : vue gabarit en lecture, projets à
+// « lecture » dans la matrice. Exception ciblée : ils écrivent dans les fils
+// de discussion, sans aucune action de circuit (remise, validation, renvoi,
+// assignation, prolongation, TS) — refusées ici quel que soit leur niveau.
 export const ROLE_CEO = 'CEO (transverse)';
-const ROLES_HORS_CIRCUIT = new Set([ROLE_CEO]);
-const ROLES_COMMENTAIRE_FIL = new Set([ROLE_CEO]);
+export const ROLE_CFO = 'CFO';
+const ROLES_HORS_CIRCUIT = new Set([ROLE_CEO, ROLE_CFO]);
+const ROLES_COMMENTAIRE_FIL = new Set([ROLE_CEO, ROLE_CFO]);
 
 export const horsCircuit = (role: string) => ROLES_HORS_CIRCUIT.has(role);
 export const commenteSansEcriture = (role: string) => ROLES_COMMENTAIRE_FIL.has(role);
 
 export function verifierCircuit(role: string) {
-  if (horsCircuit(role)) throw new ForbiddenException('Le CEO consulte et commente les projets ; il n’agit pas sur le circuit des tâches.');
+  if (horsCircuit(role)) throw new ForbiddenException('Votre rôle consulte et commente les projets ; il n’agit pas sur le circuit des tâches.');
 }
 
 export function perimetreProjets(role: string, collaborateurId: string | null): Prisma.ProjetWhereInput {

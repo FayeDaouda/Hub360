@@ -37,9 +37,9 @@ type Vue = 'grille' | 'phase' | 'carte';
 // Toutes les phases, dans l'ordre — sert de colonnes pour la vue « par phase ».
 const ORDRE_PHASES: Phase[] = ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'];
 
-// Vue gabarit (CIO, CTO, Dir. GC, Salarié, CEO — cf. vueProjetsGabarit) : la
-// maquette « Projets » du boss ; les autres rôles (CFO…) gardent la vue par
-// phases jusqu'à leur tour.
+// Vue gabarit (CIO, CTO, Dir. GC, Salarié, CEO, CFO — cf. vueProjetsGabarit) : la
+// maquette « Projets » du boss ; les autres (societe_admin) gardent la vue
+// par phases.
 export default function ProjetsPage({ params }: Props) {
   const session = useSessionCourante();
   return vueProjetsGabarit(session) ? <ProjetsOuverts slug={params.slug} /> : <ProjetsParPhase params={params} />;

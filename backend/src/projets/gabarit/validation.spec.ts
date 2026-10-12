@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
-import { commenteSansEcriture, peutDecider, peutQualifier, ROLE_CEO, ROLE_DPLG, verifierCircuit } from './validation';
+import { commenteSansEcriture, horsCircuit, peutDecider, peutQualifier, ROLE_CEO, ROLE_CFO, ROLE_DPLG, verifierCircuit } from './validation';
 
-// CEO (étape 1) : lecture + commentaires, aucune action de circuit.
+// CEO et CFO (étape 1) : lecture + commentaires, aucune action de circuit.
 describe('validation · rôle hors circuit (CEO)', () => {
   const aValider = { statut: 'a_valider', assigneId: 'C1' };
 
@@ -21,8 +21,13 @@ describe('validation · rôle hors circuit (CEO)', () => {
     expect(() => verifierCircuit('CTO (transverse)')).not.toThrow();
   });
 
-  it('seul le CEO commente sans écriture sur Projets', () => {
-    expect(commenteSansEcriture(ROLE_CEO)).toBe(true);
-    expect(commenteSansEcriture('CFO')).toBe(false);
+  it('CEO et CFO commentent sans écriture sur Projets, hors circuit', () => {
+    for (const r of [ROLE_CEO, ROLE_CFO]) {
+      expect(commenteSansEcriture(r)).toBe(true);
+      expect(horsCircuit(r)).toBe(true);
+      expect(() => verifierCircuit(r)).toThrow(ForbiddenException);
+    }
+    expect(commenteSansEcriture('RH')).toBe(false);
+    expect(horsCircuit(ROLE_DPLG)).toBe(false);
   });
 });

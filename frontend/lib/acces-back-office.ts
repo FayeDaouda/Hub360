@@ -50,12 +50,18 @@ export const ROLE_DIR_GC = 'Dir. GC';
 export const ROLE_SALARIE = 'Salarié';
 
 export const ROLE_CEO = 'CEO (transverse)';
+export const ROLE_CFO = 'CFO';
 
 // Projets · gabarit (maquettes du boss) : ouvert rôle par rôle, au fil des
-// maquettes reçues — CIO, CTO, Dir. GC, Salarié puis CEO (oct. 2026) ; les
-// autres gardent la vue par phases jusqu'à leur tour.
+// maquettes reçues — CIO, CTO, Dir. GC, Salarié, CEO puis CFO (oct. 2026).
 export function vueProjetsGabarit(session: Session): boolean {
-  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC, ROLE_SALARIE, ROLE_CEO].includes(session.role);
+  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC, ROLE_SALARIE, ROLE_CEO, ROLE_CFO].includes(session.role);
+}
+
+// Lecture et commentaires dans les fils, sans action sur les tâches — même
+// liste que backend/src/projets/gabarit/validation.ts (ROLES_COMMENTAIRE_FIL).
+export function consultationEtCommentaires(session: Session): boolean {
+  return [ROLE_CEO, ROLE_CFO].includes(session.role);
 }
 
 // Équipes (maquette du boss, oct. 2026) : CIO, CTO, CEO et Dir. GC ; les
