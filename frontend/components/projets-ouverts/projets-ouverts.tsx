@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
+import { ROLE_CEO, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
   ajouterTs,
   getAssignables,
@@ -62,6 +62,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
   const dplg = session.role === ROLE_DIR_GC;
   const salarie = session.role === ROLE_SALARIE;
+  // CEO : lecture, et les fils en écriture (exception ciblée, revérifiée par
+  // le serveur) ; aucune action de circuit.
+  const ceo = session.role === ROLE_CEO;
   const [assignables, setAssignables] = useState<Assignable[] | null>(null);
   const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
 
@@ -81,8 +84,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     chargerTableau();
   }, [chargerTableau]);
 
-  // Fil en écriture : qui écrit sur Projets, et le Salarié sur ses projets.
-  const peutEcrireFil = peutAssigner || salarie;
+  // Fil en écriture : qui écrit sur Projets, le Salarié sur ses projets, le CEO.
+  const peutEcrireFil = peutAssigner || salarie || ceo;
   useEffect(() => {
     if (peutAssigner) {
       getAssignables(slug)
@@ -138,9 +141,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     ? 'Architecte DPLG : assignation, désactivation, prolongations, validation en suppléance'
     : salarie
       ? 'Salarié : remise, prolongation, discussion ; le chef de team valide'
-      : peutAssigner
-      ? 'Lecture et assignation · accès complet'
-      : 'Lecture seule';
+      : ceo
+        ? 'CEO : lecture et commentaires ; aucune action sur les tâches'
+        : peutAssigner
+          ? 'Lecture et assignation · accès complet'
+          : 'Lecture seule';
 
   return (
     <div className="po" ref={racine}>

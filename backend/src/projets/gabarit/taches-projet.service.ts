@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import type { Temps } from '../../reglages/gabarit';
 import { motifNonAssignable, tachesAssignees } from './assignation';
-import { collaborateurDuCompte, peutDecider, peutQualifier, ROLE_DPLG } from './validation';
+import { collaborateurDuCompte, peutDecider, peutQualifier, ROLE_DPLG, verifierCircuit } from './validation';
 
 type Acteur = { userId: string };
 type ActeurRole = Acteur & { role: string };
@@ -37,12 +37,13 @@ export class TachesProjetService {
 
   async assigner(
     societeId: string,
-    acteur: Acteur,
+    acteur: ActeurRole,
     projetId: string,
     tacheId: string,
     collaborateurId: string | null,
     aLaCarte: boolean,
   ) {
+    verifierCircuit(acteur.role);
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
       select: {
@@ -90,6 +91,7 @@ export class TachesProjetService {
   // atelier, le dépôt vaut validation (exception écrite au principe 4) ;
   // sinon la remise vNN attend le chef de team (ou le DPLG pour la tâche du chef).
   async remettre(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string) {
+    verifierCircuit(acteur.role);
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
       select: {
@@ -144,6 +146,7 @@ export class TachesProjetService {
   // Valider une remise, ou la renvoyer en reprise (motif) — chef de team,
   // Architecte DPLG (tâches du chef, suppléance) ; jamais sa propre tâche.
   async decider(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
+    verifierCircuit(acteur.role);
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
       select: {
@@ -204,6 +207,7 @@ export class TachesProjetService {
   // devient une tâche de la carte « par unité » (pièce, vue), avec le temps
   // de la carte, ajouté au budget atelier du projet.
   async ajouterTs(societeId: string, acteur: ActeurRole, projetId: string, carteId: string, element: string) {
+    verifierCircuit(acteur.role);
     if (acteur.role !== ROLE_DPLG && acteur.role !== 'societe_admin') {
       throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG.');
     }
@@ -242,6 +246,7 @@ export class TachesProjetService {
   // référence reste figée (choix du 06/10/2026) : accordée, la prolongation
   // qualifie le retard jusqu'à cette date.
   async demanderProlongation(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, jusquau: string, motif: string) {
+    verifierCircuit(acteur.role);
     const tache = await this.chargerPourProlongation(societeId, projetId, tacheId);
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée demande une prolongation.');
@@ -265,6 +270,7 @@ export class TachesProjetService {
 
   // Décision (chef de team, sauf sa propre tâche ; Architecte DPLG partout).
   async deciderProlongation(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, accorder: boolean) {
+    verifierCircuit(acteur.role);
     const tache = await this.chargerPourProlongation(societeId, projetId, tacheId);
     const demande = tache.prolongations.find((p) => p.decision === null);
     if (!demande) throw new ConflictException('Aucune demande de prolongation en attente.');

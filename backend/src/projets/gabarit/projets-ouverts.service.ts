@@ -6,7 +6,7 @@ import type { Temps } from '../../reglages/gabarit';
 import { alerteAvenant, refDevis } from '../../devis/domaine';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
-import { collaborateurDuCompte, perimetreProjets, peutDecider, peutQualifier, ROLE_DPLG, type Decideur } from './validation';
+import { collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, ROLE_DPLG, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import {
   attentesFactures,
@@ -135,6 +135,8 @@ export class ProjetsOuvertsService {
     const cellule = p.cellules[0]?.cellule ?? null;
     const chef = cellule?.dispatcher ?? null;
     const dplgConnecte = acteur.role === ROLE_DPLG || acteur.role === 'societe_admin';
+    // Remise et demande de prolongation : jamais pour un rôle hors circuit (CEO).
+    const circuit = !horsCircuit(acteur.role);
     const dplg = p.societe.contratSignataireNom?.trim() || null;
     const pilote = await this.reglages.regle<string>(societeId, 'pilote_etudes');
     const horizon = this.horizon(p.budgetHeures);
@@ -232,6 +234,7 @@ export class ProjetsOuvertsService {
           // Prolongation : l'assigné la demande (tâche ni validée ni « non
           // nécessaire », aucune demande en attente) ; chef de team ou DPLG décide.
           peutDemanderProlongation:
+            circuit &&
             !!decideur.collaborateurId &&
             t.assigneId === decideur.collaborateurId &&
             !['validee', 'non_necessaire'].includes(t.statut) &&
@@ -240,6 +243,7 @@ export class ProjetsOuvertsService {
           peutDeciderProlongation: !!prolongationEnAttente(t.prolongations) && peutQualifier(decideur, t.assigneId, chef?.id ?? null),
           // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
           peutRemettre:
+            circuit &&
             !!decideur.collaborateurId &&
             t.assigneId === decideur.collaborateurId &&
             (t.statut === 'a_faire' || t.statut === 'reprise') &&

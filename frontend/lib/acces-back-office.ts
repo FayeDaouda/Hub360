@@ -49,14 +49,14 @@ export const ROLE_DIR_GC = 'Dir. GC';
 // que backend/src/projets/gabarit/validation.ts (ROLE_SALARIE).
 export const ROLE_SALARIE = 'Salarié';
 
-// Projets · gabarit (maquettes du boss) : ouvert rôle par rôle, au fil des
-// maquettes reçues — CIO, CTO, Dir. GC puis Salarié (oct. 2026) ; les autres gardent
-// la vue par phases jusqu'à leur tour.
-export function vueProjetsGabarit(session: Session): boolean {
-  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC, ROLE_SALARIE].includes(session.role);
-}
-
 export const ROLE_CEO = 'CEO (transverse)';
+
+// Projets · gabarit (maquettes du boss) : ouvert rôle par rôle, au fil des
+// maquettes reçues — CIO, CTO, Dir. GC, Salarié puis CEO (oct. 2026) ; les
+// autres gardent la vue par phases jusqu'à leur tour.
+export function vueProjetsGabarit(session: Session): boolean {
+  return [ROLE_CIO, ROLE_CTO, ROLE_DIR_GC, ROLE_SALARIE, ROLE_CEO].includes(session.role);
+}
 
 // Équipes (maquette du boss, oct. 2026) : CIO, CTO, CEO et Dir. GC ; les
 // autres rôles gardent la page par cellules jusqu'à leur tour. L'écriture

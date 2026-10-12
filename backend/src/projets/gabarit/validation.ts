@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../prisma/prisma.service';
 
@@ -12,6 +13,21 @@ export const ROLE_DPLG = 'Dir. GC';
 // (chef de team : il valide les remises de son équipe).
 export const ROLE_SALARIE = 'Salarié';
 
+// CEO (étape 1, 12/10/2026) : vue gabarit en lecture, projets à « lecture »
+// dans la matrice. Exception ciblée : il écrit dans les fils de discussion,
+// sans aucune action de circuit (remise, validation, renvoi, assignation,
+// prolongation, TS) — refusées ici quel que soit son niveau.
+export const ROLE_CEO = 'CEO (transverse)';
+const ROLES_HORS_CIRCUIT = new Set([ROLE_CEO]);
+const ROLES_COMMENTAIRE_FIL = new Set([ROLE_CEO]);
+
+export const horsCircuit = (role: string) => ROLES_HORS_CIRCUIT.has(role);
+export const commenteSansEcriture = (role: string) => ROLES_COMMENTAIRE_FIL.has(role);
+
+export function verifierCircuit(role: string) {
+  if (horsCircuit(role)) throw new ForbiddenException('Le CEO consulte et commente les projets ; il n’agit pas sur le circuit des tâches.');
+}
+
 export function perimetreProjets(role: string, collaborateurId: string | null): Prisma.ProjetWhereInput {
   if (role !== ROLE_SALARIE) return {};
   const id = collaborateurId ?? '__aucun__';
@@ -23,7 +39,7 @@ export function perimetreProjets(role: string, collaborateurId: string | null): 
 export type Decideur = { role: string; collaborateurId: string | null };
 
 export function peutDecider(d: Decideur, t: { statut: string; assigneId: string | null }, chefId: string | null): boolean {
-  if (t.statut !== 'a_valider') return false;
+  if (t.statut !== 'a_valider' || horsCircuit(d.role)) return false;
   if (d.collaborateurId && d.collaborateurId === t.assigneId) return false; // jamais sa propre tâche
   if (d.role === ROLE_DPLG || d.role === 'societe_admin') return true;
   return !!chefId && d.collaborateurId === chefId && t.assigneId !== chefId;
@@ -32,6 +48,7 @@ export function peutDecider(d: Decideur, t: { statut: string; assigneId: string 
 // Qualifier un retard (décider d'une prolongation) : chef de team, sauf pour
 // sa propre tâche ; Architecte DPLG (et admin société) partout.
 export function peutQualifier(d: Decideur, assigneId: string | null, chefId: string | null): boolean {
+  if (horsCircuit(d.role)) return false;
   if (d.collaborateurId && d.collaborateurId === assigneId) return false;
   if (d.role === ROLE_DPLG || d.role === 'societe_admin') return true;
   return !!chefId && d.collaborateurId === chefId && assigneId !== chefId;

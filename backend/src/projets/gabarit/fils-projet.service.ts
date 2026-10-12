@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../../commun/permission.guard';
-import { collaborateurDuCompte, perimetreProjets, ROLE_SALARIE } from './validation';
+import { collaborateurDuCompte, commenteSansEcriture, perimetreProjets, ROLE_SALARIE } from './validation';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { estOuvert, motifRefusResolution } from './fil';
@@ -58,11 +58,12 @@ export class FilsProjetService {
     if (!p) throw new NotFoundException('Projet introuvable');
   }
 
-  // Écrire dans un fil : écriture sur Projets (matrice), ou Salarié sur un
+  // Écrire dans un fil : écriture sur Projets (matrice), Salarié sur un
   // projet où une tâche lui est assignée (maquette : « remise, prolongation,
-  // discussion »).
+  // discussion »), ou CEO (exception ciblée : commentaires seulement).
   async verifierEcriture(societeId: string, acteur: Acteur & { role: string; permissions?: Record<string, NiveauPermission> }, projetId: string) {
     if (aLaPermission(acteur.permissions, 'projets', 'ecriture')) return;
+    if (commenteSansEcriture(acteur.role)) return;
     if (acteur.role === ROLE_SALARIE) {
       const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
       const p = await this.prisma.projet.findFirst({ where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) }, select: { id: true } });
