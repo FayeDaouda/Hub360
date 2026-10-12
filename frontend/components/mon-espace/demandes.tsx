@@ -182,6 +182,7 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
         <span className="cell-sub">
           {jjmm(d.dateDebut)} → {jjmm(d.dateFin)}
           {d.statut === 'attente_n1' && d.n1Role && ` · chez ${d.n1Role}`}
+          {d.statut === 'accord_n1' && !d.decisionN1 && ' · sans N+1, transmise à la RH'}
           {d.motifRefus && ` · ${LIBELLE_MOTIF_REFUS[d.motifRefus]}`}
           {d.commentaireRefus && ` — ${d.commentaireRefus}`}
         </span>

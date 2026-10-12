@@ -50,7 +50,7 @@ export class MesDemandesController {
   }
 }
 
-// Le N+1 (chef de cellule côté collaborateur, Dir. GC côté direction) : le
+// Le N+1 (chef de cellule côté collaborateur ; Dir. GC, CTO ou CEO côté direction) : le
 // service vérifie qu'il est bien le N+1 de chaque demande.
 @Controller('societes/:slug/absences')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)

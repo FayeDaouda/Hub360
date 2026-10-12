@@ -90,7 +90,18 @@ describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   it('direction : Dir. GC → CTO ; Salarié → Dir. GC ; rôle sans circuit défini refusé', async () => {
     await expect(deposer('Dir. GC')).resolves.toMatchObject({ n1Role: 'CTO (transverse)' });
     await expect(deposer('Salarié')).resolves.toMatchObject({ n1Role: 'Dir. GC' });
-    await expect(deposer('CFO')).rejects.toThrow(ConflictException);
+    await expect(deposer('RH')).rejects.toThrow(ConflictException);
+  });
+  it('directeurs (COO, CFO, CTO, CIO) → CEO ; le CEO va directement à la RH', async () => {
+    for (const role of ['COO', 'CFO', 'CTO (transverse)', 'CIO (transverse)']) {
+      await expect(deposer(role)).resolves.toMatchObject({ n1Role: 'CEO (transverse)', statut: 'attente_n1' });
+    }
+    await expect(deposer('CEO (transverse)')).resolves.toMatchObject({ n1Role: null, statut: 'accord_n1' });
+  });
+  it('N+1 « CEO » : le CEO décide pour un directeur', async () => {
+    const ceo = svc({ demande: { n1CollaborateurId: null, n1Role: 'CEO (transverse)' } });
+    await expect(ceo.s.decider({ ...CHEF, role: 'CTO (transverse)' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ForbiddenException);
+    await expect(ceo.s.decider({ ...CHEF, role: 'CEO (transverse)' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).resolves.toBeDefined();
   });
   it('compte sans dossier du personnel → 404', async () => {
     await expect(deposer('collaborateur', null)).rejects.toThrow('Aucun dossier');

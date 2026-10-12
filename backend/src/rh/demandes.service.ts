@@ -29,13 +29,22 @@ import {
 // Chaîne du N+1 (conception d'origine, confirmée par le boss) :
 //  collaborateur → chef de cellule (= dispatcher de sa cellule) ;
 //  chef de cellule, ou sans cellule → Dir. GC ; Dir. GC → CTO.
-// Les autres rôles de direction n'ont pas encore de N+1 défini : leur
-// demande est refusée avec un message clair plutôt que routée au hasard.
+// Direction (décision du 12/10/2026) : COO, CFO, CTO et CIO → CEO ; le CEO
+// n'a pas de N+1 — sa demande passe directement à la validation RH.
+// La RH n'a pas encore de N+1 défini : sa demande est refusée avec un
+// message clair plutôt que routée au hasard.
 export const ROLE_N1_DIRECTION = 'Dir. GC';
-export const N1_DES_ROLES: Readonly<Record<string, string>> = { [ROLE_N1_DIRECTION]: 'CTO (transverse)' };
+export const ROLE_CEO = 'CEO (transverse)';
+export const N1_DES_ROLES: Readonly<Record<string, string>> = {
+  [ROLE_N1_DIRECTION]: 'CTO (transverse)',
+  COO: ROLE_CEO,
+  CFO: ROLE_CEO,
+  'CTO (transverse)': ROLE_CEO,
+  'CIO (transverse)': ROLE_CEO,
+};
 // Rôles « salariés » : sans cellule (ou chef de leur cellule) → Dir. GC.
 const ROLES_SALARIES = ['collaborateur', 'Salarié'];
-const ROLES_N1 = [ROLE_N1_DIRECTION, ...Object.values(N1_DES_ROLES)];
+const ROLES_N1 = [...new Set([ROLE_N1_DIRECTION, ...Object.values(N1_DES_ROLES)])];
 
 type Acteur = { userId: string; societeId: string; role: string };
 
@@ -66,7 +75,11 @@ export class DemandesService {
     return { collab, dossier: reste };
   }
 
-  private n1Pour(role: string, collab: { id: string; cellule: { dispatcherId: string | null } | null } | null) {
+  private n1Pour(
+    role: string,
+    collab: { id: string; cellule: { dispatcherId: string | null } | null } | null,
+  ): Pick<Prisma.DemandeAbsenceUncheckedCreateInput, 'n1CollaborateurId' | 'n1Role' | 'statut'> {
+    if (role === ROLE_CEO) return { statut: 'accord_n1' };
     const chef = collab?.cellule?.dispatcherId;
     if (collab && chef && chef !== collab.id) return { n1CollaborateurId: chef };
     if (N1_DES_ROLES[role]) return { n1Role: N1_DES_ROLES[role] };
