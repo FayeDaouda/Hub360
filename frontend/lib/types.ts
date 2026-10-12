@@ -1560,6 +1560,9 @@ export type Facture = {
   resteAPayer: number; // montantTtc - montantPaye (négatif = avoir / trop-perçu)
   joursRetard: number; // 0 si non échue ou soldée
   paiements: Paiement[];
+  // Montant de l'affaire (TTC) : offre d'origine, sinon offre acceptée du
+  // dossier, sinon la facture — le CEO valide au-delà du seuil de contresignature.
+  affaireTtc: number;
   // Détail (étape H3) — vide pour une facture à montant unique. Si présent,
   // montantHt = somme des lignes, un seul taux de TVA pour toute la facture.
   lignes: LigneFacture[];
@@ -1921,6 +1924,7 @@ export type FactureCentrale = {
   projet: { id: string; code: string; programme: string } | null;
   client: { id: string; nom: string } | null;
   // Brouillon : référence qu'il prendra à l'émission (rang suivant du dossier).
+  affaireTtc: number; // montant de l'affaire (TTC) — cf. Facture
   referencePrevue: string | null;
   // Tranche d'échéancier « k/N » ; null hors échéancier.
   tranche: { rang: number; total: number } | null;

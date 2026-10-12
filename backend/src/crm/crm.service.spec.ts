@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
 
@@ -34,7 +35,7 @@ function prismaMock(opts: { codes?: string[]; client?: object | null } = {}) {
 }
 
 function svc(prisma: ReturnType<typeof prismaMock>) {
-  return new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService) as unknown as Prive;
+  return new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService) as unknown as Prive;
 }
 
 const annee = String(new Date().getFullYear()).slice(-2);
@@ -115,7 +116,7 @@ describe('CrmService.resoudreProprietaire', () => {
         findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService) as unknown as P;
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService) as unknown as P;
     return (choisi?: string) => s.resoudreProprietaire(prisma, 'S1', choisi);
   };
 
@@ -179,7 +180,7 @@ describe('CrmService — fiche apporteur', () => {
       dossierCrm: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(relu) },
     };
     const prisma = { $transaction: jest.fn((f: (t: typeof tx) => unknown) => f(tx)) };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
     return { s, tx };
   }
   const cio = { userId: 'U-CIO', role: 'CIO (transverse)', permissions: { crm: 'ecriture' as const } };
@@ -232,7 +233,7 @@ describe('CrmService — fiche apporteur', () => {
     const prisma = {
       dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), update: jest.fn(relu) },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
     return { s, prisma };
   }
   const coo = { userId: 'U-COO', role: 'COO', permissions: { crm: 'ecriture' as const } };
@@ -276,7 +277,7 @@ describe('CrmService.peutReassigner', () => {
       utilisateur: {
         findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
-    } as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    } as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
   const acteur = (userId: string, role: string) => ({ userId, role, permissions: {} });
 
   it.each(['societe_admin', 'CIO (transverse)'])('%s → oui, en supervision', async (role) => {
@@ -310,7 +311,7 @@ describe('CrmService.archiver', () => {
         findMany: jest.fn().mockResolvedValue(titulaires.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
     return { s, prisma };
   };
   const cio = { userId: 'C1', role: 'CIO (transverse)', permissions: {} };

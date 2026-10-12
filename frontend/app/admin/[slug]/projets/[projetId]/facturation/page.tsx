@@ -19,6 +19,7 @@ import {
 } from '@/lib/facturation';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
+import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { sectionAccessible } from '@/lib/acces-back-office';
 import {
   CATEGORIES,
@@ -65,7 +66,9 @@ const PILL_REGLEMENT: Record<StatutReglementBureau, string> = {
 // enregistre les paiements »). Affichage seulement — le serveur revérifie.
 type Droits = { ecriture: boolean; validation: boolean };
 
-function actionsPossibles(f: Facture, d: Droits) {
+function actionsPossibles(f: Facture, droits: Droits, valide: (montantTtc: number) => boolean) {
+  // CEO : validation des seules affaires au-delà du seuil de contresignature.
+  const d = { ...droits, validation: droits.validation && valide(f.affaireTtc) };
   return {
     modifiable: f.statut === 'brouillon' && d.ecriture,
     emissible: f.statut === 'brouillon' && d.validation,
@@ -83,6 +86,8 @@ export default function FacturationPage({ params }: Props) {
   };
   // Régler un bureau d'études = une charge (finances_charges), pas une facture.
   const peutReglerBureau = niveauSuffisant(session, 'finances_charges', 'validation');
+  const seuilCeo = useSeuilCeo(params.slug, session);
+  const valide = (montantTtc: number) => valideAffaire(session, seuilCeo, montantTtc);
   const [etudesChoisies, setEtudesChoisies] = useState<Set<string>>(new Set());
   const [factu, setFactu] = useState<Facturation | null>(null);
   // En-tête : fourni par la réponse Facturation elle-même (pas d'appel aux
@@ -370,7 +375,7 @@ export default function FacturationPage({ params }: Props) {
                   </thead>
                   <tbody>
                     {factu.factures.map((f) => {
-                      const a = actionsPossibles(f, droits);
+                      const a = actionsPossibles(f, droits, valide);
                       const cls = f.estAvoir
                         ? 'factu-l--avoir'
                         : f.statut === 'annulee'

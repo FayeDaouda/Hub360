@@ -257,10 +257,14 @@ async function main() {
       permissions: {
         crm: 'lecture',
         projets: 'lecture',
+        // Finances (12/10/2026, décision du boss) : tout voir ; valider les
+        // devis et factures des seules affaires au-delà du seuil de
+        // contresignature (finances/seuil-ceo.service.ts) ; marges et charges
+        // en consultation — la CFO règle les charges.
         finances_devis: 'validation',
         finances_factures: 'validation',
-        finances_marges: 'validation',
-        finances_charges: 'validation',
+        finances_marges: 'lecture',
+        finances_charges: 'lecture',
         equipe: 'lecture',
         rh: 'lecture',
         // ecriture (12/10/2026, décision du boss) : son propre espace (congés,

@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
+import { ValidationCeoAuDelaDuSeuil } from '../../finances/seuil-ceo.guard';
 import { FacturationService } from './facturation.service';
 import {
   AjouterPaiementDto,
@@ -34,7 +35,8 @@ type R = { user: { societeId: string; userId: string } };
 //   · validation : émettre, faire un avoir, enregistrer / supprimer un
 //                  paiement — « la CFO seule enregistre les paiements, ça
 //                  fait foi » (décision H, 27/09/2026). societe_admin et CEO
-//                  ont aussi `validation` dans la matrice.
+//                  ont aussi `validation` dans la matrice — le CEO seulement
+//                  au-delà du seuil de contresignature (finances/seuil-ceo).
 @Controller('societes/:slug/projets/:id/factures')
 @UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class FacturationController {
@@ -109,6 +111,7 @@ export class FacturationController {
 
   @Post(':factureId/emission')
   @RequiertPermission('finances_factures', 'validation')
+  @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
   emettre(
     @Req() req: R,
     @Param('id') id: string,
@@ -129,6 +132,7 @@ export class FacturationController {
 
   @Post(':factureId/avoir')
   @RequiertPermission('finances_factures', 'validation')
+  @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
   creerAvoir(
     @Req() req: R,
     @Param('id') id: string,
@@ -139,6 +143,7 @@ export class FacturationController {
 
   @Post(':factureId/paiements')
   @RequiertPermission('finances_factures', 'validation')
+  @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
   ajouterPaiement(
     @Req() req: R,
     @Param('id') id: string,
@@ -150,6 +155,7 @@ export class FacturationController {
 
   @Delete(':factureId/paiements/:paiementId')
   @RequiertPermission('finances_factures', 'validation')
+  @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
   supprimerPaiement(
     @Req() req: R,
     @Param('id') id: string,

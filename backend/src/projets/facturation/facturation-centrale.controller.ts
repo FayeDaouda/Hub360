@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../../commun/back-office.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
+import { ValidationCeoAuDelaDuSeuil } from '../../finances/seuil-ceo.guard';
 import { FacturationService } from './facturation.service';
 import { AjouterPaiementDto, CreerFactureDirecteDto } from './dto';
 
@@ -68,6 +69,7 @@ export class FacturationCentraleController {
   // Validation par le CFO = émission (numéro, échéance).
   @Post(':id/emission')
   @RequiertPermission('finances_factures', 'validation')
+  @ValidationCeoAuDelaDuSeuil('facture', 'id')
   emettre(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.facturation.emettreParId(req.user.societeId, id);
   }
@@ -80,6 +82,7 @@ export class FacturationCentraleController {
 
   @Post(':id/paiements')
   @RequiertPermission('finances_factures', 'validation')
+  @ValidationCeoAuDelaDuSeuil('facture', 'id')
   paiement(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AjouterPaiementDto) {
     return this.facturation.ajouterPaiementParId(req.user.societeId, id, dto);
   }

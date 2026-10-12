@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
 import { REGLES_ACTIONS } from './cycle';
@@ -102,6 +103,7 @@ function monter(
       devis as unknown as DevisService,
       facturation as unknown as FacturationService,
       notifications as unknown as NotificationsService,
+      { verifierOffreDossier: jest.fn().mockResolvedValue(undefined) } as unknown as SeuilCeoService,
     ),
   };
 }

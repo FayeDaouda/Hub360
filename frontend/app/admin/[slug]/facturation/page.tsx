@@ -8,6 +8,7 @@ import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layo
 import { getClients, getProjets } from '@/lib/crm';
 import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
+import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
 import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
 import {
@@ -73,6 +74,8 @@ export default function FinancesPage({ params }: Props) {
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
     tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
   };
+  // CEO : validation des seules affaires au-delà du seuil de contresignature.
+  const seuilCeo = useSeuilCeo(params.slug, session);
   const searchParams = useSearchParams();
   const projetFiltre = searchParams.get('projetId') ?? undefined;
 
@@ -446,7 +449,7 @@ export default function FinancesPage({ params }: Props) {
           slug={params.slug}
           devis={devisPanneau}
           document={documentDepuisDevis(devisPanneau)}
-          droits={droits}
+          droits={{ ...droits, devisValidation: droits.devisValidation && valideAffaire(session, seuilCeo, devisPanneau.montantTtc) }}
           onMaj={recharger}
           onClose={() => setDevisOuvert(null)}
           onTelecharger={() => setDocumentAImprimer(documentDepuisDevis(devisPanneau))}
@@ -459,7 +462,10 @@ export default function FinancesPage({ params }: Props) {
           document={documentDepuisFacture(facturePanneau)}
           statut={{ libelle: statutFacture(facturePanneau).libelle, classe: `pill--${statutFacture(facturePanneau).ton}` }}
           societeNom={societe?.nom ?? 'la société'}
-          droits={{ ecriture: droits.facturesEcriture, validation: droits.facturesValidation }}
+          droits={{
+            ecriture: droits.facturesEcriture,
+            validation: droits.facturesValidation && valideAffaire(session, seuilCeo, facturePanneau.affaireTtc),
+          }}
           onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
           onSupprimee={() => {
             setFactureOuverte(null);

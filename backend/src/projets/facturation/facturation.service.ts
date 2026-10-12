@@ -34,6 +34,7 @@ import { EmailService } from '../../email/email.service';
 import { OuvertureProjetService } from '../gabarit/ouverture.service';
 import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './facture-directe';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -49,6 +50,7 @@ export class FacturationService {
     private reglages: ReglagesService,
     private ouverture: OuvertureProjetService,
     private notifications: NotificationsService,
+    private seuilCeo: SeuilCeoService,
   ) {}
 
   // Soumission du dossier à la DAF (cycle CRM, dans sa transaction) : l'offre
@@ -309,9 +311,10 @@ export class FacturationService {
       orderBy: [{ creeLe: 'desc' }],
     });
     const aujourdhui = jourCourant();
-    const [rangs, tranches] = await Promise.all([
+    const [rangs, tranches, affaires] = await Promise.all([
       this.rangsParDossier(societeId),
       this.tranchesEcheancier(societeId, [...new Set(factures.map((f) => f.projetId).filter((x): x is string => !!x))]),
+      this.seuilCeo.montantsAffaire(factures),
     ]);
 
     return factures.map((f) => {
@@ -361,6 +364,8 @@ export class FacturationService {
         tranche: tranches.get(f.id) ?? null,
         // Facture directe d'un lead (sans offre) ; null sinon.
         dossierCrm: f.dossierCrm ? { id: f.dossierCrm.id, code: f.dossierCrm.code } : null,
+        // Montant de l'affaire (TTC) : le CEO valide au-delà du seuil de contresignature.
+        affaireTtc: affaires.get(f.id)!,
         paiements: f.paiements
           .map((p) => ({ id: p.id, date: p.date, montant: p.montant.toNumber(), mode: p.mode, reference: p.reference }))
           .sort((a, b) => a.date.localeCompare(b.date)),
@@ -940,6 +945,7 @@ export class FacturationService {
       orderBy: { libelle: 'asc' },
     });
     const aujourdhui = jourCourant();
+    const affaires = await this.seuilCeo.montantsAffaire(factures);
 
     const ordre = [...factures].sort((a, b) => {
       const na = a.numero ?? Number.MAX_SAFE_INTEGER;
@@ -982,6 +988,8 @@ export class FacturationService {
           statutEffectif === 'en_retard'
             ? joursRetardFacture(f.echeanceLe, aujourdhui)
             : 0,
+        // Montant de l'affaire (TTC) : le CEO valide au-delà du seuil de contresignature.
+        affaireTtc: affaires.get(f.id)!,
         lignes: f.lignes.map(versLigneFacture),
         paiements: [...f.paiements]
           .sort((a, b) => a.creeLe.getTime() - b.creeLe.getTime())

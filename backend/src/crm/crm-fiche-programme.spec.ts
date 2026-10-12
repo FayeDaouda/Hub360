@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
 
@@ -13,7 +14,7 @@ function svc(dossier: object = { statut: 'nouveau_projet', archiveLe: null, nbPl
     dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), update },
     devis: { count: jest.fn().mockResolvedValue(0) },
   };
-  const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService);
+  const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
   return { s, update };
 }
 const acteur = { userId: 'U', role: 'CIO (transverse)', permissions: {} };

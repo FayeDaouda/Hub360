@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
+import { ValidationCeoAuDelaDuSeuil } from '../finances/seuil-ceo.guard';
 import { DevisService } from './devis.service';
 import { CreerDevisDto, PatchDevisDto, ReponseDevisDto } from './dto';
 
@@ -70,6 +71,7 @@ export class DevisController {
 
   @Post(':id/envoi')
   @RequiertPermission('finances_devis', 'validation')
+  @ValidationCeoAuDelaDuSeuil('devis', 'id')
   envoyer(@Req() req: R, @Param('id') id: string) {
     return this.devis.envoyer(req.user.societeId, id);
   }

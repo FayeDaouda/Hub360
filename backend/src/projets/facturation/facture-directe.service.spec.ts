@@ -5,6 +5,7 @@ import { EmailService } from '../../email/email.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { OuvertureProjetService } from '../gabarit/ouverture.service';
 import { FacturationService } from './facturation.service';
+import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 // Facture directe d'un lead (maquette Finances) : préparée en brouillon
@@ -37,6 +38,7 @@ function monter(o: { dossier?: object | null; facture?: object } = {}) {
     {} as ReglagesService,
     {} as OuvertureProjetService,
     notifications as unknown as NotificationsService,
+    {} as SeuilCeoService,
   );
   jest.spyOn(s, 'factureCentrale').mockResolvedValue({} as never);
   return { s, prisma, updateMany, notifications };

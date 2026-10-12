@@ -22,6 +22,7 @@ import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
@@ -59,6 +60,7 @@ export class CrmService {
     private devis: DevisService,
     private facturation: FacturationService,
     private notifications: NotificationsService,
+    private seuilCeo: SeuilCeoService,
   ) {}
 
   async findAll(societeId: string, acteur: Acteur, q?: string) {
@@ -371,6 +373,10 @@ export class CrmService {
       throw new ForbiddenException(
         `Action « ${action} » : accès insuffisant sur le module « ${regle.module} » (niveau requis : ${regle.niveau}).`,
       );
+    }
+    // Validation de l'offre : le CEO seulement au-delà du seuil de contresignature.
+    if (regle.module === 'finances_devis' && regle.niveau === 'validation') {
+      await this.seuilCeo.verifierOffreDossier(acteur.role, societeId, id);
     }
     if (!regle.de.includes(dossier.statut)) {
       throw new ConflictException(
