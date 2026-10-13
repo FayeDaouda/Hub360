@@ -515,6 +515,12 @@ function FicheDossier({
 
   async function archiver() {
     if (!dossier) return;
+    if (
+      !dossier.archiveLe &&
+      !window.confirm('Archiver ce dossier (départ) ? Le compte HUB du salarié sera désactivé immédiatement.')
+    ) {
+      return;
+    }
     try {
       onChange(await archiverDossier(slug, dossier.id, !dossier.archiveLe));
     } catch (e) {

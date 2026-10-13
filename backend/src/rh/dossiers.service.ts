@@ -37,6 +37,10 @@ const CHAMPS_TEXTE = [
   'numeroIpm',
 ] as const;
 
+// Détail du journal de compte qui marque une désactivation par départ (sert
+// à savoir si le désarchivage peut réactiver le compte).
+const MOTIF_ARCHIVAGE = 'Dossier RH archivé (départ)';
+
 const COMPTE = { select: { id: true, prenom: true, nom: true, email: true } } as const;
 const INCLURE = {
   societe: { select: { id: true, nom: true, slug: true } },
@@ -184,14 +188,64 @@ export class DossiersPersonnelService {
   }
 
   // Départ : archivé, jamais supprimé ; réversible.
+  // Le départ coupe aussi l'accès au HUB : compte désactivé + sessions
+  // révoquées. Le désarchivage ne réactive que si c'est l'archivage qui avait
+  // coupé le compte (dernier événement du journal) — un compte désactivé pour
+  // une autre raison reste coupé.
   async archiver(id: string, archive: boolean, acteurId: string) {
-    await this.charger(id);
-    const d = await this.prisma.dossierPersonnel.update({
-      where: { id },
-      data: archive ? { archiveLe: new Date(), archiveParId: acteurId } : { archiveLe: null, archiveParId: null },
-      include: INCLURE,
-    });
-    return versDossier(d);
+    const actuel = await this.charger(id);
+    const utilisateurId = actuel.utilisateurId ?? actuel.collaborateur?.utilisateur?.id ?? null;
+    if (archive && utilisateurId === acteurId) {
+      throw new BadRequestException('Vous ne pouvez pas archiver votre propre dossier.');
+    }
+    const maintenant = new Date();
+    const ops: Prisma.PrismaPromise<unknown>[] = [];
+
+    if (utilisateurId) {
+      const compte = await this.prisma.utilisateur.findUniqueOrThrow({
+        where: { id: utilisateurId },
+        select: { actif: true },
+      });
+      if (archive && compte.actif) {
+        ops.push(
+          this.prisma.utilisateur.update({
+            where: { id: utilisateurId },
+            data: { actif: false, desactiveLe: maintenant, desactiveParId: acteurId, sessionsValidesDepuis: maintenant },
+          }),
+          this.prisma.evenementCompte.create({
+            data: { utilisateurId, type: 'compte_desactive', parId: acteurId, detail: MOTIF_ARCHIVAGE },
+          }),
+        );
+      }
+      if (!archive && !compte.actif) {
+        const dernier = await this.prisma.evenementCompte.findFirst({
+          where: { utilisateurId },
+          orderBy: { createdAt: 'desc' },
+          select: { type: true, detail: true },
+        });
+        if (dernier?.type === 'compte_desactive' && dernier.detail === MOTIF_ARCHIVAGE) {
+          ops.push(
+            this.prisma.utilisateur.update({
+              where: { id: utilisateurId },
+              data: { actif: true, desactiveLe: null, desactiveParId: null },
+            }),
+            this.prisma.evenementCompte.create({
+              data: { utilisateurId, type: 'compte_reactive', parId: acteurId, detail: 'Dossier RH désarchivé' },
+            }),
+          );
+        }
+      }
+    }
+
+    const [d] = await this.prisma.$transaction([
+      this.prisma.dossierPersonnel.update({
+        where: { id },
+        data: archive ? { archiveLe: maintenant, archiveParId: acteurId } : { archiveLe: null, archiveParId: null },
+        include: INCLURE,
+      }),
+      ...ops,
+    ]);
+    return versDossier(d as DossierLu);
   }
 
   async joindrePiece(id: string, type: TypePieceDossier, dto: PieceDto, acteurId: string) {
