@@ -1842,6 +1842,7 @@ model Facture {
   dossierCrmId      String?       @map("dossier_crm_id")
   creeLe            DateTime      @default(now()) @map("cree_le")
   emiseLe           DateTime?     @map("emise_le")
+  emiseParId        String?       @map("emise_par_id") // audit, pas de FK
   annuleeLe         DateTime?     @map("annulee_le")
 
   societe         Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
@@ -1900,11 +1901,34 @@ model Paiement {
   mode      ModePaiement?
   reference String        @default("") // n° de virement / chèque, optionnel
   creeLe    DateTime      @default(now()) @map("cree_le") // ordre d'affichage
+  creeParId String?       @map("cree_par_id") // audit, pas de FK
 
   facture Facture @relation(fields: [factureId], references: [id], onDelete: Cascade)
 
   @@index([factureId])
   @@map("paiements")
+}
+
+// Trace d'un paiement supprimé (correction) : copie figée de la ligne au
+// moment de la suppression, + qui l'avait saisi et qui l'a supprimé. Hors
+// de Paiement pour que les cumuls (statut « payée », tableaux de bord) ne
+// voient jamais ces lignes. Pas de FK : la trace survit à tout.
+model PaiementSupprime {
+  id            String        @id @default(uuid())
+  paiementId    String        @map("paiement_id")
+  factureId     String        @map("facture_id")
+  societeId     String        @map("societe_id")
+  date          String
+  montant       Decimal       @db.Decimal(14, 0)
+  mode          ModePaiement?
+  reference     String        @default("")
+  creeLe        DateTime      @map("cree_le")
+  creeParId     String?       @map("cree_par_id")
+  supprimeLe    DateTime      @default(now()) @map("supprime_le")
+  supprimeParId String        @map("supprime_par_id")
+
+  @@index([factureId])
+  @@map("paiements_supprimes")
 }
 
 // =============================================================================

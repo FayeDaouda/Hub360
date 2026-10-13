@@ -383,7 +383,7 @@ export class DevisService {
   // (système déjà livré et testé, cf. cadrage « Devis »). Le détail ligne par
   // ligne reste consultable sur CE devis, retrouvable depuis la facture via
   // devisOrigineId.
-  async convertir(societeId: string, id: string) {
+  async convertir(societeId: string, id: string, acteurId: string) {
     const devis = await this.charger(societeId, id);
     if (devis.statut !== 'accepte') {
       throw new ConflictException('Seul un devis accepté peut être converti en facture.');
@@ -419,7 +419,7 @@ export class DevisService {
       montantHt,
       tauxTva: tauxTvaEffectif,
       devisOrigineId: devis.id,
-    });
+    }, acteurId);
     await this.prisma.devis.update({
       where: { id: devis.id },
       data: { statut: 'transforme' },

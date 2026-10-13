@@ -66,7 +66,7 @@ describe('FacturationService · facture directe d’un lead', () => {
   it('validation CFO sans projet : référence CODE-n du lead, émise, échéance à 15 jours', async () => {
     const facture = { id: 'F1', projetId: null, dossierCrmId: 'D1', statut: 'brouillon', montantHt: new Prisma.Decimal(100_000), echeanceLe: null };
     const { s, updateMany } = monter({ facture });
-    await s.emettreParId('S1', 'F1');
+    await s.emettreParId('S1', 'F1', 'U1');
     const { data } = updateMany.mock.calls[0][0];
     // Référence affichée « D_ALM.26-3 » : code du lead + rang suivant du dossier.
     expect(data).toMatchObject({ numero: 42, codeDossier: 'D_ALM.26', rangDossier: 3, statut: 'emise' });
@@ -76,6 +76,6 @@ describe('FacturationService · facture directe d’un lead', () => {
 
   it('déjà émise → 409', async () => {
     const { s } = monter({ facture: { id: 'F1', projetId: null, dossierCrmId: 'D1', statut: 'emise', montantHt: new Prisma.Decimal(1), echeanceLe: null } });
-    await expect(s.emettreParId('S1', 'F1')).rejects.toThrow(ConflictException);
+    await expect(s.emettreParId('S1', 'F1', 'U1')).rejects.toThrow(ConflictException);
   });
 });

@@ -117,7 +117,7 @@ export class FacturationController {
     @Param('id') id: string,
     @Param('factureId') factureId: string,
   ) {
-    return this.facturation.emettre(req.user.societeId, id, factureId);
+    return this.facturation.emettre(req.user.societeId, id, factureId, req.user.userId);
   }
 
   @Delete(':factureId')
@@ -138,7 +138,7 @@ export class FacturationController {
     @Param('id') id: string,
     @Param('factureId') factureId: string,
   ) {
-    return this.facturation.creerAvoir(req.user.societeId, id, factureId);
+    return this.facturation.creerAvoir(req.user.societeId, id, factureId, req.user.userId);
   }
 
   @Post(':factureId/paiements')
@@ -150,7 +150,7 @@ export class FacturationController {
     @Param('factureId') factureId: string,
     @Body() dto: AjouterPaiementDto,
   ) {
-    return this.facturation.ajouterPaiement(req.user.societeId, id, factureId, dto);
+    return this.facturation.ajouterPaiement(req.user.societeId, id, factureId, dto, req.user.userId);
   }
 
   @Delete(':factureId/paiements/:paiementId')
@@ -167,6 +167,7 @@ export class FacturationController {
       id,
       factureId,
       paiementId,
+      req.user.userId,
     );
   }
 }

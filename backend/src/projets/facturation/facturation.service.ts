@@ -145,7 +145,7 @@ export class FacturationService {
     return this.formater(projetId);
   }
 
-  async emettre(societeId: string, projetId: string, factureId: string) {
+  async emettre(societeId: string, projetId: string, factureId: string, acteurId: string) {
     const projet = await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.brouillon(projetId, factureId);
     if (facture.montantHt.lte(0)) {
@@ -165,7 +165,7 @@ export class FacturationService {
     await this.avecSequence(societeId, projet.code, async (tx, seq) => {
       const r = await tx.facture.updateMany({
         where: { id: facture.id, statut: 'brouillon' },
-        data: { ...seq, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(facture) },
+        data: { ...seq, statut: 'emise', emiseLe: new Date(), emiseParId: acteurId, echeanceLe: echeanceALEmission(facture) },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
       if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
@@ -182,7 +182,7 @@ export class FacturationService {
 
   // Correction d'une facture émise (cadrage §5) : on n'édite pas, on émet un
   // avoir qui la porte en négatif et bascule l'originale en « annulée ».
-  async creerAvoir(societeId: string, projetId: string, factureId: string) {
+  async creerAvoir(societeId: string, projetId: string, factureId: string, acteurId: string) {
     const projet = await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.prisma.facture.findFirst({
       where: { id: factureId, projetId, societeId },
@@ -213,6 +213,7 @@ export class FacturationService {
           statut: 'emise',
           estAvoir: true,
           emiseLe: new Date(),
+          emiseParId: acteurId,
           type: facture.type,
           jalon: facture.jalon,
           montantHt: facture.montantHt.negated(),
@@ -230,6 +231,7 @@ export class FacturationService {
     projetId: string,
     factureId: string,
     dto: AjouterPaiementDto,
+    acteurId: string,
   ) {
     await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.prisma.facture.findFirst({
@@ -251,6 +253,7 @@ export class FacturationService {
         montant: dto.montant,
         mode: dto.mode ?? null,
         reference: dto.reference?.trim() ?? '',
+        creeParId: acteurId,
       },
     });
     return this.formater(projetId);
@@ -261,6 +264,7 @@ export class FacturationService {
     projetId: string,
     factureId: string,
     paiementId: string,
+    acteurId: string,
   ) {
     await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.prisma.facture.findFirst({
@@ -268,9 +272,28 @@ export class FacturationService {
       select: { id: true },
     });
     if (!facture) throw new NotFoundException('Facture introuvable');
-    await this.prisma.paiement.deleteMany({
-      where: { id: paiementId, factureId: facture.id },
-    });
+    const p = await this.prisma.paiement.findFirst({ where: { id: paiementId, factureId: facture.id } });
+    if (p) {
+      // Correction tracée : la ligne disparaît des cumuls mais sa copie reste
+      // (cf. PaiementSupprime).
+      await this.prisma.$transaction([
+        this.prisma.paiementSupprime.create({
+          data: {
+            paiementId: p.id,
+            factureId: p.factureId,
+            societeId,
+            date: p.date,
+            montant: p.montant,
+            mode: p.mode,
+            reference: p.reference,
+            creeLe: p.creeLe,
+            creeParId: p.creeParId,
+            supprimeParId: acteurId,
+          },
+        }),
+        this.prisma.paiement.delete({ where: { id: p.id } }),
+      ]);
+    }
     return this.formater(projetId);
   }
 
@@ -473,10 +496,10 @@ export class FacturationService {
   // Actions depuis Finances, par l'id de la facture : celle d'un projet suit
   // les règles du projet (F1 ouvre le projet, etc.) ; une facture directe sans
   // projet, les mêmes règles de numérotation et de statut.
-  async emettreParId(societeId: string, factureId: string) {
+  async emettreParId(societeId: string, factureId: string, acteurId: string) {
     const f = await this.facturePourAction(societeId, factureId);
     if (f.projetId) {
-      await this.emettre(societeId, f.projetId, factureId);
+      await this.emettre(societeId, f.projetId, factureId, acteurId);
       return this.factureCentrale(societeId, factureId);
     }
     if (f.statut !== 'brouillon') throw new ConflictException('Facture déjà émise.');
@@ -487,7 +510,7 @@ export class FacturationService {
     await this.avecSequence(societeId, dossier?.code ?? null, async (tx, seq) => {
       const r = await tx.facture.updateMany({
         where: { id: f.id, statut: 'brouillon' },
-        data: { ...seq, statut: 'emise', emiseLe: new Date(), echeanceLe: echeanceALEmission(f) },
+        data: { ...seq, statut: 'emise', emiseLe: new Date(), emiseParId: acteurId, echeanceLe: echeanceALEmission(f) },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
     });
@@ -505,16 +528,16 @@ export class FacturationService {
     return { ok: true };
   }
 
-  async ajouterPaiementParId(societeId: string, factureId: string, dto: AjouterPaiementDto) {
+  async ajouterPaiementParId(societeId: string, factureId: string, dto: AjouterPaiementDto, acteurId: string) {
     const f = await this.facturePourAction(societeId, factureId);
     if (f.projetId) {
-      await this.ajouterPaiement(societeId, f.projetId, factureId, dto);
+      await this.ajouterPaiement(societeId, f.projetId, factureId, dto, acteurId);
       return this.factureCentrale(societeId, factureId);
     }
     if (f.estAvoir) throw new ConflictException('Un avoir ne reçoit pas de paiement.');
     if (f.statut !== 'emise') throw new ConflictException('Seule une facture émise reçoit des paiements.');
     await this.prisma.paiement.create({
-      data: { factureId: f.id, date: dto.date, montant: dto.montant, mode: dto.mode ?? null, reference: dto.reference?.trim() ?? '' },
+      data: { factureId: f.id, date: dto.date, montant: dto.montant, mode: dto.mode ?? null, reference: dto.reference?.trim() ?? '', creeParId: acteurId },
     });
     return this.factureCentrale(societeId, factureId);
   }
@@ -588,6 +611,7 @@ export class FacturationService {
       tauxTva: number;
       devisOrigineId: string;
     },
+    acteurId: string,
   ): Promise<string> {
     let factureId = '';
     const projet = data.projetId
@@ -605,6 +629,7 @@ export class FacturationService {
           montantHt: data.montantHt,
           tauxTva: data.tauxTva,
           emiseLe: new Date(),
+          emiseParId: acteurId,
           devisOrigineId: data.devisOrigineId,
         },
       });

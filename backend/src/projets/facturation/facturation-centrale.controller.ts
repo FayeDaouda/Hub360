@@ -8,7 +8,7 @@ import { ValidationCeoAuDelaDuSeuil } from '../../finances/seuil-ceo.guard';
 import { FacturationService } from './facturation.service';
 import { AjouterPaiementDto, CreerFactureDirecteDto } from './dto';
 
-type R = { user: { societeId: string } };
+type R = { user: { societeId: string; userId: string } };
 
 // Vue centralisée (page « Facturation », cf. cadrage « Devis ») — liste à
 // plat toute la société, contrairement à FacturationController qui reste
@@ -71,7 +71,7 @@ export class FacturationCentraleController {
   @RequiertPermission('finances_factures', 'validation')
   @ValidationCeoAuDelaDuSeuil('facture', 'id')
   emettre(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
-    return this.facturation.emettreParId(req.user.societeId, id);
+    return this.facturation.emettreParId(req.user.societeId, id, req.user.userId);
   }
 
   @Delete(':id')
@@ -84,7 +84,7 @@ export class FacturationCentraleController {
   @RequiertPermission('finances_factures', 'validation')
   @ValidationCeoAuDelaDuSeuil('facture', 'id')
   paiement(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: AjouterPaiementDto) {
-    return this.facturation.ajouterPaiementParId(req.user.societeId, id, dto);
+    return this.facturation.ajouterPaiementParId(req.user.societeId, id, dto, req.user.userId);
   }
 
   @Post(':id/relance')

@@ -123,7 +123,8 @@ function mockPrisma() {
     delete: jest.fn(),
     aggregate: jest.fn().mockResolvedValue({ _max: { numero: 0 } }),
   };
-  const paiement = { create: jest.fn(), deleteMany: jest.fn() };
+  const paiement = { create: jest.fn(), deleteMany: jest.fn(), findFirst: jest.fn(), delete: jest.fn() };
+  const paiementSupprime = { create: jest.fn() };
   const projet = {
     findFirst: jest.fn().mockResolvedValue(PROJET_MANDAT),
     findUniqueOrThrow: jest.fn().mockResolvedValue({ phase: 'avant_projet' }),
@@ -147,9 +148,12 @@ function mockPrisma() {
     ligneDevis,
     blocEtude,
     ligneFacture,
-    $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(tx)),
+    paiementSupprime,
+    $transaction: jest.fn((arg: unknown) =>
+      Array.isArray(arg) ? Promise.all(arg) : (arg as (tx: unknown) => unknown)(tx),
+    ),
   } as unknown as PrismaService;
-  return { prisma, facture, paiement, projet, versionPreBilan, ligneDevis, blocEtude, ligneFacture };
+  return { prisma, facture, paiement, paiementSupprime, projet, versionPreBilan, ligneDevis, blocEtude, ligneFacture };
 }
 
 function service(prisma: PrismaService) {
@@ -204,7 +208,7 @@ describe('FacturationService.emettre', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', montantHt: dec(0) });
     const svc = service(prisma);
-    await expect(svc.emettre('S1', 'P1', 'F1')).rejects.toThrow(UnprocessableEntityException);
+    await expect(svc.emettre('S1', 'P1', 'F1', 'U1')).rejects.toThrow(UnprocessableEntityException);
     expect(facture.updateMany).not.toHaveBeenCalled();
   });
 
@@ -213,7 +217,7 @@ describe('FacturationService.emettre', () => {
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', montantHt: dec(1000) });
     facture.updateMany.mockResolvedValue({ count: 0 }); // 2ᵉ émission : plus rien à jour
     const svc = service(prisma);
-    await expect(svc.emettre('S1', 'P1', 'F1')).rejects.toThrow(ConflictException);
+    await expect(svc.emettre('S1', 'P1', 'F1', 'U1')).rejects.toThrow(ConflictException);
   });
 
   it('AUTORISÉ : numéro = max existant + 1, conditionné sur statut=brouillon', async () => {
@@ -221,10 +225,10 @@ describe('FacturationService.emettre', () => {
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', montantHt: dec(1000) });
     facture.aggregate.mockResolvedValue({ _max: { numero: 7 } });
     const svc = service(prisma);
-    await svc.emettre('S1', 'P1', 'F1');
+    await svc.emettre('S1', 'P1', 'F1', 'U1');
     expect(facture.updateMany).toHaveBeenCalledWith({
       where: { id: 'F1', statut: 'brouillon' },
-      data: expect.objectContaining({ numero: 8, statut: 'emise' }),
+      data: expect.objectContaining({ numero: 8, statut: 'emise', emiseParId: 'U1' }),
     });
   });
 });
@@ -234,21 +238,21 @@ describe('FacturationService.creerAvoir', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue(null);
     const svc = service(prisma);
-    await expect(svc.creerAvoir('S1', 'P1', 'F1')).rejects.toThrow(NotFoundException);
+    await expect(svc.creerAvoir('S1', 'P1', 'F1', 'U1')).rejects.toThrow(NotFoundException);
   });
 
   it('HORS PÉRIMÈTRE : un avoir ne s’annule pas par un autre avoir → 409', async () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'emise', estAvoir: true });
     const svc = service(prisma);
-    await expect(svc.creerAvoir('S1', 'P1', 'F1')).rejects.toThrow(ConflictException);
+    await expect(svc.creerAvoir('S1', 'P1', 'F1', 'U1')).rejects.toThrow(ConflictException);
   });
 
   it('facture pas encore émise (brouillon) → 409, rien à corriger', async () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', estAvoir: false });
     const svc = service(prisma);
-    await expect(svc.creerAvoir('S1', 'P1', 'F1')).rejects.toThrow(ConflictException);
+    await expect(svc.creerAvoir('S1', 'P1', 'F1', 'U1')).rejects.toThrow(ConflictException);
   });
 
   it('AUTORISÉ : avoir créé avec le montant NÉGATIF, lié à la facture d’origine', async () => {
@@ -265,7 +269,7 @@ describe('FacturationService.creerAvoir', () => {
       tauxTva: dec(18),
     });
     const svc = service(prisma);
-    await svc.creerAvoir('S1', 'P1', 'F1');
+    await svc.creerAvoir('S1', 'P1', 'F1', 'U1');
 
     // L'originale bascule en annulée, conditionnée sur son statut actuel —
     // exclut une course où elle aurait déjà un avoir.
@@ -299,7 +303,7 @@ describe('FacturationService.creerAvoir', () => {
     });
     facture.updateMany.mockResolvedValue({ count: 0 }); // déjà annulée par le 1er avoir
     const svc = service(prisma);
-    await expect(svc.creerAvoir('S1', 'P1', 'F1')).rejects.toThrow(ConflictException);
+    await expect(svc.creerAvoir('S1', 'P1', 'F1', 'U1')).rejects.toThrow(ConflictException);
     expect(facture.create).not.toHaveBeenCalled();
   });
 });
@@ -311,7 +315,7 @@ describe('FacturationService.ajouterPaiement', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue(null);
     const svc = service(prisma);
-    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT)).rejects.toThrow(
+    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
       NotFoundException,
     );
   });
@@ -320,7 +324,7 @@ describe('FacturationService.ajouterPaiement', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'emise', estAvoir: true });
     const svc = service(prisma);
-    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT)).rejects.toThrow(
+    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
       ConflictException,
     );
   });
@@ -329,7 +333,7 @@ describe('FacturationService.ajouterPaiement', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', estAvoir: false });
     const svc = service(prisma);
-    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT)).rejects.toThrow(
+    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
       ConflictException,
     );
   });
@@ -338,14 +342,40 @@ describe('FacturationService.ajouterPaiement', () => {
     const { prisma, facture, paiement } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'emise', estAvoir: false });
     const svc = service(prisma);
-    await svc.ajouterPaiement('S1', 'P1', 'F1', { ...PAIEMENT, reference: 'CHQ-1' });
+    await svc.ajouterPaiement('S1', 'P1', 'F1', { ...PAIEMENT, reference: 'CHQ-1' }, 'U1');
     expect(paiement.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         factureId: 'F1',
         montant: 100_000,
         reference: 'CHQ-1',
+        creeParId: 'U1',
       }),
     });
+  });
+
+  it('suppression tracée : copie dans PaiementSupprime (auteur + supprimeur) puis delete', async () => {
+    const { prisma, facture, paiement, paiementSupprime } = mockPrisma();
+    facture.findFirst.mockResolvedValue({ id: 'F1' });
+    const creeLe = new Date('2026-10-01');
+    paiement.findFirst.mockResolvedValue({
+      id: 'PA1', factureId: 'F1', date: '2026-10-01', montant: 50_000, mode: 'virement',
+      reference: 'VIR-9', creeLe, creeParId: 'U7',
+    });
+    await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1');
+    expect(paiementSupprime.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paiementId: 'PA1', factureId: 'F1', societeId: 'S1', montant: 50_000, creeLe, creeParId: 'U7', supprimeParId: 'U1',
+      }),
+    });
+    expect(paiement.delete).toHaveBeenCalledWith({ where: { id: 'PA1' } });
+  });
+
+  it('suppression d’un paiement inexistant : rien n’est tracé', async () => {
+    const { prisma, facture, paiement, paiementSupprime } = mockPrisma();
+    facture.findFirst.mockResolvedValue({ id: 'F1' });
+    paiement.findFirst.mockResolvedValue(null);
+    await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1');
+    expect(paiementSupprime.create).not.toHaveBeenCalled();
   });
 });
 

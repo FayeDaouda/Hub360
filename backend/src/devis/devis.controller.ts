@@ -92,6 +92,6 @@ export class DevisController {
   @Post(':id/conversion')
   @RequiertPermission('finances_factures', 'ecriture')
   convertir(@Req() req: R, @Param('id') id: string) {
-    return this.devis.convertir(req.user.societeId, id);
+    return this.devis.convertir(req.user.societeId, id, req.user.userId);
   }
 }
