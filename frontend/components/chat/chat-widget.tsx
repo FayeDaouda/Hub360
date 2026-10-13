@@ -27,7 +27,15 @@ import { jouerSonNotification } from '@/lib/notification-sound';
 // ouvert. `GET /canaux` distingue déjà admin (Général + 6 cellules + DM) de
 // collaborateur (Général + sa cellule + DM) — rien de spécifique ici. Le
 // panneau lui-même est purement présentiel.
-export function ChatWidget({ slug, moiId }: { slug: string; moiId: string }) {
+export function ChatWidget({
+  slug,
+  moiId,
+  ecriture = true,
+}: {
+  slug: string;
+  moiId: string;
+  ecriture?: boolean;
+}) {
   const [canaux, setCanaux] = useState<CanalChat[]>([]);
   const [ouvert, setOuvert] = useState(false);
   const [etatFlux, setEtatFlux] = useState<EtatFluxChat>('connexion');
@@ -202,6 +210,7 @@ export function ChatWidget({ slug, moiId }: { slug: string; moiId: string }) {
       {ouvert && (
         <PanneauChat
           moiId={moiId}
+          ecriture={ecriture}
           etatFlux={etatFlux}
           canaux={canaux}
           canalActif={canalActif}

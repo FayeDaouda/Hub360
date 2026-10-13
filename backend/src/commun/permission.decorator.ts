@@ -30,3 +30,10 @@ export type PermissionSelonMethode = {
 // finances) garde SA règle, sans exemption.
 export const PermissionSelonMethode = (module: string, options: { roleHorsMatrice?: string } = {}) =>
   SetMetadata(PERMISSION_SELON_METHODE, { module, ...options } satisfies PermissionSelonMethode);
+
+export const COMPTE_COMME_LECTURE = 'compteCommeLecture';
+
+// Sous @PermissionSelonMethode : route non-GET qui ne fait que LIRE au sens
+// métier (ex. marquer un canal lu, ticket du flux de réception) — jugée au
+// niveau lecture plutôt qu'écriture.
+export const CompteCommeLecture = () => SetMetadata(COMPTE_COMME_LECTURE, true);

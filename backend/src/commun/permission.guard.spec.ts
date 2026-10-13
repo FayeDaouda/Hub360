@@ -106,4 +106,17 @@ describe('PermissionGuard — règle selon la méthode', () => {
       }).canActivate(ctxOf(requete('GET', 'collaborateur', {}))),
     ).toThrow(ForbiddenException);
   });
+
+  it('@CompteCommeLecture : un POST/PATCH « de lecture » (chat lu, ticket) passe avec la seule lecture', () => {
+    const chat = { module: 'communication', roleHorsMatrice: 'collaborateur' };
+    expect(
+      g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(ctxOf(requete('PATCH', 'CEO (transverse)', { communication: 'lecture' }))),
+    ).toBe(true);
+    expect(() =>
+      g({ permissionSelonMethode: chat }).canActivate(ctxOf(requete('POST', 'CEO (transverse)', { communication: 'lecture' }))),
+    ).toThrow(ForbiddenException);
+    expect(() =>
+      g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(ctxOf(requete('PATCH', 'CIO (transverse)', { communication: 'aucun' }))),
+    ).toThrow(ForbiddenException);
+  });
 });

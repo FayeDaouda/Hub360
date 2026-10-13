@@ -11,6 +11,7 @@ import type {
 
 type Props = {
   moiId: string;
+  ecriture: boolean; // false = lecture seule (matrice « communication »)
   etatFlux: EtatFluxChat;
   canaux: CanalChat[];
   canalActif: CanalChat | null;
@@ -54,6 +55,7 @@ const LIBELLE_ETAT: Record<EtatFluxChat, string> = {
 
 export function PanneauChat({
   moiId,
+  ecriture,
   etatFlux,
   canaux,
   canalActif,
@@ -137,7 +139,7 @@ export function PanneauChat({
             {LIBELLE_ETAT[etatFlux]}
           </span>
         </div>
-        {!canalActif && !vueAnnuaire && (
+        {ecriture && !canalActif && !vueAnnuaire && (
           <button
             type="button"
             className="pchat-fermer"
@@ -262,36 +264,40 @@ export function PanneauChat({
             )}
           </div>
 
-          <form
-            className="pchat-saisie"
-            onSubmit={(e) => {
-              e.preventDefault();
-              envoyer();
-            }}
-          >
-            <textarea
-              className="pchat-saisie-champ"
-              rows={1}
-              placeholder="Message…"
-              value={brouillon}
-              maxLength={4000}
-              onChange={(e) => setBrouillon(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  envoyer();
-                }
+          {!ecriture ? (
+            <p className="pchat-saisie pchat-saisie--lecture">Lecture seule</p>
+          ) : (
+            <form
+              className="pchat-saisie"
+              onSubmit={(e) => {
+                e.preventDefault();
+                envoyer();
               }}
-            />
-            <button
-              type="submit"
-              className="pchat-saisie-btn"
-              disabled={!brouillon.trim() || envoiEnCours}
-              aria-label="Envoyer"
             >
-              <SendHorizonal size={17} strokeWidth={2} aria-hidden />
-            </button>
-          </form>
+              <textarea
+                className="pchat-saisie-champ"
+                rows={1}
+                placeholder="Message…"
+                value={brouillon}
+                maxLength={4000}
+                onChange={(e) => setBrouillon(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    envoyer();
+                  }
+                }}
+              />
+              <button
+                type="submit"
+                className="pchat-saisie-btn"
+                disabled={!brouillon.trim() || envoiEnCours}
+                aria-label="Envoyer"
+              >
+                <SendHorizonal size={17} strokeWidth={2} aria-hidden />
+              </button>
+            </form>
+          )}
         </>
       )}
     </div>

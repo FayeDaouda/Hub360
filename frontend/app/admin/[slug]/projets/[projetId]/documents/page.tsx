@@ -15,7 +15,7 @@ import {
   supprimerFichiers,
   typeParDefaut,
 } from '@/lib/fichiers';
-import { useTitrePage } from '@/lib/layout-contexte';
+import { useDroitsProjet, useTitrePage } from '@/lib/layout-contexte';
 import {
   PHASES,
   PHASES_PAR_CATEGORIE,
@@ -46,6 +46,7 @@ export default function DocumentsPage({ params }: Props) {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const ecriture = useDroitsProjet().documentsEcriture;
 
   useTitrePage(vueCorbeille ? 'Corbeille' : 'Documents');
 
@@ -132,7 +133,7 @@ export default function DocumentsPage({ params }: Props) {
                   {vueCorbeille ? 'Documents' : `Corbeille (${corbeille.length})`}
                 </button>
               )}
-              {!vueCorbeille && (
+              {!vueCorbeille && ecriture && (
                 <>
                   <input
                     ref={inputRef}
@@ -185,6 +186,7 @@ export default function DocumentsPage({ params }: Props) {
                       <select
                         className="field-input doc-select"
                         value={f.type}
+                        disabled={!ecriture}
                         onChange={(e) => patch(f.id, { type: e.target.value as TypeFichier })}
                         aria-label="Type de document"
                       >
@@ -197,6 +199,7 @@ export default function DocumentsPage({ params }: Props) {
                       <select
                         className="field-input doc-select"
                         value={f.phase ?? ''}
+                        disabled={!ecriture}
                         onChange={(e) =>
                           patch(f.id, { phase: (e.target.value || null) as Phase | null })
                         }
@@ -222,7 +225,7 @@ export default function DocumentsPage({ params }: Props) {
                     >
                       <Download size={15} strokeWidth={2} />
                     </button>
-                    {vueCorbeille ? (
+                    {!ecriture ? null : vueCorbeille ? (
                       <button
                         type="button"
                         className="doc-icone"

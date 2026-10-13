@@ -80,7 +80,6 @@ async function main() {
     { nom: 'Finances — Charges', cle: 'finances_charges' },
     { nom: 'Équipe', cle: 'equipe' },
     { nom: 'RH', cle: 'rh' },
-    { nom: 'Mon espace', cle: 'mon_espace' },
     { nom: 'Pilotage', cle: 'pilotage' },
     { nom: 'Documents', cle: 'documents' },
     { nom: 'Communication', cle: 'communication' },
@@ -174,7 +173,6 @@ async function main() {
         finances_charges: 'aucun',
         equipe: 'ecriture',
         rh: 'aucun',
-        mon_espace: 'ecriture',
         pilotage: 'lecture',
         documents: 'ecriture',
         communication: 'ecriture',
@@ -193,7 +191,6 @@ async function main() {
         finances_charges: 'aucun',
         equipe: 'aucun',
         rh: 'aucun',
-        mon_espace: 'ecriture',
         pilotage: 'lecture',
         documents: 'lecture',
         communication: 'ecriture',
@@ -210,7 +207,6 @@ async function main() {
         finances_charges: 'validation',
         equipe: 'aucun',
         rh: 'lecture',
-        mon_espace: 'aucun',
         pilotage: 'lecture',
         documents: 'lecture',
         communication: 'lecture',
@@ -227,7 +223,6 @@ async function main() {
         finances_charges: 'aucun',
         equipe: 'lecture',
         rh: 'ecriture',
-        mon_espace: 'validation',
         pilotage: 'lecture',
         documents: 'ecriture',
         communication: 'ecriture',
@@ -246,7 +241,6 @@ async function main() {
         finances_charges: 'aucun',
         equipe: 'lecture',
         rh: 'aucun',
-        mon_espace: 'ecriture',
         pilotage: 'aucun',
         documents: 'lecture',
         communication: 'ecriture',
@@ -270,7 +264,6 @@ async function main() {
         // ecriture (12/10/2026, décision du boss) : son propre espace (congés,
         // remboursements, documents) et l'onglet « À valider » — il est le
         // N+1 des directeurs (COO, CFO, CTO, CIO ; rh/demandes.service.ts).
-        mon_espace: 'ecriture',
         pilotage: 'lecture',
         documents: 'lecture',
         communication: 'lecture',
@@ -288,7 +281,6 @@ async function main() {
         finances_charges: 'lecture',
         equipe: 'lecture',
         rh: 'aucun',
-        mon_espace: 'ecriture',
         pilotage: 'lecture',
         documents: 'lecture',
         communication: 'lecture',
@@ -317,7 +309,6 @@ async function main() {
         // CIO crée les cellules et réaffecte ; CTO et CEO restent en lecture.
         equipe: 'ecriture',
         rh: 'aucun',
-        mon_espace: 'lecture',
         // lecture (05/10/2026, demande du boss) : page Pilotage, comme le CTO ;
         // ses actions vont par fonction (émetteur, CTO / CEO, responsable).
         pilotage: 'lecture',

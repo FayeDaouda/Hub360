@@ -21,7 +21,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { clearSession } from '@/lib/auth';
+import { clearSession, niveauSuffisant } from '@/lib/auth';
 import { estAdministrateurHub, sectionAccessible } from '@/lib/acces-back-office';
 import type { Session, Societe } from '@/lib/types';
 import { SocieteAvatar } from '@/components/societe-avatar';
@@ -355,7 +355,15 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             <h1 className="admin-title">{titre}</h1>
           </div>
           <div className="admin-topbar-actions">
-            <ChatWidget slug={session.societe.slug} moiId={session.utilisateur.id} />
+            {/* Module « communication » de la matrice : aucun = pas de chat,
+                lecture = lecture seule (le serveur applique la même règle). */}
+            {niveauSuffisant(session, 'communication', 'lecture') && (
+              <ChatWidget
+                slug={session.societe.slug}
+                moiId={session.utilisateur.id}
+                ecriture={niveauSuffisant(session, 'communication', 'ecriture')}
+              />
+            )}
             <ClocheNotifications slug={session.societe.slug} session={session} />
             <ThemeToggle />
             <span className="admin-user" title={session.utilisateur.email}>

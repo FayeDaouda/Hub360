@@ -112,7 +112,8 @@ export function premiereSectionAccessible(session: Session): string | null {
 // pour toutes les pages projet.
 export type DroitsProjet = {
   ecriture: boolean; // modifier le projet (checklists, blocs, phase, cellules, carte…)
-  documents: boolean; // section Documents (module « documents », ouvert plus tard aux rôles)
+  documents: boolean; // section Documents (module « documents » de la matrice)
+  documentsEcriture: boolean; // ajouter, classer, supprimer, restaurer
   facturesLecture: boolean; // montants de facture (Études, Facturation)
   facturesEcriture: boolean;
   marges: boolean; // pré-bilan
@@ -122,7 +123,8 @@ export function droitsProjet(session: Session): DroitsProjet {
   const admin = session.role === 'societe_admin';
   return {
     ecriture: admin || niveauSuffisant(session, 'projets', 'ecriture'),
-    documents: admin,
+    documents: admin || niveauSuffisant(session, 'documents', 'lecture'),
+    documentsEcriture: admin || niveauSuffisant(session, 'documents', 'ecriture'),
     facturesLecture: admin || niveauSuffisant(session, 'finances_factures', 'lecture'),
     facturesEcriture: admin || niveauSuffisant(session, 'finances_factures', 'ecriture'),
     marges: admin || niveauSuffisant(session, 'finances_marges', 'lecture'),

@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { Reflector } from '@nestjs/core';
 import type { NiveauPermission } from '@prisma/client';
 import {
+  COMPTE_COMME_LECTURE,
   PERMISSION_REQUISE,
   PERMISSION_SELON_METHODE,
   PermissionRequise,
@@ -60,7 +61,10 @@ export class PermissionGuard implements CanActivate {
     );
     if (!selon) return true;
     if (selon.roleHorsMatrice && req.user?.role === selon.roleHorsMatrice) return true;
-    const lecture = req.method === 'GET' || req.method === 'HEAD';
+    const lecture =
+      req.method === 'GET' ||
+      req.method === 'HEAD' ||
+      this.reflector.getAllAndOverride<boolean>(COMPTE_COMME_LECTURE, cibles) === true;
     verifier(permissions, selon.module, lecture ? 'lecture' : 'ecriture');
     return true;
   }

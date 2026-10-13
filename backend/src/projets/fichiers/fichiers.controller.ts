@@ -13,15 +13,19 @@ import {
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
 import { EcritureCollaborateur } from '../ecriture-collaborateur.decorator';
+import { PermissionSelonMethode } from '../../commun/permission.decorator';
+import { PermissionGuard } from '../../commun/permission.guard';
 import { FichiersService } from './fichiers.service';
 import { AjouterFichiersDto, PatchFichierDto, SupprimerFichiersDto } from './dto';
 
 type R = { user: { societeId: string; userId: string } };
 
 // Section « Documents » : livrables non-images. Même garde que les images
-// (AccesProjetGuard : collaborateur lecture seule + périmètre cellule).
+// (AccesProjetGuard : collaborateur lecture seule + périmètre cellule), et
+// module « documents » de la matrice pour les rôles métier (13/10/2026).
 @Controller('societes/:slug/projets/:id/fichiers')
-@UseGuards(JwtAuthGuard, AccesProjetGuard)
+@PermissionSelonMethode('documents', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class FichiersController {
   constructor(private fichiers: FichiersService) {}
 

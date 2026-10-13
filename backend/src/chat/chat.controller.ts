@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
+import { CompteCommeLecture, PermissionSelonMethode } from '../commun/permission.decorator';
+import { PermissionGuard } from '../commun/permission.guard';
 import { AccesCanalGuard } from './acces-canal.guard';
 import { ChatService } from './chat.service';
 import { TicketStore } from './ticket.store';
@@ -25,11 +27,15 @@ type R = {
   };
 };
 
-// Ouvert à tout membre de la société (MembreSocieteGuard). Le cloisonnement
-// par canal est appliqué en plus par AccesCanalGuard sur les routes /:id.
-// L'envoi passe par REST — le flux SSE (étape 3) ne sert qu'à recevoir.
+// Membre de la société (MembreSocieteGuard) ET module « communication » de la
+// matrice (13/10/2026, application stricte) : aucun = pas de chat, lecture =
+// lit sans écrire, écriture = participe. Le rôle socle collaborateur (hors
+// matrice) garde le chat. Le cloisonnement par canal est appliqué en plus par
+// AccesCanalGuard sur les routes /:id. L'envoi passe par REST — le flux SSE
+// (étape 3) ne sert qu'à recevoir.
 @Controller('societes/:slug')
-@UseGuards(JwtAuthGuard, MembreSocieteGuard)
+@PermissionSelonMethode('communication', { roleHorsMatrice: 'collaborateur' })
+@UseGuards(JwtAuthGuard, MembreSocieteGuard, PermissionGuard)
 export class ChatController {
   constructor(
     private chat: ChatService,
@@ -54,6 +60,7 @@ export class ChatController {
   }
 
   @Patch('canaux/:id/lecture')
+  @CompteCommeLecture()
   @UseGuards(AccesCanalGuard)
   lecture(@Req() req: R, @Param('id') id: string) {
     return this.chat.marquerLu(id, req.user.userId, req.user.societeId);
@@ -71,6 +78,7 @@ export class ChatController {
 
   // Jeton court pour l'URL du flux SSE (EventSource ne pose pas d'en-tête).
   @Post('chat/ticket')
+  @CompteCommeLecture()
   ticket(@Req() req: R) {
     return {
       token: this.tickets.emettre({
