@@ -1,7 +1,7 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { verifierMotDePasse } from './mot-de-passe';
+import { hacherMotDePasse, verifierMotDePasse } from './mot-de-passe';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
@@ -30,8 +30,43 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
+    return this.ouvrirSession(utilisateur, dto.societeSlug);
+  }
+
+  // Changement par la personne connectée : mot de passe actuel exigé (un
+  // poste resté ouvert ne suffit pas). Toutes les sessions émises avant
+  // sont coupées ; une nouvelle est rendue pour ne pas déconnecter l'auteur.
+  async changerMotDePasse(utilisateurId: string, societeSlug: string, actuel: string, nouveau: string) {
+    const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
+    if (!utilisateur?.motDePasseHash || !(await verifierMotDePasse(actuel, utilisateur.motDePasseHash))) {
+      throw new BadRequestException('Mot de passe actuel incorrect.');
+    }
+    if (actuel === nouveau) {
+      throw new BadRequestException("Le nouveau mot de passe doit être différent de l'actuel.");
+    }
+    const maintenant = new Date();
+    await this.prisma.$transaction([
+      this.prisma.utilisateur.update({
+        where: { id: utilisateurId },
+        data: { motDePasseHash: await hacherMotDePasse(nouveau), sessionsValidesDepuis: maintenant },
+      }),
+      this.prisma.evenementCompte.create({
+        data: { utilisateurId, type: 'mdp_reinitialise', parId: utilisateurId, detail: 'Changé par le titulaire' },
+      }),
+    ]);
+    // iat arrondi à la seconde SUPÉRIEURE : le jeton est daté à la seconde,
+    // la coupure à la milliseconde (cf. JwtStrategy) — sans cela, la nouvelle
+    // session serait refusée dans la seconde même du changement.
+    return this.ouvrirSession(utilisateur, societeSlug, Math.ceil(maintenant.getTime() / 1000));
+  }
+
+  private async ouvrirSession(
+    utilisateur: { id: string; email: string; nom: string; prenom: string },
+    societeSlug: string,
+    iat?: number,
+  ) {
     const societe = await this.prisma.societe.findUnique({
-      where: { slug: dto.societeSlug },
+      where: { slug: societeSlug },
     });
     if (!societe || !societe.actif) {
       throw new UnauthorizedException('Société introuvable');
@@ -73,6 +108,7 @@ export class AuthService {
       societeSlug: societe.slug,
       role: acces.role.nom,
       permissions,
+      ...(iat !== undefined && { iat }),
     };
 
     return {

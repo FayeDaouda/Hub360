@@ -11,6 +11,11 @@ class DefinirMotDePasseBase {
 export class ActiverCompteDto extends DefinirMotDePasseBase {}
 export class ReinitialiserMotDePasseDto extends DefinirMotDePasseBase {}
 
+export class ChangerMotDePasseDto {
+  @IsString() actuel!: string;
+  @IsString() @Length(10, 72) nouveau!: string;
+}
+
 export class MotDePasseOublieDto {
   @IsEmail() email!: string;
 }

@@ -20,6 +20,7 @@ import { clearSession } from '@/lib/auth';
 import type { Session, Societe } from '@/lib/types';
 import { SocieteAvatar } from '@/components/societe-avatar';
 import { ClocheNotifications } from '@/components/collab/cloche-notifications';
+import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
 import { ChatWidget } from '@/components/chat/chat-widget';
 
 type NavItem = {
@@ -81,6 +82,7 @@ export function CollaborateurShell({
   const router = useRouter();
   const base = `/collab/${session.societe.slug}`;
   const [menuOuvert, setMenuOuvert] = useState(false);
+  const [mdpOuvert, setMdpOuvert] = useState(false);
   const [repliee, setRepliee] = useState(false);
   // Portail plutôt qu'un ::after dans la sidebar — cf. commentaire équivalent
   // dans AdminShell (overflow-y auto y force overflow-x à `auto`).
@@ -280,9 +282,16 @@ export function CollaborateurShell({
           <div className="admin-topbar-actions">
             <ChatWidget slug={session.societe.slug} moiId={session.utilisateur.id} />
             <ClocheNotifications slug={session.societe.slug} />
-            <span className="admin-user" title={session.utilisateur.email}>
+            <button
+              type="button"
+              className="admin-user"
+              title={`${session.utilisateur.email} · changer mon mot de passe`}
+              aria-label="Changer mon mot de passe"
+              onClick={() => setMdpOuvert(true)}
+            >
               {initiales(session.utilisateur)}
-            </span>
+            </button>
+            {mdpOuvert && <ChangerMotDePasseModal onClose={() => setMdpOuvert(false)} />}
           </div>
         </header>
 

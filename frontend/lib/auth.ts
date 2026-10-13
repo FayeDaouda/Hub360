@@ -25,6 +25,12 @@ export function getSession(): Session | null {
   }
 }
 
+// Remplace la session en place (même stockage : « rester connecté » ou non),
+// ex. après un changement de mot de passe qui a renouvelé le jeton.
+export function remplacerSession(session: Session) {
+  saveSession(session, localStorage.getItem(STORAGE_KEY) !== null);
+}
+
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
   sessionStorage.removeItem(STORAGE_KEY);

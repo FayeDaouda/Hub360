@@ -25,6 +25,7 @@ import { clearSession, niveauSuffisant } from '@/lib/auth';
 import { estAdministrateurHub, sectionAccessible } from '@/lib/acces-back-office';
 import type { Session, Societe } from '@/lib/types';
 import { SocieteAvatar } from '@/components/societe-avatar';
+import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { ClocheNotifications } from '@/components/admin/cloche-notifications';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
@@ -96,6 +97,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
   // voir la mémoire « responsive-all-devices ». Au-dessus de ce seuil, la
   // classe n'a aucun effet (la sidebar reste dans le flux de la grille).
   const [menuOuvert, setMenuOuvert] = useState(false);
+  const [mdpOuvert, setMdpOuvert] = useState(false);
   // Lu après le premier rendu (localStorage indisponible côté serveur) —
   // évite un flash pour la majorité des utilisateurs (repli non activé par
   // défaut), au prix d'un très bref sursaut pour ceux qui l'ont activé.
@@ -366,9 +368,16 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             )}
             <ClocheNotifications slug={session.societe.slug} session={session} />
             <ThemeToggle />
-            <span className="admin-user" title={session.utilisateur.email}>
+            <button
+              type="button"
+              className="admin-user"
+              title={`${session.utilisateur.email} · changer mon mot de passe`}
+              aria-label="Changer mon mot de passe"
+              onClick={() => setMdpOuvert(true)}
+            >
               {initiales(session.utilisateur)}
-            </span>
+            </button>
+            {mdpOuvert && <ChangerMotDePasseModal onClose={() => setMdpOuvert(false)} />}
           </div>
         </header>
 

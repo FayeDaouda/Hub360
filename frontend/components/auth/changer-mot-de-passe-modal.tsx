@@ -1,0 +1,125 @@
+'use client';
+
+import { useState } from 'react';
+import { X } from 'lucide-react';
+import { remplacerSession } from '@/lib/auth';
+import { apiAuth } from '@/lib/client-api';
+import type { Session } from '@/lib/types';
+
+// Changement du mot de passe par la personne connectée (phase 0, 13/10/2026).
+// Le serveur coupe les autres sessions et renvoie une session neuve, qui
+// remplace l'actuelle : on reste connecté sur ce poste.
+export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
+  const [actuel, setActuel] = useState('');
+  const [nouveau, setNouveau] = useState('');
+  const [confirme, setConfirme] = useState('');
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [fait, setFait] = useState(false);
+
+  async function soumettre(e: React.FormEvent) {
+    e.preventDefault();
+    setErreur(null);
+    if (nouveau.length < 10) return setErreur('Au moins 10 caractères.');
+    if (nouveau !== confirme) return setErreur('Les deux saisies ne correspondent pas.');
+    setBusy(true);
+    try {
+      const session = await apiAuth<Session>('/auth/mot-de-passe', {
+        method: 'POST',
+        body: { actuel, nouveau },
+      });
+      remplacerSession(session);
+      setFait(true);
+    } catch (err) {
+      setErreur(err instanceof Error && err.message ? err.message : 'Changement impossible.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div
+        className="modal modal--sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-titre-mdp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="modal-header">
+          <h2 id="modal-titre-mdp">Changer mon mot de passe</h2>
+          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
+            <X size={18} strokeWidth={1.75} />
+          </button>
+        </header>
+
+        <div className="modal-body">
+          {fait ? (
+            <>
+              <p>Mot de passe changé. Vos autres appareils devront se reconnecter.</p>
+              <div className="modal-actions">
+                <button type="button" className="btn-primary" onClick={onClose}>
+                  Fermer
+                </button>
+              </div>
+            </>
+          ) : (
+            <form onSubmit={soumettre}>
+              <label className="field">
+                <span className="field-label">Mot de passe actuel</span>
+                <input
+                  type="password"
+                  className="field-input"
+                  autoComplete="current-password"
+                  value={actuel}
+                  onChange={(e) => setActuel(e.target.value)}
+                  autoFocus
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Nouveau mot de passe</span>
+                <input
+                  type="password"
+                  className="field-input"
+                  autoComplete="new-password"
+                  placeholder="Au moins 10 caractères"
+                  minLength={10}
+                  maxLength={72}
+                  value={nouveau}
+                  onChange={(e) => setNouveau(e.target.value)}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Confirmer le nouveau mot de passe</span>
+                <input
+                  type="password"
+                  className="field-input"
+                  autoComplete="new-password"
+                  maxLength={72}
+                  value={confirme}
+                  onChange={(e) => setConfirme(e.target.value)}
+                  required
+                />
+              </label>
+              {erreur && (
+                <p className="field-erreur" role="alert">
+                  {erreur}
+                </p>
+              )}
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
+                  Annuler
+                </button>
+                <button type="submit" className="btn-primary" disabled={busy}>
+                  {busy ? 'Enregistrement…' : 'Changer'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

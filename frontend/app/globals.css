@@ -3160,6 +3160,12 @@ a.admin-nav-item:hover {
     transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+button.admin-user {
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
 .admin-user:hover {
   transform: translateY(-2px) scale(1.06);
   box-shadow:

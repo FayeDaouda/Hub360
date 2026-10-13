@@ -1,10 +1,12 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import {
   ActiverCompteDto,
+  ChangerMotDePasseDto,
   MotDePasseOublieDto,
   ReinitialiserMotDePasseDto,
 } from './dto/comptes.dto';
@@ -53,5 +55,18 @@ export class AuthController {
   async reinitialiser(@Body() dto: ReinitialiserMotDePasseDto) {
     await this.comptes.definirMotDePasse(dto.token, dto.motDePasse, 'reset');
     return { ok: true };
+  }
+
+  // Seule route authentifiée du contrôleur : la personne connectée change son
+  // propre mot de passe. Même plafond que le login (essais sur l'actuel).
+  @Post('mot-de-passe')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  changerMotDePasse(
+    @Req() req: { user: { userId: string; societeSlug: string } },
+    @Body() dto: ChangerMotDePasseDto,
+  ) {
+    return this.authService.changerMotDePasse(req.user.userId, req.user.societeSlug, dto.actuel, dto.nouveau);
   }
 }
