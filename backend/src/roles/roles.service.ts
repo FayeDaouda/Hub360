@@ -74,11 +74,26 @@ export class RolesService {
     const module = await this.prisma.module.findUnique({ where: { cle: moduleCle } });
     if (!module) throw new NotFoundException('Module introuvable');
 
-    await this.prisma.rolePermission.upsert({
-      where: { roleId_moduleId: { roleId, moduleId: module.id } },
-      update: { niveau },
-      create: { roleId, moduleId: module.id, niveau },
-    });
+    const cle = { roleId_moduleId: { roleId, moduleId: module.id } };
+    const actuelle = await this.prisma.rolePermission.findUnique({ where: cle });
+    if (actuelle?.niveau === niveau) return { roleId, moduleCle, niveau };
+
+    await this.prisma.$transaction([
+      this.prisma.rolePermission.upsert({
+        where: cle,
+        update: { niveau },
+        create: { roleId, moduleId: module.id, niveau },
+      }),
+      // Les permissions voyagent dans le jeton (émis à la connexion) : sans
+      // cette coupure, chaque titulaire du rôle garderait l'ancien niveau
+      // jusqu'à expiration (7 jours). Même mécanisme que le changement de
+      // rôle d'un compte (comptes-groupe.service) ; l'auteur de la
+      // modification est inclus s'il porte ce rôle, il se reconnecte aussi.
+      this.prisma.utilisateur.updateMany({
+        where: { roles: { some: { roleId } } },
+        data: { sessionsValidesDepuis: new Date() },
+      }),
+    ]);
     return { roleId, moduleCle, niveau };
   }
 }

@@ -13,8 +13,10 @@ function svc(opts: {
   modules?: unknown[];
   roleTrouve?: unknown;
   moduleTrouve?: unknown;
+  permissionActuelle?: unknown;
 } = {}) {
   const upsert = jest.fn().mockResolvedValue({});
+  const revoquer = jest.fn().mockResolvedValue({ count: 0 });
   const prisma = {
     role: {
       findMany: jest.fn().mockResolvedValue(opts.roles ?? []),
@@ -24,9 +26,14 @@ function svc(opts: {
       findMany: jest.fn().mockResolvedValue(opts.modules ?? []),
       findUnique: jest.fn().mockResolvedValue(opts.moduleTrouve ?? null),
     },
-    rolePermission: { upsert },
+    rolePermission: {
+      upsert,
+      findUnique: jest.fn().mockResolvedValue(opts.permissionActuelle ?? null),
+    },
+    utilisateur: { updateMany: revoquer },
+    $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
   } as unknown as PrismaService;
-  return { svc: new RolesService(prisma), upsert };
+  return { svc: new RolesService(prisma), upsert, revoquer };
 }
 
 describe('RolesService.listerAvecPermissions', () => {
@@ -99,6 +106,30 @@ describe('RolesService.majPermission', () => {
       update: { niveau: 'ecriture' },
       create: { roleId: 'R1', moduleId: 'M1', niveau: 'ecriture' },
     });
+  });
+
+  it('révoque les sessions de tous les titulaires du rôle (droit appliqué immédiatement)', async () => {
+    const { svc: s, revoquer } = svc({
+      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
+      moduleTrouve: { id: 'M1', cle: 'crm' },
+      permissionActuelle: { niveau: 'lecture' },
+    });
+    await s.majPermission('S1', 'R1', 'crm', 'aucun', 'societe_admin');
+    expect(revoquer).toHaveBeenCalledWith({
+      where: { roles: { some: { roleId: 'R1' } } },
+      data: { sessionsValidesDepuis: expect.any(Date) },
+    });
+  });
+
+  it('niveau inchangé → ni écriture ni révocation', async () => {
+    const { svc: s, upsert, revoquer } = svc({
+      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
+      moduleTrouve: { id: 'M1', cle: 'crm' },
+      permissionActuelle: { niveau: 'lecture' },
+    });
+    await s.majPermission('S1', 'R1', 'crm', 'lecture', 'societe_admin');
+    expect(upsert).not.toHaveBeenCalled();
+    expect(revoquer).not.toHaveBeenCalled();
   });
 
   it('REFUSÉ : rôle transverse par l’admin société → 403, pas d’upsert', async () => {
