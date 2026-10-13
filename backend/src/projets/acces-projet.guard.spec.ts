@@ -255,6 +255,18 @@ describe('AccesProjetGuard — contrôleurs sous @PermissionSelonMethode', () =>
     expect(projetFind).not.toHaveBeenCalled();
   });
 
+  it.each([['GET'], ['PATCH']])(
+    'Salarié : anciennes routes fermées (%s), même sur un contrôleur ouvert à la matrice',
+    async (method) => {
+      const { svc, projetFind } = prisma();
+      const g = new AccesProjetGuard(svc, parCle({ permissionSelonMethode: { module: 'projets', roleHorsMatrice: 'collaborateur' } }));
+      await expect(
+        g.canActivate(ctxOf(req({ method, user: { ...COLLAB, role: 'Salarié' } }))),
+      ).rejects.toThrow(ForbiddenException);
+      expect(projetFind).not.toHaveBeenCalled();
+    },
+  );
+
   it('collaborateur : son chemin par cellule est inchangé (projet d’une autre cellule → 403)', async () => {
     const { svc } = prisma({
       collab: { id: 'C1', celluleId: 'CEL-A' },

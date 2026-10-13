@@ -8,6 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { estProjetDuCollaborateur } from './projet-acces';
+import { ROLE_SALARIE } from './gabarit/validation';
 import { ECRITURE_COLLABORATEUR } from './ecriture-collaborateur.decorator';
 import {
   PERMISSION_REQUISE,
@@ -32,6 +33,10 @@ import {
 //                     vérification du niveau est déléguée à PermissionGuard
 //                     (posé juste après dans @UseGuards) — ce guard-ci ne
 //                     fait que ne pas rejeter le rôle par avance.
+//  · Salarié → 403 sur toutes ces routes (anciennes) : sa lecture « projets »
+//                     de la matrice est limitée à ses tâches et passe par
+//                     /projets-ouverts (perimetreProjets, gabarit/validation.ts).
+//                     Sans ce refus, il lisait tous les projets de la société.
 //  · autre rôle/endpoint non marqué → 403.
 //
 // Le service reste agnostique du rôle : il n'assure que l'isolation société.
@@ -61,6 +66,9 @@ export class AccesProjetGuard implements CanActivate {
     }
 
     if (user.role === 'societe_admin') return true;
+    if (user.role === ROLE_SALARIE) {
+      throw new ForbiddenException('Vos projets sont accessibles depuis « Projets ».');
+    }
 
     if (user.role !== 'collaborateur') {
       const cibles = [ctx.getHandler(), ctx.getClass()];
