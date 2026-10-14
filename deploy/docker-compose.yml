@@ -1,0 +1,99 @@
+# HUB en production (ou pré-production) sur un serveur Hetzner — cf. README.md.
+#   docker compose --env-file .env up -d --build
+# Une seule configuration pour les deux : seuls .env (domaine, secrets) et le
+# nom du projet compose changent.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: 3001
+      FRONT_URL: https://${HUB_DOMAINE}
+      CORS_ORIGINS: https://${HUB_DOMAINE}
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-log}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_MARQUE: ${MAIL_MARQUE:-hub360°}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      HUB_DONNEES_DEMO: ${HUB_DONNEES_DEMO:-}
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      API_INTERNE_URL: http://backend:3001/api
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      HUB_DOMAINE: ${HUB_DOMAINE}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Sauvegarde quotidienne de la base (02:30) : copie locale (14 gardées) et,
+  # si le stockage objet est configuré, envoi dans S3_BUCKET_SAUVEGARDES.
+  sauvegarde:
+    build:
+      context: .
+      dockerfile: sauvegarde.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET_SAUVEGARDES: ${S3_BUCKET_SAUVEGARDES:-}
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-}
+      AWS_DEFAULT_REGION: ${S3_REGION:-eu-central}
+    volumes:
+      - ./sauvegardes:/sauvegardes
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

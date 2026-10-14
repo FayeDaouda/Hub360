@@ -1,0 +1,16 @@
+# Un seul domaine : /api → serveur HUB, le reste → interface. HTTPS
+# (certificat Let's Encrypt) obtenu et renouvelé automatiquement par Caddy.
+{$HUB_DOMAINE} {
+	encode zstd gzip
+
+	handle /api/* {
+		# flush_interval -1 : le flux du chat (SSE) part sans tampon.
+		reverse_proxy backend:3001 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

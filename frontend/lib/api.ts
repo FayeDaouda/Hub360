@@ -1,6 +1,13 @@
 import { Session, Societe } from './types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// Navigateur : NEXT_PUBLIC_API_URL (« /api » derrière Caddy en production).
+// Serveur Next (portail, page de connexion) : une URL relative n'a pas de
+// sens côté serveur — API_INTERNE_URL (ex. http://backend:3001/api entre
+// conteneurs), lue à l'exécution.
+const API_URL =
+  (typeof window === 'undefined' && process.env.API_INTERNE_URL) ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:3001/api';
 
 export async function getSocietes(): Promise<Societe[]> {
   const res = await fetch(`${API_URL}/societes`, { cache: 'no-store' });
