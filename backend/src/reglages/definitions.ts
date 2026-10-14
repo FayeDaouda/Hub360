@@ -138,26 +138,24 @@ export const OBJECTIFS: DefinitionReglage[] = [
     cle: 'objectif_taches_a_temps',
     libelle: 'Tâches validées à temps (%)',
     valeur: { type: 'pourcentage' },
-    defaut: null,
-    propose: '90',
-    aide: "Remise validée comparée à l'échéance de référence. Proposé : 90 %. Vide = à fixer.",
+    defaut: 90, // validé le 14/10/2026
+    aide: "Remise validée comparée à l'échéance de référence. 90 % minimum.",
     appliquee: true,
   },
   {
     cle: 'objectif_charge_equipes',
     libelle: 'Charge des équipes : zone (%)',
     valeur: { type: 'zone' },
-    defaut: null,
-    propose: '70 à 100',
-    aide: 'Temps standard des tâches assignées rapporté aux heures disponibles. Proposé : 70 à 100 %.',
+    defaut: { de: 70, a: 100 }, // validé le 14/10/2026
+    aide: 'Temps standard des tâches assignées rapporté aux heures disponibles. Zone normale : 70 à 100 %.',
     appliquee: true,
   },
   {
     cle: 'objectif_taux_reprises',
     libelle: 'Taux de reprises : seuil maximum (%)',
     valeur: { type: 'pourcentage' },
-    defaut: null,
-    aide: 'Part des tâches validées ayant eu au moins une reprise. Vide = à fixer.',
+    defaut: 20, // validé le 14/10/2026
+    aide: 'Part des tâches validées ayant eu au moins une reprise. 20 % au plus.',
     appliquee: true,
   },
 ];

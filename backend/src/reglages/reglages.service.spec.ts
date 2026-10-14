@@ -29,7 +29,9 @@ describe('ReglagesService', () => {
     expect(prisma.gabaritVersion.create).toHaveBeenCalledWith({ data: expect.objectContaining({ numero: 0, libelle: 'bêta 1.0' }) });
     if (!r.disponible) throw new Error();
     expect(r.regles.find((x) => x.cle === 'parts_factures')?.enService).toEqual({ F1: 40, F2: 40, F3: 20 });
-    expect(r.objectifs.filter((x) => x.enService === null)).toHaveLength(3);
+    // Objectifs validés le 14/10/2026 : plus aucun « à fixer ».
+    expect(r.objectifs.filter((x) => x.enService === null)).toHaveLength(0);
+    expect(r.objectifs.find((x) => x.cle === 'objectif_charge_equipes')?.enService).toEqual({ de: 70, a: 100 });
   });
   it('gabarit : nouvelle version + journal ; conflit de version ; aucune modification', async () => {
     const { s, prisma } = svc();
