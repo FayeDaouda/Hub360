@@ -38,27 +38,7 @@ export type Session = {
 // Contrat partagé avec le futur endpoint backend
 // `GET /api/societes/:slug/tableau-de-bord` — le front ne fait qu'afficher.
 
-export type PeriodeTableauBord = 'jour' | 'semaine' | 'mois' | 'annee';
-
-export type TendanceKpi = 'hausse' | 'baisse' | 'stable';
-
 export type FormatValeur = 'montant' | 'montant_compact' | 'pourcent' | 'nombre' | 'surface';
-
-export type StatKpi = {
-  cle: string;
-  libelle: string;
-  valeur: number;
-  format: FormatValeur;
-  // Delta vs période précédente — optionnel : une métrique « photo à l'instant T »
-  // (sans historique fiable en base) n'en fournit pas, et n'affiche alors que
-  // `detail`. Les trois vont ensemble ou aucun.
-  variation?: number;
-  uniteVariation?: 'pourcent' | 'points';
-  tendance?: TendanceKpi;
-  // Complément affiché sous la valeur (remplace « vs période précédente », ou
-  // tient lieu de contexte quand il n'y a pas de delta).
-  detail?: string;
-};
 
 export type PointHistogramme = {
   libelle: string;
@@ -70,29 +50,6 @@ export type Histogramme = {
   titre: string;
   unite: string;
   points: PointHistogramme[];
-};
-
-export type StatutJalon = 'a_faire' | 'en_attente' | 'a_risque' | 'fait';
-
-export type JalonApercu = {
-  id: string;
-  date: string; // ISO 8601
-  projet: string;
-  type: string;
-  statut: StatutJalon;
-};
-
-// Aperçu d'un projet actif sur le tableau de bord. `categorie` +
-// `promotionInterne` : les champs réels du modèle Projet (pas un « département »
-// dérivé). `statut` = l'enum Prisma StatutProjetExec.
-export type ProjetApercu = {
-  id: string;
-  nom: string;
-  categorie: Categorie;
-  promotionInterne: boolean; // nature === 'promotion_interne'
-  client: string;
-  avancement: number; // 0-100
-  statut: StatutProjetExec;
 };
 
 // --- Clients & projets (page /admin/[slug]/projets) ---
@@ -575,13 +532,6 @@ export type MembreAnnuaire = {
 
 export type StatutProjetExec = 'a_assigner' | 'assigne' | 'en_cours' | 'livre';
 
-export const STATUTS_PROJET_EXEC: Record<StatutProjetExec, string> = {
-  a_assigner: 'À assigner',
-  assigne: 'Assigné',
-  en_cours: 'En cours',
-  livre: 'Livré',
-};
-
 // Phase macro du projet — le fil de vie, distinct du statut d'assignation.
 // La séquence dépend de la catégorie (aménagement saute Permis et Études).
 export type Phase = 'avant_projet' | 'permis' | 'etudes' | 'chantier' | 'livre';
@@ -641,53 +591,6 @@ export type ProjetExecution = {
 // « fait » n'est pas un champ saisi, dérivé de la présence d'au moins un
 // fichier — cf. GET .../unbord.
 
-export type GroupeFoncierCle = 'documents' | 'releve_existant';
-export type StatutItemFoncier = 'fait' | 'en_attente' | 'non_necessaire';
-
-export type FichierItemFoncier = {
-  id: string;
-  nom: string;
-  url: string;
-  estImage: boolean;
-  ajouteLe: string;
-};
-
-export type ItemFoncier = {
-  id: string;
-  libelle: string;
-  statut: StatutItemFoncier;
-  fichiers: FichierItemFoncier[];
-};
-
-export type GroupeFoncier = {
-  groupe: GroupeFoncierCle;
-  libelle: string;
-  description: string;
-  items: ItemFoncier[];
-  responsable: { id: string; prenom: string; nom: string } | null;
-};
-
-export type Foncier = {
-  projetId: string;
-  groupes: GroupeFoncier[];
-};
-
-// Gabarit société (configuration — societe_admin ou CIO, hors fiche projet).
-export type LigneGabaritFoncier = {
-  id: string;
-  societeId: string;
-  groupe: GroupeFoncierCle;
-  libelle: string;
-  ordre: number;
-};
-
-// Miroir de GROUPES_UNBORD (backend, domaine/config.ts) — les 2 blocs sont
-// fixes, pas configurables (seuls les items dedans le sont).
-export const GROUPES_FONCIER: { cle: GroupeFoncierCle; libelle: string }[] = [
-  { cle: 'documents', libelle: 'Documents' },
-  { cle: 'releve_existant', libelle: "Relevé de l'existant" },
-];
-
 // --- Section « Documents » ---
 // Livrables non-images : PDF APS/APD versionnés, plans CAO (DWG/PLN), devis,
 // plaquettes. Modèle propre (pas ImageProjet élargi). Même seam de stockage —
@@ -702,40 +605,6 @@ export const GROUPES_FONCIER: { cle: GroupeFoncierCle; libelle: string }[] = [
 // technique » (5 pièces) retiré de l'UI à la même restructuration — champs
 // laissés dormants côté données (cf. domaine/config.ts::PIECES_DOSSIER_PERMIS).
 
-export type PieceDossierPermis =
-  | 'titre_propriete'
-  | 'plan_cadastral_vise'
-  | 'plans_apd'
-  | 'devis'
-  | 'timbre_fiscal';
-
-// L'enum garde instruction/observations pour ne pas invalider de vieilles
-// valeurs déjà en base, mais plus aucun chemin n'écrit dessus — seuls les 4
-// états ci-dessous restent proposés (cf. STATUTS_PERMIS_CHOIX). `depose`
-// réintroduit sept. 2026 (restructuration Permis) : « Déposé » devient un
-// choix à part entière plutôt qu'une valeur dormante sous l'étiquette
-// « En cours » — zéro migration de données, la valeur existait déjà.
-export type StatutPermis =
-  | 'a_deposer'
-  | 'depose'
-  | 'instruction'
-  | 'observations'
-  | 'obtenu'
-  | 'refuse';
-
-export type Permis = {
-  projetId: string;
-  dossier: Record<PieceDossierPermis, boolean>;
-  statut: StatutPermis;
-  dateObtention: string | null;
-  dateRefus: string | null;
-  // Équipe(s) à proposer dans le sélecteur de responsable de chaque bloc
-  // (front : GET …/collaborateurs?cellule=), comme AvantProjet. Plusieurs
-  // possibles depuis sept. 2026 (décision boss).
-  celluleIds: string[];
-  checklists: ChecklistPermisGroupe[];
-};
-
 // --- Sous-checklists opérationnelles du permis (en 3 blocs) ---
 // Miroir Trello Grey Concrete : suivi granulaire indépendant des verrous durs
 // du permis (nicad/dossier 5 pièces/statut) — juste un %, aucun blocage.
@@ -744,51 +613,6 @@ export type Permis = {
 // module (décision boss, sept. 2026, cf. mémoire) : chaque bloc peut avoir
 // une personne et une échéance différentes. Écriture (cocher, uploader,
 // prolongation) réservée au responsable DU BLOC + admin.
-
-export type GroupeChecklistPermis = 'dossier_permis' | 'depot_urbanisme' | 'procedure';
-
-// Image ou document rattaché à un item précis — même objet que dans
-// Images/Documents (ImageProjet/FichierProjet), juste un repère de
-// provenance ; pas de copie (cf. PermisService.joindreImages/joindreFichiers).
-export type FichierLigneChecklistPermis = {
-  id: string;
-  nom: string;
-  url: string;
-  estImage: boolean;
-  ajouteLe: string; // ISO 8601
-};
-
-export type ItemChecklistPermis = {
-  id: string;
-  libelle: string;
-  fait: boolean;
-  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
-  // avec fait (cf. lib/permis.ts::majLigneChecklistPermis).
-  nonRequise: boolean;
-  note: string;
-  faitPar: { id: string; nom: string } | null;
-  faitLe: string | null; // ISO 8601
-  fichiers: FichierLigneChecklistPermis[];
-};
-
-export type ChecklistPermisGroupe = {
-  groupe: GroupeChecklistPermis;
-  libelle: string;
-  description: string;
-  // Un seul responsable par bloc, une seule échéance par bloc — null =
-  // personne désigné / pas d'échéance fixée (admin seul peut alors agir).
-  debut: string | null; // AAAA-MM-JJ — fenêtre début → échéance (RH · Temps)
-  echeance: string | null; // AAAA-MM-JJ
-  responsable: { id: string; nom: string } | null;
-  prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
-  prolongationEcheance: string | null; // AAAA-MM-JJ proposée
-  prolongationMotif: string | null;
-  items: ItemChecklistPermis[];
-  // Point d'upload partagé du bloc (Dépôt urbanisme / Procédure, sept.
-  // 2026) — pas rattaché à un item précis. Toujours vide pour Constitution,
-  // dont l'unique item reçoit déjà ses fichiers directement.
-  fichiersBloc: FichierLigneChecklistPermis[];
-};
 
 // --- Section « Études » (conception uniquement) ---
 // Études techniques confiées à des BET : transforment l'APD en dossier
@@ -810,20 +634,6 @@ export type ChecklistPermisGroupe = {
 
 // -- Gabarit Études (configuration société, societe_admin ou CIO) ----------
 
-export type LigneGabaritEtude = {
-  id: string;
-  blocEtudeGabaritId: string;
-  libelle: string;
-  ordre: number;
-};
-
-export type BlocGabaritEtude = {
-  id: string;
-  libelle: string;
-  ordre: number;
-  items: LigneGabaritEtude[];
-};
-
 // --- Section « Exécution / chantier » (les deux catégories) ---
 // Miroir Trello Grey Concrete, même motif que Permis (ChecklistPermisGroupe) —
 // 8 blocs fixes, chacun avec sa propre échéance et son responsable. Remplace
@@ -842,55 +652,6 @@ export type BlocGabaritEtude = {
 // par groupe, pas par ligne). Items libres par projet — admin OU dispatcher
 // d'une cellule du projet (nouveauté sept. 2026) : ajout via
 // POST …/avant-projet/checklist, suppression via DELETE …/checklist/:id.
-
-export type GroupeChecklistAvp = 'taches_complementaires' | 'fichiers_produits';
-
-export type StatutItemChecklistAvp = 'fait' | 'en_attente' | 'non_necessaire';
-
-export type FichierItemChecklistAvp = {
-  id: string;
-  nom: string;
-  url: string;
-  estImage: boolean;
-  ajouteLe: string;
-};
-
-export type ItemChecklistAvp = {
-  id: string;
-  libelle: string;
-  statut: StatutItemChecklistAvp;
-  fichiers: FichierItemChecklistAvp[];
-};
-
-export type ChecklistAvpGroupe = {
-  groupe: GroupeChecklistAvp;
-  libelle: string;
-  description: string;
-  // Assignation par bloc (même motif que ChecklistPermisGroupe) — vide =
-  // toute l'équipe du projet peut agir (règle de septembre, en repli).
-  debut: string | null; // AAAA-MM-JJ — fenêtre début → échéance (RH · Temps)
-  echeance: string | null; // AAAA-MM-JJ
-  responsable: { id: string; nom: string } | null;
-  prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
-  prolongationEcheance: string | null; // AAAA-MM-JJ proposée
-  prolongationMotif: string | null;
-  items: ItemChecklistAvp[];
-};
-
-export type AvantProjet = {
-  projetId: string;
-  // Affectation & agenda (miroir carte Trello) — FK Collaborateur résolue { id, nom }
-  dessinateur: { id: string; nom: string } | null;
-  responsable3d: { id: string; nom: string } | null;
-  dateDebut: string | null; // AAAA-MM-JJ
-  dateFin: string | null;
-  // Équipe(s) du projet — sert à limiter le sélecteur d'assignation de
-  // chaque bloc, cf. ChecklistAvpGroupe. Plusieurs possibles depuis sept.
-  // 2026 (décision boss).
-  celluleIds: string[];
-  // Suivi opérationnel (sous-checklists Trello) — indicatif, ne gate rien
-  checklists: ChecklistAvpGroupe[];
-};
 
 // --- Pré-bilan de faisabilité (versionné) ---
 // Une version = un point de mesure figé, rattaché à une sous-étape du
@@ -1398,24 +1159,6 @@ export function statutDevisEffectif(
   if (d.statut === 'envoye' && d.dateValidite && d.dateValidite < aujourdhui) return 'expire';
   return d.statut;
 }
-
-export type AvancementProjets = {
-  pourcentage: number;
-  // Delta optionnel (cf. StatKpi) : absent quand la valeur est une photo à
-  // l'instant T ; le composant affiche alors un `sousTexte` de contexte.
-  variation?: number;
-  tendance?: TendanceKpi;
-};
-
-export type TableauBordSociete = {
-  periode: PeriodeTableauBord;
-  libellePeriode: string;
-  kpis: StatKpi[];
-  projetsSignesParPeriode: Histogramme;
-  avancementMoyen: AvancementProjets;
-  jalons: JalonApercu[];
-  projets: ProjetApercu[];
-};
 
 // --- Rôles & permissions ------------------------------------------------
 export type NiveauPermission = 'aucun' | 'lecture' | 'ecriture' | 'validation';

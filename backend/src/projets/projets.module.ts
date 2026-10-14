@@ -7,10 +7,8 @@ import { ProjetsService } from './projets.service';
 import { PermisService } from './permis/permis.service';
 import { EtudesService } from './etudes/etudes.service';
 import { EtudesGabaritService } from './etudes/gabarit.service';
-import { EtudesGabaritController } from './etudes/gabarit.controller';
 import { UnbordService } from './unbord/unbord.service';
 import { UnbordGabaritService } from './unbord/gabarit.service';
-import { UnbordGabaritController } from './unbord/gabarit.controller';
 import { ExecutionService } from './execution/execution.service';
 import { ImagesService } from './images/images.service';
 import { FichiersService } from './fichiers/fichiers.service';
@@ -47,8 +45,6 @@ import { FacturationCentraleController } from './facturation/facturation-central
   ],
   controllers: [
     ProjetsOuvertsController,
-    EtudesGabaritController,
-    UnbordGabaritController,
     FacturationController,
     FacturationCentraleController,
   ],

@@ -17,8 +17,8 @@ type Section = (typeof SECTIONS)[number];
 
 // Réglages · HUB 360° (maquette du boss) : gabarit versionné, règles et
 // délais, objectifs des indicateurs, journal — chaque modification exige un
-// motif. « Administration » regroupe les paramètres historiques (rôles,
-// gabarits Foncier/Études, localités, contrats). Section dans l'URL (?section=).
+// motif. « Administration » regroupe les autres paramètres (rôles, durées
+// standard, localités, contrats). Section dans l'URL (?section=).
 export function Reglages({ slug }: { slug: string }) {
   const session = useSessionCourante();
   const router = useRouter();
@@ -60,12 +60,12 @@ export function Reglages({ slug }: { slug: string }) {
     </div>
   );
 
-  // Paramètres historiques (rôles, gabarits Foncier/Études, localités,
-  // contrats) : hors maquette, accessibles par un lien discret en pied de page.
+  // Autres paramètres (rôles, durées standard, localités, contrats) : hors
+  // maquette, accessibles par un lien discret en pied de page.
   const lienAdministration = donnees.disponible && section !== 'administration' && (
     <p className="reg-pied">
       <button type="button" className="lien-inline" onClick={() => choisir('administration')}>
-        Autres paramètres : rôles, localités, contrats, gabarits Foncier et Études
+        Autres paramètres : rôles, durées standard, localités, contrats
       </button>
     </p>
   );
