@@ -96,8 +96,11 @@ export default function RhPage({ params }: Props) {
   const [filtre, setFiltre] = useState<'incomplets' | 'fins' | null>(null);
   const [archives, setArchives] = useState(false);
   const [ouvert, setOuvert] = useState<DossierPersonnel | 'nouveau' | null>(null);
-  // ?onglet= : lien direct (tuiles RH du Pilotage).
-  const ongletDemande = useSearchParams().get('onglet');
+  // ?onglet= : lien direct (tuiles RH du Pilotage) ; ?dossier= : fiche
+  // ouverte (recherche globale).
+  const parametres = useSearchParams();
+  const ongletDemande = parametres.get('onglet');
+  const dossierDemande = parametres.get('dossier');
   const [onglet, setOnglet] = useState<Onglet>(
     ongletDemande === 'temps' || ongletDemande === 'integration' || ongletDemande === 'demandes' ? ongletDemande : 'personnel',
   );
@@ -130,6 +133,16 @@ export default function RhPage({ params }: Props) {
       })
       .catch((e) => setErreur(messageErreur(e, 'Impossible de charger les dossiers.')));
   }, [params.slug]);
+
+  useEffect(() => {
+    const d = dossierDemande ? dossiers?.find((x) => x.id === dossierDemande) : undefined;
+    if (!d) return;
+    setOnglet('personnel');
+    setArchives(!!d.archiveLe);
+    setOuvert(d);
+    // Une seule ouverture par lien : pas à chaque rechargement de la liste.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossierDemande, dossiers === null]);
 
   const actifs = useMemo(() => (dossiers ?? []).filter((d) => !d.archiveLe), [dossiers]);
   const visibles = useMemo(() => {

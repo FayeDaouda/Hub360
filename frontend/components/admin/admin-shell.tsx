@@ -28,6 +28,7 @@ import { SocieteAvatar } from '@/components/societe-avatar';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { ClocheNotifications } from '@/components/admin/cloche-notifications';
+import { RechercheGlobale } from '@/components/admin/recherche-globale';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 
 type NavItem = {
@@ -357,6 +358,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             <h1 className="admin-title">{titre}</h1>
           </div>
           <div className="admin-topbar-actions">
+            <RechercheGlobale slug={session.societe.slug} />
             {/* Module « communication » de la matrice : aucun = pas de chat,
                 lecture = lecture seule (le serveur applique la même règle). */}
             {niveauSuffisant(session, 'communication', 'lecture') && (
