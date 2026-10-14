@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { verifierEnvironnementDemo } from './garde-demo';
 
 // Comptes fictifs de démonstration — UN par rôle de la matrice Grey Concrete
 // (sept. 2026), pour montrer et recetter les droits de chaque rôle. Personnes
@@ -61,6 +62,7 @@ export async function creerComptesDemo(
 
 // Exécution autonome : npm run comptes-demo (depuis backend/).
 if (require.main === module) {
+  verifierEnvironnementDemo();
   const prisma = new PrismaClient();
   (async () => {
     const grey = await prisma.societe.findUniqueOrThrow({ where: { slug: 'grey-concrete' } });

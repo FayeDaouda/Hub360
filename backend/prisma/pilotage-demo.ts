@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { verifierEnvironnementDemo } from './garde-demo';
 
 // Décisions FICTIVES de démonstration au registre (maquette « Pilotage »,
 // oct. 2026) : deux décisions saisies par des instances — l'une dans les
@@ -69,6 +70,7 @@ export async function creerPilotageDemo(prisma: PrismaClient, societeId: string)
 
 // Exécution autonome : npm run pilotage-demo (depuis backend/).
 if (require.main === module) {
+  verifierEnvironnementDemo();
   const prisma = new PrismaClient();
   (async () => {
     const grey = await prisma.societe.findUniqueOrThrow({ where: { slug: 'grey-concrete' } });

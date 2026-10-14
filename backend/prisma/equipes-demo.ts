@@ -1,5 +1,6 @@
 import { PrismaClient, type ClienteleCellule, type EtatPosteCellule, type ProcessusCellule, type StatutCellule } from '@prisma/client';
 import { codeCellule, prefixeSociete } from '../src/equipe/equipes-regles';
+import { verifierEnvironnementDemo } from './garde-demo';
 
 // Cellules FICTIVES de démonstration (maquette « Équipes », oct. 2026) :
 // nomenclature ISO 9001, statuts, clientèles, pilotes et postes — tous les
@@ -166,6 +167,7 @@ export async function organiserEquipesDemo(prisma: PrismaClient, societeId: stri
 
 // Exécution autonome : npm run equipes-demo (depuis backend/).
 if (require.main === module) {
+  verifierEnvironnementDemo();
   const prisma = new PrismaClient();
   (async () => {
     const grey = await prisma.societe.findUniqueOrThrow({ where: { slug: 'grey-concrete' } });

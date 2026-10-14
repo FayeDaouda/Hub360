@@ -4,6 +4,7 @@ import { JALONS_FACTURE, typeFactureDepuisNature, type PartsFactures } from '../
 import { REGLES } from '../src/reglages/definitions';
 import { VALIDITE_OFFRE_JOURS, ajouterJours } from '../src/devis/domaine';
 import { DELAI_PAIEMENT_DIRECTE_JOURS } from '../src/projets/facturation/facture-directe';
+import { verifierEnvironnementDemo } from './garde-demo';
 
 // Devis et factures FICTIFS de démonstration (maquette Finances, oct. 2026) —
 // « tarifs et montants fictifs de démonstration ». Les montants viennent du
@@ -253,6 +254,7 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
 
 // Exécution autonome : npm run finances-demo (depuis backend/).
 if (require.main === module) {
+  verifierEnvironnementDemo();
   const prisma = new PrismaClient();
   (async () => {
     const grey = await prisma.societe.findUniqueOrThrow({ where: { slug: 'grey-concrete' } });

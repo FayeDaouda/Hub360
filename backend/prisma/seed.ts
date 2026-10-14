@@ -21,6 +21,7 @@ import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
 import { creerFinancesDemo } from './finances-demo';
 import { organiserEquipesDemo } from './equipes-demo';
 import { creerPilotageDemo } from './pilotage-demo';
+import { verifierEnvironnementDemo } from './garde-demo';
 
 const prisma = new PrismaClient();
 
@@ -32,6 +33,7 @@ const ID_BOSS = '00000000-0000-4000-8000-000000000002';
 const ID_COLLAB = '00000000-0000-4000-8000-000000000003';
 
 async function main() {
+  verifierEnvironnementDemo();
   // --- Rôles & modules -------------------------------------------------
   // Rôles socles (societeId null) — rétrocompatibles, pré-créés pour toutes
   // les sociétés ; chacune pourra ensuite définir ses propres rôles.
