@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Copy, Download, ReceiptText, Send, X, XCircle } from 'lucide-react';
 import { convertirDevis, envoyerDevis, marquerReponseDevis, supprimerDevis } from '@/lib/devis';
+import { lienFacturationProjet } from '@/lib/facturation';
 import { jjmmaaaa, statutDevis } from '@/lib/finances';
 import type { Devis } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
@@ -146,7 +147,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
             </button>
           )}
           {d.projetId && (d.statut === 'accepte' || d.statut === 'transforme') && droits.facturesEcriture && (
-            <Link className="btn-primary" href={`/admin/${slug}/projets/${d.projetId}/facturation`}>
+            <Link className="btn-primary" href={lienFacturationProjet(slug, d.projetId)}>
               <ReceiptText size={14} strokeWidth={2} aria-hidden /> Facturer les tranches
             </Link>
           )}

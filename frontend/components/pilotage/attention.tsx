@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { CalendarClock, ChevronRight, FileWarning, Hourglass, ReceiptText, Scale, UserCheck } from 'lucide-react';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
+import { lienFacturationProjet } from '@/lib/facturation';
 import { formatMontant } from '@/lib/format';
 import type { AttentionPilotage, VuePilotage } from '@/lib/types';
 
@@ -94,7 +95,9 @@ export function Attention({
               : { libelle: 'À émettre', ton: 'attention' },
         href: f.factureId
           ? `${base}/facturation?facture=${f.factureId}`
-          : `${base}/projets/${f.projetId}/facturation`,
+          : f.projetId
+            ? lienFacturationProjet(slug, f.projetId)
+            : `${base}/facturation`,
       })),
     },
     {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BellRing, Download, X } from 'lucide-react';
-import { ajouterPaiementCentrale, emettreFactureCentrale, relancerFacture, supprimerFactureCentrale } from '@/lib/facturation';
+import { ajouterPaiementCentrale, emettreFactureCentrale, lienFacturationProjet, relancerFacture, supprimerFactureCentrale } from '@/lib/facturation';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
@@ -210,8 +210,8 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
             </button>
           )}
           {f.projet && (
-            <Link className="btn-ghost" href={`/admin/${slug}/projets/${f.projet.id}/facturation`}>
-              Gérer dans le projet
+            <Link className="btn-ghost" href={lienFacturationProjet(slug, f.projet.id)}>
+              Facturation du projet
             </Link>
           )}
           <button type="button" className="btn-ghost" onClick={onTelecharger}>

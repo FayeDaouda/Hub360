@@ -11,6 +11,12 @@ import type {
 } from './types';
 import { apiSociete } from './client-api';
 
+// Facturation d'un projet : page de Finances (phase 1, 14/10/2026 — avant,
+// sous /projets/:id/facturation). Seul point qui construit cette adresse.
+export function lienFacturationProjet(slug: string, projetId: string): string {
+  return `/admin/${slug}/facturation/projets/${projetId}`;
+}
+
 // -----------------------------------------------------------------------------
 // Facturation client (module admin-only). API NestJS :
 //   GET    …/projets/:id/factures

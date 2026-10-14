@@ -1,6 +1,7 @@
 import type { FluxNotifications, NotificationItem, Session } from './types';
 import { apiSociete } from './client-api';
 import { niveauSuffisant } from './auth';
+import { lienFacturationProjet } from './facturation';
 
 // Notifications du collaborateur connecté. API NestJS :
 //   GET   /api/societes/:slug/notifications          → { nonLues, elements[] }
@@ -31,7 +32,7 @@ export function lienNotificationAdmin(
   session: Session | null,
 ): string | null {
   if (n.type === 'contrat_signe' && n.projetId && niveauSuffisant(session, 'finances_factures', 'validation')) {
-    return `/admin/${slug}/projets/${n.projetId}/facturation`;
+    return lienFacturationProjet(slug, n.projetId);
   }
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).
   if (n.type === 'facture_a_valider') {

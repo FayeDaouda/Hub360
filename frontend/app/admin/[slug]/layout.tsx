@@ -7,7 +7,6 @@ import { clearSession, getSession } from '@/lib/auth';
 import {
   premiereSectionAccessible,
   sectionAccessible,
-  sectionPourAcces,
 } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { LayoutProvider } from '@/lib/layout-contexte';
@@ -60,7 +59,7 @@ export default function AdminLayout({ children, params }: Props) {
   // tous les appels.
   const active = activeAdminDepuisPathname(pathname, params.slug);
   const sectionRefusee =
-    !!session && !sectionAccessible(session, sectionPourAcces(pathname, params.slug, active));
+    !!session && !sectionAccessible(session, active);
   useEffect(() => {
     if (session && sectionRefusee) {
       const section = premiereSectionAccessible(session) ?? '';

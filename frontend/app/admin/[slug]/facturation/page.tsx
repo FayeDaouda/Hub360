@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Banknote, Clock, FileText, Package, Plus, TrendingUp } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getClients, getProjets } from '@/lib/crm';
-import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation } from '@/lib/facturation';
+import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation, lienFacturationProjet } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
@@ -258,7 +258,7 @@ export default function FinancesPage({ params }: Props) {
             {bureaux.map((b, i) => (
               <span key={b.blocId}>
                 {i > 0 && ' · '}
-                <Link href={`/admin/${params.slug}/projets/${b.projet.id}/facturation`} className="lien-inline">
+                <Link href={lienFacturationProjet(params.slug, b.projet.id)} className="lien-inline">
                   {b.bureau} — {b.libelle} ({b.projet.code}
                   {b.montantBureauHt != null && `, ${formatMontantCompact(b.montantBureauHt)} HT`})
                 </Link>

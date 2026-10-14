@@ -91,15 +91,6 @@ export function sectionAccessible(session: Session, cle: string): boolean {
   return !!moduleMatrice && niveauSuffisant(session, moduleMatrice, 'lecture');
 }
 
-// Section qui gouverne l'ACCÈS à une URL — celle de la nav, sauf la page
-// Facturation d'un projet (/projets/:id/facturation) : elle vit sous Projets
-// dans l'URL mais relève de la Facturation (finances_factures), pour qu'une
-// CFO y enregistre un paiement sans ouvrir toute la section Projets.
-export function sectionPourAcces(pathname: string, slug: string, sectionNav: string): string {
-  const reste = pathname.slice(`/admin/${slug}`.length);
-  return /^\/projets\/[^/]+\/facturation(\/|$)/.test(reste) ? 'facturation' : sectionNav;
-}
-
 // Chemin (relatif à /admin/[slug]) de la première section accessible, ou
 // null si aucune → le rôle n'a rien à faire dans le back-office.
 export function premiereSectionAccessible(session: Session): string | null {
