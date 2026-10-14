@@ -24,6 +24,7 @@ export type ProjetOuvertResume = {
   faites: number;
   total: number;
   enRetard: number;
+  livraisonDepassee: boolean; // J > horizon et projet non livré
 };
 
 export type TableauProjets = {

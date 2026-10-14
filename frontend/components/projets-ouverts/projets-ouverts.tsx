@@ -203,8 +203,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                     >
                       <span className="po-projet-tete">
                         <span className="po-code">{p.code}</span>
-                        <span className={`pill pill--${p.enRetard ? 'risque' : 'succes'}`}>
-                          {p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
+                        <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
+                          {p.livraisonDepassee ? 'Livraison dépassée' : p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
                         </span>
                       </span>
                       <span className="po-projet-client">{p.client}</span>
@@ -355,6 +355,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
           <span className="po-aide">
             J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
           </span>
+          {d.jour > d.horizon && d.statutChantier !== 'livre' && <span className="pill pill--risque">Livraison dépassée</span>}
           {d.budgetHeures !== null && <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>}
           <StatutProjet slug={slug} projetId={d.id} statut={d.statutChantier} modifiable={ecriture} onMaj={onMaj} />
         </div>

@@ -93,16 +93,20 @@ export class ProjetsOuvertsService {
     const resumes = projets.map((p) => {
       const { etapes } = this.etats(p, jour, feries);
       const somme = (cle: 'faites' | 'total' | 'enRetard') => etapes.reduce((s, e) => s + e[cle], 0);
+      const rang = rangOuvre(p.ouvertLe!, jour, feries);
+      const horizon = this.horizon(p.budgetHeures);
       return {
         id: p.id,
         code: p.code,
         client: p.client.nom,
         cellule: p.cellules[0]?.cellule.nom ?? null,
-        jour: rangOuvre(p.ouvertLe!, jour, feries),
-        horizon: this.horizon(p.budgetHeures),
+        jour: rang,
+        horizon,
         faites: somme('faites'),
         total: somme('total'),
         enRetard: somme('enRetard'),
+        // Jour de livraison franchi sans que le projet soit déclaré livré.
+        livraisonDepassee: rang > horizon && statutChantier(p.phase) !== 'livre',
       };
     });
     const taches = projets.flatMap((p) => p.cartes.flatMap((c) => c.taches));
