@@ -34,6 +34,19 @@ export function lienNotificationAdmin(
   if (n.type === 'contrat_signe' && n.projetId && niveauSuffisant(session, 'finances_factures', 'validation')) {
     return lienFacturationProjet(slug, n.projetId);
   }
+  const base = `/admin/${slug}`;
+  // Demandes RH : la RH traite dans RH › Demandes ; le N+1 décide dans Mon
+  // espace › À valider ; le salarié suit ses demandes dans Mon espace.
+  if (n.type === 'absence_a_decider') {
+    return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
+  }
+  if (n.type === 'remboursement_a_traiter') return `${base}/rh?onglet=demandes`;
+  if (n.type === 'absence_decidee') return `${base}/mon-espace?onglet=conges`;
+  if (n.type === 'remboursement_traite') return `${base}/mon-espace?onglet=remboursements`;
+  if (n.type === 'decision_assignee') return `${base}?onglet=registre`;
+  if ((n.type === 'facture_emise' || n.type === 'facture_payee') && n.factureId) {
+    return `${base}/facturation?facture=${n.factureId}`;
+  }
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).
   if (n.type === 'facture_a_valider') {
     return n.factureId ? `/admin/${slug}/facturation?facture=${n.factureId}` : `/admin/${slug}/facturation?onglet=factures`;

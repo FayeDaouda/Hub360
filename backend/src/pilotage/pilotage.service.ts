@@ -1,3 +1,4 @@
+import { NotificationsService } from '../notifications/notifications.service';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, type NiveauPermission, type TypeReporting } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -66,6 +67,7 @@ export class PilotageService {
     private reglages: ReglagesService,
     private temps: TempsService,
     private chiffres: ChiffresPilotageService,
+    private notifications: NotificationsService,
   ) {}
 
   async vue(a: Acteur) {
@@ -495,6 +497,17 @@ export class PilotageService {
       echeance: dto.echeance,
       creeParId: a.userId,
     }));
+    // Le responsable (fiche d'équipe ou titulaires du rôle) est prévenu.
+    const texte = dto.texte.trim();
+    await this.notifications.envoyer({
+      societeId: a.societeId,
+      type: 'decision_assignee',
+      titre: `Décision à mettre en œuvre · ${texte.length > 80 ? `${texte.slice(0, 79)}…` : texte} · échéance ${dto.echeance.slice(8, 10)}/${dto.echeance.slice(5, 7)}`,
+      destinataireIds: responsable.responsableCollaborateurId
+        ? await this.notifications.comptesDe([responsable.responsableCollaborateurId])
+        : await this.notifications.titulairesRole(a.societeId, responsable.responsableRole!),
+      parId: a.userId,
+    });
     return this.vue(a);
   }
 

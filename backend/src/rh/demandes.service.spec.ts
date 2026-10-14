@@ -2,6 +2,13 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { DemandesService } from './demandes.service';
+import type { NotificationsService } from '../notifications/notifications.service';
+
+const NOTIFS = {
+  envoyer: jest.fn().mockResolvedValue(undefined),
+  comptesDe: jest.fn().mockResolvedValue(['UX']),
+  titulairesRole: jest.fn().mockResolvedValue(['URH']),
+} as unknown as NotificationsService;
 
 const DEMANDE = {
   id: 'D1', dossierId: 'DOS1', type: 'conge_paye', dateDebut: '2026-10-05', dateFin: '2026-10-09', jours: 5,
@@ -25,12 +32,13 @@ function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?:
     dossierPersonnel: {
       findUnique: jest.fn().mockResolvedValue({ societeId: 'S', collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }),
       findFirst: jest.fn().mockResolvedValue(o.moi === undefined ? { id: 'DOS1', collaborateur: null } : o.moi),
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ societeId: 'S', prenom: 'Awa', nom: 'Diop', utilisateurId: 'UA', collaborateur: null }),
     },
     tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? [TACHE]), update: majTache },
     evenementTacheProjet: { create: jest.fn().mockReturnValue('evt') },
     $transaction: jest.fn().mockImplementation((ops: unknown[]) => Promise.resolve(ops.map(() => ({ ...DEMANDE, statut: 'accord_n1' })))),
   } as unknown as PrismaService;
-  return { s: new DemandesService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), update, majTache };
+  return { s: new DemandesService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService, NOTIFS), update, majTache };
 }
 const CHEF = { userId: 'U', societeId: 'S', role: 'Salarié' };
 const CLE = 'tache:T1';
@@ -51,6 +59,13 @@ describe('DemandesService.decider (N+1)', () => {
     const { s, majTache } = svc();
     await s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'X1' }] });
     expect(majTache).toHaveBeenCalledWith({ where: { id: 'T1' }, data: { assigneId: 'X1' } });
+  });
+  it('accord N+1 : salarié, RH et repreneur de la tâche notifiés', async () => {
+    (NOTIFS.envoyer as jest.Mock).mockClear();
+    const { s } = svc();
+    await s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'X1' }] });
+    const types = (NOTIFS.envoyer as jest.Mock).mock.calls.map((c) => c[0].type);
+    expect(types).toEqual(['absence_decidee', 'absence_a_decider', 'tache_assignee']);
   });
   it('on ne confie pas un livrable au demandeur lui-même', async () => {
     await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'COLLAB' }] })).rejects.toThrow(BadRequestException);

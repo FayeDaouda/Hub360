@@ -198,6 +198,15 @@ enum NotificationType {
   tache_renvoyee
   facture_a_valider // facture directe d'un lead préparée, à valider par le CFO
   mention_projet // @mention dans un fil de discussion de projet (maquette « Projets »)
+  // Notifications manquantes (phase 3, 14/10/2026)
+  tache_assignee // une tâche de projet vous est assignée
+  absence_a_decider // demande d'absence à trancher (N+1, puis RH)
+  absence_decidee // votre demande d'absence a été tranchée
+  remboursement_a_traiter // demande de remboursement reçue (RH)
+  remboursement_traite // votre remboursement a été traité
+  decision_assignee // décision du registre dont vous êtes responsable
+  facture_emise
+  facture_payee
 }
 
 model Notification {

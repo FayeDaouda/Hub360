@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
   AlarmClock,
@@ -67,7 +68,11 @@ export function Pilotage({ slug }: { slug: string }) {
   const accueilCeo = session.role === ROLE_CEO;
   const [vue, setVue] = useState<VuePilotage | null>(null);
   const [attention, setAttention] = useState<AttentionPilotage | null>(null);
-  const [onglet, setOnglet] = useState<Onglet>('indicateurs');
+  // ?onglet= : lien direct (notification « décision à mettre en œuvre »).
+  const ongletDemande = useSearchParams().get('onglet');
+  const [onglet, setOnglet] = useState<Onglet>(
+    ongletDemande === 'reportings' || ongletDemande === 'registre' ? ongletDemande : 'indicateurs',
+  );
   const [erreur, setErreur] = useState<string | null>(null);
   const ongletsRef = useRef<HTMLDivElement>(null);
 

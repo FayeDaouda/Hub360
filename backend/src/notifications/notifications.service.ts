@@ -166,11 +166,13 @@ export class NotificationsService {
 
   // Titulaires ACTIFS d'un rôle de la société (rôle non supprimé) — même
   // lecture que le choix du propriétaire dans CrmService.
-  private async titulairesRole(societeId: string, nom: string): Promise<string[]> {
+  // Titulaires actifs d'un rôle dans la société — rôle propre à la société
+  // ou rôle transverse (CEO, CTO, CIO : societeId null) attribué dans celle-ci.
+  async titulairesRole(societeId: string, nom: string): Promise<string[]> {
     const lignes = await this.prisma.utilisateurSocieteRole.findMany({
       where: {
         societeId,
-        role: { societeId, nom, supprimeLe: null },
+        role: { nom, supprimeLe: null, OR: [{ societeId }, { societeId: null }] },
         utilisateur: { actif: true },
       },
       select: { utilisateurId: true },
@@ -262,6 +264,47 @@ export class NotificationsService {
         },
       ];
     });
+  }
+
+  // Envoi générique (phase 3) : destinataires explicites, auteur exclu,
+  // contexte cliquable facultatif. Ne lève jamais — une notification
+  // manquée ne doit pas faire échouer l'action qui la déclenche.
+  async envoyer(params: {
+    societeId: string;
+    type: NotificationType;
+    titre: string;
+    destinataireIds: (string | null | undefined)[];
+    parId?: string | null;
+    projetId?: string | null;
+    factureId?: string | null;
+    dossierCrmId?: string | null;
+  }): Promise<void> {
+    const ids = [...new Set(params.destinataireIds.filter((x): x is string => !!x && x !== params.parId))];
+    if (!ids.length) return;
+    try {
+      await this.prisma.notification.createMany({
+        data: ids.map((destinataireId) => ({
+          destinataireId,
+          societeId: params.societeId,
+          type: params.type,
+          titre: params.titre,
+          parId: params.parId ?? null,
+          projetId: params.projetId ?? null,
+          factureId: params.factureId ?? null,
+          dossierCrmId: params.dossierCrmId ?? null,
+        })),
+      });
+    } catch (e) {
+      this.log.error(`Notification ${params.type} non envoyée : ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  // Comptes (utilisateurId) des fiches d'équipe données — sans compte : rien.
+  async comptesDe(collaborateurIds: (string | null | undefined)[]): Promise<string[]> {
+    const ids = collaborateurIds.filter((x): x is string => !!x);
+    if (!ids.length) return [];
+    const c = await this.prisma.collaborateur.findMany({ where: { id: { in: ids } }, select: { utilisateurId: true } });
+    return c.map((x) => x.utilisateurId).filter((x): x is string => !!x);
   }
 
   async marquerLues(societeId: string, utilisateurId: string) {

@@ -458,6 +458,15 @@ export type NotificationType =
   | 'tache_validee'
   | 'tache_renvoyee'
   | 'mention_projet' // @mention dans un fil de projet (maquette « Projets »)
+  // Phase 3 (14/10/2026) : assignation, demandes RH, registre, factures.
+  | 'tache_assignee'
+  | 'absence_a_decider'
+  | 'absence_decidee'
+  | 'remboursement_a_traiter'
+  | 'remboursement_traite'
+  | 'decision_assignee'
+  | 'facture_emise'
+  | 'facture_payee'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore

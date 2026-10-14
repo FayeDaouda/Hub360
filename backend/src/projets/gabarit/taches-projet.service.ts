@@ -48,7 +48,9 @@ export class TachesProjetService {
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
       select: {
         id: true,
+        libelle: true,
         statut: true,
+        projet: { select: { code: true } },
         carte: { select: { desactivation: true, taches: { select: { id: true, statut: true } } } },
       },
     });
@@ -83,6 +85,17 @@ export class TachesProjetService {
       });
       return cibleIds.length;
     });
+    if (collaborateurId && modifiees > 0) {
+      const autres = modifiees > 1 ? ` (+ ${modifiees - 1} autre${modifiees > 2 ? 's' : ''})` : '';
+      await this.notifications.envoyer({
+        societeId,
+        type: 'tache_assignee',
+        titre: `Tâche assignée · ${tache.projet.code} · ${tache.libelle}${autres}`,
+        destinataireIds: await this.notifications.comptesDe([collaborateurId]),
+        parId: acteur.userId,
+        projetId,
+      });
+    }
     return { modifiees };
   }
 

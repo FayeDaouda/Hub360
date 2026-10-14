@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -47,6 +48,8 @@ const ETAPE_ETUDES = 'etudes';
 
 @Injectable()
 export class FacturationService {
+  private readonly log = new Logger('Facturation');
+
   constructor(
     private prisma: PrismaService,
     private email: EmailService,
@@ -173,6 +176,7 @@ export class FacturationService {
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
       if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
     });
+    await this.signalerFacture(facture.id, 'facture_emise', acteurId);
     return this.formater(projetId);
   }
 
@@ -259,6 +263,7 @@ export class FacturationService {
         creeParId: acteurId,
       },
     });
+    await this.signalerSiPayee(facture.id, Number(dto.montant), acteurId);
     return this.formater(projetId);
   }
 
@@ -522,6 +527,7 @@ export class FacturationService {
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
     });
+    await this.signalerFacture(f.id, 'facture_emise', acteurId);
     return this.factureCentrale(societeId, factureId);
   }
 
@@ -547,7 +553,52 @@ export class FacturationService {
     await this.prisma.paiement.create({
       data: { factureId: f.id, date: dto.date, montant: dto.montant, mode: dto.mode ?? null, reference: dto.reference?.trim() ?? '', creeParId: acteurId },
     });
+    await this.signalerSiPayee(f.id, Number(dto.montant), acteurId);
     return this.factureCentrale(societeId, factureId);
+  }
+
+  // Notifications (phase 3, 14/10/2026) : facture émise → propriétaire du
+  // dossier ; facture soldée → propriétaire et CFO. Jamais bloquant.
+  private async signalerFacture(factureId: string, type: 'facture_emise' | 'facture_payee', parId: string) {
+    try {
+      const f = await this.prisma.facture.findUnique({
+        where: { id: factureId },
+        include: {
+          projet: { select: { dossierCrm: { select: { proprietaireId: true } } } },
+          dossierCrm: { select: { proprietaireId: true } },
+        },
+      });
+      if (!f) return;
+      const proprietaire = f.projet?.dossierCrm.proprietaireId ?? f.dossierCrm?.proprietaireId ?? null;
+      const { montantTtc } = ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber());
+      const cfo = type === 'facture_payee' ? await this.notifications.titulairesRole(f.societeId, 'CFO') : [];
+      await this.notifications.envoyer({
+        societeId: f.societeId,
+        type,
+        titre: `${type === 'facture_emise' ? 'Facture émise' : 'Facture payée'} · ${refFacture(f) ?? 'sans numéro'} · ${Math.round(montantTtc).toLocaleString('fr-FR')} FCFA TTC`,
+        destinataireIds: [proprietaire, ...cfo],
+        parId,
+        projetId: f.projetId,
+        factureId: f.id,
+      });
+    } catch (e) {
+      this.log.error(`Notification ${type} non envoyée : ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  // Soldée par CE paiement (le cumul franchit le TTC) : une seule notification.
+  private async signalerSiPayee(factureId: string, montantPaiement: number, parId: string) {
+    try {
+      const f = await this.prisma.facture.findUnique({ where: { id: factureId }, include: { paiements: true } });
+      if (!f) return;
+      const { montantTtc } = ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber());
+      const paye = f.paiements.reduce((t, p) => t + p.montant.toNumber(), 0);
+      if (paye >= montantTtc && paye - montantPaiement < montantTtc) {
+        await this.signalerFacture(factureId, 'facture_payee', parId);
+      }
+    } catch (e) {
+      this.log.error(`Notification facture_payee non envoyée : ${e instanceof Error ? e.message : e}`);
+    }
   }
 
   private async facturePourAction(societeId: string, factureId: string) {
@@ -643,6 +694,7 @@ export class FacturationService {
       });
       factureId = f.id;
     });
+    await this.signalerFacture(factureId, 'facture_emise', acteurId);
     return factureId;
   }
 

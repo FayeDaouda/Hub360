@@ -5,9 +5,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DemandeAbsence, Prisma } from '@prisma/client';
+import { DemandeAbsence, NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ouDossierDuCompte } from './mon-compte';
 import {
   DecisionN1Dto,
@@ -51,13 +52,18 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 // Travail dû pendant l'absence (phase 1, 14/10/2026) : tâches de projet du
 // gabarit assignées au salarié — avant, blocs des anciennes checklists.
-type Livrable = { cle: string; tacheId: string; source: string; projet: string; groupe: string; echeance: string };
+type Livrable = { cle: string; tacheId: string; projetId: string; source: string; projet: string; groupe: string; echeance: string };
+
+const ROLE_RH = 'RH';
+const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const montant = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 
 @Injectable()
 export class DemandesService {
   constructor(
     private prisma: PrismaService,
     private reglages: ReglagesService,
+    private notifications: NotificationsService,
   ) {}
 
   // Jours fériés de la société du salarié (Réglages) : non décomptés.
@@ -130,6 +136,7 @@ export class DemandesService {
         ...n1,
       },
     });
+    await this.signalerAbsence(d, a.userId, d.statut === 'accord_n1' ? 'rh' : 'n1', d.statut === 'accord_n1' ? 'Absence à valider' : 'Demande d’absence à décider');
     return versAbsence(d);
   }
 
@@ -145,12 +152,12 @@ export class DemandesService {
     // CETTE période (règle : chaque livrable dû pendant l'absence est traité).
     const debut = d.datesProposeesDebut!;
     const fin = d.datesProposeesFin!;
-    return versAbsence(
-      await this.prisma.demandeAbsence.update({
-        where: { id },
-        data: { dateDebut: debut, dateFin: fin, jours: joursOuvrables(debut, fin, await this.feries(dossier.societeId)), statut: 'attente_n1', decisionN1: null },
-      }),
-    );
+    const maj = await this.prisma.demandeAbsence.update({
+      where: { id },
+      data: { dateDebut: debut, dateFin: fin, jours: joursOuvrables(debut, fin, await this.feries(dossier.societeId)), statut: 'attente_n1', decisionN1: null },
+    });
+    await this.signalerAbsence(maj, a.userId, 'n1', 'Nouvelles dates acceptées, demande à décider');
+    return versAbsence(maj);
   }
 
   async retirer(a: Acteur, id: string) {
@@ -169,7 +176,7 @@ export class DemandesService {
       throw new BadRequestException('Joignez la facture et l’ordonnance.');
     }
     const { dossier } = await this.moi(a);
-    return this.prisma.demandeRemboursement.create({
+    const r = await this.prisma.demandeRemboursement.create({
       data: {
         dossierId: dossier.id,
         categorie: dto.categorie,
@@ -180,6 +187,15 @@ export class DemandesService {
       },
       include: { justificatifs: { select: { id: true, nom: true } } },
     });
+    const s = await this.salarieDe(dossier.id);
+    await this.notifications.envoyer({
+      societeId: s.societeId,
+      type: 'remboursement_a_traiter',
+      titre: `Remboursement à traiter · ${s.nom} · ${montant(dto.montant)}`,
+      destinataireIds: await this.notifications.titulairesRole(s.societeId, ROLE_RH),
+      parId: a.userId,
+    });
+    return r;
   }
 
   // --- N+1 ----------------------------------------------------------------------
@@ -268,20 +284,24 @@ export class DemandesService {
       if (dto.motif === 'autre' && !dto.commentaire?.trim()) {
         throw new BadRequestException('Précisez le motif « Autre » en commentaire.');
       }
-      return versAbsence(await this.prisma.demandeAbsence.update({
+      const refusee = await this.prisma.demandeAbsence.update({
         where: { id },
         data: { ...base, statut: 'refusee', motifRefus: dto.motif, commentaireRefus: dto.commentaire ?? '' },
-      }));
+      });
+      await this.signalerAbsence(refusee, a.userId, 'salarie', 'refusée par votre N+1');
+      return versAbsence(refusee);
     }
 
     if (dto.decision === 'autres_dates') {
       if (!dto.dateDebut || !dto.dateFin || dto.dateFin < dto.dateDebut) {
         throw new BadRequestException('Proposez une période valide.');
       }
-      return versAbsence(await this.prisma.demandeAbsence.update({
+      const proposee = await this.prisma.demandeAbsence.update({
         where: { id },
         data: { ...base, statut: 'autres_dates', datesProposeesDebut: dto.dateDebut, datesProposeesFin: dto.dateFin, commentaireRefus: dto.commentaire ?? '' },
-      }));
+      });
+      await this.signalerAbsence(proposee, a.userId, 'salarie', 'votre N+1 propose d’autres dates');
+      return versAbsence(proposee);
     }
 
     // valider / sous_conditions : chaque tâche due pendant l'absence est soit
@@ -320,7 +340,22 @@ export class DemandesService {
       data: { ...base, statut: 'accord_n1', traitementLivrables: journal },
     }));
     const res = await this.prisma.$transaction(ops);
-    return versAbsence(res[res.length - 1] as DemandeAbsence);
+    const accord = res[res.length - 1] as DemandeAbsence;
+    await this.signalerAbsence(accord, a.userId, 'salarie', 'accord de votre N+1, en attente de la RH');
+    await this.signalerAbsence(accord, a.userId, 'rh', 'Absence à valider (accord du N+1)');
+    for (const l of livrables) {
+      const cible = delegations.get(l.cle);
+      if (!cible || nonDelegables.has(l.cle)) continue;
+      await this.notifications.envoyer({
+        societeId: a.societeId,
+        type: 'tache_assignee',
+        titre: `Tâche confiée pendant une absence · ${l.projet} · ${l.groupe}`,
+        destinataireIds: await this.notifications.comptesDe([cible]),
+        parId: a.userId,
+        projetId: l.projetId,
+      });
+    }
+    return versAbsence(accord);
   }
 
   // --- RH -----------------------------------------------------------------------
@@ -366,12 +401,14 @@ export class DemandesService {
     const d = await this.absence(id);
     if (d.statut !== 'accord_n1') throw new ConflictException("Pas d'accord du N+1 à valider.");
     if (!valide && !motif?.trim()) throw new BadRequestException('Motif obligatoire pour un refus.');
-    return versAbsence(await this.prisma.demandeAbsence.update({
+    const tranchee = await this.prisma.demandeAbsence.update({
       where: { id },
       data: valide
         ? { statut: 'validee', valideRhParId: a.userId, valideRhLe: new Date() }
         : { statut: 'refusee', valideRhParId: a.userId, valideRhLe: new Date(), commentaireRefus: motif ?? '' },
-    }));
+    });
+    await this.signalerAbsence(tranchee, a.userId, 'salarie', valide ? 'validée par la RH' : 'refusée par la RH');
+    return versAbsence(tranchee);
   }
 
   async transitionRemboursement(
@@ -390,7 +427,48 @@ export class DemandesService {
         : action === 'rembourser'
           ? { statut: 'remboursee', montantRembourse: valeur?.montantRembourse ?? r.montant, traiteLe: new Date(), traiteParId: a.userId }
           : { statut: 'rejetee', motifRejet: valeur?.motif ?? '', traiteLe: new Date(), traiteParId: a.userId };
-    return this.prisma.demandeRemboursement.update({ where: { id }, data });
+    const maj = await this.prisma.demandeRemboursement.update({ where: { id }, data });
+    const s = await this.salarieDe(r.dossierId);
+    const etat =
+      action === 'transmettre' ? 'transmis pour remboursement' : action === 'rembourser' ? `remboursé (${montant(Number(maj.montantRembourse ?? r.montant))})` : 'rejeté';
+    await this.notifications.envoyer({
+      societeId: s.societeId,
+      type: 'remboursement_traite',
+      titre: `Votre remboursement du ${jjmm(r.dateSoins)} : ${etat}`,
+      destinataireIds: [s.compte],
+      parId: a.userId,
+    });
+    return maj;
+  }
+
+  // --- Notifications (phase 3, 14/10/2026) ----------------------------------------
+  private async salarieDe(dossierId: string) {
+    const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({
+      where: { id: dossierId },
+      select: { societeId: true, prenom: true, nom: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } },
+    });
+    return { societeId: d.societeId, nom: `${d.prenom} ${d.nom}`.trim(), compte: d.utilisateurId ?? d.collaborateur?.utilisateurId ?? null };
+  }
+
+  // N+1 (fiche d'équipe ou rôle), RH, ou le salarié lui-même.
+  private async signalerAbsence(d: DemandeAbsence, parId: string, vers: 'n1' | 'rh' | 'salarie', message: string) {
+    const s = await this.salarieDe(d.dossierId);
+    const periode = `${jjmm(d.dateDebut)} → ${jjmm(d.dateFin)}`;
+    let type: NotificationType = 'absence_a_decider';
+    let titre = `${message} · ${s.nom} · ${periode}`;
+    let ids: (string | null)[] = [];
+    if (vers === 'salarie') {
+      type = 'absence_decidee';
+      titre = `Votre absence du ${periode} : ${message}`;
+      ids = [s.compte];
+    } else if (vers === 'rh') {
+      ids = await this.notifications.titulairesRole(s.societeId, ROLE_RH);
+    } else if (d.n1CollaborateurId) {
+      ids = await this.notifications.comptesDe([d.n1CollaborateurId]);
+    } else if (d.n1Role) {
+      ids = await this.notifications.titulairesRole(s.societeId, d.n1Role);
+    }
+    await this.notifications.envoyer({ societeId: s.societeId, type, titre, destinataireIds: ids, parId });
   }
 
   async justificatif(kind: 'absence' | 'remboursement', id: string) {
@@ -424,12 +502,13 @@ export class DemandesService {
   private async livrables(collaborateurId: string, debut: string, fin: string): Promise<Livrable[]> {
     const taches = await this.prisma.tacheProjet.findMany({
       where: { assigneId: collaborateurId, statut: { in: ['a_faire', 'reprise'] }, finLe: { gte: debut, lte: fin } },
-      select: { id: true, libelle: true, finLe: true, carte: { select: { libelle: true } }, projet: { select: { code: true } } },
+      select: { id: true, libelle: true, finLe: true, carte: { select: { libelle: true } }, projet: { select: { id: true, code: true } } },
       orderBy: { finLe: 'asc' },
     });
     return taches.map((t) => ({
       cle: `tache:${t.id}`,
       tacheId: t.id,
+      projetId: t.projet.id,
       source: 'Projets',
       projet: t.projet.code,
       groupe: `${t.carte.libelle} · ${t.libelle}`,

@@ -45,7 +45,7 @@ describe('NotificationsService.notifierDossierCrm', () => {
     await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_soumis', parId: 'DG1' });
     expect(usrFindMany.mock.calls[0][0].where).toEqual({
       societeId: 'S1',
-      role: { societeId: 'S1', nom: 'CFO', supprimeLe: null },
+      role: { nom: 'CFO', supprimeLe: null, OR: [{ societeId: 'S1' }, { societeId: null }] },
       utilisateur: { actif: true },
     });
     expect(createMany.mock.calls[0][0].data).toEqual([
