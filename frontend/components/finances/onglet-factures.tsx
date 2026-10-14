@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { dansFiltreFacture, jjmmaaaa, libelleMois, parMois, payeeLe, statutFacture, type FiltreFacture } from '@/lib/finances';
 import { formatMontant } from '@/lib/format';
+import { dateExport, exporterCsv } from '@/lib/export-csv';
+import { BoutonExport } from '@/components/bouton-export';
 import { useHautMesure } from './use-haut-mesure';
 import type { FactureCentrale } from '@/lib/types';
 
@@ -40,6 +42,7 @@ export function OngletFactures({
             {f.libelle} ({factures.filter((x) => dansFiltreFacture(x, f.cle)).length})
           </button>
         ))}
+        <BoutonExport desactive={!visibles.length} onExporter={() => exporterFactures(visibles)} />
       </div>
       <div className="admin-table-wrap fin-table-wrap">
         <table className="admin-table fin-table">
@@ -137,4 +140,23 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
       })}
     </>
   );
+}
+
+function exporterFactures(factures: FactureCentrale[]) {
+  exporterCsv('factures', [
+    { titre: 'Numéro', valeur: (f) => f.reference ?? f.referencePrevue ?? 'brouillon' },
+    { titre: 'Libellé', valeur: (f) => f.libelle },
+    { titre: 'Client', valeur: (f) => f.client?.nom },
+    { titre: 'Projet / dossier', valeur: (f) => f.dossierCrm?.code ?? f.projet?.code },
+    { titre: 'Créée le', valeur: (f) => dateExport(f.creeLe) },
+    { titre: 'Émise le', valeur: (f) => dateExport(f.emiseLe) },
+    { titre: 'Échéance', valeur: (f) => dateExport(f.echeanceLe) },
+    { titre: 'Payée le', valeur: (f) => dateExport(payeeLe(f)) },
+    { titre: 'Montant HT (FCFA)', valeur: (f) => f.montantHt },
+    { titre: 'TVA (FCFA)', valeur: (f) => f.montantTva },
+    { titre: 'Montant TTC (FCFA)', valeur: (f) => f.montantTtc },
+    { titre: 'Encaissé (FCFA)', valeur: (f) => f.montantPaye },
+    { titre: 'Reste à encaisser (FCFA)', valeur: (f) => (f.estAvoir ? 0 : Math.max(0, f.montantTtc - f.montantPaye)) },
+    { titre: 'Statut', valeur: (f) => statutFacture(f).libelle },
+  ], factures);
 }

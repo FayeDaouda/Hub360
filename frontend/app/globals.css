@@ -7023,6 +7023,12 @@ a.notif-item:hover {
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
+.rh-outils .rh-archives {
+  margin-left: auto;
+}
+.rh-outils .bouton-export {
+  margin-left: 0;
+}
 .rh-archives {
   display: inline-flex;
   align-items: center;
@@ -7867,6 +7873,13 @@ a.notif-item:hover {
   justify-content: space-between;
   gap: 0.75rem 1rem;
   margin-bottom: 1rem;
+}
+/* Recherche + export groupés à droite du titre. */
+.crm-registre-tete .crm-recherche {
+  margin-left: auto;
+}
+.crm-registre-tete .bouton-export {
+  margin-left: 0;
 }
 .crm-onglets,
 .crm-situations {
@@ -9719,6 +9732,22 @@ a.notif-item:hover {
 }
 .fin-filtres button:hover {
   background: color-mix(in srgb, var(--text) 13%, transparent);
+}
+/* Feuilles de temps (RH) : export aligné à droite au-dessus du tableau. */
+.temps-export {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+/* Bouton « Exporter (Excel) » : poussé à droite dans une rangée de filtres. */
+.bouton-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.fin-filtres button.bouton-export {
+  background: none;
 }
 .fin-filtres button.is-active {
   background: color-mix(in oklch, var(--argile) 85%, transparent);

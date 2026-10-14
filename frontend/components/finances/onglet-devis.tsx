@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { filtreDevis, jjmmaaaa, libelleMois, parMois, statutDevis, type FiltreDevis } from '@/lib/finances';
 import { formatMontant } from '@/lib/format';
+import { dateExport, exporterCsv } from '@/lib/export-csv';
+import { BoutonExport } from '@/components/bouton-export';
 import { useHautMesure } from './use-haut-mesure';
 import type { Devis } from '@/lib/types';
 
@@ -31,6 +33,7 @@ export function OngletDevis({ devis, projets, onOuvrir }: { devis: Devis[]; proj
             {f.libelle} ({compte(f.cle)})
           </button>
         ))}
+        <BoutonExport desactive={!visibles.length} onExporter={() => exporterDevis(visibles, projets)} />
       </div>
       <div className="admin-table-wrap fin-table-wrap">
         <table className="admin-table fin-table">
@@ -102,4 +105,19 @@ function MoisDevis({ mois, devis, projets, onOuvrir }: { mois: string; devis: De
       })}
     </>
   );
+}
+
+function exporterDevis(devis: Devis[], projets: Map<string, string>) {
+  exporterCsv('devis', [
+    { titre: 'Numéro', valeur: (d) => d.reference ?? 'brouillon' },
+    { titre: 'Objet', valeur: (d) => d.objet },
+    { titre: 'Client', valeur: (d) => d.client.nom },
+    { titre: 'Projet / dossier', valeur: (d) => d.dossierCrm?.code ?? (d.projetId ? projets.get(d.projetId) : null) },
+    { titre: 'Créé le', valeur: (d) => dateExport(d.creeLe) },
+    { titre: 'Envoyé le', valeur: (d) => dateExport(d.dateEnvoi) },
+    { titre: 'Montant HT (FCFA)', valeur: (d) => d.montantHt },
+    { titre: 'TVA (FCFA)', valeur: (d) => d.montantTva },
+    { titre: 'Montant TTC (FCFA)', valeur: (d) => d.montantTtc },
+    { titre: 'Statut', valeur: (d) => statutDevis(d).libelle },
+  ], devis);
 }

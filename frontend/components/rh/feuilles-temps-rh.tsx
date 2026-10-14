@@ -14,6 +14,8 @@ import {
 } from '@/lib/temps';
 import type { FeuilleTempsSalarie, FeuillesTemps } from '@/lib/types';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { BoutonExport } from '@/components/bouton-export';
+import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
@@ -80,6 +82,25 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
             </div>
           </div>
           {erreur && <p className="field-erreur">{erreur}</p>}
+          <div className="temps-export">
+            <BoutonExport
+              desactive={!donnees.feuilles.length}
+              onExporter={() =>
+                exporterCsv(`feuilles-temps-${donnees.mois}`, [
+                  { titre: 'Matricule', valeur: (f) => f.matricule },
+                  { titre: 'Salarié', valeur: nomDe },
+                  { titre: 'Poste', valeur: (f) => f.poste },
+                  { titre: 'Cellule', valeur: (f) => f.cellule },
+                  { titre: 'Heures imputées', valeur: (f) => f.heuresImputees },
+                  { titre: 'Heures disponibles', valeur: (f) => f.heuresDisponibles },
+                  { titre: 'Jours d’absence', valeur: (f) => f.joursAbsence },
+                  { titre: 'Occupation (%)', valeur: (f) => f.occupation },
+                  { titre: 'Contrôle RH', valeur: (f) => STATUT_FEUILLE[f.statut].libelle },
+                  { titre: 'Contrôlée le', valeur: (f) => dateExport(f.controleLe) },
+                ], donnees.feuilles)
+              }
+            />
+          </div>
 
           {donnees.feuilles.length === 0 ? (
             <p className="empty-state">Aucun salarié présent ce mois-là.</p>

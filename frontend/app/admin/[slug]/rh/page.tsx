@@ -17,6 +17,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
+import { BoutonExport } from '@/components/bouton-export';
+import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
@@ -320,6 +322,27 @@ export default function RhPage({ params }: Props) {
             <input type="checkbox" checked={archives} onChange={(e) => setArchives(e.target.checked)} />
             Dossiers archivés
           </label>
+          {/* Coordonnées professionnelles seulement : ni salaire ni coordonnées de paiement. */}
+          <BoutonExport
+            desactive={!visibles.length}
+            onExporter={() =>
+              exporterCsv(archives ? 'dossiers-personnel-archives' : 'dossiers-personnel', [
+                { titre: 'Matricule', valeur: (d) => d.matricule },
+                { titre: 'Prénom', valeur: (d) => d.prenom },
+                { titre: 'Nom', valeur: (d) => d.nom },
+                { titre: 'Poste', valeur: (d) => d.poste },
+                { titre: 'Société', valeur: (d) => d.societe.nom },
+                { titre: 'Équipe', valeur: (d) => d.cellule },
+                { titre: 'Contrat', valeur: (d) => LIBELLE_CONTRAT[d.typeContrat] },
+                { titre: 'Fin de contrat', valeur: (d) => (d.typeContrat !== 'cdi' ? dateExport(d.dateFin) : null) },
+                { titre: 'Entrée', valeur: (d) => dateExport(d.dateEntree) },
+                { titre: 'Téléphone', valeur: (d) => d.telephone },
+                { titre: 'E-mail pro', valeur: (d) => d.emailPro },
+                { titre: 'Dossier complet (%)', valeur: (d) => d.completude.pourcentage },
+                { titre: 'Archivé le', valeur: (d) => dateExport(d.archiveLe) },
+              ], visibles)
+            }
+          />
         </div>
 
         {visibles.length === 0 ? (

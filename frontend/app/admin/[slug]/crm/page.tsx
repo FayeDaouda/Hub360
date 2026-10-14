@@ -34,6 +34,8 @@ import { formatNombre } from '@/lib/format';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiStrip } from '@/components/admin/kpi-strip';
+import { BoutonExport } from '@/components/bouton-export';
+import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DEGRADE_ETAT, DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
@@ -354,6 +356,28 @@ export default function CrmPage({ params }: Props) {
                 <Search size={15} strokeWidth={1.75} aria-hidden />
                 <input type="search" className="field-input" placeholder="Filtrer par code ou client" value={recherche} onChange={(e) => setRecherche(e.target.value)} />
               </div>
+              <BoutonExport
+                desactive={!filtres.length}
+                onExporter={() =>
+                  exporterCsv(`registre-crm-${annee}`, [
+                    { titre: 'Code projet', valeur: (p) => p.code },
+                    { titre: 'Catégorie', valeur: (p) => libelleCategorie(p) },
+                    { titre: 'Client', valeur: (p) => p.client.nom },
+                    { titre: 'Localité', valeur: (p) => p.localite?.nom ?? p.localisation },
+                    { titre: 'Type', valeur: (p) => (p.type ? TYPES_BIEN[p.type] : null) },
+                    { titre: 'Programme', valeur: (p) => p.programme.trim() || null },
+                    {
+                      titre: 'Apporteur',
+                      valeur: (p) =>
+                        p.apporteur?.type === 'externe' ? p.apporteur.nom : p.apporteur?.type === 'interne' ? p.apporteur.utilisateur?.nom ?? 'Apporteur interne' : 'Affaire directe',
+                    },
+                    { titre: 'Commission (%)', valeur: (p) => p.commissionApporteur },
+                    { titre: 'Complétude', valeur: (p) => `${completudeFiche(p).faits}/${completudeFiche(p).total}` },
+                    { titre: 'Situation', valeur: (p) => LIBELLE_SITUATION[situationDe(p)] },
+                    { titre: 'Créé le', valeur: (p) => dateExport(p.creeLe) },
+                  ], filtres)
+                }
+              />
             </div>
             {!projets ? (
               <div className="admin-skeleton" aria-hidden>
