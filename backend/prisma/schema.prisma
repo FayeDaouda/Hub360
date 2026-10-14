@@ -1873,6 +1873,25 @@ model EvenementTacheProjet {
   @@map("evenements_tache_projet")
 }
 
+// Fichiers joints à une remise (facultatifs : une visite ou une réunion n'en
+// produit pas). Rattachés à la version remise (v01, v02…) — l'historique
+// garde ceux de chaque reprise. Data URI tant que le stockage objet n'est pas
+// branché (phase 2), comme les pièces du dossier RH.
+model PieceRemiseTache {
+  id          String   @id @default(uuid())
+  tacheId     String   @map("tache_id")
+  version     Int
+  nom         String
+  cle         String
+  ajouteParId String?  @map("ajoute_par_id") // audit, pas de FK
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tache TacheProjet @relation(fields: [tacheId], references: [id], onDelete: Cascade)
+
+  @@index([tacheId, version])
+  @@map("pieces_remise_tache")
+}
+
 // Fil de discussion d'un projet ouvert (maquette « Projets ») : par carte
 // (tacheId null) ou par tâche. Une @mention notifie la personne ; le
 // commentaire reste ouvert jusqu'à une réponse ou sa résolution par l'auteur.
@@ -1975,6 +1994,7 @@ model TacheProjet {
   evenements    EvenementTacheProjet[]
   commentaires  CommentaireProjet[]
   prolongations ProlongationTache[]
+  pieces        PieceRemiseTache[]
 
   @@unique([carteId, cle])
   @@index([projetId])

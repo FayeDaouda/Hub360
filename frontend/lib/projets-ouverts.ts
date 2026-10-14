@@ -63,6 +63,11 @@ export type EtatCarte =
 
 export type EtatEtape = 'en_retard' | 'en_cours' | 'a_venir' | 'terminee';
 
+// Fichier joint à une remise (v01, v02…) — sans son contenu.
+export type PieceRemise = { id: string; nom: string; version: number };
+// Remise : fichiers (data URI) et commentaire, tous deux facultatifs.
+export type CorpsRemise = { pieces?: { nom: string; url: string }[]; commentaire?: string };
+
 export type TacheOuverte = {
   id: string;
   cle: string;
@@ -78,6 +83,7 @@ export type TacheOuverte = {
   statut: 'a_faire' | 'a_valider' | 'reprise' | 'validee' | 'non_necessaire';
   motif: string | null;
   version: number;
+  pieces: PieceRemise[];
   valideeLe: string | null;
   valideePar: string | null;
   assigne: { id: string; nom: string; cellule: string | null } | null;
@@ -179,8 +185,16 @@ export function assignerTache(
 }
 
 // Remise par la personne assignée (sans temps atelier : le dépôt vaut validation).
-export function remettreTache(slug: string, projetId: string, tacheId: string) {
-  return apiSociete<{ statut: string; version: number }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/remise`, { method: 'POST' });
+export function remettreTache(slug: string, projetId: string, tacheId: string, corps: CorpsRemise = {}) {
+  return apiSociete<{ statut: string; version: number }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/remise`, { method: 'POST', body: corps });
+}
+
+export async function telechargerPieceRemise(slug: string, projetId: string, tacheId: string, pieceId: string) {
+  const f = await apiSociete<{ nom: string; url: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/pieces/${pieceId}`);
+  const a = document.createElement('a');
+  a.href = f.url;
+  a.download = f.nom;
+  a.click();
 }
 
 // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG.

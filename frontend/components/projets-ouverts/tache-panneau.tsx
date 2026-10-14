@@ -8,6 +8,7 @@ import {
   demanderProlongation,
   remettreTache,
   getHistoriqueTache,
+  telechargerPieceRemise,
   jjmmaaaa,
   numeroEtape,
   pastilleTache,
@@ -16,6 +17,7 @@ import {
   type EvenementTache,
   type TacheOuverte,
 } from '@/lib/projets-ouverts';
+import { ChampsRemise, corpsRemise, SAISIE_REMISE_VIDE, type SaisieRemise } from './champs-remise';
 import { FilDiscussion } from './fil-discussion';
 
 type Props = {
@@ -46,6 +48,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [prolonger, setProlonger] = useState(false);
   const [jusquau, setJusquau] = useState('');
   const [motifProlongation, setMotifProlongation] = useState('');
+  const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
 
   // Rechargé quand la tâche change ou que son assigné change (nouvelle ligne).
   useEffect(() => {
@@ -67,7 +70,17 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     setProlonger(false);
     setJusquau('');
     setMotifProlongation('');
+    setSaisie(SAISIE_REMISE_VIDE);
   }, [tache.id]);
+
+  async function ouvrirPiece(pieceId: string) {
+    setErreur(null);
+    try {
+      await telechargerPieceRemise(slug, projetId, tache.id, pieceId);
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'Fichier indisponible.');
+    }
+  }
 
   // Toute action du panneau : erreur affichée, dossier relu ensuite.
   async function agir(action: () => Promise<unknown>, repli: string, apres?: () => void) {
@@ -116,6 +129,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   }
 
   const pastille = pastilleTache(tache.etat);
+  const piecesVersion = tache.pieces.filter((f) => f.version === tache.version);
   const ecart = tache.etat.code === 'validee' ? tache.etat.ecart : null;
   const v = tache.validation;
   const assignable =
@@ -188,8 +202,14 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               ? 'Le dépôt du justificatif vaut validation (exception écrite au principe 4).'
               : `Votre remise part en validation auprès de : ${v.nom ?? 'à désigner'} (${v.role}).`}
           </p>
+          <ChampsRemise id={`po-remise-${tache.id}`} valeur={saisie} onChange={setSaisie} />
           <div className="po-decision">
-            <button type="button" className="btn-primary" disabled={enCours} onClick={() => agir(() => remettreTache(slug, projetId, tache.id), 'La remise a échoué.')}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={enCours}
+              onClick={() => agir(() => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)), 'La remise a échoué.', () => setSaisie(SAISIE_REMISE_VIDE))}
+            >
               {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Remettre la tâche'}
             </button>
           </div>
@@ -275,6 +295,19 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       {tache.peutDecider && (
         <div className="po-panneau-bloc">
           <p className="po-kicker">Remise v{String(tache.version).padStart(2, '0')} à valider</p>
+          {piecesVersion.length ? (
+            <ul className="po-historique">
+              {piecesVersion.map((f) => (
+                <li key={f.id}>
+                  <button type="button" className="po-fichier" onClick={() => ouvrirPiece(f.id)}>
+                    {f.nom}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="po-aide">Sans fichier joint.</p>
+          )}
           {renvoi ? (
             <>
               <label className="po-panneau-label" htmlFor="po-motif">
@@ -333,7 +366,20 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       <div className="po-panneau-bloc">
         <p className="po-kicker">Fichiers</p>
         <p className="po-aide">nommage {code}_ÉTAPE_LIVRABLE_vNN, une version par reprise</p>
-        <p className="po-aide">Aucun fichier.</p>
+        {tache.pieces.length ? (
+          <ul className="po-historique">
+            {tache.pieces.map((f) => (
+              <li key={f.id}>
+                v{String(f.version).padStart(2, '0')} ·{' '}
+                <button type="button" className="po-fichier" onClick={() => ouvrirPiece(f.id)}>
+                  {f.nom}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="po-aide">Aucun fichier.</p>
+        )}
       </div>
       <FilDiscussion slug={slug} projetId={projetId} tacheId={tache.id} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
       <div className="po-panneau-bloc">

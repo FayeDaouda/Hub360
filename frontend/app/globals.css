@@ -8820,6 +8820,43 @@ a.notif-item:hover {
 .po-panneau-label {
   font-weight: 700;
 }
+/* Remise d'une tâche : fichiers + commentaire facultatifs. */
+.po-remise-champs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+}
+.po-remise-fichiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.po-remise-fichiers .pill {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.po-remise-retirer {
+  display: inline-flex;
+  margin-left: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.po-fichier {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
 .po-case {
   display: flex;
   align-items: flex-start;

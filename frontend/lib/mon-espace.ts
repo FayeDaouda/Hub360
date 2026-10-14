@@ -9,6 +9,7 @@ import type {
   TypePieceDossier,
 } from './types';
 import { apiSociete } from './client-api';
+import type { CorpsRemise } from './projets-ouverts';
 
 // RH · Mon espace (lot 5) — API NestJS, dossier du compte connecté :
 //   GET   …/mon-espace                  { dossier | null }
@@ -58,8 +59,11 @@ export const LIBELLE_PAIEMENT_SALAIRE: Record<ModePaiementSalaire, string> = {
 type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
 
 export const getMesTaches = (slug: string) => apiSociete<MesTaches>(slug, '/mon-espace/taches');
-export const remettreTache = (slug: string, t: TacheMonEspace) =>
-  apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/remise`, { method: 'POST', body: {} });
+export const remettreTache = (slug: string, t: TacheMonEspace, corps: CorpsRemise = {}) =>
+  apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/remise`, { method: 'POST', body: corps });
+// Fichier d'une remise à valider (le valideur, ou l'assigné).
+export const telechargerPieceRemise = (slug: string, t: TacheAValider, pieceId: string) =>
+  telecharger(slug, `/taches/${t.projetId}/${t.id}/pieces/${pieceId}`);
 export const getTachesAValider = (slug: string) => apiSociete<TacheAValider[]>(slug, '/taches/a-valider');
 export const deciderTache = (slug: string, t: TacheAValider, decision: 'valider' | 'renvoyer', motif?: string) =>
   apiSociete<TacheAValider[]>(slug, `/taches/${t.projetId}/${t.id}/decision`, { method: 'POST', body: { decision, ...(motif ? { motif } : {}) } });

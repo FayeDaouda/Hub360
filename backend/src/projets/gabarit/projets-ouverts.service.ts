@@ -38,6 +38,7 @@ const AVEC_TACHES = {
           assigne: { select: { id: true, prenom: true, nom: true, cellule: { select: { nom: true } } } },
           valideePar: { select: { prenom: true, nom: true } },
           prolongations: { orderBy: { demandeLe: 'desc' } },
+          pieces: { orderBy: [{ version: 'asc' }, { createdAt: 'asc' }], select: { id: true, nom: true, version: true } },
         },
       },
     },
@@ -275,6 +276,8 @@ export class ProjetsOuvertsService {
           statut: t.statut,
           motif: t.motif,
           version: t.version,
+          // Fichiers de chaque remise (v01, v02…), sans leur contenu.
+          pieces: t.pieces,
           valideeLe: iso(t.valideeLe),
           valideePar: nom(t.valideePar),
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,

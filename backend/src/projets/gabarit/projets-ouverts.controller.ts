@@ -6,7 +6,7 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AjouterTsDto, AssignerTacheDto, DateVisiteDto, StatutChantierDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto } from './dto';
+import { AjouterTsDto, AssignerTacheDto, DateVisiteDto, StatutChantierDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto, RemettreTacheDto } from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
 type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
@@ -76,8 +76,16 @@ export class ProjetsOuvertsController {
   // que la lecture sur Projets.
   @Post(':id/taches/:tacheId/remise')
   @RequiertPermission('projets', 'lecture')
-  remettre(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
-    return this.taches.remettre(req.user.societeId, req.user, id, tacheId);
+  remettre(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: RemettreTacheDto) {
+    return this.taches.remettre(req.user.societeId, req.user, id, tacheId, dto);
+  }
+
+  // Fichier d'une remise : quiconque voit le projet (même règle que l'historique).
+  @Get(':id/taches/:tacheId/pieces/:pieceId')
+  @RequiertPermission('projets', 'lecture')
+  async piece(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Param('pieceId') pieceId: string) {
+    await this.fils.verifierLecture(req.user.societeId, req.user, id);
+    return this.taches.piece(req.user.societeId, id, tacheId, pieceId);
   }
 
   // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG

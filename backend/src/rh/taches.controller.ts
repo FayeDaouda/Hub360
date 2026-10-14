@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } fro
 import { IsIn, IsString, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
+import { RemettreTacheDto } from '../projets/gabarit/dto';
 import { TachesService } from './taches.service';
 
 class DecisionTacheDto {
@@ -25,8 +26,13 @@ export class MesTachesController {
 
   // Tâche du gabarit : le service vérifie que la personne connectée en est l'assignée.
   @Post(':projetId/:tacheId/remise')
-  remettre(@Req() req: R, @Param('projetId', ParseUUIDPipe) projetId: string, @Param('tacheId', ParseUUIDPipe) tacheId: string) {
-    return this.taches.remettre(req.user, projetId, tacheId);
+  remettre(
+    @Req() req: R,
+    @Param('projetId', ParseUUIDPipe) projetId: string,
+    @Param('tacheId', ParseUUIDPipe) tacheId: string,
+    @Body() dto: RemettreTacheDto,
+  ) {
+    return this.taches.remettre(req.user, projetId, tacheId, dto);
   }
 }
 
@@ -40,6 +46,17 @@ export class ValidationsTachesController {
   @Get('a-valider')
   aValider(@Req() req: R) {
     return this.taches.aValider(req.user);
+  }
+
+  // Fichier d'une remise : l'assigné ou son valideur (vérifié par le service).
+  @Get(':projetId/:tacheId/pieces/:pieceId')
+  piece(
+    @Req() req: R,
+    @Param('projetId', ParseUUIDPipe) projetId: string,
+    @Param('tacheId', ParseUUIDPipe) tacheId: string,
+    @Param('pieceId', ParseUUIDPipe) pieceId: string,
+  ) {
+    return this.taches.piece(req.user, projetId, tacheId, pieceId);
   }
 
   @Post(':projetId/:tacheId/decision')

@@ -10,6 +10,7 @@ import { formatHeures, getMonTemps, LIBELLE_MANQUE, libelleMois } from '@/lib/te
 import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { ChampsRemise, corpsRemise, SAISIE_REMISE_VIDE, type SaisieRemise } from '@/components/projets-ouverts/champs-remise';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
@@ -50,6 +51,7 @@ export function MesPerformances({ slug }: { slug: string }) {
   const [temps, setTemps] = useState<MonTemps | null>(null);
   const [filtre, setFiltre] = useState<Filtre>('toutes');
   const [aRemettre, setARemettre] = useState<TacheMonEspace | null>(null);
+  const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
   const [erreur, setErreur] = useState<string | null>(null);
 
   const charger = useCallback(() => {
@@ -182,7 +184,14 @@ export function MesPerformances({ slug }: { slug: string }) {
                       <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
                       {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
                       {t.statut !== 'validee' && t.statut !== 'remise' && (
-                        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setARemettre(t)}>
+                        <button
+                          type="button"
+                          className="btn-ghost btn-ghost--sm"
+                          onClick={() => {
+                            setSaisie(SAISIE_REMISE_VIDE);
+                            setARemettre(t);
+                          }}
+                        >
                           Remettre
                         </button>
                       )}
@@ -198,10 +207,16 @@ export function MesPerformances({ slug }: { slug: string }) {
       {aRemettre && (
         <ConfirmModal
           titre="Remettre la tâche"
-          message={`« ${aRemettre.libelle} » (${aRemettre.projetCode}) part en validation chez votre chef de team (ou l’Architecte DPLG). Vous ne pourrez plus la remettre tant qu’elle n’est pas validée ou renvoyée en reprise.`}
+          message={
+            <>
+              « {aRemettre.libelle} » ({aRemettre.projetCode}) part en validation chez votre chef de team (ou l’Architecte DPLG). Vous ne
+              pourrez plus la remettre tant qu’elle n’est pas validée ou renvoyée en reprise.
+              <ChampsRemise id="perf-remise" valeur={saisie} onChange={setSaisie} />
+            </>
+          }
           confirmer="Remettre"
           onConfirm={async () => {
-            setDonnees(await remettreTache(slug, aRemettre));
+            setDonnees(await remettreTache(slug, aRemettre, corpsRemise(saisie)));
           }}
           onClose={() => setARemettre(null)}
         />

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
+import type { RemettreTacheDto } from '../projets/gabarit/dto';
 import { TachesProjetService } from '../projets/gabarit/taches-projet.service';
 import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
 import { ouDossierDuCompte } from './mon-compte';
@@ -80,8 +81,8 @@ export class TachesService {
     );
   }
 
-  async remettre(a: Acteur, projetId: string, tacheId: string) {
-    await this.tachesProjet.remettre(a.societeId, a, projetId, tacheId);
+  async remettre(a: Acteur, projetId: string, tacheId: string, corps: RemettreTacheDto = {}) {
+    await this.tachesProjet.remettre(a.societeId, a, projetId, tacheId, corps);
     return this.mesTaches(a);
   }
 
@@ -102,6 +103,7 @@ export class TachesService {
         carte: { select: { etapeNumero: true, etapeLibelle: true } },
         projet: { select: { id: true, code: true, programme: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
         evenements: { where: { type: 'remise' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
+        pieces: { orderBy: { createdAt: 'asc' }, select: { id: true, nom: true, version: true } },
       },
     });
     return remises
@@ -118,8 +120,15 @@ export class TachesService {
         debut: t.debutLe,
         echeance: t.finLe,
         remisLe: t.evenements[0]?.creeLe ?? null,
+        // Fichiers de la remise à valider (vide = « sans fichier joint »).
+        pieces: t.pieces.filter((f) => f.version === t.version).map((f) => ({ id: f.id, nom: f.nom })),
       }))
       .sort((x, y) => (x.remisLe?.getTime() ?? 0) - (y.remisLe?.getTime() ?? 0));
+  }
+
+  async piece(a: Acteur, projetId: string, tacheId: string, pieceId: string) {
+    await this.tachesProjet.verifierAccesPiece(a.societeId, a, projetId, tacheId);
+    return this.tachesProjet.piece(a.societeId, projetId, tacheId, pieceId);
   }
 
   async decider(a: Acteur, projetId: string, tacheId: string, corps: { decision: 'valider' | 'renvoyer'; motif?: string }) {

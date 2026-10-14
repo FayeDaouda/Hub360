@@ -1608,6 +1608,7 @@ export type TacheAValider = {
   debut: string | null;
   echeance: string | null;
   remisLe: string | null;
+  pieces: { id: string; nom: string }[]; // fichiers de la remise à valider (vide = sans fichier joint)
 };
 
 // Mon espace · Ma cellule (lot 5d) : l'équipe et les projets qu'elle suit.

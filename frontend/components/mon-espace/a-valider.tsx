@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ApiError } from '@/lib/client-api';
-import { deciderTache, getTachesAValider } from '@/lib/mon-espace';
+import { deciderTache, getTachesAValider, telechargerPieceRemise } from '@/lib/mon-espace';
 import type { TacheAValider } from '@/lib/types';
 import { DemandesEquipe } from './demandes-equipe';
 
@@ -89,6 +89,24 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
           {t.echeance && ` · échéance ${jjmmaaaa(t.echeance)}`}
         </span>
         {enRetard && <span className="cell-sub temps-alerte">Remis après l’échéance</span>}
+        <span className="cell-sub">
+          {t.pieces.length
+            ? t.pieces.map((f, i) => (
+                <span key={f.id}>
+                  {i > 0 && ' · '}
+                  <button
+                    type="button"
+                    className="po-fichier"
+                    onClick={() =>
+                      telechargerPieceRemise(slug, t, f.id).catch(() => setEtat({ envoi: false, erreur: 'Fichier indisponible.' }))
+                    }
+                  >
+                    {f.nom}
+                  </button>
+                </span>
+              ))
+            : 'Sans fichier joint'}
+        </span>
         {renvoi && (
           <label className="field">
             <span className="field-label">Motif du renvoi</span>

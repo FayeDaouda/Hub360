@@ -1,4 +1,5 @@
-import { IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 
 // PATCH …/projets-ouverts/:id/taches/:tacheId/assignation — null = retirer.
 export class AssignerTacheDto {
@@ -17,6 +18,18 @@ export class PublierCommentaireDto {
 }
 
 // POST …/projets-ouverts/:id/taches/:tacheId/decision — sur une remise.
+// POST …/taches/:tacheId/remise — fichiers et commentaire facultatifs.
+export class PieceRemiseDto {
+  @IsString() @MaxLength(300) nom!: string;
+  @IsString() @MaxLength(20_000_000) url!: string; // data URI
+}
+export const MAX_PIECES_REMISE = 5;
+export class RemettreTacheDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(MAX_PIECES_REMISE) @ValidateNested({ each: true }) @Type(() => PieceRemiseDto)
+  pieces?: PieceRemiseDto[];
+  @IsOptional() @IsString() @MaxLength(500) commentaire?: string;
+}
+
 export class DeciderTacheDto {
   @IsIn(['valider', 'renvoyer']) decision!: 'valider' | 'renvoyer';
   // Renvoi en reprise : le motif est obligatoire.

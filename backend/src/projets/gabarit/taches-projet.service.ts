@@ -3,6 +3,7 @@ import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import type { Temps } from '../../reglages/gabarit';
+import type { RemettreTacheDto } from './dto';
 import { motifNonAssignable, tachesAssignees } from './assignation';
 import { collaborateurDuCompte, peutDecider, peutQualifier, ROLE_DPLG, verifierCircuit } from './validation';
 
@@ -103,7 +104,7 @@ export class TachesProjetService {
   // ouverte (carte non verrouillée), à faire ou en reprise. Sans temps
   // atelier, le dépôt vaut validation (exception écrite au principe 4) ;
   // sinon la remise vNN attend le chef de team (ou le DPLG pour la tâche du chef).
-  async remettre(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string) {
+  async remettre(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, corps: RemettreTacheDto = {}) {
     verifierCircuit(acteur.role);
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
@@ -127,9 +128,17 @@ export class TachesProjetService {
       throw new ConflictException('La carte s’ouvre quand les tâches dont elle dépend sont validées.');
     }
 
+    const pieces = corps.pieces ?? [];
+    if (pieces.some((f) => !f.url.startsWith('data:'))) throw new BadRequestException('Fichier invalide.');
     const version = tache.version + 1;
     const vNN = `v${String(version).padStart(2, '0')}`;
     const depot = (tache.temps as Temps).type === 'sans';
+    const commentaire = corps.commentaire?.trim();
+    const detail = [
+      `Remise ${vNN}`,
+      pieces.length ? `${pieces.length} fichier${pieces.length > 1 ? 's' : ''}` : 'sans fichier joint',
+      ...(commentaire ? [`« ${commentaire} »`] : []),
+    ].join(' · ');
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.tacheProjet.updateMany({
         where: { id: tache.id, statut: { in: ['a_faire', 'reprise'] } },
@@ -139,8 +148,13 @@ export class TachesProjetService {
       });
       if (!count) throw new ConflictException('La tâche a changé entre-temps.');
       await tx.evenementTacheProjet.create({
-        data: { tacheId: tache.id, type: 'remise', parId: acteur.userId, detail: `Remise ${vNN}` },
+        data: { tacheId: tache.id, type: 'remise', parId: acteur.userId, detail },
       });
+      if (pieces.length) {
+        await tx.pieceRemiseTache.createMany({
+          data: pieces.map((f) => ({ tacheId: tache.id, version, nom: f.nom, cle: f.url, ajouteParId: acteur.userId })),
+        });
+      }
       if (depot) {
         await tx.evenementTacheProjet.create({
           data: { tacheId: tache.id, type: 'validation', parId: acteur.userId, detail: 'Dépôt du justificatif : vaut validation' },
@@ -372,6 +386,31 @@ export class TachesProjetService {
     } catch (e) {
       this.log.error(`Notification ${type} non envoyée : ${e instanceof Error ? e.message : e}`);
     }
+  }
+
+  // Un fichier de remise (contenu inclus). Le contrôle d'accès au projet est
+  // fait par l'appelant (périmètre Projets, ou assigné / valideur).
+  async piece(societeId: string, projetId: string, tacheId: string, pieceId: string) {
+    const f = await this.prisma.pieceRemiseTache.findFirst({
+      where: { id: pieceId, tacheId, tache: { projetId, projet: { societeId } } },
+      select: { nom: true, cle: true },
+    });
+    if (!f) throw new NotFoundException('Fichier introuvable');
+    return { nom: f.nom, url: f.cle };
+  }
+
+  // Assigné de la tâche ou personne qui peut en décider (Mon espace).
+  async verifierAccesPiece(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string) {
+    const tache = await this.prisma.tacheProjet.findFirst({
+      where: { id: tacheId, projetId, projet: { societeId } },
+      select: { assigneId: true, projet: { select: { cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } } },
+    });
+    if (!tache) throw new NotFoundException('Tâche introuvable');
+    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
+    if (collaborateurId && tache.assigneId === collaborateurId) return;
+    if (peutQualifier({ role: acteur.role, collaborateurId }, tache.assigneId, chefId)) return;
+    throw new ForbiddenException('Fichier réservé à l’assigné et à son valideur.');
   }
 
   async historique(societeId: string, projetId: string, tacheId: string) {
