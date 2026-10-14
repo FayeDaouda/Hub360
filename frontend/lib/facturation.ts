@@ -208,11 +208,12 @@ export function supprimerPaiement(
   projetId: string,
   factureId: string,
   paiementId: string,
+  motif: string, // obligatoire (14/10/2026), gardé avec la trace
 ): Promise<Facturation> {
   return apiSociete<Facturation>(
     slug,
     `${base(projetId)}/${factureId}/paiements/${paiementId}`,
-    { method: 'DELETE' },
+    { method: 'DELETE', body: { motif } },
   );
 }
 

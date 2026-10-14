@@ -22,6 +22,7 @@ import {
   RefacturerEtudesDto,
   CreerFactureDto,
   PatchFactureDto,
+  SupprimerPaiementDto,
 } from './dto';
 
 type R = { user: { societeId: string; userId: string } };
@@ -161,6 +162,7 @@ export class FacturationController {
     @Param('id') id: string,
     @Param('factureId') factureId: string,
     @Param('paiementId') paiementId: string,
+    @Body() dto: SupprimerPaiementDto,
   ) {
     return this.facturation.supprimerPaiement(
       req.user.societeId,
@@ -168,6 +170,7 @@ export class FacturationController {
       factureId,
       paiementId,
       req.user.userId,
+      dto.motif,
     );
   }
 }

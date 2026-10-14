@@ -548,13 +548,14 @@ export default function FacturationPage({ params }: Props) {
               ajouterPaiement(params.slug, params.projetId, facturePaiements.id, body),
             )
           }
-          onSupprimer={(paiementId) =>
+          onSupprimer={(paiementId, motif) =>
             action(() =>
               supprimerPaiement(
                 params.slug,
                 params.projetId,
                 facturePaiements.id,
                 paiementId,
+                motif,
               ),
             )
           }
@@ -956,9 +957,12 @@ function ModalePaiements({
     mode?: ModePaiement;
     reference?: string;
   }) => Promise<boolean>;
-  onSupprimer: (paiementId: string) => void;
+  onSupprimer: (paiementId: string, motif: string) => Promise<boolean>;
 }) {
   const [date, setDate] = useState(AUJOURD_HUI());
+  // Suppression = correction tracée : le motif est demandé avant d'envoyer.
+  const [aSupprimer, setASupprimer] = useState<string | null>(null);
+  const [motif, setMotif] = useState('');
   const [montant, setMontant] = useState(
     facture.resteAPayer > 0 ? String(facture.resteAPayer) : '',
   );
@@ -1026,7 +1030,10 @@ function ModalePaiements({
                         className="lien-inline"
                         aria-label="Supprimer le paiement"
                         disabled={busy}
-                        onClick={() => onSupprimer(p.id)}
+                        onClick={() => {
+                          setASupprimer(p.id);
+                          setMotif('');
+                        }}
                       >
                         <Trash2 size={12} strokeWidth={2} aria-hidden />
                       </button>
@@ -1035,6 +1042,37 @@ function ModalePaiements({
                 ))}
               </tbody>
             </table>
+          )}
+
+          {aSupprimer && (
+            <div className="field" style={{ display: 'grid', gap: '0.5rem' }}>
+              <label className="field">
+                <span className="field-label">Motif de la suppression</span>
+                <input
+                  className="field-input"
+                  value={motif}
+                  maxLength={300}
+                  placeholder="ex. versement saisi deux fois"
+                  autoFocus
+                  onChange={(e) => setMotif(e.target.value)}
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setASupprimer(null)}>
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy || motif.trim().length < 3}
+                  onClick={async () => {
+                    if (await onSupprimer(aSupprimer, motif.trim())) setASupprimer(null);
+                  }}
+                >
+                  Confirmer la suppression
+                </button>
+              </div>
+            </div>
           )}
 
           <h4 className="exec-sous-titre">Enregistrer un versement</h4>

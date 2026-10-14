@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { EmailService } from '../../email/email.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
@@ -361,20 +361,28 @@ describe('FacturationService.ajouterPaiement', () => {
       id: 'PA1', factureId: 'F1', date: '2026-10-01', montant: 50_000, mode: 'virement',
       reference: 'VIR-9', creeLe, creeParId: 'U7',
     });
-    await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1');
+    await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1', 'Saisi deux fois');
     expect(paiementSupprime.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        paiementId: 'PA1', factureId: 'F1', societeId: 'S1', montant: 50_000, creeLe, creeParId: 'U7', supprimeParId: 'U1',
+        paiementId: 'PA1', factureId: 'F1', societeId: 'S1', montant: 50_000, creeLe, creeParId: 'U7', supprimeParId: 'U1', motif: 'Saisi deux fois',
       }),
     });
     expect(paiement.delete).toHaveBeenCalledWith({ where: { id: 'PA1' } });
+  });
+
+  it('suppression sans motif (ou motif vide) → 400, rien n’est supprimé', async () => {
+    const { prisma, facture, paiement, paiementSupprime } = mockPrisma();
+    facture.findFirst.mockResolvedValue({ id: 'F1' });
+    await expect(service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1', '  ')).rejects.toThrow(BadRequestException);
+    expect(paiementSupprime.create).not.toHaveBeenCalled();
+    expect(paiement.delete).not.toHaveBeenCalled();
   });
 
   it('suppression d’un paiement inexistant : rien n’est tracé', async () => {
     const { prisma, facture, paiement, paiementSupprime } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1' });
     paiement.findFirst.mockResolvedValue(null);
-    await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1');
+    await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1', 'Saisi deux fois');
     expect(paiementSupprime.create).not.toHaveBeenCalled();
   });
 });

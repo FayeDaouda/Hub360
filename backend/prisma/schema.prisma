@@ -1926,6 +1926,7 @@ model PaiementSupprime {
   creeParId     String?       @map("cree_par_id")
   supprimeLe    DateTime      @default(now()) @map("supprime_le")
   supprimeParId String        @map("supprime_par_id")
+  motif         String        @default("") // obligatoire depuis le 14/10/2026 ("" = trace antérieure)
 
   @@index([factureId])
   @@map("paiements_supprimes")

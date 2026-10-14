@@ -265,7 +265,11 @@ export class FacturationService {
     factureId: string,
     paiementId: string,
     acteurId: string,
+    motif: string,
   ) {
+    if (motif.trim().length < 3) {
+      throw new BadRequestException('Indiquez le motif de la suppression (3 caractères au moins).');
+    }
     await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.prisma.facture.findFirst({
       where: { id: factureId, projetId, societeId },
@@ -289,6 +293,7 @@ export class FacturationService {
             creeLe: p.creeLe,
             creeParId: p.creeParId,
             supprimeParId: acteurId,
+            motif: motif.trim(),
           },
         }),
         this.prisma.paiement.delete({ where: { id: p.id } }),

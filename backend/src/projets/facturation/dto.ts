@@ -12,6 +12,7 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  MinLength,
 } from 'class-validator';
 import { ModePaiement } from '@prisma/client';
 
@@ -66,6 +67,14 @@ export class AjouterPaiementDto {
   @IsNumber() @Min(1) montant!: number;
   @IsOptional() @IsEnum(ModePaiement) mode?: ModePaiement;
   @IsOptional() @IsString() @MaxLength(120) reference?: string;
+}
+
+// DELETE …/factures/:id/paiements/:paiementId — correction tracée : le motif
+// est obligatoire (décision du 14/10/2026) et gardé avec la trace.
+export class SupprimerPaiementDto {
+  @IsString() @MinLength(3, { message: 'Indiquez le motif de la suppression (3 caractères au moins).' })
+  @MaxLength(300)
+  motif!: string;
 }
 
 // POST …/factures/mensualites — facture de la mensualité du mois d'une ligne
