@@ -8,6 +8,7 @@ import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layo
 import { getClients, getProjets } from '@/lib/crm';
 import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation, lienFacturationProjet } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
+import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
 import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
@@ -53,13 +54,13 @@ export default function FinancesPage({ params }: Props) {
   const societe = useSocieteCourante();
   const session = useSessionCourante();
   // Droits par la matrice — affichage seulement, le serveur revérifie.
-  // Catalogue : gestion réservée à l'administration.
+  // Catalogue : gestion confiée au CEO (14/10/2026) ; le compte de secours la garde.
   const droits = {
     devisEcriture: niveauSuffisant(session, 'finances_devis', 'ecriture'),
     devisValidation: niveauSuffisant(session, 'finances_devis', 'validation'),
     facturesEcriture: niveauSuffisant(session, 'finances_factures', 'ecriture'),
     facturesValidation: niveauSuffisant(session, 'finances_factures', 'validation'),
-    catalogue: session.role === 'societe_admin',
+    catalogue: session.role === ROLE_CEO || session.role === 'societe_admin',
     // Bureaux d'études à régler : donnée de charges (CFO).
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
