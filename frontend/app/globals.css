@@ -12086,6 +12086,21 @@ a.notif-item:hover {
 .po-carte-descriptif {
   margin: 0;
 }
+.po-visite {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.4rem 0 0.6rem;
+}
+.po-visite-champ {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.84rem;
+}
+.po-visite-champ .field-input {
+  width: auto;
+}
 .po-carte.is-eteinte .po-tache,
 .po-tache.is-eteinte {
   opacity: 0.55;

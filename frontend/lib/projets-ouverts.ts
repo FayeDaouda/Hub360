@@ -138,6 +138,7 @@ export type DossierProjetOuvert = {
   jour: number;
   horizon: number;
   budgetHeures: number | null;
+  dateVisiteSite: string | null; // AAAA-MM-JJ : relevés dus 24 h après
   factures: Record<'F1' | 'F2' | 'F3', EtatFacture>;
   // « Ajouter en TS » (Architecte DPLG) ; vide = pas le droit.
   optionsTs: { carteId: string; libelle: string; heures: number }[];
@@ -198,6 +199,12 @@ export function deciderTache(slug: string, projetId: string, tacheId: string, de
     method: 'POST',
     body: { decision, ...(motif ? { motif } : {}) },
   });
+}
+
+// Date de visite sur site : les relevés de l'existant reçoivent leur
+// échéance (lendemain de la visite) ; null = effacer.
+export function definirDateVisite(slug: string, projetId: string, date: string | null) {
+  return apiSociete<{ dateVisiteSite: string | null }>(slug, `/projets-ouverts/${projetId}/visite`, { method: 'PATCH', body: { date } });
 }
 
 // Élément demandé par le client, ajouté en TS à une carte « par unité ».

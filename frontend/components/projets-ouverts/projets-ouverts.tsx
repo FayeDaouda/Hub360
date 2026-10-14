@@ -11,6 +11,7 @@ import { niveauSuffisant } from '@/lib/auth';
 import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
   ajouterTs,
+  definirDateVisite,
   getAssignables,
   getDossierProjet,
   getMentionnables,
@@ -316,6 +317,7 @@ type PropsDossier = {
 
 function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, assignables, moiId, mentionnables, onMaj }: PropsDossier) {
   const cartes = d.cartes.filter((c) => c.etapeNumero === etape);
+  const ecriture = niveauSuffisant(useSessionCourante(), 'projets', 'ecriture');
   const tacheId = selection?.type === 'tache' ? selection.id : null;
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
   const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
@@ -395,6 +397,11 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
               filActif={carteFil?.id === c.id}
               onTache={(id) => onSelection({ type: 'tache', id })}
               onFil={() => onSelection({ type: 'carte', id: c.id })}
+              visite={
+                c.cle === CARTE_RELEVES
+                  ? { slug, projetId: d.id, date: d.dateVisiteSite, modifiable: ecriture, onMaj }
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -472,15 +479,19 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
   );
 }
 
+// Carte du gabarit dont les relevés sont dus 24 h après la visite sur site.
+const CARTE_RELEVES = 'releves_existants';
+
 type PropsCarte = {
   carte: CarteOuverte;
   tacheId: string | null;
   filActif: boolean;
   onTache: (id: string) => void;
   onFil: () => void;
+  visite?: { slug: string; projetId: string; date: string | null; modifiable: boolean; onMaj: () => Promise<void> };
 };
 
-function Carte({ carte: c, tacheId, filActif, onTache, onFil }: PropsCarte) {
+function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCarte) {
   const p = pastilleCarte(c.etat);
   const eteinte = c.etat.code === 'desactivee';
   // « délai en heures ouvrées depuis J1 » : la fenêtre se lit aussi en heures.
@@ -509,6 +520,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil }: PropsCarte) {
         </div>
       </header>
       {c.descriptif && <p className="po-aide po-carte-descriptif">{c.descriptif}</p>}
+      {visite && <DateVisite {...visite} />}
       {c.etat.code === 'verrouillee' && (
         <p className="po-attente">S’ouvre quand ces tâches sont validées : {c.etat.attend.join(', ')}.</p>
       )}
@@ -575,3 +587,33 @@ function pastillesFactures(d: DossierProjetOuvert) {
 
 // « Cellule Archi 3 » est déjà nommée ; « GC-ARC-02 » (maquette) ne l'est pas.
 const libelleCellule = (nom: string) => (/^cellule\b/i.test(nom) ? nom : `Cellule ${nom}`);
+
+// Date de visite sur site (carte « Relevés existants ») : une fois saisie, les
+// relevés sont dus le lendemain (24 h calendaires) et entrent dans le suivi
+// des délais.
+function DateVisite({ slug, projetId, date, modifiable, onMaj }: NonNullable<PropsCarte['visite']>) {
+  const [erreur, setErreur] = useState<string | null>(null);
+  async function changer(valeur: string) {
+    setErreur(null);
+    try {
+      await definirDateVisite(slug, projetId, valeur || null);
+      await onMaj();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'Date non enregistrée.');
+    }
+  }
+  return (
+    <div className="po-visite">
+      {modifiable ? (
+        <label className="po-visite-champ">
+          <span>Date de visite sur site</span>
+          <input type="date" className="field-input" value={date ?? ''} onChange={(e) => changer(e.target.value)} />
+        </label>
+      ) : (
+        <p className="po-aide">Visite sur site : {date ? jjmm(date) : 'date non renseignée'}</p>
+      )}
+      {!date && <p className="po-aide">Sans date de visite, ces relevés n’ont pas d’échéance.</p>}
+      {erreur && <p className="field-erreur">{erreur}</p>}
+    </div>
+  );
+}

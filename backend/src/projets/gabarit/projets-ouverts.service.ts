@@ -54,6 +54,16 @@ const prolongationEnAttente = (l: Prolongations) => l.find((p) => p.decision ===
 
 const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = { F1: 'signature', F2: 'avant_projet', F3: 'livraison' };
 
+// Carte du gabarit dont les tâches sont dues 24 h après la visite sur site.
+export const CARTE_RELEVES = 'releves_existants';
+
+// Jour calendaire suivant (AAAA-MM-JJ), sans jours ouvrés ni fériés.
+export function lendemain(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 @Injectable()
 export class ProjetsOuvertsService {
   constructor(
@@ -112,6 +122,25 @@ export class ProjetsOuvertsService {
         mentions: await this.mentionsOuvertes(projets.map((p) => p.id)),
       },
     };
+  }
+
+  // Date de visite sur site : la carte « Relevés existants » et ses tâches
+  // reçoivent leur fenêtre — du jour de la visite au lendemain (24 h
+  // calendaires, week-end compris : règle du gabarit). Effacer la date
+  // retire l'échéance.
+  async definirDateVisite(societeId: string, projetId: string, date: string | null) {
+    const p = await this.prisma.projet.findFirst({
+      where: { id: projetId, societeId, ouvertLe: { not: null } },
+      select: { id: true },
+    });
+    if (!p) throw new NotFoundException('Projet introuvable ou pas encore ouvert');
+    const fenetre = { debutLe: date, finLe: date ? lendemain(date) : null };
+    await this.prisma.$transaction([
+      this.prisma.projet.update({ where: { id: projetId }, data: { dateVisiteSite: date } }),
+      this.prisma.carteProjet.updateMany({ where: { projetId, cle: CARTE_RELEVES }, data: fenetre }),
+      this.prisma.tacheProjet.updateMany({ where: { projetId, carte: { cle: CARTE_RELEVES } }, data: fenetre }),
+    ]);
+    return { dateVisiteSite: date };
   }
 
   async dossier(societeId: string, projetId: string, acteur: Acteur) {
@@ -173,6 +202,7 @@ export class ProjetsOuvertsService {
       jour: rangOuvre(p.ouvertLe!, jour, feries),
       horizon,
       budgetHeures: p.budgetHeures,
+      dateVisiteSite: p.dateVisiteSite,
       factures: { F1: facture('F1'), F2: facture('F2'), F3: facture('F3') },
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
       optionsTs: dplgConnecte

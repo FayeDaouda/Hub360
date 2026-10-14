@@ -6,7 +6,7 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AjouterTsDto, AssignerTacheDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto } from './dto';
+import { AjouterTsDto, AssignerTacheDto, DateVisiteDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto } from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
 type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
@@ -44,6 +44,12 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'lecture')
   dossier(@Req() req: R, @Param('id') id: string) {
     return this.projets.dossier(req.user.societeId, id, req.user);
+  }
+
+  @Patch(':id/visite')
+  @RequiertPermission('projets', 'ecriture')
+  definirDateVisite(@Req() req: R, @Param('id') id: string, @Body() dto: DateVisiteDto) {
+    return this.projets.definirDateVisite(req.user.societeId, id, dto.date);
   }
 
   @Get(':id/taches/:tacheId/historique')

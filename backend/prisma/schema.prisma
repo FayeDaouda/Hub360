@@ -764,6 +764,9 @@ model Projet {
   // Budget atelier en service à l'ouverture (Réglages) : horizon J1 →
   // livraison = budget / 8 h. Figé, comme les fenêtres.
   budgetHeures     Int?          @map("budget_heures")
+  // Visite sur site (AAAA-MM-JJ) : les relevés de l'existant sont dus 24 h
+  // calendaires après (règle du gabarit, carte « Relevés existants »).
+  dateVisiteSite   String?       @map("date_visite_site")
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 

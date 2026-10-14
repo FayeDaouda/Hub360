@@ -39,3 +39,10 @@ export class DemanderProlongationTacheDto {
 export class DeciderProlongationTacheDto {
   @IsBoolean() accorder!: boolean;
 }
+
+// PATCH …/projets-ouverts/:id/visite — date de visite sur site ; null = effacer.
+export class DateVisiteDto {
+  @ValidateIf((_, v) => v !== null)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date attendue au format AAAA-MM-JJ.' })
+  date!: string | null;
+}
