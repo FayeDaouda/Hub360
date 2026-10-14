@@ -94,12 +94,4 @@ describe('TempsService', () => {
     await expect(svc({ collab: null }).s.monTemps({ userId: 'U', societeId: 'S1' })).rejects.toThrow(NotFoundException);
   });
 
-  it('référentiel : bloc inconnu refusé, null retire la durée', async () => {
-    const { s, prisma } = svc();
-    await expect(s.definirDuree('S1', 'U', 'permis', 'inconnu', 8)).rejects.toThrow(NotFoundException);
-    await s.definirDuree('S1', 'U', 'permis', 'dossier_permis', null);
-    expect(prisma.dureeStandardTache.deleteMany).toHaveBeenCalled();
-    await s.definirDuree('S1', 'U', 'permis', 'dossier_permis', 12.5);
-    expect(prisma.dureeStandardTache.upsert).toHaveBeenCalled();
-  });
 });

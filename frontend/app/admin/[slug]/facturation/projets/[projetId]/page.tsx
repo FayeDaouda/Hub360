@@ -607,7 +607,6 @@ export default function FacturationPage({ params }: Props) {
             <CreationFacture
               mandat={mandat}
               echeancierPose={echeancierPose}
-              suggestionVenteHt={factu.resume.suggestionVenteHt}
               busy={busy}
               onFacture={(body) =>
                 action(() => creerFacture(params.slug, params.projetId, body))
@@ -666,14 +665,12 @@ export default function FacturationPage({ params }: Props) {
 function CreationFacture({
   mandat,
   echeancierPose,
-  suggestionVenteHt,
   busy,
   onFacture,
   onEcheancier,
 }: {
   mandat: boolean;
   echeancierPose: boolean;
-  suggestionVenteHt: number | null;
   busy: boolean;
   onFacture: (body: {
     montantHt: number;
@@ -783,16 +780,6 @@ function CreationFacture({
                 value={montant}
                 onChange={(e) => setMontant(e.target.value)}
               />
-              {suggestionVenteHt != null && (
-                <button
-                  type="button"
-                  className="lien-inline"
-                  onClick={() => setMontant(String(suggestionVenteHt))}
-                >
-                  Reprendre le prix de vente du pré-bilan (
-                  {formatMontantCompact(suggestionVenteHt)})
-                </button>
-              )}
             </label>
             <label className="field">
               <span className="field-label">TVA (%)</span>

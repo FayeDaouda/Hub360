@@ -8,8 +8,8 @@ import { deciderAbsence, getPreparationDecision, jjmm, LIBELLE_MOTIF_REFUS, LIBE
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
 
 const DECISIONS: { cle: DecisionN1; libelle: string; aide: string }[] = [
-  { cle: 'valider', libelle: 'Valider', aide: 'Chaque livrable dû pendant l’absence est confié à quelqu’un d’autre.' },
-  { cle: 'sous_conditions', libelle: 'Sous conditions', aide: 'Les livrables cochés comme non délégables sont avancés à la veille du départ.' },
+  { cle: 'valider', libelle: 'Valider', aide: 'Chaque tâche de projet due pendant l’absence est confiée à quelqu’un d’autre.' },
+  { cle: 'sous_conditions', libelle: 'Sous conditions', aide: 'Les tâches cochées comme non délégables restent au salarié, à terminer avant son départ.' },
   { cle: 'autres_dates', libelle: 'Autres dates', aide: 'Le salarié accepte les nouvelles dates ou retire sa demande.' },
   { cle: 'refuser', libelle: 'Refuser', aide: 'Motif obligatoire (commentaire si « Autre »).' },
 ];
@@ -116,7 +116,7 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
 
             {avecLivrables &&
               (prep.livrables.length === 0 ? (
-                <p className="dmd-note">Aucun livrable dû pendant l’absence.</p>
+                <p className="dmd-note">Aucune tâche de projet due pendant l’absence.</p>
               ) : (
                 <ul className="rh-pieces">
                   {prep.livrables.map((l) => (

@@ -3,15 +3,6 @@ import { FinancesModule } from '../finances/finances.module';
 import { ReglagesModule } from '../reglages/reglages.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AccesProjetGuard } from './acces-projet.guard';
-import { ProjetsService } from './projets.service';
-import { PermisService } from './permis/permis.service';
-import { EtudesService } from './etudes/etudes.service';
-import { EtudesGabaritService } from './etudes/gabarit.service';
-import { UnbordService } from './unbord/unbord.service';
-import { UnbordGabaritService } from './unbord/gabarit.service';
-import { ExecutionService } from './execution/execution.service';
-import { ImagesService } from './images/images.service';
-import { FichiersService } from './fichiers/fichiers.service';
 import { FacturationService } from './facturation/facturation.service';
 import { OuvertureProjetService } from './gabarit/ouverture.service';
 import { ProjetsOuvertsService } from './gabarit/projets-ouverts.service';
@@ -28,15 +19,6 @@ import { FacturationCentraleController } from './facturation/facturation-central
   imports: [NotificationsModule, ReglagesModule, FinancesModule],
   providers: [
     AccesProjetGuard,
-    ProjetsService,
-    PermisService,
-    EtudesService,
-    EtudesGabaritService,
-    UnbordService,
-    UnbordGabaritService,
-    ExecutionService,
-    ImagesService,
-    FichiersService,
     FacturationService,
     OuvertureProjetService,
     ProjetsOuvertsService,

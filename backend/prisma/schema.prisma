@@ -67,12 +67,9 @@ model Societe {
   devis                 Devis[]
   produitsServices      ProduitService[]
   contrats              Contrat[]
-  lignesUnbordGabarit   LigneUnbordGabarit[]
-  blocsEtudeGabarit     BlocEtudeGabarit[]
   annexesContratGabarit AnnexeContratGabarit[]
 
   dossiersPersonnel    DossierPersonnel[]
-  dureesStandardTaches DureeStandardTache[]
   gabaritVersions      GabaritVersion[]
   reglages             ReglageSociete[]
   journalReglages      JournalReglage[]
@@ -98,22 +95,9 @@ model Utilisateur {
 
   roles                              UtilisateurSocieteRole[]
   rolesSupprimes                     Role[]                    @relation("RoleSupprPar")
-  lignesUnbordGabaritSupprimees      LigneUnbordGabarit[]      @relation("UnbordGabaritSupprPar")
   collaborations                     Collaborateur[]
   dossierPersonnel                   DossierPersonnel?
-  imagesAjoutees                     ImageProjet[]             @relation("ImageAjoutPar")
-  imagesSupprimees                   ImageProjet[]             @relation("ImageSupprPar")
-  fichiersAjoutes                    FichierProjet[]           @relation("FichierAjoutPar")
-  fichiersSupprimes                  FichierProjet[]           @relation("FichierSupprPar")
-  lignesChecklistAvpSupprimees       LigneChecklistAvp[]       @relation("ChecklistAvpSupprPar")
-  lignesChecklistPermisSupprimees    LigneChecklistPermis[]    @relation("ChecklistPermisSupprPar")
-  lignesChecklistPermisFaites        LigneChecklistPermis[]    @relation("ChecklistPermisFaitPar")
-  lignesChecklistExecutionSupprimees LigneChecklistExecution[] @relation("ChecklistExecutionSupprPar")
-  lignesChecklistExecutionFaites     LigneChecklistExecution[] @relation("ChecklistExecutionFaitPar")
-  blocsEtudeGabaritSupprimes         BlocEtudeGabarit[]        @relation("BlocEtudeGabaritSupprPar")
-  lignesEtudeGabaritSupprimees       LigneEtudeGabarit[]       @relation("LigneEtudeGabaritSupprPar")
   blocsEtudeSupprimes                BlocEtude[]               @relation("BlocEtudeSupprPar")
-  itemsEtudeSupprimes                ItemEtude[]               @relation("ItemEtudeSupprPar")
   invitations                        Invitation[]
   notifications                      Notification[]
   evenementsCompte                   EvenementCompte[]
@@ -405,14 +389,6 @@ enum Phase {
   livre
 }
 
-enum EtapePreBilan {
-  esq
-  aps
-  apd
-  estimation
-  definitif
-}
-
 // Listes du doc « Création de projet côté CRM » §3.3–3.4 (oct. 2026).
 enum TypeBien {
   villa
@@ -434,12 +410,6 @@ enum Gamme {
   local
   importe
   sur_mesure_importe
-}
-
-enum NiveauFinition {
-  standard
-  soigne
-  haut_de_gamme
 }
 
 enum TypeClient {
@@ -778,18 +748,9 @@ model Projet {
   // collaborateur suit un projet si SA cellule fait partie des cellules du
   // projet (cf. projet-acces.ts).
   cellules                 ProjetCellule[]
-  avantProjet              AvantProjet?
-  versionsPreBilan         VersionPreBilan[]
   // phase 2 — sections aval (conception : les 3 ; aménagement : execution seul)
-  permis                   Permis?
   etudes                   Etudes?
-  lignesUnbord             LigneUnbord[]
-  blocsUnbord              BlocUnbord[]
-  blocsExecution           BlocExecution[]
-  lignesChecklistExecution LigneChecklistExecution[]
-  images                   ImageProjet[]
   notifications            Notification[]
-  fichiers                 FichierProjet[]
   factures                 Facture[]
   devis                    Devis[]
   validationsTaches        ValidationTache[]
@@ -950,12 +911,6 @@ model Collaborateur {
   // singulier).
   celluleDispatchee            Cellule[]          @relation("CelluleDispatcher")
   utilisateur                  Utilisateur?       @relation(fields: [utilisateurId], references: [id])
-  dessinePour                  AvantProjet[]      @relation("ApDessinateur")
-  rend3dPour                   AvantProjet[]      @relation("ApResponsable3d")
-  blocsChecklistAvpResponsable BlocChecklistAvp[] @relation("BlocChecklistAvpResponsable")
-  blocsPermisResponsable       BlocPermis[]       @relation("BlocPermisResponsable")
-  blocsExecutionResponsable    BlocExecution[]    @relation("BlocExecutionResponsable")
-  blocsUnbordResponsable       BlocUnbord[]       @relation("BlocUnbordResponsable")
   tachesProjet                 TacheProjet[]      @relation("TacheProjetAssigne")
   postesCellule                PosteCellule[]     @relation("PosteTitulaire")
 
@@ -966,128 +921,9 @@ model Collaborateur {
 
 // -- Section Avant-projet : fiche programme + validation (1:1 avec Projet) --
 
-// Restructuration sept. 2026 (chantier « Avant-projet 2 groupes ») : retire la
-// section formulaire « Programme » (besoinSurface/nbLots/usages/niveauFinition/
-// budgetCibleClient/delaiSouhaite/contraintes/references — faisait double
-// emploi, plus utilisée nulle part), et le verrou macro « Validation »
-// (programmeValide/budgetValide/esquisseValidee/engagementValide/
-// pieceValidation/valideLe/validePar) — décision boss : plus de lecture seule
-// automatique, l'avant-projet reste éditable en permanence (cohérent avec
-// phases_chevauchement, sept. 2026) ; la phase avance via changerPhase
-// (mécanisme déjà générique, indépendant de ceci). Pré-bilan (VersionPreBilan)
-// n'est plus embarqué sur la page Avant-projet mais reste en base, accessible
-// nulle part pour l'instant — même sort qu'Unbord avant Foncier.
-model AvantProjet {
-  projetId        String  @id @map("projet_id")
-  // Affectation & agenda de la phase avant-projet (miroir de la carte Trello).
-  // dessinateur / responsable3d : FK Collaborateur (étaient des String libres).
-  dessinateurId   String? @map("dessinateur_id")
-  responsable3dId String? @map("responsable_3d_id")
-  dateDebut       String? @map("date_debut") // AAAA-MM-JJ (date agenda)
-  dateFin         String? @map("date_fin")
-
-  projet          Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  dessinateur     Collaborateur?      @relation("ApDessinateur", fields: [dessinateurId], references: [id], onDelete: SetNull)
-  responsable3d   Collaborateur?      @relation("ApResponsable3d", fields: [responsable3dId], references: [id], onDelete: SetNull)
-  lignesChecklist LigneChecklistAvp[]
-  blocsChecklist  BlocChecklistAvp[]
-
-  @@map("avant_projets")
-}
-
-// -- Sous-checklist opérationnelle de l'avant-projet --
-// Restructurée sept. 2026 : 2 groupes seulement (taches_complementaires,
-// renommé « Livrables » côté UI — et fichiers_produits). programme/
-// releve_existant/dossier_final retirés de la config (domaine/config.ts) —
-// valeurs d'enum laissées en base (coûteux à retirer d'un type Postgres, sans
-// utilité, même motif que dossier_final avant elles) ; lignes existantes
-// soft-deletées par la migration de ce chantier.
-enum GroupeChecklistAvp {
-  programme
-  releve_existant
-  taches_complementaires
-  fichiers_produits
-  dossier_final
-}
-
-// Les 2 blocs — porteurs de l'échéance et du responsable (un par bloc, même
-// motif que BlocPermis/BlocExecution : décision boss, sept. 2026 — remplace
-// l'ancienne assignation par ligne, indicative, sans échéance propre).
-model BlocChecklistAvp {
-  avantProjetId          String             @map("avant_projet_id")
-  groupe                 GroupeChecklistAvp
-  // Début planifié (RH · Temps, lot 4) : la durée standard du bloc se
-  // répartit sur la fenêtre début → échéance (cf. rh/regles-temps.ts).
-  debut                  String?            @map("debut") // AAAA-MM-JJ
-  echeance               String?            @map("echeance") // AAAA-MM-JJ
-  responsableId          String?            @map("responsable_id")
-  // Demande de prolongation (responsable du bloc uniquement) — même motif que
-  // BlocPermis/BlocExecution.
-  prolongationDemandeeLe DateTime?          @map("prolongation_demandee_le")
-  prolongationEcheance   String?            @map("prolongation_echeance")
-  prolongationMotif      String?            @map("prolongation_motif")
-
-  avantProjet AvantProjet    @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
-  responsable Collaborateur? @relation("BlocChecklistAvpResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
-
-  @@id([avantProjetId, groupe])
-  @@map("blocs_checklist_avp")
-}
-
-// Items du groupe (admin ou dispatcher d'une cellule du projet : ajout/
-// suppression, nouveauté de ce chantier — jusqu'ici admin seul). Restructurée
-// sept. 2026 sur le même modèle que Foncier/Unbord : plus de case « fait »
-// manuelle ni de note — le statut se déduit de la présence d'un fichier joint
-// (images/fichiers ci-dessous), `nonRequise` pour « ne s'applique pas à ce
-// projet ». L'ancien fait/note/faitParId/faitLe/collaborateurId/echeance/
-// prolongation par ligne sont retirés : assignation + échéance + prolongation
-// vivent maintenant sur BlocChecklistAvp (un responsable par groupe, pas par
-// ligne), et l'état « fait » est dérivé, pas déclaratif — plus rien à tracer
-// par ligne (cohérent avec LigneUnbord).
-model LigneChecklistAvp {
-  id            String             @id @default(uuid())
-  avantProjetId String             @map("avant_projet_id")
-  groupe        GroupeChecklistAvp
-  libelle       String
-  ordre         Int                @default(0)
-  // Case à cocher manuelle (sept. 2026, en plus du statut dérivé des
-  // fichiers) — un fichier joint la met aussi à true automatiquement (cf.
-  // ProjetsService.marquerFaitApresUploadChecklistAvp), mais elle reste
-  // librement décochable ensuite (même contrat que LigneChecklistPermis.fait,
-  // les fichiers restent attachés). Mutuellement exclusif avec nonRequise.
-  fait          Boolean            @default(false)
-  nonRequise    Boolean            @default(false) @map("non_requise")
-  // Suppression douce (admin/dispatcher) — cohérent avec le reste du projet.
-  supprimee     Boolean            @default(false)
-  supprimeLe    DateTime?          @map("supprime_le")
-  supprimeParId String?            @map("supprime_par_id")
-
-  avantProjet AvantProjet     @relation(fields: [avantProjetId], references: [projetId], onDelete: Cascade)
-  supprimePar Utilisateur?    @relation("ChecklistAvpSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  images      ImageProjet[]
-  fichiers    FichierProjet[]
-
-  @@map("lignes_checklist_avp")
-}
-
 // -- Section Pré-bilan : chiffrage versionné. Pas de table « PreBilan »
 //    propre — les versions pendent du Projet, le DTO reconstitue la forme
 //    { projetId, versions[] } attendue par le front. --
-
-model VersionPreBilan {
-  id              String        @id @default(uuid())
-  projetId        String        @map("projet_id")
-  etape           EtapePreBilan
-  couts           Json          @default("{}") // { <ligne>: <montant FCFA> }
-  prixVenteEstime Decimal?      @map("prix_vente_estime") @db.Decimal(14, 0)
-  creeeLe         DateTime      @default(now()) @map("creee_le")
-  figeeLe         DateTime?     @map("figee_le") // figée dès la création de la version suivante
-
-  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
-
-  @@unique([projetId, etape])
-  @@map("versions_pre_bilan")
-}
 
 // =============================================================================
 // Grey Concrete — phase 2 : permis de construire, études techniques, exécution,
@@ -1103,19 +939,6 @@ model VersionPreBilan {
 // =============================================================================
 
 // -- Vocabulaire métier (fermé) — miroir de frontend/lib/types.ts --
-
-// Réduit à 3 états réellement utilisés depuis le retrait du workflow de
-// dépôt/instruction (a_deposer = « en cours ») — depose/instruction/
-// observations restent dans l'enum pour ne pas casser les valeurs déjà
-// écrites en base, mais plus aucun chemin n'écrit dessus (cf. PermisService).
-enum StatutPermis {
-  a_deposer
-  depose
-  instruction
-  observations
-  obtenu
-  refuse
-}
 
 enum TypeEtude {
   geotechnique
@@ -1134,135 +957,6 @@ enum StatutEtude {
   non_requise
 }
 
-enum UsageImage {
-  travail
-  portfolio
-}
-
-// Sujet de la photo (façade/intérieur/chantier/existant) — distinct de
-// `Phase` qui tague la temporalité du projet. Enum en dur pour l'instant (5
-// valeurs suffisent) ; à revoir en table société-scopée si un besoin de
-// personnalisation par l'admin se confirme (cf. mémoire).
-// `autre` ajouté sept. 2026 : catch-all pour les images jointes depuis des
-// checklists qui ne sont pas des photos du bâtiment (Permis — scans
-// administratifs, plans techniques ; Avant-projet — rendus 3D, mood board,
-// esquisses) — forcer facade/interieur/chantier/existant sur ces images
-// n'aurait pas de sens. Exécution/Foncier restent sur chantier/existant, qui
-// leur correspondent vraiment (cf. images.service.ts::MODULE_TYPE_PHOTO).
-enum TypePhotoImage {
-  facade
-  interieur
-  chantier
-  existant
-  autre
-}
-
-// -- Section « Permis de construire » (conception) : 1:1 avec Projet --
-// Procédure sénégalaise : NICAD → dossier (5 pièces) → dépôt (TeleDAC ou guichet
-// mairie) → instruction 90 j → obtention → certificat de conformité.
-// « Permis obtenu » est le 2ᵉ verrou dur de peutAvancerPhase.
-model Permis {
-  projetId          String       @id @map("projet_id")
-  // dossier — 5 colonnes booléennes (miroir de PieceDossierPermis) plutôt qu'un Json
-  titrePropriete    Boolean      @default(false) @map("titre_propriete")
-  planCadastralVise Boolean      @default(false) @map("plan_cadastral_vise")
-  plansApd          Boolean      @default(false) @map("plans_apd")
-  devis             Boolean      @default(false)
-  timbreFiscal      Boolean      @default(false) @map("timbre_fiscal")
-  // Statut final — réduit à 3 états utilisables (a_deposer = « en cours »,
-  // obtenu, refuse) depuis le retrait du workflow de dépôt/instruction
-  // intermédiaire (sept. 2026) : les 3 blocs de la checklist couvrent déjà le
-  // travail réel, seul le résultat final garde une valeur propre (déclenche
-  // le rappel doux de changement de phase, cf. domaine/gardes.ts).
-  statut            StatutPermis @default(a_deposer)
-  dateObtention     DateTime?    @map("date_obtention")
-  dateRefus         DateTime?    @map("date_refus")
-
-  projet          Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  blocs           BlocPermis[]
-  lignesChecklist LigneChecklistPermis[]
-
-  @@map("permis")
-}
-
-// -- Sous-checklists opérationnelles du permis (miroir Trello Grey Concrete,
-//    même motif que LigneChecklistAvp) : suivi granulaire indépendant des
-//    verrous durs ci-dessus (nicad/dossier/statut). Juste un %
-//    (domaine/gardes.ts::avancementChecklistAvp, réutilisée telle quelle).
-enum GroupeChecklistPermis {
-  dossier_permis
-  depot_urbanisme
-  procedure
-}
-
-// Les 3 blocs fixes de la checklist — porteurs de l'échéance et du
-// responsable (un par bloc, pas un seul pour tout le module ni un par item :
-// décision boss, sept. 2026, cf. mémoire). `groupe` fait à la fois office de
-// clé (avec permisId) et de lien vers les lignes qui partagent le même champ
-// — pas de FK blocId sur LigneChecklistPermis, juste le couple (permisId,
-// groupe) déjà présent des deux côtés.
-model BlocPermis {
-  permisId               String                @map("permis_id")
-  groupe                 GroupeChecklistPermis
-  // Début planifié (RH · Temps, lot 4) : la durée standard du bloc se
-  // répartit sur la fenêtre début → échéance (cf. rh/regles-temps.ts).
-  debut                  String?               @map("debut") // AAAA-MM-JJ
-  echeance               String?               @map("echeance") // AAAA-MM-JJ
-  responsableId          String?               @map("responsable_id")
-  // Demande de prolongation (responsable du bloc uniquement) — une seule
-  // active, effacée à la décision (pas d'historique conservé, communiqué
-  // par notification).
-  prolongationDemandeeLe DateTime?             @map("prolongation_demandee_le")
-  prolongationEcheance   String?               @map("prolongation_echeance")
-  prolongationMotif      String?               @map("prolongation_motif")
-
-  permis      Permis          @relation(fields: [permisId], references: [projetId], onDelete: Cascade)
-  responsable Collaborateur?  @relation("BlocPermisResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
-  images      ImageProjet[]
-  fichiers    FichierProjet[]
-
-  @@id([permisId, groupe])
-  @@map("blocs_permis")
-}
-
-model LigneChecklistPermis {
-  id            String                @id @default(uuid())
-  permisId      String                @map("permis_id")
-  groupe        GroupeChecklistPermis
-  libelle       String
-  ordre         Int                   @default(0)
-  fait          Boolean               @default(false)
-  note          String                @default("")
-  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
-  // avec fait (cf. PermisService.patchLigneChecklist : passer nonRequise à
-  // true force fait à false). Compte comme réglé dans avancementChecklistAvp,
-  // même traitement que LigneChecklistAvp.nonRequise.
-  nonRequise    Boolean               @default(false) @map("non_requise")
-  // Pas d'échéance/assignation par item : portées par le bloc parent
-  // (BlocPermis, même permisId + groupe). Qui a réellement coché reste ici
-  // (le responsable du bloc OU l'admin, cf. PermisService).
-  faitLe        DateTime?             @map("fait_le")
-  faitParId     String?               @map("fait_par_id")
-  // Suppression douce (admin) — cohérent avec le reste du projet.
-  supprimee     Boolean               @default(false)
-  supprimeLe    DateTime?             @map("supprime_le")
-  supprimeParId String?               @map("supprime_par_id")
-
-  permis      Permis          @relation(fields: [permisId], references: [projetId], onDelete: Cascade)
-  faitPar     Utilisateur?    @relation("ChecklistPermisFaitPar", fields: [faitParId], references: [id], onDelete: SetNull)
-  supprimePar Utilisateur?    @relation("ChecklistPermisSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  images      ImageProjet[]
-  fichiers    FichierProjet[]
-
-  // Empêche le double-amorçage du gabarit si deux requêtes GET concurrentes
-  // (deux onglets, double montage React StrictMode…) tombent toutes les deux
-  // sur `count === 0` avant que la première n'ait inséré — cf. assurerChecklist
-  // (skipDuplicates). Les deux tentatives partagent les mêmes (groupe, ordre)
-  // puisqu'ils viennent du même gabarit statique.
-  @@unique([permisId, groupe, ordre])
-  @@map("lignes_checklist_permis")
-}
-
 // -- Section « Études » (conception) : en-tête 1:1 (comme AvantProjet) + lignes --
 model Etudes {
   projetId     String    @id @map("projet_id")
@@ -1274,26 +968,9 @@ model Etudes {
   // sept. 2026 en blocs configurables par gabarit société (BlocEtude
   // ci-dessous), même motif que dossier_final/checklist Avant-projet avant
   // elle : rien supprimé, juste plus jamais lu/écrit par le service.
-  lignes LigneEtude[]
   blocs  BlocEtude[]
 
   @@map("etudes")
-}
-
-model LigneEtude {
-  id               String      @id @default(uuid())
-  etudesId         String      @map("etudes_id")
-  type             TypeEtude
-  statut           StatutEtude @default(a_lancer) // a_lancer → en_cours → remise → validee | non_requise
-  bet              String      @default("") // nom du bureau d'études ; partenaireId nullable plus tard
-  dateRemisePrevue String?     @map("date_remise_prevue") // AAAA-MM-JJ
-  dateRemiseReelle String?     @map("date_remise_reelle")
-  note             String      @default("")
-
-  etudes Etudes @relation(fields: [etudesId], references: [projetId], onDelete: Cascade)
-
-  @@unique([etudesId, type])
-  @@map("lignes_etude")
 }
 
 // -- Études techniques restructurées en blocs configurables (sept. 2026) —
@@ -1307,55 +984,13 @@ model LigneEtude {
 //    un niveau de nesting en plus puisque les BLOCS eux-mêmes sont
 //    configurables ici (pas juste les items dans des blocs fixes). --
 
-model BlocEtudeGabarit {
-  id            String    @id @default(uuid())
-  societeId     String    @map("societe_id")
-  libelle       String
-  ordre         Int       @default(0)
-  // Suppression douce : le bloc disparaît des nouveaux projets (et cesse
-  // d'être re-synchronisé sur les projets existants), mais les BlocEtude déjà
-  // créés (et leurs items/fichiers) restent intacts — même motif que
-  // LigneUnbordGabarit.
-  supprimeLe    DateTime? @map("supprime_le")
-  supprimeParId String?   @map("supprime_par_id")
-
-  societe     Societe             @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  supprimePar Utilisateur?        @relation("BlocEtudeGabaritSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  items       LigneEtudeGabarit[]
-  blocs       BlocEtude[]
-
-  @@index([societeId, supprimeLe])
-  @@map("blocs_etude_gabarit")
-}
-
-model LigneEtudeGabarit {
-  id                 String    @id @default(uuid())
-  blocEtudeGabaritId String    @map("bloc_etude_gabarit_id")
-  libelle            String
-  ordre              Int       @default(0)
-  supprimeLe         DateTime? @map("supprime_le")
-  supprimeParId      String?   @map("supprime_par_id")
-
-  blocEtudeGabarit BlocEtudeGabarit @relation(fields: [blocEtudeGabaritId], references: [id], onDelete: Cascade)
-  supprimePar      Utilisateur?     @relation("LigneEtudeGabaritSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  items            ItemEtude[]
-
-  @@index([blocEtudeGabaritId, supprimeLe])
-  @@map("lignes_etude_gabarit")
-}
-
 model BlocEtude {
   id                   String      @id @default(uuid())
   projetId             String      @map("projet_id")
-  blocEtudeGabaritId   String?     @map("bloc_etude_gabarit_id")
   // Carte de l'étape 05 du gabarit (phase 1, 14/10/2026) : la facture du
   // bureau se saisit dans Finances, une étude par carte.
   carteProjetId        String?     @map("carte_projet_id")
-  // Copié du gabarit à la création (figé), même motif que LigneUnbord.libelle
-  // — renommer le gabarit après coup ne réécrit pas les projets en cours.
-  // L'ORDRE en revanche n'est PAS figé : trié via blocEtudeGabarit.ordre à la
-  // lecture (même motif que LigneUnbord/gabarit.ordre), pour que réordonner
-  // le gabarit se reflète immédiatement partout.
+  // Libellé de l'étude (repris de la carte du gabarit à la création).
   libelle              String
   interlocuteur        String      @default("") // ex-« bet » (nom du bureau d'études)
   contactInterlocuteur String      @default("") @map("contact_interlocuteur")
@@ -1363,8 +998,8 @@ model BlocEtude {
   dateRemisePrevue     String?     @map("date_remise_prevue") // AAAA-MM-JJ
   dateRemiseReelle     String?     @map("date_remise_reelle")
   note                 String      @default("")
-  // Visible admin/CIO uniquement — redacted côté service pour tout autre
-  // rôle (jamais renvoyé à un collaborateur, cf. EtudesService.formater).
+  // Facture du bureau : saisie dans Finances (écriture sur les factures),
+  // jamais montrée hors des rôles Finances.
   factureMontant       Decimal?    @map("facture_montant") @db.Decimal(14, 0)
   factureFichierNom    String?     @map("facture_fichier_nom")
   factureFichierCle    String?     @map("facture_fichier_cle")
@@ -1379,310 +1014,12 @@ model BlocEtude {
   supprimeParId        String?     @map("supprime_par_id")
 
   etudes           Etudes            @relation(fields: [projetId], references: [projetId], onDelete: Cascade)
-  blocEtudeGabarit BlocEtudeGabarit? @relation(fields: [blocEtudeGabaritId], references: [id], onDelete: SetNull)
   carteProjet      CarteProjet?      @relation(fields: [carteProjetId], references: [id], onDelete: SetNull)
   supprimePar      Utilisateur?      @relation("BlocEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  items            ItemEtude[]
   lignesFacture    LigneFacture[] // refacturation(s) — une seule active à la fois
 
-  @@unique([projetId, blocEtudeGabaritId])
   @@unique([projetId, carteProjetId])
   @@map("blocs_etude")
-}
-
-model ItemEtude {
-  id                  String    @id @default(uuid())
-  blocEtudeId         String    @map("bloc_etude_id")
-  ligneEtudeGabaritId String?   @map("ligne_etude_gabarit_id")
-  // Copié du gabarit à la création (figé) ; ordre trié via
-  // ligneEtudeGabarit.ordre à la lecture — même motif que BlocEtude ci-dessus.
-  libelle             String
-  // Case à cocher manuelle + statut dérivé des fichiers joints, même modèle
-  // que LigneUnbord (Foncier) : un fichier joint coche aussi automatiquement.
-  fait                Boolean   @default(false)
-  nonRequise          Boolean   @default(false) @map("non_requise")
-  supprimee           Boolean   @default(false)
-  supprimeLe          DateTime? @map("supprime_le")
-  supprimeParId       String?   @map("supprime_par_id")
-
-  blocEtude         BlocEtude          @relation(fields: [blocEtudeId], references: [id], onDelete: Cascade)
-  ligneEtudeGabarit LigneEtudeGabarit? @relation(fields: [ligneEtudeGabaritId], references: [id], onDelete: SetNull)
-  supprimePar       Utilisateur?       @relation("ItemEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  images            ImageProjet[]
-  fichiers          FichierProjet[]
-
-  @@unique([blocEtudeId, ligneEtudeGabaritId])
-  @@map("items_etude")
-}
-
-// -- Section « Unbord » (ex-Documents, renommée + restructurée en checklist à
-//    fichiers, sept. 2026) : 2 groupes fixes, items configurables par
-//    société (gabarit, 2026-09-24 — cf. LigneUnbordGabarit ci-dessous),
-//    pas d'échéance ni de responsable — toute l'équipe du projet peut
-//    uploader ou marquer « non nécessaire » (contrairement à
-//    Permis/Exécution, aucun guard d'assignation ici). « fait » n'est PAS
-//    stocké : dérivé à la lecture de la présence d'au moins un fichier/image
-//    rattaché (voir ImageProjet.ligneUnbordId / FichierProjet.ligneUnbordId
-//    plus bas) — un
-//    seul état de vérité, pas de champ qui pourrait diverger si le fichier
-//    est retiré.
-enum GroupeUnbord {
-  documents
-  releve_existant
-}
-
-// Gabarit société — remplace l'ancien enum TypeUnbord (14 valeurs figées) :
-// depuis le 2026-09-24, chaque société définit sa propre liste d'items par
-// groupe (ajout/retrait/réordonnancement), comme les checklists
-// Avant-projet/Permis sont devenues configurables avant elle — sauf qu'ici
-// le gabarit est un standard PARTAGÉ par toute la société (mêmes pièces
-// attendues sur chaque projet), pas une checklist libre par projet. Édité
-// par societe_admin OU le rôle transverse CIO (cf. SocieteAdminOuCioGuard).
-model LigneUnbordGabarit {
-  id            String       @id @default(uuid())
-  societeId     String       @map("societe_id")
-  groupe        GroupeUnbord
-  libelle       String
-  ordre         Int          @default(0)
-  // Suppression douce : l'item disparaît des nouveaux projets, mais les
-  // lignes déjà créées sur des projets existants (et leurs fichiers) restent
-  // intactes — LigneUnbord copie libelle/groupe à la création, indépendant
-  // du gabarit ensuite (même motif que LigneChecklistAvp).
-  supprimeLe    DateTime?    @map("supprime_le")
-  supprimeParId String?      @map("supprime_par_id")
-
-  societe     Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  supprimePar Utilisateur?  @relation("UnbordGabaritSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  lignes      LigneUnbord[]
-
-  @@index([societeId, supprimeLe])
-  @@map("lignes_unbord_gabarit")
-}
-
-// Assignation par bloc (2026-09-25) — même motif que BlocPermis/BlocExecution :
-// vide = toute l'équipe du projet peut agir sur les items de ce bloc (règle
-// de septembre, préservée en repli) ; renseigné = seul le responsable (+
-// societe_admin) peut cocher/uploader — vérifié par verifierResponsableOuAdmin,
-// même fonction que Permis/Exécution. Qui peut ASSIGNER (et se désigner
-// soi-même sur un bloc libre) passe par estAutoriseAAssigner
-// (dispatch-acces.ts), même règle exacte que Permis — pas de nouveau modèle
-// d'autorisation. Pas d'échéance/prolongation ici : pas demandé.
-model BlocUnbord {
-  projetId      String       @map("projet_id")
-  groupe        GroupeUnbord
-  responsableId String?      @map("responsable_id")
-
-  projet      Projet         @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  responsable Collaborateur? @relation("BlocUnbordResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
-
-  @@id([projetId, groupe])
-  @@map("blocs_unbord")
-}
-
-model LigneUnbord {
-  id         String       @id @default(uuid())
-  projetId   String       @map("projet_id")
-  gabaritId  String       @map("gabarit_id")
-  // groupe/libelle copiés du gabarit à la création (figés) : renommer ou
-  // retirer un item du gabarit plus tard ne réécrit pas l'historique des
-  // projets déjà seedés avec lui.
-  groupe     GroupeUnbord
-  libelle    String
-  // Case à cocher manuelle (sept. 2026, en plus du statut dérivé des
-  // fichiers) — même contrat que LigneChecklistAvp.fait ci-dessus.
-  fait       Boolean      @default(false)
-  nonRequise Boolean      @default(false) @map("non_requise")
-
-  projet   Projet             @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  gabarit  LigneUnbordGabarit @relation(fields: [gabaritId], references: [id])
-  images   ImageProjet[]
-  fichiers FichierProjet[]
-
-  @@unique([projetId, gabaritId])
-  @@map("lignes_unbord")
-}
-
-// -- Section « Exécution / chantier » (les deux catégories) : miroir Trello
-//    Grey Concrete, même motif que Permis (BlocPermis/LigneChecklistPermis) —
-//    8 blocs fixes, chacun avec sa propre échéance et son responsable (pas de
-//    responsable unique pour tout le module ni d'en-tête 1:1 : contrairement à
-//    Permis, l'ancien système lots/offres/situations/réception est retiré en
-//    bloc, rien à garder au niveau module — décision boss, sept. 2026, cf.
-//    mémoire). S'applique aux deux catégories avec le même gabarit (idem).
-enum GroupeChecklistExecution {
-  etudes
-  plans
-  viabilite
-  locaux_technique
-  amenagements
-  menuiserie
-  details
-  cctp
-}
-
-model BlocExecution {
-  projetId               String                   @map("projet_id")
-  groupe                 GroupeChecklistExecution
-  // Début planifié (RH · Temps, lot 4) : la durée standard du bloc se
-  // répartit sur la fenêtre début → échéance (cf. rh/regles-temps.ts).
-  debut                  String?                  @map("debut") // AAAA-MM-JJ
-  echeance               String?                  @map("echeance") // AAAA-MM-JJ
-  responsableId          String?                  @map("responsable_id")
-  // Demande de prolongation (responsable du bloc uniquement) — même motif que
-  // BlocPermis.
-  prolongationDemandeeLe DateTime?                @map("prolongation_demandee_le")
-  prolongationEcheance   String?                  @map("prolongation_echeance")
-  prolongationMotif      String?                  @map("prolongation_motif")
-
-  projet      Projet         @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  responsable Collaborateur? @relation("BlocExecutionResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
-
-  @@id([projetId, groupe])
-  @@map("blocs_execution")
-}
-
-model LigneChecklistExecution {
-  id            String                   @id @default(uuid())
-  projetId      String                   @map("projet_id")
-  groupe        GroupeChecklistExecution
-  libelle       String
-  ordre         Int                      @default(0)
-  fait          Boolean                  @default(false)
-  note          String                   @default("")
-  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
-  // avec fait. Même traitement que LigneChecklistPermis.nonRequise.
-  nonRequise    Boolean                  @default(false) @map("non_requise")
-  // Pas d'échéance/assignation par item : portées par le bloc parent
-  // (BlocExecution, même projetId + groupe).
-  faitLe        DateTime?                @map("fait_le")
-  faitParId     String?                  @map("fait_par_id")
-  // Suppression douce (admin) — cohérent avec le reste du projet.
-  supprimee     Boolean                  @default(false)
-  supprimeLe    DateTime?                @map("supprime_le")
-  supprimeParId String?                  @map("supprime_par_id")
-
-  projet      Projet          @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  faitPar     Utilisateur?    @relation("ChecklistExecutionFaitPar", fields: [faitParId], references: [id], onDelete: SetNull)
-  supprimePar Utilisateur?    @relation("ChecklistExecutionSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  images      ImageProjet[]
-  fichiers    FichierProjet[]
-
-  // Filet de sécurité contre le double-amorçage du gabarit (deux requêtes GET
-  // concurrentes) — même motif que LigneChecklistPermis (skipDuplicates).
-  @@unique([projetId, groupe, ordre])
-  @@map("lignes_checklist_execution")
-}
-
-// -- Section « Images » : galerie de travail + portfolio. Table stricte (pas un
-//    Document générique) — chaque colonne a un sens pour chaque ligne. Le
-//    fichier vit dans le stockage objet ; `cle` = clé objet (data URI en
-//    transition tant que S3 n'est pas branché), l'URL est calculée à la lecture. --
-model ImageProjet {
-  id                        String                 @id @default(uuid())
-  projetId                  String                 @map("projet_id")
-  cle                       String
-  nom                       String
-  typeMime                  String                 @default("") @map("type_mime")
-  usage                     UsageImage             @default(travail)
-  phase                     Phase? // tag optionnel — filtre, ne gate rien (temporalité)
-  typePhoto                 TypePhotoImage?        @map("type_photo") // tag optionnel — sujet de la photo, distinct de `phase`
-  legende                   String                 @default("")
-  ordre                     Int                    @default(0) // rang dans le portfolio
-  // Rattachement à un item précis de la checklist Permis / Exécution — posé
-  // quand l'upload part du bouton sur la ligne plutôt que de la page Images.
-  // SetNull (pas Cascade) : la ligne peut être retirée sans perdre le fichier.
-  ligneChecklistPermisId    String?                @map("ligne_checklist_permis_id")
-  ligneChecklistExecutionId String?                @map("ligne_checklist_execution_id")
-  // Rattachement à un item Unbord — même motif que les deux FK ci-dessus.
-  ligneUnbordId             String?                @map("ligne_unbord_id")
-  // Rattachement à un item de la checklist Avant-projet (chantier sept. 2026,
-  // statut fichier plutôt que case à cocher — même motif que ligneUnbordId).
-  ligneChecklistAvpId       String?                @map("ligne_checklist_avp_id")
-  // Rattachement au niveau du BLOC (pas d'un item précis) — Dépôt urbanisme /
-  // Procédure depuis la simplification Permis (sept. 2026) : un seul point
-  // d'upload partagé pour tout le bloc, les items restent cochables sans
-  // bouton « joindre » chacun. Référence composite (BlocPermis n'a pas de PK
-  // simple) — distinct de ligneChecklistPermisId, jamais les deux à la fois.
-  blocPermisPermisId        String?                @map("bloc_permis_permis_id")
-  blocPermisGroupe          GroupeChecklistPermis? @map("bloc_permis_groupe")
-  // Rattachement à un item Études — même motif que ligneUnbordId (sept. 2026).
-  itemEtudeId               String?                @map("item_etude_id")
-  ajouteParId               String?                @map("ajoute_par_id")
-  ajouteLe                  DateTime               @default(now()) @map("ajoute_le")
-  supprimee                 Boolean                @default(false)
-  supprimeLe                DateTime?              @map("supprime_le")
-  supprimeParId             String?                @map("supprime_par_id")
-
-  projet                  Projet                   @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  ajoutePar               Utilisateur?             @relation("ImageAjoutPar", fields: [ajouteParId], references: [id])
-  supprimePar             Utilisateur?             @relation("ImageSupprPar", fields: [supprimeParId], references: [id])
-  ligneChecklistPermis    LigneChecklistPermis?    @relation(fields: [ligneChecklistPermisId], references: [id], onDelete: SetNull)
-  ligneChecklistExecution LigneChecklistExecution? @relation(fields: [ligneChecklistExecutionId], references: [id], onDelete: SetNull)
-  ligneUnbord             LigneUnbord?             @relation(fields: [ligneUnbordId], references: [id], onDelete: SetNull)
-  ligneChecklistAvp       LigneChecklistAvp?       @relation(fields: [ligneChecklistAvpId], references: [id], onDelete: SetNull)
-  blocPermis              BlocPermis?              @relation(fields: [blocPermisPermisId, blocPermisGroupe], references: [permisId, groupe], onDelete: SetNull)
-  itemEtude               ItemEtude?               @relation(fields: [itemEtudeId], references: [id], onDelete: SetNull)
-
-  @@index([projetId, supprimee])
-  @@map("images_projet")
-}
-
-// -- Section « Documents » : livrables non-images (PDF APS/APD, plans CAO DWG,
-//    devis, plaquettes…). 2ᵉ nature de pièce jointe → modèle propre plutôt que
-//    d'élargir ImageProjet. Même seam de stockage : `cle` porte le data URI en
-//    transition tant que S3 n'est pas branché. Soft-delete horodaté, `type` et
-//    `phase` = vocabulaires fermés (filtres, ne gatent rien). --
-enum TypeFichier {
-  plan // plans CAO (DWG, PLN, PDF de plans)
-  rendu_source // fichiers source des rendus (SKP…)
-  devis // devis descriptif / quantitatif
-  plaquette // plaquette commerciale
-  pdf_dossier // dossier PDF versionné (APS, APD…)
-  autre
-}
-
-model FichierProjet {
-  id                        String                 @id @default(uuid())
-  projetId                  String                 @map("projet_id")
-  cle                       String // data URI en transition ; clé objet S3 à terme
-  nom                       String
-  typeMime                  String                 @default("") @map("type_mime")
-  taille                    Int                    @default(0) // octets — info d'affichage
-  type                      TypeFichier            @default(autre)
-  phase                     Phase? // tag optionnel — filtre
-  note                      String                 @default("")
-  // Rattachement à un item précis de la checklist Permis / Exécution — même
-  // motif que ImageProjet.ligneChecklistPermisId ci-dessus.
-  ligneChecklistPermisId    String?                @map("ligne_checklist_permis_id")
-  ligneChecklistExecutionId String?                @map("ligne_checklist_execution_id")
-  // Rattachement à un item Unbord — même motif que les deux FK ci-dessus.
-  ligneUnbordId             String?                @map("ligne_unbord_id")
-  // Rattachement à un item de la checklist Avant-projet — même motif que
-  // ligneUnbordId (cf. ImageProjet).
-  ligneChecklistAvpId       String?                @map("ligne_checklist_avp_id")
-  // Rattachement au niveau du BLOC — même motif que ImageProjet.blocPermis*.
-  blocPermisPermisId        String?                @map("bloc_permis_permis_id")
-  blocPermisGroupe          GroupeChecklistPermis? @map("bloc_permis_groupe")
-  // Rattachement à un item Études — même motif que ligneUnbordId (sept. 2026).
-  itemEtudeId               String?                @map("item_etude_id")
-  ajouteParId               String?                @map("ajoute_par_id")
-  ajouteLe                  DateTime               @default(now()) @map("ajoute_le")
-  supprimee                 Boolean                @default(false)
-  supprimeLe                DateTime?              @map("supprime_le")
-  supprimeParId             String?                @map("supprime_par_id")
-
-  projet                  Projet                   @relation(fields: [projetId], references: [id], onDelete: Cascade)
-  ajoutePar               Utilisateur?             @relation("FichierAjoutPar", fields: [ajouteParId], references: [id])
-  supprimePar             Utilisateur?             @relation("FichierSupprPar", fields: [supprimeParId], references: [id])
-  ligneChecklistPermis    LigneChecklistPermis?    @relation(fields: [ligneChecklistPermisId], references: [id], onDelete: SetNull)
-  ligneChecklistExecution LigneChecklistExecution? @relation(fields: [ligneChecklistExecutionId], references: [id], onDelete: SetNull)
-  ligneUnbord             LigneUnbord?             @relation(fields: [ligneUnbordId], references: [id], onDelete: SetNull)
-  blocPermis              BlocPermis?              @relation(fields: [blocPermisPermisId, blocPermisGroupe], references: [permisId, groupe], onDelete: SetNull)
-  ligneChecklistAvp       LigneChecklistAvp?       @relation(fields: [ligneChecklistAvpId], references: [id], onDelete: SetNull)
-  itemEtude               ItemEtude?               @relation(fields: [itemEtudeId], references: [id], onDelete: SetNull)
-
-  @@index([projetId, supprimee])
-  @@map("fichiers_projet")
 }
 
 // =============================================================================
@@ -2397,24 +1734,6 @@ enum SectionTache {
   avant_projet
   permis
   execution
-}
-
-// Référentiel société (societe_admin ou CIO). `groupe` = valeur de l'enum de
-// groupe de la section (GroupeChecklistAvp/Permis/Execution), validée en
-// service. Lu en direct : modifier une durée recalcule les feuilles non encore
-// contrôlées, jamais celles déjà contrôlées (figées, cf. ControleFeuilleTemps).
-model DureeStandardTache {
-  societeId String       @map("societe_id")
-  section   SectionTache
-  groupe    String
-  heures    Decimal      @db.Decimal(5, 1)
-  majParId  String?      @map("maj_par_id") // audit, pas de FK
-  updatedAt DateTime     @updatedAt @map("updated_at")
-
-  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
-
-  @@id([societeId, section, groupe])
-  @@map("durees_standard_taches")
 }
 
 // Contrôle RH d'une feuille de mois clos : fige les chiffres et le détail du

@@ -129,7 +129,6 @@ function mockPrisma() {
     findFirst: jest.fn().mockResolvedValue(PROJET_MANDAT),
     findUniqueOrThrow: jest.fn().mockResolvedValue({ phase: 'avant_projet' }),
   };
-  const versionPreBilan = { findMany: jest.fn().mockResolvedValue([]) };
   // Lignes SU / EX d'offre (facturation mensuelle, étape H2) : aucune par défaut.
   const ligneDevis = { findMany: jest.fn().mockResolvedValue([]) };
   // Études (refacturation, étape H3) : aucune par défaut.
@@ -149,7 +148,6 @@ function mockPrisma() {
     facture,
     paiement,
     projet,
-    versionPreBilan,
     ligneDevis,
     blocEtude,
     ligneFacture,
@@ -160,7 +158,7 @@ function mockPrisma() {
       Array.isArray(arg) ? Promise.all(arg) : (arg as (tx: unknown) => unknown)(tx),
     ),
   } as unknown as PrismaService;
-  return { prisma, facture, paiement, paiementSupprime, carteProjet, projet, versionPreBilan, ligneDevis, blocEtude, ligneFacture };
+  return { prisma, facture, paiement, paiementSupprime, carteProjet, projet, ligneDevis, blocEtude, ligneFacture };
 }
 
 function service(prisma: PrismaService) {
@@ -450,17 +448,6 @@ describe('FacturationService.get (résumé calculé par formater())', () => {
     expect(res.factures).toHaveLength(3);
   });
 
-  it('suggestionVenteHt = prix de vente de la DERNIÈRE version de pré-bilan figée', async () => {
-    const { prisma, versionPreBilan } = mockPrisma();
-    versionPreBilan.findMany.mockResolvedValue([
-      { figeeLe: new Date('2026-01-01'), prixVenteEstime: dec(10_000_000) },
-      { figeeLe: new Date('2026-06-01'), prixVenteEstime: dec(12_000_000) },
-      { figeeLe: null, prixVenteEstime: dec(99_000_000) }, // pas figée -> ignorée
-    ]);
-    const svc = service(prisma);
-    const res = await svc.get('S1', 'P1');
-    expect(res.resume.suggestionVenteHt).toBe(12_000_000);
-  });
 });
 
 describe('FacturationService.findAllPourSociete', () => {

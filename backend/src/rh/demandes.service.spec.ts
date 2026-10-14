@@ -7,11 +7,11 @@ const DEMANDE = {
   id: 'D1', dossierId: 'DOS1', type: 'conge_paye', dateDebut: '2026-10-05', dateFin: '2026-10-09', jours: 5,
   statut: 'attente_n1', n1CollaborateurId: 'CHEF', n1Role: null, justificatifCle: null,
 };
-const BLOC = { avantProjetId: 'P1', groupe: 'plans', echeance: '2026-10-06', avantProjet: { projet: { code: 'PRJ.26' } } };
+const TACHE = { id: 'T1', libelle: 'Plans APS', finLe: '2026-10-06', carte: { libelle: 'Livrables' }, projet: { code: 'PRJ.26' } };
 
-function svc(o: { demande?: object; moiCollab?: string; blocs?: object[]; moi?: object | null } = {}) {
+function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?: object | null } = {}) {
   const update = jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...o.demande, ...data }));
-  const majAvp = jest.fn().mockReturnValue('majAvp');
+  const majTache = jest.fn().mockReturnValue('majTache');
   const prisma = {
     demandeAbsence: {
       findUnique: jest.fn().mockResolvedValue({ ...DEMANDE, ...o.demande }),
@@ -20,21 +20,20 @@ function svc(o: { demande?: object; moiCollab?: string; blocs?: object[]; moi?: 
     },
     collaborateur: {
       findFirst: jest.fn().mockResolvedValue(o.moiCollab === undefined ? { id: 'CHEF' } : o.moiCollab ? { id: o.moiCollab } : null),
-      findMany: jest.fn().mockResolvedValue([{ id: 'X1' }, { id: 'X2' }, { id: 'COLLAB' }]),
+      findMany: jest.fn().mockResolvedValue([{ id: 'X1', prenom: 'Awa', nom: 'Diop' }, { id: 'X2', prenom: 'Modou', nom: 'Sy' }, { id: 'COLLAB', prenom: 'Pape', nom: 'Sy' }]),
     },
     dossierPersonnel: {
       findUnique: jest.fn().mockResolvedValue({ societeId: 'S', collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }),
       findFirst: jest.fn().mockResolvedValue(o.moi === undefined ? { id: 'DOS1', collaborateur: null } : o.moi),
     },
-    blocChecklistAvp: { findMany: jest.fn().mockResolvedValue(o.blocs ?? [BLOC]), update: majAvp },
-    blocPermis: { findMany: jest.fn().mockResolvedValue([]) },
-    blocExecution: { findMany: jest.fn().mockResolvedValue([]) },
+    tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? [TACHE]), update: majTache },
+    evenementTacheProjet: { create: jest.fn().mockReturnValue('evt') },
     $transaction: jest.fn().mockImplementation((ops: unknown[]) => Promise.resolve(ops.map(() => ({ ...DEMANDE, statut: 'accord_n1' })))),
   } as unknown as PrismaService;
-  return { s: new DemandesService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), update, majAvp };
+  return { s: new DemandesService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), update, majTache };
 }
-const CHEF = { userId: 'U', societeId: 'S', role: 'collaborateur' };
-const CLE = 'avant-projet:P1:plans';
+const CHEF = { userId: 'U', societeId: 'S', role: 'Salarié' };
+const CLE = 'tache:T1';
 
 describe('DemandesService.decider (N+1)', () => {
   it('refuse si l’appelant n’est pas le N+1', async () => {
@@ -45,21 +44,22 @@ describe('DemandesService.decider (N+1)', () => {
     await expect(s.decider(CHEF, 'D1', { decision: 'refuser' })).rejects.toThrow(BadRequestException);
     await expect(s.decider(CHEF, 'D1', { decision: 'refuser', motif: 'autre' })).rejects.toThrow('Autre');
   });
-  it('valider : un livrable non confié bloque', async () => {
-    await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [] })).rejects.toThrow('Livrable à confier');
+  it('valider : une tâche due pendant l’absence non confiée bloque', async () => {
+    await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [] })).rejects.toThrow('Tâche à confier');
   });
-  it('valider : livrable confié à quelqu’un d’autre → accord N+1', async () => {
-    const { s, majAvp } = svc();
+  it('valider : tâche confiée à quelqu’un d’autre → réassignée, accord N+1', async () => {
+    const { s, majTache } = svc();
     await s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'X1' }] });
-    expect(majAvp.mock.calls[0][0].data).toEqual({ responsableId: 'X1' });
+    expect(majTache).toHaveBeenCalledWith({ where: { id: 'T1' }, data: { assigneId: 'X1' } });
   });
   it('on ne confie pas un livrable au demandeur lui-même', async () => {
     await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'COLLAB' }] })).rejects.toThrow(BadRequestException);
   });
-  it('sous conditions : livrable non délégable avancé à la veille du départ', async () => {
-    const { s, majAvp } = svc();
+  it('sous conditions : tâche non délégable gardée par le salarié, date inchangée', async () => {
+    const { s, majTache, update } = svc();
     await s.decider(CHEF, 'D1', { decision: 'sous_conditions', nonDelegables: [CLE] });
-    expect(majAvp.mock.calls[0][0].data).toEqual({ echeance: '2026-10-04' });
+    expect(majTache).not.toHaveBeenCalled();
+    expect(update.mock.calls[0][0].data.traitementLivrables).toEqual([{ livrable: CLE, action: 'conserve' }]);
   });
   it('autres dates : période valide exigée', async () => {
     await expect(svc().s.decider(CHEF, 'D1', { decision: 'autres_dates', dateDebut: '2026-10-10', dateFin: '2026-10-01' })).rejects.toThrow(BadRequestException);

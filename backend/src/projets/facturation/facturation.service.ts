@@ -983,12 +983,11 @@ export class FacturationService {
   }
 
   private async formater(projetId: string) {
-    const [factures, versions, projet, lignesMensuelles] = await Promise.all([
+    const [factures, projet, lignesMensuelles] = await Promise.all([
       this.prisma.facture.findMany({
         where: { projetId },
         include: { paiements: true, lignes: { orderBy: { ordre: 'asc' } } },
       }),
-      this.prisma.versionPreBilan.findMany({ where: { projetId } }),
       // En-tête du projet pour la page Facturation (qui n'appelle pas les
       // routes Projets, fermées aux rôles de direction) + phase (mensualités).
       this.prisma.projet.findUniqueOrThrow({
@@ -1095,14 +1094,6 @@ export class FacturationService {
 
     // Suggestion de montant pour une facture de vente (cadrage §9) : le prix de
     // vente de la dernière version de pré-bilan figée. L'admin ajuste librement.
-    const figees = versions
-      .filter((v) => v.figeeLe && v.prixVenteEstime != null)
-      .sort((a, b) => a.figeeLe!.getTime() - b.figeeLe!.getTime());
-    const suggestionVenteHt =
-      figees.length > 0
-        ? figees[figees.length - 1].prixVenteEstime!.toNumber()
-        : null;
-
     // Refacturation des études : ligne ACTIVE = sur une facture ni annulée ni
     // avoir ; « à régler » dès que cette facture est soldée.
     const parId = new Map(rendues.map((f) => [f.id, f]));
@@ -1160,7 +1151,6 @@ export class FacturationService {
         totalEncaisse,
         totalDu: totalFactureTtc - totalEncaisse,
         nbEnRetard: rendues.filter((f) => f.statutEffectif === 'en_retard').length,
-        suggestionVenteHt,
       },
     };
   }

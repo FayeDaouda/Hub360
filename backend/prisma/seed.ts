@@ -1,6 +1,5 @@
 import {
   Categorie,
-  EtapePreBilan,
   Gamme,
   NatureDossier,
   NiveauCollaborateur,
@@ -13,7 +12,6 @@ import {
   TypeBien,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { CHECKLISTS_AVANT_PROJET } from '../src/projets/domaine/config';
 import { codeAvecVariante, genererCodeDossier } from '../src/crm/nomenclature';
 import { FICHE_VIDE, planchesCalculees, resume, type FicheProgramme } from '../src/crm/fiche-programme';
 import { readFileSync } from 'fs';
@@ -25,25 +23,6 @@ import { organiserEquipesDemo } from './equipes-demo';
 import { creerPilotageDemo } from './pilotage-demo';
 
 const prisma = new PrismaClient();
-
-// Séquences de sous-étapes / lignes de coût, alignées sur
-// src/projets/domaine/config.ts et frontend/lib/types.ts.
-const ETAPES: Record<Categorie, EtapePreBilan[]> = {
-  conception: ['esq', 'aps', 'apd'],
-  developpement: ['esq', 'aps', 'apd'],
-  amenagement: ['estimation', 'definitif'],
-};
-const LIGNES: Record<Categorie, string[]> = {
-  conception: ['charges_foncieres', 'travaux', 'honoraires', 'frais_divers', 'aleas'],
-  developpement: ['charges_foncieres', 'travaux', 'honoraires', 'frais_divers', 'aleas'],
-  amenagement: [
-    'fournitures_mobilier',
-    'travaux_amenagement',
-    'honoraires',
-    'frais_divers',
-    'aleas',
-  ],
-};
 
 // IDs figés : un `migrate reset` recrée ces lignes à l'identique, donc un JWT
 // déjà émis (societeId / userId dedans) reste valide après un reseed.
@@ -401,74 +380,6 @@ async function main() {
   const dirGc = comptesDemo['Dir. GC'];
   const cfo = comptesDemo.CFO;
 
-  // --- Gabarit Unbord (société) — remplace l'ancien enum TypeUnbord figé.
-  // Les 14 items d'origine (cf. historique de src/projets/domaine/config.ts)
-  // deviennent les valeurs de départ du gabarit Grey Concrete, pas une page
-  // vide : le contenu existe déjà et est en usage sur le terrain.
-  const GABARIT_UNBORD_GREY: { groupe: 'documents' | 'releve_existant'; libelle: string }[] = [
-    { groupe: 'documents', libelle: 'Plan cadastral' },
-    { groupe: 'documents', libelle: 'Droit réel' },
-    { groupe: 'documents', libelle: 'Pièce d’identité' },
-    { groupe: 'documents', libelle: 'Ninéa' },
-    { groupe: 'documents', libelle: 'Plan géomètre' },
-    { groupe: 'documents', libelle: 'Rapport d’expertise' },
-    { groupe: 'releve_existant', libelle: 'Visite sur site' },
-    { groupe: 'releve_existant', libelle: 'Plans (terrain)' },
-    { groupe: 'releve_existant', libelle: 'Assainissement' },
-    { groupe: 'releve_existant', libelle: 'Eau' },
-    { groupe: 'releve_existant', libelle: 'Électricité' },
-    { groupe: 'releve_existant', libelle: 'Téléphone' },
-    { groupe: 'releve_existant', libelle: 'Photos et vidéos' },
-    { groupe: 'releve_existant', libelle: 'Autres informations' },
-  ];
-  const gabaritExistant = await prisma.ligneUnbordGabarit.findMany({
-    where: { societeId: grey.id },
-    select: { libelle: true },
-  });
-  if (gabaritExistant.length === 0) {
-    await prisma.ligneUnbordGabarit.createMany({
-      data: GABARIT_UNBORD_GREY.map((it, i) => ({
-        societeId: grey.id,
-        groupe: it.groupe,
-        libelle: it.libelle,
-        ordre: i,
-      })),
-    });
-  }
-
-  // --- Gabarit Études (société) — restructuration sept. 2026 : les 6 types
-  // d'étude fixes (ex-enum TypeEtude) deviennent les 6 blocs de départ du
-  // gabarit Grey Concrete. Pas de livrables pré-remplis dans chaque bloc
-  // (LigneEtudeGabarit) — contenu métier réel que l'admin ajoutera via
-  // Paramètres › Gabarit Études, pas inventé ici (cf. mémoire
-  // feedback_dont_invent_business_data).
-  const BLOCS_ETUDE_GREY: { cle: string; libelle: string }[] = [
-    { cle: 'geotechnique', libelle: 'Étude géotechnique (sol)' },
-    { cle: 'topographie', libelle: 'Relevé topographique' },
-    { cle: 'structure', libelle: 'Structure / béton armé' },
-    { cle: 'fluides', libelle: 'Fluides (plomberie / CVC)' },
-    { cle: 'electricite', libelle: 'Électricité (courants forts / faibles)' },
-    { cle: 'vrd', libelle: 'VRD (voirie & réseaux divers)' },
-  ];
-  const blocsEtudeGabaritExistants = await prisma.blocEtudeGabarit.findMany({
-    where: { societeId: grey.id },
-  });
-  const blocEtudeGabaritIdParCle = new Map<string, string>();
-  if (blocsEtudeGabaritExistants.length === 0) {
-    for (let i = 0; i < BLOCS_ETUDE_GREY.length; i++) {
-      const b = BLOCS_ETUDE_GREY[i];
-      const cree = await prisma.blocEtudeGabarit.create({
-        data: { societeId: grey.id, libelle: b.libelle, ordre: i },
-      });
-      blocEtudeGabaritIdParCle.set(b.cle, cree.id);
-    }
-  } else {
-    for (const b of blocsEtudeGabaritExistants) {
-      const cle = BLOCS_ETUDE_GREY.find((x) => x.libelle === b.libelle)?.cle;
-      if (cle) blocEtudeGabaritIdParCle.set(cle, b.id);
-    }
-  }
-
   // --- On repart propre sur les données métier -------------------------
   // Ordre des FK : canaux (→ messages / lectures en cascade) puis factures
   // (→ paiements, en cascade — AVANT devis : Facture.devisOrigineId n'a pas
@@ -578,10 +489,7 @@ async function main() {
     ],
   });
 
-  // Un dessinateur + un responsable 3D pour peupler les FK d'avant-projet.
-  const dessinateur = await prisma.collaborateur.findFirstOrThrow({
-    where: { societeId: grey.id, role: 'Dessinateur' },
-  });
+  // Le responsable 3D reçoit le compte de démo de Rokhaya (ci-dessous).
   const resp3d = await prisma.collaborateur.findFirstOrThrow({
     where: { societeId: grey.id, role: 'Responsable 3D' },
   });
@@ -691,7 +599,6 @@ async function main() {
     // si le dossier est validé :
     phase?: Phase;
     equipe?: string;
-    avantProjetValide?: boolean;
   };
 
   const NOTAIRE: Apporteur = { nom: 'Me Aliou Ndiaye', structure: 'Notaire', telephone: '+221 77 555 12 34', email: 'etude.ndiaye@example.sn', commission: 4 };
@@ -704,12 +611,12 @@ async function main() {
       type: 'villa', surface: 400, standing: 'moyen', gamme: 'local',
       fiche: villa({ gabarit: 1, typologieVilla: 'F5', suiteParentale: true, annexes: ['bureau', 'buanderie'],
         commodites: ['parking_exterieur', 'portail_motorise', 'videosurveillance', 'interphone', 'groupe_electrogene', 'bache_surpresseur', 'pre_climatisation', 'fibre'] }) },
-    { nom: 'Duplex Sacré-Cœur', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'permis', equipe: 'Cellule Archi 1', avantProjetValide: true,
+    { nom: 'Duplex Sacré-Cœur', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'permis', equipe: 'Cellule Archi 1',
       localiteCode: 'SAC', localisation: 'Sacré-Cœur 3, Dakar', lat: 14.705, lng: -17.462, apporteur: { nom: 'Khady Seck', structure: 'Partenaire', telephone: '+221 70 412 18 80', commission: 3 }, clientId: cli(1),
       type: 'villa', surface: 300, standing: 'grand', gamme: 'importe',
       fiche: villa({ gabarit: 2, toitureTerrasse: true, typologieVilla: 'F6', suiteParentale: true, annexes: ['chambre_service', 'buanderie'],
         commodites: ['garage_box', 'portail_motorise', 'videosurveillance', 'detection_incendie', 'groupe_electrogene', 'panneaux_solaires', 'climatisation_centralisee', 'fibre', 'domotique', 'piscine', 'jardin'] }) },
-    { nom: 'Résidence Point E', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'etudes', equipe: 'Cellule Archi 2', avantProjetValide: true,
+    { nom: 'Résidence Point E', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'etudes', equipe: 'Cellule Archi 2',
       localiteCode: 'POI', localisation: 'Point E, Dakar', lat: 14.692, lng: -17.46, apporteur: null, clientId: cli(2),
       type: 'immeuble_residentiel', surface: 600, standing: 'moyen', gamme: 'local',
       fiche: immeuble({ usage: 'residentiel', gabarit: 4, sousSols: 1, composition: [
@@ -717,12 +624,12 @@ async function main() {
         { de: 0, a: 0, usage: 'commerce', typologie: '', nb: 2 },
         { de: 1, a: 4, usage: 'logements', typologie: 'F3', nb: 4 },
       ], commodites: ['parking_sous_sol', 'ascenseur', 'interphone', 'detection_incendie', 'groupe_electrogene', 'bache_surpresseur', 'local_poubelles', 'local_technique'] }) },
-    { nom: 'Villas Cap Ouest', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Archi 3', avantProjetValide: true,
+    { nom: 'Villas Cap Ouest', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Archi 3',
       localiteCode: 'ALM', localisation: 'Almadies, Dakar', lat: 14.744, lng: -17.523, apporteur: NOTAIRE, clientId: cli(3),
       type: 'villa', surface: 1000, standing: 'grand', gamme: 'sur_mesure_importe',
       fiche: villa({ gabarit: 1, sousSols: 1, typologieVilla: 'F7+', suiteParentale: true, annexes: ['bureau', 'chambre_service', 'buanderie', 'dependance'],
         commodites: ['garage_box', 'bornes_recharge', 'portail_motorise', 'gardiennage', 'guerite', 'videosurveillance', 'cloture', 'groupe_electrogene', 'panneaux_solaires', 'forage', 'climatisation_centralisee', 'domotique', 'piscine', 'salle_sport', 'spa', 'jardin'] }) },
-    { nom: 'Villa Fann', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'livre', equipe: 'Cellule Archi 1', avantProjetValide: true,
+    { nom: 'Villa Fann', nature: 'mandat_client', categorie: 'conception', statut: 'onboard', phase: 'livre', equipe: 'Cellule Archi 1',
       localiteCode: 'FPE', localisation: 'Fann Résidence, Dakar', lat: 14.687, lng: -17.464, apporteur: null, clientId: cli(0),
       type: 'villa', surface: 250, standing: 'economique', gamme: 'local',
       fiche: villa({ gabarit: 0, typologieVilla: 'F4' }) },
@@ -736,7 +643,7 @@ async function main() {
         { de: 2, a: 5, usage: 'logements', typologie: 'F3', nb: 2 },
         { de: 6, a: 6, usage: 'logements', typologie: 'F5', nb: 1 },
       ], commodites: ['parking_sous_sol', 'acces_badge', 'ascenseur', 'monte_charge', 'escalier_secours', 'gardiennage', 'videosurveillance', 'detection_incendie', 'groupe_electrogene', 'panneaux_solaires', 'bache_surpresseur', 'fibre', 'rooftop', 'hall_accueil', 'local_poubelles', 'local_technique'] }) },
-    { nom: 'Bureaux Almadies Business', nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Intérieur', avantProjetValide: true,
+    { nom: 'Bureaux Almadies Business', nature: 'mandat_client', categorie: 'amenagement', statut: 'onboard', phase: 'chantier', equipe: 'Cellule Intérieur',
       localiteCode: 'ALM', localisation: 'Almadies, Dakar', lat: 14.746, lng: -17.5195, apporteur: null, clientId: cli(4),
       type: 'immeuble_bureaux', surface: 800, standing: 'moyen', gamme: 'importe',
       fiche: immeuble({ usage: 'commercial', gabarit: 3, composition: [
@@ -875,7 +782,7 @@ async function main() {
         : 'en_cours'
       : 'a_assigner';
 
-    const projet = await prisma.projet.create({
+    await prisma.projet.create({
       data: {
         societeId: grey.id,
         dossierCrmId: dossier.id,
@@ -894,183 +801,8 @@ async function main() {
         cellules: cfg.equipe ? { create: [{ celluleId: cellules[cfg.equipe] }] } : undefined,
         statut,
         phase,
-        avantProjet: {
-          create: {
-            dateDebut: cfg.equipe ? '2026-06-01' : null,
-            dateFin: cfg.equipe ? '2026-08-31' : null,
-            dessinateurId: cfg.equipe ? dessinateur.id : null,
-            responsable3dId: cfg.equipe ? resp3d.id : null,
-          },
-        },
       },
     });
-
-    // Pré-bilan : complet si l'avant-projet est validé, sinon une seule version.
-    const etapes = ETAPES[cfg.categorie];
-    const lignes = LIGNES[cfg.categorie];
-    const nbVersions = cfg.avantProjetValide ? etapes.length : 1;
-    const montantsBase = Object.fromEntries(
-      lignes.map((l, i) => [l, (i + 1) * 40_000_000]),
-    );
-
-    for (let v = 0; v < nbVersions; v++) {
-      const couts = Object.fromEntries(
-        lignes.map((l) => [l, montantsBase[l] * (1 + v * 0.05)]),
-      );
-      await prisma.versionPreBilan.create({
-        data: {
-          projetId: projet.id,
-          etape: etapes[v],
-          couts,
-          prixVenteEstime:
-            cfg.nature === 'promotion_interne' ? 2_100_000_000 : null,
-          figeeLe: v < nbVersions - 1 ? new Date('2026-08-10') : null,
-        },
-      });
-    }
-
-    // Sous-checklists opérationnelles — statut dérivé des fichiers joints
-    // (restructuration sept. 2026, cf. schema.prisma) : pas de champ « fait »
-    // à seeder ici, les lignes démarrent toutes « en attente ».
-    await prisma.ligneChecklistAvp.createMany({
-      data: CHECKLISTS_AVANT_PROJET.flatMap((g) =>
-        g.items.map((item, ordre) => ({
-          avantProjetId: projet.id,
-          groupe: g.groupe,
-          libelle: item.libelle,
-          ordre,
-        })),
-      ),
-    });
-
-    // -- Phase 2 : permis / études / exécution selon la phase du projet ----
-    const phasesPermisEtPlus: Phase[] = ['permis', 'etudes', 'chantier', 'livre'];
-    const phasesEtudesEtPlus: Phase[] = ['etudes', 'chantier', 'livre'];
-    const phasesChantierEtPlus: Phase[] = ['chantier', 'livre'];
-
-    // Permis — conception uniquement, dès la phase « permis ».
-    if (cfg.categorie !== 'amenagement' && phasesPermisEtPlus.includes(phase)) {
-      const permisEnMain = phasesEtudesEtPlus.includes(phase);
-      await prisma.permis.create({
-        data: {
-          projetId: projet.id,
-          titrePropriete: true,
-          planCadastralVise: true,
-          plansApd: true,
-          devis: true,
-          timbreFiscal: true,
-          statut: permisEnMain ? 'obtenu' : 'a_deposer',
-          dateObtention: permisEnMain ? new Date('2026-07-15') : null,
-        },
-      });
-    }
-
-    // Études — conception uniquement, dès la phase « études ».
-    if (cfg.categorie !== 'amenagement' && phasesEtudesEtPlus.includes(phase)) {
-      const enCours = phase === 'etudes'; // toutes les études pas encore bouclées
-      const idGeotechnique = blocEtudeGabaritIdParCle.get('geotechnique');
-      const idTopographie = blocEtudeGabaritIdParCle.get('topographie');
-      const idStructure = blocEtudeGabaritIdParCle.get('structure');
-      const idFluides = blocEtudeGabaritIdParCle.get('fluides');
-      const idElectricite = blocEtudeGabaritIdParCle.get('electricite');
-      const idVrd = blocEtudeGabaritIdParCle.get('vrd');
-      await prisma.etudes.create({
-        data: {
-          projetId: projet.id,
-          dceConstitue: !enCours,
-          dceLe: enCours ? null : new Date('2026-07-25'),
-          blocs: {
-            create: [
-              {
-                blocEtudeGabaritId: idGeotechnique,
-                libelle: 'Étude géotechnique (sol)',
-                statut: 'validee',
-                interlocuteur: 'Géotech Sénégal',
-                dateRemisePrevue: '2026-05-05',
-                dateRemiseReelle: '2026-05-02',
-              },
-              {
-                blocEtudeGabaritId: idTopographie,
-                libelle: 'Relevé topographique',
-                statut: 'validee',
-                interlocuteur: 'Cabinet Bâ Géomètre',
-                dateRemisePrevue: '2026-05-05',
-                dateRemiseReelle: '2026-05-04',
-              },
-              {
-                blocEtudeGabaritId: idStructure,
-                libelle: 'Structure / béton armé',
-                statut: enCours ? 'remise' : 'validee',
-                interlocuteur: 'BET Structure Diallo',
-                dateRemisePrevue: '2026-06-15',
-                dateRemiseReelle: '2026-06-12',
-                note: enCours ? 'Rendu reçu, vérification MOE en cours.' : '',
-              },
-              {
-                blocEtudeGabaritId: idFluides,
-                libelle: 'Fluides (plomberie / CVC)',
-                statut: enCours ? 'en_cours' : 'validee',
-                interlocuteur: 'Fluitec',
-                dateRemisePrevue: '2026-06-25',
-                dateRemiseReelle: enCours ? null : '2026-06-22',
-              },
-              {
-                blocEtudeGabaritId: idElectricite,
-                libelle: 'Électricité (courants forts / faibles)',
-                statut: enCours ? 'a_lancer' : 'validee',
-                interlocuteur: enCours ? '' : 'Fluitec',
-                dateRemisePrevue: enCours ? null : '2026-06-25',
-                dateRemiseReelle: enCours ? null : '2026-06-24',
-              },
-              {
-                blocEtudeGabaritId: idVrd,
-                libelle: 'VRD (voirie & réseaux divers)',
-                statut: 'non_requise',
-                note: 'Parcelle déjà viabilisée.',
-              },
-            ],
-          },
-        },
-      });
-    }
-
-    // Exécution — les deux catégories, dès la phase « chantier ». La
-    // checklist (8 blocs) est amorcée à la volée au premier GET, comme celle
-    // du Permis (assurerChecklist/assurerBlocs) — rien à seeder ici.
-
-    // Quelques images sur les projets les plus avancés (démo galerie/portfolio).
-    if (phasesChantierEtPlus.includes(phase)) {
-      const px = (label: string, de: string, vers: string) => {
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${de}"/><stop offset="1" stop-color="${vers}"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><text x="40" y="560" font-family="Georgia, serif" font-size="34" fill="rgba(255,255,255,0.9)">${label}</text></svg>`;
-        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-      };
-      await prisma.imageProjet.createMany({
-        data: [
-          {
-            projetId: projet.id,
-            cle: px('chantier-gros-oeuvre.jpg', '#8c7b5b', '#bfae87'),
-            nom: 'chantier-gros-oeuvre.jpg',
-            typeMime: 'image/svg+xml',
-            usage: 'travail',
-            phase: 'chantier',
-            ajouteParId: collab.id,
-            ajouteLe: new Date('2026-08-26'),
-          },
-          {
-            projetId: projet.id,
-            cle: px('facade-livree.jpg', '#4a4f5b', '#9aa1b3'),
-            nom: 'facade-livree.jpg',
-            typeMime: 'image/svg+xml',
-            usage: phase === 'livre' ? 'portfolio' : 'travail',
-            phase: phase === 'livre' ? 'livre' : 'chantier',
-            legende: phase === 'livre' ? `${cfg.nom} — façade principale` : '',
-            ordre: 0,
-            ajouteParId: boss.id,
-            ajouteLe: new Date('2026-09-13'),
-          },
-        ],
-      });
-    }
   }
 
   // --- Devis et factures fictifs (onglets Finances) — cf. finances-demo.ts ---
@@ -1171,12 +903,9 @@ async function main() {
   for (const c of COMPTES_DEMO) console.log(`   · ${c.email.padEnd(32)} ${c.role}`);
   const nbP = await prisma.projet.count({ where: { societeId: grey.id } });
   const nbD = await prisma.dossierCrm.count({ where: { societeId: grey.id } });
-  const nbPermis = await prisma.permis.count();
-  const nbEtudes = await prisma.etudes.count();
   const nbCel = await prisma.cellule.count({ where: { societeId: grey.id } });
   const nbCollab = await prisma.collaborateur.count({ where: { societeId: grey.id } });
   console.log(`  Grey Concrete : ${nbD} dossiers CRM, ${nbP} projets`);
-  console.log(`  Phase 2 : ${nbPermis} permis, ${nbEtudes} études`);
   console.log(`  Équipe : ${nbCel} cellules, ${nbCollab} collaborateurs`);
   const nbCanaux = await prisma.canal.count({ where: { societeId: grey.id } });
   const nbMsg = await prisma.message.count({

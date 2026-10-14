@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationType, Prisma } from '@prisma/client';
+import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_DAF, ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import {
@@ -42,24 +42,18 @@ export class NotificationsService {
   private readonly log = new Logger('Notifications');
   constructor(private prisma: PrismaService) {}
 
-  // -- Écriture : appelée par ProjetsService au moment de l'événement --------
-  // Best-effort : un échec de fan-out ne doit pas faire échouer l'assignation
-  // ou le changement de phase (try/catch côté appelant).
+  // -- Écriture : appelée par les services Projets au moment de l'événement --
+  // Best-effort : un échec de fan-out ne doit pas faire échouer l'action
+  // (try/catch côté appelant).
   async pousser(params: {
     societeId: string;
     projet: ProjetContexte;
     type: NotificationType;
     titre: string;
     parId?: string | null;
-    // Cibles explicites (utilisateurId) — ex. assignation d'une tâche à une
-    // personne, ou tous les admins d'une société (cf. adminsDeSociete
-    // ci-dessous). Omis : diffusion à toute l'équipe du projet (comportement
-    // historique, cellule + dessinateur/responsable3d).
-    destinataireIds?: string[];
+    destinataireIds: string[]; // utilisateurId ciblés (assigné, mentionné…)
   }): Promise<void> {
-    const destinataires =
-      params.destinataireIds ??
-      (await this.destinataires(params.societeId, params.projet, params.parId ?? null));
+    const destinataires = params.destinataireIds;
     if (destinataires.length === 0) return;
 
     await this.prisma.notification.createMany({
@@ -276,52 +270,6 @@ export class NotificationsService {
       data: { luLe: new Date() },
     });
     return this.flux(societeId, utilisateurId);
-  }
-
-  // -- Internes -----------------------------------------------------------
-
-  // utilisateurId des collaborateurs qui « suivent » le projet : membres de sa
-  // cellule + dessinateur + responsable 3D, comptes existants seulement, hors
-  // l'auteur de l'action.
-  private async destinataires(
-    societeId: string,
-    projet: ProjetContexte,
-    exclusId: string | null,
-  ): Promise<string[]> {
-    const ap = await this.prisma.avantProjet.findUnique({
-      where: { projetId: projet.id },
-      select: { dessinateurId: true, responsable3dId: true },
-    });
-    const collabIds = [ap?.dessinateurId, ap?.responsable3dId].filter(
-      (v): v is string => !!v,
-    );
-
-    const ou: Prisma.CollaborateurWhereInput[] = [];
-    if (projet.celluleIds.length) ou.push({ celluleId: { in: projet.celluleIds } });
-    if (collabIds.length) ou.push({ id: { in: collabIds } });
-    if (ou.length === 0) return [];
-
-    const collabs = await this.prisma.collaborateur.findMany({
-      where: { societeId, utilisateurId: { not: null }, OR: ou },
-      select: { utilisateurId: true },
-    });
-
-    const ids = new Set<string>();
-    for (const c of collabs) {
-      if (c.utilisateurId && c.utilisateurId !== exclusId) ids.add(c.utilisateurId);
-    }
-    return [...ids];
-  }
-
-  // Tous les admins de la société — ex. alerte « demande de prolongation ».
-  // N'importe quel societe_admin traite la demande (même logique que le
-  // reste des actions admin sur ce module, pas de notion de « responsable »).
-  async adminsDeSociete(societeId: string, exclusId?: string | null): Promise<string[]> {
-    const roles = await this.prisma.utilisateurSocieteRole.findMany({
-      where: { societeId, role: { nom: 'societe_admin' } },
-      select: { utilisateurId: true },
-    });
-    return [...new Set(roles.map((r) => r.utilisateurId))].filter((id) => id !== exclusId);
   }
 
 }

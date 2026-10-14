@@ -14,7 +14,7 @@ import {
   type Salarie,
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
-import { chargerDurees, chargerTachesAssignees, groupeConnu, SECTIONS_TACHES, type TacheAssignee } from './taches-assignees';
+import { chargerTachesAssignees, type TacheAssignee } from './taches-assignees';
 
 type Acteur = { userId: string; societeId: string };
 
@@ -81,32 +81,6 @@ export class TempsService {
     private prisma: PrismaService,
     private reglages: ReglagesService,
   ) {}
-
-  // --- Référentiel des durées standard (paramètres société) ----------------
-
-  async durees(societeId: string) {
-    const durees = await chargerDurees(this.prisma, [societeId]);
-    return SECTIONS_TACHES.map((s) => ({
-      section: s.section,
-      libelle: s.libelle,
-      groupes: s.groupes.map((g) => ({ ...g, heures: durees.get(`${societeId}:${s.section}:${g.groupe}`) ?? null })),
-    }));
-  }
-
-  async definirDuree(societeId: string, userId: string, section: string, groupe: string, heures: number | null) {
-    if (!groupeConnu(section, groupe)) throw new NotFoundException('Bloc inconnu.');
-    const id = { societeId, section: section as SectionTache, groupe };
-    if (heures == null) {
-      await this.prisma.dureeStandardTache.deleteMany({ where: id });
-    } else {
-      await this.prisma.dureeStandardTache.upsert({
-        where: { societeId_section_groupe: id },
-        create: { ...id, heures, majParId: userId },
-        update: { heures, majParId: userId },
-      });
-    }
-    return this.durees(societeId);
-  }
 
   // --- Feuilles de temps (RH, périmètre groupe) ----------------------------
 

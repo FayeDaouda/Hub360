@@ -1,18 +1,14 @@
 import type {
-  AvantProjet,
-  BlocChecklistAvp,
   Cellule,
   Client,
   Collaborateur,
   Devis,
   DossierCrm,
-  LigneChecklistAvp,
   LigneDevis,
   Localite,
   Projet,
   ProjetCellule,
 } from '@prisma/client';
-import { GROUPES_CHECKLIST_AVP } from '../projets/domaine/config';
 import { ficheModifiable } from '../crm/cycle';
 import { montantTtcLignes, refDevis, relanceAFaire, statutDevisEffectif } from '../devis/domaine';
 
@@ -22,9 +18,6 @@ import { montantTtcLignes, refDevis, relanceAFaire, statutDevisEffectif } from '
 // collaborateurs), checklist ré-imbriquée — et on retire les champs techniques
 // (societeId, *Id de jointure, updatedAt). Les `Date` deviennent des ISO via
 // SerialisationInterceptor.
-
-type RefNommee = { prenom: string; nom: string } | null;
-const nomComplet = (r: RefNommee) => (r ? `${r.prenom} ${r.nom}`.trim() : null);
 
 // Référence client « CL-0009 » (maquette Finances) ; null = client sans rang.
 export const refClient = (numero: number | null) => (numero == null ? null : `CL-${String(numero).padStart(4, '0')}`);
@@ -223,82 +216,3 @@ export function versCellule(
   };
 }
 
-// Fichier joint à un item de checklist (image ou document) — même forme que
-// FichierLigne dans UnbordService, dupliquée ici plutôt qu'importée (types
-// internes à chaque module, cf. convention FichierLigneChecklistPermis).
-export type FichierLigneChecklistAvp = {
-  id: string;
-  nom: string;
-  url: string;
-  estImage: boolean;
-  ajouteLe: Date;
-};
-
-// Avant-projet (frontend/lib/types.ts::AvantProjet) : restructuré sept. 2026 —
-// plus de section « Programme » ni de verrou « Validation » (cf.
-// schema.prisma). Les sous-checklists opérationnelles sont regroupées par
-// `groupe` (lignes supprimées exclues, triées par `ordre`), statut dérivé des
-// fichiers joints (même modèle que Foncier/Unbord) ; l'assignation et
-// l'échéance vivent maintenant sur BlocChecklistAvp (un responsable par
-// groupe, pas par ligne).
-type LigneChecklistAvpAvecRefs = LigneChecklistAvp;
-type BlocChecklistAvpAvecRefs = BlocChecklistAvp & {
-  responsable: { id: string; prenom: string; nom: string } | null;
-};
-
-export function versAvantProjet(
-  ap: AvantProjet & {
-    dessinateur: (Collaborateur | { id: string; prenom: string; nom: string }) | null;
-    responsable3d: (Collaborateur | { id: string; prenom: string; nom: string }) | null;
-    projet: { cellules: { celluleId: string }[] };
-    lignesChecklist: LigneChecklistAvpAvecRefs[];
-    blocsChecklist: BlocChecklistAvpAvecRefs[];
-  },
-  fichiersParLigne: Map<string, FichierLigneChecklistAvp[]>,
-) {
-  const parGroupe = new Map<string, LigneChecklistAvpAvecRefs[]>();
-  for (const l of ap.lignesChecklist) {
-    if (l.supprimee) continue;
-    const lignes = parGroupe.get(l.groupe) ?? [];
-    lignes.push(l);
-    parGroupe.set(l.groupe, lignes);
-  }
-  const ref = (c: { id: string; prenom: string; nom: string } | null) =>
-    c ? { id: c.id, nom: `${c.prenom} ${c.nom}`.trim() } : null;
-  return {
-    projetId: ap.projetId,
-    dessinateur: ref(ap.dessinateur),
-    responsable3d: ref(ap.responsable3d),
-    dateDebut: ap.dateDebut,
-    dateFin: ap.dateFin,
-    // Équipe(s) à proposer dans le sélecteur d'assignation de chaque bloc
-    // (front : GET …/collaborateurs?cellule=). Plusieurs possibles depuis
-    // sept. 2026 (décision boss — plusieurs équipes par projet).
-    celluleIds: ap.projet.cellules.map((c) => c.celluleId),
-    checklists: GROUPES_CHECKLIST_AVP.map((g) => {
-      const bloc = ap.blocsChecklist.find((b) => b.groupe === g.groupe);
-      return {
-        groupe: g.groupe,
-        libelle: g.libelle,
-        description: g.description,
-        debut: bloc?.debut ?? null,
-        echeance: bloc?.echeance ?? null,
-        responsable: ref(bloc?.responsable ?? null),
-        prolongationDemandeeLe: bloc?.prolongationDemandeeLe ?? null,
-        prolongationEcheance: bloc?.prolongationEcheance ?? null,
-        prolongationMotif: bloc?.prolongationMotif ?? null,
-        items: (parGroupe.get(g.groupe) ?? [])
-          .sort((a, b) => a.ordre - b.ordre)
-          .map((l) => {
-            const fichiers = fichiersParLigne.get(l.id) ?? [];
-            const statut: 'fait' | 'en_attente' | 'non_necessaire' = l.nonRequise
-              ? 'non_necessaire'
-              : l.fait
-                ? 'fait'
-                : 'en_attente';
-            return { id: l.id, libelle: l.libelle, statut, fichiers };
-          }),
-      };
-    }),
-  };
-}

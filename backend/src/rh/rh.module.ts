@@ -7,7 +7,7 @@ import { DossiersPersonnelService } from './dossiers.service';
 import { DemandesService } from './demandes.service';
 import { IntegrationController } from './integration.controller';
 import { IntegrationService } from './integration.service';
-import { DureesStandardController, FeuillesTempsController, MonTempsController } from './temps.controller';
+import { FeuillesTempsController, MonTempsController } from './temps.controller';
 import { TempsService } from './temps.service';
 import { MonEspaceController } from './mon-espace.controller';
 import { MonEspaceService } from './mon-espace.service';
@@ -30,7 +30,6 @@ import {
     IntegrationController,
     FeuillesTempsController,
     MonTempsController,
-    DureesStandardController,
     MonEspaceController,
     MesTachesController,
     ValidationsTachesController,

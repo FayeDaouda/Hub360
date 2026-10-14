@@ -4,13 +4,11 @@ import { useState } from 'react';
 import { RolesPanel } from '@/components/admin/roles-panel';
 import { LocalitesPanel } from '@/components/admin/localites-panel';
 import { ParametresContratPanel } from '@/components/admin/parametres-contrat-panel';
-import { DureesStandardPanel } from '@/components/admin/durees-standard-panel';
 
-type Onglet = 'roles' | 'durees' | 'localites' | 'contrats';
+type Onglet = 'roles' | 'localites' | 'contrats';
 
 const ONGLETS: { cle: Onglet; libelle: string }[] = [
   { cle: 'roles', libelle: 'Rôles & permissions' },
-  { cle: 'durees', libelle: 'Durées standard (provisoire)' },
   { cle: 'localites', libelle: 'Localités' },
   { cle: 'contrats', libelle: 'Contrats' },
 ];
@@ -41,7 +39,6 @@ export function Administration({ slug }: { slug: string }) {
       </div>
 
       {onglet === 'roles' && <RolesPanel slug={slug} />}
-      {onglet === 'durees' && <DureesStandardPanel slug={slug} />}
       {onglet === 'localites' && <LocalitesPanel slug={slug} />}
       {onglet === 'contrats' && <ParametresContratPanel slug={slug} />}
     </>

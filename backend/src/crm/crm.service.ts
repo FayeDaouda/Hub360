@@ -560,7 +560,6 @@ export class CrmService {
         type,
         clientId: d.clientId,
         phase: PHASES_PAR_CATEGORIE[categorie][0],
-        avantProjet: { create: {} },
       },
       include: { client: true, cellules: true },
     });

@@ -770,7 +770,6 @@ export type ResumeFacturation = {
   totalEncaisse: number;
   totalDu: number;
   nbEnRetard: number;
-  suggestionVenteHt: number | null; // prix de vente de la dernière version pré-bilan figée
 };
 
 // Référence courte d'un projet dans la section Facturation (qui n'appelle pas
@@ -1507,11 +1506,6 @@ export type MonTemps = {
   mois: string;
   periodes: string[];
   feuille: FeuilleTempsCalculee;
-};
-export type DureesStandardSection = {
-  section: SectionTache;
-  libelle: string;
-  groupes: { groupe: string; libelle: string; heures: number | null }[];
 };
 
 // --- RH · Mon espace (lot 5) ---------------------------------------------------

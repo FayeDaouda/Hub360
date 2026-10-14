@@ -19,7 +19,6 @@ import {
   joursOuvrables,
   PART_CELLULE_ABSENTE_ALERTE,
   soldeConges,
-  veille,
 } from './regles-conges';
 
 // RH · Demandes (lot 2) — absences (N+1 puis RH) et remboursements santé
@@ -50,7 +49,9 @@ type Acteur = { userId: string; societeId: string; role: string };
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
-type Livrable = { cle: string; source: 'avant-projet' | 'permis' | 'execution'; projetId: string; projet: string; groupe: string; echeance: string };
+// Travail dû pendant l'absence (phase 1, 14/10/2026) : tâches de projet du
+// gabarit assignées au salarié — avant, blocs des anciennes checklists.
+type Livrable = { cle: string; tacheId: string; source: string; projet: string; groupe: string; echeance: string };
 
 @Injectable()
 export class DemandesService {
@@ -283,29 +284,35 @@ export class DemandesService {
       }));
     }
 
-    // valider / sous_conditions : chaque livrable dû pendant l'absence est
-    // soit confié à quelqu'un, soit (sous conditions) avancé à la veille du départ.
+    // valider / sous_conditions : chaque tâche due pendant l'absence est soit
+    // confiée à quelqu'un, soit (sous conditions) gardée par le salarié, à
+    // terminer avant son départ — sa date ne bouge pas (délais figés).
     const collab = await this.collaborateurDe(d.dossierId);
     const livrables = collab ? await this.livrables(collab.id, d.dateDebut, d.dateFin) : [];
     const nonDelegables = new Set(dto.decision === 'sous_conditions' ? dto.nonDelegables ?? [] : []);
     const delegations = new Map((dto.delegations ?? []).map((x) => [x.livrable, x.collaborateurId]));
-    const autorises = new Set(
-      (await this.prisma.collaborateur.findMany({ where: { societeId: a.societeId }, select: { id: true } })).map((c) => c.id),
+    const autorises = new Map(
+      (await this.prisma.collaborateur.findMany({ where: { societeId: a.societeId }, select: { id: true, prenom: true, nom: true } })).map(
+        (c) => [c.id, `${c.prenom} ${c.nom}`],
+      ),
     );
     const ops: Prisma.PrismaPromise<unknown>[] = [];
-    const journal: { livrable: string; action: 'confie' | 'avance'; a?: string; echeance?: string }[] = [];
+    const journal: { livrable: string; action: 'confie' | 'conserve'; a?: string }[] = [];
     for (const l of livrables) {
       if (nonDelegables.has(l.cle)) {
-        const nouvelle = veille(d.dateDebut);
-        ops.push(this.majBloc(l, { echeance: nouvelle }));
-        journal.push({ livrable: l.cle, action: 'avance', echeance: nouvelle });
+        journal.push({ livrable: l.cle, action: 'conserve' });
         continue;
       }
       const cible = delegations.get(l.cle);
       if (!cible || cible === collab?.id || !autorises.has(cible)) {
-        throw new BadRequestException(`Livrable à confier : ${l.projet} · ${l.groupe}.`);
+        throw new BadRequestException(`Tâche à confier : ${l.projet} · ${l.groupe}.`);
       }
-      ops.push(this.majBloc(l, { responsableId: cible }));
+      ops.push(
+        this.prisma.tacheProjet.update({ where: { id: l.tacheId }, data: { assigneId: cible } }),
+        this.prisma.evenementTacheProjet.create({
+          data: { tacheId: l.tacheId, type: 'assignation', parId: a.userId, detail: `Confiée à ${autorises.get(cible)} (absence)` },
+        }),
+      );
       journal.push({ livrable: l.cle, action: 'confie', a: cible });
     }
     ops.push(this.prisma.demandeAbsence.update({
@@ -412,29 +419,22 @@ export class DemandesService {
     return dossier?.collaborateur ?? null;
   }
 
-  // Blocs dont la personne est responsable, échéance dans la période.
+  // Tâches de projet assignées à la personne, encore à rendre, dont
+  // l'échéance de référence tombe dans la période.
   private async livrables(collaborateurId: string, debut: string, fin: string): Promise<Livrable[]> {
-    const dans = { responsableId: collaborateurId, echeance: { gte: debut, lte: fin } };
-    const [avp, permis, exe] = await Promise.all([
-      this.prisma.blocChecklistAvp.findMany({ where: dans, include: { avantProjet: { select: { projet: { select: { code: true } } } } } }),
-      this.prisma.blocPermis.findMany({ where: dans, include: { permis: { select: { projet: { select: { code: true } } } } } }),
-      this.prisma.blocExecution.findMany({ where: dans, include: { projet: { select: { code: true } } } }),
-    ]);
-    return [
-      ...avp.map((b) => ({ cle: `avant-projet:${b.avantProjetId}:${b.groupe}`, source: 'avant-projet' as const, projetId: b.avantProjetId, projet: b.avantProjet.projet.code, groupe: b.groupe, echeance: b.echeance! })),
-      ...permis.map((b) => ({ cle: `permis:${b.permisId}:${b.groupe}`, source: 'permis' as const, projetId: b.permisId, projet: b.permis.projet.code, groupe: b.groupe, echeance: b.echeance! })),
-      ...exe.map((b) => ({ cle: `execution:${b.projetId}:${b.groupe}`, source: 'execution' as const, projetId: b.projetId, projet: b.projet.code, groupe: b.groupe, echeance: b.echeance! })),
-    ].sort((x, y) => x.echeance.localeCompare(y.echeance));
-  }
-
-  private majBloc(l: Livrable, data: { responsableId?: string; echeance?: string }) {
-    if (l.source === 'avant-projet') {
-      return this.prisma.blocChecklistAvp.update({ where: { avantProjetId_groupe: { avantProjetId: l.projetId, groupe: l.groupe as never } }, data });
-    }
-    if (l.source === 'permis') {
-      return this.prisma.blocPermis.update({ where: { permisId_groupe: { permisId: l.projetId, groupe: l.groupe as never } }, data });
-    }
-    return this.prisma.blocExecution.update({ where: { projetId_groupe: { projetId: l.projetId, groupe: l.groupe as never } }, data });
+    const taches = await this.prisma.tacheProjet.findMany({
+      where: { assigneId: collaborateurId, statut: { in: ['a_faire', 'reprise'] }, finLe: { gte: debut, lte: fin } },
+      select: { id: true, libelle: true, finLe: true, carte: { select: { libelle: true } }, projet: { select: { code: true } } },
+      orderBy: { finLe: 'asc' },
+    });
+    return taches.map((t) => ({
+      cle: `tache:${t.id}`,
+      tacheId: t.id,
+      source: 'Projets',
+      projet: t.projet.code,
+      groupe: `${t.carte.libelle} · ${t.libelle}`,
+      echeance: t.finLe!,
+    }));
   }
 }
 

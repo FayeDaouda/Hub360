@@ -1,5 +1,4 @@
 import type {
-  DureesStandardSection,
   FeuillesTemps,
   ManqueTache,
   MonTemps,
@@ -12,7 +11,6 @@ import { apiSociete } from './client-api';
 //   GET …/rh/feuilles-temps?mois=AAAA-MM            feuilles du groupe (module « rh »)
 //   POST …/rh/feuilles-temps/:dossierId/:mois/controle   contrôle RH d'un mois clos
 //   GET …/mon-espace/temps?mois=AAAA-MM             le salarié connecté
-//   GET/PUT …/durees-standard[/:section/:groupe]    référentiel (admin ou CIO)
 
 // Miroir de backend/src/rh/regles-temps.ts (8 h par jour ouvré, lundi → vendredi).
 export const HEURES_PAR_JOUR = 8;
@@ -27,9 +25,6 @@ export const controlerFeuilleTemps = (slug: string, dossierId: string, mois: str
     body: {},
   });
 export const getMonTemps = (slug: string, mois?: string) => apiSociete<MonTemps>(slug, avecMois('/mon-espace/temps', mois));
-export const getDureesStandard = (slug: string) => apiSociete<DureesStandardSection[]>(slug, '/durees-standard');
-export const definirDureeStandard = (slug: string, section: SectionTache, groupe: string, heures: number | null) =>
-  apiSociete<DureesStandardSection[]>(slug, `/durees-standard/${section}/${groupe}`, { method: 'PUT', body: { heures } });
 
 export const LIBELLE_SECTION: Record<SectionTache, string> = {
   avant_projet: 'Avant-projet',
