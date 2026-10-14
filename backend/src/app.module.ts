@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { EmailModule } from './email/email.module';
@@ -27,6 +28,8 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
 @Module({
   imports: [
     PrismaModule,
+    // Tâches planifiées (rappels quotidiens, cf. RappelsService).
+    ScheduleModule.forRoot(),
     // Rate-limiting — stockage en mémoire (OK mono-instance ; passer sur un
     // storage partagé type Redis si l'API est répliquée). Le ThrottlerGuard
     // n'est posé que sur AuthController : le reste de l'API n'est pas limité.

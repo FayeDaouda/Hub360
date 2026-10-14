@@ -1,0 +1,79 @@
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from './notifications.service';
+import { RappelsService } from './rappels.service';
+
+const dec = (n: number) => new Prisma.Decimal(n);
+
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; dejaEnvoyes?: string[] } = {}) {
+  const deja = new Set(o.dejaEnvoyes ?? []);
+  const prisma = {
+    devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
+    facture: { findMany: jest.fn().mockResolvedValue(o.factures ?? []) },
+    tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? []) },
+    collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C1', utilisateurId: 'U1' }]) },
+    rappelEnvoye: {
+      createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
+        const neuf = !deja.has(data[0].cle);
+        deja.add(data[0].cle);
+        return Promise.resolve({ count: neuf ? 1 : 0 });
+      }),
+    },
+  } as unknown as PrismaService;
+  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CFO1']) };
+  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService), notifications };
+}
+
+const tache = (finLe: string) => ({
+  id: 'T1', libelle: 'Plan masse', finLe, assigneId: 'C1', carte: { libelle: 'Esquisse' }, projet: { id: 'P1', code: 'GC-01', societeId: 'S1' },
+});
+
+describe('RappelsService', () => {
+  const JOUR = '2026-10-14';
+
+  it('tâche due demain puis en retard : un rappel chacun, au titulaire', async () => {
+    const veille = await svc({ taches: [tache('2026-10-15')] }).s.taches(JOUR);
+    expect(veille).toEqual([expect.objectContaining({ cle: 'tache:T1:veille:2026-10-15', destinataireIds: ['U1'], titre: expect.stringContaining('À rendre demain') })]);
+    const retard = await svc({ taches: [tache('2026-10-10')] }).s.taches(JOUR);
+    expect(retard[0].cle).toBe('tache:T1:retard:2026-10-10');
+  });
+
+  it('tâche due aujourd’hui : pas encore de rappel', async () => {
+    expect(await svc({ taches: [tache(JOUR)] }).s.taches(JOUR)).toEqual([]);
+  });
+
+  it('offre sans réponse : un rappel par palier J+3 / J+6, au propriétaire', async () => {
+    const devis = (envoi: string, relances: number) => ({
+      id: 'D1', societeId: 'S1', projetId: null, dossierCrmId: 'L1', statut: 'envoye', dateEnvoi: new Date(`${envoi}T09:00:00Z`),
+      dateValidite: '2026-12-31', relancesEnvoyees: relances, numero: null, codeDossier: 'DIOP_DKR.26', rangDossier: 1,
+      client: { nom: 'Diop' }, dossierCrm: { proprietaireId: 'P9' }, projet: null,
+    });
+    expect(await svc({ devis: [devis('2026-10-12', 0)] }).s.offres(JOUR)).toEqual([]);
+    const j3 = await svc({ devis: [devis('2026-10-11', 0)] }).s.offres(JOUR);
+    expect(j3).toEqual([expect.objectContaining({ cle: 'offre:D1:1', destinataireIds: ['P9'], dossierCrmId: 'L1' })]);
+    // Relance J+3 faite : plus rien avant J+6.
+    expect(await svc({ devis: [devis('2026-10-10', 1)] }).s.offres(JOUR)).toEqual([]);
+    expect((await svc({ devis: [devis('2026-10-08', 1)] }).s.offres(JOUR))[0].cle).toBe('offre:D1:2');
+  });
+
+  it('facture échue non soldée : propriétaire + CFO, puis chaque semaine', async () => {
+    const facture = (echeanceLe: string, paye: number) => ({
+      id: 'F1', societeId: 'S1', projetId: 'P1', echeanceLe, montantHt: dec(100_000), tauxTva: dec(18), numero: 3,
+      emiseLe: new Date('2026-09-01'), estAvoir: false, codeDossier: null, rangDossier: null,
+      paiements: [{ montant: dec(paye) }], dossierCrm: null, projet: { dossierCrm: { proprietaireId: 'P9' } },
+    });
+    const [r] = await svc({ factures: [facture('2026-10-13', 18_000)] }).s.factures(JOUR);
+    expect(r).toEqual(expect.objectContaining({ cle: 'facture:F1:0', destinataireIds: ['P9', 'CFO1'], factureId: 'F1' }));
+    expect(r.titre).toContain('reste 100');
+    expect((await svc({ factures: [facture('2026-10-06', 0)] }).s.factures(JOUR))[0].cle).toBe('facture:F1:1');
+    expect(await svc({ factures: [facture('2026-10-13', 118_000)] }).s.factures(JOUR)).toEqual([]);
+  });
+
+  it('tournée rejouée : aucun doublon', async () => {
+    const { s, notifications } = svc({ taches: [tache('2026-10-15')], dejaEnvoyes: [] });
+    expect(await s.tournee(JOUR)).toBe(1);
+    expect(await s.tournee(JOUR)).toBe(0);
+    expect(notifications.envoyer).toHaveBeenCalledTimes(1);
+    expect(notifications.envoyer.mock.calls[0][0]).not.toHaveProperty('cle');
+  });
+});

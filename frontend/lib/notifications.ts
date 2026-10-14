@@ -44,7 +44,7 @@ export function lienNotificationAdmin(
   if (n.type === 'absence_decidee') return `${base}/mon-espace?onglet=conges`;
   if (n.type === 'remboursement_traite') return `${base}/mon-espace?onglet=remboursements`;
   if (n.type === 'decision_assignee') return `${base}?onglet=registre`;
-  if ((n.type === 'facture_emise' || n.type === 'facture_payee') && n.factureId) {
+  if ((n.type === 'facture_emise' || n.type === 'facture_payee' || n.type === 'rappel_facture') && n.factureId) {
     return `${base}/facturation?facture=${n.factureId}`;
   }
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).

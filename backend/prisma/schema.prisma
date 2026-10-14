@@ -190,6 +190,10 @@ enum NotificationType {
   dossier_soumis
   dossier_renvoye
   offre_envoyee // offre validée par la CFO et partie chez le client
+  // Rappels quotidiens (RappelsService, 7 h) — jamais deux fois le même.
+  rappel_offre // offre envoyée sans réponse à J+3 puis J+6
+  rappel_facture // facture échue non soldée (puis chaque semaine)
+  rappel_tache // tâche due demain, ou passée en retard
   offre_acceptee
   offre_refusee
   contrat_signe
@@ -230,6 +234,16 @@ model Notification {
 
   @@index([destinataireId, luLe])
   @@map("notifications")
+}
+
+// Rappels quotidiens déjà envoyés : la clé (ex. « tache:<id>:veille:<finLe> »)
+// garantit qu'un rappel ne part qu'une fois, même si la tournée est rejouée
+// (redémarrage du serveur).
+model RappelEnvoye {
+  cle       String   @id
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("rappels_envoyes")
 }
 
 // Journal d'audit des événements sensibles sur un compte.
