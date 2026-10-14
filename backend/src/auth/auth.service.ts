@@ -54,16 +54,12 @@ export class AuthService {
         data: { utilisateurId, type: 'mdp_reinitialise', parId: utilisateurId, detail: 'Changé par le titulaire' },
       }),
     ]);
-    // iat arrondi à la seconde SUPÉRIEURE : le jeton est daté à la seconde,
-    // la coupure à la milliseconde (cf. JwtStrategy) — sans cela, la nouvelle
-    // session serait refusée dans la seconde même du changement.
-    return this.ouvrirSession(utilisateur, societeSlug, Math.ceil(maintenant.getTime() / 1000));
+    return this.ouvrirSession({ ...utilisateur, sessionsValidesDepuis: maintenant }, societeSlug);
   }
 
   private async ouvrirSession(
-    utilisateur: { id: string; email: string; nom: string; prenom: string },
+    utilisateur: { id: string; email: string; nom: string; prenom: string; sessionsValidesDepuis: Date | null },
     societeSlug: string,
-    iat?: number,
   ) {
     const societe = await this.prisma.societe.findUnique({
       where: { slug: societeSlug },
@@ -108,7 +104,7 @@ export class AuthService {
       societeSlug: societe.slug,
       role: acces.role.nom,
       permissions,
-      ...(iat !== undefined && { iat }),
+      iat: dateEmission(utilisateur.sessionsValidesDepuis),
     };
 
     return {
@@ -130,4 +126,15 @@ export class AuthService {
       permissions,
     };
   }
+}
+
+// Le jeton est daté à la seconde, la coupure des sessions à la milliseconde
+// (cf. JwtStrategy) : un jeton émis dans la seconde qui suit une coupure
+// (reconnexion après un changement de droits, de rôle, de mot de passe…)
+// serait refusé d'emblée. On le date alors de la seconde suivant la coupure ;
+// un jeton émis AVANT la coupure garde sa date et reste refusé.
+export function dateEmission(sessionsValidesDepuis: Date | null, maintenant = Date.now()): number {
+  const iat = Math.floor(maintenant / 1000);
+  if (!sessionsValidesDepuis) return iat;
+  return Math.max(iat, Math.ceil(sessionsValidesDepuis.getTime() / 1000));
 }

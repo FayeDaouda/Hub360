@@ -162,7 +162,9 @@ export default function DocumentsPage({ params }: Props) {
             <p className="empty-state">
               {vueCorbeille
                 ? 'Corbeille vide.'
-                : 'Aucun document. Ajoute un PDF, un plan CAO, un devis…'}
+                : ecriture
+                  ? 'Aucun document. Ajoute un PDF, un plan CAO, un devis…'
+                  : 'Aucun document.'}
             </p>
           ) : (
             <div className="doc-liste">

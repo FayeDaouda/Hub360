@@ -1,7 +1,7 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthService } from './auth.service';
+import { AuthService, dateEmission } from './auth.service';
 
 jest.mock('./mot-de-passe', () => ({
   verifierMotDePasse: jest.fn().mockResolvedValue(true),
@@ -97,5 +97,17 @@ describe('AuthService.changerMotDePasse', () => {
     const { iat } = sign.mock.calls[0][0];
     expect(iat * 1000).toBeGreaterThanOrEqual(data.sessionsValidesDepuis.getTime());
     expect(res.access_token).toBe('jeton');
+  });
+});
+
+describe('dateEmission', () => {
+  it('sans coupure : seconde courante', () => {
+    expect(dateEmission(null, 10_700)).toBe(10);
+  });
+  it('connexion dans la seconde d’une coupure : datée juste après la coupure (jeton accepté)', () => {
+    expect(dateEmission(new Date(10_500), 10_700)).toBe(11);
+  });
+  it('coupure ancienne : seconde courante', () => {
+    expect(dateEmission(new Date(5_000), 10_700)).toBe(10);
   });
 });

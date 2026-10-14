@@ -64,7 +64,7 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
               </div>
             </>
           ) : (
-            <form onSubmit={soumettre}>
+            <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
               <label className="field">
                 <span className="field-label">Mot de passe actuel</span>
                 <input
