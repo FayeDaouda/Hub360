@@ -594,12 +594,6 @@ export const PHASES: Record<Phase, string> = {
   livre: 'Livré',
 };
 
-export const PHASES_PAR_CATEGORIE: Record<Categorie, Phase[]> = {
-  conception: ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'],
-  developpement: ['avant_projet', 'permis', 'etudes', 'chantier', 'livre'],
-  amenagement: ['avant_projet', 'chantier', 'livre'],
-};
-
 export type ProjetExecution = {
   id: string;
   code: string; // repris du dossier CRM
@@ -620,108 +614,6 @@ export type ProjetExecution = {
   creeLe: string; // ISO 8601
 };
 
-// Garde de transition de phase. Les phases peuvent se chevaucher dans la
-// réalité du terrain (décision boss, sept. 2026) : plus aucun verrou dur sur
-// l'avant-projet non validé ou le permis non obtenu — seule la dernière phase
-// de la séquence bloque l'avancement.
-//
-// GARDE MIROIR — le backend rejoue cette règle sur PUT …/projets/:id/phase
-// (422 si transition non adjacente). Toute modification ici doit être
-// répercutée côté NestJS, et réciproquement.
-export function peutAvancerPhase(
-  projet: Pick<ProjetExecution, 'categorie' | 'phase'>,
-  _contexte: { permisObtenu: boolean },
-): { ok: boolean; raison?: string } {
-  const sequence = PHASES_PAR_CATEGORIE[projet.categorie];
-  const i = sequence.indexOf(projet.phase);
-  if (i < 0 || i >= sequence.length - 1) return { ok: false, raison: 'Dernière phase' };
-  return { ok: true };
-}
-
-// Rappel doux (n'affecte jamais `peutAvancerPhase.ok`) : signale qu'on quitte
-// « permis » sans permis en main. À combiner avec les autres textes de la
-// prop `avertissement` du PhaseStepper — jamais un blocage. Le verrou de
-// validation avant-projet a été retiré (sept. 2026, cf. schema.prisma
-// backend) — plus de rappel correspondant.
-export function avertissementChangementPhase(
-  projet: Pick<ProjetExecution, 'phase'>,
-  contexte: { permisObtenu: boolean },
-): string | null {
-  if (projet.phase === 'permis' && !contexte.permisObtenu) {
-    return 'Le permis de construire n’est pas encore obtenu.';
-  }
-  return null;
-}
-
-// Les 6 sections d'un projet (dossiers internes). Ordre = ordre d'affichage
-// (confirmé boss, sept. 2026 — 11 cartes au total à terme, les 5 suivantes
-// restant à ajouter une fois leur contenu défini carte par carte).
-export type SectionProjet =
-  | 'foncier'
-  | 'documents'
-  | 'avant-projet'
-  | 'images'
-  | 'permis'
-  | 'etude'
-  | 'execution';
-
-export const SECTIONS_PROJET: {
-  cle: SectionProjet;
-  libelle: string;
-  description: string;
-}[] = [
-  {
-    cle: 'foncier',
-    libelle: 'Foncier',
-    description: 'Cadastre, droit réel, relevé de l’existant sur le terrain',
-  },
-  {
-    cle: 'documents',
-    libelle: 'Documents',
-    description: 'PDF APS/APD, plans CAO, devis, plaquettes',
-  },
-  { cle: 'avant-projet', libelle: 'Avant-projet', description: 'Cadrage, faisabilité, esquisse' },
-  { cle: 'images', libelle: 'Images', description: 'Photos, rendus, références' },
-  {
-    cle: 'permis',
-    libelle: 'Autorisation',
-    description: 'Dossier PC, échanges, autorisations',
-  },
-  { cle: 'etude', libelle: 'Bureau d’études technique', description: 'Plans techniques, notes, DCE' },
-  {
-    cle: 'execution',
-    libelle: 'Dossier Exécutions',
-    description: 'Chantier, comptes-rendus, réserves',
-  },
-];
-
-// Sections disponibles selon la catégorie : « aménagement » n'a ni permis
-// de construire ni étude. Foncier s'applique aux deux — un terrain se
-// documente pareil, conception ou aménagement. Foncier en premier (demande
-// boss, sept. 2026) : c'est le point de départ réel d'un dossier.
-export const SECTIONS_PAR_CATEGORIE: Record<Categorie, SectionProjet[]> = {
-  conception: ['foncier', 'avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
-  developpement: ['foncier', 'avant-projet', 'images', 'documents', 'permis', 'etude', 'execution'],
-  amenagement: ['foncier', 'avant-projet', 'images', 'documents', 'execution'],
-};
-
-// Hiérarchie de couleur (sept. 2026, cf. globals.css .projet-carte--* /
-// .phase-etape--* / .lien-retour--* / .module-icone--*) — identité fixe liée
-// à la place dans le parcours, pas au statut. Images et Documents restent
-// neutres (transverses, pas une étape). Point de vérité UNIQUE : consommé
-// par les cartes de la fiche projet (admin + collab), le lien de retour de
-// chaque section (admin + SectionCollabShell) et le badge d'icône de module —
-// ne pas redéclarer cette table ailleurs.
-export const COULEUR_SECTION: Record<SectionProjet, string> = {
-  'avant-projet': 'avant-projet',
-  permis: 'permis',
-  images: 'images',
-  documents: 'documents',
-  foncier: 'foncier',
-  etude: 'etude',
-  execution: 'execution',
-};
-
 // --- Section « Images » ---
 // Un seul flux d'upload, un tag `usage` par image. Lié au projet (pas à la
 // phase ni au pré-bilan). `phase` = vocabulaire contrôlé, purement indicatif
@@ -737,54 +629,6 @@ export const COULEUR_SECTION: Record<SectionProjet, string> = {
 // (`supprimee` / `supprimeLe` / `supprimePar`) — l'image quitte la vue
 // normale mais reste dans la Corbeille admin. Pas de table journal séparée
 // tant que le besoin se limite à upload + suppression.
-
-export type UsageImage = 'travail' | 'portfolio';
-
-export const USAGES_IMAGE: Record<UsageImage, string> = {
-  travail: 'Travail',
-  portfolio: 'Portfolio',
-};
-
-// Sujet de la photo — distinct de `Phase` qui tague la temporalité du projet
-// (« à quel moment » vs « quoi »). Enum fixe pour l'instant (cf. mémoire) :
-// pas d'ajout/modif par l'admin tant qu'un vrai besoin ne s'est pas confirmé.
-// `autre` (sept. 2026) : catch-all pour les images jointes depuis Permis/
-// Avant-projet (scans administratifs, rendus 3D, mood board…) — pas des
-// photos du bâtiment, aucune des 4 valeurs de base ne leur correspond.
-export type TypePhotoImage = 'facade' | 'interieur' | 'chantier' | 'existant' | 'autre';
-
-export const TYPES_PHOTO_IMAGE: Record<TypePhotoImage, string> = {
-  facade: 'Façade',
-  interieur: 'Intérieur',
-  chantier: 'Chantier',
-  existant: 'Existant',
-  autre: 'Autre',
-};
-
-// Provenance d'une image jointe depuis le bouton d'une checklist plutôt que
-// de cette page (Permis/Exécution/Foncier/Avant-projet) — sept. 2026. Texte
-// déjà pré-rendu côté serveur (« <module> → <groupe> », ex. « Autorisation →
-// Dossier de Permis ») ; `route` sert à construire le lien retour
-// (`/…/projets/:id/<route>`). null si l'image vient de cette page directement.
-export type ProvenanceImage = { route: string; libelle: string };
-
-export type ImageProjet = {
-  id: string;
-  projetId: string;
-  url: string; // data URI en mock ; vraie URL objet une fois le stockage branché
-  nom: string; // nom de fichier d'origine
-  usage: UsageImage; // 'travail' par défaut à l'ajout
-  phase: Phase | null; // tag optionnel — filtre, ne gate rien (temporalité)
-  typePhoto: TypePhotoImage | null; // tag optionnel — sujet de la photo
-  provenance: ProvenanceImage | null;
-  legende: string; // surtout renseigné côté portfolio
-  ordre: number; // rang d'affichage dans le portfolio (drag & drop)
-  ajoutePar: string; // nom résolu ; utilisateurId côté API
-  ajouteLe: string; // ISO 8601
-  supprimee: boolean; // soft-delete
-  supprimeLe: string | null;
-  supprimePar: string | null;
-};
 
 // --- Section « Foncier » (Unbord côté backend) ---
 // Checklist à fichiers, items configurables par société (gabarit —
@@ -849,43 +693,6 @@ export const GROUPES_FONCIER: { cle: GroupeFoncierCle; libelle: string }[] = [
 // plaquettes. Modèle propre (pas ImageProjet élargi). Même seam de stockage —
 // data URI en transition, URL objet à terme. `type` et `phase` = filtres.
 
-export type TypeFichier =
-  | 'plan'
-  | 'rendu_source'
-  | 'devis'
-  | 'plaquette'
-  | 'pdf_dossier'
-  | 'autre';
-
-export const TYPES_FICHIER: Record<TypeFichier, string> = {
-  plan: 'Plan CAO',
-  rendu_source: 'Source de rendu',
-  devis: 'Devis',
-  plaquette: 'Plaquette',
-  pdf_dossier: 'Dossier PDF',
-  autre: 'Autre',
-};
-
-export type FichierProjet = {
-  id: string;
-  projetId: string;
-  url: string; // data URI en transition ; URL objet une fois le stockage branché
-  nom: string;
-  typeMime: string;
-  taille: number; // octets
-  type: TypeFichier;
-  phase: Phase | null;
-  // Posé quand l'upload part d'une ligne de la checklist Permis plutôt que
-  // de cette page — même fichier, juste un repère de provenance.
-  ligneChecklistPermisId: string | null;
-  note: string;
-  ajoutePar: string;
-  ajouteLe: string; // ISO 8601
-  supprimee: boolean;
-  supprimeLe: string | null;
-  supprimePar: string | null;
-};
-
 // --- Section « Permis de construire » (conception uniquement) ---
 // Le workflow historique (NICAD, dépôt/instruction, journal, certificat de
 // conformité) a été retiré (sept. 2026) : les 3 blocs de la checklist
@@ -902,14 +709,6 @@ export type PieceDossierPermis =
   | 'devis'
   | 'timbre_fiscal';
 
-export const PIECES_DOSSIER_PERMIS: { cle: PieceDossierPermis; libelle: string }[] = [
-  { cle: 'titre_propriete', libelle: 'Titre de propriété' },
-  { cle: 'plan_cadastral_vise', libelle: 'Plan cadastral visé (NICAD)' },
-  { cle: 'plans_apd', libelle: 'Plans architecturaux (APD)' },
-  { cle: 'devis', libelle: 'Devis descriptif' },
-  { cle: 'timbre_fiscal', libelle: 'Timbre fiscal (10 000 FCFA) + taxe mairie' },
-];
-
 // L'enum garde instruction/observations pour ne pas invalider de vieilles
 // valeurs déjà en base, mais plus aucun chemin n'écrit dessus — seuls les 4
 // états ci-dessous restent proposés (cf. STATUTS_PERMIS_CHOIX). `depose`
@@ -923,20 +722,6 @@ export type StatutPermis =
   | 'observations'
   | 'obtenu'
   | 'refuse';
-
-export const STATUTS_PERMIS: Record<StatutPermis, string> = {
-  a_deposer: 'En cours',
-  depose: 'Déposé',
-  instruction: 'En cours',
-  observations: 'En cours',
-  obtenu: 'Validé',
-  refuse: 'Refusé',
-};
-
-// Les 4 choix proposés dans le sélecteur, dans l'ordre logique du flux
-// (cf. STATUTS_PERMIS ci-dessus pour l'étiquette d'affichage, y compris des
-// vieilles valeurs intermédiaires dormantes).
-export const STATUTS_PERMIS_CHOIX: StatutPermis[] = ['a_deposer', 'depose', 'obtenu', 'refuse'];
 
 export type Permis = {
   projetId: string;
@@ -1005,11 +790,6 @@ export type ChecklistPermisGroupe = {
   fichiersBloc: FichierLigneChecklistPermis[];
 };
 
-// Toutes les pièces du dossier cochées — garde avant de marquer « déposé ».
-export function dossierPermisComplet(dossier: Record<PieceDossierPermis, boolean>): boolean {
-  return PIECES_DOSSIER_PERMIS.every((p) => dossier[p.cle]);
-}
-
 // --- Section « Études » (conception uniquement) ---
 // Études techniques confiées à des BET : transforment l'APD en dossier
 // d'exécution, puis constitution du DCE (dossier de consultation des
@@ -1027,72 +807,6 @@ export function dossierPermisComplet(dossier: Record<PieceDossierPermis, boolean
 // son statut/remise/note (repris tels quels de l'ancien modèle), et ses
 // propres livrables en checklist à fichiers (statut dérivé + case à cocher
 // manuelle, même modèle que Foncier).
-
-export type StatutEtude = 'a_lancer' | 'en_cours' | 'remise' | 'validee' | 'non_requise';
-
-export const STATUTS_ETUDE: Record<StatutEtude, string> = {
-  a_lancer: 'À lancer',
-  en_cours: 'En cours',
-  remise: 'Remise',
-  validee: 'Validée',
-  non_requise: 'Non requise',
-};
-
-export type StatutItemEtude = 'fait' | 'en_attente' | 'non_necessaire';
-
-export type FichierItemEtude = {
-  id: string;
-  nom: string;
-  url: string;
-  estImage: boolean;
-  ajouteLe: string; // ISO 8601
-};
-
-export type ItemEtude = {
-  id: string;
-  libelle: string;
-  statut: StatutItemEtude;
-  fichiers: FichierItemEtude[];
-};
-
-// null = redacted (appelant non admin/CIO) ; jamais renvoyé à un
-// collaborateur, même en lecture seule (cf. cadrage).
-export type FactureEtude = {
-  montant: number | null;
-  fichierNom: string | null;
-  fichierCle: string | null;
-};
-
-export type BlocEtude = {
-  id: string;
-  libelle: string;
-  interlocuteur: string; // ex-« bet » (nom du bureau d'études)
-  contactInterlocuteur: string;
-  statut: StatutEtude;
-  dateRemisePrevue: string | null; // AAAA-MM-JJ
-  dateRemiseReelle: string | null;
-  note: string;
-  facture: FactureEtude | null;
-  items: ItemEtude[];
-};
-
-export type Etudes = {
-  projetId: string;
-  blocs: BlocEtude[];
-  dceConstitue: boolean;
-  dceLe: string | null;
-};
-
-// DCE mobilisable quand chaque bloc est validé OU non requis (pas
-// « remise » — on ne met pas un rendu non vérifié dans l'appel d'offres).
-export function etudesCompletes(e: Etudes): boolean {
-  return e.blocs.every((b) => b.statut === 'validee' || b.statut === 'non_requise');
-}
-
-// Blocs ni validés ni non-requis — pour l'avertissement du stepper.
-export function etudesEnAttente(e: Etudes): number {
-  return e.blocs.filter((b) => b.statut !== 'validee' && b.statut !== 'non_requise').length;
-}
 
 // -- Gabarit Études (configuration société, societe_admin ou CIO) ----------
 
@@ -1117,64 +831,6 @@ export type BlocGabaritEtude = {
 // (retiré sept. 2026, cf. mémoire) : pas de verrou dur, juste un % de suivi
 // opérationnel, indépendant, comme le reste des sous-checklists. S'applique
 // aux deux catégories avec le même gabarit (décision boss, sept. 2026).
-
-export type GroupeChecklistExecution =
-  | 'etudes'
-  | 'plans'
-  | 'viabilite'
-  | 'locaux_technique'
-  | 'amenagements'
-  | 'menuiserie'
-  | 'details'
-  | 'cctp';
-
-// Image ou document rattaché à un item précis — même objet que dans
-// Images/Documents (ImageProjet/FichierProjet), juste un repère de
-// provenance ; pas de copie (cf. ExecutionService.joindreImages/joindreFichiers).
-export type FichierLigneChecklistExecution = {
-  id: string;
-  nom: string;
-  url: string;
-  estImage: boolean;
-  ajouteLe: string; // ISO 8601
-};
-
-export type ItemChecklistExecution = {
-  id: string;
-  libelle: string;
-  fait: boolean;
-  // Item désactivé (« non nécessaire », sept. 2026) — mutuellement exclusif
-  // avec fait, même modèle que ItemChecklistPermis.
-  nonRequise: boolean;
-  note: string;
-  faitPar: { id: string; nom: string } | null;
-  faitLe: string | null; // ISO 8601
-  fichiers: FichierLigneChecklistExecution[];
-};
-
-export type ChecklistExecutionGroupe = {
-  groupe: GroupeChecklistExecution;
-  libelle: string;
-  description: string;
-  // Un seul responsable par bloc, une seule échéance par bloc — null =
-  // personne désigné / pas d'échéance fixée (admin seul peut alors agir).
-  debut: string | null; // AAAA-MM-JJ — fenêtre début → échéance (RH · Temps)
-  echeance: string | null; // AAAA-MM-JJ
-  responsable: { id: string; nom: string } | null;
-  prolongationDemandeeLe: string | null; // ISO 8601 — non nul = en attente
-  prolongationEcheance: string | null; // AAAA-MM-JJ proposée
-  prolongationMotif: string | null;
-  items: ItemChecklistExecution[];
-};
-
-export type Execution = {
-  projetId: string;
-  // Équipe(s) à proposer dans le sélecteur de responsable de chaque bloc
-  // (front : GET …/collaborateurs?cellule=), comme Permis. Plusieurs
-  // possibles depuis sept. 2026 (décision boss).
-  celluleIds: string[];
-  checklists: ChecklistExecutionGroupe[];
-};
 
 // --- Section « Avant-projet » ---
 // Restructurée sept. 2026 (décision boss) : plus de fiche programme ni de
@@ -1221,46 +877,6 @@ export type ChecklistAvpGroupe = {
   items: ItemChecklistAvp[];
 };
 
-// MIROIR de backend domaine/gardes.ts::avancementChecklistAvp. Checklists
-// Permis/Exécution (case « fait » manuelle) — purement indicatif, aucun
-// verrou. Un item « non requis » (Permis uniquement, sept. 2026) compte comme
-// réglé, même convention que avancementChecklistFichiers ci-dessous. NE PAS
-// réutiliser pour Avant-projet (cf. avancementChecklistFichiers — items à
-// statut dérivé des fichiers, plus de case « fait »).
-export function avancementChecklistAvp(
-  items: { fait: boolean; nonRequise?: boolean }[],
-): { faits: number; total: number; pct: number; complete: boolean } {
-  const faits = items.filter((i) => i.fait || i.nonRequise).length;
-  const total = items.length;
-  return {
-    faits,
-    total,
-    pct: total ? Math.round((faits / total) * 100) : 0,
-    complete: total > 0 && faits === total,
-  };
-}
-
-// MIROIR de backend domaine/gardes.ts::avancementChecklistFichiers. Purement
-// indicatif (carte de section), aucun verrou — un item « non nécessaire »
-// compte comme réglé, au même titre qu'un item avec au moins un fichier joint.
-export function avancementChecklistFichiers(
-  items: { statut: StatutItemChecklistAvp }[],
-): { faits: number; total: number; pct: number; complete: boolean } {
-  const faits = items.filter((i) => i.statut !== 'en_attente').length;
-  const total = items.length;
-  return {
-    faits,
-    total,
-    pct: total ? Math.round((faits / total) * 100) : 0,
-    complete: total > 0 && faits === total,
-  };
-}
-
-// Tous les items à plat — pour un compteur global sur la carte de section.
-export function itemsChecklistAvp(groupes: ChecklistAvpGroupe[]): ItemChecklistAvp[] {
-  return groupes.flatMap((g) => g.items);
-}
-
 export type AvantProjet = {
   projetId: string;
   // Affectation & agenda (miroir carte Trello) — FK Collaborateur résolue { id, nom }
@@ -1276,108 +892,10 @@ export type AvantProjet = {
   checklists: ChecklistAvpGroupe[];
 };
 
-// Charge utile du PATCH avant-projet : affectation + agenda (merge partiel).
-// `dessinateur`/`responsable3d` s'envoient par id (FK Collaborateur).
-export type PatchAvantProjet = Partial<{
-  dessinateurId: string | null;
-  responsable3dId: string | null;
-  dateDebut: string | null;
-  dateFin: string | null;
-}>;
-
 // --- Pré-bilan de faisabilité (versionné) ---
 // Une version = un point de mesure figé, rattaché à une sous-étape du
 // chiffrage. Le nombre de versions et leur libellé dépendent de la
 // catégorie (comme la checklist) — jamais de saisie libre.
-
-export type EtapePreBilan = 'esq' | 'aps' | 'apd' | 'estimation' | 'definitif';
-
-export const ETAPES_PRE_BILAN: Record<
-  Categorie,
-  { cle: EtapePreBilan; libelle: string }[]
-> = {
-  conception: [
-    { cle: 'esq', libelle: 'ESQ' },
-    { cle: 'aps', libelle: 'APS' },
-    { cle: 'apd', libelle: 'APD' },
-  ],
-  // Développement : comme la conception (hypothèse de travail, oct. 2026).
-  developpement: [
-    { cle: 'esq', libelle: 'ESQ' },
-    { cle: 'aps', libelle: 'APS' },
-    { cle: 'apd', libelle: 'APD' },
-  ],
-  amenagement: [
-    { cle: 'estimation', libelle: 'Estimation initiale' },
-    { cle: 'definitif', libelle: 'Chiffrage définitif' },
-  ],
-};
-
-export type LignePreBilan =
-  | 'charges_foncieres'
-  | 'travaux'
-  | 'fournitures_mobilier'
-  | 'travaux_amenagement'
-  | 'honoraires'
-  | 'frais_divers'
-  | 'aleas';
-
-export const LIGNES_PRE_BILAN: Record<
-  Categorie,
-  { cle: LignePreBilan; libelle: string }[]
-> = {
-  conception: [
-    { cle: 'charges_foncieres', libelle: 'Charges foncières' },
-    { cle: 'travaux', libelle: 'Travaux' },
-    { cle: 'honoraires', libelle: 'Honoraires' },
-    { cle: 'frais_divers', libelle: 'Frais divers' },
-    { cle: 'aleas', libelle: 'Aléas' },
-  ],
-  developpement: [
-    { cle: 'charges_foncieres', libelle: 'Charges foncières' },
-    { cle: 'travaux', libelle: 'Travaux' },
-    { cle: 'honoraires', libelle: 'Honoraires' },
-    { cle: 'frais_divers', libelle: 'Frais divers' },
-    { cle: 'aleas', libelle: 'Aléas' },
-  ],
-  amenagement: [
-    { cle: 'fournitures_mobilier', libelle: 'Fournitures & mobilier' },
-    { cle: 'travaux_amenagement', libelle: "Travaux d'aménagement" },
-    { cle: 'honoraires', libelle: 'Honoraires' },
-    { cle: 'frais_divers', libelle: 'Frais divers' },
-    { cle: 'aleas', libelle: 'Aléas' },
-  ],
-};
-
-export type VersionPreBilan = {
-  etape: EtapePreBilan;
-  couts: Partial<Record<LignePreBilan, number>>; // montants FCFA saisis
-  prixVenteEstime: number | null; // uniquement si nature = promotion_interne
-  creeeLe: string; // ISO 8601
-  figeeLe: string | null; // se fige à la création de la version suivante
-};
-
-export type PreBilan = {
-  projetId: string;
-  versions: VersionPreBilan[]; // dans l'ordre de ETAPES_PRE_BILAN[categorie]
-};
-
-// Complétude *structurelle* du pré-bilan : toutes les versions attendues
-// existent et la dernière a un total non nul. C'est la condition qui rend la
-// case « Budget validé / Pré-bilan validé » cochable — le jugement métier
-// (marge acceptable) reste à l'humain.
-//
-// GARDE MIROIR — le backend recalcule cette complétude à la validation de
-// l'avant-projet (POST …/avant-projet/validation, 409 sinon), jamais depuis
-// le body. À garder synchronisée avec l'équivalent NestJS.
-export function preBilanComplet(pb: PreBilan | null, categorie: Categorie): boolean {
-  if (!pb) return false;
-  const attendu = ETAPES_PRE_BILAN[categorie].length;
-  if (pb.versions.length < attendu) return false;
-  const derniere = pb.versions[pb.versions.length - 1];
-  const total = Object.values(derniere.couts).reduce<number>((s, n) => s + (n ?? 0), 0);
-  return total > 0;
-}
 
 // --- Section « Facturation client » (brique « gestion ») ---
 // Le pré-bilan chiffre un projet ; ce module émet des factures réelles, les

@@ -23,7 +23,7 @@ type Options = {
 };
 
 // Appel authentifié à une route sous /api/societes/:slug.
-// `chemin` commence par « / » — ex. apiSociete(slug, `/projets/${id}/permis`).
+// `chemin` commence par « / » — ex. apiSociete(slug, `/projets-ouverts/${id}`).
 export function apiSociete<T>(slug: string, chemin: string, options: Options = {}): Promise<T> {
   return apiAuth<T>(`/societes/${slug}${chemin}`, options);
 }

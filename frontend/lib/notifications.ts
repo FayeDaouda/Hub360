@@ -25,7 +25,7 @@ export function marquerNotificationsLues(slug: string): Promise<FluxNotification
 //     factures (finances_factures validation : la CFO) — ses brouillons l'y
 //     attendent ; les autres destinataires ouvrent le dossier.
 //   · cycle CRM → le dossier, ouvert dans le CRM (?dossier=).
-//   · sinon → la fiche projet (notifications d'exécution, admin).
+//   · sinon → le projet, ouvert dans Projets (?projet=).
 export function lienNotificationAdmin(
   slug: string,
   n: Pick<NotificationItem, 'type' | 'projetId' | 'dossierCrmId' | 'factureId'>,
@@ -40,8 +40,7 @@ export function lienNotificationAdmin(
   }
   if (n.dossierCrmId) return `/admin/${slug}/crm?dossier=${n.dossierCrmId}`;
   // Mention dans un fil : le projet ouvert dans la vue « Projets · gabarit ».
-  if (n.type === 'mention_projet' && n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;
-  if (n.projetId) return `/admin/${slug}/projets/${n.projetId}`;
+  if (n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;
   return null;
 }
 

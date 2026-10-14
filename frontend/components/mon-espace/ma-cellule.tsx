@@ -86,7 +86,7 @@ export function MaCellule({ slug }: { slug: string }) {
               {projets.map((p) => (
                 <li key={p.id} className="dmd-ligne">
                   <span>
-                    <Link className="lien-inline" href={`${base}/projets/${p.id}`}>
+                    <Link className="lien-inline" href={`${base}/projets?projet=${p.id}`}>
                       <strong>{p.code}</strong>
                     </Link>
                     <span className="cell-sub">{p.programme}</span>
