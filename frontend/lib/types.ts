@@ -477,18 +477,6 @@ export type VueEquipes = {
   prochainsCodes: Record<ProcessusCellule, string>;
 };
 
-// Fiche du collaborateur connecté — `GET …/mon-profil`, résolue depuis le
-// compte (jamais un :id d'URL). Alimente l'espace /collab/[slug].
-export type MonProfil = Collaborateur & {
-  celluleNom: string | null;
-  // Dispatcher de sa cellule (décision boss, sept. 2026) — peut réassigner
-  // les lignes/blocs dont l'assigné est un membre de SA cellule (même
-  // périmètre que le guard estAutoriseAAssigner côté serveur). `equipeAssignable`
-  // = ses coéquipiers, vide si `estDispatcher` est faux.
-  estDispatcher: boolean;
-  equipeAssignable: { id: string; prenom: string; nom: string }[];
-};
-
 // Un projet tel que présenté sur « Mes indicateurs » (carte active / ligne
 // d'historique). Dérivé serveur — miroir de CollaborateursService.indicateurs.
 export type LigneProjetIndic = {

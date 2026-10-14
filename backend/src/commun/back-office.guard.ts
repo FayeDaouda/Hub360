@@ -5,12 +5,12 @@ import {
   Injectable,
 } from '@nestjs/common';
 
-// Rôles socles historiques qui ont LEUR propre espace (holding → /groupe,
-// collaborateur → /collab) et n'entrent jamais dans le back-office société.
+// Rôle socle qui a SON propre espace (holding → /groupe) et n'entre jamais
+// dans le back-office société.
 // societe_admin et tous les rôles de la matrice (Dir. GC, COO, CFO, CEO…)
 // y entrent ; ce qu'ils y voient est décidé module par module par
 // PermissionGuard + @RequiertPermission, posés APRÈS ce garde.
-const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin', 'collaborateur']);
+const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin']);
 
 // societe_admin + rôles de la matrice. Partagé avec le chat : ces rôles n'ont
 // pas forcément de fiche collaborateur (pas de cellule) et n'en ont pas besoin.

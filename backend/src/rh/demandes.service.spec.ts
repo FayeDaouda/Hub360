@@ -81,11 +81,11 @@ describe('DemandesService.decider (N+1)', () => {
 describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   const CONGE = { type: 'conge_paye' as const, dateDebut: '2026-10-05', dateFin: '2026-10-09' };
   const deposer = (role: string, moi?: object | null) => svc({ moi }).s.deposerAbsence({ userId: 'U', societeId: 'S', role }, CONGE);
-  it('collaborateur : chef de sa cellule, sinon Dir. GC', async () => {
+  it('Salarié : chef de sa cellule, sinon Dir. GC', async () => {
     const membre = { id: 'DOS1', collaborateur: { id: 'C1', cellule: { id: 'CEL', dispatcherId: 'CHEF' } } };
-    await expect(deposer('collaborateur', membre)).resolves.toMatchObject({ n1CollaborateurId: 'CHEF' });
+    await expect(deposer('Salarié', membre)).resolves.toMatchObject({ n1CollaborateurId: 'CHEF' });
     const chef = { id: 'DOS1', collaborateur: { id: 'CHEF', cellule: { id: 'CEL', dispatcherId: 'CHEF' } } };
-    await expect(deposer('collaborateur', chef)).resolves.toMatchObject({ n1Role: 'Dir. GC' });
+    await expect(deposer('Salarié', chef)).resolves.toMatchObject({ n1Role: 'Dir. GC' });
   });
   it('direction : Dir. GC → CTO ; Salarié → Dir. GC ; rôle sans circuit défini refusé', async () => {
     await expect(deposer('Dir. GC')).resolves.toMatchObject({ n1Role: 'CTO (transverse)' });

@@ -254,7 +254,7 @@ export class ChatService {
       this.prisma.utilisateurSocieteRole.findMany({
         where: {
           OR: [{ societeId: acteur.societeId }, { societeId: null }],
-          role: { nom: { notIn: ['collaborateur', 'holding_admin'] }, supprimeLe: null },
+          role: { nom: { not: 'holding_admin' }, supprimeLe: null },
         },
         select: {
           utilisateur: { select: { id: true, prenom: true, nom: true } },

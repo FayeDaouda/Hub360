@@ -12,7 +12,7 @@ type Props = {
 
 // Écran générique « connecté » — filet de sécurité pour un rôle qui n'a pas
 // (encore) de surface dédiée. holding_admin → /groupe, societe_admin →
-// /admin/[slug], collaborateur → /collab/[slug] : chacun est renvoyé chez lui.
+// /admin/[slug] : chacun est renvoyé chez lui.
 export default function EspacePage({ params }: Props) {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);

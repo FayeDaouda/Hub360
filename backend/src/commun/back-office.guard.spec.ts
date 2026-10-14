@@ -17,7 +17,7 @@ describe('BackOfficeGuard', () => {
     },
   );
 
-  it.each(['collaborateur', 'holding_admin'])('%s → 403 (espace dédié ailleurs)', (role) => {
+  it.each(['holding_admin'])('%s → 403 (espace dédié ailleurs)', (role) => {
     expect(() => guard.canActivate(ctx({ role, societeSlug: 'grey-concrete' }))).toThrow(
       ForbiddenException,
     );

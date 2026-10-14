@@ -43,9 +43,9 @@ const typesDemandes = (m: jest.Mock) =>
   );
 
 describe('ChatService.listerCanaux', () => {
-  it('collaborateur sans fiche → 403 (inchangé)', async () => {
+  it('compte hors back-office sans fiche → 403 (inchangé)', async () => {
     const { s } = svc({ collab: null });
-    await expect(s.listerCanaux(acteur('collaborateur'))).rejects.toThrow(ForbiddenException);
+    await expect(s.listerCanaux(acteur('holding_admin'))).rejects.toThrow(ForbiddenException);
   });
 
   it('rôle de direction sans fiche → Général + DM, aucune cellule', async () => {
@@ -101,12 +101,12 @@ describe('ChatService.annuaire', () => {
     ]);
   });
 
-  it('même appartenance qu’au login (société OU transverse), sans collaborateur / holding_admin / rôle supprimé', async () => {
+  it('même appartenance qu’au login (société OU transverse), sans holding_admin ni rôle supprimé', async () => {
     const { s, usrFindMany } = svc();
     await s.annuaire(acteur('CFO'));
     expect(usrFindMany.mock.calls[0][0].where).toEqual({
       OR: [{ societeId: 'S1' }, { societeId: null }],
-      role: { nom: { notIn: ['collaborateur', 'holding_admin'] }, supprimeLe: null },
+      role: { nom: { not: 'holding_admin' }, supprimeLe: null },
     });
   });
 });

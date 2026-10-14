@@ -4,8 +4,7 @@ import { createContext, useContext, useEffect } from 'react';
 import type { Session, Societe } from './types';
 import { droitsProjet, type DroitsProjet } from './acces-back-office';
 
-// Contexte posé par les layouts persistants (app/admin/[slug]/layout.tsx,
-// app/collab/[slug]/layout.tsx) — la coquille (sidebar/topbar) ne démonte plus
+// Contexte posé par le layout persistant (app/admin/[slug]/layout.tsx) — la coquille (sidebar/topbar) ne démonte plus
 // entre deux pages (cf. cadrage « layout persistant », sept. 2026 : l'ancien
 // système où chaque page refaisait sa propre auth + son propre AdminShell
 // provoquait un re-montage complet à chaque navigation, visible sous forme de

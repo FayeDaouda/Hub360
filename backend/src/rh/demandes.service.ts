@@ -42,8 +42,8 @@ export const N1_DES_ROLES: Readonly<Record<string, string>> = {
   'CTO (transverse)': ROLE_CEO,
   'CIO (transverse)': ROLE_CEO,
 };
-// Rôles « salariés » : sans cellule (ou chef de leur cellule) → Dir. GC.
-const ROLES_SALARIES = ['collaborateur', 'Salarié'];
+// Salarié : sans cellule (ou chef de sa cellule) → Dir. GC.
+const ROLES_SALARIES = ['Salarié'];
 const ROLES_N1 = [...new Set([ROLE_N1_DIRECTION, ...Object.values(N1_DES_ROLES)])];
 
 type Acteur = { userId: string; societeId: string; role: string };

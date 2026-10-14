@@ -34,9 +34,9 @@ const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
 
 // Rôles qui ne valident rien (maquettes RH et Salarié) : « À valider »
 // n'apparaît pour eux que si quelque chose les attend.
-const SANS_VALIDATION = new Set(['RH', 'Salarié', 'collaborateur']);
+const SANS_VALIDATION = new Set(['RH', 'Salarié']);
 // Salarié pas encore affecté à une équipe : bandeau d'explication (maquette).
-const EQUIPE_ATTENDUE = new Set(['Salarié', 'collaborateur']);
+const EQUIPE_ATTENDUE = new Set(['Salarié']);
 // Rôles hors circuit des tâches (le CEO n'en reçoit jamais) : ni
 // performances, ni temps, ni cellule — son espace s'ouvre sur « À valider »
 // (N+1 des directeurs) et ses demandes personnelles.

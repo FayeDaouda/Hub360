@@ -29,12 +29,11 @@ type R = {
 
 // Membre de la société (MembreSocieteGuard) ET module « communication » de la
 // matrice (13/10/2026, application stricte) : aucun = pas de chat, lecture =
-// lit sans écrire, écriture = participe. Le rôle socle collaborateur (hors
-// matrice) garde le chat. Le cloisonnement par canal est appliqué en plus par
-// AccesCanalGuard sur les routes /:id. L'envoi passe par REST — le flux SSE
-// (étape 3) ne sert qu'à recevoir.
+// lit sans écrire, écriture = participe. Le cloisonnement par canal est
+// appliqué en plus par AccesCanalGuard sur les routes /:id. L'envoi passe par
+// REST — le flux SSE (étape 3) ne sert qu'à recevoir.
 @Controller('societes/:slug')
-@PermissionSelonMethode('communication', { roleHorsMatrice: 'collaborateur' })
+@PermissionSelonMethode('communication')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard, PermissionGuard)
 export class ChatController {
   constructor(

@@ -42,7 +42,7 @@ function messageErreur(e: unknown, repli: string): string {
 
 // Comptes & rôles — administration du HUB (CIO, sept. 2026). Une ligne par
 // personne et par société : son rôle (liste regroupée : rôles de la société,
-// rôles transverses, socle) et son salaire brut mensuel. Les comptes
+// rôles transverses) et son salaire brut mensuel. Les comptes
 // d'administration et la propre ligne de la personne connectée (`moiId`)
 // sont en lecture seule — le serveur refuse de toute façon (409).
 export function ComptesRolesPanel({ moiId }: { moiId: string }) {
@@ -174,9 +174,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
 function Resume({ societe }: { societe: SocieteComptes }) {
   const salaries = societe.comptes.filter((c) => c.salaireBrutMensuel !== null);
   const masse = salaries.reduce((t, c) => t + (c.salaireBrutMensuel ?? 0), 0);
-  const avecRoleMatrice = societe.comptes.filter(
-    (c) => !c.administration && c.role.nom !== 'collaborateur',
-  ).length;
+  const avecRoleMatrice = societe.comptes.filter((c) => !c.administration).length;
   return (
     <dl className="groupe-resume">
       <div>
@@ -410,9 +408,8 @@ function SelectRole({
   onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
 }) {
   const [etat, setEtat] = useState<EtatAction>({ type: 'repos' });
-  const propres = roles.filter((r) => !r.transverse && r.nom !== 'collaborateur');
-  const transverses = roles.filter((r) => r.transverse && r.nom !== 'collaborateur');
-  const socle = roles.filter((r) => r.nom === 'collaborateur');
+  const propres = roles.filter((r) => !r.transverse);
+  const transverses = roles.filter((r) => r.transverse);
 
   useEffect(() => {
     if (etat.type !== 'ok') return;
@@ -453,15 +450,6 @@ function SelectRole({
         {transverses.length > 0 && (
           <optgroup label="Groupe (transverses)">
             {transverses.map((r) => (
-              <option key={r.id} value={r.id}>
-                {libelleRole(r.nom)}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        {socle.length > 0 && (
-          <optgroup label="Socle">
-            {socle.map((r) => (
               <option key={r.id} value={r.id}>
                 {libelleRole(r.nom)}
               </option>

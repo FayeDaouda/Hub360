@@ -18,7 +18,7 @@ type Canal = {
   participant2Id: string | null;
 };
 
-const USER: User = { societeId: 'S1', userId: 'U1', role: 'collaborateur' };
+const USER: User = { societeId: 'S1', userId: 'U1', role: 'Salarié' };
 
 const ctxOf = (req: unknown): ExecutionContext =>
   ({ switchToHttp: () => ({ getRequest: () => req }) }) as unknown as ExecutionContext;
@@ -153,13 +153,13 @@ describe('AccesCanalGuard', () => {
       ).resolves.toBe(true);
     });
 
-    it('compte collaborateur sans fiche → 403', async () => {
+    it('compte hors back-office sans fiche → 403', async () => {
       const { svc } = prisma({
         canal: { type: 'cellule', celluleId: 'CEL1', participant1Id: null, participant2Id: null },
         collab: null,
       });
       await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
+        new AccesCanalGuard(svc).canActivate(ctxOf(req({ user: { ...USER, role: 'holding_admin' } }))),
       ).rejects.toThrow(/Aucune fiche/);
     });
   });

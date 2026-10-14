@@ -33,9 +33,9 @@ const CHEMINS: Record<string, string> = {
   parametres: 'reglages',
 };
 
-// Rôles socles qui ont leur propre espace (/groupe, /collab) — même liste
-// que backend/src/commun/back-office.guard.ts.
-const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin', 'collaborateur']);
+// Rôle socle qui a son propre espace (/groupe) — même liste que
+// backend/src/commun/back-office.guard.ts.
+const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin']);
 
 // Le CIO est le super admin du HUB (décision 28/09/2026) — même nom de rôle
 // que backend/src/commun/societe-admin-ou-cio.guard.ts (ROLE_CIO).

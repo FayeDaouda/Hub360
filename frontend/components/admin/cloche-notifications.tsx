@@ -18,9 +18,8 @@ function ilYa(iso: string): string {
   return j === 1 ? 'hier' : `il y a ${j} j`;
 }
 
-// Pendant civile de components/collab/cloche-notifications.tsx — seuls les
-// liens changent : /admin, et les notifications du cycle CRM ouvrent le
-// dossier (cf. lienNotificationAdmin).
+// Cloche du back-office : chaque notification ouvre l'écran concerné
+// (cf. lienNotificationAdmin).
 export function ClocheNotifications({ slug, session }: { slug: string; session: Session }) {
   const { flux, recharger, toutLire, toast, fermerToast } = useNotificationsPoll(slug);
   const [ouvert, setOuvert] = useState(false);

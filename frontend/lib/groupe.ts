@@ -58,7 +58,6 @@ export function definirSalaireCompte(
 // l'écran montre un intitulé lisible ; le suffixe « (transverse) » est porté
 // par le regroupement de la liste, pas répété sur chaque option.
 const LIBELLES_ROLES: Record<string, string> = {
-  collaborateur: 'Collaborateur',
   societe_admin: 'Administration société',
   holding_admin: 'Administration groupe',
 };
@@ -77,7 +76,6 @@ const ORDRE_ROLES = [
   'CEO (transverse)',
   'CTO (transverse)',
   'CIO (transverse)',
-  'collaborateur',
 ];
 
 export function comparerRoles(a: { nom: string }, b: { nom: string }): number {

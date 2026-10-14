@@ -59,7 +59,7 @@ async function main() {
   // `findFirst` + `create` plutôt que `.upsert()` : Prisma ne sait pas
   // exprimer `null` dans la clé composite d'un `@@unique` portant sur un
   // champ nullable (societeId) — le where-unique généré le type `string`.
-  for (const nom of ['holding_admin', 'societe_admin', 'collaborateur']) {
+  for (const nom of ['holding_admin', 'societe_admin']) {
     const existant = await prisma.role.findFirst({ where: { societeId: null, nom } });
     if (!existant) {
       await prisma.role.create({ data: { nom } });
@@ -352,8 +352,10 @@ async function main() {
       create: { roleId: roleAdmin.id, moduleId: mod.id, niveau: 'validation' },
     });
   }
+  // Comptes de démo « salariés » : rôle Salarié de la société (le rôle socle
+  // collaborateur a été fondu dans Salarié, phase 1, 14/10/2026).
   const roleCollab = await prisma.role.findFirstOrThrow({
-    where: { societeId: null, nom: 'collaborateur' },
+    where: { societeId: grey.id, nom: 'Salarié' },
   });
 
   const boss = await prisma.utilisateur.upsert({
@@ -1165,7 +1167,7 @@ async function main() {
   console.log('  Comptes (mdp : changeme123)');
   console.log('   · admin@hub.group                 holding_admin');
   console.log('   · admin.greyconcrete@hub.group    societe_admin  → /admin/grey-concrete');
-  console.log('   · collab.greyconcrete@hub.group   collaborateur');
+  console.log('   · collab.greyconcrete@hub.group   Salarié');
   for (const c of COMPTES_DEMO) console.log(`   · ${c.email.padEnd(32)} ${c.role}`);
   const nbP = await prisma.projet.count({ where: { societeId: grey.id } });
   const nbD = await prisma.dossierCrm.count({ where: { societeId: grey.id } });

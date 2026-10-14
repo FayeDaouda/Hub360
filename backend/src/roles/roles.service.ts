@@ -4,10 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
 
 // Rôles socles : leur accès ne passe pas par la matrice (administration =
-// tout, collaborateur = espace collab) — jamais modifiables ici, même par
+// tout) — jamais modifiables ici, même par
 // le CIO : une case changée sur societe_admin couperait l'accès de toutes
 // les administrations de société.
-const ROLES_SOCLE = new Set(['holding_admin', 'societe_admin', 'collaborateur']);
+const ROLES_SOCLE = new Set(['holding_admin', 'societe_admin']);
 
 type RoleLu = { nom: string; societeId: string | null };
 
@@ -16,7 +16,7 @@ type RoleLu = { nom: string; societeId: string | null };
 // le CIO ; les rôles transverses (CEO/CTO/CIO) → le CIO seul.
 function motifRefus(role: RoleLu, societeId: string, acteurRole: string): string | null {
   if (ROLES_SOCLE.has(role.nom)) {
-    return 'Les rôles socles (administration, collaborateur) ne se modifient pas depuis la matrice.';
+    return 'Les rôles d’administration ne se modifient pas depuis la matrice.';
   }
   if (role.societeId === societeId) return null;
   if (role.societeId === null) {

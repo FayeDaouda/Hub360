@@ -57,14 +57,14 @@ describe('RolesService.listerAvecPermissions', () => {
       roles: [
         { id: 'R2', nom: 'CEO (transverse)', societeId: null, permissions: [] },
         { id: 'RA', nom: 'societe_admin', societeId: null, permissions: [] },
-        { id: 'RC', nom: 'collaborateur', societeId: null, permissions: [] },
+        { id: 'RH', nom: 'holding_admin', societeId: null, permissions: [] },
       ],
     });
     const res = await s.listerAvecPermissions('S1', ROLE_CIO);
     expect(res.roles.map((r) => [r.nom, r.modifiable])).toEqual([
       ['CEO (transverse)', true],
       ['societe_admin', false],
-      ['collaborateur', false],
+      ['holding_admin', false],
     ]);
   });
 
@@ -158,7 +158,7 @@ describe('RolesService.majPermission', () => {
     expect(upsert).toHaveBeenCalled();
   });
 
-  it.each([['societe_admin'], ['collaborateur'], ['holding_admin']])(
+  it.each([['societe_admin'], ['holding_admin']])(
     'REFUSÉ : rôle socle %s, même par le CIO',
     async (nom) => {
       const { svc: s, upsert } = svc({ roleTrouve: { id: 'RS', nom, societeId: null } });

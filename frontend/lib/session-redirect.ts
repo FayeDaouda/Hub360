@@ -10,8 +10,6 @@ export function destinationForSession(session: Session): string {
       return '/groupe';
     case 'societe_admin':
       return `/admin/${session.societe.slug}`;
-    case 'collaborateur':
-      return `/collab/${session.societe.slug}`;
     default: {
       // Rôle de la matrice (Dir. GC, COO, CFO, CEO, CIO…) : première section
       // du back-office qu'il peut lire — Pilotage dès qu'il y a accès (le CIO

@@ -17,9 +17,9 @@ export class ComptesService {
     private email: EmailService,
   ) {}
 
-  // -- Admin : invite un collaborateur ------------------------------------
+  // -- Admin (ancienne page Équipe) : invite une fiche d'équipe -------------
   // Crée / réutilise le compte Utilisateur, le lie au Collaborateur, pose le
-  // rôle `collaborateur` sur la société, émet un jeton d'invitation.
+  // rôle Salarié de la société, émet un jeton d'invitation.
   async inviter(
     societeId: string,
     collaborateurId: string,
@@ -44,12 +44,10 @@ export class ComptesService {
       });
     }
 
-    // 'collaborateur' est un rôle socle (societeId null) — findFirst, pas
-    // findUnique : Prisma type la clé composite d'un @@unique portant sur un
-    // champ nullable (societeId) en `string`, donc `null` n'y est pas exprimable.
-    const role = await this.prisma.role.findFirstOrThrow({
-      where: { societeId: null, nom: 'collaborateur' },
+    const role = await this.prisma.role.findFirst({
+      where: { societeId, nom: 'Salarié', supprimeLe: null },
     });
+    if (!role) throw new NotFoundException('Rôle Salarié introuvable dans cette société');
     await this.prisma.utilisateurSocieteRole.upsert({
       where: {
         utilisateurId_societeId_roleId: {
