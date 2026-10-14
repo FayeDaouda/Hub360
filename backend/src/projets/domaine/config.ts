@@ -41,20 +41,17 @@ export const JALONS_FACTURE: { cle: JalonFacture; code: CodeFacture; libelle: st
   { cle: 'livraison', code: 'F3', libelle: "Livraison des plans d'exécution" },
 ];
 
-// Référence d'une facture (maquette Finances, oct. 2026) : code du dossier et
-// rang de la facture dans ce dossier, attribués à l'émission (« D_ALM.26-1 »).
-// Une facture sans dossier (devis libre) garde la séquence de la société
-// (F / AV + année + numéro). Miroir de refFacture côté front.
+// Référence d'une facture : une seule suite par société, sans trou ni
+// doublon, attribuée à l'émission — F (ou AV pour un avoir) + année + numéro
+// (« F2026-0001 »). Décision du 14/10/2026 : le code du dossier n'entre plus
+// dans la référence (il reste affiché à côté). Miroir de refFacture côté front.
 export type ReferenceFacture = {
   numero: number | null;
   emiseLe: Date | string | null;
   estAvoir: boolean;
-  codeDossier: string | null;
-  rangDossier: number | null;
 };
 
 export function refFacture(f: ReferenceFacture): string | null {
-  if (f.codeDossier && f.rangDossier != null) return `${f.codeDossier}-${f.rangDossier}`;
   if (f.numero == null) return null;
   const annee = (f.emiseLe ? new Date(f.emiseLe) : new Date()).getFullYear();
   return `${f.estAvoir ? 'AV' : 'F'}${annee}-${String(f.numero).padStart(4, '0')}`;

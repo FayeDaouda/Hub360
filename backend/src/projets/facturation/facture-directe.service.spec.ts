@@ -63,12 +63,12 @@ describe('FacturationService · facture directe d’un lead', () => {
     await expect(monter().s.creerFactureDirecte('S1', { dossierCrmId: 'D1', lignes: [{ designation: ' ', montantHt: 1 }] })).rejects.toThrow(BadRequestException);
   });
 
-  it('validation CFO sans projet : référence CODE-n du lead, émise, échéance à 15 jours', async () => {
+  it('validation CFO sans projet : numéro de la suite de la société, émise, échéance à 15 jours', async () => {
     const facture = { id: 'F1', projetId: null, dossierCrmId: 'D1', statut: 'brouillon', montantHt: new Prisma.Decimal(100_000), echeanceLe: null };
     const { s, updateMany } = monter({ facture });
     await s.emettreParId('S1', 'F1', 'U1');
     const { data } = updateMany.mock.calls[0][0];
-    // Référence affichée « D_ALM.26-3 » : code du lead + rang suivant du dossier.
+    // Référence affichée « F2026-0042 » ; le code du lead reste rattaché à la facture.
     expect(data).toMatchObject({ numero: 42, codeDossier: 'D_ALM.26', rangDossier: 3, statut: 'emise' });
     const attendue = new Date(Date.now() + 15 * 86_400_000).toISOString().slice(0, 10);
     expect(data.echeanceLe).toBe(attendue);

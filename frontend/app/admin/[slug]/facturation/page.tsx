@@ -186,7 +186,9 @@ export default function FinancesPage({ params }: Props) {
       dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
       estAvoir: f.estAvoir,
       clientNom: f.client?.nom ?? '—',
-      objet: f.libelle,
+      // Le code du dossier n'entre plus dans le numéro (suite unique
+      // F2026-0001…) : il reste lisible dans l'objet.
+      objet: [f.dossierCrm?.code ?? f.projet?.code, f.libelle].filter(Boolean).join(' · '),
       // Facture à lignes (refacturation d'études) : une ligne par étude,
       // « lignes distinctes de la facture » (CGV art. 5) ; sinon montant unique.
       lignes:

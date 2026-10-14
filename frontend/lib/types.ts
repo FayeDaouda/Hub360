@@ -900,18 +900,9 @@ export function statutFactureEffectif(
   return 'emise';
 }
 
-// MIROIR du backend domaine/config.ts::refFacture (maquette Finances, oct.
-// 2026) : code du dossier + rang de la facture dans ce dossier, attribués à
-// l'émission (« D_ALM.26-1 ») ; sans dossier (devis libre), la séquence de la
-// société (F / AV + année + numéro).
-export function refFacture(f: {
-  numero: number | null;
-  emiseLe: string | null;
-  estAvoir: boolean;
-  codeDossier: string | null;
-  rangDossier: number | null;
-}): string | null {
-  if (f.codeDossier && f.rangDossier != null) return `${f.codeDossier}-${f.rangDossier}`;
+// MIROIR du backend domaine/config.ts::refFacture : une seule suite par
+// société, attribuée à l'émission — F (AV pour un avoir) + année + numéro.
+export function refFacture(f: { numero: number | null; emiseLe: string | null; estAvoir: boolean }): string | null {
   if (f.numero == null) return null;
   const annee = (f.emiseLe ? new Date(f.emiseLe) : new Date()).getFullYear();
   return `${f.estAvoir ? 'AV' : 'F'}${annee}-${String(f.numero).padStart(4, '0')}`;
@@ -1134,9 +1125,7 @@ export type FactureCentrale = {
   projetId: string | null;
   projet: { id: string; code: string; programme: string } | null;
   client: { id: string; nom: string } | null;
-  // Brouillon : référence qu'il prendra à l'émission (rang suivant du dossier).
   affaireTtc: number; // montant de l'affaire (TTC) — cf. Facture
-  referencePrevue: string | null;
   // Tranche d'échéancier « k/N » ; null hors échéancier.
   tranche: { rang: number; total: number } | null;
   // Facture directe d'un lead (sans offre) ; null sinon.
@@ -1152,7 +1141,7 @@ export type LeadFacturable = {
   client: string;
   localisation: string;
   statut: StatutCrm;
-  prochaineReference: string; // « D_ALM.26-1 » : référence de la prochaine facture émise
+  prochaineReference: string; // « F2026-0013 » : référence indicative de la prochaine facture émise
 };
 
 // MIROIR du backend devis/domaine.ts::refDevis

@@ -347,8 +347,7 @@ export class FacturationService {
       orderBy: [{ creeLe: 'desc' }],
     });
     const aujourdhui = jourCourant();
-    const [rangs, tranches, affaires] = await Promise.all([
-      this.rangsParDossier(societeId),
+    const [tranches, affaires] = await Promise.all([
       this.tranchesEcheancier(societeId, [...new Set(factures.map((f) => f.projetId).filter((x): x is string => !!x))]),
       this.seuilCeo.montantsAffaire(factures),
     ]);
@@ -393,9 +392,6 @@ export class FacturationService {
         projetId: f.projetId,
         projet: f.projet ? { id: f.projet.id, code: f.projet.code, programme: f.projet.programme } : null,
         client: client ? { id: client.id, nom: client.nom } : null,
-        // Brouillon : la référence qu'il prendra à l'émission (rang suivant du
-        // dossier) — indicative, attribuée seulement par la validation.
-        referencePrevue: prochaineReference(f.statut === 'brouillon' ? (f.dossierCrm?.code ?? f.projet?.code ?? null) : null, rangs),
         // Tranche d'échéancier « k/N » (maquette Finances) ; null hors échéancier.
         tranche: tranches.get(f.id) ?? null,
         // Facture directe d'un lead (sans offre) ; null sinon.
@@ -418,27 +414,23 @@ export class FacturationService {
       select: { id: true, code: true, statut: true, localisation: true, localite: { select: { nom: true } }, client: { select: { nom: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    const rangs = await this.rangsParDossier(societeId);
+    const suivante = await this.prochaineReference(societeId);
     return dossiers.map((d) => ({
       id: d.id,
       code: d.code,
       client: d.client.nom,
       localisation: d.localite?.nom ?? d.localisation,
       statut: d.statut,
-      // « Nouvelle facture D_ALM.26-1 » : la référence que prendra la prochaine
-      // facture émise sur ce lead.
-      prochaineReference: prochaineReference(d.code, rangs)!,
+      // Indicative : la référence que prendrait la prochaine facture émise
+      // (une autre émission entre-temps la décale).
+      prochaineReference: suivante,
     }));
   }
 
-  // Dernier rang de facture émis par code de dossier.
-  private async rangsParDossier(societeId: string): Promise<Map<string, number>> {
-    const g = await this.prisma.facture.groupBy({
-      by: ['codeDossier'],
-      where: { societeId, codeDossier: { not: null } },
-      _max: { rangDossier: true },
-    });
-    return new Map(g.map((x) => [x.codeDossier!, x._max.rangDossier ?? 0]));
+  // Référence que prendrait la prochaine facture émise (suite de la société).
+  private async prochaineReference(societeId: string): Promise<string> {
+    const max = await this.prisma.facture.aggregate({ where: { societeId, numero: { not: null } }, _max: { numero: true } });
+    return refFacture({ numero: (max._max.numero ?? 0) + 1, emiseLe: null, estAvoir: false })!;
   }
 
   // Position « k/N » des factures d'échéancier (jalons) de chaque projet, dans
@@ -1236,6 +1228,3 @@ function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string
 // dossier pour la référence affichée (null sans dossier).
 type Sequence = { numero: number; codeDossier: string | null; rangDossier: number | null };
 
-function prochaineReference(code: string | null, rangs: Map<string, number>): string | null {
-  return code ? `${code}-${(rangs.get(code) ?? 0) + 1}` : null;
-}

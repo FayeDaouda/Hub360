@@ -95,7 +95,7 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
             <td data-label="Numéro">
               <span className="cell-stack">
                 <span className={`fin-code${f.reference ? '' : ' factu-ref-prevue'}`} title={f.reference ? undefined : 'Référence attribuée à la validation'}>
-                  {f.reference ?? f.referencePrevue ?? 'brouillon'}
+                  {f.reference ?? 'brouillon'}
                 </span>
                 {f.dossierCrm ? (
                   <span className="cell-sub">directe</span>
@@ -144,7 +144,7 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
 
 function exporterFactures(factures: FactureCentrale[]) {
   exporterCsv('factures', [
-    { titre: 'Numéro', valeur: (f) => f.reference ?? f.referencePrevue ?? 'brouillon' },
+    { titre: 'Numéro', valeur: (f) => f.reference ?? 'brouillon' },
     { titre: 'Libellé', valeur: (f) => f.libelle },
     { titre: 'Client', valeur: (f) => f.client?.nom },
     { titre: 'Projet / dossier', valeur: (f) => f.dossierCrm?.code ?? f.projet?.code },

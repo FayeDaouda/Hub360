@@ -484,12 +484,12 @@ describe('FacturationService.findAllPourSociete', () => {
   });
 });
 
-describe('refFacture · numérotation par dossier (maquette Finances)', () => {
-  it('code du dossier + rang ; sans dossier, séquence de la société', () => {
+describe('refFacture · numérotation unique de la société', () => {
+  it('une seule suite par société, dossier ou non (décision du 14/10/2026)', () => {
     const { refFacture } = jest.requireActual('../domaine/config');
-    expect(refFacture({ numero: 42, emiseLe: '2026-09-23', estAvoir: false, codeDossier: 'D_ALM.26', rangDossier: 1 })).toBe('D_ALM.26-1');
-    expect(refFacture({ numero: 7, emiseLe: '2026-09-23', estAvoir: false, codeDossier: null, rangDossier: null })).toBe('F2026-0007');
-    expect(refFacture({ numero: null, emiseLe: null, estAvoir: false, codeDossier: null, rangDossier: null })).toBeNull();
+    expect(refFacture({ numero: 42, emiseLe: '2026-09-23', estAvoir: false, codeDossier: 'D_ALM.26', rangDossier: 1 })).toBe('F2026-0042');
+    expect(refFacture({ numero: 7, emiseLe: '2026-09-23', estAvoir: true })).toBe('AV2026-0007');
+    expect(refFacture({ numero: null, emiseLe: null, estAvoir: false })).toBeNull();
   });
 });
 

@@ -64,7 +64,7 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
           <div>
             <p className="fiche-crm-titre">{f.estAvoir ? 'Avoir' : 'Facture'}</p>
             <h2 id="fp-facture" className="fiche-crm-code fac-titre">
-              {f.reference ?? f.referencePrevue ?? 'Brouillon'}
+              {f.reference ?? 'Brouillon'}
               <span className={`pill ${statut.classe}`}>{statut.libelle}</span>
             </h2>
             <p className="fiche-crm-meta">
