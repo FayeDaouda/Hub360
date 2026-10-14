@@ -28,7 +28,7 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
 
 ## Première installation
 
-1. **Serveur** : Hetzner Cloud, Ubuntu 24.04, 2 vCPU / 4 Go (CX22) suffisent
+1. **Serveur** : Hetzner Cloud, Ubuntu 24.04, 2 vCPU / 4 Go (CX23, ex-CX22) suffisent
    au départ. Ajouter sa clé SSH à la création.
 2. **Domaine** : chez le registraire, un enregistrement `A` du domaine choisi
    (ex. `hub.greyconcrete.sn`) vers l'IP du serveur. Attendre qu'il réponde
@@ -61,9 +61,7 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
 Même dossier, sur un second petit serveur (CX11, ~4 €/mois), avec son propre
 `.env` : un autre domaine (ex. `preprod.hub.greyconcrete.sn`), d'autres
 secrets, et `HUB_DONNEES_DEMO=autorise` si l'on veut y charger la démo
-(`docker compose exec backend npx ts-node prisma/seed.ts` n'est pas inclus
-dans l'image : charger la démo depuis un poste de développement pointé sur
-cette base). Chaque mise à jour passe par la pré-production avant la
+(`docker compose --profile demo run --rm demo`). Chaque mise à jour passe par la pré-production avant la
 production.
 
 ## Mettre à jour
