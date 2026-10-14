@@ -47,6 +47,8 @@ export function lienNotificationAdmin(
   if ((n.type === 'facture_emise' || n.type === 'facture_payee' || n.type === 'rappel_facture') && n.factureId) {
     return `${base}/facturation?facture=${n.factureId}`;
   }
+  // Élément ajouté en TS : les devis du projet (l'avenant y est en préparation).
+  if (n.type === 'avenant_ts' && n.projetId) return `${base}/facturation?projetId=${n.projetId}`;
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).
   if (n.type === 'facture_a_valider') {
     return n.factureId ? `/admin/${slug}/facturation?facture=${n.factureId}` : `/admin/${slug}/facturation?onglet=factures`;

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { STATUTS_DEVIS } from '@/lib/types';
 import {
   assignerTache,
   deciderProlongation,
@@ -182,6 +184,16 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           </div>
         ))}
       </dl>
+      {tache.avenant && (
+        <p className="po-panneau-note">
+          Facturé par l’avenant{' '}
+          <Link className="lien-inline" href={`/admin/${slug}/facturation?devis=${tache.avenant.devisId}`}>
+            {tache.avenant.reference ?? 'en préparation'}
+          </Link>{' '}
+          · {STATUTS_DEVIS[tache.avenant.statut]}
+          {tache.avenant.statut === 'brouillon' && ' : à envoyer au client'}
+        </p>
+      )}
       {tache.etat.code === 'non_necessaire' && tache.motif && <p className="po-panneau-note">Non nécessaire : {tache.motif}.</p>}
       {carte.etat.code === 'desactivee' && (
         <p className="po-panneau-note">Carte désactivée : {carte.etat.motif}. Son temps n’est pas compté.</p>

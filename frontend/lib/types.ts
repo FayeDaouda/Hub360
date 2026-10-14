@@ -454,6 +454,7 @@ export type NotificationType =
   | 'rappel_offre'
   | 'rappel_facture'
   | 'rappel_tache'
+  | 'avenant_ts'
   | 'offre_acceptee'
   | 'offre_refusee'
   | 'contrat_signe'

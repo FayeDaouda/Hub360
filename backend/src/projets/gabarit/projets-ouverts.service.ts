@@ -3,7 +3,7 @@ import { JalonFacture, Phase, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import type { Temps } from '../../reglages/gabarit';
-import { alerteAvenant, refDevis } from '../../devis/domaine';
+import { alerteAvenant, refDevis, statutDevisEffectif } from '../../devis/domaine';
 import { PHASES_PAR_CATEGORIE } from '../domaine/config';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
@@ -39,6 +39,7 @@ const AVEC_TACHES = {
           valideePar: { select: { prenom: true, nom: true } },
           prolongations: { orderBy: { demandeLe: 'desc' } },
           pieces: { orderBy: [{ version: 'asc' }, { createdAt: 'asc' }], select: { id: true, nom: true, version: true } },
+          devisTs: { select: { id: true, statut: true, dateValidite: true, dateEnvoi: true, numero: true, codeDossier: true, rangDossier: true } },
         },
       },
     },
@@ -278,6 +279,8 @@ export class ProjetsOuvertsService {
           version: t.version,
           // Fichiers de chaque remise (v01, v02…), sans leur contenu.
           pieces: t.pieces,
+          // Élément TS : devis d'avenant qui le facture et son état.
+          avenant: t.devisTs ? { devisId: t.devisTs.id, reference: refDevis(t.devisTs), statut: statutDevisEffectif(t.devisTs, jour) } : null,
           valideeLe: iso(t.valideeLe),
           valideePar: nom(t.valideePar),
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,

@@ -1,5 +1,6 @@
 import { apiSociete } from './client-api';
 import type { Temps } from './reglages';
+import type { StatutDevisEffectif } from './types';
 
 // -----------------------------------------------------------------------------
 // Projets ouverts selon le gabarit (maquette « Projets » du boss). Branché sur :
@@ -84,6 +85,8 @@ export type TacheOuverte = {
   motif: string | null;
   version: number;
   pieces: PieceRemise[];
+  // Élément TS : devis d'avenant qui le facture.
+  avenant: { devisId: string; reference: string | null; statut: StatutDevisEffectif } | null;
   valideeLe: string | null;
   valideePar: string | null;
   assigne: { id: string; nom: string; cellule: string | null } | null;
@@ -236,8 +239,14 @@ export function definirDateVisite(slug: string, projetId: string, date: string |
 }
 
 // Élément demandé par le client, ajouté en TS à une carte « par unité ».
-export function ajouterTs(slug: string, projetId: string, carteId: string, element: string) {
-  return apiSociete<{ id: string; libelle: string }>(slug, `/projets-ouverts/${projetId}/ts`, { method: 'POST', body: { carteId, element } });
+// Reprise mineure (TS-MIN, forfait) ou majeure (TS-MAJ : tarif CO × surface ×
+// planches) : la ligne du devis d'avenant est chiffrée par le catalogue.
+export type RepriseTs = { reprise: 'mineure' } | { reprise: 'majeure'; surfaceM2: number; planches: number };
+export function ajouterTs(slug: string, projetId: string, carteId: string, element: string, reprise: RepriseTs) {
+  return apiSociete<{ id: string; libelle: string; devisId: string }>(slug, `/projets-ouverts/${projetId}/ts`, {
+    method: 'POST',
+    body: { carteId, element, ...reprise },
+  });
 }
 
 // Fil de discussion d'une carte ou d'une tâche (un niveau de réponse).

@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 
 // PATCH …/projets-ouverts/:id/taches/:tacheId/assignation — null = retirer.
 export class AssignerTacheDto {
@@ -40,6 +40,11 @@ export class DeciderTacheDto {
 export class AjouterTsDto {
   @IsString() carteId!: string;
   @IsString() @MinLength(2) @MaxLength(80) element!: string;
+  // Produit du devis d'avenant, choisi par l'Architecte DPLG : reprise mineure
+  // (TS-MIN, forfait) ou majeure (TS-MAJ : tarif CO × surface × planches).
+  @IsIn(['mineure', 'majeure']) reprise!: 'mineure' | 'majeure';
+  @ValidateIf((o) => o.reprise === 'majeure') @IsInt() @Min(1) surfaceM2?: number;
+  @ValidateIf((o) => o.reprise === 'majeure') @IsInt() @Min(1) planches?: number;
 }
 
 // POST …/taches/:tacheId/prolongation — par la personne assignée.

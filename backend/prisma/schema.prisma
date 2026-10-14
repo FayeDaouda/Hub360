@@ -194,6 +194,7 @@ enum NotificationType {
   rappel_offre // offre envoyée sans réponse à J+3 puis J+6
   rappel_facture // facture échue non soldée (puis chaque semaine)
   rappel_tache // tâche due demain, ou passée en retard
+  avenant_ts // élément ajouté en TS : ligne ajoutée au devis d'avenant, à envoyer
   offre_acceptee
   offre_refusee
   contrat_signe
@@ -1388,6 +1389,7 @@ model Devis {
   factureConvertie   Facture?     @relation("DevisConversion")
   facturesEcheancier Facture[]    @relation("DevisEcheancier")
   contrats           Contrat[]
+  tachesTs           TacheProjet[] // éléments TS facturés par cet avenant
 
   @@unique([societeId, numero])
   @@unique([societeId, codeDossier, rangDossier])
@@ -1986,8 +1988,12 @@ model TacheProjet {
   version      Int               @default(0) // dernière remise (1 = v01)
   valideeLe    DateTime?         @map("validee_le")
   valideeParId String?           @map("validee_par_id")
+  // Élément ajouté en TS : devis d'avenant qui le facture (ligne ajoutée à
+  // l'ajout). Le devis n'est jamais recréé — seules ses lignes le sont.
+  devisTsId    String?           @map("devis_ts_id")
 
   projet        Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  devisTs       Devis?                 @relation(fields: [devisTsId], references: [id], onDelete: SetNull)
   carte         CarteProjet            @relation(fields: [carteId], references: [id], onDelete: Cascade)
   assigne       Collaborateur?         @relation("TacheProjetAssigne", fields: [assigneId], references: [id], onDelete: SetNull)
   valideePar    Utilisateur?           @relation("TacheProjetValideePar", fields: [valideeParId], references: [id], onDelete: SetNull)

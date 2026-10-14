@@ -440,6 +440,9 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
 function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierProjetOuvert; onMaj: () => Promise<void> }) {
   const [carteId, setCarteId] = useState(d.optionsTs[0].carteId);
   const [element, setElement] = useState('');
+  const [reprise, setReprise] = useState<'mineure' | 'majeure'>('mineure');
+  const [surface, setSurface] = useState('');
+  const [planches, setPlanches] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
 
@@ -447,9 +450,17 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
     setEnvoi(true);
     setMessage(null);
     try {
-      const t = await ajouterTs(slug, d.id, carteId, element.trim());
+      const t = await ajouterTs(
+        slug,
+        d.id,
+        carteId,
+        element.trim(),
+        reprise === 'majeure' ? { reprise, surfaceM2: Number(surface), planches: Number(planches) } : { reprise },
+      );
       setElement('');
-      setMessage({ ok: true, texte: `${t.libelle} ajoutée au projet.` });
+      setSurface('');
+      setPlanches('');
+      setMessage({ ok: true, texte: `${t.libelle} ajoutée au projet et au devis d’avenant (en préparation, à envoyer au client).` });
       await onMaj();
     } catch (e) {
       setMessage({ ok: false, texte: e instanceof Error && e.message ? e.message : 'L’ajout en TS a échoué.' });
@@ -457,6 +468,9 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
       setEnvoi(false);
     }
   }
+
+  const entier = (v: string) => Number.isInteger(Number(v)) && Number(v) >= 1;
+  const valide = element.trim().length >= 2 && (reprise === 'mineure' || (entier(surface) && entier(planches)));
 
   return (
     <div className="po-ts">
@@ -475,9 +489,44 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
           placeholder="Élément ajouté par le client (ex. Bureau)"
           onChange={(e) => setElement(e.target.value)}
         />
-        <button type="button" className="btn-primary" disabled={envoi || element.trim().length < 2} onClick={ajouter}>
+        <button type="button" className="btn-primary" disabled={envoi || !valide} onClick={ajouter}>
           {envoi ? 'Ajout…' : 'Ajouter en TS'}
         </button>
+      </div>
+      <div className="po-ts-ligne po-ts-reprise">
+        <select
+          className="field-input"
+          aria-label="Chiffrage de l’avenant"
+          value={reprise}
+          onChange={(e) => setReprise(e.target.value as 'mineure' | 'majeure')}
+        >
+          <option value="mineure">Reprise mineure (TS-MIN, forfait)</option>
+          <option value="majeure">Reprise majeure (TS-MAJ, tarif CO × surface × planches)</option>
+        </select>
+        {reprise === 'majeure' && (
+          <>
+            <input
+              className="field-input"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              aria-label="Surface concernée (m²)"
+              placeholder="Surface concernée (m²)"
+              value={surface}
+              onChange={(e) => setSurface(e.target.value)}
+            />
+            <input
+              className="field-input"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              aria-label="Planches concernées"
+              placeholder="Planches"
+              value={planches}
+              onChange={(e) => setPlanches(e.target.value)}
+            />
+          </>
+        )}
       </div>
       {message && <p className={message.ok ? 'po-aide' : 'field-erreur'}>{message.texte}</p>}
     </div>

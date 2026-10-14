@@ -169,6 +169,12 @@ export class DevisService {
     return this.detail(societeId, devis);
   }
 
+  // Lignes d'un devis de projet passées aux règles du catalogue, sans rien
+  // écrire : un refus (ex. TS-MAJ sans catégorie CO) tombe avant toute action.
+  async verifierLignesProjet(societeId: string, projetId: string, lignes: LigneDevisDto[]) {
+    await this.appliquerCatalogue(societeId, lignes, await this.contexteLignes(societeId, { projetId }));
+  }
+
   async patch(societeId: string, id: string, dto: PatchDevisDto) {
     const devis = await this.brouillon(societeId, id);
     if (devis.dossierCrm) {
