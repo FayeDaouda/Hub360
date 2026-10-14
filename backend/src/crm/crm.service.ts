@@ -22,7 +22,7 @@ import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
-import { SeuilCeoService } from '../finances/seuil-ceo.service';
+import { ROLE_CEO, SeuilCeoService } from '../finances/seuil-ceo.service';
 import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
@@ -431,6 +431,7 @@ export class CrmService {
         where: { id },
         include: INCLUDE_DOSSIER,
       });
+      await this.notifications.notifierDossierCrm({ societeId, dossierId: id, evenement: 'offre_envoyee', parId: acteur.userId });
       return {
         projet: versDossierCrm(d, opts),
         projetCree: null,
@@ -458,6 +459,21 @@ export class CrmService {
         parId: acteur.userId,
         commentaire,
       });
+    }
+    // Offre au-delà du seuil de contresignature : la validation revient au
+    // CEO — il est prévenu en plus de la CFO (14/10/2026).
+    if (action === 'soumettre') {
+      const montant = await this.seuilCeo.offreAuDelaDuSeuil(societeId, id);
+      if (montant !== null) {
+        await this.notifications.envoyer({
+          societeId,
+          type: 'dossier_soumis',
+          titre: `${dossierMaj.code} · ${dossierMaj.programme} — offre de ${Math.round(montant).toLocaleString('fr-FR')} FCFA TTC à contresigner (au-delà du seuil)`,
+          destinataireIds: await this.notifications.titulairesRole(societeId, ROLE_CEO),
+          parId: acteur.userId,
+          dossierCrmId: id,
+        });
+      }
     }
 
     return {

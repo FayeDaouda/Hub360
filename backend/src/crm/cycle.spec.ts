@@ -92,7 +92,11 @@ function monter(
     }),
   };
   const facturation = { preparerDepuisOffre: jest.fn().mockResolvedValue(4), figerPartsOffres: jest.fn() };
-  const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
+  const notifications = {
+    notifierDossierCrm: jest.fn().mockResolvedValue(undefined),
+    envoyer: jest.fn().mockResolvedValue(undefined),
+    titulairesRole: jest.fn().mockResolvedValue(['UCEO']),
+  };
   return {
     prisma,
     devis,
@@ -103,7 +107,10 @@ function monter(
       devis as unknown as DevisService,
       facturation as unknown as FacturationService,
       notifications as unknown as NotificationsService,
-      { verifierOffreDossier: jest.fn().mockResolvedValue(undefined) } as unknown as SeuilCeoService,
+      {
+        verifierOffreDossier: jest.fn().mockResolvedValue(undefined),
+        offreAuDelaDuSeuil: jest.fn().mockResolvedValue(null),
+      } as unknown as SeuilCeoService,
     ),
   };
 }
@@ -171,8 +178,8 @@ describe('CrmService.agir', () => {
     const { svc, prisma, devis, notifications } = monter('en_validation');
     const r = await svc.agir('S1', CFO as never, 'D1', 'valider', undefined);
     expect(devis.emettreOffre).toHaveBeenCalledTimes(1);
-    // Hors tableau validé : l'envoi de l'offre au client ne notifie personne.
-    expect(notifications.notifierDossierCrm).not.toHaveBeenCalled();
+    // Offre partie chez le client : le propriétaire est prévenu (14/10/2026).
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith(expect.objectContaining({ evenement: 'offre_envoyee' }));
     expect(prisma.dossierCrm.updateMany.mock.calls[0][0].data).toEqual({
       statut: 'offre_envoyee',
     });

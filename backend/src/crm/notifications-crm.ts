@@ -22,6 +22,7 @@ import { ChampsFiche, TOTAL_CHAMPS_FICHE, champsManquants } from './fiche';
 export type EvenementCrm =
   | 'dossier_soumis'
   | 'dossier_renvoye'
+  | 'offre_envoyee'
   | 'offre_acceptee'
   | 'offre_refusee'
   | 'contrat_signe';
@@ -33,6 +34,7 @@ export type CibleCrm = 'daf' | 'proprietaire' | 'apporteur';
 export const EVENEMENT_PAR_ACTION: Partial<Record<ActionCrm, EvenementCrm>> = {
   soumettre: 'dossier_soumis',
   renvoyer: 'dossier_renvoye',
+  valider: 'offre_envoyee',
 };
 
 // Ordre = priorité du titre quand une même personne cumule deux cibles (le
@@ -40,6 +42,7 @@ export const EVENEMENT_PAR_ACTION: Partial<Record<ActionCrm, EvenementCrm>> = {
 export const CIBLES_EVENEMENT: Record<EvenementCrm, CibleCrm[]> = {
   dossier_soumis: ['daf'],
   dossier_renvoye: ['proprietaire'],
+  offre_envoyee: ['proprietaire'],
   offre_acceptee: ['proprietaire', 'apporteur'],
   offre_refusee: ['proprietaire', 'apporteur'],
   contrat_signe: ['proprietaire', 'daf'],
@@ -72,6 +75,8 @@ export function titreNotificationCrm(
       return ctx.commentaire
         ? `${dossier} — renvoyé par la DAF : « ${extrait(ctx.commentaire)} »`
         : `${dossier} — renvoyé par la DAF`;
+    case 'offre_envoyee':
+      return `${dossier} — offre validée et envoyée au client`;
     case 'offre_acceptee':
       return cible === 'proprietaire'
         ? `${dossier} — offre acceptée par le client, contrat à préparer`

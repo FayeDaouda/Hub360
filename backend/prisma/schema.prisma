@@ -189,6 +189,7 @@ enum NotificationType {
   // Cycle CRM (tableau validé sept. 2026) — cf. src/crm/notifications-crm.ts
   dossier_soumis
   dossier_renvoye
+  offre_envoyee // offre validée par la CFO et partie chez le client
   offre_acceptee
   offre_refusee
   contrat_signe

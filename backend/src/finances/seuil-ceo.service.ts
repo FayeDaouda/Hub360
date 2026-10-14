@@ -101,6 +101,19 @@ export class SeuilCeoService {
     if (offre) await this.exigerAuDela(societeId, montantTtcLignes(offre.lignes));
   }
 
+  // Montant TTC de l'offre soumise d'un dossier si elle dépasse le seuil de
+  // contresignature (validation par le CEO), sinon null.
+  async offreAuDelaDuSeuil(societeId: string, dossierId: string): Promise<number | null> {
+    const offre = await this.prisma.devis.findFirst({
+      where: { societeId, dossierCrmId: dossierId, statut: 'brouillon' },
+      select: { lignes: LIGNES_TTC },
+      orderBy: { creeLe: 'desc' },
+    });
+    if (!offre) return null;
+    const montant = montantTtcLignes(offre.lignes);
+    return signataireRequis(montant, await this.seuil(societeId)) === 'ceo' ? montant : null;
+  }
+
   async verifierFacture(role: string, societeId: string, factureId: string) {
     if (role !== ROLE_CEO) return;
     const f = await this.prisma.facture.findFirst({

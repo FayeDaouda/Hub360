@@ -16,6 +16,7 @@ describe('CIBLES_EVENEMENT — tableau validé', () => {
     expect(CIBLES_EVENEMENT).toEqual({
       dossier_soumis: ['daf'],
       dossier_renvoye: ['proprietaire'],
+      offre_envoyee: ['proprietaire'],
       offre_acceptee: ['proprietaire', 'apporteur'],
       offre_refusee: ['proprietaire', 'apporteur'],
       contrat_signe: ['proprietaire', 'daf'],

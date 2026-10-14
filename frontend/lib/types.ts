@@ -450,6 +450,7 @@ export type NotificationType =
   // Cycle CRM (back-office) — ouvrent le dossier dans le CRM.
   | 'dossier_soumis'
   | 'dossier_renvoye'
+  | 'offre_envoyee'
   | 'offre_acceptee'
   | 'offre_refusee'
   | 'contrat_signe'
