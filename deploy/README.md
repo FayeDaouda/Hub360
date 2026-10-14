@@ -51,10 +51,17 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
    docker compose logs -f backend      # migrations puis « HUB API démarrée »
    ```
    Le HUB répond sur `https://<domaine>`.
-6. **Premier compte** : la base est vide. Créer le compte du CIO et la société
-   avec le script d'amorçage (à fournir avec la reprise des vraies données,
-   phase 3). Ne jamais lancer `prisma db seed` ici : les scripts de démo sont
-   refusés en production.
+6. **Premier compte** : la base est vide. Le script de démarrage installe le
+   socle réel (rôles, matrice des droits, société, catalogue) et crée le compte
+   du CIO, sans aucune donnée de démo :
+   ```sh
+   docker compose --profile demarrage run --rm \
+     -e HUB_CIO_EMAIL=prenom.nom@greyconcrete.sn -e HUB_CIO_PRENOM=Prénom -e HUB_CIO_NOM=Nom \
+     demarrage
+   ```
+   Il affiche une seule fois un mot de passe provisoire : le CIO se connecte
+   avec, puis le change (menu du compte). Rejouable sans risque. Ne jamais
+   lancer `prisma db seed` ici : les scripts de démo sont refusés en production.
 
 ## Pré-production
 
