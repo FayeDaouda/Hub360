@@ -19,7 +19,3 @@ export class ChangerMotDePasseDto {
 export class MotDePasseOublieDto {
   @IsEmail() email!: string;
 }
-
-export class InviterCollaborateurDto {
-  @IsEmail() email!: string;
-}

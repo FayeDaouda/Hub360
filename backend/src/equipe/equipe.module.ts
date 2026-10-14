@@ -7,17 +7,14 @@ import { CellulesService } from './cellules.service';
 import { CellulesController } from './cellules.controller';
 import { CollaborateursService } from './collaborateurs.service';
 import { CollaborateursController } from './collaborateurs.controller';
-import { IndicateursController } from './indicateurs.controller';
-import { AccesIndicateursGuard } from './acces-indicateurs.guard';
 
 @Module({
   imports: [AuthModule, ReglagesModule], // ComptesService (invitations) ; jours fériés (charge du mois)
-  providers: [CellulesService, CollaborateursService, EquipesService, AccesIndicateursGuard],
+  providers: [CellulesService, CollaborateursService, EquipesService],
   controllers: [
     CellulesController,
     EquipesController,
     CollaborateursController,
-    IndicateursController,
   ],
 })
 export class EquipeModule {}

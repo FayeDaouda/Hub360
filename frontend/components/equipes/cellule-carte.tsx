@@ -1,13 +1,19 @@
 'use client';
 
 import { CLIENTELES, ETATS_POSTE, PROCESSUS, STATUTS_CELLULE } from '@/lib/equipes';
-import type { CelluleEquipe } from '@/lib/types';
+import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
+import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur } from '@/lib/types';
 
 type Props = {
   cellule: CelluleEquipe;
   cellules: CelluleEquipe[]; // destinations d'une réaffectation
   ecriture: boolean;
   onReaffecter: (collaborateurId: string, celluleId: string | null) => void;
+  // Reprises de l'ancienne page Équipe (phase 1, G1 à G4) — en écriture.
+  onRenommer: (cellule: CelluleEquipe) => void;
+  onSupprimer: (cellule: CelluleEquipe) => void;
+  onPilote: (celluleId: string, collaborateurId: string | null) => void;
+  onMajMembre: (collaborateurId: string, patch: { niveau?: NiveauCollaborateur; photo?: string | null }) => void;
 };
 
 const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
@@ -15,8 +21,24 @@ const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigi
 // Cellule (maquette « Équipes ») : code ISO 9001, statut, ponctualité, pilote,
 // clientèle et clauses, postes, puis les membres — charge du mois, part des
 // livrables à temps, cellule de rattachement (réaffectation en écriture).
-export function CelluleCarte({ cellule: c, cellules, ecriture, onReaffecter }: Props) {
+export function CelluleCarte({
+  cellule: c,
+  cellules,
+  ecriture,
+  onReaffecter,
+  onRenommer,
+  onSupprimer,
+  onPilote,
+  onMajMembre,
+}: Props) {
   const statut = STATUTS_CELLULE[c.statut];
+
+  async function choisirPhoto(collaborateurId: string, f: File | undefined) {
+    if (!f || !estImage(f)) return;
+    const { url } = await lireImageRedimensionnee(f);
+    onMajMembre(collaborateurId, { photo: url });
+  }
+
   return (
     <section className={`panel glass-panel eq-cellule eq-cellule--${c.statut}`} aria-labelledby={`eq-${c.id}`}>
       <header className="eq-cellule-tete">
@@ -31,8 +53,43 @@ export function CelluleCarte({ cellule: c, cellules, ecriture, onReaffecter }: P
         </span>
       </header>
       <p className="eq-cellule-sous">
-        Pilote : {c.pilote?.nom ?? 'à désigner'} · {CLIENTELES[c.clientele]} · {PROCESSUS[c.processus].iso}
+        Pilote :{' '}
+        {ecriture && c.membres.length > 0 ? (
+          // Le pilote est le chef de team de la cellule (dispatcher) : il
+          // valide les tâches de ses membres — choisi parmi eux.
+          <select
+            className="field-input eq-pilote"
+            aria-label={`Pilote de ${c.nom}`}
+            value={c.pilote?.id ?? ''}
+            onChange={(e) => onPilote(c.id, e.target.value || null)}
+          >
+            <option value="">À désigner</option>
+            {c.membres.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nom}
+              </option>
+            ))}
+          </select>
+        ) : (
+          (c.pilote?.nom ?? 'à désigner')
+        )}{' '}
+        · {CLIENTELES[c.clientele]} · {PROCESSUS[c.processus].iso}
       </p>
+      {ecriture && (
+        <div className="eq-cellule-actions">
+          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onRenommer(c)}>
+            Renommer
+          </button>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm"
+            onClick={() => onSupprimer(c)}
+            title={c.membres.length ? 'Réaffectez d’abord ses membres' : undefined}
+          >
+            Supprimer
+          </button>
+        </div>
+      )}
 
       {c.postes.length > 0 && (
         <ul className="eq-postes">
@@ -49,12 +106,51 @@ export function CelluleCarte({ cellule: c, cellules, ecriture, onReaffecter }: P
         <ul className="eq-membres">
           {c.membres.map((m) => (
             <li key={m.id}>
+              <label
+                className={`eq-avatar${ecriture ? ' eq-avatar--modifiable' : ''}`}
+                style={m.photoUrl ? { backgroundImage: `url(${m.photoUrl})` } : undefined}
+                title={ecriture ? `Changer la photo de ${m.nom}` : undefined}
+              >
+                {!m.photoUrl &&
+                  m.nom
+                    .split(' ')
+                    .map((x) => x[0])
+                    .slice(0, 2)
+                    .join('')}
+                {ecriture && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    aria-label={`Photo de ${m.nom}`}
+                    onChange={(e) => choisirPhoto(m.id, e.target.files?.[0])}
+                  />
+                )}
+              </label>
               <span className="eq-membre">
                 <strong>
                   {m.nom}
                   {m.estPilote && ' · pilote'}
                 </strong>
-                <small>{m.poste ?? m.role}</small>
+                <small>
+                  {m.poste ?? m.role} ·{' '}
+                  {ecriture ? (
+                    <select
+                      className="eq-niveau"
+                      aria-label={`Niveau de ${m.nom}`}
+                      value={m.niveau}
+                      onChange={(e) => onMajMembre(m.id, { niveau: e.target.value as NiveauCollaborateur })}
+                    >
+                      {(Object.keys(NIVEAUX_COLLABORATEUR) as NiveauCollaborateur[]).map((n) => (
+                        <option key={n} value={n}>
+                          {NIVEAUX_COLLABORATEUR[n]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    NIVEAUX_COLLABORATEUR[m.niveau]
+                  )}
+                </small>
               </span>
               <span className="eq-charge" title="Tâches du mois en cours · heures imputées à ce jour">
                 {m.taches} tâche(s) · {heures(m.heures)}

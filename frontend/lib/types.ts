@@ -453,6 +453,8 @@ export type CelluleEquipe = {
     id: string;
     nom: string;
     role: string;
+    niveau: NiveauCollaborateur;
+    photoUrl: string | null; // data URI en transition (cf. Collaborateur.photoUrl)
     poste: string | null;
     estPilote: boolean;
     taches: number; // tâches du mois en cours
@@ -475,79 +477,6 @@ export type VueEquipes = {
   etapesEnCours: { id: string; projet: string; etape: string; libelle: string; assigne: string | null; echeance: string | null; enRetard: boolean }[];
   collaborateurs: { id: string; nom: string; cellule: string | null }[];
   prochainsCodes: Record<ProcessusCellule, string>;
-};
-
-// Un projet tel que présenté sur « Mes indicateurs » (carte active / ligne
-// d'historique). Dérivé serveur — miroir de CollaborateursService.indicateurs.
-export type LigneProjetIndic = {
-  id: string;
-  code: string;
-  programme: string;
-  type: TypeBien;
-  phase: Phase;
-  clientNom: string;
-  checklistPct: number | null; // null = pas encore de checklist
-};
-
-// Indicateurs de performance — calcul de lecture serveur (aucune saisie).
-// `faitAnnuel` / `projetsActifs` / `historique` alimentent la page « Mes
-// indicateurs » ; les 3 premiers champs, le bandeau accueil + la fiche admin.
-export type IndicateursCollaborateur = {
-  projetsEnCours: number;
-  projetsLivres: number;
-  // « Mes tâches » (point 3, sept. 2026, décision boss) — lignes Avant-
-  // projet assignées + items des blocs Permis/Exécution dont ce
-  // collaborateur est responsable, crédités un par un (remplace l'ancien
-  // checklistPct/avantProjetDelais calculés en moyenne de projet, pas
-  // filtrés par assignation individuelle). Deux signaux délais séparés,
-  // pas un score unique : `enRetard` (dérivé à la volée, pour agir tout de
-  // suite) et `respectDelais` (ratio historique, pour la fiabilité dans la
-  // durée) — même logique que pipeline actif / taux de conversion sur le CRM.
-  mesTaches: {
-    total: number;
-    faites: number;
-    pct: number | null; // null = aucune tâche
-    enRetard: number;
-    respectDelais: { aTemps: number; total: number };
-  };
-  // Liste détaillée et filtrable de ces mêmes tâches (point 2, sept. 2026,
-  // décision boss) — une ligne par tâche Avant-projet, une ligne par BLOC
-  // pour Permis/Exécution (le bloc reste l'unité de travail affichée, même
-  // si `mesTaches` ci-dessus compte ses items un par un).
-  taches: TacheIndividuelle[];
-  projetsActifs: LigneProjetIndic[];
-  historique: LigneProjetIndic[]; // projets livrés
-};
-
-export type ModuleTache = 'avant_projet' | 'permis' | 'execution';
-
-export const MODULES_TACHE: Record<ModuleTache, string> = {
-  avant_projet: 'Avant-projet',
-  permis: 'Autorisation',
-  execution: 'Dossier Exécutions',
-};
-
-// Chemin de la section projet correspondante — cf. app/collab/[slug]/projets/[projetId]/…
-export const CHEMIN_MODULE_TACHE: Record<ModuleTache, string> = {
-  avant_projet: 'avant-projet',
-  permis: 'permis',
-  execution: 'execution',
-};
-
-export type TacheIndividuelle = {
-  id: string;
-  module: ModuleTache;
-  libelle: string;
-  projetId: string;
-  projetCode: string;
-  projetProgramme: string;
-  fait: boolean;
-  // Nb d'items faits / total du bloc — module = avant_projet, permis ou
-  // execution, tous assignés par bloc depuis sept. 2026 (même grain partout).
-  faits: number | null;
-  total: number | null;
-  echeance: string | null; // AAAA-MM-JJ
-  enRetard: boolean; // dérivé serveur : non faite ET échéance dépassée
 };
 
 // --- Notifications collaborateur ---

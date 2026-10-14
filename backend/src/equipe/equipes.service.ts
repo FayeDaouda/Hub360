@@ -122,6 +122,8 @@ export class EquipesService {
             id: m.id,
             nom: nomDe(m),
             role: m.role,
+            niveau: m.niveau,
+            photoUrl: m.photoCle,
             poste: titulaires.get(m.id) ?? null,
             estPilote: c.dispatcherId === m.id,
             taches: charge.taches,

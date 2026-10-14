@@ -64,13 +64,6 @@ export function consultationEtCommentaires(session: Session): boolean {
   return [ROLE_CEO, ROLE_CFO].includes(session.role);
 }
 
-// Équipes (maquette du boss, oct. 2026) : CIO, CTO, CEO et Dir. GC ; les
-// autres rôles gardent la page par cellules jusqu'à leur tour. L'écriture
-// suit la matrice.
-export function vueEquipesMaquette(session: Session): boolean {
-  return [ROLE_CIO, ROLE_CTO, ROLE_CEO, ROLE_DIR_GC].includes(session.role);
-}
-
 // Administration du HUB (/groupe : comptes, rôles, salaires) — même règle
 // que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte
 // technique holding_admin (secours).

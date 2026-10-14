@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getVueEquipes, majCollaborateur } from '@/lib/equipe';
+import { definirDispatcher, getVueEquipes, majCollaborateur, renommerCellule, supprimerCellule } from '@/lib/equipe';
 import { getAbsencesAValider } from '@/lib/demandes';
-import { NIVEAUX_COLLABORATEUR, type VueEquipes } from '@/lib/types';
+import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur, type VueEquipes } from '@/lib/types';
 import { AbsencesADecider } from '@/components/absences/absences-a-decider';
+import { ChampModal } from '@/components/admin/champ-modal';
+import { ConfirmModal } from '@/components/admin/confirm-modal';
 import { CelluleCarte } from './cellule-carte';
 import { CreerCellule } from './creer-cellule';
 import { Nomenclature } from './nomenclature';
@@ -22,6 +24,8 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
   const [liste, setListe] = useState<Liste>('cellules');
   const [aDecider, setADecider] = useState<number | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [aRenommer, setARenommer] = useState<CelluleEquipe | null>(null);
+  const [aSupprimer, setASupprimer] = useState<CelluleEquipe | null>(null);
 
   const charger = useCallback(() => {
     getVueEquipes(slug)
@@ -44,6 +48,22 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
       setErreur(e instanceof Error && e.message ? e.message : 'La réaffectation a échoué.');
     }
   }
+
+  // Actions reprises de l'ancienne page Équipe (phase 1, G1 à G4) : chaque
+  // réussite recharge la vue, le serveur fait foi (règles de cellule, 409).
+  async function agir(action: () => Promise<unknown>, repli: string) {
+    setErreur(null);
+    try {
+      await action();
+      charger();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : repli);
+    }
+  }
+  const definirPilote = (celluleId: string, collaborateurId: string | null) =>
+    agir(() => definirDispatcher(slug, celluleId, collaborateurId), 'Le pilote n’a pas été modifié.');
+  const majMembre = (collaborateurId: string, patch: { niveau?: NiveauCollaborateur; photo?: string | null }) =>
+    agir(() => majCollaborateur(slug, collaborateurId, patch), 'La modification a échoué.');
 
   if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
   const i = vue.indicateurs;
@@ -97,7 +117,17 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
         <div className="eq-colonnes">
           <div className="eq-cellules">
             {vue.cellules.map((c) => (
-              <CelluleCarte key={c.id} cellule={c} cellules={vue.cellules} ecriture={ecriture} onReaffecter={reaffecter} />
+              <CelluleCarte
+                key={c.id}
+                cellule={c}
+                cellules={vue.cellules}
+                ecriture={ecriture}
+                onReaffecter={reaffecter}
+                onRenommer={setARenommer}
+                onSupprimer={setASupprimer}
+                onPilote={definirPilote}
+                onMajMembre={majMembre}
+              />
             ))}
           </div>
           <aside className="eq-cote">
@@ -214,6 +244,35 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
             </section>
           )}
         </>
+      )}
+      {/* Hors des cartes « glass » : une modale fixe y serait positionnée par
+          rapport à la carte, pas à l'écran. */}
+      {aRenommer && (
+        <ChampModal
+          titre="Renommer la cellule"
+          label="Nom"
+          valeurInitiale={aRenommer.nom}
+          onSubmit={async (nom) => {
+            await renommerCellule(slug, aRenommer.id, nom.trim());
+            setARenommer(null);
+            charger();
+          }}
+          onClose={() => setARenommer(null)}
+        />
+      )}
+      {aSupprimer && (
+        <ConfirmModal
+          titre="Supprimer la cellule"
+          message={`Supprimer « ${aSupprimer.code} · ${aSupprimer.nom} » ? Une cellule qui a encore des membres ne peut pas être supprimée.`}
+          confirmer="Supprimer"
+          danger
+          onConfirm={async () => {
+            await supprimerCellule(slug, aSupprimer.id);
+            setASupprimer(null);
+            charger();
+          }}
+          onClose={() => setASupprimer(null)}
+        />
       )}
     </div>
   );

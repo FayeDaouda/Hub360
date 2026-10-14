@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { EvenementCompteType, InvitationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -17,61 +17,8 @@ export class ComptesService {
     private email: EmailService,
   ) {}
 
-  // -- Admin (ancienne page Équipe) : invite une fiche d'équipe -------------
-  // Crée / réutilise le compte Utilisateur, le lie au Collaborateur, pose le
-  // rôle Salarié de la société, émet un jeton d'invitation.
-  async inviter(
-    societeId: string,
-    collaborateurId: string,
-    email: string,
-    parId: string,
-  ): Promise<{ lien: string; emailEnvoye: boolean }> {
-    const collab = await this.prisma.collaborateur.findFirst({
-      where: { id: collaborateurId, societeId },
-    });
-    if (!collab) throw new NotFoundException('Collaborateur introuvable');
-
-    let utilisateur = await this.prisma.utilisateur.findUnique({ where: { email } });
-    if (!utilisateur) {
-      utilisateur = await this.prisma.utilisateur.create({
-        data: {
-          email,
-          prenom: collab.prenom,
-          nom: collab.nom,
-          motDePasseHash: null,
-          actif: false,
-        },
-      });
-    }
-
-    const role = await this.prisma.role.findFirst({
-      where: { societeId, nom: 'Salarié', supprimeLe: null },
-    });
-    if (!role) throw new NotFoundException('Rôle Salarié introuvable dans cette société');
-    await this.prisma.utilisateurSocieteRole.upsert({
-      where: {
-        utilisateurId_societeId_roleId: {
-          utilisateurId: utilisateur.id,
-          societeId,
-          roleId: role.id,
-        },
-      },
-      update: {},
-      create: { utilisateurId: utilisateur.id, societeId, roleId: role.id },
-    });
-
-    if (collab.utilisateurId !== utilisateur.id) {
-      await this.prisma.collaborateur.update({
-        where: { id: collab.id },
-        data: { utilisateurId: utilisateur.id },
-      });
-    }
-
-    return this.envoyerInvitation(utilisateur.id, email, collab.prenom, parId);
-  }
-
-  // Jeton d'invitation (72 h) + e-mail + journal. Partagé par l'ancienne page
-  // Équipe et l'Administration du HUB (création depuis un dossier RH).
+  // Jeton d'invitation (72 h) + e-mail + journal. Utilisé par
+  // l'Administration du HUB (création depuis un dossier RH, renvoi).
   async envoyerInvitation(
     utilisateurId: string,
     email: string,
