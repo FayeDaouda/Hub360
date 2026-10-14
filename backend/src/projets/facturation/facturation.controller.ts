@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { FacturationService } from './facturation.service';
 import {
   AjouterPaiementDto,
   CreerEcheancierDto,
+  FactureBureauDto,
   CreerMensualiteDto,
   RefacturerEtudesDto,
   CreerFactureDto,
@@ -96,6 +98,19 @@ export class FacturationController {
     @Body() dto: RefacturerEtudesDto,
   ) {
     return this.facturation.refacturerEtudes(req.user.societeId, id, dto.blocIds);
+  }
+
+  // Facture du bureau d'études d'une étude de l'étape 05 : écriture sur les
+  // factures (même règle que la refacturation qui en découle).
+  @Put('etudes/cartes/:carteId/bureau')
+  @RequiertPermission('finances_factures', 'ecriture')
+  saisirFactureBureau(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('carteId') carteId: string,
+    @Body() dto: FactureBureauDto,
+  ) {
+    return this.facturation.saisirFactureBureau(req.user.societeId, id, carteId, dto);
   }
 
   // Règlement du bureau d'études — une charge : finances_charges (CFO), pas

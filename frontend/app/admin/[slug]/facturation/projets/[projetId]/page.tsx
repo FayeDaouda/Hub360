@@ -15,8 +15,10 @@ import {
   getFacturation,
   majFacture,
   supprimerFacture,
+  saisirFactureBureau,
   supprimerPaiement,
 } from '@/lib/facturation';
+import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
@@ -88,6 +90,14 @@ export default function FacturationPage({ params }: Props) {
   const seuilCeo = useSeuilCeo(params.slug, session);
   const valide = (montantTtc: number) => valideAffaire(session, seuilCeo, montantTtc);
   const [etudesChoisies, setEtudesChoisies] = useState<Set<string>>(new Set());
+  // Facture du bureau d'études en cours de saisie (une étude de l'étape 05).
+  const [saisieBureau, setSaisieBureau] = useState<{
+    carteId: string;
+    libelle: string;
+    bureau: string;
+    montant: string;
+    fichier?: File;
+  } | null>(null);
   const [factu, setFactu] = useState<Facturation | null>(null);
   // En-tête : fourni par la réponse Facturation elle-même (pas d'appel aux
   // routes Projets, fermées aux rôles de direction).
@@ -247,7 +257,8 @@ export default function FacturationPage({ params }: Props) {
 
           {/* Études techniques (étape H3, CGV art. 5) — une facture, une ligne
               par étude (bureau × 1,10) ; le bureau se règle après
-              encaissement du client. Montants de bureau saisis dans Études. */}
+              encaissement du client. La facture du bureau se saisit ici, une
+              ligne par étude de l'étape 05 du gabarit. */}
           {factu.etudes.length > 0 && (
             <section className="panel">
               <h3 className="panel-title">Études techniques — refacturation</h3>
@@ -265,9 +276,9 @@ export default function FacturationPage({ params }: Props) {
                   </thead>
                   <tbody>
                     {factu.etudes.map((e) => (
-                      <tr key={e.blocId}>
+                      <tr key={e.carteId ?? e.blocId}>
                         <td data-label="">
-                          {e.refacturable && droits.ecriture && (
+                          {e.refacturable && e.blocId && droits.ecriture && (
                             <input
                               type="checkbox"
                               aria-label={`Refacturer ${e.libelle}`}
@@ -275,8 +286,8 @@ export default function FacturationPage({ params }: Props) {
                               onChange={(ev) =>
                                 setEtudesChoisies((s) => {
                                   const n = new Set(s);
-                                  if (ev.target.checked) n.add(e.blocId);
-                                  else n.delete(e.blocId);
+                                  if (ev.target.checked) n.add(e.blocId!);
+                                  else n.delete(e.blocId!);
                                   return n;
                                 })
                               }
@@ -299,11 +310,28 @@ export default function FacturationPage({ params }: Props) {
                             {STATUTS_REGLEMENT_BUREAU[e.statutReglement]}
                           </span>
                           {e.statutReglement === 'non_refacture' && !e.refacturable && (
-                            <span className="cell-sub">Bureau et montant à saisir dans Études</span>
+                            <span className="cell-sub">Facture du bureau à saisir</span>
                           )}
                         </td>
                         <td data-label="" className="cell-actions">
-                          {e.statutReglement === 'a_regler' && peutReglerBureau && (
+                          {e.carteId && e.statutReglement === 'non_refacture' && droits.ecriture && (
+                            <button
+                              type="button"
+                              className="lien-inline"
+                              disabled={busy}
+                              onClick={() =>
+                                setSaisieBureau({
+                                  carteId: e.carteId!,
+                                  libelle: e.libelle,
+                                  bureau: e.bureau,
+                                  montant: e.montantBureauHt != null ? String(e.montantBureauHt) : '',
+                                })
+                              }
+                            >
+                              {e.montantBureauHt != null ? 'Modifier la facture du bureau' : 'Saisir la facture du bureau'}
+                            </button>
+                          )}
+                          {e.statutReglement === 'a_regler' && peutReglerBureau && e.blocId && (
                             <button
                               type="button"
                               className="lien-inline"
@@ -315,7 +343,7 @@ export default function FacturationPage({ params }: Props) {
                                   )
                                 ) {
                                   void action(() =>
-                                    marquerBureauRegle(params.slug, params.projetId, e.blocId),
+                                    marquerBureauRegle(params.slug, params.projetId, e.blocId!),
                                   );
                                 }
                               }}
@@ -329,6 +357,74 @@ export default function FacturationPage({ params }: Props) {
                   </tbody>
                 </table>
               </div>
+              {saisieBureau && (
+                <form
+                  className="factu-saisie-bureau"
+                  onSubmit={async (ev) => {
+                    ev.preventDefault();
+                    let fichier: { nom: string; url: string } | undefined;
+                    try {
+                      fichier = saisieBureau.fichier ? await lireFichier(saisieBureau.fichier) : undefined;
+                    } catch (err) {
+                      setErreur(err instanceof Error ? err.message : 'Fichier illisible.');
+                      return;
+                    }
+                    const ok = await action(() =>
+                      saisirFactureBureau(params.slug, params.projetId, saisieBureau.carteId, {
+                        bureau: saisieBureau.bureau.trim(),
+                        montantHt: Number(saisieBureau.montant),
+                        ...(fichier && { fichier: { nom: fichier.nom, url: fichier.url } }),
+                      }),
+                    );
+                    if (ok) setSaisieBureau(null);
+                  }}
+                >
+                  <h4 className="exec-sous-titre">Facture du bureau · {saisieBureau.libelle}</h4>
+                  <div className="field-row">
+                    <label className="field">
+                      <span className="field-label">Bureau d’études</span>
+                      <input
+                        className="field-input"
+                        value={saisieBureau.bureau}
+                        maxLength={120}
+                        onChange={(ev) => setSaisieBureau({ ...saisieBureau, bureau: ev.target.value })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="field-label">Montant HT (FCFA)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        className="field-input"
+                        value={saisieBureau.montant}
+                        onChange={(ev) => setSaisieBureau({ ...saisieBureau, montant: ev.target.value })}
+                        required
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="field-label">Facture (PDF, facultatif)</span>
+                      <input
+                        type="file"
+                        className="field-input"
+                        onChange={(ev) => setSaisieBureau({ ...saisieBureau, fichier: ev.target.files?.[0] })}
+                      />
+                    </label>
+                  </div>
+                  <div className="modal-actions">
+                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setSaisieBureau(null)}>
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={busy || saisieBureau.bureau.trim().length < 2 || !(Number(saisieBureau.montant) > 0)}
+                    >
+                      Enregistrer
+                    </button>
+                  </div>
+                </form>
+              )}
               {droits.ecriture && factu.etudes.some((e) => e.refacturable) && (
                 <div className="modal-actions">
                   <button

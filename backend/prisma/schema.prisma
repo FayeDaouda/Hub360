@@ -1348,6 +1348,9 @@ model BlocEtude {
   id                   String      @id @default(uuid())
   projetId             String      @map("projet_id")
   blocEtudeGabaritId   String?     @map("bloc_etude_gabarit_id")
+  // Carte de l'étape 05 du gabarit (phase 1, 14/10/2026) : la facture du
+  // bureau se saisit dans Finances, une étude par carte.
+  carteProjetId        String?     @map("carte_projet_id")
   // Copié du gabarit à la création (figé), même motif que LigneUnbord.libelle
   // — renommer le gabarit après coup ne réécrit pas les projets en cours.
   // L'ORDRE en revanche n'est PAS figé : trié via blocEtudeGabarit.ordre à la
@@ -1377,11 +1380,13 @@ model BlocEtude {
 
   etudes           Etudes            @relation(fields: [projetId], references: [projetId], onDelete: Cascade)
   blocEtudeGabarit BlocEtudeGabarit? @relation(fields: [blocEtudeGabaritId], references: [id], onDelete: SetNull)
+  carteProjet      CarteProjet?      @relation(fields: [carteProjetId], references: [id], onDelete: SetNull)
   supprimePar      Utilisateur?      @relation("BlocEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
   items            ItemEtude[]
   lignesFacture    LigneFacture[] // refacturation(s) — une seule active à la fois
 
   @@unique([projetId, blocEtudeGabaritId])
+  @@unique([projetId, carteProjetId])
   @@map("blocs_etude")
 }
 
@@ -2584,6 +2589,7 @@ model CarteProjet {
   projet       Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
   taches       TacheProjet[]
   commentaires CommentaireProjet[]
+  blocsEtude   BlocEtude[]
 
   @@unique([projetId, cle])
   @@map("cartes_projet")

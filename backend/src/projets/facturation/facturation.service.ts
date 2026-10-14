@@ -42,6 +42,9 @@ const jourCourant = () => new Date().toISOString().slice(0, 10);
 // endpoint @EcritureCollaborateur, donc AccesProjetGuard rejette toute écriture
 // d'un collaborateur ; la lecture suit la règle projet habituelle, comme le
 // pré-bilan). Cf. cadrage « Facturation client ».
+// Étape du gabarit dont chaque carte est une étude confiée à un bureau.
+const ETAPE_ETUDES = 'etudes';
+
 @Injectable()
 export class FacturationService {
   constructor(
@@ -725,7 +728,7 @@ export class FacturationService {
     for (const b of blocs) {
       if (!b.interlocuteur.trim() || !b.factureMontant || b.factureMontant.toNumber() <= 0) {
         throw new UnprocessableEntityException(
-          `« ${b.libelle} » : renseigne le bureau d’études et le montant HT de sa facture (section Études).`,
+          `« ${b.libelle} » : renseigne le bureau d’études et le montant HT de sa facture.`,
         );
       }
       if (b.lignesFacture.some((l) => l.facture.statut !== 'annulee' && !l.facture.estAvoir)) {
@@ -754,6 +757,47 @@ export class FacturationService {
         lignes: { create: lignes },
       },
     });
+    return this.formater(projetId);
+  }
+
+  // Facture du bureau d'études pour une étude de l'étape 05 du gabarit (phase
+  // 1, 14/10/2026 — avant, dans la section Études du projet). Une étude déjà
+  // refacturée ne se modifie plus : on corrige par un avoir.
+  async saisirFactureBureau(
+    societeId: string,
+    projetId: string,
+    carteId: string,
+    dto: { bureau: string; montantHt: number; fichier?: { nom: string; url: string } | null },
+  ) {
+    await chargerProjet(this.prisma, societeId, projetId);
+    const carte = await this.prisma.carteProjet.findFirst({
+      where: { id: carteId, projetId, etapeCle: ETAPE_ETUDES },
+      select: { id: true, libelle: true },
+    });
+    if (!carte) throw new NotFoundException('Étude introuvable pour ce projet.');
+    const existant = await this.prisma.blocEtude.findUnique({
+      where: { projetId_carteProjetId: { projetId, carteProjetId: carteId } },
+      include: { lignesFacture: { include: { facture: { select: { statut: true, estAvoir: true } } } } },
+    });
+    if (existant?.lignesFacture.some((l) => l.facture.statut !== 'annulee' && !l.facture.estAvoir)) {
+      throw new ConflictException(`« ${carte.libelle} » est déjà refacturée : corrigez par un avoir.`);
+    }
+    const data = {
+      interlocuteur: dto.bureau.trim(),
+      factureMontant: dto.montantHt,
+      ...(dto.fichier !== undefined && {
+        factureFichierNom: dto.fichier?.nom ?? null,
+        factureFichierCle: dto.fichier?.url ?? null,
+      }),
+    };
+    await this.prisma.$transaction([
+      this.prisma.etudes.upsert({ where: { projetId }, update: {}, create: { projetId } }),
+      this.prisma.blocEtude.upsert({
+        where: { projetId_carteProjetId: { projetId, carteProjetId: carteId } },
+        update: data,
+        create: { projetId, carteProjetId: carteId, libelle: carte.libelle, ...data },
+      }),
+    ]);
     return this.formater(projetId);
   }
 
@@ -963,17 +1007,27 @@ export class FacturationService {
       }),
       this.lignesMensuelles(projetId),
     ]);
-    // Études du projet concernées par la refacturation (montant de bureau
-    // saisi, ou déjà refacturées) — état de règlement du bureau (H3).
-    const blocsEtude = await this.prisma.blocEtude.findMany({
-      where: {
-        projetId,
-        supprimee: false,
-        OR: [{ factureMontant: { not: null } }, { lignesFacture: { some: {} } }],
-      },
-      include: { lignesFacture: { select: { factureId: true, montantHt: true } } },
-      orderBy: { libelle: 'asc' },
-    });
+    // Études du projet (H3) : une ligne par carte de l'étape 05 du gabarit
+    // (facture du bureau saisie ici depuis la phase 1), plus les anciennes
+    // études déjà chiffrées ou refacturées — état de règlement du bureau.
+    const [cartesEtudes, blocsProjet] = await Promise.all([
+      this.prisma.carteProjet.findMany({
+        where: { projetId, etapeCle: ETAPE_ETUDES, desactivation: null },
+        select: { id: true, libelle: true },
+        orderBy: { ordre: 'asc' },
+      }),
+      this.prisma.blocEtude.findMany({
+        where: { projetId, supprimee: false },
+        include: { lignesFacture: { select: { factureId: true, montantHt: true } } },
+        orderBy: { libelle: 'asc' },
+      }),
+    ]);
+    const blocsEtude = [
+      ...cartesEtudes.map((c) => ({ carteId: c.id, libelleCarte: c.libelle, bloc: blocsProjet.find((b) => b.carteProjetId === c.id) ?? null })),
+      ...blocsProjet
+        .filter((b) => !b.carteProjetId && (b.factureMontant != null || b.lignesFacture.length > 0))
+        .map((b) => ({ carteId: null, libelleCarte: b.libelle, bloc: b })),
+    ];
     const aujourdhui = jourCourant();
     const affaires = await this.seuilCeo.montantsAffaire(factures);
 
@@ -1052,7 +1106,8 @@ export class FacturationService {
     // Refacturation des études : ligne ACTIVE = sur une facture ni annulée ni
     // avoir ; « à régler » dès que cette facture est soldée.
     const parId = new Map(rendues.map((f) => [f.id, f]));
-    const etudes = blocsEtude.map((b) => {
+    const etudes = blocsEtude.map(({ carteId, libelleCarte, bloc }) => {
+      const b = bloc ?? { id: null, libelle: libelleCarte, interlocuteur: '', factureMontant: null, bureauRegleLe: null, lignesFacture: [] as { factureId: string; montantHt: Prisma.Decimal }[] };
       const active = b.lignesFacture
         .map((l) => ({ l, f: parId.get(l.factureId) }))
         .find(({ f }) => f && f.statut !== 'annulee' && !f.estAvoir);
@@ -1063,6 +1118,7 @@ export class FacturationService {
       const montantBureauHt = b.factureMontant?.toNumber() ?? null;
       return {
         blocId: b.id,
+        carteId,
         libelle: b.libelle,
         bureau: b.interlocuteur,
         montantBureauHt,

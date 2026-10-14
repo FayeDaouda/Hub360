@@ -87,6 +87,17 @@ export function refacturerEtudes(
   });
 }
 
+// Facture du bureau d'études d'une étude de l'étape 05 (phase 1) : bureau,
+// montant HT, pièce optionnelle.
+export function saisirFactureBureau(
+  slug: string,
+  projetId: string,
+  carteId: string,
+  body: { bureau: string; montantHt: number; fichier?: { nom: string; url: string } },
+): Promise<Facturation> {
+  return apiSociete<Facturation>(slug, `${base(projetId)}/etudes/cartes/${carteId}/bureau`, { method: 'PUT', body });
+}
+
 // Règlement du bureau d'études (après encaissement du client) — CFO.
 export function marquerBureauRegle(
   slug: string,

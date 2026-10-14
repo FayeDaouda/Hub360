@@ -9439,6 +9439,13 @@ a.notif-item:hover {
    .vue-toggle, .lien-inline. N'ajoute que le strict nécessaire.
    ========================================================================== */
 
+.factu-saisie-bureau {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
 .factu-resume {
   display: flex;
   flex-wrap: wrap;

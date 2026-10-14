@@ -136,8 +136,13 @@ function mockPrisma() {
   const blocEtude = {
     findMany: jest.fn().mockResolvedValue([]),
     findFirst: jest.fn(),
+    findUnique: jest.fn().mockResolvedValue(null),
     update: jest.fn(),
+    upsert: jest.fn((a: unknown) => a),
   };
+  // Cartes de l'étape 05 du gabarit (études) : aucune par défaut.
+  const carteProjet = { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn() };
+  const etudes = { upsert: jest.fn((a: unknown) => a) };
   const ligneFacture = { count: jest.fn().mockResolvedValue(0) };
   const tx = { facture, paiement };
   const prisma = {
@@ -149,11 +154,13 @@ function mockPrisma() {
     blocEtude,
     ligneFacture,
     paiementSupprime,
+    carteProjet,
+    etudes,
     $transaction: jest.fn((arg: unknown) =>
       Array.isArray(arg) ? Promise.all(arg) : (arg as (tx: unknown) => unknown)(tx),
     ),
   } as unknown as PrismaService;
-  return { prisma, facture, paiement, paiementSupprime, projet, versionPreBilan, ligneDevis, blocEtude, ligneFacture };
+  return { prisma, facture, paiement, paiementSupprime, carteProjet, projet, versionPreBilan, ligneDevis, blocEtude, ligneFacture };
 }
 
 function service(prisma: PrismaService) {
@@ -673,5 +680,41 @@ describe('FacturationService · parts F1 / F2 / F3 (Réglages)', () => {
     const { data } = tx.facture.createMany.mock.calls[0][0];
     expect(data.map((f: { montantHt: number }) => f.montantHt)).toEqual([400_000, 400_000, 200_000]);
     expect(reglages.partsFactures).not.toHaveBeenCalled();
+  });
+});
+
+describe('FacturationService — études de l’étape 05 (facture du bureau dans Finances)', () => {
+  it('liste une ligne par carte d’étude, même sans facture de bureau saisie', async () => {
+    const { prisma, carteProjet } = mockPrisma();
+    carteProjet.findMany.mockResolvedValue([{ id: 'CA1', libelle: 'Étude de sol (ETS)' }]);
+    const res = await service(prisma).get('S1', 'P1');
+    expect(res.etudes).toEqual([
+      expect.objectContaining({ blocId: null, carteId: 'CA1', libelle: 'Étude de sol (ETS)', montantBureauHt: null, refacturable: false }),
+    ]);
+  });
+
+  it('saisir la facture du bureau : crée le bloc relié à la carte, avec bureau et montant', async () => {
+    const { prisma, carteProjet, blocEtude } = mockPrisma();
+    carteProjet.findFirst.mockResolvedValue({ id: 'CA1', libelle: 'Étude de sol (ETS)' });
+    await service(prisma).saisirFactureBureau('S1', 'P1', 'CA1', { bureau: ' Géotec ', montantHt: 1_000_000 });
+    expect(blocEtude.upsert).toHaveBeenCalledWith({
+      where: { projetId_carteProjetId: { projetId: 'P1', carteProjetId: 'CA1' } },
+      update: { interlocuteur: 'Géotec', factureMontant: 1_000_000 },
+      create: { projetId: 'P1', carteProjetId: 'CA1', libelle: 'Étude de sol (ETS)', interlocuteur: 'Géotec', factureMontant: 1_000_000 },
+    });
+  });
+
+  it('étude déjà refacturée → 409, rien n’est modifié', async () => {
+    const { prisma, carteProjet, blocEtude } = mockPrisma();
+    carteProjet.findFirst.mockResolvedValue({ id: 'CA1', libelle: 'ETS' });
+    blocEtude.findUnique.mockResolvedValue({ lignesFacture: [{ facture: { statut: 'emise', estAvoir: false } }] });
+    await expect(service(prisma).saisirFactureBureau('S1', 'P1', 'CA1', { bureau: 'X', montantHt: 1 })).rejects.toThrow(ConflictException);
+    expect(blocEtude.upsert).not.toHaveBeenCalled();
+  });
+
+  it('carte qui n’est pas une étude de ce projet → 404', async () => {
+    const { prisma, carteProjet } = mockPrisma();
+    carteProjet.findFirst.mockResolvedValue(null);
+    await expect(service(prisma).saisirFactureBureau('S1', 'P1', 'CX', { bureau: 'X', montantHt: 1 })).rejects.toThrow(NotFoundException);
   });
 });

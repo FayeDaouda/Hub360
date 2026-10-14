@@ -1549,7 +1549,8 @@ export const STATUTS_REGLEMENT_BUREAU: Record<StatutReglementBureau, string> = {
 };
 
 export type EtudeRefacturation = {
-  blocId: string;
+  blocId: string | null; // null = facture du bureau pas encore saisie
+  carteId: string | null; // carte de l'étape 05 du gabarit (null = ancienne étude)
   libelle: string;
   bureau: string;
   montantBureauHt: number | null;

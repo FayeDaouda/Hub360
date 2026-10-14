@@ -69,6 +69,18 @@ export class AjouterPaiementDto {
   @IsOptional() @IsString() @MaxLength(120) reference?: string;
 }
 
+// PUT …/factures/etudes/cartes/:carteId/bureau — facture du bureau d'études
+// (montant HT, pièce optionnelle en data URI le temps du stockage S3).
+class PieceFactureBureauDto {
+  @IsString() @MinLength(1) @MaxLength(200) nom!: string;
+  @IsString() @MaxLength(12_000_000) url!: string;
+}
+export class FactureBureauDto {
+  @IsString() @MinLength(2, { message: 'Indiquez le bureau d’études.' }) @MaxLength(120) bureau!: string;
+  @IsNumber() @Min(1, { message: 'Le montant HT doit être positif.' }) montantHt!: number;
+  @IsOptional() @ValidateNested() @Type(() => PieceFactureBureauDto) fichier?: PieceFactureBureauDto | null;
+}
+
 // DELETE …/factures/:id/paiements/:paiementId — correction tracée : le motif
 // est obligatoire (décision du 14/10/2026) et gardé avec la trace.
 export class SupprimerPaiementDto {
