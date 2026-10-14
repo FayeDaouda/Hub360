@@ -10,6 +10,22 @@ internet ──443──▶ caddy ──/api──▶ backend (NestJS) ──▶
                  sauvegarde (02:30) ──pg_dump──▶ ./sauvegardes + stockage objet
 ```
 
+## Serveur de test (données fictives)
+
+Pour essayer avant la vraie mise en service, sans acheter de domaine :
+
+1. Créer le serveur (étapes 1 et 3 ci-dessous), puis depuis le Mac :
+   `deploy/envoyer.sh root@<IP>` échoue tant que `.env` n'existe pas — le créer
+   une fois sur le serveur : `ssh root@<IP>`, puis
+   `cp /opt/hub/deploy/.env.example /opt/hub/deploy/.env && nano /opt/hub/deploy/.env`.
+2. Dans ce `.env` : `HUB_DOMAINE=hub.<IP>.sslip.io` (adresse gratuite qui
+   pointe vers l'IP, HTTPS compris) et `HUB_DONNEES_DEMO=autorise`.
+3. `deploy/envoyer.sh root@<IP>` (envoie le code et lance le HUB), puis sur le
+   serveur : `cd /opt/hub/deploy && docker compose --profile demo run --rm demo`.
+4. Le HUB de test répond sur `https://hub.<IP>.sslip.io`, comptes de démo et
+   mot de passe `changeme123`. Supprimer le serveur dans la console Hetzner à
+   la fin du test (facturation à l'heure).
+
 ## Première installation
 
 1. **Serveur** : Hetzner Cloud, Ubuntu 24.04, 2 vCPU / 4 Go (CX22) suffisent
@@ -22,10 +38,11 @@ internet ──443──▶ caddy ──/api──▶ backend (NestJS) ──▶
    curl -fsSL https://get.docker.com | sh
    ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
    ```
-4. **Code et configuration** :
+4. **Code et configuration** : depuis le Mac, `deploy/envoyer.sh root@<IP>`
+   copie le code dans `/opt/hub` (il s'arrête la première fois faute de
+   `.env`). Puis sur le serveur :
    ```sh
-   git clone <dépôt> /opt/hub && cd /opt/hub/deploy
-   cp .env.example .env && nano .env    # domaine, mots de passe, secrets
+   cd /opt/hub/deploy && cp .env.example .env && nano .env   # domaine, mots de passe, secrets
    ```
    Générer les secrets : `openssl rand -base64 32` (base), `openssl rand -base64 48` (JWT).
 5. **Lancement** :
@@ -51,10 +68,7 @@ production.
 
 ## Mettre à jour
 
-```sh
-cd /opt/hub && git pull
-cd deploy && docker compose --env-file .env up -d --build
-```
+Depuis le Mac : `deploy/envoyer.sh root@<IP>`.
 Les migrations de base s'appliquent au démarrage du backend.
 
 ## Sauvegardes
