@@ -1,10 +1,13 @@
-import type { CompteGroupe, ComptesGroupe } from './types';
+import type { CompteGroupe, ComptesGroupe, InvitationCompte, StatutCompteGroupe } from './types';
 import { apiAuth } from './client-api';
 
 // Comptes & rôles — API NestJS, admin du groupe (HoldingAdminGuard) :
 //   GET  /groupe/comptes                                 sociétés, rôles attribuables, comptes
 //   PUT  /groupe/comptes/:id/societes/:societeId/role    { roleId } — coupe les sessions du compte
 //   PUT  /groupe/comptes/:id/salaire                     { salaireBrutMensuel: number | null }
+//   POST /groupe/comptes                                 { dossierId, email, roleId, celluleId? } — crée + invite
+//   POST /groupe/comptes/:id/invitation                  renvoie l'invitation (compte en attente)
+//   PUT  /groupe/comptes/:id/actif                       { actif } — désactiver coupe les sessions
 
 export function getComptesGroupe(): Promise<ComptesGroupe> {
   return apiAuth<ComptesGroupe>('/groupe/comptes');
@@ -19,6 +22,26 @@ export function changerRoleCompte(
     method: 'PUT',
     body: { roleId },
   });
+}
+
+export function creerCompte(body: {
+  dossierId: string;
+  email: string;
+  roleId: string;
+  celluleId?: string;
+}): Promise<InvitationCompte & { compte: CompteGroupe }> {
+  return apiAuth('/groupe/comptes', { method: 'POST', body });
+}
+
+export function renvoyerInvitation(utilisateurId: string): Promise<InvitationCompte> {
+  return apiAuth(`/groupe/comptes/${utilisateurId}/invitation`, { method: 'POST' });
+}
+
+export function changerActifCompte(
+  utilisateurId: string,
+  actif: boolean,
+): Promise<{ id: string; statut: StatutCompteGroupe }> {
+  return apiAuth(`/groupe/comptes/${utilisateurId}/actif`, { method: 'PUT', body: { actif } });
 }
 
 export function definirSalaireCompte(

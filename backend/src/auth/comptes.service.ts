@@ -69,16 +69,22 @@ export class ComptesService {
       });
     }
 
-    const clair = await this.emettreJeton('invitation', utilisateur.id, email);
-    await this.journal(utilisateur.id, 'invitation_envoyee', parId, email);
+    return this.envoyerInvitation(utilisateur.id, email, collab.prenom, parId);
+  }
+
+  // Jeton d'invitation (72 h) + e-mail + journal. Partagé par l'ancienne page
+  // Équipe et l'Administration du HUB (création depuis un dossier RH).
+  async envoyerInvitation(
+    utilisateurId: string,
+    email: string,
+    prenom: string,
+    parId: string,
+  ): Promise<{ lien: string; emailEnvoye: boolean }> {
+    const clair = await this.emettreJeton('invitation', utilisateurId, email);
+    await this.journal(utilisateurId, 'invitation_envoyee', parId, email);
 
     const lien = this.construireLien('invitation', clair);
-    const { envoye } = await this.email.envoyerLienCompte({
-      type: 'invitation',
-      email,
-      lien,
-      prenom: collab.prenom,
-    });
+    const { envoye } = await this.email.envoyerLienCompte({ type: 'invitation', email, lien, prenom });
     // `lien` reste renvoyé même si l'email est parti : repli si le transport
     // échoue plus tard / si l'admin doit le transmettre autrement.
     return { lien, emailEnvoye: envoye };

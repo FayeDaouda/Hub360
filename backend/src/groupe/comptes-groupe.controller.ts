@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdministrationHubGuard } from '../commun/administration-hub.guard';
 import { ComptesGroupeService } from './comptes-groupe.service';
-import { ChangerRoleDto, DefinirSalaireDto } from './dto';
+import { ChangerActifDto, ChangerRoleDto, CreerCompteDto, DefinirSalaireDto } from './dto';
 
 type R = { user: { userId: string } };
 
@@ -16,6 +16,25 @@ export class ComptesGroupeController {
   @Get()
   lister() {
     return this.comptes.lister();
+  }
+
+  @Post()
+  creer(@Req() req: R, @Body() dto: CreerCompteDto) {
+    return this.comptes.creerCompte(dto, req.user.userId);
+  }
+
+  @Post(':utilisateurId/invitation')
+  renvoyerInvitation(@Req() req: R, @Param('utilisateurId', ParseUUIDPipe) utilisateurId: string) {
+    return this.comptes.renvoyerInvitation(utilisateurId, req.user.userId);
+  }
+
+  @Put(':utilisateurId/actif')
+  changerActif(
+    @Req() req: R,
+    @Param('utilisateurId', ParseUUIDPipe) utilisateurId: string,
+    @Body() dto: ChangerActifDto,
+  ) {
+    return this.comptes.changerActif(utilisateurId, dto.actif, req.user.userId);
   }
 
   @Put(':utilisateurId/societes/:societeId/role')

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ComptesGroupeService } from './comptes-groupe.service';
+import type { ComptesService } from '../auth/comptes.service';
 
 // Règles verrouillées : un rôle par personne et par société, rôles
 // d'administration hors de portée de cet écran, cloisonnement des rôles
@@ -29,8 +30,12 @@ function mockPrisma(o: {
   societe?: unknown;
   affectations?: unknown[];
   utilisateur?: unknown;
+  dossier?: unknown;
+  cellule?: unknown;
+  dossiers?: unknown[];
 }) {
   const tx = jest.fn().mockResolvedValue([]);
+  const invitation = jest.fn().mockResolvedValue({ lien: 'http://x/activer?token=t', emailEnvoye: false });
   const prisma = {
     societe: {
       findMany: jest.fn().mockResolvedValue(o.societes ?? []),
@@ -53,15 +58,27 @@ function mockPrisma(o: {
       update: jest.fn().mockReturnValue('update'),
       findUnique: jest.fn().mockResolvedValue(o.utilisateur ?? null),
       findUniqueOrThrow: jest.fn().mockResolvedValue(UTIL),
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...UTIL, id: 'UN', ...data })),
     },
     remuneration: {
       upsert: jest.fn().mockReturnValue('upsert'),
       deleteMany: jest.fn().mockReturnValue('remDelete'),
     },
     evenementCompte: { create: jest.fn().mockReturnValue('audit') },
+    dossierPersonnel: {
+      findMany: jest.fn().mockResolvedValue(o.dossiers ?? []),
+      findUnique: jest.fn().mockResolvedValue(o.dossier ?? null),
+      update: jest.fn(),
+    },
+    cellule: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(o.cellule ?? null),
+    },
+    collaborateur: { create: jest.fn().mockResolvedValue({ id: 'C9' }), update: jest.fn() },
     $transaction: tx,
   };
-  return { svc: new ComptesGroupeService(prisma as unknown as PrismaService), prisma, tx };
+  const comptes = { envoyerInvitation: invitation } as unknown as ComptesService;
+  return { svc: new ComptesGroupeService(prisma as unknown as PrismaService, comptes), prisma, tx, invitation };
 }
 
 describe('ComptesGroupeService.lister', () => {
@@ -189,5 +206,86 @@ describe('ComptesGroupeService.definirSalaire', () => {
     const { svc, tx } = mockPrisma({ utilisateur: { id: 'U1', remuneration: { salaireBrutMensuel: 750000 } } });
     await svc.definirSalaire('U1', 750000, 'ADM');
     expect(tx).not.toHaveBeenCalled();
+  });
+});
+
+describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle → cellule', () => {
+  const DOSSIER = {
+    id: 'D1', societeId: 'S1', prenom: 'Fatou', nom: 'Ba', poste: 'Dessinatrice', dateEntree: '2026-01-05',
+    archiveLe: null, utilisateurId: null, collaborateur: null,
+  };
+  const ROLE = { id: 'RS', nom: 'Salarié', societeId: 'S1' };
+  const DTO = { dossierId: 'D1', email: ' Fatou.Ba@GC.sn ', roleId: 'RS', celluleId: 'CE1' };
+  function pret(o: Parameters<typeof mockPrisma>[0] = {}) {
+    const m = mockPrisma({ dossier: DOSSIER, role: ROLE, cellule: { id: 'CE1' }, ...o });
+    m.tx.mockImplementation((fn: (t: unknown) => unknown) => fn(m.prisma));
+    return m;
+  }
+
+  it('crée compte inactif + rôle + fiche d’équipe dans la cellule (identité du dossier), puis invite', async () => {
+    const { svc, prisma, invitation } = pret();
+    const res = await svc.creerCompte(DTO, 'CIO');
+    expect(prisma.utilisateur.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ email: 'fatou.ba@gc.sn', prenom: 'Fatou', actif: false, motDePasseHash: null }) }),
+    );
+    expect(prisma.utilisateurSocieteRole.create).toHaveBeenCalledWith({ data: { utilisateurId: 'UN', societeId: 'S1', roleId: 'RS' } });
+    expect(prisma.collaborateur.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ celluleId: 'CE1', role: 'Dessinatrice', dateArrivee: '2026-01-05', utilisateurId: 'UN' }),
+    });
+    expect(prisma.dossierPersonnel.update).toHaveBeenCalledWith({ where: { id: 'D1' }, data: { collaborateurId: 'C9' } });
+    expect(invitation).toHaveBeenCalledWith('UN', 'fatou.ba@gc.sn', 'Fatou', 'CIO');
+    expect(res.lien).toContain('/activer');
+  });
+
+  it('sans cellule : pas de fiche d’équipe, le dossier est relié directement au compte', async () => {
+    const { svc, prisma } = pret();
+    await svc.creerCompte({ ...DTO, celluleId: undefined }, 'CIO');
+    expect(prisma.collaborateur.create).not.toHaveBeenCalled();
+    expect(prisma.dossierPersonnel.update).toHaveBeenCalledWith({ where: { id: 'D1' }, data: { utilisateurId: 'UN' } });
+  });
+
+  it('dossier relié à une fiche d’équipe existante : la fiche reçoit le compte', async () => {
+    const { svc, prisma } = pret({ dossier: { ...DOSSIER, collaborateur: { id: 'C1', utilisateurId: null } } });
+    await svc.creerCompte(DTO, 'CIO');
+    expect(prisma.collaborateur.create).not.toHaveBeenCalled();
+    expect(prisma.collaborateur.update).toHaveBeenCalledWith({ where: { id: 'C1' }, data: { utilisateurId: 'UN', celluleId: 'CE1' } });
+  });
+
+  it.each([
+    ['dossier déjà avec compte', { dossier: { ...DOSSIER, utilisateurId: 'UX' } }, ConflictException],
+    ['dossier archivé', { dossier: { ...DOSSIER, archiveLe: new Date() } }, NotFoundException],
+    ['e-mail déjà pris', { utilisateur: { id: 'UX' } }, ConflictException],
+    ['rôle d’administration', { role: { id: 'RA', nom: 'societe_admin', societeId: null } }, BadRequestException],
+    ['rôle d’une autre société', { role: { id: 'RX', nom: 'CFO', societeId: 'S2' } }, BadRequestException],
+    ['cellule d’une autre société', { cellule: null }, BadRequestException],
+  ])('refus : %s', async (_l, o, erreur) => {
+    const { svc, prisma, invitation } = pret(o as Parameters<typeof mockPrisma>[0]);
+    await expect(svc.creerCompte(DTO, 'CIO')).rejects.toThrow(erreur);
+    expect(prisma.utilisateur.create).not.toHaveBeenCalled();
+    expect(invitation).not.toHaveBeenCalled();
+  });
+});
+
+describe('ComptesGroupeService.changerActif', () => {
+  const avecRoles = (nom: string, extra = {}) => ({ ...UTIL, roles: [{ role: { nom } }], ...extra });
+
+  it('désactiver : compte coupé + sessions révoquées + journal', async () => {
+    const { svc, prisma, tx } = mockPrisma({ utilisateur: avecRoles('Salarié') });
+    tx.mockResolvedValue([{ ...UTIL, actif: false }]);
+    const res = await svc.changerActif('U1', false, 'CIO');
+    expect(prisma.utilisateur.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ actif: false, sessionsValidesDepuis: expect.any(Date) }) }),
+    );
+    expect(prisma.evenementCompte.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'compte_desactive' }) });
+    expect(res.statut).toBe('desactive');
+  });
+
+  it.each([
+    ['soi-même', 'U1', avecRoles('Salarié')],
+    ['compte d’administration', 'CIO', avecRoles('societe_admin')],
+    ['invitation en attente', 'CIO', avecRoles('Salarié', { motDePasseHash: null, actif: false })],
+  ])('refus : %s', async (_l, acteur, utilisateur) => {
+    const { svc } = mockPrisma({ utilisateur });
+    await expect(svc.changerActif('U1', false, acteur)).rejects.toThrow(ConflictException);
   });
 });

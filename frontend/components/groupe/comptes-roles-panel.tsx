@@ -1,20 +1,25 @@
 'use client';
 
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, CircleAlert, LoaderCircle, RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
+import { NouveauCompteModal, ResultatInvitation } from '@/components/groupe/nouveau-compte-modal';
 import {
+  changerActifCompte,
   changerRoleCompte,
   comparerRoles,
   definirSalaireCompte,
   getComptesGroupe,
   libelleRole,
   lireSaisieSalaire,
+  renvoyerInvitation,
 } from '@/lib/groupe';
 import { formatMontant, formatNombre } from '@/lib/format';
 import type {
   CompteGroupe,
   ComptesGroupe,
+  InvitationCompte,
   RoleAttribuable,
   SocieteComptes,
   StatutCompteGroupe,
@@ -46,6 +51,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
   const [essai, setEssai] = useState(0);
   const [societeId, setSocieteId] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
+  const [nouveau, setNouveau] = useState(false);
 
   useEffect(() => {
     let annule = false;
@@ -110,9 +116,14 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
         <div>
           <h2 id="groupe-comptes-titre">Comptes &amp; rôles</h2>
           <p>
-            Attribuez à chaque compte son rôle dans la société et renseignez son salaire brut
-            mensuel.
+            Créez les comptes depuis les dossiers RH, attribuez à chacun son rôle dans la société et
+            renseignez son salaire brut mensuel.
           </p>
+          {societe && (
+            <button type="button" className="btn-primary" style={{ marginTop: '0.75rem' }} onClick={() => setNouveau(true)}>
+              <Plus size={15} strokeWidth={2} aria-hidden /> Nouveau compte
+            </button>
+          )}
         </div>
         {societe && <Resume societe={societe} />}
       </header>
@@ -145,6 +156,10 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
           onRecherche={setRecherche}
           onMaj={majCompte}
         />
+      )}
+
+      {nouveau && societe && (
+        <NouveauCompteModal societe={societe} onClose={() => setNouveau(false)} onCree={() => setEssai((n) => n + 1)} />
       )}
 
       <p className="groupe-note">
@@ -289,6 +304,7 @@ function LigneCompte({
         <span className={`groupe-statut groupe-statut--${compte.statut}`}>
           {LIBELLE_STATUT[compte.statut]}
         </span>
+        {!compte.administration && !estMoi && <ActionsCompte compte={compte} onMaj={onMaj} />}
       </td>
       <td data-libelle="Rôle">
         {compte.administration || estMoi ? (
@@ -311,6 +327,72 @@ function LigneCompte({
         <ChampSalaire compte={compte} onMaj={onMaj} />
       </td>
     </tr>
+  );
+}
+
+// Invitation à renvoyer (en attente), désactivation (coupe les sessions) ou
+// réactivation — jamais sur soi-même ni sur un compte d'administration.
+function ActionsCompte({
+  compte,
+  onMaj,
+}: {
+  compte: CompteGroupe;
+  onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [invitation, setInvitation] = useState<InvitationCompte | null>(null);
+
+  async function agir() {
+    if (
+      compte.statut === 'actif' &&
+      !window.confirm(`Désactiver le compte de ${compte.prenom} ${compte.nom} ? Ses sessions seront coupées immédiatement.`)
+    ) {
+      return;
+    }
+    setBusy(true);
+    setErreur(null);
+    try {
+      if (compte.statut === 'en_attente') setInvitation(await renvoyerInvitation(compte.id));
+      else onMaj(await changerActifCompte(compte.id, compte.statut !== 'actif'));
+    } catch (e) {
+      setErreur(messageErreur(e, 'Action impossible.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const libelle =
+    compte.statut === 'en_attente' ? 'Renvoyer l’invitation' : compte.statut === 'actif' ? 'Désactiver' : 'Réactiver';
+  return (
+    <>
+      <button type="button" className="btn-ghost btn-ghost--sm groupe-action-compte" onClick={agir} disabled={busy}>
+        {busy ? '…' : libelle}
+      </button>
+      {erreur && <span className="field-erreur">{erreur}</span>}
+      {invitation &&
+        createPortal(
+          <div className="modal-backdrop" onClick={() => setInvitation(null)}>
+            <div className="modal modal--sm" role="dialog" aria-modal="true" aria-label="Invitation" onClick={(e) => e.stopPropagation()}>
+              <header className="modal-header">
+                <h2>Invitation renvoyée</h2>
+                <button type="button" className="modal-close" aria-label="Fermer" onClick={() => setInvitation(null)}>
+                  <X size={18} strokeWidth={1.75} />
+                </button>
+              </header>
+              <div className="modal-body">
+                <ResultatInvitation
+                  {...invitation}
+                  nom={`${compte.prenom} ${compte.nom}`}
+                  email={compte.email}
+                  onClose={() => setInvitation(null)}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 

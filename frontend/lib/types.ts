@@ -2122,7 +2122,12 @@ export type SocieteComptes = {
   slug: string;
   rolesAttribuables: RoleAttribuable[];
   comptes: CompteGroupe[];
+  // Création d'un compte (phase 1) : dossiers RH sans compte, cellules.
+  dossiersSansCompte: { id: string; prenom: string; nom: string; poste: string; emailPro: string; matricule: string }[];
+  cellules: { id: string; nom: string }[];
 };
+
+export type InvitationCompte = { lien: string; emailEnvoye: boolean };
 
 export type ComptesGroupe = { societes: SocieteComptes[] };
 

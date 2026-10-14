@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ComptesService } from '../auth/comptes.service';
 
 // Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
 // compte technique holding_admin, cf. AdministrationHubGuard) attribue à
@@ -66,10 +67,13 @@ function versCompte(u: UtilisateurLu, role: { id: string; nom: string }) {
 
 @Injectable()
 export class ComptesGroupeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private comptes: ComptesService,
+  ) {}
 
   async lister() {
-    const [societes, roles, affectations] = await Promise.all([
+    const [societes, roles, affectations, dossiers, cellules] = await Promise.all([
       this.prisma.societe.findMany({
         where: { actif: true },
         select: { id: true, nom: true, slug: true },
@@ -88,6 +92,18 @@ export class ComptesGroupeService {
           utilisateur: { select: SELECT_UTILISATEUR },
         },
       }),
+      // Dossiers RH sans compte : ni compte direct, ni compte via la fiche
+      // d'équipe — candidats à « Créer le compte ».
+      this.prisma.dossierPersonnel.findMany({
+        where: {
+          archiveLe: null,
+          utilisateurId: null,
+          OR: [{ collaborateurId: null }, { collaborateur: { utilisateurId: null } }],
+        },
+        select: { id: true, societeId: true, prenom: true, nom: true, poste: true, emailPro: true, matricule: true },
+        orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+      }),
+      this.prisma.cellule.findMany({ select: { id: true, nom: true, societeId: true }, orderBy: { nom: 'asc' } }),
     ]);
 
     return {
@@ -111,6 +127,10 @@ export class ComptesGroupeService {
             .filter((r) => r.societeId === null || r.societeId === societe.id)
             .map((r) => ({ id: r.id, nom: r.nom, transverse: r.societeId === null })),
           comptes,
+          dossiersSansCompte: dossiers
+            .filter((d) => d.societeId === societe.id)
+            .map(({ societeId: _s, ...d }) => d),
+          cellules: cellules.filter((c) => c.societeId === societe.id).map(({ id, nom }) => ({ id, nom })),
         };
       }),
     };
@@ -181,6 +201,118 @@ export class ComptesGroupeService {
       select: SELECT_UTILISATEUR,
     });
     return versCompte(utilisateur, role);
+  }
+
+  // Parcours unique de création (phase 1, 14/10/2026) : dossier RH → compte →
+  // rôle → cellule. Le dossier RH est la seule fiche de la personne ; la fiche
+  // d'équipe (Collaborateur, utilisée par les tâches) n'est créée que pour la
+  // rattacher à une cellule, avec l'identité recopiée du dossier.
+  async creerCompte(
+    dto: { dossierId: string; email: string; roleId: string; celluleId?: string },
+    acteurId: string,
+  ) {
+    const email = dto.email.trim().toLowerCase();
+    const dossier = await this.prisma.dossierPersonnel.findUnique({
+      where: { id: dto.dossierId },
+      include: { collaborateur: { select: { id: true, utilisateurId: true } } },
+    });
+    if (!dossier || dossier.archiveLe) throw new NotFoundException('Dossier RH introuvable ou archivé.');
+    if (dossier.utilisateurId || dossier.collaborateur?.utilisateurId) {
+      throw new ConflictException('Ce dossier a déjà un compte.');
+    }
+    if (!dossier.prenom.trim() || !dossier.nom.trim()) {
+      throw new BadRequestException('Renseignez le prénom et le nom dans le dossier RH.');
+    }
+    const [role, cellule, existant] = await Promise.all([
+      this.prisma.role.findFirst({ where: { id: dto.roleId, supprimeLe: null } }),
+      dto.celluleId
+        ? this.prisma.cellule.findFirst({ where: { id: dto.celluleId, societeId: dossier.societeId } })
+        : Promise.resolve(null),
+      this.prisma.utilisateur.findUnique({ where: { email }, select: { id: true } }),
+    ]);
+    if (!role || ROLES_ADMINISTRATION.has(role.nom)) throw new BadRequestException('Rôle invalide.');
+    if (role.societeId !== null && role.societeId !== dossier.societeId) {
+      throw new BadRequestException('Ce rôle appartient à une autre société.');
+    }
+    if (dto.celluleId && !cellule) throw new BadRequestException('Cellule introuvable dans cette société.');
+    if (existant) throw new ConflictException('Cette adresse e-mail est déjà utilisée par un compte.');
+
+    const utilisateur = await this.prisma.$transaction(async (tx) => {
+      const u = await tx.utilisateur.create({
+        data: { email, prenom: dossier.prenom.trim(), nom: dossier.nom.trim(), motDePasseHash: null, actif: false },
+        select: SELECT_UTILISATEUR,
+      });
+      await tx.utilisateurSocieteRole.create({
+        data: { utilisateurId: u.id, societeId: dossier.societeId, roleId: role.id },
+      });
+      if (dossier.collaborateur) {
+        await tx.collaborateur.update({
+          where: { id: dossier.collaborateur.id },
+          data: { utilisateurId: u.id, ...(cellule && { celluleId: cellule.id }) },
+        });
+      } else if (cellule) {
+        const fiche = await tx.collaborateur.create({
+          data: {
+            societeId: dossier.societeId,
+            celluleId: cellule.id,
+            prenom: u.prenom,
+            nom: u.nom,
+            role: dossier.poste.trim() || role.nom,
+            dateArrivee: dossier.dateEntree,
+            utilisateurId: u.id,
+          },
+        });
+        await tx.dossierPersonnel.update({ where: { id: dossier.id }, data: { collaborateurId: fiche.id } });
+      } else {
+        await tx.dossierPersonnel.update({ where: { id: dossier.id }, data: { utilisateurId: u.id } });
+      }
+      return u;
+    });
+
+    const invitation = await this.comptes.envoyerInvitation(utilisateur.id, email, utilisateur.prenom, acteurId);
+    return { compte: versCompte(utilisateur, role), ...invitation };
+  }
+
+  async renvoyerInvitation(utilisateurId: string, acteurId: string) {
+    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: SELECT_UTILISATEUR });
+    if (!u) throw new NotFoundException('Compte introuvable.');
+    if (statut(u) !== 'en_attente') throw new ConflictException('Ce compte est déjà activé.');
+    return this.comptes.envoyerInvitation(u.id, u.email, u.prenom, acteurId);
+  }
+
+  // Désactiver coupe aussi les sessions vivantes ; même journal que
+  // l'archivage RH et l'ancienne page Équipe.
+  async changerActif(utilisateurId: string, actif: boolean, acteurId: string) {
+    if (utilisateurId === acteurId) throw new ConflictException('Vous ne pouvez pas désactiver votre propre compte.');
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { ...SELECT_UTILISATEUR, roles: { select: { role: { select: { nom: true } } } } },
+    });
+    if (!u) throw new NotFoundException('Compte introuvable.');
+    if (u.roles.some((r) => ROLES_ADMINISTRATION.has(r.role.nom))) {
+      throw new ConflictException("Compte d'administration : il ne se désactive pas depuis cet écran.");
+    }
+    if (!u.motDePasseHash) throw new ConflictException("Invitation en attente : le compte n'est pas encore activé.");
+    if (u.actif === actif) return { id: u.id, statut: statut(u) };
+    const maintenant = new Date();
+    const [maj] = await this.prisma.$transaction([
+      this.prisma.utilisateur.update({
+        where: { id: utilisateurId },
+        data: actif
+          ? { actif: true, desactiveLe: null, desactiveParId: null }
+          : { actif: false, desactiveLe: maintenant, desactiveParId: acteurId, sessionsValidesDepuis: maintenant },
+        select: SELECT_UTILISATEUR,
+      }),
+      this.prisma.evenementCompte.create({
+        data: {
+          utilisateurId,
+          type: actif ? 'compte_reactive' : 'compte_desactive',
+          parId: acteurId,
+          detail: 'Administration du HUB',
+        },
+      }),
+    ]);
+    return { id: maj.id, statut: statut(maj) };
   }
 
   async definirSalaire(utilisateurId: string, salaireBrutMensuel: number | null, acteurId: string) {
