@@ -34,11 +34,13 @@ import {
   getIntegrations,
   getOptionsDossiers,
   getPieceDossier,
+  getTachesOuvertes,
   joindrePieceDossier,
   LIBELLE_CONTRAT,
   majDossier,
   PIECES,
   type MajDossier,
+  type TachesOuvertes,
 } from '@/lib/rh';
 import { getFeuillesTemps, libelleMois } from '@/lib/temps';
 import { getDemandesRh } from '@/lib/demandes';
@@ -433,6 +435,9 @@ function FicheDossier({
   const [erreur, setErreur] = useState<string | null>(null);
   const [enregistre, setEnregistre] = useState(false);
   const [moisBulletin, setMoisBulletin] = useState(moisPrecedent);
+  // Départ en cours : tâches de projet à confier avant l'archivage.
+  const [depart, setDepart] = useState<TachesOuvertes | null>(null);
+  const [confies, setConfies] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (dossier) setForm(versFormulaire(dossier));
@@ -515,16 +520,33 @@ function FicheDossier({
 
   async function archiver() {
     if (!dossier) return;
-    if (
-      !dossier.archiveLe &&
-      !window.confirm('Archiver ce dossier (départ) ? Le compte HUB du salarié sera désactivé immédiatement.')
-    ) {
-      return;
-    }
+    setErreur(null);
     try {
+      if (!dossier.archiveLe) {
+        const ouvertes = await getTachesOuvertes(slug, dossier.id);
+        if (ouvertes.taches.length) {
+          setConfies({});
+          setDepart(ouvertes);
+          return;
+        }
+        if (!window.confirm('Archiver ce dossier (départ) ? Le compte HUB du salarié sera désactivé immédiatement.')) return;
+      }
       onChange(await archiverDossier(slug, dossier.id, !dossier.archiveLe));
     } catch (e) {
       setErreur(messageErreur(e, 'Action impossible.'));
+    }
+  }
+
+  async function confirmerDepart() {
+    if (!dossier || !depart) return;
+    if (!window.confirm('Confirmer le départ ? Les tâches sont confiées et le compte HUB du salarié est désactivé immédiatement.')) return;
+    setErreur(null);
+    try {
+      const reaffectations = depart.taches.map((t) => ({ tacheId: t.id, collaborateurId: confies[t.id] }));
+      onChange(await archiverDossier(slug, dossier.id, true, reaffectations));
+      setDepart(null);
+    } catch (e) {
+      setErreur(messageErreur(e, 'Départ non enregistré.'));
     }
   }
 
@@ -811,9 +833,58 @@ function FicheDossier({
           )}
           <p className="cell-sub">Un dossier n’est jamais supprimé : en cas de départ, il est archivé.</p>
 
+          {depart && (
+            <>
+              <h3 className="rh-section">
+                Départ · {depart.taches.length} tâche{depart.taches.length > 1 ? 's' : ''} de projet à confier
+              </h3>
+              <p className="rh-note">
+                Le départ n’est enregistré qu’une fois chaque tâche confiée à un collègue de la société. Chaque nouveau
+                titulaire est prévenu ; les échéances ne bougent pas.
+              </p>
+              {depart.candidats.length === 0 && (
+                <p className="field-erreur">Aucun collègue en poste dans cette société : créez d’abord la fiche du remplaçant.</p>
+              )}
+              {depart.taches.map((t) => (
+                <label key={t.id} className="field">
+                  <span className="field-label">
+                    {t.projet} · {t.carte} · {t.libelle}
+                    {t.finLe && ` · échéance ${jjmmaaaa(t.finLe)}`}
+                    {t.statut === 'a_valider' && ' · remise en attente de validation'}
+                  </span>
+                  <select
+                    className="field-input"
+                    value={confies[t.id] ?? ''}
+                    onChange={(e) => setConfies((c) => ({ ...c, [t.id]: e.target.value }))}
+                  >
+                    <option value="">Confier à…</option>
+                    {depart.candidats.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={() => setDepart(null)}>
+                  Annuler le départ
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={confirmerDepart}
+                  disabled={depart.taches.some((t) => !confies[t.id])}
+                >
+                  Confirmer le départ
+                </button>
+              </div>
+            </>
+          )}
+
           {erreur && <p className="field-erreur">{erreur}</p>}
           <div className="modal-actions">
-            {ecriture && dossier && (
+            {ecriture && dossier && !depart && (
               <button type="button" className="btn-ghost" onClick={archiver}>
                 {dossier.archiveLe ? (
                   <>

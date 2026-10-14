@@ -50,9 +50,15 @@ export class DossiersPersonnelController {
     return this.dossiers.maj(id, dto);
   }
 
+  // Avant un départ : tâches de projet à réaffecter et collègues possibles.
+  @Get(':id/taches-ouvertes')
+  tachesOuvertes(@Param('id', ParseUUIDPipe) id: string) {
+    return this.dossiers.tachesOuvertes(id);
+  }
+
   @Post(':id/archivage')
   archiver(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ArchivageDto) {
-    return this.dossiers.archiver(id, dto.archive, req.user.userId);
+    return this.dossiers.archiver(id, dto.archive, req.user.userId, dto.reaffectations);
   }
 
   @Post(':id/paiement')

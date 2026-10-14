@@ -36,7 +36,7 @@ describe('DossiersPersonnelService', () => {
       societe: { findFirst: jest.fn().mockResolvedValue({ id: 'S1' }) },
       collaborateur: { findUnique: jest.fn().mockResolvedValue(o.collab ?? null) },
     } as unknown as PrismaService;
-    return { s: new DossiersPersonnelService(prisma), create };
+    return { s: new DossiersPersonnelService(prisma, {} as never), create };
   }
 
   it('matricule suivant dans la séquence groupe', async () => {
@@ -67,9 +67,11 @@ describe('DossiersPersonnelService', () => {
 });
 
 describe('DossiersPersonnelService.archiver — le départ coupe l’accès', () => {
-  function svc(o: { dossier: unknown; actif?: boolean; dernierEvenement?: unknown }) {
+  function svc(o: { dossier: unknown; actif?: boolean; dernierEvenement?: unknown; taches?: unknown[] }) {
     const majCompte = jest.fn((a: unknown) => a);
     const evenement = jest.fn((a: unknown) => a);
+    const majTache = jest.fn((a: unknown) => a);
+    const notifications = { envoyer: jest.fn(), comptesDe: jest.fn().mockResolvedValue(['U7']) };
     const majDossier = jest.fn(() => ({ ...VIDE, societe: {}, collaborateur: null, pieces: [], bulletins: [] }));
     const prisma = {
       dossierPersonnel: { findUnique: jest.fn().mockResolvedValue(o.dossier), update: majDossier },
@@ -78,9 +80,12 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
         update: majCompte,
       },
       evenementCompte: { create: evenement, findFirst: jest.fn().mockResolvedValue(o.dernierEvenement ?? null) },
+      tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? []), update: majTache },
+      evenementTacheProjet: { create: jest.fn((a: unknown) => a) },
+      collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C7', prenom: 'Awa', nom: 'Diop' }]) },
       $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     } as unknown as PrismaService;
-    return { s: new DossiersPersonnelService(prisma), majCompte, evenement };
+    return { s: new DossiersPersonnelService(prisma, notifications as never), majCompte, evenement, majTache, notifications };
   }
   const direct = { id: 'D1', utilisateurId: 'U9', collaborateur: null };
   const parFiche = { id: 'D1', utilisateurId: null, collaborateur: { utilisateur: { id: 'U9' } } };
@@ -102,6 +107,38 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     const { s, majCompte } = svc({ dossier: { id: 'D1', utilisateurId: null, collaborateur: null } });
     await s.archiver('D1', true, 'RH1');
     expect(majCompte).not.toHaveBeenCalled();
+  });
+
+  describe('tâches de projet encore ouvertes', () => {
+    const dossier = { id: 'D1', utilisateurId: null, collaborateur: { id: 'C1', societeId: 'S1' } };
+    const taches = [
+      { id: 'T1', libelle: 'Plan masse', statut: 'a_faire', finLe: '2026-10-20', carte: { libelle: 'Esquisse' }, projet: { id: 'P1', code: 'GC-01', societeId: 'S1' } },
+    ];
+
+    it('refuse le départ tant qu’une tâche n’est pas réaffectée', async () => {
+      await expect(svc({ dossier, taches }).s.archiver('D1', true, 'RH1')).rejects.toThrow('Tâche à réaffecter');
+    });
+
+    it('refuse un collègue hors de la société ou parti', async () => {
+      await expect(
+        svc({ dossier, taches }).s.archiver('D1', true, 'RH1', [{ tacheId: 'T1', collaborateurId: 'C9' }]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('réaffecte et prévient le nouveau titulaire', async () => {
+      const { s, majTache, notifications } = svc({ dossier, taches });
+      await s.archiver('D1', true, 'RH1', [{ tacheId: 'T1', collaborateurId: 'C7' }]);
+      expect(majTache).toHaveBeenCalledWith({ where: { id: 'T1' }, data: { assigneId: 'C7' } });
+      expect(notifications.envoyer).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'tache_assignee', destinataireIds: ['U7'], projetId: 'P1', societeId: 'S1' }),
+      );
+    });
+
+    it('désarchiver ne touche à aucune tâche', async () => {
+      const { s, majTache } = svc({ dossier, taches });
+      await s.archiver('D1', false, 'RH1');
+      expect(majTache).not.toHaveBeenCalled();
+    });
   });
 
   it('refuse d’archiver son propre dossier', async () => {

@@ -5,8 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, TypePieceDossier } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { DossierPersonnelDto, PieceDto } from './dto';
+import { DossierPersonnelDto, PieceDto, ReaffectationDto } from './dto';
 
 // Pièces attendues dans tout dossier (ordre d'affichage).
 export const PIECES_DOSSIER: TypePieceDossier[] = [
@@ -87,7 +88,10 @@ function versDossier(d: DossierLu) {
 
 @Injectable()
 export class DossiersPersonnelService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   // Tout le groupe (les trois sociétés) : c'est le périmètre du module RH.
   async lister() {
@@ -192,7 +196,7 @@ export class DossiersPersonnelService {
   // révoquées. Le désarchivage ne réactive que si c'est l'archivage qui avait
   // coupé le compte (dernier événement du journal) — un compte désactivé pour
   // une autre raison reste coupé.
-  async archiver(id: string, archive: boolean, acteurId: string) {
+  async archiver(id: string, archive: boolean, acteurId: string, reaffectations: ReaffectationDto[] = []) {
     const actuel = await this.charger(id);
     const utilisateurId = actuel.utilisateurId ?? actuel.collaborateur?.utilisateur?.id ?? null;
     if (archive && utilisateurId === acteurId) {
@@ -200,6 +204,26 @@ export class DossiersPersonnelService {
     }
     const maintenant = new Date();
     const ops: Prisma.PrismaPromise<unknown>[] = [];
+
+    // Départ : chaque tâche de projet encore ouverte change de main, sans
+    // exception — personne ne garde une tâche au nom d'un salarié parti.
+    const confiees: { tacheId: string; projetId: string; societeId: string; titre: string; cible: string }[] = [];
+    if (archive) {
+      const { taches, candidats } = await this.tachesOuvertes(id);
+      const noms = new Map(candidats.map((c) => [c.id, c.nom]));
+      const cibles = new Map(reaffectations.map((r) => [r.tacheId, r.collaborateurId]));
+      for (const t of taches) {
+        const cible = cibles.get(t.id);
+        if (!cible || !noms.has(cible)) throw new BadRequestException(`Tâche à réaffecter : ${t.projet} · ${t.carte} · ${t.libelle}.`);
+        ops.push(
+          this.prisma.tacheProjet.update({ where: { id: t.id }, data: { assigneId: cible } }),
+          this.prisma.evenementTacheProjet.create({
+            data: { tacheId: t.id, type: 'assignation', parId: acteurId, detail: `Confiée à ${noms.get(cible)} (départ)` },
+          }),
+        );
+        confiees.push({ tacheId: t.id, projetId: t.projetId, societeId: t.societeId, titre: `${t.projet} · ${t.carte} · ${t.libelle}`, cible });
+      }
+    }
 
     if (utilisateurId) {
       const compte = await this.prisma.utilisateur.findUniqueOrThrow({
@@ -245,7 +269,66 @@ export class DossiersPersonnelService {
       }),
       ...ops,
     ]);
+    for (const c of confiees) {
+      await this.notifications.envoyer({
+        societeId: c.societeId,
+        type: 'tache_assignee',
+        titre: `Tâche reprise après un départ · ${c.titre}`,
+        destinataireIds: await this.notifications.comptesDe([c.cible]),
+        parId: acteurId,
+        projetId: c.projetId,
+      });
+    }
     return versDossier(d as DossierLu);
+  }
+
+  // Tâches de projet encore ouvertes au nom du salarié (rien à rendre une fois
+  // validée ou non nécessaire), et les collègues de sa société, encore en
+  // poste, à qui les confier.
+  async tachesOuvertes(id: string) {
+    const d = await this.prisma.dossierPersonnel.findUnique({
+      where: { id },
+      select: { collaborateur: { select: { id: true, societeId: true } } },
+    });
+    if (!d) throw new NotFoundException('Dossier introuvable');
+    const collab = d.collaborateur;
+    if (!collab) return { taches: [], candidats: [] };
+    const [taches, collegues] = await Promise.all([
+      this.prisma.tacheProjet.findMany({
+        where: { assigneId: collab.id, statut: { in: ['a_faire', 'a_valider', 'reprise'] } },
+        select: {
+          id: true,
+          libelle: true,
+          statut: true,
+          finLe: true,
+          carte: { select: { libelle: true } },
+          projet: { select: { id: true, code: true, societeId: true } },
+        },
+        orderBy: [{ finLe: 'asc' }, { id: 'asc' }],
+      }),
+      this.prisma.collaborateur.findMany({
+        where: {
+          societeId: collab.societeId,
+          id: { not: collab.id },
+          OR: [{ dossierPersonnel: null }, { dossierPersonnel: { archiveLe: null } }],
+        },
+        select: { id: true, prenom: true, nom: true },
+        orderBy: [{ prenom: 'asc' }, { nom: 'asc' }],
+      }),
+    ]);
+    return {
+      taches: taches.map((t) => ({
+        id: t.id,
+        libelle: t.libelle,
+        statut: t.statut,
+        finLe: t.finLe,
+        carte: t.carte.libelle,
+        projet: t.projet.code,
+        projetId: t.projet.id,
+        societeId: t.projet.societeId,
+      })),
+      candidats: collegues.map((c) => ({ id: c.id, nom: `${c.prenom} ${c.nom}` })),
+    };
   }
 
   async joindrePiece(id: string, type: TypePieceDossier, dto: PieceDto, acteurId: string) {

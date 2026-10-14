@@ -1,5 +1,7 @@
 import { ModePaiementSalaire, TypeContrat } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -11,6 +13,7 @@ import {
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -50,8 +53,16 @@ export class DossierPersonnelDto {
   @IsOptional() @IsString() @MaxLength(2000) missionSignalAlerte?: string;
 }
 
+export class ReaffectationDto {
+  @IsUUID() tacheId: string;
+  @IsUUID() collaborateurId: string;
+}
+
 export class ArchivageDto {
   @IsBoolean() archive: boolean;
+  // Départ : nouveau titulaire de chaque tâche de projet encore ouverte.
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ReaffectationDto)
+  reaffectations?: ReaffectationDto[];
 }
 
 // Changement de moyen de paiement demandé par le salarié : la RH valide

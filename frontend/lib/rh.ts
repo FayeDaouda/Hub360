@@ -29,8 +29,20 @@ export const creerDossier = (slug: string, corps: MajDossier) =>
   apiSociete<DossierPersonnel>(slug, '/rh/dossiers', { method: 'POST', body: corps });
 export const majDossier = (slug: string, id: string, corps: MajDossier) =>
   apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}`, { method: 'PATCH', body: corps });
-export const archiverDossier = (slug: string, id: string, archive: boolean) =>
-  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/archivage`, { method: 'POST', body: { archive } });
+// Départ : tâches de projet encore ouvertes au nom du salarié, à confier à un
+// collègue de sa société avant l'archivage.
+export type TachesOuvertes = {
+  taches: { id: string; libelle: string; statut: 'a_faire' | 'a_valider' | 'reprise'; finLe: string | null; carte: string; projet: string }[];
+  candidats: { id: string; nom: string }[];
+};
+export const getTachesOuvertes = (slug: string, id: string) =>
+  apiSociete<TachesOuvertes>(slug, `/rh/dossiers/${id}/taches-ouvertes`);
+export const archiverDossier = (
+  slug: string,
+  id: string,
+  archive: boolean,
+  reaffectations?: { tacheId: string; collaborateurId: string }[],
+) => apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/archivage`, { method: 'POST', body: { archive, reaffectations } });
 // Changement de moyen de paiement demandé dans Mon espace : validé (appliqué
 // à la paie) ou refusé.
 export const deciderPaiement = (slug: string, id: string, valide: boolean) =>
