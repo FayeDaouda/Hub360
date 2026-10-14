@@ -8575,6 +8575,16 @@ a.notif-item:hover {
 .po-carte-descriptif {
   margin: 0;
 }
+.po-statut-chantier {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.po-statut-chantier .field-input {
+  width: auto;
+}
 .po-visite {
   display: grid;
   gap: 0.3rem;

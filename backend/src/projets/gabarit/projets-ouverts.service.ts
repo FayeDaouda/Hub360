@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { JalonFacture, Prisma } from '@prisma/client';
+import { JalonFacture, Phase, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import type { Temps } from '../../reglages/gabarit';
 import { alerteAvenant, refDevis } from '../../devis/domaine';
+import { PHASES_PAR_CATEGORIE } from '../domaine/config';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
 import { collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, ROLE_DPLG, type Decideur } from './validation';
@@ -53,6 +54,11 @@ const prolongationAccordee = (l: Prolongations) => l.find((p) => p.decision === 
 const prolongationEnAttente = (l: Prolongations) => l.find((p) => p.decision === null) ?? null;
 
 const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = { F1: 'signature', F2: 'avant_projet', F3: 'livraison' };
+
+export type StatutChantier = 'conception' | 'chantier' | 'livre';
+export function statutChantier(phase: Phase): StatutChantier {
+  return phase === 'chantier' || phase === 'livre' ? phase : 'conception';
+}
 
 // Carte du gabarit dont les tâches sont dues 24 h après la visite sur site.
 export const CARTE_RELEVES = 'releves_existants';
@@ -122,6 +128,21 @@ export class ProjetsOuvertsService {
         mentions: await this.mentionsOuvertes(projets.map((p) => p.id)),
       },
     };
+  }
+
+  // Statut simple « En conception / En chantier / Livré » (décision du
+  // 14/10/2026) porté par Projet.phase : la facturation mensuelle SU/EX s'y
+  // fie (« à facturer ce mois » en chantier). Revenir en conception remet la
+  // première phase de la catégorie.
+  async definirStatutChantier(societeId: string, projetId: string, statut: StatutChantier) {
+    const p = await this.prisma.projet.findFirst({
+      where: { id: projetId, societeId, ouvertLe: { not: null } },
+      select: { id: true, categorie: true },
+    });
+    if (!p) throw new NotFoundException('Projet introuvable ou pas encore ouvert');
+    const phase: Phase = statut === 'conception' ? PHASES_PAR_CATEGORIE[p.categorie][0] : statut;
+    await this.prisma.projet.update({ where: { id: projetId }, data: { phase } });
+    return { statutChantier: statut };
   }
 
   // Date de visite sur site : la carte « Relevés existants » et ses tâches
@@ -203,6 +224,7 @@ export class ProjetsOuvertsService {
       horizon,
       budgetHeures: p.budgetHeures,
       dateVisiteSite: p.dateVisiteSite,
+      statutChantier: statutChantier(p.phase),
       factures: { F1: facture('F1'), F2: facture('F2'), F3: facture('F3') },
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
       optionsTs: dplgConnecte

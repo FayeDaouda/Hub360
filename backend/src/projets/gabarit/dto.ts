@@ -46,3 +46,9 @@ export class DateVisiteDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date attendue au format AAAA-MM-JJ.' })
   date!: string | null;
 }
+
+// PATCH …/projets-ouverts/:id/chantier — statut simple du projet (décision du
+// 14/10/2026, en attendant les étapes de fin de projet du gabarit).
+export class StatutChantierDto {
+  @IsIn(['conception', 'chantier', 'livre']) statut!: 'conception' | 'chantier' | 'livre';
+}

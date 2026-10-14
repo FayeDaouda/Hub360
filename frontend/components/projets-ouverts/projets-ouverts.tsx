@@ -12,6 +12,7 @@ import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessibl
 import {
   ajouterTs,
   definirDateVisite,
+  definirStatutChantier,
   getAssignables,
   getDossierProjet,
   getMentionnables,
@@ -26,6 +27,8 @@ import {
   type Assignable,
   type CarteOuverte,
   type DossierProjetOuvert,
+  STATUTS_CHANTIER,
+  type StatutChantier,
   type TableauProjets,
 } from '@/lib/projets-ouverts';
 import { TachePanneau } from './tache-panneau';
@@ -353,6 +356,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
             J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
           </span>
           {d.budgetHeures !== null && <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>}
+          <StatutProjet slug={slug} projetId={d.id} statut={d.statutChantier} modifiable={ecriture} onMaj={onMaj} />
         </div>
       </header>
 
@@ -615,5 +619,49 @@ function DateVisite({ slug, projetId, date, modifiable, onMaj }: NonNullable<Pro
       {!date && <p className="po-aide">Sans date de visite, ces relevés n’ont pas d’échéance.</p>}
       {erreur && <p className="field-erreur">{erreur}</p>}
     </div>
+  );
+}
+
+// Statut simple « En conception / En chantier / Livré » (14/10/2026) : posé
+// par qui modifie les projets (DPLG, CTO) ; la facturation SU/EX s'y fie.
+function StatutProjet({
+  slug,
+  projetId,
+  statut,
+  modifiable,
+  onMaj,
+}: {
+  slug: string;
+  projetId: string;
+  statut: StatutChantier;
+  modifiable: boolean;
+  onMaj: () => Promise<void>;
+}) {
+  const [erreur, setErreur] = useState<string | null>(null);
+  if (!modifiable) return <span className="pill pill--neutre po-statut-chantier">{STATUTS_CHANTIER[statut]}</span>;
+  return (
+    <label className="po-statut-chantier">
+      <span className="po-aide">Statut</span>
+      <select
+        className="field-input"
+        value={statut}
+        onChange={async (e) => {
+          setErreur(null);
+          try {
+            await definirStatutChantier(slug, projetId, e.target.value as StatutChantier);
+            await onMaj();
+          } catch (err) {
+            setErreur(err instanceof Error && err.message ? err.message : 'Statut non enregistré.');
+          }
+        }}
+      >
+        {(Object.keys(STATUTS_CHANTIER) as StatutChantier[]).map((k) => (
+          <option key={k} value={k}>
+            {STATUTS_CHANTIER[k]}
+          </option>
+        ))}
+      </select>
+      {erreur && <span className="field-erreur">{erreur}</span>}
+    </label>
   );
 }

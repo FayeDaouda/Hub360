@@ -139,6 +139,7 @@ export type DossierProjetOuvert = {
   horizon: number;
   budgetHeures: number | null;
   dateVisiteSite: string | null; // AAAA-MM-JJ : relevés dus 24 h après
+  statutChantier: StatutChantier;
   factures: Record<'F1' | 'F2' | 'F3', EtatFacture>;
   // « Ajouter en TS » (Architecte DPLG) ; vide = pas le droit.
   optionsTs: { carteId: string; libelle: string; heures: number }[];
@@ -199,6 +200,18 @@ export function deciderTache(slug: string, projetId: string, tacheId: string, de
     method: 'POST',
     body: { decision, ...(motif ? { motif } : {}) },
   });
+}
+
+// Statut simple du projet (14/10/2026) : la facturation mensuelle SU/EX
+// (suivi et extras de chantier) s'y fie.
+export type StatutChantier = 'conception' | 'chantier' | 'livre';
+export const STATUTS_CHANTIER: Record<StatutChantier, string> = {
+  conception: 'En conception',
+  chantier: 'En chantier',
+  livre: 'Livré',
+};
+export function definirStatutChantier(slug: string, projetId: string, statut: StatutChantier) {
+  return apiSociete<{ statutChantier: StatutChantier }>(slug, `/projets-ouverts/${projetId}/chantier`, { method: 'PATCH', body: { statut } });
 }
 
 // Date de visite sur site : les relevés de l'existant reçoivent leur
