@@ -19,7 +19,9 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
    une fois sur le serveur : `ssh root@<IP>`, puis
    `cp /opt/hub/deploy/.env.example /opt/hub/deploy/.env && nano /opt/hub/deploy/.env`.
 2. Dans ce `.env` : `HUB_DOMAINE=hub.<IP>.sslip.io` (adresse gratuite qui
-   pointe vers l'IP, HTTPS compris) et `HUB_DONNEES_DEMO=autorise`.
+   pointe vers l'IP, HTTPS compris) et `HUB_DONNEES_DEMO=autorise`. Ajouter
+   `HUB_DOUBLE_FACTEUR=desactive` pour essayer les comptes de démo sans
+   application d'authentification (en production réelle, la laisser vide).
 3. `deploy/envoyer.sh root@<IP>` (envoie le code et lance le HUB), puis sur le
    serveur : `cd /opt/hub/deploy && docker compose --profile demo run --rm demo`.
 4. Le HUB de test répond sur `https://hub.<IP>.sslip.io`, comptes de démo et

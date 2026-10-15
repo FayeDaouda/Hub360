@@ -28,6 +28,11 @@ export class ComptesGroupeController {
     return this.comptes.renvoyerInvitation(utilisateurId, req.user.userId);
   }
 
+  @Post(':utilisateurId/double-facteur/reinitialisation')
+  reinitialiserDoubleFacteur(@Req() req: R, @Param('utilisateurId', ParseUUIDPipe) utilisateurId: string) {
+    return this.comptes.reinitialiserDoubleFacteur(utilisateurId, req.user.userId);
+  }
+
   @Put(':utilisateurId/actif')
   changerActif(
     @Req() req: R,

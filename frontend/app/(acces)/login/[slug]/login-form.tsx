@@ -4,10 +4,12 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, CircleAlert, LoaderCircle, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
-import { EchecConnexion, login, type MotifEchecConnexion } from '@/lib/api';
+import { EchecConnexion, estEtape, login, type EtapeConnexion, type MotifEchecConnexion } from '@/lib/api';
 import { saveSession } from '@/lib/auth';
 import { destinationForSession } from '@/lib/session-redirect';
 import { AuthChamp } from '@/components/auth/auth-champ';
+import { DoubleFacteur } from '@/components/auth/double-facteur';
+import type { Session } from '@/lib/types';
 
 const MESSAGE_ECHEC: Record<MotifEchecConnexion, string> = {
   identifiants: 'Adresse e-mail ou mot de passe incorrect.',
@@ -25,6 +27,13 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Double authentification : étape rendue par le serveur après le mot de passe.
+  const [etape, setEtape] = useState<EtapeConnexion | null>(null);
+
+  function entrer(session: Session) {
+    saveSession(session, remember);
+    router.push(destinationForSession(session));
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -32,10 +41,14 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
     setError(null);
     setLoading(true);
     try {
-      const session = await login(email.trim(), motDePasse, societeSlug);
-      saveSession(session, remember);
+      const reponse = await login(email.trim(), motDePasse, societeSlug);
+      if (estEtape(reponse)) {
+        setEtape(reponse);
+        setLoading(false);
+        return;
+      }
       // loading reste vrai jusqu'au changement de page : pas de double envoi.
-      router.push(destinationForSession(session));
+      entrer(reponse);
     } catch (err) {
       setError(MESSAGE_ECHEC[err instanceof EchecConnexion ? err.motif : 'serveur']);
       setLoading(false);
@@ -43,6 +56,19 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
   }
 
   const invalide = error !== null;
+
+  if (etape) {
+    return (
+      <DoubleFacteur
+        etape={etape}
+        onSession={entrer}
+        onRetour={() => {
+          setEtape(null);
+          setMotDePasse('');
+        }}
+      />
+    );
+  }
 
   return (
     <form className="auth-formulaire" onSubmit={handleSubmit} aria-busy={loading}>

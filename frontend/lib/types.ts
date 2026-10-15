@@ -1296,6 +1296,7 @@ export type CompteGroupe = {
   role: { id: string; nom: string };
   administration: boolean;
   salaireBrutMensuel: number | null; // FCFA ; null = non renseigné
+  doubleFacteur: boolean; // application d'authentification active
 };
 
 export type SocieteComptes = {

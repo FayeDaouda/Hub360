@@ -41,11 +41,17 @@ export class EchecConnexion extends Error {
   }
 }
 
+// Mot de passe juste mais double authentification à passer : le serveur
+// rend une étape (code de l'application, ou première activation) et un jeton
+// valable 10 minutes, pas encore de session.
+export type EtapeConnexion = { etape: 'code' | 'enrolement'; jeton: string };
+export const estEtape = (r: Session | EtapeConnexion): r is EtapeConnexion => 'etape' in r;
+
 export async function login(
   email: string,
   motDePasse: string,
   societeSlug: string,
-): Promise<Session> {
+): Promise<Session | EtapeConnexion> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/login`, {
@@ -61,6 +67,31 @@ export async function login(
   if (res.status >= 500) throw new EchecConnexion('serveur');
   throw new EchecConnexion('identifiants');
 }
+
+// -- Double authentification (routes /auth/login/code, /auth/double-facteur/*) --
+
+async function postDoubleFacteur<T>(chemin: string, body: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/auth/${chemin}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('Serveur injoignable. Vérifiez votre connexion internet puis réessayez.');
+  }
+  if (res.ok) return res.json();
+  if (res.status === 429) throw new Error('Trop de tentatives. Patientez une minute avant de réessayer.');
+  const c = await res.json().catch(() => null);
+  throw new Error(typeof c?.message === 'string' ? c.message : 'Code incorrect.');
+}
+
+export const connexionAvecCode = (jeton: string, code: string) => postDoubleFacteur<Session>('login/code', { jeton, code });
+export const preparerDoubleFacteur = (jeton: string) =>
+  postDoubleFacteur<{ secret: string; qr: string }>('double-facteur/preparation', { jeton });
+export const activerDoubleFacteur = (jeton: string, code: string) =>
+  postDoubleFacteur<Session & { codesSecours: string[] }>('double-facteur/activation', { jeton, code });
 
 // -- Comptes : activation, reset, mot de passe oublié (routes /auth/*) --------
 

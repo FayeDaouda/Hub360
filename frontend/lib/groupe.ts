@@ -44,6 +44,12 @@ export function changerActifCompte(
   return apiAuth(`/groupe/comptes/${utilisateurId}/actif`, { method: 'PUT', body: { actif } });
 }
 
+// Téléphone perdu : retire la double authentification (sessions coupées) ;
+// la personne la réactive à sa prochaine connexion.
+export function reinitialiserDoubleFacteur(utilisateurId: string): Promise<{ id: string; doubleFacteur: boolean }> {
+  return apiAuth(`/groupe/comptes/${utilisateurId}/double-facteur/reinitialisation`, { method: 'POST' });
+}
+
 export function definirSalaireCompte(
   utilisateurId: string,
   salaireBrutMensuel: number | null,

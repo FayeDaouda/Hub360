@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/client-api';
 import { NouveauCompteModal, ResultatInvitation } from '@/components/groupe/nouveau-compte-modal';
 import {
   changerActifCompte,
+  reinitialiserDoubleFacteur,
   changerRoleCompte,
   comparerRoles,
   definirSalaireCompte,
@@ -360,6 +361,25 @@ function ActionsCompte({
     }
   }
 
+  async function reinitialiser2fa() {
+    if (
+      !window.confirm(
+        `Retirer la double authentification de ${compte.prenom} ${compte.nom} (téléphone perdu ou changé) ? Ses sessions sont coupées ; il la réactivera à sa prochaine connexion.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setErreur(null);
+    try {
+      onMaj(await reinitialiserDoubleFacteur(compte.id));
+    } catch (e) {
+      setErreur(messageErreur(e, 'Action impossible.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const libelle =
     compte.statut === 'en_attente' ? 'Renvoyer l’invitation' : compte.statut === 'actif' ? 'Désactiver' : 'Réactiver';
   return (
@@ -367,6 +387,11 @@ function ActionsCompte({
       <button type="button" className="btn-ghost btn-ghost--sm groupe-action-compte" onClick={agir} disabled={busy}>
         {busy ? '…' : libelle}
       </button>
+      {compte.doubleFacteur && (
+        <button type="button" className="btn-ghost btn-ghost--sm groupe-action-compte" onClick={reinitialiser2fa} disabled={busy}>
+          Réinitialiser la double authentification
+        </button>
+      )}
       {erreur && <span className="field-erreur">{erreur}</span>}
       {invitation &&
         createPortal(

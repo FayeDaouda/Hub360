@@ -1456,6 +1456,51 @@ button {
   outline-offset: 3px;
 }
 
+/* Double authentification (après le mot de passe). */
+.auth-df-texte {
+  margin: 0;
+  line-height: 1.5;
+}
+.auth-df-aide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.auth-df-etapes {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.5;
+}
+.auth-df-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.auth-df-qr img {
+  border-radius: 8px;
+  background: #fff;
+}
+.auth-df-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+}
+.auth-df-retour {
+  align-self: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
 .auth-erreur {
   display: flex;
   align-items: flex-start;

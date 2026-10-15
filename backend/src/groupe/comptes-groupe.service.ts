@@ -33,6 +33,7 @@ type UtilisateurLu = {
   email: string;
   actif: boolean;
   motDePasseHash: string | null;
+  totpActifLe?: Date | null;
   remuneration: { salaireBrutMensuel: number } | null;
 };
 
@@ -43,6 +44,7 @@ const SELECT_UTILISATEUR = {
   email: true,
   actif: true,
   motDePasseHash: true,
+  totpActifLe: true,
   remuneration: { select: { salaireBrutMensuel: true } },
 } as const;
 
@@ -62,6 +64,7 @@ function versCompte(u: UtilisateurLu, role: { id: string; nom: string }) {
     role: { id: role.id, nom: role.nom },
     administration: ROLES_ADMINISTRATION.has(role.nom),
     salaireBrutMensuel: u.remuneration?.salaireBrutMensuel ?? null,
+    doubleFacteur: !!u.totpActifLe,
   };
 }
 
@@ -313,6 +316,25 @@ export class ComptesGroupeService {
       }),
     ]);
     return { id: maj.id, statut: statut(maj) };
+  }
+
+  // Téléphone perdu ou changé : la double authentification est retirée et
+  // les sessions coupées ; la personne la réactive à sa prochaine connexion.
+  async reinitialiserDoubleFacteur(utilisateurId: string, acteurId: string) {
+    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpSecret: true, totpActifLe: true } });
+    if (!u) throw new NotFoundException('Compte introuvable.');
+    if (!u.totpActifLe && !u.totpSecret) throw new ConflictException('Double authentification non activée sur ce compte.');
+    const maintenant = new Date();
+    await this.prisma.$transaction([
+      this.prisma.utilisateur.update({
+        where: { id: utilisateurId },
+        data: { totpSecret: null, totpActifLe: null, totpDernierPas: null, totpCodesSecours: [], sessionsValidesDepuis: maintenant },
+      }),
+      this.prisma.evenementCompte.create({
+        data: { utilisateurId, type: 'double_facteur_reinitialise', parId: acteurId, detail: 'Administration du HUB' },
+      }),
+    ]);
+    return { id: utilisateurId, doubleFacteur: false };
   }
 
   async definirSalaire(utilisateurId: string, salaireBrutMensuel: number | null, acteurId: string) {

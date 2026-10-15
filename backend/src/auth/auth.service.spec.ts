@@ -1,7 +1,8 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthService, dateEmission } from './auth.service';
+import { AuthService, dateEmission, doubleFacteurExige } from './auth.service';
+import { base32, chiffrerSecret, codeAuPas, hacherCodeSecours, pasCourant } from './totp';
 
 jest.mock('./mot-de-passe', () => ({
   verifierMotDePasse: jest.fn().mockResolvedValue(true),
@@ -46,6 +47,7 @@ function svc(affectations: unknown[]) {
 }
 
 const DTO = { email: 'a@b.c', motDePasse: 'x', societeSlug: 'grey-concrete' };
+type Session = { role: string; permissions: Record<string, string> };
 
 describe('AuthService.login — choix de l’affectation', () => {
   it('préfère l’affectation de la société à l’affectation transverse, quel que soit l’ordre', async () => {
@@ -53,14 +55,14 @@ describe('AuthService.login — choix de l’affectation', () => {
       affectation(null, 'CEO (transverse)', [['finances_marges', 'validation']]),
       affectation('S1', 'Salarié', [['mon_espace', 'ecriture']]),
     ]);
-    const res = await s.login(DTO);
+    const res = (await s.login(DTO)) as Session;
     expect(res.role).toBe('Salarié');
     expect(res.permissions).toEqual({ mon_espace: 'ecriture' });
   });
 
   it('se rabat sur l’affectation transverse sans affectation dans la société', async () => {
     const { svc: s } = svc([affectation(null, 'holding_admin')]);
-    expect((await s.login(DTO)).role).toBe('holding_admin');
+    expect(((await s.login(DTO)) as Session).role).toBe('holding_admin');
   });
 
   it('refuse la connexion sans affectation', async () => {
@@ -109,5 +111,60 @@ describe('dateEmission', () => {
   });
   it('coupure ancienne : seconde courante', () => {
     expect(dateEmission(new Date(5_000), 10_700)).toBe(10);
+  });
+});
+
+describe('Double authentification', () => {
+  const SECRET = base32(Buffer.from('12345678901234567890'));
+  const AVEC_2FA = { ...UTILISATEUR, totpActifLe: new Date(), totpSecret: chiffrerSecret(SECRET), totpDernierPas: null, totpCodesSecours: [hacherCodeSecours('ABCD-EFGH')] };
+
+  function svc2(u: unknown = AVEC_2FA) {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const update = jest.fn((a: unknown) => a);
+    const prisma = {
+      utilisateur: { findUnique: jest.fn().mockResolvedValue(u), update, updateMany },
+      societe: { findUnique: jest.fn().mockResolvedValue(SOCIETE) },
+      utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([affectation('S1', 'CFO')]) },
+      evenementCompte: { create: jest.fn((a: unknown) => a) },
+      $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+    } as unknown as PrismaService;
+    const jwt = {
+      sign: jest.fn().mockReturnValue('jeton'),
+      verify: jest.fn().mockReturnValue({ sub: 'U1', slug: 'grey-concrete', but: 'double-facteur' }),
+    } as unknown as JwtService;
+    return { s: new AuthService(prisma, jwt), update, updateMany };
+  }
+
+  it('obligatoire pour la direction en production, jamais pour le Salarié ; réglable', () => {
+    expect(doubleFacteurExige('CFO', { NODE_ENV: 'production' })).toBe(true);
+    expect(doubleFacteurExige('Salarié', { NODE_ENV: 'production' })).toBe(false);
+    expect(doubleFacteurExige('CFO', { NODE_ENV: 'development' })).toBe(false);
+    expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'obligatoire' })).toBe(true);
+    expect(doubleFacteurExige('CFO', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
+  });
+
+  it('mot de passe juste + double facteur actif : pas de session, une étape « code »', async () => {
+    expect(await svc2().s.login(DTO)).toEqual({ etape: 'code', jeton: 'jeton' });
+  });
+
+  it('code de l’application : session ouverte, pas mémorisé contre le rejeu', async () => {
+    const { s, updateMany } = svc2();
+    const res = (await s.connexionAvecCode('jeton', codeAuPas(SECRET, pasCourant()))) as Session;
+    expect(res.role).toBe('CFO');
+    expect(updateMany.mock.calls[0][0].data).toEqual({ totpDernierPas: pasCourant() });
+  });
+
+  it('code faux refusé ; code de secours accepté une seule fois', async () => {
+    const { s, update } = svc2();
+    await expect(s.connexionAvecCode('jeton', '000000')).rejects.toThrow(UnauthorizedException);
+    await s.connexionAvecCode('jeton', 'abcd efgh');
+    expect(update.mock.calls[0][0]).toEqual({ where: { id: 'U1' }, data: { totpCodesSecours: [] } });
+  });
+
+  it('activation : premier code juste → 8 codes de secours et session', async () => {
+    const enCours = { ...UTILISATEUR, totpActifLe: null, totpSecret: chiffrerSecret(SECRET), totpDernierPas: null, totpCodesSecours: [] };
+    const res = await svc2(enCours).s.activerDoubleFacteur('jeton', codeAuPas(SECRET, pasCourant()));
+    expect(res.codesSecours).toHaveLength(8);
+    expect(res.role).toBe('CFO');
   });
 });

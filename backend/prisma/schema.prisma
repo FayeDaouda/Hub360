@@ -86,6 +86,13 @@ model Utilisateur {
   motDePasseHash        String?   @map("mot_de_passe_hash")
   nom                   String
   prenom                String
+  // Double authentification (application TOTP, RFC 6238) : secret chiffré
+  // (AES-256-GCM), actif dès totpActifLe ; dernier pas accepté (anti-rejeu)
+  // et codes de secours à usage unique (SHA-256).
+  totpSecret            String?   @map("totp_secret")
+  totpActifLe           DateTime? @map("totp_actif_le")
+  totpDernierPas        Int?      @map("totp_dernier_pas")
+  totpCodesSecours      String[]  @default([]) @map("totp_codes_secours")
   actif                 Boolean   @default(true)
   // Invalide toute session émise avant cette date (reset de mot de passe,
   // désactivation). Vérifié dans jwt.strategy contre le `iat` du token.
@@ -173,6 +180,8 @@ enum EvenementCompteType {
   compte_reactive
   role_modifie // par l'admin du groupe (écran Comptes & rôles)
   salaire_modifie // idem — le montant n'est PAS recopié dans le journal
+  double_facteur_active // par le titulaire, à la connexion
+  double_facteur_reinitialise // par l'administration du HUB (téléphone perdu)
 }
 
 // -- Notifications collaborateur --

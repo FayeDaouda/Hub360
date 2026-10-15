@@ -3,7 +3,7 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { LoginDto } from './dto/login.dto';
+import { CodeDoubleFacteurDto, EtapeDoubleFacteurDto, LoginDto } from './dto/login.dto';
 import {
   ActiverCompteDto,
   ChangerMotDePasseDto,
@@ -28,6 +28,29 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  // Double authentification (après le mot de passe, jeton d'étape) : code de
+  // l'application ou de secours ; première activation (QR puis premier code).
+  @Post('login/code')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  connexionAvecCode(@Body() dto: CodeDoubleFacteurDto) {
+    return this.authService.connexionAvecCode(dto.jeton, dto.code);
+  }
+
+  @Post('double-facteur/preparation')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  preparerDoubleFacteur(@Body() dto: EtapeDoubleFacteurDto) {
+    return this.authService.preparerDoubleFacteur(dto.jeton);
+  }
+
+  @Post('double-facteur/activation')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  activerDoubleFacteur(@Body() dto: CodeDoubleFacteurDto) {
+    return this.authService.activerDoubleFacteur(dto.jeton, dto.code);
   }
 
   // Activation d'un compte invité : le collaborateur choisit son mot de passe.
