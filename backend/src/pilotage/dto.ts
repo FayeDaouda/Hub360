@@ -13,3 +13,8 @@ export class SaisirDecisionDto {
   @IsOptional() @IsString() responsableCollaborateurId?: string;
   @Matches(DATE) echeance!: string; // §4.1 : chaque décision a une échéance
 }
+
+// Dépôt d'un reporting : l'analyse de l'émetteur est obligatoire.
+export class DeposerReportingDto {
+  @IsString() @MinLength(10) @MaxLength(4000) analyse!: string;
+}

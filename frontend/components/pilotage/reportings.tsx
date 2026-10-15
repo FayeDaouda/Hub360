@@ -24,13 +24,16 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
   const [choisi, setChoisi] = useState<string | null>(premier ? cle(premier) : null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Brouillon d'analyse par reporting : changer de ligne ne le perd pas.
+  const [analyses, setAnalyses] = useState<Record<string, string>>({});
   const r = reportings.find((x) => cle(x) === choisi) ?? null;
+  const analyse = r ? analyses[cle(r)] ?? '' : '';
 
   async function deposer(x: ReportingPilotage) {
     setEnvoi(true);
     setErreur(null);
     try {
-      onVue(await deposerReporting(slug, x.type, x.mois));
+      onVue(await deposerReporting(slug, x.type, x.mois, analyses[cle(x)]?.trim() ?? ''));
     } catch (e) {
       setErreur(e instanceof Error && e.message ? e.message : 'Le dépôt a échoué.');
     } finally {
@@ -107,9 +110,29 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
               inscrite au registre pour le CODIR.
             </p>
           )}
+          {r.analyse ? (
+            <div className="pi-analyse">
+              <p className="po-kicker">Analyse de l’émetteur</p>
+              <p>{r.analyse}</p>
+            </div>
+          ) : (
+            r.peutDeposer && (
+              <label className="field pi-analyse">
+                <span className="field-label">Analyse (obligatoire)</span>
+                <textarea
+                  className="field-input"
+                  rows={5}
+                  maxLength={4000}
+                  placeholder="Lecture des chiffres du mois, causes des écarts, actions proposées…"
+                  value={analyse}
+                  onChange={(e) => setAnalyses((a) => ({ ...a, [cle(r)]: e.target.value }))}
+                />
+              </label>
+            )
+          )}
           {erreur && <p className="field-erreur">{erreur}</p>}
           {r.peutDeposer && (
-            <button type="button" className="btn-primary pi-deposer" disabled={envoi} onClick={() => deposer(r)}>
+            <button type="button" className="btn-primary pi-deposer" disabled={envoi || analyse.trim().length < 10} onClick={() => deposer(r)}>
               {envoi ? 'Dépôt…' : 'Déposer le reporting'}
             </button>
           )}

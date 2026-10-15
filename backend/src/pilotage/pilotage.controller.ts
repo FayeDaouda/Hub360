@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { SaisirDecisionDto } from './dto';
+import { DeposerReportingDto, SaisirDecisionDto } from './dto';
 import { AttentionService, type ActeurAttention } from './attention.service';
 import { type Acteur, PilotageService } from './pilotage.service';
 
@@ -36,8 +36,13 @@ export class PilotageController {
 
   @Post('reportings/:type/:mois/depot')
   @HttpCode(200)
-  deposer(@Req() req: R, @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting, @Param('mois') mois: string) {
-    return this.pilotage.deposer(req.user, type, mois);
+  deposer(
+    @Req() req: R,
+    @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting,
+    @Param('mois') mois: string,
+    @Body() dto: DeposerReportingDto,
+  ) {
+    return this.pilotage.deposer(req.user, type, mois, dto.analyse);
   }
 
   @Post('decisions')

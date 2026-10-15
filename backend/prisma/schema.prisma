@@ -2063,6 +2063,9 @@ model ReportingMensuel {
   deposeLe    DateTime      @default(now()) @map("depose_le")
   deposeParId String?       @map("depose_par_id") // audit, pas de FK
   contenu     Json?
+  // Analyse rédigée par l'émetteur (lecture des chiffres, causes, actions),
+  // obligatoire au dépôt et figée avec le contenu.
+  analyse     String?
 
   societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
 

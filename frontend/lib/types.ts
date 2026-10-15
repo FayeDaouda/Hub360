@@ -1637,6 +1637,7 @@ export type ReportingPilotage = {
   statut: StatutReporting;
   deposeLe: string | null;
   contenu: { libelle: string; valeur: string }[] | null; // null = aucune rubrique définie
+  analyse: string | null; // rédigée par l'émetteur au dépôt
   peutDeposer: boolean;
 };
 

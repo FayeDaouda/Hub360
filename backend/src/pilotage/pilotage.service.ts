@@ -403,23 +403,26 @@ export class PilotageService {
           statut,
           deposeLe,
           contenu,
+          analyse: depot?.analyse ?? null,
           peutDeposer: !depot && a.role === emetteur,
         };
       }),
     );
   }
 
-  async deposer(a: Acteur, type: TypeReporting, mois: string) {
+  async deposer(a: Acteur, type: TypeReporting, mois: string, analyse: string) {
     const jour = aujourdhui();
     if (!REPORTINGS[type]) throw new NotFoundException('Reporting inconnu.');
     if (a.role !== REPORTINGS[type].emetteur) {
       throw new ForbiddenException(`Seul l’émetteur (${libelleRole(REPORTINGS[type].emetteur)}) dépose ce reporting.`);
     }
     if (!moisAReporter(jour).includes(mois)) throw new BadRequestException('Seul le reporting d’un mois clos se dépose.');
+    // Validée côté DTO, mais des espaces seuls ne font pas une analyse.
+    if (analyse.trim().length < 10) throw new BadRequestException('L’analyse est obligatoire (10 caractères au moins).');
     const contenu = type === 'direction' ? await this.contenuDirection(a.societeId, mois, jour) : undefined;
     try {
       await this.prisma.reportingMensuel.create({
-        data: { societeId: a.societeId, type, mois, deposeParId: a.userId, contenu: contenu ?? Prisma.JsonNull },
+        data: { societeId: a.societeId, type, mois, deposeParId: a.userId, contenu: contenu ?? Prisma.JsonNull, analyse: analyse.trim() },
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException('Reporting déjà déposé.');

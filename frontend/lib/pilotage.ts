@@ -11,8 +11,8 @@ export function getAttention(slug: string): Promise<AttentionPilotage> {
   return apiSociete<AttentionPilotage>(slug, '/pilotage/attention');
 }
 
-export function deposerReporting(slug: string, type: 'direction' | 'rh', mois: string): Promise<VuePilotage> {
-  return apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/depot`, { method: 'POST' });
+export function deposerReporting(slug: string, type: 'direction' | 'rh', mois: string, analyse: string): Promise<VuePilotage> {
+  return apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/depot`, { method: 'POST', body: { analyse } });
 }
 
 export type NouvelleDecision = {

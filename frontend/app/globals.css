@@ -11412,6 +11412,15 @@ a.notif-item:hover {
   padding: 0.35rem 0.9rem;
   font-size: 0.82rem;
 }
+/* Reporting : analyse rédigée par l'émetteur, sous les rubriques chiffrées. */
+.pi-analyse {
+  margin-top: 1rem;
+}
+.pi-analyse p:last-child {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .pi-rubriques {
   display: grid;
   margin: 0;
