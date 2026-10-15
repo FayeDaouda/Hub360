@@ -75,6 +75,11 @@ production.
 
 ## Mettre à jour
 
+Avant chaque envoi, sur le Mac : `cd backend && npm test && npm run test:e2e`
+(tests unitaires, puis les trois parcours critiques sur une base de test
+créée et supprimée à chaque lancement : connexion et droits, offre → facture
+payée, remise → validation d'une tâche). Tout doit être vert.
+
 Depuis le Mac : `deploy/envoyer.sh root@<IP>`.
 Les migrations de base s'appliquent au démarrage du backend.
 

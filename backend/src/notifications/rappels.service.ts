@@ -46,7 +46,9 @@ export class RappelsService implements OnApplicationBootstrap {
   ) {}
 
   // Serveur redémarré après l'heure : la tournée du jour est rattrapée.
+  // Jamais pendant les tests (un minuteur resterait ouvert après eux).
   onApplicationBootstrap() {
+    if (process.env.NODE_ENV === 'test') return;
     if (new Date().getUTCHours() >= HEURE_TOURNEE) setTimeout(() => void this.tournee(), 30_000);
   }
 
