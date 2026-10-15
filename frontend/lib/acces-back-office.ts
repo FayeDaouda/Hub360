@@ -20,8 +20,11 @@ const SECTIONS_DIRECTION: Record<string, string> = {
   rh: 'rh',
 };
 
+// Module de la matrice qui gouverne une section (guide d'aide : niveau du rôle).
+export const moduleDeSection = (cle: string): string | undefined => SECTIONS_DIRECTION[cle];
+
 // Ordre de préférence pour la page d'arrivée (= ordre de la sidebar).
-const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
+export const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
 const CHEMINS: Record<string, string> = {
   'tableau-de-bord': '',
   crm: 'crm',

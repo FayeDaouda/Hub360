@@ -3070,6 +3070,85 @@ a.admin-nav-item:hover {
   color: var(--text-muted);
 }
 
+/* Réglages › Signalements : un retour par carte, statut modifiable. */
+.sig-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sig-ligne {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+}
+.sig-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sig-texte {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sig-page {
+  overflow-wrap: anywhere;
+}
+.sig-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.sig-statut {
+  width: auto;
+}
+/* Aide (barre du haut) : guide selon les droits + « Signaler un problème ». */
+.aide-panneau {
+  max-width: 640px;
+}
+.aide-onglets {
+  margin: 0 1.25rem;
+}
+.aide-corps {
+  max-height: min(70vh, 40rem);
+  overflow-y: auto;
+}
+.aide-intro {
+  margin: 0 0 0.75rem;
+}
+.aide-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.aide-sections li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.aide-action {
+  font-size: 0.88rem;
+}
+.aide-reperes {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+.aide-reperes li + li {
+  margin-top: 0.3rem;
+}
 /* Recherche globale : déclencheur (pilule de la topbar) et palette. */
 .recherche-declencheur {
   font: inherit;

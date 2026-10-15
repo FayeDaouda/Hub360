@@ -29,6 +29,7 @@ import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-m
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { ClocheNotifications } from '@/components/admin/cloche-notifications';
 import { RechercheGlobale } from '@/components/admin/recherche-globale';
+import { AideGlobale } from '@/components/admin/aide-globale';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 
 type NavItem = {
@@ -369,6 +370,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               />
             )}
             <ClocheNotifications slug={session.societe.slug} session={session} />
+            <AideGlobale session={session} />
             <ThemeToggle />
             <button
               type="button"

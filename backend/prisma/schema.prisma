@@ -69,10 +69,11 @@ model Societe {
   contrats              Contrat[]
   annexesContratGabarit AnnexeContratGabarit[]
 
-  dossiersPersonnel    DossierPersonnel[]
-  gabaritVersions      GabaritVersion[]
-  reglages             ReglageSociete[]
-  journalReglages      JournalReglage[]
+  dossiersPersonnel DossierPersonnel[]
+  gabaritVersions   GabaritVersion[]
+  reglages          ReglageSociete[]
+  journalReglages   JournalReglage[]
+  signalements      Signalement[]
 
   @@map("societes")
 }
@@ -93,28 +94,29 @@ model Utilisateur {
   desactiveParId        String?   @map("desactive_par_id") // utilisateurId de l'admin (audit, pas de FK)
   createdAt             DateTime  @default(now()) @map("created_at")
 
-  roles                              UtilisateurSocieteRole[]
-  rolesSupprimes                     Role[]                    @relation("RoleSupprPar")
-  collaborations                     Collaborateur[]
-  dossierPersonnel                   DossierPersonnel?
-  blocsEtudeSupprimes                BlocEtude[]               @relation("BlocEtudeSupprPar")
-  invitations                        Invitation[]
-  notifications                      Notification[]
-  evenementsCompte                   EvenementCompte[]
-  messages                           Message[]
-  canauxDmP1                         Canal[]                   @relation("CanalDmP1")
-  canauxDmP2                         Canal[]                   @relation("CanalDmP2")
-  lecturesCanal                      LectureCanal[]
-  dossiersCrees                      DossierCrm[]              @relation("DossierCreePar")
-  dossiersApportes                   DossierCrm[]              @relation("DossierApporteur")
-  dossiersPossedes                   DossierCrm[]              @relation("DossierProprietaire")
-  dossiersArchives                   DossierCrm[]              @relation("DossierArchivePar")
-  tachesProjetValidees               TacheProjet[]             @relation("TacheProjetValideePar")
-  evenementsTachesProjet             EvenementTacheProjet[]    @relation("EvenementTacheProjetPar")
-  commentairesProjet                 CommentaireProjet[]       @relation("CommentaireProjetAuteur")
-  mentionsProjet                     CommentaireProjet[]       @relation("CommentaireProjetMentionne")
-  transitionsDossier                 DossierCrmTransition[]    @relation("TransitionDossierPar")
-  remuneration                       Remuneration?
+  roles                  UtilisateurSocieteRole[]
+  rolesSupprimes         Role[]                   @relation("RoleSupprPar")
+  collaborations         Collaborateur[]
+  dossierPersonnel       DossierPersonnel?
+  blocsEtudeSupprimes    BlocEtude[]              @relation("BlocEtudeSupprPar")
+  invitations            Invitation[]
+  notifications          Notification[]
+  evenementsCompte       EvenementCompte[]
+  messages               Message[]
+  canauxDmP1             Canal[]                  @relation("CanalDmP1")
+  canauxDmP2             Canal[]                  @relation("CanalDmP2")
+  lecturesCanal          LectureCanal[]
+  dossiersCrees          DossierCrm[]             @relation("DossierCreePar")
+  dossiersApportes       DossierCrm[]             @relation("DossierApporteur")
+  dossiersPossedes       DossierCrm[]             @relation("DossierProprietaire")
+  dossiersArchives       DossierCrm[]             @relation("DossierArchivePar")
+  tachesProjetValidees   TacheProjet[]            @relation("TacheProjetValideePar")
+  evenementsTachesProjet EvenementTacheProjet[]   @relation("EvenementTacheProjetPar")
+  commentairesProjet     CommentaireProjet[]      @relation("CommentaireProjetAuteur")
+  mentionsProjet         CommentaireProjet[]      @relation("CommentaireProjetMentionne")
+  transitionsDossier     DossierCrmTransition[]   @relation("TransitionDossierPar")
+  remuneration           Remuneration?
+  signalements           Signalement[]            @relation("SignalementAuteur")
 
   @@map("utilisateurs")
 }
@@ -195,6 +197,7 @@ enum NotificationType {
   rappel_facture // facture échue non soldée (puis chaque semaine)
   rappel_tache // tâche due demain, ou passée en retard
   avenant_ts // élément ajouté en TS : ligne ajoutée au devis d'avenant, à envoyer
+  signalement_recu // « Signaler un problème » : nouveau retour à traiter (CIO)
   offre_acceptee
   offre_refusee
   contrat_signe
@@ -235,6 +238,36 @@ model Notification {
 
   @@index([destinataireId, luLe])
   @@map("notifications")
+}
+
+// « Signaler un problème » (aide de la barre du haut, mois de test puis
+// usage courant) : le HUB joint la page, le rôle et l'appareil ; le CIO suit
+// chaque retour jusqu'à sa correction (Réglages › Signalements).
+enum StatutSignalement {
+  a_traiter
+  en_cours
+  corrige
+}
+
+model Signalement {
+  id          String            @id @default(uuid())
+  societeId   String            @map("societe_id")
+  auteurId    String?           @map("auteur_id")
+  description String
+  page        String // chemin de la page au moment du signalement
+  role        String // rôle de l'auteur à ce moment
+  appareil    String // « mobile » | « ordinateur »
+  capture     String? // data URI facultative, comme les autres pièces (phase 2 : stockage objet)
+  statut      StatutSignalement @default(a_traiter)
+  creeLe      DateTime          @default(now()) @map("cree_le")
+  traiteLe    DateTime?         @map("traite_le")
+  traiteParId String?           @map("traite_par_id") // audit, pas de FK
+
+  societe Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  auteur  Utilisateur? @relation("SignalementAuteur", fields: [auteurId], references: [id], onDelete: SetNull)
+
+  @@index([societeId, statut])
+  @@map("signalements")
 }
 
 // Rappels quotidiens déjà envoyés : la clé (ex. « tache:<id>:veille:<finLe> »)
@@ -765,24 +798,24 @@ model Projet {
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  societe                  Societe                   @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  dossierCrm               DossierCrm                @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
-  client                   Client                    @relation(fields: [clientId], references: [id])
+  societe           Societe             @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  dossierCrm        DossierCrm          @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
+  client            Client              @relation(fields: [clientId], references: [id])
   // Plusieurs équipes par projet (décision boss, sept. 2026 — remplace « 1
   // projet = 1 cellule »). Collaborateur.celluleId reste singulier : un
   // collaborateur suit un projet si SA cellule fait partie des cellules du
   // projet (cf. projet-acces.ts).
-  cellules                 ProjetCellule[]
+  cellules          ProjetCellule[]
   // phase 2 — sections aval (conception : les 3 ; aménagement : execution seul)
-  etudes                   Etudes?
-  notifications            Notification[]
-  factures                 Facture[]
-  devis                    Devis[]
-  validationsTaches        ValidationTache[]
-  gabaritVersion           GabaritVersion?           @relation(fields: [gabaritVersionId], references: [id])
-  cartes                   CarteProjet[]
-  taches                   TacheProjet[]
-  commentaires             CommentaireProjet[]
+  etudes            Etudes?
+  notifications     Notification[]
+  factures          Facture[]
+  devis             Devis[]
+  validationsTaches ValidationTache[]
+  gabaritVersion    GabaritVersion?     @relation(fields: [gabaritVersionId], references: [id])
+  cartes            CarteProjet[]
+  taches            TacheProjet[]
+  commentaires      CommentaireProjet[]
 
   @@map("projets")
 }
@@ -927,17 +960,17 @@ model Collaborateur {
   dateArrivee   String?             @map("date_arrivee")
   createdAt     DateTime            @default(now()) @map("created_at")
 
-  societe                      Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  cellule                      Cellule?           @relation("CelluleMembre", fields: [celluleId], references: [id], onDelete: SetNull)
+  societe           Societe        @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  cellule           Cellule?       @relation("CelluleMembre", fields: [celluleId], references: [id], onDelete: SetNull)
   // Back-relation de Cellule.dispatcherId — un tableau car non-`@unique` en
   // base, mais en pratique jamais plus de 1 élément (la désignation exige
   // d'appartenir à la cellule, donc « être dispatcher de 2 cellules à la
   // fois » impliquerait d'être membre des deux, impossible avec celluleId
   // singulier).
-  celluleDispatchee            Cellule[]          @relation("CelluleDispatcher")
-  utilisateur                  Utilisateur?       @relation(fields: [utilisateurId], references: [id])
-  tachesProjet                 TacheProjet[]      @relation("TacheProjetAssigne")
-  postesCellule                PosteCellule[]     @relation("PosteTitulaire")
+  celluleDispatchee Cellule[]      @relation("CelluleDispatcher")
+  utilisateur       Utilisateur?   @relation(fields: [utilisateurId], references: [id])
+  tachesProjet      TacheProjet[]  @relation("TacheProjetAssigne")
+  postesCellule     PosteCellule[] @relation("PosteTitulaire")
 
   dossierPersonnel DossierPersonnel?
 
@@ -988,7 +1021,7 @@ model Etudes {
   dceConstitue Boolean   @default(false) @map("dce_constitue")
   dceLe        DateTime? @map("dce_le")
 
-  projet Projet       @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  projet Projet      @relation(fields: [projetId], references: [id], onDelete: Cascade)
   // LigneEtude (6 types figés, TypeEtude) laissée dormante — restructuration
   // sept. 2026 en blocs configurables par gabarit société (BlocEtude
   // ci-dessous), même motif que dossier_final/checklist Avant-projet avant
@@ -1038,10 +1071,10 @@ model BlocEtude {
   supprimeLe           DateTime?   @map("supprime_le")
   supprimeParId        String?     @map("supprime_par_id")
 
-  etudes           Etudes            @relation(fields: [projetId], references: [projetId], onDelete: Cascade)
-  carteProjet      CarteProjet?      @relation(fields: [carteProjetId], references: [id], onDelete: SetNull)
-  supprimePar      Utilisateur?      @relation("BlocEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
-  lignesFacture    LigneFacture[] // refacturation(s) — une seule active à la fois
+  etudes        Etudes         @relation(fields: [projetId], references: [projetId], onDelete: Cascade)
+  carteProjet   CarteProjet?   @relation(fields: [carteProjetId], references: [id], onDelete: SetNull)
+  supprimePar   Utilisateur?   @relation("BlocEtudeSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
+  lignesFacture LigneFacture[] // refacturation(s) — une seule active à la fois
 
   @@unique([projetId, carteProjetId])
   @@map("blocs_etude")
@@ -1381,13 +1414,13 @@ model Devis {
   delaisEcheancier    Json?       @map("delais_echeancier")
   derniereRelanceLe   DateTime?   @map("derniere_relance_le")
 
-  societe            Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  projet             Projet?      @relation(fields: [projetId], references: [id], onDelete: SetNull)
-  dossierCrm         DossierCrm?  @relation(fields: [dossierCrmId], references: [id], onDelete: SetNull)
-  client             Client       @relation(fields: [clientId], references: [id])
+  societe            Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  projet             Projet?       @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  dossierCrm         DossierCrm?   @relation(fields: [dossierCrmId], references: [id], onDelete: SetNull)
+  client             Client        @relation(fields: [clientId], references: [id])
   lignes             LigneDevis[]
-  factureConvertie   Facture?     @relation("DevisConversion")
-  facturesEcheancier Facture[]    @relation("DevisEcheancier")
+  factureConvertie   Facture?      @relation("DevisConversion")
+  facturesEcheancier Facture[]     @relation("DevisEcheancier")
   contrats           Contrat[]
   tachesTs           TacheProjet[] // éléments TS facturés par cet avenant
 

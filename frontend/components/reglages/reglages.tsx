@@ -2,17 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ClipboardList, FileClock, Scale, Target } from 'lucide-react';
+import { ClipboardList, FileClock, MessageSquareWarning, Scale, Target } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { ROLE_CIO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { afficher, getReglages, libelleVersion, type Reglages as DonneesReglages } from '@/lib/reglages';
+import { getSignalements, type Signalement } from '@/lib/signalements';
 import { Administration } from './administration';
 import { GabaritPanel } from './gabarit-panel';
 import { JournalPanel } from './journal-panel';
+import { SignalementsPanel } from './signalements-panel';
 import { ValeursPanel } from './valeurs-panel';
 
-const SECTIONS = ['gabarit', 'regles', 'objectifs', 'journal', 'administration'] as const;
+const SECTIONS = ['gabarit', 'regles', 'objectifs', 'journal', 'signalements', 'administration'] as const;
 type Section = (typeof SECTIONS)[number];
 
 // Réglages · HUB 360° (maquette du boss) : gabarit versionné, règles et
@@ -26,11 +28,15 @@ export function Reglages({ slug }: { slug: string }) {
   const demande = useSearchParams().get('section');
   const [donnees, setDonnees] = useState<DonneesReglages | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [signalements, setSignalements] = useState<Signalement[]>([]);
 
   const charger = useCallback(() => {
     getReglages(slug)
       .then(setDonnees)
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger les réglages.'));
+    getSignalements(slug)
+      .then(setSignalements)
+      .catch(() => setSignalements([]));
   }, [slug]);
   useEffect(charger, [charger]);
 
@@ -85,6 +91,7 @@ export function Reglages({ slug }: { slug: string }) {
   const ceo = donnees.regles.find((r) => r.cle === 'seuil_contresignature_ceo')!;
   const ouverture = donnees.regles.find((r) => r.cle === 'ouverture_projet')!;
   const aFixer = donnees.objectifs.filter((o) => o.enService === null).length;
+  const aTraiter = signalements.filter((x) => x.statut === 'a_traiter').length;
   const p = parts.enService as Record<string, number>;
 
   return (
@@ -107,6 +114,14 @@ export function Reglages({ slug }: { slug: string }) {
             label: 'Modifications tracées',
             valeur: String(donnees.modifications),
             sous: donnees.modifications ? 'voir le journal des réglages' : 'aucune modification depuis la mise en service',
+          },
+          {
+            s: 'signalements' as const,
+            icone: MessageSquareWarning,
+            label: 'Signalements à traiter',
+            valeur: String(aTraiter),
+            sous: `${signalements.length} retour(s) reçu(s) via « Aide »`,
+            alerte: aTraiter > 0,
           },
         ].map((t) => (
           <button
@@ -149,6 +164,7 @@ export function Reglages({ slug }: { slug: string }) {
         />
       )}
       {section === 'journal' && <JournalPanel key={donnees.modifications} slug={slug} versionInitiale={libelleVersion(0)} />}
+      {section === 'signalements' && <SignalementsPanel slug={slug} signalements={signalements} onMaj={setSignalements} />}
       {section === 'administration' && <Administration slug={slug} />}
       {lienAdministration}
     </>
