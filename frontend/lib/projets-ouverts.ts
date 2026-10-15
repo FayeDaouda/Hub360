@@ -276,6 +276,29 @@ export function resoudreCommentaire(slug: string, projetId: string, commentaireI
   return apiSociete(slug, `/projets-ouverts/${projetId}/fil/${commentaireId}/resolution`, { method: 'POST' });
 }
 
+// Charge prévisionnelle de chacun sur la fenêtre d'une tâche (avant
+// d'assigner) — mêmes règles que les feuilles de temps ; zone = Réglages.
+export type ChargePersonne = {
+  collaborateurId: string;
+  disponibles: number;
+  assignees: number;
+  joursAbsence: number;
+  pourcentage: number | null; // avec cette tâche ; null = absent toute la fenêtre
+};
+export type ChargesTache = { periode: { debut: string; fin: string } | null; zone: { de: number; a: number } | null; charges: ChargePersonne[] };
+
+export function getChargesTache(slug: string, projetId: string, tacheId: string): Promise<ChargesTache> {
+  return apiSociete(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/charges`);
+}
+
+// Libellé court d'une charge (liste « Assigner »).
+export function libelleCharge(c: ChargePersonne | undefined, zone: ChargesTache['zone']): string {
+  if (!c) return '';
+  if (c.pourcentage === null) return 'absent sur la période';
+  const etat = zone && c.pourcentage > zone.a ? ' · surchargé' : zone && c.pourcentage < zone.de ? ' · disponible' : '';
+  return `charge ${c.pourcentage} %${etat}`;
+}
+
 export function getHistoriqueTache(slug: string, projetId: string, tacheId: string): Promise<EvenementTache[]> {
   return apiSociete(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/historique`);
 }

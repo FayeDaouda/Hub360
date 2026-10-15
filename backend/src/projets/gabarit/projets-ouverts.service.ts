@@ -9,6 +9,7 @@ import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
 import { collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, ROLE_DPLG, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
+import { chargeSurPeriode } from './charge';
 import {
   attentesFactures,
   etatCarte,
@@ -395,6 +396,56 @@ export class ProjetsOuvertsService {
   // --- internes -----------------------------------------------------------------------
   private horizon(budgetHeures: number | null) {
     return Math.max(1, Math.round((budgetHeures ?? 320) / HEURES_PAR_JOUR));
+  }
+
+  // Charge prévisionnelle de chaque personne assignable sur la fenêtre de la
+  // tâche (avant d'assigner), et la zone normale fixée dans Réglages.
+  async charges(societeId: string, projetId: string, tacheId: string) {
+    const tache = await this.prisma.tacheProjet.findFirst({
+      where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
+      select: { id: true, debutLe: true, finLe: true, heures: true },
+    });
+    if (!tache) throw new NotFoundException('Tâche introuvable');
+    const zone = await this.reglages.regle<{ de: number; a: number } | null>(societeId, 'objectif_charge_equipes');
+    if (!tache.debutLe || !tache.finLe || tache.debutLe > tache.finLe) return { periode: null, zone, charges: [] };
+    const p = { debut: tache.debutLe, fin: tache.finLe };
+    const [collaborateurs, feries] = await Promise.all([
+      this.prisma.collaborateur.findMany({
+        where: { societeId },
+        select: {
+          id: true,
+          // Tâches encore à faire qui touchent la fenêtre (les validées sont livrées).
+          tachesProjet: {
+            where: { id: { not: tacheId }, statut: { in: ['a_faire', 'a_valider', 'reprise'] }, debutLe: { lte: p.fin }, finLe: { gte: p.debut } },
+            select: { id: true, debutLe: true, finLe: true, heures: true },
+          },
+          dossierPersonnel: {
+            select: { absences: { where: { statut: 'validee', dateDebut: { lte: p.fin }, dateFin: { gte: p.debut } }, select: { dateDebut: true, dateFin: true } } },
+          },
+        },
+      }),
+      this.feries(societeId),
+    ]);
+    const versTache = (t: { id: string; debutLe: string | null; finLe: string | null; heures: Prisma.Decimal | null }) => ({
+      id: t.id,
+      debut: t.debutLe,
+      echeance: t.finLe,
+      heures: t.heures == null ? null : Number(t.heures),
+    });
+    return {
+      periode: p,
+      zone,
+      charges: collaborateurs.map((c) => ({
+        collaborateurId: c.id,
+        ...chargeSurPeriode(
+          p,
+          c.tachesProjet.map(versTache),
+          versTache(tache),
+          (c.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
+          feries,
+        ),
+      })),
+    };
   }
 
   private async feries(societeId: string) {

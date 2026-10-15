@@ -58,6 +58,13 @@ export class ProjetsOuvertsController {
     return this.projets.definirDateVisite(req.user.societeId, id, dto.date);
   }
 
+  // Avant d'assigner : charge de chacun sur la fenêtre de la tâche.
+  @Get(':id/taches/:tacheId/charges')
+  @RequiertPermission('projets', 'ecriture')
+  charges(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
+    return this.projets.charges(req.user.societeId, id, tacheId);
+  }
+
   @Get(':id/taches/:tacheId/historique')
   @RequiertPermission('projets', 'lecture')
   async historique(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {

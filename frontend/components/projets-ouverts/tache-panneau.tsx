@@ -9,8 +9,11 @@ import {
   deciderTache,
   demanderProlongation,
   remettreTache,
+  getChargesTache,
   getHistoriqueTache,
+  libelleCharge,
   telechargerPieceRemise,
+  type ChargesTache,
   jjmmaaaa,
   numeroEtape,
   pastilleTache,
@@ -51,6 +54,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [jusquau, setJusquau] = useState('');
   const [motifProlongation, setMotifProlongation] = useState('');
   const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
+  const [charges, setCharges] = useState<ChargesTache | null>(null);
 
   // Rechargé quand la tâche change ou que son assigné change (nouvelle ligne).
   useEffect(() => {
@@ -74,6 +78,21 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     setMotifProlongation('');
     setSaisie(SAISIE_REMISE_VIDE);
   }, [tache.id]);
+
+  // Charge de chacun sur la fenêtre de la tâche, pour qui peut assigner.
+  // Relue quand la tâche ou son assigné change (la charge bouge avec).
+  const peutAssigner = assignables !== null;
+  useEffect(() => {
+    if (!peutAssigner) return;
+    let annule = false;
+    setCharges(null);
+    getChargesTache(slug, projetId, tache.id)
+      .then((c) => !annule && setCharges(c))
+      .catch(() => !annule && setCharges(null));
+    return () => {
+      annule = true;
+    };
+  }, [slug, projetId, tache.id, tache.assigne?.id, peutAssigner]);
 
   async function ouvrirPiece(pieceId: string) {
     setErreur(null);
@@ -130,6 +149,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     }
   }
 
+  const chargeDe = (id: string) => charges?.charges.find((c) => c.collaborateurId === id);
   const pastille = pastilleTache(tache.etat);
   const piecesVersion = tache.pieces.filter((f) => f.version === tache.version);
   const ecart = tache.etat.code === 'validee' ? tache.etat.ecart : null;
@@ -360,13 +380,31 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
             onChange={(e) => assigner(e.target.value)}
           >
             <option value="">À assigner</option>
-            {assignables.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nom}
-                {a.cellule ? ` · ${a.cellule}` : ''}
-              </option>
-            ))}
+            {assignables.map((a) => {
+              const charge = libelleCharge(chargeDe(a.id), charges?.zone ?? null);
+              return (
+                <option key={a.id} value={a.id}>
+                  {a.nom}
+                  {a.cellule ? ` · ${a.cellule}` : ''}
+                  {charge ? ` — ${charge}` : ''}
+                </option>
+              );
+            })}
           </select>
+          {charges?.periode && (
+            <p className="po-aide">
+              Charge prévisionnelle du {jjmmaaaa(charges.periode.debut)} au {jjmmaaaa(charges.periode.fin)}, cette tâche comprise
+              {charges.zone ? ` (zone normale ${charges.zone.de} à ${charges.zone.a} %)` : ''}.
+              {tache.assigne && chargeDe(tache.assigne.id) && (
+                <>
+                  {' '}
+                  {tache.assigne.nom} : {chargeDe(tache.assigne.id)!.assignees} h déjà prévues sur {chargeDe(tache.assigne.id)!.disponibles} h
+                  disponibles
+                  {chargeDe(tache.assigne.id)!.joursAbsence ? `, ${chargeDe(tache.assigne.id)!.joursAbsence} j d’absence` : ''}.
+                </>
+              )}
+            </p>
+          )}
           {carte.taches.length > 1 && (
             <label className="po-case">
               <input type="checkbox" checked={aLaCarte} disabled={enCours} onChange={(e) => setALaCarte(e.target.checked)} />
