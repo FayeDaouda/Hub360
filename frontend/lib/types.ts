@@ -1622,6 +1622,12 @@ export type IndicateurPilotage = {
   affichage: string;
   evaluation: EvaluationIndicateur;
   atteintPropose: boolean; // objectif à fixer, valeur proposée atteinte
+  // Objectif chiffré (Réglages) : seuil minimum ou maximum, ou zone.
+  objectif?:
+    | { type: 'minimum' | 'maximum'; valeur: number | null }
+    | { type: 'zone'; de: number | null; a: number | null };
+  // 6 derniers mois (mois courant en dernier) ; null = indicateur cumulé.
+  tendance: { mois: string; valeur: number | null }[] | null;
   texteObjectif: string;
   source: string;
 };

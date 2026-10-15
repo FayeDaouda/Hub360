@@ -28,6 +28,7 @@ import { Attention } from './attention';
 import { Reportings } from './reportings';
 import { Registre } from './registre';
 import { JournalAudit } from './journal-audit';
+import { Progression, Tendance } from './tendance';
 
 type Onglet = 'indicateurs' | 'reportings' | 'registre' | 'journal';
 
@@ -158,7 +159,9 @@ export function Pilotage({ slug }: { slug: string }) {
                   {pill && <span className={`pill ${pill.classe}`}>{pill.libelle}</span>}
                 </header>
                 <strong className={`pi-valeur${tonValeur(i)}`}>{i.affichage}</strong>
+                <Progression indicateur={i} />
                 <p className="pi-objectif">{i.texteObjectif}</p>
+                <Tendance indicateur={i} unite={i.cle === 'nouveaux_projets' ? '' : '%'} />
                 <p className="pi-source">{i.source}</p>
               </section>
             );

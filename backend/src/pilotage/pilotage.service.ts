@@ -22,6 +22,7 @@ import {
 } from './pilotage-regles';
 import { ChiffresPilotageService } from './chiffres.service';
 import type { SaisirDecisionDto } from './dto';
+import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 
 export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
@@ -74,11 +75,12 @@ export class PilotageService {
     const jour = aujourdhui();
     await this.synchroniserRegistre(a.societeId, jour);
     const feuilles = await this.feuillesControlees(a.societeId, jour);
-    const [indicateurs, reportings, registre, chiffres] = await Promise.all([
+    const [indicateurs, reportings, registre, chiffres, tendances] = await Promise.all([
       this.indicateurs(a.societeId, jour, feuilles),
       this.reportings(a, jour),
       this.registre(a, jour),
       this.chiffres.tuiles(a, jour, feuilles),
+      this.tendances(a.societeId, jour),
     ]);
     const suivis = indicateurs.filter((i) => i.evaluation !== 'sans_donnee');
     return {
@@ -91,13 +93,39 @@ export class PilotageService {
       },
       // Chiffres clés en tête de page, selon la matrice (chiffres.service.ts).
       chiffres,
-      indicateurs,
+      // Courbe des 6 derniers mois, par indicateur mesuré au mois.
+      indicateurs: indicateurs.map((i) => ({ ...i, tendance: tendances[i.cle] ?? null })),
       reportings,
       ...registre,
     };
   }
 
   // --- Indicateurs -----------------------------------------------------------
+
+  // Séries mensuelles (6 derniers mois) des indicateurs mesurés au mois.
+  private async tendances(societeId: string, jour: string): Promise<Record<string, Point[]>> {
+    const mois = derniersMois(moisDe(jour));
+    const debut = new Date(`${mois[0]}-01T00:00:00Z`);
+    const [leads, taches, charges] = await Promise.all([
+      this.prisma.dossierCrm.findMany({ where: { societeId, categorie: 'conception', createdAt: { gte: debut } }, select: { createdAt: true } }),
+      this.prisma.tacheProjet.findMany({
+        where: { projet: { societeId }, statut: 'validee', valideeLe: { gte: debut } },
+        select: { statut: true, valideeLe: true, finLe: true, evenements: { where: { type: 'reprise' }, select: { id: true }, take: 1 } },
+      }),
+      Promise.all(mois.map((m) => this.chargeEquipes(societeId, m, jour))),
+    ]);
+    const { aTemps, reprises } = seriesTaches(
+      mois,
+      taches.map((t) => ({ statut: t.statut, valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null, echeance: t.finLe, reprise: t.evenements.length > 0 })),
+    );
+    return {
+      nouveaux_projets: serieNouveaux(mois, leads.map((l) => jourIso(l.createdAt))),
+      taches_a_temps: aTemps,
+      taux_reprises: reprises,
+      // Pas de charge calculable avant la mise en service des feuilles de temps.
+      charge_equipes: mois.map((m, i) => ({ mois: m, valeur: m < MOIS_DEBUT_FEUILLES ? null : charges[i] })),
+    };
+  }
 
   private async indicateurs(societeId: string, jour: string, feuilles: { total: number; controlees: number }) {
     const mois = moisDe(jour);
@@ -148,7 +176,7 @@ export class PilotageService {
       objectif: Objectif,
       texteObjectif: string,
       source: string,
-    ) => ({ cle, titre, valeur, affichage, ...evaluer(valeur, objectif), texteObjectif, source });
+    ) => ({ cle, titre, valeur, affichage, ...evaluer(valeur, objectif), objectif, texteObjectif, source });
 
     const pct = (v: number | null) => (v == null ? '—' : `${v} %`);
     const conversion = pourcentage(avecSuivi, signees);
