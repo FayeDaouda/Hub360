@@ -31,3 +31,14 @@ export function saisirDecision(slug: string, decision: NouvelleDecision): Promis
 export function cloturerDecision(slug: string, id: string): Promise<VuePilotage> {
   return apiSociete<VuePilotage>(slug, `/pilotage/decisions/${id}/cloture`, { method: 'POST' });
 }
+
+// Journal d'audit (Pilotage › Journal) : CEO, CIO, administration. Période
+// [debut, fin] incluse, 30 derniers jours par défaut, un an au plus.
+export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh';
+export type LigneAudit = { id: string; le: string; categorie: CategorieAudit; action: string; detail: string; par: string | null };
+export type JournalAudit = { debut: string; fin: string; lignes: LigneAudit[] };
+
+export function getJournalAudit(slug: string, debut?: string, fin?: string): Promise<JournalAudit> {
+  const q = new URLSearchParams({ ...(debut ? { debut } : {}), ...(fin ? { fin } : {}) }).toString();
+  return apiSociete<JournalAudit>(slug, `/journal-audit${q ? `?${q}` : ''}`);
+}

@@ -65,6 +65,7 @@ export class RolesService {
     moduleCle: string,
     niveau: NiveauPermission,
     acteurRole: string,
+    acteurId: string | null = null,
   ) {
     const role = await this.prisma.role.findUnique({ where: { id: roleId } });
     if (!role || role.supprimeLe) throw new NotFoundException('Rôle introuvable');
@@ -92,6 +93,10 @@ export class RolesService {
       this.prisma.utilisateur.updateMany({
         where: { roles: { some: { roleId } } },
         data: { sessionsValidesDepuis: new Date() },
+      }),
+      // Trace pour le journal d'audit (CEO, CIO).
+      this.prisma.journalDroit.create({
+        data: { societeId, roleNom: role.nom, module: moduleCle, avant: actuelle?.niveau ?? null, apres: niveau, parId: acteurId },
       }),
     ]);
     return { roleId, moduleCle, niveau };

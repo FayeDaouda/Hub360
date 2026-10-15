@@ -21,6 +21,7 @@ import { RhModule } from './rh/rh.module';
 import { LocalitesModule } from './localites/localites.module';
 import { ContratsModule } from './contrats/contrats.module';
 import { SignalementsModule } from './signalements/signalements.module';
+import { AuditModule } from './audit/audit.module';
 import { RechercheModule } from './recherche/recherche.module';
 import { ReglagesModule } from './reglages/reglages.module';
 import { PilotageModule } from './pilotage/pilotage.module';
@@ -60,6 +61,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ReglagesModule,
     RechercheModule,
     SignalementsModule,
+    AuditModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: SerialisationInterceptor },

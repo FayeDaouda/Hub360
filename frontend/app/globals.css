@@ -11536,6 +11536,19 @@ a.notif-item:hover {
   padding: 0.35rem 0.9rem;
   font-size: 0.82rem;
 }
+/* Pilotage › Journal d'audit. */
+.pi-journal-outils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+.pi-journal-outils .field {
+  flex: 1 1 10rem;
+}
+.pi-journal-detail {
+  overflow-wrap: anywhere;
+}
 /* Reporting : analyse rédigée par l'émetteur, sous les rubriques chiffrées. */
 .pi-analyse {
   margin-top: 1rem;

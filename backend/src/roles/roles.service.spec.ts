@@ -17,6 +17,7 @@ function svc(opts: {
 } = {}) {
   const upsert = jest.fn().mockResolvedValue({});
   const revoquer = jest.fn().mockResolvedValue({ count: 0 });
+  const tracer = jest.fn((a: unknown) => a);
   const prisma = {
     role: {
       findMany: jest.fn().mockResolvedValue(opts.roles ?? []),
@@ -31,9 +32,10 @@ function svc(opts: {
       findUnique: jest.fn().mockResolvedValue(opts.permissionActuelle ?? null),
     },
     utilisateur: { updateMany: revoquer },
+    journalDroit: { create: tracer },
     $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
   } as unknown as PrismaService;
-  return { svc: new RolesService(prisma), upsert, revoquer };
+  return { svc: new RolesService(prisma), upsert, revoquer, tracer };
 }
 
 describe('RolesService.listerAvecPermissions', () => {
@@ -118,6 +120,18 @@ describe('RolesService.majPermission', () => {
     expect(revoquer).toHaveBeenCalledWith({
       where: { roles: { some: { roleId: 'R1' } } },
       data: { sessionsValidesDepuis: expect.any(Date) },
+    });
+  });
+
+  it('trace le changement pour le journal d’audit (avant → après, auteur)', async () => {
+    const { svc: s, tracer } = svc({
+      roleTrouve: { id: 'R1', nom: 'CFO', societeId: 'S1' },
+      moduleTrouve: { id: 'M1', cle: 'crm' },
+      permissionActuelle: { niveau: 'lecture' },
+    });
+    await s.majPermission('S1', 'R1', 'crm', 'ecriture', 'societe_admin', 'U9');
+    expect(tracer).toHaveBeenCalledWith({
+      data: { societeId: 'S1', roleNom: 'CFO', module: 'crm', avant: 'lecture', apres: 'ecriture', parId: 'U9' },
     });
   });
 

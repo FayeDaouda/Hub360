@@ -20,15 +20,19 @@ import {
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
 import { formatMontant } from '@/lib/format';
-import { ROLE_CEO } from '@/lib/acces-back-office';
+import { ROLE_CEO, ROLE_CIO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getAttention, getPilotage } from '@/lib/pilotage';
 import type { AttentionPilotage, IndicateurPilotage, VuePilotage } from '@/lib/types';
 import { Attention } from './attention';
 import { Reportings } from './reportings';
 import { Registre } from './registre';
+import { JournalAudit } from './journal-audit';
 
-type Onglet = 'indicateurs' | 'reportings' | 'registre';
+type Onglet = 'indicateurs' | 'reportings' | 'registre' | 'journal';
+
+// Journal d'audit : mêmes rôles que le serveur (audit/journal-audit.service.ts).
+const ROLES_JOURNAL = new Set([ROLE_CEO, ROLE_CIO, 'societe_admin']);
 
 const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string; libelle: string } | null> = {
   hors_objectif: { classe: 'pill--risque', libelle: 'Hors objectif' },
@@ -71,7 +75,9 @@ export function Pilotage({ slug }: { slug: string }) {
   // ?onglet= : lien direct (notification « décision à mettre en œuvre »).
   const ongletDemande = useSearchParams().get('onglet');
   const [onglet, setOnglet] = useState<Onglet>(
-    ongletDemande === 'reportings' || ongletDemande === 'registre' ? ongletDemande : 'indicateurs',
+    ongletDemande === 'reportings' || ongletDemande === 'registre' || (ongletDemande === 'journal' && ROLES_JOURNAL.has(session.role))
+      ? ongletDemande
+      : 'indicateurs',
   );
   const [erreur, setErreur] = useState<string | null>(null);
   const ongletsRef = useRef<HTMLDivElement>(null);
@@ -131,6 +137,7 @@ export function Pilotage({ slug }: { slug: string }) {
               ['indicateurs', 'Indicateurs'],
               ['reportings', `Reportings · ${t.reportingsADeposer}`],
               ['registre', `Registre des décisions · ${t.decisionsOuvertes}`],
+              ...(ROLES_JOURNAL.has(session.role) ? ([['journal', 'Journal']] as const) : []),
             ] as const
           ).map(([cle, libelle]) => (
             <button key={cle} type="button" role="tab" aria-selected={onglet === cle} className={onglet === cle ? 'is-active' : ''} onClick={() => setOnglet(cle)}>
@@ -160,6 +167,7 @@ export function Pilotage({ slug }: { slug: string }) {
       )}
       {onglet === 'reportings' && <Reportings slug={slug} reportings={vue.reportings} onVue={setVue} />}
       {onglet === 'registre' && <Registre slug={slug} vue={vue} onVue={setVue} />}
+      {onglet === 'journal' && <JournalAudit slug={slug} />}
     </div>
   );
 }

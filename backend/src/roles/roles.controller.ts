@@ -4,7 +4,7 @@ import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
 import { RolesService } from './roles.service';
 import { MajPermissionDto } from './dto';
 
-type R = { user: { societeId: string; role: string } };
+type R = { user: { societeId: string; role: string; userId: string } };
 
 // Matrice des rôles d'une société — son admin, ou le CIO (super admin du
 // HUB) connecté sur cette société. Qui modifie quelle ligne : RolesService.
@@ -25,6 +25,6 @@ export class RolesController {
     @Param('moduleCle') moduleCle: string,
     @Body() dto: MajPermissionDto,
   ) {
-    return this.roles.majPermission(req.user.societeId, roleId, moduleCle, dto.niveau, req.user.role);
+    return this.roles.majPermission(req.user.societeId, roleId, moduleCle, dto.niveau, req.user.role, req.user.userId);
   }
 }

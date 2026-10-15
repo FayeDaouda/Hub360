@@ -74,6 +74,7 @@ model Societe {
   reglages          ReglageSociete[]
   journalReglages   JournalReglage[]
   signalements      Signalement[]
+  journalDroits     JournalDroit[]
 
   @@map("societes")
 }
@@ -277,6 +278,24 @@ model Signalement {
 
   @@index([societeId, statut])
   @@map("signalements")
+}
+
+// Changements de la matrice des droits (écran Rôles) : qui a changé quel
+// niveau, quand — lu par le journal d'audit (CEO, CIO). Jamais modifié.
+model JournalDroit {
+  id        String            @id @default(uuid())
+  societeId String            @map("societe_id") // société de l'auteur au moment du changement
+  roleNom   String            @map("role_nom")
+  module    String // clé du module (crm, projets…)
+  avant     NiveauPermission? // null = aucune ligne avant
+  apres     NiveauPermission
+  parId     String?           @map("par_id") // audit, pas de FK
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@index([societeId, createdAt])
+  @@map("journal_droits")
 }
 
 // Rappels quotidiens déjà envoyés : la clé (ex. « tache:<id>:veille:<finLe> »)
