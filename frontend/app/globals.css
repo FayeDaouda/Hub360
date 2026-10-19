@@ -7548,6 +7548,14 @@ a.notif-item:hover {
   background: var(--admin-fond, #f4f2ec);
   color: var(--text);
 }
+/* Écart de feuille de temps (revue Salarié 19/10/2026) */
+.temps-ecart {
+  display: grid;
+  gap: 0.5rem;
+}
+.temps-ecart .dmd-note {
+  margin: 0;
+}
 /* Mes tâches (revue Salarié 19/10/2026) */
 .mt-decider {
   display: flex;

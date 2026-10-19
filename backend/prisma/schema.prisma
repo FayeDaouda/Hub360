@@ -226,6 +226,9 @@ enum NotificationType {
   decision_assignee // décision du registre dont vous êtes responsable
   facture_emise
   facture_payee
+  // Feuille de temps (revue Salarié 19/10/2026) : écart signalé par le salarié
+  ecart_temps_signale // à la RH
+  ecart_temps_traite // au salarié, avec la réponse de la RH
 }
 
 model Notification {
@@ -1626,6 +1629,7 @@ model DossierPersonnel {
   attestations      DemandeAttestation[]
   pointsIntegration PointIntegration[]
   controlesTemps    ControleFeuilleTemps[]
+  ecartsTemps       EcartFeuilleTemps[]
   bulletins         BulletinPaie[]
 
   @@index([societeId])
@@ -1841,6 +1845,27 @@ model ControleFeuilleTemps {
 
   @@unique([dossierId, mois])
   @@map("controles_feuilles_temps")
+}
+
+// Écart signalé par le salarié sur sa feuille de temps calculée (revue
+// Salarié 19/10/2026) : il ne la confirme pas — sans signalement, elle est
+// juste. La RH corrige la source (absence, fenêtre de tâche) puis répond ;
+// un écart ouvert bloque le contrôle du mois. Un seul ouvert par mois.
+model EcartFeuilleTemps {
+  id           String    @id @default(uuid())
+  dossierId    String    @map("dossier_id")
+  mois         String // AAAA-MM
+  commentaire  String
+  signaleLe    DateTime  @default(now()) @map("signale_le")
+  signaleParId String?   @map("signale_par_id") // audit, pas de FK
+  reponse      String?
+  traiteLe     DateTime? @map("traite_le")
+  traiteParId  String?   @map("traite_par_id") // audit, pas de FK
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@index([dossierId, mois])
+  @@map("ecarts_feuilles_temps")
 }
 
 // --- RH · Bulletins de paie (lot 5b, sept. 2026) -----------------------------

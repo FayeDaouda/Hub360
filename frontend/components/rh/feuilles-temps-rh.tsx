@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/client-api';
 import {
   controlerFeuilleTemps,
   formatHeures,
+  traiterEcartTemps,
   getFeuillesTemps,
   HEURES_PAR_JOUR,
   LIBELLE_MANQUE,
@@ -77,6 +78,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                 >
                   {libelleMois(p.mois)}
                   {p.aControler > 0 && ` · ${p.aControler}`}
+                  {p.ecarts > 0 && ` · ${p.ecarts} écart${p.ecarts > 1 ? 's' : ''}`}
                 </button>
               ))}
             </div>
@@ -138,6 +140,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                             ? `Contrôlée le ${jjmmaaaa(f.controleLe)}`
                             : STATUT_FEUILLE[f.statut].libelle}
                         </span>
+                        {f.ecart && !f.ecart.traiteLe && <span className="pill pill--attention">Écart signalé</span>}
                       </td>
                     </tr>
                   ))}
@@ -172,7 +175,8 @@ function DetailFeuille({
 }) {
   const [confirmation, setConfirmation] = useState(false);
   const joursPresents = f.heuresDisponibles / HEURES_PAR_JOUR;
-  const controlable = ecriture && (f.statut === 'a_controler' || f.statut === 'sans_heures');
+  const ecartOuvert = !!f.ecart && !f.ecart.traiteLe;
+  const controlable = ecriture && !ecartOuvert && (f.statut === 'a_controler' || f.statut === 'sans_heures');
   const incompletes = f.lignes.filter((l) => l.manque).length;
 
   return (
@@ -228,6 +232,8 @@ function DetailFeuille({
         )}
       </div>
 
+      {f.ecart && <EcartRh key={f.ecart.id} slug={slug} f={f} ecriture={ecriture} onTraite={onControle} />}
+
       {f.statut === 'controlee' && f.controleLe ? (
         <p className="dmd-note">Feuille contrôlée le {jjmmaaaa(f.controleLe)} : chiffres figés à cette date.</p>
       ) : f.statut === 'en_cours' ? (
@@ -256,5 +262,58 @@ function DetailFeuille({
         />
       )}
     </>
+  );
+}
+
+// Écart signalé par le salarié (revue Salarié 19/10/2026) : la RH corrige la
+// source si besoin (absence, fenêtre de tâche) — le calcul suit — puis
+// répond, ce qui clôt l'écart et rouvre le contrôle du mois.
+function EcartRh({ slug, f, ecriture, onTraite }: { slug: string; f: FeuilleTempsSalarie; ecriture: boolean; onTraite: () => void }) {
+  const e = f.ecart!;
+  const [reponse, setReponse] = useState('');
+  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
+
+  async function repondre() {
+    setEtat({ envoi: true, erreur: null });
+    try {
+      await traiterEcartTemps(slug, e.id, reponse);
+      onTraite();
+    } catch (err) {
+      setEtat({ envoi: false, erreur: err instanceof ApiError ? err.message : 'Réponse non enregistrée.' });
+    }
+  }
+
+  return (
+    <div className="temps-ecart">
+      <h3 className="rh-section">Écart signalé par le salarié</h3>
+      <p className="dmd-note">
+        <span className={`pill ${e.traiteLe ? 'pill--succes' : 'pill--attention'}`}>{e.traiteLe ? 'Traité' : 'À traiter'}</span> Le{' '}
+        {jjmmaaaa(e.signaleLe)} : « {e.commentaire} »
+      </p>
+      {e.traiteLe ? (
+        <p className="dmd-note">
+          Réponse du {jjmmaaaa(e.traiteLe)} : « {e.reponse} »
+        </p>
+      ) : ecriture ? (
+        <>
+          <p className="dmd-note">
+            Corrigez la source si besoin (absence à enregistrer, dates de la tâche dans Projets) : la feuille se recalcule. Puis répondez au
+            salarié ; le contrôle du mois se rouvre.
+          </p>
+          <label className="field">
+            <span className="field-label">Réponse au salarié</span>
+            <textarea className="field-input" rows={2} maxLength={1000} value={reponse} onChange={(ev) => setReponse(ev.target.value)} />
+          </label>
+          {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+          <div className="dmd-actions">
+            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || reponse.trim().length < 3} onClick={repondre}>
+              Répondre et clore
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="dmd-note">En attente de la réponse de la RH.</p>
+      )}
+    </div>
   );
 }

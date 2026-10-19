@@ -48,6 +48,8 @@ export function lienNotificationAdmin(
     return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
   }
   if (n.type === 'remboursement_a_traiter') return `${base}/rh?onglet=demandes`;
+  if (n.type === 'ecart_temps_signale') return `${base}/rh?onglet=temps`;
+  if (n.type === 'ecart_temps_traite') return `${base}/mon-espace?onglet=temps`;
   if (n.type === 'absence_decidee') return `${base}/mon-espace?onglet=conges`;
   if (n.type === 'remboursement_traite') return `${base}/mon-espace?onglet=remboursements`;
   if (n.type === 'decision_assignee') return `${base}?onglet=registre`;

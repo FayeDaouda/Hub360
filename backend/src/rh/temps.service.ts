@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, SectionTache } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
@@ -60,9 +61,29 @@ const INCLUDE_DOSSIER = {
   collaborateur: { select: { id: true, cellule: { select: { nom: true } } } },
   absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } },
   controlesTemps: true,
+  ecartsTemps: { orderBy: { signaleLe: 'desc' } },
 } satisfies Prisma.DossierPersonnelInclude;
 type DossierTemps = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLUDE_DOSSIER }>;
 type Controle = DossierTemps['controlesTemps'][number];
+
+const ROLE_RH = 'RH';
+
+export type EcartFeuille = { id: string; commentaire: string; signaleLe: Date; reponse: string | null; traiteLe: Date | null };
+
+// Écart du mois affiché : l'ouvert s'il y en a un, sinon le dernier traité.
+function ecartDuMois(ecarts: DossierTemps['ecartsTemps'], mois: string): EcartFeuille | null {
+  const duMois = ecarts.filter((e) => e.mois === mois);
+  const e = duMois.find((x) => !x.traiteLe) ?? duMois[0];
+  return e ? { id: e.id, commentaire: e.commentaire, signaleLe: e.signaleLe, reponse: e.reponse, traiteLe: e.traiteLe } : null;
+}
+
+const libelleMois = (mois: string) =>
+  new Date(`${mois}-01T00:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+// « de septembre 2026 », « d’octobre 2026 » (élision devant avril, août, octobre).
+const deMois = (mois: string) => {
+  const l = libelleMois(mois);
+  return /^[aeiou]/i.test(l) ? `d’${l}` : `de ${l}`;
+};
 
 const salarieDe = (d: DossierTemps): Salarie => ({
   dateEntree: d.dateEntree,
@@ -80,6 +101,7 @@ export class TempsService {
   constructor(
     private prisma: PrismaService,
     private reglages: ReglagesService,
+    private notifications: NotificationsService,
   ) {}
 
   // --- Feuilles de temps (RH, périmètre groupe) ----------------------------
@@ -110,6 +132,8 @@ export class TempsService {
     const periodes = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).map((m) => ({
       mois: m,
       clos: m < moisDe(jour),
+      // Écarts signalés par les salariés, en attente de réponse.
+      ecarts: dossiers.filter((d) => d.ecartsTemps.some((e) => e.mois === m && !e.traiteLe)).length,
       aControler: presentsEn(m).filter(
         (d) => calculer(m, salarieDe(d), d.controlesTemps, tachesDe(d), jour, feriesDe(d)).statut === 'a_controler',
       ).length,
@@ -129,6 +153,7 @@ export class TempsService {
         // État actuel (pas celui du mois) : blocs assignés sans début ou sans
         // échéance, qui ne produisent aucune heure tant qu'ils ne sont pas planifiés.
         blocsNonPlanifies: tachesDe(d).filter((t) => !planifiee(t)).length,
+        ecart: ecartDuMois(d.ecartsTemps, cible),
         ...calculer(cible, salarieDe(d), d.controlesTemps, tachesDe(d), jour, feriesDe(d)),
       })),
     };
@@ -143,6 +168,9 @@ export class TempsService {
     if (!d) throw new NotFoundException('Dossier introuvable');
     if (!periodeComptee(mois, salarieDe(d), jour)) throw new ConflictException("Ce salarié n'était pas présent ce mois-là.");
     if (d.controlesTemps.some((c) => c.mois === mois)) throw new ConflictException('Feuille déjà contrôlée.');
+    if (d.ecartsTemps.some((e) => e.mois === mois && !e.traiteLe)) {
+      throw new ConflictException('Un écart signalé par le salarié attend votre réponse : traitez-le avant de contrôler.');
+    }
 
     const taches = d.collaborateur ? await chargerTachesAssignees(this.prisma, [d.collaborateur.id]) : [];
     const feries = (await this.reglages.joursFeries([d.societeId])).get(d.societeId)!;
@@ -195,7 +223,59 @@ export class TempsService {
       mois: cible,
       periodes: moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)),
       feuille: calculer(cible, salarie, dossier?.controlesTemps ?? [], taches, jour, feries),
+      // Sans dossier RH, pas de signalement possible (la RH n'a rien à corriger).
+      signalable: !!dossier,
+      ecart: dossier ? ecartDuMois(dossier.ecartsTemps, cible) : null,
     };
+  }
+
+  // --- Écart signalé (revue Salarié 19/10/2026) ----------------------------
+  // Le salarié ne confirme pas sa feuille : sans signalement, elle est juste.
+  // Il signale un écart tant que la RH n'a pas figé le mois.
+
+  async signalerEcart(a: Acteur, mois: string, commentaire: string) {
+    const jour = aujourdhui();
+    moisValide(mois, jour);
+    const d = await this.prisma.dossierPersonnel.findFirst({ where: ouDossierDuCompte(a.userId), include: INCLUDE_DOSSIER });
+    if (!d) throw new NotFoundException('Aucun dossier du personnel pour ce compte — voir avec la RH.');
+    if (d.controlesTemps.some((c) => c.mois === mois)) {
+      throw new ConflictException('Feuille déjà contrôlée par la RH : voyez directement avec elle.');
+    }
+    if (d.ecartsTemps.some((e) => e.mois === mois && !e.traiteLe)) {
+      throw new ConflictException('Un écart est déjà signalé pour ce mois : la RH va vous répondre.');
+    }
+    await this.prisma.ecartFeuilleTemps.create({ data: { dossierId: d.id, mois, commentaire: commentaire.trim(), signaleParId: a.userId } });
+    await this.notifications.envoyer({
+      societeId: d.societeId,
+      type: 'ecart_temps_signale',
+      titre: `Écart signalé · ${d.prenom} ${d.nom} · feuille de temps ${deMois(mois)}`,
+      destinataireIds: await this.notifications.titulairesRole(d.societeId, ROLE_RH),
+      parId: a.userId,
+    });
+    return this.monTemps(a, mois);
+  }
+
+  // La RH a corrigé la source si besoin (absence, fenêtre de tâche) et répond.
+  async traiterEcart(userId: string, ecartId: string, reponse: string) {
+    const e = await this.prisma.ecartFeuilleTemps.findUnique({
+      where: { id: ecartId },
+      include: { dossier: { select: { societeId: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } } },
+    });
+    if (!e) throw new NotFoundException('Écart introuvable');
+    if (e.traiteLe) throw new ConflictException('Écart déjà traité.');
+    const { count } = await this.prisma.ecartFeuilleTemps.updateMany({
+      where: { id: ecartId, traiteLe: null },
+      data: { reponse: reponse.trim(), traiteLe: new Date(), traiteParId: userId },
+    });
+    if (!count) throw new ConflictException('Écart déjà traité.');
+    await this.notifications.envoyer({
+      societeId: e.dossier.societeId,
+      type: 'ecart_temps_traite',
+      titre: `La RH a répondu à votre écart · feuille de temps ${deMois(e.mois)}`,
+      destinataireIds: [e.dossier.utilisateurId ?? e.dossier.collaborateur?.utilisateurId],
+      parId: userId,
+    });
+    return { id: ecartId, mois: e.mois };
   }
 }
 

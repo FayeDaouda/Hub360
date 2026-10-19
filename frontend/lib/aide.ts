@@ -61,7 +61,7 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
     actions: {
       lecture: 'Consulter les dossiers et les feuilles de temps.',
       ecriture:
-        'Tenir les dossiers et leurs pièces, déposer les bulletins, traiter les demandes, contrôler les feuilles de temps, enregistrer un départ (ses tâches sont alors confiées à un collègue).',
+        'Tenir les dossiers et leurs pièces, déposer les bulletins, traiter les demandes, contrôler les feuilles de temps (après avoir répondu aux écarts signalés par les salariés), enregistrer un départ (ses tâches sont alors confiées à un collègue).',
     },
   },
   equipe: {

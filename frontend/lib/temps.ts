@@ -11,6 +11,8 @@ import { apiSociete } from './client-api';
 //   GET …/rh/feuilles-temps?mois=AAAA-MM            feuilles du groupe (module « rh »)
 //   POST …/rh/feuilles-temps/:dossierId/:mois/controle   contrôle RH d'un mois clos
 //   GET …/mon-espace/temps?mois=AAAA-MM             le salarié connecté
+//   POST …/mon-espace/temps/ecarts                  { mois, commentaire } écart signalé
+//   POST …/rh/feuilles-temps/ecarts/:id/traitement  { reponse } réponse de la RH
 
 // Miroir de backend/src/rh/regles-temps.ts (8 h par jour ouvré, lundi → vendredi).
 export const HEURES_PAR_JOUR = 8;
@@ -25,6 +27,10 @@ export const controlerFeuilleTemps = (slug: string, dossierId: string, mois: str
     body: {},
   });
 export const getMonTemps = (slug: string, mois?: string) => apiSociete<MonTemps>(slug, avecMois('/mon-espace/temps', mois));
+export const signalerEcartTemps = (slug: string, mois: string, commentaire: string) =>
+  apiSociete<MonTemps>(slug, '/mon-espace/temps/ecarts', { method: 'POST', body: { mois, commentaire } });
+export const traiterEcartTemps = (slug: string, ecartId: string, reponse: string) =>
+  apiSociete<{ id: string; mois: string }>(slug, `/rh/feuilles-temps/ecarts/${ecartId}/traitement`, { method: 'POST', body: { reponse } });
 
 export const LIBELLE_SECTION: Record<SectionTache, string> = {
   avant_projet: 'Avant-projet',

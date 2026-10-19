@@ -473,6 +473,9 @@ export type NotificationType =
   | 'decision_assignee'
   | 'facture_emise'
   | 'facture_payee'
+  // Feuille de temps : écart signalé (→ RH), puis réponse (→ salarié).
+  | 'ecart_temps_signale'
+  | 'ecart_temps_traite'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
@@ -1501,16 +1504,28 @@ export type FeuilleTempsSalarie = FeuilleTempsCalculee & {
   societe: string;
   cellule: string | null;
   blocsNonPlanifies: number;
+  ecart: EcartFeuilleTemps | null;
 };
 export type FeuillesTemps = {
   mois: string;
-  periodes: { mois: string; clos: boolean; aControler: number }[];
+  periodes: { mois: string; clos: boolean; aControler: number; ecarts: number }[];
   feuilles: FeuilleTempsSalarie[];
+};
+// Écart signalé par le salarié (revue Salarié 19/10/2026) : l'ouvert du
+// mois, sinon le dernier traité ; ouvert = traiteLe null.
+export type EcartFeuilleTemps = {
+  id: string;
+  commentaire: string;
+  signaleLe: string;
+  reponse: string | null;
+  traiteLe: string | null;
 };
 export type MonTemps = {
   mois: string;
   periodes: string[];
   feuille: FeuilleTempsCalculee;
+  signalable: boolean; // dossier RH relié au compte
+  ecart: EcartFeuilleTemps | null;
 };
 
 // --- RH · Mon espace (lot 5) ---------------------------------------------------

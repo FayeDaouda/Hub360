@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from './temps.service';
 
@@ -14,6 +15,8 @@ const DOSSIER = {
   id: 'D1', matricule: 'GH-0001', prenom: 'Awa', nom: 'Ndiaye', poste: 'CAD L1', dateEntree: '2024-01-03', archiveLe: null,
   societe: { nom: 'Grey Concrete' }, collaborateur: { id: 'C1', cellule: { nom: 'Archi 2' } }, absences: [],
   controlesTemps: [] as object[],
+  ecartsTemps: [] as object[],
+  societeId: 'S1',
 };
 const SANS_FICHE = { ...DOSSIER, id: 'D2', matricule: 'GH-0002', collaborateur: null };
 
@@ -32,9 +35,16 @@ function svc(o: { dossier?: object; taches?: object[]; collab?: object | null } 
       deleteMany: jest.fn(),
     },
     controleFeuilleTemps: { create: jest.fn() },
+    ecartFeuilleTemps: { create: jest.fn() },
     collaborateur: { findFirst: jest.fn().mockResolvedValue(o.collab === undefined ? { id: 'C1', dateArrivee: null } : o.collab) },
   } as unknown as PrismaService;
-  return { s: new TempsService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService), prisma };
+  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['URH']) };
+  const reglages = { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) };
+  return {
+    s: new TempsService(prisma, reglages as unknown as ReglagesService, notifications as unknown as NotificationsService),
+    prisma,
+    notifications,
+  };
 }
 
 describe('TempsService', () => {
@@ -45,8 +55,8 @@ describe('TempsService', () => {
     const r = await svc().s.feuilles();
     expect(r.mois).toBe('2026-09');
     expect(r.periodes).toEqual([
-      { mois: '2026-09', clos: true, aControler: 1 },
-      { mois: '2026-10', clos: false, aControler: 0 },
+      { mois: '2026-09', clos: true, ecarts: 0, aControler: 1 },
+      { mois: '2026-10', clos: false, ecarts: 0, aControler: 0 },
     ]);
     const [awa, sansFiche] = r.feuilles;
     expect(awa).toMatchObject({ statut: 'a_controler', heuresImputees: 16, heuresDisponibles: 176, occupation: 9, cellule: 'Archi 2' });
@@ -94,4 +104,24 @@ describe('TempsService', () => {
     await expect(svc({ collab: null }).s.monTemps({ userId: 'U', societeId: 'S1' })).rejects.toThrow(NotFoundException);
   });
 
+
+  // Revue Salarié 19/10/2026 : pas de confirmation ; un écart signalé bloque le contrôle.
+  it('écart : signalé tant que le mois n’est pas contrôlé, RH prévenue', async () => {
+    const { s, prisma, notifications } = svc();
+    await s.signalerEcart({ userId: 'U1', societeId: 'S1' }, '2026-09', ' Absence du 12 non prise en compte ');
+    expect((prisma.ecartFeuilleTemps.create as jest.Mock).mock.calls[0][0].data).toMatchObject({ dossierId: 'D1', mois: '2026-09', commentaire: 'Absence du 12 non prise en compte' });
+    expect(notifications.envoyer.mock.calls[0][0]).toMatchObject({ type: 'ecart_temps_signale', destinataireIds: ['URH'] });
+  });
+
+  it('écart : refusé sur une feuille déjà contrôlée, ou déjà ouvert', async () => {
+    const controlee = svc({ dossier: { controlesTemps: [{ mois: '2026-09' }] } });
+    await expect(controlee.s.signalerEcart({ userId: 'U1', societeId: 'S1' }, '2026-09', 'Écart à revoir')).rejects.toThrow(ConflictException);
+    const ouvert = svc({ dossier: { ecartsTemps: [{ mois: '2026-09', traiteLe: null }] } });
+    await expect(ouvert.s.signalerEcart({ userId: 'U1', societeId: 'S1' }, '2026-09', 'Écart à revoir')).rejects.toThrow(ConflictException);
+  });
+
+  it('contrôle refusé tant qu’un écart du mois est ouvert', async () => {
+    const { s } = svc({ dossier: { ecartsTemps: [{ mois: '2026-09', traiteLe: null }] } });
+    await expect(s.controler('URH', 'D1', '2026-09')).rejects.toThrow(/écart/);
+  });
 });
