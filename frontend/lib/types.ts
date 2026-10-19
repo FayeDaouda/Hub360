@@ -1414,7 +1414,15 @@ export type DemandeAbsence = {
 };
 
 // Année civile en cours (maquette : Report · Acquis 2026 · Pris · Restant) ; disponible = restant.
-export type SoldeConges = { annee: number; report: number; acquis: number; pris: number; enAttente: number; disponible: number };
+export type SoldeConges = {
+  annee: number;
+  report: number;
+  plafondReport: number; // Réglages CIO ; 0 = aucun report
+  acquis: number;
+  pris: number;
+  enAttente: number;
+  disponible: number;
+};
 
 export type CategorieSoins = 'pharmacie' | 'consultation' | 'analyses_imagerie' | 'hospitalisation' | 'dentaire_optique' | 'autre';
 export type StatutRemboursement = 'soumise' | 'transmise' | 'remboursee' | 'rejetee';

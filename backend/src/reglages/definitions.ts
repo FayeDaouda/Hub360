@@ -115,6 +115,14 @@ export const REGLES: DefinitionReglage[] = [
     aide: "Retirés du calendrier ouvrable de tous les projets, en cours compris : une échéance qui traverse un jour férié recule d'un jour.",
     appliquee: true, // temps de travail (lot 4) et décompte des congés (lot 2)
   },
+  {
+    cle: 'plafond_report_conges',
+    libelle: 'Plafond de report des congés (jours)',
+    valeur: { type: 'entier', min: 0, max: 60, unite: 'j' },
+    defaut: 0,
+    aide: "Congés payés non pris reportés sur l'année suivante, au plus ce nombre de jours (report plafonné, décision du 19/10/2026). 0 = aucun report. Compté à partir de 2026.",
+    appliquee: true, // solde de « Congés et absences » (regles-conges.ts)
+  },
 ];
 
 export const OBJECTIFS: DefinitionReglage[] = [

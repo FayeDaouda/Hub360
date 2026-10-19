@@ -106,8 +106,9 @@ export class DemandesService {
         include: { justificatifs: { select: { id: true, nom: true } } },
       }),
     ]);
+    const plafond = await this.reglages.regle<number>(dossier.societeId, 'plafond_report_conges');
     return {
-      solde: soldeConges(dossier.dateEntree, absences, aujourdhui()),
+      solde: soldeConges(dossier.dateEntree, absences, aujourdhui(), plafond),
       absences: absences.map(versAbsence),
       remboursements,
     };

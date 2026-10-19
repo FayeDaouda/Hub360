@@ -1,6 +1,8 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { CalendarCheck, CalendarPlus, Hourglass, Plane } from 'lucide-react';
+import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier } from '@/lib/fichiers';
 import {
@@ -103,8 +105,8 @@ function Chargement() {
 }
 
 // « Mon espace » · Congés et absences (RH lot 2, maquette du boss) : solde
-// de l'année, demande, suivi (la file du N+1 vit dans « À valider »). Règles
-// de solde = hypothèses de travail (cf. regles-conges.ts).
+// de l'année en tête, demande, suivi (la file du N+1 vit dans « À valider »).
+// Règles de solde : regles-conges.ts (2 j/mois, report plafonné — 19/10/2026).
 export function CongesAbsences({ slug }: { slug: string }) {
   const { donnees, erreur, charger } = useMesDemandes(slug);
   if (erreur) return <p className="empty-state">{erreur}</p>;
@@ -112,6 +114,39 @@ export function CongesAbsences({ slug }: { slug: string }) {
   const { solde, absences } = donnees;
 
   return (
+    <>
+      <KpiStrip
+        tuiles={[
+          {
+            cle: 'restant',
+            label: 'Restant',
+            valeur: `${solde.disponible} j`,
+            sousTexte: solde.enAttente ? `dont ${solde.enAttente} j réservés par vos demandes en attente` : 'à poser cette année',
+            icone: Plane,
+          },
+          {
+            cle: 'acquis',
+            label: `Acquis ${solde.annee}`,
+            valeur: `${solde.acquis} j`,
+            sousTexte: '2 jours ouvrables par mois de service',
+            icone: CalendarPlus,
+          },
+          {
+            cle: 'report',
+            label: `Report de ${solde.annee - 1}`,
+            valeur: `${solde.report} j`,
+            sousTexte: solde.plafondReport ? `plafonné à ${solde.plafondReport} j` : 'aucun report',
+            icone: Hourglass,
+          },
+          {
+            cle: 'pris',
+            label: 'Pris',
+            valeur: `${solde.pris} j`,
+            sousTexte: 'congés payés validés',
+            icone: CalendarCheck,
+          },
+        ]}
+      />
     <div className="me-colonnes me-colonnes--egales">
       <FormAbsence slug={slug} solde={solde} onFait={charger} />
       <section className="panel glass-panel dmd-section">
@@ -127,6 +162,7 @@ export function CongesAbsences({ slug }: { slug: string }) {
         )}
       </section>
     </div>
+    </>
   );
 }
 
@@ -247,25 +283,10 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
   return (
     <form className="panel glass-panel dmd-section" onSubmit={envoyer}>
       <h2 className="dmd-titre">Demander une absence ou un congé</h2>
-      <div className="me-solde">
-        {(
-          [
-            ['Report', solde.report],
-            [`Acquis ${solde.annee}`, solde.acquis],
-            ['Pris', solde.pris],
-            ['Restant', solde.disponible],
-          ] as const
-        ).map(([libelle, j]) => (
-          <div key={libelle} className={libelle === 'Restant' ? 'is-restant' : undefined}>
-            <span>{libelle}</span>
-            <strong>{j} j</strong>
-          </div>
-        ))}
-      </div>
       <p className="dmd-note">
-        Règle simulée : 2 jours ouvrables acquis par mois de service (à confirmer par la RH) ; décompte hors dimanches et
-        jours fériés des Réglages.
-        {solde.enAttente > 0 && ` Dont ${solde.enAttente} j en attente de décision, réservés.`}
+        Restant : <strong>{solde.disponible} j</strong>
+        {solde.enAttente > 0 && ` (dont ${solde.enAttente} j en attente de décision, réservés)`}. Décompte hors dimanches et jours
+        fériés des Réglages.
       </p>
       <label className="field">
         <span className="field-label">Type</span>
