@@ -27,6 +27,7 @@ export const moduleDeSection = (cle: string): string | undefined => SECTIONS_DIR
 export const ORDRE_SECTIONS = ['mes-taches', 'tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
 const CHEMINS: Record<string, string> = {
   'mes-taches': 'mes-taches',
+  'mes-reglages': 'mes-reglages',
   'tableau-de-bord': '',
   crm: 'crm',
   projets: 'projets',
@@ -76,6 +77,9 @@ export function sectionAccessible(session: Session, cle: string): boolean {
   if (cle === 'mes-taches') return session.role === ROLE_SALARIE;
   if (session.role === 'societe_admin') return true;
   if (ROLES_HORS_BACK_OFFICE.has(session.role)) return false;
+  // Mes réglages (19/10/2026) : compte, sécurité, apparence — chacun les
+  // siens, hors matrice (le CIO garde aussi les Réglages du HUB).
+  if (cle === 'mes-reglages') return true;
   // Mon espace (RH lot 5) : chacun le sien, hors matrice — le serveur ne
   // sert que le dossier du compte connecté.
   if (cle === 'mon-espace') return true;

@@ -11,11 +11,22 @@ import type { NiveauPermission, Session } from '@/lib/types';
 
 type Onglet = 'guide' | 'signaler';
 
+// Ouvrir l'aide d'ailleurs que de la barre du haut (menu latéral, Réglages).
+const EVENEMENT = 'hub:ouvrir-aide';
+export function ouvrirAide(onglet: Onglet = 'guide') {
+  window.dispatchEvent(new CustomEvent<Onglet>(EVENEMENT, { detail: onglet }));
+}
+
 // Bouton « Aide » de la barre du haut : le guide de la personne connectée
 // (ses sections, ce qu'elle peut y faire selon la matrice) et « Signaler un
 // problème » (page, rôle et appareil joints automatiquement).
 export function AideGlobale({ session }: { session: Session }) {
   const [onglet, setOnglet] = useState<Onglet | null>(null);
+  useEffect(() => {
+    const ouvrir = (e: Event) => setOnglet((e as CustomEvent<Onglet>).detail ?? 'guide');
+    window.addEventListener(EVENEMENT, ouvrir);
+    return () => window.removeEventListener(EVENEMENT, ouvrir);
+  }, []);
   return (
     <>
       <button type="button" className="admin-icon-btn" aria-label="Aide et signalement d’un problème" title="Aide" onClick={() => setOnglet('guide')}>

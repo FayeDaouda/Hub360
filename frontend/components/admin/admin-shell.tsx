@@ -30,7 +30,7 @@ import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-m
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { ClocheNotifications } from '@/components/admin/cloche-notifications';
 import { RechercheGlobale } from '@/components/admin/recherche-globale';
-import { AideGlobale } from '@/components/admin/aide-globale';
+import { AideGlobale, ouvrirAide } from '@/components/admin/aide-globale';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 
 type NavItem = {
@@ -74,6 +74,7 @@ export function activeAdminDepuisPathname(pathname: string, slug: string): strin
   // « Paramètres » vit dans le pied de sidebar, pas dans NAV (colonne
   // principale) — reste géré ici pour garder un seul point de vérité.
   if (segment === 'reglages' || segment === 'parametres') return 'parametres';
+  if (segment === 'mes-reglages') return 'mes-reglages';
   return NAV.find((item) => item.chemin === segment)?.cle ?? 'tableau-de-bord';
 }
 
@@ -309,17 +310,38 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
                 <span className="admin-nav-label">Réglages</span>
               </Link>
             )}
-            <span
-              className="admin-nav-item is-soon"
+            {/* Réglages personnels (compte, sécurité, apparence) : tous les
+                rôles ; le CIO a les Réglages du HUB ci-dessus. */}
+            {!sectionAccessible(session, 'parametres') && (
+              <Link
+                href={`${base}/mes-reglages`}
+                className={`admin-nav-item admin-nav-item--parametres${active === 'mes-reglages' ? ' is-active' : ''}`}
+                onMouseEnter={(e) => afficherInfobulle(e, 'Réglages')}
+                onMouseLeave={masquerInfobulle}
+                onFocus={(e) => afficherInfobulle(e, 'Réglages')}
+                onBlur={masquerInfobulle}
+                onClick={() => setMenuOuvert(false)}
+                aria-current={active === 'mes-reglages' ? 'page' : undefined}
+              >
+                <Settings size={18} strokeWidth={1.75} aria-hidden />
+                <span className="admin-nav-label">Réglages</span>
+              </Link>
+            )}
+            <button
+              type="button"
+              className="admin-nav-item admin-nav-btn"
               onMouseEnter={(e) => afficherInfobulle(e, 'Aide')}
               onMouseLeave={masquerInfobulle}
               onFocus={(e) => afficherInfobulle(e, 'Aide')}
               onBlur={masquerInfobulle}
-              aria-disabled
+              onClick={() => {
+                setMenuOuvert(false);
+                ouvrirAide();
+              }}
             >
               <LifeBuoy size={18} strokeWidth={1.75} aria-hidden />
               <span className="admin-nav-label">Aide</span>
-            </span>
+            </button>
             <button
               type="button"
               className="admin-nav-item admin-nav-btn"

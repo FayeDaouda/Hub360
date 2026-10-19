@@ -7492,6 +7492,24 @@ a.notif-item:hover {
   font-weight: 600;
   padding: 0.45rem 1.15rem;
 }
+/* Réglages personnels (19/10/2026). */
+.rg-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.rg-bloc {
+  margin-top: 0;
+}
+.rg-bouton {
+  width: fit-content;
+}
+.rg-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
 /* Mes performances · bilan mois par mois (19/10/2026). */
 .bilan-mois::first-letter {
   text-transform: uppercase;
