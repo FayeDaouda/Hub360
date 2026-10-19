@@ -90,6 +90,7 @@ export type TacheOuverte = {
   valideeLe: string | null;
   valideePar: string | null;
   assigne: { id: string; nom: string; cellule: string | null } | null;
+  aMoi: boolean; // assignée à la personne connectée
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
   peutDecider: boolean; // remise à trancher par la personne connectée
   peutRemettre: boolean; // la personne connectée est l'assignée, tâche ouverte
@@ -140,6 +141,7 @@ export type DossierProjetOuvert = {
   code: string;
   client: { nom: string; type: string };
   cellule: { nom: string; chef: string | null } | null;
+  jeSuisChef: boolean; // la personne connectée pilote la cellule du projet
   pilote: string;
   version: { code: string; libelle: string } | null;
   offre: string | null;

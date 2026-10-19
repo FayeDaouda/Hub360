@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { AlarmClock, AtSign, CalendarClock, ChevronDown, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getAbsencesAValider } from '@/lib/demandes';
@@ -63,7 +64,9 @@ export function MesTaches({ slug }: { slug: string }) {
   const [donnees, setDonnees] = useState<MesTachesApi | null>(null);
   const [mentions, setMentions] = useState<MentionRecue[]>([]);
   const [aDecider, setADecider] = useState({ taches: 0, absences: 0 });
-  const [filtreChoisi, setFiltre] = useState<Filtre | null>(null);
+  // ?filtre= : lien d'une tuile de Projets (« Mes tâches en retard »…).
+  const demande = useSearchParams().get('filtre');
+  const [filtreChoisi, setFiltre] = useState<Filtre | null>(FILTRES.some((f) => f.cle === demande) ? (demande as Filtre) : null);
   const [jour, setJour] = useState<string | null>(null);
   const [vue, setVue] = useState<Vue>('urgence');
   const [tiroir, setTiroir] = useState<{ projetId: string; tacheId: string; prolongation: boolean } | null>(null);

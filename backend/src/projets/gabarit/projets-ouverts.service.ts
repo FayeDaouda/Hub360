@@ -222,6 +222,8 @@ export class ProjetsOuvertsService {
       code: p.code,
       client: { nom: p.client.nom, type: p.client.type },
       cellule: cellule ? { nom: cellule.nom, chef: nom(chef) } : null,
+      // La personne connectée pilote la cellule du projet (elle valide).
+      jeSuisChef: !!chef && !!decideur.collaborateurId && chef.id === decideur.collaborateurId,
       pilote: pilote === 'head_of_engineering' ? 'Head of Engineering (à recruter)' : dplg ?? 'Architecte DPLG',
       version: p.gabaritVersion,
       offre: p.devis[0] ? refDevis(p.devis[0]) : null,
@@ -285,6 +287,8 @@ export class ProjetsOuvertsService {
           valideeLe: iso(t.valideeLe),
           valideePar: nom(t.valideePar),
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
+          // Assignée à la personne connectée (« Seulement mes tâches »).
+          aMoi: !!decideur.collaborateurId && t.assigneId === decideur.collaborateurId,
           validation: validation(t.temps as Temps, t.assigneId),
           peutDecider: peutDecider(decideur, t, chef?.id ?? null),
           prolongation: {

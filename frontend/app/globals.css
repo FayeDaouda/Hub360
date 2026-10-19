@@ -8048,7 +8048,7 @@ a.notif-item:hover {
     display: none;
   }
 }
-.mt-tiroir .po-panneau {
+.panneau-lateral .po-panneau {
   position: static;
   padding-left: 0;
   border-left: 0;
@@ -9441,7 +9441,7 @@ a.notif-item:hover {
 }
 .po-corps {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 1rem;
 }
@@ -10127,6 +10127,110 @@ a.notif-item:hover {
   }
 }
 
+/* Projets · revue Salarié (19/10/2026) : liste compacte sous 3 projets,
+   « Seulement mes tâches », tâches à moi par étape, cartes closes repliées. */
+.po-colonnes--compacte {
+  grid-template-columns: minmax(0, 1fr);
+}
+.po-projets-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.po-projet--ligne {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: auto;
+  padding: 0.55rem 0.85rem;
+  background: color-mix(in oklch, var(--surface) 70%, transparent);
+}
+.po-etape-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.po-etape-moi {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--brand) 16%, transparent);
+  color: color-mix(in oklch, var(--brand) 80%, var(--text));
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.po-miennes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.po-miennes input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+}
+.po-lien-bouton {
+  color: var(--brand);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.po-carte--repliee {
+  padding: 0;
+}
+.po-carte-deplier {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-carte-deplier:hover {
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.po-carte-repliee-titre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+.po-carte--repliee .po-chevron {
+  transform: rotate(-90deg);
+}
+.po-carte-repliee-droite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.po-carte-replier {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.po-carte-replier:hover {
+  background: color-mix(in oklch, var(--text) 6%, transparent);
+  color: var(--text);
+}
+
 /* Projets · gabarit, desktop : l'écran tient dans la fenêtre, sans défilement
    de page. « Projets ouverts » défile en interne ; le dossier garde son
    en-tête et ses étapes fixes, et deux zones défilent séparément : les cartes
@@ -10151,6 +10255,9 @@ a.notif-item:hover {
     min-height: 0;
     grid-template-rows: minmax(0, 1fr);
     align-items: stretch;
+  }
+  .po > .po-colonnes.po-colonnes--compacte {
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .po-liste,
   .po-dossier {

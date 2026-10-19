@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AtSign, CalendarPlus, CheckCheck, Hourglass, MessageCircle } from 'lucide-react';
+import { AlarmClock, AtSign, CalendarPlus, CheckCheck, ChevronDown, Hourglass, MessageCircle, RotateCcw } from 'lucide-react';
 import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
 import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
+import { getMesTaches } from '@/lib/mon-espace';
 import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
   ajouterTs,
@@ -16,6 +17,7 @@ import {
   getAssignables,
   getDossierProjet,
   getMentionnables,
+  getMesMentions,
   getTableauProjets,
   heuresTache,
   jjmm,
@@ -33,8 +35,9 @@ import {
 } from '@/lib/projets-ouverts';
 import { TachePanneau } from './tache-panneau';
 import { CartePanneau } from './carte-panneau';
+import { PanneauLateral } from './panneau-lateral';
 
-// Panneau de droite : une tâche, ou le fil d'une carte.
+// Panneau latéral : une tâche, ou le fil d'une carte.
 type Selection = { type: 'tache' | 'carte'; id: string } | null;
 
 const HEURES_PAR_JOUR = 8;
@@ -68,6 +71,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const peutAssigner = niveauSuffisant(session, 'projets', 'ecriture');
   const dplg = session.role === ROLE_DIR_GC;
   const salarie = session.role === ROLE_SALARIE;
+  // « Seulement mes tâches » (revue Salarié 19/10/2026) : actif d'office
+  // pour le Salarié, proposé à quiconque a une tâche dans le projet.
+  const [miennes, setMiennes] = useState(salarie);
+  // Tuiles du Salarié : SES tâches (pas le total du projet), ses mentions.
+  const [perso, setPerso] = useState<{ reprises: number; retards: number; attente: number; mentions: number } | null>(null);
   // CEO, CFO : lecture, et les fils en écriture (exception ciblée, revérifiée
   // par le serveur) ; aucune action de circuit.
   const consultation = consultationEtCommentaires(session);
@@ -106,10 +114,26 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   }, [slug, peutAssigner, peutEcrireFil]);
 
   // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
+  const chargerPerso = useCallback(() => {
+    if (!salarie) return;
+    Promise.all([getMesTaches(slug), getMesMentions(slug)])
+      .then(([t, m]) =>
+        setPerso({
+          reprises: t.taches.filter((x) => x.statut === 'a_reprendre').length,
+          retards: t.taches.filter((x) => x.statut === 'en_retard').length,
+          attente: t.taches.filter((x) => x.statut === 'remise').length,
+          mentions: m.filter((x) => !x.lue).length,
+        }),
+      )
+      .catch(() => setPerso(null));
+  }, [slug, salarie]);
+  useEffect(chargerPerso, [chargerPerso]);
+
   const recharger = useCallback(async () => {
     if (projetId) setDossier(await getDossierProjet(slug, projetId));
     await chargerTableau();
-  }, [slug, projetId, chargerTableau]);
+    chargerPerso();
+  }, [slug, projetId, chargerTableau, chargerPerso]);
 
   // Ouvre l'étape et le panneau de la remise demandée, dossier chargé.
   useEffect(() => {
@@ -135,7 +159,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     setDossier(null);
     setSelection(null);
     getDossierProjet(slug, projetId)
-      .then((d) => !annule && setDossier(d))
+      .then((d) => {
+        if (annule) return;
+        setDossier(d);
+        setEtape(etapeParDefaut(d));
+      })
       .catch((e) => !annule && setErreur(e instanceof Error ? e.message : 'Lecture impossible.'));
     return () => {
       annule = true;
@@ -143,6 +171,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   }, [slug, projetId]);
 
   const horizon = tableau ? Math.round(tableau.budgetHeures / HEURES_PAR_JOUR) : null;
+  const compacte = !!tableau && tableau.projets.length < 3;
   const acces = dplg
     ? 'Architecte DPLG : assignation, désactivation, prolongations, validation en suppléance'
     : salarie
@@ -157,8 +186,14 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     <div className="po" ref={racine}>
       <div className="po-entete">
         <p className="po-sous-titre">
-          Étapes → cartes → tâches générées depuis le devis signé à l’émission de F1
-          {horizon !== null && ` · ${horizon} jours ouvrés (${tableau!.budgetHeures} h)`}, délais figés, validation par le chef de team.
+          {salarie ? (
+            'Les projets où vous avez une tâche : ce que vous avez à rendre, son échéance et les échanges avec l’équipe.'
+          ) : (
+            <>
+              Étapes → cartes → tâches générées depuis le devis signé à l’émission de F1
+              {horizon !== null && ` · ${horizon} jours ouvrés (${tableau!.budgetHeures} h)`}, délais figés, validation par le chef de team.
+            </>
+          )}
         </p>
         <div className="po-entete-actions">
           {/* Réglages : réservés au CIO (page Paramètres hors matrice). */}
@@ -174,7 +209,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       {erreur && <p className="field-erreur">{erreur}</p>}
 
       <div className="po-kpi">
-        <KpiStrip tuiles={tuilesProjets(tableau, dplg || salarie, salarie, ouvrirRemiseAValider)} />
+        <KpiStrip
+          tuiles={
+            salarie ? tuilesSalarie(perso, tableau, slug, ouvrirRemiseAValider) : tuilesProjets(tableau, dplg, false, ouvrirRemiseAValider)
+          }
+        />
       </div>
 
       {tableau && tableau.projets.length === 0 ? (
@@ -186,40 +225,61 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
           </p>
         </section>
       ) : (
-        <div className="po-colonnes">
-          <section className="panel glass-panel po-liste" aria-label="Projets ouverts">
-            <h2 className="po-liste-titre">Projets ouverts</h2>
-            {!tableau ? (
-              <div className="skeleton admin-skeleton-panel" aria-hidden />
-            ) : (
-              <ul>
-                {tableau.projets.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className={`po-projet${p.id === projetId ? ' is-actif' : ''}`}
-                      aria-pressed={p.id === projetId}
-                      onClick={() => setProjetId(p.id)}
-                    >
-                      <span className="po-projet-tete">
-                        <span className="po-code">{p.code}</span>
-                        <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
-                          {p.livraisonDepassee ? 'Livraison dépassée' : p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
+        <div className={`po-colonnes${compacte ? ' po-colonnes--compacte' : ''}`}>
+          {compacte && tableau ? (
+            // Moins de 3 projets : un sélecteur en ligne, le dossier prend la largeur.
+            <div className="po-projets-ligne" role="group" aria-label="Projets ouverts">
+              {tableau.projets.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`po-projet po-projet--ligne${p.id === projetId ? ' is-actif' : ''}`}
+                  aria-pressed={p.id === projetId}
+                  onClick={() => setProjetId(p.id)}
+                >
+                  <span className="po-code">{p.code}</span>
+                  <span className="po-projet-client">{p.client}</span>
+                  <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
+                    {p.livraisonDepassee ? 'Livraison dépassée' : p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <section className="panel glass-panel po-liste" aria-label="Projets ouverts">
+              <h2 className="po-liste-titre">Projets ouverts</h2>
+              {!tableau ? (
+                <div className="skeleton admin-skeleton-panel" aria-hidden />
+              ) : (
+                <ul>
+                  {tableau.projets.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className={`po-projet${p.id === projetId ? ' is-actif' : ''}`}
+                        aria-pressed={p.id === projetId}
+                        onClick={() => setProjetId(p.id)}
+                      >
+                        <span className="po-projet-tete">
+                          <span className="po-code">{p.code}</span>
+                          <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
+                            {p.livraisonDepassee ? 'Livraison dépassée' : p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
+                          </span>
                         </span>
-                      </span>
-                      <span className="po-projet-client">{p.client}</span>
-                      <span className="po-barre" aria-hidden>
-                        <span style={{ width: `${p.total ? Math.round((p.faites / p.total) * 100) : 0}%` }} />
-                      </span>
-                      <span className="po-aide">
-                        {p.cellule ?? 'Cellule à assigner'} · J{p.jour} / {p.horizon} · {p.faites}/{p.total} tâches
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                        <span className="po-projet-client">{p.client}</span>
+                        <span className="po-barre" aria-hidden>
+                          <span style={{ width: `${p.total ? Math.round((p.faites / p.total) * 100) : 0}%` }} />
+                        </span>
+                        <span className="po-aide">
+                          {p.cellule ?? 'Cellule à assigner'} · J{p.jour} / {p.horizon} · {p.faites}/{p.total} tâches
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
           <section className="panel glass-panel po-dossier" aria-label="Dossier projet">
             {!dossier ? (
@@ -236,6 +296,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                 moiId={session.utilisateur.id}
                 mentionnables={peutEcrireFil ? mentionnables : null}
                 onMaj={recharger}
+                salarie={salarie}
+                miennes={miennes}
+                onMiennes={setMiennes}
               />
             )}
           </section>
@@ -243,6 +306,78 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       )}
     </div>
   );
+}
+
+// Étape ouverte à l'arrivée : celle de ma première tâche en cours, sinon la
+// première étape pas finie (plutôt que 01, souvent déjà close).
+function etapeParDefaut(d: DossierProjetOuvert): number {
+  const ouverte = (statut: string) => statut !== 'validee' && statut !== 'non_necessaire';
+  const miennes = d.cartes.filter((c) => c.taches.some((t) => t.aMoi && ouverte(t.statut))).map((c) => c.etapeNumero);
+  if (miennes.length) return Math.min(...miennes);
+  return d.etapes.find((e) => e.faites < e.total)?.numero ?? d.etapes[0]?.numero ?? 1;
+}
+
+// Tuiles du Salarié (revue 19/10/2026) : SES tâches et ses mentions — le
+// total du projet l'alarmait à tort. Chacune ouvre « Mes tâches » filtré ;
+// chef de cellule avec des remises en attente : « À valider par vous ».
+function tuilesSalarie(
+  perso: { reprises: number; retards: number; attente: number; mentions: number } | null,
+  tableau: TableauProjets | null,
+  slug: string,
+  ouvrirRemise: () => void,
+): KpiTuile[] {
+  const n = (v: number | undefined) => (v === undefined ? '…' : v);
+  const etat = (v: number | undefined, f: (x: number) => EtatTuile) => DEGRADE_ETAT[v === undefined ? 'marque' : f(v)];
+  const lien = (filtre: string) => ({ type: 'lien' as const, href: `/admin/${slug}/mes-taches?filtre=${filtre}` });
+  const aValider = tableau?.kpi.aValiderParVous.length ?? 0;
+  return [
+    {
+      cle: 'reprises',
+      label: 'Mes tâches à reprendre',
+      valeur: n(perso?.reprises),
+      sousTexte: 'renvoyées par votre N+1',
+      icone: RotateCcw,
+      degrade: etat(perso?.reprises, etatEnRetard),
+      action: lien('reprises'),
+    },
+    {
+      cle: 'retard',
+      label: 'Mes tâches en retard',
+      valeur: n(perso?.retards),
+      sousTexte: 'échéance dépassée',
+      icone: AlarmClock,
+      degrade: etat(perso?.retards, etatEnRetard),
+      action: lien('retards'),
+    },
+    {
+      cle: 'attente',
+      label: 'Mes remises en attente',
+      valeur: n(perso?.attente),
+      sousTexte: 'chez votre chef de team',
+      icone: Hourglass,
+      degrade: etat(perso?.attente, etatATraiter),
+      action: lien('attente'),
+    },
+    aValider > 0
+      ? {
+          cle: 'a-valider',
+          label: 'À valider par vous',
+          valeur: aValider,
+          sousTexte: 'remises de votre cellule',
+          icone: CheckCheck,
+          degrade: DEGRADE_ETAT[etatATraiter(aValider)],
+          action: { type: 'popup' as const, onClick: ouvrirRemise },
+        }
+      : {
+          cle: 'mentions',
+          label: 'Mentions à lire',
+          valeur: n(perso?.mentions),
+          sousTexte: 'dans les fils des projets',
+          icone: AtSign,
+          degrade: etat(perso?.mentions, etatATraiter),
+          action: lien('mentions'),
+        },
+  ];
 }
 
 // Tuiles du tableau (couleur = sens, lib/couleurs-etat.ts) : ambre à
@@ -316,10 +451,23 @@ type PropsDossier = {
   moiId: string;
   mentionnables: { id: string; nom: string }[] | null;
   onMaj: () => Promise<void>;
+  salarie: boolean;
+  miennes: boolean;
+  onMiennes: (v: boolean) => void;
 };
 
-function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, assignables, moiId, mentionnables, onMaj }: PropsDossier) {
-  const cartes = d.cartes.filter((c) => c.etapeNumero === etape);
+const ouverte = (statut: string) => statut !== 'validee' && statut !== 'non_necessaire';
+
+function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, assignables, moiId, mentionnables, onMaj, salarie, miennes, onMiennes }: PropsDossier) {
+  // « Seulement mes tâches » : proposé dès qu'une tâche du projet est à moi.
+  const aDesMiennes = d.cartes.some((c) => c.taches.some((t) => t.aMoi));
+  const filtrer = miennes && aDesMiennes;
+  const cartes = d.cartes
+    .filter((c) => c.etapeNumero === etape)
+    .map((c) => (filtrer ? { ...c, taches: c.taches.filter((t) => t.aMoi) } : c))
+    .filter((c) => !filtrer || c.taches.length > 0);
+  const mesOuvertes = (numero: number) =>
+    d.cartes.filter((c) => c.etapeNumero === numero).reduce((n, c) => n + c.taches.filter((t) => t.aMoi && ouverte(t.statut)).length, 0);
   const ecriture = niveauSuffisant(useSessionCourante(), 'projets', 'ecriture');
   const tacheId = selection?.type === 'tache' ? selection.id : null;
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
@@ -334,19 +482,29 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
           <h2 className="po-dossier-titre">
             <span className="po-code po-code--grand">{d.code}</span> {d.client.nom}
           </h2>
-          <p className="po-aide">
-            {d.cellule ? `${libelleCellule(d.cellule.nom)} · chef de team ${d.cellule.chef ?? 'à désigner'}` : 'Cellule à assigner'}
-            {d.cellule?.chef && ` · validation aujourd’hui : ${d.cellule.chef}`} · pilote des études : {d.pilote}
-            {d.version && ` · ${d.version.code} ${d.version.libelle}`}
-            {d.offre && ` depuis ${d.offre}`}
-          </p>
-          <div className="po-pastilles">
-            {factures.map((f) => (
-              <span key={f.libelle} className={`pill pill--${f.ton}`}>
-                {f.libelle}
-              </span>
-            ))}
-          </div>
+          {salarie ? (
+            // Revue Salarié : l'essentiel, sans le vocabulaire de direction.
+            <p className="po-aide">
+              J{d.jour} sur {d.horizon} · livraison le {jjmmaaaa(d.livraisonLe)} ·{' '}
+              {d.jeSuisChef ? 'vous pilotez la cellule' : `votre chef de team : ${d.cellule?.chef ?? 'à désigner'}`}
+            </p>
+          ) : (
+            <>
+              <p className="po-aide">
+                {d.cellule ? `${libelleCellule(d.cellule.nom)} · chef de team ${d.cellule.chef ?? 'à désigner'}` : 'Cellule à assigner'}
+                {d.cellule?.chef && ` · validation aujourd’hui : ${d.cellule.chef}`} · pilote des études : {d.pilote}
+                {d.version && ` · ${d.version.code} ${d.version.libelle}`}
+                {d.offre && ` depuis ${d.offre}`}
+              </p>
+              <div className="po-pastilles">
+                {factures.map((f) => (
+                  <span key={f.libelle} className={`pill pill--${f.ton}`}>
+                    {f.libelle}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         <div className="po-dossier-jour">
           <strong>
@@ -356,7 +514,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
             J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
           </span>
           {d.jour > d.horizon && d.statutChantier !== 'livre' && <span className="pill pill--risque">Livraison dépassée</span>}
-          {d.budgetHeures !== null && <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>}
+          {d.budgetHeures !== null && !salarie && <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>}
           <StatutProjet slug={slug} projetId={d.id} statut={d.statutChantier} modifiable={ecriture} onMaj={onMaj} />
         </div>
       </header>
@@ -383,7 +541,14 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
                 </span>
               </span>
               <strong>{e.libelle}</strong>
-              <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
+              <span className="po-etape-pied">
+                <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
+                {mesOuvertes(e.numero) > 0 && (
+                  <span className="po-etape-moi" title="Vos tâches en cours dans cette étape">
+                    {mesOuvertes(e.numero)} à moi
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}
@@ -391,9 +556,24 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
 
       {d.optionsTs.length > 0 && <AjoutTs slug={slug} dossier={d} onMaj={onMaj} />}
 
+      {aDesMiennes && (
+        <label className="po-miennes">
+          <input type="checkbox" checked={miennes} onChange={(e) => onMiennes(e.target.checked)} />
+          Seulement mes tâches
+        </label>
+      )}
+
       <div className="po-corps">
         {/* key : changer d'étape repart du haut de la liste des cartes. */}
-        <div className="po-cartes" key={etape}>
+        <div className="po-cartes" key={`${etape}:${filtrer}`}>
+          {cartes.length === 0 && filtrer && (
+            <p className="po-aide">
+              Aucune de vos tâches dans cette étape.{' '}
+              <button type="button" className="lien-inline po-lien-bouton" onClick={() => onMiennes(false)}>
+                Voir toutes les tâches
+              </button>
+            </p>
+          )}
           {cartes.map((c) => (
             <Carte
               key={c.id}
@@ -410,27 +590,38 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
             />
           ))}
         </div>
-        {choisie ? (
-          <TachePanneau
-            key={choisie.tache.id}
-            slug={slug}
-            projetId={d.id}
-            code={d.code}
-            carte={choisie.carte}
-            tache={choisie.tache}
-            assignables={assignables}
-            moiId={moiId}
-            mentionnables={mentionnables}
-            onMaj={onMaj}
-          />
-        ) : carteFil ? (
-          <CartePanneau key={carteFil.id} slug={slug} projetId={d.id} carte={carteFil} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
-        ) : (
-          <p className="po-panneau po-panneau--vide">
-            Cliquez une tâche pour voir son descriptif, l’assigner ou en discuter. Chaque carte a aussi son fil de discussion.
-          </p>
-        )}
       </div>
+
+      {/* Tâche ou fil d'une carte : panneau latéral, le dossier garde la largeur. */}
+      {(choisie || carteFil) && (
+        <PanneauLateral
+          titre={choisie ? `Tâche ${choisie.tache.libelle}` : `Fil de la carte ${carteFil!.libelle}`}
+          onClose={() => onSelection(null)}
+          entete={
+            <>
+              <p className="fiche-crm-code">{d.code}</p>
+              <p className="fiche-crm-meta">{d.client.nom}</p>
+            </>
+          }
+        >
+          {choisie ? (
+            <TachePanneau
+              key={choisie.tache.id}
+              slug={slug}
+              projetId={d.id}
+              code={d.code}
+              carte={choisie.carte}
+              tache={choisie.tache}
+              assignables={assignables}
+              moiId={moiId}
+              mentionnables={mentionnables}
+              onMaj={onMaj}
+            />
+          ) : (
+            <CartePanneau key={carteFil!.id} slug={slug} projetId={d.id} carte={carteFil!} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
+          )}
+        </PanneauLateral>
+      )}
     </>
   );
 }
@@ -547,6 +738,27 @@ type PropsCarte = {
 
 function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCarte) {
   const p = pastilleCarte(c.etat);
+  // Carte close (tout validé) : repliée sur une ligne, dépliable au clic.
+  const repliable = c.etat.code === 'close';
+  const [deplie, setDeplie] = useState(!repliable);
+  if (repliable && !deplie) {
+    return (
+      <article className="po-carte po-carte--repliee">
+        <button type="button" className="po-carte-deplier" aria-expanded={false} onClick={() => setDeplie(true)}>
+          <span className="po-carte-repliee-titre">
+            <ChevronDown size={16} aria-hidden className="po-chevron" />
+            {c.libelle}
+          </span>
+          <span className="po-carte-repliee-droite">
+            <span className="po-aide">
+              {c.taches.length} tâche{c.taches.length > 1 ? 's' : ''}
+            </span>
+            <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
+          </span>
+        </button>
+      </article>
+    );
+  }
   const eteinte = c.etat.code === 'desactivee';
   // « délai en heures ouvrées depuis J1 » : la fenêtre se lit aussi en heures.
   const enHeures = c.note?.includes('heures ouvrées') && c.debutJ !== null && c.finJ !== null;
@@ -564,6 +776,11 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
           <h3>{c.libelle}</h3>
         </div>
         <div className="po-carte-droite">
+          {repliable && (
+            <button type="button" className="po-carte-replier" aria-expanded onClick={() => setDeplie(false)} aria-label={`Replier ${c.libelle}`}>
+              <ChevronDown size={16} aria-hidden />
+            </button>
+          )}
           <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
           {fenetre && <span className="po-aide">{fenetre}</span>}
           {etiquettes.map((e) => (
