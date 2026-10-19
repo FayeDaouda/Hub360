@@ -9355,6 +9355,21 @@ a.notif-item:hover {
   border-color: var(--brand);
   background: color-mix(in oklch, var(--brand) 10%, transparent);
 }
+/* Bloc cliqué = fond blanc (user 19/10/2026), dans les deux thèmes : les
+   couleurs de texte du thème clair y sont reposées pour rester lisibles. */
+.po-projet.is-actif,
+.po-etape.is-actif,
+.po-tache.is-actif,
+.po-fil-bouton.is-actif {
+  --text: #17132a;
+  --text-muted: #6e6785;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--brand) 22%, transparent);
+}
+.po-tache.is-actif .po-retard {
+  color: var(--fuchsia);
+}
 .po-projet-tete {
   display: flex;
   align-items: center;
