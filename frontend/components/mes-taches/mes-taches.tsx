@@ -1,20 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { AlarmClock, AtSign, CalendarClock, Hourglass, RotateCcw } from 'lucide-react';
+import { AlarmClock, AtSign, CalendarClock, ChevronDown, Hourglass, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { useTitrePage } from '@/lib/layout-contexte';
-import { getMesTaches, getTachesAValider, libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
+import { ecartJours, getMesTaches, getTachesAValider } from '@/lib/mon-espace';
 import { getNotifications } from '@/lib/notifications';
 import type { NotificationItem, StatsPerformances, TacheMonEspace } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 
 type MesTachesApi = { taches: TacheMonEspace[]; stats: StatsPerformances };
+type Filtre = 'reprises' | 'retards' | 'semaine' | 'attente' | 'mentions';
+// Ton de couleur (tokens --pill-*) : bande de la ligne, compteur du filtre.
+type Ton = 'risque' | 'attention' | 'info' | 'iris' | 'neutre';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const parEcheance = (a: TacheMonEspace, b: TacheMonEspace) => (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999');
 // Mentions gardées en vue : non lues, ou reçues dans les 7 derniers jours.
 const FENETRE_MENTIONS_MS = 7 * 86_400_000;
@@ -26,11 +28,27 @@ function finDeSemaine(aujourdhui: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Échéance lue d'un coup d'œil : « 14 j de retard », « Aujourd’hui », « Dans 3 j ».
+function relatif(echeance: string, aujourdhui: string): string {
+  const n = ecartJours(aujourdhui, echeance);
+  if (n < 0) return `${-n} j de retard`;
+  if (n === 0) return 'Aujourd’hui';
+  if (n === 1) return 'Demain';
+  return `Dans ${n} j`;
+}
+
+const FILTRES: { cle: Filtre; libelle: string; aide: string; icone: LucideIcon; ton: Ton }[] = [
+  { cle: 'reprises', libelle: 'À reprendre', aide: 'renvoyées par votre N+1', icone: RotateCcw, ton: 'risque' },
+  { cle: 'retards', libelle: 'En retard', aide: 'échéance dépassée', icone: AlarmClock, ton: 'risque' },
+  { cle: 'semaine', libelle: 'Cette semaine', aide: 'à rendre d’ici dimanche', icone: CalendarClock, ton: 'attention' },
+  { cle: 'attente', libelle: 'En validation', aide: 'remises chez votre N+1', icone: Hourglass, ton: 'info' },
+  { cle: 'mentions', libelle: 'Mentions', aide: 'dans les fils des projets', icone: AtSign, ton: 'iris' },
+];
+
 // « Mes tâches » (revue Salarié, 19/10/2026) : la réponse à « qu'est-ce que
-// je dois faire aujourd'hui ? », par urgence — reprises, retards et
-// échéances de la semaine, remises en attente, mentions — au lieu de
-// chercher entre Projets et Mon espace. Mêmes données que « Mes
-// performances » (GET mon-espace/taches), même remise.
+// je dois faire aujourd'hui ? », par urgence. En-tête fixe (barre du haut +
+// filtres) ; un filtre n'affiche que sa liste, un second clic rend tout.
+// Mêmes données que « Mes performances » (GET mon-espace/taches), même remise.
 export function MesTaches({ slug }: { slug: string }) {
   useTitrePage('Mes tâches');
   const base = `/admin/${slug}`;
@@ -38,8 +56,11 @@ export function MesTaches({ slug }: { slug: string }) {
   const [donnees, setDonnees] = useState<MesTachesApi | null>(null);
   const [mentions, setMentions] = useState<NotificationItem[]>([]);
   const [aDecider, setADecider] = useState({ taches: 0, absences: 0 });
+  const [filtreChoisi, setFiltre] = useState<Filtre | null>(null);
   const [aRemettre, setARemettre] = useState<TacheMonEspace | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  useEnteteFixe();
 
   const charger = useCallback(() => {
     getMesTaches(slug)
@@ -58,6 +79,26 @@ export function MesTaches({ slug }: { slug: string }) {
   }, [slug]);
   useEffect(charger, [charger]);
 
+  const groupes = useMemo(() => {
+    const ouvertes = (donnees?.taches ?? []).filter((t) => t.statut !== 'validee').sort(parEcheance);
+    const dimanche = finDeSemaine(aujourdhui);
+    const reprises = ouvertes.filter((t) => t.statut === 'a_reprendre');
+    const retards = ouvertes.filter((t) => t.statut === 'en_retard');
+    const semaine = ouvertes.filter((t) => (t.statut === 'en_cours' || t.statut === 'a_venir') && !!t.echeance && t.echeance <= dimanche);
+    const attente = ouvertes.filter((t) => t.statut === 'remise');
+    const classees = new Set([...reprises, ...retards, ...semaine, ...attente]);
+    return { reprises, retards, semaine, attente, ensuite: ouvertes.filter((t) => !classees.has(t)), dimanche };
+  }, [donnees, aujourdhui]);
+  const compte: Record<Filtre, number> = {
+    reprises: groupes.reprises.length,
+    retards: groupes.retards.length,
+    semaine: groupes.semaine.length,
+    attente: groupes.attente.length,
+    mentions: mentions.length,
+  };
+  // Un filtre dont la liste s'est vidée (dernière tâche remise) rend « tout ».
+  const filtre = filtreChoisi && compte[filtreChoisi] > 0 ? filtreChoisi : null;
+
   if (!donnees) {
     return erreur ? (
       <p className="empty-state">{erreur}</p>
@@ -68,193 +109,231 @@ export function MesTaches({ slug }: { slug: string }) {
     );
   }
 
-  const ouvertes = donnees.taches.filter((t) => t.statut !== 'validee').sort(parEcheance);
-  const dimanche = finDeSemaine(aujourdhui);
-  const reprises = ouvertes.filter((t) => t.statut === 'a_reprendre');
-  const retards = ouvertes.filter((t) => t.statut === 'en_retard');
-  const semaine = ouvertes.filter((t) => (t.statut === 'en_cours' || t.statut === 'a_venir') && !!t.echeance && t.echeance <= dimanche);
-  const attente = ouvertes.filter((t) => t.statut === 'remise');
-  const classees = new Set([...reprises, ...retards, ...semaine, ...attente]);
-  const ensuite = ouvertes.filter((t) => !classees.has(t));
+  const voir = (f: Filtre) => filtre === null || filtre === f;
   const nbADecider = aDecider.taches + aDecider.absences;
-  const rienDUrgent = reprises.length + retards.length + semaine.length === 0;
-
-  const ligne = (t: TacheMonEspace, remettre: boolean) => (
-    <LigneTache key={t.id} t={t} base={base} aujourdhui={aujourdhui} onRemettre={remettre ? () => setARemettre(t) : undefined} />
+  const urgences = compte.reprises + compte.retards + compte.semaine;
+  const ligne = (t: TacheMonEspace, ton: Ton) => (
+    <LigneTache key={t.id} t={t} ton={ton} base={base} aujourdhui={aujourdhui} onRemettre={t.statut === 'remise' ? undefined : () => setARemettre(t)} />
   );
+  const filtreActif = FILTRES.find((f) => f.cle === filtre);
 
   return (
-    <>
-      <KpiStrip
-        tuiles={[
-          {
-            cle: 'reprises',
-            label: 'À reprendre',
-            valeur: reprises.length,
-            sousTexte: reprises.length ? 'renvoyées par votre N+1, prioritaires' : 'aucune reprise',
-            icone: RotateCcw,
-            alerte: reprises.length > 0,
-            ...(reprises.length > 0 && { action: { type: 'lien' as const, href: '#reprises' } }),
-          },
-          {
-            cle: 'retard',
-            label: 'En retard',
-            valeur: retards.length,
-            sousTexte: retards.length ? 'à remettre au plus vite' : 'aucun retard',
-            icone: AlarmClock,
-            alerte: retards.length > 0,
-            ...(retards.length > 0 && { action: { type: 'lien' as const, href: '#retards' } }),
-          },
-          {
-            cle: 'semaine',
-            label: 'Cette semaine',
-            valeur: semaine.length,
-            sousTexte: `échéance d’ici le ${jjmmaaaa(dimanche)}`,
-            icone: CalendarClock,
-            ...(semaine.length > 0 && { action: { type: 'lien' as const, href: '#semaine' } }),
-          },
-          {
-            cle: 'attente',
-            label: 'En attente de validation',
-            valeur: attente.length,
-            sousTexte: 'remises chez votre N+1',
-            icone: Hourglass,
-            ...(attente.length > 0 && { action: { type: 'lien' as const, href: '#attente' } }),
-          },
-        ]}
-      />
+    <div className="mt-page">
+      <div className="mt-entete">
+        <div className="mt-filtres" role="group" aria-label="Filtrer mes tâches">
+          {FILTRES.map((f) => {
+            const n = compte[f.cle];
+            const actif = filtre === f.cle;
+            return (
+              <button
+                key={f.cle}
+                type="button"
+                className={`mt-filtre${actif ? ' is-actif' : ''}`}
+                data-ton={n > 0 ? f.ton : 'neutre'}
+                aria-pressed={actif}
+                disabled={n === 0}
+                onClick={() => setFiltre(actif ? null : f.cle)}
+              >
+                <span className="mt-filtre-icone" aria-hidden>
+                  <f.icone size={16} strokeWidth={2} />
+                </span>
+                <span className="mt-filtre-texte">
+                  <span className="mt-filtre-libelle">{f.libelle}</span>
+                  <span className="mt-filtre-aide">{f.cle === 'semaine' ? `d’ici le ${jjmm(groupes.dimanche)}` : f.aide}</span>
+                </span>
+                <span className="mt-filtre-compte">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {erreur && <p className="field-erreur">{erreur}</p>}
 
-      {nbADecider > 0 && (
-        <section className="panel glass-panel dmd-section">
-          <div className="mt-decider">
-            <p className="dmd-note">
-              <strong>Vous êtes N+1.</strong>{' '}
-              {[
-                aDecider.taches && `${aDecider.taches} tâche${aDecider.taches > 1 ? 's' : ''} remise${aDecider.taches > 1 ? 's' : ''}`,
-                aDecider.absences && `${aDecider.absences} demande${aDecider.absences > 1 ? 's' : ''} d’absence`,
-              ]
-                .filter(Boolean)
-                .join(' et ')}{' '}
-              attend{nbADecider > 1 ? 'ent' : ''} votre décision.
-            </p>
-            <Link className="btn-primary btn-primary--sm" href={`${base}/mon-espace?onglet=a-valider`}>
-              Décider
-            </Link>
+      {nbADecider > 0 && filtre === null && (
+        <div className="mt-bandeau">
+          <p>
+            <strong>Vous êtes N+1.</strong>{' '}
+            {[
+              aDecider.taches && `${aDecider.taches} tâche${aDecider.taches > 1 ? 's' : ''} remise${aDecider.taches > 1 ? 's' : ''}`,
+              aDecider.absences && `${aDecider.absences} demande${aDecider.absences > 1 ? 's' : ''} d’absence`,
+            ]
+              .filter(Boolean)
+              .join(' et ')}{' '}
+            attend{nbADecider > 1 ? 'ent' : ''} votre décision.
+          </p>
+          <Link className="btn-primary btn-primary--sm" href={`${base}/mon-espace?onglet=a-valider`}>
+            Décider
+          </Link>
+        </div>
+      )}
+
+      <section className="panel glass-panel mt-liste" aria-live="polite">
+        {filtreActif && (
+          <div className="mt-filtre-etat">
+            <span>
+              {filtreActif.libelle} · {compte[filtreActif.cle]}
+            </span>
+            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setFiltre(null)}>
+              <X size={14} aria-hidden /> Tout afficher
+            </button>
           </div>
-        </section>
-      )}
+        )}
 
-      {rienDUrgent && (
-        <section className="panel glass-panel dmd-section">
-          <p className="dmd-note">Rien d’urgent : aucune reprise, aucun retard, aucune échéance d’ici dimanche.</p>
-        </section>
-      )}
+        {filtre === null && urgences === 0 && (
+          <p className="mt-calme">Rien d’urgent : aucune reprise, aucun retard, aucune échéance d’ici dimanche.</p>
+        )}
 
-      <Section id="reprises" titre="À reprendre" taches={reprises}>
-        {reprises.map((t) => ligne(t, true))}
-      </Section>
-      <Section id="retards" titre="En retard" taches={retards}>
-        {retards.map((t) => ligne(t, true))}
-      </Section>
-      <Section id="semaine" titre="À rendre cette semaine" taches={semaine}>
-        {semaine.map((t) => ligne(t, true))}
-      </Section>
-      <Section id="attente" titre="En attente de validation" taches={attente}>
-        {attente.map((t) => ligne(t, false))}
-      </Section>
-
-      {mentions.length > 0 && (
-        <section id="mentions" className="panel glass-panel dmd-section">
-          <h2 className="dmd-titre">
-            <AtSign size={16} aria-hidden /> Mentions · {mentions.length}
-          </h2>
-          <ul className="dmd-liste">
+        {voir('reprises') && (
+          <Groupe titre="À reprendre" ton="risque" n={compte.reprises} masquerTitre={!!filtre}>
+            {groupes.reprises.map((t) => ligne(t, 'risque'))}
+          </Groupe>
+        )}
+        {voir('retards') && (
+          <Groupe titre="En retard" ton="risque" n={compte.retards} masquerTitre={!!filtre}>
+            {groupes.retards.map((t) => ligne(t, 'risque'))}
+          </Groupe>
+        )}
+        {voir('semaine') && (
+          <Groupe titre="À rendre cette semaine" ton="attention" n={compte.semaine} masquerTitre={!!filtre}>
+            {groupes.semaine.map((t) => ligne(t, 'attention'))}
+          </Groupe>
+        )}
+        {voir('attente') && (
+          <Groupe titre="En attente de validation" ton="info" n={compte.attente} masquerTitre={!!filtre}>
+            {groupes.attente.map((t) => ligne(t, 'info'))}
+          </Groupe>
+        )}
+        {voir('mentions') && (
+          <Groupe titre="Mentions" ton="iris" n={compte.mentions} masquerTitre={!!filtre}>
             {mentions.map((n) => (
-              <li key={n.id} className="dmd-ligne">
-                <span>
-                  <strong>{n.titre}</strong>
-                  <span className="cell-sub">le {jjmmaaaa(n.date)}</span>
+              <li key={n.id} className="mt-ligne" data-ton="iris">
+                <span className="mt-corps">
+                  <span className="mt-titre">
+                    {!n.lu && <span className="mt-nouveau" aria-label="Non lue" />}
+                    {n.titre}
+                  </span>
                 </span>
-                <span className="dmd-actions">
-                  {!n.lu && <span className="pill pill--info">Nouveau</span>}
+                <span className="mt-echeance">
+                  <span className="mt-echeance-rel">le {jjmm(n.date)}</span>
+                </span>
+                <span className="mt-action">
                   {n.projetId && (
                     <Link className="btn-ghost btn-ghost--sm" href={`${base}/projets?projet=${n.projetId}`}>
-                      Ouvrir le projet
+                      Ouvrir
                     </Link>
                   )}
                 </span>
               </li>
             ))}
-          </ul>
-        </section>
-      )}
+          </Groupe>
+        )}
 
-      {ensuite.length > 0 && (
-        <details className="panel glass-panel dmd-section mt-ensuite">
-          <summary className="dmd-titre">Ensuite · {ensuite.length}</summary>
-          <ul className="dmd-liste">{ensuite.map((t) => ligne(t, true))}</ul>
-        </details>
-      )}
+        {filtre === null && groupes.ensuite.length > 0 && (
+          <details className="mt-plus-tard">
+            <summary>
+              <ChevronDown size={16} aria-hidden className="mt-plus-tard-chevron" />
+              Plus tard · {groupes.ensuite.length}
+            </summary>
+            <ul className="mt-lignes">{groupes.ensuite.map((t) => ligne(t, 'neutre'))}</ul>
+          </details>
+        )}
+      </section>
 
       <p className="dmd-note mt-pied">
-        Historique, tâches validées et respect des délais : <Link className="lien-inline" href={`${base}/mon-espace?onglet=performances`}>Mon espace › Mes performances</Link>.
+        Historique, tâches validées et respect des délais :{' '}
+        <Link className="lien-inline" href={`${base}/mon-espace?onglet=performances`}>
+          Mon espace › Mes performances
+        </Link>
+        .
       </p>
 
-      {aRemettre && (
-        <RemiseModal slug={slug} tache={aRemettre} onRemise={setDonnees} onClose={() => setARemettre(null)} />
-      )}
-    </>
+      {aRemettre && <RemiseModal slug={slug} tache={aRemettre} onRemise={setDonnees} onClose={() => setARemettre(null)} />}
+    </div>
   );
 }
 
-function Section({ id, titre, taches, children }: { id: string; titre: string; taches: TacheMonEspace[]; children: ReactNode }) {
-  if (taches.length === 0) return null;
+// Barre du haut fixe sur cette page, et sa hauteur réelle (elle passe sur
+// deux lignes sur mobile) pour coller les filtres juste en dessous.
+function useEnteteFixe() {
+  useLayoutEffect(() => {
+    const barre = document.querySelector<HTMLElement>('.admin-topbar');
+    if (!barre) return;
+    const racine = document.documentElement;
+    const mesurer = () => racine.style.setProperty('--mt-topbar-h', `${barre.offsetHeight}px`);
+    mesurer();
+    const obs = new ResizeObserver(mesurer);
+    obs.observe(barre);
+    return () => {
+      obs.disconnect();
+      racine.style.removeProperty('--mt-topbar-h');
+    };
+  }, []);
+}
+
+function Groupe({ titre, ton, n, masquerTitre, children }: { titre: string; ton: Ton; n: number; masquerTitre: boolean; children: ReactNode }) {
+  if (n === 0) return null;
   return (
-    <section id={id} className="panel glass-panel dmd-section">
-      <h2 className="dmd-titre">
-        {titre} · {taches.length}
-      </h2>
-      <ul className="dmd-liste">{children}</ul>
-    </section>
+    <div className="mt-groupe">
+      {!masquerTitre && (
+        <h2 className="mt-groupe-titre" data-ton={ton}>
+          {titre} <span className="mt-groupe-compte">{n}</span>
+        </h2>
+      )}
+      <ul className="mt-lignes">{children}</ul>
+    </div>
   );
 }
 
 function LigneTache({
   t,
+  ton,
   base,
   aujourdhui,
   onRemettre,
 }: {
   t: TacheMonEspace;
+  ton: Ton;
   base: string;
   aujourdhui: string;
   onRemettre?: () => void;
 }) {
+  const echeance =
+    t.statut === 'remise'
+      ? { rel: 'En validation', date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · remise le ${jjmm(t.remisLe)}` : ''}` }
+      : t.echeance
+        ? {
+            rel: relatif(t.echeance, aujourdhui),
+            date: t.statut === 'a_venir' && t.debut ? `démarre le ${jjmm(t.debut)} · due le ${jjmm(t.echeance)}` : `due le ${jjmm(t.echeance)}`,
+          }
+        : { rel: 'À planifier', date: 'pas encore de dates' };
   return (
-    <li className="dmd-ligne">
-      <span>
-        <strong>{t.libelle}</strong>
-        <span className="cell-sub">
-          <Link className="lien-inline" href={`${base}/projets?projet=${t.projetId}`}>
+    <li className="mt-ligne" data-ton={ton}>
+      <span className="mt-corps">
+        <span className="mt-titre">{t.libelle}</span>
+        <span className="mt-meta">
+          <Link className="mt-code" href={`${base}/projets?projet=${t.projetId}`}>
             {t.projetCode}
-          </Link>{' '}
-          · {t.projetClient} · {t.etape}
+          </Link>
+          <span>{t.projetClient}</span>
+          <span className="mt-sep" aria-hidden>
+            ·
+          </span>
+          <span>{t.etape}</span>
         </span>
-        <span className="cell-sub">
-          {t.statut === 'remise'
-            ? `Remise v${String(t.version).padStart(2, '0')}${t.remisLe ? ` le ${jjmmaaaa(t.remisLe)}` : ''}`
-            : t.echeance
-              ? `Échéance le ${jjmmaaaa(t.echeance)}`
-              : 'Pas encore planifiée'}
-        </span>
-        {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
+        {t.renvoiMotif && (
+          <span className="mt-motif">
+            <RotateCcw size={13} aria-hidden /> {t.renvoiMotif}
+          </span>
+        )}
       </span>
-      <span className="dmd-actions">
-        <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
+      <span className="mt-echeance">
+        <span className="mt-echeance-rel">{echeance.rel}</span>
+        <span className="mt-echeance-date">{echeance.date}</span>
+      </span>
+      <span className="mt-action">
         {onRemettre && (
-          <button type="button" className="btn-primary btn-primary--sm" onClick={onRemettre}>
+          <button type="button" className={ton === 'neutre' ? 'btn-ghost btn-ghost--sm' : 'btn-primary btn-primary--sm'} onClick={onRemettre}>
             Remettre
           </button>
         )}
