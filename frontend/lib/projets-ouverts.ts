@@ -259,6 +259,25 @@ export function getMentionnables(slug: string): Promise<{ id: string; nom: strin
   return apiSociete(slug, '/projets-ouverts/mentionnables');
 }
 
+// « Mes tâches » : les @mentions qui me visent (non traitées, ou des 7 derniers jours).
+export type MentionRecue = {
+  id: string;
+  texte: string;
+  creeLe: string;
+  lue: boolean;
+  auteur: string | null;
+  auteurId: string | null;
+  projetId: string;
+  projetCode: string;
+  carteId: string;
+  tacheId: string | null;
+  cible: string; // libellé de la tâche, sinon de la carte
+  racineId: string; // commentaire auquel répondre (racine du fil)
+};
+export const getMesMentions = (slug: string) => apiSociete<MentionRecue[]>(slug, '/projets-ouverts/mes-mentions');
+export const marquerMentionLue = (slug: string, commentaireId: string) =>
+  apiSociete<{ id: string }>(slug, `/projets-ouverts/mes-mentions/${commentaireId}/lue`, { method: 'POST', body: {} });
+
 export function getFil(slug: string, projetId: string, cible: CibleFil): Promise<CommentaireFil[]> {
   const q = 'carteId' in cible ? `carte=${cible.carteId}` : `tache=${cible.tacheId}`;
   return apiSociete(slug, `/projets-ouverts/${projetId}/fil?${q}`);

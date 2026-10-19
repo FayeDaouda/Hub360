@@ -7556,6 +7556,35 @@ a.notif-item:hover {
 .temps-ecart .dmd-note {
   margin: 0;
 }
+/* Texte et champs réservés aux lecteurs d'écran. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Remise : « Prendre une photo » seulement sur écran tactile (téléphone). */
+.po-remise-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  cursor: pointer;
+}
+.po-remise-photo.is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .po-remise-photo {
+    display: none;
+  }
+}
 /* Mes tâches · en-tête fixe et liste par urgence (19/10/2026) */
 .admin-main:has(.mt-page) {
   --mt-gx: 2rem;
@@ -7767,7 +7796,7 @@ a.notif-item:hover {
 .mt-ligne {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 12rem 7rem;
+  grid-template-columns: minmax(0, 1fr) 11rem minmax(6.5rem, auto);
   align-items: center;
   gap: 0.5rem 1rem;
   padding: 0.7rem 0.75rem 0.7rem 1.15rem;
@@ -7858,7 +7887,9 @@ a.notif-item:hover {
 }
 .mt-action {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 0.35rem;
 }
 .mt-nouveau {
   flex: none;
@@ -7881,12 +7912,183 @@ a.notif-item:hover {
 .mt-plus-tard[open] .mt-plus-tard-chevron {
   transform: rotate(180deg);
 }
+/* Accueil, frise de la semaine, tâche ouverte, dépôt, mentions (19/10/2026) */
+.mt-accueil {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.9rem;
+}
+.mt-accueil-titre {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.mt-accueil-sous {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.mt-accueil-sous::first-letter {
+  text-transform: uppercase;
+}
+.mt-semaine {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+.mt-jour {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.mt-jour:hover:not(:disabled) {
+  border-color: var(--border-hover);
+}
+.mt-jour:disabled {
+  cursor: default;
+  color: var(--text-muted);
+}
+.mt-jour.is-passe {
+  opacity: 0.7;
+}
+.mt-jour.is-aujourdhui {
+  border-color: color-mix(in oklch, var(--brand) 45%, transparent);
+  font-weight: 700;
+}
+.mt-jour.is-actif {
+  border-color: var(--pill-attention);
+  background: color-mix(in oklch, var(--pill-attention) 14%, var(--surface));
+}
+.mt-jour-nom {
+  white-space: nowrap;
+}
+.mt-jour-points {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.mt-jour-point {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pill-attention);
+}
+.mt-jour.is-passe .mt-jour-point {
+  background: var(--pill-risque);
+}
+.mt-jour-plus {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.mt-titre-bouton {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.mt-titre-bouton:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mt-ligne.is-depot {
+  outline: 2px dashed var(--brand);
+  outline-offset: -2px;
+  background: color-mix(in oklch, var(--brand) 8%, transparent);
+}
+.mt-groupe-titre--projet {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+.mt-mention-texte {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 0.86rem;
+}
+.mt-mention.is-lue .mt-titre,
+.mt-mention.is-lue .mt-mention-texte {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.mt-reponse {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.mt-astuce {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+@media (hover: none) {
+  .mt-astuce {
+    display: none;
+  }
+}
+.mt-tiroir .po-panneau {
+  position: static;
+  padding-left: 0;
+  border-left: 0;
+}
 @media (max-width: 1280px) {
   .mt-filtre-aide {
     display: none;
   }
 }
+/* Téléphone : seuls filtres et frise restent fixes (la barre du haut
+   défilerait sinon avec eux sur un tiers de l'écran). */
 @media (max-width: 720px) {
+  .admin-main:has(.mt-page) .admin-topbar {
+    position: relative;
+  }
+  .mt-entete {
+    top: 0;
+  }
+}
+@media (max-width: 720px) {
+  .mt-semaine {
+    gap: 0.25rem;
+  }
+  .mt-jour {
+    justify-content: center;
+    padding: 0.35rem 0.3rem;
+  }
+  .mt-jour-points {
+    display: none;
+  }
+  .mt-jour:not(:disabled) .mt-jour-nom::after {
+    content: ' •';
+    color: var(--pill-attention);
+  }
   .mt-filtres {
     display: flex;
     overflow-x: auto;

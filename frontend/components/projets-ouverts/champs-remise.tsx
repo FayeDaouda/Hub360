@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { lireFichier } from '@/lib/fichiers';
 
 // Nombre de fichiers par remise (même plafond que le serveur).
@@ -45,6 +45,22 @@ export function ChampsRemise({ valeur, onChange, id }: { valeur: SaisieRemise; o
           e.target.value = '';
         }}
       />
+      {/* Téléphone (visite de chantier) : photo prise directement — capture
+          ouvre l'appareil photo ; ignorée sur ordinateur (masquée en CSS). */}
+      <label className={`btn-ghost btn-ghost--sm po-remise-photo${valeur.pieces.length >= MAX_PIECES ? ' is-desactive' : ''}`}>
+        <Camera size={15} aria-hidden /> Prendre une photo
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          disabled={valeur.pieces.length >= MAX_PIECES}
+          onChange={(e) => {
+            void ajouter(e.target.files);
+            e.target.value = '';
+          }}
+        />
+      </label>
       {valeur.pieces.length > 0 && (
         <span className="po-remise-fichiers">
           {valeur.pieces.map((f, i) => (

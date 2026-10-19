@@ -13,15 +13,18 @@ type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
 export function RemiseModal({
   slug,
   tache,
+  piecesInitiales,
   onRemise,
   onClose,
 }: {
   slug: string;
   tache: TacheMonEspace;
+  // Fichiers glissés sur la ligne de la tâche (« Mes tâches »).
+  piecesInitiales?: SaisieRemise['pieces'];
   onRemise: (r: MesTaches) => void;
   onClose: () => void;
 }) {
-  const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
+  const [saisie, setSaisie] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: piecesInitiales ?? [] });
   return (
     <ConfirmModal
       titre="Remettre la tâche"

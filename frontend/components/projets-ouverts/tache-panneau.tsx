@@ -37,20 +37,22 @@ type Props = {
   // null = lecture seule du fil.
   mentionnables: { id: string; nom: string }[] | null;
   onMaj: () => Promise<void>;
+  // « Prolonger » depuis Mes tâches : le formulaire s'ouvre directement.
+  prolongationOuverte?: boolean;
 };
 
 // Panneau d'une tâche (maquette « Projets ») : qui, qui valide, durée,
 // fenêtre et échéance figées, écart, descriptif, assignation (à la tâche ou à
 // toute la carte), fichiers, fil de discussion et historique. Remise et
 // validation : avec les vues chef de team et collaborateur.
-export function TachePanneau({ slug, projetId, code, carte, tache, assignables, moiId, mentionnables, onMaj }: Props) {
+export function TachePanneau({ slug, projetId, code, carte, tache, assignables, moiId, mentionnables, onMaj, prolongationOuverte = false }: Props) {
   const [aLaCarte, setALaCarte] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [historique, setHistorique] = useState<EvenementTache[] | null>(null);
   const [renvoi, setRenvoi] = useState(false);
   const [motif, setMotif] = useState('');
-  const [prolonger, setProlonger] = useState(false);
+  const [prolonger, setProlonger] = useState(prolongationOuverte);
   const [jusquau, setJusquau] = useState('');
   const [motifProlongation, setMotifProlongation] = useState('');
   const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
@@ -73,11 +75,11 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     setErreur(null);
     setRenvoi(false);
     setMotif('');
-    setProlonger(false);
+    setProlonger(prolongationOuverte);
     setJusquau('');
     setMotifProlongation('');
     setSaisie(SAISIE_REMISE_VIDE);
-  }, [tache.id]);
+  }, [tache.id, prolongationOuverte]);
 
   // Charge de chacun sur la fenêtre de la tâche, pour qui peut assigner.
   // Relue quand la tâche ou son assigné change (la charge bouge avec).
