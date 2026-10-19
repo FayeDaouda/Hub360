@@ -6173,12 +6173,11 @@ a.notif-item:hover {
 }
 
 /* Tuile volontairement en retrait (« Annulés ») : même famille « pleine
-   couleur » que les autres (texture, lueur, anneau — cf. .kpi-tuile--pleine
+   couleur » que les autres (lueur, anneau — cf. .kpi-tuile--pleine
    plus bas), mais un dégradé gris/noir plutôt qu'une teinte vive — on ne met
    pas une mauvaise nouvelle au même poids visuel qu'un succès. */
 .kpi-tuile--attenue {
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
     linear-gradient(
       135deg,
       color-mix(in oklch, #4a4658 82%, transparent),
@@ -6193,8 +6192,8 @@ a.notif-item:hover {
    Verre teinté plutôt qu'un aplat opaque (sept. 2026 — l'aplat plein rendait
    ces tuiles trop chargées à côté du reste de l'app, cf. mémoire) : dégradé
    translucide + flou + reflet en haut, même recette que .projet-carte au
-   survol / .phase-pastille faite. Texte blanc, voile de texture diagonale,
-   et deux formes décoratives abstraites (lueur + anneau) façon carte
+   survol / .phase-pastille faite. Texte blanc (texture diagonale retirée le
+   19/10/2026, demande du user), et deux formes décoratives abstraites (lueur + anneau) façon carte
    premium. `--pleine` porte tout ce qui est PARTAGÉ ; chaque variante
    ci-dessous ne fixe que sa couleur (background + ombre). */
 .kpi-tuile--pleine {
@@ -6209,7 +6208,6 @@ a.notif-item:hover {
    assigner » (page Projets). */
 .kpi-tuile--accent {
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
     linear-gradient(
       135deg,
       color-mix(in oklch, var(--iris) 80%, transparent),
@@ -6221,7 +6219,6 @@ a.notif-item:hover {
 }
 .kpi-tuile--sens-sauge {
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
     linear-gradient(
       135deg,
       color-mix(in oklch, var(--sauge) 80%, transparent),
@@ -6233,7 +6230,6 @@ a.notif-item:hover {
 }
 .kpi-tuile--sens-argile {
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
     linear-gradient(
       135deg,
       color-mix(in oklch, var(--argile) 80%, transparent),
@@ -6249,7 +6245,6 @@ a.notif-item:hover {
    teinte, pas le doré vif des pastilles. */
 .kpi-tuile--sens-ocre {
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
     linear-gradient(
       135deg,
       color-mix(in oklch, oklch(50% 0.13 70) 80%, transparent),
@@ -6268,7 +6263,6 @@ a.notif-item:hover {
    de sens ci-dessus — assumé décoratif, pas lié à la hiérarchie de module. */
 .kpi-tuile--degrade {
   background:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 7px),
     linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
