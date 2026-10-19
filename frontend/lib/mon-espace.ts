@@ -77,3 +77,17 @@ export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }
   a_venir: { libelle: 'À venir', pill: 'pill--neutre' },
   a_planifier: { libelle: 'À planifier', pill: 'pill--neutre' },
 };
+
+export const ecartJours = (de: string, a: string) =>
+  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
+
+// Libellé du statut, précisé par la fenêtre quand la tâche est ouverte.
+export function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
+  if (t.statut === 'en_cours') {
+    const reste = ecartJours(aujourdhui, t.echeance!);
+    return reste === 0 ? 'Échéance aujourd’hui' : `Échéance dans ${reste} j`;
+  }
+  if (t.statut === 'a_venir') return `À venir · J-${ecartJours(aujourdhui, t.debut!)}`;
+  if (t.statut === 'en_retard') return `En retard · ${ecartJours(t.echeance!, aujourdhui)} j`;
+  return STATUT_TACHE[t.statut].libelle;
+}

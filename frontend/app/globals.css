@@ -7443,6 +7443,27 @@ a.notif-item:hover {
   align-items: center;
   gap: 0.45rem;
 }
+/* Mes tâches (revue Salarié 19/10/2026) */
+.mt-decider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+.mt-decider .dmd-note {
+  margin: 0;
+}
+.mt-ensuite > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+.mt-ensuite:not([open]) {
+  gap: 0;
+}
+.mt-pied {
+  margin: 1rem 0 0;
+}
 .dmd-proposition {
   font-size: 0.85rem;
   font-weight: 600;

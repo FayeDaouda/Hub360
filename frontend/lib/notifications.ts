@@ -1,6 +1,7 @@
 import type { FluxNotifications, NotificationItem, Session } from './types';
 import { apiSociete } from './client-api';
 import { niveauSuffisant } from './auth';
+import { sectionAccessible } from './acces-back-office';
 import { lienFacturationProjet } from './facturation';
 
 // Notifications du collaborateur connecté. API NestJS :
@@ -35,6 +36,12 @@ export function lienNotificationAdmin(
     return lienFacturationProjet(slug, n.projetId);
   }
   const base = `/admin/${slug}`;
+  // Salarié : ses tâches s'ouvrent dans « Mes tâches » (sa page d'arrivée),
+  // les remises de son équipe dans « À valider » (chef de cellule).
+  if (session && sectionAccessible(session, 'mes-taches')) {
+    if (['tache_assignee', 'tache_renvoyee', 'tache_validee', 'rappel_tache'].includes(n.type)) return `${base}/mes-taches`;
+    if (n.type === 'tache_remise') return `${base}/mon-espace?onglet=a-valider`;
+  }
   // Demandes RH : la RH traite dans RH › Demandes ; le N+1 décide dans Mon
   // espace › À valider ; le salarié suit ses demandes dans Mon espace.
   if (n.type === 'absence_a_decider') {

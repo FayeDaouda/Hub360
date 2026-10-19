@@ -5,19 +5,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AlarmClock, CircleCheck, Clock, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { getMesTaches, remettreTache, STATUT_TACHE } from '@/lib/mon-espace';
+import { getMesTaches, libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
 import { formatHeures, getMonTemps, LIBELLE_MANQUE, libelleMois } from '@/lib/temps';
 import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
-import { ConfirmModal } from '@/components/admin/confirm-modal';
-import { ChampsRemise, corpsRemise, SAISIE_REMISE_VIDE, type SaisieRemise } from '@/components/projets-ouverts/champs-remise';
+import { RemiseModal } from './remise-modal';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const ecartJours = (de: string, a: string) =>
-  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
 // Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
 const lienProjet = (base: string, projetId: string) =>
   base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
@@ -29,16 +26,6 @@ const FILTRES: { cle: Filtre; libelle: string; garde: (t: TacheMonEspace) => boo
   { cle: 'validees', libelle: 'Validées', garde: (t) => t.statut === 'validee' },
 ];
 
-// Libellé du statut, précisé par la fenêtre quand la tâche est ouverte.
-function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
-  if (t.statut === 'en_cours') {
-    const reste = ecartJours(aujourdhui, t.echeance!);
-    return reste === 0 ? 'Échéance aujourd’hui' : `Échéance dans ${reste} j`;
-  }
-  if (t.statut === 'a_venir') return `À venir · J-${ecartJours(aujourdhui, t.debut!)}`;
-  if (t.statut === 'en_retard') return `En retard · ${ecartJours(t.echeance!, aujourdhui)} j`;
-  return STATUT_TACHE[t.statut].libelle;
-}
 
 // « Mon espace » · Mes performances (RH lot 5c) : respect des délais, tâches
 // en cours et en retard, temps du mois, et la liste des tâches assignées avec
@@ -51,7 +38,6 @@ export function MesPerformances({ slug }: { slug: string }) {
   const [temps, setTemps] = useState<MonTemps | null>(null);
   const [filtre, setFiltre] = useState<Filtre>('toutes');
   const [aRemettre, setARemettre] = useState<TacheMonEspace | null>(null);
-  const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
   const [erreur, setErreur] = useState<string | null>(null);
 
   const charger = useCallback(() => {
@@ -187,10 +173,7 @@ export function MesPerformances({ slug }: { slug: string }) {
                         <button
                           type="button"
                           className="btn-ghost btn-ghost--sm"
-                          onClick={() => {
-                            setSaisie(SAISIE_REMISE_VIDE);
-                            setARemettre(t);
-                          }}
+                          onClick={() => setARemettre(t)}
                         >
                           Remettre
                         </button>
@@ -204,23 +187,7 @@ export function MesPerformances({ slug }: { slug: string }) {
         </div>
       </section>
 
-      {aRemettre && (
-        <ConfirmModal
-          titre="Remettre la tâche"
-          message={
-            <>
-              « {aRemettre.libelle} » ({aRemettre.projetCode}) part en validation chez votre chef de team (ou l’Architecte DPLG). Vous ne
-              pourrez plus la remettre tant qu’elle n’est pas validée ou renvoyée en reprise.
-              <ChampsRemise id="perf-remise" valeur={saisie} onChange={setSaisie} />
-            </>
-          }
-          confirmer="Remettre"
-          onConfirm={async () => {
-            setDonnees(await remettreTache(slug, aRemettre, corpsRemise(saisie)));
-          }}
-          onClose={() => setARemettre(null)}
-        />
-      )}
+      {aRemettre && <RemiseModal slug={slug} tache={aRemettre} onRemise={setDonnees} onClose={() => setARemettre(null)} />}
     </>
   );
 }

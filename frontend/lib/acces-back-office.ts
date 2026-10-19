@@ -24,8 +24,9 @@ const SECTIONS_DIRECTION: Record<string, string> = {
 export const moduleDeSection = (cle: string): string | undefined => SECTIONS_DIRECTION[cle];
 
 // Ordre de préférence pour la page d'arrivée (= ordre de la sidebar).
-export const ORDRE_SECTIONS = ['tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
+export const ORDRE_SECTIONS = ['mes-taches', 'tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
 const CHEMINS: Record<string, string> = {
+  'mes-taches': 'mes-taches',
   'tableau-de-bord': '',
   crm: 'crm',
   projets: 'projets',
@@ -69,6 +70,10 @@ export function estAdministrateurHub(session: Session): boolean {
 }
 
 export function sectionAccessible(session: Session, cle: string): boolean {
+  // Mes tâches (revue Salarié 19/10/2026) : sa page d'arrivée, hors matrice
+  // comme Mon espace — le serveur ne sert que les tâches du compte connecté.
+  // Testé avant societe_admin, qui verrait sinon toutes les sections.
+  if (cle === 'mes-taches') return session.role === ROLE_SALARIE;
   if (session.role === 'societe_admin') return true;
   if (ROLES_HORS_BACK_OFFICE.has(session.role)) return false;
   // Mon espace (RH lot 5) : chacun le sien, hors matrice — le serveur ne

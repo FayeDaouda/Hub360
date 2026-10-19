@@ -13,6 +13,12 @@ export type FicheAide = {
 };
 
 export const FICHES_AIDE: Record<string, FicheAide> = {
+  'mes-taches': {
+    titre: 'Mes tâches',
+    resume:
+      'Ce que vous avez à faire, par urgence : tâches renvoyées en reprise, en retard, à rendre cette semaine, puis vos remises en attente de validation et les mentions dans les fils. « Remettre » envoie la tâche à votre N+1, avec fichiers et commentaire si besoin.',
+    actions: {},
+  },
   'tableau-de-bord': {
     titre: 'Pilotage',
     resume: 'Indicateurs du mois et leurs objectifs, reportings mensuels, registre des décisions.',
