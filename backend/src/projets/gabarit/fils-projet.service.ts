@@ -31,6 +31,54 @@ export class FilsProjetService {
     return utilisateurs.map((u) => ({ id: u.id, nom: nom(u)! }));
   }
 
+  // « Mes tâches » (revue Salarié 19/10/2026) : les @mentions qui me visent
+  // — non traitées, ou des 7 derniers jours —, avec de quoi y répondre
+  // (fil de la tâche ou de la carte, commentaire racine).
+  async mesMentions(societeId: string, userId: string) {
+    const depuis = new Date(Date.now() - 7 * 86_400_000);
+    const l = await this.prisma.commentaireProjet.findMany({
+      where: { mentionneId: userId, projet: { societeId }, OR: [{ mentionLueLe: null }, { creeLe: { gte: depuis } }] },
+      orderBy: { creeLe: 'desc' },
+      take: 30,
+      include: {
+        auteur: PERSONNE,
+        projet: { select: { code: true } },
+        carte: { select: { libelle: true } },
+        tache: { select: { libelle: true } },
+      },
+    });
+    return l.map((c) => ({
+      id: c.id,
+      texte: c.texte,
+      creeLe: c.creeLe,
+      lue: !!c.mentionLueLe,
+      auteur: nom(c.auteur),
+      auteurId: c.auteur?.id ?? null,
+      projetId: c.projetId,
+      projetCode: c.projet.code,
+      carteId: c.carteId,
+      tacheId: c.tacheId,
+      cible: c.tache?.libelle ?? c.carte.libelle,
+      racineId: c.parentId ?? c.id,
+    }));
+  }
+
+  // Mention traitée (lue, ou répondue) ; la cloche suit pour ce projet.
+  async marquerMentionLue(societeId: string, userId: string, commentaireId: string) {
+    const c = await this.prisma.commentaireProjet.findFirst({
+      where: { id: commentaireId, mentionneId: userId, projet: { societeId } },
+      select: { id: true, projetId: true, mentionLueLe: true },
+    });
+    if (!c) throw new NotFoundException('Mention introuvable.');
+    const maintenant = new Date();
+    if (!c.mentionLueLe) await this.prisma.commentaireProjet.update({ where: { id: c.id }, data: { mentionLueLe: maintenant } });
+    await this.prisma.notification.updateMany({
+      where: { destinataireId: userId, societeId, type: 'mention_projet', projetId: c.projetId, luLe: null },
+      data: { luLe: maintenant },
+    });
+    return { id: c.id };
+  }
+
   // Fil d'une carte (tacheId absent) ou d'une tâche.
   async lire(societeId: string, projetId: string, cible: { carteId?: string; tacheId?: string }) {
     const { carteId, tacheId } = await this.cible(societeId, projetId, cible);

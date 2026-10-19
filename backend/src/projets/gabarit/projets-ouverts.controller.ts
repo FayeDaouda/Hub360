@@ -40,6 +40,19 @@ export class ProjetsOuvertsController {
     return this.fils.mentionnables(req.user.societeId);
   }
 
+  // « Mes tâches » : mes @mentions, et les marquer traitées.
+  @Get('mes-mentions')
+  @RequiertPermission('projets', 'lecture')
+  mesMentions(@Req() req: R) {
+    return this.fils.mesMentions(req.user.societeId, req.user.userId);
+  }
+
+  @Post('mes-mentions/:commentaireId/lue')
+  @RequiertPermission('projets', 'lecture')
+  marquerMentionLue(@Req() req: R, @Param('commentaireId') commentaireId: string) {
+    return this.fils.marquerMentionLue(req.user.societeId, req.user.userId, commentaireId);
+  }
+
   @Get(':id')
   @RequiertPermission('projets', 'lecture')
   dossier(@Req() req: R, @Param('id') id: string) {

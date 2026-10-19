@@ -1985,16 +1985,19 @@ model PieceRemiseTache {
 // commentaire reste ouvert jusqu'à une réponse ou sa résolution par l'auteur.
 // Un seul niveau de réponse.
 model CommentaireProjet {
-  id          String    @id @default(uuid())
-  projetId    String    @map("projet_id")
-  carteId     String    @map("carte_id")
-  tacheId     String?   @map("tache_id")
-  parentId    String?   @map("parent_id") // réponse à ce commentaire
-  auteurId    String?   @map("auteur_id")
-  mentionneId String?   @map("mentionne_id")
-  texte       String
-  resoluLe    DateTime? @map("resolu_le")
-  creeLe      DateTime  @default(now()) @map("cree_le")
+  id           String    @id @default(uuid())
+  projetId     String    @map("projet_id")
+  carteId      String    @map("carte_id")
+  tacheId      String?   @map("tache_id")
+  parentId     String?   @map("parent_id") // réponse à ce commentaire
+  auteurId     String?   @map("auteur_id")
+  mentionneId  String?   @map("mentionne_id")
+  // La personne mentionnée l'a traitée (lue, ou y a répondu) depuis « Mes
+  // tâches » (revue Salarié 19/10/2026).
+  mentionLueLe DateTime? @map("mention_lue_le")
+  texte        String
+  resoluLe     DateTime? @map("resolu_le")
+  creeLe       DateTime  @default(now()) @map("cree_le")
 
   projet    Projet              @relation(fields: [projetId], references: [id], onDelete: Cascade)
   carte     CarteProjet         @relation(fields: [carteId], references: [id], onDelete: Cascade)
@@ -2006,6 +2009,7 @@ model CommentaireProjet {
 
   @@index([carteId, creeLe])
   @@index([tacheId, creeLe])
+  @@index([mentionneId, creeLe])
   @@map("commentaires_projet")
 }
 
