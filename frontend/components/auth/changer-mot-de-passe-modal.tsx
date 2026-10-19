@@ -5,8 +5,10 @@ import { X } from 'lucide-react';
 import { remplacerSession } from '@/lib/auth';
 import { apiAuth } from '@/lib/client-api';
 import type { Session } from '@/lib/types';
+import { DoubleFacteurCompte } from './double-facteur-compte';
 
-// Changement du mot de passe par la personne connectée (phase 0, 13/10/2026).
+// « Mon compte » (initiales de la barre du haut) : changement du mot de
+// passe (phase 0, 13/10/2026) et double authentification (19/10/2026).
 // Le serveur coupe les autres sessions et renvoie une session neuve, qui
 // remplace l'actuelle : on reste connecté sur ce poste.
 export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
@@ -47,13 +49,14 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-header">
-          <h2 id="modal-titre-mdp">Changer mon mot de passe</h2>
+          <h2 id="modal-titre-mdp">Mon compte</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
             <X size={18} strokeWidth={1.75} />
           </button>
         </header>
 
         <div className="modal-body">
+          <h3 className="mon-compte-titre">Mot de passe</h3>
           {fait ? (
             <>
               <p>Mot de passe changé. Vos autres appareils devront se reconnecter.</p>
@@ -118,6 +121,8 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
               </div>
             </form>
           )}
+          <h3 className="mon-compte-titre mon-compte-titre--suite">Double authentification</h3>
+          <DoubleFacteurCompte />
         </div>
       </div>
     </div>

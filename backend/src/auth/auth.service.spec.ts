@@ -138,6 +138,8 @@ describe('Double authentification', () => {
   it('obligatoire pour la direction en production, jamais pour le Salarié ; réglable', () => {
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'production' })).toBe(true);
     expect(doubleFacteurExige('Salarié', { NODE_ENV: 'production' })).toBe(false);
+    // Salarié chef de cellule : il valide le travail des autres.
+    expect(doubleFacteurExige('Salarié', { NODE_ENV: 'production' }, true)).toBe(true);
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'development' })).toBe(false);
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'obligatoire' })).toBe(true);
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);

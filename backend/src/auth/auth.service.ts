@@ -15,13 +15,16 @@ import {
 } from './totp';
 
 // Double authentification obligatoire pour la direction (tous les rôles sauf
-// Salarié, phase 4) — appliquée en production ; HUB_DOUBLE_FACTEUR =
-// « obligatoire » | « desactive » force l'un ou l'autre (poste de dev, démo).
+// Salarié, phase 4) et pour le Salarié chef de cellule, qui valide le travail
+// des autres (revue Salarié 19/10/2026) ; facultative pour les autres
+// Salariés, qui l'activent eux-mêmes une fois connectés. Appliquée en
+// production ; HUB_DOUBLE_FACTEUR = « obligatoire » | « desactive » force
+// l'un ou l'autre (poste de dev, démo).
 const ROLE_SALARIE = 'Salarié';
-export function doubleFacteurExige(role: string, env: NodeJS.ProcessEnv = process.env): boolean {
+export function doubleFacteurExige(role: string, env: NodeJS.ProcessEnv = process.env, chefDeCellule = false): boolean {
   const reglage = env.HUB_DOUBLE_FACTEUR;
   const applique = reglage === 'obligatoire' || (reglage !== 'desactive' && env.NODE_ENV === 'production');
-  return applique && role !== ROLE_SALARIE;
+  return applique && (role !== ROLE_SALARIE || chefDeCellule);
 }
 
 // Jeton d'étape entre le mot de passe et le code : signé avec une autre clé
@@ -55,10 +58,20 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    const { acces } = await this.acces(utilisateur.id, dto.societeSlug);
+    const { societe, acces } = await this.acces(utilisateur.id, dto.societeSlug);
     if (utilisateur.totpActifLe) return this.etape('code', utilisateur.id, dto.societeSlug);
-    if (doubleFacteurExige(acces.role.nom)) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
+    if (await this.exigePour(utilisateur.id, societe.id, acces.role.nom)) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
     return this.ouvrirSession(utilisateur, dto.societeSlug);
+  }
+
+  // Salarié : obligatoire seulement s'il pilote une cellule de la société.
+  private async exigePour(utilisateurId: string, societeId: string, role: string): Promise<boolean> {
+    if (!doubleFacteurExige(role, process.env, true)) return false;
+    if (role !== ROLE_SALARIE) return true;
+    const chef = await this.prisma.cellule.count({
+      where: { societeId, dispatcher: { OR: [{ utilisateurId }, { dossierPersonnel: { utilisateurId } }] } },
+    });
+    return chef > 0;
   }
 
   // --- Double authentification ---------------------------------------------
@@ -109,6 +122,34 @@ export class AuthService {
   // Première activation : secret généré, montré une seule fois (QR + texte).
   async preparerDoubleFacteur(jeton: string) {
     const { utilisateur } = await this.lireEtape(jeton);
+    return this.preparerPour(utilisateur);
+  }
+
+  // Le premier code juste prouve que l'application est réglée : activation,
+  // codes de secours (affichés une seule fois) et ouverture de la session.
+  async activerDoubleFacteur(jeton: string, code: string) {
+    const { utilisateur, societeSlug } = await this.lireEtape(jeton);
+    const codesSecours = await this.activerPour(utilisateur, code);
+    return { ...(await this.ouvrirSession(utilisateur, societeSlug)), codesSecours };
+  }
+
+  // Depuis le HUB, par la personne connectée (Salarié : facultatif) — même
+  // parcours, la session en cours reste valable.
+  async etatDoubleFacteur(utilisateurId: string, societeId: string, role: string) {
+    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpActifLe: true } });
+    return { actifLe: u?.totpActifLe?.toISOString() ?? null, exige: await this.exigePour(utilisateurId, societeId, role) };
+  }
+
+  async preparerDoubleFacteurCompte(utilisateurId: string) {
+    return this.preparerPour(await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } }));
+  }
+
+  async activerDoubleFacteurCompte(utilisateurId: string, code: string) {
+    const utilisateur = await this.prisma.utilisateur.findUniqueOrThrow({ where: { id: utilisateurId } });
+    return { codesSecours: await this.activerPour(utilisateur, code) };
+  }
+
+  private async preparerPour(utilisateur: { id: string; email: string; totpActifLe: Date | null }) {
     if (utilisateur.totpActifLe) throw new ConflictException('Double authentification déjà active.');
     const secret = genererSecret();
     await this.prisma.utilisateur.update({ where: { id: utilisateur.id }, data: { totpSecret: chiffrerSecret(secret), totpDernierPas: null } });
@@ -116,10 +157,7 @@ export class AuthService {
     return { secret, qr: await QRCode.toDataURL(lien, { margin: 1, width: 220 }) };
   }
 
-  // Le premier code juste prouve que l'application est réglée : activation,
-  // codes de secours (affichés une seule fois) et ouverture de la session.
-  async activerDoubleFacteur(jeton: string, code: string) {
-    const { utilisateur, societeSlug } = await this.lireEtape(jeton);
+  private async activerPour(utilisateur: { id: string; totpActifLe: Date | null; totpSecret: string | null }, code: string) {
     if (utilisateur.totpActifLe) throw new ConflictException('Double authentification déjà active.');
     const secret = utilisateur.totpSecret ? dechiffrerSecret(utilisateur.totpSecret) : null;
     if (!secret) throw new BadRequestException('Recommencez l’activation : affichez un nouveau QR code.');
@@ -135,7 +173,7 @@ export class AuthService {
         data: { utilisateurId: utilisateur.id, type: 'double_facteur_active', parId: utilisateur.id, detail: 'Application d’authentification' },
       }),
     ]);
-    return { ...(await this.ouvrirSession(utilisateur, societeSlug)), codesSecours: clairs };
+    return clairs;
   }
 
   // Changement par la personne connectée : mot de passe actuel exigé (un

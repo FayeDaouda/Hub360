@@ -377,8 +377,8 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             <button
               type="button"
               className="admin-user"
-              title={`${session.utilisateur.email} · changer mon mot de passe`}
-              aria-label="Changer mon mot de passe"
+              title={`${session.utilisateur.email} · mon compte (mot de passe, double authentification)`}
+              aria-label="Mon compte"
               onClick={() => setMdpOuvert(true)}
             >
               {initiales(session.utilisateur)}

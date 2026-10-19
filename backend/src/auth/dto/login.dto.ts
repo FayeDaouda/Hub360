@@ -28,3 +28,11 @@ export class CodeDoubleFacteurDto extends EtapeDoubleFacteurDto {
   @MaxLength(20)
   code: string;
 }
+
+// Activation depuis le HUB (personne connectée) : le code de l'application.
+export class CodeApplicationDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  code: string;
+}

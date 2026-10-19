@@ -7443,6 +7443,49 @@ a.notif-item:hover {
   align-items: center;
   gap: 0.45rem;
 }
+/* Mon compte : double authentification (revue Salarié 19/10/2026) */
+.mon-compte-titre {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+}
+.mon-compte-titre--suite {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.df-compte {
+  display: grid;
+  gap: 0.75rem;
+}
+.df-compte p {
+  margin: 0;
+}
+.df-compte-etapes {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+}
+.df-compte-qr {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.df-compte-qr img {
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 0.4rem;
+}
+.df-compte-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
 /* Mon espace en deux blocs (revue Salarié 19/10/2026) */
 .mes-blocs {
   display: flex;

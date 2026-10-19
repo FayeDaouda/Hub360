@@ -1,9 +1,9 @@
-import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { CodeDoubleFacteurDto, EtapeDoubleFacteurDto, LoginDto } from './dto/login.dto';
+import { CodeApplicationDto, CodeDoubleFacteurDto, EtapeDoubleFacteurDto, LoginDto } from './dto/login.dto';
 import {
   ActiverCompteDto,
   ChangerMotDePasseDto,
@@ -80,8 +80,32 @@ export class AuthController {
     return { ok: true };
   }
 
-  // Seule route authentifiée du contrôleur : la personne connectée change son
-  // propre mot de passe. Même plafond que le login (essais sur l'actuel).
+  // Double authentification depuis le HUB (personne connectée) : état, puis
+  // activation volontaire (Salarié) ou différée.
+  @Get('double-facteur')
+  @UseGuards(JwtAuthGuard)
+  etatDoubleFacteur(@Req() req: { user: { userId: string; societeId: string; role: string } }) {
+    return this.authService.etatDoubleFacteur(req.user.userId, req.user.societeId, req.user.role);
+  }
+
+  @Post('double-facteur/compte/preparation')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  preparerDoubleFacteurCompte(@Req() req: { user: { userId: string } }) {
+    return this.authService.preparerDoubleFacteurCompte(req.user.userId);
+  }
+
+  @Post('double-facteur/compte/activation')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  activerDoubleFacteurCompte(@Req() req: { user: { userId: string } }, @Body() dto: CodeApplicationDto) {
+    return this.authService.activerDoubleFacteurCompte(req.user.userId, dto.code);
+  }
+
+  // Routes authentifiées du contrôleur : la personne connectée change son
+  // propre mot de passe (ci-dessous) ou règle sa double authentification (ci-dessus). Même plafond que le login (essais sur l'actuel).
   @Post('mot-de-passe')
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
