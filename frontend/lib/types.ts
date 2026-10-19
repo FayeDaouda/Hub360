@@ -476,6 +476,9 @@ export type NotificationType =
   // Feuille de temps : écart signalé (→ RH), puis réponse (→ salarié).
   | 'ecart_temps_signale'
   | 'ecart_temps_traite'
+  // Mon espace · Mes documents : bulletin déposé, attestation délivrée.
+  | 'bulletin_depose'
+  | 'attestation_delivree'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore

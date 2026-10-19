@@ -7,9 +7,10 @@ import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getAbsencesAValider } from '@/lib/demandes';
+import { getNonLuesParType, marquerTypesLus } from '@/lib/notifications';
 import { getMonEspace, getTachesAValider } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
-import type { ProfilMonEspace } from '@/lib/types';
+import type { NotificationType, ProfilMonEspace } from '@/lib/types';
 import { AValider } from './a-valider';
 import { CongesAbsences, RemboursementsSante } from './demandes';
 import { MesDocuments } from './documents';
@@ -39,6 +40,16 @@ const ONGLETS = [
   { cle: 'documents', libelle: 'Mes documents', dossierRequis: true, bloc: 'dossier' },
 ] as const;
 type Onglet = (typeof ONGLETS)[number]['cle'];
+
+// Nouveautés par onglet (pastilles) : notifications non lues de ces types,
+// marquées lues à l'ouverture de l'onglet.
+const NOUVEAUTES: Partial<Record<Onglet, NotificationType[]>> = {
+  performances: ['tache_validee'],
+  temps: ['ecart_temps_traite'],
+  conges: ['absence_decidee'],
+  remboursements: ['remboursement_traite'],
+  documents: ['bulletin_depose', 'attestation_delivree'],
+};
 
 const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
 
@@ -71,6 +82,8 @@ export function MonEspace({ slug }: { slug: string }) {
   // l'onglet « À valider » (toujours affiché, maquette du boss).
   const [aValider, setAValider] = useState(0);
   const compter = useCallback((n: number) => setAValider(n), []);
+  const [nonLues, setNonLues] = useState<Partial<Record<NotificationType, number>>>({});
+  const nouveautes = (o: Onglet) => (NOUVEAUTES[o] ?? []).reduce((n, t) => n + (nonLues[t] ?? 0), 0);
 
   // Titre (maquette) : « Mon espace · Prénom Nom » — celui du dossier RH, sinon du compte.
   const nomAffiche = dossier ? `${dossier.prenom} ${dossier.nom}`.trim() : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
@@ -84,7 +97,18 @@ export function MonEspace({ slug }: { slug: string }) {
     Promise.all([getTachesAValider(slug), getAbsencesAValider(slug)])
       .then(([t, a]) => setAValider(t.length + a.length))
       .catch(() => setAValider(0));
+    getNonLuesParType(slug)
+      .then(setNonLues)
+      .catch(() => setNonLues({}));
   }, [slug]);
+
+  // Onglet ouvert : ses nouveautés sont vues (cloche comprise).
+  useEffect(() => {
+    const types = (NOUVEAUTES[demandeOnglet] ?? []).filter((t) => (nonLues[t] ?? 0) > 0);
+    if (!types.length) return;
+    setNonLues((x) => ({ ...x, ...Object.fromEntries(types.map((t) => [t, 0])) }));
+    marquerTypesLus(slug, types).catch(() => undefined);
+  }, [slug, demandeOnglet, nonLues]);
 
   // Barre d'onglets défilante sur mobile : l'onglet actif reste visible.
   useEffect(() => {
@@ -117,6 +141,8 @@ export function MonEspace({ slug }: { slug: string }) {
   const prenom = dossier?.prenom ?? utilisateur.prenom;
   const nom = dossier?.nom ?? utilisateur.nom;
   const choisir = (cle: Onglet) => router.replace(`${pathname}?onglet=${cle}`, { scroll: false });
+  const nouveautesDuBloc = (b: Bloc) =>
+    visibles.filter((o) => o.bloc === b).reduce((n, o) => n + (o.cle === 'a-valider' ? aValider : nouveautes(o.cle)), 0);
   const choisirBloc = (b: Bloc) => b !== courant.bloc && choisir(visibles.find((o) => o.bloc === b)!.cle);
 
   return (
@@ -150,8 +176,9 @@ export function MonEspace({ slug }: { slug: string }) {
                 className={courant.bloc === b.cle ? 'is-active' : ''}
                 onClick={() => choisirBloc(b.cle)}
               >
-                {/* Une décision attend : visible même depuis « Mon dossier ». */}
-                {b.cle === 'travail' && aValider > 0 && courant.bloc !== 'travail' ? `${b.libelle} · ${aValider}` : b.libelle}
+                {b.libelle}
+                {/* Nouveautés (et décisions en attente) de l'autre bloc : visibles d'ici. */}
+                {courant.bloc !== b.cle && <Pastille n={nouveautesDuBloc(b.cle)} />}
               </button>
             ))}
           </div>
@@ -168,6 +195,7 @@ export function MonEspace({ slug }: { slug: string }) {
               onClick={() => choisir(o.cle)}
             >
               {o.cle === 'a-valider' ? `${o.libelle} · ${aValider}` : o.libelle}
+              {o.cle !== onglet && <Pastille n={nouveautes(o.cle)} />}
             </button>
           ))}
         </div>
@@ -230,4 +258,12 @@ function CarteMission({ mission }: { mission: NonNullable<ProfilMonEspace['missi
       </dl>
     </section>
   );
+}
+
+function Pastille({ n }: { n: number }) {
+  return n > 0 ? (
+    <span className="mes-pastille" aria-label={`${n} nouveauté${n > 1 ? 's' : ''}`}>
+      {n}
+    </span>
+  ) : null;
 }

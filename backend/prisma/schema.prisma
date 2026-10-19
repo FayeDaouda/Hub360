@@ -229,6 +229,9 @@ enum NotificationType {
   // Feuille de temps (revue Salarié 19/10/2026) : écart signalé par le salarié
   ecart_temps_signale // à la RH
   ecart_temps_traite // au salarié, avec la réponse de la RH
+  // Mon espace · Mes documents (19/10/2026) : pastille de l'onglet
+  bulletin_depose // la RH a déposé un bulletin de paie
+  attestation_delivree // la RH a délivré l'attestation demandée
 }
 
 model Notification {

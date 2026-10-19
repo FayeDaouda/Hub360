@@ -395,6 +395,14 @@ export class DemandesService {
       data: { delivreeLe: new Date(), delivreeParId: a.userId, nom: fichier.nom, cle: fichier.url },
     });
     if (count === 0) throw new ConflictException('Attestation introuvable ou déjà délivrée.');
+    const att = await this.prisma.demandeAttestation.findUniqueOrThrow({ where: { id }, select: { dossierId: true, dossier: { select: { societeId: true } } } });
+    await this.notifications.envoyer({
+      societeId: att.dossier.societeId,
+      type: 'attestation_delivree',
+      titre: 'Votre attestation de travail est disponible',
+      destinataireIds: [await this.notifications.compteDuDossier(att.dossierId)],
+      parId: a.userId,
+    });
     return { ok: true };
   }
 

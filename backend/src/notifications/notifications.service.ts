@@ -307,12 +307,33 @@ export class NotificationsService {
     return c.map((x) => x.utilisateurId).filter((x): x is string => !!x);
   }
 
-  async marquerLues(societeId: string, utilisateurId: string) {
+  // `types` : seulement ces notifications (onglet de Mon espace ouvert).
+  async marquerLues(societeId: string, utilisateurId: string, types?: NotificationType[]) {
     await this.prisma.notification.updateMany({
-      where: { destinataireId: utilisateurId, societeId, luLe: null },
+      where: { destinataireId: utilisateurId, societeId, luLe: null, ...(types?.length && { type: { in: types } }) },
       data: { luLe: new Date() },
     });
     return this.flux(societeId, utilisateurId);
+  }
+
+  // Non lues par type (pastilles des onglets de Mon espace) : compté en
+  // base, pas sur le flux limité aux dernières.
+  async nonLuesParType(societeId: string, utilisateurId: string): Promise<Partial<Record<NotificationType, number>>> {
+    const g = await this.prisma.notification.groupBy({
+      by: ['type'],
+      where: { destinataireId: utilisateurId, societeId, luLe: null },
+      _count: true,
+    });
+    return Object.fromEntries(g.map((x) => [x.type, x._count]));
+  }
+
+  // Compte HUB d'un dossier du personnel (relié directement, ou via sa fiche d'équipe).
+  async compteDuDossier(dossierId: string): Promise<string | null> {
+    const d = await this.prisma.dossierPersonnel.findUnique({
+      where: { id: dossierId },
+      select: { utilisateurId: true, collaborateur: { select: { utilisateurId: true } } },
+    });
+    return d?.utilisateurId ?? d?.collaborateur?.utilisateurId ?? null;
   }
 
 }

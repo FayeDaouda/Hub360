@@ -7492,6 +7492,22 @@ a.notif-item:hover {
   font-weight: 600;
   padding: 0.45rem 1.15rem;
 }
+/* Pastille de nouveautés d'un onglet / d'un bloc de Mon espace. */
+.mes-pastille {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--pill-risque);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
 /* Mon espace : blocs et onglets sur une ligne, dans l'en-tête fixe. */
 .mes-navigation {
   display: flex;

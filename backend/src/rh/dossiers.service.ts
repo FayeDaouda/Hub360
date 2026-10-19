@@ -353,6 +353,13 @@ export class DossiersPersonnelService {
       create: { dossierId: id, mois, ...data },
       update: data,
     });
+    await this.notifications.envoyer({
+      societeId: d.societeId,
+      type: 'bulletin_depose',
+      titre: `Bulletin de paie disponible · ${mois.split('-').reverse().join('/')}`,
+      destinataireIds: [await this.notifications.compteDuDossier(id)],
+      parId: acteurId,
+    });
     return this.detail(id);
   }
 

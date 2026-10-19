@@ -1,4 +1,4 @@
-import type { FluxNotifications, NotificationItem, Session } from './types';
+import type { FluxNotifications, NotificationItem, NotificationType, Session } from './types';
 import { apiSociete } from './client-api';
 import { niveauSuffisant } from './auth';
 import { sectionAccessible } from './acces-back-office';
@@ -13,6 +13,16 @@ import { lienFacturationProjet } from './facturation';
 
 export function getNotifications(slug: string): Promise<FluxNotifications> {
   return apiSociete<FluxNotifications>(slug, '/notifications');
+}
+
+// Non lues par type (pastilles des onglets de Mon espace).
+export function getNonLuesParType(slug: string): Promise<Partial<Record<NotificationType, number>>> {
+  return apiSociete(slug, '/notifications/non-lues-par-type');
+}
+
+// Seulement ces types (l'onglet correspondant vient d'être ouvert).
+export function marquerTypesLus(slug: string, types: NotificationType[]): Promise<FluxNotifications> {
+  return apiSociete<FluxNotifications>(slug, '/notifications/lecture', { method: 'PATCH', body: { types } });
 }
 
 export function marquerNotificationsLues(slug: string): Promise<FluxNotifications> {
@@ -50,6 +60,7 @@ export function lienNotificationAdmin(
   if (n.type === 'remboursement_a_traiter') return `${base}/rh?onglet=demandes`;
   if (n.type === 'ecart_temps_signale') return `${base}/rh?onglet=temps`;
   if (n.type === 'ecart_temps_traite') return `${base}/mon-espace?onglet=temps`;
+  if (n.type === 'bulletin_depose' || n.type === 'attestation_delivree') return `${base}/mon-espace?onglet=documents`;
   if (n.type === 'absence_decidee') return `${base}/mon-espace?onglet=conges`;
   if (n.type === 'remboursement_traite') return `${base}/mon-espace?onglet=remboursements`;
   if (n.type === 'decision_assignee') return `${base}?onglet=registre`;

@@ -1,9 +1,15 @@
-import { Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import { NotificationType } from '@prisma/client';
+import { IsArray, IsEnum, IsOptional } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { NotificationsService } from './notifications.service';
 
 type R = { user: { societeId: string; userId: string } };
+
+class LectureDto {
+  @IsOptional() @IsArray() @IsEnum(NotificationType, { each: true }) types?: NotificationType[];
+}
 
 // Ouvert à tout membre de la société (garde « membre », pas « admin ») :
 // chacun lit / marque lues SES propres notifications — l'id vient du token,
@@ -18,8 +24,14 @@ export class NotificationsController {
     return this.notifications.flux(req.user.societeId, req.user.userId);
   }
 
+  // Sans corps : tout ; { types } : seulement ces types (onglet ouvert).
   @Patch('lecture')
-  marquerLues(@Req() req: R) {
-    return this.notifications.marquerLues(req.user.societeId, req.user.userId);
+  marquerLues(@Req() req: R, @Body() dto: LectureDto) {
+    return this.notifications.marquerLues(req.user.societeId, req.user.userId, dto?.types);
+  }
+
+  @Get('non-lues-par-type')
+  nonLuesParType(@Req() req: R) {
+    return this.notifications.nonLuesParType(req.user.societeId, req.user.userId);
   }
 }
