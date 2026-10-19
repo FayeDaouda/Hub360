@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, Plus, SendHorizonal, X } from 'lucide-react';
+import { ChevronLeft, Info, Plus, SendHorizonal, X } from 'lucide-react';
+import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import type {
   CanalChat,
   EtatFluxChat,
@@ -10,6 +11,7 @@ import type {
 } from '@/lib/types';
 
 type Props = {
+  slug: string;
   moiId: string;
   ecriture: boolean; // false = lecture seule (matrice « communication »)
   etatFlux: EtatFluxChat;
@@ -54,6 +56,7 @@ const LIBELLE_ETAT: Record<EtatFluxChat, string> = {
 };
 
 export function PanneauChat({
+  slug,
   moiId,
   ecriture,
   etatFlux,
@@ -74,16 +77,18 @@ export function PanneauChat({
   onNouveauDm,
 }: Props) {
   const [brouillon, setBrouillon] = useState('');
+  const [fiche, setFiche] = useState<string | null>(null);
   const filRef = useRef<HTMLDivElement>(null);
   const presDuBas = useRef(true);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onFermer();
+      // Fiche contact ouverte : Échap ne ferme qu'elle (son propre écouteur).
+      if (e.key === 'Escape' && !fiche) onFermer();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onFermer]);
+  }, [onFermer, fiche]);
 
   // Colle au bas du fil à l'arrivée d'un message, sauf si on remonte l'historique.
   useLayoutEffect(() => {
@@ -168,7 +173,7 @@ export function PanneauChat({
             <li className="pchat-vide">Personne d’autre dans la société.</li>
           ) : (
             annuaire.map((m) => (
-              <li key={m.utilisateurId}>
+              <li key={m.utilisateurId} className="pchat-annuaire-ligne">
                 <button
                   type="button"
                   className="pchat-canal"
@@ -187,6 +192,15 @@ export function PanneauChat({
                       {m.cellule ? ` · ${m.cellule}` : ''}
                     </span>
                   </span>
+                </button>
+                <button
+                  type="button"
+                  className="pchat-annuaire-fiche"
+                  aria-label={`Fiche contact de ${m.prenom} ${m.nom}`}
+                  title="Fiche contact"
+                  onClick={() => setFiche(m.utilisateurId)}
+                >
+                  <Info size={16} strokeWidth={1.75} />
                 </button>
               </li>
             ))
@@ -300,6 +314,7 @@ export function PanneauChat({
           )}
         </>
       )}
+      {fiche && <FicheContactModal slug={slug} utilisateurId={fiche} onClose={() => setFiche(null)} />}
     </div>
   );
 }

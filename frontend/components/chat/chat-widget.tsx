@@ -209,6 +209,7 @@ export function ChatWidget({
 
       {ouvert && (
         <PanneauChat
+          slug={slug}
           moiId={moiId}
           ecriture={ecriture}
           etatFlux={etatFlux}

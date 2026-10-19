@@ -9,6 +9,7 @@ function svc() {
     facture: { findMany: jest.fn().mockResolvedValue([]) },
     dossierPersonnel: { findMany: jest.fn().mockResolvedValue([]) },
     collaborateur: { findFirst: jest.fn().mockResolvedValue({ id: 'C1' }) },
+    utilisateur: { findMany: jest.fn().mockResolvedValue([]) },
   };
   return { s: new RechercheService(prisma as unknown as PrismaService), prisma };
 }
@@ -27,6 +28,8 @@ describe('RechercheService', () => {
     expect(prisma.dossierCrm.findMany).not.toHaveBeenCalled();
     expect(prisma.facture.findMany).not.toHaveBeenCalled();
     expect(prisma.dossierPersonnel.findMany).not.toHaveBeenCalled();
+    // Sans la RH : l'annuaire des collègues, hors soi-même.
+    expect(prisma.utilisateur.findMany.mock.calls[0][0].where.id).toEqual({ not: 'U1' });
     // Salarié : périmètre Projets appliqué (ses projets seulement).
     const [perimetre] = prisma.projet.findMany.mock.calls[0][0].where.AND;
     expect(JSON.stringify(perimetre)).toContain('C1');

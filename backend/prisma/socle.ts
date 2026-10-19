@@ -173,7 +173,10 @@ export async function installerSocle(prisma: PrismaClient) {
         finances_factures: 'aucun',
         finances_marges: 'aucun',
         finances_charges: 'aucun',
-        equipe: 'lecture',
+        // aucun (revue Salarié 19/10/2026, user) : Équipes montre la charge
+        // des collègues ; son équipe est dans Mon espace › Ma cellule, et
+        // l'annuaire passe par la fiche contact (Ctrl+K, chat).
+        equipe: 'aucun',
         rh: 'aucun',
         pilotage: 'aucun',
         documents: 'lecture',

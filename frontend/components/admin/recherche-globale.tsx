@@ -5,15 +5,17 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { chercher, GROUPES, lienResultat, type ResultatRecherche } from '@/lib/recherche';
+import { FicheContactModal } from '@/components/contacts/fiche-contact';
 
 const DELAI_SAISIE_MS = 250;
 const LONGUEUR_MIN = 2;
 
 // Recherche globale (barre du haut, Ctrl+K / ⌘K) : dossiers, projets, devis,
-// factures, personnel — ce que les droits de la personne lui laissent voir.
+// factures, personnel (ou collègues : fiche contact) — ce que les droits de la personne lui laissent voir.
 export function RechercheGlobale({ slug }: { slug: string }) {
   const [ouvert, setOuvert] = useState(false);
   const [mac, setMac] = useState(false);
+  const [contact, setContact] = useState<string | null>(null);
 
   useEffect(() => {
     setMac(/Mac|iPhone|iPad/.test(navigator.platform));
@@ -34,12 +36,13 @@ export function RechercheGlobale({ slug }: { slug: string }) {
         <span className="recherche-declencheur-texte">Rechercher…</span>
         <kbd className="recherche-raccourci">{mac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
-      {ouvert && createPortal(<Palette slug={slug} onClose={() => setOuvert(false)} />, document.body)}
+      {ouvert && createPortal(<Palette slug={slug} onClose={() => setOuvert(false)} onContact={setContact} />, document.body)}
+      {contact && <FicheContactModal slug={slug} utilisateurId={contact} onClose={() => setContact(null)} />}
     </>
   );
 }
 
-function Palette({ slug, onClose }: { slug: string; onClose: () => void }) {
+function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => void; onContact: (utilisateurId: string) => void }) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [resultats, setResultats] = useState<ResultatRecherche[] | null>(null);
@@ -78,7 +81,9 @@ function Palette({ slug, onClose }: { slug: string; onClose: () => void }) {
 
   function ouvrir(r: ResultatRecherche) {
     onClose();
-    router.push(lienResultat(slug, r));
+    const lien = lienResultat(slug, r);
+    if (lien) router.push(lien);
+    else onContact(r.id);
   }
 
   function onKeyDown(e: React.KeyboardEvent) {

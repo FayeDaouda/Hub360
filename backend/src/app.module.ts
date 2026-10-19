@@ -23,6 +23,7 @@ import { ContratsModule } from './contrats/contrats.module';
 import { SignalementsModule } from './signalements/signalements.module';
 import { AuditModule } from './audit/audit.module';
 import { RechercheModule } from './recherche/recherche.module';
+import { ContactsModule } from './contacts/contacts.module';
 import { ReglagesModule } from './reglages/reglages.module';
 import { PilotageModule } from './pilotage/pilotage.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
@@ -60,6 +61,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ContratsModule,
     ReglagesModule,
     RechercheModule,
+    ContactsModule,
     SignalementsModule,
     AuditModule,
   ],

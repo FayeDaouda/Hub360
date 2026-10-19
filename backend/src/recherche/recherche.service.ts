@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import type { NiveauPermission, Prisma } from '@prisma/client';
 import { aLaPermission } from '../commun/permission.guard';
+import { chercherCollegues } from '../contacts/contacts.service';
 import { refDevis } from '../devis/domaine';
 import { refFacture } from '../projets/domaine/config';
 import { collaborateurDuCompte, perimetreProjets } from '../projets/gabarit/validation';
 import { PrismaService } from '../prisma/prisma.service';
 
 export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
-export type TypeResultat = 'dossier' | 'projet' | 'devis' | 'facture' | 'salarie';
+export type TypeResultat = 'dossier' | 'projet' | 'devis' | 'facture' | 'salarie' | 'collegue';
 export type Resultat = { type: TypeResultat; id: string; titre: string; detail: string };
 
 // Résultats par type : de quoi reconnaître la fiche, pas une liste complète.
@@ -38,7 +39,8 @@ export class RechercheService {
       peut('projets') ? this.projets(a, q) : [],
       peut('finances_devis') ? this.devis(a.societeId, q) : [],
       peut('finances_factures') ? this.factures(a.societeId, q) : [],
-      peut('rh') ? this.salaries(q) : [],
+      // Dossiers du personnel avec la RH ; sinon l'annuaire (fiche contact).
+      peut('rh') ? this.salaries(q) : this.collegues(a, q),
     ]);
     return groupes.flat();
   }
@@ -113,6 +115,17 @@ export class RechercheService {
       id: f.id,
       titre: refFacture(f) ?? 'Facture en préparation',
       detail: [f.projet?.client.nom ?? f.dossierCrm?.client.nom, f.libelle].filter(Boolean).join(' · '),
+    }));
+  }
+
+  // Collègues : ouvrent leur fiche contact (nom, poste, cellule, téléphone).
+  private async collegues(a: Acteur, q: string): Promise<Resultat[]> {
+    const l = await chercherCollegues(this.prisma, a, q, PAR_TYPE);
+    return l.map((c) => ({
+      type: 'collegue',
+      id: c.utilisateurId,
+      titre: `${c.prenom} ${c.nom}`.trim(),
+      detail: [c.poste, c.cellule].filter(Boolean).join(' · '),
     }));
   }
 
