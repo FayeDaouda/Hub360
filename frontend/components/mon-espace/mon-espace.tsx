@@ -17,16 +17,24 @@ import { MaCellule } from './ma-cellule';
 import { MonTemps } from './mon-temps';
 import { MesPerformances } from './performances';
 
+// Deux blocs (revue Salarié 19/10/2026) : le travail au quotidien, puis le
+// dossier personnel — neuf onglets à plat étaient trop chargés.
+const BLOCS = [
+  { cle: 'travail', libelle: 'Mon travail' },
+  { cle: 'dossier', libelle: 'Mon dossier' },
+] as const;
+type Bloc = (typeof BLOCS)[number]['cle'];
+
 const ONGLETS = [
-  { cle: 'performances', libelle: 'Mes performances', dossierRequis: false },
-  { cle: 'mission', libelle: 'Ma carte de mission', dossierRequis: true },
-  { cle: 'a-valider', libelle: 'À valider', dossierRequis: false },
-  { cle: 'temps', libelle: 'Mon temps', dossierRequis: false },
-  { cle: 'cellule', libelle: 'Ma cellule', dossierRequis: false },
-  { cle: 'conges', libelle: 'Congés et absences', dossierRequis: true },
-  { cle: 'remboursements', libelle: 'Remboursements santé', dossierRequis: true },
-  { cle: 'informations', libelle: 'Mes informations', dossierRequis: true },
-  { cle: 'documents', libelle: 'Mes documents', dossierRequis: true },
+  { cle: 'performances', libelle: 'Mes performances', dossierRequis: false, bloc: 'travail' },
+  { cle: 'temps', libelle: 'Mon temps', dossierRequis: false, bloc: 'travail' },
+  { cle: 'cellule', libelle: 'Ma cellule', dossierRequis: false, bloc: 'travail' },
+  { cle: 'a-valider', libelle: 'À valider', dossierRequis: false, bloc: 'travail' },
+  { cle: 'mission', libelle: 'Ma carte de mission', dossierRequis: true, bloc: 'travail' },
+  { cle: 'conges', libelle: 'Congés et absences', dossierRequis: true, bloc: 'dossier' },
+  { cle: 'remboursements', libelle: 'Remboursements santé', dossierRequis: true, bloc: 'dossier' },
+  { cle: 'informations', libelle: 'Mes informations', dossierRequis: true, bloc: 'dossier' },
+  { cle: 'documents', libelle: 'Mes documents', dossierRequis: true, bloc: 'dossier' },
 ] as const;
 type Onglet = (typeof ONGLETS)[number]['cle'];
 
@@ -100,10 +108,13 @@ export function MonEspace({ slug }: { slug: string }) {
   );
   const onglet: Onglet = visibles.some((o) => o.cle === demandeOnglet) ? demandeOnglet : visibles[0].cle;
   const courant = ONGLETS.find((o) => o.cle === onglet)!;
+  const blocs = BLOCS.filter((b) => visibles.some((o) => o.bloc === b.cle));
+  const ongletsDuBloc = visibles.filter((o) => o.bloc === courant.bloc);
   // Sans dossier RH : le nom du compte connecté.
   const prenom = dossier?.prenom ?? utilisateur.prenom;
   const nom = dossier?.nom ?? utilisateur.nom;
   const choisir = (cle: Onglet) => router.replace(`${pathname}?onglet=${cle}`, { scroll: false });
+  const choisirBloc = (b: Bloc) => b !== courant.bloc && choisir(visibles.find((o) => o.bloc === b)!.cle);
 
   return (
     <>
@@ -125,8 +136,26 @@ export function MonEspace({ slug }: { slug: string }) {
         </p>
       </div>
 
+      {blocs.length > 1 && (
+        <div className="vue-toggle mes-blocs" role="tablist" aria-label="Mon espace">
+          {blocs.map((b) => (
+            <button
+              key={b.cle}
+              type="button"
+              role="tab"
+              aria-selected={courant.bloc === b.cle}
+              className={courant.bloc === b.cle ? 'is-active' : ''}
+              onClick={() => choisirBloc(b.cle)}
+            >
+              {/* Une décision attend : visible même depuis « Mon dossier ». */}
+              {b.cle === 'travail' && aValider > 0 && courant.bloc !== 'travail' ? `${b.libelle} · ${aValider}` : b.libelle}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
-        {visibles.map((o) => (
+        {ongletsDuBloc.map((o) => (
           <button
             key={o.cle}
             type="button"

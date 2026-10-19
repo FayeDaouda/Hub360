@@ -75,7 +75,7 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
   'mon-espace': {
     titre: 'Mon espace',
     resume:
-      'Votre espace personnel : congés et absences, remboursements, documents (bulletins, attestations), vos tâches à remettre et, si vous êtes N+1, l’onglet « À valider ».',
+      'Votre espace personnel, en deux blocs. Mon travail : performances, temps, cellule et, si vous êtes N+1, « À valider ». Mon dossier : congés et absences, remboursements santé, informations, documents (bulletins, attestations).',
     actions: {},
   },
   parametres: {
