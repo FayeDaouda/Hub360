@@ -72,7 +72,12 @@ export function MesPerformances({ slug }: { slug: string }) {
             cle: 'delais',
             label: 'Respect des délais',
             valeur: rd.pct == null ? '—' : `${rd.pct} %`,
-            sousTexte: `${stats.validees} tâches validées, dont ${rd.aTemps} remises à temps`,
+            // Seules les tâches validées APRÈS une remise datée sont jugées.
+            sousTexte: rd.total
+              ? `${rd.aTemps} remise${rd.aTemps > 1 ? 's' : ''} à temps sur ${rd.total} jugée${rd.total > 1 ? 's' : ''}`
+              : stats.validees
+                ? `${stats.validees} tâche${stats.validees > 1 ? 's' : ''} validée${stats.validees > 1 ? 's' : ''}, aucune remise datée à juger`
+                : 'aucune tâche validée pour l’instant',
             icone: CircleCheck,
           },
           {
@@ -153,6 +158,8 @@ export function MesPerformances({ slug }: { slug: string }) {
                     <span className="cell-sub">
                       {t.projetClient} · {t.etape}
                     </span>
+                    {/* Motif sous la tâche : dans la colonne Statut, il poussait « Remettre » hors de l'écran. */}
+                    {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
                   </td>
                   <td data-label="Durée std" className="num">
                     {t.dureeStandard == null ? '—' : formatHeures(t.dureeStandard)}
@@ -168,7 +175,6 @@ export function MesPerformances({ slug }: { slug: string }) {
                   <td data-label="Statut">
                     <span className="perf-statut">
                       <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
-                      {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
                       {t.statut !== 'validee' && t.statut !== 'remise' && (
                         <button
                           type="button"

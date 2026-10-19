@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ROLE_CEO } from '@/lib/acces-back-office';
 import { ApiError } from '@/lib/client-api';
+import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { getMonEspace, getTachesAValider } from '@/lib/mon-espace';
@@ -73,6 +74,7 @@ export function MonEspace({ slug }: { slug: string }) {
   // Titre (maquette) : « Mon espace · Prénom Nom » — celui du dossier RH, sinon du compte.
   const nomAffiche = dossier ? `${dossier.prenom} ${dossier.nom}`.trim() : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
   useTitrePage(dossier === undefined ? 'Mon espace' : `Mon espace · ${nomAffiche}`);
+  useEnteteFixe();
 
   useEffect(() => {
     getMonEspace(slug)
@@ -117,7 +119,7 @@ export function MonEspace({ slug }: { slug: string }) {
   const choisirBloc = (b: Bloc) => b !== courant.bloc && choisir(visibles.find((o) => o.bloc === b)!.cle);
 
   return (
-    <>
+    <div className="mes-page page-entete-fixe">
       <div className="mes-entete">
         <span className="mes-initiales" aria-hidden>
           {`${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase()}
@@ -136,37 +138,40 @@ export function MonEspace({ slug }: { slug: string }) {
         </p>
       </div>
 
-      {blocs.length > 1 && (
-        <div className="vue-toggle mes-blocs" role="tablist" aria-label="Mon espace">
-          {blocs.map((b) => (
+      {/* En-tête fixe : blocs et onglets sur une ligne, au-dessus du contenu qui défile. */}
+      <div className="entete-fixe mes-navigation">
+        {blocs.length > 1 && (
+          <div className="vue-toggle mes-blocs" role="tablist" aria-label="Mon espace">
+            {blocs.map((b) => (
+              <button
+                key={b.cle}
+                type="button"
+                role="tab"
+                aria-selected={courant.bloc === b.cle}
+                className={courant.bloc === b.cle ? 'is-active' : ''}
+                onClick={() => choisirBloc(b.cle)}
+              >
+                {/* Une décision attend : visible même depuis « Mon dossier ». */}
+                {b.cle === 'travail' && aValider > 0 && courant.bloc !== 'travail' ? `${b.libelle} · ${aValider}` : b.libelle}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
+          {ongletsDuBloc.map((o) => (
             <button
-              key={b.cle}
+              key={o.cle}
               type="button"
               role="tab"
-              aria-selected={courant.bloc === b.cle}
-              className={courant.bloc === b.cle ? 'is-active' : ''}
-              onClick={() => choisirBloc(b.cle)}
+              aria-selected={onglet === o.cle}
+              className={onglet === o.cle ? 'is-active' : ''}
+              onClick={() => choisir(o.cle)}
             >
-              {/* Une décision attend : visible même depuis « Mon dossier ». */}
-              {b.cle === 'travail' && aValider > 0 && courant.bloc !== 'travail' ? `${b.libelle} · ${aValider}` : b.libelle}
+              {o.cle === 'a-valider' ? `${o.libelle} · ${aValider}` : o.libelle}
             </button>
           ))}
         </div>
-      )}
-
-      <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
-        {ongletsDuBloc.map((o) => (
-          <button
-            key={o.cle}
-            type="button"
-            role="tab"
-            aria-selected={onglet === o.cle}
-            className={onglet === o.cle ? 'is-active' : ''}
-            onClick={() => choisir(o.cle)}
-          >
-            {o.cle === 'a-valider' ? `${o.libelle} · ${aValider}` : o.libelle}
-          </button>
-        ))}
       </div>
 
       {dossier && !dossier.cellule && EQUIPE_ATTENDUE.has(role) && (
@@ -200,7 +205,7 @@ export function MonEspace({ slug }: { slug: string }) {
       ) : (
         <MesDocuments slug={slug} dossier={dossier!} onMaj={setDossier} />
       )}
-    </>
+    </div>
   );
 }
 

@@ -7492,6 +7492,20 @@ a.notif-item:hover {
   font-weight: 600;
   padding: 0.45rem 1.15rem;
 }
+/* Mon espace : blocs et onglets sur une ligne, dans l'en-tête fixe. */
+.mes-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+.mes-navigation .mes-blocs,
+.mes-navigation .rh-onglets {
+  margin-bottom: 0;
+}
+.mes-navigation .rh-onglets {
+  min-width: 0;
+}
 /* Fiche contact (revue Salarié 19/10/2026) */
 .fc-liste {
   display: grid;
@@ -7579,35 +7593,37 @@ a.notif-item:hover {
     display: none;
   }
 }
-/* Mes tâches · en-tête fixe et liste par urgence (19/10/2026) */
-.admin-main:has(.mt-page) {
-  --mt-gx: 2rem;
-  --mt-gy: 1.5rem;
-  --mt-voile: color-mix(in oklch, var(--bg) 84%, transparent);
+/* En-tête fixe d'une page (Mes tâches, Mon espace — 19/10/2026) : la barre
+   du haut colle en haut, `.entete-fixe` juste dessous (hauteur réelle de la
+   barre mesurée : lib/entete-fixe.ts). Page racine : `.page-entete-fixe`. */
+.admin-main:has(.page-entete-fixe) {
+  --ef-gx: 2rem;
+  --ef-gy: 1.5rem;
+  --ef-voile: color-mix(in oklch, var(--bg) 84%, transparent);
 }
 @media (max-width: 960px) {
-  .admin-main:has(.mt-page) {
-    --mt-gx: 1.25rem;
-    --mt-gy: 1.1rem;
+  .admin-main:has(.page-entete-fixe) {
+    --ef-gx: 1.25rem;
+    --ef-gy: 1.1rem;
   }
 }
-.admin-main:has(.mt-page) .admin-topbar {
+.admin-main:has(.page-entete-fixe) .admin-topbar {
   position: sticky;
   top: 0;
   z-index: 30;
-  margin: calc(-1 * var(--mt-gy)) calc(-1 * var(--mt-gx)) 0;
-  padding: var(--mt-gy) var(--mt-gx) 0.85rem;
-  background: var(--mt-voile);
+  margin: calc(-1 * var(--ef-gy)) calc(-1 * var(--ef-gx)) 0;
+  padding: var(--ef-gy) var(--ef-gx) 0.85rem;
+  background: var(--ef-voile);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
-.mt-entete {
+.entete-fixe {
   position: sticky;
-  top: var(--mt-topbar-h, 0px);
+  top: var(--ef-topbar-h, 0px);
   z-index: 25;
-  margin: 0 calc(-1 * var(--mt-gx)) 1.1rem;
-  padding: 0.15rem var(--mt-gx) 0.9rem;
-  background: var(--mt-voile);
+  margin: 0 calc(-1 * var(--ef-gx)) 1.1rem;
+  padding: 0.15rem var(--ef-gx) 0.9rem;
+  background: var(--ef-voile);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
@@ -8058,13 +8074,13 @@ a.notif-item:hover {
     display: none;
   }
 }
-/* Téléphone : seuls filtres et frise restent fixes (la barre du haut
-   défilerait sinon avec eux sur un tiers de l'écran). */
+/* Téléphone : seul l'en-tête de la page reste fixe (la barre du haut
+   défilerait sinon avec lui sur un tiers de l'écran). */
 @media (max-width: 720px) {
-  .admin-main:has(.mt-page) .admin-topbar {
+  .admin-main:has(.page-entete-fixe) .admin-topbar {
     position: relative;
   }
-  .mt-entete {
+  .entete-fixe {
     top: 0;
   }
 }

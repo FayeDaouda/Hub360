@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlarmClock, AtSign, CalendarClock, ChevronDown, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
+import { useEnteteFixe } from '@/lib/entete-fixe';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
@@ -220,7 +221,7 @@ export function MesTaches({ slug }: { slug: string }) {
   const parProjet = groupesParProjet(selection, g.rang);
 
   return (
-    <div className="mt-page">
+    <div className="mt-page page-entete-fixe">
       <div className="mt-accueil">
         <div>
           <h2 className="mt-accueil-titre">
@@ -244,7 +245,7 @@ export function MesTaches({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <div className="mt-entete">
+      <div className="mt-entete entete-fixe">
         <div className="mt-filtres" role="group" aria-label="Filtrer mes tâches">
           {FILTRES.map((f) => {
             const n = compte[f.cle];
@@ -441,24 +442,6 @@ function groupesParProjet(taches: TacheMonEspace[], rang: (t: TacheMonEspace) =>
   const groupes = [...parId.values()];
   for (const p of groupes) p.taches.sort((a, b) => rang(a) - rang(b) || parEcheance(a, b));
   return groupes.sort((a, b) => rang(a.taches[0]) - rang(b.taches[0]) || parEcheance(a.taches[0], b.taches[0]));
-}
-
-// Barre du haut fixe sur cette page, et sa hauteur réelle (elle passe sur
-// deux lignes sur mobile) pour coller les filtres juste en dessous.
-function useEnteteFixe() {
-  useLayoutEffect(() => {
-    const barre = document.querySelector<HTMLElement>('.admin-topbar');
-    if (!barre) return;
-    const racine = document.documentElement;
-    const mesurer = () => racine.style.setProperty('--mt-topbar-h', `${barre.offsetHeight}px`);
-    mesurer();
-    const obs = new ResizeObserver(mesurer);
-    obs.observe(barre);
-    return () => {
-      obs.disconnect();
-      racine.style.removeProperty('--mt-topbar-h');
-    };
-  }, []);
 }
 
 function Groupe({
