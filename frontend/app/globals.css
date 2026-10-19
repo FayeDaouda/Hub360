@@ -8413,6 +8413,42 @@ a.notif-item:hover {
   color: #fff;
   font-weight: 700;
 }
+.mes-initiales--sm {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.8rem;
+}
+.mes-photo {
+  object-fit: cover;
+  background: var(--surface);
+}
+/* Ma cellule : membre cliquable → fiche contact. */
+.me-membre {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.me-membre > span:last-child {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.me-membre:disabled {
+  cursor: default;
+}
+.me-membre:not(:disabled):hover strong {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .mes-nom {
   margin: 0;
   font-size: 1.25rem;

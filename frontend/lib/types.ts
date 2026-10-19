@@ -1548,6 +1548,7 @@ export type ProfilMonEspace = {
   poste: string;
   societe: string;
   cellule: string | null;
+  photo: string | null; // photo de la fiche d'équipe
   typeContrat: TypeContrat;
   dateEntree: string | null;
   dateFin: string | null;
@@ -1630,7 +1631,16 @@ export type TacheAValider = {
 export type MaCellule = {
   nom: string;
   pilote: string | null; // chef de team (dispatcher) ; null = « Pilote à désigner »
-  membres: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; estChef: boolean; estMoi: boolean }[];
+  membres: {
+    id: string;
+    nom: string;
+    role: string;
+    niveau: NiveauCollaborateur;
+    estChef: boolean;
+    estMoi: boolean;
+    photo: string | null;
+    utilisateurId: string | null; // compte HUB (fiche contact) ; null sans compte
+  }[];
   projets: { id: string; code: string; programme: string; phase: Phase }[];
 };
 

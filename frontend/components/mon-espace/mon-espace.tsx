@@ -13,6 +13,7 @@ import type { ProfilMonEspace } from '@/lib/types';
 import { AValider } from './a-valider';
 import { CongesAbsences, RemboursementsSante } from './demandes';
 import { MesDocuments } from './documents';
+import { Avatar } from './avatar';
 import { MesInformations } from './informations';
 import { MaCellule } from './ma-cellule';
 import { MonTemps } from './mon-temps';
@@ -121,9 +122,7 @@ export function MonEspace({ slug }: { slug: string }) {
   return (
     <div className="mes-page page-entete-fixe">
       <div className="mes-entete">
-        <span className="mes-initiales" aria-hidden>
-          {`${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase()}
-        </span>
+        <Avatar nom={`${prenom} ${nom}`} photo={dossier?.photo ?? null} />
         <p className="mes-sous-titre">
           {dossier
             ? [

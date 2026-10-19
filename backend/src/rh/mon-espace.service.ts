@@ -12,7 +12,7 @@ export const DOCUMENTS_SALARIE: TypePieceDossier[] = ['contrat_signe', 'fiche_po
 
 const INCLURE = {
   societe: { select: { nom: true } },
-  collaborateur: { select: { cellule: { select: { nom: true } } } },
+  collaborateur: { select: { photoCle: true, cellule: { select: { nom: true } } } },
   pieces: { where: { type: { in: DOCUMENTS_SALARIE } }, select: { type: true, nom: true, createdAt: true } },
   bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
   attestations: { select: { id: true, demandeLe: true, delivreeLe: true, nom: true }, orderBy: { demandeLe: 'desc' } },
@@ -141,7 +141,19 @@ export class MonEspaceService {
       select: {
         nom: true,
         dispatcherId: true,
-        membres: { select: { id: true, prenom: true, nom: true, role: true, niveau: true }, orderBy: [{ nom: 'asc' }, { prenom: 'asc' }] },
+        membres: {
+          select: {
+            id: true,
+            prenom: true,
+            nom: true,
+            role: true,
+            niveau: true,
+            photoCle: true,
+            utilisateurId: true,
+            dossierPersonnel: { select: { utilisateurId: true } },
+          },
+          orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+        },
         dispatcher: { select: { prenom: true, nom: true } },
         projets: {
           select: { projet: { select: { id: true, code: true, programme: true, phase: true } } },
@@ -161,6 +173,9 @@ export class MonEspaceService {
           niveau: m.niveau,
           estChef: m.id === c.dispatcherId,
           estMoi: m.id === fiche.id,
+          photo: m.photoCle,
+          // Compte HUB du membre (fiche contact) ; null s'il n'en a pas.
+          utilisateurId: m.utilisateurId ?? m.dossierPersonnel?.utilisateurId ?? null,
         })),
         projets: c.projets.map((p) => p.projet),
       },
@@ -189,6 +204,8 @@ function versProfil(d: DossierProfil) {
     poste: d.poste,
     societe: d.societe.nom,
     cellule: d.collaborateur?.cellule?.nom ?? null,
+    // Photo de la fiche d'équipe (Équipes) : en-tête de Mon espace.
+    photo: d.collaborateur?.photoCle ?? null,
     typeContrat: d.typeContrat,
     dateEntree: d.dateEntree,
     dateFin: d.dateFin,
