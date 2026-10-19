@@ -127,6 +127,35 @@ export function periodeComptee(mois: string, s: Salarie, aujourdhui: string): Pe
 
 export type LigneFeuille = { id: string; jours: number; heures: number; manque: Manque | null };
 
+// Calendrier du mois (Mon temps, 19/10/2026) : chaque jour, sa nature et ses
+// heures — même répartition que heuresTache, jour par jour (la somme des
+// jours retombe sur les heures imputées, aux arrondis près).
+export type NatureJour = 'travail' | 'absence' | 'ferie' | 'weekend' | 'hors';
+export type JourCalendrier = { date: string; nature: NatureJour; heures: number };
+
+export function calendrierDuMois(mois: string, s: Salarie, taches: Tache[], aujourdhui: string, feries: Feries = AUCUN_FERIE): JourCalendrier[] {
+  const absents = joursAbsents(s.absences, feries);
+  const p = periodeComptee(mois, s, aujourdhui);
+  const m = bornesMois(mois);
+  // Par tâche planifiée : ses jours présents et la part d'heures de chacun.
+  const parts = taches
+    .filter((t) => !manqueTache(t, absents, feries))
+    .map((t) => {
+      const presents = joursOuvres({ debut: t.debut!, fin: t.echeance! }, feries).filter((j) => !absents.has(j));
+      return { jours: new Set(presents), parJour: t.heures! / presents.length };
+    });
+  const jours: JourCalendrier[] = [];
+  for (let d = jour(m.debut); d <= jour(m.fin); d.setUTCDate(d.getUTCDate() + 1)) {
+    const date = versIso(d);
+    const js = d.getUTCDay();
+    const nature: NatureJour =
+      js === 0 || js === 6 ? 'weekend' : feries.has(date) ? 'ferie' : !p || date < p.debut || date > p.fin ? 'hors' : absents.has(date) ? 'absence' : 'travail';
+    const heures = nature === 'travail' ? parts.reduce((n, x) => n + (x.jours.has(date) ? x.parJour : 0), 0) : 0;
+    jours.push({ date, nature, heures: arrondi(heures) });
+  }
+  return jours;
+}
+
 export type Feuille = {
   heuresImputees: number;
   heuresDisponibles: number;

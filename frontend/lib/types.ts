@@ -1505,7 +1505,10 @@ export type FeuilleTempsCalculee = {
   occupation: number | null; // %
   controleLe: string | null;
   lignes: LigneCalculTemps[];
+  // Jour par jour (calcul en direct) ; null pour une feuille figée au contrôle.
+  calendrier: JourCalendrierTemps[] | null;
 };
+export type JourCalendrierTemps = { date: string; nature: 'travail' | 'absence' | 'ferie' | 'weekend' | 'hors'; heures: number };
 export type FeuilleTempsSalarie = FeuilleTempsCalculee & {
   dossierId: string;
   matricule: string;

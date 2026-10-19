@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
   bornesMois,
+  calendrierDuMois,
+  type JourCalendrier,
   feuilleDuMois,
   type Manque,
   MOIS_DEBUT_FEUILLES,
@@ -54,6 +56,8 @@ export type FeuilleCalculee = {
   occupation: number | null;
   controleLe: Date | null;
   lignes: LigneCalcul[];
+  // Jour par jour (calcul en direct) ; null pour une feuille figée au contrôle.
+  calendrier: JourCalendrier[] | null;
 };
 
 const INCLUDE_DOSSIER = {
@@ -303,6 +307,7 @@ function calculer(
       occupation: disponibles > 0 ? Math.round((imputees / disponibles) * 100) : null,
       controleLe: controle.controleLe,
       lignes: detail.lignes,
+      calendrier: null,
     };
   }
 
@@ -320,6 +325,7 @@ function calculer(
     joursAbsence: f.joursAbsence,
     occupation: f.occupation,
     controleLe: null,
+    calendrier: calendrierDuMois(mois, salarie, duMois, jour, feries),
     lignes: duMois.map((t, i) => ({
       id: t.id,
       etape: t.etape,

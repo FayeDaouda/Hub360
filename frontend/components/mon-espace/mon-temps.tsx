@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, CalendarX, Clock, Gauge } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { formatHeures, getMonTemps, HEURES_PAR_JOUR, libelleMois, signalerEcartTemps, STATUT_FEUILLE } from '@/lib/temps';
-import type { MonTemps as DonneesMonTemps } from '@/lib/types';
+import type { JourCalendrierTemps, MonTemps as DonneesMonTemps } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
 
@@ -90,6 +90,8 @@ export function MonTemps({ slug }: { slug: string }) {
           },
         ]}
       />
+
+      {feuille.calendrier && <CalendrierMois jours={feuille.calendrier} />}
 
       <section className="panel glass-panel dmd-section temps-panel">
         <h2 className="dmd-titre">Détail du calcul · {libelleMois(feuille.mois)}</h2>
@@ -177,6 +179,59 @@ function EcartTemps({ slug, donnees, onMaj }: { slug: string; donnees: DonneesMo
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+const JOURS_SEMAINE = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const NATURE: Record<JourCalendrierTemps['nature'], string> = {
+  travail: 'Travaillé',
+  absence: 'Absence',
+  ferie: 'Férié',
+  weekend: 'Week-end',
+  hors: 'À venir',
+};
+
+// Le mois en grille (19/10/2026) : la feuille se lit d'un coup d'œil, un
+// écart (absence oubliée, jour vide) se repère tout seul. Intensité de la
+// case = heures du jour sur 8 h.
+function CalendrierMois({ jours }: { jours: JourCalendrierTemps[] }) {
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  // Cases vides avant le 1er (semaine du lundi).
+  const decalage = (new Date(`${jours[0].date}T00:00:00Z`).getUTCDay() + 6) % 7;
+  return (
+    <section className="panel glass-panel dmd-section">
+      <h2 className="dmd-titre">Mon mois jour par jour</h2>
+      <div className="tc-grille" role="table" aria-label="Heures par jour">
+        {JOURS_SEMAINE.map((j) => (
+          <span key={j} className="tc-entete" role="columnheader">
+            {j}
+          </span>
+        ))}
+        {Array.from({ length: decalage }, (_, i) => (
+          <span key={`v${i}`} className="tc-jour tc-jour--vide" aria-hidden />
+        ))}
+        {jours.map((j) => (
+          <span
+            key={j.date}
+            role="cell"
+            className={`tc-jour tc-jour--${j.nature}${j.date === aujourdhui ? ' is-aujourdhui' : ''}`}
+            style={j.nature === 'travail' ? ({ '--tc-charge': Math.min(1, j.heures / HEURES_PAR_JOUR) } as React.CSSProperties) : undefined}
+            title={`${jjmmaaaa(j.date)} · ${NATURE[j.nature]}${j.heures ? ` · ${formatHeures(j.heures)}` : ''}`}
+          >
+            <span className="tc-numero">{Number(j.date.slice(8, 10))}</span>
+            <span className="tc-valeur">
+              {j.nature === 'travail' ? (j.heures ? formatHeures(j.heures) : '0 h') : j.nature === 'absence' || j.nature === 'ferie' ? NATURE[j.nature] : ''}
+            </span>
+          </span>
+        ))}
+      </div>
+      <p className="tc-legende">
+        <span className="tc-puce tc-puce--travail" /> heures imputées (plus foncé = plus chargé)
+        <span className="tc-puce tc-puce--absence" /> absence validée
+        <span className="tc-puce tc-puce--ferie" /> jour férié
+        <span className="tc-puce tc-puce--hors" /> à venir
+      </p>
     </section>
   );
 }

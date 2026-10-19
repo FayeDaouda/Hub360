@@ -1,4 +1,5 @@
 import {
+  calendrierDuMois,
   bornesMois,
   etatTache,
   feuilleDuMois,
@@ -105,5 +106,19 @@ describe('regles-temps · jours fériés', () => {
   it('une absence posée sur un férié ne compte pas comme jour d’absence', () => {
     const f = feuilleDuMois('2026-12', { ...present, absences: [{ debut: '2026-12-24', fin: '2026-12-28' }] }, [], '2027-01-10', noel);
     expect(f.joursAbsence).toBe(2); // 24 et 28 ; le 25 est férié, 26-27 week-end
+  });
+
+  // Mon temps en calendrier (19/10/2026) : même répartition, jour par jour.
+  it('calendrier : nature des jours et somme = heures imputées', () => {
+    const s = { dateEntree: '2024-01-01', dateSortie: null, absences: [{ debut: '2026-09-16', fin: '2026-09-16' }] };
+    const t = [{ id: 'T', debut: '2026-09-14', echeance: '2026-09-18', heures: 16 }];
+    const feries = new Set(['2026-09-17']);
+    const c = calendrierDuMois('2026-09', s, t, '2026-10-05', feries);
+    const nature = (d: string) => c.find((j) => j.date === d)!.nature;
+    expect([nature('2026-09-13'), nature('2026-09-16'), nature('2026-09-17'), nature('2026-09-14')]).toEqual(['weekend', 'absence', 'ferie', 'travail']);
+    // 3 jours présents (14, 15, 18) : 16 h / 3 chacun.
+    expect(c.filter((j) => j.heures > 0).map((j) => j.date)).toEqual(['2026-09-14', '2026-09-15', '2026-09-18']);
+    const somme = c.reduce((n, j) => n + j.heures, 0);
+    expect(Math.abs(somme - feuilleDuMois('2026-09', s, t, '2026-10-05', feries).heuresImputees)).toBeLessThan(0.2);
   });
 });
