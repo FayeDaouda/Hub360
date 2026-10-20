@@ -19,8 +19,8 @@ import { ComptesService } from '../auth/comptes.service';
 //   pouvoirs d'administration d'un clic.
 // - Un rôle transverse (CEO/CTO/CIO — définition partagée par le groupe) est
 //   attribué DANS la société de la ligne, comme les autres.
-// - Le salaire vit dans sa propre table (Remuneration), jamais recopié dans
-//   le journal d'audit.
+// - Pas de salaire ici : sa seule source est le dossier RH (revue RH
+//   20/10/2026, D19) — la rémunération saisie par le CIO a été retirée.
 
 const ROLES_ADMINISTRATION = new Set(['holding_admin', 'societe_admin']);
 
@@ -34,7 +34,6 @@ type UtilisateurLu = {
   actif: boolean;
   motDePasseHash: string | null;
   totpActifLe?: Date | null;
-  remuneration: { salaireBrutMensuel: number } | null;
 };
 
 const SELECT_UTILISATEUR = {
@@ -45,7 +44,6 @@ const SELECT_UTILISATEUR = {
   actif: true,
   motDePasseHash: true,
   totpActifLe: true,
-  remuneration: { select: { salaireBrutMensuel: true } },
 } as const;
 
 // Invité pas encore activé = pas de mot de passe ; désactivé = en avait un.
@@ -63,7 +61,6 @@ function versCompte(u: UtilisateurLu, role: { id: string; nom: string }) {
     statut: statut(u),
     role: { id: role.id, nom: role.nom },
     administration: ROLES_ADMINISTRATION.has(role.nom),
-    salaireBrutMensuel: u.remuneration?.salaireBrutMensuel ?? null,
     doubleFacteur: !!u.totpActifLe,
   };
 }
@@ -335,35 +332,5 @@ export class ComptesGroupeService {
       }),
     ]);
     return { id: utilisateurId, doubleFacteur: false };
-  }
-
-  async definirSalaire(utilisateurId: string, salaireBrutMensuel: number | null, acteurId: string) {
-    const utilisateur = await this.prisma.utilisateur.findUnique({
-      where: { id: utilisateurId },
-      select: { id: true, remuneration: { select: { salaireBrutMensuel: true } } },
-    });
-    if (!utilisateur) throw new NotFoundException('Compte introuvable.');
-
-    const actuel = utilisateur.remuneration?.salaireBrutMensuel ?? null;
-    if (actuel === salaireBrutMensuel) return { salaireBrutMensuel };
-
-    await this.prisma.$transaction([
-      salaireBrutMensuel === null
-        ? this.prisma.remuneration.deleteMany({ where: { utilisateurId } })
-        : this.prisma.remuneration.upsert({
-            where: { utilisateurId },
-            create: { utilisateurId, salaireBrutMensuel, majParId: acteurId },
-            update: { salaireBrutMensuel, majParId: acteurId },
-          }),
-      this.prisma.evenementCompte.create({
-        data: {
-          utilisateurId,
-          type: 'salaire_modifie',
-          parId: acteurId,
-          detail: salaireBrutMensuel === null ? 'Salaire retiré' : 'Salaire brut mensuel mis à jour',
-        },
-      }),
-    ]);
-    return { salaireBrutMensuel };
   }
 }

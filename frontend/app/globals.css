@@ -7302,11 +7302,11 @@ a.notif-item:hover {
   font-size: 0.82rem;
 }
 .rh-kpi .kpi-strip {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 @media (max-width: 1300px) {
   .rh-kpi .kpi-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 @media (max-width: 640px) {

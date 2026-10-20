@@ -13,12 +13,14 @@ import {
   Timer,
   UserPlus,
   Users,
+  Wallet,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
+import { formatMontant } from '@/lib/format';
 import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
@@ -179,13 +181,15 @@ export default function RhPage({ params }: Props) {
   const fins = actifs.filter((d) => finProche(d)).length;
 
   const paiementsAValider = actifs.filter((d) => d.paiementDemandeMode).length;
+  const salaries = actifs.filter((d) => d.salaireBase !== null);
+  const masse = salaries.reduce((t, d) => t + (d.salaireBase ?? 0), 0);
   const ouvrir = (o: Onglet, f: 'incomplets' | 'fins' | null = null) => {
     setOnglet(o);
     setFiltre(f);
   };
   // Couleur = sens (lib/couleurs-etat.ts) : ambre à traiter, rouge en
   // retard / hors objectif, vert rien en attente, iris sans objectif.
-  const tuiles: { cle: string; libelle: string; valeur: number | null; aide: string; actif: boolean; onClick: () => void; icone: LucideIcon; etat: EtatTuile }[] = [
+  const tuiles: { cle: string; libelle: string; valeur: number | string | null; aide: string; actif: boolean; onClick: () => void; icone: LucideIcon; etat: EtatTuile }[] = [
     {
       cle: 'effectif',
       libelle: 'Effectif du groupe',
@@ -194,6 +198,18 @@ export default function RhPage({ params }: Props) {
       actif: onglet === 'personnel' && !filtre,
       onClick: () => ouvrir('personnel'),
       icone: Users,
+      etat: 'marque',
+    },
+    {
+      // Seule source du salaire : le dossier RH (D19, 20/10/2026) — la
+      // rémunération saisie dans l'administration du HUB a été retirée.
+      cle: 'masse',
+      libelle: 'Masse salariale brute / mois',
+      valeur: salaries.length ? formatMontant(masse) : '—',
+      aide: `${salaries.length}/${actifs.length} salaires renseignés`,
+      actif: false,
+      onClick: () => ouvrir('personnel'),
+      icone: Wallet,
       etat: 'marque',
     },
     {

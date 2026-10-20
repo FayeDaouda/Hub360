@@ -19,7 +19,6 @@ const UTIL = {
   email: 'awa@x.sn',
   actif: true,
   motDePasseHash: 'h',
-  remuneration: null,
 };
 
 function mockPrisma(o: {
@@ -60,10 +59,6 @@ function mockPrisma(o: {
       findUniqueOrThrow: jest.fn().mockResolvedValue(UTIL),
       create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...UTIL, id: 'UN', ...data })),
     },
-    remuneration: {
-      upsert: jest.fn().mockReturnValue('upsert'),
-      deleteMany: jest.fn().mockReturnValue('remDelete'),
-    },
     evenementCompte: { create: jest.fn().mockReturnValue('audit') },
     dossierPersonnel: {
       findMany: jest.fn().mockResolvedValue(o.dossiers ?? []),
@@ -92,7 +87,7 @@ describe('ComptesGroupeService.lister', () => {
       ],
       affectationsListe: [
         { societeId: 'S1', role: { id: 'R1', nom: 'CFO' }, utilisateur: { ...UTIL, id: 'U2', nom: 'Sow', actif: false, motDePasseHash: null } },
-        { societeId: 'S1', role: { id: 'RA', nom: 'societe_admin' }, utilisateur: { ...UTIL, remuneration: { salaireBrutMensuel: 900000 } } },
+        { societeId: 'S1', role: { id: 'RA', nom: 'societe_admin' }, utilisateur: { ...UTIL } },
       ],
     });
     const { societes } = await svc.lister();
@@ -100,9 +95,10 @@ describe('ComptesGroupeService.lister', () => {
       { id: 'R1', nom: 'CFO', transverse: false },
       { id: 'R2', nom: 'CEO (transverse)', transverse: true },
     ]);
-    expect(societes[0].comptes.map((c) => [c.nom, c.statut, c.administration, c.salaireBrutMensuel])).toEqual([
-      ['Sarr', 'actif', true, 900000],
-      ['Sow', 'en_attente', false, null],
+    // Pas de salaire ici : sa seule source est le dossier RH (D19, 20/10/2026).
+    expect(societes[0].comptes.map((c) => [c.nom, c.statut, c.administration, 'salaireBrutMensuel' in c])).toEqual([
+      ['Sarr', 'actif', true, false],
+      ['Sow', 'en_attente', false, false],
     ]);
   });
 
@@ -174,37 +170,6 @@ describe('ComptesGroupeService.changerRole', () => {
   it('même rôle : aucune écriture, aucune session coupée', async () => {
     const { svc, tx } = mockPrisma({ ...base, affectations: [{ roleId: 'R1', role: { id: 'R1', nom: 'CFO' } }] });
     await svc.changerRole('U1', 'S1', 'R1', 'ADM');
-    expect(tx).not.toHaveBeenCalled();
-  });
-});
-
-describe('ComptesGroupeService.definirSalaire', () => {
-  it('404 sur un compte inconnu', async () => {
-    const { svc } = mockPrisma({});
-    await expect(svc.definirSalaire('U1', 500000, 'ADM')).rejects.toThrow(NotFoundException);
-  });
-
-  it('enregistre le montant sans le recopier dans le journal', async () => {
-    const { svc, prisma, tx } = mockPrisma({ utilisateur: { id: 'U1', remuneration: null } });
-    await svc.definirSalaire('U1', 750000, 'ADM');
-    expect(tx).toHaveBeenCalledWith(['upsert', 'audit']);
-    expect(prisma.remuneration.upsert.mock.calls[0][0].create).toEqual({
-      utilisateurId: 'U1',
-      salaireBrutMensuel: 750000,
-      majParId: 'ADM',
-    });
-    expect(JSON.stringify(prisma.evenementCompte.create.mock.calls[0][0])).not.toContain('750');
-  });
-
-  it('null retire le salaire', async () => {
-    const { svc, tx } = mockPrisma({ utilisateur: { id: 'U1', remuneration: { salaireBrutMensuel: 1 } } });
-    await svc.definirSalaire('U1', null, 'ADM');
-    expect(tx).toHaveBeenCalledWith(['remDelete', 'audit']);
-  });
-
-  it('montant inchangé : aucune écriture', async () => {
-    const { svc, tx } = mockPrisma({ utilisateur: { id: 'U1', remuneration: { salaireBrutMensuel: 750000 } } });
-    await svc.definirSalaire('U1', 750000, 'ADM');
     expect(tx).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
@@ -10,13 +10,10 @@ import {
   reinitialiserDoubleFacteur,
   changerRoleCompte,
   comparerRoles,
-  definirSalaireCompte,
   getComptesGroupe,
   libelleRole,
-  lireSaisieSalaire,
   renvoyerInvitation,
 } from '@/lib/groupe';
-import { formatMontant, formatNombre } from '@/lib/format';
 import type {
   CompteGroupe,
   ComptesGroupe,
@@ -32,18 +29,13 @@ const LIBELLE_STATUT: Record<StatutCompteGroupe, string> = {
   desactive: 'Désactivé',
 };
 
-// Salaire affiché dans le champ : « 850 000 », vide si non renseigné.
-function afficherSalaire(valeur: number | null): string {
-  return valeur === null ? '' : formatNombre(valeur);
-}
-
 function messageErreur(e: unknown, repli: string): string {
   return e instanceof ApiError ? e.message : repli;
 }
 
 // Comptes & rôles — administration du HUB (CIO, sept. 2026). Une ligne par
 // personne et par société : son rôle (liste regroupée : rôles de la société,
-// rôles transverses) et son salaire brut mensuel. Les comptes
+// rôles transverses). Le salaire vit dans le dossier RH (D19). Les comptes
 // d'administration et la propre ligne de la personne connectée (`moiId`)
 // sont en lecture seule — le serveur refuse de toute façon (409).
 export function ComptesRolesPanel({ moiId }: { moiId: string }) {
@@ -117,8 +109,8 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
         <div>
           <h2 id="groupe-comptes-titre">Comptes &amp; rôles</h2>
           <p>
-            Créez les comptes depuis les dossiers RH, attribuez à chacun son rôle dans la société et
-            renseignez son salaire brut mensuel.
+            Créez les comptes depuis les dossiers RH et attribuez à chacun son rôle dans la société. Le
+            salaire se renseigne dans le dossier RH.
           </p>
           {societe && (
             <button type="button" className="btn-primary" style={{ marginTop: '0.75rem' }} onClick={() => setNouveau(true)}>
@@ -166,15 +158,13 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
       <p className="groupe-note">
         <ShieldCheck size={15} aria-hidden />
         Changer un rôle déconnecte la personne : ses nouveaux droits s’appliquent dès sa
-        prochaine connexion. Le salaire n’est visible que dans cet espace.
+        prochaine connexion.
       </p>
     </section>
   );
 }
 
 function Resume({ societe }: { societe: SocieteComptes }) {
-  const salaries = societe.comptes.filter((c) => c.salaireBrutMensuel !== null);
-  const masse = salaries.reduce((t, c) => t + (c.salaireBrutMensuel ?? 0), 0);
   const avecRoleMatrice = societe.comptes.filter((c) => !c.administration).length;
   return (
     <dl className="groupe-resume">
@@ -185,15 +175,6 @@ function Resume({ societe }: { societe: SocieteComptes }) {
       <div>
         <dt>Rôles de direction</dt>
         <dd>{avecRoleMatrice}</dd>
-      </div>
-      <div>
-        <dt>Masse salariale brute / mois</dt>
-        <dd>
-          {salaries.length ? formatMontant(masse) : '—'}
-          <small>
-            {salaries.length}/{societe.comptes.length} renseignés
-          </small>
-        </dd>
       </div>
     </dl>
   );
@@ -246,9 +227,6 @@ function TableComptes({
               <th scope="col">Personne</th>
               <th scope="col">Statut</th>
               <th scope="col">Rôle</th>
-              <th scope="col" className="groupe-col-salaire">
-                Salaire brut mensuel
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -321,9 +299,6 @@ function LigneCompte({
         ) : (
           <SelectRole compte={compte} societe={societe} roles={roles} onMaj={onMaj} />
         )}
-      </td>
-      <td data-libelle="Salaire brut mensuel" className="groupe-col-salaire">
-        <ChampSalaire compte={compte} onMaj={onMaj} />
       </td>
     </tr>
   );
@@ -483,94 +458,6 @@ function SelectRole({
         )}
       </select>
       <EtatLigne etat={etat} ok="Rôle mis à jour" />
-    </div>
-  );
-}
-
-function ChampSalaire({
-  compte,
-  onMaj,
-}: {
-  compte: CompteGroupe;
-  onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
-}) {
-  const [texte, setTexte] = useState(afficherSalaire(compte.salaireBrutMensuel));
-  const [etat, setEtat] = useState<EtatAction>({ type: 'repos' });
-  // Échap annule : la perte de focus qui suit ne doit PAS enregistrer (le
-  // onBlur lirait encore l'ancien texte, l'état React n'étant pas à jour).
-  const annulation = useRef(false);
-
-  useEffect(() => {
-    setTexte(afficherSalaire(compte.salaireBrutMensuel));
-  }, [compte.salaireBrutMensuel]);
-
-  useEffect(() => {
-    if (etat.type !== 'ok') return;
-    const t = setTimeout(() => setEtat({ type: 'repos' }), 2500);
-    return () => clearTimeout(t);
-  }, [etat]);
-
-  async function valider() {
-    const lu = lireSaisieSalaire(texte);
-    if ('erreur' in lu) {
-      setEtat({ type: 'erreur', message: lu.erreur });
-      return;
-    }
-    if (lu.valeur === compte.salaireBrutMensuel) {
-      setTexte(afficherSalaire(lu.valeur));
-      if (etat.type === 'erreur') setEtat({ type: 'repos' });
-      return;
-    }
-    setEtat({ type: 'envoi' });
-    try {
-      const r = await definirSalaireCompte(compte.id, lu.valeur);
-      onMaj({ id: compte.id, salaireBrutMensuel: r.salaireBrutMensuel });
-      setTexte(afficherSalaire(r.salaireBrutMensuel));
-      setEtat({ type: 'ok' });
-    } catch (e) {
-      setEtat({ type: 'erreur', message: messageErreur(e, 'Salaire non enregistré — réessayez.') });
-    }
-  }
-
-  function surTouche(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') e.currentTarget.blur();
-    if (e.key === 'Escape') {
-      annulation.current = true;
-      setTexte(afficherSalaire(compte.salaireBrutMensuel));
-      setEtat({ type: 'repos' });
-      e.currentTarget.blur();
-    }
-  }
-
-  const invalide = etat.type === 'erreur';
-  return (
-    <div className="groupe-cellule-action">
-      <div className={`groupe-salaire${invalide ? ' est-invalide' : ''}`}>
-        <input
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          className="groupe-salaire-saisie"
-          placeholder="Non renseigné"
-          aria-label={`Salaire brut mensuel de ${compte.prenom} ${compte.nom}, en FCFA`}
-          aria-invalid={invalide || undefined}
-          value={texte}
-          disabled={etat.type === 'envoi'}
-          onChange={(e) => setTexte(e.target.value)}
-          onBlur={() => {
-            if (annulation.current) {
-              annulation.current = false;
-              return;
-            }
-            valider();
-          }}
-          onKeyDown={surTouche}
-        />
-        <span className="groupe-salaire-devise" aria-hidden>
-          FCFA
-        </span>
-      </div>
-      <EtatLigne etat={etat} ok="Enregistré" />
     </div>
   );
 }

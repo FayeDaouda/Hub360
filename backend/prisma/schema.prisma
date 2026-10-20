@@ -123,7 +123,6 @@ model Utilisateur {
   commentairesProjet     CommentaireProjet[]      @relation("CommentaireProjetAuteur")
   mentionsProjet         CommentaireProjet[]      @relation("CommentaireProjetMentionne")
   transitionsDossier     DossierCrmTransition[]   @relation("TransitionDossierPar")
-  remuneration           Remuneration?
   signalements           Signalement[]            @relation("SignalementAuteur")
 
   @@map("utilisateurs")
@@ -135,19 +134,6 @@ model Utilisateur {
 // d'annuaire ne peut la ramener par accident ; seul le service des comptes
 // du groupe la lit. Une ligne par personne (un employeur dans les faits) ;
 // pas de ligne = salaire non renseigné (jamais de 0 improvisé).
-model Remuneration {
-  id                 String   @id @default(uuid())
-  utilisateurId      String   @unique @map("utilisateur_id")
-  // Brut mensuel en FCFA (XOF) — entier : le franc CFA n'a pas de centimes.
-  salaireBrutMensuel Int      @map("salaire_brut_mensuel")
-  majParId           String?  @map("maj_par_id") // audit, pas de FK (même convention que desactiveParId)
-  majLe              DateTime @updatedAt @map("maj_le")
-  createdAt          DateTime @default(now()) @map("created_at")
-
-  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
-
-  @@map("remunerations")
-}
 
 enum InvitationType {
   invitation

@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Req, UseGuards 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdministrationHubGuard } from '../commun/administration-hub.guard';
 import { ComptesGroupeService } from './comptes-groupe.service';
-import { ChangerActifDto, ChangerRoleDto, CreerCompteDto, DefinirSalaireDto } from './dto';
+import { ChangerActifDto, ChangerRoleDto, CreerCompteDto } from './dto';
 
 type R = { user: { userId: string } };
 
@@ -50,14 +50,5 @@ export class ComptesGroupeController {
     @Body() dto: ChangerRoleDto,
   ) {
     return this.comptes.changerRole(utilisateurId, societeId, dto.roleId, req.user.userId);
-  }
-
-  @Put(':utilisateurId/salaire')
-  definirSalaire(
-    @Req() req: R,
-    @Param('utilisateurId', ParseUUIDPipe) utilisateurId: string,
-    @Body() dto: DefinirSalaireDto,
-  ) {
-    return this.comptes.definirSalaire(utilisateurId, dto.salaireBrutMensuel, req.user.userId);
   }
 }
