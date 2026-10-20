@@ -1,0 +1,222 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { AlarmClock, CalendarClock, ChevronDown, FileWarning, Inbox, Scale, Timer, UserPlus, type LucideIcon } from 'lucide-react';
+import type { AttestationRh } from '@/lib/demandes';
+import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
+import { getFeuillesTemps, libelleMois } from '@/lib/temps';
+import { formatMontant } from '@/lib/format';
+import type { DemandeAbsence, DemandeRemboursement, DossierPersonnel, FeuillesTemps, IntegrationSalarie } from '@/lib/types';
+
+export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
+export type DonneesRh = {
+  demandes: { absences: DemandeAbsence[]; remboursements: DemandeRemboursement[]; attestations: AttestationRh[] };
+  feuilles: FeuillesTemps;
+  integrations: IntegrationSalarie[];
+};
+type Ton = 'risque' | 'attention' | 'info' | 'neutre';
+type Element = {
+  cle: string;
+  groupe: number; // ordre d'urgence (cf. GROUPES)
+  tri: string; // à l'intérieur du groupe : le plus ancien / le plus proche d'abord
+  icone: LucideIcon;
+  titre: string;
+  detail: string;
+  quand: string;
+  ton: Ton;
+  action: string;
+  ouvrir: () => void;
+};
+
+const JOUR = 86_400_000;
+const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+const ecart = (de: string, a: string) => Math.round((Date.parse(`${a.slice(0, 10)}T00:00:00Z`) - Date.parse(`${de.slice(0, 10)}T00:00:00Z`)) / JOUR);
+const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
+// Une demande qui attend depuis plus de 3 jours passe en rouge.
+const ATTENTE_ALERTE_J = 3;
+const FIN_CONTRAT_J = 30; // fins de CDD : 30 jours (revue RH 20/10/2026)
+const INTEGRATION_J = 7; // points d'intégration de la semaine
+
+// « À traiter aujourd'hui » (revue RH 20/10/2026) : en tête de la page RH,
+// trié par urgence — demandes (les plus anciennes d'abord), écarts de feuille
+// de temps, points d'intégration de la semaine, fins de contrat, feuilles à
+// contrôler, dossiers incomplets. Même principe que « Mes tâches ».
+export function ATraiterRh({
+  slug,
+  donnees,
+  dossiers,
+  onOuvrir,
+}: {
+  slug: string;
+  donnees: DonneesRh | null;
+  dossiers: DossierPersonnel[];
+  onOuvrir: (onglet: OngletRh, options?: { filtre?: 'incomplets' | 'fins'; dossier?: DossierPersonnel }) => void;
+}) {
+  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [ecarts, setEcarts] = useState<{ cle: string; nom: string; mois: string; commentaire: string; signaleLe: string }[]>([]);
+  const [tout, setTout] = useState(false);
+
+  // Écarts ouverts : le détail (qui, quel mois) vient des feuilles des mois concernés.
+  const moisEcarts = donnees?.feuilles.periodes.filter((p) => p.ecarts > 0).map((p) => p.mois).join(',') ?? '';
+  useEffect(() => {
+    if (!moisEcarts) {
+      setEcarts([]);
+      return;
+    }
+    Promise.all(moisEcarts.split(',').map((m) => getFeuillesTemps(slug, m)))
+      .then((l) =>
+        setEcarts(
+          l.flatMap((f) =>
+            f.feuilles
+              .filter((x) => x.ecart && !x.ecart.traiteLe)
+              .map((x) => ({ cle: x.ecart!.id, nom: `${x.prenom} ${x.nom}`.trim(), mois: f.mois, commentaire: x.ecart!.commentaire, signaleLe: x.ecart!.signaleLe })),
+          ),
+        ),
+      )
+      .catch(() => setEcarts([]));
+  }, [slug, moisEcarts]);
+
+  if (!donnees) return null;
+  const depuis = (iso: string) => {
+    const n = ecart(iso, aujourdhui);
+    return { quand: n <= 0 ? 'aujourd’hui' : n === 1 ? 'depuis hier' : `depuis ${n} j`, ton: (n > ATTENTE_ALERTE_J ? 'risque' : 'attention') as Ton };
+  };
+  const elements: Element[] = [];
+
+  // 1. Demandes, les plus anciennes d'abord.
+  for (const a of donnees.demandes.absences.filter((x) => x.statut === 'accord_n1')) {
+    const d = depuis(a.createdAt);
+    elements.push({
+      cle: `abs-${a.id}`, groupe: 1, tri: a.createdAt, icone: Inbox, ...d, action: 'Valider',
+      titre: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${nom(a.salarie)}`,
+      detail: `du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)} · ${a.jours} j · accord du N+1, validation finale`,
+      ouvrir: () => onOuvrir('demandes'),
+    });
+  }
+  for (const r of donnees.demandes.remboursements.filter((x) => x.statut === 'soumise')) {
+    const d = depuis(r.createdAt);
+    elements.push({
+      cle: `rbt-${r.id}`, groupe: 1, tri: r.createdAt, icone: Inbox, ...d, action: 'Traiter',
+      titre: `Remboursement · ${nom(r.dossier)}`,
+      detail: `${LIBELLE_SOINS[r.categorie]} · ${formatMontant(r.montant)} · à transmettre à l’assurance`,
+      ouvrir: () => onOuvrir('demandes'),
+    });
+  }
+  for (const t of donnees.demandes.attestations.filter((x) => !x.delivreeLe)) {
+    const d = depuis(t.demandeLe);
+    elements.push({
+      cle: `att-${t.id}`, groupe: 1, tri: t.demandeLe, icone: Inbox, ...d, action: 'Délivrer',
+      titre: `Attestation de travail · ${nom(t.dossier)}`,
+      detail: 'document signé à déposer',
+      ouvrir: () => onOuvrir('demandes'),
+    });
+  }
+  for (const p of dossiers.filter((x) => x.paiementDemandeMode && x.paiementDemandeLe)) {
+    const d = depuis(p.paiementDemandeLe!);
+    elements.push({
+      cle: `pai-${p.id}`, groupe: 1, tri: p.paiementDemandeLe!, icone: Inbox, ...d, action: 'Ouvrir',
+      titre: `Moyen de paiement · ${nom(p)}`,
+      detail: 'changement demandé, à valider avant la paie',
+      ouvrir: () => onOuvrir('personnel', { dossier: p }),
+    });
+  }
+  // 2. Écarts de feuille de temps (le contrôle du mois attend la réponse).
+  for (const e of ecarts) {
+    const d = depuis(e.signaleLe);
+    elements.push({
+      cle: `ecart-${e.cle}`, groupe: 2, tri: e.signaleLe, icone: Scale, ...d, action: 'Répondre',
+      titre: `Écart signalé · ${e.nom}`,
+      detail: `feuille de ${libelleMois(e.mois)} · « ${e.commentaire} »`,
+      ouvrir: () => onOuvrir('temps'),
+    });
+  }
+  // 3. Points d'intégration échus ou de la semaine.
+  for (const i of donnees.integrations) {
+    for (const p of i.points.filter((x) => x.statut !== 'fait' && ecart(aujourdhui, x.datePrevue) <= INTEGRATION_J)) {
+      const n = ecart(aujourdhui, p.datePrevue);
+      elements.push({
+        cle: `int-${i.id}-${p.jalon}`, groupe: 3, tri: p.datePrevue, icone: UserPlus, action: 'Préparer',
+        titre: `Point J${p.jalon} · ${nom(i)}`,
+        detail: `${i.poste || 'poste à renseigner'} · arrivée le ${jjmm(i.dateEntree)}`,
+        quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `le ${jjmm(p.datePrevue)}`,
+        ton: n < 0 ? 'risque' : 'attention',
+        ouvrir: () => onOuvrir('integration'),
+      });
+    }
+  }
+  // 4. Fins de contrat proches.
+  for (const f of dossiers.filter((x) => x.dateFin && ecart(aujourdhui, x.dateFin) >= 0 && ecart(aujourdhui, x.dateFin) <= FIN_CONTRAT_J)) {
+    const n = ecart(aujourdhui, f.dateFin!);
+    elements.push({
+      cle: `fin-${f.id}`, groupe: 4, tri: f.dateFin!, icone: CalendarClock, action: 'Ouvrir',
+      titre: `Fin de ${f.typeContrat.toUpperCase()} · ${nom(f)}`,
+      detail: `le ${jjmm(f.dateFin!)} · renouveler, transformer ou préparer la sortie`,
+      quand: n === 0 ? 'aujourd’hui' : `dans ${n} j`,
+      ton: n <= 15 ? 'risque' : 'attention',
+      ouvrir: () => onOuvrir('personnel', { dossier: f }),
+    });
+  }
+  // 5. Feuilles de temps des mois clos à contrôler.
+  for (const p of donnees.feuilles.periodes.filter((x) => x.clos && x.aControler > 0)) {
+    elements.push({
+      cle: `feuilles-${p.mois}`, groupe: 5, tri: p.mois, icone: Timer, action: 'Contrôler',
+      titre: `${p.aControler} feuille${p.aControler > 1 ? 's' : ''} de temps à contrôler`,
+      detail: `mois clos de ${libelleMois(p.mois)}`,
+      quand: 'mois clos', ton: 'attention',
+      ouvrir: () => onOuvrir('temps'),
+    });
+  }
+  // 6. Dossiers incomplets : une ligne de synthèse.
+  const incomplets = dossiers.filter((x) => x.completude.pourcentage < 100).length;
+  if (incomplets) {
+    elements.push({
+      cle: 'incomplets', groupe: 6, tri: '', icone: FileWarning, action: 'Voir',
+      titre: `${incomplets} dossier${incomplets > 1 ? 's' : ''} incomplet${incomplets > 1 ? 's' : ''}`,
+      detail: 'pièces ou champs manquants',
+      quand: '', ton: 'neutre',
+      ouvrir: () => onOuvrir('personnel', { filtre: 'incomplets' }),
+    });
+  }
+
+  elements.sort((a, b) => a.groupe - b.groupe || a.tri.localeCompare(b.tri));
+  const urgents = elements.filter((e) => e.ton === 'risque').length;
+  const visibles = tout ? elements : elements.slice(0, 6);
+
+  return (
+    <section className="panel glass-panel at-rh" aria-label="À traiter aujourd’hui">
+      <div className="at-rh-tete">
+        <h2 className="dmd-titre">
+          <AlarmClock size={17} aria-hidden /> À traiter aujourd’hui · {elements.length}
+        </h2>
+        {urgents > 0 && <span className="pill pill--risque">{urgents} en retard</span>}
+      </div>
+      {elements.length === 0 ? (
+        <p className="dmd-note">Rien en attente : demandes, écarts, intégrations et contrats sont à jour.</p>
+      ) : (
+        <ul className="at-rh-liste">
+          {visibles.map((e) => (
+            <li key={e.cle} className="at-rh-ligne" data-ton={e.ton}>
+              <span className="at-rh-icone" aria-hidden>
+                <e.icone size={16} strokeWidth={2} />
+              </span>
+              <span className="at-rh-corps">
+                <strong>{e.titre}</strong>
+                <span className="cell-sub">{e.detail}</span>
+              </span>
+              {e.quand && <span className="at-rh-quand">{e.quand}</span>}
+              <button type="button" className="btn-ghost btn-ghost--sm" onClick={e.ouvrir}>
+                {e.action}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {elements.length > 6 && (
+        <button type="button" className="at-rh-plus" aria-expanded={tout} onClick={() => setTout((x) => !x)}>
+          <ChevronDown size={15} aria-hidden className={tout ? 'is-ouvert' : undefined} />
+          {tout ? 'Réduire' : `Voir les ${elements.length - 6} autres`}
+        </button>
+      )}
+    </section>
+  );
+}

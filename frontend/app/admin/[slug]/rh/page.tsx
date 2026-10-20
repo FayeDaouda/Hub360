@@ -51,6 +51,7 @@ import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/
 import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
 import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
+import { ATraiterRh, type DonneesRh } from '@/components/rh/a-traiter-rh';
 
 type Props = { params: { slug: string } };
 
@@ -105,12 +106,15 @@ export default function RhPage({ params }: Props) {
     ongletDemande === 'temps' || ongletDemande === 'integration' || ongletDemande === 'demandes' ? ongletDemande : 'personnel',
   );
   const [compteurs, setCompteurs] = useState<Compteurs | null>(null);
+  // Données brutes des onglets : tuiles et « À traiter aujourd'hui ».
+  const [brut, setBrut] = useState<DonneesRh | null>(null);
 
   // Tuiles des autres onglets : relues à chaque changement d'onglet, pour
   // refléter ce qui vient d'y être traité.
   const chargerCompteurs = useCallback(() => {
     Promise.all([getFeuillesTemps(params.slug), getDemandesRh(params.slug), getIntegrations(params.slug)])
-      .then(([f, d, i]) =>
+      .then(([f, d, i]) => {
+        setBrut({ feuilles: f, demandes: d, integrations: i });
         setCompteurs({
           feuilles: f.periodes.reduce((n, p) => n + p.aControler, 0),
           demandes:
@@ -119,8 +123,8 @@ export default function RhPage({ params }: Props) {
             d.attestations.filter((a) => !a.delivreeLe).length,
           integrations: i.length,
           points: i.reduce((n, x) => n + x.aTraiter, 0),
-        }),
-      )
+        });
+      })
       .catch(() => setCompteurs(null));
   }, [params.slug]);
   useEffect(chargerCompteurs, [chargerCompteurs, onglet]);
@@ -257,6 +261,18 @@ export default function RhPage({ params }: Props) {
           </button>
         )}
       </div>
+      {/* Qui traite (RH, admin) : ce qui attend, par urgence, avant les tuiles. */}
+      {ecriture && (
+        <ATraiterRh
+          slug={params.slug}
+          donnees={brut}
+          dossiers={actifs}
+          onOuvrir={(o, opt) => {
+            ouvrir(o, opt?.filtre ?? null);
+            if (opt?.dossier) setOuvert(opt.dossier);
+          }}
+        />
+      )}
       <div className="rh-kpi">
         <KpiStrip
           tuiles={tuiles.map((t) => ({

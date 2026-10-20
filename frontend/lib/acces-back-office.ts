@@ -93,6 +93,12 @@ export function sectionAccessible(session: Session, cle: string): boolean {
 // Chemin (relatif à /admin/[slug]) de la première section accessible, ou
 // null si aucune → le rôle n'a rien à faire dans le back-office.
 export function premiereSectionAccessible(session: Session): string | null {
+  const prefere = ARRIVEE_PAR_ROLE[session.role];
+  if (prefere && sectionAccessible(session, prefere)) return CHEMINS[prefere];
   const cle = ORDRE_SECTIONS.find((c) => sectionAccessible(session, c));
   return cle === undefined ? null : CHEMINS[cle];
 }
+
+// Page d'arrivée propre à un rôle, avant l'ordre du menu : la RH arrive sur
+// sa page (« À traiter aujourd'hui » en tête), pas sur Pilotage (revue RH 20/10/2026).
+const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh' };
