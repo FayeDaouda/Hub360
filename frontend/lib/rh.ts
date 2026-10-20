@@ -100,7 +100,52 @@ export type AlerteRh = {
   jours: number;
 };
 export const getAlertesRh = (slug: string) => apiSociete<AlerteRh[]>(slug, '/rh/alertes');
-export const getSalaireDossier = (slug: string, id: string) => apiSociete<{ salaireBase: number | null }>(slug, `/rh/dossiers/${id}/salaire`);
+// --- Historique des salaires (revue RH validée 20/10/2026) -------------------
+// La RH propose (montant, date d'effet, motif), le CFO valide — le CEO pour
+// le salaire du CFO. Chaque affichage d'un montant est tracé.
+export type MotifSalaire = 'embauche' | 'augmentation' | 'promotion' | 'fin_essai' | 'correction';
+export const LIBELLE_MOTIF_SALAIRE: Record<MotifSalaire, string> = {
+  embauche: 'Salaire d’entrée',
+  augmentation: 'Augmentation',
+  promotion: 'Promotion',
+  fin_essai: 'Fin d’essai',
+  correction: 'Correction',
+};
+export type ChangementSalaire = {
+  id: string;
+  montant: number;
+  dateEffet: string | null; // null = reprise, date inconnue
+  motif: MotifSalaire;
+  statut: 'a_valider' | 'valide' | 'refuse';
+  proposePar: string | null;
+  proposeLe: string;
+  decidePar: string | null;
+  decideLe: string | null;
+  motifRefus: string;
+};
+export type HistoriqueSalaire = { enVigueur: number | null; valideur: 'CFO' | 'CEO'; changements: ChangementSalaire[] };
+export type SalaireAValider = { id: string; dossierId: string; salarie: string; motif: MotifSalaire; dateEffet: string | null; proposePar: string | null; proposeLe: string };
+export type DetailSalaire = { id: string; salarie: string; motif: MotifSalaire; dateEffet: string | null; montant: number; actuel: number | null };
+
+// Date d'effet : 3 mois en arrière au plus (sauf salaire d'entrée) — même
+// règle que le serveur (rh/regles-salaire.ts).
+export function dateEffetMin(jour: string): string {
+  const [a, m, j] = jour.split('-').map(Number);
+  const cible = new Date(Date.UTC(a, m - 4, 1));
+  const dernier = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
+  cible.setUTCDate(Math.min(j, dernier));
+  return cible.toISOString().slice(0, 10);
+}
+
+export const getSalaireDossier = (slug: string, id: string) => apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaire`);
+export const proposerSalaire = (slug: string, id: string, p: { montant: number; dateEffet: string; motif: MotifSalaire }) =>
+  apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaires`, { method: 'POST', body: p });
+export const retirerSalaire = (slug: string, id: string, changementId: string) =>
+  apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaires/${changementId}`, { method: 'DELETE' });
+export const getSalairesAValider = (slug: string) => apiSociete<SalaireAValider[]>(slug, '/rh/salaires/a-valider');
+export const getDetailSalaire = (slug: string, id: string) => apiSociete<DetailSalaire>(slug, `/rh/salaires/${id}`);
+export const deciderSalaire = (slug: string, id: string, valide: boolean, motifRefus?: string) =>
+  apiSociete<SalaireAValider[]>(slug, `/rh/salaires/${id}/decision`, { method: 'POST', body: { valide, motifRefus } });
 export const getMasseSalariale = (slug: string) =>
   apiSociete<{ masse: number; renseignes: number; total: number }>(slug, '/rh/dossiers/masse-salariale');
 export const getBulletin = (slug: string, id: string, mois: string) =>

@@ -1,8 +1,10 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportingRhService } from './reporting-rh.service';
 
+// Salaire validé en vigueur depuis toujours (reprise) ; `salaires: []` = non renseigné.
+const salaire = (montant: number, dateEffet: string | null = null) => ({ montant, dateEffet, statut: 'valide', decideLe: new Date('2026-01-01') });
 const dossier = (id: string, o: Record<string, unknown> = {}) => ({
-  id, prenom: id, nom: 'Test', typeContrat: 'cdi', salaireBase: 500_000, dateEntree: null, archiveLe: null, ...o,
+  id, prenom: id, nom: 'Test', typeContrat: 'cdi', salaires: [salaire(500_000)], dateEntree: null, archiveLe: null, ...o,
 });
 
 function svc(o: { dossiers: unknown[]; absences?: unknown[]; bulletins?: unknown[]; feuilles?: unknown[]; rappels?: unknown[]; attestations?: unknown[]; precedent?: unknown }) {
@@ -32,7 +34,7 @@ describe('ReportingRhService (reporting RH prérempli, revue RH 20/10/2026)', ()
   it('effectif, masse salariale, absences, temps, demandes, échéances et paie du mois', async () => {
     const r = await svc({
       dossiers: [
-        dossier('Awa', { dateEntree: '2026-09-28', typeContrat: 'cdd', salaireBase: null }),
+        dossier('Awa', { dateEntree: '2026-09-28', typeContrat: 'cdd', salaires: [] }),
         dossier('Malick'),
         dossier('Ousmane', { archiveLe: new Date('2026-09-15T10:00:00Z') }),
       ],
@@ -63,5 +65,12 @@ describe('ReportingRhService (reporting RH prérempli, revue RH 20/10/2026)', ()
     expect(await masse({ contenu: [{ libelle: 'Masse salariale brute', valeur: '…', montant: 450_000 }] })).toMatch(/\+50\s000 FCFA par rapport au reporting de septembre$/);
     expect(await masse({ contenu: [{ libelle: 'Masse salariale brute', valeur: '600\u202f000 FCFA / mois · stable' }] })).toMatch(/−100\s000 FCFA par rapport au reporting de septembre$/);
     expect(await masse({ contenu: [{ libelle: 'Masse salariale brute', valeur: '500 000 FCFA / mois' }] })).toBe('500\u202f000 FCFA / mois · stable par rapport au reporting de septembre');
+  });
+
+  it('masse salariale : salaire en vigueur au dernier jour du mois (date d’effet)', async () => {
+    const r = await svc({
+      dossiers: [dossier('Malick', { salaires: [salaire(500_000), salaire(600_000, '2026-09-15'), salaire(700_000, '2026-10-01')] })],
+    }).contenu('S1', '2026-09');
+    expect(r.find((x) => x.libelle === 'Masse salariale brute')?.montant).toBe(600_000);
   });
 });

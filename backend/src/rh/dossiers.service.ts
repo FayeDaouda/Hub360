@@ -7,6 +7,7 @@ import {
 import { ActionPaie, Prisma, TypePieceDossier } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { salaireAu } from './regles-salaire';
 import { DossierPersonnelDto, PieceDto, ReaffectationDto } from './dto';
 
 // Pièces attendues dans tout dossier (ordre d'affichage).
@@ -49,6 +50,8 @@ const INCLURE = {
   utilisateur: COMPTE,
   pieces: { select: { type: true, nom: true, createdAt: true } },
   bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
+  // Statuts seulement : aucun montant ne part avec le dossier.
+  salaires: { select: { statut: true } },
 } satisfies Prisma.DossierPersonnelInclude;
 type DossierLu = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE }>;
 
@@ -57,7 +60,7 @@ export function completude(d: DossierLu): { pourcentage: number; manquants: numb
     ...CHAMPS_TEXTE.map((c) => d[c].trim() !== ''),
     d.dateEntree !== null,
     d.dateNaissance !== null,
-    d.salaireBase !== null,
+    d.salaires.some((s) => s.statut === 'valide'),
     ...(d.typeContrat === 'cdi' ? [] : [d.dateFin !== null]),
     ...PIECES_DOSSIER.map((t) => d.pieces.some((p) => p.type === t)),
   ];
@@ -66,7 +69,7 @@ export function completude(d: DossierLu): { pourcentage: number; manquants: numb
 }
 
 function versDossier(d: DossierLu) {
-  const { societe, collaborateur, utilisateur, pieces, bulletins, archiveParId: _a, creeParId: _c, ...champs } = d;
+  const { societe, collaborateur, utilisateur, pieces, bulletins, salaires, archiveParId: _a, creeParId: _c, ...champs } = d;
   // Compte qui ouvre « Mon espace » : celui de la fiche d'équipe s'il y en a
   // une, sinon le compte relié directement au dossier.
   const compte = collaborateur?.utilisateur ?? utilisateur;
@@ -84,9 +87,9 @@ function versDossier(d: DossierLu) {
     completude: completude(d),
     bulletins: bulletins.map((b) => ({ mois: b.mois, nom: b.nom, deposeLe: b.updatedAt })),
     // Le salaire ne part jamais avec le dossier : il s'affiche à la demande
-    // (GET …/salaire), et chaque affichage est tracé (journal de la paie).
-    salaireBase: null,
-    salaireRenseigne: d.salaireBase !== null,
+    // (GET …/salaire, historique), et chaque affichage est tracé (journal de la paie).
+    salaireRenseigne: salaires.some((s) => s.statut === 'valide'),
+    salaireEnAttente: salaires.some((s) => s.statut === 'a_valider'),
   };
 }
 
@@ -115,18 +118,16 @@ export class DossiersPersonnelService {
     return this.prisma.journalPaie.create({ data: { dossierId, action, parId, mois: mois ?? null } });
   }
 
-  async salaire(id: string, acteurId: string) {
-    const d = await this.prisma.dossierPersonnel.findUnique({ where: { id }, select: { salaireBase: true } });
-    if (!d) throw new NotFoundException('Dossier introuvable');
-    await this.tracer(id, 'salaire_consulte', acteurId);
-    return { salaireBase: d.salaireBase };
-  }
-
-  // Total des dossiers actifs : un agrégat, pas la paie d'une personne.
+  // Total des dossiers actifs, salaires en vigueur aujourd'hui : un agrégat,
+  // pas la paie d'une personne.
   async masseSalariale() {
-    const actifs = await this.prisma.dossierPersonnel.findMany({ where: { archiveLe: null }, select: { salaireBase: true } });
-    const renseignes = actifs.filter((d) => d.salaireBase !== null);
-    return { masse: renseignes.reduce((t, d) => t + (d.salaireBase ?? 0), 0), renseignes: renseignes.length, total: actifs.length };
+    const jour = new Date().toISOString().slice(0, 10);
+    const actifs = await this.prisma.dossierPersonnel.findMany({
+      where: { archiveLe: null },
+      select: { salaires: { where: { statut: 'valide' }, select: { montant: true, dateEffet: true, statut: true, decideLe: true } } },
+    });
+    const salaires = actifs.map((d) => salaireAu(d.salaires, jour)).filter((s): s is number => s !== null);
+    return { masse: salaires.reduce((t, s) => t + s, 0), renseignes: salaires.length, total: actifs.length };
   }
 
   // Liens de la pièce (data URI) : à part, pour ne pas alourdir la liste.
@@ -180,7 +181,6 @@ export class DossiersPersonnelService {
           data: { ...data, societeId: dto.societeId, matricule: await this.prochainMatricule(), creeParId: acteurId },
           include: INCLURE,
         });
-        if (cree.salaireBase !== null) await this.tracer(cree.id, 'salaire_modifie', acteurId);
         return versDossier(cree);
       } catch (e) {
         // Deux créations simultanées : même matricule calculé → on recalcule.
@@ -191,11 +191,9 @@ export class DossiersPersonnelService {
   }
 
   async maj(id: string, dto: DossierPersonnelDto, acteurId: string) {
-    const avant = await this.charger(id);
+    await this.charger(id);
     const data = await this.valider(dto, id);
     const d = await this.prisma.dossierPersonnel.update({ where: { id }, data, include: INCLURE });
-    // Salaire absent du corps = inchangé (la fiche ne l'envoie que s'il a été affiché).
-    if (dto.salaireBase !== undefined && dto.salaireBase !== avant.salaireBase) await this.tracer(id, 'salaire_modifie', acteurId);
     return versDossier(d);
   }
 

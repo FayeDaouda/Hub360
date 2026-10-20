@@ -5,7 +5,7 @@ import { completude, DossiersPersonnelService, PIECES_DOSSIER } from './dossiers
 const VIDE = {
   poste: '', prenom: '', nom: '', lieuNaissance: '', nationalite: 'Sénégalaise', numeroPiece: '',
   telephone: '', emailPro: '', contactUrgence: '', coordonneesPaiement: '', numeroIpm: '',
-  dateEntree: null, dateNaissance: null, salaireBase: null, dateFin: null, typeContrat: 'cdi', pieces: [],
+  dateEntree: null, dateNaissance: null, salaires: [] as { statut: string }[], dateFin: null, typeContrat: 'cdi', pieces: [],
 };
 
 describe('completude', () => {
@@ -17,7 +17,7 @@ describe('completude', () => {
     const plein = {
       ...VIDE, poste: 'x', prenom: 'x', nom: 'x', lieuNaissance: 'x', numeroPiece: 'x', telephone: 'x',
       emailPro: 'x', contactUrgence: 'x', coordonneesPaiement: 'x', numeroIpm: 'x',
-      dateEntree: '2026-01-01', dateNaissance: '1990-01-01', salaireBase: 1,
+      dateEntree: '2026-01-01', dateNaissance: '1990-01-01', salaires: [{ statut: 'valide' }],
       pieces: PIECES_DOSSIER.map((type) => ({ type })),
     };
     expect(completude(plein as never)).toEqual({ pourcentage: 100, manquants: 0 });
@@ -30,7 +30,7 @@ describe('completude', () => {
 
 describe('DossiersPersonnelService', () => {
   function svc(o: { dernier?: unknown; collab?: unknown } = {}) {
-    const create = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...VIDE, ...data, societe: {}, collaborateur: null, pieces: [], bulletins: [] }));
+    const create = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...VIDE, ...data, societe: {}, collaborateur: null, pieces: [], bulletins: [], salaires: [] }));
     const prisma = {
       dossierPersonnel: { findFirst: jest.fn().mockResolvedValue(o.dernier ?? null), create },
       societe: { findFirst: jest.fn().mockResolvedValue({ id: 'S1' }) },
@@ -72,7 +72,7 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     const evenement = jest.fn((a: unknown) => a);
     const majTache = jest.fn((a: unknown) => a);
     const notifications = { envoyer: jest.fn(), comptesDe: jest.fn().mockResolvedValue(['U7']) };
-    const majDossier = jest.fn(() => ({ ...VIDE, societe: {}, collaborateur: null, pieces: [], bulletins: [] }));
+    const majDossier = jest.fn(() => ({ ...VIDE, societe: {}, collaborateur: null, pieces: [], bulletins: [], salaires: [] }));
     const prisma = {
       dossierPersonnel: { findUnique: jest.fn().mockResolvedValue(o.dossier), update: majDossier },
       utilisateur: {

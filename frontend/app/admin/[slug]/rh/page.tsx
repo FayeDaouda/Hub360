@@ -39,7 +39,6 @@ import {
   getAlertesRh,
   getIntegrations,
   getMasseSalariale,
-  getSalaireDossier,
   getOptionsDossiers,
   getPieceDossier,
   getTachesOuvertes,
@@ -60,6 +59,8 @@ import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
 import { ATraiterRh, type DonneesRh } from '@/components/rh/a-traiter-rh';
 import { getReportingsADeposer } from '@/lib/pilotage';
 import { DepotBulletins } from '@/components/rh/depot-bulletins';
+import { SalaireDossier } from '@/components/rh/salaire-dossier';
+import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 
 type Props = { params: { slug: string } };
 
@@ -305,6 +306,8 @@ export default function RhPage({ params }: Props) {
           </span>
         )}
       </div>
+      {/* CFO (CEO pour le salaire du CFO) : changements de salaire à décider. */}
+      <SalairesAValider slug={params.slug} />
       {/* Qui traite (RH, admin) : ce qui attend, par urgence, avant les tuiles. */}
       {ecriture && (
         <ATraiterRh
@@ -496,7 +499,6 @@ const CHAMPS_VIDES: MajDossier = {
   finEssai: null,
   visiteMedicale: null,
   expirationPiece: null,
-  salaireBase: null,
   prenom: '',
   nom: '',
   dateNaissance: null,
@@ -546,9 +548,6 @@ function FicheDossier({
   const [erreur, setErreur] = useState<string | null>(null);
   const [enregistre, setEnregistre] = useState(false);
   const [moisBulletin, setMoisBulletin] = useState(moisPrecedent);
-  // Salaire : masqué tant qu'on ne l'affiche pas (affichage tracé) ; il n'est
-  // renvoyé à l'enregistrement que s'il a été affiché ou saisi.
-  const [salaireVu, setSalaireVu] = useState(!dossier || !dossier.salaireRenseigne);
   // Départ en cours : tâches de projet à confier avant l'archivage.
   const [depart, setDepart] = useState<TachesOuvertes | null>(null);
   const [confies, setConfies] = useState<Record<string, string>>({});
@@ -556,44 +555,23 @@ function FicheDossier({
   useEffect(() => {
     if (!dossier) return;
     setForm(versFormulaire(dossier));
-    // Le dossier revenu du serveur n'a jamais le salaire : remasqué, sinon
-    // un enregistrement suivant l'effacerait.
-    setSalaireVu(!dossier.salaireRenseigne);
   }, [dossier]);
 
   const maj = (cle: keyof MajDossier) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const v = e.target.value;
-    const valeur =
-      cle === 'salaireBase'
-        ? v === '' ? null : Number(v.replace(/\D/g, ''))
-        : ['dateEntree', 'dateFin', 'finEssai', 'visiteMedicale', 'expirationPiece', 'dateNaissance', 'collaborateurId', 'utilisateurId'].includes(cle)
-          ? v || null
-          : v;
+    const valeur = ['dateEntree', 'dateFin', 'finEssai', 'visiteMedicale', 'expirationPiece', 'dateNaissance', 'collaborateurId', 'utilisateurId'].includes(cle)
+      ? v || null
+      : v;
     // Une fiche d'équipe porte son propre compte : relier une fiche retire le compte direct.
     setForm((f) => ({ ...f, [cle]: valeur, ...(cle === 'collaborateurId' && valeur ? { utilisateurId: null } : {}) }));
     setEnregistre(false);
   };
 
-  async function afficherSalaire() {
-    if (!dossier) return;
-    setErreur(null);
-    try {
-      const { salaireBase } = await getSalaireDossier(slug, dossier.id);
-      setForm((f) => ({ ...f, salaireBase }));
-      setSalaireVu(true);
-    } catch (e) {
-      setErreur(messageErreur(e, 'Salaire indisponible.'));
-    }
-  }
-
   async function enregistrer() {
     setEnvoi(true);
     setErreur(null);
     try {
-      // Salaire masqué = inchangé : on ne l'envoie pas (sinon il serait effacé).
-      const { salaireBase: _s, ...sansSalaire } = form;
-      const corps = salaireVu ? form : sansSalaire;
-      const d = dossier ? await majDossier(slug, dossier.id, corps) : await creerDossier(slug, corps);
+      const d = dossier ? await majDossier(slug, dossier.id, form) : await creerDossier(slug, form);
       onChange(d);
       setEnregistre(true);
     } catch (e) {
@@ -763,20 +741,6 @@ function FicheDossier({
               {champ('dateEntree', 'Date d’entrée', { type: 'date' })}
               {form.typeContrat !== 'cdi' && champ('dateFin', 'Fin (CDD, stage)', { type: 'date' })}
               {champ('finEssai', 'Fin de la période d’essai', { type: 'date' })}
-              {salaireVu ? (
-                champ('salaireBase', 'Salaire de base (FCFA)', { inputMode: 'numeric', placeholder: 'Non renseigné' })
-              ) : (
-                <div className="field">
-                  <span className="field-label">Salaire de base (FCFA)</span>
-                  <span className="rh-salaire-masque">
-                    <span aria-label="Salaire masqué">••••••</span>
-                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={afficherSalaire}>
-                      Afficher
-                    </button>
-                  </span>
-                  <span className="cell-sub">Chaque affichage est inscrit au journal d’audit.</span>
-                </div>
-              )}
               <label className="field">
                 <span className="field-label">Fiche d’équipe liée</span>
                 <select className="field-input" value={form.collaborateurId ?? ''} onChange={maj('collaborateurId')}>
@@ -819,6 +783,13 @@ function FicheDossier({
                 )}
               </label>
             </div>
+
+            <h3 className="rh-section">Salaire</h3>
+            {dossier ? (
+              <SalaireDossier slug={slug} dossier={dossier} ecriture={ecriture} />
+            ) : (
+              <p className="rh-note">Le salaire d’entrée se propose une fois le dossier créé ; il entre en vigueur après validation du CFO.</p>
+            )}
 
             <h3 className="rh-section">Identité</h3>
             <div className="rh-grille">

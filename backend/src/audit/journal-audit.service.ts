@@ -29,7 +29,9 @@ const ACTIONS_COMPTE: Record<EvenementCompteType, string> = {
 // Journal de la paie (revue RH 20/10/2026) : jamais de montant.
 const ACTIONS_PAIE: Record<ActionPaie, string> = {
   salaire_consulte: 'Salaire consulté',
-  salaire_modifie: 'Salaire modifié',
+  salaire_modifie: 'Changement de salaire validé',
+  salaire_propose: 'Changement de salaire proposé',
+  salaire_refuse: 'Changement de salaire refusé',
   bulletin_consulte: 'Bulletin consulté',
   bulletin_depose: 'Bulletin déposé',
   bulletin_retire: 'Bulletin retiré',

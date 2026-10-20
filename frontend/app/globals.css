@@ -14013,3 +14013,160 @@ tr.is-demandeur .cal-nom {
     background: color-mix(in oklch, var(--iris, var(--argile)) 8%, transparent);
   }
 }
+
+/* RH · historique des salaires (revue RH validée 20/10/2026). */
+.sal-bloc {
+  display: grid;
+  gap: 0.75rem;
+}
+.sal-vigueur {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+.sal-vigueur strong {
+  font-size: 1.15rem;
+}
+.sal-attente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid color-mix(in oklch, var(--pill-attention) 45%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--pill-attention) 8%, transparent);
+  font-size: 0.88rem;
+}
+.sal-proposer {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.sal-proposer > .field-label {
+  margin: 0;
+  font-weight: 600;
+}
+.sal-proposer-champs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.sal-proposer-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.sal-historique {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sal-historique li {
+  display: grid;
+  grid-template-columns: 6.5rem 8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.sal-historique li:last-child {
+  border-bottom: 0;
+}
+.sal-date {
+  color: var(--text-muted);
+}
+.sal-montant {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sal-motif {
+  display: grid;
+  min-width: 0;
+}
+.sav {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.sav-liste {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sav-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.sav-ligne:last-child {
+  border-bottom: 0;
+}
+.sav-corps {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.sav-detail {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 0.6rem;
+}
+.sav-montants {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+}
+.sav-montants > span:not([aria-hidden]) {
+  display: grid;
+  gap: 0.1rem;
+}
+.sav-montants strong {
+  font-size: 1.1rem;
+}
+.sav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+@media (max-width: 720px) {
+  .sal-proposer-champs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sal-proposer-pied .btn-primary,
+  .sav-actions > * {
+    flex: 1;
+    justify-content: center;
+  }
+  .sal-historique li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'montant statut' 'date date' 'motif motif';
+  }
+  .sal-montant {
+    grid-area: montant;
+  }
+  .sal-historique .pill {
+    grid-area: statut;
+  }
+  .sal-date {
+    grid-area: date;
+  }
+  .sal-motif {
+    grid-area: motif;
+  }
+}

@@ -219,6 +219,9 @@ enum NotificationType {
   rappel_demande // demande RH en attente (absence, remboursement, attestation) : relance
   bulletin_depose // la RH a déposé un bulletin de paie
   attestation_delivree // la RH a délivré l'attestation demandée
+  // Historique des salaires (revue RH validée 20/10/2026) : la RH propose, le CFO valide
+  salaire_a_valider // au CFO (au CEO pour le salaire du CFO)
+  salaire_decide // à la RH qui a proposé
 }
 
 model Notification {
@@ -1577,7 +1580,6 @@ model DossierPersonnel {
   finEssai                   String?              @map("fin_essai") // AAAA-MM-JJ
   visiteMedicale             String?              @map("visite_medicale") // prochaine visite
   expirationPiece            String?              @map("expiration_piece") // CNI ou passeport
-  salaireBase                Int?                 @map("salaire_base") // FCFA
   prenom                     String               @default("")
   nom                        String               @default("")
   dateNaissance              String?              @map("date_naissance")
@@ -1627,6 +1629,7 @@ model DossierPersonnel {
   controlesTemps    ControleFeuilleTemps[]
   ecartsTemps       EcartFeuilleTemps[]
   bulletins         BulletinPaie[]
+  salaires          ChangementSalaire[]
 
   @@index([societeId])
   @@map("dossiers_personnel")
@@ -1848,7 +1851,9 @@ model ControleFeuilleTemps {
 // HUB. JAMAIS de montant ici. Lu dans le journal d'audit (catégorie Paie).
 enum ActionPaie {
   salaire_consulte
-  salaire_modifie
+  salaire_modifie // changement validé (en vigueur à sa date d'effet)
+  salaire_propose
+  salaire_refuse
   bulletin_consulte
   bulletin_depose
   bulletin_retire
@@ -1867,6 +1872,44 @@ model JournalPaie {
   @@index([dossierId, createdAt])
   @@index([createdAt])
   @@map("journal_paie")
+}
+
+// Historique des salaires (revue RH validée 20/10/2026) : chaque changement
+// a une date d'effet et un motif obligatoire ; la RH le propose, le CFO le
+// valide (le CEO pour le salaire du CFO), personne ne valide le sien. Le
+// salaire en vigueur à une date = le dernier changement VALIDÉ dont la date
+// d'effet est passée (cf. rh/regles-salaire.ts). JAMAIS de montant ailleurs.
+enum MotifSalaire {
+  embauche // salaire d'entrée (et reprise des salaires d'avant l'historique)
+  augmentation
+  promotion
+  fin_essai
+  correction
+}
+
+enum StatutSalaire {
+  a_valider
+  valide
+  refuse
+}
+
+model ChangementSalaire {
+  id           String        @id @default(uuid())
+  dossierId    String        @map("dossier_id")
+  montant      Int // FCFA, brut mensuel de base
+  dateEffet    String?       @map("date_effet") // AAAA-MM-JJ ; null = reprise, date inconnue
+  motif        MotifSalaire
+  statut       StatutSalaire @default(a_valider)
+  proposeParId String?       @map("propose_par_id") // audit, pas de FK
+  proposeLe    DateTime      @default(now()) @map("propose_le")
+  decideParId  String?       @map("decide_par_id") // audit, pas de FK
+  decideLe     DateTime?     @map("decide_le")
+  motifRefus   String        @default("") @map("motif_refus")
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@index([dossierId, statut])
+  @@map("changements_salaire")
 }
 
 // Écart signalé par le salarié sur sa feuille de temps calculée (revue

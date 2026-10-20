@@ -481,6 +481,9 @@ export type NotificationType =
   // Mon espace · Mes documents : bulletin déposé, attestation délivrée.
   | 'bulletin_depose'
   | 'attestation_delivree'
+  // Historique des salaires : proposé par la RH (→ CFO), décidé (→ RH).
+  | 'salaire_a_valider'
+  | 'salaire_decide'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
@@ -1346,10 +1349,10 @@ export type ChampsDossierPersonnel = {
   finEssai: string | null;
   visiteMedicale: string | null; // prochaine visite
   expirationPiece: string | null; // CNI ou passeport
-  // FCFA — toujours null dans les listes : il s'affiche à la demande
+  // Le montant ne part jamais avec le dossier : historique à la demande
   // (getSalaireDossier), chaque affichage tracé au journal de la paie.
-  salaireBase: number | null;
-  salaireRenseigne: boolean;
+  salaireRenseigne: boolean; // un salaire validé existe
+  salaireEnAttente: boolean; // un changement attend la validation du CFO
   prenom: string;
   nom: string;
   dateNaissance: string | null;

@@ -1,4 +1,4 @@
-import { ModePaiementSalaire, TypeContrat } from '@prisma/client';
+import { ModePaiementSalaire, MotifSalaire, TypeContrat } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -32,12 +32,6 @@ export class DossierPersonnelDto {
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) finEssai?: string | null;
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) visiteMedicale?: string | null;
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) expirationPiece?: string | null;
-  @IsOptional()
-  @ValidateIf((_, v) => v !== null)
-  @IsInt({ message: 'Le salaire doit être un montant entier en FCFA.' })
-  @Min(0)
-  @Max(100_000_000, { message: 'Montant anormalement élevé — vérifiez la saisie.' })
-  salaireBase?: number | null;
   @IsOptional() @IsString() @MaxLength(80) prenom?: string;
   @IsOptional() @IsString() @MaxLength(80) nom?: string;
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) dateNaissance?: string | null;
@@ -77,4 +71,19 @@ export class DecisionPaiementDto {
 export class PieceDto {
   @IsString() @MaxLength(300) nom: string;
   @IsString() @MaxLength(20_000_000) url: string; // data URI
+}
+
+// Historique des salaires (revue RH validée 20/10/2026) : proposition de la RH.
+export class PropositionSalaireDto {
+  @IsInt({ message: 'Le salaire doit être un montant entier en FCFA.' })
+  @Min(1)
+  @Max(100_000_000, { message: 'Montant anormalement élevé — vérifiez la saisie.' })
+  montant!: number;
+  @Matches(DATE) dateEffet!: string;
+  @IsEnum(MotifSalaire, { message: 'Le motif est obligatoire.' }) motif!: MotifSalaire;
+}
+
+export class DecisionSalaireDto {
+  @IsBoolean() valide!: boolean;
+  @IsOptional() @IsString() @MaxLength(300) motifRefus?: string;
 }

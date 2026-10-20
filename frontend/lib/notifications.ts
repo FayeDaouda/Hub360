@@ -58,6 +58,9 @@ export function lienNotificationAdmin(
     return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
   }
   if (n.type === 'remboursement_a_traiter') return `${base}/rh?onglet=demandes`;
+  // Salaire : le CFO décide en tête de la page RH, la RH retrouve le dossier.
+  if (n.type === 'salaire_a_valider') return `${base}/rh`;
+  if (n.type === 'salaire_decide') return `${base}/rh?onglet=personnel`;
   // Relance : la RH traite dans RH › Demandes ; le N+1 (ou le CEO) dans « À valider ».
   if (n.type === 'rappel_demande') {
     return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;

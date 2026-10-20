@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { AlertesRhService, type TypeAlerteRh } from '../rh/alertes-rh.service';
 import { joursOuvrables } from '../rh/regles-conges';
+import { salaireAu, type ChangementSource } from '../rh/regles-salaire';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { TempsService } from '../rh/temps.service';
 
@@ -52,7 +53,7 @@ function masseDuReporting(contenu: unknown): number | null {
   return m ? Number(m[1].replace(/\D/g, '')) : null;
 }
 
-type Dossier = { id: string; prenom: string; nom: string; typeContrat: string; salaireBase: number | null; entree: string; sortie: string | null };
+type Dossier = { id: string; prenom: string; nom: string; typeContrat: string; salaires: ChangementSource[]; entree: string; sortie: string | null };
 
 // Reporting RH → CFO prérempli depuis le HUB (revue RH 20/10/2026, rubriques
 // D18 validées par le user) : effectif, masse salariale, absences, temps,
@@ -72,7 +73,10 @@ export class ReportingRhService {
     const dossiers: Dossier[] = (
       await this.prisma.dossierPersonnel.findMany({
         where: { societeId },
-        select: { id: true, prenom: true, nom: true, typeContrat: true, salaireBase: true, dateEntree: true, archiveLe: true },
+        select: {
+          id: true, prenom: true, nom: true, typeContrat: true, dateEntree: true, archiveLe: true,
+          salaires: { where: { statut: 'valide' }, select: { montant: true, dateEffet: true, statut: true, decideLe: true } },
+        },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       })
     ).map((d) => ({ ...d, entree: d.dateEntree ?? '', sortie: d.archiveLe ? jourIso(d.archiveLe) : null }));
@@ -101,12 +105,13 @@ export class ReportingRhService {
     const sorties = dossiers.filter((d) => d.sortie && moisDe(d.sortie) === mois);
     const liste = (ds: Dossier[]) => (ds.length ? `${ds.length} (${noms(ds)})` : '0');
 
-    // 2. Masse salariale (salaires de base actuels : pas encore d'historique
-    // des salaires), comparée au chiffre FIGÉ du reporting RH déposé le mois
-    // précédent — pas à un recalcul (revue RH validée, 20/10/2026).
-    const masse = effectif.reduce((t, d) => t + (d.salaireBase ?? 0), 0);
+    // 2. Masse salariale : salaires EN VIGUEUR au dernier jour du mois
+    // (historique, date d'effet), comparée au chiffre FIGÉ du reporting RH
+    // déposé le mois précédent — pas à un recalcul (revue RH validée, 20/10/2026).
+    const salaires = effectif.map((d) => salaireAu(d.salaires, fin));
+    const masse = salaires.reduce<number>((t, s) => t + (s ?? 0), 0);
     const masseFigee = masseDuReporting(reportingPrecedent?.contenu);
-    const manquants = effectif.filter((d) => d.salaireBase === null).length;
+    const manquants = salaires.filter((s) => s === null).length;
     const comparaison = !reportingPrecedent
       ? `pas de reporting RH déposé pour ${moisCourt(precedent)} : pas de comparaison`
       : masseFigee == null

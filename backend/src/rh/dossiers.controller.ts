@@ -5,7 +5,8 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { DossiersPersonnelService } from './dossiers.service';
-import { ArchivageDto, DecisionPaiementDto, DossierPersonnelDto, PieceDto } from './dto';
+import { ArchivageDto, DecisionPaiementDto, DossierPersonnelDto, PieceDto, PropositionSalaireDto } from './dto';
+import { SalairesService } from './salaires.service';
 
 type R = { user: { userId: string } };
 
@@ -15,7 +16,10 @@ type R = { user: { userId: string } };
 @PermissionSelonMethode('rh')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class DossiersPersonnelController {
-  constructor(private dossiers: DossiersPersonnelService) {}
+  constructor(
+    private dossiers: DossiersPersonnelService,
+    private salaires: SalairesService,
+  ) {}
 
   @Get()
   lister() {
@@ -38,10 +42,22 @@ export class DossiersPersonnelController {
     return this.dossiers.detail(id);
   }
 
-  // Salaire d'un dossier : affiché à la demande, chaque affichage tracé.
+  // Salaire d'un dossier (en vigueur + historique) : affiché à la demande,
+  // chaque affichage tracé. La RH propose un changement, le CFO le valide.
   @Get(':id/salaire')
   salaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
-    return this.dossiers.salaire(id, req.user.userId);
+    return this.salaires.historique(id, req.user.userId);
+  }
+
+  @Post(':id/salaires')
+  proposerSalaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: PropositionSalaireDto) {
+    return this.salaires.proposer(id, dto, req.user.userId);
+  }
+
+  @Delete(':id/salaires/:changementId')
+  async retirerSalaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('changementId', ParseUUIDPipe) changementId: string) {
+    await this.salaires.retirer(id, changementId);
+    return this.salaires.historique(id, req.user.userId);
   }
 
   @Get(':id/pieces/:type')
