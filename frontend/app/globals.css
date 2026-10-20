@@ -2932,6 +2932,10 @@ a.admin-nav-item:hover {
 .admin-nav-btn {
   color: var(--argile);
 }
+/* « Aide » est un bouton comme « Se déconnecter », sans sa couleur d'alerte. */
+.admin-nav-btn.admin-nav-btn--neutre {
+  color: inherit;
+}
 
 .admin-nav-btn:hover {
   background: var(--sidebar-hover-bg);
@@ -3167,6 +3171,11 @@ a.admin-nav-item:hover {
   max-height: min(70vh, 40rem);
   overflow-y: auto;
 }
+@media (max-width: 640px) {
+  .aide-corps {
+    max-height: calc(100dvh - 9rem);
+  }
+}
 .aide-intro {
   margin: 0 0 0.75rem;
 }
@@ -3229,8 +3238,14 @@ a.admin-nav-item:hover {
   padding: 0.75rem;
   border-bottom: 1px solid var(--border);
 }
-.recherche-champ svg {
+/* La loupe seule : « svg » visait aussi la croix du bouton Fermer, posée
+   par-dessus la loupe (revue mobile 20/10/2026). */
+.recherche-champ > svg {
   left: 1.5rem;
+}
+/* Croix native du champ « search » : le bouton Fermer suffit. */
+.recherche-champ input::-webkit-search-cancel-button {
+  display: none;
 }
 .recherche-champ .field-input {
   flex: 1;
@@ -3850,6 +3865,10 @@ button:focus-visible .repli-icone {
 @media (max-width: 480px) {
   .admin-search {
     display: none;
+  }
+  /* La recherche reste accessible sur téléphone : la loupe seule. */
+  .admin-search.recherche-declencheur {
+    display: inline-flex;
   }
 
   .admin-title {
@@ -6585,15 +6604,16 @@ a.notif-item:hover {
     height: 10px;
   }
   .kpi-tuile-label {
-    font-size: 0.6rem;
+    font-size: 0.66rem;
   }
   .kpi-tuile-valeur {
     margin-top: 0.25rem;
-    font-size: 1rem;
+    font-size: 1.05rem;
   }
+  /* Une rangée de 4 sur téléphone (choix de départ) : la phrase sous le
+     chiffre, illisible à cette largeur, cède la place (revue 20/10/2026). */
   .kpi-tuile-sous {
-    margin-top: 0.15rem;
-    font-size: 0.6rem;
+    display: none;
   }
   /* Le pictogramme décoratif (aucune donnée) cède la place en premier ; le
      vrai delta (badge) et l'anneau (vrai %) restent tant qu'il y a la place. */
@@ -7492,6 +7512,40 @@ a.notif-item:hover {
   font-weight: 600;
   padding: 0.45rem 1.15rem;
 }
+/* E. Mentions sur téléphone : date sur sa ligne, les trois actions dessous. */
+@media (max-width: 720px) {
+  .mt-mention .mt-echeance {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  .mt-mention .mt-action {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+/* F. Remise : « Joindre des fichiers » au lieu du champ natif. */
+.po-remise-joindre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  cursor: pointer;
+}
+.po-remise-joindre.is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.po-remise-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+/* J. Double authentification : bouton à sa taille. */
+.df-compte > button {
+  width: fit-content;
+}
 /* Réglages personnels (19/10/2026). */
 .rg-page {
   display: grid;
@@ -7773,6 +7827,15 @@ a.notif-item:hover {
   z-index: 30;
   margin: calc(-1 * var(--ef-gy)) calc(-1 * var(--ef-gx)) 0;
   padding: var(--ef-gy) var(--ef-gx) 0.85rem;
+}
+/* Voile flou sur un calque : un backdrop-filter sur la barre elle-même en
+   ferait le bloc conteneur de ses enfants « fixed » (panneau du chat
+   réduit à la hauteur de la barre — trouvé en revue mobile 20/10/2026). */
+.admin-main:has(.page-entete-fixe) .admin-topbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: var(--ef-voile);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);

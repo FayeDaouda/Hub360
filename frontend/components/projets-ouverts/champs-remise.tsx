@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, X } from 'lucide-react';
+import { Camera, Paperclip, X } from 'lucide-react';
 import { lireFichier } from '@/lib/fichiers';
 
 // Nombre de fichiers par remise (même plafond que le serveur).
@@ -31,36 +31,40 @@ export function ChampsRemise({ valeur, onChange, id }: { valeur: SaisieRemise; o
 
   return (
     <span className="po-remise-champs">
-      <label className="po-panneau-label" htmlFor={`${id}-fichiers`}>
-        Fichiers (facultatif)
-      </label>
-      <input
-        id={`${id}-fichiers`}
-        className="field-input"
-        type="file"
-        multiple
-        disabled={valeur.pieces.length >= MAX_PIECES}
-        onChange={(e) => {
-          void ajouter(e.target.files);
-          e.target.value = '';
-        }}
-      />
-      {/* Téléphone (visite de chantier) : photo prise directement — capture
-          ouvre l'appareil photo ; ignorée sur ordinateur (masquée en CSS). */}
-      <label className={`btn-ghost btn-ghost--sm po-remise-photo${valeur.pieces.length >= MAX_PIECES ? ' is-desactive' : ''}`}>
-        <Camera size={15} aria-hidden /> Prendre une photo
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          disabled={valeur.pieces.length >= MAX_PIECES}
-          onChange={(e) => {
-            void ajouter(e.target.files);
-            e.target.value = '';
-          }}
-        />
-      </label>
+      <span className="po-panneau-label">Fichiers (facultatif)</span>
+      {/* Boutons du HUB plutôt que le champ natif (« Choose Files » selon la
+          langue du navigateur) ; la photo n'apparaît que sur écran tactile. */}
+      <span className="po-remise-boutons">
+        <label className={`btn-ghost btn-ghost--sm po-remise-joindre${valeur.pieces.length >= MAX_PIECES ? ' is-desactive' : ''}`}>
+          <Paperclip size={15} aria-hidden /> Joindre des fichiers
+          <input
+            id={`${id}-fichiers`}
+            type="file"
+            multiple
+            className="sr-only"
+            disabled={valeur.pieces.length >= MAX_PIECES}
+            onChange={(e) => {
+              void ajouter(e.target.files);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        <label className={`btn-ghost btn-ghost--sm po-remise-photo${valeur.pieces.length >= MAX_PIECES ? ' is-desactive' : ''}`}>
+          <Camera size={15} aria-hidden /> Prendre une photo
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            disabled={valeur.pieces.length >= MAX_PIECES}
+            onChange={(e) => {
+              void ajouter(e.target.files);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      </span>
+      {valeur.pieces.length === 0 && <span className="po-aide">Aucun fichier joint · {MAX_PIECES} au plus</span>}
       {valeur.pieces.length > 0 && (
         <span className="po-remise-fichiers">
           {valeur.pieces.map((f, i) => (

@@ -88,7 +88,7 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
 
 // Repères valables pour tous les comptes.
 export const REPERES_AIDE = [
-  'Rechercher un dossier, un projet, un devis, une facture ou un salarié : Ctrl K (⌘K sur Mac), ou la loupe en haut.',
+  'Rechercher un projet, un collègue ou tout ce que vos droits vous ouvrent : la loupe en haut, ou Ctrl K (⌘K sur Mac).',
   'La cloche réunit vos notifications ; chaque matin à 7 h, le HUB y ajoute les rappels du jour (tâches à rendre, relances, factures échues).',
   'Les listes Factures, Devis, CRM, RH et Feuilles de temps s’exportent vers Excel, filtres compris.',
   'Un problème, une question, une idée : « Signaler un problème » ci-dessous. La page où vous êtes est jointe automatiquement.',

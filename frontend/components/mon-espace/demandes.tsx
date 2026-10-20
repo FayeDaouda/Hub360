@@ -35,6 +35,13 @@ function versIso(jjmmaaaa: string): string | null {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : null;
 }
 
+// Saisie JJ/MM/AAAA au clavier numérique : les « / » sont posés pendant la
+// frappe — le pavé numérique d'un iPhone n'en a pas (revue mobile 20/10/2026).
+function formaterDate(saisie: string): string {
+  const c = saisie.replace(/\D/g, '').slice(0, 8);
+  return c.length > 4 ? `${c.slice(0, 2)}/${c.slice(2, 4)}/${c.slice(4)}` : c.length > 2 ? `${c.slice(0, 2)}/${c.slice(2)}` : c;
+}
+
 // Pièce jointe présentée comme la case de la maquette (« Justificatif joint ») :
 // cocher ouvre le sélecteur de fichiers ; la case est cochée dès qu'un fichier
 // est joint (décocher le retire).
@@ -301,11 +308,11 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
       <div className="rh-grille">
         <label className="field">
           <span className="field-label">Du</span>
-          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={debut} onChange={(e) => setDebut(e.target.value)} />
+          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={debut} onChange={(e) => setDebut(formaterDate(e.target.value))} />
         </label>
         <label className="field">
           <span className="field-label">Au (inclus)</span>
-          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={fin} onChange={(e) => setFin(e.target.value)} />
+          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={fin} onChange={(e) => setFin(formaterDate(e.target.value))} />
         </label>
       </div>
       <label className="field">
@@ -320,12 +327,13 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
         />
       </label>
       <CaseJointe libelle="Justificatif joint" fichiers={fichiers} onChange={setFichiers} onErreur={(m) => setEtat({ envoi: false, erreur: m })} />
-      {(!isoDebut || !isoFin) && <p className="me-consigne">Renseignez les dates (JJ/MM/AAAA).</p>}
+      {/* Seulement une date complète mais invalide (pas avant toute saisie). */}
+      {((debut.length === 10 && !isoDebut) || (fin.length === 10 && !isoFin)) && <p className="me-consigne">Date invalide : JJ/MM/AAAA.</p>}
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
       <button type="submit" className="btn-primary me-envoyer" disabled={etat.envoi || !pret}>
         {etat.envoi ? 'Envoi…' : 'Envoyer à mon N+1'}
       </button>
-      <p className="dmd-note me-pied">Circuit (manuel §3.7) : vous → votre N+1 (décision) → RH Holding (validation finale et paie).</p>
+      <p className="dmd-note me-pied">Circuit : vous → votre N+1 (décision) → RH Holding (validation finale et paie).</p>
     </form>
   );
 }
@@ -367,7 +375,7 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
       <div className="rh-grille">
         <label className="field">
           <span className="field-label">Date des soins</span>
-          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={dateSoins} onChange={(e) => setDateSoins(e.target.value)} />
+          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={dateSoins} onChange={(e) => setDateSoins(formaterDate(e.target.value))} />
         </label>
         <label className="field">
           <span className="field-label">Bénéficiaire</span>

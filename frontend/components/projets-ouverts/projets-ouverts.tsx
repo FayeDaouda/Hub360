@@ -82,7 +82,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const [assignables, setAssignables] = useState<Assignable[] | null>(null);
   const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
 
-  useTitrePage(`Projets · gabarit ${tableau?.gabarit ?? 'GC-CONCEPTION'}`);
+  // Le nom du gabarit parle à la direction, pas au Salarié (revue mobile 20/10/2026).
+  useTitrePage(salarie ? 'Projets' : `Projets · gabarit ${tableau?.gabarit ?? 'GC-CONCEPTION'}`);
 
   const chargerTableau = useCallback(
     () =>
@@ -202,7 +203,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
               Gabarit et paramètres
             </Link>
           )}
-          <span className="po-acces">{acces}</span>
+          {!salarie && <span className="po-acces">{acces}</span>}
         </div>
       </div>
 
@@ -473,6 +474,11 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
   const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
   const factures = pastillesFactures(d);
+  // Bandeau des étapes défilant (mobile) : l'étape ouverte reste visible.
+  const etapesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    etapesRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [etape]);
 
   return (
     <>
@@ -510,16 +516,19 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
           <strong>
             J{d.jour} / {d.horizon}
           </strong>
-          <span className="po-aide">
-            J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
-          </span>
+          {/* Le Salarié a déjà J et livraison dans sa ligne d'en-tête. */}
+          {!salarie && (
+            <span className="po-aide">
+              J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
+            </span>
+          )}
           {d.jour > d.horizon && d.statutChantier !== 'livre' && <span className="pill pill--risque">Livraison dépassée</span>}
           {d.budgetHeures !== null && !salarie && <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>}
           <StatutProjet slug={slug} projetId={d.id} statut={d.statutChantier} modifiable={ecriture} onMaj={onMaj} />
         </div>
       </header>
 
-      <div className="po-etapes" role="tablist" aria-label="Étapes">
+      <div className="po-etapes" role="tablist" aria-label="Étapes" ref={etapesRef}>
         {d.etapes.map((e) => {
           const p = pastilleEtape(e);
           return (
@@ -814,10 +823,11 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
                 >
                   <span className="po-tache-libelle">
                     <strong>{t.libelle}</strong>
-                    <span className="po-aide">
-                      {t.cle.replace(/_/g, ' ')}
-                      {t.motif && ` · ${t.motif}`}
-                    </span>
+                    {(!memeLibelle(t.cle, t.libelle) || t.motif) && (
+                      <span className="po-aide">
+                        {[!memeLibelle(t.cle, t.libelle) && t.cle.replace(/_/g, ' '), t.motif].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
                   </span>
                   <span className="po-tache-assigne">{t.assigne?.nom ?? 'À assigner'}</span>
                   <span className="po-tache-heures">{heuresTache(t)}</span>
@@ -842,6 +852,16 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
     </article>
   );
 }
+
+// Clé technique (« laterale_droite ») qui ne fait que répéter le libellé.
+const normaliser = (x: string) =>
+  x
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+const memeLibelle = (cle: string, libelle: string) => normaliser(cle) === normaliser(libelle);
 
 // « F1 émise · projet ouvert », « F2 attend 02, 03, récépissé 04 »… La
 // première facture en attente est mise en avant (maquette).

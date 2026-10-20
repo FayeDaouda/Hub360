@@ -109,7 +109,7 @@ function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => vo
             ref={champ}
             type="search"
             className="field-input"
-            placeholder="Code, client, numéro de devis ou de facture, salarié…"
+            placeholder="Rechercher un projet, un client, un collègue…"
             value={q}
             maxLength={80}
             onChange={(e) => setQ(e.target.value)}

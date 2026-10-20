@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 // Panneau latéral (tâche, fil d'une carte) : même tiroir que la fiche CRM —
@@ -12,7 +13,9 @@ export function PanneauLateral({ titre, entete, onClose, children }: { titre: st
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // Portail : rendu dans un panneau en verre (backdrop-filter), le tiroir
+  // « fixed » serait enfermé dans ce panneau au lieu de couvrir l'écran.
+  return createPortal(
     <div className="fiche-crm-fond" onClick={onClose}>
       <div className="fiche-crm panneau-lateral" role="dialog" aria-modal="true" aria-label={titre} onClick={(e) => e.stopPropagation()}>
         <div className="fiche-crm-entete">
@@ -23,6 +26,7 @@ export function PanneauLateral({ titre, entete, onClose, children }: { titre: st
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

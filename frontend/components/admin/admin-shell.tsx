@@ -329,7 +329,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             )}
             <button
               type="button"
-              className="admin-nav-item admin-nav-btn"
+              className="admin-nav-item admin-nav-btn admin-nav-btn--neutre"
               onMouseEnter={(e) => afficherInfobulle(e, 'Aide')}
               onMouseLeave={masquerInfobulle}
               onFocus={(e) => afficherInfobulle(e, 'Aide')}
