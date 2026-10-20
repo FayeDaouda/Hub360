@@ -58,6 +58,7 @@ import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
 import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
 import { ATraiterRh, type DonneesRh } from '@/components/rh/a-traiter-rh';
+import { getReportingsADeposer } from '@/lib/pilotage';
 import { DepotBulletins } from '@/components/rh/depot-bulletins';
 
 type Props = { params: { slug: string } };
@@ -129,9 +130,16 @@ export default function RhPage({ params }: Props) {
   // Tuiles des autres onglets : relues à chaque changement d'onglet, pour
   // refléter ce qui vient d'y être traité.
   const chargerCompteurs = useCallback(() => {
-    Promise.all([getFeuillesTemps(params.slug), getDemandesRh(params.slug), getIntegrations(params.slug), getAlertesRh(params.slug)])
-      .then(([f, d, i, al]) => {
-        setBrut({ feuilles: f, demandes: d, integrations: i, alertes: al });
+    Promise.all([
+      getFeuillesTemps(params.slug),
+      getDemandesRh(params.slug),
+      getIntegrations(params.slug),
+      getAlertesRh(params.slug),
+      // Facultatif : sans accès au Pilotage, pas de ligne « reporting ».
+      getReportingsADeposer(params.slug).catch(() => []),
+    ])
+      .then(([f, d, i, al, rp]) => {
+        setBrut({ feuilles: f, demandes: d, integrations: i, alertes: al, reportings: rp });
         setCompteurs({
           feuilles: f.periodes.reduce((n, p) => n + p.aControler, 0),
           demandes:

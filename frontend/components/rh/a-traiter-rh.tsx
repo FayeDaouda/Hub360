@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlarmClock, CalendarClock, ChevronDown, FileWarning, IdCard, Inbox, Scale, Stethoscope, Timer, UserCheck, UserPlus, type LucideIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { AlarmClock, CalendarClock, ChevronDown, ClipboardList, FileWarning, IdCard, Inbox, Scale, Stethoscope, Timer, UserCheck, UserPlus, type LucideIcon } from 'lucide-react';
 import type { AttestationRh } from '@/lib/demandes';
 import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { getFeuillesTemps, libelleMois } from '@/lib/temps';
 import { formatMontant } from '@/lib/format';
 import type { AlerteRh } from '@/lib/rh';
-import type { DemandeAbsence, DemandeRemboursement, DossierPersonnel, FeuillesTemps, IntegrationSalarie } from '@/lib/types';
+import type { DemandeAbsence, DemandeRemboursement, DossierPersonnel, FeuillesTemps, IntegrationSalarie, ReportingADeposer } from '@/lib/types';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
 export type DonneesRh = {
@@ -15,6 +16,7 @@ export type DonneesRh = {
   feuilles: FeuillesTemps;
   integrations: IntegrationSalarie[];
   alertes: AlerteRh[];
+  reportings: ReportingADeposer[];
 };
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -56,6 +58,7 @@ export function ATraiterRh({
   const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [ecarts, setEcarts] = useState<{ cle: string; nom: string; mois: string; commentaire: string; signaleLe: string }[]>([]);
   const [tout, setTout] = useState(false);
+  const router = useRouter();
 
   // Écarts ouverts : le détail (qui, quel mois) vient des feuilles des mois concernés.
   const moisEcarts = donnees?.feuilles.periodes.filter((p) => p.ecarts > 0).map((p) => p.mois).join(',') ?? '';
@@ -163,6 +166,18 @@ export function ATraiterRh({
       quand: al.jours < 0 ? `dépassée de ${-al.jours} j` : al.jours === 0 ? 'aujourd’hui' : `dans ${al.jours} j`,
       ton: al.jours <= (al.type === 'fin_essai' ? 7 : 15) ? 'risque' : 'attention',
       ouvrir: () => onOuvrir('personnel', dossier ? { dossier } : undefined),
+    });
+  }
+  // Reporting RH du mois clos à déposer (Pilotage, échéance J+5).
+  for (const r of donnees.reportings) {
+    const n = ecart(aujourdhui, r.echeance);
+    elements.push({
+      cle: `reporting-${r.type}-${r.mois}`, groupe: 4, tri: r.echeance, icone: ClipboardList, action: 'Déposer',
+      titre: `Reporting RH · ${r.periode}`,
+      detail: `prérempli, à relire et commenter · pour le CFO, échéance le ${jjmm(r.echeance)}`,
+      quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `dans ${n} j`,
+      ton: r.statut === 'en_retard' ? 'risque' : 'attention',
+      ouvrir: () => router.push(`/admin/${slug}?onglet=reportings`),
     });
   }
   // 5. Feuilles de temps des mois clos à contrôler.

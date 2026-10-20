@@ -20,7 +20,8 @@ function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
 // préremplie depuis le HUB tant qu'elle n'est pas déposée, figée ensuite.
 export function Reportings({ slug, reportings, onVue }: { slug: string; reportings: ReportingPilotage[]; onVue: (v: VuePilotage) => void }) {
   const cle = (r: ReportingPilotage) => `${r.type}:${r.mois}`;
-  const premier = reportings.find((r) => r.statut === 'a_deposer' || r.statut === 'en_retard') ?? reportings[0];
+  // D'abord celui que l'acteur doit déposer (lien « À traiter » de la RH).
+  const premier = reportings.find((r) => r.peutDeposer) ?? reportings.find((r) => r.statut === 'a_deposer' || r.statut === 'en_retard') ?? reportings[0];
   const [choisi, setChoisi] = useState<string | null>(premier ? cle(premier) : null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);

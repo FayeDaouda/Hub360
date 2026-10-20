@@ -28,6 +28,12 @@ export class PilotageController {
     return this.pilotage.vue(req.user);
   }
 
+  // Reportings à déposer par l'acteur (« À traiter » de la page RH).
+  @Get('reportings/a-deposer')
+  aDeposer(@Req() req: R) {
+    return this.pilotage.aDeposer(req.user);
+  }
+
   // « À votre attention » (accueil du CEO) : chaque rubrique selon la matrice.
   @Get('attention')
   attention(@Req() req: R) {

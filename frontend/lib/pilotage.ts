@@ -1,5 +1,5 @@
 import { apiSociete } from './client-api';
-import type { AttentionPilotage, VuePilotage } from './types';
+import type { AttentionPilotage, ReportingADeposer, VuePilotage } from './types';
 
 // Pilotage · tableau de bord Holding : chaque action renvoie la vue à jour.
 
@@ -9,6 +9,10 @@ export function getPilotage(slug: string): Promise<VuePilotage> {
 
 export function getAttention(slug: string): Promise<AttentionPilotage> {
   return apiSociete<AttentionPilotage>(slug, '/pilotage/attention');
+}
+
+export function getReportingsADeposer(slug: string): Promise<ReportingADeposer[]> {
+  return apiSociete<ReportingADeposer[]>(slug, '/pilotage/reportings/a-deposer');
 }
 
 export function deposerReporting(slug: string, type: 'direction' | 'rh', mois: string, analyse: string): Promise<VuePilotage> {

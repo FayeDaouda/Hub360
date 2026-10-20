@@ -439,6 +439,20 @@ export class PilotageService {
     );
   }
 
+  // Reportings que l'acteur doit encore déposer, sans leur contenu (léger) :
+  // « À traiter aujourd'hui » de la page RH (revue RH 20/10/2026).
+  async aDeposer(a: Acteur) {
+    const jour = aujourdhui();
+    const types = (Object.keys(REPORTINGS) as TypeReporting[]).filter((t) => REPORTINGS[t].emetteur === a.role);
+    if (!types.length) return [];
+    const deposes = await this.prisma.reportingMensuel.findMany({ where: { societeId: a.societeId, type: { in: types } }, select: { type: true, mois: true } });
+    return moisAReporter(jour).flatMap((mois) =>
+      types
+        .filter((type) => !deposes.some((d) => d.type === type && d.mois === mois))
+        .map((type) => ({ type, mois, periode: moisLong(mois), echeance: echeanceReporting(mois), statut: statutReporting(mois, null, jour) })),
+    );
+  }
+
   async deposer(a: Acteur, type: TypeReporting, mois: string, analyse: string) {
     const jour = aujourdhui();
     if (!REPORTINGS[type]) throw new NotFoundException('Reporting inconnu.');

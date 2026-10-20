@@ -1700,6 +1700,9 @@ export type ReportingPilotage = {
   peutDeposer: boolean;
 };
 
+// Reporting que l'acteur doit encore déposer (« À traiter » de la page RH).
+export type ReportingADeposer = Pick<ReportingPilotage, 'type' | 'mois' | 'periode' | 'echeance' | 'statut'>;
+
 export type StatutDecision = 'ouverte' | 'echeance_depassee' | 'close';
 
 export type DecisionRegistre = {
