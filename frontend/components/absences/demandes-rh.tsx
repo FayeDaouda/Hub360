@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { CalendrierCellule } from './calendrier-cellule';
 import { Paperclip } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier } from '@/lib/fichiers';
@@ -35,6 +36,8 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
   } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [toutes, setToutes] = useState(false);
+  // Demande dont on regarde le calendrier de la cellule.
+  const [cellule, setCellule] = useState<string | null>(null);
 
   const charger = useCallback(() => {
     getDemandesRh(slug)
@@ -81,7 +84,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
         ) : (
           <ul className="dmd-liste">
             {absences.map((d) => (
-              <li key={d.id} className="dmd-ligne">
+              <li key={d.id} className="dmd-ligne rh-absence">
                 <span>
                   <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
                   <span className="cell-sub">
@@ -97,6 +100,11 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                   )}
                   <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
                   {d.statut === 'accord_n1' && d.valideurFinal === 'ceo' && <span className="cell-sub">validation finale : CEO</span>}
+                  {d.statut === 'accord_n1' && (
+                    <button type="button" className="btn-ghost btn-ghost--sm" aria-expanded={cellule === d.id} onClick={() => setCellule((x) => (x === d.id ? null : d.id))}>
+                      {cellule === d.id ? 'Masquer la cellule' : 'Voir la cellule'}
+                    </button>
+                  )}
                   {ecriture && d.statut === 'accord_n1' && d.valideurFinal !== 'ceo' && (
                     <>
                       <button type="button" className="btn-primary btn-primary--sm" onClick={() => agir(() => validerAbsenceRh(slug, d.id, true))}>
@@ -115,6 +123,11 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                     </>
                   )}
                 </span>
+                {cellule === d.id && (
+                  <div className="rh-absence-cellule">
+                    <CalendrierCellule slug={slug} demandeId={d.id} source="rh" />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

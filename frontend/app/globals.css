@@ -7854,6 +7854,112 @@ a.notif-item:hover {
   opacity: 1;
 }
 
+/* Calendrier de la cellule au moment de décider d'une absence (20/10/2026). */
+.cal-cellule {
+  display: grid;
+  gap: 0.5rem;
+}
+.cal-cellule .dmd-note,
+.cal-cellule .field-erreur {
+  margin: 0;
+}
+.cal-cellule-squelette {
+  height: 6rem;
+  border-radius: var(--radius-md);
+}
+.cal-cellule-defile {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.cal-cellule-table {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 0.72rem;
+}
+.cal-cellule-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.cal-cellule-table thead th {
+  min-width: 1.6rem;
+  padding: 0.2rem 0;
+  text-align: center;
+  line-height: 1.1;
+}
+.cal-cellule-table thead th span {
+  display: block;
+  font-size: 0.62rem;
+  opacity: 0.7;
+}
+.cal-cellule-table thead th.is-periode {
+  color: var(--brand);
+}
+.cal-nom {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 8rem;
+  max-width: 10rem;
+  padding: 0 0.5rem;
+  overflow: hidden;
+  background: var(--surface);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+tr.is-demandeur .cal-nom {
+  color: var(--text);
+}
+.cal-cellule-table td {
+  height: 1.5rem;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--text) 5%, transparent);
+}
+.cal-cellule-table td.is-weekend {
+  background: transparent;
+}
+.cal-cellule-table td.is-periode {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand) 45%, transparent);
+}
+.cal-demande {
+  background: var(--brand) !important;
+}
+.cal-validee {
+  background: var(--pill-risque) !important;
+}
+.cal-en_attente {
+  background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--pill-attention) 80%, transparent) 0 3px, transparent 3px 6px) !important;
+}
+.cal-legende {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.cal-puce {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-left: 0.3rem;
+  border-radius: 3px;
+}
+
+@media (max-width: 720px) {
+  .cal-nom {
+    min-width: 6rem;
+    max-width: 7rem;
+  }
+}
+/* Liste RH : le calendrier de la cellule se déplie sous la demande. */
+.rh-absence-cellule {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
 /* RH · salaire masqué dans la fiche (affichage tracé, 20/10/2026). */
 .rh-salaire-masque {
   display: flex;

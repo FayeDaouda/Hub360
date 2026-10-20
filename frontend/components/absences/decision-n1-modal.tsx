@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
+import { CalendrierCellule } from './calendrier-cellule';
 import { deciderAbsence, getPreparationDecision, jjmm, LIBELLE_MOTIF_REFUS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
 
@@ -99,11 +100,8 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
               <strong>{LIBELLE_TYPE_ABSENCE[d!.type]}</strong> · {d!.jours} j ouvrables · du {jjmm(d!.dateDebut)} au {jjmm(d!.dateFin)}
               {d!.commentaire && <span className="cell-sub"> — « {d!.commentaire} »</span>}
             </p>
-            {prep.alerteCellule.membres > 0 && (
-              <p className={prep.alerteCellule.preselection ? 'field-erreur' : 'dmd-note'}>
-                {prep.alerteCellule.absents} autre(s) membre(s) de la cellule absent(s) sur la période ({prep.alerteCellule.membres} au total).
-              </p>
-            )}
+            {/* Qui d'autre de la cellule est absent ces jours-là (calendrier). */}
+            <CalendrierCellule slug={slug} demandeId={id} source="decideur" />
 
             <div className="vue-toggle rh-decisions" role="radiogroup" aria-label="Décision">
               {DECISIONS.map((x) => (

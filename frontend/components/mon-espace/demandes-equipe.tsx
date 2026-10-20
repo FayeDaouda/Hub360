@@ -5,6 +5,7 @@ import { ApiError } from '@/lib/client-api';
 import { getAbsencesAValider, jjmm, LIBELLE_TYPE_ABSENCE, STATUT_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Formulaire } from '@/components/absences/decision-n1-modal';
+import { CalendrierCellule } from '@/components/absences/calendrier-cellule';
 
 type Filtre = 'a_decider' | 'toutes';
 
@@ -143,6 +144,7 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
       <p className="dmd-note">
         Demande de la RH, accord de son N+1 (CFO) donné : la validation finale vous revient — la RH ne valide jamais sa propre demande.
       </p>
+      <CalendrierCellule slug={slug} demandeId={demande.id} source="decideur" />
       {refus && (
         <label className="field">
           <span className="field-label">Motif du refus</span>

@@ -63,6 +63,12 @@ export class ValidationsAbsencesController {
     return this.demandes.aValider(req.user, toutes === '1');
   }
 
+  // Calendrier de la cellule autour de la demande (N+1, CEO en validation finale).
+  @Get(':id/calendrier')
+  calendrier(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.demandes.calendrierPourDecideur(req.user, id);
+  }
+
   @Get(':id/preparation')
   preparation(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.demandes.preparationDecision(req.user, id);
@@ -91,6 +97,11 @@ export class DemandesRhController {
   @Get()
   lister() {
     return this.demandes.listeRh();
+  }
+
+  @Get('absences/:id/calendrier')
+  calendrier(@Param('id', ParseUUIDPipe) id: string) {
+    return this.demandes.calendrierCellule(id);
   }
 
   @Get('absences/:id/justificatif')

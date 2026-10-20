@@ -62,6 +62,17 @@ export const rejeterRemboursement = (slug: string, id: string, motif: string) =>
   apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/rejet`, { method: 'POST', body: { motif } });
 export const getJustificatif = (slug: string, chemin: string) => apiSociete<{ nom: string; url: string }>(slug, chemin);
 
+// Calendrier de la cellule autour d'une demande (revue RH 20/10/2026).
+export type CalendrierCellule = {
+  cellule: string | null;
+  periode: { debut: string; fin: string };
+  fenetre: { debut: string; fin: string };
+  membres: { nom: string; estDemandeur: boolean; absences: { debut: string; fin: string; type: TypeAbsence; etat: 'demande' | 'validee' | 'en_attente' }[] }[];
+};
+// « rh » : page RH ; « decideur » : N+1 ou CEO en validation finale.
+export const getCalendrierCellule = (slug: string, id: string, source: 'rh' | 'decideur') =>
+  apiSociete<CalendrierCellule>(slug, source === 'rh' ? `/rh/demandes/absences/${id}/calendrier` : `/absences/${id}/calendrier`);
+
 export const LIBELLE_TYPE_ABSENCE: Record<TypeAbsence, string> = {
   conge_paye: 'Congé payé',
   maladie: 'Maladie',

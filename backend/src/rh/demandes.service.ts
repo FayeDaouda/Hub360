@@ -57,6 +57,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 type Livrable = { cle: string; tacheId: string; projetId: string; source: string; projet: string; groupe: string; echeance: string };
 
 const ROLE_RH = 'RH';
+const FENETRE_CALENDRIER_J = 7; // jours montrés avant et après la demande
 // Dossier dont le compte (direct ou via la fiche d'équipe) tient le rôle RH.
 const RH_ROLE = { roles: { some: { role: { nom: ROLE_RH } } } };
 const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = { OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }] };
@@ -560,6 +561,75 @@ export class DemandesService {
   }
 
   // --- internes -------------------------------------------------------------------
+  // --- Calendrier de la cellule (revue RH 20/10/2026) -------------------------
+  // Au moment de décider : qui d'autre de la cellule est absent (validé ou en
+  // attente) autour de la période demandée — une semaine avant et après.
+  async calendrierCellule(id: string) {
+    const d = await this.absence(id);
+    const decaler = (iso: string, n: number) => {
+      const x = new Date(`${iso}T00:00:00Z`);
+      x.setUTCDate(x.getUTCDate() + n);
+      return x.toISOString().slice(0, 10);
+    };
+    const fenetre = { debut: decaler(d.dateDebut, -FENETRE_CALENDRIER_J), fin: decaler(d.dateFin, FENETRE_CALENDRIER_J) };
+    const periode = { debut: d.dateDebut, fin: d.dateFin };
+    const collab = await this.collaborateurDe(d.dossierId);
+    if (!collab?.celluleId) return { cellule: null, periode, fenetre, membres: [] };
+    const cellule = await this.prisma.cellule.findUniqueOrThrow({
+      where: { id: collab.celluleId },
+      select: {
+        nom: true,
+        membres: {
+          orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+          select: {
+            id: true,
+            prenom: true,
+            nom: true,
+            dossierPersonnel: {
+              select: {
+                absences: {
+                  where: {
+                    statut: { in: ['validee', 'accord_n1', 'attente_n1', 'autres_dates'] },
+                    dateDebut: { lte: fenetre.fin },
+                    dateFin: { gte: fenetre.debut },
+                  },
+                  select: { id: true, dateDebut: true, dateFin: true, statut: true, type: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    return {
+      cellule: cellule.nom,
+      periode,
+      fenetre,
+      membres: cellule.membres
+        // Le demandeur en tête, puis ses collègues.
+        .sort((x, y) => Number(y.id === collab.id) - Number(x.id === collab.id))
+        .map((m) => ({
+          nom: `${m.prenom} ${m.nom}`.trim(),
+          estDemandeur: m.id === collab.id,
+          absences: (m.dossierPersonnel?.absences ?? []).map((x) => ({
+            debut: x.dateDebut,
+            fin: x.dateFin,
+            type: x.type,
+            // La demande en cours de décision, une absence acquise, ou en attente.
+            etat: x.id === d.id ? ('demande' as const) : x.statut === 'validee' ? ('validee' as const) : ('en_attente' as const),
+          })),
+        })),
+    };
+  }
+
+  // Côté N+1 (et CEO en validation finale d'une demande de la RH).
+  async calendrierPourDecideur(a: Acteur, id: string) {
+    const d = await this.absence(id);
+    const finalCeo = a.role === ROLE_CEO && (await this.valideurFinal(d.dossierId)) === 'ceo';
+    if (!finalCeo && !(await this.estN1(a, d))) throw new ForbiddenException("Vous n'êtes pas le N+1 de cette demande.");
+    return this.calendrierCellule(id);
+  }
+
   private async absence(id: string) {
     const d = await this.prisma.demandeAbsence.findUnique({ where: { id } });
     if (!d) throw new NotFoundException('Demande introuvable');
