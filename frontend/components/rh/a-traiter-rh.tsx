@@ -84,7 +84,7 @@ export function ATraiterRh({
   const elements: Element[] = [];
 
   // 1. Demandes, les plus anciennes d'abord.
-  for (const a of donnees.demandes.absences.filter((x) => x.statut === 'accord_n1')) {
+  for (const a of donnees.demandes.absences.filter((x) => x.statut === 'accord_n1' && x.valideurFinal !== 'ceo')) {
     const d = depuis(a.createdAt);
     elements.push({
       cle: `abs-${a.id}`, groupe: 1, tri: a.createdAt, icone: Inbox, ...d, action: 'Valider',

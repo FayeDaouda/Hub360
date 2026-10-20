@@ -49,6 +49,9 @@ export const getDemandesRh = (slug: string) =>
   apiSociete<{ absences: DemandeAbsence[]; remboursements: DemandeRemboursement[]; attestations: AttestationRh[] }>(slug, '/rh/demandes');
 export const delivrerAttestation = (slug: string, id: string, fichier: { nom: string; url: string }) =>
   apiSociete<{ ok: true }>(slug, `/rh/demandes/attestations/${id}/delivrance`, { method: 'POST', body: fichier });
+// Validation finale d'une demande de la RH, par le CEO (« À valider »).
+export const validerFinaleCeo = (slug: string, id: string, valide: boolean, motif?: string) =>
+  apiSociete<DemandeAbsence>(slug, `/absences/${id}/validation-finale`, { method: 'POST', body: { valide, motif } });
 export const validerAbsenceRh = (slug: string, id: string, valide: boolean, motif?: string) =>
   apiSociete<DemandeAbsence>(slug, `/rh/demandes/absences/${id}/validation`, { method: 'POST', body: { valide, motif } });
 export const transmettreRemboursement = (slug: string, id: string) =>

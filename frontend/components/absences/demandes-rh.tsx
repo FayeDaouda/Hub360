@@ -55,7 +55,8 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
 
   if (!donnees) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
 
-  const absencesATraiter = donnees.absences.filter((d) => d.statut === 'accord_n1');
+  // Une demande de la RH attend le CEO : elle n'est pas « à traiter » ici.
+  const absencesATraiter = donnees.absences.filter((d) => d.statut === 'accord_n1' && d.valideurFinal !== 'ceo');
   const rembATraiter = donnees.remboursements.filter((r) => r.statut === 'soumise' || r.statut === 'transmise');
   const absences = toutes ? donnees.absences : absencesATraiter;
   const remboursements = toutes ? donnees.remboursements : rembATraiter;
@@ -95,7 +96,8 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                     </button>
                   )}
                   <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
-                  {ecriture && d.statut === 'accord_n1' && (
+                  {d.statut === 'accord_n1' && d.valideurFinal === 'ceo' && <span className="cell-sub">validation finale : CEO</span>}
+                  {ecriture && d.statut === 'accord_n1' && d.valideurFinal !== 'ceo' && (
                     <>
                       <button type="button" className="btn-primary btn-primary--sm" onClick={() => agir(() => validerAbsenceRh(slug, d.id, true))}>
                         Valider

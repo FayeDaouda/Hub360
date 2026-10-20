@@ -1414,6 +1414,10 @@ export type DemandeAbsence = {
   datesProposeesFin: string | null;
   createdAt: string;
   salarie?: { prenom: string; nom: string; poste?: string; matricule?: string };
+  // Liste RH : qui fait la validation finale (« ceo » pour une demande de la RH).
+  valideurFinal?: 'rh' | 'ceo';
+  // À valider du CEO : cette demande attend sa validation finale.
+  validationFinale?: boolean;
 };
 
 // Année civile en cours (maquette : Report · Acquis 2026 · Pris · Restant) ; disponible = restant.

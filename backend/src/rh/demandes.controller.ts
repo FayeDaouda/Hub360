@@ -72,6 +72,12 @@ export class ValidationsAbsencesController {
   decider(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: DecisionN1Dto) {
     return this.demandes.decider(req.user, id, dto);
   }
+
+  // Validation finale d'une demande de la RH : le CEO (vérifié par le service).
+  @Post(':id/validation-finale')
+  validationFinale(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ValidationRhDto) {
+    return this.demandes.validationFinaleCeo(req.user, id, dto.valide, dto.motif);
+  }
 }
 
 // La RH : toutes les demandes ; validation finale et suivi des remboursements.

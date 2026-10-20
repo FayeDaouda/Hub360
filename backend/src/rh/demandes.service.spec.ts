@@ -16,7 +16,7 @@ const DEMANDE = {
 };
 const TACHE = { id: 'T1', libelle: 'Plans APS', finLe: '2026-10-06', carte: { libelle: 'Livrables' }, projet: { code: 'PRJ.26' } };
 
-function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?: object | null } = {}) {
+function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?: object | null; demandeurRh?: boolean } = {}) {
   const update = jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...o.demande, ...data }));
   const majTache = jest.fn().mockReturnValue('majTache');
   const prisma = {
@@ -33,6 +33,9 @@ function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?:
       findUnique: jest.fn().mockResolvedValue({ societeId: 'S', collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }),
       findFirst: jest.fn().mockResolvedValue(o.moi === undefined ? { id: 'DOS1', collaborateur: null } : o.moi),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ societeId: 'S', prenom: 'Awa', nom: 'Diop', utilisateurId: 'UA', collaborateur: null }),
+      // Demandeur RH ? (validation finale par le CEO) — non par défaut.
+      count: jest.fn().mockResolvedValue(o.demandeurRh ? 1 : 0),
+      findMany: jest.fn().mockResolvedValue(o.demandeurRh ? [{ id: 'DOS1' }] : []),
     },
     tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? [TACHE]), update: majTache },
     evenementTacheProjet: { create: jest.fn().mockReturnValue('evt') },
@@ -105,7 +108,18 @@ describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   it('direction : Dir. GC → CTO ; Salarié → Dir. GC ; rôle sans circuit défini refusé', async () => {
     await expect(deposer('Dir. GC')).resolves.toMatchObject({ n1Role: 'CTO (transverse)' });
     await expect(deposer('Salarié')).resolves.toMatchObject({ n1Role: 'Dir. GC' });
-    await expect(deposer('RH')).rejects.toThrow(ConflictException);
+    // RH → CFO (revue RH 20/10/2026) ; un rôle sans circuit reste refusé.
+    await expect(deposer('RH')).resolves.toMatchObject({ n1Role: 'CFO' });
+    await expect(deposer('Rôle inconnu')).rejects.toThrow(ConflictException);
+  });
+  it('personne ne décide de sa propre demande ; demande de la RH : validation finale par le CEO', async () => {
+    // Le demandeur (compte UA) ne valide ni comme RH ni comme CEO.
+    const propre = svc({ demande: { statut: 'accord_n1' } });
+    await expect(propre.s.validationRh({ userId: 'UA', societeId: 'S', role: 'RH' }, 'D1', true)).rejects.toThrow(ForbiddenException);
+    const rh = svc({ demande: { statut: 'accord_n1' }, demandeurRh: true });
+    await expect(rh.s.validationRh({ userId: 'URH', societeId: 'S', role: 'RH' }, 'D1', true)).rejects.toThrow(/CEO/);
+    await expect(rh.s.validationFinaleCeo({ userId: 'UCEO', societeId: 'S', role: 'CFO' }, 'D1', true)).rejects.toThrow(ForbiddenException);
+    await expect(rh.s.validationFinaleCeo({ userId: 'UCEO', societeId: 'S', role: 'CEO (transverse)' }, 'D1', true)).resolves.toMatchObject({ statut: 'validee' });
   });
   it('directeurs (COO, CFO, CTO, CIO) → CEO ; le CEO va directement à la RH', async () => {
     for (const role of ['COO', 'CFO', 'CTO (transverse)', 'CIO (transverse)']) {

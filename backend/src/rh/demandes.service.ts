@@ -31,8 +31,9 @@ import {
 //  chef de cellule, ou sans cellule → Dir. GC ; Dir. GC → CTO.
 // Direction (décision du 12/10/2026) : COO, CFO, CTO et CIO → CEO ; le CEO
 // n'a pas de N+1 — sa demande passe directement à la validation RH.
-// La RH n'a pas encore de N+1 défini : sa demande est refusée avec un
-// message clair plutôt que routée au hasard.
+// RH → CFO (revue RH 20/10/2026, à confirmer par le boss : la RH remet son
+// reporting au CFO). Sa validation finale passe au CEO : personne ne valide
+// jamais sa propre demande (contrôlé à chaque étape).
 export const ROLE_N1_DIRECTION = 'Dir. GC';
 export const ROLE_CEO = 'CEO (transverse)';
 export const N1_DES_ROLES: Readonly<Record<string, string>> = {
@@ -41,6 +42,7 @@ export const N1_DES_ROLES: Readonly<Record<string, string>> = {
   CFO: ROLE_CEO,
   'CTO (transverse)': ROLE_CEO,
   'CIO (transverse)': ROLE_CEO,
+  RH: 'CFO',
 };
 // Salarié : sans cellule (ou chef de sa cellule) → Dir. GC.
 const ROLES_SALARIES = ['Salarié'];
@@ -55,6 +57,10 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 type Livrable = { cle: string; tacheId: string; projetId: string; source: string; projet: string; groupe: string; echeance: string };
 
 const ROLE_RH = 'RH';
+// Dossier dont le compte (direct ou via la fiche d'équipe) tient le rôle RH.
+const RH_ROLE = { roles: { some: { role: { nom: ROLE_RH } } } };
+const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = { OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }] };
+const COMPTE_DOSSIER = { utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } as const;
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const montant = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 
@@ -199,6 +205,19 @@ export class DemandesService {
     return r;
   }
 
+  // Validation finale : la RH, sauf pour une demande de la RH elle-même → CEO.
+  private async valideurFinal(dossierId: string): Promise<'rh' | 'ceo'> {
+    const n = await this.prisma.dossierPersonnel.count({ where: { id: dossierId, ...DEMANDEUR_RH } });
+    return n ? 'ceo' : 'rh';
+  }
+
+  // Personne ne décide de sa propre demande (N+1 ou validation finale).
+  private async interdireSaPropreDemande(a: Acteur, d: DemandeAbsence) {
+    if ((await this.salarieDe(d.dossierId)).compte === a.userId) {
+      throw new ForbiddenException('Vous ne pouvez pas décider de votre propre demande.');
+    }
+  }
+
   // --- N+1 ----------------------------------------------------------------------
   private async estN1(a: Acteur, d: DemandeAbsence): Promise<boolean> {
     if (d.n1Role) {
@@ -229,13 +248,29 @@ export class DemandesService {
     if (c) ou.push({ n1CollaborateurId: c.id });
     if (ROLES_N1.includes(a.role)) ou.push({ n1Role: a.role });
     if (a.role === 'societe_admin') ou.push({ n1Role: { in: ROLES_N1 } });
+    // CEO : la validation finale des demandes de la RH (après l'accord du CFO).
+    if (a.role === ROLE_CEO) ou.push({ statut: toutes ? undefined : 'accord_n1', dossier: DEMANDEUR_RH });
     if (!ou.length) return [];
     const demandes = await this.prisma.demandeAbsence.findMany({
-      where: { ...(!toutes && { statut: 'attente_n1' as const }), OR: ou, dossier: { societeId: a.societeId } },
-      include: { dossier: { select: { prenom: true, nom: true, poste: true } } },
+      where: {
+        ...(!toutes && { statut: { in: a.role === ROLE_CEO ? ['attente_n1', 'accord_n1'] : ['attente_n1'] } }),
+        OR: ou,
+        dossier: { societeId: a.societeId },
+      },
+      include: { dossier: { select: { prenom: true, nom: true, poste: true, ...COMPTE_DOSSIER } } },
       orderBy: toutes ? { createdAt: 'desc' } : { dateDebut: 'asc' },
     });
-    return demandes.map((d) => ({ ...versAbsence(d), salarie: d.dossier }));
+    const rhIds = a.role === ROLE_CEO ? await this.dossiersRh(demandes.map((d) => d.dossierId)) : new Set<string>();
+    return demandes
+      // Jamais sa propre demande dans sa file (un N+1 qui serait aussi le demandeur).
+      .filter((d) => (d.dossier.utilisateurId ?? d.dossier.collaborateur?.utilisateurId) !== a.userId)
+      // File « à décider » du CEO : un accord_n1 n'y figure que s'il attend sa validation finale.
+      .filter((d) => toutes || d.statut !== 'accord_n1' || rhIds.has(d.dossierId))
+      .map((d) => ({
+        ...versAbsence(d),
+        salarie: { prenom: d.dossier.prenom, nom: d.dossier.nom, poste: d.dossier.poste },
+        validationFinale: rhIds.has(d.dossierId) && d.statut === 'accord_n1',
+      }));
   }
 
   // Livrables dus pendant l'absence + personnes à qui les confier + alerte
@@ -277,6 +312,7 @@ export class DemandesService {
   async decider(a: Acteur, id: string, dto: DecisionN1Dto) {
     const d = await this.absence(id);
     if (!(await this.estN1(a, d))) throw new ForbiddenException("Vous n'êtes pas le N+1 de cette demande.");
+    await this.interdireSaPropreDemande(a, d);
     if (d.statut !== 'attente_n1') throw new ConflictException('Demande déjà tranchée.');
     const base = { decisionN1ParId: a.userId, decisionN1Le: new Date(), decisionN1: dto.decision };
 
@@ -384,7 +420,12 @@ export class DemandesService {
         orderBy: { demandeLe: 'desc' },
       }),
     ]);
-    return { absences: absences.map((d) => ({ ...versAbsence(d), salarie: d.dossier })), remboursements, attestations };
+    const rhIds = await this.dossiersRh(absences.map((d) => d.dossierId));
+    return {
+      absences: absences.map((d) => ({ ...versAbsence(d), salarie: d.dossier, valideurFinal: rhIds.has(d.dossierId) ? 'ceo' : 'rh' })),
+      remboursements,
+      attestations,
+    };
   }
 
   // Attestation de travail : la RH la délivre en déposant le document signé.
@@ -408,6 +449,26 @@ export class DemandesService {
 
   async validationRh(a: Acteur, id: string, valide: boolean, motif?: string) {
     const d = await this.absence(id);
+    if ((await this.valideurFinal(d.dossierId)) === 'ceo') {
+      throw new ForbiddenException('La validation finale d’une demande de la RH revient au CEO.');
+    }
+    return this.trancherFinal(a, d, valide, motif, 'RH');
+  }
+
+  // Validation finale d'une demande de la RH, par le CEO (Mon espace › À valider).
+  async validationFinaleCeo(a: Acteur, id: string, valide: boolean, motif?: string) {
+    if (a.role !== ROLE_CEO) throw new ForbiddenException('Réservé au CEO.');
+    const d = await this.absence(id);
+    const dossier = await this.prisma.dossierPersonnel.findUnique({ where: { id: d.dossierId }, select: { societeId: true } });
+    if (dossier?.societeId !== a.societeId || (await this.valideurFinal(d.dossierId)) !== 'ceo') {
+      throw new ForbiddenException('Cette demande ne relève pas de votre validation finale.');
+    }
+    return this.trancherFinal(a, d, valide, motif, 'CEO');
+  }
+
+  private async trancherFinal(a: Acteur, d: DemandeAbsence, valide: boolean, motif: string | undefined, par: 'RH' | 'CEO') {
+    const id = d.id;
+    await this.interdireSaPropreDemande(a, d);
     if (d.statut !== 'accord_n1') throw new ConflictException("Pas d'accord du N+1 à valider.");
     if (!valide && !motif?.trim()) throw new BadRequestException('Motif obligatoire pour un refus.');
     const tranchee = await this.prisma.demandeAbsence.update({
@@ -416,7 +477,7 @@ export class DemandesService {
         ? { statut: 'validee', valideRhParId: a.userId, valideRhLe: new Date() }
         : { statut: 'refusee', valideRhParId: a.userId, valideRhLe: new Date(), commentaireRefus: motif ?? '' },
     });
-    await this.signalerAbsence(tranchee, a.userId, 'salarie', valide ? 'validée par la RH' : 'refusée par la RH');
+    await this.signalerAbsence(tranchee, a.userId, 'salarie', valide ? `validée par ${par === 'RH' ? 'la RH' : 'le CEO'}` : `refusée par ${par === 'RH' ? 'la RH' : 'le CEO'}`);
     return versAbsence(tranchee);
   }
 
@@ -450,6 +511,12 @@ export class DemandesService {
     return maj;
   }
 
+  private async dossiersRh(ids: string[]): Promise<Set<string>> {
+    if (!ids.length) return new Set();
+    const l = await this.prisma.dossierPersonnel.findMany({ where: { id: { in: [...new Set(ids)] }, ...DEMANDEUR_RH }, select: { id: true } });
+    return new Set(l.map((x) => x.id));
+  }
+
   // --- Notifications (phase 3, 14/10/2026) ----------------------------------------
   private async salarieDe(dossierId: string) {
     const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({
@@ -471,7 +538,8 @@ export class DemandesService {
       titre = `Votre absence du ${periode} : ${message}`;
       ids = [s.compte];
     } else if (vers === 'rh') {
-      ids = await this.notifications.titulairesRole(s.societeId, ROLE_RH);
+      const final = await this.valideurFinal(d.dossierId);
+      ids = await this.notifications.titulairesRole(s.societeId, final === 'ceo' ? ROLE_CEO : ROLE_RH);
     } else if (d.n1CollaborateurId) {
       ids = await this.notifications.comptesDe([d.n1CollaborateurId]);
     } else if (d.n1Role) {

@@ -118,7 +118,7 @@ export default function RhPage({ params }: Props) {
         setCompteurs({
           feuilles: f.periodes.reduce((n, p) => n + p.aControler, 0),
           demandes:
-            d.absences.filter((a) => a.statut === 'accord_n1').length +
+            d.absences.filter((a) => a.statut === 'accord_n1' && a.valideurFinal !== 'ceo').length +
             d.remboursements.filter((r) => r.statut === 'soumise' || r.statut === 'transmise').length +
             d.attestations.filter((a) => !a.delivreeLe).length,
           integrations: i.length,
