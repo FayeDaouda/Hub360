@@ -232,8 +232,8 @@ export function AValiderCfo({
       ouvrir: onOuvrirClotures,
     });
   }
-  // 6. Reporting reçu du dernier mois clos.
-  for (const r of reportings) {
+  // 6. Reporting reçu du dernier mois clos, tant qu'il n'est pas lu.
+  for (const r of reportings.filter((x) => !x.lu)) {
     elements.push({
       cle: `reporting-${r.type}-${r.mois}`,
       groupe: 6,

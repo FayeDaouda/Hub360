@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { TypeReporting } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { DeposerReportingDto, SaisirDecisionDto } from './dto';
+import { DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
+import { SuiviReportingService } from './suivi-reporting.service';
 import { AttentionService, type ActeurAttention } from './attention.service';
 import { type Acteur, PilotageService } from './pilotage.service';
 
@@ -21,6 +22,7 @@ export class PilotageController {
   constructor(
     private pilotage: PilotageService,
     private attentionService: AttentionService,
+    private suivi: SuiviReportingService,
   ) {}
 
   @Get()
@@ -55,6 +57,45 @@ export class PilotageController {
     @Body() dto: DeposerReportingDto,
   ) {
     return this.pilotage.deposer(req.user, type, mois, dto.analyse);
+  }
+
+  // Suivi d'un reporting déposé (revue CFO, lot 5) : droits vérifiés par le
+  // service (destinataire : lu / question ; émetteur : réponse).
+  @Get('reportings/questions-ouvertes')
+  questionsOuvertes(@Req() req: R) {
+    return this.suivi.questionsOuvertes(req.user);
+  }
+
+  @Post('reportings/:type/:mois/lecture')
+  @HttpCode(200)
+  async lire(@Req() req: R, @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting, @Param('mois') mois: string) {
+    await this.suivi.lire(req.user, type, mois);
+    return this.pilotage.vue(req.user);
+  }
+
+  @Post('reportings/:type/:mois/questions')
+  @HttpCode(200)
+  async questionner(
+    @Req() req: R,
+    @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting,
+    @Param('mois') mois: string,
+    @Body() dto: MessageReportingDto,
+  ) {
+    await this.suivi.questionner(req.user, type, mois, dto.texte);
+    return this.pilotage.vue(req.user);
+  }
+
+  @Post('reportings/:type/:mois/questions/:questionId/reponse')
+  @HttpCode(200)
+  async repondre(
+    @Req() req: R,
+    @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting,
+    @Param('mois') mois: string,
+    @Param('questionId', ParseUUIDPipe) questionId: string,
+    @Body() dto: MessageReportingDto,
+  ) {
+    await this.suivi.repondre(req.user, type, mois, questionId, dto.texte);
+    return this.pilotage.vue(req.user);
   }
 
   @Post('decisions')

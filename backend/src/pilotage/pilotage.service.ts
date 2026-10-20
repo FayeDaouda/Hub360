@@ -22,6 +22,7 @@ import {
 } from './pilotage-regles';
 import { ChiffresPilotageService } from './chiffres.service';
 import { ReportingRhService } from './reporting-rh.service';
+import { SuiviReportingService } from './suivi-reporting.service';
 import type { SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 
@@ -71,6 +72,7 @@ export class PilotageService {
     private chiffres: ChiffresPilotageService,
     private notifications: NotificationsService,
     private reportingRh: ReportingRhService,
+    private suivi: SuiviReportingService,
   ) {}
 
   async vue(a: Acteur) {
@@ -414,6 +416,11 @@ export class PilotageService {
     const lignes = [...moisAReporter(jour)].reverse().flatMap((mois) =>
       types.map((type) => ({ mois, type, depot: deposes.find((d) => d.type === type && d.mois === mois) ?? null })),
     );
+    // Suivi des dépôts (lu, questions) : une requête pour tous.
+    const suivis = await this.suivi.suivi(
+      a,
+      lignes.flatMap(({ type, depot }) => (depot ? [{ id: depot.id, type }] : [])),
+    );
     return Promise.all(
       lignes.map(async ({ mois, type, depot }) => {
         const deposeLe = depot ? jourIso(depot.deposeLe) : null;
@@ -434,6 +441,7 @@ export class PilotageService {
           contenu,
           analyse: depot?.analyse ?? null,
           peutDeposer: !depot && a.role === emetteur,
+          suivi: depot ? (suivis.get(depot.id) ?? null) : null,
         };
       }),
     );
@@ -461,9 +469,16 @@ export class PilotageService {
     if (!types.length || !mois) return [];
     const deposes = await this.prisma.reportingMensuel.findMany({
       where: { societeId: a.societeId, type: { in: types }, mois },
-      select: { type: true, mois: true, deposeLe: true },
+      select: { type: true, mois: true, deposeLe: true, lectures: { where: { lecteurId: a.userId }, select: { id: true } } },
     });
-    return deposes.map((d) => ({ type: d.type, mois: d.mois, periode: moisLong(d.mois), deposeLe: jourIso(d.deposeLe), emetteur: libelleRole(REPORTINGS[d.type].emetteur) }));
+    return deposes.map((d) => ({
+      type: d.type,
+      mois: d.mois,
+      periode: moisLong(d.mois),
+      deposeLe: jourIso(d.deposeLe),
+      emetteur: libelleRole(REPORTINGS[d.type].emetteur),
+      lu: d.lectures.length > 0,
+    }));
   }
 
   async deposer(a: Acteur, type: TypeReporting, mois: string, analyse: string) {

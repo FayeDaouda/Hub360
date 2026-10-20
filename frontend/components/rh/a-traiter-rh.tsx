@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, CalendarClock, ChevronDown, ClipboardList, FileWarning, IdCard, Inbox, Scale, Stethoscope, Timer, UserCheck, UserPlus, type LucideIcon } from 'lucide-react';
+import { AlarmClock, CalendarClock, ChevronDown, ClipboardList, FileWarning, MessageCircleQuestion, IdCard, Inbox, Scale, Stethoscope, Timer, UserCheck, UserPlus, type LucideIcon } from 'lucide-react';
 import type { AttestationRh } from '@/lib/demandes';
 import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { getFeuillesTemps, libelleMois } from '@/lib/temps';
 import { formatMontant } from '@/lib/format';
 import type { AlerteRh } from '@/lib/rh';
+import type { QuestionOuverte } from '@/lib/pilotage';
 import type { DemandeAbsence, DemandeRemboursement, DossierPersonnel, FeuillesTemps, IntegrationSalarie, ReportingADeposer } from '@/lib/types';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
@@ -17,6 +18,7 @@ export type DonneesRh = {
   integrations: IntegrationSalarie[];
   alertes: AlerteRh[];
   reportings: ReportingADeposer[];
+  questions: QuestionOuverte[]; // questions du destinataire sur un reporting déposé
 };
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -177,6 +179,16 @@ export function ATraiterRh({
       detail: `prérempli, à relire et commenter · pour le CFO, échéance le ${jjmm(r.echeance)}`,
       quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `dans ${n} j`,
       ton: r.statut === 'en_retard' ? 'risque' : 'attention',
+      ouvrir: () => router.push(`/admin/${slug}?onglet=reportings`),
+    });
+  }
+  // Questions du CFO sur un reporting déposé : à répondre sous le reporting.
+  for (const q of donnees.questions) {
+    const d = depuis(q.le);
+    elements.push({
+      cle: `question-${q.id}`, groupe: 1, tri: q.le, icone: MessageCircleQuestion, ...d, action: 'Répondre',
+      titre: `Question${q.par ? ` de ${q.par}` : ''} · ${q.titre} · ${q.periode}`,
+      detail: 'à répondre dans le reporting (Pilotage)',
       ouvrir: () => router.push(`/admin/${slug}?onglet=reportings`),
     });
   }

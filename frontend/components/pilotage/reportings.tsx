@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { deposerReporting } from '@/lib/pilotage';
+import { PastillesSuivi, SuiviReporting } from '@/components/pilotage/suivi-reporting';
 import type { ReportingPilotage, StatutReporting, VuePilotage } from '@/lib/types';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
@@ -21,7 +22,14 @@ function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
 export function Reportings({ slug, reportings, onVue }: { slug: string; reportings: ReportingPilotage[]; onVue: (v: VuePilotage) => void }) {
   const cle = (r: ReportingPilotage) => `${r.type}:${r.mois}`;
   // D'abord celui que l'acteur doit déposer (lien « À traiter » de la RH).
-  const premier = reportings.find((r) => r.peutDeposer) ?? reportings.find((r) => r.statut === 'a_deposer' || r.statut === 'en_retard') ?? reportings[0];
+  // Puis, pour le destinataire, celui qu'il n'a pas lu ; pour l'émetteur, une question ouverte.
+  const premier =
+    reportings.find((r) => r.peutDeposer) ??
+    reportings.find((r) => (r.suivi?.peutLire && !r.suivi.luParMoi) || (r.suivi?.peutRepondre && r.suivi.questionsOuvertes > 0)) ??
+    // Sinon le plus récent dont l'acteur est destinataire ou émetteur.
+    reportings.find((r) => r.suivi?.peutLire || r.suivi?.peutRepondre) ??
+    reportings.find((r) => r.statut === 'a_deposer' || r.statut === 'en_retard') ??
+    reportings[0];
   const [choisi, setChoisi] = useState<string | null>(premier ? cle(premier) : null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -74,8 +82,9 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
                     {x.emetteur} → {x.destinataire}
                   </span>
                   <span role="cell">{jjmmaaaa(x.echeance)}</span>
-                  <span role="cell">
+                  <span role="cell" className="pi-pastilles">
                     <span className={`pill ${pill.classe}`}>{pill.libelle}</span>
+                    <PastillesSuivi r={x} />
                   </span>
                 </button>
               );
@@ -92,7 +101,10 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
           <h2>
             {r.titre} · {r.periode}
           </h2>
-          <span className={`pill ${pillStatut(r).classe} pi-fiche-statut`}>{pillStatut(r).libelle}</span>
+          <span className="pi-pastilles pi-fiche-statut">
+            <span className={`pill ${pillStatut(r).classe}`}>{pillStatut(r).libelle}</span>
+            <PastillesSuivi r={r} />
+          </span>
           {r.contenu ? (
             <dl className="pi-rubriques">
               {r.contenu.map((c) => (
@@ -132,6 +144,7 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
             )
           )}
           {erreur && <p className="field-erreur">{erreur}</p>}
+          <SuiviReporting key={cle(r)} slug={slug} r={r} onVue={onVue} />
           {r.peutDeposer && (
             <button type="button" className="btn-primary pi-deposer" disabled={envoi || analyse.trim().length < 10} onClick={() => deposer(r)}>
               {envoi ? 'Dépôt…' : 'Déposer le reporting'}

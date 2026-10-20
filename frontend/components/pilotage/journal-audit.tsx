@@ -13,6 +13,7 @@ const CATEGORIES: Record<CategorieAudit, string> = {
   rh: 'Départs',
   // Qui a consulté ou modifié le salaire ou un bulletin de qui (jamais de montant).
   paie: 'Paie',
+  pilotage: 'Reportings',
 };
 const horodatage = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });

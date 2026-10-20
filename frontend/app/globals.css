@@ -14544,3 +14544,114 @@ tr.is-demandeur .cal-nom {
     background: color-mix(in oklch, var(--text) 4%, transparent);
   }
 }
+
+/* Pilotage · suivi d'un reporting déposé (revue CFO 20/10/2026, lot 5). */
+.pi-pastilles {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.sr {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.sr-tete {
+  display: grid;
+  gap: 0.4rem;
+}
+.sr-tete .po-kicker {
+  margin: 0;
+}
+.sr-lu,
+.sr-attente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.sr-lu {
+  color: color-mix(in oklch, var(--pill-succes) 85%, var(--text));
+  font-weight: 600;
+}
+.sr-attente {
+  color: var(--text-muted);
+}
+.sr-actions,
+.sr-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.sr-boutons {
+  justify-content: flex-end;
+}
+.sr-formulaire {
+  display: grid;
+  gap: 0.5rem;
+}
+.sr-fil {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sr-question {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--pill-attention);
+  border-radius: var(--radius-md);
+}
+.sr-question[data-etat='repondue'] {
+  border-left-color: var(--pill-succes);
+}
+.sr-message {
+  display: grid;
+  gap: 0.2rem;
+}
+.sr-message--reponse {
+  margin-left: 1rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.sr-auteur {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.sr-auteur strong {
+  color: var(--text);
+}
+.sr-texte {
+  margin: 0;
+  white-space: pre-wrap;
+}
+@media (max-width: 720px) {
+  .sr-actions > *,
+  .sr-boutons > * {
+    flex: 1;
+    justify-content: center;
+  }
+  .sr-message--reponse {
+    margin-left: 0.5rem;
+  }
+}
+/* Pastilles d'état dans une colonne étroite : elles passent à la ligne. */
+.pi-pastilles {
+  min-width: 0;
+}
+.pi-pastilles .pill {
+  max-width: 100%;
+  white-space: normal;
+}

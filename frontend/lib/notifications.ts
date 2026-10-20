@@ -63,6 +63,8 @@ export function lienNotificationAdmin(
   if (n.type === 'salaire_decide') return `${base}/rh?onglet=personnel`;
   // Contrôle interne : avoirs et clôture se traitent en tête de Finances.
   if (['avoir_emis', 'avoir_a_valider', 'avoir_decide', 'cloture_a_faire'].includes(n.type)) return `${base}/facturation`;
+  // Suivi des reportings : le fil est sous le reporting, dans Pilotage.
+  if (n.type === 'reporting_question' || n.type === 'reporting_reponse') return `${base}?onglet=reportings`;
   // Relance : la RH traite dans RH › Demandes ; le N+1 (ou le CEO) dans « À valider ».
   if (n.type === 'rappel_demande') {
     return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;

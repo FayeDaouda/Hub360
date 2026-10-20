@@ -57,7 +57,7 @@ import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
 import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
 import { ATraiterRh, type DonneesRh } from '@/components/rh/a-traiter-rh';
-import { getReportingsADeposer } from '@/lib/pilotage';
+import { getQuestionsOuvertes, getReportingsADeposer } from '@/lib/pilotage';
 import { DepotBulletins } from '@/components/rh/depot-bulletins';
 import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
@@ -138,9 +138,10 @@ export default function RhPage({ params }: Props) {
       getAlertesRh(params.slug),
       // Facultatif : sans accès au Pilotage, pas de ligne « reporting ».
       getReportingsADeposer(params.slug).catch(() => []),
+      getQuestionsOuvertes(params.slug).catch(() => []),
     ])
-      .then(([f, d, i, al, rp]) => {
-        setBrut({ feuilles: f, demandes: d, integrations: i, alertes: al, reportings: rp });
+      .then(([f, d, i, al, rp, qs]) => {
+        setBrut({ feuilles: f, demandes: d, integrations: i, alertes: al, reportings: rp, questions: qs });
         setCompteurs({
           feuilles: f.periodes.reduce((n, p) => n + p.aControler, 0),
           demandes:

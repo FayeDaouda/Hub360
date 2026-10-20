@@ -227,6 +227,9 @@ enum NotificationType {
   avoir_a_valider // au CEO, avoir au-delà du seuil
   avoir_decide // au demandeur
   cloture_a_faire // au CFO : mois précédent pas encore clôturé
+  // Suivi des reportings (revue CFO, lot 5)
+  reporting_question // à l'émetteur : question du destinataire
+  reporting_reponse // à l'auteur de la question
 }
 
 model Notification {
@@ -2291,10 +2294,46 @@ model ReportingMensuel {
   // obligatoire au dépôt et figée avec le contenu.
   analyse     String?
 
-  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  societe   Societe             @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  lectures  LectureReporting[]
+  questions QuestionReporting[]
 
   @@unique([societeId, type, mois])
   @@map("reportings_mensuels")
+}
+
+// Suivi d'un reporting déposé (revue CFO 20/10/2026, lot 5) : le destinataire
+// accuse réception (une lecture par personne et par dépôt, la première fait
+// foi) ou pose une question ; l'émetteur répond dans le même fil. Le dépôt
+// est figé (aucun redépôt) : la lecture porte l'id du dépôt et sa date de
+// dépôt (version lue), pour qu'un redépôt futur ne la rattache pas au neuf.
+model LectureReporting {
+  id          String   @id @default(uuid())
+  reportingId String   @map("reporting_id")
+  lecteurId   String   @map("lecteur_id") // audit, pas de FK
+  version     DateTime // deposeLe du dépôt lu
+  luLe        DateTime @default(now()) @map("lu_le")
+
+  reporting ReportingMensuel @relation(fields: [reportingId], references: [id], onDelete: Cascade)
+
+  @@unique([reportingId, lecteurId])
+  @@map("lectures_reporting")
+}
+
+model QuestionReporting {
+  id           String    @id @default(uuid())
+  reportingId  String    @map("reporting_id")
+  auteurId     String    @map("auteur_id") // audit, pas de FK
+  texte        String
+  creeLe       DateTime  @default(now()) @map("cree_le")
+  reponse      String?
+  reponduParId String?   @map("repondu_par_id")
+  reponduLe    DateTime? @map("repondu_le")
+
+  reporting ReportingMensuel @relation(fields: [reportingId], references: [id], onDelete: Cascade)
+
+  @@index([reportingId])
+  @@map("questions_reporting")
 }
 
 enum OrigineDecision {

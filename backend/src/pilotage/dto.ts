@@ -18,3 +18,9 @@ export class SaisirDecisionDto {
 export class DeposerReportingDto {
   @IsString() @MinLength(10) @MaxLength(4000) analyse!: string;
 }
+
+// Suivi d'un reporting déposé (revue CFO, lot 5) : question du destinataire,
+// réponse de l'émetteur.
+export class MessageReportingDto {
+  @IsString() @MinLength(3) @MaxLength(2000) texte!: string;
+}

@@ -15,10 +15,20 @@ export function getReportingsADeposer(slug: string): Promise<ReportingADeposer[]
   return apiSociete<ReportingADeposer[]>(slug, '/pilotage/reportings/a-deposer');
 }
 
-export type ReportingRecu = { type: 'direction' | 'rh'; mois: string; periode: string; deposeLe: string; emetteur: string };
+export type ReportingRecu = { type: 'direction' | 'rh'; mois: string; periode: string; deposeLe: string; emetteur: string; lu: boolean };
 export function getReportingsRecus(slug: string): Promise<ReportingRecu[]> {
   return apiSociete<ReportingRecu[]>(slug, '/pilotage/reportings/recus');
 }
+
+// Suivi d'un reporting déposé (revue CFO, lot 5) : chaque action rend la vue.
+export const lireReporting = (slug: string, type: 'direction' | 'rh', mois: string) =>
+  apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/lecture`, { method: 'POST', body: {} });
+export const poserQuestionReporting = (slug: string, type: 'direction' | 'rh', mois: string, texte: string) =>
+  apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/questions`, { method: 'POST', body: { texte } });
+export const repondreQuestionReporting = (slug: string, type: 'direction' | 'rh', mois: string, questionId: string, texte: string) =>
+  apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/questions/${questionId}/reponse`, { method: 'POST', body: { texte } });
+export type QuestionOuverte = { id: string; type: 'direction' | 'rh'; mois: string; periode: string; titre: string; le: string; par: string | null };
+export const getQuestionsOuvertes = (slug: string) => apiSociete<QuestionOuverte[]>(slug, '/pilotage/reportings/questions-ouvertes');
 
 export function deposerReporting(slug: string, type: 'direction' | 'rh', mois: string, analyse: string): Promise<VuePilotage> {
   return apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/depot`, { method: 'POST', body: { analyse } });
@@ -43,7 +53,7 @@ export function cloturerDecision(slug: string, id: string): Promise<VuePilotage>
 
 // Journal d'audit (Pilotage › Journal) : CEO, CIO, administration. Période
 // [debut, fin] incluse, 30 derniers jours par défaut, un an au plus.
-export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie';
+export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';
 export type LigneAudit = { id: string; le: string; categorie: CategorieAudit; action: string; detail: string; par: string | null };
 export type JournalAudit = { debut: string; fin: string; lignes: LigneAudit[] };
 

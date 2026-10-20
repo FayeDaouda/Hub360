@@ -489,6 +489,9 @@ export type NotificationType =
   | 'avoir_a_valider'
   | 'avoir_decide'
   | 'cloture_a_faire'
+  // Suivi des reportings : question (→ émetteur), réponse (→ auteur).
+  | 'reporting_question'
+  | 'reporting_reponse'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
@@ -1708,6 +1711,21 @@ export type ReportingPilotage = {
   contenu: { libelle: string; valeur: string }[] | null; // null = aucune rubrique définie
   analyse: string | null; // rédigée par l'émetteur au dépôt
   peutDeposer: boolean;
+  // Suivi d'un dépôt (revue CFO, lot 5) ; null tant que non déposé.
+  suivi: SuiviReporting | null;
+};
+
+export type SuiviReporting = {
+  lecture: { le: string; par: string | null } | null; // première lecture du destinataire
+  luParMoi: boolean;
+  questionsOuvertes: number;
+  // Fil des questions : seulement pour le destinataire et l'émetteur (null sinon).
+  fil:
+    | { id: string; texte: string; le: string; par: string | null; reponse: string | null; reponduLe: string | null; reponduPar: string | null }[]
+    | null;
+  peutLire: boolean;
+  peutQuestionner: boolean;
+  peutRepondre: boolean;
 };
 
 // Reporting que l'acteur doit encore déposer (« À traiter » de la page RH).

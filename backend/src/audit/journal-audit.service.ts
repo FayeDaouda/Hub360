@@ -4,10 +4,11 @@ import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { moisFr } from '../projets/facturation/cloture';
 import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.service';
+import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Acteur = { userId: string; societeId: string; role: string };
-export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie';
+export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';
 export type LigneAudit = { id: string; le: Date; categorie: CategorieAudit; action: string; detail: string; par: string | null };
 
 // Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.
@@ -82,6 +83,16 @@ export class JournalAuditService {
       }),
     ]);
     // Contrôle interne (revue CFO 20/10/2026) : demandes d'avoir et clôtures.
+    // Suivi des reportings (lot 5) : qui a lu, questionné, répondu — jamais le texte.
+    const reportingSel = { select: { type: true, mois: true } } as const;
+    const [lecturesReporting, questionsReporting] = await Promise.all([
+      this.prisma.lectureReporting.findMany({ where: { luLe: dans, reporting: { societeId: S } }, include: { reporting: reportingSel } }),
+      this.prisma.questionReporting.findMany({
+        where: { reporting: { societeId: S }, OR: [{ creeLe: dans }, { reponduLe: dans }] },
+        select: { id: true, auteurId: true, creeLe: true, reponduParId: true, reponduLe: true, reporting: reportingSel },
+      }),
+    ]);
+    const nomReporting = (r: { type: 'direction' | 'rh'; mois: string }) => `${titreReporting(r.type)} · ${moisFr(r.mois)}`;
     const [demandesAvoir, clotures] = await Promise.all([
       this.prisma.demandeAvoir.findMany({
         where: { societeId: S, OR: [{ demandeLe: dans }, { decideLe: dans }] },
@@ -160,6 +171,22 @@ export class JournalAuditService {
         }
         return lignesDemande;
       }),
+      ...lecturesReporting.map((l) => ({
+        id: `reporting-lu:${l.id}`,
+        le: l.luLe,
+        categorie: 'pilotage' as const,
+        action: 'Reporting lu',
+        detail: nomReporting(l.reporting),
+        parId: l.lecteurId,
+      })),
+      ...questionsReporting.flatMap((q) => [
+        ...(q.creeLe >= de && q.creeLe < jusque
+          ? [{ id: `reporting-q:${q.id}`, le: q.creeLe, categorie: 'pilotage' as const, action: 'Question sur un reporting', detail: nomReporting(q.reporting), parId: q.auteurId }]
+          : []),
+        ...(q.reponduLe && q.reponduLe >= de && q.reponduLe < jusque
+          ? [{ id: `reporting-r:${q.id}`, le: q.reponduLe, categorie: 'pilotage' as const, action: 'Réponse à une question', detail: nomReporting(q.reporting), parId: q.reponduParId }]
+          : []),
+      ]),
       ...clotures.map((c) => ({
         id: `cloture:${c.id}`,
         le: c.createdAt,
