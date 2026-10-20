@@ -45,7 +45,7 @@ export function OngletFactures({
         <BoutonExport desactive={!visibles.length} onExporter={() => exporterFactures(visibles)} />
       </div>
       <div className="admin-table-wrap fin-table-wrap">
-        <table className="admin-table fin-table">
+        <table className="admin-table fin-table fin-table--factures">
           <thead>
             <tr>
               <th>Numéro</th>
@@ -92,7 +92,7 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
         const code = f.dossierCrm?.code ?? f.projet?.code ?? null;
         return (
           <tr key={f.id} className="fin-ligne" onClick={() => onOuvrir(f)}>
-            <td data-label="Numéro">
+            <td data-label="Numéro" className="fl-ref">
               <span className="cell-stack">
                 <span className={`fin-code${f.reference ? '' : ' factu-ref-prevue'}`} title={f.reference ? undefined : 'Référence attribuée à la validation'}>
                   {f.reference ?? 'brouillon'}
@@ -108,21 +108,21 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
                 )}
               </span>
             </td>
-            <td data-label="Client">
+            <td data-label="Client" className="fl-client">
               <span className="cell-stack">
                 <strong>{f.client?.nom ?? '—'}</strong>
                 {code && <span className="cell-sub fin-code fin-code--leger">{code}</span>}
               </span>
             </td>
-            <td data-label="Créée le">{jjmmaaaa(f.creeLe)}</td>
-            <td data-label="Échéance" className={f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < aujourdhui() ? 'fin-retard' : undefined}>
+            <td data-label="Créée le" className="fl-date">{jjmmaaaa(f.creeLe)}</td>
+            <td data-label="Échéance" className={`fl-echeance${f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < aujourdhui() ? ' fin-retard' : ''}`}>
               {f.echeanceLe ? jjmmaaaa(f.echeanceLe) : '—'}
             </td>
-            <td data-label="Payée">{payee ? jjmmaaaa(payee) : ''}</td>
-            <td data-label="Total TTC" className="num">
+            <td data-label="Payée" className="fl-payee">{payee ? jjmmaaaa(payee) : ''}</td>
+            <td data-label="Total TTC" className="num fl-ttc">
               <strong>{formatMontant(f.montantTtc)}</strong>
             </td>
-            <td data-label="Encaissé">
+            <td data-label="Encaissé" className="fl-encaisse">
               {!f.estAvoir && (
                 <span className="fin-encaisse">
                   <strong>{formatMontant(f.montantPaye)}</strong>
@@ -132,7 +132,7 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
                 </span>
               )}
             </td>
-            <td data-label="Statut">
+            <td data-label="Statut" className="fl-statut">
               <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
             </td>
           </tr>

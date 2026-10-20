@@ -14655,3 +14655,211 @@ tr.is-demandeur .cal-nom {
   max-width: 100%;
   white-space: normal;
 }
+
+/* Finances · version mobile (revue CFO 20/10/2026, lot 8) : ≤ 720 px
+   seulement, même modèle que la page RH (lot 11) — tuiles en bandeau,
+   listes Devis / Factures en lignes compactes, en-tête rangé en grille. */
+@media (max-width: 720px) {
+  .fin-entete .factu-actions-tete {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .fin-entete .factu-actions-tete > * {
+    justify-content: center;
+    min-height: 2.6rem;
+  }
+
+  /* 5 tuiles : un bandeau horizontal, comme la page RH. */
+  .fin-kpi .kpi-strip {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 42%;
+    margin-inline: calc(-1 * var(--ef-gx, 16px));
+    padding: 0.15rem var(--ef-gx, 16px) 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--ef-gx, 16px);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .fin-kpi .kpi-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .fin-kpi .kpi-strip > * {
+    scroll-snap-align: start;
+  }
+  .fin-kpi .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+  .fin-kpi .kpi-tuile-sous {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* Devis et factures : une ligne compacte par document, à filet ;
+     toute la ligne ouvre le panneau (onClick existant sur la ligne). */
+  .admin-table.fin-table tr.fin-ligne {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 0.75rem;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .admin-table.fin-table tr.fin-ligne + tr {
+    margin-top: 0;
+  }
+  .admin-table.fin-table tr.fin-ligne td,
+  .admin-table.fin-table tr.fin-ligne td:first-child {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  /* :nth-child(n) : égale la spécificité de la règle des cartes de tableau. */
+  .admin-table.fin-table tr.fin-ligne td:nth-child(n) > * {
+    margin-left: 0;
+    text-align: left;
+  }
+  .admin-table.fin-table tr.fin-ligne td::before {
+    display: none;
+  }
+  .admin-table.fin-table tr.fin-ligne :is(.fl-ref, .fl-projet, .fl-date) {
+    color: var(--text-muted);
+    font-size: 0.74rem;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-client strong {
+    font-size: 0.95rem;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-ttc {
+    justify-self: end;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-statut {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+
+  /* Devis :  FS_NGO.26-OF1                 [En validation CFO]
+              Fatou Sarr                      8 496 000 FCFA
+              FS_NGO.26 · créé le 29/09                        */
+  .admin-table.fin-table.fin-table--devis tr.fin-ligne {
+    grid-template-areas: 'ref statut' 'client ttc' 'meta meta';
+  }
+  .fin-table--devis .fl-ref {
+    grid-area: ref;
+  }
+  .fin-table--devis .fl-statut {
+    grid-area: statut;
+  }
+  .fin-table--devis .fl-client {
+    grid-area: client;
+  }
+  .fin-table--devis .fl-ttc {
+    grid-area: ttc;
+  }
+  .admin-table.fin-table--devis tr.fin-ligne .fl-projet {
+    grid-area: meta;
+  }
+  .admin-table.fin-table--devis tr.fin-ligne .fl-date {
+    grid-area: meta;
+    justify-self: end;
+  }
+  .admin-table.fin-table--devis tr.fin-ligne .fl-date::before {
+    content: 'créé le ';
+    display: inline;
+    font-size: inherit;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-ht {
+    display: none;
+  }
+
+  /* Factures :  F2026-0015 · 3/3                     [En retard]
+                 Teranga Capital SA                 2 643 200 FCFA
+                 échéance 12/10/2026          ▬▬ 0 FCFA encaissé  */
+  .admin-table.fin-table.fin-table--factures tr.fin-ligne {
+    grid-template-areas: 'ref statut' 'client ttc' 'echeance encaisse';
+  }
+  .fin-table--factures .fl-ref {
+    grid-area: ref;
+  }
+  .fin-table--factures .fl-ref .cell-stack {
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+  .fin-table--factures .fl-statut {
+    grid-area: statut;
+  }
+  .fin-table--factures .fl-client {
+    grid-area: client;
+  }
+  .fin-table--factures .fl-ttc {
+    grid-area: ttc;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-echeance {
+    grid-area: echeance;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-echeance.fin-retard {
+    color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
+    font-weight: 600;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-echeance::before {
+    content: 'échéance ';
+    display: inline;
+    font-size: inherit;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-encaisse {
+    grid-area: encaisse;
+    justify-self: end;
+    font-size: 0.78rem;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne :is(.fl-date, .fl-payee) {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .fin-table--factures .fl-encaisse .fin-encaisse {
+    min-width: 6.5rem;
+  }
+  .fin-table--factures .fl-encaisse .fin-encaisse strong::after {
+    content: ' encaissés';
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+}
+@media (max-width: 720px) {
+  .admin-table.fin-table tr.fin-ligne td .cell-stack {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-ref .cell-stack {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+  .fin-ligne:hover td {
+    background: none;
+  }
+}
+@media (max-width: 380px) {
+  /* Petit téléphone : une tuile et demie, montant sur une ligne. */
+  .fin-kpi .kpi-strip {
+    grid-auto-columns: 58%;
+  }
+}

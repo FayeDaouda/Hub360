@@ -36,7 +36,7 @@ export function OngletDevis({ devis, projets, onOuvrir }: { devis: Devis[]; proj
         <BoutonExport desactive={!visibles.length} onExporter={() => exporterDevis(visibles, projets)} />
       </div>
       <div className="admin-table-wrap fin-table-wrap">
-        <table className="admin-table fin-table">
+        <table className="admin-table fin-table fin-table--devis">
           <thead>
             <tr>
               <th>Numéro</th>
@@ -80,23 +80,23 @@ function MoisDevis({ mois, devis, projets, onOuvrir }: { mois: string; devis: De
         const projet = d.dossierCrm?.code ?? (d.projetId ? projets.get(d.projetId) : null);
         return (
           <tr key={d.id} className="fin-ligne" onClick={() => onOuvrir(d)}>
-            <td data-label="Numéro" className="fin-code">
+            <td data-label="Numéro" className="fin-code fl-ref">
               {d.reference ?? 'brouillon'}
             </td>
-            <td data-label="Client">
+            <td data-label="Client" className="fl-client">
               <strong>{d.client.nom}</strong>
             </td>
-            <td data-label="Projet" className="fin-code fin-code--leger">
+            <td data-label="Projet" className="fin-code fin-code--leger fl-projet">
               {projet ?? '—'}
             </td>
-            <td data-label="Créé le">{jjmmaaaa(d.creeLe)}</td>
-            <td data-label="Total HT" className="num">
+            <td data-label="Créé le" className="fl-date">{jjmmaaaa(d.creeLe)}</td>
+            <td data-label="Total HT" className="num fl-ht">
               {formatMontant(d.montantHt)}
             </td>
-            <td data-label="Total TTC" className="num">
+            <td data-label="Total TTC" className="num fl-ttc">
               <strong>{formatMontant(d.montantTtc)}</strong>
             </td>
-            <td data-label="Statut">
+            <td data-label="Statut" className="fl-statut">
               <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
               {d.alerteAvenant && <span className="pill pill--risque fin-alerte">Avenant non accepté · {d.alerteAvenant.jours} j</span>}
             </td>
