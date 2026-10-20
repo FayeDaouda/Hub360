@@ -6610,10 +6610,9 @@ a.notif-item:hover {
     margin-top: 0.25rem;
     font-size: 1.05rem;
   }
-  /* Une rangée de 4 sur téléphone (choix de départ) : la phrase sous le
-     chiffre, illisible à cette largeur, cède la place (revue 20/10/2026). */
   .kpi-tuile-sous {
-    display: none;
+    margin-top: 0.15rem;
+    font-size: 0.66rem;
   }
   /* Le pictogramme décoratif (aucune donnée) cède la place en premier ; le
      vrai delta (badge) et l'anneau (vrai %) restent tant qu'il y a la place. */
@@ -7546,6 +7545,262 @@ a.notif-item:hover {
 .df-compte > button {
   width: fit-content;
 }
+/* ---------- Coque mobile (≤ 720 px) — refonte 20/10/2026 ----------
+   Une application de téléphone, pas un bureau rétréci : barre du haut sur
+   une ligne (marque, recherche, messages, cloche, avatar), grand titre de
+   page, navigation par onglets en bas (navigation-mobile.tsx), contenu
+   d'abord (introductions masquées), tuiles lisibles sur 2 colonnes. */
+.nav-mobile,
+.admin-grand-titre,
+.admin-topbar-marque {
+  display: none;
+}
+@media (max-width: 720px) {
+  .admin-sidebar,
+  .admin-backdrop,
+  .admin-menu-btn,
+  .masque-mobile {
+    display: none !important;
+  }
+  /* « body » : passe devant les gouttières de l'en-tête fixe définies plus
+     bas dans la feuille (1,25 rem), qui débordaient de 4 px. */
+  body .admin-main,
+  body .admin-main:has(.page-entete-fixe) {
+    --ef-gx: 1rem;
+    --ef-gy: 0.5rem;
+    padding: 0 1rem calc(5.5rem + env(safe-area-inset-bottom));
+  }
+  .admin-main .admin-topbar,
+  .admin-main:has(.page-entete-fixe) .admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    min-height: 3.5rem;
+    margin: 0 -1rem;
+    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
+  }
+  .admin-main .admin-topbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in oklch, var(--bg) 86%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  }
+  .admin-topbar .admin-title {
+    display: none;
+  }
+  .admin-topbar-marque {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+  .admin-topbar-marque > * {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .admin-topbar-actions {
+    gap: 0.35rem;
+  }
+  .admin-topbar-actions .admin-icon-btn,
+  .admin-topbar-actions .admin-search.recherche-declencheur,
+  .admin-topbar-actions .admin-user {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    justify-content: center;
+  }
+  .admin-grand-titre {
+    display: block;
+    margin: 1.1rem 0 1rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  /* Mes tâches : « Bonjour Khadija » tient lieu de titre. */
+  .admin-main:has(.mt-accueil) .admin-grand-titre {
+    display: none;
+  }
+  .admin-main:has(.mt-accueil) .mt-accueil {
+    margin-top: 1.1rem;
+  }
+  /* Contenu d'abord : les phrases d'introduction (pensées pour l'écran
+     large) cèdent la place. */
+  .po-sous-titre,
+  .po-acces,
+  .rh-sous-titre,
+  .eq-sous-titre,
+  .reg-sous-titre,
+  .fin-sous-titre {
+    display: none;
+  }
+  .admin-atmosphere {
+    opacity: 0.35;
+  }
+  .panel {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+  /* Tuiles : 2 colonnes lisibles (une tuile seule en fin prend la ligne). */
+  .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .kpi-tuile {
+    padding: 0.8rem 0.85rem;
+  }
+  .kpi-tuile-label {
+    font-size: 0.74rem;
+  }
+  .kpi-tuile-valeur {
+    font-size: 1.35rem;
+  }
+  .kpi-tuile-valeur--long {
+    font-size: 1.05rem;
+  }
+  /* Barre d'onglets du bas. */
+  .nav-mobile {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: color-mix(in oklch, var(--surface) 90%, transparent);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+  .nav-mobile-item {
+    display: grid;
+    justify-items: center;
+    gap: 0.2rem;
+    padding: 0.3rem 0 0.2rem;
+    border: 0;
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-mobile-item svg {
+    box-sizing: content-box;
+    padding: 0.2rem 0.9rem;
+    border-radius: 999px;
+    transition: background 0.2s ease;
+  }
+  .nav-mobile-item.is-active {
+    color: var(--brand);
+  }
+  .nav-mobile-item.is-active svg {
+    background: color-mix(in oklch, var(--brand) 16%, transparent);
+  }
+}
+/* Panneau « Plus » : monte du bas (téléphone). */
+.feuille-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  background: color-mix(in oklch, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.feuille {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
+  background: var(--surface);
+  box-shadow: 0 -18px 50px color-mix(in oklch, var(--bg) 60%, transparent);
+  animation: feuille-entree 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes feuille-entree {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feuille {
+    animation: none;
+  }
+}
+.feuille-poignee {
+  justify-self: center;
+  width: 2.5rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+.feuille-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.05rem;
+}
+.feuille-groupe {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.feuille-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 3rem;
+  padding: 0 1rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  text-decoration: none;
+}
+.feuille-ligne + .feuille-ligne {
+  border-top: 1px solid var(--border);
+}
+.feuille-ligne svg {
+  color: var(--text-muted);
+}
+.feuille-ligne.is-active {
+  color: var(--brand);
+  font-weight: 600;
+}
+.feuille-ligne--alerte,
+.feuille-ligne--alerte svg {
+  color: var(--pill-risque);
+}
+.feuille-theme {
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+.feuille-libelle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 /* ---------- Revue mobile de tout le HUB (20/10/2026) ---------- */
 @media (max-width: 720px) {
   /* Barres d'onglets : défilent au doigt au lieu d'être coupées ; l'onglet
@@ -7587,27 +7842,6 @@ a.notif-item:hover {
   }
 }
 @media (max-width: 560px) {
-  /* 5 tuiles et plus : la rangée défile (même taille que 4 tuiles) au lieu
-     d'en laisser une seule sur une 2e ligne. */
-  .kpi-strip:has(> :nth-child(5)) {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-  }
-  .kpi-strip:has(> :nth-child(5)) > * {
-    flex: 0 0 calc((100% - 1.5rem) / 4);
-    scroll-snap-align: start;
-  }
-  /* RH et Finances ont leur propre grille (2 colonnes, tout visible) : elle
-     prime sur la rangée défilante ci-dessus. */
-  :is(.rh-kpi, .fin-kpi) .kpi-strip:has(> :nth-child(5)) {
-    display: grid;
-    overflow: visible;
-  }
-  :is(.rh-kpi, .fin-kpi) .kpi-strip:has(> :nth-child(5)) > * {
-    flex: initial;
-  }
   /* Montant long (« 13 546 400 FCFA ») : plus petit plutôt que coupé. */
   .kpi-tuile-valeur--long {
     font-size: 0.78rem;
@@ -8374,11 +8608,8 @@ a.notif-item:hover {
 /* Téléphone : seul l'en-tête de la page reste fixe (la barre du haut
    défilerait sinon avec lui sur un tiers de l'écran). */
 @media (max-width: 720px) {
-  .admin-main:has(.page-entete-fixe) .admin-topbar {
-    position: relative;
-  }
   .entete-fixe {
-    top: 0;
+    top: var(--ef-topbar-h, 56px);
   }
 }
 @media (max-width: 720px) {

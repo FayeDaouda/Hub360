@@ -32,6 +32,7 @@ import { ClocheNotifications } from '@/components/admin/cloche-notifications';
 import { RechercheGlobale } from '@/components/admin/recherche-globale';
 import { AideGlobale, ouvrirAide } from '@/components/admin/aide-globale';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
+import { NavigationMobile } from '@/components/admin/navigation-mobile';
 
 type NavItem = {
   cle: string;
@@ -395,6 +396,14 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
       <main className="admin-main">
         <header className="admin-topbar">
           <div className="admin-topbar-left">
+            {/* Téléphone : la marque de la société à la place du menu (navigation en bas). */}
+            <span className="admin-topbar-marque" aria-hidden>
+              {societe ? (
+                <SocieteAvatar societe={societe} size="md" theme="glass" />
+              ) : (
+                <span className="admin-brand-fallback">{session.societe.nom.charAt(0)}</span>
+              )}
+            </span>
             <button
               type="button"
               className="admin-menu-btn"
@@ -417,8 +426,13 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               />
             )}
             <ClocheNotifications slug={session.societe.slug} session={session} />
-            <AideGlobale session={session} />
-            <ThemeToggle />
+            {/* Aide et thème : dans « Plus » sur téléphone (barre du haut sur une ligne). */}
+            <span className="masque-mobile">
+              <AideGlobale session={session} />
+            </span>
+            <span className="masque-mobile">
+              <ThemeToggle />
+            </span>
             <button
               type="button"
               className="admin-user"
@@ -432,8 +446,29 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
           </div>
         </header>
 
+        {/* Téléphone : grand titre sous la barre (masqué sur ordinateur, où le titre est dans la barre). */}
+        <h1 className="admin-grand-titre" aria-hidden>
+          {titre}
+        </h1>
         {children}
       </main>
+
+      <NavigationMobile
+        items={NAV.filter((item) => item.chemin !== undefined && sectionAccessible(session, item.cle)).map((item) => ({
+          cle: item.cle,
+          libelle: item.libelle,
+          icone: item.icone,
+          href: item.chemin ? `${base}/${item.chemin}` : base,
+        }))}
+        active={active}
+        reglages={
+          sectionAccessible(session, 'parametres')
+            ? { cle: 'parametres', libelle: 'Réglages du HUB', icone: Settings, href: `${base}/reglages` }
+            : { cle: 'mes-reglages', libelle: 'Réglages', icone: Settings, href: `${base}/mes-reglages` }
+        }
+        administration={estAdministrateurHub(session) ? { cle: 'groupe', libelle: 'Administration du HUB', icone: ShieldCheck, href: '/groupe' } : null}
+        onDeconnexion={deconnexion}
+      />
     </div>
   );
 }
