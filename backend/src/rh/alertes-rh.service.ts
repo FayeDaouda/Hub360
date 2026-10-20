@@ -30,9 +30,10 @@ export class AlertesRhService {
     private reglages: ReglagesService,
   ) {}
 
-  async alertes(aujourdhui = new Date().toISOString().slice(0, 10)): Promise<AlerteRh[]> {
+  // `societeId` : celles d'une société seulement (reporting RH).
+  async alertes(aujourdhui = new Date().toISOString().slice(0, 10), societeId?: string): Promise<AlerteRh[]> {
     const dossiers = await this.prisma.dossierPersonnel.findMany({
-      where: { archiveLe: null },
+      where: { archiveLe: null, ...(societeId ? { societeId } : {}) },
       select: {
         id: true, societeId: true, prenom: true, nom: true, poste: true, typeContrat: true,
         dateFin: true, finEssai: true, visiteMedicale: true, expirationPiece: true,

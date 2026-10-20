@@ -21,6 +21,7 @@ import {
   statutReporting,
 } from './pilotage-regles';
 import { ChiffresPilotageService } from './chiffres.service';
+import { ReportingRhService } from './reporting-rh.service';
 import type { SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 
@@ -69,6 +70,7 @@ export class PilotageService {
     private temps: TempsService,
     private chiffres: ChiffresPilotageService,
     private notifications: NotificationsService,
+    private reportingRh: ReportingRhService,
   ) {}
 
   async vue(a: Acteur) {
@@ -398,6 +400,10 @@ export class PilotageService {
 
   // --- Reportings ----------------------------------------------------------
 
+  private contenuDe(type: TypeReporting, societeId: string, mois: string, jour: string) {
+    return type === 'direction' ? this.contenuDirection(societeId, mois, jour) : this.reportingRh.contenu(societeId, mois);
+  }
+
   private async reportings(a: Acteur, jour: string) {
     const [societe, deposes] = await Promise.all([
       this.prisma.societe.findUniqueOrThrow({ where: { id: a.societeId }, select: { nom: true } }),
@@ -413,13 +419,8 @@ export class PilotageService {
         const deposeLe = depot ? jourIso(depot.deposeLe) : null;
         const statut = statutReporting(mois, deposeLe, jour);
         const { emetteur, destinataire } = REPORTINGS[type];
-        // Prérempli tant qu'il n'est pas déposé ; figé ensuite. Le reporting
-        // RH n'a pas encore de contenu défini (aucune rubrique fournie).
-        const contenu = depot
-          ? ((depot.contenu as { libelle: string; valeur: string }[] | null) ?? null)
-          : type === 'direction'
-            ? await this.contenuDirection(a.societeId, mois, jour)
-            : null;
+        // Prérempli tant qu'il n'est pas déposé ; figé ensuite.
+        const contenu = depot ? ((depot.contenu as { libelle: string; valeur: string }[] | null) ?? null) : await this.contenuDe(type, a.societeId, mois, jour);
         return {
           type,
           mois,
@@ -447,10 +448,10 @@ export class PilotageService {
     if (!moisAReporter(jour).includes(mois)) throw new BadRequestException('Seul le reporting d’un mois clos se dépose.');
     // Validée côté DTO, mais des espaces seuls ne font pas une analyse.
     if (analyse.trim().length < 10) throw new BadRequestException('L’analyse est obligatoire (10 caractères au moins).');
-    const contenu = type === 'direction' ? await this.contenuDirection(a.societeId, mois, jour) : undefined;
+    const contenu = await this.contenuDe(type, a.societeId, mois, jour);
     try {
       await this.prisma.reportingMensuel.create({
-        data: { societeId: a.societeId, type, mois, deposeParId: a.userId, contenu: contenu ?? Prisma.JsonNull, analyse: analyse.trim() },
+        data: { societeId: a.societeId, type, mois, deposeParId: a.userId, contenu, analyse: analyse.trim() },
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException('Reporting déjà déposé.');

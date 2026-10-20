@@ -39,6 +39,6 @@ import {
   ],
   // Pilotage : feuilles de temps contrôlées, absences à valider (N+1),
   // points d'intégration (tuiles RH).
-  exports: [TempsService, DemandesService, IntegrationService],
+  exports: [TempsService, DemandesService, IntegrationService, AlertesRhService],
 })
 export class RhModule {}

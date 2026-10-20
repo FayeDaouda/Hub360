@@ -8,12 +8,13 @@ import { PilotageController } from './pilotage.controller';
 import { AttentionService } from './attention.service';
 import { ChiffresPilotageService } from './chiffres.service';
 import { PilotageService } from './pilotage.service';
+import { ReportingRhService } from './reporting-rh.service';
 
 @Module({
   // Réglages : objectifs, jours fériés ; RH : feuilles de temps, absences à
   // valider ; Projets et Finances : alertes de l'accueil CEO.
   imports: [ReglagesModule, RhModule, ProjetsModule, FinancesModule, NotificationsModule],
-  providers: [PilotageService, AttentionService, ChiffresPilotageService],
+  providers: [PilotageService, AttentionService, ChiffresPilotageService, ReportingRhService],
   controllers: [PilotageController],
 })
 export class PilotageModule {}
