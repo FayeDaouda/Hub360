@@ -141,7 +141,8 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
               </span>
             </div>
             <p className="kpi-tuile-label">{t.label}</p>
-            {t.contenu ?? <p className="kpi-tuile-valeur">{t.valeur}</p>}
+            {/* Montant long : variante plus petite sur téléphone (pas coupé). */}
+            {t.contenu ?? <p className={`kpi-tuile-valeur${String(t.valeur).length > 9 ? ' kpi-tuile-valeur--long' : ''}`}>{t.valeur}</p>}
             {t.sousTexte && <p className="kpi-tuile-sous">{t.sousTexte}</p>}
           </>
         );

@@ -7546,6 +7546,80 @@ a.notif-item:hover {
 .df-compte > button {
   width: fit-content;
 }
+/* ---------- Revue mobile de tout le HUB (20/10/2026) ---------- */
+@media (max-width: 720px) {
+  /* Barres d'onglets : défilent au doigt au lieu d'être coupées ; l'onglet
+     actif est ramené à l'écran (admin-shell.tsx). */
+  .vue-toggle {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .vue-toggle::-webkit-scrollbar {
+    display: none;
+  }
+  .vue-toggle > button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  /* Cartes de tableau : un sous-texte (poste, client…) passe sous la valeur
+     au lieu de faire une 3e colonne ; une valeur longue reste à droite. */
+  .admin-table td > .cell-sub {
+    flex-basis: 100%;
+    margin-top: -0.25rem;
+    text-align: right;
+  }
+  .admin-table td:first-child > .cell-sub {
+    text-align: left;
+  }
+  .admin-table td:not(:first-child) > :last-child {
+    margin-left: auto;
+    text-align: right;
+  }
+  /* Valeur en texte simple passée à la ligne : à droite elle aussi (le
+     libellé garde la gauche grâce à sa marge automatique). */
+  .admin-table td:not(:first-child) {
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .admin-table td:not(:first-child)::before {
+    margin-right: auto;
+  }
+}
+@media (max-width: 560px) {
+  /* 5 tuiles et plus : la rangée défile (même taille que 4 tuiles) au lieu
+     d'en laisser une seule sur une 2e ligne. */
+  .kpi-strip:has(> :nth-child(5)) {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .kpi-strip:has(> :nth-child(5)) > * {
+    flex: 0 0 calc((100% - 1.5rem) / 4);
+    scroll-snap-align: start;
+  }
+  /* RH et Finances ont leur propre grille (2 colonnes, tout visible) : elle
+     prime sur la rangée défilante ci-dessus. */
+  :is(.rh-kpi, .fin-kpi) .kpi-strip:has(> :nth-child(5)) {
+    display: grid;
+    overflow: visible;
+  }
+  :is(.rh-kpi, .fin-kpi) .kpi-strip:has(> :nth-child(5)) > * {
+    flex: initial;
+  }
+  /* Montant long (« 13 546 400 FCFA ») : plus petit plutôt que coupé. */
+  .kpi-tuile-valeur--long {
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+}
+/* Texte d'aide des champs de filtre : lisible sur le verre. */
+.champ-recherche .field-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
 /* Réglages personnels (19/10/2026). */
 .rg-page {
   display: grid;
@@ -8806,9 +8880,27 @@ a.notif-item:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Téléphone : 2 colonnes compactes (empilées, les 6 tuiles repoussaient le
+   contenu de deux écrans — revue mobile 20/10/2026). */
 @media (max-width: 520px) {
   .reg-tuiles {
-    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+  }
+  .reg-tuile {
+    gap: 0.2rem;
+    padding: 0.7rem 0.8rem;
+  }
+  .reg-tuile.glass-panel.is-active {
+    padding: calc(0.7rem - 1px) calc(0.8rem - 1px);
+  }
+  .reg-tuile-label {
+    font-size: 0.74rem;
+  }
+  .reg-tuile-valeur {
+    font-size: 1.05rem;
+  }
+  .reg-tuile-sous {
+    display: none;
   }
 }
 /* Panneaux en verre (style du HUB). */
@@ -12264,6 +12356,29 @@ a.notif-item:hover {
   }
 }
 @media (max-width: 560px) {
+  /* Nom sur toute la largeur, charge dessous, % à droite. */
+  .eq-membres li {
+    grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  }
+  .eq-membres li > .eq-avatar {
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+  .eq-membres li > .eq-membre {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .eq-membres li > .eq-pct {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .eq-membres li > .eq-charge {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .eq-membres li > .eq-affectation {
+    grid-row: 3;
+  }
   .eq-tuiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
