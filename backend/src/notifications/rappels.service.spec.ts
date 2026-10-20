@@ -5,7 +5,7 @@ import { RappelsService } from './rappels.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 
-function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[] } = {}) {
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[] } = {}) {
   const deja = new Set(o.dejaEnvoyes ?? []);
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
@@ -16,6 +16,7 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
     demandeRemboursement: { findMany: jest.fn().mockResolvedValue([]) },
     demandeAttestation: { findMany: jest.fn().mockResolvedValue([]) },
     dossierPersonnel: { findMany: jest.fn().mockResolvedValue([]) },
+    journalCloture: { findMany: jest.fn().mockResolvedValue(o.clotures ?? []) },
     rappelEnvoye: {
       createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
         const neuf = !deja.has(data[0].cle);
@@ -109,5 +110,13 @@ describe('RappelsService', () => {
     const r = await svc({ absences: [absence('2026-10-01')] }).s.demandes(JOUR);
     expect(r.map((x) => x.cle)).toEqual(['demande:absence:A1:n1:3', 'demande:absence:A1:n1:signalee']);
     expect(r[1]).toEqual(expect.objectContaining({ destinataireIds: ['CFO1'], titre: expect.stringContaining('N+1 sans réponse') }));
+  });
+
+  it('clôture : relance du CFO à partir du 5, chaque semaine, tant que le mois précédent est ouvert', async () => {
+    const factures = [{ societeId: 'S1' }];
+    // regle() rend 3 pour toute clé dans ce mock (rappel_cloture_jour = 3) : le 14, 2e semaine.
+    expect(await svc({ factures }).s.clotures(JOUR)).toEqual([expect.objectContaining({ cle: 'cloture:S1:2026-09:1', type: 'cloture_a_faire', destinataireIds: ['CFO1'] })]);
+    expect(await svc({ factures }).s.clotures('2026-10-02')).toEqual([]);
+    expect(await svc({ factures, clotures: [{ mois: '2026-09', action: 'cloture' }] }).s.clotures(JOUR)).toEqual([]);
   });
 });

@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { DemandeAvoir } from '@/components/finances/demande-avoir';
 import Link from 'next/link';
 import { ArrowLeft, Pencil, Plus, ReceiptText, Send, Trash2, Undo2, Wallet } from 'lucide-react';
 import {
   ajouterPaiement,
-  creerAvoir,
   creerEcheancier,
   creerFacture,
   creerMensualite,
@@ -106,6 +106,7 @@ export default function FacturationPage({ params }: Props) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [paiementsId, setPaiementsId] = useState<string | null>(null);
+  const [avoirPour, setAvoirPour] = useState<{ id: string; reference: string | null; montantTtc: number } | null>(null);
 
   useEffect(() => {
     getFacturation(params.slug, params.projetId).then(setFactu);
@@ -555,23 +556,10 @@ export default function FacturationPage({ params }: Props) {
                                   {f.paiements.length > 0 && ` (${f.paiements.length})`}
                                 </button>
                               )}
-                              {a.annulable && (
-                                <button
-                                  type="button"
-                                  className="lien-inline"
-                                  disabled={busy}
-                                  onClick={() => {
-                                    if (
-                                      window.confirm(
-                                        `Créer un avoir pour annuler ${f.reference} ? La facture passera en « annulée » et un avoir du même montant en négatif sera émis.`,
-                                      )
-                                    ) {
-                                      void action(() =>
-                                        creerAvoir(params.slug, params.projetId, f.id),
-                                      );
-                                    }
-                                  }}
-                                >
+                              {/* Avoir motivé (contrôle interne) ; au-delà du seuil, en attente du CEO. */}
+                              {a.annulable && f.avoirEnAttente && <span className="pill pill--attention">Avoir en attente du CEO</span>}
+                              {a.annulable && !f.avoirEnAttente && (
+                                <button type="button" className="lien-inline" disabled={busy} onClick={() => setAvoirPour(f)}>
                                   <Undo2 size={12} strokeWidth={2} aria-hidden /> Avoir
                                 </button>
                               )}
@@ -633,6 +621,9 @@ export default function FacturationPage({ params }: Props) {
         />
       )}
 
+      {avoirPour && (
+        <DemandeAvoir slug={params.slug} projetId={params.projetId} facture={avoirPour} onFait={setFactu} onClose={() => setAvoirPour(null)} />
+      )}
       {facturePaiements && (
         <ModalePaiements
           facture={facturePaiements}

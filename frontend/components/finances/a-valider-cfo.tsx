@@ -11,12 +11,15 @@ import {
   ClipboardList,
   FileCheck2,
   HardHat,
+  Lock,
   TriangleAlert,
+  Undo2,
   type LucideIcon,
 } from 'lucide-react';
 import { getProjets } from '@/lib/crm';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
-import { lienFacturationProjet } from '@/lib/facturation';
+import { getAvoirsAValider, getClotures, LIBELLE_MOTIF_AVOIR, lienFacturationProjet, type AvoirAValider, type MoisCloture } from '@/lib/facturation';
+import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { aValiderCfo } from '@/lib/finances';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -58,11 +61,15 @@ export function AValiderCfo({
   factures,
   bureaux,
   onOuvrirFacture,
+  onOuvrirClotures,
+  version,
 }: {
   slug: string;
   factures: FactureCentrale[] | null;
   bureaux: BureauARegler[];
   onOuvrirFacture: (id: string) => void;
+  onOuvrirClotures: () => void;
+  version: number; // relu après une clôture ou un avoir décidé ailleurs
 }) {
   const router = useRouter();
   const session = useSessionCourante();
@@ -71,6 +78,9 @@ export function AValiderCfo({
   const [absences, setAbsences] = useState<DemandeAbsence[]>([]);
   const [salaires, setSalaires] = useState<SalaireAValider[]>([]);
   const [reportings, setReportings] = useState<ReportingRecu[]>([]);
+  const [avoirs, setAvoirs] = useState<AvoirAValider[]>([]);
+  const [moisTermine, setMoisTermine] = useState<MoisCloture | null>(null);
+  const [avoirOuvert, setAvoirOuvert] = useState<AvoirAValider | null>(null);
   const [tout, setTout] = useState(false);
   const [maintenant] = useState(() => Date.now());
 
@@ -89,6 +99,15 @@ export function AValiderCfo({
       .then(setReportings)
       .catch(() => setReportings([]));
   }, [slug]);
+  // Contrôle interne : avoirs à décider (CEO) et clôture du mois terminé.
+  useEffect(() => {
+    getAvoirsAValider(slug)
+      .then(setAvoirs)
+      .catch(() => setAvoirs([]));
+    getClotures(slug)
+      .then((l) => setMoisTermine(l[0] ?? null))
+      .catch(() => setMoisTermine(null));
+  }, [slug, version]);
 
   const tresorerie = useMemo(() => {
     const mois = new Date().toISOString().slice(0, 7);
@@ -116,6 +135,22 @@ export function AValiderCfo({
       ton: reste < 0 ? 'risque' : ecoule >= DELAI_OFFRE_H / 2 ? 'attention' : 'info',
       action: 'Examiner',
       ouvrir: () => router.push(`/admin/${slug}/crm?dossier=${o.id}`),
+    });
+  }
+  // 1 bis. Avoirs au-delà du seuil, à valider (CEO).
+  for (const a of avoirs) {
+    const jours = Math.floor((maintenant - Date.parse(a.demandeLe)) / JOUR);
+    elements.push({
+      cle: `avoir-${a.id}`,
+      groupe: 1,
+      tri: a.demandeLe,
+      icone: Undo2,
+      titre: `Avoir à valider · ${a.reference ?? 'facture'}${a.client ? ` · ${a.client}` : ''}`,
+      detail: `${formatMontant(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()} · demandé${a.demandePar ? ` par ${a.demandePar}` : ''}`,
+      quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
+      ton: jours > 2 ? 'risque' : 'attention',
+      action: 'Examiner',
+      ouvrir: () => setAvoirOuvert(a),
     });
   }
   // 2. Factures directes préparées, à émettre.
@@ -179,6 +214,22 @@ export function AValiderCfo({
       ton: jours > 3 ? 'risque' : 'attention',
       action: 'Décider',
       ouvrir: () => router.push(`/admin/${slug}/mon-espace?onglet=a-valider`),
+    });
+  }
+  // 5 bis. Clôture du mois terminé (relance par défaut à partir du 5).
+  if (moisTermine && !moisTermine.clos && session.role !== 'CEO (transverse)') {
+    const jour = new Date().getDate();
+    elements.push({
+      cle: `cloture-${moisTermine.mois}`,
+      groupe: 5,
+      tri: moisTermine.mois,
+      icone: Lock,
+      titre: `Clôture de ${moisTermine.periode} à faire`,
+      detail: `${moisTermine.chiffres.factures} facture(s) · ${moisTermine.chiffres.paiements} paiement(s) à figer`,
+      quand: `terminé il y a ${jour} j`,
+      ton: jour > 5 ? 'risque' : 'attention',
+      action: 'Clôturer',
+      ouvrir: onOuvrirClotures,
     });
   }
   // 6. Reporting reçu du dernier mois clos.
@@ -256,6 +307,7 @@ export function AValiderCfo({
           ))}
         </ul>
       )}
+      {avoirOuvert && <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />}
       {elements.length > VISIBLES && (
         <button type="button" className="at-rh-plus" aria-expanded={tout} onClick={() => setTout((x) => !x)}>
           <ChevronDown size={15} aria-hidden className={tout ? 'is-ouvert' : undefined} />

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Banknote, Clock, FileText, Package, Plus, TrendingUp } from 'lucide-react';
+import { Banknote, Clock, FileText, Lock, Package, Plus, TrendingUp } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getClients, getProjets } from '@/lib/crm';
 import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation, lienFacturationProjet } from '@/lib/facturation';
@@ -39,6 +39,7 @@ import { GrilleTarifaire } from '@/components/finances/grille-tarifaire';
 import { OffrePanneau } from '@/components/finances/offre-panneau';
 import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
 import { AValiderCfo } from '@/components/finances/a-valider-cfo';
+import { Clotures } from '@/components/finances/clotures';
 
 type Onglet = 'tableau' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
@@ -101,6 +102,10 @@ export default function FinancesPage({ params }: Props) {
   const [modalDevis, setModalDevis] = useState(false);
   const [modalCatalogue, setModalCatalogue] = useState(false);
   const [grille, setGrille] = useState(false);
+  // Contrôle interne : fenêtre des clôtures mensuelles ; relecture du bloc
+  // « À valider » après une clôture.
+  const [clotures, setClotures] = useState(false);
+  const [versionControle, setVersionControle] = useState(0);
   const [nouvelle, setNouvelle] = useState<{ dossier?: string } | null>(null);
   const [factureOuverte, setFactureOuverte] = useState<string | null>(null);
   const [devisOuvert, setDevisOuvert] = useState<string | null>(null);
@@ -233,6 +238,11 @@ export default function FinancesPage({ params }: Props) {
           <button type="button" className="btn-ghost fin-bouton-grille" onClick={() => setGrille(true)}>
             Grille tarifaire
           </button>
+          {validateur && (
+            <button type="button" className="btn-ghost" onClick={() => setClotures(true)}>
+              <Lock size={15} strokeWidth={1.75} aria-hidden /> Clôtures
+            </button>
+          )}
           {droits.catalogue && (
             <button type="button" className="btn-ghost" onClick={() => setModalCatalogue(true)}>
               <Package size={15} strokeWidth={1.75} aria-hidden /> Catalogue
@@ -254,7 +264,27 @@ export default function FinancesPage({ params }: Props) {
 
       {/* Qui valide (CFO ; CEO au-delà du seuil) : ce qui attend sa décision,
           avec l'encaissé du mois et le retard (revue CFO 20/10/2026). */}
-      {validateur && <AValiderCfo slug={params.slug} factures={factures} bureaux={bureaux} onOuvrirFacture={setFactureOuverte} />}
+      {validateur && (
+        <AValiderCfo
+          slug={params.slug}
+          factures={factures}
+          bureaux={bureaux}
+          onOuvrirFacture={setFactureOuverte}
+          onOuvrirClotures={() => setClotures(true)}
+          version={versionControle}
+        />
+      )}
+      {clotures && (
+        <Clotures
+          slug={params.slug}
+          estCeo={session.role === ROLE_CEO}
+          onClose={() => {
+            setClotures(false);
+            setVersionControle((v) => v + 1);
+            recharger();
+          }}
+        />
+      )}
 
       {/* Bureaux d'études à régler (CGV art. 5 : après encaissement du client) — dans « À valider » pour qui valide. */}
       {!validateur && bureaux.length > 0 && (

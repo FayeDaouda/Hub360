@@ -10,6 +10,7 @@ import { TachesProjetService } from './gabarit/taches-projet.service';
 import { FilsProjetService } from './gabarit/fils-projet.service';
 import { ProjetsOuvertsController } from './gabarit/projets-ouverts.controller';
 import { FacturationController } from './facturation/facturation.controller';
+import { ControleInterneService } from './facturation/controle-interne.service';
 import { FacturationCentraleController } from './facturation/facturation-centrale.controller';
 
 // L'agrégat « projet » : le tronc (assignation, phase) plus les sections aval,
@@ -20,6 +21,7 @@ import { FacturationCentraleController } from './facturation/facturation-central
   providers: [
     AccesProjetGuard,
     FacturationService,
+    ControleInterneService,
     OuvertureProjetService,
     ProjetsOuvertsService,
     TachesProjetService,

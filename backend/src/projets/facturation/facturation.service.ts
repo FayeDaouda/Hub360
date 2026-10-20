@@ -36,6 +36,7 @@ import { OuvertureProjetService } from '../gabarit/ouverture.service';
 import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './facture-directe';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
+import { exigerMoisOuvert } from './cloture';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -252,6 +253,7 @@ export class FacturationService {
     if (facture.statut !== 'emise') {
       throw new ConflictException('Seule une facture émise reçoit des paiements.');
     }
+    await exigerMoisOuvert(this.prisma, societeId, dto.date, 'un paiement daté de ce mois');
 
     await this.prisma.paiement.create({
       data: {
@@ -285,6 +287,7 @@ export class FacturationService {
     });
     if (!facture) throw new NotFoundException('Facture introuvable');
     const p = await this.prisma.paiement.findFirst({ where: { id: paiementId, factureId: facture.id } });
+    if (p) await exigerMoisOuvert(this.prisma, societeId, p.date, 'supprimer un paiement de ce mois');
     if (p) {
       // Correction tracée : la ligne disparaît des cumuls mais sa copie reste
       // (cf. PaiementSupprime).
@@ -343,6 +346,7 @@ export class FacturationService {
         devisOrigine: { select: { numero: true, client: true } },
         dossierCrm: { select: { id: true, code: true, client: true } },
         lignes: { orderBy: { ordre: 'asc' } },
+        demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true } },
       },
       orderBy: [{ creeLe: 'desc' }],
     });
@@ -371,6 +375,8 @@ export class FacturationService {
         libelle: f.libelle,
         statut: f.statut,
         statutEffectif,
+        // Avoir demandé au-delà du seuil, en attente du CEO (contrôle interne).
+        avoirEnAttente: (f.demandesAvoir ?? []).length > 0,
         montantHt,
         tauxTva,
         montantTva,
@@ -542,6 +548,7 @@ export class FacturationService {
     }
     if (f.estAvoir) throw new ConflictException('Un avoir ne reçoit pas de paiement.');
     if (f.statut !== 'emise') throw new ConflictException('Seule une facture émise reçoit des paiements.');
+    await exigerMoisOuvert(this.prisma, societeId, dto.date, 'un paiement daté de ce mois');
     await this.prisma.paiement.create({
       data: { factureId: f.id, date: dto.date, montant: dto.montant, mode: dto.mode ?? null, reference: dto.reference?.trim() ?? '', creeParId: acteurId },
     });
@@ -1030,7 +1037,7 @@ export class FacturationService {
     const [factures, projet, lignesMensuelles] = await Promise.all([
       this.prisma.facture.findMany({
         where: { projetId },
-        include: { paiements: true, lignes: { orderBy: { ordre: 'asc' } } },
+        include: { paiements: true, lignes: { orderBy: { ordre: 'asc' } }, demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true } } },
       }),
       // En-tête du projet pour la page Facturation (qui n'appelle pas les
       // routes Projets, fermées aux rôles de direction) + phase (mensualités).
@@ -1099,6 +1106,8 @@ export class FacturationService {
         libelle: f.libelle,
         statut: f.statut,
         statutEffectif,
+        // Avoir demandé au-delà du seuil, en attente du CEO (contrôle interne).
+        avoirEnAttente: (f.demandesAvoir ?? []).length > 0,
         montantHt,
         tauxTva,
         montantTva,

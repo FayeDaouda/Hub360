@@ -156,6 +156,22 @@ export const REGLES: DefinitionReglage[] = [
     appliquee: true,
   },
   {
+    cle: 'seuil_validation_avoir_ceo',
+    libelle: "Seuil de validation d'un avoir par le CEO (FCFA TTC)",
+    valeur: { type: 'entier', min: 0, max: 100_000_000_000, unite: 'FCFA' },
+    defaut: 1_000_000,
+    aide: "Tout avoir exige un motif et prévient le CEO ; au-delà de ce montant TTC, le CEO le valide avant émission (revue CFO, 20/10/2026).",
+    appliquee: true,
+  },
+  {
+    cle: 'rappel_cloture_jour',
+    libelle: 'Rappel de clôture mensuelle (jour du mois suivant)',
+    valeur: { type: 'entier', min: 1, max: 28, unite: 'j' },
+    defaut: 5,
+    aide: 'À partir de ce jour, le CFO est relancé chaque semaine tant que le mois précédent n’est pas clôturé (revue CFO, 20/10/2026).',
+    appliquee: true,
+  },
+  {
     cle: 'signalement_rh_apres_relances',
     libelle: 'Absence signalée à la RH après N relances du N+1 sans réponse',
     valeur: { type: 'entier', min: 1, max: 10, unite: 'relances' },

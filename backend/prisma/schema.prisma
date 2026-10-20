@@ -222,6 +222,11 @@ enum NotificationType {
   // Historique des salaires (revue RH validée 20/10/2026) : la RH propose, le CFO valide
   salaire_a_valider // au CFO (au CEO pour le salaire du CFO)
   salaire_decide // à la RH qui a proposé
+  // Contrôle interne (revue CFO 20/10/2026)
+  avoir_emis // au CEO, pour chaque avoir
+  avoir_a_valider // au CEO, avoir au-delà du seuil
+  avoir_decide // au demandeur
+  cloture_a_faire // au CFO : mois précédent pas encore clôturé
 }
 
 model Notification {
@@ -1283,6 +1288,7 @@ model Facture {
   notifications   Notification[]
   paiements       Paiement[]
   lignes          LigneFacture[]
+  demandesAvoir   DemandeAvoir[]
 
   @@unique([societeId, numero])
   @@unique([societeId, codeDossier, rangDossier])
@@ -1334,6 +1340,69 @@ model Paiement {
 
   @@index([factureId])
   @@map("paiements")
+}
+
+// --- Contrôle interne (revue CFO validée 20/10/2026) ---------------------------
+// Tout avoir part d'une demande : motif obligatoire, CEO prévenu ; au-delà du
+// seuil (Réglages · seuil_validation_avoir_ceo, TTC), le CEO valide avant
+// émission — la facture n'est annulée qu'à ce moment. En deçà, la demande
+// naît validée et l'avoir est émis aussitôt.
+enum MotifAvoir {
+  erreur_facturation
+  remise_commerciale
+  litige_client
+  annulation_prestation
+  autre
+}
+
+enum StatutDemandeAvoir {
+  a_valider
+  valide
+  refuse
+}
+
+model DemandeAvoir {
+  id           String             @id @default(uuid())
+  societeId    String             @map("societe_id")
+  factureId    String             @map("facture_id") // facture à annuler
+  motif        MotifAvoir
+  commentaire  String
+  montantTtc   Decimal            @map("montant_ttc") @db.Decimal(14, 0) // figé à la demande
+  statut       StatutDemandeAvoir @default(a_valider)
+  demandeParId String?            @map("demande_par_id") // audit, pas de FK
+  demandeLe    DateTime           @default(now()) @map("demande_le")
+  decideParId  String?            @map("decide_par_id") // null + validé = sous le seuil
+  decideLe     DateTime?          @map("decide_le")
+  motifRefus   String             @default("") @map("motif_refus")
+  avoirId      String?            @map("avoir_id") // avoir émis (pas de FK)
+
+  facture Facture @relation(fields: [factureId], references: [id], onDelete: Cascade)
+
+  @@index([societeId, statut])
+  @@index([factureId])
+  @@map("demandes_avoir")
+}
+
+// Clôture mensuelle : un mois clos n'accepte plus aucun paiement daté de ce
+// mois (ajout, suppression) ; toute correction passe par un avoir ou une
+// écriture du mois en cours. Journal d'événements : le mois est clos si son
+// dernier événement est une clôture ; la réouverture est réservée au CEO.
+enum ActionCloture {
+  cloture
+  reouverture
+}
+
+model JournalCloture {
+  id        String        @id @default(uuid())
+  societeId String        @map("societe_id")
+  mois      String // AAAA-MM
+  action    ActionCloture
+  motif     String        @default("") // obligatoire à la réouverture
+  parId     String?       @map("par_id") // audit, pas de FK
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([societeId, mois])
+  @@map("journal_clotures")
 }
 
 // Trace d'un paiement supprimé (correction) : copie figée de la ligne au

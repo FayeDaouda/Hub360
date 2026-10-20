@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BellRing, Download, X } from 'lucide-react';
-import { ajouterPaiementCentrale, emettreFactureCentrale, lienFacturationProjet, relancerFacture, supprimerFactureCentrale } from '@/lib/facturation';
+import { BellRing, Download, Undo2, X } from 'lucide-react';
+import { ajouterPaiementCentrale, emettreFactureCentrale, getFactureCentrale, lienFacturationProjet, relancerFacture, supprimerFactureCentrale } from '@/lib/facturation';
+import { DemandeAvoir } from '@/components/finances/demande-avoir';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
@@ -28,6 +29,7 @@ type Props = {
 // bandeau « à valider par le CFO » d'une facture directe préparée, document,
 // encaissements. Le CFO (validation) l'émet et enregistre les encaissements.
 export function FacturePanneau({ slug, facture: f, document, statut, societeNom, droits, onMaj, onSupprimee, onTelecharger, onClose }: Props) {
+  const [avoir, setAvoir] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [paiement, setPaiement] = useState<{ date: string; montant: string; mode: ModePaiement | '' } | null>(null);
@@ -209,6 +211,13 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
               <BellRing size={14} strokeWidth={2} aria-hidden /> Relancer
             </button>
           )}
+          {/* Avoir motivé (contrôle interne) : facture émise d'un projet. */}
+          {f.statut === 'emise' && !f.estAvoir && f.projet && droits.validation && !f.avoirEnAttente && (
+            <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setAvoir(true)}>
+              <Undo2 size={14} strokeWidth={2} aria-hidden /> Faire un avoir
+            </button>
+          )}
+          {f.avoirEnAttente && <span className="pill pill--attention">Avoir en attente du CEO</span>}
           {f.projet && (
             <Link className="btn-ghost" href={lienFacturationProjet(slug, f.projet.id)}>
               Facturation du projet
@@ -218,6 +227,16 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
             <Download size={14} strokeWidth={2} aria-hidden /> Télécharger
           </button>
         </div>
+        {/* Dans le panneau : un clic dans la fenêtre ne ferme pas le panneau. */}
+        {avoir && f.projet && (
+          <DemandeAvoir
+            slug={slug}
+            projetId={f.projet.id}
+            facture={{ id: f.id, reference: f.reference, montantTtc: f.montantTtc }}
+            onFait={() => getFactureCentrale(slug, f.id).then(onMaj).catch(() => undefined)}
+            onClose={() => setAvoir(false)}
+          />
+        )}
       </aside>
     </div>
   );

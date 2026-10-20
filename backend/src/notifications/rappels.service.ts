@@ -5,6 +5,7 @@ import { joursEntre, refDevis, relanceAFaire, JOURS_RELANCE_OFFRE } from '../dev
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
+import { moisClos, moisFr } from '../projets/facturation/cloture';
 import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from './notifications.service';
 
@@ -59,7 +60,13 @@ export class RappelsService implements OnApplicationBootstrap {
     if (this.enCours) return 0;
     this.enCours = true;
     try {
-      const rappels = [...(await this.offres(jour)), ...(await this.factures(jour)), ...(await this.taches(jour)), ...(await this.demandes(jour))];
+      const rappels = [
+        ...(await this.offres(jour)),
+        ...(await this.factures(jour)),
+        ...(await this.taches(jour)),
+        ...(await this.demandes(jour)),
+        ...(await this.clotures(jour)),
+      ];
       let envoyes = 0;
       for (const r of rappels) if (await this.envoyer(r)) envoyes++;
       if (envoyes) this.log.log(`${envoyes} rappel(s) envoyé(s)`);
@@ -280,6 +287,27 @@ export class RappelsService implements OnApplicationBootstrap {
     }
     for (const t of attestations) {
       await ajouter(`demande:attestation:${t.id}`, t.demandeLe, t.dossier, 'attestation de travail', 'à délivrer', await role(t.dossier.societeId, 'RH'));
+    }
+    return rappels;
+  }
+
+  // Clôture mensuelle (revue CFO 20/10/2026) : à partir du jour réglé, le
+  // CFO est relancé chaque semaine tant que le mois précédent n'est pas clos.
+  async clotures(jour: string): Promise<Rappel[]> {
+    const [a, m, j] = jour.split('-').map(Number);
+    const precedent = m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`;
+    const societes = await this.prisma.facture.findMany({ where: { emiseLe: { not: null } }, distinct: ['societeId'], select: { societeId: true } });
+    const rappels: Rappel[] = [];
+    for (const { societeId } of societes) {
+      const depuis = await this.reglages.regle<number>(societeId, 'rappel_cloture_jour');
+      if (j < depuis || (await moisClos(this.prisma, societeId)).has(precedent)) continue;
+      rappels.push({
+        cle: `cloture:${societeId}:${precedent}:${Math.floor((j - depuis) / 7)}`,
+        societeId,
+        type: 'cloture_a_faire',
+        titre: `Clôture de ${moisFr(precedent)} à faire · paiements et factures du mois à figer`,
+        destinataireIds: await this.notifications.titulairesRole(societeId, 'CFO'),
+      });
     }
     return rappels;
   }

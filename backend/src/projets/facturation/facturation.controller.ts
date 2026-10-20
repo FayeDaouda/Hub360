@@ -25,9 +25,11 @@ import {
   CreerFactureDto,
   PatchFactureDto,
   SupprimerPaiementDto,
+  DemandeAvoirDto,
 } from './dto';
+import { ControleInterneService } from './controle-interne.service';
 
-type R = { user: { societeId: string; userId: string } };
+type R = { user: { societeId: string; userId: string; role: string } };
 
 // Gouverné par la matrice, module `finances_factures` (étape H5) — chaque route
 // porte son niveau ; AccesProjetGuard laisse passer un rôle de direction
@@ -43,7 +45,10 @@ type R = { user: { societeId: string; userId: string } };
 @Controller('societes/:slug/projets/:id/factures')
 @UseGuards(JwtAuthGuard, AccesProjetGuard, PermissionGuard)
 export class FacturationController {
-  constructor(private facturation: FacturationService) {}
+  constructor(
+    private facturation: FacturationService,
+    private controle: ControleInterneService,
+  ) {}
 
   @Get()
   @RequiertPermission('finances_factures', 'lecture')
@@ -149,12 +154,15 @@ export class FacturationController {
   @Post(':factureId/avoir')
   @RequiertPermission('finances_factures', 'validation')
   @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
-  creerAvoir(
+  // Motif obligatoire ; au-delà du seuil, en attente du CEO (contrôle interne).
+  async creerAvoir(
     @Req() req: R,
     @Param('id') id: string,
     @Param('factureId') factureId: string,
+    @Body() dto: DemandeAvoirDto,
   ) {
-    return this.facturation.creerAvoir(req.user.societeId, id, factureId, req.user.userId);
+    await this.controle.demanderAvoir(req.user.societeId, id, factureId, dto, req.user);
+    return this.facturation.get(req.user.societeId, id);
   }
 
   @Post(':factureId/paiements')

@@ -6,9 +6,10 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ValidationCeoAuDelaDuSeuil } from '../../finances/seuil-ceo.guard';
 import { FacturationService } from './facturation.service';
-import { AjouterPaiementDto, CreerFactureDirecteDto } from './dto';
+import { AjouterPaiementDto, CreerFactureDirecteDto, DecisionAvoirDto, ReouvertureDto } from './dto';
+import { ControleInterneService } from './controle-interne.service';
 
-type R = { user: { societeId: string; userId: string } };
+type R = { user: { societeId: string; userId: string; role: string } };
 
 // Vue centralisée (page « Facturation », cf. cadrage « Devis ») — liste à
 // plat toute la société, contrairement à FacturationController qui reste
@@ -17,7 +18,10 @@ type R = { user: { societeId: string; userId: string } };
 @Controller('societes/:slug/factures')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class FacturationCentraleController {
-  constructor(private facturation: FacturationService) {}
+  constructor(
+    private facturation: FacturationService,
+    private controle: ControleInterneService,
+  ) {}
 
   @Get()
   @RequiertPermission('finances_factures', 'lecture')
@@ -43,6 +47,39 @@ export class FacturationCentraleController {
   @RequiertPermission('finances_charges', 'lecture')
   bureauxARegler(@Req() req: R) {
     return this.facturation.bureauxARegler(req.user.societeId);
+  }
+
+  // --- Contrôle interne (revue CFO 20/10/2026) : avoirs, clôture mensuelle ---
+  // Avoirs au-delà du seuil : le CEO décide (vérifié par le service).
+  @Get('avoirs/a-valider')
+  @RequiertPermission('finances_factures', 'lecture')
+  avoirsAValider(@Req() req: R) {
+    return this.controle.avoirsAValider(req.user.societeId, req.user);
+  }
+
+  @Post('avoirs/:demandeId/decision')
+  @RequiertPermission('finances_factures', 'lecture')
+  deciderAvoir(@Req() req: R, @Param('demandeId', ParseUUIDPipe) demandeId: string, @Body() dto: DecisionAvoirDto) {
+    return this.controle.deciderAvoir(req.user.societeId, demandeId, req.user, dto.valide, dto.motifRefus);
+  }
+
+  @Get('clotures')
+  @RequiertPermission('finances_factures', 'lecture')
+  clotures(@Req() req: R) {
+    return this.controle.clotures(req.user.societeId);
+  }
+
+  // Clôturer : qui enregistre les paiements (CFO) ; rouvrir : le CEO seul.
+  @Post('clotures/:mois')
+  @RequiertPermission('finances_factures', 'validation')
+  cloturer(@Req() req: R, @Param('mois') mois: string) {
+    return this.controle.cloturer(req.user.societeId, mois, req.user);
+  }
+
+  @Post('clotures/:mois/reouverture')
+  @RequiertPermission('finances_factures', 'lecture')
+  rouvrir(@Req() req: R, @Param('mois') mois: string, @Body() dto: ReouvertureDto) {
+    return this.controle.rouvrir(req.user.societeId, mois, req.user, dto.motif);
   }
 
   // --- Facture directe d'un lead (sans offre) — maquette Finances, oct. 2026 ---

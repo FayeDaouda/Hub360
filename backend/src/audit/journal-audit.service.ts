@@ -2,6 +2,8 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import type { ActionPaie, EvenementCompteType, NiveauPermission } from '@prisma/client';
 import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
+import { moisFr } from '../projets/facturation/cloture';
+import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Acteur = { userId: string; societeId: string; role: string };
@@ -79,6 +81,14 @@ export class JournalAuditService {
         select: { id: true, action: true, mois: true, parId: true, createdAt: true, dossier: { select: { prenom: true, nom: true, matricule: true } } },
       }),
     ]);
+    // Contrôle interne (revue CFO 20/10/2026) : demandes d'avoir et clôtures.
+    const [demandesAvoir, clotures] = await Promise.all([
+      this.prisma.demandeAvoir.findMany({
+        where: { societeId: S, OR: [{ demandeLe: dans }, { decideLe: dans }] },
+        include: { facture: { select: { numero: true, emiseLe: true, estAvoir: true } } },
+      }),
+      this.prisma.journalCloture.findMany({ where: { societeId: S, createdAt: dans } }),
+    ]);
 
     // Facture d'un paiement supprimé : sa référence, si elle existe encore.
     const facturesSupprimes = new Map(
@@ -130,6 +140,33 @@ export class JournalAuditService {
         action: 'Paiement supprimé',
         detail: [fcfa(p.montant.toNumber()), facturesSupprimes.get(p.factureId) ?? 'facture', p.motif ? `motif : ${p.motif}` : null].filter(Boolean).join(' · '),
         parId: p.supprimeParId,
+      })),
+      ...demandesAvoir.flatMap((d) => {
+        const quoi = `${refFacture(d.facture) ?? 'facture'} · ${fcfa(d.montantTtc.toNumber())} TTC · ${LIBELLE_MOTIF_AVOIR[d.motif]} : ${d.commentaire}`;
+        const lignesDemande = [];
+        if (d.demandeLe >= de && d.demandeLe < jusque) {
+          lignesDemande.push({ id: `avoir-demande:${d.id}`, le: d.demandeLe, categorie: 'finances' as const, action: 'Avoir demandé', detail: quoi, parId: d.demandeParId });
+        }
+        // Décision du CEO (au-delà du seuil) ; en deçà, l'avoir émis suffit.
+        if (d.decideParId && d.decideLe && d.decideLe >= de && d.decideLe < jusque) {
+          lignesDemande.push({
+            id: `avoir-decision:${d.id}`,
+            le: d.decideLe,
+            categorie: 'finances' as const,
+            action: d.statut === 'valide' ? 'Avoir validé par le CEO' : 'Avoir refusé par le CEO',
+            detail: d.statut === 'refuse' ? `${quoi} · refus : ${d.motifRefus}` : quoi,
+            parId: d.decideParId,
+          });
+        }
+        return lignesDemande;
+      }),
+      ...clotures.map((c) => ({
+        id: `cloture:${c.id}`,
+        le: c.createdAt,
+        categorie: 'finances' as const,
+        action: c.action === 'cloture' ? 'Mois clôturé' : 'Mois rouvert',
+        detail: [moisFr(c.mois), c.motif && `motif : ${c.motif}`].filter(Boolean).join(' · '),
+        parId: c.parId,
       })),
       ...reglages.map((r) => ({
         id: `reglage:${r.id}`,

@@ -1,7 +1,9 @@
+import { MotifAvoir } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsObject,
@@ -116,4 +118,19 @@ export class CreerFactureDirecteDto {
   @ValidateNested({ each: true })
   @Type(() => LigneFactureDirecteDto)
   lignes!: LigneFactureDirecteDto[];
+}
+
+// Contrôle interne (revue CFO validée 20/10/2026) : tout avoir est motivé.
+export class DemandeAvoirDto {
+  @IsEnum(MotifAvoir, { message: 'Le motif de l’avoir est obligatoire.' }) motif!: MotifAvoir;
+  @IsString() @MinLength(5, { message: 'Précisez le motif de l’avoir (5 caractères au moins).' }) @MaxLength(500) commentaire!: string;
+}
+
+export class DecisionAvoirDto {
+  @IsBoolean() valide!: boolean;
+  @IsOptional() @IsString() @MaxLength(300) motifRefus?: string;
+}
+
+export class ReouvertureDto {
+  @IsString() @MinLength(5, { message: 'Le motif de la réouverture est obligatoire (5 caractères au moins).' }) @MaxLength(300) motif!: string;
 }

@@ -154,6 +154,8 @@ function mockPrisma() {
     paiementSupprime,
     carteProjet,
     etudes,
+    // Clôture mensuelle : aucun mois clos, sauf test dédié.
+    journalCloture: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn((arg: unknown) =>
       Array.isArray(arg) ? Promise.all(arg) : (arg as (tx: unknown) => unknown)(tx),
     ),
@@ -341,6 +343,21 @@ describe('FacturationService.ajouterPaiement', () => {
     await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
       ConflictException,
     );
+  });
+
+  it('REFUSÉ : paiement daté d’un mois clôturé (contrôle interne)', async () => {
+    const { prisma, facture, paiement } = mockPrisma();
+    facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'emise', estAvoir: false });
+    (prisma.journalCloture.findMany as jest.Mock).mockResolvedValue([{ mois: PAIEMENT.date.slice(0, 7), action: 'cloture' }]);
+    await expect(service(prisma).ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(/clôturé/);
+    expect(paiement.create).not.toHaveBeenCalled();
+    // Rouvert ensuite par le CEO : de nouveau possible.
+    (prisma.journalCloture.findMany as jest.Mock).mockResolvedValue([
+      { mois: PAIEMENT.date.slice(0, 7), action: 'cloture' },
+      { mois: PAIEMENT.date.slice(0, 7), action: 'reouverture' },
+    ]);
+    await service(prisma).ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1');
+    expect(paiement.create).toHaveBeenCalled();
   });
 
   it('AUTORISÉ : facture émise → paiement enregistré avec les bons montants', async () => {

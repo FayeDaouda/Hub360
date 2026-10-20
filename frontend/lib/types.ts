@@ -484,6 +484,11 @@ export type NotificationType =
   // Historique des salaires : proposé par la RH (→ CFO), décidé (→ RH).
   | 'salaire_a_valider'
   | 'salaire_decide'
+  // Contrôle interne (revue CFO) : avoirs, clôture mensuelle.
+  | 'avoir_emis'
+  | 'avoir_a_valider'
+  | 'avoir_decide'
+  | 'cloture_a_faire'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore
@@ -769,6 +774,7 @@ export type Facture = {
   libelle: string;
   statut: StatutFacture;
   statutEffectif: StatutFactureEffectif;
+  avoirEnAttente: boolean; // avoir demandé au-delà du seuil, en attente du CEO
   montantHt: number; // FCFA
   tauxTva: number; // %
   montantTva: number; // FCFA — dérivé
@@ -1118,6 +1124,7 @@ export type FactureCentrale = {
   libelle: string;
   statut: StatutFacture;
   statutEffectif: StatutFactureEffectif;
+  avoirEnAttente: boolean; // avoir demandé au-delà du seuil, en attente du CEO
   montantHt: number;
   tauxTva: number;
   montantTva: number;

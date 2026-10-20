@@ -157,15 +157,60 @@ export function supprimerFacture(
   });
 }
 
+// --- Contrôle interne (revue CFO validée 20/10/2026) --------------------------
+// Tout avoir est motivé et le CEO prévenu ; au-delà du seuil (Réglages), il
+// attend la validation du CEO. Un mois clôturé n'accepte plus de paiement.
+export type MotifAvoir = 'erreur_facturation' | 'remise_commerciale' | 'litige_client' | 'annulation_prestation' | 'autre';
+export const LIBELLE_MOTIF_AVOIR: Record<MotifAvoir, string> = {
+  erreur_facturation: 'Erreur de facturation',
+  remise_commerciale: 'Remise commerciale',
+  litige_client: 'Litige client',
+  annulation_prestation: 'Annulation de prestation',
+  autre: 'Autre',
+};
+export type AvoirAValider = {
+  id: string;
+  factureId: string;
+  reference: string | null;
+  libelle: string;
+  projet: string | null;
+  client: string | null;
+  montantTtc: number;
+  motif: MotifAvoir;
+  commentaire: string;
+  demandeLe: string;
+  demandePar: string | null;
+  peutDecider: boolean;
+};
+export type ChiffresMois = { factures: number; factureTtc: number; avoirs: number; avoirsTtc: number; paiements: number; encaisse: number };
+export type MoisCloture = {
+  mois: string;
+  periode: string;
+  clos: boolean;
+  le: string | null;
+  par: string | null;
+  derniereReouverture: string | null;
+  chiffres: ChiffresMois;
+};
+
 export function creerAvoir(
   slug: string,
   projetId: string,
   factureId: string,
+  demande: { motif: MotifAvoir; commentaire: string },
 ): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/${factureId}/avoir`, {
     method: 'POST',
+    body: demande,
   });
 }
+export const getAvoirsAValider = (slug: string) => apiSociete<AvoirAValider[]>(slug, '/factures/avoirs/a-valider');
+export const deciderAvoir = (slug: string, id: string, valide: boolean, motifRefus?: string) =>
+  apiSociete<AvoirAValider[]>(slug, `/factures/avoirs/${id}/decision`, { method: 'POST', body: { valide, motifRefus } });
+export const getClotures = (slug: string) => apiSociete<MoisCloture[]>(slug, '/factures/clotures');
+export const cloturerMois = (slug: string, mois: string) => apiSociete<MoisCloture[]>(slug, `/factures/clotures/${mois}`, { method: 'POST', body: {} });
+export const rouvrirMois = (slug: string, mois: string, motif: string) =>
+  apiSociete<MoisCloture[]>(slug, `/factures/clotures/${mois}/reouverture`, { method: 'POST', body: { motif } });
 
 export type NouveauPaiement = {
   date: string;
