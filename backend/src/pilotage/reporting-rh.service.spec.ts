@@ -5,7 +5,7 @@ const dossier = (id: string, o: Record<string, unknown> = {}) => ({
   id, prenom: id, nom: 'Test', typeContrat: 'cdi', salaireBase: 500_000, dateEntree: null, archiveLe: null, ...o,
 });
 
-function svc(o: { dossiers: unknown[]; absences?: unknown[]; bulletins?: unknown[]; feuilles?: unknown[]; rappels?: unknown[]; attestations?: unknown[] }) {
+function svc(o: { dossiers: unknown[]; absences?: unknown[]; bulletins?: unknown[]; feuilles?: unknown[]; rappels?: unknown[]; attestations?: unknown[]; precedent?: unknown }) {
   const prisma = {
     dossierPersonnel: { findMany: jest.fn().mockResolvedValue(o.dossiers) },
     demandeAbsence: {
@@ -18,6 +18,7 @@ function svc(o: { dossiers: unknown[]; absences?: unknown[]; bulletins?: unknown
     },
     bulletinPaie: { findMany: jest.fn().mockResolvedValue(o.bulletins ?? []) },
     rappelEnvoye: { findMany: jest.fn().mockResolvedValue(o.rappels ?? []) },
+    reportingMensuel: { findUnique: jest.fn().mockResolvedValue(o.precedent ?? null) },
   } as unknown as PrismaService;
   const reglages = { joursFeries: jest.fn().mockResolvedValue(new Map([['S1', new Set<string>()]])) };
   const temps = { feuilles: jest.fn().mockResolvedValue({ feuilles: o.feuilles ?? [] }) };
@@ -44,8 +45,9 @@ describe('ReportingRhService (reporting RH prérempli, revue RH 20/10/2026)', ()
     }).contenu('S1', '2026-09');
 
     expect(valeur(r, 'Effectif')).toBe('2 salariés au 30/09 · 1 CDI, 1 CDD · entrées : 1 (Awa Test) · sorties : 1 (Ousmane Test)');
-    // Août : Malick + Ousmane ; septembre : Malick (Awa sans salaire).
-    expect(valeur(r, 'Masse salariale brute')).toMatch(/^500\s000 FCFA \/ mois · −500\s000 FCFA par rapport à août · 1 salaire non renseigné$/);
+    // Septembre : Malick seul (Awa sans salaire, Ousmane sorti) ; août non déposé.
+    expect(valeur(r, 'Masse salariale brute')).toMatch(/^500\s000 FCFA \/ mois · pas de reporting RH déposé pour août : pas de comparaison · 1 salaire non renseigné$/);
+    expect(r.find((x) => x.libelle === 'Masse salariale brute')?.montant).toBe(500_000);
     expect(valeur(r, 'Absences')).toBe('Congés payés 3 j · 1 demande refusée');
     expect(valeur(r, 'Temps')).toBe('1 / 2 feuille(s) contrôlée(s) · 1 sans heures · 1 écart ouvert');
     // L'absence relancée n'est pas de la société : une seule relance comptée.
@@ -53,5 +55,13 @@ describe('ReportingRhService (reporting RH prérempli, revue RH 20/10/2026)', ()
     expect(valeur(r, 'Échéances légales')).toBe("Lamine Diallo · pièce d'identité expirée le 20/09");
     // Ousmane, sorti le 15, a été payé en septembre.
     expect(valeur(r, 'Paie')).toBe('1 / 3 bulletin(s) déposé(s) · manquants : Awa Test, Ousmane Test');
+  });
+
+  it('masse salariale : comparée au chiffre figé du reporting précédent (montant, ou texte d’un ancien dépôt)', async () => {
+    const masse = async (precedent: unknown) =>
+      valeur(await svc({ dossiers: [dossier('Malick')], precedent }).contenu('S1', '2026-10'), 'Masse salariale brute');
+    expect(await masse({ contenu: [{ libelle: 'Masse salariale brute', valeur: '…', montant: 450_000 }] })).toMatch(/\+50\s000 FCFA par rapport au reporting de septembre$/);
+    expect(await masse({ contenu: [{ libelle: 'Masse salariale brute', valeur: '600\u202f000 FCFA / mois · stable' }] })).toMatch(/−100\s000 FCFA par rapport au reporting de septembre$/);
+    expect(await masse({ contenu: [{ libelle: 'Masse salariale brute', valeur: '500 000 FCFA / mois' }] })).toBe('500\u202f000 FCFA / mois · stable par rapport au reporting de septembre');
   });
 });

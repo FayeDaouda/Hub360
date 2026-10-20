@@ -83,7 +83,7 @@ export function CalendrierCellule({ slug, demandeId, source }: { slug: string; d
                     <td
                       key={j}
                       className={`${dansPeriode(j) ? 'is-periode' : ''}${js === 0 || js === 6 ? ' is-weekend' : ''}${a ? ` cal-${a.etat}` : ''}`}
-                      title={a ? `${m.nom} · ${LIBELLE_TYPE_ABSENCE[a.type]} · ${a.etat === 'validee' ? 'validée' : a.etat === 'demande' ? 'cette demande' : 'en attente'}` : undefined}
+                      title={a ? `${m.nom} · ${a.type ? LIBELLE_TYPE_ABSENCE[a.type] : 'Absent'} · ${a.etat === 'validee' ? 'validée' : a.etat === 'demande' ? 'cette demande' : 'en attente'}` : undefined}
                     />
                   );
                 })}

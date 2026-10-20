@@ -67,7 +67,7 @@ export type CalendrierCellule = {
   cellule: string | null;
   periode: { debut: string; fin: string };
   fenetre: { debut: string; fin: string };
-  membres: { nom: string; estDemandeur: boolean; absences: { debut: string; fin: string; type: TypeAbsence; etat: 'demande' | 'validee' | 'en_attente' }[] }[];
+  membres: { nom: string; estDemandeur: boolean; absences: { debut: string; fin: string; type: TypeAbsence | null; etat: 'demande' | 'validee' | 'en_attente' }[] }[];
 };
 // « rh » : page RH ; « decideur » : N+1 ou CEO en validation finale.
 export const getCalendrierCellule = (slug: string, id: string, source: 'rh' | 'decideur') =>

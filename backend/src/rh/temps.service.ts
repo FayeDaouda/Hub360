@@ -6,6 +6,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import {
   bornesMois,
   calendrierDuMois,
+  controleOuvertLe,
   type JourCalendrier,
   feuilleDuMois,
   type Manque,
@@ -23,7 +24,8 @@ type Acteur = { userId: string; societeId: string };
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
-export type StatutFeuille = 'en_cours' | 'a_controler' | 'sans_heures' | 'controlee';
+// `cloture` : mois clos, contrôle pas encore ouvert (avant le 3 du mois suivant).
+export type StatutFeuille = 'en_cours' | 'cloture' | 'a_controler' | 'sans_heures' | 'controlee';
 
 // Ligne de calcul d'une feuille (aussi figée telle quelle au contrôle).
 export type LigneCalcul = {
@@ -168,6 +170,8 @@ export class TempsService {
     const jour = aujourdhui();
     moisValide(mois, jour);
     if (mois >= moisDe(jour)) throw new ConflictException('Seul un mois clos peut être contrôlé.');
+    const ouverture = controleOuvertLe(mois);
+    if (jour < ouverture) throw new ConflictException(`Contrôle possible à partir du ${ouverture.split('-').reverse().join('/')}.`);
     const d = await this.prisma.dossierPersonnel.findUnique({ where: { id: dossierId }, include: INCLUDE_DOSSIER });
     if (!d) throw new NotFoundException('Dossier introuvable');
     if (!periodeComptee(mois, salarieDe(d), jour)) throw new ConflictException("Ce salarié n'était pas présent ce mois-là.");
@@ -316,7 +320,7 @@ function calculer(
   const duMois = taches.filter((t) => planifiee(t) && t.debut! <= m.fin && t.echeance! >= m.debut);
   const f = feuilleDuMois(mois, salarie, duMois, jour, feries);
   const statut: StatutFeuille =
-    mois >= moisDe(jour) ? 'en_cours' : f.heuresImputees > 0 ? 'a_controler' : 'sans_heures';
+    mois >= moisDe(jour) ? 'en_cours' : jour < controleOuvertLe(mois) ? 'cloture' : f.heuresImputees > 0 ? 'a_controler' : 'sans_heures';
   return {
     mois,
     statut,

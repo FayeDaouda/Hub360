@@ -25,7 +25,7 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
     },
   } as unknown as PrismaService;
   const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CFO1']), comptesDe: jest.fn().mockResolvedValue(['CHEF']) };
-  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService, { regle: jest.fn().mockResolvedValue(3) } as never), notifications };
+  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService, { regle: jest.fn((_s: string, cle: string) => Promise.resolve(cle === 'signalement_rh_apres_relances' ? 2 : 3)) } as never), notifications };
 }
 
 const tache = (finLe: string) => ({
@@ -95,5 +95,19 @@ describe('RappelsService', () => {
     expect(await svc({ absences: [absence('2026-10-12')] }).s.demandes(JOUR)).toEqual([]);
     // Déposée lundi 5 → 7 jours ouvrés : deuxième palier, nouvelle relance.
     expect((await svc({ absences: [absence('2026-10-05')] }).s.demandes(JOUR))[0].cle).toBe('demande:absence:A1:n1:2');
+  });
+
+  it('N+1 sans réponse après 2 relances : la demande est signalée aussi à la RH, une fois', async () => {
+    const absence = (createdAt: string) => ({
+      id: 'A1', statut: 'attente_n1', createdAt: new Date(`${createdAt}T09:00:00Z`), decisionN1Le: null,
+      dateDebut: '2026-11-03', dateFin: '2026-11-05', n1CollaborateurId: 'C9', n1Role: null,
+      dossier: { id: 'D1', societeId: 'S1', prenom: 'Khadija', nom: 'Sow' },
+    });
+    // Lundi 5 → 7 jours ouvrés : 2e relance, pas encore de signalement.
+    expect((await svc({ absences: [absence('2026-10-05')] }).s.demandes(JOUR)).map((r) => r.cle)).toEqual(['demande:absence:A1:n1:2']);
+    // Jeudi 1er → 9 jours ouvrés : 3e relance, et signalement à la RH.
+    const r = await svc({ absences: [absence('2026-10-01')] }).s.demandes(JOUR);
+    expect(r.map((x) => x.cle)).toEqual(['demande:absence:A1:n1:3', 'demande:absence:A1:n1:signalee']);
+    expect(r[1]).toEqual(expect.objectContaining({ destinataireIds: ['CFO1'], titre: expect.stringContaining('N+1 sans réponse') }));
   });
 });

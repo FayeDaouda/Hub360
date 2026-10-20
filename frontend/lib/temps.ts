@@ -48,6 +48,7 @@ export const LIBELLE_MANQUE: Record<ManqueTache, string> = {
 
 export const STATUT_FEUILLE: Record<StatutFeuilleTemps, { libelle: string; pill: string }> = {
   en_cours: { libelle: 'Mois en cours', pill: 'pill--info' },
+  cloture: { libelle: 'Contrôle à partir du 3', pill: 'pill--info' },
   a_controler: { libelle: 'À contrôler', pill: 'pill--attention' },
   sans_heures: { libelle: 'Sans heures', pill: 'pill--neutre' },
   controlee: { libelle: 'Contrôlée', pill: 'pill--succes' },

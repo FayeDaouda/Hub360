@@ -86,6 +86,18 @@ describe('TempsService', () => {
     });
   });
 
+  it('contrôle ouvert le 3 du mois suivant seulement', async () => {
+    jest.setSystemTime(new Date('2026-10-02T10:00:00Z'));
+    try {
+      await expect(svc().s.controler('U', 'D1', '2026-09')).rejects.toThrow('Contrôle possible à partir du 03/10/2026.');
+      expect((await svc().s.feuilles('2026-09')).feuilles[0].statut).toBe('cloture');
+      jest.setSystemTime(new Date('2026-10-03T08:00:00Z'));
+      await expect(svc().s.controler('U', 'D1', '2026-09')).resolves.toBeDefined();
+    } finally {
+      jest.setSystemTime(new Date('2026-10-05T10:00:00Z'));
+    }
+  });
+
   it('une feuille contrôlée affiche les chiffres figés, pas le recalcul', async () => {
     const controle = {
       mois: '2026-09', heuresImputees: 40, heuresDisponibles: 160, joursAbsence: 2,

@@ -9,7 +9,9 @@ import { deposerBulletin } from '@/lib/rh';
 import { libelleMois } from '@/lib/temps';
 import type { DossierPersonnel } from '@/lib/types';
 
-type Ligne = { fichier: File; dossierId: string | null; par: 'matricule' | 'nom' | 'manuel' | null; etat: 'attente' | 'envoi' | 'fait' | 'erreur'; message?: string };
+// `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
+// ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
+type Ligne = { fichier: File; dossierId: string | null; par: 'matricule' | 'nom' | 'manuel' | null; confirme: boolean; etat: 'attente' | 'envoi' | 'fait' | 'erreur'; message?: string };
 
 // « Kh. SOW » → « kh sow » : comparaison sans accents ni casse.
 const normaliser = (x: string) =>
@@ -22,12 +24,12 @@ const normaliser = (x: string) =>
 
 // Rattachement d'un fichier : le matricule dans le nom (« GH-0005_2026-09.pdf »),
 // sinon le prénom et le nom du salarié tous deux présents dans le nom.
-function rattacher(fichier: File, dossiers: DossierPersonnel[]): Pick<Ligne, 'dossierId' | 'par'> {
+function rattacher(fichier: File, dossiers: DossierPersonnel[]): Pick<Ligne, 'dossierId' | 'par' | 'confirme'> {
   const matricule = /([A-Z]{2,4})[-_ ]?(\d{4})/i.exec(fichier.name);
   if (matricule) {
     const cle = `${matricule[1]}-${matricule[2]}`.toUpperCase();
     const d = dossiers.find((x) => x.matricule.toUpperCase() === cle);
-    if (d) return { dossierId: d.id, par: 'matricule' };
+    if (d) return { dossierId: d.id, par: 'matricule', confirme: true };
   }
   const nom = ` ${normaliser(fichier.name)} `;
   const candidats = dossiers.filter((x) => {
@@ -35,7 +37,7 @@ function rattacher(fichier: File, dossiers: DossierPersonnel[]): Pick<Ligne, 'do
     const n = normaliser(x.nom);
     return !!p && !!n && nom.includes(` ${p} `) && nom.includes(` ${n} `);
   });
-  return candidats.length === 1 ? { dossierId: candidats[0].id, par: 'nom' } : { dossierId: null, par: null };
+  return candidats.length === 1 ? { dossierId: candidats[0].id, par: 'nom', confirme: false } : { dossierId: null, par: null, confirme: false };
 }
 
 // Dépôt groupé des bulletins du mois (revue RH 20/10/2026) : 240 dépôts par
@@ -75,9 +77,12 @@ export function DepotBulletins({
   for (const l of lignes) if (l.dossierId) parDossier.set(l.dossierId, (parDossier.get(l.dossierId) ?? 0) + 1);
   const doublon = (l: Ligne) => !!l.dossierId && (parDossier.get(l.dossierId) ?? 0) > 1;
   const remplace = (l: Ligne) => !!l.dossierId && !!actifs.find((d) => d.id === l.dossierId)?.bulletins.some((b) => b.mois === mois);
-  const pretes = lignes.filter((l) => l.dossierId && !doublon(l) && l.etat !== 'fait');
+  const aConfirmer = (l: Ligne) => !!l.dossierId && !l.confirme && l.etat !== 'fait';
+  const pretes = lignes.filter((l) => l.dossierId && l.confirme && !doublon(l) && l.etat !== 'fait');
   const nonReconnus = lignes.filter((l) => !l.dossierId).length;
+  const nbAConfirmer = lignes.filter(aConfirmer).length;
   const termine = lignes.length > 0 && lignes.every((l) => l.etat === 'fait' || !l.dossierId || doublon(l));
+  const confirmer = (i: number) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, confirme: true } : y)));
 
   async function deposer() {
     setEnvoi(true);
@@ -117,8 +122,8 @@ export function DepotBulletins({
             </label>
           </div>
           <p className="dmd-note">
-            Nommez chaque fichier avec le matricule (ex. « GH-0005_{mois}.pdf ») ou le prénom et le nom du salarié : il est rattaché
-            tout seul. Vérifiez, corrigez si besoin, puis déposez — chaque salarié est prévenu.
+            Nommez chaque fichier avec le matricule (ex. « GH-0005_{mois}.pdf ») : il est rattaché tout seul. Un fichier reconnu par le
+            prénom et le nom est « à confirmer » : vérifiez le salarié puis confirmez-le. Chaque salarié est prévenu au dépôt.
           </p>
 
           {lignes.length > 0 && (
@@ -126,10 +131,11 @@ export function DepotBulletins({
               <p className="db-bilan">
                 {lignes.length} fichier{lignes.length > 1 ? 's' : ''} · {pretes.length} prêt{pretes.length > 1 ? 's' : ''} pour {libelleMois(mois)}
                 {nonReconnus > 0 && <span className="db-alerte"> · {nonReconnus} non reconnu{nonReconnus > 1 ? 's' : ''}</span>}
+                {nbAConfirmer > 0 && <span className="db-alerte"> · {nbAConfirmer} à confirmer</span>}
               </p>
               <ul className="db-liste">
                 {lignes.map((l, i) => (
-                  <li key={`${l.fichier.name}-${i}`} className="db-ligne" data-etat={!l.dossierId || doublon(l) ? 'alerte' : l.etat}>
+                  <li key={`${l.fichier.name}-${i}`} className="db-ligne" data-etat={!l.dossierId || doublon(l) || aConfirmer(l) ? 'alerte' : l.etat}>
                     <span className="db-fichier" title={l.fichier.name}>
                       {l.fichier.name}
                     </span>
@@ -137,7 +143,7 @@ export function DepotBulletins({
                       className="field-input db-salarie"
                       value={l.dossierId ?? ''}
                       disabled={envoi || l.etat === 'fait'}
-                      onChange={(e) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, dossierId: e.target.value || null, par: 'manuel' } : y)))}
+                      onChange={(e) => setLignes((x) => x.map((y, j) => (j === i ? { ...y, dossierId: e.target.value || null, par: 'manuel', confirme: true } : y)))}
                       aria-label={`Salarié du fichier ${l.fichier.name}`}
                     >
                       <option value="">— à rattacher —</option>
@@ -164,6 +170,10 @@ export function DepotBulletins({
                         <span className="pill pill--risque">
                           <CircleAlert size={12} aria-hidden /> doublon
                         </span>
+                      ) : aConfirmer(l) ? (
+                        <button type="button" className="btn-ghost btn-ghost--sm" disabled={envoi} onClick={() => confirmer(i)} title="Rattaché par le nom : vérifiez le salarié choisi">
+                          Confirmer
+                        </button>
                       ) : remplace(l) ? (
                         <span className="pill pill--attention">remplace le bulletin déposé</span>
                       ) : (

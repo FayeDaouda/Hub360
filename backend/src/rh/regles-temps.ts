@@ -63,6 +63,16 @@ export function bornesMois(mois: string): Periode {
   return { debut: `${mois}-01`, fin: `${mois}-${String(dernier).padStart(2, '0')}` };
 }
 
+// Le contrôle RH d'un mois clos s'ouvre le 3 du mois suivant (revue RH
+// validée, 20/10/2026) : le temps que les dernières absences et remises du
+// mois soient saisies.
+export const JOUR_OUVERTURE_CONTROLE = 3;
+export function controleOuvertLe(mois: string): string {
+  const [a, m] = mois.split('-').map(Number);
+  const suivant = m === 12 ? `${a + 1}-01` : `${a}-${String(m + 1).padStart(2, '0')}`;
+  return `${suivant}-${String(JOUR_OUVERTURE_CONTROLE).padStart(2, '0')}`;
+}
+
 // Mois de `depuis` à `jusqua` inclus (AAAA-MM), dans l'ordre.
 export function moisEntre(depuis: string, jusqua: string): string[] {
   const liste: string[] = [];

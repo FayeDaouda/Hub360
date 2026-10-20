@@ -7,7 +7,11 @@ import { joursOuvrables } from '../rh/regles-conges';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { TempsService } from '../rh/temps.service';
 
-export type Rubrique = { libelle: string; valeur: string };
+// `montant` : chiffre brut figé avec le reporting (masse salariale), relu le
+// mois suivant pour la comparaison.
+export type Rubrique = { libelle: string; valeur: string; montant?: number };
+
+const MASSE = 'Masse salariale brute';
 
 const JOUR = 86_400_000;
 const jourIso = (d: Date) => d.toISOString().slice(0, 10);
@@ -37,6 +41,16 @@ const LIBELLE_ALERTE: Record<TypeAlerteRh, [avant: string, apres: string]> = {
   visite_medicale: ['visite médicale le', 'visite médicale dépassée depuis le'],
   piece_identite: ["pièce d'identité expire le", "pièce d'identité expirée le"],
 };
+
+// Masse figée d'un reporting déposé : le montant brut, sinon (reporting
+// antérieur à ce champ) le nombre en tête du texte « 650 000 FCFA / mois ».
+function masseDuReporting(contenu: unknown): number | null {
+  const r = Array.isArray(contenu) ? (contenu as Rubrique[]).find((x) => x.libelle === MASSE) : undefined;
+  if (!r) return null;
+  if (typeof r.montant === 'number') return r.montant;
+  const m = /^([\d\s\u00a0\u202f]+) FCFA/.exec(r.valeur);
+  return m ? Number(m[1].replace(/\D/g, '')) : null;
+}
 
 type Dossier = { id: string; prenom: string; nom: string; typeContrat: string; salaireBase: number | null; entree: string; sortie: string | null };
 
@@ -68,12 +82,14 @@ export class ReportingRhService {
     const presentDans = (d: Dossier, m: { debut: string; fin: string }) => d.entree <= m.fin && (!d.sortie || d.sortie >= m.debut);
     const effectif = dossiers.filter((d) => presentLe(d, fin));
 
-    const [absences, demandes, feuilles, echeances, bulletins] = await Promise.all([
+    const precedent = moisPrecedent(mois);
+    const [absences, demandes, feuilles, echeances, bulletins, reportingPrecedent] = await Promise.all([
       this.absences(societeId, mois),
       this.demandes(societeId, debut, fin),
       this.temps.feuilles(mois, societeId),
       this.alertes.alertes(fin, societeId),
       this.prisma.bulletinPaie.findMany({ where: { mois, dossier: { societeId } }, select: { dossierId: true } }),
+      this.prisma.reportingMensuel.findUnique({ where: { societeId_type_mois: { societeId, type: 'rh', mois: precedent } }, select: { contenu: true } }),
     ]);
 
     // 1. Effectif
@@ -85,13 +101,19 @@ export class ReportingRhService {
     const sorties = dossiers.filter((d) => d.sortie && moisDe(d.sortie) === mois);
     const liste = (ds: Dossier[]) => (ds.length ? `${ds.length} (${noms(ds)})` : '0');
 
-    // 2. Masse salariale — salaires de base actuels : le HUB ne garde pas
-    // l'historique des salaires, l'évolution reflète entrées et sorties.
-    const masseAu = (jour: string) => dossiers.filter((d) => presentLe(d, jour)).reduce((t, d) => t + (d.salaireBase ?? 0), 0);
-    const masse = masseAu(fin);
-    const precedent = moisPrecedent(mois);
-    const delta = masse - masseAu(bornesMois(precedent).fin);
+    // 2. Masse salariale (salaires de base actuels : pas encore d'historique
+    // des salaires), comparée au chiffre FIGÉ du reporting RH déposé le mois
+    // précédent — pas à un recalcul (revue RH validée, 20/10/2026).
+    const masse = effectif.reduce((t, d) => t + (d.salaireBase ?? 0), 0);
+    const masseFigee = masseDuReporting(reportingPrecedent?.contenu);
     const manquants = effectif.filter((d) => d.salaireBase === null).length;
+    const comparaison = !reportingPrecedent
+      ? `pas de reporting RH déposé pour ${moisCourt(precedent)} : pas de comparaison`
+      : masseFigee == null
+        ? `chiffre de ${moisCourt(precedent)} illisible : pas de comparaison`
+        : masse === masseFigee
+          ? `stable par rapport au reporting de ${moisCourt(precedent)}`
+          : `${masse > masseFigee ? '+' : '−'}${fcfa(Math.abs(masse - masseFigee))} par rapport au reporting de ${moisCourt(precedent)}`;
 
     // 4. Temps
     const aControler = feuilles.feuilles.filter((f) => f.statut === 'a_controler' || f.statut === 'controlee');
@@ -109,10 +131,9 @@ export class ReportingRhService {
         valeur: `${pluriel(effectif.length, 'salarié')} au ${dateFr(fin)}${parContrat.length ? ` · ${parContrat.join(', ')}` : ''} · entrées : ${liste(entrees)} · sorties : ${liste(sorties)}`,
       },
       {
-        libelle: 'Masse salariale brute',
-        valeur:
-          `${fcfa(masse)} / mois · ${delta === 0 ? `stable par rapport à ${moisCourt(precedent)}` : `${delta > 0 ? '+' : '−'}${fcfa(Math.abs(delta))} par rapport à ${moisCourt(precedent)}`}` +
-          (manquants ? ` · ${pluriel(manquants, 'salaire')} non renseigné${manquants > 1 ? 's' : ''}` : ''),
+        libelle: MASSE,
+        valeur: `${fcfa(masse)} / mois · ${comparaison}` + (manquants ? ` · ${pluriel(manquants, 'salaire')} non renseigné${manquants > 1 ? 's' : ''}` : ''),
+        montant: masse,
       },
       {
         libelle: 'Absences',

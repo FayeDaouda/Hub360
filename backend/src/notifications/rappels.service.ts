@@ -206,9 +206,15 @@ export class RappelsService implements OnApplicationBootstrap {
   // au N+1 tant qu'il n'a pas décidé, ensuite à la RH (au CEO pour une
   // demande de la RH) ; remboursements et attestations : à la RH.
   async demandes(jour: string): Promise<Rappel[]> {
-    const delais = new Map<string, number>();
+    const delais = new Map<string, { relance: number; signalement: number }>();
     const delai = async (societeId: string) => {
-      if (!delais.has(societeId)) delais.set(societeId, await this.reglages.regle<number>(societeId, 'relance_demandes_jours'));
+      if (!delais.has(societeId)) {
+        const [relance, signalement] = await Promise.all([
+          this.reglages.regle<number>(societeId, 'relance_demandes_jours'),
+          this.reglages.regle<number>(societeId, 'signalement_rh_apres_relances'),
+        ]);
+        delais.set(societeId, { relance, signalement });
+      }
       return delais.get(societeId)!;
     };
     const titulaires = new Map<string, string[]>();
@@ -233,10 +239,11 @@ export class RappelsService implements OnApplicationBootstrap {
     ]);
     const demandeurRh = new Set(dossiersRh.map((d) => d.id));
     const rappels: Rappel[] = [];
+    // Renvoie le palier atteint (0 : pas encore de relance).
     const ajouter = async (cle: string, depuis: Date, dossier: { societeId: string; prenom: string; nom: string }, objet: string, chez: string, ids: (string | null)[]) => {
       const n = joursOuvresDepuis(depuis.toISOString().slice(0, 10), jour);
-      const palier = Math.floor(n / (await delai(dossier.societeId)));
-      if (palier < 1) return;
+      const palier = Math.floor(n / (await delai(dossier.societeId)).relance);
+      if (palier < 1) return 0;
       rappels.push({
         cle: `${cle}:${palier}`,
         societeId: dossier.societeId,
@@ -244,12 +251,25 @@ export class RappelsService implements OnApplicationBootstrap {
         titre: `Relance · ${objet} de ${`${dossier.prenom} ${dossier.nom}`.trim()} · ${chez} depuis ${n} jours ouvrés`,
         destinataireIds: ids,
       });
+      return palier;
     };
     for (const a of absences) {
       const periode = `absence du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)}`;
       if (a.statut === 'attente_n1') {
         const ids = a.n1CollaborateurId ? await this.notifications.comptesDe([a.n1CollaborateurId]) : a.n1Role ? await role(a.dossier.societeId, a.n1Role) : [];
-        await ajouter(`demande:absence:${a.id}:n1`, a.createdAt, a.dossier, periode, 'en attente de votre décision', ids);
+        const palier = await ajouter(`demande:absence:${a.id}:n1`, a.createdAt, a.dossier, periode, 'en attente de votre décision', ids);
+        // N relances du N+1 restées sans réponse : la demande est signalée
+        // aussi à la RH (au CEO si la demandeuse est la RH), une seule fois.
+        if (palier > (await delai(a.dossier.societeId)).signalement) {
+          const escalade = demandeurRh.has(a.dossier.id) ? 'CEO (transverse)' : 'RH';
+          rappels.push({
+            cle: `demande:absence:${a.id}:n1:signalee`,
+            societeId: a.dossier.societeId,
+            type: 'rappel_demande',
+            titre: `N+1 sans réponse · ${periode} de ${`${a.dossier.prenom} ${a.dossier.nom}`.trim()} · ${(await delai(a.dossier.societeId)).signalement} relances restées sans décision`,
+            destinataireIds: await role(a.dossier.societeId, escalade),
+          });
+        }
       } else {
         const final = demandeurRh.has(a.dossier.id) ? 'CEO (transverse)' : 'RH';
         await ajouter(`demande:absence:${a.id}:final`, a.decisionN1Le ?? a.createdAt, a.dossier, periode, 'en attente de validation finale', await role(a.dossier.societeId, final));

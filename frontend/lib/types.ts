@@ -1491,7 +1491,7 @@ export type IntegrationSalarie = {
 // fenêtre début → échéance), hors absences validées — jamais saisies.
 export type SectionTache = 'avant_projet' | 'permis' | 'execution';
 export type ManqueTache = 'duree' | 'debut' | 'echeance' | 'fenetre' | 'absence';
-export type StatutFeuilleTemps = 'en_cours' | 'a_controler' | 'sans_heures' | 'controlee';
+export type StatutFeuilleTemps = 'en_cours' | 'cloture' | 'a_controler' | 'sans_heures' | 'controlee';
 export type EtatTacheTemps = 'a_venir' | 'en_cours' | 'terminee';
 
 export type LigneCalculTemps = {

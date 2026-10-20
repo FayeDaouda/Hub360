@@ -155,6 +155,14 @@ export const REGLES: DefinitionReglage[] = [
     aide: "Absence, remboursement ou attestation sans décision : relance à 7 h au N+1 ou à la RH après ce nombre de jours ouvrés, puis à chaque nouveau palier (décision du 20/10/2026).",
     appliquee: true,
   },
+  {
+    cle: 'signalement_rh_apres_relances',
+    libelle: 'Absence signalée à la RH après N relances du N+1 sans réponse',
+    valeur: { type: 'entier', min: 1, max: 10, unite: 'relances' },
+    defaut: 2,
+    aide: "Le N+1 n'a pas répondu après ce nombre de relances : la demande est signalée aussi à la RH (au CEO si la demandeuse est la RH), une seule fois (revue RH validée, 20/10/2026).",
+    appliquee: true,
+  },
 ];
 
 export const OBJECTIFS: DefinitionReglage[] = [

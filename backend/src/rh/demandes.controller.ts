@@ -99,9 +99,10 @@ export class DemandesRhController {
     return this.demandes.listeRh();
   }
 
+  // Page RH (RH, CFO, CEO) : le motif des absences à la RH seule.
   @Get('absences/:id/calendrier')
-  calendrier(@Param('id', ParseUUIDPipe) id: string) {
-    return this.demandes.calendrierCellule(id);
+  calendrier(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.demandes.calendrierCellule(id, req.user.role === 'RH');
   }
 
   @Get('absences/:id/justificatif')

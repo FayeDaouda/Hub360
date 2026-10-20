@@ -564,7 +564,9 @@ export class DemandesService {
   // --- Calendrier de la cellule (revue RH 20/10/2026) -------------------------
   // Au moment de décider : qui d'autre de la cellule est absent (validé ou en
   // attente) autour de la période demandée — une semaine avant et après.
-  async calendrierCellule(id: string) {
+  // Le motif (maladie… : donnée de santé) n'est remis qu'à la RH ; le N+1 et
+  // le CEO voient « Absent » (revue RH validée, 20/10/2026).
+  async calendrierCellule(id: string, avecMotif: boolean) {
     const d = await this.absence(id);
     const decaler = (iso: string, n: number) => {
       const x = new Date(`${iso}T00:00:00Z`);
@@ -614,7 +616,7 @@ export class DemandesService {
           absences: (m.dossierPersonnel?.absences ?? []).map((x) => ({
             debut: x.dateDebut,
             fin: x.dateFin,
-            type: x.type,
+            type: avecMotif ? x.type : null,
             // La demande en cours de décision, une absence acquise, ou en attente.
             etat: x.id === d.id ? ('demande' as const) : x.statut === 'validee' ? ('validee' as const) : ('en_attente' as const),
           })),
@@ -627,7 +629,7 @@ export class DemandesService {
     const d = await this.absence(id);
     const finalCeo = a.role === ROLE_CEO && (await this.valideurFinal(d.dossierId)) === 'ceo';
     if (!finalCeo && !(await this.estN1(a, d))) throw new ForbiddenException("Vous n'êtes pas le N+1 de cette demande.");
-    return this.calendrierCellule(id);
+    return this.calendrierCellule(id, false);
   }
 
   private async absence(id: string) {
