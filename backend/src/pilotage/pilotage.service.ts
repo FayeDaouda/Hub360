@@ -453,6 +453,19 @@ export class PilotageService {
     );
   }
 
+  // Reportings reçus par l'acteur (destinataire) pour le dernier mois clos :
+  // « À valider aujourd'hui » du CFO (revue CFO, 20/10/2026).
+  async recus(a: Acteur) {
+    const types = (Object.keys(REPORTINGS) as TypeReporting[]).filter((t) => REPORTINGS[t].destinataire === a.role);
+    const mois = moisAReporter(aujourdhui()).at(-1);
+    if (!types.length || !mois) return [];
+    const deposes = await this.prisma.reportingMensuel.findMany({
+      where: { societeId: a.societeId, type: { in: types }, mois },
+      select: { type: true, mois: true, deposeLe: true },
+    });
+    return deposes.map((d) => ({ type: d.type, mois: d.mois, periode: moisLong(d.mois), deposeLe: jourIso(d.deposeLe), emetteur: libelleRole(REPORTINGS[d.type].emetteur) }));
+  }
+
   async deposer(a: Acteur, type: TypeReporting, mois: string, analyse: string) {
     const jour = aujourdhui();
     if (!REPORTINGS[type]) throw new NotFoundException('Reporting inconnu.');

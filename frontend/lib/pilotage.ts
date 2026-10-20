@@ -15,6 +15,11 @@ export function getReportingsADeposer(slug: string): Promise<ReportingADeposer[]
   return apiSociete<ReportingADeposer[]>(slug, '/pilotage/reportings/a-deposer');
 }
 
+export type ReportingRecu = { type: 'direction' | 'rh'; mois: string; periode: string; deposeLe: string; emetteur: string };
+export function getReportingsRecus(slug: string): Promise<ReportingRecu[]> {
+  return apiSociete<ReportingRecu[]>(slug, '/pilotage/reportings/recus');
+}
+
 export function deposerReporting(slug: string, type: 'direction' | 'rh', mois: string, analyse: string): Promise<VuePilotage> {
   return apiSociete<VuePilotage>(slug, `/pilotage/reportings/${type}/${mois}/depot`, { method: 'POST', body: { analyse } });
 }

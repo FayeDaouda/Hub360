@@ -38,6 +38,7 @@ import { TableauDeBordFinances } from '@/components/finances/tableau-de-bord';
 import { GrilleTarifaire } from '@/components/finances/grille-tarifaire';
 import { OffrePanneau } from '@/components/finances/offre-panneau';
 import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
+import { AValiderCfo } from '@/components/finances/a-valider-cfo';
 
 type Onglet = 'tableau' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
@@ -66,6 +67,7 @@ export default function FinancesPage({ params }: Props) {
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
     tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
   };
+  const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.
   const seuilCeo = useSeuilCeo(params.slug, session);
   const searchParams = useSearchParams();
@@ -250,8 +252,12 @@ export default function FinancesPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Bureaux d'études à régler (CGV art. 5 : après encaissement du client). */}
-      {bureaux.length > 0 && (
+      {/* Qui valide (CFO ; CEO au-delà du seuil) : ce qui attend sa décision,
+          avec l'encaissé du mois et le retard (revue CFO 20/10/2026). */}
+      {validateur && <AValiderCfo slug={params.slug} factures={factures} bureaux={bureaux} onOuvrirFacture={setFactureOuverte} />}
+
+      {/* Bureaux d'études à régler (CGV art. 5 : après encaissement du client) — dans « À valider » pour qui valide. */}
+      {!validateur && bureaux.length > 0 && (
         <div className="crm-banner" role="status">
           <span>
             <strong>

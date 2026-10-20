@@ -34,6 +34,12 @@ export class PilotageController {
     return this.pilotage.aDeposer(req.user);
   }
 
+  // Reportings reçus (destinataire) pour le dernier mois clos.
+  @Get('reportings/recus')
+  recus(@Req() req: R) {
+    return this.pilotage.recus(req.user);
+  }
+
   // « À votre attention » (accueil du CEO) : chaque rubrique selon la matrice.
   @Get('attention')
   attention(@Req() req: R) {

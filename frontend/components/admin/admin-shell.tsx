@@ -23,7 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { clearSession, niveauSuffisant } from '@/lib/auth';
-import { estAdministrateurHub, sectionAccessible } from '@/lib/acces-back-office';
+import { estAdministrateurHub, sectionAccessible, sectionArrivee } from '@/lib/acces-back-office';
 import type { Session, Societe } from '@/lib/types';
 import { SocieteAvatar } from '@/components/societe-avatar';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
@@ -454,12 +454,15 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
       </main>
 
       <NavigationMobile
-        items={NAV.filter((item) => item.chemin !== undefined && sectionAccessible(session, item.cle)).map((item) => ({
-          cle: item.cle,
-          libelle: item.libelle,
-          icone: item.icone,
-          href: item.chemin ? `${base}/${item.chemin}` : base,
-        }))}
+        items={NAV.filter((item) => item.chemin !== undefined && sectionAccessible(session, item.cle))
+          // La page d'arrivée du rôle (RH, Finances du CFO) en premier onglet.
+          .sort((x, y) => Number(y.cle === sectionArrivee(session)) - Number(x.cle === sectionArrivee(session)))
+          .map((item) => ({
+            cle: item.cle,
+            libelle: item.libelle,
+            icone: item.icone,
+            href: item.chemin ? `${base}/${item.chemin}` : base,
+          }))}
         active={active}
         reglages={
           sectionAccessible(session, 'parametres')

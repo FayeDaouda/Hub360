@@ -100,5 +100,13 @@ export function premiereSectionAccessible(session: Session): string | null {
 }
 
 // Page d'arrivée propre à un rôle, avant l'ordre du menu : la RH arrive sur
-// sa page (« À traiter aujourd'hui » en tête), pas sur Pilotage (revue RH 20/10/2026).
-const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh' };
+// sa page (« À traiter aujourd'hui » en tête), pas sur Pilotage (revue RH 20/10/2026) ;
+// le CFO sur Finances (« À valider aujourd'hui », revue CFO 20/10/2026).
+const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation' };
+
+// Section d'arrivée propre au rôle, si accessible (null sinon) : sur
+// téléphone, elle prend toujours un onglet du bas, en premier.
+export function sectionArrivee(session: Session): string | null {
+  const s = ARRIVEE_PAR_ROLE[session.role];
+  return s && sectionAccessible(session, s) ? s : null;
+}

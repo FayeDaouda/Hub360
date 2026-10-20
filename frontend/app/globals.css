@@ -14170,3 +14170,101 @@ tr.is-demandeur .cal-nom {
     grid-area: motif;
   }
 }
+
+/* Finances · « À valider aujourd'hui » du CFO (revue CFO 20/10/2026) : même
+   liste que « À traiter » de la RH (.at-rh-*), deux chiffres de trésorerie en tête. */
+.avc-tresorerie {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.avc-chiffre {
+  --ton: var(--pill-succes);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in oklch, var(--ton) 30%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ton) 7%, transparent);
+}
+.avc-chiffre[data-ton='risque'] {
+  --ton: var(--pill-risque);
+}
+.avc-chiffre > span:last-child {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+.avc-chiffre-icone {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--ton) 16%, transparent);
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.avc-chiffre-libelle {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.avc-chiffre strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  /* Deux chiffres côte à côte : libellé, montant ; l'icône s'efface. */
+  .avc-chiffre {
+    padding: 0.6rem 0.7rem;
+  }
+  .avc-chiffre-icone {
+    display: none;
+  }
+  .avc-chiffre strong {
+    font-size: 1.05rem;
+  }
+}
+
+/* Écrans de validation sur téléphone (revue CFO 20/10/2026, lot 1) : un
+   panneau ouvert masque la barre d'onglets (feuille d'application) ; l'offre
+   et ses actions (Valider, Renvoyer) viennent juste après la situation ; les
+   actions d'une facture restent au pied de l'écran. */
+@media (max-width: 720px) {
+  body:has(.fiche-crm-fond, .modal-backdrop, .feuille-fond) .nav-mobile {
+    display: none;
+  }
+  .fiche-crm {
+    padding: 1.1rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
+    gap: 1.1rem;
+  }
+  .fiche-crm:has(> .fiche-crm-actions) > * {
+    order: 3;
+  }
+  .fiche-crm:has(> .fiche-crm-actions) > :is(header, .fiche-crm-section:first-of-type) {
+    order: 1;
+  }
+  .fiche-crm > .fiche-crm-actions {
+    order: 2;
+  }
+  .fiche-crm .cycle-dossier-actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+  .fiche-crm .fac-actions {
+    position: sticky;
+    bottom: calc(-1.25rem - env(safe-area-inset-bottom));
+    z-index: 1;
+    margin-inline: -1rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    background: var(--surface);
+    box-shadow: 0 -10px 24px color-mix(in oklch, var(--bg) 55%, transparent);
+  }
+  .fiche-crm .fac-actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+}
