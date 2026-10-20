@@ -6,6 +6,7 @@ import {
   Archive,
   ArchiveRestore,
   CalendarClock,
+  FileStack,
   FileWarning,
   Inbox,
   Paperclip,
@@ -57,6 +58,7 @@ import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
 import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
 import { ATraiterRh, type DonneesRh } from '@/components/rh/a-traiter-rh';
+import { DepotBulletins } from '@/components/rh/depot-bulletins';
 
 type Props = { params: { slug: string } };
 
@@ -102,6 +104,7 @@ export default function RhPage({ params }: Props) {
   const [filtre, setFiltre] = useState<'incomplets' | 'fins' | null>(null);
   const [archives, setArchives] = useState(false);
   const [ouvert, setOuvert] = useState<DossierPersonnel | 'nouveau' | null>(null);
+  const [depotBulletins, setDepotBulletins] = useState(false);
   // ?onglet= : lien direct (tuiles RH du Pilotage) ; ?dossier= : fiche
   // ouverte (recherche globale).
   const parametres = useSearchParams();
@@ -283,9 +286,15 @@ export default function RhPage({ params }: Props) {
       <div className="rh-entete">
         <p className="rh-sous-titre">Dossiers du personnel des sociétés du groupe. Accès : RH, CFO et CEO (manuel §3.7, League Admin).</p>
         {ecriture && (
-          <button type="button" className="btn-primary" onClick={() => setOuvert('nouveau')}>
-            <Plus size={16} strokeWidth={2} aria-hidden /> Nouveau salarié
-          </button>
+          <span className="rh-entete-actions">
+            {/* Tous les bulletins du mois en une fois (revue RH 20/10/2026). */}
+            <button type="button" className="btn-ghost" onClick={() => setDepotBulletins(true)}>
+              <FileStack size={16} strokeWidth={2} aria-hidden /> Bulletins du mois
+            </button>
+            <button type="button" className="btn-primary" onClick={() => setOuvert('nouveau')}>
+              <Plus size={16} strokeWidth={2} aria-hidden /> Nouveau salarié
+            </button>
+          </span>
         )}
       </div>
       {/* Qui traite (RH, admin) : ce qui attend, par urgence, avant les tuiles. */}
@@ -331,6 +340,16 @@ export default function RhPage({ params }: Props) {
       </div>
     </>
   );
+  const depot = depotBulletins && (
+    <DepotBulletins
+      slug={params.slug}
+      dossiers={dossiers}
+      moisParDefaut={moisPrecedent()}
+      // Bulletins déposés : la liste (et les fiches) relues.
+      onFait={() => getDossiers(params.slug).then(setDossiers).catch(() => undefined)}
+      onClose={() => setDepotBulletins(false)}
+    />
+  );
   const fiche = ouvert && (
     <FicheDossier
       slug={params.slug}
@@ -349,6 +368,7 @@ export default function RhPage({ params }: Props) {
         {onglet === 'integration' && <IntegrationRh slug={params.slug} ecriture={ecriture} />}
         {onglet === 'demandes' && <DemandesRh slug={params.slug} ecriture={ecriture} />}
         {fiche}
+        {depot}
       </>
     );
   }
@@ -455,6 +475,7 @@ export default function RhPage({ params }: Props) {
       </section>
 
       {fiche}
+      {depot}
     </>
   );
 }

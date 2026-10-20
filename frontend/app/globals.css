@@ -7854,6 +7854,93 @@ a.notif-item:hover {
   opacity: 1;
 }
 
+/* RH · dépôt groupé des bulletins du mois (20/10/2026). */
+.rh-entete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.db-modal {
+  max-width: 760px;
+}
+.db-corps {
+  display: grid;
+  gap: 0.8rem;
+}
+.db-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+.db-choisir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+.db-choisir.is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.db-bilan {
+  margin: 0;
+  font-weight: 600;
+}
+.db-alerte {
+  color: var(--pill-attention);
+}
+.db-liste {
+  display: grid;
+  gap: 0.35rem;
+  max-height: min(50vh, 26rem);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.db-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.db-ligne[data-etat='alerte'] {
+  border-color: color-mix(in oklch, var(--pill-attention) 55%, var(--border));
+}
+.db-ligne[data-etat='fait'] {
+  opacity: 0.75;
+}
+.db-fichier {
+  overflow: hidden;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.db-salarie {
+  min-width: 0;
+  padding-block: 0.35rem;
+  font-size: 0.85rem;
+}
+.db-etat .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .db-ligne {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .db-salarie {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
 /* Calendrier de la cellule au moment de décider d'une absence (20/10/2026). */
 .cal-cellule {
   display: grid;
