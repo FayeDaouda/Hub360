@@ -14362,3 +14362,185 @@ tr.is-demandeur .cal-nom {
     justify-content: center;
   }
 }
+
+/* Finances · Trésorerie (revue CFO 20/10/2026, lot 3) : encaissements
+   attendus à 30 / 60 / 90 jours, balance âgée des créances. */
+.tre {
+  display: grid;
+  gap: 1rem;
+}
+.tre-section {
+  display: grid;
+  gap: 0.85rem;
+}
+.tre-tete {
+  display: grid;
+  gap: 0.25rem;
+}
+.tre-tete .dmd-note {
+  margin: 0;
+}
+.tre-tete--ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.tre-cartes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.tre-carte {
+  --ton: var(--pill-info);
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--ton) 28%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ton) 6%, var(--surface));
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tre-carte[data-ton='risque'] {
+  --ton: var(--pill-risque);
+}
+.tre-carte[data-ton='neutre'] {
+  --ton: var(--pill-neutre);
+}
+.tre-carte:hover,
+.tre-carte.is-active {
+  border-color: color-mix(in oklch, var(--ton) 65%, var(--border));
+  background: color-mix(in oklch, var(--ton) 12%, var(--surface));
+}
+.tre-carte-titre {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.tre-carte strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.tre-liste {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tre-liste > li {
+  border-bottom: 1px solid var(--border);
+}
+.tre-liste > li:last-child {
+  border-bottom: 0;
+}
+.tre-ligne {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.2rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tre-ligne:hover {
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.tre-ligne-date {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.tre-ligne-corps {
+  display: grid;
+  min-width: 0;
+}
+.tre-ligne-montant {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tre-creance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+.tre-creance > .tre-ligne {
+  flex: 1 1 18rem;
+  width: auto;
+}
+.tre-client {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.tre-client svg.is-ouvert {
+  transform: rotate(180deg);
+}
+.tre-table td[data-tranche='j60'],
+.tre-table td[data-tranche='j90'] {
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+  font-weight: 600;
+}
+.tre-table td[data-tranche='plus90'] {
+  color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
+  font-weight: 700;
+}
+.tre-total,
+.tre-pied td {
+  font-weight: 700;
+}
+.tre-detail > td {
+  padding-top: 0;
+  background: color-mix(in oklch, var(--text) 2%, transparent);
+}
+@media (max-width: 1100px) {
+  .tre-cartes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .tre-cartes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tre-cartes > :first-child {
+    grid-column: 1 / -1;
+  }
+  .tre-carte strong {
+    font-size: 1.05rem;
+  }
+  .tre-table .tre-detail > td::before {
+    display: none;
+  }
+  .tre-ligne {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+}
+@media (max-width: 720px) {
+  /* Une carte par client : seulement les tranches où il doit quelque chose. */
+  .tre-table td[data-vide] {
+    display: none;
+  }
+  .tre-table tfoot {
+    display: block;
+    width: 100%;
+    margin-top: 0.7rem;
+  }
+  .tre-table tfoot tr {
+    display: block;
+    width: 100%;
+    background: color-mix(in oklch, var(--text) 4%, transparent);
+  }
+}

@@ -40,8 +40,9 @@ import { OffrePanneau } from '@/components/finances/offre-panneau';
 import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
 import { AValiderCfo } from '@/components/finances/a-valider-cfo';
 import { Clotures } from '@/components/finances/clotures';
+import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 
-type Onglet = 'tableau' | 'devis' | 'factures' | 'temps';
+type Onglet = 'tableau' | 'tresorerie' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
 
 function formatDate(iso: string): string {
@@ -90,7 +91,9 @@ export default function FinancesPage({ params }: Props) {
   const offreDemandee = searchParams.get('offre');
   const devisDemande = searchParams.get('devis');
   const ongletDemande: Onglet | null =
-    searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee
+    searchParams.get('onglet') === 'tresorerie' && droits.tableauDeBord
+      ? 'tresorerie'
+      : searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee
       ? 'factures'
       : offreDemandee || devisDemande
         ? 'devis'
@@ -375,6 +378,18 @@ export default function FinancesPage({ params }: Props) {
               Tableau de bord
             </button>
           )}
+          {/* Balance âgée et encaissements attendus (revue CFO 20/10/2026). */}
+          {droits.tableauDeBord && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={onglet === 'tresorerie'}
+              className={onglet === 'tresorerie' ? 'is-active' : ''}
+              onClick={() => setOnglet('tresorerie')}
+            >
+              Trésorerie
+            </button>
+          )}
           <button type="button" role="tab" aria-selected={onglet === 'devis'} className={onglet === 'devis' ? 'is-active' : ''} onClick={() => setOnglet('devis')}>
             Devis · {devis ? devisFiltres.length : '…'}
           </button>
@@ -401,6 +416,12 @@ export default function FinancesPage({ params }: Props) {
           <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
         ) : (
           <TableauDeBordFinances devis={devisFiltres} factures={facturesFiltrees} catalogue={catalogue} />
+        )
+      ) : onglet === 'tresorerie' ? (
+        !factures ? (
+          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        ) : (
+          <OngletTresorerie slug={params.slug} factures={factures} peutRelancer={droits.facturesEcriture} onOuvrirFacture={setFactureOuverte} />
         )
       ) : onglet === 'temps' ? (
         <OngletFeuilleTemps
