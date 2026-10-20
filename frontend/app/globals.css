@@ -7854,6 +7854,16 @@ a.notif-item:hover {
   opacity: 1;
 }
 
+/* RH · salaire masqué dans la fiche (affichage tracé, 20/10/2026). */
+.rh-salaire-masque {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
 /* RH · « À traiter aujourd'hui » (revue RH 20/10/2026). */
 .at-rh {
   display: grid;

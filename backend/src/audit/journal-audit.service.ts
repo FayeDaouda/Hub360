@@ -1,11 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
-import type { EvenementCompteType, NiveauPermission } from '@prisma/client';
+import type { ActionPaie, EvenementCompteType, NiveauPermission } from '@prisma/client';
 import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Acteur = { userId: string; societeId: string; role: string };
-export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh';
+export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie';
 export type LigneAudit = { id: string; le: Date; categorie: CategorieAudit; action: string; detail: string; par: string | null };
 
 // Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.
@@ -26,6 +26,14 @@ const ACTIONS_COMPTE: Record<EvenementCompteType, string> = {
   double_facteur_active: 'Double authentification activée',
   double_facteur_reinitialise: 'Double authentification réinitialisée',
 };
+// Journal de la paie (revue RH 20/10/2026) : jamais de montant.
+const ACTIONS_PAIE: Record<ActionPaie, string> = {
+  salaire_consulte: 'Salaire consulté',
+  salaire_modifie: 'Salaire modifié',
+  bulletin_consulte: 'Bulletin consulté',
+  bulletin_depose: 'Bulletin déposé',
+  bulletin_retire: 'Bulletin retiré',
+};
 const NIVEAUX: Record<NiveauPermission, string> = { aucun: 'aucun', lecture: 'lecture', ecriture: 'écriture', validation: 'validation' };
 const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 const nomDe = (u: { prenom: string; nom: string } | null | undefined) => (u ? `${u.prenom} ${u.nom}`.trim() : null);
@@ -43,7 +51,7 @@ export class JournalAuditService {
     const dans = { gte: de, lt: jusque };
     const S = a.societeId;
 
-    const [comptes, droits, emises, paiements, supprimes, reglages, departs] = await Promise.all([
+    const [comptes, droits, emises, paiements, supprimes, reglages, departs, paie] = await Promise.all([
       // Comptes de la société (ou transverses), où qu'ait eu lieu l'action.
       this.prisma.evenementCompte.findMany({
         where: { createdAt: dans, utilisateur: { roles: { some: { OR: [{ societeId: S }, { societeId: null }] } } } },
@@ -63,6 +71,10 @@ export class JournalAuditService {
       this.prisma.dossierPersonnel.findMany({
         where: { societeId: S, archiveLe: dans },
         select: { id: true, prenom: true, nom: true, poste: true, archiveLe: true, archiveParId: true },
+      }),
+      this.prisma.journalPaie.findMany({
+        where: { createdAt: dans, dossier: { societeId: S } },
+        select: { id: true, action: true, mois: true, parId: true, createdAt: true, dossier: { select: { prenom: true, nom: true, matricule: true } } },
       }),
     ]);
 
@@ -132,6 +144,14 @@ export class JournalAuditService {
         action: 'Départ enregistré',
         detail: [`${d.prenom} ${d.nom}`.trim(), d.poste].filter(Boolean).join(' · '),
         parId: d.archiveParId,
+      })),
+      ...paie.map((p) => ({
+        id: `paie:${p.id}`,
+        le: p.createdAt,
+        categorie: 'paie' as const,
+        action: ACTIONS_PAIE[p.action],
+        detail: [`${p.dossier.prenom} ${p.dossier.nom}`.trim(), p.dossier.matricule, p.mois && `bulletin ${p.mois.split('-').reverse().join('/')}`].filter(Boolean).join(' · '),
+        parId: p.parId,
       })),
     ];
 

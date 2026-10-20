@@ -30,6 +30,11 @@ function svc() {
     paiementSupprime: vide,
     journalReglage: vide,
     dossierPersonnel: vide,
+    journalPaie: {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'P1', action: 'bulletin_consulte', mois: '2026-09', parId: 'U9', createdAt: new Date('2026-10-13T08:00:00Z'), dossier: { prenom: 'Khadija', nom: 'Sow', matricule: 'GH-0005' } },
+      ]),
+    },
     utilisateur: { findMany: jest.fn().mockResolvedValue([{ id: 'U9', prenom: 'Ousseynou', nom: 'Camara' }]) },
   } as unknown as PrismaService;
   return new JournalAuditService(prisma);
@@ -42,10 +47,12 @@ describe('JournalAuditService', () => {
 
   it('réunit les sources, du plus récent au plus ancien, auteur nommé', async () => {
     const { lignes } = await svc().journal({ userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' }, '2026-10-01', '2026-10-14');
-    expect(lignes.map((l) => l.action)).toEqual(['Droits modifiés', 'Facture émise', 'Compte désactivé']);
-    expect(lignes[0]).toMatchObject({ detail: 'CFO · crm : lecture → écriture', par: 'Ousseynou Camara', categorie: 'droits' });
-    expect(lignes[1].detail).toContain('F2026-0003 · 118');
-    expect(lignes[1].par).toBeNull();
+    expect(lignes.map((l) => l.action)).toEqual(['Bulletin consulté', 'Droits modifiés', 'Facture émise', 'Compte désactivé']);
+    // Paie : qui a ouvert le bulletin de qui — jamais de montant.
+    expect(lignes[0]).toMatchObject({ categorie: 'paie', detail: 'Khadija Sow · GH-0005 · bulletin 09/2026', par: 'Ousseynou Camara' });
+    expect(lignes[1]).toMatchObject({ detail: 'CFO · crm : lecture → écriture', par: 'Ousseynou Camara', categorie: 'droits' });
+    expect(lignes[2].detail).toContain('F2026-0003 · 118');
+    expect(lignes[2].par).toBeNull();
   });
 });
 

@@ -1340,7 +1340,10 @@ export type ChampsDossierPersonnel = {
   typeContrat: TypeContrat;
   dateEntree: string | null;
   dateFin: string | null;
-  salaireBase: number | null; // FCFA
+  // FCFA — toujours null dans les listes : il s'affiche à la demande
+  // (getSalaireDossier), chaque affichage tracé au journal de la paie.
+  salaireBase: number | null;
+  salaireRenseigne: boolean;
   prenom: string;
   nom: string;
   dateNaissance: string | null;

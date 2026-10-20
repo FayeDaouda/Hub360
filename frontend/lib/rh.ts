@@ -85,6 +85,11 @@ export const confirmerIntegration = (slug: string, dossierId: string) =>
 // Bulletins de paie (lot 5b) : un par mois (AAAA-MM), remplaçable, retirable.
 export const deposerBulletin = (slug: string, id: string, mois: string, nom: string, url: string) =>
   apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/bulletins/${mois}`, { method: 'PUT', body: { nom, url } });
+// Paie (revue RH 20/10/2026) : le salaire s'affiche à la demande (tracé au
+// journal d'audit) ; la masse salariale est un total calculé par le serveur.
+export const getSalaireDossier = (slug: string, id: string) => apiSociete<{ salaireBase: number | null }>(slug, `/rh/dossiers/${id}/salaire`);
+export const getMasseSalariale = (slug: string) =>
+  apiSociete<{ masse: number; renseignes: number; total: number }>(slug, '/rh/dossiers/masse-salariale');
 export const getBulletin = (slug: string, id: string, mois: string) =>
   apiSociete<{ nom: string; url: string }>(slug, `/rh/dossiers/${id}/bulletins/${mois}`);
 export const retirerBulletin = (slug: string, id: string, mois: string) =>

@@ -36,6 +36,8 @@ import {
   finProche,
   getDossiers,
   getIntegrations,
+  getMasseSalariale,
+  getSalaireDossier,
   getOptionsDossiers,
   getPieceDossier,
   getTachesOuvertes,
@@ -110,6 +112,15 @@ export default function RhPage({ params }: Props) {
   const [compteurs, setCompteurs] = useState<Compteurs | null>(null);
   // Données brutes des onglets : tuiles et « À traiter aujourd'hui ».
   const [brut, setBrut] = useState<DonneesRh | null>(null);
+  // Masse salariale : total calculé par le serveur (aucun salaire individuel
+  // ne part avec la liste), relu quand les dossiers changent.
+  const [masse, setMasse] = useState<{ masse: number; renseignes: number; total: number } | null>(null);
+  useEffect(() => {
+    if (!dossiers) return;
+    getMasseSalariale(params.slug)
+      .then(setMasse)
+      .catch(() => setMasse(null));
+  }, [params.slug, dossiers]);
 
   // Tuiles des autres onglets : relues à chaque changement d'onglet, pour
   // refléter ce qui vient d'y être traité.
@@ -181,8 +192,7 @@ export default function RhPage({ params }: Props) {
   const fins = actifs.filter((d) => finProche(d)).length;
 
   const paiementsAValider = actifs.filter((d) => d.paiementDemandeMode).length;
-  const salaries = actifs.filter((d) => d.salaireBase !== null);
-  const masse = salaries.reduce((t, d) => t + (d.salaireBase ?? 0), 0);
+
   const ouvrir = (o: Onglet, f: 'incomplets' | 'fins' | null = null) => {
     setOnglet(o);
     setFiltre(f);
@@ -205,8 +215,8 @@ export default function RhPage({ params }: Props) {
       // rémunération saisie dans l'administration du HUB a été retirée.
       cle: 'masse',
       libelle: 'Masse salariale brute / mois',
-      valeur: salaries.length ? formatMontant(masse) : '—',
-      aide: `${salaries.length}/${actifs.length} salaires renseignés`,
+      valeur: masse ? (masse.renseignes ? formatMontant(masse.masse) : '—') : null,
+      aide: masse ? `${masse.renseignes}/${masse.total} salaires renseignés` : 'calcul…',
       actif: false,
       onClick: () => ouvrir('personnel'),
       icone: Wallet,
@@ -503,12 +513,19 @@ function FicheDossier({
   const [erreur, setErreur] = useState<string | null>(null);
   const [enregistre, setEnregistre] = useState(false);
   const [moisBulletin, setMoisBulletin] = useState(moisPrecedent);
+  // Salaire : masqué tant qu'on ne l'affiche pas (affichage tracé) ; il n'est
+  // renvoyé à l'enregistrement que s'il a été affiché ou saisi.
+  const [salaireVu, setSalaireVu] = useState(!dossier || !dossier.salaireRenseigne);
   // Départ en cours : tâches de projet à confier avant l'archivage.
   const [depart, setDepart] = useState<TachesOuvertes | null>(null);
   const [confies, setConfies] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (dossier) setForm(versFormulaire(dossier));
+    if (!dossier) return;
+    setForm(versFormulaire(dossier));
+    // Le dossier revenu du serveur n'a jamais le salaire : remasqué, sinon
+    // un enregistrement suivant l'effacerait.
+    setSalaireVu(!dossier.salaireRenseigne);
   }, [dossier]);
 
   const maj = (cle: keyof MajDossier) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -524,11 +541,26 @@ function FicheDossier({
     setEnregistre(false);
   };
 
+  async function afficherSalaire() {
+    if (!dossier) return;
+    setErreur(null);
+    try {
+      const { salaireBase } = await getSalaireDossier(slug, dossier.id);
+      setForm((f) => ({ ...f, salaireBase }));
+      setSalaireVu(true);
+    } catch (e) {
+      setErreur(messageErreur(e, 'Salaire indisponible.'));
+    }
+  }
+
   async function enregistrer() {
     setEnvoi(true);
     setErreur(null);
     try {
-      const d = dossier ? await majDossier(slug, dossier.id, form) : await creerDossier(slug, form);
+      // Salaire masqué = inchangé : on ne l'envoie pas (sinon il serait effacé).
+      const { salaireBase: _s, ...sansSalaire } = form;
+      const corps = salaireVu ? form : sansSalaire;
+      const d = dossier ? await majDossier(slug, dossier.id, corps) : await creerDossier(slug, corps);
       onChange(d);
       setEnregistre(true);
     } catch (e) {
@@ -697,7 +729,20 @@ function FicheDossier({
               </label>
               {champ('dateEntree', 'Date d’entrée', { type: 'date' })}
               {form.typeContrat !== 'cdi' && champ('dateFin', 'Fin (CDD, stage)', { type: 'date' })}
-              {champ('salaireBase', 'Salaire de base (FCFA)', { inputMode: 'numeric', placeholder: 'Non renseigné' })}
+              {salaireVu ? (
+                champ('salaireBase', 'Salaire de base (FCFA)', { inputMode: 'numeric', placeholder: 'Non renseigné' })
+              ) : (
+                <div className="field">
+                  <span className="field-label">Salaire de base (FCFA)</span>
+                  <span className="rh-salaire-masque">
+                    <span aria-label="Salaire masqué">••••••</span>
+                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={afficherSalaire}>
+                      Afficher
+                    </button>
+                  </span>
+                  <span className="cell-sub">Chaque affichage est inscrit au journal d’audit.</span>
+                </div>
+              )}
               <label className="field">
                 <span className="field-label">Fiche d’équipe liée</span>
                 <select className="field-input" value={form.collaborateurId ?? ''} onChange={maj('collaborateurId')}>

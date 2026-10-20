@@ -1617,6 +1617,7 @@ model DossierPersonnel {
   remboursements    DemandeRemboursement[]
   attestations      DemandeAttestation[]
   pointsIntegration PointIntegration[]
+  journalPaie       JournalPaie[]
   controlesTemps    ControleFeuilleTemps[]
   ecartsTemps       EcartFeuilleTemps[]
   bulletins         BulletinPaie[]
@@ -1834,6 +1835,32 @@ model ControleFeuilleTemps {
 
   @@unique([dossierId, mois])
   @@map("controles_feuilles_temps")
+}
+
+// Journal de la paie (revue RH 20/10/2026) : qui a consulté ou modifié le
+// salaire ou un bulletin de qui, et quand — la donnée la plus sensible du
+// HUB. JAMAIS de montant ici. Lu dans le journal d'audit (catégorie Paie).
+enum ActionPaie {
+  salaire_consulte
+  salaire_modifie
+  bulletin_consulte
+  bulletin_depose
+  bulletin_retire
+}
+
+model JournalPaie {
+  id        String     @id @default(uuid())
+  dossierId String     @map("dossier_id")
+  action    ActionPaie
+  mois      String? // bulletin concerné (AAAA-MM)
+  parId     String?    @map("par_id") // audit, pas de FK
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
+
+  @@index([dossierId, createdAt])
+  @@index([createdAt])
+  @@map("journal_paie")
 }
 
 // Écart signalé par le salarié sur sa feuille de temps calculée (revue

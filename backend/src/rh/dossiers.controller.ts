@@ -27,9 +27,21 @@ export class DossiersPersonnelController {
     return this.dossiers.options();
   }
 
+  // Masse salariale (agrégat) : segment fixe, déclaré avant ':id'.
+  @Get('masse-salariale')
+  masseSalariale() {
+    return this.dossiers.masseSalariale();
+  }
+
   @Get(':id')
   detail(@Param('id', ParseUUIDPipe) id: string) {
     return this.dossiers.detail(id);
+  }
+
+  // Salaire d'un dossier : affiché à la demande, chaque affichage tracé.
+  @Get(':id/salaire')
+  salaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
+    return this.dossiers.salaire(id, req.user.userId);
   }
 
   @Get(':id/pieces/:type')
@@ -46,8 +58,8 @@ export class DossiersPersonnelController {
   }
 
   @Patch(':id')
-  maj(@Param('id', ParseUUIDPipe) id: string, @Body() dto: DossierPersonnelDto) {
-    return this.dossiers.maj(id, dto);
+  maj(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: DossierPersonnelDto) {
+    return this.dossiers.maj(id, dto, req.user.userId);
   }
 
   // Avant un départ : tâches de projet à réaffecter et collègues possibles.
@@ -78,8 +90,8 @@ export class DossiersPersonnelController {
 
   // Bulletins de paie (lot 5b).
   @Get(':id/bulletins/:mois')
-  bulletin(@Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
-    return this.dossiers.bulletin(id, mois);
+  bulletin(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
+    return this.dossiers.bulletin(id, mois, req.user.userId);
   }
 
   @Put(':id/bulletins/:mois')
@@ -88,7 +100,7 @@ export class DossiersPersonnelController {
   }
 
   @Delete(':id/bulletins/:mois')
-  retirerBulletin(@Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
-    return this.dossiers.retirerBulletin(id, mois);
+  retirerBulletin(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
+    return this.dossiers.retirerBulletin(id, mois, req.user.userId);
   }
 }
