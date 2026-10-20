@@ -1340,6 +1340,10 @@ export type ChampsDossierPersonnel = {
   typeContrat: TypeContrat;
   dateEntree: string | null;
   dateFin: string | null;
+  // Échéances légales (alertes RH, 20/10/2026), AAAA-MM-JJ.
+  finEssai: string | null;
+  visiteMedicale: string | null; // prochaine visite
+  expirationPiece: string | null; // CNI ou passeport
   // FCFA — toujours null dans les listes : il s'affiche à la demande
   // (getSalaireDossier), chaque affichage tracé au journal de la paie.
   salaireBase: number | null;

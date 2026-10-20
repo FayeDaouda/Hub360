@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AlertesRhController } from './alertes-rh.controller';
+import { AlertesRhService } from './alertes-rh.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ReglagesModule } from '../reglages/reglages.module';
 import { ProjetsModule } from '../projets/projets.module';
@@ -21,8 +23,9 @@ import {
 
 @Module({
   imports: [NotificationsModule, ReglagesModule, ProjetsModule], // ProjetsModule : remise / validation des tâches du gabarit
-  providers: [DossiersPersonnelService, DemandesService, IntegrationService, TempsService, MonEspaceService, TachesService],
+  providers: [AlertesRhService, DossiersPersonnelService, DemandesService, IntegrationService, TempsService, MonEspaceService, TachesService],
   controllers: [
+    AlertesRhController,
     DossiersPersonnelController,
     MesDemandesController,
     ValidationsAbsencesController,

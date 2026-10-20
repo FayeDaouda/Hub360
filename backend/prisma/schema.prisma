@@ -1571,6 +1571,11 @@ model DossierPersonnel {
   typeContrat                TypeContrat          @default(cdi) @map("type_contrat")
   dateEntree                 String?              @map("date_entree") // AAAA-MM-JJ
   dateFin                    String?              @map("date_fin") // CDD, stage
+  // Échéances légales (revue RH 20/10/2026) : alertes dans « À traiter » —
+  // délais dans Réglages (alerte_fin_essai_jours, alerte_echeance_rh_jours).
+  finEssai                   String?              @map("fin_essai") // AAAA-MM-JJ
+  visiteMedicale             String?              @map("visite_medicale") // prochaine visite
+  expirationPiece            String?              @map("expiration_piece") // CNI ou passeport
   salaireBase                Int?                 @map("salaire_base") // FCFA
   prenom                     String               @default("")
   nom                        String               @default("")

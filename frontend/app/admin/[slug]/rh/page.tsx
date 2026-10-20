@@ -35,6 +35,7 @@ import {
   retirerBulletin,
   finProche,
   getDossiers,
+  getAlertesRh,
   getIntegrations,
   getMasseSalariale,
   getSalaireDossier,
@@ -125,9 +126,9 @@ export default function RhPage({ params }: Props) {
   // Tuiles des autres onglets : relues à chaque changement d'onglet, pour
   // refléter ce qui vient d'y être traité.
   const chargerCompteurs = useCallback(() => {
-    Promise.all([getFeuillesTemps(params.slug), getDemandesRh(params.slug), getIntegrations(params.slug)])
-      .then(([f, d, i]) => {
-        setBrut({ feuilles: f, demandes: d, integrations: i });
+    Promise.all([getFeuillesTemps(params.slug), getDemandesRh(params.slug), getIntegrations(params.slug), getAlertesRh(params.slug)])
+      .then(([f, d, i, al]) => {
+        setBrut({ feuilles: f, demandes: d, integrations: i, alertes: al });
         setCompteurs({
           feuilles: f.periodes.reduce((n, p) => n + p.aControler, 0),
           demandes:
@@ -463,6 +464,9 @@ const CHAMPS_VIDES: MajDossier = {
   typeContrat: 'cdi',
   dateEntree: new Date().toISOString().slice(0, 10),
   dateFin: null,
+  finEssai: null,
+  visiteMedicale: null,
+  expirationPiece: null,
   salaireBase: null,
   prenom: '',
   nom: '',
@@ -533,7 +537,7 @@ function FicheDossier({
     const valeur =
       cle === 'salaireBase'
         ? v === '' ? null : Number(v.replace(/\D/g, ''))
-        : ['dateEntree', 'dateFin', 'dateNaissance', 'collaborateurId', 'utilisateurId'].includes(cle)
+        : ['dateEntree', 'dateFin', 'finEssai', 'visiteMedicale', 'expirationPiece', 'dateNaissance', 'collaborateurId', 'utilisateurId'].includes(cle)
           ? v || null
           : v;
     // Une fiche d'équipe porte son propre compte : relier une fiche retire le compte direct.
@@ -729,6 +733,7 @@ function FicheDossier({
               </label>
               {champ('dateEntree', 'Date d’entrée', { type: 'date' })}
               {form.typeContrat !== 'cdi' && champ('dateFin', 'Fin (CDD, stage)', { type: 'date' })}
+              {champ('finEssai', 'Fin de la période d’essai', { type: 'date' })}
               {salaireVu ? (
                 champ('salaireBase', 'Salaire de base (FCFA)', { inputMode: 'numeric', placeholder: 'Non renseigné' })
               ) : (
@@ -794,6 +799,7 @@ function FicheDossier({
               {champ('lieuNaissance', 'Lieu de naissance')}
               {champ('nationalite', 'Nationalité')}
               {champ('numeroPiece', 'N° CNI ou passeport')}
+              {champ('expirationPiece', 'Expiration de la pièce', { type: 'date' })}
             </div>
 
             <h3 className="rh-section">Contact, paie, prévoyance</h3>
@@ -829,6 +835,7 @@ function FicheDossier({
               </label>
               {champ('coordonneesPaiement', 'RIB ou numéro')}
               {champ('numeroIpm', 'N° adhérent IPM / assurance')}
+              {champ('visiteMedicale', 'Prochaine visite médicale', { type: 'date' })}
             </div>
 
             <h3 className="rh-section">Carte de mission · nouvel arrivant</h3>

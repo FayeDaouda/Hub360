@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlarmClock, CalendarClock, ChevronDown, FileWarning, Inbox, Scale, Timer, UserPlus, type LucideIcon } from 'lucide-react';
+import { AlarmClock, CalendarClock, ChevronDown, FileWarning, IdCard, Inbox, Scale, Stethoscope, Timer, UserCheck, UserPlus, type LucideIcon } from 'lucide-react';
 import type { AttestationRh } from '@/lib/demandes';
 import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { getFeuillesTemps, libelleMois } from '@/lib/temps';
 import { formatMontant } from '@/lib/format';
+import type { AlerteRh } from '@/lib/rh';
 import type { DemandeAbsence, DemandeRemboursement, DossierPersonnel, FeuillesTemps, IntegrationSalarie } from '@/lib/types';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
@@ -13,6 +14,7 @@ export type DonneesRh = {
   demandes: { absences: DemandeAbsence[]; remboursements: DemandeRemboursement[]; attestations: AttestationRh[] };
   feuilles: FeuillesTemps;
   integrations: IntegrationSalarie[];
+  alertes: AlerteRh[];
 };
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -34,7 +36,6 @@ const ecart = (de: string, a: string) => Math.round((Date.parse(`${a.slice(0, 10
 const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
 // Une demande qui attend depuis plus de 3 jours passe en rouge.
 const ATTENTE_ALERTE_J = 3;
-const FIN_CONTRAT_J = 30; // fins de CDD : 30 jours (revue RH 20/10/2026)
 const INTEGRATION_J = 7; // points d'intégration de la semaine
 
 // « À traiter aujourd'hui » (revue RH 20/10/2026) : en tête de la page RH,
@@ -144,16 +145,24 @@ export function ATraiterRh({
       });
     }
   }
-  // 4. Fins de contrat proches.
-  for (const f of dossiers.filter((x) => x.dateFin && ecart(aujourdhui, x.dateFin) >= 0 && ecart(aujourdhui, x.dateFin) <= FIN_CONTRAT_J)) {
-    const n = ecart(aujourdhui, f.dateFin!);
+  // 4. Échéances légales (délais des Réglages, calculées par le serveur) :
+  // fins de CDD/stage, fins d'essai, visites médicales, pièces d'identité.
+  const ECHEANCES: Record<AlerteRh['type'], { icone: LucideIcon; titre: (al: AlerteRh) => string; detail: string; action: string }> = {
+    fin_contrat: { icone: CalendarClock, titre: (al) => `Fin de ${al.typeContrat.toUpperCase()} · ${nom(al)}`, detail: 'renouveler, transformer ou préparer la sortie', action: 'Ouvrir' },
+    fin_essai: { icone: UserCheck, titre: (al) => `Fin de période d’essai · ${nom(al)}`, detail: 'confirmer ou rompre à temps', action: 'Ouvrir' },
+    visite_medicale: { icone: Stethoscope, titre: (al) => `Visite médicale · ${nom(al)}`, detail: 'à programmer', action: 'Ouvrir' },
+    piece_identite: { icone: IdCard, titre: (al) => `Pièce d’identité · ${nom(al)}`, detail: 'nouvelle pièce à demander', action: 'Ouvrir' },
+  };
+  for (const al of donnees.alertes) {
+    const e = ECHEANCES[al.type];
+    const dossier = dossiers.find((x) => x.id === al.dossierId);
     elements.push({
-      cle: `fin-${f.id}`, groupe: 4, tri: f.dateFin!, icone: CalendarClock, action: 'Ouvrir',
-      titre: `Fin de ${f.typeContrat.toUpperCase()} · ${nom(f)}`,
-      detail: `le ${jjmm(f.dateFin!)} · renouveler, transformer ou préparer la sortie`,
-      quand: n === 0 ? 'aujourd’hui' : `dans ${n} j`,
-      ton: n <= 15 ? 'risque' : 'attention',
-      ouvrir: () => onOuvrir('personnel', { dossier: f }),
+      cle: `${al.type}-${al.dossierId}`, groupe: 4, tri: al.date, icone: e.icone, action: e.action,
+      titre: e.titre(al),
+      detail: `${al.poste || 'poste à renseigner'} · ${al.type === 'piece_identite' ? 'expire' : 'le'} ${jjmm(al.date)} · ${e.detail}`,
+      quand: al.jours < 0 ? `dépassée de ${-al.jours} j` : al.jours === 0 ? 'aujourd’hui' : `dans ${al.jours} j`,
+      ton: al.jours <= (al.type === 'fin_essai' ? 7 : 15) ? 'risque' : 'attention',
+      ouvrir: () => onOuvrir('personnel', dossier ? { dossier } : undefined),
     });
   }
   // 5. Feuilles de temps des mois clos à contrôler.

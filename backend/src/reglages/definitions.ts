@@ -123,6 +123,30 @@ export const REGLES: DefinitionReglage[] = [
     aide: "Congés payés non pris reportés sur l'année suivante, au plus ce nombre de jours (report plafonné, décision du 19/10/2026). 0 = aucun report. Compté à partir de 2026.",
     appliquee: true, // solde de « Congés et absences » (regles-conges.ts)
   },
+  {
+    cle: 'alerte_fin_cdd_jours',
+    libelle: 'Alerte fin de CDD ou de stage (jours avant)',
+    valeur: { type: 'entier', min: 1, max: 365, unite: 'j' },
+    defaut: 30,
+    aide: "Une fin de CDD ou de stage entre dans « À traiter aujourd'hui » de la RH ce nombre de jours avant (décision du 20/10/2026).",
+    appliquee: true,
+  },
+  {
+    cle: 'alerte_fin_essai_jours',
+    libelle: "Alerte fin de période d'essai (jours avant)",
+    valeur: { type: 'entier', min: 1, max: 90, unite: 'j' },
+    defaut: 15,
+    aide: "Pour confirmer ou rompre à temps : la fin de période d'essai entre dans « À traiter aujourd'hui » de la RH ce nombre de jours avant.",
+    appliquee: true,
+  },
+  {
+    cle: 'alerte_echeance_rh_jours',
+    libelle: "Alerte pièce d'identité et visite médicale (jours avant)",
+    valeur: { type: 'entier', min: 1, max: 180, unite: 'j' },
+    defaut: 30,
+    aide: "Expiration de la pièce d'identité, prochaine visite médicale : alerte RH ce nombre de jours avant (et tant qu'elles sont dépassées).",
+    appliquee: true,
+  },
 ];
 
 export const OBJECTIFS: DefinitionReglage[] = [

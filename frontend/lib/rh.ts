@@ -87,6 +87,19 @@ export const deposerBulletin = (slug: string, id: string, mois: string, nom: str
   apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/bulletins/${mois}`, { method: 'PUT', body: { nom, url } });
 // Paie (revue RH 20/10/2026) : le salaire s'affiche à la demande (tracé au
 // journal d'audit) ; la masse salariale est un total calculé par le serveur.
+// Échéances légales (fins de CDD/stage, d'essai, visites, pièces) : délais
+// des Réglages, calculées par le serveur ; jours < 0 = dépassée.
+export type AlerteRh = {
+  type: 'fin_contrat' | 'fin_essai' | 'visite_medicale' | 'piece_identite';
+  dossierId: string;
+  prenom: string;
+  nom: string;
+  poste: string;
+  typeContrat: string;
+  date: string;
+  jours: number;
+};
+export const getAlertesRh = (slug: string) => apiSociete<AlerteRh[]>(slug, '/rh/alertes');
 export const getSalaireDossier = (slug: string, id: string) => apiSociete<{ salaireBase: number | null }>(slug, `/rh/dossiers/${id}/salaire`);
 export const getMasseSalariale = (slug: string) =>
   apiSociete<{ masse: number; renseignes: number; total: number }>(slug, '/rh/dossiers/masse-salariale');

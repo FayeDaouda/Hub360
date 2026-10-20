@@ -29,6 +29,9 @@ export class DossierPersonnelDto {
   @IsOptional() @IsEnum(TypeContrat) typeContrat?: TypeContrat;
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) dateEntree?: string | null;
   @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) dateFin?: string | null;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) finEssai?: string | null;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) visiteMedicale?: string | null;
+  @IsOptional() @ValidateIf((_, v) => v !== null) @Matches(DATE) expirationPiece?: string | null;
   @IsOptional()
   @ValidateIf((_, v) => v !== null)
   @IsInt({ message: 'Le salaire doit être un montant entier en FCFA.' })
