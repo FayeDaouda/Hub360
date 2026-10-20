@@ -108,7 +108,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
             <p className="empty-state">Aucun salarié présent ce mois-là.</p>
           ) : (
             <div className="admin-table-wrap">
-              <table className="admin-table temps-table">
+              <table className="admin-table temps-table temps-liste">
                 <thead>
                   <tr>
                     <th>Salarié</th>
@@ -129,12 +129,12 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                         </button>
                         <span className="cell-sub">{f.poste || 'poste à renseigner'}</span>
                       </td>
-                      <td data-label="Cellule">{f.cellule ?? <span className="cell-sub">—</span>}</td>
+                      <td data-label="Cellule" className="tl-cellule">{f.cellule ?? <span className="cell-sub">—</span>}</td>
                       <td data-label="Imputées" className="num">{formatHeures(f.heuresImputees)}</td>
                       <td data-label="Disponibles" className="num">{formatHeures(f.heuresDisponibles)}</td>
                       <td data-label="Absences" className="num">{f.joursAbsence} j</td>
                       <td data-label="Occupation" className="num">{f.occupation == null ? '—' : `${f.occupation} %`}</td>
-                      <td data-label="Contrôle RH">
+                      <td data-label="Contrôle RH" className="tl-statut">
                         <span className={`pill ${STATUT_FEUILLE[f.statut].pill}`}>
                           {f.statut === 'controlee' && f.controleLe
                             ? `Contrôlée le ${jjmmaaaa(f.controleLe)}`

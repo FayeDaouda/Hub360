@@ -449,20 +449,20 @@ export default function RhPage({ params }: Props) {
                 {visibles.map((d) => (
                   <tr key={d.id}>
                     <td className="rh-matricule">{d.matricule}</td>
-                    <td data-label="Salarié">
+                    <td data-label="Salarié" className="rh-c-salarie">
                       <button type="button" className="rh-nom" onClick={() => setOuvert(d)}>
                         {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
                       </button>
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
                       {d.paiementDemandeMode && <span className="pill pill--attention">Moyen de paiement à valider</span>}
                     </td>
-                    <td data-label="Société">{d.societe.nom}</td>
-                    <td data-label="Équipe">{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
-                    <td data-label="Contrat">
+                    <td data-label="Société" className="rh-c-societe">{d.societe.nom}</td>
+                    <td data-label="Équipe" className="rh-c-equipe">{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
+                    <td data-label="Contrat" className="rh-c-contrat">
                       {LIBELLE_CONTRAT[d.typeContrat]}
                       {d.typeContrat !== 'cdi' && d.dateFin && ` → ${jjmmaaaa(d.dateFin)}`}
                     </td>
-                    <td data-label="Dossier">
+                    <td data-label="Dossier" className="rh-c-dossier">
                       <span className="progress">
                         <span className="progress-track">
                           <span
@@ -473,7 +473,7 @@ export default function RhPage({ params }: Props) {
                         {d.completude.pourcentage} %
                       </span>
                     </td>
-                    <td data-label="Entrée">{jjmmaaaa(d.dateEntree)}</td>
+                    <td data-label="Entrée" className="rh-c-entree">{jjmmaaaa(d.dateEntree)}</td>
                   </tr>
                 ))}
               </tbody>

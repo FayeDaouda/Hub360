@@ -13812,3 +13812,204 @@ tr.is-demandeur .cal-nom {
     align-items: flex-end;
   }
 }
+
+/* RH · coque mobile (revue RH 20/10/2026, lot 11) : ≤ 720 px seulement.
+   Tuiles en bandeau qui défile, listes en lignes compactes d'application
+   (au lieu de cartes de 6 lignes par salarié), « À traiter » aéré. */
+@media (max-width: 720px) {
+  .rh-entete-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .rh-entete-actions > * {
+    justify-content: center;
+  }
+
+  /* 7 tuiles : un bandeau horizontal (2 tuiles et l'amorce de la 3e). */
+  .rh-kpi .kpi-strip {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 42%;
+    margin-inline: calc(-1 * var(--ef-gx, 16px));
+    padding: 0.15rem var(--ef-gx, 16px) 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--ef-gx, 16px);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .rh-kpi .kpi-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .rh-kpi .kpi-strip > * {
+    scroll-snap-align: start;
+  }
+  .rh-kpi .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+  .rh-kpi .kpi-tuile-sous {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* « À traiter » : le texte prend toute la largeur, l'échéance et l'action
+     sur une ligne en dessous. */
+  .at-rh-ligne {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    grid-template-areas: 'icone corps corps' '. quand action';
+    align-items: center;
+  }
+  .at-rh-icone {
+    grid-area: icone;
+    align-self: start;
+  }
+  .at-rh-corps {
+    grid-area: corps;
+  }
+  .at-rh-quand {
+    grid-column: auto;
+    grid-row: auto;
+    grid-area: quand;
+  }
+  .at-rh-ligne > button {
+    grid-column: auto;
+    grid-row: auto;
+    grid-area: action;
+  }
+
+  /* Listes Personnel et Feuilles de temps : lignes séparées par un filet,
+     toute la ligne ouvre le salarié. */
+  .admin-table:is(.rh-table, .temps-liste) tr {
+    position: relative;
+    display: grid;
+    gap: 0.2rem 0.75rem;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .admin-table:is(.rh-table, .temps-liste) tr + tr {
+    margin-top: 0;
+  }
+  .admin-table:is(.rh-table, .temps-liste) tr:last-child {
+    border-bottom: 0;
+  }
+  .admin-table:is(.rh-table, .temps-liste) td,
+  .admin-table:is(.rh-table, .temps-liste) td:first-child {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  /* :nth-child(n) : égale la spécificité de la règle des cartes de tableau. */
+  .admin-table:is(.rh-table, .temps-liste) td:nth-child(n) > * {
+    margin-left: 0;
+    text-align: left;
+  }
+  .admin-table:is(.rh-table, .temps-liste) td .cell-sub {
+    display: block;
+    margin-top: 0.15rem;
+  }
+  .admin-table:is(.rh-table, .temps-liste) td::before {
+    display: none;
+  }
+  .admin-table:is(.rh-table, .temps-liste) .rh-nom {
+    font-size: 0.95rem;
+  }
+  .admin-table:is(.rh-table, .temps-liste) .rh-nom::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Personnel :  GH-0001 · CDI            ▬▬ 22 %
+                  Rokhaya Ndoye — Responsable 3D
+                  Études et ingénierie */
+  .admin-table.rh-table tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'matricule contrat dossier' 'salarie salarie salarie' 'equipe equipe equipe';
+    column-gap: 0.35rem;
+  }
+  .admin-table.rh-table :is(.rh-matricule, .rh-c-contrat) {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+  .admin-table.rh-table .rh-matricule {
+    grid-area: matricule;
+  }
+  .admin-table.rh-table .rh-c-contrat {
+    grid-area: contrat;
+  }
+  .admin-table.rh-table .rh-c-contrat::before {
+    content: '· ';
+    display: inline;
+    font-size: inherit;
+  }
+  .admin-table.rh-table .rh-c-dossier {
+    grid-area: dossier;
+    justify-self: end;
+    font-size: 0.75rem;
+  }
+  .admin-table.rh-table .rh-c-dossier .progress-track {
+    width: 3.5rem;
+  }
+  .admin-table.rh-table .rh-c-salarie {
+    grid-area: salarie;
+  }
+  .admin-table.rh-table .rh-c-salarie .pill {
+    margin-top: 0.3rem;
+  }
+  .admin-table.rh-table .rh-c-equipe {
+    grid-area: equipe;
+    color: var(--text-muted);
+  }
+  .admin-table.rh-table :is(.rh-c-societe, .rh-c-entree) {
+    display: none;
+  }
+
+  /* Feuilles :  Ousmane Bâ — Architecte          [À contrôler]
+                 66 h      176 h      0 j      38 %
+                 imputées  dispo.     absences occupation */
+  .admin-table.temps-liste tr {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas: 'salarie salarie statut statut' 'a b c d';
+  }
+  .admin-table.temps-liste td:first-child {
+    grid-area: salarie;
+  }
+  .admin-table.temps-liste .tl-statut {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: 0.25rem;
+    grid-area: statut;
+  }
+  .admin-table.temps-liste .tl-cellule {
+    display: none;
+  }
+  .admin-table.temps-liste td.num {
+    display: flex;
+    flex-direction: column-reverse;
+    margin-top: 0.35rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  .admin-table.temps-liste td.num::before {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .admin-table.temps-liste tr.is-active {
+    background: color-mix(in oklch, var(--iris, var(--argile)) 8%, transparent);
+  }
+}
