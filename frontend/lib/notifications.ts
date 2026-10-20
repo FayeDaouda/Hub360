@@ -58,6 +58,10 @@ export function lienNotificationAdmin(
     return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
   }
   if (n.type === 'remboursement_a_traiter') return `${base}/rh?onglet=demandes`;
+  // Relance : la RH traite dans RH › Demandes ; le N+1 (ou le CEO) dans « À valider ».
+  if (n.type === 'rappel_demande') {
+    return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
+  }
   if (n.type === 'ecart_temps_signale') return `${base}/rh?onglet=temps`;
   if (n.type === 'ecart_temps_traite') return `${base}/mon-espace?onglet=temps`;
   if (n.type === 'bulletin_depose' || n.type === 'attestation_delivree') return `${base}/mon-espace?onglet=documents`;

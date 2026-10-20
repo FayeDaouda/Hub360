@@ -5,13 +5,17 @@ import { RappelsService } from './rappels.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 
-function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; dejaEnvoyes?: string[] } = {}) {
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[] } = {}) {
   const deja = new Set(o.dejaEnvoyes ?? []);
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
     facture: { findMany: jest.fn().mockResolvedValue(o.factures ?? []) },
     tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? []) },
     collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C1', utilisateurId: 'U1' }]) },
+    demandeAbsence: { findMany: jest.fn().mockResolvedValue(o.absences ?? []) },
+    demandeRemboursement: { findMany: jest.fn().mockResolvedValue([]) },
+    demandeAttestation: { findMany: jest.fn().mockResolvedValue([]) },
+    dossierPersonnel: { findMany: jest.fn().mockResolvedValue([]) },
     rappelEnvoye: {
       createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
         const neuf = !deja.has(data[0].cle);
@@ -20,8 +24,8 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; d
       }),
     },
   } as unknown as PrismaService;
-  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CFO1']) };
-  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService), notifications };
+  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CFO1']), comptesDe: jest.fn().mockResolvedValue(['CHEF']) };
+  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService, { regle: jest.fn().mockResolvedValue(3) } as never), notifications };
 }
 
 const tache = (finLe: string) => ({
@@ -75,5 +79,21 @@ describe('RappelsService', () => {
     expect(await s.tournee(JOUR)).toBe(0);
     expect(notifications.envoyer).toHaveBeenCalledTimes(1);
     expect(notifications.envoyer.mock.calls[0][0]).not.toHaveProperty('cle');
+  });
+
+  // Revue RH 20/10/2026 : relance des demandes en attente après 3 jours ouvrés, puis par palier.
+  it('demande en attente : relance après 3 jours ouvrés, puis à chaque palier', async () => {
+    const absence = (createdAt: string) => ({
+      id: 'A1', statut: 'attente_n1', createdAt: new Date(`${createdAt}T09:00:00Z`), decisionN1Le: null,
+      dateDebut: '2026-11-03', dateFin: '2026-11-05', n1CollaborateurId: 'C9', n1Role: null,
+      dossier: { id: 'D1', societeId: 'S1', prenom: 'Khadija', nom: 'Sow' },
+    });
+    // JOUR = mercredi 14/10 : déposée vendredi 9 → 3 jours ouvrés (12, 13, 14), week-end non compté.
+    const [r] = await svc({ absences: [absence('2026-10-09')] }).s.demandes(JOUR);
+    expect(r).toEqual(expect.objectContaining({ cle: 'demande:absence:A1:n1:1', type: 'rappel_demande', destinataireIds: ['CHEF'] }));
+    // Déposée lundi 12 → 2 jours ouvrés : rien encore.
+    expect(await svc({ absences: [absence('2026-10-12')] }).s.demandes(JOUR)).toEqual([]);
+    // Déposée lundi 5 → 7 jours ouvrés : deuxième palier, nouvelle relance.
+    expect((await svc({ absences: [absence('2026-10-05')] }).s.demandes(JOUR))[0].cle).toBe('demande:absence:A1:n1:2');
   });
 });

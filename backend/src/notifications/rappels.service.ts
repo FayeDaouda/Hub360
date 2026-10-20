@@ -5,6 +5,7 @@ import { joursEntre, refDevis, relanceAFaire, JOURS_RELANCE_OFFRE } from '../dev
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from './notifications.service';
 
 // Heure de la tournée (Dakar = UTC, pas d'heure d'été).
@@ -43,6 +44,7 @@ export class RappelsService implements OnApplicationBootstrap {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private reglages: ReglagesService,
   ) {}
 
   // Serveur redémarré après l'heure : la tournée du jour est rattrapée.
@@ -57,7 +59,7 @@ export class RappelsService implements OnApplicationBootstrap {
     if (this.enCours) return 0;
     this.enCours = true;
     try {
-      const rappels = [...(await this.offres(jour)), ...(await this.factures(jour)), ...(await this.taches(jour))];
+      const rappels = [...(await this.offres(jour)), ...(await this.factures(jour)), ...(await this.taches(jour)), ...(await this.demandes(jour))];
       let envoyes = 0;
       for (const r of rappels) if (await this.envoyer(r)) envoyes++;
       if (envoyes) this.log.log(`${envoyes} rappel(s) envoyé(s)`);
@@ -198,4 +200,79 @@ export class RappelsService implements OnApplicationBootstrap {
         };
       });
   }
+
+  // Demandes RH en attente (revue RH 20/10/2026) : après N jours ouvrés sans
+  // décision (Réglages, 3 par défaut), puis à chaque nouveau palier de N —
+  // au N+1 tant qu'il n'a pas décidé, ensuite à la RH (au CEO pour une
+  // demande de la RH) ; remboursements et attestations : à la RH.
+  async demandes(jour: string): Promise<Rappel[]> {
+    const delais = new Map<string, number>();
+    const delai = async (societeId: string) => {
+      if (!delais.has(societeId)) delais.set(societeId, await this.reglages.regle<number>(societeId, 'relance_demandes_jours'));
+      return delais.get(societeId)!;
+    };
+    const titulaires = new Map<string, string[]>();
+    const role = async (societeId: string, nom: string) => {
+      const k = `${societeId}:${nom}`;
+      if (!titulaires.has(k)) titulaires.set(k, await this.notifications.titulairesRole(societeId, nom));
+      return titulaires.get(k)!;
+    };
+    const DOSSIER = { select: { id: true, societeId: true, prenom: true, nom: true } } as const;
+    const [absences, remboursements, attestations, dossiersRh] = await Promise.all([
+      this.prisma.demandeAbsence.findMany({
+        where: { statut: { in: ['attente_n1', 'accord_n1'] } },
+        select: { id: true, statut: true, createdAt: true, decisionN1Le: true, dateDebut: true, dateFin: true, n1CollaborateurId: true, n1Role: true, dossier: DOSSIER },
+      }),
+      this.prisma.demandeRemboursement.findMany({ where: { statut: 'soumise' }, select: { id: true, createdAt: true, dossier: DOSSIER } }),
+      this.prisma.demandeAttestation.findMany({ where: { delivreeLe: null }, select: { id: true, demandeLe: true, dossier: DOSSIER } }),
+      // Demandeurs titulaires du rôle RH : leur validation finale revient au CEO.
+      this.prisma.dossierPersonnel.findMany({
+        where: { OR: [{ utilisateur: { roles: { some: { role: { nom: 'RH' } } } } }, { collaborateur: { utilisateur: { roles: { some: { role: { nom: 'RH' } } } } } }] },
+        select: { id: true },
+      }),
+    ]);
+    const demandeurRh = new Set(dossiersRh.map((d) => d.id));
+    const rappels: Rappel[] = [];
+    const ajouter = async (cle: string, depuis: Date, dossier: { societeId: string; prenom: string; nom: string }, objet: string, chez: string, ids: (string | null)[]) => {
+      const n = joursOuvresDepuis(depuis.toISOString().slice(0, 10), jour);
+      const palier = Math.floor(n / (await delai(dossier.societeId)));
+      if (palier < 1) return;
+      rappels.push({
+        cle: `${cle}:${palier}`,
+        societeId: dossier.societeId,
+        type: 'rappel_demande',
+        titre: `Relance · ${objet} de ${`${dossier.prenom} ${dossier.nom}`.trim()} · ${chez} depuis ${n} jours ouvrés`,
+        destinataireIds: ids,
+      });
+    };
+    for (const a of absences) {
+      const periode = `absence du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)}`;
+      if (a.statut === 'attente_n1') {
+        const ids = a.n1CollaborateurId ? await this.notifications.comptesDe([a.n1CollaborateurId]) : a.n1Role ? await role(a.dossier.societeId, a.n1Role) : [];
+        await ajouter(`demande:absence:${a.id}:n1`, a.createdAt, a.dossier, periode, 'en attente de votre décision', ids);
+      } else {
+        const final = demandeurRh.has(a.dossier.id) ? 'CEO (transverse)' : 'RH';
+        await ajouter(`demande:absence:${a.id}:final`, a.decisionN1Le ?? a.createdAt, a.dossier, periode, 'en attente de validation finale', await role(a.dossier.societeId, final));
+      }
+    }
+    for (const r of remboursements) {
+      await ajouter(`demande:remboursement:${r.id}`, r.createdAt, r.dossier, 'remboursement', 'à transmettre', await role(r.dossier.societeId, 'RH'));
+    }
+    for (const t of attestations) {
+      await ajouter(`demande:attestation:${t.id}`, t.demandeLe, t.dossier, 'attestation de travail', 'à délivrer', await role(t.dossier.societeId, 'RH'));
+    }
+    return rappels;
+  }
+}
+
+const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+// Jours ouvrés (lundi → vendredi) écoulés après `depuis`, jusqu'à `jour` inclus.
+export function joursOuvresDepuis(depuis: string, jour: string): number {
+  let n = 0;
+  for (let d = new Date(`${decaler(depuis, 1)}T00:00:00Z`); d <= new Date(`${jour}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) {
+    const js = d.getUTCDay();
+    if (js !== 0 && js !== 6) n++;
+  }
+  return n;
 }

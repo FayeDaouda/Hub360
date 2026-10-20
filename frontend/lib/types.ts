@@ -476,6 +476,8 @@ export type NotificationType =
   // Feuille de temps : écart signalé (→ RH), puis réponse (→ salarié).
   | 'ecart_temps_signale'
   | 'ecart_temps_traite'
+  // Relance d'une demande RH en attente (absence, remboursement, attestation).
+  | 'rappel_demande'
   // Mon espace · Mes documents : bulletin déposé, attestation délivrée.
   | 'bulletin_depose'
   | 'attestation_delivree'

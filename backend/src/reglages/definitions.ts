@@ -147,6 +147,14 @@ export const REGLES: DefinitionReglage[] = [
     aide: "Expiration de la pièce d'identité, prochaine visite médicale : alerte RH ce nombre de jours avant (et tant qu'elles sont dépassées).",
     appliquee: true,
   },
+  {
+    cle: 'relance_demandes_jours',
+    libelle: 'Relance des demandes en attente (jours ouvrés)',
+    valeur: { type: 'entier', min: 1, max: 30, unite: 'j' },
+    defaut: 3,
+    aide: "Absence, remboursement ou attestation sans décision : relance à 7 h au N+1 ou à la RH après ce nombre de jours ouvrés, puis à chaque nouveau palier (décision du 20/10/2026).",
+    appliquee: true,
+  },
 ];
 
 export const OBJECTIFS: DefinitionReglage[] = [
