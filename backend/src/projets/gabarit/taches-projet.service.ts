@@ -121,7 +121,7 @@ export class TachesProjetService {
         temps: true,
         assigneId: true,
         cle: true,
-        carte: { select: { desactivation: true, ouvreApres: true, taches: { where: { visaRequis: true, statut: 'validee', visaLe: null }, select: { libelle: true } } } },
+        carte: { select: { desactivation: true, ouvreApres: true, taches: { where: { visaRequis: true, statut: 'validee', visaLe: null, visaNonTrace: false }, select: { libelle: true } } } },
         projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
@@ -269,11 +269,11 @@ export class TachesProjetService {
     if (!peutViser(acteur.role)) throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
-      select: { id: true, libelle: true, statut: true, version: true, visaRequis: true, visaLe: true, assigneId: true, projet: { select: { code: true } } },
+      select: { id: true, libelle: true, statut: true, version: true, visaRequis: true, visaLe: true, visaNonTrace: true, assigneId: true, projet: { select: { code: true } } },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
     if (!tache.visaRequis) throw new ConflictException('Cette tâche n’exige pas de visa DPLG.');
-    if (tache.statut !== 'validee' || tache.visaLe) throw new ConflictException('Aucun visa en attente sur cette tâche.');
+    if (tache.statut !== 'validee' || tache.visaLe || tache.visaNonTrace) throw new ConflictException('Aucun visa en attente sur cette tâche.');
     if (!apposer && !motif?.trim()) throw new BadRequestException('Le motif du refus de visa est obligatoire.');
     const vNN = `v${String(tache.version).padStart(2, '0')}`;
     await this.prisma.$transaction(async (tx) => {
@@ -460,9 +460,9 @@ export class TachesProjetService {
   private async carteVerrouillee(projetId: string, refs: string[]): Promise<boolean> {
     for (const ref of refs) {
       const [carte, cle] = ref.split('.');
-      const t = await this.prisma.tacheProjet.findFirst({ where: { projetId, cle, carte: { cle: carte } }, select: { statut: true, visaRequis: true, visaLe: true } });
+      const t = await this.prisma.tacheProjet.findFirst({ where: { projetId, cle, carte: { cle: carte } }, select: { statut: true, visaRequis: true, visaLe: true, visaNonTrace: true } });
       // Faite : non nécessaire, ou validée (et visée si le visa DPLG est exigé).
-      if (t && !(t.statut === 'non_necessaire' || (t.statut === 'validee' && (!t.visaRequis || t.visaLe)))) return true;
+      if (t && !(t.statut === 'non_necessaire' || (t.statut === 'validee' && (!t.visaRequis || t.visaLe || t.visaNonTrace)))) return true;
     }
     return false;
   }

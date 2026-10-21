@@ -335,7 +335,9 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       {tache.visa && (tache.statut === 'validee' || tache.visa.le) && (
         <div className="po-panneau-bloc">
           <p className="po-panneau-label">Visa DPLG</p>
-          {tache.visa.le ? (
+          {tache.visa.nonTrace ? (
+            <p className="po-aide">Visa non tracé (antérieur au 21/10/2026) : la tâche a été validée avant la règle du visa.</p>
+          ) : tache.visa.le ? (
             <p className="po-aide">
               Apposé le {jjmmaaaa(tache.visa.le)}
               {tache.visa.par ? ` par ${tache.visa.par}` : ''}.

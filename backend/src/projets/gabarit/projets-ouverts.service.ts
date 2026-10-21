@@ -171,7 +171,7 @@ export class ProjetsOuvertsService {
       })
       .filter(({ t, chefId, demande, repousse }) => demande && peutQualifier(decideur, this.regle(ctx, t), chefId, repousse));
     // Visas DPLG à apposer (l'architecte DPLG seul).
-    const visas = peutViser(acteur.role) ? lignes.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe) : [];
+    const visas = peutViser(acteur.role) ? lignes.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace) : [];
     // Date de la dernière remise de chaque tâche à valider.
     const evenements = await this.prisma.evenementTacheProjet.findMany({
       where: { type: 'remise', tacheId: { in: remises.map((r) => r.t.id) } },
@@ -382,10 +382,12 @@ export class ProjetsOuvertsService {
           valideeLe: iso(t.valideeLe),
           valideePar: nom(t.valideePar),
           // Visa DPLG exigé : apposé le… par… (null tant qu'il ne l'est pas).
-          visa: t.visaRequis ? { le: iso(t.visaLe), par: t.visaParId ? (viseurs.get(t.visaParId) ?? null) : null } : null,
+          visa: t.visaRequis
+            ? { le: iso(t.visaLe), par: t.visaParId ? (viseurs.get(t.visaParId) ?? null) : null, nonTrace: t.visaNonTrace }
+            : null,
           // L'architecte DPLG (Dir. GC, ou un autre Dir. GC en suppléance —
           // jamais le CTO : le visa engage la signature de l'architecte).
-          peutViser: peutViser(acteur.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe,
+          peutViser: peutViser(acteur.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
           // Assignée à la personne connectée (« Seulement mes tâches »).
           aMoi: !!decideur.collaborateurId && t.assigneId === decideur.collaborateurId,
@@ -586,10 +588,17 @@ export class ProjetsOuvertsService {
       const horizon = horizonProjet(p.budgetHeures);
       const livraisonLe = dateDuJour(p.ouvertLe!, horizon, feries);
       const statut = statutChantier(p.phase);
-      // Étape en cours : la plus avancée des étapes commencées et pas
-      // terminées (une tâche oubliée en Onboard ne fige pas l'affichage).
-      const commencees = etapes.filter((e) => e.etat === 'en_cours' || e.etat === 'en_retard');
-      const enCours = commencees.at(-1) ?? etapes.find((e) => e.etat !== 'terminee');
+      // Étape en cours : la plus avancée où le travail a lieu (commencée,
+      // terminée ou non) ; les tâches restées ouvertes dans une étape
+      // antérieure sont signalées à part (« 1 tâche en souffrance dans
+      // Onboard ») — revue Dir. GC, 21/10/2026.
+      const libelleEtape = (n: number) => p.cartes.find((c) => c.etapeNumero === n)?.etapeLibelle ?? '';
+      const enCours = etapes.filter((e) => e.etat !== 'a_venir').at(-1) ?? etapes[0];
+      const souffrance = enCours
+        ? etapes
+            .filter((e) => e.numero < enCours.numero && e.total > e.faites)
+            .map((e) => ({ numero: e.numero, libelle: libelleEtape(e.numero), taches: e.total - e.faites }))
+        : [];
       const statutFacture = (f: 'F1' | 'F2' | 'F3') => {
         const fs = p.factures.filter((x) => x.jalon === JALON_PAR_FACTURE[f]);
         return fs.some((x) => x.statut === 'emise') ? 'emise' : fs.length ? 'brouillon' : 'absente';
@@ -607,7 +616,8 @@ export class ProjetsOuvertsService {
       return {
         projet: { id: p.id, code: p.code, client: p.client.nom, cellule: p.cellules[0]?.cellule.nom ?? null },
         statutChantier: statut,
-        etape: enCours ? { numero: enCours.numero, libelle: p.cartes.find((c) => c.etapeNumero === enCours.numero)?.etapeLibelle ?? '' } : null,
+        etape: enCours ? { numero: enCours.numero, libelle: libelleEtape(enCours.numero), terminee: enCours.etat === 'terminee' } : null,
+        souffrance,
         faites: etapes.reduce((s, e) => s + e.faites, 0),
         total: etapes.reduce((s, e) => s + e.total, 0),
         jour: rangOuvre(p.ouvertLe!, jour, feries),
@@ -763,6 +773,7 @@ export class ProjetsOuvertsService {
         prolongeeJusquau: prolongationAccordee(t.prolongations),
         visaRequis: t.visaRequis,
         viseeLe: iso(t.visaLe),
+        visaNonTrace: t.visaNonTrace,
       })),
     }));
   }

@@ -4,7 +4,7 @@ import { apiAuth } from './client-api';
 // Comptes & rôles — API NestJS, admin du groupe (HoldingAdminGuard) :
 //   GET  /groupe/comptes                                 sociétés, rôles attribuables, comptes
 //   PUT  /groupe/comptes/:id/societes/:societeId/role    { roleId } — coupe les sessions du compte
-//   POST /groupe/comptes                                 { dossierId, email, roleId, celluleId? } — crée + invite
+//   POST /groupe/comptes                                 { dossierId, email, roleId } — crée + invite (cellule : le Dir. GC)
 //   POST /groupe/comptes/:id/invitation                  renvoie l'invitation (compte en attente)
 //   PUT  /groupe/comptes/:id/actif                       { actif } — désactiver coupe les sessions
 
@@ -27,7 +27,6 @@ export function creerCompte(body: {
   dossierId: string;
   email: string;
   roleId: string;
-  celluleId?: string;
 }): Promise<InvitationCompte & { compte: CompteGroupe }> {
   return apiAuth('/groupe/comptes', { method: 'POST', body });
 }

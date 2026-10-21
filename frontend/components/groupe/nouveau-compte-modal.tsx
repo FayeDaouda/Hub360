@@ -22,7 +22,6 @@ export function NouveauCompteModal({
   const [dossierId, setDossierId] = useState('');
   const [email, setEmail] = useState('');
   const [roleId, setRoleId] = useState('');
-  const [celluleId, setCelluleId] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [resultat, setResultat] = useState<(InvitationCompte & { nom: string; email: string }) | null>(null);
@@ -38,7 +37,7 @@ export function NouveauCompteModal({
     setErreur(null);
     setBusy(true);
     try {
-      const r = await creerCompte({ dossierId, email, roleId, ...(celluleId && { celluleId }) });
+      const r = await creerCompte({ dossierId, email, roleId });
       setResultat({ ...r, nom: `${r.compte.prenom} ${r.compte.nom}`, email: r.compte.email });
       onCree();
     } catch (err) {
@@ -116,17 +115,11 @@ export function NouveauCompteModal({
                   ))}
                 </select>
               </label>
-              <label className="field">
-                <span className="field-label">Cellule</span>
-                <select className="field-input" value={celluleId} onChange={(e) => setCelluleId(e.target.value)}>
-                  <option value="">Aucune (direction, hors cellule)</option>
-                  {societe.cellules.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nom}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {/* Revue Dir. GC (21/10/2026) : la cellule est choisie par le Dir. GC. */}
+              <p className="dmd-note">
+                La cellule n’est pas choisie ici : un compte Salarié arrive dans Équipes › Salariés à affecter, et le Dir. GC, qui organise les
+                cellules, est prévenu.
+              </p>
               {erreur && (
                 <p className="field-erreur" role="alert">
                   {erreur}

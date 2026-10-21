@@ -242,6 +242,7 @@ enum NotificationType {
   reporting_en_retard
   reporting_depose
   visa_a_apposer // au Dir. GC : tâche validée qui attend son visa DPLG
+  arrivant_a_affecter // au Dir. GC : compte Salarié créé, cellule à choisir
 }
 
 model Notification {
@@ -2331,6 +2332,9 @@ model TacheProjet {
   visaRequis   Boolean           @default(false) @map("visa_requis")
   visaLe       DateTime?         @map("visa_le")
   visaParId    String?           @map("visa_par_id")
+  // Validée avant la règle du visa (21/10/2026) : ni bloquée ni réputée visée
+  // — affichée « Visa non tracé (antérieur au 21/10/2026) ».
+  visaNonTrace Boolean           @default(false) @map("visa_non_trace")
   // Élément ajouté en TS : devis d'avenant qui le facture (ligne ajoutée à
   // l'ajout). Le devis n'est jamais recréé — seules ses lignes le sont.
   devisTsId    String?           @map("devis_ts_id")

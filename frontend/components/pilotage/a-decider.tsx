@@ -16,10 +16,12 @@ import {
   PackageCheck,
   Stamp,
   Undo2,
+  UserPlus,
   type LucideIcon,
 } from 'lucide-react';
 import { ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { getProjets } from '@/lib/crm';
+import { getVueEquipes } from '@/lib/equipe';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { formatMontant } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -70,6 +72,7 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
   const [absences, setAbsences] = useState<DemandeAbsence[]>([]);
   const [dossiers, setDossiers] = useState<Projet[]>([]);
   const [recus, setRecus] = useState<ReportingRecu[]>([]);
+  const [arrivants, setArrivants] = useState<{ id: string; nom: string; role: string; dateArrivee: string | null }[]>([]);
   const [tsOuvert, setTsOuvert] = useState<DemandeTsADecider | null>(null);
   const [version, setVersion] = useState(0);
   const [tout, setTout] = useState(false);
@@ -92,6 +95,10 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
       getProjets(slug)
         .then((l) => setDossiers(l.filter((d) => !d.archive)))
         .catch(() => setDossiers([]));
+      // Salariés sans cellule : le Dir. GC, qui organise les cellules, les affecte.
+      getVueEquipes(slug)
+        .then((v) => setArrivants(v.salariesAAffecter))
+        .catch(() => setArrivants([]));
     }
   }, [slug, dirGc]);
 
@@ -265,6 +272,21 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
       ton: r.statut === 'en_retard' ? 'risque' : reste <= 2 ? 'attention' : 'info',
       action: 'Déposer',
       ouvrir: () => onOnglet('reportings'),
+    });
+  }
+  // 5 bis. Nouveaux arrivants à affecter à une cellule (Dir. GC).
+  for (const a of arrivants) {
+    elements.push({
+      cle: `arrivant-${a.id}`,
+      groupe: 5,
+      tri: a.dateArrivee ?? '',
+      icone: UserPlus,
+      titre: `Nouvel arrivant à affecter · ${a.nom}`,
+      detail: `${a.role || 'poste à préciser'}${a.dateArrivee ? ` · arrivée le ${jjmm(a.dateArrivee)}` : ''} · à rattacher à une cellule`,
+      quand: '',
+      ton: 'attention',
+      action: 'Affecter',
+      ouvrir: () => router.push(`/admin/${slug}/equipe?liste=affecter`),
     });
   }
   // 6 bis. Reporting reçu (CTO : celui du Dir. GC), tant qu'il n'est pas lu.

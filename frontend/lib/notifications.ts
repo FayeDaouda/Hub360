@@ -70,6 +70,8 @@ export function lienNotificationAdmin(
   // TS au-delà du seuil : le CTO décide dans « À décider aujourd'hui » ; le
   // Dir. GC retrouve le projet. Suppléance : son panneau, en tête de Pilotage.
   if (n.type === 'ts_a_valider' || n.type === 'suppleance_designee') return base;
+  // Nouvel arrivant : le Dir. GC l'affecte dans Équipes › Salariés à affecter.
+  if (n.type === 'arrivant_a_affecter') return `${base}/equipe?liste=affecter`;
   if (n.type === 'ts_decide' && n.projetId) return `${base}/projets?projet=${n.projetId}`;
   // Seuil ou coordonnées de paiement changés : le journal d'audit (CEO).
   if (n.type === 'reglage_gouvernance_modifie' || n.type === 'coordonnees_paiement_modifiees') return `${base}?onglet=journal`;

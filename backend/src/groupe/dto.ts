@@ -5,13 +5,12 @@ export class ChangerRoleDto {
 }
 
 // Création d'un compte depuis un dossier RH (phase 1, 14/10/2026) : le dossier
-// porte l'identité ; la cellule est facultative (sans cellule, pas de fiche
-// d'équipe : comptes de direction).
+// porte l'identité. Pas de cellule ici (revue Dir. GC, 21/10/2026) : le Dir.
+// GC organise les cellules et affecte le nouvel arrivant.
 export class CreerCompteDto {
   @IsUUID() dossierId: string;
   @IsEmail({}, { message: 'Adresse e-mail invalide.' }) email: string;
   @IsUUID() roleId: string;
-  @IsOptional() @IsUUID() celluleId?: string;
 }
 
 export class ChangerActifDto {

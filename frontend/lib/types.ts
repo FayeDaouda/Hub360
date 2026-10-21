@@ -506,6 +506,8 @@ export type NotificationType =
   | 'ts_decide'
   | 'suppleance_designee'
   | 'reglage_gouvernance_modifie'
+  | 'visa_a_apposer'
+  | 'arrivant_a_affecter'
   // Profil de facturation (lot 6 CFO) : coordonnées de paiement changées (CEO).
   | 'coordonnees_paiement_modifiees'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.

@@ -16,7 +16,7 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 function enAttente(a: LigneProduction['attente']): string[] {
   return [
     a.remises && pluriel(a.remises, 'remise'),
-    a.visas && pluriel(a.visas, 'visa DPLG'),
+    a.visas && `${pluriel(a.visas, 'visa')} DPLG`,
     a.prolongations && pluriel(a.prolongations, 'prolongation'),
     a.ts && pluriel(a.ts, 'TS'),
   ].filter((x): x is string => !!x);
@@ -163,7 +163,20 @@ export function Production({ slug }: { slug: string }) {
                     </span>
                     <span className="prod-avancement">
                       <span className="prod-etiquette">Avancement</span>
-                      <span>{l.etape ? `${numeroEtape(l.etape.numero)} · ${l.etape.libelle}` : 'Toutes les étapes terminées'}</span>
+                      <span>
+                        {l.etape ? `${numeroEtape(l.etape.numero)} · ${l.etape.libelle}${l.etape.terminee ? ' · terminée' : ''}` : 'Pas encore commencé'}
+                      </span>
+                      {l.souffrance.length > 0 && (
+                        // Une ligne : « 1 tâche en souffrance dans 01 · Onboard », ou le total et les étapes.
+                        <span className="prod-souffrance" title={l.souffrance.map((s) => `${numeroEtape(s.numero)} · ${s.libelle} : ${s.taches}`).join('\n')}>
+                          {l.souffrance.length === 1
+                            ? `${pluriel(l.souffrance[0].taches, 'tâche')} en souffrance dans ${numeroEtape(l.souffrance[0].numero)} · ${l.souffrance[0].libelle}`
+                            : `${pluriel(
+                                l.souffrance.reduce((t, s) => t + s.taches, 0),
+                                'tâche',
+                              )} en souffrance : ${l.souffrance.map((s) => `${numeroEtape(s.numero)} (${s.taches})`).join(', ')}`}
+                        </span>
+                      )}
                       <span className="prod-barre" aria-label={`${l.faites} tâches faites sur ${l.total}`}>
                         <span style={{ width: `${pct}%` }} />
                       </span>

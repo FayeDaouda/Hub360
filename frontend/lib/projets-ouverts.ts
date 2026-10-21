@@ -91,7 +91,8 @@ export type TacheOuverte = {
   valideeLe: string | null;
   valideePar: string | null;
   // Visa DPLG exigé (gabarit) : apposé le… par… ; null si la tâche n'en exige pas.
-  visa: { le: string | null; par: string | null } | null;
+  // nonTrace : validée avant la règle du visa (21/10/2026), non visée.
+  visa: { le: string | null; par: string | null; nonTrace: boolean } | null;
   peutViser: boolean; // l'architecte DPLG connecté peut apposer le visa
   assigne: { id: string; nom: string; cellule: string | null } | null;
   aMoi: boolean; // assignée à la personne connectée
@@ -445,7 +446,10 @@ export const getADeciderProjets = (slug: string) => apiSociete<ADeciderProjets>(
 export type LigneProduction = {
   projet: { id: string; code: string; client: string; cellule: string | null };
   statutChantier: StatutChantier;
-  etape: { numero: number; libelle: string } | null;
+  // Étape la plus avancée où le travail a lieu ; souffrance : tâches restées
+  // ouvertes dans des étapes antérieures.
+  etape: { numero: number; libelle: string; terminee: boolean } | null;
+  souffrance: { numero: number; libelle: string; taches: number }[];
   faites: number;
   total: number;
   jour: number;

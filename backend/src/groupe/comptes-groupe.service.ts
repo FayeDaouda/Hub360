@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+// Seul rôle qui travaille en cellule (fiche d'équipe, tâches de projet).
+const ROLE_SALARIE = 'Salarié';
 import { ComptesService } from '../auth/comptes.service';
 
 // Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
@@ -70,6 +74,7 @@ export class ComptesGroupeService {
   constructor(
     private prisma: PrismaService,
     private comptes: ComptesService,
+    private notifications: NotificationsService,
   ) {}
 
   async lister() {
@@ -204,13 +209,12 @@ export class ComptesGroupeService {
   }
 
   // Parcours unique de création (phase 1, 14/10/2026) : dossier RH → compte →
-  // rôle → cellule. Le dossier RH est la seule fiche de la personne ; la fiche
-  // d'équipe (Collaborateur, utilisée par les tâches) n'est créée que pour la
-  // rattacher à une cellule, avec l'identité recopiée du dossier.
-  async creerCompte(
-    dto: { dossierId: string; email: string; roleId: string; celluleId?: string },
-    acteurId: string,
-  ) {
+  // rôle. Le dossier RH est la seule fiche de la personne. Revue Dir. GC
+  // (21/10/2026) : le CIO ne choisit plus de cellule — un compte Salarié reçoit
+  // sa fiche d'équipe SANS cellule (« Salariés à affecter ») et le Dir. GC,
+  // qui organise les cellules, est prévenu ; les comptes de direction n'ont
+  // pas de fiche d'équipe.
+  async creerCompte(dto: { dossierId: string; email: string; roleId: string }, acteurId: string) {
     const email = dto.email.trim().toLowerCase();
     const dossier = await this.prisma.dossierPersonnel.findUnique({
       where: { id: dto.dossierId },
@@ -223,18 +227,14 @@ export class ComptesGroupeService {
     if (!dossier.prenom.trim() || !dossier.nom.trim()) {
       throw new BadRequestException('Renseignez le prénom et le nom dans le dossier RH.');
     }
-    const [role, cellule, existant] = await Promise.all([
+    const [role, existant] = await Promise.all([
       this.prisma.role.findFirst({ where: { id: dto.roleId, supprimeLe: null } }),
-      dto.celluleId
-        ? this.prisma.cellule.findFirst({ where: { id: dto.celluleId, societeId: dossier.societeId } })
-        : Promise.resolve(null),
       this.prisma.utilisateur.findUnique({ where: { email }, select: { id: true } }),
     ]);
     if (!role || ROLES_ADMINISTRATION.has(role.nom)) throw new BadRequestException('Rôle invalide.');
     if (role.societeId !== null && role.societeId !== dossier.societeId) {
       throw new BadRequestException('Ce rôle appartient à une autre société.');
     }
-    if (dto.celluleId && !cellule) throw new BadRequestException('Cellule introuvable dans cette société.');
     if (existant) throw new ConflictException('Cette adresse e-mail est déjà utilisée par un compte.');
 
     const utilisateur = await this.prisma.$transaction(async (tx) => {
@@ -246,15 +246,11 @@ export class ComptesGroupeService {
         data: { utilisateurId: u.id, societeId: dossier.societeId, roleId: role.id },
       });
       if (dossier.collaborateur) {
-        await tx.collaborateur.update({
-          where: { id: dossier.collaborateur.id },
-          data: { utilisateurId: u.id, ...(cellule && { celluleId: cellule.id }) },
-        });
-      } else if (cellule) {
+        await tx.collaborateur.update({ where: { id: dossier.collaborateur.id }, data: { utilisateurId: u.id } });
+      } else if (role.nom === ROLE_SALARIE) {
         const fiche = await tx.collaborateur.create({
           data: {
             societeId: dossier.societeId,
-            celluleId: cellule.id,
             prenom: u.prenom,
             nom: u.nom,
             role: dossier.poste.trim() || role.nom,
@@ -270,6 +266,16 @@ export class ComptesGroupeService {
     });
 
     const invitation = await this.comptes.envoyerInvitation(utilisateur.id, email, utilisateur.prenom, acteurId);
+    // Nouvel arrivant à affecter : le Dir. GC choisit sa cellule (Équipes).
+    if (role.nom === ROLE_SALARIE && !dossier.collaborateur) {
+      await this.notifications.envoyer({
+        societeId: dossier.societeId,
+        type: 'arrivant_a_affecter',
+        titre: `Nouvel arrivant à affecter · ${utilisateur.prenom} ${utilisateur.nom}${dossier.poste.trim() ? ` · ${dossier.poste.trim()}` : ''}`,
+        destinataireIds: await this.notifications.titulairesRole(dossier.societeId, 'Dir. GC'),
+        parId: acteurId,
+      });
+    }
     return { compte: versCompte(utilisateur, role), ...invitation };
   }
 

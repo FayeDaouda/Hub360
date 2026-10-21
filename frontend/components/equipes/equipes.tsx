@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { definirDispatcher, getVueEquipes, majCollaborateur, renommerCellule, supprimerCellule } from '@/lib/equipe';
@@ -21,7 +22,9 @@ const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/'
 // la nomenclature ISO 9001. Écriture selon la matrice (module équipe).
 export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean }) {
   const [vue, setVue] = useState<VueEquipes | null>(null);
-  const [liste, setListe] = useState<Liste>('cellules');
+  // ?liste=affecter : depuis « À décider aujourd'hui » (nouvel arrivant).
+  const demandee = useSearchParams().get('liste');
+  const [liste, setListe] = useState<Liste>(demandee === 'affecter' ? 'affecter' : 'cellules');
   const [aDecider, setADecider] = useState<number | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [aRenommer, setARenommer] = useState<CelluleEquipe | null>(null);

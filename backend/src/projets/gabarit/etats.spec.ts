@@ -111,3 +111,12 @@ describe('visa DPLG', () => {
     expect(attentesFactures([r2], [vise]).F3).toEqual([]);
   });
 });
+
+describe('visa non tracé (tâches validées avant la règle)', () => {
+  it('ni « à viser », ni bloquant : la carte se clôt, le dépôt est libre', () => {
+    const c = carte('permis_construire', [tache('plans_autorisation', { statut: 'validee', valideeLe: '2026-09-15', visaRequis: true, visaNonTrace: true }), tache('depot')]);
+    const etat = etatCarte(c, indexTaches([c]));
+    expect(etatTache(c.taches[0], etat, AUJ, F).code).toBe('validee');
+    expect(attendVisa(c.taches[1], c)).toBe(false);
+  });
+});

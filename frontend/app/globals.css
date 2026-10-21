@@ -15826,6 +15826,11 @@ tr.is-demandeur .cal-nom {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+.prod-souffrance {
+  color: color-mix(in oklch, var(--pill-attention) 75%, var(--text));
+  font-size: 0.78rem;
+  font-weight: 600;
+}
 .prod-alerte {
   color: color-mix(in oklch, var(--pill-risque) 80%, var(--text));
   font-size: 0.8rem;

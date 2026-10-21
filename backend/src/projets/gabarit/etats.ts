@@ -20,6 +20,7 @@ export type TacheSource = {
   // Visa DPLG (revue Dir. GC, 21/10/2026) : exigé, et apposé le… (AAAA-MM-JJ).
   visaRequis?: boolean;
   viseeLe?: string | null;
+  visaNonTrace?: boolean; // validée avant la règle du visa : ni bloquée ni visée
 };
 
 export type CarteSource = {
@@ -57,7 +58,7 @@ export type EtatEtape = 'en_retard' | 'en_cours' | 'a_venir' | 'terminee';
 export type ResumeEtape = { numero: number; faites: number; total: number; enRetard: number; etat: EtatEtape };
 
 // Faite : non nécessaire, ou validée — et visée quand le visa DPLG est exigé.
-export const enAttenteVisa = (t: TacheSource) => t.statut === 'validee' && !!t.visaRequis && !t.viseeLe;
+export const enAttenteVisa = (t: TacheSource) => t.statut === 'validee' && !!t.visaRequis && !t.viseeLe && !t.visaNonTrace;
 const faite = (t: TacheSource) => t.statut === 'non_necessaire' || (t.statut === 'validee' && !enAttenteVisa(t));
 
 // Le dépôt du permis attend les plans visés : une tâche « depot » reste

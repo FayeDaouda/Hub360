@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ComptesGroupeService } from './comptes-groupe.service';
 import type { ComptesService } from '../auth/comptes.service';
+import type { NotificationsService } from '../notifications/notifications.service';
 
 // Règles verrouillées : un rôle par personne et par société, rôles
 // d'administration hors de portée de cet écran, cloisonnement des rôles
@@ -73,7 +74,8 @@ function mockPrisma(o: {
     $transaction: tx,
   };
   const comptes = { envoyerInvitation: invitation } as unknown as ComptesService;
-  return { svc: new ComptesGroupeService(prisma as unknown as PrismaService, comptes), prisma, tx, invitation };
+  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['DG']) };
+  return { svc: new ComptesGroupeService(prisma as unknown as PrismaService, comptes, notifications as unknown as NotificationsService), prisma, tx, invitation, notifications };
 }
 
 describe('ComptesGroupeService.lister', () => {
@@ -174,38 +176,41 @@ describe('ComptesGroupeService.changerRole', () => {
   });
 });
 
-describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle → cellule', () => {
+describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle (cellule : le Dir. GC)', () => {
   const DOSSIER = {
     id: 'D1', societeId: 'S1', prenom: 'Fatou', nom: 'Ba', poste: 'Dessinatrice', dateEntree: '2026-01-05',
     archiveLe: null, utilisateurId: null, collaborateur: null,
   };
   const ROLE = { id: 'RS', nom: 'Salarié', societeId: 'S1' };
-  const DTO = { dossierId: 'D1', email: ' Fatou.Ba@GC.sn ', roleId: 'RS', celluleId: 'CE1' };
+  const DTO = { dossierId: 'D1', email: ' Fatou.Ba@GC.sn ', roleId: 'RS' };
   function pret(o: Parameters<typeof mockPrisma>[0] = {}) {
     const m = mockPrisma({ dossier: DOSSIER, role: ROLE, cellule: { id: 'CE1' }, ...o });
     m.tx.mockImplementation((fn: (t: unknown) => unknown) => fn(m.prisma));
     return m;
   }
 
-  it('crée compte inactif + rôle + fiche d’équipe dans la cellule (identité du dossier), puis invite', async () => {
-    const { svc, prisma, invitation } = pret();
+  it('Salarié : compte inactif + rôle + fiche d’équipe SANS cellule, invitation, Dir. GC prévenu', async () => {
+    const { svc, prisma, invitation, notifications } = pret();
     const res = await svc.creerCompte(DTO, 'CIO');
     expect(prisma.utilisateur.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ email: 'fatou.ba@gc.sn', prenom: 'Fatou', actif: false, motDePasseHash: null }) }),
     );
     expect(prisma.utilisateurSocieteRole.create).toHaveBeenCalledWith({ data: { utilisateurId: 'UN', societeId: 'S1', roleId: 'RS' } });
     expect(prisma.collaborateur.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ celluleId: 'CE1', role: 'Dessinatrice', dateArrivee: '2026-01-05', utilisateurId: 'UN' }),
+      data: expect.objectContaining({ role: 'Dessinatrice', dateArrivee: '2026-01-05', utilisateurId: 'UN' }),
     });
+    expect(prisma.collaborateur.create.mock.calls[0][0].data).not.toHaveProperty('celluleId');
+    expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'arrivant_a_affecter', destinataireIds: ['DG'], titre: 'Nouvel arrivant à affecter · Fatou Ba · Dessinatrice' }));
     expect(prisma.dossierPersonnel.update).toHaveBeenCalledWith({ where: { id: 'D1' }, data: { collaborateurId: 'C9' } });
     expect(invitation).toHaveBeenCalledWith('UN', 'fatou.ba@gc.sn', 'Fatou', 'CIO');
     expect(res.lien).toContain('/activer');
   });
 
-  it('sans cellule : pas de fiche d’équipe, le dossier est relié directement au compte', async () => {
-    const { svc, prisma } = pret();
-    await svc.creerCompte({ ...DTO, celluleId: undefined }, 'CIO');
+  it('compte de direction : pas de fiche d’équipe, le dossier est relié directement au compte, personne à affecter', async () => {
+    const { svc, prisma, notifications } = pret({ role: { id: 'RC', nom: 'CFO', societeId: 'S1' } });
+    await svc.creerCompte({ ...DTO, roleId: 'RC' }, 'CIO');
     expect(prisma.collaborateur.create).not.toHaveBeenCalled();
+    expect(notifications.envoyer).not.toHaveBeenCalled();
     expect(prisma.dossierPersonnel.update).toHaveBeenCalledWith({ where: { id: 'D1' }, data: { utilisateurId: 'UN' } });
   });
 
@@ -213,7 +218,7 @@ describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle �
     const { svc, prisma } = pret({ dossier: { ...DOSSIER, collaborateur: { id: 'C1', utilisateurId: null } } });
     await svc.creerCompte(DTO, 'CIO');
     expect(prisma.collaborateur.create).not.toHaveBeenCalled();
-    expect(prisma.collaborateur.update).toHaveBeenCalledWith({ where: { id: 'C1' }, data: { utilisateurId: 'UN', celluleId: 'CE1' } });
+    expect(prisma.collaborateur.update).toHaveBeenCalledWith({ where: { id: 'C1' }, data: { utilisateurId: 'UN' } });
   });
 
   it.each([
@@ -222,7 +227,6 @@ describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle �
     ['e-mail déjà pris', { utilisateur: { id: 'UX' } }, ConflictException],
     ['rôle d’administration', { role: { id: 'RA', nom: 'societe_admin', societeId: null } }, BadRequestException],
     ['rôle d’une autre société', { role: { id: 'RX', nom: 'CFO', societeId: 'S2' } }, BadRequestException],
-    ['cellule d’une autre société', { cellule: null }, BadRequestException],
   ])('refus : %s', async (_l, o, erreur) => {
     const { svc, prisma, invitation } = pret(o as Parameters<typeof mockPrisma>[0]);
     await expect(svc.creerCompte(DTO, 'CIO')).rejects.toThrow(erreur);
