@@ -242,9 +242,11 @@ export async function installerSocle(prisma: PrismaClient) {
         finances_factures: 'ecriture',
         finances_marges: 'lecture',
         finances_charges: 'lecture',
-        // ecriture (02/10/2026, décision du boss) : maquette « Équipes » — le
-        // CIO crée les cellules et réaffecte ; CTO et CEO restent en lecture.
-        equipe: 'ecriture',
+        // lecture (21/10/2026, revue Dir. GC) : le Dir. GC organise les
+        // cellules (il connaît projets, compétences et charge) ; le CIO gère
+        // comptes et droits, pas l'organisation du travail. Avant : ecriture
+        // (02/10/2026, maquette « Équipes »).
+        equipe: 'lecture',
         rh: 'aucun',
         // lecture (05/10/2026, demande du boss) : page Pilotage, comme le CTO ;
         // ses actions vont par fonction (émetteur, CTO / CEO, responsable).
