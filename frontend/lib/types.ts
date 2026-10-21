@@ -253,6 +253,8 @@ export type Projet = {
   // droit Finances : le statut seul).
   offreExpiree: boolean;
   soumisLe: string | null; // soumis au CFO le… (en validation seulement) — délai 48 h
+  // Renvoyé par le CFO (retour en « Nouveau projet ») : quand et pourquoi ; null sinon.
+  renvoi: { le: string; commentaire: string } | null;
   // null = lead actif ; sinon figé, consultable dans « Archivés » (code réservé).
   archive: { le: string; par: Personne | null } | null;
 };

@@ -49,7 +49,7 @@ export function versDossierCrm(
     proprietaire: PersonneRef;
     archivePar: PersonneRef;
     offres: (Devis & { lignes: LigneDevis[] })[];
-    transitions?: { creeLe: Date }[];
+    transitions?: { creeLe: Date; de?: string | null; vers?: string; commentaire?: string | null }[];
   },
   // Offre (finances_devis) : absente de la réponse (clé omise, pas null) pour
   // qui n'a pas le droit en lecture.
@@ -111,6 +111,11 @@ export function versDossierCrm(
     // ni contenu de l'offre.
     // Soumis au CFO le… (en validation seulement) : délai de 48 h.
     soumisLe: d.statut === 'en_validation' ? (d.transitions?.[0]?.creeLe ?? null) : null,
+    // Renvoyé par le CFO (retour en « Nouveau projet ») : quand et pourquoi.
+    renvoi:
+      d.statut === 'nouveau_projet' && d.transitions?.[0]?.de === 'en_validation'
+        ? { le: d.transitions[0].creeLe, commentaire: d.transitions[0].commentaire ?? '' }
+        : null,
     offreExpiree:
       d.statut === 'offre_envoyee' &&
       !!d.offres[0] &&

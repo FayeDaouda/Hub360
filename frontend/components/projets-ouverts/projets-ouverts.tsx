@@ -48,14 +48,19 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const session = useSessionCourante();
   const [tableau, setTableau] = useState<TableauProjets | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  // ?projet= : lien d'une notification (mention dans un fil).
-  const projetDemande = useSearchParams().get('projet');
+  // ?projet= : lien d'une notification (mention dans un fil) ; &tache= : la
+  // tâche à ouvrir (« À décider aujourd'hui » du Dir. GC).
+  const parametres = useSearchParams();
+  const projetDemande = parametres.get('projet');
+  const tacheDemandee = parametres.get('tache');
   const [projetId, setProjetId] = useState<string | null>(projetDemande);
   const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
   const [etape, setEtape] = useState(1);
   const [selection, setSelection] = useState<Selection>(null);
   // « À valider par vous » : la remise à ouvrir une fois son dossier chargé.
-  const [aOuvrir, setAOuvrir] = useState<{ projetId: string; tacheId: string } | null>(null);
+  const [aOuvrir, setAOuvrir] = useState<{ projetId: string; tacheId: string } | null>(
+    projetDemande && tacheDemandee ? { projetId: projetDemande, tacheId: tacheDemandee } : null,
+  );
   // Écran tenu dans la fenêtre (desktop, cf. globals.css) : la hauteur
   // disponible part du haut réel de la page, mesuré (barre du haut comprise).
   const racine = useRef<HTMLDivElement>(null);

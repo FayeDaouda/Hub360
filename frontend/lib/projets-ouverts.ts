@@ -392,3 +392,12 @@ export function heuresTache(t: TacheOuverte): string {
   if (t.temps.type === 'partage' && t.temps.heures) return `${t.temps.heures} h`;
   return '—';
 }
+
+// « À décider » (revue Dir. GC, 21/10/2026) : remises et prolongations que la
+// personne connectée peut trancher, sur tous ses projets.
+type LigneADecider = { projetId: string; code: string; client: string; tacheId: string; tache: string; carte: string; assigne: string | null };
+export type ADeciderProjets = {
+  remises: (LigneADecider & { version: number; remiseLe: string | null })[];
+  prolongations: (LigneADecider & { jusquau: string; motif: string; demandeLe: string; finPrevue: string | null })[];
+};
+export const getADeciderProjets = (slug: string) => apiSociete<ADeciderProjets>(slug, '/projets-ouverts/a-decider');

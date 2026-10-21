@@ -40,6 +40,13 @@ export class ProjetsOuvertsController {
     return this.fils.mentionnables(req.user.societeId);
   }
 
+  // « À décider » : remises et prolongations que je peux trancher, tous projets.
+  @Get('a-decider')
+  @RequiertPermission('projets', 'lecture')
+  aDecider(@Req() req: R) {
+    return this.projets.aDecider(req.user.societeId, req.user);
+  }
+
   // « Mes tâches » : mes @mentions, et les marquer traitées.
   @Get('mes-mentions')
   @RequiertPermission('projets', 'lecture')

@@ -137,6 +137,46 @@ export class ProjetsOuvertsService {
     };
   }
 
+  // « À décider » (revue Dir. GC, 21/10/2026) : sur tous les projets visibles,
+  // les remises et les demandes de prolongation que la personne connectée peut
+  // trancher — mêmes règles que les boutons (peutDecider, peutQualifier).
+  async aDecider(societeId: string, acteur: Acteur) {
+    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
+    const projets = await this.prisma.projet.findMany({
+      where: { societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
+      include: { ...AVEC_TACHES, client: { select: { nom: true } }, cellules: { include: { cellule: { select: { dispatcherId: true } } } } },
+    });
+    const lignes = projets.flatMap((p) => {
+      const chefId = p.cellules[0]?.cellule.dispatcherId ?? null;
+      return p.cartes.flatMap((c) => c.taches.map((t) => ({ p, c, t, chefId })));
+    });
+    const remises = lignes.filter(({ t, chefId }) => peutDecider(decideur, t, chefId));
+    const prolongations = lignes
+      .map((l) => ({ ...l, demande: prolongationEnAttente(l.t.prolongations) }))
+      .filter(({ t, chefId, demande }) => demande && peutQualifier(decideur, t.assigneId, chefId));
+    // Date de la dernière remise de chaque tâche à valider.
+    const evenements = await this.prisma.evenementTacheProjet.findMany({
+      where: { type: 'remise', tacheId: { in: remises.map((r) => r.t.id) } },
+      orderBy: { creeLe: 'desc' },
+      select: { tacheId: true, creeLe: true },
+    });
+    const remiseLe = new Map<string, Date>();
+    for (const e of evenements) if (!remiseLe.has(e.tacheId)) remiseLe.set(e.tacheId, e.creeLe);
+    const commun = ({ p, c, t }: (typeof lignes)[number]) => ({
+      projetId: p.id,
+      code: p.code,
+      client: p.client.nom,
+      tacheId: t.id,
+      tache: t.libelle,
+      carte: c.libelle,
+      assigne: t.assigne ? `${t.assigne.prenom} ${t.assigne.nom}`.trim() : null,
+    });
+    return {
+      remises: remises.map((l) => ({ ...commun(l), version: l.t.version, remiseLe: remiseLe.get(l.t.id) ?? null })),
+      prolongations: prolongations.map((l) => ({ ...commun(l), jusquau: l.demande!.jusquau, motif: l.demande!.motif, demandeLe: l.demande!.demandeLe, finPrevue: l.t.finLe })),
+    };
+  }
+
   // Statut simple « En conception / En chantier / Livré » (décision du
   // 14/10/2026) porté par Projet.phase : la facturation mensuelle SU/EX s'y
   // fie (« à facturer ce mois » en chantier). Revenir en conception remet la

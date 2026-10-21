@@ -20,10 +20,11 @@ import {
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
 import { formatMontant } from '@/lib/format';
-import { ROLE_CEO, ROLE_CIO } from '@/lib/acces-back-office';
+import { ROLE_CEO, ROLE_CIO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getAttention, getPilotage } from '@/lib/pilotage';
 import type { AttentionPilotage, IndicateurPilotage, VuePilotage } from '@/lib/types';
+import { ADeciderDirGc } from './a-decider-dir-gc';
 import { Attention } from './attention';
 import { Reportings } from './reportings';
 import { Registre } from './registre';
@@ -114,6 +115,8 @@ export function Pilotage({ slug }: { slug: string }) {
         Indicateurs du manuel, reportings mensuels et registre des décisions. Ce qui n’est pas dans le HUB n’existe pas pour la gouvernance
         (§3.7).
       </p>
+      {/* Dir. GC : ce qui attend sa décision d'abord, la supervision ensuite. */}
+      {session.role === ROLE_DIR_GC && <ADeciderDirGc slug={slug} vue={vue} onOnglet={ouvrir} />}
       {vue.chiffres && (
         <KpiStrip
           tuiles={vue.chiffres.tuiles
