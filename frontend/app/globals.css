@@ -15125,3 +15125,55 @@ tr.is-demandeur .cal-nom {
   display: block;
   margin-top: 0.1rem;
 }
+
+/* Finances · export comptable générique (lot 4). */
+.exc-modal {
+  max-width: 600px;
+}
+.exc-corps {
+  display: grid;
+  gap: 0.8rem;
+}
+.exc-journaux {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.exc-journal {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.exc-journal .field-label {
+  margin: 0;
+  font-weight: 600;
+}
+.exc-chiffres {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.exc-journal .btn-ghost {
+  justify-self: start;
+}
+@media (max-width: 720px) {
+  .exc-journaux {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* En-tête Finances : 5 actions, la grille 2 × 2 passe à 2 colonnes libres. */
+  .fin-entete .factu-actions-tete > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+/* Fenêtres en grille (export, avoir, clôtures, paramètres) : une seule
+   colonne qui ne s'élargit jamais au-delà de la fenêtre, textes repliés. */
+:is(.exc-corps, .da-corps, .clo-corps, .rtp-corps, .sav-detail) {
+  grid-template-columns: minmax(0, 1fr);
+}
+:is(.exc-corps, .da-corps, .clo-corps, .rtp-corps) .cell-sub {
+  white-space: normal;
+}

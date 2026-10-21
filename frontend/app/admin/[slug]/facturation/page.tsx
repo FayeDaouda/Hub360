@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Banknote, Clock, FileText, Lock, Package, Plus, TrendingUp } from 'lucide-react';
+import { Banknote, Clock, FileSpreadsheet, FileText, Lock, Package, Plus, TrendingUp } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getClients, getProjets } from '@/lib/crm';
 import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation, lienFacturationProjet } from '@/lib/facturation';
@@ -40,6 +40,7 @@ import { OffrePanneau } from '@/components/finances/offre-panneau';
 import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
 import { AValiderCfo } from '@/components/finances/a-valider-cfo';
 import { Clotures } from '@/components/finances/clotures';
+import { ExportComptable } from '@/components/finances/export-comptable';
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 import { ROLES_RENTABILITE } from '@/lib/rentabilite';
@@ -114,6 +115,8 @@ export default function FinancesPage({ params }: Props) {
   // Contrôle interne : fenêtre des clôtures mensuelles ; relecture du bloc
   // « À valider » après une clôture.
   const [clotures, setClotures] = useState(false);
+  // Export comptable générique (lot 4) : journaux des ventes et des encaissements.
+  const [exportComptable, setExportComptable] = useState(false);
   const [versionControle, setVersionControle] = useState(0);
   const [nouvelle, setNouvelle] = useState<{ dossier?: string } | null>(null);
   const [factureOuverte, setFactureOuverte] = useState<string | null>(null);
@@ -252,6 +255,11 @@ export default function FinancesPage({ params }: Props) {
               <Lock size={15} strokeWidth={1.75} aria-hidden /> Clôtures
             </button>
           )}
+          {validateur && (
+            <button type="button" className="btn-ghost" disabled={!factures} onClick={() => setExportComptable(true)}>
+              <FileSpreadsheet size={15} strokeWidth={1.75} aria-hidden /> Export comptable
+            </button>
+          )}
           {droits.catalogue && (
             <button type="button" className="btn-ghost" onClick={() => setModalCatalogue(true)}>
               <Package size={15} strokeWidth={1.75} aria-hidden /> Catalogue
@@ -283,6 +291,7 @@ export default function FinancesPage({ params }: Props) {
           version={versionControle}
         />
       )}
+      {exportComptable && factures && <ExportComptable factures={factures} onClose={() => setExportComptable(false)} />}
       {clotures && (
         <Clotures
           slug={params.slug}
