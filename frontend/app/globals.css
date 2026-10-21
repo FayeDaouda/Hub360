@@ -15744,3 +15744,197 @@ tr.is-demandeur .cal-nom {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : une ligne par
+   projet en colonnes sur grand écran, des cartes empilées sur téléphone. */
+.prod-onglets {
+  margin-bottom: 1rem;
+}
+.prod {
+  display: grid;
+  gap: 1rem;
+}
+.prod-section {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+}
+.prod-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.prod-filtre {
+  width: auto;
+  min-width: 12rem;
+}
+.prod-liste,
+.prod-echeances {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.prod-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.7fr);
+  align-items: start;
+  gap: 0.4rem 1rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.prod-ligne:hover {
+  border-color: color-mix(in oklch, var(--pill-info) 45%, var(--border));
+}
+.prod-ligne[data-risque] {
+  border-left-color: var(--pill-risque);
+}
+.prod-ligne > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.35rem;
+  min-width: 0;
+}
+.prod-projet,
+.prod-avancement,
+.prod-calendrier {
+  flex-direction: column;
+  align-items: flex-start !important;
+}
+/* .cell-sub est sur une ligne ailleurs : ici le client et la cellule passent à la ligne. */
+.prod-ligne .cell-sub {
+  white-space: normal;
+}
+.prod-etiquette {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.prod-alerte {
+  color: color-mix(in oklch, var(--pill-risque) 80%, var(--text));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.prod-barre {
+  display: block;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text) 10%, transparent);
+}
+.prod-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pill-info);
+}
+.prod-bas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.prod-cellules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.prod-cellule {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.prod-cellule-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+.prod-membre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.prod-membre-nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prod-membre-pct {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.prod-membre[data-ton='risque'] .prod-barre > span {
+  background: var(--pill-risque);
+}
+.prod-membre[data-ton='succes'] .prod-barre > span {
+  background: var(--pill-succes);
+}
+.prod-membre[data-ton='risque'] .prod-membre-pct {
+  color: color-mix(in oklch, var(--pill-risque) 80%, var(--text));
+  font-weight: 600;
+}
+.prod-echeance {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.prod-echeance:hover {
+  background: color-mix(in oklch, var(--text) 6%, transparent);
+}
+.prod-echeance-date {
+  min-width: 2.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .prod-ligne {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .prod-projet {
+    grid-column: 1 / -1;
+  }
+  .prod-bas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .prod-ligne {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .prod-filtre {
+    width: 100%;
+  }
+}

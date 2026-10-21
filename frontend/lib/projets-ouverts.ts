@@ -439,3 +439,35 @@ export const deciderDemandeTs = (slug: string, projetId: string, demandeId: stri
     body: { accepter, ...(motif ? { motif } : {}) },
   });
 export const getADeciderProjets = (slug: string) => apiSociete<ADeciderProjets>(slug, '/projets-ouverts/a-decider');
+
+// Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : Dir. GC (ses
+// projets), CTO et CEO (tous).
+export type LigneProduction = {
+  projet: { id: string; code: string; client: string; cellule: string | null };
+  statutChantier: StatutChantier;
+  etape: { numero: number; libelle: string } | null;
+  faites: number;
+  total: number;
+  jour: number;
+  horizon: number;
+  livraisonLe: string;
+  livraisonDepassee: boolean;
+  enRetard: number;
+  prolongees: number;
+  attente: { remises: number; visas: number; prolongations: number; ts: number };
+  tranche: { code: 'F2' | 'F3'; statut: 'brouillon' | 'absente'; attend: string[] } | null;
+  echeances: { carte: string; finLe: string }[];
+};
+export type ChargeMembre = { id: string; nom: string; heures: number; disponibles: number; pourcentage: number | null; joursAbsence: number };
+export type VueProduction = {
+  perimetre: 'mes_projets' | 'tous';
+  chiffres: { ouverts: number; enRetard: number; livraisons15: number; enAttente: number; chargeMoyenne: number | null };
+  lignes: LigneProduction[];
+  charge: {
+    periode: { debut: string; fin: string };
+    zone: { de: number; a: number } | null;
+    cellules: { code: string; nom: string; moyenne: number | null; membres: ChargeMembre[] }[];
+  };
+  livraisons: { projetId: string; code: string; client: string; livraisonLe: string }[];
+};
+export const getProduction = (slug: string) => apiSociete<VueProduction>(slug, '/projets-ouverts/production');

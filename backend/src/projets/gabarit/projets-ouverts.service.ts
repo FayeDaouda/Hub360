@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { JalonFacture, Phase, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
@@ -7,8 +7,8 @@ import { alerteAvenant, refDevis, statutDevisEffectif } from '../../devis/domain
 import { PHASES_PAR_CATEGORIE } from '../domaine/config';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
-import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
-import { agitCommeDplg, collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, peutViser, ROLE_CTO, type Decideur } from './validation';
+import { contexteDecision, dateLivraison, horizonProjet, type ContexteDecision } from './suppleance';
+import { agitCommeDplg, collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, peutViser, ROLE_CTO, ROLE_DPLG, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import { chargeSurPeriode } from './charge';
 import {
@@ -57,6 +57,15 @@ type Prolongations = ProjetAvecTaches['cartes'][number]['taches'][number]['prolo
 // et demande en attente de décision.
 const prolongationAccordee = (l: Prolongations) => l.find((p) => p.decision === 'accordee')?.jusquau ?? null;
 const prolongationEnAttente = (l: Prolongations) => l.find((p) => p.decision === null) ?? null;
+
+// Cartes clés suivies dans « À venir » du tableau de production.
+const CARTES_CLES = ['permis_construire', 'pe_architecture', 'tache_finale'];
+const ROLE_CEO_PROD = 'CEO (transverse)';
+const jourPlus = (jour: string, n: number) => {
+  const d = new Date(`${jour}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 
 const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = { F1: 'signature', F2: 'avant_projet', F3: 'livraison' };
 
@@ -543,6 +552,152 @@ export class ProjetsOuvertsService {
           feries,
         ),
       })),
+    };
+  }
+
+  // Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : un écran pour
+  // le Dir. GC (les projets dont il porte le dossier), le CTO et le CEO (tous) —
+  // avancement, calendrier, retards, décisions en attente, prochaine tranche,
+  // charge des cellules sur deux semaines, échéances des 14 jours.
+  async production(societeId: string, acteur: Acteur) {
+    if (![ROLE_DPLG, ROLE_CTO, ROLE_CEO_PROD, 'societe_admin'].includes(acteur.role)) {
+      throw new ForbiddenException('Le tableau de production est réservé au Dir. GC, au CTO et au CEO.');
+    }
+    const jour = aujourdhui();
+    const feries = await this.feries(societeId);
+    const projets = await this.prisma.projet.findMany({
+      where: { societeId, ouvertLe: { not: null }, ...(acteur.role === ROLE_DPLG ? { dossierCrm: { proprietaireId: acteur.userId } } : {}) },
+      orderBy: { ouvertLe: 'asc' },
+      include: {
+        ...AVEC_TACHES,
+        client: { select: { nom: true } },
+        cellules: { include: { cellule: { select: { code: true, nom: true } } } },
+        factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { jalon: true, statut: true } },
+      },
+    });
+    const ts = await this.prisma.demandeTs.groupBy({ by: ['projetId'], where: { societeId, statut: 'a_valider', projetId: { in: projets.map((p) => p.id) } }, _count: true });
+    const tsParProjet = new Map(ts.map((t) => [t.projetId, t._count]));
+    const dans = (n: number) => jourPlus(jour, n);
+
+    const lignes = projets.map((p) => {
+      const { etapes, etatsCartes, etatsTaches } = this.etats(p, jour, feries);
+      const taches = p.cartes.flatMap((c) => c.taches);
+      const compte = (code: EtatTache['code']) => taches.filter((t) => etatsTaches.get(t.id)?.code === code).length;
+      const horizon = horizonProjet(p.budgetHeures);
+      const livraisonLe = dateDuJour(p.ouvertLe!, horizon, feries);
+      const statut = statutChantier(p.phase);
+      // Étape en cours : la plus avancée des étapes commencées et pas
+      // terminées (une tâche oubliée en Onboard ne fige pas l'affichage).
+      const commencees = etapes.filter((e) => e.etat === 'en_cours' || e.etat === 'en_retard');
+      const enCours = commencees.at(-1) ?? etapes.find((e) => e.etat !== 'terminee');
+      const statutFacture = (f: 'F1' | 'F2' | 'F3') => {
+        const fs = p.factures.filter((x) => x.jalon === JALON_PAR_FACTURE[f]);
+        return fs.some((x) => x.statut === 'emise') ? 'emise' : fs.length ? 'brouillon' : 'absente';
+      };
+      const attentes = attentesFactures(etapes, this.sources(p));
+      const prochaine = (['F2', 'F3'] as const).find((f) => statutFacture(f) !== 'emise');
+      const attente = {
+        remises: compte('a_valider'),
+        visas: compte('a_viser'),
+        prolongations: taches.filter((t) => prolongationEnAttente(t.prolongations)).length,
+        ts: tsParProjet.get(p.id) ?? 0,
+      };
+      const enRetard = compte('en_retard');
+      const livraisonDepassee = jour > livraisonLe && statut !== 'livre';
+      return {
+        projet: { id: p.id, code: p.code, client: p.client.nom, cellule: p.cellules[0]?.cellule.nom ?? null },
+        statutChantier: statut,
+        etape: enCours ? { numero: enCours.numero, libelle: p.cartes.find((c) => c.etapeNumero === enCours.numero)?.etapeLibelle ?? '' } : null,
+        faites: etapes.reduce((s, e) => s + e.faites, 0),
+        total: etapes.reduce((s, e) => s + e.total, 0),
+        jour: rangOuvre(p.ouvertLe!, jour, feries),
+        horizon,
+        livraisonLe,
+        livraisonDepassee,
+        enRetard,
+        prolongees: compte('prolongee'),
+        attente,
+        // Prochaine tranche non émise : prête (rien n'attend) ou ce qu'elle attend.
+        tranche: prochaine ? { code: prochaine, statut: statutFacture(prochaine), attend: attentes[prochaine] } : null,
+        // Cartes clés dont la fenêtre se termine dans les 14 jours, pas encore closes.
+        echeances: p.cartes
+          .filter((c) => CARTES_CLES.includes(c.cle) && c.finLe && c.finLe >= jour && c.finLe <= dans(14) && !['close', 'desactivee'].includes(etatsCartes.get(c.id)!.code))
+          .map((c) => ({ carte: c.libelle, finLe: c.finLe! })),
+        // Tri : livraison dépassée, retards, décisions en attente.
+        risque: (livraisonDepassee ? 1000 : 0) + enRetard * 10 + Object.values(attente).reduce((s, n) => s + n, 0),
+      };
+    });
+    lignes.sort((a, b) => b.risque - a.risque || a.livraisonLe.localeCompare(b.livraisonLe));
+
+    const charge = await this.chargeCellules(societeId, { debut: jour, fin: dans(13) }, feries);
+    const moyennes = charge.cellules.map((c) => c.moyenne).filter((x): x is number => x !== null);
+    return {
+      perimetre: acteur.role === ROLE_DPLG ? ('mes_projets' as const) : ('tous' as const),
+      chiffres: {
+        ouverts: lignes.length,
+        enRetard: lignes.filter((l) => l.enRetard > 0 || l.livraisonDepassee).length,
+        livraisons15: lignes.filter((l) => l.statutChantier !== 'livre' && l.livraisonLe >= jour && l.livraisonLe <= dans(15)).length,
+        enAttente: lignes.reduce((s, l) => s + Object.values(l.attente).reduce((t, n) => t + n, 0), 0),
+        chargeMoyenne: moyennes.length ? Math.round(moyennes.reduce((s, x) => s + x, 0) / moyennes.length) : null,
+      },
+      lignes: lignes.map(({ risque: _r, ...l }) => l),
+      charge,
+      // Livraisons dans les 14 jours (projets non livrés).
+      livraisons: lignes
+        .filter((l) => l.statutChantier !== 'livre' && l.livraisonLe >= jour && l.livraisonLe <= dans(14))
+        .map((l) => ({ projetId: l.projet.id, code: l.projet.code, client: l.projet.client, livraisonLe: l.livraisonLe })),
+    };
+  }
+
+  // Charge de chaque personne des cellules sur la période (même calcul que
+  // « Assigner » et l'indicateur « Charge des équipes »), par cellule.
+  private async chargeCellules(societeId: string, p: { debut: string; fin: string }, feries: ReadonlySet<string>) {
+    const [cellules, zone] = await Promise.all([
+      this.prisma.cellule.findMany({
+        where: { societeId },
+        orderBy: { code: 'asc' },
+        select: {
+          code: true,
+          nom: true,
+          membres: {
+            orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+            select: {
+              id: true,
+              prenom: true,
+              nom: true,
+              tachesProjet: {
+                where: { statut: { in: ['a_faire', 'a_valider', 'reprise'] }, debutLe: { lte: p.fin }, finLe: { gte: p.debut } },
+                select: { id: true, debutLe: true, finLe: true, heures: true },
+              },
+              dossierPersonnel: {
+                select: { absences: { where: { statut: 'validee', dateDebut: { lte: p.fin }, dateFin: { gte: p.debut } }, select: { dateDebut: true, dateFin: true } } },
+              },
+            },
+          },
+        },
+      }),
+      this.reglages.regle<{ de: number; a: number } | null>(societeId, 'objectif_charge_equipes'),
+    ]);
+    const vide = { id: '_', debut: p.debut, echeance: p.fin, heures: 0 };
+    return {
+      periode: p,
+      zone,
+      cellules: cellules
+        .filter((c) => c.membres.length)
+        .map((c) => {
+          const membres = c.membres.map((m) => {
+            const ch = chargeSurPeriode(
+              p,
+              m.tachesProjet.map((t) => ({ id: t.id, debut: t.debutLe, echeance: t.finLe, heures: t.heures == null ? null : Number(t.heures) })),
+              vide,
+              (m.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
+              feries,
+            );
+            return { id: m.id, nom: nom(m)!, heures: ch.assignees, disponibles: ch.disponibles, pourcentage: ch.pourcentage, joursAbsence: ch.joursAbsence };
+          });
+          const pcts = membres.map((m) => m.pourcentage).filter((x): x is number => x !== null);
+          return { code: c.code, nom: c.nom, membres, moyenne: pcts.length ? Math.round(pcts.reduce((s, x) => s + x, 0) / pcts.length) : null };
+        }),
     };
   }
 

@@ -40,6 +40,14 @@ export class ProjetsOuvertsController {
     return this.fils.mentionnables(req.user.societeId);
   }
 
+  // Tableau de production (Dir. GC : ses projets ; CTO, CEO : tous) — rôle
+  // vérifié par le service.
+  @Get('production')
+  @RequiertPermission('projets', 'lecture')
+  production(@Req() req: R) {
+    return this.projets.production(req.user.societeId, req.user);
+  }
+
   // « À décider » : remises et prolongations que je peux trancher, tous projets.
   @Get('a-decider')
   @RequiertPermission('projets', 'lecture')
