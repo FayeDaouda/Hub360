@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
 import { TachesProjetService } from '../projets/gabarit/taches-projet.service';
+import { contexteDecision } from '../projets/gabarit/suppleance';
 import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
 import { ouDossierDuCompte } from './mon-compte';
 import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from './regles-temps';
@@ -106,8 +107,16 @@ export class TachesService {
         pieces: { orderBy: { createdAt: 'asc' }, select: { id: true, nom: true, version: true } },
       },
     });
+    // Mêmes règles que Projets : suppléance du jour, travail d'un Dir. GC au CTO.
+    const ctx = await contexteDecision(this.prisma, a.societeId, new Date().toISOString().slice(0, 10));
     return remises
-      .filter((t) => peutDecider({ role: a.role, collaborateurId }, t, t.projet.cellules[0]?.cellule.dispatcherId ?? null))
+      .filter((t) =>
+        peutDecider(
+          { role: a.role, collaborateurId, ctoSupplee: ctx.ctoSupplee },
+          { ...t, assigneEstDplg: !!t.assigneId && ctx.dplgCollaborateurs.has(t.assigneId) },
+          t.projet.cellules[0]?.cellule.dispatcherId ?? null,
+        ),
+      )
       .map((t) => ({
         id: t.id,
         etape: `${String(t.carte.etapeNumero).padStart(2, '0')} · ${t.carte.etapeLibelle}`,

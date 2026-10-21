@@ -1,3 +1,4 @@
+import { ReglagesService } from '../../reglages/reglages.service';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -26,10 +27,13 @@ describe('TachesProjetService.remettre — fichiers', () => {
         findFirst: jest.fn().mockResolvedValue({ id: 'C1' }),
         findMany: jest.fn().mockResolvedValue([{ utilisateurId: 'U2', dossierPersonnel: null }]),
       },
+      // Contexte du jour (suppléance) : aucun Dir. GC, aucune absence.
+      utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([]) },
+      demandeAbsence: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn((f: (t: typeof tx) => Promise<unknown>) => f(tx)),
     } as unknown as PrismaService;
     const notifications = { pousser: jest.fn() } as unknown as NotificationsService;
-    return { s: new TachesProjetService(prisma, notifications), evenement, pieces };
+    return { s: new TachesProjetService(prisma, notifications, {} as ReglagesService), evenement, pieces };
   }
   const acteur = { userId: 'U1', role: 'Salarié' };
 

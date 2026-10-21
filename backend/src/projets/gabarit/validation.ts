@@ -5,8 +5,16 @@ import type { PrismaService } from '../../prisma/prisma.service';
 // Validation d'une remise (maquettes « Projets ») : le chef de team valide ;
 // l'Architecte DPLG (rôle Dir. GC) valide les tâches du chef de team et
 // supplée le chef de team partout. Personne ne valide sa propre tâche.
+//
+// Revue Dir. GC (21/10/2026, lot 4) — le CTO, niveau au-dessus du Dir. GC :
+//   · valide les tâches assignées à un Dir. GC ;
+//   · tient la place d'un Dir. GC absent (absence validée) qui n'a pas confié
+//     sa suppléance à un autre Dir. GC ;
+//   · décide seul des prolongations qui repoussent la livraison du projet et
+//     des TS au-delà du seuil des Réglages.
 
 export const ROLE_DPLG = 'Dir. GC';
+export const ROLE_CTO = 'CTO (transverse)';
 
 // Salarié (matrice : projets en lecture, 06/10/2026) : il ne voit que les
 // projets où une tâche lui est assignée, et ceux de la cellule qu'il pilote
@@ -37,22 +45,43 @@ export function perimetreProjets(role: string, collaborateurId: string | null): 
   };
 }
 
-export type Decideur = { role: string; collaborateurId: string | null };
+// `ctoSupplee` : le CTO tient aujourd'hui la place d'un Dir. GC absent.
+export type Decideur = { role: string; collaborateurId: string | null; ctoSupplee?: boolean };
+// `assigneEstDplg` : la tâche est assignée à un Dir. GC (validée par le CTO).
+export type TacheRegle = { assigneId: string | null; assigneEstDplg?: boolean };
 
-export function peutDecider(d: Decideur, t: { statut: string; assigneId: string | null }, chefId: string | null): boolean {
+// Pouvoirs de l'Architecte DPLG : le Dir. GC, l'admin société, le CTO en suppléance.
+export const agitCommeDplg = (d: Decideur) => d.role === ROLE_DPLG || d.role === 'societe_admin' || (d.role === ROLE_CTO && !!d.ctoSupplee);
+// Ce qui remonte au CTO (et à l'admin société).
+const niveauCto = (d: Decideur) => d.role === ROLE_CTO || d.role === 'societe_admin';
+const estChefDe = (d: Decideur, assigneId: string | null, chefId: string | null) => !!chefId && d.collaborateurId === chefId && assigneId !== chefId;
+
+export function peutDecider(d: Decideur, t: TacheRegle & { statut: string }, chefId: string | null): boolean {
   if (t.statut !== 'a_valider' || horsCircuit(d.role)) return false;
   if (d.collaborateurId && d.collaborateurId === t.assigneId) return false; // jamais sa propre tâche
-  if (d.role === ROLE_DPLG || d.role === 'societe_admin') return true;
-  return !!chefId && d.collaborateurId === chefId && t.assigneId !== chefId;
+  if (t.assigneEstDplg) return niveauCto(d);
+  return agitCommeDplg(d) || estChefDe(d, t.assigneId, chefId);
 }
 
 // Qualifier un retard (décider d'une prolongation) : chef de team, sauf pour
-// sa propre tâche ; Architecte DPLG (et admin société) partout.
-export function peutQualifier(d: Decideur, assigneId: string | null, chefId: string | null): boolean {
+// sa propre tâche ; Architecte DPLG (et admin société) partout ; le CTO seul
+// quand la nouvelle date repousse la livraison du projet ou que la tâche est
+// celle d'un Dir. GC.
+export function peutQualifier(d: Decideur, t: TacheRegle, chefId: string | null, repousseLivraison = false): boolean {
   if (horsCircuit(d.role)) return false;
-  if (d.collaborateurId && d.collaborateurId === assigneId) return false;
-  if (d.role === ROLE_DPLG || d.role === 'societe_admin') return true;
-  return !!chefId && d.collaborateurId === chefId && assigneId !== chefId;
+  if (d.collaborateurId && d.collaborateurId === t.assigneId) return false;
+  if (t.assigneEstDplg || repousseLivraison) return niveauCto(d);
+  return agitCommeDplg(d) || estChefDe(d, t.assigneId, chefId);
+}
+
+// TS : le Dir. GC (ou son suppléant) l'ajoute jusqu'au seuil ; au-delà, il le
+// demande et le CTO le valide (ou l'ajoute lui-même).
+export type DroitTs = 'ajouter' | 'demander' | null;
+export function droitTs(d: Decideur, montantHt: number, seuil: number): DroitTs {
+  if (horsCircuit(d.role)) return null;
+  if (niveauCto(d)) return 'ajouter';
+  if (!agitCommeDplg(d)) return null;
+  return montantHt > seuil ? 'demander' : 'ajouter';
 }
 
 // Fiche d'équipe du compte connecté (directe, ou via son dossier RH).

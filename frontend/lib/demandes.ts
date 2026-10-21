@@ -17,7 +17,13 @@ type Fichier = { nom: string; url: string };
 
 export const getMesDemandes = (slug: string) =>
   apiSociete<{ solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] }>(slug, '/mon-espace/demandes');
-export const deposerAbsence = (slug: string, corps: { type: TypeAbsence; dateDebut: string; dateFin: string; commentaire?: string; justificatif?: Fichier }) =>
+// Dir. GC : suppléants possibles pendant son absence (autre Dir. GC, CTO).
+export type Suppleant = { id: string; nom: string; role: string };
+export const getSuppleants = (slug: string) => apiSociete<Suppleant[]>(slug, '/mon-espace/suppleants');
+export const deposerAbsence = (
+  slug: string,
+  corps: { type: TypeAbsence; dateDebut: string; dateFin: string; commentaire?: string; justificatif?: Fichier; suppleantId?: string },
+) =>
   apiSociete<DemandeAbsence>(slug, '/mon-espace/absences', { method: 'POST', body: corps });
 export const repondreAutresDates = (slug: string, id: string, accepte: boolean) =>
   apiSociete<DemandeAbsence>(slug, `/mon-espace/absences/${id}/reponse`, { method: 'POST', body: { accepte } });

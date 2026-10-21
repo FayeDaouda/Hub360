@@ -25,7 +25,9 @@ export class EquipesService {
         where: { societeId },
         orderBy: [{ processus: 'asc' }, { numero: 'asc' }],
         include: {
-          dispatcher: { select: { id: true, prenom: true, nom: true } },
+          dispatcher: {
+            select: { id: true, prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+          },
           postes: { orderBy: { ordre: 'asc' }, include: { titulaire: { select: { id: true, prenom: true, nom: true } } } },
           membres: {
             orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
@@ -102,7 +104,15 @@ export class EquipesService {
         nom: c.nom,
         clientele: c.clientele,
         statut: c.statut,
-        pilote: c.dispatcher ? { id: c.dispatcher.id, nom: nomDe(c.dispatcher) } : null,
+        // sansCompte : chef sans compte HUB actif — ses remises remontent au
+        // Dir. GC ; à corriger en lui créant un compte (revue Dir. GC).
+        pilote: c.dispatcher
+          ? {
+              id: c.dispatcher.id,
+              nom: nomDe(c.dispatcher),
+              sansCompte: !c.dispatcher.utilisateur?.actif && !c.dispatcher.dossierPersonnel?.utilisateur?.actif,
+            }
+          : null,
         pctATemps: partATemps(c.membres.flatMap((m) => tachesDe(m.id))),
         postes: c.postes.map((p) => ({
           id: p.id,

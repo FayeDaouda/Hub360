@@ -12686,6 +12686,15 @@ tr.is-demandeur .cal-nom {
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+.eq-alerte {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--pill-attention) 14%, transparent);
+  color: color-mix(in oklch, var(--pill-attention) 70%, var(--text));
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
 .eq-cellule-sous,
 .eq-aide {
   margin: 0;

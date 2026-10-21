@@ -59,6 +59,7 @@ export class CellulesService {
       ? await this.prisma.collaborateur.findFirst({ where: { id: dto.piloteId, societeId } })
       : null;
     if (dto.piloteId && !pilote) throw new UnprocessableEntityException('Pilote introuvable dans la société.');
+    if (pilote) await this.exigerCompteActif(pilote.id);
     const cellule = await this.prisma.$transaction(async (tx) => {
       const { dernier } = await tx.compteurCellule.upsert({
         where: { societeId_processus: { societeId, processus: dto.processus } },
@@ -112,6 +113,7 @@ export class CellulesService {
           'Le dispatcher doit être membre de cette cellule.',
         );
       }
+      await this.exigerCompteActif(dto.dispatcherId);
     }
     const cellule = await this.prisma.cellule.update({
       where: { id },
@@ -119,6 +121,20 @@ export class CellulesService {
       include: MEMBRES,
     });
     return formater(cellule);
+  }
+
+  // Revue Dir. GC (21/10/2026) : un chef sans compte HUB actif ne serait
+  // jamais prévenu des remises de son équipe — refusé à la source.
+  private async exigerCompteActif(collaborateurId: string) {
+    const c = await this.prisma.collaborateur.findUniqueOrThrow({
+      where: { id: collaborateurId },
+      select: { prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+    });
+    if (!c.utilisateur?.actif && !c.dossierPersonnel?.utilisateur?.actif) {
+      throw new UnprocessableEntityException(
+        `${`${c.prenom ?? ''} ${c.nom}`.trim()} n’a pas de compte HUB actif : il ne recevrait ni les remises ni les demandes de son équipe. Créez-lui un compte d’abord.`,
+      );
+    }
   }
 
   async supprimer(societeId: string, id: string) {

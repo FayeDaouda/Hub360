@@ -7,7 +7,8 @@ import { alerteAvenant, refDevis, statutDevisEffectif } from '../../devis/domain
 import { PHASES_PAR_CATEGORIE } from '../domaine/config';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
-import { collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, ROLE_DPLG, type Decideur } from './validation';
+import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
+import { agitCommeDplg, collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, ROLE_CTO, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import { chargeSurPeriode } from './charge';
 import {
@@ -81,7 +82,7 @@ export class ProjetsOuvertsService {
   ) {}
 
   async tableau(societeId: string, acteur: Acteur) {
-    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
+    const { decideur, ctx } = await this.decideur(societeId, acteur);
     const projets = await this.prisma.projet.findMany({
       where: { societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
       orderBy: { ouvertLe: 'asc' },
@@ -124,7 +125,7 @@ export class ProjetsOuvertsService {
         aValiderParVous: projets.flatMap((p) =>
           p.cartes.flatMap((c) =>
             c.taches
-              .filter((t) => peutDecider(decideur, t, p.cellules[0]?.cellule.dispatcherId ?? null))
+              .filter((t) => peutDecider(decideur, this.regle(ctx, t), p.cellules[0]?.cellule.dispatcherId ?? null))
               .map((t) => ({ projetId: p.id, tacheId: t.id })),
           ),
         ),
@@ -141,7 +142,8 @@ export class ProjetsOuvertsService {
   // les remises et les demandes de prolongation que la personne connectée peut
   // trancher — mêmes règles que les boutons (peutDecider, peutQualifier).
   async aDecider(societeId: string, acteur: Acteur) {
-    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
+    const { decideur, ctx } = await this.decideur(societeId, acteur);
+    const feries = await this.feries(societeId);
     const projets = await this.prisma.projet.findMany({
       where: { societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
       include: { ...AVEC_TACHES, client: { select: { nom: true } }, cellules: { include: { cellule: { select: { dispatcherId: true } } } } },
@@ -150,10 +152,14 @@ export class ProjetsOuvertsService {
       const chefId = p.cellules[0]?.cellule.dispatcherId ?? null;
       return p.cartes.flatMap((c) => c.taches.map((t) => ({ p, c, t, chefId })));
     });
-    const remises = lignes.filter(({ t, chefId }) => peutDecider(decideur, t, chefId));
+    const remises = lignes.filter(({ t, chefId }) => peutDecider(decideur, this.regle(ctx, t), chefId));
     const prolongations = lignes
-      .map((l) => ({ ...l, demande: prolongationEnAttente(l.t.prolongations) }))
-      .filter(({ t, chefId, demande }) => demande && peutQualifier(decideur, t.assigneId, chefId));
+      .map((l) => {
+        const demande = prolongationEnAttente(l.t.prolongations);
+        const livraison = dateLivraison(l.p, feries);
+        return { ...l, demande, repousse: !!demande && !!livraison && demande.jusquau > livraison, livraison };
+      })
+      .filter(({ t, chefId, demande, repousse }) => demande && peutQualifier(decideur, this.regle(ctx, t), chefId, repousse));
     // Date de la dernière remise de chaque tâche à valider.
     const evenements = await this.prisma.evenementTacheProjet.findMany({
       where: { type: 'remise', tacheId: { in: remises.map((r) => r.t.id) } },
@@ -173,7 +179,17 @@ export class ProjetsOuvertsService {
     });
     return {
       remises: remises.map((l) => ({ ...commun(l), version: l.t.version, remiseLe: remiseLe.get(l.t.id) ?? null })),
-      prolongations: prolongations.map((l) => ({ ...commun(l), jusquau: l.demande!.jusquau, motif: l.demande!.motif, demandeLe: l.demande!.demandeLe, finPrevue: l.t.finLe })),
+      prolongations: prolongations.map((l) => ({
+        ...commun(l),
+        jusquau: l.demande!.jusquau,
+        motif: l.demande!.motif,
+        demandeLe: l.demande!.demandeLe,
+        finPrevue: l.t.finLe,
+        // Escalade au CTO : la nouvelle date dépasse la livraison du projet.
+        repousseLivraison: l.repousse ? l.livraison : null,
+      })),
+      // TS au-delà du seuil, demandés par le Dir. GC : au CTO de trancher.
+      ts: await this.demandesTsADecider(societeId, decideur, projets.map((p) => p.id)),
     };
   }
 
@@ -212,13 +228,23 @@ export class ProjetsOuvertsService {
   }
 
   async dossier(societeId: string, projetId: string, acteur: Acteur) {
-    const decideur: Decideur = { role: acteur.role, collaborateurId: await collaborateurDuCompte(this.prisma, societeId, acteur.userId) };
+    const { decideur, ctx } = await this.decideur(societeId, acteur);
     const p = await this.prisma.projet.findFirst({
       where: { id: projetId, societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
       include: {
         ...AVEC_TACHES,
         client: { select: { nom: true, type: true } },
-        cellules: { include: { cellule: { include: { dispatcher: { select: { id: true, prenom: true, nom: true } } } } } },
+        cellules: {
+          include: {
+            cellule: {
+              include: {
+                dispatcher: {
+                  select: { id: true, prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+                },
+              },
+            },
+          },
+        },
         gabaritVersion: { select: { code: true, libelle: true } },
         factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { jalon: true, statut: true } },
         devis: { where: { statut: 'transforme' }, select: { numero: true, dateEnvoi: true, codeDossier: true, rangDossier: true }, take: 1 },
@@ -231,7 +257,9 @@ export class ProjetsOuvertsService {
     const { etapes, etatsCartes, etatsTaches } = this.etats(p, jour, feries);
     const cellule = p.cellules[0]?.cellule ?? null;
     const chef = cellule?.dispatcher ?? null;
-    const dplgConnecte = acteur.role === ROLE_DPLG || acteur.role === 'societe_admin';
+    // « Ajouter en TS » : l'Architecte DPLG (ou son suppléant) et le CTO.
+    const dplgConnecte = agitCommeDplg(decideur) || acteur.role === ROLE_CTO;
+    const livraisonLe = dateLivraison(p, feries);
     // Remise et demande de prolongation : jamais pour un rôle hors circuit (CEO).
     const circuit = !horsCircuit(acteur.role);
     const dplg = p.societe.contratSignataireNom?.trim() || null;
@@ -248,7 +276,12 @@ export class ProjetsOuvertsService {
     const validation = (temps: Temps, assigneId: string | null) =>
       temps.type === 'sans'
         ? { mode: 'depot' as const }
-        : chef && assigneId === chef.id
+        : assigneId && ctx.dplgCollaborateurs.has(assigneId)
+          ? { mode: 'personne' as const, nom: null, role: 'travail du Dir. GC : CTO' }
+          : chef && assigneId !== chef.id && (ctx.collaborateursAbsents.has(chef.id) || (!chef.utilisateur?.actif && !chef.dossierPersonnel?.utilisateur?.actif))
+            ? // Chef sans compte HUB ou absent : la remise remonte à l'Architecte DPLG.
+              { mode: 'personne' as const, nom: dplg, role: `${nom(chef)} ${ctx.collaborateursAbsents.has(chef.id) ? 'absent' : 'sans compte HUB'} : Architecte DPLG` }
+            : chef && assigneId === chef.id
           ? { mode: 'personne' as const, nom: dplg, role: 'tâche du chef de team : Architecte DPLG' }
           : { mode: 'personne' as const, nom: nom(chef), role: 'chef de team' };
 
@@ -330,7 +363,7 @@ export class ProjetsOuvertsService {
           // Assignée à la personne connectée (« Seulement mes tâches »).
           aMoi: !!decideur.collaborateurId && t.assigneId === decideur.collaborateurId,
           validation: validation(t.temps as Temps, t.assigneId),
-          peutDecider: peutDecider(decideur, t, chef?.id ?? null),
+          peutDecider: peutDecider(decideur, this.regle(ctx, t), chef?.id ?? null),
           prolongation: {
             enAttente: (() => {
               const p = prolongationEnAttente(t.prolongations);
@@ -347,7 +380,10 @@ export class ProjetsOuvertsService {
             !['validee', 'non_necessaire'].includes(t.statut) &&
             !c.desactivation &&
             !prolongationEnAttente(t.prolongations),
-          peutDeciderProlongation: !!prolongationEnAttente(t.prolongations) && peutQualifier(decideur, t.assigneId, chef?.id ?? null),
+          peutDeciderProlongation: (() => {
+            const d = prolongationEnAttente(t.prolongations);
+            return !!d && peutQualifier(decideur, this.regle(ctx, t), chef?.id ?? null, !!livraisonLe && d.jusquau > livraisonLe);
+          })(),
           // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
           peutRemettre:
             circuit &&
@@ -490,6 +526,45 @@ export class ProjetsOuvertsService {
         ),
       })),
     };
+  }
+
+  // Personne connectée face aux règles du jour (suppléance, escalade au CTO).
+  private async decideur(societeId: string, acteur: Acteur): Promise<{ decideur: Decideur; ctx: ContexteDecision }> {
+    const [collaborateurId, ctx] = await Promise.all([
+      collaborateurDuCompte(this.prisma, societeId, acteur.userId),
+      contexteDecision(this.prisma, societeId, aujourdhui()),
+    ]);
+    return { decideur: { role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, ctx };
+  }
+
+  private regle<T extends { assigneId: string | null }>(ctx: ContexteDecision, t: T) {
+    return { ...t, assigneEstDplg: !!t.assigneId && ctx.dplgCollaborateurs.has(t.assigneId) };
+  }
+
+  // Demandes de TS en attente sur ces projets, si la personne peut les trancher (CTO).
+  private async demandesTsADecider(societeId: string, decideur: Decideur, projetIds: string[]) {
+    if (decideur.role !== ROLE_CTO && decideur.role !== 'societe_admin') return [];
+    const demandes = await this.prisma.demandeTs.findMany({
+      where: { societeId, statut: 'a_valider', projetId: { in: projetIds } },
+      orderBy: { demandeLe: 'asc' },
+      include: { projet: { select: { code: true, client: { select: { nom: true } } } } },
+    });
+    const auteurs = await this.prisma.utilisateur.findMany({
+      where: { id: { in: demandes.map((d) => d.demandeParId).filter((x): x is string => !!x) } },
+      select: { id: true, prenom: true, nom: true },
+    });
+    const noms = new Map(auteurs.map((u) => [u.id, `${u.prenom} ${u.nom}`.trim()]));
+    return demandes.map((d) => ({
+      id: d.id,
+      projetId: d.projetId,
+      code: d.projet.code,
+      client: d.projet.client.nom,
+      element: d.element,
+      reprise: d.reprise,
+      montantHt: d.montantHt.toNumber(),
+      demandeLe: d.demandeLe,
+      demandePar: d.demandeParId ? (noms.get(d.demandeParId) ?? null) : null,
+    }));
   }
 
   private async feries(societeId: string) {

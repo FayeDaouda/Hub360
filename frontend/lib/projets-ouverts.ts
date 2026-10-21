@@ -244,8 +244,11 @@ export function definirDateVisite(slug: string, projetId: string, date: string |
 // Reprise mineure (TS-MIN, forfait) ou majeure (TS-MAJ : tarif CO × surface ×
 // planches) : la ligne du devis d'avenant est chiffrée par le catalogue.
 export type RepriseTs = { reprise: 'mineure' } | { reprise: 'majeure'; surfaceM2: number; planches: number };
+// Au-delà du seuil des Réglages (500 000 FCFA HT par défaut), le Dir. GC ne
+// l'ajoute pas : la demande part au CTO (revue Dir. GC, 21/10/2026).
+export type ResultatTs = { id: string; libelle: string; devisId: string } | { enAttente: true; demandeId: string; montantHt: number; seuil: number };
 export function ajouterTs(slug: string, projetId: string, carteId: string, element: string, reprise: RepriseTs) {
-  return apiSociete<{ id: string; libelle: string; devisId: string }>(slug, `/projets-ouverts/${projetId}/ts`, {
+  return apiSociete<ResultatTs>(slug, `/projets-ouverts/${projetId}/ts`, {
     method: 'POST',
     body: { carteId, element, ...reprise },
   });
@@ -398,6 +401,25 @@ export function heuresTache(t: TacheOuverte): string {
 type LigneADecider = { projetId: string; code: string; client: string; tacheId: string; tache: string; carte: string; assigne: string | null };
 export type ADeciderProjets = {
   remises: (LigneADecider & { version: number; remiseLe: string | null })[];
-  prolongations: (LigneADecider & { jusquau: string; motif: string; demandeLe: string; finPrevue: string | null })[];
+  // repousseLivraison : date de livraison dépassée (escalade au CTO) ; null sinon.
+  prolongations: (LigneADecider & { jusquau: string; motif: string; demandeLe: string; finPrevue: string | null; repousseLivraison: string | null })[];
+  // TS au-delà du seuil, à trancher par le CTO.
+  ts: DemandeTsADecider[];
 };
+export type DemandeTsADecider = {
+  id: string;
+  projetId: string;
+  code: string;
+  client: string;
+  element: string;
+  reprise: string;
+  montantHt: number;
+  demandeLe: string;
+  demandePar: string | null;
+};
+export const deciderDemandeTs = (slug: string, projetId: string, demandeId: string, accepter: boolean, motif?: string) =>
+  apiSociete<{ statut: 'acceptee' | 'refusee'; tacheId: string | null }>(slug, `/projets-ouverts/${projetId}/ts/demandes/${demandeId}/decision`, {
+    method: 'POST',
+    body: { accepter, ...(motif ? { motif } : {}) },
+  });
 export const getADeciderProjets = (slug: string) => apiSociete<ADeciderProjets>(slug, '/projets-ouverts/a-decider');

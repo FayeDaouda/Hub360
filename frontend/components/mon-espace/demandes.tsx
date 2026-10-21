@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/client-api';
 import { lireFichier } from '@/lib/fichiers';
 import {
   deposerAbsence,
+  getSuppleants,
   deposerRemboursement,
   getMesDemandes,
   jjmm,
@@ -17,6 +18,7 @@ import {
   retirerAbsence,
   STATUT_ABSENCE,
   STATUT_REMBOURSEMENT,
+  type Suppleant,
 } from '@/lib/demandes';
 import { formatMontant } from '@/lib/format';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
@@ -265,6 +267,14 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
   const [motif, setMotif] = useState('');
   const [fichiers, setFichiers] = useState<Fichier[]>([]);
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
+  // Dir. GC (revue du 21/10/2026) : qui tient sa place pendant l'absence.
+  const [suppleants, setSuppleants] = useState<Suppleant[]>([]);
+  const [suppleantId, setSuppleantId] = useState('');
+  useEffect(() => {
+    getSuppleants(slug)
+      .then(setSuppleants)
+      .catch(() => setSuppleants([]));
+  }, [slug]);
   const isoDebut = versIso(debut);
   const isoFin = versIso(fin);
   const motifRequis = type !== 'conge_paye';
@@ -275,7 +285,14 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
     if (!isoDebut || !isoFin) return;
     setEtat({ envoi: true, erreur: null });
     try {
-      await deposerAbsence(slug, { type, dateDebut: isoDebut, dateFin: isoFin, commentaire: motif.trim() || undefined, justificatif: fichiers[0] });
+      await deposerAbsence(slug, {
+        type,
+        dateDebut: isoDebut,
+        dateFin: isoFin,
+        commentaire: motif.trim() || undefined,
+        justificatif: fichiers[0],
+        suppleantId: suppleantId || undefined,
+      });
       setDebut('');
       setFin('');
       setMotif('');
@@ -327,6 +344,20 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
         />
       </label>
       <CaseJointe libelle="Justificatif joint" fichiers={fichiers} onChange={setFichiers} onErreur={(m) => setEtat({ envoi: false, erreur: m })} />
+      {suppleants.length > 0 && (
+        <label className="field">
+          <span className="field-label">Suppléant pendant votre absence</span>
+          <select className="field-input" value={suppleantId} onChange={(e) => setSuppleantId(e.target.value)}>
+            <option value="">Le CTO (par défaut)</option>
+            {suppleants.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nom} · {s.role.replace(/\s*\(transverse\)$/, '')}
+              </option>
+            ))}
+          </select>
+          <span className="cell-sub">Remises, prolongations et TS lui reviennent tant que votre absence validée dure ; il est prévenu dès l’envoi.</span>
+        </label>
+      )}
       {/* Seulement une date complète mais invalide (pas avant toute saisie). */}
       {((debut.length === 10 && !isoDebut) || (fin.length === 10 && !isoFin)) && <p className="me-consigne">Date invalide : JJ/MM/AAAA.</p>}
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}

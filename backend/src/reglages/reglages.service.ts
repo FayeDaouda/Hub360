@@ -173,6 +173,29 @@ export class ReglagesService {
         })),
       }),
     ]);
+    // Seuil de gouvernance changé : le CEO est prévenu (le journal garde le
+    // détail). Créée ici, sans NotificationsService (qui dépend des Réglages).
+    const gouvernance = changements.filter((c) => c.def.gouvernance);
+    if (gouvernance.length) {
+      const ceo = await this.prisma.utilisateurSocieteRole.findMany({
+        where: { societeId, role: { nom: 'CEO (transverse)', supprimeLe: null, OR: [{ societeId }, { societeId: null }] }, utilisateur: { actif: true } },
+        select: { utilisateurId: true },
+      });
+      const destinataires = [...new Set(ceo.map((x) => x.utilisateurId))].filter((id) => id !== userId);
+      if (destinataires.length) {
+        await this.prisma.notification.createMany({
+          data: destinataires.flatMap((destinataireId) =>
+            gouvernance.map((c) => ({
+              societeId,
+              destinataireId,
+              type: 'reglage_gouvernance_modifie' as const,
+              titre: `Seuil modifié dans Réglages · ${c.def.libelle} : ${afficher(c.def, c.avant)} → ${afficher(c.def, c.apres)} · motif : ${motif}`,
+              parId: userId,
+            })),
+          ),
+        });
+      }
+    }
     return this.lire(societeId);
   }
 

@@ -26,13 +26,18 @@ const PROJET = {
   }],
 };
 
-function svc(collaborateurId: string) {
+function svc(collaborateurId: string, projet: object = PROJET) {
   const prisma = {
-    collaborateur: { findFirst: jest.fn().mockResolvedValue({ id: collaborateurId }) },
-    projet: { findMany: jest.fn().mockResolvedValue([PROJET]) },
+    collaborateur: { findFirst: jest.fn().mockResolvedValue({ id: collaborateurId }), findMany: jest.fn().mockResolvedValue([]) },
+    projet: { findMany: jest.fn().mockResolvedValue([projet]) },
     evenementTacheProjet: { findMany: jest.fn().mockResolvedValue([{ tacheId: 'T1', creeLe: new Date('2026-10-21T09:00:00Z') }]) },
+    utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([]) },
+    demandeAbsence: { findMany: jest.fn().mockResolvedValue([]) },
+    demandeTs: { findMany: jest.fn().mockResolvedValue([]) },
+    utilisateur: { findMany: jest.fn().mockResolvedValue([]) },
   };
-  return new ProjetsOuvertsService(prisma as unknown as PrismaService, {} as ReglagesService);
+  const reglages = { joursFeries: jest.fn().mockResolvedValue(new Map()) } as unknown as ReglagesService;
+  return new ProjetsOuvertsService(prisma as unknown as PrismaService, reglages);
 }
 
 describe('ProjetsOuvertsService.aDecider', () => {
@@ -40,7 +45,7 @@ describe('ProjetsOuvertsService.aDecider', () => {
     const r = await svc('DPLG').aDecider('S1', { userId: 'U', role: 'Dir. GC' });
     expect(r.remises.map((x) => x.tacheId)).toEqual(['T1', 'T2']);
     expect(r.remises[0]).toMatchObject({ code: 'FS_POI.26', client: 'Fatou Sarr', carte: 'Plans d’exécution', remiseLe: new Date('2026-10-21T09:00:00Z') });
-    expect(r.prolongations).toEqual([expect.objectContaining({ tacheId: 'T4', jusquau: '2026-11-06', motif: 'Attente géomètre', finPrevue: '2026-10-30' })]);
+    expect(r.prolongations).toEqual([expect.objectContaining({ tacheId: 'T4', jusquau: '2026-11-06', motif: 'Attente géomètre', finPrevue: '2026-10-30', repousseLivraison: null })]);
   });
 
   it('chef de team : son équipe, jamais sa propre remise', async () => {
@@ -50,6 +55,15 @@ describe('ProjetsOuvertsService.aDecider', () => {
 
   it('CEO (hors circuit) : rien à décider', async () => {
     const r = await svc('AUTRE').aDecider('S1', { userId: 'U', role: 'CEO (transverse)' });
-    expect(r).toEqual({ remises: [], prolongations: [] });
+    expect(r).toEqual({ remises: [], prolongations: [], ts: [] });
+  });
+
+  it('prolongation qui repousse la livraison : au CTO, plus au Dir. GC', async () => {
+    // Ouvert le 01/10, 80 h de budget = 10 jours ouvrés → livraison le 14/10.
+    const projet = { ...PROJET, ouvertLe: '2026-10-01', budgetHeures: 80 };
+    expect((await svc('DPLG', projet).aDecider('S1', { userId: 'U', role: 'Dir. GC' })).prolongations).toEqual([]);
+    const cto = await svc('AUTRE', projet).aDecider('S1', { userId: 'U', role: 'CTO (transverse)' });
+    expect(cto.prolongations).toEqual([expect.objectContaining({ tacheId: 'T4', repousseLivraison: '2026-10-14' })]);
+    expect(cto.remises).toEqual([]); // le travail des équipes reste au Dir. GC
   });
 });

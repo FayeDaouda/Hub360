@@ -665,6 +665,14 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
       setElement('');
       setSurface('');
       setPlanches('');
+      if ('enAttente' in t) {
+        // Au-delà du seuil : rien n'est ajouté tant que le CTO n'a pas validé.
+        setMessage({
+          ok: true,
+          texte: `TS chiffré à ${t.montantHt.toLocaleString('fr-FR')} FCFA HT, au-delà du seuil de ${t.seuil.toLocaleString('fr-FR')} FCFA : demande envoyée au CTO. Il sera ajouté au projet et à l’avenant dès sa validation.`,
+        });
+        return;
+      }
       setMessage({ ok: true, texte: `${t.libelle} ajoutée au projet et au devis d’avenant (en préparation, à envoyer au client).` });
       await onMaj();
     } catch (e) {

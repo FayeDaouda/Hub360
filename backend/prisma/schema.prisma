@@ -231,6 +231,11 @@ enum NotificationType {
   reporting_question // à l'émetteur : question du destinataire
   reporting_reponse // à l'auteur de la question
   coordonnees_paiement_modifiees // au CEO : banque, RIB, Wave ou Orange Money changés (lot 6)
+  // Revue Dir. GC (lot 4, 21/10/2026)
+  reglage_gouvernance_modifie // au CEO : un seuil de gouvernance changé dans Réglages
+  ts_a_valider // au CTO : TS au-delà du seuil, demandé par le Dir. GC
+  ts_decide // au demandeur : TS accepté (ajouté) ou refusé par le CTO
+  suppleance_designee // au suppléant désigné par un Dir. GC pour son absence
 }
 
 model Notification {
@@ -847,6 +852,7 @@ model Projet {
   factures          Facture[]
   devis             Devis[]
   validationsTaches ValidationTache[]
+  demandesTs        DemandeTs[]
   gabaritVersion    GabaritVersion?     @relation(fields: [gabaritVersionId], references: [id])
   cartes            CarteProjet[]
   taches            TacheProjet[]
@@ -1873,6 +1879,9 @@ model DemandeAbsence {
   traitementLivrables Json?              @map("traitement_livrables") // délégations / reports décidés
   valideRhParId       String?            @map("valide_rh_par_id")
   valideRhLe          DateTime?          @map("valide_rh_le")
+  // Dir. GC (revue du 21/10/2026) : qui tient sa place pendant l'absence
+  // validée — un autre Dir. GC ou le CTO (compte) ; null = le CTO.
+  suppleantId         String?            @map("suppleant_id")
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
 
@@ -2473,6 +2482,39 @@ enum DecisionProlongation {
 // Choix du 06/10/2026 : l'échéance de référence reste figée — une
 // prolongation accordée QUALIFIE le retard (la tâche n'est plus « en
 // retard » jusqu'à `jusquau`), les indicateurs restent mesurés sur l'origine.
+// TS au-delà du seuil (Réglages, 500 000 FCFA HT par défaut) : le Dir. GC le
+// demande, le CTO le valide ; accepté, il devient la tâche TS et la ligne de
+// l'avenant (comme un TS sous le seuil). Revue Dir. GC, 21/10/2026.
+enum StatutDemandeTs {
+  a_valider
+  acceptee
+  refusee
+}
+
+model DemandeTs {
+  id           String          @id @default(uuid())
+  societeId    String          @map("societe_id")
+  projetId     String          @map("projet_id")
+  carteId      String          @map("carte_id")
+  element      String
+  reprise      String // mineure | majeure
+  surfaceM2    Int?            @map("surface_m2")
+  planches     Int?
+  montantHt    Decimal         @map("montant_ht") @db.Decimal(14, 0)
+  statut       StatutDemandeTs @default(a_valider)
+  demandeParId String?         @map("demande_par_id")
+  demandeLe    DateTime        @default(now()) @map("demande_le")
+  decideParId  String?         @map("decide_par_id")
+  decideLe     DateTime?       @map("decide_le")
+  motifRefus   String          @default("") @map("motif_refus")
+  tacheId      String?         @map("tache_id") // tâche TS créée à l'acceptation
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  @@index([societeId, statut])
+  @@map("demandes_ts")
+}
+
 model ProlongationTache {
   id           String                @id @default(uuid())
   tacheId      String                @map("tache_id")

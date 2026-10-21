@@ -5,7 +5,11 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import type { Temps } from '../../reglages/gabarit';
 import type { RemettreTacheDto } from './dto';
 import { motifNonAssignable, tachesAssignees } from './assignation';
-import { collaborateurDuCompte, peutDecider, peutQualifier, ROLE_DPLG, verifierCircuit } from './validation';
+import { ReglagesService } from '../../reglages/reglages.service';
+import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
+import { agitCommeDplg, collaborateurDuCompte, peutDecider, peutQualifier, ROLE_CTO, verifierCircuit } from './validation';
+
+const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 type Acteur = { userId: string };
 type ActeurRole = Acteur & { role: string };
@@ -24,6 +28,7 @@ export class TachesProjetService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private reglages: ReglagesService,
   ) {}
 
   // Collaborateurs proposés dans « Assigner » (« Moussa Diop · GC-ARC-02 »).
@@ -116,7 +121,7 @@ export class TachesProjetService {
         temps: true,
         assigneId: true,
         carte: { select: { desactivation: true, ouvreApres: true } },
-        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
@@ -164,7 +169,8 @@ export class TachesProjetService {
 
     if (!depot) {
       const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-      const valideurs = chefId && chefId !== collaborateurId ? await this.comptesDe([chefId]) : await this.comptesDplg(societeId);
+      const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+      const valideurs = await this.valideurs(ctx, collaborateurId, chefId);
       await this.notifier(societeId, projetId, tache.projet.code, 'tache_remise', `Remise ${vNN} à valider · ${tache.projet.code} · ${tache.libelle}`, acteur.userId, valideurs);
     }
     return { statut: depot ? 'validee' : 'a_valider', version };
@@ -189,11 +195,15 @@ export class TachesProjetService {
     if (tache.statut !== 'a_valider') throw new ConflictException('Aucune remise en attente sur cette tâche.');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-    if (!peutDecider({ role: acteur.role, collaborateurId }, tache, chefId)) {
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const assigneEstDplg = !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId);
+    if (!peutDecider({ role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, { ...tache, assigneEstDplg }, chefId)) {
       throw new ForbiddenException(
         collaborateurId && collaborateurId === tache.assigneId
           ? 'On ne valide jamais sa propre tâche.'
-          : 'La remise se valide par le chef de team ou l’Architecte DPLG.',
+          : assigneEstDplg
+            ? 'Le travail du Dir. GC est validé par le CTO.'
+            : 'La remise se valide par le chef de team ou l’Architecte DPLG.',
       );
     }
     const vNN = `v${String(tache.version).padStart(2, '0')}`;
@@ -235,8 +245,10 @@ export class TachesProjetService {
   // de la carte, ajouté au budget atelier du projet.
   async ajouterTs(societeId: string, acteur: ActeurRole, projetId: string, carteId: string, element: string) {
     verifierCircuit(acteur.role);
-    if (acteur.role !== ROLE_DPLG && acteur.role !== 'societe_admin') {
-      throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG.');
+    // Seuil et suppléance vérifiés en amont (AvenantsTsService) ; ici, le rôle.
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    if (!agitCommeDplg({ role: acteur.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }) && acteur.role !== ROLE_CTO) {
+      throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     }
     const carte = await this.prisma.carteProjet.findFirst({
       where: { id: carteId, projetId, projet: { societeId, ouvertLe: { not: null } } },
@@ -290,8 +302,20 @@ export class TachesProjetService {
       }),
     ]);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-    const decideurs = chefId && chefId !== collaborateurId ? await this.comptesDe([chefId]) : await this.comptesDplg(societeId);
-    await this.notifier(societeId, projetId, tache.projet.code, 'prolongation_demandee', `Prolongation demandée · ${tache.projet.code} · ${tache.libelle}`, acteur.userId, decideurs);
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    // Au-delà de la livraison du projet, ou travail d'un Dir. GC : le CTO.
+    const repousse = await this.repousseLivraison(societeId, tache.projet, jusquau);
+    const escalade = repousse || ctx.dplgCollaborateurs.has(collaborateurId);
+    const decideurs = escalade ? ctx.comptesCto : await this.valideurs(ctx, collaborateurId, chefId);
+    await this.notifier(
+      societeId,
+      projetId,
+      tache.projet.code,
+      'prolongation_demandee',
+      `Prolongation demandée · ${tache.projet.code} · ${tache.libelle}${repousse ? ' · repousse la livraison du projet' : ''}`,
+      acteur.userId,
+      decideurs,
+    );
     return { ok: true };
   }
 
@@ -303,8 +327,17 @@ export class TachesProjetService {
     if (!demande) throw new ConflictException('Aucune demande de prolongation en attente.');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-    if (!peutQualifier({ role: acteur.role, collaborateurId }, tache.assigneId, chefId)) {
-      throw new ForbiddenException('Le retard est qualifié par le chef de team ou l’Architecte DPLG, jamais sur sa propre tâche.');
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const assigneEstDplg = !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId);
+    const repousse = await this.repousseLivraison(societeId, tache.projet, demande.jusquau);
+    if (!peutQualifier({ role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, { assigneId: tache.assigneId, assigneEstDplg }, chefId, repousse)) {
+      throw new ForbiddenException(
+        repousse
+          ? 'Cette prolongation repousse la livraison du projet : elle est décidée par le CTO.'
+          : assigneEstDplg
+            ? 'Une prolongation du Dir. GC est décidée par le CTO.'
+            : 'Le retard est qualifié par le chef de team ou l’Architecte DPLG, jamais sur sa propre tâche.',
+      );
     }
     const date = demande.jusquau.split('-').reverse().join('/');
     await this.prisma.$transaction(async (tx) => {
@@ -342,7 +375,7 @@ export class TachesProjetService {
         assigneId: true,
         carte: { select: { desactivation: true } },
         prolongations: { orderBy: { demandeLe: 'desc' }, select: { id: true, jusquau: true, decision: true } },
-        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
@@ -368,13 +401,23 @@ export class TachesProjetService {
     return [...new Set(c.flatMap((x) => [x.utilisateurId, x.dossierPersonnel?.utilisateurId].filter((id): id is string => !!id)))];
   }
 
-  // Comptes de l'Architecte DPLG (rôle Dir. GC) de la société.
-  private async comptesDplg(societeId: string): Promise<string[]> {
-    const r = await this.prisma.utilisateurSocieteRole.findMany({
-      where: { societeId, role: { nom: ROLE_DPLG }, utilisateur: { actif: true } },
-      select: { utilisateurId: true },
-    });
-    return r.map((x) => x.utilisateurId);
+  // Qui prévenir d'une remise ou d'une prolongation : le chef de team s'il a
+  // un compte et n'est pas absent ; sinon l'Architecte DPLG (ou son
+  // suppléant) ; le CTO pour le travail d'un Dir. GC.
+  private async valideurs(ctx: ContexteDecision, assigneId: string | null, chefId: string | null): Promise<string[]> {
+    if (assigneId && ctx.dplgCollaborateurs.has(assigneId)) return ctx.comptesCto;
+    if (chefId && chefId !== assigneId && !ctx.collaborateursAbsents.has(chefId)) {
+      const chef = await this.comptesDe([chefId]);
+      if (chef.length) return chef;
+    }
+    return ctx.comptesDplg;
+  }
+
+  // La nouvelle date dépasse-t-elle la livraison du projet (jour J de son horizon) ?
+  private async repousseLivraison(societeId: string, projet: { ouvertLe: string | null; budgetHeures: number | null }, jusquau: string): Promise<boolean> {
+    const feries = (await this.reglages.joursFeries([societeId])).get(societeId) ?? new Set<string>();
+    const livraison = dateLivraison(projet, feries);
+    return !!livraison && jusquau > livraison;
   }
 
   // Best-effort : une notification manquée ne fait pas échouer l'action.
@@ -409,7 +452,9 @@ export class TachesProjetService {
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
     if (collaborateurId && tache.assigneId === collaborateurId) return;
-    if (peutQualifier({ role: acteur.role, collaborateurId }, tache.assigneId, chefId)) return;
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const t = { assigneId: tache.assigneId, assigneEstDplg: !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId) };
+    if (peutQualifier({ role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, t, chefId)) return;
     throw new ForbiddenException('Fichier réservé à l’assigné et à son valideur.');
   }
 

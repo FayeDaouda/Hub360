@@ -35,6 +35,9 @@ export class DeposerAbsenceDto {
   @Matches(DATE) dateFin: string;
   @IsOptional() @IsString() @MaxLength(1000) commentaire?: string;
   @IsOptional() @ValidateNested() @Type(() => FichierDto) justificatif?: FichierDto;
+  // Dir. GC : qui tient sa place pendant l'absence (autre Dir. GC ou CTO) ;
+  // absent = le CTO (revue Dir. GC, 21/10/2026).
+  @IsOptional() @IsUUID() suppleantId?: string;
 }
 
 export class ReponseAutresDatesDto {

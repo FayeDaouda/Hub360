@@ -26,6 +26,9 @@ export type DefinitionReglage = {
   aide: string;
   appliquee: boolean;
   propose?: string; // objectifs : valeur proposée, indicative
+  // Seuil de gouvernance : chaque modification est notifiée au CEO (en plus
+  // du journal), comme les coordonnées de paiement (revue Dir. GC, 21/10/2026).
+  gouvernance?: boolean;
 };
 
 export const REGLES: DefinitionReglage[] = [
@@ -60,6 +63,7 @@ export const REGLES: DefinitionReglage[] = [
     defaut: 50_000_000,
     aide: "Au-delà de ce montant TTC, seul le CEO contresigne le devis accepté ; en deçà, l'Architecte DPLG.",
     appliquee: true, // signataire du contrat choisi à sa préparation (contrats.service)
+    gouvernance: true,
   },
   {
     cle: 'pilote_etudes',
@@ -162,6 +166,16 @@ export const REGLES: DefinitionReglage[] = [
     defaut: 1_000_000,
     aide: "Tout avoir exige un motif et prévient le CEO ; au-delà de ce montant TTC, le CEO le valide avant émission (revue CFO, 20/10/2026).",
     appliquee: true,
+    gouvernance: true,
+  },
+  {
+    cle: 'seuil_ts_cto_ht',
+    libelle: "Seuil de validation d'un TS par le CTO (FCFA HT)",
+    valeur: { type: 'entier', min: 0, max: 100_000_000_000, unite: 'FCFA' },
+    defaut: 500_000,
+    aide: "Un travail supplémentaire chiffré au-delà de ce montant HT (reprise majeure, nouvelle planche) est validé par le CTO avant d'être ajouté ; en deçà, le Dir. GC l'ajoute (revue Dir. GC, 21/10/2026).",
+    appliquee: true,
+    gouvernance: true,
   },
   {
     cle: 'rappel_cloture_jour',

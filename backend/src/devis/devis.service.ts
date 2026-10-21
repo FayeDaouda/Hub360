@@ -171,8 +171,9 @@ export class DevisService {
 
   // Lignes d'un devis de projet passées aux règles du catalogue, sans rien
   // écrire : un refus (ex. TS-MAJ sans catégorie CO) tombe avant toute action.
+  // Renvoie les lignes chiffrées (prix du catalogue) : le seuil des TS s'y lit.
   async verifierLignesProjet(societeId: string, projetId: string, lignes: LigneDevisDto[]) {
-    await this.appliquerCatalogue(societeId, lignes, await this.contexteLignes(societeId, { projetId }));
+    return this.appliquerCatalogue(societeId, lignes, await this.contexteLignes(societeId, { projetId }));
   }
 
   async patch(societeId: string, id: string, dto: PatchDevisDto) {

@@ -58,7 +58,8 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
   const [charges, setCharges] = useState<ChargesTache | null>(null);
 
-  // Rechargé quand la tâche change ou que son assigné change (nouvelle ligne).
+  // Rechargé quand la tâche change, que son assigné change, ou après une
+  // remise / décision (statut, version) : la nouvelle ligne apparaît aussitôt.
   useEffect(() => {
     let annule = false;
     setHistorique(null);
@@ -68,7 +69,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     return () => {
       annule = true;
     };
-  }, [slug, projetId, tache.id, tache.assigne?.id]);
+  }, [slug, projetId, tache.id, tache.assigne?.id, tache.statut, tache.version]);
 
   useEffect(() => {
     setALaCarte(false);

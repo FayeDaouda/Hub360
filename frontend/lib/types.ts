@@ -406,7 +406,8 @@ export type CelluleEquipe = {
   nom: string;
   clientele: ClienteleCellule;
   statut: StatutCellule;
-  pilote: { id: string; nom: string } | null;
+  // sansCompte : chef sans compte HUB actif — ses remises remontent au Dir. GC.
+  pilote: { id: string; nom: string; sansCompte?: boolean } | null;
   pctATemps: number | null; // null = pas encore d'étape livrée
   postes: { id: string; libelle: string; etat: EtatPosteCellule; titulaire: { id: string; nom: string } | null }[];
   membres: {

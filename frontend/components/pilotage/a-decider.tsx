@@ -2,12 +2,29 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, CalendarCheck, CalendarClock, ChevronDown, ClipboardList, FileClock, FileInput, Inbox, PackageCheck, Undo2, type LucideIcon } from 'lucide-react';
+import {
+  AlarmClock,
+  BookOpenCheck,
+  CalendarCheck,
+  CalendarClock,
+  ChevronDown,
+  ClipboardList,
+  FileClock,
+  FileInput,
+  FilePlus2,
+  Inbox,
+  PackageCheck,
+  Undo2,
+  type LucideIcon,
+} from 'lucide-react';
+import { ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { getProjets } from '@/lib/crm';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { formatMontant } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { getADeciderProjets, type ADeciderProjets } from '@/lib/projets-ouverts';
+import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
+import { getADeciderProjets, type ADeciderProjets, type DemandeTsADecider } from '@/lib/projets-ouverts';
+import { DecisionTs } from './decision-ts';
 import type { DemandeAbsence, Projet, VuePilotage } from '@/lib/types';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
@@ -34,17 +51,26 @@ const RANG_TON: Record<Ton, number> = { risque: 0, attention: 1, info: 2, neutre
 // « Revêtements · Revêtements » : la carte n'est rappelée que si elle dit autre chose.
 const carteDe = (carte: string, tache: string) => (carte === tache ? '' : ` · ${carte}`);
 
-// « À décider aujourd'hui » du Dir. GC (revue Dir. GC, 21/10/2026) : en tête
-// de Pilotage, tout ce qui attend sa décision ou son action, par urgence —
-// remises et prolongations (architecte DPLG), dossiers renvoyés par le CFO,
-// absences dont il est le N+1, offres sans réponse ou qui expirent, leads à
-// prendre, reporting de direction à déposer au CTO.
-export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VuePilotage; onOnglet: (onglet: 'reportings') => void }) {
+const VIDE: ADeciderProjets = { remises: [], prolongations: [], ts: [] };
+
+// « À décider aujourd'hui » (revue Dir. GC, 21/10/2026) : en tête de
+// Pilotage, tout ce qui attend une décision ou une action, par urgence.
+//   · Dir. GC : remises et prolongations (architecte DPLG), dossiers renvoyés
+//     par le CFO, absences dont il est le N+1, offres sans réponse ou qui
+//     expirent, leads à prendre, reporting à déposer au CTO.
+//   · CTO : le travail du Dir. GC, les prolongations qui repoussent une
+//     livraison, les TS au-delà du seuil, ce qu'il décide en suppléance du
+//     Dir. GC absent, les absences du Dir. GC, le reporting reçu à lire.
+export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilotage; onOnglet: (onglet: 'reportings') => void }) {
   const router = useRouter();
   const session = useSessionCourante();
-  const [projets, setProjets] = useState<ADeciderProjets>({ remises: [], prolongations: [] });
+  const dirGc = session.role === ROLE_DIR_GC;
+  const [projets, setProjets] = useState<ADeciderProjets>(VIDE);
   const [absences, setAbsences] = useState<DemandeAbsence[]>([]);
   const [dossiers, setDossiers] = useState<Projet[]>([]);
+  const [recus, setRecus] = useState<ReportingRecu[]>([]);
+  const [tsOuvert, setTsOuvert] = useState<DemandeTsADecider | null>(null);
+  const [version, setVersion] = useState(0);
   const [tout, setTout] = useState(false);
   const [maintenant] = useState(() => Date.now());
 
@@ -52,14 +78,21 @@ export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VueP
   useEffect(() => {
     getADeciderProjets(slug)
       .then(setProjets)
-      .catch(() => setProjets({ remises: [], prolongations: [] }));
+      .catch(() => setProjets(VIDE));
+  }, [slug, version]);
+  useEffect(() => {
+    getReportingsRecus(slug)
+      .then(setRecus)
+      .catch(() => setRecus([]));
     getAbsencesAValider(slug)
       .then(setAbsences)
       .catch(() => setAbsences([]));
-    getProjets(slug)
-      .then((l) => setDossiers(l.filter((d) => !d.archive)))
-      .catch(() => setDossiers([]));
-  }, [slug]);
+    if (dirGc) {
+      getProjets(slug)
+        .then((l) => setDossiers(l.filter((d) => !d.archive)))
+        .catch(() => setDossiers([]));
+    }
+  }, [slug, dirGc]);
 
   const joursDepuis = (iso: string) => Math.floor((maintenant - Date.parse(iso)) / JOUR);
   const aujourdhui = new Date(maintenant).toISOString().slice(0, 10);
@@ -94,11 +127,29 @@ export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VueP
       tri: p.demandeLe,
       icone: CalendarClock,
       titre: `Prolongation demandée · ${p.code} · ${p.tache}`,
-      detail: `${p.assigne ?? 'Non assignée'} · jusqu’au ${jjmm(p.jusquau)}${p.finPrevue ? ` au lieu du ${jjmm(p.finPrevue)}` : ''} · « ${p.motif} »`,
+      detail: `${p.assigne ?? 'Non assignée'} · jusqu’au ${jjmm(p.jusquau)}${p.finPrevue ? ` au lieu du ${jjmm(p.finPrevue)}` : ''}${
+        p.repousseLivraison ? ` · repousse la livraison du projet (prévue le ${jjmm(p.repousseLivraison)})` : ''
+      } · « ${p.motif} »`,
+      quand: depuis(jours),
+      ton: jours > 1 || p.repousseLivraison ? 'risque' : 'attention',
+      action: 'Décider',
+      ouvrir: versTache(p.projetId, p.tacheId),
+    });
+  }
+  // 1 ter. TS au-delà du seuil (CTO) : accepter ou refuser.
+  for (const t of projets.ts) {
+    const jours = joursDepuis(t.demandeLe);
+    elements.push({
+      cle: `ts-${t.id}`,
+      groupe: 1,
+      tri: t.demandeLe,
+      icone: FilePlus2,
+      titre: `TS à valider · ${t.code} · ${t.element}`,
+      detail: `${formatMontant(t.montantHt)} HT, au-delà du seuil · demandé${t.demandePar ? ` par ${t.demandePar}` : ''} le ${jjmm(t.demandeLe)}`,
       quand: depuis(jours),
       ton: jours > 1 ? 'risque' : 'attention',
       action: 'Décider',
-      ouvrir: versTache(p.projetId, p.tacheId),
+      ouvrir: () => setTsOuvert(t),
     });
   }
   // 2. Dossiers renvoyés par le CFO : à corriger avant l'envoi de l'offre.
@@ -168,7 +219,7 @@ export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VueP
     });
   }
   // 5. Leads sans responsable : l'un des Dir. GC le prend.
-  for (const d of dossiers.filter((x) => !x.proprietaire && x.statut === 'nouveau_projet')) {
+  for (const d of dirGc ? dossiers.filter((x) => !x.proprietaire && x.statut === 'nouveau_projet') : []) {
     const jours = joursDepuis(d.creeLe);
     elements.push({
       cle: `lead-${d.id}`,
@@ -199,6 +250,21 @@ export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VueP
       ouvrir: () => onOnglet('reportings'),
     });
   }
+  // 6 bis. Reporting reçu (CTO : celui du Dir. GC), tant qu'il n'est pas lu.
+  for (const r of recus.filter((x) => !x.lu)) {
+    elements.push({
+      cle: `recu-${r.type}-${r.mois}`,
+      groupe: 6,
+      tri: r.deposeLe,
+      icone: BookOpenCheck,
+      titre: `Reporting ${r.type === 'rh' ? 'RH' : 'de la direction'} · ${r.periode}`,
+      detail: `déposé par ${r.emetteur} le ${jjmm(r.deposeLe)}, à lire`,
+      quand: '',
+      ton: 'neutre',
+      action: 'Lire',
+      ouvrir: () => onOnglet('reportings'),
+    });
+  }
   elements.sort((a, b) => RANG_TON[a.ton] - RANG_TON[b.ton] || a.groupe - b.groupe || a.tri.localeCompare(b.tri));
   const urgents = elements.filter((e) => e.ton === 'risque').length;
   const visibles = tout ? elements : elements.slice(0, VISIBLES);
@@ -212,7 +278,11 @@ export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VueP
         {urgents > 0 && <span className="pill pill--risque">{urgents} en retard</span>}
       </div>
       {elements.length === 0 ? (
-        <p className="dmd-note">Rien en attente : remises, prolongations, dossiers, absences, offres et reporting sont à jour.</p>
+        <p className="dmd-note">
+          {dirGc
+            ? 'Rien en attente : remises, prolongations, dossiers, absences, offres et reporting sont à jour.'
+            : 'Rien en attente : travail du Dir. GC, prolongations, TS, absences et reporting sont à jour.'}
+        </p>
       ) : (
         <ul className="at-rh-liste">
           {visibles.map((e) => (
@@ -232,6 +302,7 @@ export function ADeciderDirGc({ slug, vue, onOnglet }: { slug: string; vue: VueP
           ))}
         </ul>
       )}
+      {tsOuvert && <DecisionTs slug={slug} demande={tsOuvert} onFait={() => setVersion((v) => v + 1)} onClose={() => setTsOuvert(null)} />}
       {elements.length > VISIBLES && (
         <button type="button" className="at-rh-plus" aria-expanded={tout} onClick={() => setTout((x) => !x)}>
           <ChevronDown size={15} aria-hidden className={tout ? 'is-ouvert' : undefined} />

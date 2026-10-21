@@ -47,6 +47,12 @@ export class AjouterTsDto {
   @ValidateIf((o) => o.reprise === 'majeure') @IsInt() @Min(1) planches?: number;
 }
 
+// POST …/ts/demandes/:demandeId/decision — le CTO, TS au-delà du seuil.
+export class DeciderDemandeTsDto {
+  @IsBoolean() accepter!: boolean;
+  @IsOptional() @IsString() @MaxLength(500) motif?: string;
+}
+
 // POST …/taches/:tacheId/prolongation — par la personne assignée.
 export class DemanderProlongationTacheDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/) jusquau!: string;

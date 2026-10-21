@@ -29,6 +29,12 @@ export class MesDemandesController {
     return this.demandes.mesDemandes(req.user);
   }
 
+  // Dir. GC : suppléants possibles pendant son absence (autre Dir. GC, CTO).
+  @Get('suppleants')
+  suppleants(@Req() req: R) {
+    return this.demandes.suppleantsPossibles(req.user);
+  }
+
   @Post('absences')
   deposer(@Req() req: R, @Body() dto: DeposerAbsenceDto) {
     return this.demandes.deposerAbsence(req.user, dto);

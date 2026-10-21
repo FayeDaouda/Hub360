@@ -131,6 +131,7 @@ export class DemandesService {
     const jours = joursOuvrables(dto.dateDebut, dto.dateFin, await this.feries(dossier.societeId));
     if (jours === 0) throw new BadRequestException('Aucun jour ouvrable sur cette période.');
     const n1 = this.n1Pour(a.role, collab);
+    const suppleantId = await this.suppleantValide(a, dto.suppleantId);
     const d = await this.prisma.demandeAbsence.create({
       data: {
         dossierId: dossier.id,
@@ -141,11 +142,47 @@ export class DemandesService {
         commentaire: dto.commentaire ?? '',
         justificatifNom: dto.justificatif?.nom ?? null,
         justificatifCle: dto.justificatif?.url ?? null,
+        suppleantId,
         ...n1,
       },
     });
     await this.signalerAbsence(d, a.userId, d.statut === 'accord_n1' ? 'rh' : 'n1', d.statut === 'accord_n1' ? 'Absence à valider' : 'Demande d’absence à décider');
+    if (suppleantId) {
+      const date = (x: string) => x.split('-').reverse().slice(0, 2).join('/');
+      await this.notifications.envoyer({
+        societeId: dossier.societeId,
+        type: 'suppleance_designee',
+        titre: `Suppléance · ${dossier.prenom} ${dossier.nom} vous confie ses décisions du ${date(d.dateDebut)} au ${date(d.dateFin)}, si son absence est validée`,
+        destinataireIds: [suppleantId],
+        parId: a.userId,
+      });
+    }
     return versAbsence(d);
+  }
+
+  // Suppléants possibles d'un Dir. GC absent : les autres Dir. GC et le CTO
+  // (comptes actifs de la société). Vide pour les autres rôles.
+  async suppleantsPossibles(a: Acteur) {
+    if (a.role !== ROLE_N1_DIRECTION) return [];
+    const lignes = await this.prisma.utilisateurSocieteRole.findMany({
+      where: {
+        societeId: a.societeId,
+        utilisateurId: { not: a.userId },
+        role: { nom: { in: [ROLE_N1_DIRECTION, 'CTO (transverse)'] }, supprimeLe: null, OR: [{ societeId: a.societeId }, { societeId: null }] },
+        utilisateur: { actif: true },
+      },
+      select: { role: { select: { nom: true } }, utilisateur: { select: { id: true, prenom: true, nom: true } } },
+    });
+    return lignes.map((l) => ({ id: l.utilisateur.id, nom: `${l.utilisateur.prenom} ${l.utilisateur.nom}`.trim(), role: l.role.nom }));
+  }
+
+  // Seul un Dir. GC désigne un suppléant, choisi parmi les suppléants possibles.
+  private async suppleantValide(a: Acteur, suppleantId?: string): Promise<string | null> {
+    if (!suppleantId) return null;
+    if (a.role !== ROLE_N1_DIRECTION) throw new BadRequestException('Seul le Dir. GC désigne un suppléant pour son absence.');
+    const possibles = await this.suppleantsPossibles(a);
+    if (!possibles.some((p) => p.id === suppleantId)) throw new BadRequestException('Suppléant : un autre Dir. GC ou le CTO.');
+    return suppleantId;
   }
 
   async repondreAutresDates(a: Acteur, id: string, accepte: boolean) {

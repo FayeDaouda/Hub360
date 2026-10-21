@@ -75,6 +75,12 @@ export function CelluleCarte({
         )}{' '}
         · {CLIENTELES[c.clientele]} · {PROCESSUS[c.processus].iso}
       </p>
+      {c.pilote?.sansCompte && (
+        <p className="eq-alerte" role="note">
+          {c.pilote.nom} n’a pas de compte HUB : les remises et demandes de la cellule remontent au Dir. GC. Créez-lui un compte, ou désignez un
+          autre pilote.
+        </p>
+      )}
       {ecriture && (
         <div className="eq-cellule-actions">
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onRenommer(c)}>
