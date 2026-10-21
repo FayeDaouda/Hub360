@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { FinancesModule } from '../finances/finances.module';
 import { ReglagesModule } from '../reglages/reglages.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -18,7 +19,7 @@ import { FacturationCentraleController } from './facturation/facturation-central
 // chacune avec son service + son contrôleur mais sous le même module —
 // frontière métier unique. Voir l'artifact « Backend Grey Concrete » §05 / §08.
 @Module({
-  imports: [NotificationsModule, ReglagesModule, FinancesModule],
+  imports: [AuthModule, NotificationsModule, ReglagesModule, FinancesModule],
   providers: [
     AccesProjetGuard,
     FacturationService,

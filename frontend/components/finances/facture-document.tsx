@@ -21,6 +21,7 @@ export type FactureDocumentProps = {
   factureOrigine: string | null; // avoir : la facture qu'il annule
   dateEmission: string | null; // déjà formatée
   dateEcheance: string | null;
+  aReception: boolean; // payable à réception : l'échéance est la date d'émission
   projet: { nom: string | null; code: string | null } | null; // « Villa — Yoff » + code interne
   tranche: string | null; // « F2 · 2 sur 3 »
   offre: { reference: string; accepteeLe: string | null } | null; // date déjà formatée
@@ -35,6 +36,17 @@ export type FactureDocumentProps = {
   penaliteRetardMensuelle: number | null;
   essai: boolean; // préfixe TEST : facture d'essai, sans valeur
   cgv: Cgv | null; // CGV de la société, citées sur la facture (pas sur l'avoir)
+  // CGV complètes : jointes à ce document, déjà remises avec la 1re facture du
+  // projet, ou non jointes (réglage du CFO).
+  annexeCgv: 'jointe' | 'deja_remise' | 'non_jointe';
+  // Récapitulatif d'une facture de tranche (HT) ; null sinon.
+  echeancier: {
+    libelle: string; // « Honoraires totaux (offre DIO_NGO.26-OF1) »
+    total: number;
+    deja: { tranches: string[]; ht: number };
+    presente: { tranche: string; ht: number };
+    reste: { tranches: string[]; ht: number };
+  } | null;
 };
 
 // Articles des CGV rappelés en page 1 : ceux qui jouent au moment de payer
@@ -58,7 +70,8 @@ export function FactureDocument(p: FactureDocumentProps) {
   // Pied légal composé des champs du profil (dans l'ordre des CGV), puis les mentions libres.
   const legal = ligne(e.raisonSociale, fiscal, e.capital && `Capital ${e.capital}`);
   const cgv = p.estAvoir ? null : p.cgv;
-  const annexe = !!cgv && (e.joindreCgv ?? true);
+  const annexe = !!cgv && p.annexeCgv === 'jointe';
+  const echeance = p.aReception ? (p.dateEcheance ? `à réception, le ${p.dateEcheance}` : 'à réception') : p.dateEcheance;
   const offre = p.offre && `${p.offre.reference}${p.offre.accepteeLe ? ` du\u00a0${p.offre.accepteeLe.replace(/ /g, '\u00a0')}` : ''}`;
 
   return (
@@ -87,10 +100,10 @@ export function FactureDocument(p: FactureDocumentProps) {
                   <dd>{p.dateEmission}</dd>
                 </div>
               )}
-              {!p.estAvoir && p.dateEcheance && (
+              {!p.estAvoir && echeance && (
                 <div>
                   <dt>Échéance</dt>
-                  <dd>{p.dateEcheance}</dd>
+                  <dd>{echeance}</dd>
                 </div>
               )}
             </dl>
@@ -165,21 +178,26 @@ export function FactureDocument(p: FactureDocumentProps) {
           </tbody>
         </table>
 
-        <div className="fd-totaux">
-          <dl>
-            <div>
-              <dt>Total HT</dt>
-              <dd>{montant(p.montantHt)}</dd>
-            </div>
-            <div>
-              <dt>TVA {String(p.tauxTva).replace('.', ',')} %</dt>
-              <dd>{montant(p.montantTva)}</dd>
-            </div>
-            <div className="fd-ttc">
-              <dt>{p.estAvoir ? 'Total TTC de l’avoir' : 'Total TTC'}</dt>
-              <dd>{montant(p.montantTtc)}</dd>
-            </div>
-          </dl>
+        {/* Échéancier de l'offre à gauche des totaux : le client voit où il en
+            est sans ressortir son contrat. */}
+        <div className="fd-chiffres">
+          {p.echeancier && <RecapEcheancier r={p.echeancier} />}
+          <div className="fd-totaux">
+            <dl>
+              <div>
+                <dt>Total HT</dt>
+                <dd>{montant(p.montantHt)}</dd>
+              </div>
+              <div>
+                <dt>TVA {String(p.tauxTva).replace('.', ',')} %</dt>
+                <dd>{montant(p.montantTva)}</dd>
+              </div>
+              <div className="fd-ttc">
+                <dt>{p.estAvoir ? 'Total TTC de l’avoir' : 'Total TTC'}</dt>
+                <dd>{montant(p.montantTtc)}</dd>
+              </div>
+            </dl>
+          </div>
         </div>
         <p className="fd-lettres">
           {p.estAvoir ? 'Arrêté le présent avoir' : 'Arrêtée la présente facture'} à la somme de{' '}
@@ -198,12 +216,20 @@ export function FactureDocument(p: FactureDocumentProps) {
                 </p>
               </>
             ) : (
-              (p.dateEcheance || e.conditionsPaiement || reglement.length > 0) && (
+              (echeance || e.conditionsPaiement || reglement.length > 0) && (
                 <>
                   <p className="fd-etiquette">Règlement</p>
-                  {p.dateEcheance && (
+                  {echeance && (
                     <p>
-                      À régler au plus tard le <strong>{p.dateEcheance}</strong>.
+                      {p.aReception ? (
+                        <>
+                          À régler à réception{p.dateEcheance && <>, le <strong>{p.dateEcheance}</strong></>}.
+                        </>
+                      ) : (
+                        <>
+                          À régler au plus tard le <strong>{p.dateEcheance}</strong>.
+                        </>
+                      )}
                     </p>
                   )}
                   {e.conditionsPaiement && <p>{e.conditionsPaiement}</p>}
@@ -233,7 +259,7 @@ export function FactureDocument(p: FactureDocumentProps) {
             <p>
               Prestations régies par les conditions générales de vente de {e.raisonSociale}, édition {cgv.edition}
               {p.offre ? `, acceptées avec l’offre ${p.offre.reference}` : ''}
-              {annexe ? ', jointes en annexe.' : '.'}
+              {annexe ? ', jointes en annexe.' : p.annexeCgv === 'deja_remise' ? ', remises en annexe de la première facture du projet.' : '.'}
             </p>
             {cgv.articles
               .filter((a) => ARTICLES_RAPPELES.includes(a.numero))
@@ -284,5 +310,37 @@ export function FactureDocument(p: FactureDocumentProps) {
         </section>
       )}
     </>
+  );
+}
+
+// Récapitulatif HT de l'échéancier, sous le total : total de l'offre, déjà
+// facturé, présente facture, reste à facturer (avec la part de chaque ligne).
+function RecapEcheancier({ r }: { r: NonNullable<FactureDocumentProps['echeancier']> }) {
+  const part = (ht: number) => (r.total > 0 ? `, ${Math.round((ht / r.total) * 100)} %` : '');
+  const detail = (t: string[], ht: number) => (t.length ? ` (${t.join(', ')}${part(ht)})` : '');
+  return (
+    <section className="fd-recap" aria-label="Échéancier de l’offre">
+      <p className="fd-etiquette">Échéancier de l’offre</p>
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">{r.libelle}</th>
+            <td className="num">{montant(r.total)}</td>
+          </tr>
+          <tr>
+            <th scope="row">Déjà facturé{detail(r.deja.tranches, r.deja.ht)}</th>
+            <td className="num">{montant(r.deja.ht)}</td>
+          </tr>
+          <tr className="fd-recap-presente">
+            <th scope="row">Présente facture{detail([r.presente.tranche], r.presente.ht)}</th>
+            <td className="num">{montant(r.presente.ht)}</td>
+          </tr>
+          <tr>
+            <th scope="row">Reste à facturer{detail(r.reste.tranches, r.reste.ht)}</th>
+            <td className="num">{montant(r.reste.ht)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
   );
 }

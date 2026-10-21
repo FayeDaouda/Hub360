@@ -1459,6 +1459,12 @@ model NumerotationFactures {
   @@map("numerotation_factures")
 }
 
+enum AnnexeCgv {
+  premiere_facture
+  toujours
+  jamais
+}
+
 // Profil de facturation de la société (lot 6) : ce qu'imprime la facture
 // (identité, NINEA, RCCM, contact, règlement, pied). Versionné comme la
 // numérotation : la dernière ligne fait foi, les autres tracent les changements.
@@ -1482,8 +1488,12 @@ model ProfilFacturation {
   // Logo pour les documents (SVG ou PNG transparent, data URI) ; null = logo
   // de la société.
   logoDocument       String?  @map("logo_document")
-  // CGV de la société jointes en annexe de chaque facture (demande du CEO).
-  joindreCgv         Boolean  @default(true) @map("joindre_cgv")
+  // CGV complètes en annexe : sur la 1re facture du projet par défaut (les
+  // suivantes citent les articles clés), sur toutes, ou jamais.
+  cgvAnnexe          AnnexeCgv @default(premiere_facture) @map("cgv_annexe")
+  // Coordonnées de paiement changées dans cette version : identité confirmée
+  // par « code » (double authentification) ou « mot_de_passe » ; null sinon.
+  confirmation       String?
   parId              String?  @map("par_id")
   createdAt          DateTime @default(now()) @map("created_at")
 

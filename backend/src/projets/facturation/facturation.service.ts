@@ -354,9 +354,16 @@ export class FacturationService {
       orderBy: [{ creeLe: 'desc' }],
     });
     const aujourdhui = jourCourant();
-    const [tranches, affaires] = await Promise.all([
-      this.tranchesEcheancier(societeId, [...new Set(factures.map((f) => f.projetId).filter((x): x is string => !!x))]),
+    const projetIds = [...new Set(factures.map((f) => f.projetId).filter((x): x is string => !!x))];
+    const dossierIds = [...new Set(factures.map((f) => f.dossierCrmId).filter((x): x is string => !!x))];
+    const [tranches, affaires, voisines] = await Promise.all([
+      this.tranchesEcheancier(societeId, projetIds),
       this.seuilCeo.montantsAffaire(factures),
+      // Factures du même projet (ou lead) : première facture, récapitulatif d'échéancier.
+      this.prisma.facture.findMany({
+        where: { societeId, estAvoir: false, OR: [{ projetId: { in: projetIds } }, { dossierCrmId: { in: dossierIds } }] },
+        select: { id: true, projetId: true, dossierCrmId: true, emiseLe: true, creeLe: true, statut: true, montantHt: true, devisEcheancierId: true, cleEcheance: true },
+      }),
     ]);
 
     return factures.map((f) => {
@@ -408,11 +415,14 @@ export class FacturationService {
           const lieu = f.projet?.dossierCrm ?? f.dossierCrm;
           const offre = f.devisEcheancier ?? f.devisOrigine;
           const tranche = /:(F\d)$/.exec(f.cleEcheance ?? '')?.[1] ?? null;
+          const memeProjet = voisines.filter((v) => (f.projetId ? v.projetId === f.projetId : v.dossierCrmId === f.dossierCrmId));
           return {
             typeBien: lieu?.type ?? null,
             localite: lieu?.localite?.nom ?? null,
             tranche,
             offre: offre ? { reference: refDevis({ ...offre, dateEnvoi: null }), accepteeLe: offre.dateReponse } : null,
+            premiereDuProjet: premiereDuProjet(f, memeProjet),
+            echeancier: f.estAvoir ? null : recapEcheancier(f, memeProjet),
           };
         })(),
         // Tranche d'échéancier « k/N » (maquette Finances) ; null hors échéancier.
@@ -1244,11 +1254,51 @@ function versLigneFacture(l: {
   };
 }
 
-// Échéance posée à l'émission : celle déjà fixée, sinon pour une facture
-// directe d'un lead, payable à 15 jours (maquette Finances).
-function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string | null }): string | null {
+// Première facture du projet (ou du lead) : aucune autre émise avant elle,
+// même annulée depuis — le client a reçu les CGV complètes avec celle-là.
+type Voisine = { id: string; emiseLe: Date | null; creeLe: Date; statut: string; montantHt: { toNumber(): number }; devisEcheancierId: string | null; cleEcheance: string | null };
+export function premiereDuProjet(f: { id: string; emiseLe: Date | null }, voisines: Voisine[]): boolean {
+  return !voisines.some((v) => v.id !== f.id && v.emiseLe && (!f.emiseLe || v.emiseLe < f.emiseLe));
+}
+
+// Récapitulatif de l'échéancier sur une facture de tranche (revue CFO,
+// 21/10/2026) : total de l'offre pour cette prestation, déjà facturé (émis,
+// non annulé), présente facture, reste à facturer. Une tranche annulée par
+// avoir et pas encore refacturée reste « à facturer ».
+export function recapEcheancier(f: Voisine, voisines: Voisine[]) {
+  const famille = f.cleEcheance?.split(':')[0];
+  if (!f.devisEcheancierId || !famille) return null;
+  const tranches = voisines.filter((v) => v.devisEcheancierId === f.devisEcheancierId && v.cleEcheance?.split(':')[0] === famille);
+  // Par tranche : la facture en vigueur (non annulée) si elle existe.
+  const parCle = new Map<string, Voisine>();
+  for (const v of tranches) {
+    const cle = v.cleEcheance!;
+    const deja = parCle.get(cle);
+    if (!deja || (deja.statut === 'annulee' && v.statut !== 'annulee') || v.id === f.id) parCle.set(cle, v);
+  }
+  parCle.set(f.cleEcheance!, f);
+  const code = (v: Voisine) => v.cleEcheance!.split(':')[1];
+  const lignes = [...parCle.values()].sort((x, y) => code(x).localeCompare(code(y)));
+  if (lignes.length < 2) return null;
+  const facturees = lignes.filter((v) => v.id !== f.id && v.emiseLe && v.statut !== 'annulee');
+  const restantes = lignes.filter((v) => v.id !== f.id && !facturees.includes(v));
+  const somme = (l: Voisine[]) => l.reduce((t, v) => t + v.montantHt.toNumber(), 0);
+  return {
+    famille,
+    total: somme(lignes),
+    deja: { tranches: facturees.map(code), ht: somme(facturees) },
+    presente: { tranche: code(f), ht: f.montantHt.toNumber() },
+    reste: { tranches: restantes.map(code), ht: somme(restantes) },
+  };
+}
+
+// Échéance posée à l'émission, toujours explicite (revue CFO, 21/10/2026) :
+// celle déjà fixée ; une facture directe d'un lead, à 15 jours (maquette
+// Finances) ; sinon payable à réception, soit le jour de l'émission.
+function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string | null }): string {
   if (f.echeanceLe) return f.echeanceLe;
-  return f.dossierCrmId ? echeanceDirecte(new Date().toISOString().slice(0, 10)) : null;
+  const jour = new Date().toISOString().slice(0, 10);
+  return f.dossierCrmId ? echeanceDirecte(jour) : jour;
 }
 
 // Numéros attribués à l'émission : séquence de la société, et code + rang du

@@ -10,6 +10,8 @@ import {
   modifierProfilFacturation,
   PREFIXE_TEST,
   type FormatNumero,
+  ANNEXE_CGV,
+  type AnnexeCgv,
   type ParametresFacturation,
   type ProfilFacturation,
 } from '@/lib/facturation';
@@ -21,7 +23,7 @@ const LOGO_MAX = 600 * 1024;
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
-type ChampTexte = Exclude<keyof ProfilFacturation, 'logoDocument' | 'joindreCgv'>;
+type ChampTexte = Exclude<keyof ProfilFacturation, 'logoDocument' | 'cgvAnnexe'>;
 const CHAMPS: { cle: ChampTexte; libelle: string; long?: boolean; aide?: string }[] = [
   { cle: 'raisonSociale', libelle: 'Raison sociale' },
   { cle: 'adresse', libelle: 'Adresse', long: true },
@@ -61,6 +63,7 @@ export function ParametresFacturationFenetre({
   const [erreur, setErreur] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [confirmerPaiement, setConfirmerPaiement] = useState(false);
+  const [preuve, setPreuve] = useState(''); // mot de passe ou code, jamais gardé
 
   useEffect(() => {
     const echap = (e: KeyboardEvent) => e.key === 'Escape' && !envoi && onClose();
@@ -86,8 +89,15 @@ export function ParametresFacturationFenetre({
 
   function enregistrerProfil() {
     if (paiementChange.length && !confirmerPaiement) return setConfirmerPaiement(true);
-    setConfirmerPaiement(false);
-    lancer('profil', () => modifierProfilFacturation(slug, profil), 'Profil de facturation enregistré.');
+    lancer(
+      'profil',
+      async () => {
+        const r = await modifierProfilFacturation(slug, { ...profil, ...(paiementChange.length ? { confirmation: preuve } : {}) });
+        setConfirmerPaiement(false);
+        return r;
+      },
+      'Profil de facturation enregistré.',
+    ).finally(() => setPreuve(''));
   }
 
   async function lancer(quoi: 'format' | 'profil', action: () => Promise<ParametresFacturation>, succes: string) {
@@ -262,27 +272,58 @@ export function ParametresFacturationFenetre({
                 </label>
               ))}
             </div>
-            <label className="pf-case">
-              <input type="checkbox" checked={profil.joindreCgv ?? true} disabled={lecture || !!envoi} onChange={(e) => setProfil({ ...profil, joindreCgv: e.target.checked })} />
-              <span>
-                Joindre les conditions générales de vente en annexe des factures
-                <span className="cell-sub"> · la page 1 les cite toujours, avec l’offre acceptée</span>
-              </span>
+            <label className="field">
+              <span className="field-label">CGV complètes en annexe</span>
+              <select
+                className="field-input"
+                value={profil.cgvAnnexe ?? 'premiere_facture'}
+                disabled={lecture || !!envoi}
+                onChange={(e) => setProfil({ ...profil, cgvAnnexe: e.target.value as AnnexeCgv })}
+              >
+                {(Object.keys(ANNEXE_CGV) as AnnexeCgv[]).map((k) => (
+                  <option key={k} value={k}>
+                    {ANNEXE_CGV[k]}
+                  </option>
+                ))}
+              </select>
+              <span className="cell-sub">La page 1 de chaque facture cite toujours les CGV, l’offre acceptée et les articles clés.</span>
             </label>
             {!lecture && confirmerPaiement && (
-              <p className="pf-alerte" role="alert">
-                Vous modifiez les coordonnées de paiement ({paiementChange.map((c) => LIBELLES[c]).join(', ')}). Elles seront imprimées sur toutes les
-                prochaines factures ; le CEO sera prévenu et le changement gardé dans le journal d’audit. Vérifiez chaque chiffre avant de confirmer.
-              </p>
+              <div className="pf-alerte" role="alert">
+                <p>
+                  Vous modifiez les coordonnées de paiement ({paiementChange.map((c) => LIBELLES[c]).join(', ')}). Elles seront imprimées sur toutes les
+                  prochaines factures ; le CEO sera prévenu et le changement gardé dans le journal d’audit. Vérifiez chaque chiffre.
+                </p>
+                <label className="field">
+                  <span className="field-label">
+                    {p.confirmation === 'code' ? 'Code de votre application de double authentification' : 'Votre mot de passe, pour confirmer'}
+                  </span>
+                  <input
+                    className="field-input"
+                    type={p.confirmation === 'code' ? 'text' : 'password'}
+                    inputMode={p.confirmation === 'code' ? 'numeric' : undefined}
+                    autoComplete={p.confirmation === 'code' ? 'one-time-code' : 'current-password'}
+                    value={preuve}
+                    disabled={!!envoi}
+                    autoFocus
+                    onChange={(e) => setPreuve(e.target.value)}
+                  />
+                </label>
+              </div>
             )}
             {!lecture && (
               <div className="modal-actions">
                 {confirmerPaiement && (
-                  <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => setConfirmerPaiement(false)}>
+                  <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => (setConfirmerPaiement(false), setPreuve(''))}>
                     Revoir
                   </button>
                 )}
-                <button type="button" className="btn-primary" disabled={!!envoi || !profil.raisonSociale.trim()} onClick={enregistrerProfil}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={!!envoi || !profil.raisonSociale.trim() || (confirmerPaiement && !preuve.trim())}
+                  onClick={enregistrerProfil}
+                >
                   {envoi === 'profil' ? 'Enregistrement…' : confirmerPaiement ? 'Confirmer les nouvelles coordonnées' : 'Enregistrer le profil'}
                 </button>
               </div>

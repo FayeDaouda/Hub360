@@ -5,6 +5,7 @@ import { Eye, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { formatMontant } from '@/lib/format';
 import {
+  finDeMois,
   formatTaux,
   getCoutSalaries,
   getFicheRentabilite,
@@ -78,7 +79,9 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
         {f && (
           <>
             <section className="fiche-crm-section">
-              <h3 className="fiche-crm-titre">Synthèse · cumul depuis l’ouverture</h3>
+              <h3 className="fiche-crm-titre">
+                Synthèse · {f.arreteAu ? `cumul arrêté au ${finDeMois(f.arreteAu)}` : 'aucun mois entièrement contrôlé'}
+              </h3>
               <dl className="rtf-synthese">
                 {montants && (
                   <>
@@ -171,7 +174,10 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
                         <span className="rtf-mois-nom">{x.reference ?? '—'}</span>
                         <span>{jjmmaaaa(x.emiseLe)}</span>
                         <span className={x.ht < 0 ? 'rt-negatif' : undefined}>{formatMontant(x.ht)} HT</span>
-                        <span className="cell-sub">{x.estAvoir ? 'avoir' : x.annulee ? 'annulée par avoir' : x.libelle}</span>
+                        <span className="cell-sub">
+                          {x.estAvoir ? 'avoir' : x.annulee ? 'annulée par avoir' : x.libelle}
+                          {x.horsCumul && ' · hors cumul (émise après l’arrêté)'}
+                        </span>
                       </li>
                     ))}
                   </ul>

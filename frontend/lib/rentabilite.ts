@@ -30,6 +30,7 @@ export type LigneRentabilite = {
 export type Portefeuille = {
   acces: Acces;
   periode: string | null; // null = cumul depuis l'ouverture
+  arreteAu: string | null; // AAAA-MM : cumul arrêté au dernier mois entièrement contrôlé
   calculeLe: string;
   parametres: ParametreEnVigueur[];
   projetsComplets: number; // les totaux ne portent que sur eux
@@ -46,9 +47,10 @@ export type Portefeuille = {
 
 export type FicheRentabilite = LigneRentabilite & {
   acces: Acces;
+  arreteAu: string | null;
   parametres: ParametreEnVigueur[];
   parHeure: { honoraires: number; cout: number } | null;
-  factures: { id: string; reference: string | null; emiseLe: string; estAvoir: boolean; annulee: boolean; libelle: string; ht: number }[] | null;
+  factures: { id: string; reference: string | null; emiseLe: string; estAvoir: boolean; annulee: boolean; libelle: string; ht: number; horsCumul: boolean }[] | null;
   mois: { mois: string; heures: number; cout: number | null; ht: number | null }[];
   salaries: number;
   qualite: string[];
@@ -97,3 +99,9 @@ export const formatParametre = (p: { valeur: number | null; unite: string; cle?:
     : p.cle === 'heures_annuelles'
       ? `${p.valeur.toLocaleString('fr-FR')} h par an, soit ${(p.valeur / 12).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} h par mois`
       : `${p.valeur.toLocaleString('fr-FR')} ${p.unite}`;
+
+// « 30 septembre 2026 » : dernier jour du mois arrêté (AAAA-MM).
+export function finDeMois(mois: string): string {
+  const [a, m] = mois.split('-').map(Number);
+  return new Date(Date.UTC(a, m, 0)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+}

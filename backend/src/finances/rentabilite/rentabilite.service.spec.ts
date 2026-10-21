@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { TempsService } from '../../rh/temps.service';
-import { coutHoraire, parametreAu, salaireDuMois, statutMarge, tauxMarge } from './regles-rentabilite';
+import { coutHoraire, moisArrete, parametreAu, salaireDuMois, statutMarge, tauxMarge } from './regles-rentabilite';
 import { RentabiliteService } from './rentabilite.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
@@ -37,6 +37,16 @@ describe('règles de rentabilité (lot 7, phase 1)', () => {
     expect(statutMarge(40, 60)).toBe('ambre');
     expect(statutMarge(-5, 60)).toBe('rouge');
     expect(statutMarge(null, 60)).toBeNull();
+  });
+
+  it('mois arrêté : dernier mois entièrement contrôlé, sans trou', () => {
+    const m = (mois: string, ...statuts: string[]) => ({ mois, statuts });
+    expect(moisArrete([])).toBeNull();
+    expect(moisArrete([m('2026-09', 'a_controler', 'controlee')])).toBeNull();
+    expect(moisArrete([m('2026-09', 'controlee', 'sans_heures'), m('2026-10', 'cloture')])).toBe('2026-09');
+    // Un mois en retard bloque les suivants, même contrôlés.
+    expect(moisArrete([m('2026-11', 'controlee'), m('2026-09', 'controlee'), m('2026-10', 'a_controler')])).toBe('2026-09');
+    expect(moisArrete([m('2026-09', 'controlee'), m('2026-10', 'controlee')])).toBe('2026-10');
   });
 });
 
@@ -132,13 +142,50 @@ describe('RentabiliteService', () => {
     expect(prisma.parametreRentabilite.create).toHaveBeenCalledWith({ data: expect.objectContaining({ cle: 'heures_annuelles', valeur: 1920, dateEffet: '2099-01-01', parId: 'U-CFO' }) });
   });
 
-  it('heures de mois clos à contrôler : données insuffisantes, pas de marge gonflée', async () => {
-    const { s, prisma } = svc();
-    void prisma;
+  it('cumul arrêté au dernier mois contrôlé : rien tant qu’aucun mois ne l’est, facturé compris', async () => {
+    const { s } = svc();
     (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({ feuilles: [{ statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }] });
     const r = await s.portefeuille(CFO);
-    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', marge: null, taux: null, heuresAttente: 40, cout: 300_000 });
-    expect(r.lignes.find((l) => l.projet.id === 'P1')!.raisons).toContain('40 h en attente de contrôle RH');
+    expect(r.arreteAu).toBeNull();
+    // Ni facturé ni coût : jamais une marge faite de factures sans leurs heures.
+    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', ht: 0, cout: 0, marge: null, taux: null });
+    expect(r.lignes.find((l) => l.projet.id === 'P1')!.raisons).toContain('aucun mois entièrement contrôlé');
+    // Vue du mois : les heures en attente sont comptées et bloquent.
+    const mois = await s.portefeuille(CFO, String(r.blocages.feuilles[0].mois));
+    expect(mois.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', heuresAttente: 40, marge: null });
+    expect(mois.lignes.find((l) => l.projet.id === 'P1')!.raisons).toContain('40 h en attente de contrôle RH');
+  });
+
+  it('projet commencé avant le suivi des heures : pas de marge (coût antérieur inconnu)', async () => {
+    const { s, prisma } = svc();
+    (prisma.facture.findMany as jest.Mock).mockImplementation(({ where }: { where: { statut?: string } }) =>
+      Promise.resolve(
+        where.statut === 'brouillon'
+          ? []
+          : [{ id: 'F0', projetId: 'P1', numero: 1, emiseLe: new Date('2026-04-21'), estAvoir: false, statut: 'emise', montantHt: dec(5_000_000), libelle: 'F1' }],
+      ),
+    );
+    const r = await s.portefeuille(CFO);
+    const p1 = r.lignes.find((l) => l.projet.id === 'P1')!;
+    expect(p1).toMatchObject({ etat: 'insuffisant', marge: null, taux: null, ht: 5_000_000, cout: 300_000 });
+    expect(p1.raisons[0]).toMatch(/^projet commencé avant le suivi des heures \(septembre 2026\)/);
+  });
+
+  it('facture émise après le mois arrêté : hors cumul, signalée sur la fiche', async () => {
+    const { s, prisma } = svc();
+    const factures = [
+      { id: 'F1', projetId: 'P1', numero: 1, emiseLe: new Date('2026-09-10'), estAvoir: false, statut: 'emise', montantHt: dec(10_000_000), libelle: 'F1' },
+      { id: 'F3', projetId: 'P1', numero: 3, emiseLe: new Date(), estAvoir: false, statut: 'emise', montantHt: dec(5_000_000), libelle: 'F3' },
+    ];
+    (prisma.facture.findMany as jest.Mock).mockImplementation(({ where }: { where: { statut?: string } }) => Promise.resolve(where.statut === 'brouillon' ? [] : factures));
+    const r = await s.portefeuille(CFO);
+    expect(r.arreteAu).toMatch(/^\d{4}-\d{2}$/);
+    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ ht: 10_000_000, cout: 300_000, etat: 'complet' });
+    const fiche = await s.fiche(CFO, 'P1');
+    expect(fiche.factures!.map((f) => [f.id, f.horsCumul])).toEqual([
+      ['F1', false],
+      ['F3', true],
+    ]);
   });
 
   it('blocages : feuilles à contrôler par mois, salaires manquants, et qui doit agir', async () => {

@@ -40,16 +40,16 @@ describe('planFacturationOffre', () => {
       ['avant_projet', 1_400_000],
       ['livraison', 700_000],
     ]);
-    expect(co[1].libelle).toBe("CO2 — Fin de l'APD (40 %)");
+    expect(co[1].libelle).toBe('Honoraires de conception, catégorie CO2 · 2ᵉ tranche : fin de l’APD (40 %)');
   });
 
   it('conception : parts figées de l’offre (réglage du CIO), arrondi sur la dernière', () => {
     const co = planFacturationOffre([ligne('CO1', 'CO', 1_000_001)], { F1: 30, F2: 50, F3: 20 });
     expect(co.map((f) => f.montantHt)).toEqual([300_000, 500_001, 200_000]);
     expect(co.map((f) => f.libelle)).toEqual([
-      'CO1 — Acompte à la signature du contrat (30 %)',
-      "CO1 — Fin de l'APD (50 %)",
-      "CO1 — Livraison des plans d'exécution (20 %)",
+      'Honoraires de conception, catégorie CO1 · 1ʳᵉ tranche : acompte à la signature du contrat (30 %)',
+      'Honoraires de conception, catégorie CO1 · 2ᵉ tranche : fin de l’APD (50 %)',
+      'Honoraires de conception, catégorie CO1 · 3ᵉ tranche : livraison des plans d’exécution (20 %)',
     ]);
   });
 

@@ -15433,6 +15433,50 @@ tr.is-demandeur .cal-nom {
   font-size: 0.72rem;
   text-align: center;
 }
+/* Échéancier de l'offre à gauche, totaux à droite ; empilés sur mobile. */
+.fd-chiffres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+.fd-chiffres .fd-totaux {
+  margin-left: auto;
+}
+/* Récapitulatif de l'échéancier de l'offre (factures de tranche). */
+.fd-recap {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 0.2rem;
+  max-width: 25rem;
+  break-inside: avoid;
+}
+.fd-recap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.fd-recap th,
+.fd-recap td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--fd-filet);
+  text-align: left;
+  font-weight: 400;
+}
+.fd-recap th {
+  color: var(--fd-doux);
+}
+.fd-recap td.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fd-recap-presente th,
+.fd-recap-presente td {
+  color: var(--fd-encre);
+  font-weight: 700 !important;
+}
 /* Conditions : les CGV citées en page 1, en petit, avant le pied. */
 .fd-conditions {
   display: grid;
@@ -15543,7 +15587,12 @@ tr.is-demandeur .cal-nom {
   body:has(#impression-document .fd) {
     background: #ffffff !important;
   }
+  #impression-document .fd-cachet {
+    min-height: 6rem;
+  }
+  /* Plus serré sur papier : une facture tient sur une page. */
   #impression-document .fd {
+    gap: 1rem;
     max-width: none;
     padding: 0;
     border-radius: 0;

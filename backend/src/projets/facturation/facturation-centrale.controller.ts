@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { FactureStatut } from '@prisma/client';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../../commun/back-office.guard';
@@ -65,8 +66,12 @@ export class FacturationCentraleController {
     return this.parametres.modifierFormat(req.user, dto);
   }
 
+  // Coordonnées de paiement : mot de passe ou code exigé (service) ; tentatives
+  // limitées pour qu'une session volée ne puisse pas deviner le mot de passe.
   @Post('parametres/profil')
   @RequiertPermission('finances_factures', 'lecture')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   profil(@Req() req: R, @Body() dto: ProfilFacturationDto) {
     return this.parametres.modifierProfil(req.user, dto);
   }

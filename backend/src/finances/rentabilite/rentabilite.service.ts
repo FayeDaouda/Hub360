@@ -7,6 +7,7 @@ import type { ChangementSource } from '../../rh/regles-salaire';
 import { TempsService } from '../../rh/temps.service';
 import {
   coutHoraire,
+  moisArrete,
   PARAMETRES,
   parametreAu,
   premierMoisModifiable,
@@ -100,6 +101,12 @@ export class RentabiliteService {
       this.reglages.joursFeries([societeId]),
     ]);
     const ferieSet = feries.get(societeId) ?? new Set<string>();
+    // Feuilles de tous les mois clos : elles fixent le mois arrêté du cumul.
+    const clos = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).filter((m) => m < moisDe(jour));
+    const feuillesClos = await Promise.all(clos.map(async (m) => ({ mois: m, feuilles: (await this.temps.feuilles(m, societeId)).feuilles })));
+    const arrete = moisArrete(feuillesClos.map((x) => ({ mois: x.mois, statuts: x.feuilles.map((f) => f.statut) })));
+    // Cumul : jusqu'au mois arrêté inclus (rien s'il n'y en a pas). Mois isolé : ce mois.
+    const retenu = (m: string) => (periode ? m === periode : !!arrete && m <= arrete);
     const projetDeTache = new Map(taches.map((t) => [t.id, t.projetId]));
     const projetDeCode = new Map(projets.map((p) => [p.code, p.id]));
     const salaires = new Map(dossiers.map((d) => [d.id, d.salaires as ChangementSource[]]));
@@ -116,10 +123,13 @@ export class RentabiliteService {
       if (!c.derniere || d > c.derniere) c.derniere = d;
     };
 
+    // Projets facturés avant le début du suivi des heures : le travail payé
+    // par ces factures n'a jamais été compté en coût (marge gonflée).
+    const facturesAvantSuivi = new Set(factures.filter((f) => moisDe(jourIso(f.emiseLe!)) < MOIS_DEBUT_FEUILLES).map((f) => f.projetId!));
     for (const f of factures) {
       const c = cumuls.get(f.projetId!);
       const m = moisDe(jourIso(f.emiseLe!));
-      if (!c || !dansPeriode(m)) continue;
+      if (!c || !retenu(m)) continue;
       c.ht += f.montantHt.toNumber();
       mois(c, m).ht += f.montantHt.toNumber();
       plusRecent(c, jourIso(f.emiseLe!));
@@ -143,9 +153,19 @@ export class RentabiliteService {
     const projetDe = (l: LigneHeures) => projetDeTache.get(l.id) ?? projetDeCode.get(l.projetCode) ?? null;
 
     // Heures CONTRÔLÉES par la RH (chiffres figés) : seules à compter.
+    // Salarié sans salaire validé : signalé dès ses heures contrôlées, même
+    // au-delà du mois arrêté, pour que le CFO le valide avant l'arrêt suivant.
+    const salairesManquants = new Map<string, Set<string>>();
     for (const ctrl of controles) {
-      if (!dansPeriode(ctrl.mois)) continue;
       const horaire = coutDe(ctrl.dossierId, ctrl.mois);
+      if (horaire === null) {
+        for (const l of (ctrl.detail as { lignes?: LigneHeures[] }).lignes ?? []) {
+          const projetId = projetDe(l);
+          if (!projetId || !l.heures) continue;
+          salairesManquants.set(ctrl.dossierId, (salairesManquants.get(ctrl.dossierId) ?? new Set()).add(projetId));
+        }
+      }
+      if (!retenu(ctrl.mois)) continue;
       for (const l of (ctrl.detail as { lignes?: LigneHeures[] }).lignes ?? []) {
         const c = cumuls.get(projetDe(l) ?? '');
         if (!c || !l.heures) continue;
@@ -168,15 +188,15 @@ export class RentabiliteService {
     // Ce qui bloque le calcul : feuilles à contrôler (par mois) et salariés
     // sans salaire validé, avec les projets touchés — montré au CFO et à la RH.
     const feuillesBloquantes = new Map<string, { feuilles: Set<string>; projets: Set<string> }>();
-    const clos = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).filter((m) => m < moisDe(jour) && dansPeriode(m));
-    for (const m of clos) {
-      const { feuilles } = await this.temps.feuilles(m, societeId);
+    // Après le mois arrêté, ces heures n'entrent pas dans le cumul : elles
+    // expliquent seulement pourquoi il ne va pas plus loin.
+    for (const { mois: m, feuilles } of feuillesClos.filter((x) => dansPeriode(x.mois))) {
       for (const f of feuilles.filter((x) => x.statut === 'a_controler')) {
         for (const l of f.lignes) {
           const projetId = projetDe(l);
           const c = cumuls.get(projetId ?? '');
           if (!c || !l.heures) continue;
-          c.heuresAttente += l.heures;
+          if (periode) c.heuresAttente += l.heures;
           const b = feuillesBloquantes.get(m) ?? { feuilles: new Set<string>(), projets: new Set<string>() };
           b.feuilles.add(f.dossierId);
           b.projets.add(projetId!);
@@ -200,11 +220,17 @@ export class RentabiliteService {
       let etat: EtatDonnees = 'complet';
       if (p._count.taches === 0) etat = 'heures_non_suivies';
       else {
+        // Cumul : un projet commencé avant le suivi des heures a un coût
+        // antérieur inconnu — jamais de marge sur cette base.
+        if (!periode && ((!!p.ouvertLe && p.ouvertLe.slice(0, 7) < MOIS_DEBUT_FEUILLES) || facturesAvantSuivi.has(p.id))) {
+          raisons.push(`projet commencé avant le suivi des heures (${moisFrancais(MOIS_DEBUT_FEUILLES)}) : coût antérieur inconnu`);
+        }
         if (c.sansSalaire.size) raisons.push(`${c.sansSalaire.size} salarié(s) sans salaire validé`);
         // Heures de mois clos pas encore contrôlées : le coût serait
         // sous-estimé, la marge gonflée — pas de marge tant qu'il en reste.
         if (c.heuresAttente) raisons.push(`${heures1(c.heuresAttente)} h en attente de contrôle RH`);
-        else if (!c.heures) raisons.push('aucune heure contrôlée');
+        else if (periode && (!arrete || periode > arrete)) raisons.push('mois pas encore entièrement contrôlé');
+        else if (!c.heures) raisons.push(arrete ? 'aucune heure contrôlée' : 'aucun mois entièrement contrôlé');
         if (raisons.length) etat = 'insuffisant';
       }
       // Données incomplètes : ni marge ni taux (un coût à zéro donnerait un
@@ -229,14 +255,13 @@ export class RentabiliteService {
         _cumul: c,
       };
     });
-    const sansSalaire = new Set([...cumuls.values()].flatMap((c) => [...c.sansSalaire]));
     const blocages = {
       feuilles: [...feuillesBloquantes.entries()]
         .sort(([x], [y]) => x.localeCompare(y))
         .map(([m, b]) => ({ mois: m, feuilles: b.feuilles.size, projets: b.projets.size })),
-      salaires: { salaries: sansSalaire.size, projets: [...cumuls.values()].filter((c) => c.sansSalaire.size).length },
+      salaires: { salaries: salairesManquants.size, projets: new Set([...salairesManquants.values()].flatMap((x) => [...x])).size },
     };
-    return { lignes, params, cible, factures, blocages };
+    return { lignes, params, cible, factures, blocages, arrete };
   }
 
   // Qui doit agir : la RH contrôle les feuilles et propose les salaires, le
@@ -265,7 +290,7 @@ export class RentabiliteService {
   async portefeuille(a: Acteur, periode?: string) {
     const acces = this.acces(a);
     if (periode && !/^\d{4}-\d{2}$/.test(periode)) throw new BadRequestException('Période invalide (AAAA-MM).');
-    const { lignes, params, blocages } = await this.calculer(a.societeId, periode ?? null);
+    const { lignes, params, blocages, arrete } = await this.calculer(a.societeId, periode ?? null);
     const [rh, cfo] = await Promise.all([this.titulaires(a.societeId, 'RH'), this.titulaires(a.societeId, ROLE_CFO)]);
     // Totaux : projets aux données complètes seulement.
     const complets = lignes.filter((l) => l.etat === 'complet');
@@ -278,6 +303,8 @@ export class RentabiliteService {
     return {
       acces,
       periode: periode ?? null,
+      // Cumul arrêté à la fin de ce mois (dernier mois entièrement contrôlé).
+      arreteAu: arrete,
       calculeLe: new Date(),
       parametres: this.parametresEnVigueur(params),
       projetsComplets: complets.length,
@@ -292,7 +319,7 @@ export class RentabiliteService {
 
   async fiche(a: Acteur, projetId: string) {
     const acces = this.acces(a);
-    const { lignes, factures, params } = await this.calculer(a.societeId, null);
+    const { lignes, factures, params, arrete } = await this.calculer(a.societeId, null);
     const l = lignes.find((x) => x.projet.id === projetId);
     if (!l) throw new NotFoundException('Projet introuvable');
     const { _cumul: c, ...ligne } = l;
@@ -303,6 +330,7 @@ export class RentabiliteService {
     ];
     return {
       acces,
+      arreteAu: arrete,
       parametres: this.parametresEnVigueur(params),
       ...(montants ? ligne : { ...ligne, ht: null, cout: null, marge: null, aFacturer: null }),
       // Honoraires HT par heure contrôlée, coût horaire moyen.
@@ -310,7 +338,17 @@ export class RentabiliteService {
       factures: montants
         ? factures
             .filter((f) => f.projetId === projetId)
-            .map((f) => ({ id: f.id, reference: refFacture(f), emiseLe: jourIso(f.emiseLe!), estAvoir: f.estAvoir, annulee: f.statut === 'annulee', libelle: f.libelle, ht: f.montantHt.toNumber() }))
+            .map((f) => ({
+              id: f.id,
+              reference: refFacture(f),
+              emiseLe: jourIso(f.emiseLe!),
+              estAvoir: f.estAvoir,
+              annulee: f.statut === 'annulee',
+              libelle: f.libelle,
+              ht: f.montantHt.toNumber(),
+              // Émise après le mois arrêté : pas encore dans le cumul.
+              horsCumul: !arrete || moisDe(jourIso(f.emiseLe!)) > arrete,
+            }))
         : null,
       mois: [...c.parMois.entries()]
         .sort(([x], [y]) => x.localeCompare(y))
@@ -382,3 +420,6 @@ export class RentabiliteService {
     return this.parametres(a);
   }
 }
+
+const MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const moisFrancais = (m: string) => `${MOIS_FR[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;

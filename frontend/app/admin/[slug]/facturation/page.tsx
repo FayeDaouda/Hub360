@@ -222,12 +222,20 @@ export default function FinancesPage({ params }: Props) {
     // Un avoir reprend ce que le client reconnaît sur la facture qu'il annule.
     const source = f.estAvoir && origine ? origine : f;
     const doc = source.pourDocument;
+    // CGV complètes : sur la 1re facture du projet par défaut, ensuite citées.
+    const reglageCgv = paramsFacturation.profil.cgvAnnexe ?? 'premiere_facture';
+    const annexeCgv =
+      reglageCgv === 'toujours' ? 'jointe' : reglageCgv === 'jamais' ? 'non_jointe' : f.pourDocument?.premiereDuProjet ? 'jointe' : 'deja_remise';
+    const recap = f.estAvoir ? null : f.pourDocument?.echeancier;
+    const offreRef = doc?.offre?.reference;
     return {
       estAvoir: f.estAvoir,
       reference: f.reference,
       factureOrigine: origine?.reference ?? null,
       dateEmission: f.emiseLe ? formatDate(f.emiseLe) : null,
       dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
+      // Payable à réception : sans échéance, ou échéance le jour de l'émission.
+      aReception: !f.echeanceLe || (!!f.emiseLe && f.echeanceLe.slice(0, 10) === f.emiseLe.slice(0, 10)),
       // Ce que le client reconnaît : « Villa — Yoff », le code en rappel.
       projet: {
         nom: doc?.typeBien ? [TYPES_BIEN[doc.typeBien], doc.localite].filter(Boolean).join(' — ') : null,
@@ -258,6 +266,13 @@ export default function FinancesPage({ params }: Props) {
       penaliteRetardMensuelle: paramsFacturation.penaliteRetardMensuelle,
       essai: prefixe.toUpperCase() === PREFIXE_TEST,
       cgv: CGV_PAR_SOCIETE[params.slug] ?? null,
+      annexeCgv,
+      echeancier: recap
+        ? {
+            ...recap,
+            libelle: `${recap.famille === 'CO' ? 'Honoraires totaux' : `Total ${recap.famille}`}${offreRef ? ` (offre ${offreRef})` : ''}`,
+          }
+        : null,
     };
   }
 

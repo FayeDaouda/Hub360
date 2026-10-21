@@ -96,7 +96,8 @@ export function planFacturationOffre(lignes: LigneOffre[], parts: PartsFactures)
     JALONS_FACTURE.forEach((j, i) =>
       prevues.push({
         jalon: j.cle,
-        libelle: `${co.code} — ${j.libelle} (${parts[j.code]} %)`,
+        // Lisible par le client : le code catalogue seul (« CO2 ») ne lui dit rien.
+        libelle: `Honoraires de conception, catégorie ${co.code} · ${j.tranche} (${parts[j.code]} %)`,
         montantHt: montants[i],
         tauxTva: co.tauxTva,
         cle: `CO:${j.code}`, // une seule ligne CO par devis : clé stable si la catégorie change

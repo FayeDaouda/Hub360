@@ -1155,6 +1155,15 @@ export type FactureCentrale = {
     localite: string | null;
     tranche: string | null;
     offre: { reference: string | null; accepteeLe: string | null } | null;
+    premiereDuProjet: boolean; // aucune autre facture émise avant : CGV complètes en annexe
+    // Récapitulatif d'une facture de tranche (HT) ; null hors échéancier et pour un avoir.
+    echeancier: {
+      famille: string; // « CO », « DPC »…
+      total: number;
+      deja: { tranches: string[]; ht: number };
+      presente: { tranche: string; ht: number };
+      reste: { tranches: string[]; ht: number };
+    } | null;
   };
   affaireTtc: number; // montant de l'affaire (TTC) — cf. Facture
   // Tranche d'échéancier « k/N » ; null hors échéancier.

@@ -49,6 +49,29 @@ const nomDe = (u: { prenom: string; nom: string } | null | undefined) => (u ? `$
 // Journal d'audit : ce que le HUB enregistre déjà, réuni en une seule liste
 // datée (comptes, droits, finances, réglages, départs). Lecture seule —
 // aucune de ces traces ne se modifie ni ne se supprime.
+// Champs du profil de facturation suivis au journal (libellés lisibles).
+const CHAMPS_PROFIL_AUDIT: [
+  'raisonSociale' | 'adresse' | 'ninea' | 'cofi' | 'rccm' | 'capital' | 'telephone' | 'email' | 'banque' | 'rib' | 'wave' | 'orangeMoney' | 'conditionsPaiement' | 'mentionsPied' | 'logoDocument' | 'cgvAnnexe',
+  string,
+][] = [
+  ['raisonSociale', 'raison sociale'],
+  ['adresse', 'adresse'],
+  ['ninea', 'NINEA'],
+  ['cofi', 'COFI'],
+  ['rccm', 'RCCM'],
+  ['capital', 'capital'],
+  ['telephone', 'téléphone'],
+  ['email', 'e-mail'],
+  ['banque', 'banque'],
+  ['rib', 'RIB'],
+  ['wave', 'Wave'],
+  ['orangeMoney', 'Orange Money'],
+  ['conditionsPaiement', 'conditions de paiement'],
+  ['mentionsPied', 'mentions de pied'],
+  ['logoDocument', 'logo'],
+  ['cgvAnnexe', 'CGV en annexe'],
+];
+
 @Injectable()
 export class JournalAuditService {
   constructor(private prisma: PrismaService) {}
@@ -101,7 +124,8 @@ export class JournalAuditService {
       this.prisma.parametreRentabilite.findMany({ where: { societeId: S, createdAt: dans } }),
       // Paramètres de facturation (lot 6) : format de numérotation, profil imprimé.
       this.prisma.numerotationFactures.findMany({ where: { societeId: S, createdAt: dans } }),
-      this.prisma.profilFacturation.findMany({ where: { societeId: S, createdAt: dans }, select: { id: true, createdAt: true, parId: true, raisonSociale: true } }),
+      // Toutes les versions : chacune se compare à la précédente (champs modifiés).
+      this.prisma.profilFacturation.findMany({ where: { societeId: S, createdAt: { lt: jusque } }, orderBy: { createdAt: 'asc' } }),
     ]);
     const [demandesAvoir, clotures] = await Promise.all([
       this.prisma.demandeAvoir.findMany({
@@ -216,14 +240,23 @@ export class JournalAuditService {
         detail: `prochain format : ${formaterNumero({ prefixe: n.prefixe, formatAnnee: n.formatAnnee as 'AAAA' | 'AA', separateur: n.separateur, chiffres: n.chiffres, numeroDepart: n.numeroDepart }, n.createdAt.getUTCFullYear(), n.numeroDepart)} · motif : ${n.motif}`,
         parId: n.parId,
       })),
-      ...profils.map((p) => ({
-        id: `profil-facturation:${p.id}`,
-        le: p.createdAt,
-        categorie: 'finances' as const,
-        action: 'Profil de facturation modifié',
-        detail: p.raisonSociale,
-        parId: p.parId,
-      })),
+      ...profils.flatMap((p, i) => {
+        if (p.createdAt < de) return [];
+        const avant = profils[i - 1];
+        const changes = CHAMPS_PROFIL_AUDIT.filter(([c]) => !avant || String(avant[c] ?? '') !== String(p[c] ?? ''));
+        const paiement = changes.some(([c]) => ['banque', 'rib', 'wave', 'orangeMoney'].includes(c));
+        const confirme = p.confirmation === 'code' ? 'confirmé par code de double authentification' : p.confirmation === 'mot_de_passe' ? 'confirmé par mot de passe' : null;
+        return [
+          {
+            id: `profil-facturation:${p.id}`,
+            le: p.createdAt,
+            categorie: 'finances' as const,
+            action: paiement ? 'Coordonnées de paiement des factures modifiées' : 'Profil de facturation modifié',
+            detail: [avant ? changes.map(([, l]) => l).join(', ') || 'aucun champ modifié' : 'premier profil', confirme].filter(Boolean).join(' · '),
+            parId: p.parId,
+          },
+        ];
+      }),
       ...clotures.map((c) => ({
         id: `cloture:${c.id}`,
         le: c.createdAt,

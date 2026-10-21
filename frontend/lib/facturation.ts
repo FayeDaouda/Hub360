@@ -335,10 +335,19 @@ export type ProfilFacturation = {
   conditionsPaiement: string;
   mentionsPied: string;
   logoDocument?: string | null; // SVG / PNG transparent en data URI ; null = logo de la société
-  joindreCgv?: boolean; // CGV de la société en annexe des factures (par défaut)
+  cgvAnnexe?: AnnexeCgv; // CGV complètes en annexe : 1re facture du projet (défaut), toutes, jamais
+};
+export type AnnexeCgv = 'premiere_facture' | 'toujours' | 'jamais';
+export const ANNEXE_CGV: Record<AnnexeCgv, string> = {
+  premiere_facture: 'Sur la première facture de chaque projet',
+  toujours: 'Sur toutes les factures',
+  jamais: 'Jamais (articles clés cités en page 1 seulement)',
 };
 export type ParametresFacturation = {
   peutModifier: boolean; // CFO seul
+  // Preuve exigée pour changer les coordonnées de paiement : code de double
+  // authentification si elle est active sur le compte, sinon mot de passe.
+  confirmation: 'code' | 'mot_de_passe';
   annee: number;
   format: FormatNumero;
   parDefaut: boolean;
@@ -353,7 +362,7 @@ export const PREFIXE_TEST = 'TEST';
 export const getParametresFacturation = (slug: string) => apiSociete<ParametresFacturation>(slug, '/factures/parametres');
 export const modifierNumerotation = (slug: string, f: FormatNumero & { motif: string }) =>
   apiSociete<ParametresFacturation>(slug, '/factures/parametres/numerotation', { method: 'POST', body: f });
-export const modifierProfilFacturation = (slug: string, p: ProfilFacturation) =>
+export const modifierProfilFacturation = (slug: string, p: ProfilFacturation & { confirmation?: string }) =>
   apiSociete<ParametresFacturation>(slug, '/factures/parametres/profil', { method: 'POST', body: p });
 
 // Aperçu d'un format (même règle que le serveur, facturation/numerotation.ts).

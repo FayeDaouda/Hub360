@@ -74,6 +74,22 @@ describe('JournalAuditService', () => {
     expect(ligne('Avoir demandé')).toMatchObject({ categorie: 'finances', detail: expect.stringContaining('litige client : Prestation contestée') });
     expect(ligne('Mois clôturé').detail).toBe('septembre 2026');
   });
+
+  it('profil de facturation : champs modifiés, et confirmation des coordonnées de paiement', async () => {
+    const s = svc();
+    const v = (id: string, le: string, rib: string, adresse: string, confirmation: string | null) => ({
+      id, createdAt: new Date(le), parId: 'U9', raisonSociale: 'GC', adresse, rib, banque: '', wave: '', orangeMoney: '', confirmation,
+    });
+    const prisma = (s as unknown as { prisma: { profilFacturation: { findMany: jest.Mock } } }).prisma;
+    prisma.profilFacturation = { findMany: jest.fn().mockResolvedValue([
+      v('P0', '2026-09-01T08:00:00Z', 'SN01', '', null), // hors période : sert de référence
+      v('P1', '2026-10-05T08:00:00Z', 'SN01', 'Dakar', null),
+      v('P2', '2026-10-06T08:00:00Z', 'SN99', 'Dakar', 'mot_de_passe'),
+    ]) };
+    const { lignes } = await s.journal({ userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' }, '2026-10-01', '2026-10-14');
+    expect(lignes.find((l) => l.action === 'Profil de facturation modifié')!.detail).toBe('adresse');
+    expect(lignes.find((l) => l.action === 'Coordonnées de paiement des factures modifiées')!.detail).toBe('RIB · confirmé par mot de passe');
+  });
 });
 
 describe('periode', () => {

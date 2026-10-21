@@ -67,3 +67,17 @@ export function statutMarge(taux: number | null, cible: number | null): Statut {
   if (taux >= cible) return 'vert';
   return taux >= 0 ? 'ambre' : 'rouge';
 }
+
+// Mois arrêté (revue CFO, 21/10/2026) : le dernier mois clos dont TOUTES les
+// feuilles sont contrôlées (ou sans heures), sans trou depuis le premier mois
+// suivi. Le cumul s'arrête là pour le facturé COMME pour le coût — sinon les
+// factures récentes face à des heures pas encore contrôlées gonflent la marge.
+// `mois` : mois clos dans l'ordre, avec le statut de chaque feuille.
+export function moisArrete(mois: { mois: string; statuts: string[] }[]): string | null {
+  let arrete: string | null = null;
+  for (const m of [...mois].sort((x, y) => x.mois.localeCompare(y.mois))) {
+    if (!m.statuts.every((s) => s === 'controlee' || s === 'sans_heures')) break;
+    arrete = m.mois;
+  }
+  return arrete;
+}

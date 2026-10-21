@@ -1,4 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import type { AnnexeCgv } from '@prisma/client';
+import { ConfirmationIdentiteService } from '../../auth/confirmation-identite.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { formaterNumero, PREFIXE_TEST, refusFormat, type FormatNumero } from './numerotation';
@@ -41,11 +43,12 @@ export class ParametresFacturationService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private confirmation: ConfirmationIdentiteService,
   ) {}
 
   async lire(a: Acteur) {
     const annee = new Date().getUTCFullYear();
-    const [format, prochain, historique, prefixesEmis, vraies, societe, profil] = await Promise.all([
+    const [format, prochain, historique, prefixesEmis, vraies, societe, profil, modeConfirmation] = await Promise.all([
       formatEnVigueur(this.prisma, a.societeId),
       prochainNumeroLegal(this.prisma, a.societeId),
       this.prisma.numerotationFactures.findMany({ where: { societeId: a.societeId }, orderBy: { createdAt: 'desc' } }),
@@ -53,6 +56,7 @@ export class ParametresFacturationService {
       this.prisma.facture.count({ where: { societeId: a.societeId, refAnnee: annee, refPrefixe: { not: PREFIXE_TEST } } }),
       this.prisma.societe.findUniqueOrThrow({ where: { id: a.societeId }, select: { nom: true, coordonnees: true, mentionsLegales: true, penaliteRetardMensuelle: true } }),
       this.prisma.profilFacturation.findFirst({ where: { societeId: a.societeId }, orderBy: { createdAt: 'desc' } }),
+      this.confirmation.mode(a.userId),
     ]);
     const auteurs = await this.prisma.utilisateur.findMany({
       where: { id: { in: [...new Set(historique.map((h) => h.parId).filter((x): x is string => !!x))] } },
@@ -61,6 +65,8 @@ export class ParametresFacturationService {
     const noms = new Map(auteurs.map((u) => [u.id, nomDe(u)]));
     return {
       peutModifier: a.role === ROLE_CFO,
+      // Ce que l'écran demande pour confirmer un changement de coordonnées de paiement.
+      confirmation: modeConfirmation,
       annee,
       format,
       parDefaut: historique.length === 0,
@@ -76,11 +82,11 @@ export class ParametresFacturationService {
       // Sans profil saisi : ce que la société affiche déjà (nom, coordonnées,
       // mentions légales reprises des CGV), à compléter par le CFO.
       profil: profil
-        ? { ...Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, profil[c]])), logoDocument: profil.logoDocument, joindreCgv: profil.joindreCgv, parDefaut: false }
+        ? { ...Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, profil[c]])), logoDocument: profil.logoDocument, cgvAnnexe: profil.cgvAnnexe, parDefaut: false }
         : {
             ...Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, ''])),
             logoDocument: null,
-            joindreCgv: true,
+            cgvAnnexe: 'premiere_facture',
             raisonSociale: societe.nom,
             adresse: societe.coordonnees ?? '',
             mentionsPied: societe.mentionsLegales ?? '',
@@ -102,7 +108,7 @@ export class ParametresFacturationService {
     return this.lire(a);
   }
 
-  async modifierProfil(a: Acteur, p: Profil & { logoDocument?: string | null; joindreCgv?: boolean }) {
+  async modifierProfil(a: Acteur, p: Profil & { logoDocument?: string | null; cgvAnnexe?: AnnexeCgv; confirmation?: string }) {
     if (a.role !== ROLE_CFO) throw new ForbiddenException('Seul le CFO règle le profil de facturation.');
     if (!p.raisonSociale?.trim()) throw new BadRequestException('La raison sociale est obligatoire.');
     if (p.logoDocument && (!LOGO.test(p.logoDocument) || p.logoDocument.length > LOGO_MAX * 1.37)) {
@@ -110,22 +116,26 @@ export class ParametresFacturationService {
     }
     const avant = await this.prisma.profilFacturation.findFirst({ where: { societeId: a.societeId }, orderBy: { createdAt: 'desc' } });
     const valeurs = Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, (p[c] ?? '').trim()])) as Profil;
+    // Coordonnées de paiement changées : identité confirmée d'abord (mot de
+    // passe ou code), sinon rien n'est enregistré.
+    const changes = CHAMPS_PAIEMENT.filter((c) => (avant?.[c] ?? '') !== valeurs[c]);
+    const confirmePar = changes.length ? await this.confirmation.verifier(a.userId, p.confirmation) : null;
     await this.prisma.profilFacturation.create({
       data: {
         societeId: a.societeId,
         ...valeurs,
         logoDocument: p.logoDocument === undefined ? (avant?.logoDocument ?? null) : p.logoDocument,
-        joindreCgv: p.joindreCgv ?? avant?.joindreCgv ?? true,
+        cgvAnnexe: p.cgvAnnexe ?? avant?.cgvAnnexe ?? 'premiere_facture',
+        confirmation: confirmePar,
         parId: a.userId,
       },
     });
     // Coordonnées de paiement changées : le CEO est prévenu (sans les numéros).
-    const changes = CHAMPS_PAIEMENT.filter((c) => (avant?.[c] ?? '') !== valeurs[c]);
     if (changes.length) {
       await this.notifications.envoyer({
         societeId: a.societeId,
         type: 'coordonnees_paiement_modifiees',
-        titre: `Coordonnées de paiement des factures modifiées par le CFO : ${changes.map((c) => LIBELLE_PAIEMENT[c]).join(', ')}`,
+        titre: `Coordonnées de paiement des factures modifiées par le CFO : ${changes.map((c) => LIBELLE_PAIEMENT[c]).join(', ')} · confirmé par ${confirmePar === 'code' ? 'code de double authentification' : 'mot de passe'}`,
         destinataireIds: await this.notifications.titulairesRole(a.societeId, 'CEO (transverse)'),
         parId: a.userId,
       });

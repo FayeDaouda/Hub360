@@ -11,6 +11,7 @@ import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
 import { exporterCsv } from '@/lib/export-csv';
 import { formatMontant } from '@/lib/format';
 import {
+  finDeMois,
   formatParametre,
   formatTaux,
   getRentabilite,
@@ -87,6 +88,16 @@ export function OngletRentabilite({ slug }: { slug: string }) {
           <strong>Marge directe provisoire</strong> : montant HT facturé moins le coût salarial des heures imputées et contrôlées.{' '}
           {charges == null ? 'Charges patronales non comprises' : `Charges patronales au coefficient de ${charges} %`}, dépenses et frais généraux non
           compris.{parDefaut && ' Paramètres par défaut, non validés par un expert-comptable.'} Calculé le {new Date(donnees.calculeLe).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}.
+          {!donnees.periode &&
+            (donnees.arreteAu ? (
+              <>
+                {' '}
+                <strong>Cumul arrêté au {finDeMois(donnees.arreteAu)}</strong>, dernier mois entièrement contrôlé : facturé et coût s’arrêtent à cette date, les
+                factures émises depuis entreront au prochain arrêté.
+              </>
+            ) : (
+              <strong> Aucun mois n’est encore entièrement contrôlé : le cumul reste vide.</strong>
+            ))}
         </span>
         <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setParametres(true)}>
           <Settings2 size={14} aria-hidden /> Paramètres
