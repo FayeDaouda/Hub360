@@ -178,6 +178,14 @@ export const REGLES: DefinitionReglage[] = [
     gouvernance: true,
   },
   {
+    cle: 'rappel_reporting_jours_avant',
+    libelle: 'Rappel du reporting mensuel (jours avant le dépôt)',
+    valeur: { type: 'entier', min: 1, max: 10, unite: 'j' },
+    defaut: 3,
+    aide: "L'émetteur d'un reporting (Dir. GC, RH) est rappelé ce nombre de jours avant la date de dépôt (le 5), puis relancé chaque semaine en cas de retard ; le destinataire est prévenu du retard une fois (revue Dir. GC, 21/10/2026).",
+    appliquee: true,
+  },
+  {
     cle: 'rappel_cloture_jour',
     libelle: 'Rappel de clôture mensuelle (jour du mois suivant)',
     valeur: { type: 'entier', min: 1, max: 28, unite: 'j' },

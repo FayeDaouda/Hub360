@@ -64,7 +64,15 @@ export function lienNotificationAdmin(
   // Contrôle interne : avoirs et clôture se traitent en tête de Finances.
   if (['avoir_emis', 'avoir_a_valider', 'avoir_decide', 'cloture_a_faire'].includes(n.type)) return `${base}/facturation`;
   // Suivi des reportings : le fil est sous le reporting, dans Pilotage.
-  if (n.type === 'reporting_question' || n.type === 'reporting_reponse') return `${base}?onglet=reportings`;
+  if (['reporting_question', 'reporting_reponse', 'reporting_a_deposer', 'reporting_en_retard', 'reporting_depose'].includes(n.type)) {
+    return `${base}?onglet=reportings`;
+  }
+  // TS au-delà du seuil : le CTO décide dans « À décider aujourd'hui » ; le
+  // Dir. GC retrouve le projet. Suppléance : son panneau, en tête de Pilotage.
+  if (n.type === 'ts_a_valider' || n.type === 'suppleance_designee') return base;
+  if (n.type === 'ts_decide' && n.projetId) return `${base}/projets?projet=${n.projetId}`;
+  // Seuil ou coordonnées de paiement changés : le journal d'audit (CEO).
+  if (n.type === 'reglage_gouvernance_modifie' || n.type === 'coordonnees_paiement_modifiees') return `${base}?onglet=journal`;
   // Relance : la RH traite dans RH › Demandes ; le N+1 (ou le CEO) dans « À valider ».
   if (n.type === 'rappel_demande') {
     return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;

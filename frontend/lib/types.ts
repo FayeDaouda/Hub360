@@ -496,6 +496,18 @@ export type NotificationType =
   // Suivi des reportings : question (→ émetteur), réponse (→ auteur).
   | 'reporting_question'
   | 'reporting_reponse'
+  // Reportings (revue Dir. GC, lot 3) : rappel / relance à l'émetteur,
+  // retard signalé au destinataire, dépôt au destinataire.
+  | 'reporting_a_deposer'
+  | 'reporting_en_retard'
+  | 'reporting_depose'
+  // Revue Dir. GC (lot 4) : TS au-delà du seuil, suppléance, seuils de gouvernance.
+  | 'ts_a_valider'
+  | 'ts_decide'
+  | 'suppleance_designee'
+  | 'reglage_gouvernance_modifie'
+  // Profil de facturation (lot 6 CFO) : coordonnées de paiement changées (CEO).
+  | 'coordonnees_paiement_modifiees'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore

@@ -41,6 +41,30 @@ export function statutReporting(mois: string, deposeLe: string | null, aujourdhu
   return aujourdhui <= echeance ? 'a_deposer' : 'en_retard';
 }
 
+// Rappels d'un reporting non déposé (revue Dir. GC, 21/10/2026, lot 3) :
+//   · à l'émetteur, `joursAvant` jours avant l'échéance (une fois) ;
+//   · en retard, à l'émetteur chaque semaine (palier 0, 1, 2…) et au
+//     destinataire une seule fois.
+// `cle` : suffixe de la clé du rappel (jamais deux fois le même envoi).
+export type RappelReporting = { cle: string; cible: 'emetteur' | 'destinataire'; nature: 'avant' | 'retard' };
+const jourDecale = (jour: string, n: number) => {
+  const d = new Date(`${jour}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+export function rappelsReporting(mois: string, depose: boolean, jour: string, joursAvant: number): RappelReporting[] {
+  if (depose) return [];
+  const echeance = echeanceReporting(mois);
+  if (jour > echeance) {
+    const retard = Math.round((Date.parse(jour) - Date.parse(echeance)) / 86_400_000);
+    return [
+      { cle: `retard:${Math.floor((retard - 1) / 7)}`, cible: 'emetteur', nature: 'retard' },
+      { cle: 'retard-destinataire', cible: 'destinataire', nature: 'retard' },
+    ];
+  }
+  return jour >= jourDecale(echeance, -joursAvant) ? [{ cle: 'avant', cible: 'emetteur', nature: 'avant' }] : [];
+}
+
 // --- Registre des décisions ------------------------------------------------
 
 export const numeroDecision = (n: number) => `D-${String(n).padStart(3, '0')}`;

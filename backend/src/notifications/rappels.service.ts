@@ -6,6 +6,7 @@ import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { moisClos, moisFr } from '../projets/facturation/cloture';
+import { echeanceReporting, moisAReporter, rappelsReporting, REPORTINGS } from '../pilotage/pilotage-regles';
 import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from './notifications.service';
 
@@ -66,6 +67,7 @@ export class RappelsService implements OnApplicationBootstrap {
         ...(await this.taches(jour)),
         ...(await this.demandes(jour)),
         ...(await this.clotures(jour)),
+        ...(await this.reportings(jour)),
       ];
       let envoyes = 0;
       for (const r of rappels) if (await this.envoyer(r)) envoyes++;
@@ -288,6 +290,48 @@ export class RappelsService implements OnApplicationBootstrap {
     }
     for (const t of attestations) {
       await ajouter(`demande:attestation:${t.id}`, t.demandeLe, t.dossier, 'attestation de travail', 'à délivrer', await role(t.dossier.societeId, 'RH'));
+    }
+    return rappels;
+  }
+
+  // Reportings mensuels (revue Dir. GC, 21/10/2026, lot 3) : l'émetteur est
+  // rappelé avant le 5, puis relancé chaque semaine en retard ; le
+  // destinataire est prévenu du retard une fois. Même règle pour la direction
+  // (Dir. GC → CTO) et la RH (RH → CFO).
+  async reportings(jour: string): Promise<Rappel[]> {
+    const mois = moisAReporter(jour);
+    if (!mois.length) return [];
+    const [societes, deposes] = await Promise.all([
+      this.prisma.societe.findMany({ select: { id: true } }),
+      this.prisma.reportingMensuel.findMany({ where: { mois: { in: mois } }, select: { societeId: true, type: true, mois: true } }),
+    ]);
+    const fait = new Set(deposes.map((d) => `${d.societeId}:${d.type}:${d.mois}`));
+    const court = (role: string) => role.replace(/\s*\(transverse\)$/, '');
+    const rappels: Rappel[] = [];
+    for (const { id: societeId } of societes) {
+      const joursAvant = await this.reglages.regle<number>(societeId, 'rappel_reporting_jours_avant');
+      for (const [type, { emetteur, destinataire }] of Object.entries(REPORTINGS) as [keyof typeof REPORTINGS, (typeof REPORTINGS)[keyof typeof REPORTINGS]][]) {
+        const emetteurs = await this.notifications.titulairesRole(societeId, emetteur);
+        if (!emetteurs.length) continue; // pas d'émetteur dans la société : pas de reporting
+        const titre = type === 'rh' ? 'Reporting RH' : 'Reporting de la direction';
+        for (const m of mois) {
+          const echeance = jjmm(echeanceReporting(m));
+          for (const r of rappelsReporting(m, fait.has(`${societeId}:${type}:${m}`), jour, joursAvant)) {
+            rappels.push({
+              cle: `reporting:${societeId}:${type}:${m}:${r.cle}`,
+              societeId,
+              type: r.cible === 'emetteur' ? 'reporting_a_deposer' : 'reporting_en_retard',
+              titre:
+                r.cible === 'destinataire'
+                  ? `${titre} de ${moisFr(m)} pas encore déposé (dû le ${echeance}) · l’émetteur est relancé chaque semaine`
+                  : r.nature === 'avant'
+                    ? `${titre} de ${moisFr(m)} à déposer au ${court(destinataire)} avant le ${echeance} · prérempli par le HUB, à compléter`
+                    : `${titre} de ${moisFr(m)} en retard (dû le ${echeance}) · à déposer au ${court(destinataire)}`,
+              destinataireIds: r.cible === 'emetteur' ? emetteurs : await this.notifications.titulairesRole(societeId, destinataire),
+            });
+          }
+        }
+      }
     }
     return rappels;
   }

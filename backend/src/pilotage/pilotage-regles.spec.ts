@@ -1,4 +1,4 @@
-import { echeanceReporting, evaluer, moisAReporter, moisSuivant, numeroDecision, statutDecision, statutReporting } from './pilotage-regles';
+import { echeanceReporting, evaluer, moisAReporter, moisSuivant, numeroDecision, rappelsReporting, statutDecision, statutReporting } from './pilotage-regles';
 
 // Pilotage (maquettes du boss) : reportings J+5, registre, objectifs.
 describe('reportings mensuels', () => {
@@ -53,5 +53,27 @@ describe('évaluation des indicateurs', () => {
 
   it('sans donnée', () => {
     expect(evaluer(null, { type: 'minimum', valeur: 50 }).evaluation).toBe('sans_donnee');
+  });
+});
+
+// Revue Dir. GC (21/10/2026, lot 3) : rappel avant le 5, relances en retard.
+describe('rappels d’un reporting', () => {
+  const cles = (jour: string, depose = false) => rappelsReporting('2026-09', depose, jour, 3).map((r) => `${r.cible}:${r.cle}`);
+
+  it('rien avant la fenêtre de rappel ni une fois déposé', () => {
+    expect(cles('2026-10-01')).toEqual([]);
+    expect(cles('2026-10-20', true)).toEqual([]);
+  });
+
+  it('rappel à l’émetteur 3 jours avant le 5, une seule clé jusqu’à l’échéance', () => {
+    expect(cles('2026-10-02')).toEqual(['emetteur:avant']);
+    expect(cles('2026-10-05')).toEqual(['emetteur:avant']);
+  });
+
+  it('en retard : l’émetteur relancé chaque semaine, le destinataire prévenu une fois', () => {
+    expect(cles('2026-10-06')).toEqual(['emetteur:retard:0', 'destinataire:retard-destinataire']);
+    expect(cles('2026-10-12')).toEqual(['emetteur:retard:0', 'destinataire:retard-destinataire']);
+    expect(cles('2026-10-13')).toEqual(['emetteur:retard:1', 'destinataire:retard-destinataire']);
+    expect(cles('2026-10-21')).toEqual(['emetteur:retard:2', 'destinataire:retard-destinataire']);
   });
 });

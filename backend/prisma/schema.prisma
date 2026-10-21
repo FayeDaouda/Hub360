@@ -236,6 +236,11 @@ enum NotificationType {
   ts_a_valider // au CTO : TS au-delà du seuil, demandé par le Dir. GC
   ts_decide // au demandeur : TS accepté (ajouté) ou refusé par le CTO
   suppleance_designee // au suppléant désigné par un Dir. GC pour son absence
+  // Reportings mensuels (revue Dir. GC, lot 3) : rappel et relances à
+  // l'émetteur, retard signalé une fois au destinataire, dépôt au destinataire.
+  reporting_a_deposer
+  reporting_en_retard
+  reporting_depose
 }
 
 model Notification {

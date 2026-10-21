@@ -5,7 +5,7 @@ import { RappelsService } from './rappels.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 
-function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[] } = {}) {
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[] } = {}) {
   const deja = new Set(o.dejaEnvoyes ?? []);
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
@@ -17,6 +17,8 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
     demandeAttestation: { findMany: jest.fn().mockResolvedValue([]) },
     dossierPersonnel: { findMany: jest.fn().mockResolvedValue([]) },
     journalCloture: { findMany: jest.fn().mockResolvedValue(o.clotures ?? []) },
+    societe: { findMany: jest.fn().mockResolvedValue(o.societes ?? []) },
+    reportingMensuel: { findMany: jest.fn().mockResolvedValue(o.reportings ?? []) },
     rappelEnvoye: {
       createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
         const neuf = !deja.has(data[0].cle);
@@ -118,5 +120,18 @@ describe('RappelsService', () => {
     expect(await svc({ factures }).s.clotures(JOUR)).toEqual([expect.objectContaining({ cle: 'cloture:S1:2026-09:1', type: 'cloture_a_faire', destinataireIds: ['CFO1'] })]);
     expect(await svc({ factures }).s.clotures('2026-10-02')).toEqual([]);
     expect(await svc({ factures, clotures: [{ mois: '2026-09', action: 'cloture' }] }).s.clotures(JOUR)).toEqual([]);
+  });
+
+  // Revue Dir. GC (21/10/2026, lot 3) : rappel avant le 5, relances en retard.
+  it('reportings : émetteur relancé, destinataire prévenu du retard ; rien pour un reporting déposé', async () => {
+    const { s, notifications } = svc({ societes: [{ id: 'S1' }], reportings: [{ societeId: 'S1', type: 'rh', mois: '2026-09' }] });
+    notifications.titulairesRole.mockImplementation((_s: string, role: string) => Promise.resolve({ 'Dir. GC': ['DG'], 'CTO (transverse)': ['CTO'], RH: ['RH1'], CFO: ['CFO1'] }[role] ?? []));
+    const r = await s.reportings('2026-10-13');
+    // Septembre : direction non déposée (en retard), RH déposée.
+    expect(r.map((x) => [x.cle, x.type, x.destinataireIds])).toEqual([
+      ['reporting:S1:direction:2026-09:retard:1', 'reporting_a_deposer', ['DG']],
+      ['reporting:S1:direction:2026-09:retard-destinataire', 'reporting_en_retard', ['CTO']],
+    ]);
+    expect(r[0].titre).toBe('Reporting de la direction de septembre 2026 en retard (dû le 05/10) · à déposer au CTO');
   });
 });

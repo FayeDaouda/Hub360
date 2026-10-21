@@ -499,6 +499,16 @@ export class PilotageService {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException('Reporting déjà déposé.');
       throw e;
     }
+    // Le destinataire est prévenu du dépôt (revue Dir. GC, 21/10/2026, lot 3).
+    const auteur = await this.prisma.utilisateur.findUnique({ where: { id: a.userId }, select: { prenom: true, nom: true } });
+    const [an, mm] = mois.split('-');
+    await this.notifications.envoyer({
+      societeId: a.societeId,
+      type: 'reporting_depose',
+      titre: `${type === 'rh' ? 'Reporting RH' : 'Reporting de la direction'} de ${new Date(Date.UTC(Number(an), Number(mm) - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' })} déposé${auteur ? ` par ${auteur.prenom} ${auteur.nom}` : ''} · à lire`,
+      destinataireIds: (await this.notifications.titulairesRole(a.societeId, REPORTINGS[type].destinataire)).filter((id) => id !== a.userId),
+      parId: a.userId,
+    });
     return this.vue(a);
   }
 
