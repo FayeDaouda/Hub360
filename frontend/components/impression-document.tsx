@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { DocumentFacturation, type DocumentFacturationProps } from './document-facturation';
+import { FactureDocument, type FactureDocumentProps } from './finances/facture-document';
 
 // Impression d'un devis/facture depuis une page admin qui a par ailleurs sa
 // propre UI (sidebar, tableaux…) — portal direct sur body + CSS d'impression
@@ -10,15 +11,20 @@ import { DocumentFacturation, type DocumentFacturationProps } from './document-f
 // motif que le portail d'info-bulle de admin-shell.tsx. `doc` passe à
 // non-null → impression déclenchée ; `onImprime` reprend la main une fois la
 // boîte de dialogue navigateur refermée (annulée ou « Enregistrer en PDF »).
+// Une facture ou un avoir s'imprime avec son propre modèle (lot 6, A4) ;
+// un devis garde le document partagé avec la page publique.
 export function ImpressionDocument({
   doc,
+  facture = null,
   onImprime,
 }: {
   doc: DocumentFacturationProps | null;
+  facture?: FactureDocumentProps | null;
   onImprime: () => void;
 }) {
+  const aImprimer = doc ?? facture;
   useEffect(() => {
-    if (!doc) return;
+    if (!aImprimer) return;
     const id = setTimeout(() => window.print(), 60);
     window.addEventListener('afterprint', onImprime);
     return () => {
@@ -26,13 +32,11 @@ export function ImpressionDocument({
       window.removeEventListener('afterprint', onImprime);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc]);
+  }, [aImprimer]);
 
-  if (!doc) return null;
+  if (!aImprimer) return null;
   return createPortal(
-    <div id="impression-document">
-      <DocumentFacturation {...doc} />
-    </div>,
+    <div id="impression-document">{doc ? <DocumentFacturation {...doc} /> : <FactureDocument {...facture!} />}</div>,
     document.body,
   );
 }

@@ -23,6 +23,7 @@ import {
   ventilationTva,
 } from '../domaine/gardes';
 import { FAMILLES_MENSUELLES, lignesOffreDepuisDevis, planFacturationOffre } from '../domaine/facturation-offre';
+import { refDevis } from '../../devis/domaine';
 import { montantRefacture, statutReglementBureau } from '../domaine/refacturation-etudes';
 import {
   AjouterPaiementDto,
@@ -37,6 +38,7 @@ import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './f
 import { NotificationsService } from '../../notifications/notifications.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
+import { prochainNumeroLegal } from './numerotation-base';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -342,9 +344,10 @@ export class FacturationService {
       },
       include: {
         paiements: true,
-        projet: { select: { id: true, code: true, programme: true, client: true } },
-        devisOrigine: { select: { numero: true, client: true } },
-        dossierCrm: { select: { id: true, code: true, client: true } },
+        projet: { select: { id: true, code: true, programme: true, client: true, dossierCrm: { select: { type: true, localite: { select: { nom: true } } } } } },
+        devisOrigine: { select: { numero: true, client: true, codeDossier: true, rangDossier: true, dateReponse: true } },
+        devisEcheancier: { select: { numero: true, codeDossier: true, rangDossier: true, dateReponse: true } },
+        dossierCrm: { select: { id: true, code: true, client: true, type: true, localite: { select: { nom: true } } } },
         lignes: { orderBy: { ordre: 'asc' } },
         demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true } },
       },
@@ -397,7 +400,21 @@ export class FacturationService {
           statutEffectif === 'en_retard' ? joursRetardFacture(f.echeanceLe, aujourdhui) : 0,
         projetId: f.projetId,
         projet: f.projet ? { id: f.projet.id, code: f.projet.code, programme: f.projet.programme } : null,
-        client: client ? { id: client.id, nom: client.nom } : null,
+        // Adresse et contact : le bloc « Facturé à » du document (lot 6).
+        client: client ? { id: client.id, nom: client.nom, adresse: client.adresse, ninea: client.ninea, email: client.email, telephone: client.telephone } : null,
+        // Ce que le client reconnaît sur le document (lot 6) : nature et lieu
+        // du projet, tranche F1 / F2 / F3, offre acceptée qui fonde la facture.
+        pourDocument: (() => {
+          const lieu = f.projet?.dossierCrm ?? f.dossierCrm;
+          const offre = f.devisEcheancier ?? f.devisOrigine;
+          const tranche = /:(F\d)$/.exec(f.cleEcheance ?? '')?.[1] ?? null;
+          return {
+            typeBien: lieu?.type ?? null,
+            localite: lieu?.localite?.nom ?? null,
+            tranche,
+            offre: offre ? { reference: refDevis({ ...offre, dateEnvoi: null }), accepteeLe: offre.dateReponse } : null,
+          };
+        })(),
         // Tranche d'échéancier « k/N » (maquette Finances) ; null hors échéancier.
         tranche: tranches.get(f.id) ?? null,
         // Facture directe d'un lead (sans offre) ; null sinon.
@@ -433,10 +450,9 @@ export class FacturationService {
     }));
   }
 
-  // Référence que prendrait la prochaine facture émise (suite de la société).
+  // Référence que prendrait la prochaine facture émise (format en vigueur).
   private async prochaineReference(societeId: string): Promise<string> {
-    const max = await this.prisma.facture.aggregate({ where: { societeId, numero: { not: null } }, _max: { numero: true } });
-    return refFacture({ numero: (max._max.numero ?? 0) + 1, emiseLe: null, estAvoir: false })!;
+    return (await prochainNumeroLegal(this.prisma, societeId)).reference;
   }
 
   // Position « k/N » des factures d'échéancier (jalons) de chaque projet, dans
@@ -1017,10 +1033,12 @@ export class FacturationService {
           const rang = codeDossier
             ? await tx.facture.aggregate({ where: { societeId, codeDossier }, _max: { rangDossier: true } })
             : null;
+          const legal = await prochainNumeroLegal(tx, societeId);
           await action(tx, {
             numero: (max._max.numero ?? 0) + 1,
             codeDossier,
             rangDossier: rang ? (rang._max.rangDossier ?? 0) + 1 : null,
+            ...legal,
           });
         });
         return;
@@ -1235,5 +1253,14 @@ function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string
 
 // Numéros attribués à l'émission : séquence de la société, et code + rang du
 // dossier pour la référence affichée (null sans dossier).
-type Sequence = { numero: number; codeDossier: string | null; rangDossier: number | null };
+type Sequence = {
+  numero: number;
+  codeDossier: string | null;
+  rangDossier: number | null;
+  // Numéro légal figé (lot 6) : format en vigueur, séquence par préfixe et année.
+  reference: string;
+  refPrefixe: string;
+  refAnnee: number;
+  refSequence: number;
+};
 

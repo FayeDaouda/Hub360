@@ -210,8 +210,14 @@ export class DevisService {
         )
       : undefined;
     const maj = await this.prisma.$transaction(async (tx) => {
-      if (dto.adresseClient !== undefined) {
-        await tx.client.update({ where: { id: devis.clientId }, data: { adresse: dto.adresseClient.trim() } });
+      if (dto.adresseClient !== undefined || dto.nineaClient !== undefined) {
+        await tx.client.update({
+          where: { id: devis.clientId },
+          data: {
+            ...(dto.adresseClient !== undefined && { adresse: dto.adresseClient.trim() }),
+            ...(dto.nineaClient !== undefined && { ninea: dto.nineaClient.trim() }),
+          },
+        });
       }
       const ecrit = await tx.devis.update({
         where: { id: devis.id },

@@ -6,7 +6,8 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ValidationCeoAuDelaDuSeuil } from '../../finances/seuil-ceo.guard';
 import { FacturationService } from './facturation.service';
-import { AjouterPaiementDto, CreerFactureDirecteDto, DecisionAvoirDto, ReouvertureDto } from './dto';
+import { AjouterPaiementDto, CreerFactureDirecteDto, DecisionAvoirDto, FormatNumerotationDto, ProfilFacturationDto, ReouvertureDto } from './dto';
+import { ParametresFacturationService } from './parametres-facturation.service';
 import { ControleInterneService } from './controle-interne.service';
 
 type R = { user: { societeId: string; userId: string; role: string } };
@@ -21,6 +22,7 @@ export class FacturationCentraleController {
   constructor(
     private facturation: FacturationService,
     private controle: ControleInterneService,
+    private parametres: ParametresFacturationService,
   ) {}
 
   @Get()
@@ -47,6 +49,26 @@ export class FacturationCentraleController {
   @RequiertPermission('finances_charges', 'lecture')
   bureauxARegler(@Req() req: R) {
     return this.facturation.bureauxARegler(req.user.societeId);
+  }
+
+  // --- Paramètres de facturation (lot 6) : numérotation, profil imprimé ---
+  // Lecture pour qui lit les factures ; le CFO seul modifie (vérifié par le service).
+  @Get('parametres')
+  @RequiertPermission('finances_factures', 'lecture')
+  lireParametres(@Req() req: R) {
+    return this.parametres.lire(req.user);
+  }
+
+  @Post('parametres/numerotation')
+  @RequiertPermission('finances_factures', 'lecture')
+  numerotation(@Req() req: R, @Body() dto: FormatNumerotationDto) {
+    return this.parametres.modifierFormat(req.user, dto);
+  }
+
+  @Post('parametres/profil')
+  @RequiertPermission('finances_factures', 'lecture')
+  profil(@Req() req: R, @Body() dto: ProfilFacturationDto) {
+    return this.parametres.modifierProfil(req.user, dto);
   }
 
   // --- Contrôle interne (revue CFO 20/10/2026) : avoirs, clôture mensuelle ---

@@ -230,6 +230,7 @@ enum NotificationType {
   // Suivi des reportings (revue CFO, lot 5)
   reporting_question // à l'émetteur : question du destinataire
   reporting_reponse // à l'auteur de la question
+  coordonnees_paiement_modifiees // au CEO : banque, RIB, Wave ou Orange Money changés (lot 6)
 }
 
 model Notification {
@@ -529,6 +530,8 @@ model Client {
   telephone String?
   // Adresse reprise sur les devis et les factures ; "" = à renseigner.
   adresse   String     @default("")
+  // NINEA d'une entreprise cliente, imprimé sur ses factures (lot 6) ; vide = non renseigné.
+  ninea     String     @default("")
   createdAt DateTime   @default(now()) @map("created_at")
 
   societe  Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
@@ -1275,6 +1278,14 @@ model Facture {
   // Finances, validée par le CFO avant émission (« À valider CFO »). Le
   // projet est rattaché quand il existe (Onboard).
   dossierCrmId      String?       @map("dossier_crm_id")
+  // Numéro légal (lot 6, à la manière de Zervant) : figé à l'émission selon
+  // le format en vigueur (préfixe, année, séquence sans trou par préfixe et
+  // par année, commune aux factures et aux avoirs). null = facture émise
+  // avant ce format : son numéro reste l'ancien « F2026-0007 » (refFacture).
+  reference         String?
+  refPrefixe        String?       @map("ref_prefixe")
+  refAnnee          Int?          @map("ref_annee")
+  refSequence       Int?          @map("ref_sequence")
   creeLe            DateTime      @default(now()) @map("cree_le")
   emiseLe           DateTime?     @map("emise_le")
   emiseParId        String?       @map("emise_par_id") // audit, pas de FK
@@ -1294,6 +1305,7 @@ model Facture {
   demandesAvoir   DemandeAvoir[]
 
   @@unique([societeId, numero])
+  @@unique([societeId, refPrefixe, refAnnee, refSequence])
   @@unique([societeId, codeDossier, rangDossier])
   @@index([projetId])
   @@index([ligneDevisId])
@@ -1425,6 +1437,58 @@ model ParametreRentabilite {
 
   @@index([societeId, cle])
   @@map("parametres_rentabilite")
+}
+
+// Numérotation des factures (lot 6, à la manière de Zervant) : chaque
+// réglage du CFO est une ligne (les préfixes déjà utilisés restent visibles
+// et resélectionnables) ; le format en vigueur est la dernière. Sans ligne :
+// initiales de la société, année sur 4 chiffres, « - », 4 chiffres, départ 1.
+model NumerotationFactures {
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  prefixe      String // « GC », « TEST »… (vide permis)
+  formatAnnee  String   @map("format_annee") // AAAA | AA
+  separateur   String
+  chiffres     Int
+  numeroDepart Int      @map("numero_depart")
+  motif        String
+  parId        String?  @map("par_id") // audit, pas de FK
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([societeId, createdAt])
+  @@map("numerotation_factures")
+}
+
+// Profil de facturation de la société (lot 6) : ce qu'imprime la facture
+// (identité, NINEA, RCCM, contact, règlement, pied). Versionné comme la
+// numérotation : la dernière ligne fait foi, les autres tracent les changements.
+model ProfilFacturation {
+  id                 String   @id @default(uuid())
+  societeId          String   @map("societe_id")
+  raisonSociale      String   @map("raison_sociale")
+  adresse            String   @default("")
+  ninea              String   @default("")
+  rccm               String   @default("")
+  cofi               String   @default("") // code fiscal imprimé après le NINEA (« COFI 292 » dans les CGV)
+  capital            String   @default("") // « 1 000 000 FCFA »
+  telephone          String   @default("")
+  email              String   @default("")
+  banque             String   @default("")
+  rib                String   @default("") // RIB ou IBAN
+  wave               String   @default("")
+  orangeMoney        String   @default("") @map("orange_money")
+  conditionsPaiement String   @default("") @map("conditions_paiement")
+  mentionsPied       String   @default("") @map("mentions_pied")
+  // Logo pour les documents (SVG ou PNG transparent, data URI) ; null = logo
+  // de la société.
+  logoDocument       String?  @map("logo_document")
+  // CGV de la société jointes en annexe de chaque facture (demande du CEO).
+  joindreCgv         Boolean  @default(true) @map("joindre_cgv")
+  parId              String?  @map("par_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([societeId, createdAt])
+  @@map("profils_facturation")
 }
 
 // Trace d'un paiement supprimé (correction) : copie figée de la ligne au

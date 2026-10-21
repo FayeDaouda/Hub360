@@ -5,11 +5,14 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
+  IsInt,
   IsNumber,
   IsObject,
   IsOptional,
   IsString,
   Matches,
+  ValidateIf,
   Max,
   MaxLength,
   Min,
@@ -134,3 +137,35 @@ export class DecisionAvoirDto {
 export class ReouvertureDto {
   @IsString() @MinLength(5, { message: 'Le motif de la réouverture est obligatoire (5 caractères au moins).' }) @MaxLength(300) motif!: string;
 }
+
+// Paramètres de facturation (lot 6) : numérotation à la manière de Zervant,
+// profil imprimé sur les factures. Règles fines dans le service.
+export class FormatNumerotationDto {
+  @IsString() @MaxLength(10) prefixe!: string;
+  @IsIn(['AAAA', 'AA']) formatAnnee!: 'AAAA' | 'AA';
+  @IsIn(['-', '/', '.', '']) separateur!: string;
+  @Type(() => Number) @IsInt() @Min(3) @Max(6) chiffres!: number;
+  @Type(() => Number) @IsInt() @Min(1) numeroDepart!: number;
+  @IsString() @MinLength(3, { message: 'Le motif est obligatoire.' }) @MaxLength(300) motif!: string;
+}
+
+export class ProfilFacturationDto {
+  @IsString() @MinLength(1) @MaxLength(160) raisonSociale!: string;
+  @IsString() @MaxLength(300) adresse!: string;
+  @IsString() @MaxLength(40) ninea!: string;
+  @IsString() @MaxLength(60) rccm!: string;
+  @IsString() @MaxLength(40) cofi!: string;
+  @IsString() @MaxLength(60) capital!: string;
+  @IsString() @MaxLength(40) telephone!: string;
+  @IsString() @MaxLength(120) email!: string;
+  @IsString() @MaxLength(120) banque!: string;
+  @IsString() @MaxLength(60) rib!: string;
+  @IsString() @MaxLength(40) wave!: string;
+  @IsString() @MaxLength(40) orangeMoney!: string;
+  @IsString() @MaxLength(500) conditionsPaiement!: string;
+  @IsString() @MaxLength(600) mentionsPied!: string;
+  // undefined = logo inchangé ; null = retiré (logo de la société).
+  @IsOptional() @ValidateIf((_, v) => v !== null) @IsString() logoDocument?: string | null;
+  @IsOptional() @IsBoolean() joindreCgv?: boolean;
+}
+

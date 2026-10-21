@@ -79,6 +79,7 @@ export type Client = {
   email?: string;
   telephone?: string;
   adresse?: string; // reprise sur les devis et factures ; "" = à renseigner
+  ninea?: string; // NINEA du client (entreprise), imprimé sur ses factures
 };
 
 // Type de projet (doc « Création de projet côté CRM » §3.3, oct. 2026).
@@ -1146,7 +1147,15 @@ export type FactureCentrale = {
   joursRetard: number;
   projetId: string | null;
   projet: { id: string; code: string; programme: string } | null;
-  client: { id: string; nom: string } | null;
+  client: { id: string; nom: string; adresse?: string; ninea?: string; email?: string | null; telephone?: string | null } | null;
+  // Pour le document imprimé (lot 6) : nature et lieu du projet, tranche
+  // F1 / F2 / F3, offre acceptée qui fonde la facture.
+  pourDocument?: {
+    typeBien: TypeBien | null;
+    localite: string | null;
+    tranche: string | null;
+    offre: { reference: string | null; accepteeLe: string | null } | null;
+  };
   affaireTtc: number; // montant de l'affaire (TTC) — cf. Facture
   // Tranche d'échéancier « k/N » ; null hors échéancier.
   tranche: { rang: number; total: number } | null;

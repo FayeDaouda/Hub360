@@ -3,6 +3,7 @@ import type { ActionPaie, EvenementCompteType, NiveauPermission } from '@prisma/
 import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { moisFr } from '../projets/facturation/cloture';
+import { formaterNumero } from '../projets/facturation/numerotation';
 import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.service';
 import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
@@ -67,11 +68,11 @@ export class JournalAuditService {
       this.prisma.journalDroit.findMany({ where: { societeId: S, createdAt: dans } }),
       this.prisma.facture.findMany({
         where: { societeId: S, emiseLe: dans },
-        select: { id: true, numero: true, emiseLe: true, estAvoir: true, montantHt: true, tauxTva: true, emiseParId: true, libelle: true },
+        select: { id: true, numero: true, reference: true, emiseLe: true, estAvoir: true, montantHt: true, tauxTva: true, emiseParId: true, libelle: true },
       }),
       this.prisma.paiement.findMany({
         where: { creeLe: dans, facture: { societeId: S } },
-        select: { id: true, montant: true, date: true, creeLe: true, creeParId: true, facture: { select: { numero: true, emiseLe: true, estAvoir: true } } },
+        select: { id: true, montant: true, date: true, creeLe: true, creeParId: true, facture: { select: { numero: true, reference: true, emiseLe: true, estAvoir: true } } },
       }),
       this.prisma.paiementSupprime.findMany({ where: { societeId: S, supprimeLe: dans } }),
       this.prisma.journalReglage.findMany({ where: { societeId: S, createdAt: dans } }),
@@ -96,11 +97,16 @@ export class JournalAuditService {
     ]);
     const nomReporting = (r: { type: 'direction' | 'rh'; mois: string }) => `${titreReporting(r.type)} · ${moisFr(r.mois)}`;
     // Paramètres de rentabilité (lot 7) : valeur, date d'effet, motif — jamais un salaire.
-    const parametresRentabilite = await this.prisma.parametreRentabilite.findMany({ where: { societeId: S, createdAt: dans } });
+    const [parametresRentabilite, numerotations, profils] = await Promise.all([
+      this.prisma.parametreRentabilite.findMany({ where: { societeId: S, createdAt: dans } }),
+      // Paramètres de facturation (lot 6) : format de numérotation, profil imprimé.
+      this.prisma.numerotationFactures.findMany({ where: { societeId: S, createdAt: dans } }),
+      this.prisma.profilFacturation.findMany({ where: { societeId: S, createdAt: dans }, select: { id: true, createdAt: true, parId: true, raisonSociale: true } }),
+    ]);
     const [demandesAvoir, clotures] = await Promise.all([
       this.prisma.demandeAvoir.findMany({
         where: { societeId: S, OR: [{ demandeLe: dans }, { decideLe: dans }] },
-        include: { facture: { select: { numero: true, emiseLe: true, estAvoir: true } } },
+        include: { facture: { select: { numero: true, reference: true, emiseLe: true, estAvoir: true } } },
       }),
       this.prisma.journalCloture.findMany({ where: { societeId: S, createdAt: dans } }),
     ]);
@@ -110,7 +116,7 @@ export class JournalAuditService {
       (
         await this.prisma.facture.findMany({
           where: { id: { in: [...new Set(supprimes.map((p) => p.factureId))] } },
-          select: { id: true, numero: true, emiseLe: true, estAvoir: true },
+          select: { id: true, numero: true, reference: true, emiseLe: true, estAvoir: true },
         })
       ).map((f) => [f.id, refFacture(f)]),
     );
@@ -202,6 +208,22 @@ export class JournalAuditService {
           parId: r.parId,
         };
       }),
+      ...numerotations.map((n) => ({
+        id: `numerotation:${n.id}`,
+        le: n.createdAt,
+        categorie: 'finances' as const,
+        action: 'Numérotation des factures modifiée',
+        detail: `prochain format : ${formaterNumero({ prefixe: n.prefixe, formatAnnee: n.formatAnnee as 'AAAA' | 'AA', separateur: n.separateur, chiffres: n.chiffres, numeroDepart: n.numeroDepart }, n.createdAt.getUTCFullYear(), n.numeroDepart)} · motif : ${n.motif}`,
+        parId: n.parId,
+      })),
+      ...profils.map((p) => ({
+        id: `profil-facturation:${p.id}`,
+        le: p.createdAt,
+        categorie: 'finances' as const,
+        action: 'Profil de facturation modifié',
+        detail: p.raisonSociale,
+        parId: p.parId,
+      })),
       ...clotures.map((c) => ({
         id: `cloture:${c.id}`,
         le: c.createdAt,

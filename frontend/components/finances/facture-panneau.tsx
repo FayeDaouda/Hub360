@@ -7,7 +7,7 @@ import { ajouterPaiementCentrale, emettreFactureCentrale, getFactureCentrale, li
 import { DemandeAvoir } from '@/components/finances/demande-avoir';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
-import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
+import { FactureDocument, type FactureDocumentProps } from '@/components/finances/facture-document';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -15,7 +15,7 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 type Props = {
   slug: string;
   facture: FactureCentrale;
-  document: DocumentFacturationProps | null; // aperçu (mise en page de la société)
+  document: FactureDocumentProps | null; // aperçu : le modèle imprimé (lot 6)
   statut: { libelle: string; classe: string };
   societeNom: string;
   droits: { ecriture: boolean; validation: boolean };
@@ -96,7 +96,7 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
 
         {document && (
           <div className="fac-document">
-            <DocumentFacturation {...document} />
+            <FactureDocument {...document} />
           </div>
         )}
 

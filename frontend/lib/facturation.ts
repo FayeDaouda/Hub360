@@ -316,3 +316,49 @@ export function ajouterPaiementCentrale(slug: string, id: string, body: NouveauP
 export function getFeuilleTemps(slug: string, dossierId: string): Promise<FeuilleTemps> {
   return apiSociete<FeuilleTemps>(slug, `/finances/feuille-temps/${dossierId}`);
 }
+
+// --- Paramètres de facturation (lot 6, à la manière de Zervant) ---------------
+export type FormatNumero = { prefixe: string; formatAnnee: 'AAAA' | 'AA'; separateur: string; chiffres: number; numeroDepart: number };
+export type ProfilFacturation = {
+  raisonSociale: string;
+  adresse: string;
+  ninea: string;
+  rccm: string;
+  cofi: string; // code fiscal, imprimé après le NINEA
+  capital: string;
+  telephone: string;
+  email: string;
+  banque: string;
+  rib: string;
+  wave: string;
+  orangeMoney: string;
+  conditionsPaiement: string;
+  mentionsPied: string;
+  logoDocument?: string | null; // SVG / PNG transparent en data URI ; null = logo de la société
+  joindreCgv?: boolean; // CGV de la société en annexe des factures (par défaut)
+};
+export type ParametresFacturation = {
+  peutModifier: boolean; // CFO seul
+  annee: number;
+  format: FormatNumero;
+  parDefaut: boolean;
+  verrouille: boolean; // une vraie facture émise cette année : format figé jusqu'au 1er janvier
+  prochain: string;
+  prefixes: string[];
+  historique: { le: string; par: string | null; motif: string; exemple: string }[];
+  profil: ProfilFacturation & { parDefaut: boolean };
+  penaliteRetardMensuelle: number | null;
+};
+export const PREFIXE_TEST = 'TEST';
+export const getParametresFacturation = (slug: string) => apiSociete<ParametresFacturation>(slug, '/factures/parametres');
+export const modifierNumerotation = (slug: string, f: FormatNumero & { motif: string }) =>
+  apiSociete<ParametresFacturation>(slug, '/factures/parametres/numerotation', { method: 'POST', body: f });
+export const modifierProfilFacturation = (slug: string, p: ProfilFacturation) =>
+  apiSociete<ParametresFacturation>(slug, '/factures/parametres/profil', { method: 'POST', body: p });
+
+// Aperçu d'un format (même règle que le serveur, facturation/numerotation.ts).
+export function formaterNumero(f: FormatNumero, annee: number, sequence: number): string {
+  const an = f.formatAnnee === 'AA' ? String(annee % 100).padStart(2, '0') : String(annee);
+  return [f.prefixe, an, String(sequence).padStart(f.chiffres, '0')].filter(Boolean).join(f.separateur);
+}
+

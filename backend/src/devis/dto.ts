@@ -67,6 +67,8 @@ export class PatchDevisDto {
   @IsOptional() @IsString() @MaxLength(3000) messageIntroduction?: string | null;
   @IsOptional() @IsObject() delaisEcheancier?: Record<string, number>;
   @IsOptional() @IsString() @MaxLength(500) adresseClient?: string;
+  // NINEA d'une entreprise cliente, imprimé sur ses factures (lot 6).
+  @IsOptional() @IsString() @MaxLength(40) nineaClient?: string;
 }
 
 // POST …/devis/:id/reponse — validation MANUELLE par l'admin (le client a

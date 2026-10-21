@@ -96,6 +96,7 @@ export class AttentionService {
         jalon: true,
         libelle: true,
         numero: true,
+        reference: true,
         codeDossier: true,
         rangDossier: true,
         emiseLe: true,

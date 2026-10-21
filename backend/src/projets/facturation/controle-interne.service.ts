@@ -46,7 +46,7 @@ export class ControleInterneService {
     if (commentaire.length < 5) throw new BadRequestException('Précisez le motif de l’avoir (5 caractères au moins).');
     const f = await this.prisma.facture.findFirst({
       where: { id: factureId, projetId, societeId },
-      select: { id: true, numero: true, emiseLe: true, estAvoir: true, statut: true, montantHt: true, tauxTva: true, projet: { select: { code: true } } },
+      select: { id: true, numero: true, reference: true, emiseLe: true, estAvoir: true, statut: true, montantHt: true, tauxTva: true, projet: { select: { code: true } } },
     });
     if (!f) throw new NotFoundException('Facture introuvable');
     if (f.estAvoir) throw new ConflictException("Un avoir ne s'annule pas par un autre avoir.");
@@ -88,7 +88,7 @@ export class ControleInterneService {
       include: {
         facture: {
           select: {
-            id: true, numero: true, emiseLe: true, estAvoir: true, libelle: true, projetId: true,
+            id: true, numero: true, reference: true, emiseLe: true, estAvoir: true, libelle: true, projetId: true,
             projet: { select: { code: true, client: { select: { nom: true } } } },
           },
         },
@@ -115,7 +115,7 @@ export class ControleInterneService {
     if (acteur.role !== ROLE_CEO) throw new ForbiddenException('Un avoir au-delà du seuil est validé par le CEO.');
     const d = await this.prisma.demandeAvoir.findFirst({
       where: { id: demandeId, societeId },
-      include: { facture: { select: { id: true, numero: true, emiseLe: true, estAvoir: true, projetId: true } } },
+      include: { facture: { select: { id: true, numero: true, reference: true, emiseLe: true, estAvoir: true, projetId: true } } },
     });
     if (!d) throw new NotFoundException('Demande introuvable');
     if (d.statut !== 'a_valider') throw new ConflictException('Cette demande a déjà été décidée.');

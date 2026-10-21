@@ -81,7 +81,7 @@ export class RentabiliteService {
       // Émises (y compris annulées depuis par un avoir) et avoirs : HT négatif.
       this.prisma.facture.findMany({
         where: { societeId, projetId: { not: null }, emiseLe: { not: null } },
-        select: { id: true, projetId: true, numero: true, emiseLe: true, estAvoir: true, statut: true, montantHt: true, libelle: true },
+        select: { id: true, projetId: true, numero: true, reference: true, emiseLe: true, estAvoir: true, statut: true, montantHt: true, libelle: true },
         orderBy: { emiseLe: 'asc' },
       }),
       this.prisma.facture.findMany({

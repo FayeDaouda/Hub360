@@ -140,6 +140,7 @@ export class RappelsService implements OnApplicationBootstrap {
         montantHt: true,
         tauxTva: true,
         numero: true,
+        reference: true,
         emiseLe: true,
         estAvoir: true,
         codeDossier: true,

@@ -38,6 +38,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
   const [lignes, setLignes] = useState<LigneForm[]>([ligneVide()]);
   const [message, setMessage] = useState<string | null>(null); // null = texte généré
   const [adresse, setAdresse] = useState<string | null>(null); // null = inchangée
+  const [ninea, setNinea] = useState<string | null>(null); // null = inchangé
   const [delais, setDelais] = useState<Record<string, string>>({});
   const [etat, setEtat] = useState<'pret' | 'modifie' | 'enregistrement'>('pret');
   const [erreur, setErreur] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
     setLignes(lignesDepuisDevis(d.lignes));
     setMessage(d.messageIntroductionPersonnalise ? d.messageIntroduction : null);
     setAdresse(null);
+    setNinea(null);
     setDelais(Object.fromEntries(Object.entries(d.delaisEcheancier).map(([k, v]) => [k, String(v)])));
     setEtat('pret');
   }, []);
@@ -135,6 +137,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
           Object.entries(delais).flatMap(([k, v]) => (v.trim() === '' ? [] : [[k, Math.round(Number(v))]])),
         ),
         ...(adresse != null && { adresseClient: adresse }),
+        ...(ninea != null && { nineaClient: ninea }),
       });
       if (n !== sequence.current) return; // une saisie plus récente part déjà
       setDevis(d);
@@ -145,7 +148,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
       setErreur(e instanceof Error && e.message ? e.message : 'Enregistrement impossible.');
       setEtat('modifie');
     }
-  }, [slug, devis, lignes, catalogue, message, delais, adresse]);
+  }, [slug, devis, lignes, catalogue, message, delais, adresse, ninea]);
 
   useEffect(() => {
     if (etat !== 'modifie') return;
@@ -272,6 +275,14 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
                     placeholder="Adresse du client (reprise sur devis et factures)"
                     aria-label="Adresse du client"
                     onChange={(e) => modifier(setAdresse)(e.target.value)}
+                  />
+                  <input
+                    className="offre-ninea"
+                    value={ninea ?? devis.client.ninea ?? ''}
+                    maxLength={40}
+                    placeholder="NINEA du client (s'il en a un)"
+                    aria-label="NINEA du client"
+                    onChange={(e) => modifier(setNinea)(e.target.value)}
                   />
                 </div>
                 <div className="offre-emetteur">

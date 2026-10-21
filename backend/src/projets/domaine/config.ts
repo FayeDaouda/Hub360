@@ -45,13 +45,19 @@ export const JALONS_FACTURE: { cle: JalonFacture; code: CodeFacture; libelle: st
 // doublon, attribuée à l'émission — F (ou AV pour un avoir) + année + numéro
 // (« F2026-0001 »). Décision du 14/10/2026 : le code du dossier n'entre plus
 // dans la référence (il reste affiché à côté). Miroir de refFacture côté front.
+// Depuis le lot 6 (21/10/2026), le numéro légal est FIGÉ à l'émission selon le
+// format de la société (« GC-2026-0001 », cf. facturation/numerotation.ts) :
+// `reference` fait foi ; le calcul ci-dessous ne sert plus qu'aux factures
+// émises avant.
 export type ReferenceFacture = {
   numero: number | null;
   emiseLe: Date | string | null;
   estAvoir: boolean;
+  reference?: string | null;
 };
 
 export function refFacture(f: ReferenceFacture): string | null {
+  if (f.reference) return f.reference;
   if (f.numero == null) return null;
   const annee = (f.emiseLe ? new Date(f.emiseLe) : new Date()).getFullYear();
   return `${f.estAvoir ? 'AV' : 'F'}${annee}-${String(f.numero).padStart(4, '0')}`;

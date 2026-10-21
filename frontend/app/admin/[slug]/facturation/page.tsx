@@ -3,10 +3,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Banknote, Clock, FileSpreadsheet, FileText, Lock, Package, Plus, TrendingUp } from 'lucide-react';
+import { Banknote, Clock, FileSpreadsheet, FileText, Lock, Package, Plus, Settings2, TrendingUp } from 'lucide-react';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getClients, getProjets } from '@/lib/crm';
-import { getBureauxARegler, getFacturesCentrale, getProjetsFacturation, lienFacturationProjet } from '@/lib/facturation';
+import {
+  getBureauxARegler,
+  getFacturesCentrale,
+  getParametresFacturation,
+  getProjetsFacturation,
+  lienFacturationProjet,
+  PREFIXE_TEST,
+  type ParametresFacturation,
+} from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
 import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
@@ -14,6 +22,7 @@ import { getDevisListe, getProduitsServices } from '@/lib/devis';
 import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
 import {
   TAUX_TVA_DEFAUT,
+  TYPES_BIEN,
   type BureauARegler,
   type Client,
   type Devis,
@@ -28,6 +37,8 @@ import { DEGRADE_ETAT, etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
 import { ImpressionDocument } from '@/components/impression-document';
+import { CGV_PAR_SOCIETE } from '@/lib/cgv';
+import type { FactureDocumentProps } from '@/components/finances/facture-document';
 import type { DocumentFacturationProps } from '@/components/document-facturation';
 import { NouvelleFactureDirecte } from '@/components/finances/nouvelle-facture-directe';
 import { FacturePanneau } from '@/components/finances/facture-panneau';
@@ -41,6 +52,7 @@ import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
 import { AValiderCfo } from '@/components/finances/a-valider-cfo';
 import { Clotures } from '@/components/finances/clotures';
 import { ExportComptable } from '@/components/finances/export-comptable';
+import { ParametresFacturationFenetre } from '@/components/finances/parametres-facturation';
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 import { ROLES_RENTABILITE } from '@/lib/rentabilite';
@@ -148,6 +160,15 @@ export default function FinancesPage({ params }: Props) {
     if (factureDemandee) setFactureOuverte(factureDemandee);
   }, [factureDemandee]);
   const [documentAImprimer, setDocumentAImprimer] = useState<DocumentFacturationProps | null>(null);
+  const [factureAImprimer, setFactureAImprimer] = useState<FactureDocumentProps | null>(null);
+  // Paramètres de facturation (lot 6) : profil imprimé, préfixe TEST.
+  const [paramsFacturation, setParamsFacturation] = useState<ParametresFacturation | null>(null);
+  const [parametresOuverts, setParametresOuverts] = useState(false);
+  useEffect(() => {
+    getParametresFacturation(params.slug)
+      .then(setParamsFacturation)
+      .catch(() => setParamsFacturation(null));
+  }, [params.slug]);
 
   useEffect(() => {
     getClients(params.slug).then(setClients);
@@ -192,22 +213,30 @@ export default function FinancesPage({ params }: Props) {
     };
   }
 
-  function documentDepuisFacture(f: FactureCentrale): DocumentFacturationProps | null {
-    if (!societe) return null;
-    const s = statutFacture(f);
+  // Facture ou avoir au modèle imprimé (lot 6) : profil de facturation de la
+  // société, numéro figé, somme en lettres ; « essai » sous le préfixe TEST.
+  function documentDepuisFacture(f: FactureCentrale): FactureDocumentProps | null {
+    if (!societe || !paramsFacturation) return null;
+    const origine = f.factureOrigineId ? (factures ?? []).find((x) => x.id === f.factureOrigineId) : null;
+    const prefixe = f.reference ? f.reference.split(/[-/.]/)[0] : paramsFacturation.format.prefixe;
+    // Un avoir reprend ce que le client reconnaît sur la facture qu'il annule.
+    const source = f.estAvoir && origine ? origine : f;
+    const doc = source.pourDocument;
     return {
-      typeDocument: 'Facture',
-      societe,
-      reference: f.reference,
-      statutLabel: s.libelle,
-      statutClasse: `pill--${s.ton}`,
-      dateEmission: formatDate(f.emiseLe ?? f.creeLe),
-      dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
       estAvoir: f.estAvoir,
-      clientNom: f.client?.nom ?? '—',
-      // Le code du dossier n'entre plus dans le numéro (suite unique
-      // F2026-0001…) : il reste lisible dans l'objet.
-      objet: [f.dossierCrm?.code ?? f.projet?.code, f.libelle].filter(Boolean).join(' · '),
+      reference: f.reference,
+      factureOrigine: origine?.reference ?? null,
+      dateEmission: f.emiseLe ? formatDate(f.emiseLe) : null,
+      dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
+      // Ce que le client reconnaît : « Villa — Yoff », le code en rappel.
+      projet: {
+        nom: doc?.typeBien ? [TYPES_BIEN[doc.typeBien], doc.localite].filter(Boolean).join(' — ') : null,
+        code: f.dossierCrm?.code ?? f.projet?.code ?? null,
+      },
+      tranche: source.tranche ? [doc?.tranche, `${source.tranche.rang} sur ${source.tranche.total}`].filter(Boolean).join(' · ') : (doc?.tranche ?? null),
+      offre: doc?.offre?.reference ? { reference: doc.offre.reference, accepteeLe: doc.offre.accepteeLe ? formatDate(doc.offre.accepteeLe) : null } : null,
+      objet: f.estAvoir ? null : f.libelle || null, // l'avoir cite déjà la facture annulée
+      client: { nom: f.client?.nom ?? '—', adresse: f.client?.adresse, ninea: f.client?.ninea, email: f.client?.email, telephone: f.client?.telephone },
       // Facture à lignes (refacturation d'études) : une ligne par étude,
       // « lignes distinctes de la facture » (CGV art. 5) ; sinon montant unique.
       lignes:
@@ -220,20 +249,18 @@ export default function FinancesPage({ params }: Props) {
               prixUnitaire: l.montantHt,
               montantHt: l.montantHt,
             }))
-          : [
-              {
-                id: f.id,
-                designation: f.libelle || (f.estAvoir ? 'Avoir' : 'Prestation'),
-                quantite: 1,
-                prixUnitaire: f.montantHt,
-                montantHt: f.montantHt,
-              },
-            ],
+          : [{ id: f.id, designation: (f.estAvoir && origine?.libelle ? `Annulation · ${origine.libelle}` : f.libelle) || (f.estAvoir ? 'Avoir' : 'Prestation'), quantite: 1, prixUnitaire: f.montantHt, montantHt: f.montantHt }],
       montantHt: f.montantHt,
+      tauxTva: f.tauxTva,
       montantTva: f.montantTva,
       montantTtc: f.montantTtc,
+      emetteur: { ...paramsFacturation.profil, logoUrl: societe.logoUrl },
+      penaliteRetardMensuelle: paramsFacturation.penaliteRetardMensuelle,
+      essai: prefixe.toUpperCase() === PREFIXE_TEST,
+      cgv: CGV_PAR_SOCIETE[params.slug] ?? null,
     };
   }
+
 
   const pluriel = (n: number, mot: string) => `${n} ${mot}(s)`;
   const devisPanneau = devisOuvert ? (devis ?? []).find((d) => d.id === devisOuvert) : undefined;
@@ -253,6 +280,11 @@ export default function FinancesPage({ params }: Props) {
           {validateur && (
             <button type="button" className="btn-ghost" onClick={() => setClotures(true)}>
               <Lock size={15} strokeWidth={1.75} aria-hidden /> Clôtures
+            </button>
+          )}
+          {paramsFacturation && (
+            <button type="button" className="btn-ghost" onClick={() => setParametresOuverts(true)}>
+              <Settings2 size={15} strokeWidth={1.75} aria-hidden /> Paramètres de facturation
             </button>
           )}
           {validateur && (
@@ -292,6 +324,17 @@ export default function FinancesPage({ params }: Props) {
         />
       )}
       {exportComptable && factures && <ExportComptable factures={factures} onClose={() => setExportComptable(false)} />}
+      {parametresOuverts && paramsFacturation && (
+        <ParametresFacturationFenetre
+          slug={params.slug}
+          parametres={paramsFacturation}
+          onMaj={(p) => {
+            setParamsFacturation(p);
+            recharger();
+          }}
+          onClose={() => setParametresOuverts(false)}
+        />
+      )}
       {clotures && (
         <Clotures
           slug={params.slug}
@@ -554,12 +597,19 @@ export default function FinancesPage({ params }: Props) {
             setFactureOuverte(null);
             setFactures((l) => (l ?? []).filter((x) => x.id !== facturePanneau.id));
           }}
-          onTelecharger={() => setDocumentAImprimer(documentDepuisFacture(facturePanneau))}
+          onTelecharger={() => setFactureAImprimer(documentDepuisFacture(facturePanneau))}
           onClose={() => setFactureOuverte(null)}
         />
       )}
 
-      <ImpressionDocument doc={documentAImprimer} onImprime={() => setDocumentAImprimer(null)} />
+      <ImpressionDocument
+        doc={documentAImprimer}
+        facture={factureAImprimer}
+        onImprime={() => {
+          setDocumentAImprimer(null);
+          setFactureAImprimer(null);
+        }}
+      />
     </>
   );
 }

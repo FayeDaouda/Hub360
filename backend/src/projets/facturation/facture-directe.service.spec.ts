@@ -28,6 +28,9 @@ function monter(o: { dossier?: object | null; facture?: object } = {}) {
       ),
       updateMany,
     },
+    // Numérotation (lot 6) : format par défaut « GC », séquence vide.
+    numerotationFactures: { findFirst: jest.fn().mockResolvedValue(null) },
+    societe: { findUniqueOrThrow: jest.fn().mockResolvedValue({ nom: 'Grey Concrete' }) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));

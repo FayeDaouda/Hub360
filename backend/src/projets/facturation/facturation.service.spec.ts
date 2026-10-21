@@ -143,7 +143,12 @@ function mockPrisma() {
   const carteProjet = { findMany: jest.fn().mockResolvedValue([]), findFirst: jest.fn() };
   const etudes = { upsert: jest.fn((a: unknown) => a) };
   const ligneFacture = { count: jest.fn().mockResolvedValue(0) };
-  const tx = { facture, paiement };
+  // Numérotation (lot 6) : aucun format réglé → défaut « GC », séquence vide.
+  const numerotation = {
+    numerotationFactures: { findFirst: jest.fn().mockResolvedValue(null) },
+    societe: { findUniqueOrThrow: jest.fn().mockResolvedValue({ nom: 'Grey Concrete' }) },
+  };
+  const tx = { facture, paiement, ...numerotation };
   const prisma = {
     facture,
     paiement,
@@ -236,6 +241,19 @@ describe('FacturationService.emettre', () => {
     expect(facture.updateMany).toHaveBeenCalledWith({
       where: { id: 'F1', statut: 'brouillon' },
       data: expect.objectContaining({ numero: 8, statut: 'emise', emiseParId: 'U1' }),
+    });
+  });
+
+  it('numéro légal figé à l’émission (lot 6) : format par défaut, séquence de l’année', async () => {
+    const { prisma, facture } = mockPrisma();
+    facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', montantHt: dec(1000) });
+    // Séquence globale 7, séquence « GC » de l'année : 41 déjà émises.
+    facture.aggregate.mockImplementation(({ _max }: { _max: Record<string, boolean> }) => Promise.resolve(_max.refSequence ? { _max: { refSequence: 41 } } : { _max: { numero: 7 } }));
+    await service(prisma).emettre('S1', 'P1', 'F1', 'U1');
+    const annee = new Date().getUTCFullYear();
+    expect(facture.updateMany).toHaveBeenCalledWith({
+      where: { id: 'F1', statut: 'brouillon' },
+      data: expect.objectContaining({ reference: `GC-${annee}-0042`, refPrefixe: 'GC', refAnnee: annee, refSequence: 42 }),
     });
   });
 });

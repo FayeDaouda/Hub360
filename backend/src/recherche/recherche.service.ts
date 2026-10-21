@@ -99,6 +99,7 @@ export class RechercheService {
       select: {
         id: true,
         numero: true,
+        reference: true,
         emiseLe: true,
         estAvoir: true,
         codeDossier: true,

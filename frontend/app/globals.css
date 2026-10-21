@@ -12020,7 +12020,8 @@ tr.is-demandeur .cal-nom {
 .offre-client > span:not(.offre-etiquette) {
   color: var(--papier-gris);
 }
-.offre-document textarea {
+.offre-document textarea,
+.offre-document input.offre-ninea {
   width: 100%;
   margin-top: 0.3rem;
   padding: 0.55rem 0.7rem;
@@ -12033,7 +12034,11 @@ tr.is-demandeur .cal-nom {
   line-height: 1.5;
   resize: vertical;
 }
-.offre-document textarea:focus {
+.offre-document input.offre-ninea {
+  resize: none;
+}
+.offre-document textarea:focus,
+.offre-document input.offre-ninea:focus {
   outline: 2px solid color-mix(in oklch, var(--argile) 55%, transparent);
   outline-offset: 1px;
 }
@@ -15176,4 +15181,494 @@ tr.is-demandeur .cal-nom {
 }
 :is(.exc-corps, .da-corps, .clo-corps, .rtp-corps) .cell-sub {
   white-space: normal;
+}
+
+/* Facture et avoir au modèle imprimé (lot 6, dans l'esprit Zervant) : une
+   feuille blanche, noir sur blanc dans les deux thèmes (c'est du papier),
+   filets gris, total TTC seul en gras. A4 à l'impression. */
+.fd {
+  --fd-encre: #1b1b1f;
+  --fd-doux: #5d5d66;
+  --fd-filet: #e3e3e8;
+  --fd-fond: #f6f6f8;
+  display: grid;
+  gap: 1.4rem;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2.4rem 2.6rem;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--fd-encre);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.fd p {
+  margin: 0;
+}
+.fd-essai {
+  padding: 0.45rem 0.7rem;
+  border: 1px dashed #b57414;
+  border-radius: 4px;
+  color: #8a530a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fd-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.2rem 2rem;
+}
+.fd-emetteur {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--fd-doux);
+  font-size: 0.8rem;
+}
+.fd-logo {
+  width: auto;
+  max-width: 250px;
+  max-height: 84px;
+  margin-bottom: 0.6rem;
+  object-fit: contain;
+  object-position: left center;
+}
+.fd-raison {
+  color: var(--fd-encre);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.fd-titre {
+  text-align: right;
+}
+.fd-titre h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.fd-numero {
+  margin-top: 0.15rem !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fd-dates,
+.fd-refs {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.6rem 0 0;
+}
+.fd-dates > div,
+.fd-refs > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+.fd-refs > div {
+  justify-content: space-between;
+}
+.fd dt {
+  color: var(--fd-doux);
+  white-space: nowrap;
+}
+.fd dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fd-blocs {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 6px;
+  background: var(--fd-fond);
+}
+.fd-etiquette {
+  margin-bottom: 0.3rem !important;
+  color: var(--fd-doux);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fd-client {
+  display: grid;
+  gap: 0.1rem;
+}
+.fd-client-nom {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.fd-adresse {
+  white-space: pre-line;
+}
+.fd-refs dd {
+  text-align: right;
+}
+.fd-code {
+  display: block;
+  color: var(--fd-doux);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+.fd-refs {
+  align-content: start;
+  margin: 0;
+}
+.fd-objet {
+  font-weight: 600;
+}
+.fd-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fd-table th {
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1.5px solid var(--fd-encre);
+  color: var(--fd-doux);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.fd-table td {
+  padding: 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--fd-filet);
+  vertical-align: top;
+}
+.fd-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fd-detail {
+  display: block;
+  color: var(--fd-doux);
+  font-size: 0.78rem;
+}
+.fd-totaux {
+  display: flex;
+  justify-content: flex-end;
+}
+.fd-totaux dl {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 17rem;
+  margin: 0;
+}
+.fd-totaux dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.fd-ttc {
+  margin-top: 0.2rem;
+  padding-top: 0.5rem;
+  border-top: 1.5px solid var(--fd-encre);
+  font-size: 1rem;
+}
+.fd-ttc dt {
+  color: var(--fd-encre);
+  font-weight: 700;
+}
+.fd-ttc dd {
+  font-weight: 800;
+}
+.fd-lettres {
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--fd-encre);
+  background: var(--fd-fond);
+}
+.fd-lettres strong::first-letter {
+  text-transform: uppercase;
+}
+.fd-bas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 1.5rem;
+  align-items: start;
+  break-inside: avoid;
+}
+.fd-reglement {
+  display: grid;
+  gap: 0.35rem;
+}
+/* Cachet et signature : un cadre vide, en bas à droite, à tamponner. */
+.fd-cachet {
+  min-height: 7.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--fd-filet);
+  border-radius: 6px;
+}
+.fd-reglement dl {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+.fd-reglement dl > div {
+  display: flex;
+  gap: 0.6rem;
+}
+.fd-reglement dt {
+  min-width: 9rem;
+}
+.fd-rappel {
+  color: var(--fd-doux);
+  font-size: 0.78rem;
+}
+.fd-pied {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--fd-filet);
+  color: var(--fd-doux);
+  font-size: 0.72rem;
+  text-align: center;
+}
+/* Conditions : les CGV citées en page 1, en petit, avant le pied. */
+.fd-conditions {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--fd-doux);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.fd-conditions strong {
+  color: var(--fd-encre);
+  font-weight: 600;
+}
+/* Annexe CGV : une feuille à part, nouvelle page à l'impression, en bloc
+   simple sur une colonne (grille et colonnes CSS se fragmentent mal). */
+.fd.fd-annexe {
+  display: block;
+  margin-top: 1.5rem;
+  break-before: page;
+}
+.fd-annexe header {
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1.5px solid var(--fd-encre);
+}
+.fd-annexe h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.fd-articles {
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+.fd-articles section {
+  margin-bottom: 0.45rem;
+  break-inside: avoid;
+}
+.fd-articles h3 {
+  margin: 0 0 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.fd-articles p {
+  margin: 0 0 0.12rem;
+  text-align: justify;
+  hyphens: auto;
+}
+.fd-annexe-pied {
+  margin-top: 0.6rem !important;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--fd-filet);
+  color: var(--fd-doux);
+  font-size: 0.7rem;
+  text-align: center;
+}
+/* Dans le panneau, l'annexe ne s'imprime qu'au téléchargement. */
+.fac-document .fd-annexe {
+  display: none;
+}
+.fac-document .fd {
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+@media (max-width: 720px) {
+  .fd {
+    padding: 1.3rem 1.1rem;
+    font-size: 0.8rem;
+  }
+  .fd-titre {
+    text-align: left;
+  }
+  .fd-dates > div {
+    justify-content: flex-start;
+  }
+  .fd-blocs {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+  .fd-totaux dl {
+    min-width: 0;
+    width: 100%;
+  }
+  .fd-table th:nth-child(2),
+  .fd-table td:nth-child(2),
+  .fd-table th:nth-child(3),
+  .fd-table td:nth-child(3),
+  .fd-table th:nth-child(4),
+  .fd-table td:nth-child(4) {
+    display: none;
+  }
+  .fd-bas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 12mm 16mm;
+    @bottom-right {
+      content: 'Page ' counter(page) '/' counter(pages);
+      color: #5d5d66;
+      font-family: var(--font-sans, Arial, sans-serif);
+      font-size: 8pt;
+    }
+  }
+  /* Le fond de l'application ne s'imprime pas sous la facture. */
+  html:has(#impression-document .fd),
+  body:has(#impression-document .fd) {
+    background: #ffffff !important;
+  }
+  #impression-document .fd {
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 9.5pt;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* Paramètres de facturation (lot 6). */
+.pf-modal {
+  max-width: 760px;
+}
+.pf-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  max-height: min(78vh, 52rem);
+  overflow-y: auto;
+}
+.pf-section {
+  display: grid;
+  gap: 0.6rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.pf-section:last-of-type {
+  border-bottom: 0;
+}
+.pf-apercu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+.pf-apercu strong {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.pf-verrou {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+  font-size: 0.86rem;
+}
+.pf-format {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.pf-apercu-ligne {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.pf-profil {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+}
+.pf-profil .pf-long {
+  grid-column: 1 / -1;
+}
+.pf-logo {
+  display: grid;
+  gap: 0.35rem;
+}
+.pf-logo-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+/* Fond blanc : le logo est vu tel qu'il sera imprimé. */
+.pf-logo-apercu {
+  display: grid;
+  place-items: center;
+  width: 12rem;
+  height: 4.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.pf-logo-apercu img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.pf-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pf-logo-actions .btn-ghost {
+  cursor: pointer;
+}
+.pf-alerte {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--pill-attention) 14%, transparent);
+  color: color-mix(in oklch, var(--pill-attention) 70%, var(--text));
+  font-size: 0.86rem;
+}
+.pf-case {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.pf-case input {
+  margin-top: 0.2rem;
+}
+.pf-ok {
+  margin: 0;
+  color: color-mix(in oklch, var(--pill-succes) 85%, var(--text));
+  font-weight: 600;
+}
+@media (max-width: 720px) {
+  .pf-format,
+  .pf-profil {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
