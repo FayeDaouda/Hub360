@@ -14,6 +14,7 @@ import {
   FilePlus2,
   Inbox,
   PackageCheck,
+  Stamp,
   Undo2,
   type LucideIcon,
 } from 'lucide-react';
@@ -51,7 +52,7 @@ const RANG_TON: Record<Ton, number> = { risque: 0, attention: 1, info: 2, neutre
 // « Revêtements · Revêtements » : la carte n'est rappelée que si elle dit autre chose.
 const carteDe = (carte: string, tache: string) => (carte === tache ? '' : ` · ${carte}`);
 
-const VIDE: ADeciderProjets = { remises: [], prolongations: [], ts: [] };
+const VIDE: ADeciderProjets = { remises: [], prolongations: [], visas: [], ts: [] };
 
 // « À décider aujourd'hui » (revue Dir. GC, 21/10/2026) : en tête de
 // Pilotage, tout ce qui attend une décision ou une action, par urgence.
@@ -134,6 +135,22 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
       ton: jours > 1 || p.repousseLivraison ? 'risque' : 'attention',
       action: 'Décider',
       ouvrir: versTache(p.projetId, p.tacheId),
+    });
+  }
+  // 1 bis. Visas DPLG à apposer (plans du permis, plans d'exécution, livraison).
+  for (const v of projets.visas) {
+    const jours = v.valideeLe ? joursDepuis(v.valideeLe) : 0;
+    elements.push({
+      cle: `visa-${v.tacheId}`,
+      groupe: 1,
+      tri: v.valideeLe ?? '',
+      icone: Stamp,
+      titre: `Visa DPLG à apposer · ${v.code} · ${v.tache}`,
+      detail: `${v.assigne ?? 'Non assignée'} · validée par le chef de team${v.valideeLe ? ` le ${jjmm(v.valideeLe)}` : ''}`,
+      quand: depuis(jours),
+      ton: jours > 1 ? 'risque' : 'attention',
+      action: 'Viser',
+      ouvrir: versTache(v.projetId, v.tacheId),
     });
   }
   // 1 ter. TS au-delà du seuil (CTO) : accepter ou refuser.

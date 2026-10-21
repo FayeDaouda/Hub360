@@ -17,7 +17,8 @@ export type Temps =
   | { type: 'charge_gc'; charge: 'notice' | 'cachet' | 'timbre' }
   | { type: 'part_carte' } // part égale du temps « au total » de la carte
   | { type: 'sans' };
-export type TacheGabarit = { cle: string; libelle: string; fenetre?: Fenetre; temps: Temps };
+// visaDplg : la tâche, validée, attend le visa de l'architecte DPLG.
+export type TacheGabarit = { cle: string; libelle: string; fenetre?: Fenetre; temps: Temps; visaDplg?: boolean };
 export type CarteGabarit = {
   cle: string;
   libelle: string;
@@ -62,7 +63,8 @@ export type Reglages =
   | { disponible: false }
   | { disponible: true; gabarits: GabaritEnService[]; regles: Reglage[]; objectifs: Reglage[]; modifications: number };
 
-export type Changement = { carte: string; tache?: string; champ: 'debut' | 'fin' | 'heures'; valeur: number };
+// « visa » (tâche) : 1 = visa DPLG exigé, 0 = non.
+export type Changement = { carte: string; tache?: string; champ: 'debut' | 'fin' | 'heures' | 'visa'; valeur: number };
 export type LigneJournal = { id: string; lot: string; section: string; libelle: string; motif: string; par: string | null; createdAt: string };
 
 export const getReglages = (slug: string) => apiSociete<Reglages>(slug, '/reglages');

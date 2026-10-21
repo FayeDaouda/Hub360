@@ -7,6 +7,7 @@ import {
   assignerTache,
   deciderProlongation,
   deciderTache,
+  viserTache,
   demanderProlongation,
   remettreTache,
   getChargesTache,
@@ -52,6 +53,8 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [historique, setHistorique] = useState<EvenementTache[] | null>(null);
   const [renvoi, setRenvoi] = useState(false);
   const [motif, setMotif] = useState('');
+  // Visa DPLG : refus en cours de saisie (motif obligatoire).
+  const [refusVisa, setRefusVisa] = useState<string | null>(null);
   const [prolonger, setProlonger] = useState(prolongationOuverte);
   const [jusquau, setJusquau] = useState('');
   const [motifProlongation, setMotifProlongation] = useState('');
@@ -69,7 +72,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     return () => {
       annule = true;
     };
-  }, [slug, projetId, tache.id, tache.assigne?.id, tache.statut, tache.version]);
+  }, [slug, projetId, tache.id, tache.assigne?.id, tache.statut, tache.version, tache.visa?.le]);
 
   useEffect(() => {
     setALaCarte(false);
@@ -325,6 +328,59 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               </button>
             </div>
           )}
+        </div>
+      )}
+      {/* Visa DPLG (revue Dir. GC) : validée par le chef de team, la tâche
+          attend la signature de l'architecte ; apposé, il est daté et nommé. */}
+      {tache.visa && (tache.statut === 'validee' || tache.visa.le) && (
+        <div className="po-panneau-bloc">
+          <p className="po-panneau-label">Visa DPLG</p>
+          {tache.visa.le ? (
+            <p className="po-aide">
+              Apposé le {jjmmaaaa(tache.visa.le)}
+              {tache.visa.par ? ` par ${tache.visa.par}` : ''}.
+            </p>
+          ) : (
+            <p className="po-aide">Validée par le chef de team : le visa de l’architecte DPLG est attendu avant la suite.</p>
+          )}
+          {tache.peutViser &&
+            (refusVisa !== null ? (
+              <>
+                <label className="po-panneau-label" htmlFor="po-motif-visa">
+                  Motif du refus (la tâche repart en reprise)
+                </label>
+                <textarea
+                  id="po-motif-visa"
+                  className="field-input"
+                  rows={2}
+                  maxLength={500}
+                  value={refusVisa}
+                  onChange={(e) => setRefusVisa(e.target.value)}
+                />
+                <div className="po-decision">
+                  <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setRefusVisa(null)}>
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={enCours || refusVisa.trim().length < 3}
+                    onClick={() => agir(() => viserTache(slug, projetId, tache.id, false, refusVisa.trim()), 'Le refus a échoué.', () => setRefusVisa(null))}
+                  >
+                    Refuser le visa
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="po-decision">
+                <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setRefusVisa('')}>
+                  Refuser le visa
+                </button>
+                <button type="button" className="btn-primary" disabled={enCours} onClick={() => agir(() => viserTache(slug, projetId, tache.id, true), 'Le visa a échoué.')}>
+                  Apposer le visa DPLG
+                </button>
+              </div>
+            ))}
         </div>
       )}
       {tache.peutDecider && (

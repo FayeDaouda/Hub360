@@ -7,7 +7,7 @@ import type { RemettreTacheDto } from './dto';
 import { motifNonAssignable, tachesAssignees } from './assignation';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
-import { agitCommeDplg, collaborateurDuCompte, peutDecider, peutQualifier, ROLE_CTO, verifierCircuit } from './validation';
+import { agitCommeDplg, collaborateurDuCompte, peutDecider, peutQualifier, peutViser, ROLE_CTO, verifierCircuit } from './validation';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
@@ -120,7 +120,8 @@ export class TachesProjetService {
         version: true,
         temps: true,
         assigneId: true,
-        carte: { select: { desactivation: true, ouvreApres: true } },
+        cle: true,
+        carte: { select: { desactivation: true, ouvreApres: true, taches: { where: { visaRequis: true, statut: 'validee', visaLe: null }, select: { libelle: true } } } },
         projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
@@ -131,6 +132,10 @@ export class TachesProjetService {
     if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : rien à remettre.');
     if (await this.carteVerrouillee(projetId, tache.carte.ouvreApres)) {
       throw new ConflictException('La carte s’ouvre quand les tâches dont elle dépend sont validées.');
+    }
+    // Le dépôt du permis attend les plans visés par l'architecte DPLG.
+    if (tache.cle === 'depot' && tache.carte.taches.length) {
+      throw new ConflictException(`Dépôt impossible : visa DPLG attendu sur ${tache.carte.taches.map((t) => `« ${t.libelle} »`).join(', ')}.`);
     }
 
     const pieces = corps.pieces ?? [];
@@ -188,6 +193,7 @@ export class TachesProjetService {
         version: true,
         libelle: true,
         assigneId: true,
+        visaRequis: true,
         projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
@@ -237,7 +243,75 @@ export class TachesProjetService {
         await this.comptesDe([tache.assigneId]),
       );
     }
+    // Validée, elle attend le visa de l'architecte DPLG : il est prévenu.
+    if (decision === 'valider' && tache.visaRequis) {
+      const { comptes, enAttente } = await this.viseurs(societeId);
+      await this.notifier(
+        societeId,
+        projetId,
+        tache.projet.code,
+        'visa_a_apposer',
+        enAttente
+          ? `Visa DPLG en attente du retour du Dir. GC · ${tache.projet.code} · ${tache.libelle}`
+          : `Visa DPLG à apposer · ${tache.projet.code} · ${tache.libelle}`,
+        acteur.userId,
+        comptes,
+      );
+    }
     return { statut: decision === 'valider' ? 'validee' : 'reprise' };
+  }
+
+  // Visa DPLG (revue Dir. GC, 21/10/2026) : sur une tâche validée qui l'exige,
+  // l'architecte DPLG appose son visa (daté, tracé) ou le refuse avec un
+  // motif — la tâche repart alors en reprise chez la personne assignée.
+  async viser(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, apposer: boolean, motif?: string) {
+    verifierCircuit(acteur.role);
+    if (!peutViser(acteur.role)) throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');
+    const tache = await this.prisma.tacheProjet.findFirst({
+      where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
+      select: { id: true, libelle: true, statut: true, version: true, visaRequis: true, visaLe: true, assigneId: true, projet: { select: { code: true } } },
+    });
+    if (!tache) throw new NotFoundException('Tâche introuvable');
+    if (!tache.visaRequis) throw new ConflictException('Cette tâche n’exige pas de visa DPLG.');
+    if (tache.statut !== 'validee' || tache.visaLe) throw new ConflictException('Aucun visa en attente sur cette tâche.');
+    if (!apposer && !motif?.trim()) throw new BadRequestException('Le motif du refus de visa est obligatoire.');
+    const vNN = `v${String(tache.version).padStart(2, '0')}`;
+    await this.prisma.$transaction(async (tx) => {
+      // Garde en base : le visa n'a pas été tranché entre-temps.
+      const { count } = await tx.tacheProjet.updateMany({
+        where: { id: tache.id, statut: 'validee', visaLe: null },
+        data: apposer ? { visaLe: new Date(), visaParId: acteur.userId } : { statut: 'reprise', valideeLe: null, valideeParId: null },
+      });
+      if (!count) throw new ConflictException('Le visa a déjà été tranché.');
+      await tx.evenementTacheProjet.create({
+        data: {
+          tacheId: tache.id,
+          type: 'visa',
+          parId: acteur.userId,
+          detail: apposer ? `Visa DPLG apposé sur la remise ${vNN}` : `Visa DPLG refusé, remise ${vNN} renvoyée en reprise : ${motif!.trim()}`,
+        },
+      });
+    });
+    if (tache.assigneId) {
+      await this.notifier(
+        societeId,
+        projetId,
+        tache.projet.code,
+        apposer ? 'tache_validee' : 'tache_renvoyee',
+        apposer ? `Visa DPLG apposé · ${tache.projet.code} · ${tache.libelle}` : `Visa DPLG refusé, reprise · ${tache.projet.code} · ${tache.libelle}`,
+        acteur.userId,
+        await this.comptesDe([tache.assigneId]),
+      );
+    }
+    return { visa: apposer ? 'appose' : 'refuse' };
+  }
+
+  // Qui vise : les Dir. GC présents (ou un Dir. GC suppléant). Aucun : le visa
+  // attend leur retour et le CTO en est prévenu (il ne vise pas à leur place).
+  private async viseurs(societeId: string): Promise<{ comptes: string[]; enAttente: boolean }> {
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const dirGc = ctx.comptesDplg.filter((id) => !ctx.comptesCto.includes(id));
+    return dirGc.length ? { comptes: dirGc, enAttente: false } : { comptes: ctx.comptesCto, enAttente: true };
   }
 
   // « Ajouter en TS » (Architecte DPLG) : un élément demandé par le client
@@ -386,8 +460,9 @@ export class TachesProjetService {
   private async carteVerrouillee(projetId: string, refs: string[]): Promise<boolean> {
     for (const ref of refs) {
       const [carte, cle] = ref.split('.');
-      const t = await this.prisma.tacheProjet.findFirst({ where: { projetId, cle, carte: { cle: carte } }, select: { statut: true } });
-      if (t && t.statut !== 'validee' && t.statut !== 'non_necessaire') return true;
+      const t = await this.prisma.tacheProjet.findFirst({ where: { projetId, cle, carte: { cle: carte } }, select: { statut: true, visaRequis: true, visaLe: true } });
+      // Faite : non nécessaire, ou validée (et visée si le visa DPLG est exigé).
+      if (t && !(t.statut === 'non_necessaire' || (t.statut === 'validee' && (!t.visaRequis || t.visaLe)))) return true;
     }
     return false;
   }

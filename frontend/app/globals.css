@@ -9531,6 +9531,20 @@ tr.is-demandeur .cal-nom {
 .reg-numero--4 { color: var(--mandarine); }
 .reg-numero--5 { color: var(--jade); }
 .reg-numero--6 { color: var(--fuchsia); }
+.reg-visa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.reg-visa.is-modifie {
+  color: var(--accent, var(--text));
+  font-weight: 600;
+}
 .reg-fenetre,
 .reg-temps {
   display: inline-flex;

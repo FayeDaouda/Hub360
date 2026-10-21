@@ -8,10 +8,11 @@ import { PHASES_PAR_CATEGORIE } from '../domaine/config';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
 import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
-import { agitCommeDplg, collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, ROLE_CTO, type Decideur } from './validation';
+import { agitCommeDplg, collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, peutViser, ROLE_CTO, type Decideur } from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import { chargeSurPeriode } from './charge';
 import {
+  attendVisa,
   attentesFactures,
   etatCarte,
   etatTache,
@@ -160,6 +161,8 @@ export class ProjetsOuvertsService {
         return { ...l, demande, repousse: !!demande && !!livraison && demande.jusquau > livraison, livraison };
       })
       .filter(({ t, chefId, demande, repousse }) => demande && peutQualifier(decideur, this.regle(ctx, t), chefId, repousse));
+    // Visas DPLG à apposer (l'architecte DPLG seul).
+    const visas = peutViser(acteur.role) ? lignes.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe) : [];
     // Date de la dernière remise de chaque tâche à valider.
     const evenements = await this.prisma.evenementTacheProjet.findMany({
       where: { type: 'remise', tacheId: { in: remises.map((r) => r.t.id) } },
@@ -188,6 +191,7 @@ export class ProjetsOuvertsService {
         // Escalade au CTO : la nouvelle date dépasse la livraison du projet.
         repousseLivraison: l.repousse ? l.livraison : null,
       })),
+      visas: visas.map((l) => ({ ...commun(l), valideeLe: l.t.valideeLe })),
       // TS au-delà du seuil, demandés par le Dir. GC : au CTO de trancher.
       ts: await this.demandesTsADecider(societeId, decideur, projets.map((p) => p.id)),
     };
@@ -267,6 +271,15 @@ export class ProjetsOuvertsService {
     const horizon = this.horizon(p.budgetHeures);
     // Nombre de messages par fil (« Fil de la carte · N », bulle d'une tâche).
     const fils = await this.prisma.commentaireProjet.groupBy({ by: ['carteId', 'tacheId'], where: { projetId: p.id }, _count: true });
+    // Auteurs des visas DPLG apposés (nom affiché sous la tâche).
+    const viseurs = new Map(
+      (
+        await this.prisma.utilisateur.findMany({
+          where: { id: { in: p.cartes.flatMap((c) => c.taches.map((t) => t.visaParId)).filter((x): x is string => !!x) } },
+          select: { id: true, prenom: true, nom: true },
+        })
+      ).map((u) => [u.id, nom(u)]),
+    );
     const filDe = (carteId: string, tacheId: string | null) =>
       fils.find((f) => f.carteId === carteId && f.tacheId === tacheId)?._count ?? 0;
 
@@ -359,6 +372,11 @@ export class ProjetsOuvertsService {
           avenant: t.devisTs ? { devisId: t.devisTs.id, reference: refDevis(t.devisTs), statut: statutDevisEffectif(t.devisTs, jour) } : null,
           valideeLe: iso(t.valideeLe),
           valideePar: nom(t.valideePar),
+          // Visa DPLG exigé : apposé le… par… (null tant qu'il ne l'est pas).
+          visa: t.visaRequis ? { le: iso(t.visaLe), par: t.visaParId ? (viseurs.get(t.visaParId) ?? null) : null } : null,
+          // L'architecte DPLG (Dir. GC, ou un autre Dir. GC en suppléance —
+          // jamais le CTO : le visa engage la signature de l'architecte).
+          peutViser: peutViser(acteur.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe,
           assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
           // Assignée à la personne connectée (« Seulement mes tâches »).
           aMoi: !!decideur.collaborateurId && t.assigneId === decideur.collaborateurId,
@@ -588,6 +606,8 @@ export class ProjetsOuvertsService {
         version: t.version,
         valideeLe: iso(t.valideeLe),
         prolongeeJusquau: prolongationAccordee(t.prolongations),
+        visaRequis: t.visaRequis,
+        viseeLe: iso(t.visaLe),
       })),
     }));
   }
@@ -600,7 +620,7 @@ export class ProjetsOuvertsService {
     const parEtape = new Map<number, { tache: (typeof sources)[number]['taches'][number]; etat: EtatTache }[]>();
     p.cartes.forEach((c, i) => {
       c.taches.forEach((t, j) => {
-        const etat = etatTache(sources[i].taches[j], etatsCartes.get(c.id)!, jour, feries);
+        const etat = etatTache(sources[i].taches[j], etatsCartes.get(c.id)!, jour, feries, attendVisa(sources[i].taches[j], sources[i]));
         etatsTaches.set(t.id, etat);
         parEtape.set(c.etapeNumero, [...(parEtape.get(c.etapeNumero) ?? []), { tache: sources[i].taches[j], etat }]);
       });

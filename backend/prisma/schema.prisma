@@ -241,6 +241,7 @@ enum NotificationType {
   reporting_a_deposer
   reporting_en_retard
   reporting_depose
+  visa_a_apposer // au Dir. GC : tâche validée qui attend son visa DPLG
 }
 
 model Notification {
@@ -2189,6 +2190,7 @@ enum TypeEvenementTache {
   validation
   reprise
   prolongation // demande ou décision de prolongation
+  visa // visa DPLG apposé ou refusé (revue Dir. GC, 21/10/2026)
 }
 
 model EvenementTacheProjet {
@@ -2323,6 +2325,12 @@ model TacheProjet {
   version      Int               @default(0) // dernière remise (1 = v01)
   valideeLe    DateTime?         @map("validee_le")
   valideeParId String?           @map("validee_par_id")
+  // Visa DPLG (revue Dir. GC, 21/10/2026) : la tâche, validée par le chef de
+  // team, n'est faite qu'une fois visée par l'architecte DPLG (Dir. GC).
+  // Repris du gabarit à l'ouverture du projet.
+  visaRequis   Boolean           @default(false) @map("visa_requis")
+  visaLe       DateTime?         @map("visa_le")
+  visaParId    String?           @map("visa_par_id")
   // Élément ajouté en TS : devis d'avenant qui le facture (ligne ajoutée à
   // l'ajout). Le devis n'est jamais recréé — seules ses lignes le sont.
   devisTsId    String?           @map("devis_ts_id")

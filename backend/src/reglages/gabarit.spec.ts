@@ -70,3 +70,22 @@ describe('normaliser', () => {
     expect(() => normaliser(def('delai_levee_reserves_jours'), 0)).toThrow('entier');
   });
 });
+
+// Visa DPLG (revue Dir. GC, 21/10/2026) : réglé par tâche dans le gabarit.
+describe('gabarit · visa DPLG', () => {
+  const visees = GABARIT_GC_CONCEPTION.etapes.flatMap((e) => e.cartes.flatMap((c) => c.taches.filter((t) => t.visaDplg).map((t) => `${c.cle}.${t.cle}`)));
+
+  it('par défaut : plans du permis, plans d’exécution, intégration et livraison', () => {
+    expect(visees).toEqual(['permis_construire.plans_autorisation', 'pe_architecture.pe_architecture', 'tache_finale.integration_livraison']);
+  });
+
+  it('se coche et se décoche par tâche, jamais sur une carte ; décrit au journal', () => {
+    const { contenu, appliques } = appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', tache: 'fiches_techniques', champ: 'visa', valeur: 1 }]);
+    expect(contenu.etapes.flatMap((e) => e.cartes).find((c) => c.cle === 'permis_construire')!.taches.find((t) => t.cle === 'fiches_techniques')!.visaDplg).toBe(true);
+    expect(decrire(appliques[0])).toBe('Permis de construire · Fiches techniques — visa DPLG : non → oui');
+    expect(() => appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', champ: 'visa', valeur: 1 }])).toThrow(ErreurGabarit);
+    expect(() => appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', tache: 'depot', champ: 'visa', valeur: 2 }])).toThrow(ErreurGabarit);
+    // Déjà coché : rien à appliquer.
+    expect(appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'pe_architecture', tache: 'pe_architecture', champ: 'visa', valeur: 1 }]).appliques).toEqual([]);
+  });
+});

@@ -34,6 +34,8 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         // Seuls ces temps se modifient (le partagé est un libellé, cf. backend).
         const t = cible.temps;
         if (t && (t.type === 'heures' || t.type === 'par_unite' || t.type === 'total')) m.set(cle(c.cle, tache, 'heures'), t.heures);
+        // Visa DPLG (revue Dir. GC) : case par tâche, 1 = exigé.
+        if (tache) m.set(cle(c.cle, tache, 'visa'), (cible as TacheGabarit).visaDplg ? 1 : 0);
       }
     }
     return m;
@@ -57,6 +59,17 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         value={saisies[k] ?? String(origines.get(k))}
         onChange={(e) => setSaisies((s) => ({ ...s, [k]: e.target.value }))}
       />
+    );
+  };
+  const visa = (carte: string, tache: string) => {
+    const k = cle(carte, tache, 'visa');
+    const coche = (saisies[k] ?? String(origines.get(k))) === '1';
+    const modifie = k in saisies && Number(saisies[k]) !== origines.get(k);
+    return (
+      <label className={`reg-visa${modifie ? ' is-modifie' : ''}`}>
+        <input type="checkbox" checked={coche} onChange={(e) => setSaisies((s) => ({ ...s, [k]: e.target.checked ? '1' : '0' }))} />
+        Visa DPLG
+      </label>
     );
   };
   const fenetre = (carte: string, tache?: string) => (
@@ -87,7 +100,8 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         </span>
       </div>
       <p className="dmd-note">
-        Fenêtres en jours ouvrés (J1 = ouverture du projet) et durées standard. Un enregistrement crée la version{' '}
+        Fenêtres en jours ouvrés (J1 = ouverture du projet), durées standard et visa DPLG (la tâche validée attend la signature de
+        l’architecte). Un enregistrement crée la version{' '}
         {libelleVersion(gabarit.numero + 1)} : elle s’applique aux projets ouverts ensuite. Les projets en cours gardent leur
         version, leurs fenêtres et leurs durées (délais figés).
       </p>
@@ -129,7 +143,9 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
                 {c.taches.map((t) => (
                   <div key={t.cle} className="reg-ligne reg-ligne--tache" role="row">
                     <span />
-                    <span>{t.libelle}</span>
+                    <span className="reg-tache-libelle">
+                      {t.libelle} {visa(c.cle, t.cle)}
+                    </span>
                     <span>{t.fenetre && fenetre(c.cle, t.cle)}</span>
                     <span>{temps(c.cle, t.cle, t.temps)}</span>
                   </div>

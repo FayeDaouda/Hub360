@@ -1,4 +1,4 @@
-import { attentesFactures, etatCarte, etatTache, indexTaches, resumeEtape, type CarteSource, type TacheSource } from './etats';
+import { attendVisa, attentesFactures, etatCarte, etatTache, indexTaches, resumeEtape, type CarteSource, type TacheSource } from './etats';
 
 // Scénario de la maquette « Projets » : DFS_ALM.26, J1 10/09, consulté le 23/09.
 const AUJ = '2026-09-23';
@@ -76,5 +76,38 @@ describe('états dérivés (maquette Projets)', () => {
     });
     const etapes = [2, 3, 6].map((n) => ({ numero: n, faites: 0, total: 1, enRetard: 0, etat: 'en_cours' as const }));
     expect(attentesFactures(etapes, [permis, ets, etb])).toEqual({ F2: ['02', '03', 'récépissé 04'], F3: ['06', "1 visa(s) d'étude"] });
+  });
+});
+
+// Visa DPLG (revue Dir. GC, 21/10/2026) : validée par le chef de team, la
+// tâche n'est faite qu'une fois visée par l'architecte DPLG.
+describe('visa DPLG', () => {
+  const plans = (o: Partial<TacheSource> = {}) => tache('plans_autorisation', { statut: 'validee', valideeLe: '2026-09-15', visaRequis: true, ...o });
+  const permis = (p: TacheSource) => carte('permis_construire', [p, tache('depot')], { etapeNumero: 4, etapeCle: 'autorisations' });
+
+  it('validée sans visa : « visa à apposer », la carte n’est pas close', () => {
+    const c = permis(plans());
+    const etat = etatCarte(c, indexTaches([c]));
+    expect(etatTache(c.taches[0], etat, AUJ, F)).toEqual({ code: 'a_viser' });
+    expect(etat.code).toBe('ouverte');
+  });
+
+  it('le dépôt attend les plans visés', () => {
+    expect(attendVisa(tache('depot'), permis(plans()))).toBe(true);
+    expect(attendVisa(tache('depot'), permis(plans({ viseeLe: '2026-09-16' })))).toBe(false);
+    const c = permis(plans());
+    expect(etatTache(c.taches[1], etatCarte(c, indexTaches([c])), AUJ, F, attendVisa(c.taches[1], c))).toEqual({ code: 'verrouillee' });
+  });
+
+  it('une étape n’est terminée qu’une fois les visas apposés ; F3 attend les visas DPLG', () => {
+    const pe = (o: Partial<TacheSource>) => carte('pe_architecture', [tache('pe_architecture', { statut: 'validee', valideeLe: '2026-09-20', visaRequis: true, ...o })], { etapeNumero: 6, etapeCle: 'plans_execution' });
+    const sansVisa = pe({});
+    const r = resumeEtape(6, sansVisa.taches.map((t) => ({ tache: t, etat: etatTache(t, etatCarte(sansVisa, indexTaches([sansVisa])), AUJ, F) })));
+    expect(r).toMatchObject({ faites: 0, total: 1, etat: 'en_cours' });
+    expect(attentesFactures([r], [sansVisa]).F3).toEqual(['06', '1 visa(s) DPLG']);
+    const vise = pe({ viseeLe: '2026-09-21' });
+    const r2 = resumeEtape(6, vise.taches.map((t) => ({ tache: t, etat: etatTache(t, etatCarte(vise, indexTaches([vise])), AUJ, F) })));
+    expect(r2.etat).toBe('terminee');
+    expect(attentesFactures([r2], [vise]).F3).toEqual([]);
   });
 });

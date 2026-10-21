@@ -6,7 +6,7 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AssignerTacheDto, DateVisiteDto, StatutChantierDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto, RemettreTacheDto } from './dto';
+import { AssignerTacheDto, DateVisiteDto, StatutChantierDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto, RemettreTacheDto, ViserTacheDto } from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
 type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
@@ -136,6 +136,13 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'lecture')
   decider(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DeciderTacheDto) {
     return this.taches.decider(req.user.societeId, req.user, id, tacheId, dto.decision, dto.motif);
+  }
+
+  // Visa DPLG d'une tâche validée (droits vérifiés par le service).
+  @Post(':id/taches/:tacheId/visa')
+  @RequiertPermission('projets', 'lecture')
+  viser(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: ViserTacheDto) {
+    return this.taches.viser(req.user.societeId, req.user, id, tacheId, dto.apposer, dto.motif);
   }
 
   // Fil d'une carte (?carte=) ou d'une tâche (?tache=).

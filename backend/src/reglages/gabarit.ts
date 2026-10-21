@@ -24,6 +24,9 @@ export type TacheGabarit = {
   temps: Temps;
   descriptif?: string; // panneau de la tâche (maquette Projets)
   sourceNative?: boolean; // « source native exigée »
+  // Visa DPLG (revue Dir. GC, 21/10/2026) : validée par le chef de team, la
+  // tâche n'est faite qu'une fois visée par l'architecte DPLG (Dir. GC).
+  visaDplg?: boolean;
 };
 
 export type CarteGabarit = {
@@ -48,11 +51,12 @@ export type EtapeGabarit = { numero: number; cle: string; libelle: string; carte
 
 export type ContenuGabarit = { etapes: EtapeGabarit[] };
 
-// Une modification = un champ numérique d'une carte ou d'une tâche.
+// Une modification = un champ numérique d'une carte ou d'une tâche ; « visa »
+// (tâche seulement) : 1 = visa DPLG exigé, 0 = non.
 export type Changement = {
   carte: string; // clé de la carte
   tache?: string; // clé de la tâche (absente : la carte elle-même)
-  champ: 'debut' | 'fin' | 'heures';
+  champ: 'debut' | 'fin' | 'heures' | 'visa';
   valeur: number;
 };
 
@@ -80,6 +84,17 @@ export function appliquer(contenu: ContenuGabarit, changements: Changement[]): {
     if (ch.tache && !tache) throw new ErreurGabarit(`Tâche inconnue : ${ch.tache}.`);
     const cible = tache ?? carte;
     const libelle = tache ? `${carte.libelle} · ${tache.libelle}` : carte.libelle;
+
+    if (ch.champ === 'visa') {
+      if (!tache) throw new ErreurGabarit(`${libelle} : le visa DPLG se règle sur une tâche.`);
+      if (ch.valeur !== 0 && ch.valeur !== 1) throw new ErreurGabarit(`${libelle} : visa DPLG oui (1) ou non (0).`);
+      const avant = tache.visaDplg ? 1 : 0;
+      if (avant !== ch.valeur) {
+        appliques.push({ ...ch, libelle, avant });
+        tache.visaDplg = ch.valeur === 1;
+      }
+      continue;
+    }
 
     if (ch.champ === 'heures') {
       if (!aDesHeures(cible.temps)) throw new ErreurGabarit(`${libelle} : pas de temps standard modifiable.`);
@@ -116,6 +131,7 @@ export function appliquer(contenu: ContenuGabarit, changements: Changement[]): {
 }
 
 export function decrire(ch: ChangementApplique): string {
+  if (ch.champ === 'visa') return `${ch.libelle} — visa DPLG : ${ch.avant ? 'oui' : 'non'} → ${ch.valeur ? 'oui' : 'non'}`;
   if (ch.champ === 'heures') return `${ch.libelle} — temps : ${ch.avant} h → ${ch.valeur} h`;
   return `${ch.libelle} — ${ch.champ === 'debut' ? 'début' : 'fin'} : J${ch.avant} → J${ch.valeur}`;
 }

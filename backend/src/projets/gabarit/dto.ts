@@ -47,6 +47,13 @@ export class AjouterTsDto {
   @ValidateIf((o) => o.reprise === 'majeure') @IsInt() @Min(1) planches?: number;
 }
 
+// POST …/taches/:tacheId/visa — l'architecte DPLG (Dir. GC) : apposer, ou
+// refuser avec un motif (la tâche repart en reprise).
+export class ViserTacheDto {
+  @IsBoolean() apposer!: boolean;
+  @IsOptional() @IsString() @MaxLength(500) motif?: string;
+}
+
 // POST …/ts/demandes/:demandeId/decision — le CTO, TS au-delà du seuil.
 export class DeciderDemandeTsDto {
   @IsBoolean() accepter!: boolean;

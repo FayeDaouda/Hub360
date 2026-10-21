@@ -74,6 +74,10 @@ export function peutQualifier(d: Decideur, t: TacheRegle, chefId: string | null,
   return agitCommeDplg(d) || estChefDe(d, t.assigneId, chefId);
 }
 
+// Visa DPLG : il engage la signature de l'architecte — le Dir. GC (ou un
+// autre Dir. GC en suppléance), l'admin société ; jamais le CTO.
+export const peutViser = (role: string) => role === ROLE_DPLG || role === 'societe_admin';
+
 // TS : le Dir. GC (ou son suppléant) l'ajoute jusqu'au seuil ; au-delà, il le
 // demande et le CTO le valide (ou l'ajoute lui-même).
 export type DroitTs = 'ajouter' | 'demander' | null;

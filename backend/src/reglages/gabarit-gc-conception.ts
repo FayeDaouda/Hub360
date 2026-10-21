@@ -193,7 +193,8 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           taches: [
             t('contacts', 'E-mail · N° de téléphone', SANS),
             t('pieces_foncieres', 'Droit réel · Plan cadastral · ID · NINEA', SANS),
-            t('plans_autorisation', 'Plans · Coupes · Façades (cartouche autorisation)', h(24)),
+            // Visa DPLG : le dépôt attend les plans visés (revue Dir. GC, 21/10/2026).
+            { ...t('plans_autorisation', 'Plans · Coupes · Façades (cartouche autorisation)', h(24)), visaDplg: true },
             t('fiches_techniques', 'Fiches techniques', h(8)),
             t('notice_securite', 'Notice de sécurité', { type: 'charge_gc', charge: 'notice' }),
             t('cachet_architecte', "Cachet de l'architecte", { type: 'charge_gc', charge: 'cachet' }),
@@ -254,6 +255,7 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
             {
               ...t('pe_architecture', "Plans d'exécution architecture", h(80)),
               sourceNative: true,
+              visaDplg: true,
               descriptif: contenu('Niveaux au 1/50', "Coupes d'exécution", "Façades d'exécution", 'Toiture', 'Repérage', 'Réservations'),
             },
           ],
@@ -293,7 +295,7 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           cle: 'tache_finale',
           libelle: 'Tâche finale',
           fenetre: J(38, 40),
-          taches: [t('integration_livraison', 'Intégration des études visées, mises à jour, contrôle DPLG, livraison', h(24))],
+          taches: [{ ...t('integration_livraison', 'Intégration des études visées, mises à jour, contrôle DPLG, livraison', h(24)), visaDplg: true }],
         },
       ],
     },

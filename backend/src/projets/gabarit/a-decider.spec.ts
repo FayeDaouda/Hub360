@@ -55,7 +55,7 @@ describe('ProjetsOuvertsService.aDecider', () => {
 
   it('CEO (hors circuit) : rien à décider', async () => {
     const r = await svc('AUTRE').aDecider('S1', { userId: 'U', role: 'CEO (transverse)' });
-    expect(r).toEqual({ remises: [], prolongations: [], ts: [] });
+    expect(r).toEqual({ remises: [], prolongations: [], visas: [], ts: [] });
   });
 
   it('prolongation qui repousse la livraison : au CTO, plus au Dir. GC', async () => {

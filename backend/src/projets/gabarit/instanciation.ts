@@ -27,6 +27,7 @@ export type TacheInstanciee = {
   ordre: number;
   descriptif: string | null;
   sourceNative: boolean;
+  visaRequis: boolean; // visa DPLG exigé (gabarit)
   debutJ: number | null;
   finJ: number | null;
   debutLe: string | null;
@@ -115,6 +116,7 @@ export function instancier(contenu: ContenuGabarit, ctx: ContexteOuverture): Car
           ordre: i,
           descriptif: t.descriptif ?? null,
           sourceNative: !!t.sourceNative,
+          visaRequis: !!t.visaDplg,
           ...dates(t.fenetre ?? carte.fenetre),
           temps: t.temps,
           heures: heuresDe(t, motifs[i] !== null),

@@ -48,6 +48,7 @@ export type EtatTache =
   | { code: 'non_necessaire' }
   | { code: 'verrouillee' }
   | { code: 'validee'; ecart: number | null }
+  | { code: 'a_viser' } // validée par le chef de team, visa DPLG à apposer
   | { code: 'a_valider'; version: number }
   | { code: 'reprise'; version: number }
   | { code: 'en_retard'; jours: number }
@@ -89,6 +90,9 @@ export type TacheOuverte = {
   avenant: { devisId: string; reference: string | null; statut: StatutDevisEffectif } | null;
   valideeLe: string | null;
   valideePar: string | null;
+  // Visa DPLG exigé (gabarit) : apposé le… par… ; null si la tâche n'en exige pas.
+  visa: { le: string | null; par: string | null } | null;
+  peutViser: boolean; // l'architecte DPLG connecté peut apposer le visa
   assigne: { id: string; nom: string; cellule: string | null } | null;
   aMoi: boolean; // assignée à la personne connectée
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
@@ -215,6 +219,14 @@ export function deciderProlongation(slug: string, projetId: string, tacheId: str
 }
 
 // Remise : valider, ou renvoyer en reprise avec un motif.
+// Visa DPLG (revue Dir. GC, 21/10/2026) : apposer, ou refuser avec un motif.
+export function viserTache(slug: string, projetId: string, tacheId: string, apposer: boolean, motif?: string) {
+  return apiSociete<{ visa: 'appose' | 'refuse' }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/visa`, {
+    method: 'POST',
+    body: { apposer, ...(motif ? { motif } : {}) },
+  });
+}
+
 export function deciderTache(slug: string, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
   return apiSociete<{ statut: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/decision`, {
     method: 'POST',
@@ -341,6 +353,8 @@ export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
       if (e.ecart && e.ecart > 0) return { libelle: `Validé · avance ${e.ecart} h`, ton: 'succes' };
       if (e.ecart && e.ecart < 0) return { libelle: `Validé · +${-e.ecart} h`, ton: 'attention' };
       return { libelle: 'Validé', ton: 'succes' };
+    case 'a_viser':
+      return { libelle: 'Visa DPLG à apposer', ton: 'attention' };
     case 'a_valider':
       return { libelle: `À valider · ${v(e.version)}`, ton: 'attention' };
     case 'reprise':
@@ -403,6 +417,8 @@ export type ADeciderProjets = {
   remises: (LigneADecider & { version: number; remiseLe: string | null })[];
   // repousseLivraison : date de livraison dépassée (escalade au CTO) ; null sinon.
   prolongations: (LigneADecider & { jusquau: string; motif: string; demandeLe: string; finPrevue: string | null; repousseLivraison: string | null })[];
+  // Visas DPLG à apposer (Dir. GC).
+  visas: (LigneADecider & { valideeLe: string | null })[];
   // TS au-delà du seuil, à trancher par le CTO.
   ts: DemandeTsADecider[];
 };
