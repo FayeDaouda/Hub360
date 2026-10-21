@@ -94,7 +94,7 @@ export function sectionAccessible(session: Session, cle: string): boolean {
 // null si aucune → le rôle n'a rien à faire dans le back-office.
 export function premiereSectionAccessible(session: Session): string | null {
   const prefere = ARRIVEE_PAR_ROLE[session.role];
-  if (prefere && sectionAccessible(session, prefere)) return CHEMINS[prefere];
+  if (prefere && sectionAccessible(session, prefere)) return CHEMIN_ARRIVEE[session.role] ?? CHEMINS[prefere];
   const cle = ORDRE_SECTIONS.find((c) => sectionAccessible(session, c));
   return cle === undefined ? null : CHEMINS[cle];
 }
@@ -102,7 +102,10 @@ export function premiereSectionAccessible(session: Session): string | null {
 // Page d'arrivée propre à un rôle, avant l'ordre du menu : la RH arrive sur
 // sa page (« À traiter aujourd'hui » en tête), pas sur Pilotage (revue RH 20/10/2026) ;
 // le CFO sur Finances (« À valider aujourd'hui », revue CFO 20/10/2026).
-const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation' };
+// Le CTO arrive sur Projets › Production, « À décider aujourd'hui » au-dessus
+// (revue CTO, 21/10/2026).
+const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation', [ROLE_CTO]: 'projets' };
+const CHEMIN_ARRIVEE: Record<string, string> = { [ROLE_CTO]: 'projets?vue=production' };
 
 // Section d'arrivée propre au rôle, si accessible (null sinon) : sur
 // téléphone, elle prend toujours un onglet du bas, en premier.

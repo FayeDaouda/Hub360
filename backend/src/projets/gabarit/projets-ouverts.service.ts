@@ -331,6 +331,8 @@ export class ProjetsOuvertsService {
       statutChantier: statutChantier(p.phase),
       factures: { F1: facture('F1'), F2: facture('F2'), F3: facture('F3') },
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
+      // Assigner : le CTO seulement en suppléance d'un Dir. GC (revue CTO).
+      peutAssigner: acteur.role !== ROLE_CTO || ctx.ctoSupplee,
       optionsTs: dplgConnecte
         ? p.cartes.flatMap((c) => {
             const t = c.temps as Temps | null;

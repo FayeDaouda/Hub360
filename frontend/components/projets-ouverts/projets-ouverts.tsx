@@ -626,7 +626,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
               code={d.code}
               carte={choisie.carte}
               tache={choisie.tache}
-              assignables={assignables}
+              assignables={d.peutAssigner ? assignables : null}
               moiId={moiId}
               mentionnables={mentionnables}
               onMaj={onMaj}

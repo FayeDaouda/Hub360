@@ -211,9 +211,10 @@ export async function installerSocle(prisma: PrismaClient) {
       permissions: {
         crm: 'lecture',
         projets: 'validation',
-        // Finances ouvertes, comme le CIO (maquette Finances, oct. 2026).
-        finances_devis: 'ecriture',
-        finances_factures: 'ecriture',
+        // lecture (21/10/2026, revue Dir. GC / CTO) : le CTO supervise, il ne
+        // prépare ni devis ni factures. Avant : ecriture (maquette Finances).
+        finances_devis: 'lecture',
+        finances_factures: 'lecture',
         finances_marges: 'lecture',
         finances_charges: 'lecture',
         equipe: 'lecture',

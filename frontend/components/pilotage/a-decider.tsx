@@ -64,8 +64,11 @@ const VIDE: ADeciderProjets = { remises: [], prolongations: [], visas: [], ts: [
 //   · CTO : le travail du Dir. GC, les prolongations qui repoussent une
 //     livraison, les TS au-delà du seuil, ce qu'il décide en suppléance du
 //     Dir. GC absent, les absences du Dir. GC, le reporting reçu à lire.
-export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilotage; onOnglet: (onglet: 'reportings') => void }) {
+// Hors de Pilotage (page Production du CTO) : sans `vue`, pas de reporting à
+// déposer ; sans `onOnglet`, « Lire » mène à l'onglet Reportings de Pilotage.
+export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilotage | null; onOnglet?: (onglet: 'reportings') => void }) {
   const router = useRouter();
+  const versReportings = () => (onOnglet ? onOnglet('reportings') : router.push(`/admin/${slug}?onglet=reportings`));
   const session = useSessionCourante();
   const dirGc = session.role === ROLE_DIR_GC;
   const [projets, setProjets] = useState<ADeciderProjets>(VIDE);
@@ -259,7 +262,7 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
     });
   }
   // 6. Reporting de direction à déposer au CTO (dû le 5 du mois suivant).
-  for (const r of vue.reportings.filter((x) => x.peutDeposer && (x.statut === 'a_deposer' || x.statut === 'en_retard'))) {
+  for (const r of (vue?.reportings ?? []).filter((x) => x.peutDeposer && (x.statut === 'a_deposer' || x.statut === 'en_retard'))) {
     const reste = joursAvant(r.echeance);
     elements.push({
       cle: `reporting-${r.type}-${r.mois}`,
@@ -271,7 +274,7 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
       quand: r.statut === 'en_retard' ? `en retard depuis le ${jjmm(r.echeance)}` : `à déposer avant le ${jjmm(r.echeance)}`,
       ton: r.statut === 'en_retard' ? 'risque' : reste <= 2 ? 'attention' : 'info',
       action: 'Déposer',
-      ouvrir: () => onOnglet('reportings'),
+      ouvrir: versReportings,
     });
   }
   // 5 bis. Nouveaux arrivants à affecter à une cellule (Dir. GC).
@@ -301,7 +304,7 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue: VuePilota
       quand: '',
       ton: 'neutre',
       action: 'Lire',
-      ouvrir: () => onOnglet('reportings'),
+      ouvrir: versReportings,
     });
   }
   elements.sort((a, b) => RANG_TON[a.ton] - RANG_TON[b.ton] || a.groupe - b.groupe || a.tri.localeCompare(b.tri));

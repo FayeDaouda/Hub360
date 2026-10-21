@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { ADecider } from '@/components/pilotage/a-decider';
 import { ProjetsOuverts } from '@/components/projets-ouverts/projets-ouverts';
 import { Production } from '@/components/projets-ouverts/production';
 import { ROLE_CEO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
@@ -38,6 +39,8 @@ export default function ProjetsPage({ params }: Props) {
           Production
         </button>
       </div>
+      {/* CTO : sa page d'arrivée — ce qui attend sa décision, puis la production. */}
+      {production && session.role === ROLE_CTO && <ADecider slug={params.slug} />}
       {production ? <Production slug={params.slug} /> : <ProjetsOuverts slug={params.slug} />}
     </>
   );

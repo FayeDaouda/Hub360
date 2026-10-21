@@ -50,6 +50,11 @@ export class TachesProjetService {
     aLaCarte: boolean,
   ) {
     verifierCircuit(acteur.role);
+    // Revue CTO (21/10/2026) : assigner, c'est organiser le travail — le Dir.
+    // GC et les chefs de cellule ; le CTO seulement en suppléance d'un Dir. GC.
+    if (acteur.role === ROLE_CTO && !(await contexteDecision(this.prisma, societeId, aujourdhui())).ctoSupplee) {
+      throw new ForbiddenException('Le CTO n’assigne les tâches qu’en suppléance d’un Dir. GC absent.');
+    }
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
       select: {

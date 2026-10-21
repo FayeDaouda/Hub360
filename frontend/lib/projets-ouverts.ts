@@ -159,6 +159,8 @@ export type DossierProjetOuvert = {
   statutChantier: StatutChantier;
   factures: Record<'F1' | 'F2' | 'F3', EtatFacture>;
   // « Ajouter en TS » (Architecte DPLG) ; vide = pas le droit.
+  // La personne connectée peut assigner (le CTO : seulement en suppléance).
+  peutAssigner: boolean;
   optionsTs: { carteId: string; libelle: string; heures: number }[];
   attentes: { F2: string[]; F3: string[] };
   etapes: EtapeOuverte[];
