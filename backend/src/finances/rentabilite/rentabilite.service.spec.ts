@@ -11,9 +11,9 @@ const valide = (montant: number, dateEffet: string | null) => ({ montant, dateEf
 
 describe('règles de rentabilité (lot 7, phase 1)', () => {
   it('paramètres : défaut 173,33 h, puis la valeur en vigueur à sa date d’effet', () => {
-    const lignes = [{ cle: 'heures_reference', valeur: 160, dateEffet: '2026-11-01', createdAt: new Date() }];
-    expect(parametreAu(lignes, 'heures_reference', '2026-10-15')).toBe(173.33);
-    expect(parametreAu(lignes, 'heures_reference', '2026-11-01')).toBe(160);
+    const lignes = [{ cle: 'heures_annuelles', valeur: 1920, dateEffet: '2026-11-01', createdAt: new Date() }];
+    expect(parametreAu(lignes, 'heures_annuelles', '2026-10-15')).toBe(2080);
+    expect(parametreAu(lignes, 'heures_annuelles', '2026-11-01')).toBe(1920);
     expect(parametreAu([], 'coefficient_charges', '2026-10-01')).toBeNull();
     expect(parametreAu([], 'marge_cible', '2026-10-01')).toBeNull();
   });
@@ -23,8 +23,10 @@ describe('règles de rentabilité (lot 7, phase 1)', () => {
     const s = salaireDuMois([valide(600_000, null), valide(700_000, '2026-10-16')], '2026-10', new Set());
     expect(s).toBe(650_000);
     expect(salaireDuMois([], '2026-10', new Set())).toBeNull();
-    expect(coutHoraire(173_330, 173.33, null)).toBeCloseTo(1000);
-    expect(coutHoraire(173_330, 173.33, 20)).toBeCloseTo(1200);
+    // Base exacte : 520 000 FCFA ÷ (2 080 h ÷ 12) = 3 000 FCFA tout rond (simulation refaite à la main).
+    expect(coutHoraire(520_000, 2080, null)).toBe(3000);
+    expect(coutHoraire(520_000, 2080, null) * 66).toBe(198_000);
+    expect(coutHoraire(520_000, 2080, 20)).toBe(3600);
   });
 
   it('taux non calculable sans facturé ; couleur par rapport à la cible, aucune sans cible', () => {
@@ -66,13 +68,14 @@ describe('RentabiliteService', () => {
         ]),
       },
       dossierPersonnel: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: o.salaire === null ? [] : [valide(o.salaire ?? 519_990, null)] }]),
+        findMany: jest.fn().mockResolvedValue([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: o.salaire === null ? [] : [valide(o.salaire ?? 520_000, null)] }]),
       },
       tacheProjet: { findMany: jest.fn().mockResolvedValue([{ id: 'T1', projetId: 'P1' }]) },
       prolongationTache: { findMany: jest.fn().mockResolvedValue([{ tache: { projetId: 'P1' } }]) },
       evenementTacheProjet: { findMany: jest.fn().mockResolvedValue([{ tache: { projetId: 'P1' } }, { tache: { projetId: 'P1' } }]) },
       parametreRentabilite: { findMany: jest.fn().mockResolvedValue(o.parametres ?? []), create: jest.fn() },
       journalPaie: { createMany: jest.fn() },
+      utilisateurSocieteRole: { findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) => Promise.resolve([{ utilisateur: where.role.nom === 'RH' ? { prenom: 'Coumba', nom: 'Gaye' } : { prenom: 'Bineta', nom: 'Sarr' } }])) },
       utilisateur: { findMany: jest.fn().mockResolvedValue([]) },
     } as unknown as PrismaService;
     const reglages = { joursFeries: jest.fn().mockResolvedValue(new Map([['S1', new Set<string>()]])) } as unknown as ReglagesService;
@@ -83,12 +86,12 @@ describe('RentabiliteService', () => {
   it('CFO : HT facturé, coût des heures contrôlées au salaire en vigueur, marge provisoire, signaux', async () => {
     const r = await svc().s.portefeuille(CFO);
     const p1 = r.lignes.find((l) => l.projet.id === 'P1')!;
-    // 519 990 / 173,33 h = 3 000 FCFA/h × 100 h = 300 000.
+    // 520 000 ÷ (2 080 ÷ 12) = 3 000 FCFA/h × 100 h = 300 000.
     expect(p1).toMatchObject({ ht: 10_000_000, cout: 300_000, marge: 9_700_000, taux: 97, heures: 100, prolongations: 1, reprises: 2, aFacturer: 4_000_000, etat: 'complet', statut: null });
     // Projet sans gabarit : heures non suivies, pas de statut, hors totaux.
     expect(r.lignes.find((l) => l.projet.id === 'P2')).toMatchObject({ etat: 'heures_non_suivies', statut: null });
     expect(r.totaux).toMatchObject({ ht: 10_000_000, cout: 300_000 });
-    expect(r.parametres.find((p) => p.cle === 'heures_reference')).toMatchObject({ valeur: 173.33, parDefaut: true });
+    expect(r.parametres.find((p) => p.cle === 'heures_annuelles')).toMatchObject({ valeur: 2080, parDefaut: true });
   });
 
   it('couleur par rapport à la marge cible fixée par le CFO', async () => {
@@ -114,19 +117,19 @@ describe('RentabiliteService', () => {
 
   it('détail par salarié tracé au journal de la paie, sans montant', async () => {
     const { s, prisma } = svc();
-    (prisma.dossierPersonnel.findMany as jest.Mock).mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: [valide(519_990, null)] }]).mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf' }]);
+    (prisma.dossierPersonnel.findMany as jest.Mock).mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: [valide(520_000, null)] }]).mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf' }]);
     expect(await s.salaries(CFO, 'P1')).toEqual([{ nom: 'Awa Diouf', heures: 100, cout: 300_000, sansSalaire: false }]);
     expect(prisma.journalPaie.createMany).toHaveBeenCalledWith({ data: [{ dossierId: 'D1', action: 'cout_consulte', parId: 'U-CFO' }] });
   });
 
   it('paramètres : le CFO seul, au 1er d’un mois, jamais un mois passé', async () => {
-    const p = { cle: 'heures_reference', valeur: 160, dateEffet: '2099-01-01', motif: 'Accord d’entreprise' };
+    const p = { cle: 'heures_annuelles', valeur: 1920, dateEffet: '2099-01-01', motif: 'Accord d’entreprise' };
     await expect(svc().s.modifierParametre(CEO, p)).rejects.toThrow(ForbiddenException);
     await expect(svc().s.modifierParametre(CFO, { ...p, dateEffet: '2020-01-01' })).rejects.toThrow(/mois passé/);
     await expect(svc().s.modifierParametre(CFO, { ...p, valeur: null })).rejects.toThrow(BadRequestException);
     const { s, prisma } = svc();
     await s.modifierParametre(CFO, p);
-    expect(prisma.parametreRentabilite.create).toHaveBeenCalledWith({ data: expect.objectContaining({ cle: 'heures_reference', valeur: 160, dateEffet: '2099-01-01', parId: 'U-CFO' }) });
+    expect(prisma.parametreRentabilite.create).toHaveBeenCalledWith({ data: expect.objectContaining({ cle: 'heures_annuelles', valeur: 1920, dateEffet: '2099-01-01', parId: 'U-CFO' }) });
   });
 
   it('heures de mois clos à contrôler : données insuffisantes, pas de marge gonflée', async () => {
@@ -136,6 +139,18 @@ describe('RentabiliteService', () => {
     const r = await s.portefeuille(CFO);
     expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', marge: null, taux: null, heuresAttente: 40, cout: 300_000 });
     expect(r.lignes.find((l) => l.projet.id === 'P1')!.raisons).toContain('40 h en attente de contrôle RH');
+  });
+
+  it('blocages : feuilles à contrôler par mois, salaires manquants, et qui doit agir', async () => {
+    const { s } = svc({ salaire: null });
+    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({ feuilles: [{ dossierId: 'D2', statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }] });
+    const r = await s.portefeuille(CFO);
+    expect(r.blocages).toEqual({
+      feuilles: [{ mois: expect.stringMatching(/^\d{4}-\d{2}$/), feuilles: 1, projets: 1 }],
+      salaires: { salaries: 1, projets: 1 },
+      rh: ['Coumba Gaye'],
+      cfo: ['Bineta Sarr'],
+    });
   });
 });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Banknote, Info, Percent, Settings2, Users } from 'lucide-react';
+import { Banknote, Info, OctagonAlert, Percent, Settings2, Users } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { BoutonExport } from '@/components/bouton-export';
 import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite';
@@ -106,7 +106,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     icone: Banknote,
                     degrade: DEGRADE_ETAT.marque,
                   },
-                  { cle: 'cout', label: 'Coût salarial direct', valeur: formatMontant(donnees.totaux.cout ?? 0), sousTexte: `heures contrôlées · ${formatParametre(p.heures_reference)} / mois`, icone: Users, degrade: DEGRADE_ETAT.marque },
+                  { cle: 'cout', label: 'Coût salarial direct', valeur: formatMontant(donnees.totaux.cout ?? 0), sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`, icone: Users, degrade: DEGRADE_ETAT.marque },
                   {
                     cle: 'marge',
                     label: 'Marge directe provisoire',
@@ -129,6 +129,37 @@ export function OngletRentabilite({ slug }: { slug: string }) {
           }
         />
       </div>
+
+      {(donnees.blocages.feuilles.length > 0 || donnees.blocages.salaires.salaries > 0) && (
+        <section className="panel glass-panel rt-blocages" aria-label="Ce qui bloque le calcul">
+          <h2 className="dmd-titre">
+            <OctagonAlert size={17} aria-hidden /> Ce qui bloque le calcul
+          </h2>
+          <ul className="rt-blocages-liste">
+            {donnees.blocages.feuilles.map((b) => (
+              <li key={b.mois}>
+                <strong>
+                  {b.feuilles} feuille{b.feuilles > 1 ? 's' : ''} de temps de {libelleMois(b.mois)} à contrôler
+                </strong>{' '}
+                · bloque{b.feuilles > 1 ? 'nt' : ''} {b.projets} projet{b.projets > 1 ? 's' : ''}
+                <span className="cell-sub">À faire par la RH{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, dans RH › Feuilles de temps.</span>
+              </li>
+            ))}
+            {donnees.blocages.salaires.salaries > 0 && (
+              <li>
+                <strong>
+                  {donnees.blocages.salaires.salaries} salarié{donnees.blocages.salaires.salaries > 1 ? 's' : ''} sans salaire validé
+                </strong>{' '}
+                · bloque{donnees.blocages.salaires.salaries > 1 ? 'nt' : ''} {donnees.blocages.salaires.projets} projet{donnees.blocages.salaires.projets > 1 ? 's' : ''}
+                <span className="cell-sub">
+                  La RH propose le salaire{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, le CFO le valide
+                  {donnees.blocages.cfo.length ? ` (${donnees.blocages.cfo.join(', ')})` : ''}.
+                </span>
+              </li>
+            )}
+          </ul>
+        </section>
+      )}
 
       <section className="panel glass-panel rt-liste">
         <div className="rt-outils">

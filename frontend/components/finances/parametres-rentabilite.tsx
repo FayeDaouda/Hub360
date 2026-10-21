@@ -15,7 +15,7 @@ const libelleMois = (iso: string) => new Date(`${iso.slice(0, 7)}-15T12:00:00Z`)
 export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose: (modifie: boolean) => void }) {
   const [p, setP] = useState<Parametres | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [cle, setCle] = useState('heures_reference');
+  const [cle, setCle] = useState('heures_annuelles');
   const [valeur, setValeur] = useState('');
   const [desactive, setDesactive] = useState(false);
   const [mois, setMois] = useState('');

@@ -194,10 +194,16 @@ export function ATraiterRh({
   }
   // 5. Feuilles de temps des mois clos à contrôler.
   for (const p of donnees.feuilles.periodes.filter((x) => x.clos && x.aControler > 0)) {
+    // Projets dont la rentabilité attend ces feuilles (détail connu pour le
+    // mois chargé) : le CFO ne voit aucune marge tant qu'elles ne sont pas contrôlées.
+    const projets =
+      donnees.feuilles.mois === p.mois
+        ? new Set(donnees.feuilles.feuilles.filter((f) => f.statut === 'a_controler').flatMap((f) => f.lignes.filter((l) => l.heures > 0).map((l) => l.projetCode))).size
+        : 0;
     elements.push({
       cle: `feuilles-${p.mois}`, groupe: 5, tri: p.mois, icone: Timer, action: 'Contrôler',
       titre: `${p.aControler} feuille${p.aControler > 1 ? 's' : ''} de temps à contrôler`,
-      detail: `mois clos de ${libelleMois(p.mois)}`,
+      detail: `mois clos de ${libelleMois(p.mois)}${projets ? ` · bloque${p.aControler > 1 ? 'nt' : ''} le calcul de la rentabilité de ${projets} projet${projets > 1 ? 's' : ''}` : ''}`,
       quand: 'mois clos', ton: 'attention',
       ouvrir: () => onOuvrir('temps'),
     });

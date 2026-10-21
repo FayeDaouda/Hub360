@@ -7,13 +7,15 @@ import { bornesMois, joursOuvres, type Feries } from '../../rh/regles-temps';
 // patronales (sauf coefficient activé par le CFO), ni dépenses, ni frais
 // généraux : jamais une « rentabilité ».
 
-export type CleParametre = 'heures_reference' | 'coefficient_charges' | 'marge_cible';
+export type CleParametre = 'heures_annuelles' | 'coefficient_charges' | 'marge_cible';
 
 // Valeurs par défaut (pas d'expert-comptable pour l'instant) : modifiables
 // par le CFO, chacune affichée comme « non validée ».
 export const PARAMETRES: Record<CleParametre, { libelle: string; defaut: number | null; min: number; max: number; unite: string; videPermis: boolean }> = {
-  // Durée légale de 40 h par semaine au Sénégal : 40 × 52 ÷ 12.
-  heures_reference: { libelle: 'Heures mensuelles de référence', defaut: 173.33, min: 1, max: 400, unite: 'h', videPermis: false },
+  // Durée légale de 40 h par semaine au Sénégal : 40 × 52 = 2 080 h par an,
+  // soit 173,333… h par mois. Stockée en heures ANNUELLES (valeur exacte) et
+  // divisée par 12 au calcul : 520 000 FCFA donnent exactement 3 000 FCFA/h.
+  heures_annuelles: { libelle: 'Heures annuelles de référence (÷ 12 par mois)', defaut: 2080, min: 100, max: 4000, unite: 'h par an', videPermis: false },
   // Vide = charges patronales désactivées (non comprises dans le coût).
   coefficient_charges: { libelle: 'Coefficient de charges patronales', defaut: null, min: 0, max: 100, unite: '%', videPermis: true },
   // Vide = pas de couleur de statut.
@@ -46,10 +48,11 @@ export function salaireDuMois(changements: ChangementSource[], mois: string, fer
   return valeurs.reduce((t, s) => t + s, 0) / valeurs.length;
 }
 
-// Coût d'une heure d'un salarié pour un mois : salaire ÷ heures de
-// référence, majoré des charges si le coefficient est activé.
-export function coutHoraire(salaireMois: number, heuresReference: number, coefficientCharges: number | null): number {
-  return (salaireMois / heuresReference) * (1 + (coefficientCharges ?? 0) / 100);
+// Coût d'une heure d'un salarié pour un mois : salaire ÷ (heures annuelles
+// ÷ 12), majoré des charges si le coefficient est activé. Aucun arrondi ici :
+// seul l'affichage arrondit.
+export function coutHoraire(salaireMois: number, heuresAnnuelles: number, coefficientCharges: number | null): number {
+  return ((salaireMois * 12) / heuresAnnuelles) * (1 + (coefficientCharges ?? 0) / 100);
 }
 
 // Taux de marge : « Non calculable » (null) si rien n'est facturé.

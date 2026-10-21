@@ -136,7 +136,7 @@ export class RentabiliteService {
       if (!couts.has(k)) {
         const salaire = salaireDuMois(salaires.get(dossierId) ?? [], m, ferieSet);
         const debut = `${m}-01`;
-        couts.set(k, salaire === null ? null : coutHoraire(salaire, parametreAu(params, 'heures_reference', debut)!, parametreAu(params, 'coefficient_charges', debut)));
+        couts.set(k, salaire === null ? null : coutHoraire(salaire, parametreAu(params, 'heures_annuelles', debut)!, parametreAu(params, 'coefficient_charges', debut)));
       }
       return couts.get(k)!;
     };
@@ -165,13 +165,22 @@ export class RentabiliteService {
     }
 
     // Heures des mois clos encore à contrôler : affichées, jamais comptées.
+    // Ce qui bloque le calcul : feuilles à contrôler (par mois) et salariés
+    // sans salaire validé, avec les projets touchés — montré au CFO et à la RH.
+    const feuillesBloquantes = new Map<string, { feuilles: Set<string>; projets: Set<string> }>();
     const clos = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).filter((m) => m < moisDe(jour) && dansPeriode(m));
     for (const m of clos) {
       const { feuilles } = await this.temps.feuilles(m, societeId);
       for (const f of feuilles.filter((x) => x.statut === 'a_controler')) {
         for (const l of f.lignes) {
-          const c = cumuls.get(projetDe(l) ?? '');
-          if (c && l.heures) c.heuresAttente += l.heures;
+          const projetId = projetDe(l);
+          const c = cumuls.get(projetId ?? '');
+          if (!c || !l.heures) continue;
+          c.heuresAttente += l.heures;
+          const b = feuillesBloquantes.get(m) ?? { feuilles: new Set<string>(), projets: new Set<string>() };
+          b.feuilles.add(f.dossierId);
+          b.projets.add(projetId!);
+          feuillesBloquantes.set(m, b);
         }
       }
     }
@@ -220,7 +229,24 @@ export class RentabiliteService {
         _cumul: c,
       };
     });
-    return { lignes, params, cible, factures };
+    const sansSalaire = new Set([...cumuls.values()].flatMap((c) => [...c.sansSalaire]));
+    const blocages = {
+      feuilles: [...feuillesBloquantes.entries()]
+        .sort(([x], [y]) => x.localeCompare(y))
+        .map(([m, b]) => ({ mois: m, feuilles: b.feuilles.size, projets: b.projets.size })),
+      salaires: { salaries: sansSalaire.size, projets: [...cumuls.values()].filter((c) => c.sansSalaire.size).length },
+    };
+    return { lignes, params, cible, factures, blocages };
+  }
+
+  // Qui doit agir : la RH contrôle les feuilles et propose les salaires, le
+  // CFO valide les salaires.
+  private async titulaires(societeId: string, role: string) {
+    const lignes = await this.prisma.utilisateurSocieteRole.findMany({
+      where: { societeId, role: { nom: role }, utilisateur: { actif: true } },
+      select: { utilisateur: { select: { prenom: true, nom: true } } },
+    });
+    return [...new Set(lignes.map((l) => nomDe(l.utilisateur)))];
   }
 
   private parametresEnVigueur(params: LigneParametre[]) {
@@ -239,7 +265,8 @@ export class RentabiliteService {
   async portefeuille(a: Acteur, periode?: string) {
     const acces = this.acces(a);
     if (periode && !/^\d{4}-\d{2}$/.test(periode)) throw new BadRequestException('Période invalide (AAAA-MM).');
-    const { lignes, params } = await this.calculer(a.societeId, periode ?? null);
+    const { lignes, params, blocages } = await this.calculer(a.societeId, periode ?? null);
+    const [rh, cfo] = await Promise.all([this.titulaires(a.societeId, 'RH'), this.titulaires(a.societeId, ROLE_CFO)]);
     // Totaux : projets aux données complètes seulement.
     const complets = lignes.filter((l) => l.etat === 'complet');
     const totaux = {
@@ -254,6 +281,7 @@ export class RentabiliteService {
       calculeLe: new Date(),
       parametres: this.parametresEnVigueur(params),
       projetsComplets: complets.length,
+      blocages: { ...blocages, rh, cfo },
       totaux:
         acces === 'montants'
           ? { ...totaux, marge: margeTotale === null ? null : arrondi(margeTotale), taux: tauxTotal === null ? null : Math.round(tauxTotal * 10) / 10 }

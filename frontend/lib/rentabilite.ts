@@ -8,7 +8,7 @@ import { apiSociete } from './client-api';
 export type Acces = 'montants' | 'taux';
 export type Statut = 'vert' | 'ambre' | 'rouge' | null;
 export type EtatDonnees = 'complet' | 'insuffisant' | 'heures_non_suivies';
-export type ParametreEnVigueur = { cle: 'heures_reference' | 'coefficient_charges' | 'marge_cible'; libelle: string; unite: string; valeur: number | null; parDefaut: boolean };
+export type ParametreEnVigueur = { cle: 'heures_annuelles' | 'coefficient_charges' | 'marge_cible'; libelle: string; unite: string; valeur: number | null; parDefaut: boolean };
 
 export type LigneRentabilite = {
   projet: { id: string; code: string; programme: string; client: string; statut: string; phase: string };
@@ -33,6 +33,13 @@ export type Portefeuille = {
   calculeLe: string;
   parametres: ParametreEnVigueur[];
   projetsComplets: number; // les totaux ne portent que sur eux
+  // Ce qui empêche le calcul, et qui doit agir (RH : contrôle, salaires ; CFO : validation).
+  blocages: {
+    feuilles: { mois: string; feuilles: number; projets: number }[];
+    salaires: { salaries: number; projets: number };
+    rh: string[];
+    cfo: string[];
+  };
   totaux: { ht: number | null; cout: number | null; marge: number | null; taux: number | null };
   lignes: LigneRentabilite[];
 };
@@ -81,5 +88,12 @@ export const LIBELLE_ETAT: Record<EtatDonnees, string> = {
 };
 
 export const formatTaux = (t: number | null) => (t === null ? 'Non calculable' : `${t.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`);
+// Les heures sont stockées par an (valeur exacte) ; le mois est affiché arrondi.
 export const formatParametre = (p: { valeur: number | null; unite: string; cle?: string }) =>
-  p.valeur === null ? (p.cle === 'coefficient_charges' ? 'désactivé' : 'non fixée') : `${p.valeur.toLocaleString('fr-FR')} ${p.unite}`;
+  p.valeur === null
+    ? p.cle === 'coefficient_charges'
+      ? 'désactivé'
+      : 'non fixée'
+    : p.cle === 'heures_annuelles'
+      ? `${p.valeur.toLocaleString('fr-FR')} h par an, soit ${(p.valeur / 12).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} h par mois`
+      : `${p.valeur.toLocaleString('fr-FR')} ${p.unite}`;
