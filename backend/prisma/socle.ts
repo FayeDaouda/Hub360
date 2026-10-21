@@ -282,11 +282,15 @@ export async function installerSocle(prisma: PrismaClient) {
   // 26/09/2026), plutôt qu'un contournement codé en dur dans PermissionGuard —
   // la matrice reste la seule source de vérité de « qui voit quoi ». Boucle
   // sur le catalogue entier : un module ajouté plus tard est couvert aussi.
+  // Sauf les marges et la RH (décision 12 du 21/10/2026, revue CFO) : le
+  // compte de secours ne voit ni salaires ni rentabilité.
+  const SANS_ACCES_ADMIN = new Set(['finances_marges', 'rh']);
   for (const mod of modules) {
+    const niveau = SANS_ACCES_ADMIN.has(mod.cle) ? 'aucun' : 'validation';
     await prisma.rolePermission.upsert({
       where: { roleId_moduleId: { roleId: roleAdmin.id, moduleId: mod.id } },
-      update: { niveau: 'validation' },
-      create: { roleId: roleAdmin.id, moduleId: mod.id, niveau: 'validation' },
+      update: { niveau },
+      create: { roleId: roleAdmin.id, moduleId: mod.id, niveau },
     });
   }
 

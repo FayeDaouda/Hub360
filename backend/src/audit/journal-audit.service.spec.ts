@@ -40,6 +40,7 @@ function svc() {
       ]),
     },
     lectureReporting: vide,
+    parametreRentabilite: vide,
     questionReporting: vide,
     journalCloture: { findMany: jest.fn().mockResolvedValue([{ id: 'C1', mois: '2026-09', action: 'cloture', motif: '', parId: 'U9', createdAt: new Date('2026-10-05T08:00:00Z') }]) },
     journalPaie: {

@@ -5,6 +5,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { moisFr } from '../projets/facturation/cloture';
 import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.service';
 import { titreReporting } from '../pilotage/suivi-reporting.service';
+import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Acteur = { userId: string; societeId: string; role: string };
@@ -35,6 +36,7 @@ const ACTIONS_PAIE: Record<ActionPaie, string> = {
   salaire_modifie: 'Changement de salaire validé',
   salaire_propose: 'Changement de salaire proposé',
   salaire_refuse: 'Changement de salaire refusé',
+  cout_consulte: 'Coût sur un projet consulté',
   bulletin_consulte: 'Bulletin consulté',
   bulletin_depose: 'Bulletin déposé',
   bulletin_retire: 'Bulletin retiré',
@@ -93,6 +95,8 @@ export class JournalAuditService {
       }),
     ]);
     const nomReporting = (r: { type: 'direction' | 'rh'; mois: string }) => `${titreReporting(r.type)} · ${moisFr(r.mois)}`;
+    // Paramètres de rentabilité (lot 7) : valeur, date d'effet, motif — jamais un salaire.
+    const parametresRentabilite = await this.prisma.parametreRentabilite.findMany({ where: { societeId: S, createdAt: dans } });
     const [demandesAvoir, clotures] = await Promise.all([
       this.prisma.demandeAvoir.findMany({
         where: { societeId: S, OR: [{ demandeLe: dans }, { decideLe: dans }] },
@@ -187,6 +191,17 @@ export class JournalAuditService {
           ? [{ id: `reporting-r:${q.id}`, le: q.reponduLe, categorie: 'pilotage' as const, action: 'Réponse à une question', detail: nomReporting(q.reporting), parId: q.reponduParId }]
           : []),
       ]),
+      ...parametresRentabilite.map((r) => {
+        const def = PARAMETRES[r.cle as CleParametre];
+        return {
+          id: `rentabilite:${r.id}`,
+          le: r.createdAt,
+          categorie: 'finances' as const,
+          action: 'Paramètre de rentabilité modifié',
+          detail: `${def?.libelle ?? r.cle} : ${r.valeur === null ? 'désactivé' : `${r.valeur} ${def?.unite ?? ''}`.trim()} dès ${moisFr(r.dateEffet.slice(0, 7))} · motif : ${r.motif}`,
+          parId: r.parId,
+        };
+      }),
       ...clotures.map((c) => ({
         id: `cloture:${c.id}`,
         le: c.createdAt,

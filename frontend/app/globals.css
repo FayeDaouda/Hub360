@@ -14863,3 +14863,246 @@ tr.is-demandeur .cal-nom {
     grid-auto-columns: 58%;
   }
 }
+
+/* Finances · Rentabilité par projet (lot 7, phase 1) : marge directe
+   provisoire, bandeau des réserves, fiche et paramètres. */
+.rt {
+  display: grid;
+  gap: 1rem;
+}
+.rt-bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.6rem 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--pill-attention) 40%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--pill-attention) 7%, var(--surface));
+  font-size: 0.86rem;
+}
+.rt-bandeau > svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+}
+.rt-bandeau > span {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+.rt-liste {
+  display: grid;
+  gap: 0.75rem;
+}
+.rt-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.75rem;
+}
+.rt-outils .field {
+  min-width: 12rem;
+}
+.rt-outils > :last-child:not(.field) {
+  margin-left: auto;
+}
+.rt-taux-ligne {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.rt-negatif {
+  color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
+}
+.rt-signal {
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+  font-weight: 600;
+}
+.rt-heures .cell-sub {
+  display: block;
+}
+.rtf-synthese {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.rtf-synthese > div {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.rtf-synthese dt {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+.rtf-synthese dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.rtf-qualite {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+.rtf-mois {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rtf-mois > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+.rtf-mois > li:last-child {
+  border-bottom: 0;
+}
+.rtf-mois-nom {
+  flex: 1 1 10rem;
+  font-weight: 600;
+}
+.rtf-mois-nom::first-letter {
+  text-transform: uppercase;
+}
+.rtp-modal {
+  max-width: 640px;
+}
+.rtp-corps {
+  display: grid;
+  gap: 0.85rem;
+}
+.rtp-form {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.rtp-form > .field-label {
+  margin: 0;
+  font-weight: 600;
+}
+.rtp-champs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.rtp-vide {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 720px) {
+  .rt-outils .field {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .rtp-champs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rtf-synthese > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+  /* Une ligne compacte par projet (même modèle que Devis / Factures). */
+  .admin-table.rt-table tr.fin-ligne {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'projet marge' 'taux taux' 'signaux heures' 'etat etat';
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .admin-table.rt-table--taux tr.fin-ligne {
+    grid-template-areas: 'projet taux' 'signaux heures' 'etat etat';
+  }
+  .admin-table.rt-table tr.fin-ligne + tr {
+    margin-top: 0;
+  }
+  .admin-table.rt-table tr.fin-ligne td,
+  .admin-table.rt-table tr.fin-ligne td:first-child {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  .admin-table.rt-table tr.fin-ligne td:nth-child(n) > * {
+    margin-left: 0;
+    text-align: left;
+  }
+  .admin-table.rt-table tr.fin-ligne td::before {
+    display: none;
+  }
+  .admin-table.rt-table tr.fin-ligne td .cell-stack {
+    align-items: flex-start;
+  }
+  .rt-table .rt-projet {
+    grid-area: projet;
+  }
+  .rt-table .rt-marge {
+    grid-area: marge;
+    justify-self: end;
+    white-space: nowrap;
+  }
+  .rt-table .rt-taux {
+    grid-area: taux;
+  }
+  .rt-table--taux .rt-taux {
+    justify-self: end;
+  }
+  .rt-table .rt-signaux {
+    grid-area: signaux;
+  }
+  .rt-table .rt-heures {
+    grid-area: heures;
+    justify-self: end;
+  }
+  .rt-table .rt-etat {
+    grid-area: etat;
+  }
+  .admin-table.rt-table tr.fin-ligne .rt-signaux .cell-stack {
+    flex-direction: row;
+    gap: 0.4rem;
+  }
+  .admin-table.rt-table tr.fin-ligne .rt-etat .cell-stack {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .admin-table.rt-table tr.fin-ligne :is(.rt-ht, .rt-cout) {
+    display: none;
+  }
+}
+@media (min-width: 721px) {
+  /* Tuiles de la rentabilité : elles prennent toute la largeur (3 ou 1). */
+  .rt-kpi .kpi-strip {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+}
+.rt-table .rt-etat .pill,
+.rt-table .rt-taux .pill {
+  white-space: nowrap;
+}

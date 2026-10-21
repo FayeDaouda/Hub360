@@ -41,8 +41,10 @@ import { OngletFeuilleTemps } from '@/components/finances/onglet-feuille-temps';
 import { AValiderCfo } from '@/components/finances/a-valider-cfo';
 import { Clotures } from '@/components/finances/clotures';
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
+import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
+import { ROLES_RENTABILITE } from '@/lib/rentabilite';
 
-type Onglet = 'tableau' | 'tresorerie' | 'devis' | 'factures' | 'temps';
+type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
 
 function formatDate(iso: string): string {
@@ -68,6 +70,8 @@ export default function FinancesPage({ params }: Props) {
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
     tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
+    // Rentabilité par projet (lot 7, décision 8) : CFO, CEO (montants), CTO (taux).
+    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture') && ROLES_RENTABILITE.has(session.role),
   };
   const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.
@@ -93,6 +97,8 @@ export default function FinancesPage({ params }: Props) {
   const ongletDemande: Onglet | null =
     searchParams.get('onglet') === 'tresorerie' && droits.tableauDeBord
       ? 'tresorerie'
+      : searchParams.get('onglet') === 'rentabilite' && droits.rentabilite
+      ? 'rentabilite'
       : searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee
       ? 'factures'
       : offreDemandee || devisDemande
@@ -390,6 +396,17 @@ export default function FinancesPage({ params }: Props) {
               Trésorerie
             </button>
           )}
+          {droits.rentabilite && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={onglet === 'rentabilite'}
+              className={onglet === 'rentabilite' ? 'is-active' : ''}
+              onClick={() => setOnglet('rentabilite')}
+            >
+              Rentabilité
+            </button>
+          )}
           <button type="button" role="tab" aria-selected={onglet === 'devis'} className={onglet === 'devis' ? 'is-active' : ''} onClick={() => setOnglet('devis')}>
             Devis · {devis ? devisFiltres.length : '…'}
           </button>
@@ -423,6 +440,8 @@ export default function FinancesPage({ params }: Props) {
         ) : (
           <OngletTresorerie slug={params.slug} factures={factures} peutRelancer={droits.facturesEcriture} onOuvrirFacture={setFactureOuverte} />
         )
+      ) : onglet === 'rentabilite' ? (
+        <OngletRentabilite slug={params.slug} />
       ) : onglet === 'temps' ? (
         <OngletFeuilleTemps
           slug={params.slug}

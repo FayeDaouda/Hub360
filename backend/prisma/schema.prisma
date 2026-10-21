@@ -1408,6 +1408,25 @@ model JournalCloture {
   @@map("journal_clotures")
 }
 
+// Rentabilité par projet, phase 1 (lot 7, décisions du 21/10/2026) :
+// paramètres de calcul versionnés, modifiables par le CFO seul. Une valeur
+// s'applique à partir de sa date d'effet (le 1er d'un mois, jamais un mois
+// passé) : un changement ne réécrit pas les mois déjà calculés. Sans ligne,
+// la valeur par défaut du code (finances/rentabilite/regles-rentabilite.ts).
+model ParametreRentabilite {
+  id        String   @id @default(uuid())
+  societeId String   @map("societe_id")
+  cle       String // heures_reference | coefficient_charges | marge_cible
+  valeur    Float? // null = désactivé / vide
+  dateEffet String   @map("date_effet") // AAAA-MM-01
+  motif     String
+  parId     String?  @map("par_id") // audit, pas de FK
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([societeId, cle])
+  @@map("parametres_rentabilite")
+}
+
 // Trace d'un paiement supprimé (correction) : copie figée de la ligne au
 // moment de la suppression, + qui l'avait saisi et qui l'a supprimé. Hors
 // de Paiement pour que les cumuls (statut « payée », tableaux de bord) ne
@@ -1926,6 +1945,7 @@ enum ActionPaie {
   salaire_modifie // changement validé (en vigueur à sa date d'effet)
   salaire_propose
   salaire_refuse
+  cout_consulte // détail du coût d'un salarié sur un projet (rentabilité)
   bulletin_consulte
   bulletin_depose
   bulletin_retire

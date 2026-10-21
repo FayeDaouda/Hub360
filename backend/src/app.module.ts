@@ -15,6 +15,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { DevisModule } from './devis/devis.module';
 import { FinancesModule } from './finances/finances.module';
+import { RentabiliteModule } from './finances/rentabilite/rentabilite.module';
 import { RolesModule } from './roles/roles.module';
 import { GroupeModule } from './groupe/groupe.module';
 import { RhModule } from './rh/rh.module';
@@ -53,6 +54,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ChatModule,
     DevisModule,
     FinancesModule,
+    RentabiliteModule,
     RolesModule,
     GroupeModule,
     RhModule,
