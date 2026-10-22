@@ -109,11 +109,14 @@ describe('RentabiliteService', () => {
     expect(r.lignes.find((l) => l.projet.id === 'P1')!.statut).toBe('ambre');
   });
 
-  it('CTO : taux et couleur, aucun montant ; CIO : refusé', async () => {
+  // Revue CIO (22/10/2026) : la matrice fait foi (le CIO n'a plus les marges,
+  // la porte du contrôleur le refuse) ; ici, tout rôle admis hors CFO/CEO voit le taux.
+  it('CTO (et tout rôle que la matrice ouvre) : taux et couleur, aucun montant ; administration : refusée', async () => {
     const r = await svc().s.portefeuille(CTO);
     expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ ht: null, cout: null, marge: null, aFacturer: null, taux: 97 });
     expect(r.totaux).toMatchObject({ ht: null, cout: null, marge: null });
-    await expect(svc().s.portefeuille(CIO)).rejects.toThrow(ForbiddenException);
+    expect((await svc().s.portefeuille(CIO)).totaux).toMatchObject({ ht: null, cout: null, marge: null });
+    await expect(svc().s.portefeuille({ ...CIO, role: 'societe_admin' })).rejects.toThrow(ForbiddenException);
     await expect(svc().s.salaries(CTO, 'P1')).rejects.toThrow(ForbiddenException);
   });
 

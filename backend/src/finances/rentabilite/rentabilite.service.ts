@@ -24,9 +24,10 @@ type Acces = 'montants' | 'taux';
 
 // Décision 8 (21/10/2026) : les montants (coût, marge) au CFO et au CEO
 // seuls — croisés avec les heures visibles dans Projets, ils permettraient de
-// recalculer les salaires ; le CTO voit le taux et la couleur ; le CIO et le
-// compte d'administration n'ont pas accès (en plus de la matrice).
-const ACCES: Record<string, Acces> = { CFO: 'montants', 'CEO (transverse)': 'montants', 'CTO (transverse)': 'taux' };
+// recalculer les salaires ; tout autre rôle que la matrice ouvre aux marges
+// voit le taux et la couleur (revue CIO, 22/10/2026 : la matrice fait foi,
+// plus de liste parallèle) ; le compte d'administration n'a pas accès.
+const ACCES_MONTANTS = new Set(['CFO', 'CEO (transverse)']);
 const ROLE_CFO = 'CFO';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -62,10 +63,11 @@ export class RentabiliteService {
     private temps: TempsService,
   ) {}
 
+  // Le contrôleur exige finances_marges en lecture (matrice) ; ici, le
+  // niveau de détail selon la fonction.
   private acces(a: Acteur): Acces {
-    const acces = ACCES[a.role];
-    if (!acces) throw new ForbiddenException('La rentabilité par projet est réservée au CFO, au CEO et au CTO.');
-    return acces;
+    if (a.role === 'societe_admin') throw new ForbiddenException('La rentabilité par projet n’est pas ouverte au compte d’administration.');
+    return ACCES_MONTANTS.has(a.role) ? 'montants' : 'taux';
   }
 
   // --- Calcul ------------------------------------------------------------------

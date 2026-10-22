@@ -82,10 +82,11 @@ export class CrmController {
     return this.crm.rattacherLocalite(req.user.societeId, req.user, id, dto.localiteId);
   }
 
-  // Écriture sur le CRM ne suffit pas : le service n'autorise que les
+  // Lecture suffit à la porte (revue CIO, 22/10/2026 : le CIO a le CRM en
+  // lecture, limité à la réassignation) ; le service n'autorise que les
   // titulaires Dir. GC, societe_admin et le CIO (cf. changerProprietaire).
   @Patch(':id/proprietaire')
-  @RequiertPermission('crm', 'ecriture')
+  @RequiertPermission('crm', 'lecture')
   changerProprietaire(
     @Req() req: Req,
     @Param('id') id: string,

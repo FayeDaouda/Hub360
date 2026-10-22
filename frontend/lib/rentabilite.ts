@@ -74,8 +74,6 @@ export const getParametresRentabilite = (slug: string) => apiSociete<Parametres>
 export const modifierParametreRentabilite = (slug: string, p: { cle: string; valeur: number | null; dateEffet: string; motif: string }) =>
   apiSociete<Parametres>(slug, `${base}/parametres`, { method: 'POST', body: p });
 
-// Rôles qui voient l'onglet (décision 8) ; le serveur revérifie.
-export const ROLES_RENTABILITE = new Set(['CFO', 'CEO (transverse)', 'CTO (transverse)']);
 
 export const LIBELLE_STATUT: Record<'vert' | 'ambre' | 'rouge', string> = {
   vert: 'Au-dessus de la cible',

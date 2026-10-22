@@ -55,7 +55,6 @@ import { ExportComptable } from '@/components/finances/export-comptable';
 import { ParametresFacturationFenetre } from '@/components/finances/parametres-facturation';
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
-import { ROLES_RENTABILITE } from '@/lib/rentabilite';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
 type Props = { params: { slug: string } };
@@ -84,7 +83,8 @@ export default function FinancesPage({ params }: Props) {
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
     tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
     // Rentabilité par projet (lot 7, décision 8) : CFO, CEO (montants), CTO (taux).
-    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture') && ROLES_RENTABILITE.has(session.role),
+    // La matrice fait foi (revue CIO) : marges en lecture = Rentabilité (montants au CFO et au CEO, taux aux autres).
+    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== 'societe_admin',
   };
   const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.

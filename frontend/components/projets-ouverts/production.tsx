@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { AlarmClock, CalendarClock, Gauge, TriangleAlert } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
+import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getProduction, jjmm, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
-import { getRentabilite, ROLES_RENTABILITE, type LigneRentabilite } from '@/lib/rentabilite';
+import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
 
 const STATUT: Record<LigneProduction['statutChantier'], string> = { conception: 'En conception', chantier: 'En chantier', livre: 'Livré' };
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
@@ -43,7 +44,8 @@ export function Production({ slug }: { slug: string }) {
   const [cellule, setCellule] = useState('');
   const [retard, setRetard] = useState(false);
   const [livraison, setLivraison] = useState(false);
-  const voitRenta = ROLES_RENTABILITE.has(session.role) && session.role !== 'CFO';
+  // La matrice fait foi (revue CIO) : marges en lecture = couleur de marge.
+  const voitRenta = niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== 'societe_admin';
 
   useEffect(() => {
     getProduction(slug)

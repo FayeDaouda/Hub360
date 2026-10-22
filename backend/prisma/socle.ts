@@ -148,7 +148,8 @@ export async function installerSocle(prisma: PrismaClient) {
         rh: 'lecture',
         pilotage: 'lecture',
         documents: 'lecture',
-        communication: 'lecture',
+        // ecriture (22/10/2026, revue CIO) : tous les directeurs écrivent dans le chat.
+        communication: 'ecriture',
       },
     },
     RH: {
@@ -208,7 +209,8 @@ export async function installerSocle(prisma: PrismaClient) {
         // N+1 des directeurs (COO, CFO, CTO, CIO ; rh/demandes.service.ts).
         pilotage: 'lecture',
         documents: 'lecture',
-        communication: 'lecture',
+        // ecriture (22/10/2026, revue CIO) : tous les directeurs écrivent dans le chat.
+        communication: 'ecriture',
       },
     },
     'CTO (transverse)': {
@@ -226,28 +228,28 @@ export async function installerSocle(prisma: PrismaClient) {
         rh: 'aucun',
         pilotage: 'lecture',
         documents: 'lecture',
-        communication: 'lecture',
+        // ecriture (22/10/2026, revue CIO) : tous les directeurs écrivent dans le chat.
+        communication: 'ecriture',
       },
     },
     'CIO (transverse)': {
       transverse: true,
       permissions: {
-        // ecriture (26/09/2026) : le CIO réassigne les dossiers en
-        // supervision (CrmService.peutReassigner) — il doit pouvoir entrer
-        // dans le CRM et y agir, pas seulement consulter.
-        crm: 'ecriture',
-        // ecriture (01/10/2026) : maquette « Projets » du boss — le CIO lit
-        // tous les projets ouverts et assigne (« Lecture et assignation ·
-        // accès complet ») ; la validation reste au chef de team / DPLG.
-        projets: 'ecriture',
-        // Finances ouvertes (maquette Finances, oct. 2026 : « CFO, CEO, CTO,
-        // CIO : tout, y compris tableau de bord et rentabilité ») : préparer
-        // devis et factures, lire marges et charges ; la validation (émission,
-        // offres) reste au CFO.
-        finances_devis: 'ecriture',
-        finances_factures: 'ecriture',
-        finances_marges: 'lecture',
-        finances_charges: 'lecture',
+        // lecture (22/10/2026, revue CIO) : limité à la réassignation des
+        // dossiers (CrmService.peutReassigner, route en lecture). Avant :
+        // ecriture (26/09/2026).
+        crm: 'lecture',
+        // lecture (22/10/2026, revue CIO) : sans assignation, même en
+        // suppléance — le Dir. GC organise. Avant : ecriture (01/10/2026,
+        // maquette « Projets » du boss).
+        projets: 'lecture',
+        // aucun (22/10/2026, revue CIO) : celui qui gère les droits n'a pas la
+        // main sur l'argent. Avant : devis et factures en écriture, marges et
+        // charges en lecture (maquette Finances, oct. 2026).
+        finances_devis: 'aucun',
+        finances_factures: 'aucun',
+        finances_marges: 'aucun',
+        finances_charges: 'aucun',
         // lecture (21/10/2026, revue Dir. GC) : le Dir. GC organise les
         // cellules (il connaît projets, compétences et charge) ; le CIO gère
         // comptes et droits, pas l'organisation du travail. Avant : ecriture
@@ -258,7 +260,9 @@ export async function installerSocle(prisma: PrismaClient) {
         // ses actions vont par fonction (émetteur, CTO / CEO, responsable).
         pilotage: 'lecture',
         documents: 'aucun',
-        communication: 'aucun',
+        // ecriture (22/10/2026, revue CIO) : tous les directeurs écrivent dans
+        // le chat, CIO compris. Avant : aucun.
+        communication: 'ecriture',
       },
     },
   };

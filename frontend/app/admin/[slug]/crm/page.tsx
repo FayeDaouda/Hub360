@@ -530,7 +530,8 @@ export default function CrmPage({ params }: Props) {
           depuisFinances={depuisFinances}
           onMaj={rafraichir}
           peutReassigner={estDirectionOuCio}
-          peutArchiver={estDirectionOuCio}
+          // Archiver exige l'écriture sur le CRM (le CIO, en lecture, ne fait que réassigner).
+          peutArchiver={estDirectionOuCio && peutEcrire}
           onClose={() => setDetailId(null)}
           onAgir={(action, commentaire) => onAgir(detailProjet, action, commentaire)}
           onRattacher={(localiteId) => onRattacher(detailProjet, localiteId)}

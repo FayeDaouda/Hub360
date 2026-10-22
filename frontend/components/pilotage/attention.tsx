@@ -25,6 +25,7 @@ const ajouterJours = (iso: string, n: number) => {
 const joursEntre = (de: string, a: string) =>
   Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${de}T12:00:00Z`).getTime()) / 86_400_000);
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+const NIVEAU_DROIT: Record<DemandeDroit['apres'], string> = { aucun: 'aucun', lecture: 'lecture', ecriture: 'écriture', validation: 'validation' };
 
 type Ligne = {
   cle: string;
@@ -76,7 +77,7 @@ export function Attention({
       couleur: 'var(--corail)',
       lignes: droits.map((d) => ({
         cle: d.id,
-        titre: `${d.module} · ${d.avant} → ${d.apres}`,
+        titre: `${d.module} · ${NIVEAU_DROIT[d.avant]} → ${NIVEAU_DROIT[d.apres]}`,
         detail: `demandé par ${d.demandePar}`,
         pill: { libelle: 'À valider', ton: 'attention' as const },
         onClick: () => setDroitOuvert(d),
