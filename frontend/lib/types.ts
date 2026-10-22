@@ -1849,7 +1849,8 @@ export type VuePilotage = {
     instances: string[];
     responsables: ResponsableDecision[]; // titulaires d'un compte HUB seulement
     rattachables: { projets: OptionRattachement[]; cellules: OptionRattachement[]; clients: OptionRattachement[] } | null;
-    peutProposer: boolean; // CTO : « Proposer au CEO »
+    peutProposer: boolean; // CTO, COO : « Proposer au CEO »
+    peutInscrire: boolean; // CTO, CEO : inscrire directement (le COO propose seulement)
   } | null; // null = pas de saisie
   // Chiffres clés en tête de page, selon la matrice (backend pilotage/chiffres.service.ts).
   chiffres: {

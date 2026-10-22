@@ -34,6 +34,8 @@ export async function installerSocle(prisma: PrismaClient) {
   await prisma.module.deleteMany({ where: { cle: 'finances' } });
   for (const m of [
     { nom: 'CRM', cle: 'crm' },
+    // Revue COO (22/10/2026) : totaux HT du pipeline, sans le détail des offres.
+    { nom: 'CRM — Totaux HT', cle: 'crm_totaux' },
     { nom: 'Projets', cle: 'projets' },
     { nom: 'Finances — Devis', cle: 'finances_devis' },
     { nom: 'Finances — Factures', cle: 'finances_factures' },
@@ -116,6 +118,9 @@ export async function installerSocle(prisma: PrismaClient) {
       transverse: false,
       permissions: {
         crm: 'ecriture',
+        // lecture (22/10/2026, revue COO) : le pipeline en FCFA HT par étape,
+        // sans voir les offres (finances_devis reste à aucun).
+        crm_totaux: 'lecture',
         // aucun (06/10/2026, maquette COO validée par le user) : pas de Projets
         // dans son menu ; Pilotage ouvert en lecture (ci-dessous).
         projets: 'aucun',

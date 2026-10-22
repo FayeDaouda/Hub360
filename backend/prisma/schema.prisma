@@ -247,7 +247,7 @@ enum NotificationType {
   arrivant_a_affecter // au Dir. GC : compte Salarié créé, cellule à choisir
   // Registre des décisions (revue CTO) : relance au responsable, retard à l'auteur.
   rappel_decision
-  decision_proposee // au CEO : le CTO lui soumet une décision
+  decision_proposee // au CEO : le CTO ou le COO lui soumet une décision
   decision_arbitree // au CTO : acceptée, modifiée ou refusée
   decision_en_retard
 }
@@ -2495,7 +2495,7 @@ model DecisionRegistre {
   closeLe                    DateTime?        @map("close_le")
   closeParId                 String?          @map("close_par_id")
   creeParId                  String?          @map("cree_par_id")
-  // Décision proposée par le CTO au CEO (revue CTO, 22/10/2026) : null =
+  // Décision proposée par le CTO ou le COO au CEO (revues CTO et COO, 22/10/2026) : null =
   // inscrite directement. Le CEO l'accepte (telle quelle ou modifiée) ou la
   // refuse, motif obligatoire ; la proposition d'origine reste tracée.
   proposition                EtatProposition?

@@ -32,10 +32,11 @@ export type Acteur = { userId: string; societeId: string; role: string; permissi
 // Rôles qui saisissent et clôturent les décisions des instances (choix du
 // 05/10/2026 : « par fonction », la matrice reste en lecture).
 const ROLES_REGISTRE = new Set(['CTO (transverse)', 'CEO (transverse)', 'societe_admin']);
-// Revue CTO (22/10/2026) : pas de reporting CTO → CEO ; le CTO propose une
-// décision, le CEO l'arbitre.
+// Revue CTO puis COO (22/10/2026) : pas de reporting CTO → CEO ni COO → CEO ;
+// ils proposent une décision, le CEO l'arbitre. Le COO ne fait que proposer.
 const ROLE_CTO = 'CTO (transverse)';
 const ROLE_CEO = 'CEO (transverse)';
+const PROPOSANTS = new Set([ROLE_CTO, 'COO']);
 const ARBITRES = new Set([ROLE_CEO, 'societe_admin']);
 
 // Rôles proposés comme responsables d'une décision (fonctions de direction).
@@ -475,7 +476,7 @@ export class PilotageService {
   // --- Registre des décisions ---------------------------------------------
 
   private async registre(a: Acteur, jour: string) {
-    const saisir = ROLES_REGISTRE.has(a.role);
+    const saisir = ROLES_REGISTRE.has(a.role) || PROPOSANTS.has(a.role);
     const [decisions, collaborateurId, rolesPourvus, collaborateurs, rattachables] = await Promise.all([
       this.prisma.decisionRegistre.findMany({
         where: { societeId: a.societeId },
@@ -534,7 +535,8 @@ export class PilotageService {
               ...collaborateurs.map((c) => ({ collaborateurId: c.id, libelle: nomDe(c) })),
             ],
             rattachables,
-            peutProposer: a.role === ROLE_CTO,
+            peutProposer: PROPOSANTS.has(a.role),
+            peutInscrire: ROLES_REGISTRE.has(a.role),
           }
         : null,
     };
@@ -563,8 +565,12 @@ export class PilotageService {
   }
 
   async saisir(a: Acteur, dto: SaisirDecisionDto) {
-    if (!ROLES_REGISTRE.has(a.role)) throw new ForbiddenException('Saisir une décision est réservé au CTO et au CEO.');
-    if (dto.proposer && a.role !== ROLE_CTO) throw new ForbiddenException('Proposer une décision au CEO est réservé au CTO.');
+    if (dto.proposer && !PROPOSANTS.has(a.role)) throw new ForbiddenException('Proposer une décision au CEO est réservé au CTO et au COO.');
+    if (!dto.proposer && !ROLES_REGISTRE.has(a.role)) {
+      throw new ForbiddenException(
+        PROPOSANTS.has(a.role) ? 'Vos décisions passent par le CEO : proposez-la-lui.' : 'Saisir une décision est réservé au CTO et au CEO.',
+      );
+    }
     const jour = aujourdhui();
     const date = dto.date ?? jour;
     if (date > jour) throw new BadRequestException('Une décision ne peut pas être datée dans le futur.');
@@ -591,7 +597,7 @@ export class PilotageService {
       await this.notifications.envoyer({
         societeId: a.societeId,
         type: 'decision_proposee',
-        titre: `Décision proposée par le CTO · ${numeroDecision(creee!.numero)} · ${court(dto.texte.trim())} · à accepter, modifier ou refuser`,
+        titre: `Décision proposée par le ${libelleRole(a.role)} · ${numeroDecision(creee!.numero)} · ${court(dto.texte.trim())} · à accepter, modifier ou refuser`,
         destinataireIds: arbitres,
         parId: a.userId,
       });
@@ -617,7 +623,7 @@ export class PilotageService {
     });
   }
 
-  // Arbitrage par le CEO d'une décision proposée par le CTO. Acceptée (telle
+  // Arbitrage par le CEO d'une décision proposée par le CTO ou le COO. Acceptée (telle
   // quelle ou modifiée), elle entre en vigueur ce jour : date de la décision =
   // jour de l'arbitrage, responsable prévenu, relances comme toute décision.
   // Refusée, elle reste au registre avec son motif. Le CTO est prévenu.

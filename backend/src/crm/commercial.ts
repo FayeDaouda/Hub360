@@ -21,6 +21,9 @@ export type DossierCommercial = ChampsFiche & {
   // Offre en cours (la plus récente) : dates seulement, jamais de montant.
   offre: { statut: string; envoyeeLe: string | null; valideJusquau: string | null } | null;
   signeLe: string | null; // passage en Onboard (contrat signé)
+  // HT de l'offre en cours (de l'offre acceptée une fois signé) ; null sans
+  // offre ou sans le droit de voir les montants (lot D).
+  montantHt: number | null;
 };
 
 export type TypeATraiter = 'fiche_incomplete' | 'lead_sans_proprietaire' | 'offre_chez_client' | 'apporteur_incomplet';
@@ -103,7 +106,15 @@ export function aTraiterCommercial(dossiers: DossierCommercial[], jour: string, 
   return elements;
 }
 
-export type LignePerformance = { cle: string; libelle: string; type: 'interne' | 'externe' | 'direct'; leads: number; signes: number; enCours: number };
+export type LignePerformance = {
+  cle: string;
+  libelle: string;
+  type: 'interne' | 'externe' | 'direct';
+  leads: number;
+  signes: number;
+  enCours: number;
+  signeHt: number; // somme HT des offres acceptées (0 sans le droit)
+};
 
 // Apporteur d'un dossier : compte HUB (interne), nom + structure (externe),
 // ou « Affaire directe ».
@@ -123,18 +134,57 @@ export function performanceCommerciale(dossiers: DossierCommercial[]) {
   const lignes = new Map<string, LignePerformance>();
   for (const d of dossiers) {
     const a = apporteurDe(d);
-    const l = lignes.get(a.cle) ?? { ...a, leads: 0, signes: 0, enCours: 0 };
+    const l = lignes.get(a.cle) ?? { ...a, leads: 0, signes: 0, enCours: 0, signeHt: 0 };
     l.leads++;
-    if (d.statut === 'onboard') l.signes++;
+    if (d.statut === 'onboard') {
+      l.signes++;
+      l.signeHt += d.montantHt ?? 0;
+    }
     else if (!d.archive && EN_COURS.has(d.statut)) l.enCours++;
     lignes.set(a.cle, l);
   }
   return {
     leads: dossiers.length,
     signes: signes.length,
+    signeHt: signes.reduce((s, d) => s + (d.montantHt ?? 0), 0),
     enCours: dossiers.filter((d) => !d.archive && EN_COURS.has(d.statut)).length,
     tauxTransformation: dossiers.length ? Math.round((signes.length / dossiers.length) * 100) : null,
     delaiMoyenJours: delais.length ? Math.round(delais.reduce((s, x) => s + x, 0) / delais.length) : null,
     apporteurs: [...lignes.values()].sort((a, b) => b.signes - a.signes || b.leads - a.leads || a.libelle.localeCompare(b.libelle)),
   };
+}
+
+// Totaux HT du pipeline par étape (revue COO, lot D) : nombre de dossiers et
+// somme HT de leur offre, sans le détail des offres. Archivés exclus ; une
+// offre envoyée dont la validité est passée compte en « expirée ».
+export type EtapePipeline = 'preparation' | 'en_validation' | 'chez_client' | 'expiree' | 'signe' | 'perdu';
+export const ETAPES_PIPELINE: EtapePipeline[] = ['preparation', 'en_validation', 'chez_client', 'expiree', 'signe', 'perdu'];
+
+export function etapePipeline(d: Pick<DossierCommercial, 'statut' | 'offre'>, jour: string): EtapePipeline {
+  switch (d.statut) {
+    case 'nouveau_projet':
+      return 'preparation';
+    case 'en_validation':
+      return 'en_validation';
+    case 'offre_envoyee':
+      return d.offre?.statut === 'envoye' && d.offre.valideJusquau && d.offre.valideJusquau < jour ? 'expiree' : 'chez_client';
+    case 'onboard':
+      return 'signe';
+    default:
+      return 'perdu';
+  }
+}
+
+export function totauxPipeline(dossiers: DossierCommercial[], jour: string) {
+  const totaux = new Map(ETAPES_PIPELINE.map((e) => [e, { etape: e, dossiers: 0, avecOffre: 0, totalHt: 0 }]));
+  for (const d of dossiers) {
+    if (d.archive) continue;
+    const t = totaux.get(etapePipeline(d, jour))!;
+    t.dossiers++;
+    if (d.montantHt !== null) {
+      t.avecOffre++;
+      t.totalHt += d.montantHt;
+    }
+  }
+  return [...totaux.values()];
 }

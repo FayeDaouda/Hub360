@@ -102,7 +102,7 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
         <div className="pi-registre-actions">
           {vue.saisie && !saisie && (
             <button type="button" className="btn-ghost" onClick={() => setSaisie(true)}>
-              Saisir une décision
+              {vue.saisie.peutInscrire ? 'Saisir une décision' : 'Proposer une décision'}
             </button>
           )}
           <div className="vue-toggle" role="group" aria-label="Décisions">
@@ -145,7 +145,7 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
               </span>
               <span role="cell" className="pi-instance">
                 <strong>{d.instance}</strong>
-                <small>{d.origine === 'hub' ? 'inscrite par le HUB' : d.proposition ? 'proposée par le CTO' : 'saisie'}</small>
+                <small>{d.origine === 'hub' ? 'inscrite par le HUB' : d.proposition ? 'proposée au CEO' : 'saisie'}</small>
               </span>
               <span role="cell" className="pi-texte">
                 {d.texte}
@@ -410,7 +410,9 @@ function SaisieDecision({
         )}
       </div>
       {saisie.peutProposer && (
-        <p className="pi-aide">« Proposer au CEO » : la décision attend son accord (accepter, modifier ou refuser) avant d’entrer en vigueur.</p>
+        <p className="pi-aide">
+          {saisie.peutInscrire ? '« Proposer au CEO » : la' : 'La'} décision attend l’accord du CEO (accepter, modifier ou refuser) avant d’entrer en vigueur.
+        </p>
       )}
       {erreur && <p className="field-erreur">{erreur}</p>}
       <div className="pi-saisie-actions">
@@ -418,13 +420,20 @@ function SaisieDecision({
           Annuler
         </button>
         {saisie.peutProposer && (
-          <button type="button" className="btn-ghost" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={() => enregistrer(true)}>
-            Proposer au CEO
+          <button
+            type="button"
+            className={saisie.peutInscrire ? 'btn-ghost' : 'btn-primary'}
+            disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance}
+            onClick={() => enregistrer(true)}
+          >
+            {envoi && !saisie.peutInscrire ? 'Envoi…' : 'Proposer au CEO'}
           </button>
         )}
-        <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={() => enregistrer(false)}>
-          {envoi ? 'Envoi…' : 'Inscrire au registre'}
-        </button>
+        {saisie.peutInscrire && (
+          <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={() => enregistrer(false)}>
+            {envoi ? 'Envoi…' : 'Inscrire au registre'}
+          </button>
+        )}
       </div>
     </div>
   );

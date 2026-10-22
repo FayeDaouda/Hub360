@@ -43,7 +43,7 @@ export class CrmController {
   @RequiertPermission('crm', 'lecture')
   vueCommerciale(@Req() req: Req, @Query('annee') annee?: string) {
     const valide = annee && /^\d{4}$/.test(annee) ? annee : String(new Date().getUTCFullYear());
-    return this.commercial.vue(req.user.societeId, valide);
+    return this.commercial.vue(req.user, valide);
   }
 
   @Get()

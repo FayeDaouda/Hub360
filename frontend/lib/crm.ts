@@ -39,18 +39,23 @@ export type ElementCommercial = {
   detail: string;
   tri: string;
 };
-export type LignePerformance = { cle: string; libelle: string; type: 'interne' | 'externe' | 'direct'; leads: number; signes: number; enCours: number };
+export type LignePerformance = { cle: string; libelle: string; type: 'interne' | 'externe' | 'direct'; leads: number; signes: number; enCours: number; signeHt: number };
+export type EtapePipeline = 'preparation' | 'en_validation' | 'chez_client' | 'expiree' | 'signe' | 'perdu';
 export type VueCommerciale = {
   aTraiter: ElementCommercial[];
   performance: {
     annee: string;
+    montants: boolean; // droit « CRM — Totaux HT » (ou les offres) : signeHt renseignés
     leads: number;
     signes: number;
+    signeHt: number;
     enCours: number;
     tauxTransformation: number | null;
     delaiMoyenJours: number | null;
     apporteurs: LignePerformance[];
   };
+  // Totaux HT par étape, sans le détail des offres ; null sans le droit.
+  pipelineHt: { etape: EtapePipeline; dossiers: number; avecOffre: number; totalHt: number }[] | null;
 };
 export function getVueCommerciale(slug: string, annee: string): Promise<VueCommerciale> {
   return apiSociete<VueCommerciale>(slug, `/dossiers/commercial?annee=${encodeURIComponent(annee)}`);

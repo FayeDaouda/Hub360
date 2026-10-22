@@ -55,13 +55,13 @@ export function Attention({
       (d.statut === 'ouverte' && !!d.echeance && d.echeance <= ajouterJours(jour, FENETRE_DECISIONS_JOURS)),
   );
   const reportings = vue.reportings.filter((r) => r.statut === 'en_retard');
-  // Revue CTO (22/10/2026) : le CTO ne reporte plus au CEO, il lui propose des décisions.
+  // Revues CTO et COO (22/10/2026) : ils ne reportent plus au CEO, ils lui proposent des décisions.
   const proposees = vue.decisions.filter((d) => d.peutArbitrer);
 
   const toutes: Rubrique[] = [
     {
       cle: 'proposees',
-      titre: 'Décisions proposées par le CTO',
+      titre: 'Décisions proposées',
       icone: <Gavel size={16} aria-hidden />,
       couleur: 'var(--iris)',
       lignes: proposees.map((d) => {

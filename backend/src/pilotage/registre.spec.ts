@@ -76,7 +76,15 @@ describe('PilotageService · décisions proposées', () => {
     expect(prisma.decisionRegistre.create).toHaveBeenCalledWith({ data: expect.objectContaining({ proposition: 'proposee', numero: 5 }) });
     expect(notifications.envoyer).toHaveBeenCalledTimes(1);
     expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'decision_proposee', destinataireIds: ['CEO1'], titre: expect.stringContaining('D-005') }));
-    await expect(svc().s.saisir(ceo, { ...base, proposer: true })).rejects.toThrow('réservé au CTO');
+    await expect(svc().s.saisir(ceo, { ...base, proposer: true })).rejects.toThrow('réservé au CTO et au COO');
+  });
+
+  it('le COO propose (titre « par le COO ») mais n’inscrit pas directement', async () => {
+    const coo = { userId: 'COO1', societeId: 'S1', role: 'COO' };
+    const { s, notifications } = svc();
+    await s.saisir(coo, { ...base, proposer: true });
+    expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'decision_proposee', titre: expect.stringContaining('proposée par le COO') }));
+    await expect(svc().s.saisir(coo, base)).rejects.toThrow('proposez-la-lui');
   });
 
   it('seul le CEO arbitre ; une décision déjà tranchée n’attend plus rien', async () => {

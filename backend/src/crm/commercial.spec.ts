@@ -1,4 +1,4 @@
-import { aTraiterCommercial, manquesApporteur, performanceCommerciale, type DossierCommercial } from './commercial';
+import { aTraiterCommercial, manquesApporteur, performanceCommerciale, totauxPipeline, type DossierCommercial } from './commercial';
 
 // Vue commerciale du COO (revue COO, 22/10/2026).
 const JOUR = '2026-10-22';
@@ -16,6 +16,7 @@ const dossier = (o: Partial<DossierCommercial> = {}): DossierCommercial => ({
   commission: null,
   offre: null,
   signeLe: null,
+  montantHt: null,
   ...complet,
   ...o,
 });
@@ -62,16 +63,40 @@ describe('performanceCommerciale', () => {
   it('par apporteur, taux de transformation et délai moyen lead → signature', () => {
     const notaire = { type: 'externe' as const, nom: 'Me Aliou Ndiaye', structure: 'Notaire', telephone: '77', email: null };
     const p = performanceCommerciale([
-      dossier({ id: '1', statut: 'onboard', apporteur: notaire, creeLe: new Date('2026-03-01T10:00:00Z'), signeLe: '2026-03-31' }),
+      dossier({ id: '1', statut: 'onboard', apporteur: notaire, creeLe: new Date('2026-03-01T10:00:00Z'), signeLe: '2026-03-31', montantHt: 9_000_000 }),
       dossier({ id: '2', statut: 'perdu', apporteur: { ...notaire, nom: ' me aliou ndiaye ' } }),
       dossier({ id: '3', statut: 'onboard', creeLe: new Date('2026-04-01T10:00:00Z'), signeLe: '2026-04-11' }),
       dossier({ id: '4', statut: 'offre_envoyee' }),
     ]);
-    expect(p).toMatchObject({ leads: 4, signes: 2, enCours: 1, tauxTransformation: 50, delaiMoyenJours: 20 });
-    expect(p.apporteurs.map((a) => [a.libelle, a.leads, a.signes, a.enCours])).toEqual([
-      ['Affaire directe', 2, 1, 1],
-      ['Me Aliou Ndiaye · Notaire', 2, 1, 0],
+    expect(p).toMatchObject({ leads: 4, signes: 2, signeHt: 9_000_000, enCours: 1, tauxTransformation: 50, delaiMoyenJours: 20 });
+    expect(p.apporteurs.map((a) => [a.libelle, a.leads, a.signes, a.enCours, a.signeHt])).toEqual([
+      ['Affaire directe', 2, 1, 1, 0],
+      ['Me Aliou Ndiaye · Notaire', 2, 1, 0, 9_000_000],
     ]);
     expect(performanceCommerciale([]).tauxTransformation).toBeNull();
+  });
+});
+
+describe('totauxPipeline', () => {
+  it('par étape, offre expirée à part, archivés exclus, dossiers sans offre comptés sans montant', () => {
+    const t = totauxPipeline(
+      [
+        dossier({ id: '1' }),
+        dossier({ id: '2', statut: 'en_validation', montantHt: 5_000_000 }),
+        dossier({ id: '3', statut: 'offre_envoyee', montantHt: 2_000_000, offre: { statut: 'envoye', envoyeeLe: '2026-10-01', valideJusquau: '2026-10-08' } }),
+        dossier({ id: '4', statut: 'offre_envoyee', montantHt: 3_000_000, offre: { statut: 'envoye', envoyeeLe: '2026-10-20', valideJusquau: '2026-10-27' } }),
+        dossier({ id: '5', statut: 'onboard', montantHt: 7_000_000 }),
+        dossier({ id: '6', statut: 'perdu', archive: true, montantHt: 1_000_000 }),
+      ],
+      JOUR,
+    );
+    expect(t.map((x) => [x.etape, x.dossiers, x.avecOffre, x.totalHt])).toEqual([
+      ['preparation', 1, 0, 0],
+      ['en_validation', 1, 1, 5_000_000],
+      ['chez_client', 1, 1, 3_000_000],
+      ['expiree', 1, 1, 2_000_000],
+      ['signe', 1, 1, 7_000_000],
+      ['perdu', 0, 0, 0],
+    ]);
   });
 });

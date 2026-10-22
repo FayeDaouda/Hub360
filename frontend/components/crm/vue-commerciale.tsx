@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { AlarmClock, ChevronDown, FileWarning, Handshake, Send, TrendingUp, UserX, type LucideIcon } from 'lucide-react';
-import { getVueCommerciale, type ElementCommercial, type VueCommerciale } from '@/lib/crm';
+import { getVueCommerciale, type ElementCommercial, type EtapePipeline, type VueCommerciale } from '@/lib/crm';
+import { formatMontant, formatMontantCompact } from '@/lib/format';
 
 const VISIBLES = 6;
 const RANG_TON: Record<ElementCommercial['ton'], number> = { risque: 0, attention: 1, info: 2 };
@@ -13,6 +14,14 @@ const GROUPE: Record<ElementCommercial['type'], { icone: LucideIcon; titre: stri
   apporteur_incomplet: { icone: Handshake, titre: 'Fiche apporteur à compléter', action: 'Compléter', rang: 3 },
 };
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+const ETAPE: Record<EtapePipeline, { libelle: string; ton: string }> = {
+  preparation: { libelle: 'En préparation', ton: 'neutre' },
+  en_validation: { libelle: 'En validation CFO', ton: 'attention' },
+  chez_client: { libelle: 'Chez le client', ton: 'info' },
+  expiree: { libelle: 'Expirées', ton: 'risque' },
+  signe: { libelle: 'Signées', ton: 'succes' },
+  perdu: { libelle: 'Perdues', ton: 'neutre' },
+};
 
 // Vue commerciale du COO (revue COO, 22/10/2026), en tête du CRM : ce qui
 // attend une action, puis la performance de l'année du pipeline choisi.
@@ -93,6 +102,20 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
             <span className="cell-sub">moyenne des contrats signés</span>
           </div>
         </dl>
+        {vue.pipelineHt && (
+          <div className="crm-perf-pipeline" aria-label="Pipeline en FCFA HT">
+            <p className="crm-perf-sous-titre">Pipeline en FCFA HT · offres de l’année</p>
+            <ul>
+              {vue.pipelineHt.map((t) => (
+                <li key={t.etape} title={`${pluriel(t.dossiers, 'dossier')}, ${t.avecOffre} avec offre · ${formatMontant(t.totalHt)} HT`}>
+                  <span className={`pill pill--${ETAPE[t.etape].ton}`}>{ETAPE[t.etape].libelle}</span>
+                  <strong>{formatMontantCompact(t.totalHt)}</strong>
+                  <span className="cell-sub">{pluriel(t.dossiers, 'dossier')}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {p.apporteurs.length > 0 && (
           <table className="crm-perf-table">
             <thead>
@@ -100,6 +123,7 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
                 <th>Apporteur</th>
                 <th>Leads</th>
                 <th>Signés</th>
+                {p.montants && <th>Signé HT</th>}
                 <th>En cours</th>
               </tr>
             </thead>
@@ -112,6 +136,7 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
                   </td>
                   <td>{a.leads}</td>
                   <td>{a.signes}</td>
+                  {p.montants && <td>{a.signeHt ? formatMontantCompact(a.signeHt) : '—'}</td>}
                   <td>{a.enCours}</td>
                 </tr>
               ))}
