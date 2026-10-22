@@ -780,6 +780,29 @@ export class ProjetsOuvertsService {
     }));
   }
 
+  // États de tous les projets ouverts de la société : la règle unique
+  // (cartes verrouillées, prolongations, visa DPLG) que Production, Équipes
+  // et le reporting de la direction partagent (revue CTO, 22/10/2026).
+  async etatsSociete(societeId: string, jour: string) {
+    const [projets, feries] = await Promise.all([
+      this.prisma.projet.findMany({ where: { societeId, ouvertLe: { not: null } }, orderBy: { ouvertLe: 'asc' }, include: AVEC_TACHES }),
+      this.feries(societeId),
+    ]);
+    return projets.map((p) => {
+      const { etapes, etatsTaches } = this.etats(p, jour, feries);
+      return {
+        id: p.id,
+        code: p.code,
+        etatsTaches,
+        etapes: etapes.map((e) => {
+          const cartes = p.cartes.filter((c) => c.etapeNumero === e.numero);
+          const validees = cartes.flatMap((c) => c.taches.map((t) => iso(t.valideeLe))).filter((d): d is string => !!d).sort();
+          return { ...e, libelle: cartes[0]?.etapeLibelle ?? '', closeLe: e.etat === 'terminee' ? (validees.at(-1) ?? null) : null };
+        }),
+      };
+    });
+  }
+
   private etats(p: ProjetAvecTaches, jour: string, feries: ReadonlySet<string>) {
     const sources = this.sources(p);
     const index = indexTaches(sources);

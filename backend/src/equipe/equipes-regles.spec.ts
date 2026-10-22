@@ -1,4 +1,4 @@
-import { chargeDuMois, codeCellule, etapesEnCours, partATemps, prefixeSociete, type TacheEquipe } from './equipes-regles';
+import { chargeDuMois, codeCellule, partATemps, prefixeSociete, tachesEnCours, type TacheEquipe } from './equipes-regles';
 
 // Équipes (maquette du boss) : nomenclature et indicateurs des cellules.
 const tache = (o: Partial<TacheEquipe>): TacheEquipe => ({
@@ -32,20 +32,11 @@ describe('partATemps', () => {
   });
 });
 
-describe('etapesEnCours', () => {
-  it('commencées, ni validées ni non nécessaires ; retard = échéance dépassée', () => {
-    const r = etapesEnCours(
-      [
-        tache({}), // en cours, à l'heure
-        tache({ echeance: '2026-09-15' }), // en retard
-        tache({ debut: '2026-10-01', echeance: '2026-10-05' }), // pas commencée
-        tache({ statut: 'validee', valideeLe: '2026-09-15' }),
-        tache({ statut: 'non_necessaire' }),
-      ],
-      '2026-09-16',
-    );
-    expect(r).toEqual({ enCours: 2, enRetard: 1, pctATemps: 50 });
-    expect(etapesEnCours([], '2026-09-16').pctATemps).toBeNull();
+describe('tachesEnCours', () => {
+  it('état commun des projets : démarrées, pas faites ; prolongée = retard qualifié, non compté', () => {
+    const r = tachesEnCours(['en_cours', 'en_retard', 'prolongee', 'a_valider', 'a_venir', 'verrouillee', 'validee', 'non_necessaire', 'desactivee']);
+    expect(r).toEqual({ enCours: 4, enRetard: 1, pctATemps: 75 });
+    expect(tachesEnCours([]).pctATemps).toBeNull();
   });
 });
 

@@ -429,13 +429,23 @@ export type VueEquipes = {
     cellules: { actives: number; total: number };
     salariesAAffecter: number;
     projetsSignes: { total: number; nonAffectes: number };
-    etapes: { enCours: number; enRetard: number; pctATemps: number | null };
+    // Tâches (revue CTO) ; etapesEnRetard = le chiffre du reporting de la direction.
+    taches: { enCours: number; enRetard: number; pctATemps: number | null; etapesEnRetard: number };
     absencesEnAttente: number;
   };
   cellules: CelluleEquipe[];
   salariesAAffecter: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; dateArrivee: string | null }[];
   projets: { id: string; code: string; programme: string; client: string; cellules: { code: string; nom: string }[] }[];
-  etapesEnCours: { id: string; projet: string; etape: string; libelle: string; assigne: string | null; echeance: string | null; enRetard: boolean }[];
+  tachesEnCours: {
+    id: string;
+    projet: string;
+    etape: string;
+    libelle: string;
+    assigne: string | null;
+    echeance: string | null;
+    enRetard: boolean;
+    prolongeeJusquau: string | null; // retard qualifié, pas compté en retard
+  }[];
   collaborateurs: { id: string; nom: string; cellule: string | null }[];
   prochainsCodes: Record<ProcessusCellule, string>;
 };

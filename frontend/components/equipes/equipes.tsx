@@ -13,7 +13,7 @@ import { CelluleCarte } from './cellule-carte';
 import { CreerCellule } from './creer-cellule';
 import { Nomenclature } from './nomenclature';
 
-type Liste = 'cellules' | 'affecter' | 'projets' | 'etapes' | 'absences';
+type Liste = 'cellules' | 'affecter' | 'projets' | 'taches' | 'absences';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
@@ -81,10 +81,13 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
       ton: i.projetsSignes.nonAffectes ? 'attention' : undefined,
     },
     {
-      cle: 'etapes',
-      libelle: 'Étapes en cours',
-      valeur: String(i.etapes.enCours),
-      aide: `${i.etapes.pctATemps ?? 100} % à temps · ${i.etapes.enRetard} en retard`,
+      // Des tâches ; « soit N étapes » fait le lien avec le reporting de la direction.
+      cle: 'taches',
+      libelle: 'Tâches en cours',
+      valeur: String(i.taches.enCours),
+      aide: `${i.taches.pctATemps ?? 100} % à temps · ${i.taches.enRetard} en retard${
+        i.taches.enRetard ? `, soit ${i.taches.etapesEnRetard} étape${i.taches.etapesEnRetard > 1 ? 's' : ''}` : ''
+      }`,
       ton: 'risque',
     },
     {
@@ -211,14 +214,14 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
         </section>
       )}
 
-      {liste === 'etapes' && (
+      {liste === 'taches' && (
         <section className="panel glass-panel eq-liste">
           <h2>
-            Étapes en cours · {vue.etapesEnCours.length}
-            {i.etapes.enRetard > 0 && <span className="pill pill--risque">{i.etapes.enRetard} en retard</span>}
+            Tâches en cours · {vue.tachesEnCours.length}
+            {i.taches.enRetard > 0 && <span className="pill pill--risque">{i.taches.enRetard} en retard</span>}
           </h2>
           <ul className="eq-lignes">
-            {vue.etapesEnCours.map((t) => (
+            {vue.tachesEnCours.map((t) => (
               <li key={t.id}>
                 <span className="eq-membre">
                   <strong>{t.libelle}</strong>
@@ -227,9 +230,13 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
                   </small>
                 </span>
                 <span className="eq-charge">{t.assigne ?? 'à assigner'}</span>
-                <span className={`pill ${t.enRetard ? 'pill--risque' : 'pill--neutre'}`}>
-                  {t.echeance ? `${t.enRetard ? 'échue le' : 'échéance'} ${jjmmaaaa(t.echeance)}` : 'sans échéance'}
-                </span>
+                {t.prolongeeJusquau ? (
+                  <span className="pill pill--attention">prolongée jusqu’au {jjmmaaaa(t.prolongeeJusquau)}</span>
+                ) : (
+                  <span className={`pill ${t.enRetard ? 'pill--risque' : 'pill--neutre'}`}>
+                    {t.echeance ? `${t.enRetard ? 'échue le' : 'échéance'} ${jjmmaaaa(t.echeance)}` : 'sans échéance'}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

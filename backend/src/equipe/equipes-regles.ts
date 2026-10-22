@@ -1,4 +1,5 @@
 import type { ProcessusCellule, StatutTacheProjet } from '@prisma/client';
+import type { EtatTache } from '../projets/gabarit/etats';
 import { arrondi, bornesMois, heuresTache, joursAbsents, type Feries, type Periode } from '../rh/regles-temps';
 
 // Équipes (maquette du boss, oct. 2026) — règles pures : nomenclature des
@@ -36,11 +37,15 @@ export function partATemps(taches: TacheEquipe[]): number | null {
   return pourcent(livrees.filter((t) => t.valideeLe! <= t.echeance!).length, livrees.length);
 }
 
-// Étapes en cours : tâches commencées, ni validées ni « non nécessaires » ;
-// en retard = échéance dépassée.
-export function etapesEnCours(taches: TacheEquipe[], aujourdhui: string) {
-  const enCours = taches.filter((t) => t.statut !== 'validee' && t.statut !== 'non_necessaire' && !!t.debut && t.debut <= aujourdhui);
-  const enRetard = enCours.filter((t) => !!t.echeance && t.echeance < aujourdhui).length;
+// Tâches en cours (revue CTO, 22/10/2026) : démarrées et pas encore faites,
+// selon l'état commun des projets (etats.ts) — le même que Production et le
+// reporting de la direction. Une prolongation accordée qualifie le retard :
+// la tâche n'est pas comptée en retard.
+const EN_COURS: ReadonlySet<EtatTache['code']> = new Set(['en_cours', 'en_retard', 'prolongee', 'a_valider', 'reprise', 'a_viser']);
+export const estEnCours = (code: EtatTache['code']) => EN_COURS.has(code);
+export function tachesEnCours(codes: EtatTache['code'][]) {
+  const enCours = codes.filter(estEnCours);
+  const enRetard = enCours.filter((c) => c === 'en_retard').length;
   return { enCours: enCours.length, enRetard, pctATemps: enCours.length ? pourcent(enCours.length - enRetard, enCours.length) : null };
 }
 

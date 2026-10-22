@@ -18,7 +18,7 @@ describe('PilotageService.saisir · registre', () => {
       },
     };
     const notifications = { titulairesRole: jest.fn().mockResolvedValue(o.titulaires ?? ['DG']), comptesDe: jest.fn().mockResolvedValue(['U1']), envoyer: jest.fn() };
-    const s = new PilotageService(prisma as never, {} as never, {} as never, {} as never, notifications as never, {} as never, {} as never);
+    const s = new PilotageService(prisma as never, {} as never, {} as never, {} as never, notifications as never, {} as never, {} as never, {} as never);
     jest.spyOn(s, 'vue').mockResolvedValue({} as never);
     return { s, prisma, notifications };
   }
@@ -61,7 +61,7 @@ describe('PilotageService · décisions proposées', () => {
       comptesDe: jest.fn().mockResolvedValue(['U1']),
       envoyer: jest.fn(),
     };
-    const s = new PilotageService(prisma as never, {} as never, {} as never, {} as never, notifications as never, {} as never, {} as never);
+    const s = new PilotageService(prisma as never, {} as never, {} as never, {} as never, notifications as never, {} as never, {} as never, {} as never);
     jest.spyOn(s, 'vue').mockResolvedValue({} as never);
     return { s, prisma, notifications };
   }

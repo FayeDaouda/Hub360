@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ProcessusCellule } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { chargeDuMois, codeCellule, etapesEnCours, partATemps, prefixeSociete, type TacheEquipe } from './equipes-regles';
+import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { chargeDuMois, codeCellule, estEnCours, partATemps, prefixeSociete, tachesEnCours, type TacheEquipe } from './equipes-regles';
 
 const jour = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
@@ -15,11 +16,12 @@ export class EquipesService {
   constructor(
     private prisma: PrismaService,
     private reglages: ReglagesService,
+    private projetsOuverts: ProjetsOuvertsService,
   ) {}
 
   async vue(societeId: string) {
     const aujourdhui = new Date().toISOString().slice(0, 10);
-    const [societe, cellules, sansCellule, collaborateurs, taches, projets, absencesEnAttente, compteurs, feries] = await Promise.all([
+    const [societe, cellules, sansCellule, collaborateurs, taches, projets, absencesEnAttente, compteurs, feries, etats] = await Promise.all([
       this.prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } }),
       this.prisma.cellule.findMany({
         where: { societeId },
@@ -77,7 +79,10 @@ export class EquipesService {
       this.prisma.demandeAbsence.count({ where: { statut: 'attente_n1', dossier: { societeId } } }),
       this.prisma.compteurCellule.findMany({ where: { societeId } }),
       this.reglages.joursFeries([societeId]),
+      this.projetsOuverts.etatsSociete(societeId, aujourdhui),
     ]);
+    // État de chaque tâche selon la règle commune des projets (Production, reporting).
+    const etatDe = new Map(etats.flatMap((p) => [...p.etatsTaches]));
     const ferieSet = feries.get(societeId) ?? new Set<string>();
 
     const versTache = (t: (typeof taches)[number]): TacheEquipe => ({
@@ -144,7 +149,10 @@ export class EquipesService {
       };
     });
 
-    const etapes = etapesEnCours(taches.map(versTache), aujourdhui);
+    const enCours = taches.flatMap((t) => {
+      const etat = etatDe.get(t.id);
+      return etat && estEnCours(etat.code) ? [{ ...t, etat }] : [];
+    });
     const prefixe = prefixeSociete(societe.nom);
     const dernier = new Map(compteurs.map((c) => [c.processus, c.dernier]));
 
@@ -153,7 +161,12 @@ export class EquipesService {
         cellules: { actives: cellules.filter((c) => c.statut === 'active').length, total: cellules.length },
         salariesAAffecter: sansCellule.length,
         projetsSignes: { total: projets.length, nonAffectes: projets.filter((p) => p.cellules.length === 0).length },
-        etapes,
+        // Revue CTO (22/10/2026) : des tâches, plus des « étapes » ; les étapes
+        // en retard sont celles du reporting de la direction.
+        taches: {
+          ...tachesEnCours(enCours.map((t) => t.etat.code)),
+          etapesEnRetard: etats.reduce((n, p) => n + p.etapes.filter((e) => e.etat === 'en_retard').length, 0),
+        },
         absencesEnAttente,
       },
       cellules: vueCellules,
@@ -165,9 +178,8 @@ export class EquipesService {
         client: p.client.nom,
         cellules: p.cellules.map((x) => ({ code: x.cellule.code, nom: x.cellule.nom })),
       })),
-      // Étapes en cours, les plus en retard d'abord.
-      etapesEnCours: taches
-        .filter((t) => t.statut !== 'validee' && t.statut !== 'non_necessaire' && !!t.debutLe && t.debutLe <= aujourdhui)
+      // Tâches en cours, les plus en retard d'abord.
+      tachesEnCours: enCours
         .map((t) => ({
           id: t.id,
           projet: t.projet.code,
@@ -175,7 +187,9 @@ export class EquipesService {
           libelle: t.libelle,
           assigne: t.assigne ? nomDe(t.assigne) : null,
           echeance: t.finLe,
-          enRetard: !!t.finLe && t.finLe < aujourdhui,
+          enRetard: t.etat.code === 'en_retard',
+          // Retard qualifié par une prolongation accordée : pas compté en retard.
+          prolongeeJusquau: t.etat.code === 'prolongee' ? t.etat.jusquau : null,
         }))
         .sort((a, b) => (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999')),
       collaborateurs: collaborateurs.map((c) => ({ id: c.id, nom: nomDe(c), cellule: c.cellule?.code ?? null })),

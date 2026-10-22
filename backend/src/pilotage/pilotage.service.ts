@@ -7,7 +7,7 @@ import { TempsService } from '../rh/temps.service';
 import { bornesMois, feuilleDuMois, moisDe, moisEntre, MOIS_DEBUT_FEUILLES, type Salarie } from '../rh/regles-temps';
 import { partATemps } from '../equipe/equipes-regles';
 import { ajouterJours, statutDevisEffectif } from '../devis/domaine';
-import { etatCarte, etatTache, indexTaches, resumeEtape, type CarteSource, type EtatTache, type TacheSource } from '../projets/gabarit/etats';
+import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import {
   DECISION_EN_VIGUEUR,
   echeanceReporting,
@@ -79,6 +79,7 @@ export class PilotageService {
     private notifications: NotificationsService,
     private reportingRh: ReportingRhService,
     private suivi: SuiviReportingService,
+    private projetsOuverts: ProjetsOuvertsService,
   ) {}
 
   async vue(a: Acteur) {
@@ -325,56 +326,9 @@ export class PilotageService {
 
   // --- Étapes des projets ouverts (contenu du reporting) ------------------
 
-  private async etapesProjets(societeId: string, jour: string) {
-    const [projets, feries] = await Promise.all([
-      this.prisma.projet.findMany({
-        where: { societeId, ouvertLe: { not: null } },
-        orderBy: { ouvertLe: 'asc' },
-        select: {
-          code: true,
-          cartes: {
-            orderBy: { ordre: 'asc' },
-            select: {
-              cle: true,
-              etapeNumero: true,
-              etapeCle: true,
-              etapeLibelle: true,
-              fichiers: true,
-              desactivation: true,
-              ouvreApres: true,
-              taches: {
-                orderBy: { ordre: 'asc' },
-                select: { cle: true, libelle: true, statut: true, debutLe: true, finLe: true, version: true, valideeLe: true },
-              },
-            },
-          },
-        },
-      }),
-      this.reglages.joursFeries([societeId]),
-    ]);
-    const ferieSet = feries.get(societeId) ?? new Set<string>();
-    return projets.map((p) => {
-      const sources: CarteSource[] = p.cartes.map((c) => ({
-        ...c,
-        taches: c.taches.map((t): TacheSource => ({ ...t, valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null })),
-      }));
-      const index = indexTaches(sources);
-      const parEtape = new Map<number, { libelle: string; etats: { tache: TacheSource; etat: EtatTache }[] }>();
-      sources.forEach((c, i) => {
-        const carte = etatCarte(c, index);
-        const e = parEtape.get(c.etapeNumero) ?? { libelle: p.cartes[i].etapeLibelle, etats: [] };
-        c.taches.forEach((t) => e.etats.push({ tache: t, etat: etatTache(t, carte, jour, ferieSet) }));
-        parEtape.set(c.etapeNumero, e);
-      });
-      const etapes = [...parEtape.entries()]
-        .sort(([x], [y]) => x - y)
-        .map(([n, e]) => {
-          const resume = resumeEtape(n, e.etats);
-          const dates = e.etats.map((x) => x.tache.valideeLe).filter((d): d is string => !!d).sort();
-          return { ...resume, libelle: e.libelle, closeLe: resume.etat === 'terminee' ? (dates.at(-1) ?? null) : null };
-        });
-      return { code: p.code, etapes };
-    });
+  // Étapes des projets ouverts : état commun des projets (Production, Équipes).
+  private etapesProjets(societeId: string, jour: string) {
+    return this.projetsOuverts.etatsSociete(societeId, jour);
   }
 
   // Reporting {société} prérempli depuis le HUB pour un mois clos.
