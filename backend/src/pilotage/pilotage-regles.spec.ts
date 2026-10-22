@@ -1,4 +1,4 @@
-import { echeanceReporting, evaluer, moisAReporter, moisSuivant, numeroDecision, rappelsReporting, statutDecision, statutReporting } from './pilotage-regles';
+import { echeanceReporting, evaluer, moisAReporter, moisSuivant, numeroDecision, rappelsReporting, relanceDecision, statutDecision, statutReporting } from './pilotage-regles';
 
 // Pilotage (maquettes du boss) : reportings J+5, registre, objectifs.
 describe('reportings mensuels', () => {
@@ -75,5 +75,18 @@ describe('rappels d’un reporting', () => {
     expect(cles('2026-10-12')).toEqual(['emetteur:retard:0', 'destinataire:retard-destinataire']);
     expect(cles('2026-10-13')).toEqual(['emetteur:retard:1', 'destinataire:retard-destinataire']);
     expect(cles('2026-10-21')).toEqual(['emetteur:retard:2', 'destinataire:retard-destinataire']);
+  });
+});
+
+// Revue CTO (21/10/2026) : relances du responsable d'une décision.
+describe('relance d’une décision', () => {
+  it('3 jours avant, le jour même, puis une par semaine de retard', () => {
+    expect(relanceDecision('2026-11-10', '2026-11-06')).toBeNull();
+    expect(relanceDecision('2026-11-10', '2026-11-07')).toBe('avant');
+    expect(relanceDecision('2026-11-10', '2026-11-09')).toBe('avant');
+    expect(relanceDecision('2026-11-10', '2026-11-10')).toBe('jour');
+    expect(relanceDecision('2026-11-10', '2026-11-11')).toBe('retard:0');
+    expect(relanceDecision('2026-11-10', '2026-11-17')).toBe('retard:0');
+    expect(relanceDecision('2026-11-10', '2026-11-18')).toBe('retard:1');
   });
 });

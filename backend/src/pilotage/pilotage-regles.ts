@@ -67,6 +67,19 @@ export function rappelsReporting(mois: string, depose: boolean, jour: string, jo
 
 // --- Registre des décisions ------------------------------------------------
 
+// Relance du responsable d'une décision ouverte (revue CTO, 21/10/2026) :
+// 3 jours avant l'échéance, le jour même, puis chaque semaine de retard.
+// Renvoie le suffixe de la clé du rappel (jamais deux fois le même), ou null.
+// Après 2 relances sans effet, l'auteur de la décision est prévenu (rappels).
+export const RELANCES_AVANT_AUTEUR = 2;
+export function relanceDecision(echeance: string, jour: string): string | null {
+  if (jour < jourDecale(echeance, -3)) return null;
+  if (jour < echeance) return 'avant';
+  if (jour === echeance) return 'jour';
+  const retard = Math.round((Date.parse(jour) - Date.parse(echeance)) / 86_400_000);
+  return `retard:${Math.floor((retard - 1) / 7)}`;
+}
+
 export const numeroDecision = (n: number) => `D-${String(n).padStart(3, '0')}`;
 
 export type StatutDecision = 'ouverte' | 'echeance_depassee' | 'close';

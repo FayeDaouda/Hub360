@@ -1,10 +1,12 @@
 'use client';
 
+import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { CLIENTELES, ETATS_POSTE, PROCESSUS, STATUTS_CELLULE } from '@/lib/equipes';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
 import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur } from '@/lib/types';
 
 type Props = {
+  slug: string;
   cellule: CelluleEquipe;
   cellules: CelluleEquipe[]; // destinations d'une réaffectation
   ecriture: boolean;
@@ -22,6 +24,7 @@ const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigi
 // clientèle et clauses, postes, puis les membres — charge du mois, part des
 // livrables à temps, cellule de rattachement (réaffectation en écriture).
 export function CelluleCarte({
+  slug,
   cellule: c,
   cellules,
   ecriture,
@@ -81,6 +84,7 @@ export function CelluleCarte({
           autre pilote.
         </p>
       )}
+      <DecisionsFiche slug={slug} cible={{ cellule: c.id }} />
       {ecriture && (
         <div className="eq-cellule-actions">
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onRenommer(c)}>

@@ -5,7 +5,7 @@ import { RappelsService } from './rappels.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 
-function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[] } = {}) {
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[]; decisions?: unknown[] } = {}) {
   const deja = new Set(o.dejaEnvoyes ?? []);
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
@@ -19,15 +19,18 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
     journalCloture: { findMany: jest.fn().mockResolvedValue(o.clotures ?? []) },
     societe: { findMany: jest.fn().mockResolvedValue(o.societes ?? []) },
     reportingMensuel: { findMany: jest.fn().mockResolvedValue(o.reportings ?? []) },
+    decisionRegistre: { findMany: jest.fn().mockResolvedValue(o.decisions ?? []) },
     rappelEnvoye: {
+      count: jest.fn(({ where }: { where: { cle: { startsWith: string } } }) => Promise.resolve([...deja].filter((c) => c.startsWith(where.cle.startsWith)).length)),
       createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
         const neuf = !deja.has(data[0].cle);
         deja.add(data[0].cle);
         return Promise.resolve({ count: neuf ? 1 : 0 });
       }),
+      deleteMany: jest.fn(({ where }: { where: { cle: string } }) => Promise.resolve({ count: Number(deja.delete(where.cle)) })),
     },
   } as unknown as PrismaService;
-  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CFO1']), comptesDe: jest.fn().mockResolvedValue(['CHEF']) };
+  const notifications = { envoyer: jest.fn().mockResolvedValue(1), titulairesRole: jest.fn().mockResolvedValue(['CFO1']), comptesDe: jest.fn().mockResolvedValue(['CHEF']) };
   return { s: new RappelsService(prisma, notifications as unknown as NotificationsService, { regle: jest.fn((_s: string, cle: string) => Promise.resolve(cle === 'signalement_rh_apres_relances' ? 2 : 3)) } as never), notifications };
 }
 
@@ -84,6 +87,14 @@ describe('RappelsService', () => {
     expect(notifications.envoyer.mock.calls[0][0]).not.toHaveProperty('cle');
   });
 
+  it('notification non écrite : la clé est rendue, la tournée suivante réessaie', async () => {
+    const { s, notifications } = svc({ taches: [tache('2026-10-15')], dejaEnvoyes: [] });
+    notifications.envoyer.mockResolvedValueOnce(0);
+    expect(await s.tournee(JOUR)).toBe(0);
+    expect(await s.tournee(JOUR)).toBe(1);
+    expect(notifications.envoyer).toHaveBeenCalledTimes(2);
+  });
+
   // Revue RH 20/10/2026 : relance des demandes en attente après 3 jours ouvrés, puis par palier.
   it('demande en attente : relance après 3 jours ouvrés, puis à chaque palier', async () => {
     const absence = (createdAt: string) => ({
@@ -133,5 +144,22 @@ describe('RappelsService', () => {
       ['reporting:S1:direction:2026-09:retard-destinataire', 'reporting_en_retard', ['CTO']],
     ]);
     expect(r[0].titre).toBe('Reporting de la direction de septembre 2026 en retard (dû le 05/10) · à déposer au CTO');
+  });
+
+  // Revue CTO : relances des décisions, auteur prévenu après 2 relances sans effet.
+  it('décisions : responsable relancé ; l’auteur prévenu une fois après 2 relances', async () => {
+    const d = { id: 'D2', societeId: 'S1', numero: 2, texte: 'Réorganiser la cellule ARC-02', echeance: '2026-10-06', responsable: 'Direction GC', responsableRole: 'Dir. GC', responsableCollaborateurId: null, creeParId: 'CTO' };
+    const { s, notifications } = svc({ decisions: [d], dejaEnvoyes: ['decision:D2:resp:avant', 'decision:D2:resp:jour'] });
+    notifications.titulairesRole.mockResolvedValue(['DG']);
+    const r = await s.decisions('2026-10-21');
+    expect(r.map((x) => [x.cle, x.type, x.destinataireIds])).toEqual([
+      ['decision:D2:resp:retard:2', 'rappel_decision', ['DG']],
+      ['decision:D2:auteur', 'decision_en_retard', ['CTO']],
+    ]);
+    expect(r[0].titre).toBe('Décision D-002 à mettre en œuvre · Réorganiser la cellule ARC-02 · échéance dépassée depuis le 06/10');
+    // Une seule relance partie : l'auteur n'est pas encore prévenu.
+    const un = svc({ decisions: [d], dejaEnvoyes: ['decision:D2:resp:jour'] });
+    un.notifications.titulairesRole.mockResolvedValue(['DG']);
+    expect((await un.s.decisions('2026-10-21')).map((x) => x.cle)).toEqual(['decision:D2:resp:retard:2']);
   });
 });

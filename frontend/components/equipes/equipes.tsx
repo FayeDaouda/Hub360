@@ -122,6 +122,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
             {vue.cellules.map((c) => (
               <CelluleCarte
                 key={c.id}
+                slug={slug}
                 cellule={c}
                 cellules={vue.cellules}
                 ecriture={ecriture}

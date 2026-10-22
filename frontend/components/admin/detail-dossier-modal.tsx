@@ -1,5 +1,6 @@
 'use client';
 
+import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Archive, ArrowRight, X } from 'lucide-react';
@@ -232,6 +233,7 @@ export function DetailDossierModal({
             <X size={18} strokeWidth={1.75} />
           </button>
         </header>
+        <DecisionsFiche slug={slug} cible={{ client: projet.client.id }} />
 
         <section className="fiche-crm-section">
           <h3 className="fiche-crm-titre">Situation</h3>

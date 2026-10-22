@@ -12,6 +12,10 @@ export class SaisirDecisionDto {
   @IsOptional() @IsString() responsableRole?: string;
   @IsOptional() @IsString() responsableCollaborateurId?: string;
   @Matches(DATE) echeance!: string; // §4.1 : chaque décision a une échéance
+  // Rattachement facultatif, un seul (revue CTO, 21/10/2026).
+  @IsOptional() @IsString() projetId?: string;
+  @IsOptional() @IsString() celluleId?: string;
+  @IsOptional() @IsString() clientId?: string;
 }
 
 // Dépôt d'un reporting : l'analyse de l'émetteur est obligatoire.

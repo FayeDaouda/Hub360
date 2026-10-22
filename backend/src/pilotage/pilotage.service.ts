@@ -515,13 +515,27 @@ export class PilotageService {
   // --- Registre des décisions ---------------------------------------------
 
   private async registre(a: Acteur, jour: string) {
-    const [decisions, collaborateurId, roles, collaborateurs] = await Promise.all([
-      this.prisma.decisionRegistre.findMany({ where: { societeId: a.societeId }, orderBy: { numero: 'desc' } }),
-      this.collaborateurDuCompte(a),
-      this.prisma.role.findMany({ where: { nom: { in: ROLES_RESPONSABLES } }, select: { nom: true } }),
-      this.prisma.collaborateur.findMany({ where: { societeId: a.societeId }, orderBy: [{ nom: 'asc' }, { prenom: 'asc' }], select: { id: true, prenom: true, nom: true } }),
-    ]);
     const saisir = ROLES_REGISTRE.has(a.role);
+    const [decisions, collaborateurId, rolesPourvus, collaborateurs, rattachables] = await Promise.all([
+      this.prisma.decisionRegistre.findMany({
+        where: { societeId: a.societeId },
+        orderBy: { numero: 'desc' },
+        include: { projet: { select: { code: true } }, cellule: { select: { nom: true } }, client: { select: { nom: true } } },
+      }),
+      this.collaborateurDuCompte(a),
+      // Responsable : toujours quelqu'un qui a un compte HUB (revue CTO) — un
+      // rôle pourvu, ou une personne dont le compte est actif.
+      Promise.all(ROLES_RESPONSABLES.map(async (r) => ((await this.notifications.titulairesRole(a.societeId, r)).length ? r : null))),
+      this.prisma.collaborateur.findMany({
+        where: {
+          societeId: a.societeId,
+          OR: [{ utilisateur: { actif: true } }, { dossierPersonnel: { utilisateur: { actif: true } } }],
+        },
+        orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+        select: { id: true, prenom: true, nom: true },
+      }),
+      saisir ? this.rattachables(a.societeId) : null,
+    ]);
     return {
       decisions: decisions.map((d) => ({
         id: d.id,
@@ -533,6 +547,7 @@ export class PilotageService {
         responsable: d.responsable,
         echeance: d.echeance,
         statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null }, jour),
+        rattachement: rattachementDe(d),
         closeLe: d.closeLe ? jourIso(d.closeLe) : null,
         peutCloturer: d.origine === 'saisie' && !d.closeLe && this.peutCloturer(a, d, collaborateurId),
       })),
@@ -540,9 +555,10 @@ export class PilotageService {
         ? {
             instances: [...INSTANCES_SAISIE],
             responsables: [
-              ...ROLES_RESPONSABLES.filter((r) => roles.some((x) => x.nom === r)).map((r) => ({ role: r, libelle: libelleRole(r) })),
+              ...rolesPourvus.filter((r): r is string => !!r).map((r) => ({ role: r, libelle: libelleRole(r) })),
               ...collaborateurs.map((c) => ({ collaborateurId: c.id, libelle: nomDe(c) })),
             ],
+            rattachables,
           }
         : null,
     };
@@ -570,7 +586,9 @@ export class PilotageService {
     if (date > jour) throw new BadRequestException('Une décision ne peut pas être datée dans le futur.');
     if (dto.echeance < date) throw new BadRequestException('L’échéance précède la date de la décision.');
     const responsable = await this.responsable(a.societeId, dto);
+    const rattachement = await this.rattachementSaisi(a.societeId, dto);
     await this.creerNumerotee(a.societeId, (numero) => ({
+      ...rattachement,
       societeId: a.societeId,
       numero,
       date,
@@ -599,11 +617,68 @@ export class PilotageService {
     if (!!dto.responsableRole === !!dto.responsableCollaborateurId) throw new BadRequestException('Un responsable, rôle ou collaborateur, est requis.');
     if (dto.responsableRole) {
       if (!ROLES_RESPONSABLES.includes(dto.responsableRole)) throw new BadRequestException('Rôle responsable inconnu.');
+      if (!(await this.notifications.titulairesRole(societeId, dto.responsableRole)).length) {
+        throw new BadRequestException(`Aucun compte HUB actif ne porte le rôle ${libelleRole(dto.responsableRole)} : il ne serait jamais prévenu.`);
+      }
       return { responsable: libelleRole(dto.responsableRole), responsableRole: dto.responsableRole, responsableCollaborateurId: null };
     }
-    const c = await this.prisma.collaborateur.findFirst({ where: { id: dto.responsableCollaborateurId, societeId }, select: { id: true, prenom: true, nom: true } });
+    const c = await this.prisma.collaborateur.findFirst({
+      where: { id: dto.responsableCollaborateurId, societeId },
+      select: { id: true, prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+    });
     if (!c) throw new BadRequestException('Collaborateur responsable introuvable.');
+    // Revue CTO : un responsable sans compte HUB ne serait jamais relancé.
+    if (!c.utilisateur?.actif && !c.dossierPersonnel?.utilisateur?.actif) {
+      throw new BadRequestException(`${nomDe(c)} n’a pas de compte HUB actif : choisissez un responsable qui en a un.`);
+    }
     return { responsable: nomDe(c), responsableRole: null, responsableCollaborateurId: c.id };
+  }
+
+  // Projets, cellules et clients proposés au rattachement d'une décision.
+  private async rattachables(societeId: string) {
+    const [projets, cellules, clients] = await Promise.all([
+      this.prisma.projet.findMany({ where: { societeId, ouvertLe: { not: null } }, orderBy: { code: 'asc' }, select: { id: true, code: true } }),
+      this.prisma.cellule.findMany({ where: { societeId }, orderBy: { code: 'asc' }, select: { id: true, nom: true } }),
+      this.prisma.client.findMany({ where: { societeId }, orderBy: { nom: 'asc' }, select: { id: true, nom: true } }),
+    ]);
+    return {
+      projets: projets.map((p) => ({ id: p.id, libelle: p.code })),
+      cellules: cellules.map((c) => ({ id: c.id, libelle: c.nom })),
+      clients: clients.map((c) => ({ id: c.id, libelle: c.nom })),
+    };
+  }
+
+  // Rattachement d'une décision saisie : un seul, de la société.
+  private async rattachementSaisi(societeId: string, dto: SaisirDecisionDto) {
+    const choisis = [dto.projetId, dto.celluleId, dto.clientId].filter(Boolean);
+    if (choisis.length > 1) throw new BadRequestException('Une décision se rattache à un seul élément : projet, cellule ou client.');
+    const existe = async (n: number) => {
+      if (!n) throw new BadRequestException('Élément de rattachement introuvable dans la société.');
+    };
+    if (dto.projetId) await existe(await this.prisma.projet.count({ where: { id: dto.projetId, societeId } }));
+    if (dto.celluleId) await existe(await this.prisma.cellule.count({ where: { id: dto.celluleId, societeId } }));
+    if (dto.clientId) await existe(await this.prisma.client.count({ where: { id: dto.clientId, societeId } }));
+    return { projetId: dto.projetId ?? null, celluleId: dto.celluleId ?? null, clientId: dto.clientId ?? null };
+  }
+
+  // Décisions rattachées à un projet, une cellule ou un client (fiche concernée).
+  async decisionsRattachees(a: Acteur, cible: { projetId?: string; celluleId?: string; clientId?: string }) {
+    if (!cible.projetId && !cible.celluleId && !cible.clientId) throw new BadRequestException('Projet, cellule ou client requis.');
+    const jour = aujourdhui();
+    const decisions = await this.prisma.decisionRegistre.findMany({
+      where: { societeId: a.societeId, ...(cible.projetId ? { projetId: cible.projetId } : cible.celluleId ? { celluleId: cible.celluleId } : { clientId: cible.clientId }) },
+      orderBy: { numero: 'desc' },
+    });
+    return decisions.map((d) => ({
+      id: d.id,
+      numero: numeroDecision(d.numero),
+      date: d.date,
+      instance: d.instance,
+      texte: d.texte,
+      responsable: d.responsable,
+      echeance: d.echeance,
+      statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null }, jour),
+    }));
   }
 
   async cloturer(a: Acteur, id: string) {
@@ -777,4 +852,12 @@ export class PilotageService {
       closeLe: j.createdAt,
     }));
   }
+}
+
+// Libellé du rattachement d'une décision (« Projet FS_POI.26 »…), null sans.
+function rattachementDe(d: { projet: { code: string } | null; cellule: { nom: string } | null; client: { nom: string } | null }) {
+  if (d.projet) return { type: 'projet' as const, libelle: d.projet.code };
+  if (d.cellule) return { type: 'cellule' as const, libelle: d.cellule.nom };
+  if (d.client) return { type: 'client' as const, libelle: d.client.nom };
+  return null;
 }

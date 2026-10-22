@@ -41,7 +41,26 @@ export type NouvelleDecision = {
   responsableRole?: string;
   responsableCollaborateurId?: string;
   echeance: string;
+  projetId?: string;
+  celluleId?: string;
+  clientId?: string;
 };
+
+// Décisions rattachées à une fiche (projet, cellule ou client).
+export type DecisionRattachee = {
+  id: string;
+  numero: string;
+  date: string;
+  instance: string;
+  texte: string;
+  responsable: string;
+  echeance: string | null;
+  statut: 'ouverte' | 'echeance_depassee' | 'close';
+};
+export function getDecisionsRattachees(slug: string, cible: { projet?: string; cellule?: string; client?: string }): Promise<DecisionRattachee[]> {
+  const [cle, id] = Object.entries(cible).find(([, v]) => !!v) ?? ['projet', ''];
+  return apiSociete<DecisionRattachee[]>(slug, `/pilotage/decisions?${cle}=${encodeURIComponent(id ?? '')}`);
+}
 
 export function saisirDecision(slug: string, decision: NouvelleDecision): Promise<VuePilotage> {
   return apiSociete<VuePilotage>(slug, '/pilotage/decisions', { method: 'POST', body: decision });

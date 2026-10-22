@@ -243,6 +243,9 @@ enum NotificationType {
   reporting_depose
   visa_a_apposer // au Dir. GC : tâche validée qui attend son visa DPLG
   arrivant_a_affecter // au Dir. GC : compte Salarié créé, cellule à choisir
+  // Registre des décisions (revue CTO) : relance au responsable, retard à l'auteur.
+  rappel_decision
+  decision_en_retard
 }
 
 model Notification {
@@ -546,10 +549,11 @@ model Client {
   ninea     String     @default("")
   createdAt DateTime   @default(now()) @map("created_at")
 
-  societe  Societe      @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  dossiers DossierCrm[]
-  projets  Projet[]
-  devis    Devis[]
+  societe   Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  dossiers  DossierCrm[]
+  projets   Projet[]
+  devis     Devis[]
+  decisions DecisionRegistre[]
 
   @@unique([societeId, numero])
   @@map("clients")
@@ -860,6 +864,7 @@ model Projet {
   devis             Devis[]
   validationsTaches ValidationTache[]
   demandesTs        DemandeTs[]
+  decisions         DecisionRegistre[]
   gabaritVersion    GabaritVersion?     @relation(fields: [gabaritVersionId], references: [id])
   cartes            CarteProjet[]
   taches            TacheProjet[]
@@ -897,12 +902,13 @@ model Cellule {
   statut       StatutCellule    @default(active)
   createdAt    DateTime         @default(now()) @map("created_at")
 
-  societe    Societe         @relation(fields: [societeId], references: [id], onDelete: Cascade)
-  membres    Collaborateur[] @relation("CelluleMembre")
-  dispatcher Collaborateur?  @relation("CelluleDispatcher", fields: [dispatcherId], references: [id], onDelete: SetNull)
+  societe    Societe            @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  membres    Collaborateur[]    @relation("CelluleMembre")
+  dispatcher Collaborateur?     @relation("CelluleDispatcher", fields: [dispatcherId], references: [id], onDelete: SetNull)
   projets    ProjetCellule[]
   canal      Canal? // fil de discussion permanent de la cellule (0..1)
   postes     PosteCellule[]
+  decisions  DecisionRegistre[]
 
   @@unique([societeId, code])
   @@map("cellules")
@@ -1482,33 +1488,33 @@ enum AnnexeCgv {
 // (identité, NINEA, RCCM, contact, règlement, pied). Versionné comme la
 // numérotation : la dernière ligne fait foi, les autres tracent les changements.
 model ProfilFacturation {
-  id                 String   @id @default(uuid())
-  societeId          String   @map("societe_id")
-  raisonSociale      String   @map("raison_sociale")
-  adresse            String   @default("")
-  ninea              String   @default("")
-  rccm               String   @default("")
-  cofi               String   @default("") // code fiscal imprimé après le NINEA (« COFI 292 » dans les CGV)
-  capital            String   @default("") // « 1 000 000 FCFA »
-  telephone          String   @default("")
-  email              String   @default("")
-  banque             String   @default("")
-  rib                String   @default("") // RIB ou IBAN
-  wave               String   @default("")
-  orangeMoney        String   @default("") @map("orange_money")
-  conditionsPaiement String   @default("") @map("conditions_paiement")
-  mentionsPied       String   @default("") @map("mentions_pied")
+  id                 String    @id @default(uuid())
+  societeId          String    @map("societe_id")
+  raisonSociale      String    @map("raison_sociale")
+  adresse            String    @default("")
+  ninea              String    @default("")
+  rccm               String    @default("")
+  cofi               String    @default("") // code fiscal imprimé après le NINEA (« COFI 292 » dans les CGV)
+  capital            String    @default("") // « 1 000 000 FCFA »
+  telephone          String    @default("")
+  email              String    @default("")
+  banque             String    @default("")
+  rib                String    @default("") // RIB ou IBAN
+  wave               String    @default("")
+  orangeMoney        String    @default("") @map("orange_money")
+  conditionsPaiement String    @default("") @map("conditions_paiement")
+  mentionsPied       String    @default("") @map("mentions_pied")
   // Logo pour les documents (SVG ou PNG transparent, data URI) ; null = logo
   // de la société.
-  logoDocument       String?  @map("logo_document")
+  logoDocument       String?   @map("logo_document")
   // CGV complètes en annexe : sur la 1re facture du projet par défaut (les
   // suivantes citent les articles clés), sur toutes, ou jamais.
   cgvAnnexe          AnnexeCgv @default(premiere_facture) @map("cgv_annexe")
   // Coordonnées de paiement changées dans cette version : identité confirmée
   // par « code » (double authentification) ou « mot_de_passe » ; null sinon.
   confirmation       String?
-  parId              String?  @map("par_id")
-  createdAt          DateTime @default(now()) @map("created_at")
+  parId              String?   @map("par_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   @@index([societeId, createdAt])
   @@map("profils_facturation")
@@ -2477,12 +2483,20 @@ model DecisionRegistre {
   responsableRole            String?         @map("responsable_role")
   responsableCollaborateurId String?         @map("responsable_collaborateur_id") // pas de FK : le libellé reste
   echeance                   String? // AAAA-MM-JJ
+  // Rattachement facultatif (revue CTO, 21/10/2026) : visible sur la fiche
+  // du projet, de la cellule ou du client.
+  projetId                   String?         @map("projet_id")
+  celluleId                  String?         @map("cellule_id")
+  clientId                   String?         @map("client_id")
   closeLe                    DateTime?       @map("close_le")
   closeParId                 String?         @map("close_par_id")
   creeParId                  String?         @map("cree_par_id")
   createdAt                  DateTime        @default(now()) @map("created_at")
 
-  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  societe Societe  @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  projet  Projet?  @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  cellule Cellule? @relation(fields: [celluleId], references: [id], onDelete: SetNull)
+  client  Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@unique([societeId, numero])
   @@unique([societeId, cleOrigine])

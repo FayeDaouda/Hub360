@@ -95,6 +95,11 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
               </span>
               <span role="cell" className="pi-texte">
                 {d.texte}
+                {d.rattachement && (
+                  <small className="pi-rattachement">
+                    {d.rattachement.type === 'projet' ? 'Projet' : d.rattachement.type === 'cellule' ? 'Cellule' : 'Client'} · {d.rattachement.libelle}
+                  </small>
+                )}
               </span>
               <span role="cell">{d.responsable}</span>
               <span role="cell" className={d.statut === 'echeance_depassee' ? 'pi-echeance--depassee' : undefined}>
@@ -132,6 +137,8 @@ function SaisieDecision({
   const [texte, setTexte] = useState('');
   const [responsable, setResponsable] = useState('');
   const [echeance, setEcheance] = useState('');
+  // Rattachement facultatif : « projet:id », « cellule:id » ou « client:id ».
+  const [rattache, setRattache] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const roles = saisie.responsables.filter((r) => 'role' in r);
@@ -139,6 +146,7 @@ function SaisieDecision({
 
   async function enregistrer() {
     const [genre, id] = responsable.split(/:(.*)/s);
+    const [typeR, idR] = rattache ? rattache.split(/:(.*)/s) : ['', ''];
     setEnvoi(true);
     setErreur(null);
     try {
@@ -149,6 +157,7 @@ function SaisieDecision({
           date,
           ...(genre === 'role' ? { responsableRole: id } : { responsableCollaborateurId: id }),
           echeance,
+          ...(typeR === 'projet' ? { projetId: idR } : typeR === 'cellule' ? { celluleId: idR } : typeR === 'client' ? { clientId: idR } : {}),
         }),
       );
       onFermer();
@@ -204,6 +213,29 @@ function SaisieDecision({
           <span>Échéance</span>
           <input className="field-input" type="date" value={echeance} min={date} onChange={(e) => setEcheance(e.target.value)} />
         </label>
+        {saisie.rattachables && (
+          <label>
+            <span>Rattachée à (facultatif)</span>
+            <select className="field-input" value={rattache} onChange={(e) => setRattache(e.target.value)}>
+              <option value="">Aucun rattachement</option>
+              {(
+                [
+                  ['projet', 'Projets', saisie.rattachables.projets],
+                  ['cellule', 'Cellules', saisie.rattachables.cellules],
+                  ['client', 'Clients', saisie.rattachables.clients],
+                ] as const
+              ).map(([type, libelle, options]) => (
+                <optgroup key={type} label={libelle}>
+                  {options.map((o) => (
+                    <option key={o.id} value={`${type}:${o.id}`}>
+                      {o.libelle}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       {erreur && <p className="field-erreur">{erreur}</p>}
       <div className="pi-saisie-actions">

@@ -278,11 +278,11 @@ export class NotificationsService {
     projetId?: string | null;
     factureId?: string | null;
     dossierCrmId?: string | null;
-  }): Promise<void> {
+  }): Promise<number> {
     const ids = [...new Set(params.destinataireIds.filter((x): x is string => !!x && x !== params.parId))];
-    if (!ids.length) return;
+    if (!ids.length) return 0;
     try {
-      await this.prisma.notification.createMany({
+      const { count } = await this.prisma.notification.createMany({
         data: ids.map((destinataireId) => ({
           destinataireId,
           societeId: params.societeId,
@@ -294,8 +294,10 @@ export class NotificationsService {
           dossierCrmId: params.dossierCrmId ?? null,
         })),
       });
+      return count;
     } catch (e) {
       this.log.error(`Notification ${params.type} non envoyée : ${e instanceof Error ? e.message : e}`);
+      return 0;
     }
   }
 

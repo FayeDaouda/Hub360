@@ -13290,6 +13290,12 @@ tr.is-demandeur .cal-nom {
   color: var(--text-muted);
   font-size: 0.74rem;
 }
+.pi-rattachement {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
 .pi-echeance--depassee {
   color: var(--fuchsia);
 }
@@ -15941,5 +15947,59 @@ tr.is-demandeur .cal-nom {
   }
   .prod-filtre {
     width: 100%;
+  }
+}
+
+/* Décisions du registre rattachées à une fiche (revue CTO, 21/10/2026). */
+.dec-fiche {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.dec-fiche-titre {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.dec-fiche-lien {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dec-fiche ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dec-fiche li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+}
+.dec-fiche-texte small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+/* Téléphone : la pastille passe sous le texte, qui garde toute la largeur. */
+@media (max-width: 560px) {
+  .dec-fiche li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .dec-fiche li > .pill {
+    grid-column: 2;
+    justify-self: start;
   }
 }

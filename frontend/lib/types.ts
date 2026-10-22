@@ -508,6 +508,8 @@ export type NotificationType =
   | 'reglage_gouvernance_modifie'
   | 'visa_a_apposer'
   | 'arrivant_a_affecter'
+  | 'rappel_decision'
+  | 'decision_en_retard'
   // Profil de facturation (lot 6 CFO) : coordonnées de paiement changées (CEO).
   | 'coordonnees_paiement_modifiees'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
@@ -1768,6 +1770,8 @@ export type ReportingADeposer = Pick<ReportingPilotage, 'type' | 'mois' | 'perio
 
 export type StatutDecision = 'ouverte' | 'echeance_depassee' | 'close';
 
+export type OptionRattachement = { id: string; libelle: string };
+
 export type DecisionRegistre = {
   id: string;
   numero: string; // D-014
@@ -1780,6 +1784,8 @@ export type DecisionRegistre = {
   statut: StatutDecision;
   closeLe: string | null;
   peutCloturer: boolean;
+  // Rattachement facultatif (revue CTO) : projet, cellule ou client.
+  rattachement: { type: 'projet' | 'cellule' | 'client'; libelle: string } | null;
 };
 
 // « À votre attention » (accueil du CEO, Pilotage) — backend
@@ -1812,7 +1818,11 @@ export type VuePilotage = {
   indicateurs: IndicateurPilotage[];
   reportings: ReportingPilotage[];
   decisions: DecisionRegistre[];
-  saisie: { instances: string[]; responsables: ResponsableDecision[] } | null; // null = pas de saisie
+  saisie: {
+    instances: string[];
+    responsables: ResponsableDecision[]; // titulaires d'un compte HUB seulement
+    rattachables: { projets: OptionRattachement[]; cellules: OptionRattachement[]; clients: OptionRattachement[] } | null;
+  } | null; // null = pas de saisie
   // Chiffres clés en tête de page, selon la matrice (backend pilotage/chiffres.service.ts).
   chiffres: {
     jeu: 'finances' | 'crm' | 'rh';

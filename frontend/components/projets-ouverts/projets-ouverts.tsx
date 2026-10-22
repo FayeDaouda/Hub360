@@ -1,5 +1,6 @@
 'use client';
 
+import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -532,6 +533,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
           <StatutProjet slug={slug} projetId={d.id} statut={d.statutChantier} modifiable={ecriture} onMaj={onMaj} />
         </div>
       </header>
+      <DecisionsFiche slug={slug} cible={{ projet: d.id }} />
 
       <div className="po-etapes" role="tablist" aria-label="Étapes" ref={etapesRef}>
         {d.etapes.map((e) => {

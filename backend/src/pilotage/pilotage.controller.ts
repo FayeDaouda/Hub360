@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { TypeReporting } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
@@ -96,6 +96,12 @@ export class PilotageController {
   ) {
     await this.suivi.repondre(req.user, type, mois, questionId, dto.texte);
     return this.pilotage.vue(req.user);
+  }
+
+  // Décisions rattachées à une fiche (?projet= | ?cellule= | ?client=).
+  @Get('decisions')
+  decisionsRattachees(@Req() req: R, @Query('projet') projetId?: string, @Query('cellule') celluleId?: string, @Query('client') clientId?: string) {
+    return this.pilotage.decisionsRattachees(req.user, { projetId, celluleId, clientId });
   }
 
   @Post('decisions')

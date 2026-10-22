@@ -6,7 +6,7 @@ import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { moisClos, moisFr } from '../projets/facturation/cloture';
-import { echeanceReporting, moisAReporter, rappelsReporting, REPORTINGS } from '../pilotage/pilotage-regles';
+import { echeanceReporting, moisAReporter, numeroDecision, rappelsReporting, relanceDecision, RELANCES_AVANT_AUTEUR, REPORTINGS } from '../pilotage/pilotage-regles';
 import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from './notifications.service';
 
@@ -68,6 +68,7 @@ export class RappelsService implements OnApplicationBootstrap {
         ...(await this.demandes(jour)),
         ...(await this.clotures(jour)),
         ...(await this.reportings(jour)),
+        ...(await this.decisions(jour)),
       ];
       let envoyes = 0;
       for (const r of rappels) if (await this.envoyer(r)) envoyes++;
@@ -82,13 +83,15 @@ export class RappelsService implements OnApplicationBootstrap {
   }
 
   // La clé est réservée avant l'envoi : deux tournées concurrentes (ou un
-  // rejeu) ne l'envoient qu'une fois.
+  // rejeu) ne l'envoient qu'une fois. Rien d'écrit (échec, aucun titulaire) :
+  // la clé est rendue, la tournée suivante réessaie au lieu de perdre le rappel.
   private async envoyer(r: Rappel): Promise<boolean> {
     const { count } = await this.prisma.rappelEnvoye.createMany({ data: [{ cle: r.cle }], skipDuplicates: true });
     if (!count) return false;
     const { cle: _c, ...notification } = r;
-    await this.notifications.envoyer(notification);
-    return true;
+    if (await this.notifications.envoyer(notification)) return true;
+    await this.prisma.rappelEnvoye.deleteMany({ where: { cle: r.cle } });
+    return false;
   }
 
   // Offre envoyée sans réponse : un rappel par palier (J+3, J+6) tant que la
@@ -331,6 +334,45 @@ export class RappelsService implements OnApplicationBootstrap {
             });
           }
         }
+      }
+    }
+    return rappels;
+  }
+
+  // Registre des décisions (revue CTO, 21/10/2026) : le responsable d'une
+  // décision ouverte est relancé 3 jours avant l'échéance, le jour même, puis
+  // chaque semaine ; après 2 relances sans effet, l'auteur est prévenu (une fois).
+  async decisions(jour: string): Promise<Rappel[]> {
+    const ouvertes = await this.prisma.decisionRegistre.findMany({
+      where: { origine: 'saisie', closeLe: null, echeance: { not: null } },
+      select: { id: true, societeId: true, numero: true, texte: true, echeance: true, responsable: true, responsableRole: true, responsableCollaborateurId: true, creeParId: true },
+    });
+    const rappels: Rappel[] = [];
+    for (const d of ouvertes) {
+      const suffixe = relanceDecision(d.echeance!, jour);
+      if (!suffixe) continue;
+      const responsables = d.responsableCollaborateurId
+        ? await this.notifications.comptesDe([d.responsableCollaborateurId])
+        : await this.notifications.titulairesRole(d.societeId, d.responsableRole ?? '');
+      const texte = d.texte.length > 70 ? `${d.texte.slice(0, 69)}…` : d.texte;
+      const etat = suffixe === 'avant' ? `échéance le ${jjmm(d.echeance!)}` : suffixe === 'jour' ? 'échéance aujourd’hui' : `échéance dépassée depuis le ${jjmm(d.echeance!)}`;
+      rappels.push({
+        cle: `decision:${d.id}:resp:${suffixe}`,
+        societeId: d.societeId,
+        type: 'rappel_decision',
+        titre: `Décision ${numeroDecision(d.numero)} à mettre en œuvre · ${texte} · ${etat}`,
+        destinataireIds: responsables,
+      });
+      // Relances déjà parties (sans compter celle-ci) : au-delà de 2, l'auteur est prévenu.
+      const envoyees = await this.prisma.rappelEnvoye.count({ where: { cle: { startsWith: `decision:${d.id}:resp:` } } });
+      if (suffixe.startsWith('retard') && envoyees >= RELANCES_AVANT_AUTEUR && d.creeParId) {
+        rappels.push({
+          cle: `decision:${d.id}:auteur`,
+          societeId: d.societeId,
+          type: 'decision_en_retard',
+          titre: `Décision ${numeroDecision(d.numero)} toujours ouverte après ${envoyees} relances · ${d.responsable} · ${texte}`,
+          destinataireIds: [d.creeParId],
+        });
       }
     }
     return rappels;
