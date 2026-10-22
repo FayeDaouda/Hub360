@@ -56,6 +56,8 @@ export const ROLE_SALARIE = 'Salarié';
 
 export const ROLE_CEO = 'CEO (transverse)';
 export const ROLE_CFO = 'CFO';
+// COO : le commercial (CRM, apporteurs) — même nom que backend crm.service.ts (ROLE_MODIF_APPORTEUR).
+export const ROLE_COO = 'COO';
 
 // Lecture et commentaires dans les fils, sans action sur les tâches — même
 // liste que backend/src/projets/gabarit/validation.ts (ROLES_COMMENTAIRE_FIL).
@@ -104,7 +106,9 @@ export function premiereSectionAccessible(session: Session): string | null {
 // le CFO sur Finances (« À valider aujourd'hui », revue CFO 20/10/2026).
 // Le CTO arrive sur Projets › Production, « À décider aujourd'hui » au-dessus
 // (revue CTO, 21/10/2026).
-const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation', [ROLE_CTO]: 'projets' };
+// Le COO arrive sur le CRM, « À traiter aujourd'hui » et sa performance
+// commerciale en tête (revue COO, 22/10/2026).
+const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation', [ROLE_CTO]: 'projets', [ROLE_COO]: 'crm' };
 const CHEMIN_ARRIVEE: Record<string, string> = { [ROLE_CTO]: 'projets?vue=production' };
 
 // Section d'arrivée propre au rôle, si accessible (null sinon) : sur

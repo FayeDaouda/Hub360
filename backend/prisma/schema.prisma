@@ -197,6 +197,8 @@ enum NotificationType {
   offre_acceptee
   offre_refusee
   contrat_signe
+  dossier_perdu // revue COO : au créateur du lead, au propriétaire, à l'apporteur
+  offre_expiree // revue COO : tournée des rappels, offre restée sans réponse
   // Remise / validation des tâches (RH lot 5c) — cf. src/rh/taches.service.ts
   tache_remise
   tache_validee

@@ -472,6 +472,8 @@ export type NotificationType =
   | 'signalement_recu'
   | 'offre_acceptee'
   | 'offre_refusee'
+  | 'dossier_perdu'
+  | 'offre_expiree'
   | 'contrat_signe'
   // Remise / validation des tâches (RH lot 5c) — ouvrent le projet.
   | 'tache_remise'

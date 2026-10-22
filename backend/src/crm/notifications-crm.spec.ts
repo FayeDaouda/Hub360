@@ -9,7 +9,7 @@ import {
 // fan-out : une notification par personne, jamais l'auteur de l'action.
 
 const CTX = { code: 'TCP_ALM.26', programme: 'Villa Almadies' };
-const aucun = { daf: [], proprietaire: [], apporteur: [] };
+const aucun = { daf: [], proprietaire: [], apporteur: [], createur: [] };
 
 describe('CIBLES_EVENEMENT — tableau validé', () => {
   it('qui est prévenu à chaque étape', () => {
@@ -17,10 +17,21 @@ describe('CIBLES_EVENEMENT — tableau validé', () => {
       dossier_soumis: ['daf'],
       dossier_renvoye: ['proprietaire'],
       offre_envoyee: ['proprietaire'],
-      offre_acceptee: ['proprietaire', 'apporteur'],
-      offre_refusee: ['proprietaire', 'apporteur'],
-      contrat_signe: ['proprietaire', 'daf'],
+      offre_acceptee: ['proprietaire', 'apporteur', 'createur'],
+      offre_refusee: ['proprietaire', 'apporteur', 'createur'],
+      contrat_signe: ['proprietaire', 'daf', 'createur'],
+      dossier_perdu: ['proprietaire', 'createur', 'apporteur'],
+      offre_expiree: ['proprietaire', 'createur', 'apporteur'],
     });
+  });
+
+  // Revue COO (22/10/2026) : le créateur du lead suit l'issue de son dossier.
+  it('créateur du lead (COO) : informé de l’issue, jamais de la soumission DAF', () => {
+    const comptes = { daf: ['CFO'], proprietaire: ['DG'], apporteur: [], createur: ['COO'] };
+    expect(planNotificationsCrm('dossier_soumis', CTX, comptes, 'DG').map((p) => p.destinataireId)).toEqual(['CFO']);
+    expect(planNotificationsCrm('contrat_signe', CTX, comptes, null).map((p) => p.destinataireId)).toEqual(['DG', 'CFO', 'COO']);
+    const [perdu] = planNotificationsCrm('dossier_perdu', { ...CTX, commentaire: 'Client parti chez un concurrent' }, comptes, 'DG');
+    expect(perdu).toEqual({ destinataireId: 'COO', titre: 'TCP_ALM.26 · Villa Almadies — dossier déclaré perdu : « Client parti chez un concurrent »' });
   });
 });
 
@@ -29,7 +40,7 @@ describe('planNotificationsCrm', () => {
     const plan = planNotificationsCrm(
       'dossier_soumis',
       CTX,
-      { daf: ['CFO'], proprietaire: ['DG'], apporteur: ['AP'] },
+      { daf: ['CFO'], proprietaire: ['DG'], apporteur: ['AP'], createur: [] },
       'COO',
     );
     expect(plan).toEqual([{ destinataireId: 'CFO', titre: 'TCP_ALM.26 · Villa Almadies — offre à valider' }]);

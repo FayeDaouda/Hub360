@@ -16,6 +16,8 @@ import {
   rattacherLocalite,
 } from '@/lib/crm';
 import { getLocalites } from '@/lib/localites';
+import { VueCommercialeCoo } from '@/components/crm/vue-commerciale';
+import { ROLE_COO } from '@/lib/acces-back-office';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { type ActionCrm } from '@/lib/cycle-crm';
@@ -240,6 +242,8 @@ export default function CrmPage({ params }: Props) {
 
   return (
     <>
+      {/* COO : sa page d'arrivée — ce qui attend une action, puis sa performance (revue COO). */}
+      {session.role === ROLE_COO && <VueCommercialeCoo slug={params.slug} annee={annee} onOuvrir={setDetailId} />}
       <div className="crm-entete">
         <div className="vue-toggle crm-onglets" role="tablist" aria-label="Vue du CRM">
           <button type="button" role="tab" aria-selected={onglet === 'registre'} className={onglet === 'registre' ? 'is-active' : ''} onClick={() => setOnglet('registre')}>

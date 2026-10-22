@@ -95,6 +95,7 @@ export class NotificationsService {
           proprietaireId: true,
           apporteurType: true,
           apporteurUtilisateurId: true,
+          creeParId: true,
         },
       });
       if (!d) return;
@@ -119,6 +120,7 @@ export class NotificationsService {
             d.apporteurType === 'interne' && d.apporteurUtilisateurId
               ? [d.apporteurUtilisateurId]
               : [],
+          createur: d.creeParId ? [d.creeParId] : [],
         },
         params.parId,
       );

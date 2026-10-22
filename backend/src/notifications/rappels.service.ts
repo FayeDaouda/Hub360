@@ -7,6 +7,8 @@ import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { moisClos, moisFr } from '../projets/facturation/cloture';
 import { DECISION_EN_VIGUEUR, echeanceReporting, moisAReporter, numeroDecision, rappelsReporting, relanceDecision, RELANCES_AVANT_AUTEUR, REPORTINGS } from '../pilotage/pilotage-regles';
+import { planNotificationsCrm } from '../crm/notifications-crm';
+import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from './notifications.service';
 
@@ -63,6 +65,7 @@ export class RappelsService implements OnApplicationBootstrap {
     try {
       const rappels = [
         ...(await this.offres(jour)),
+        ...(await this.offresExpirees(jour)),
         ...(await this.factures(jour)),
         ...(await this.taches(jour)),
         ...(await this.demandes(jour)),
@@ -131,6 +134,47 @@ export class RappelsService implements OnApplicationBootstrap {
           dossierCrmId: d.dossierCrmId,
         };
       });
+  }
+
+  // Offre d'un dossier restée sans réponse au-delà de sa validité (revue
+  // COO) : propriétaire, créateur du lead et apporteur interne, une fois.
+  async offresExpirees(jour: string): Promise<Rappel[]> {
+    const dossiers = await this.prisma.dossierCrm.findMany({
+      where: { statut: 'offre_envoyee', archiveLe: null, offres: { some: { statut: 'envoye', dateValidite: { lt: jour } } } },
+      select: {
+        id: true,
+        societeId: true,
+        code: true,
+        programme: true,
+        proprietaireId: true,
+        creeParId: true,
+        apporteurType: true,
+        apporteurUtilisateurId: true,
+        offres: { orderBy: { creeLe: 'desc' }, take: 1, select: { id: true, statut: true, dateValidite: true } },
+      },
+    });
+    const rappels: Rappel[] = [];
+    for (const d of dossiers) {
+      const offre = d.offres[0];
+      // Seule l'offre en cours compte : une offre refaite repart de zéro.
+      if (!offre || offre.statut !== 'envoye' || !offre.dateValidite || offre.dateValidite >= jour) continue;
+      const proprietaire = d.proprietaireId ? [d.proprietaireId] : await this.notifications.titulairesRole(d.societeId, ROLE_PROPRIETAIRE_DOSSIER);
+      const plan = planNotificationsCrm(
+        'offre_expiree',
+        { code: d.code, programme: d.programme },
+        {
+          daf: [],
+          proprietaire,
+          createur: d.creeParId ? [d.creeParId] : [],
+          apporteur: d.apporteurType === 'interne' && d.apporteurUtilisateurId ? [d.apporteurUtilisateurId] : [],
+        },
+        null,
+      );
+      for (const p of plan) {
+        rappels.push({ cle: `offre-expiree:${offre.id}:${p.destinataireId}`, societeId: d.societeId, type: 'offre_expiree', titre: p.titre, destinataireIds: [p.destinataireId], dossierCrmId: d.id });
+      }
+    }
+    return rappels;
   }
 
   // Facture émise, échue et non soldée : au propriétaire du dossier et au CFO.

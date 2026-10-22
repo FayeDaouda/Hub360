@@ -3,6 +3,7 @@ import { DevisModule } from '../devis/devis.module';
 import { FinancesModule } from '../finances/finances.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ProjetsModule } from '../projets/projets.module';
+import { CommercialService } from './commercial.service';
 import { CrmService } from './crm.service';
 import { CrmController } from './crm.controller';
 
@@ -12,7 +13,7 @@ import { CrmController } from './crm.controller';
 // (FacturationService.preparerDepuisOffre, étape H2).
 @Module({
   imports: [DevisModule, ProjetsModule, NotificationsModule, FinancesModule],
-  providers: [CrmService],
+  providers: [CrmService, CommercialService],
   controllers: [CrmController],
   // Le contrat (étape G) déclenche l'Onboard par CrmService.
   exports: [CrmService],

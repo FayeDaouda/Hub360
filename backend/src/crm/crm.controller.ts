@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
+import { CommercialService } from './commercial.service';
 import { Acteur, CrmService } from './crm.service';
 import {
   ActionDossierDto,
@@ -31,7 +32,19 @@ type Req = { user: Acteur & { societeId: string } };
 @Controller('societes/:slug/dossiers')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class CrmController {
-  constructor(private crm: CrmService) {}
+  constructor(
+    private crm: CrmService,
+    private commercial: CommercialService,
+  ) {}
+
+  // Vue commerciale (revue COO) : « À traiter aujourd'hui » et performance
+  // de l'année (?annee=AAAA, l'année en cours par défaut).
+  @Get('commercial')
+  @RequiertPermission('crm', 'lecture')
+  vueCommerciale(@Req() req: Req, @Query('annee') annee?: string) {
+    const valide = annee && /^\d{4}$/.test(annee) ? annee : String(new Date().getUTCFullYear());
+    return this.commercial.vue(req.user.societeId, valide);
+  }
 
   @Get()
   @RequiertPermission('crm', 'lecture')

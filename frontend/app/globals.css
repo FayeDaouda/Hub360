@@ -16015,3 +16015,85 @@ tr.is-demandeur .cal-nom {
     justify-self: start;
   }
 }
+
+/* CRM · vue commerciale du COO (revue COO, 22/10/2026) : « À traiter
+   aujourd'hui » et performance de l'année, côte à côte sur grand écran. */
+.crm-coo {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+.crm-coo > .panel {
+  margin: 0;
+}
+.crm-perf {
+  display: grid;
+  gap: 0.8rem;
+}
+.crm-perf-chiffres {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+.crm-perf-chiffres > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+}
+.crm-perf-chiffres dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.crm-perf-chiffres dd {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.crm-perf-chiffres .cell-sub,
+.crm-perf-table .cell-sub {
+  white-space: normal;
+}
+.crm-perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+.crm-perf-table th {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.crm-perf-table th:first-child,
+.crm-perf-table td:first-child {
+  text-align: left;
+}
+.crm-perf-table th,
+.crm-perf-table td {
+  padding: 0.45rem 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.crm-perf-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.crm-perf-table td .cell-sub {
+  display: block;
+}
+@media (max-width: 1100px) {
+  .crm-coo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .crm-perf-chiffres {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

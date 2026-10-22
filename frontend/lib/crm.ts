@@ -29,6 +29,33 @@ import { CATEGORIES } from './types';
 // (création du projet d'exécution + coquille avant-projet, idempotente).
 // -----------------------------------------------------------------------------
 
+// Vue commerciale du COO (revue COO, 22/10/2026) — backend crm/commercial.ts.
+export type ElementCommercial = {
+  type: 'fiche_incomplete' | 'lead_sans_proprietaire' | 'offre_chez_client' | 'apporteur_incomplet';
+  dossierId: string;
+  code: string;
+  client: string;
+  ton: 'risque' | 'attention' | 'info';
+  detail: string;
+  tri: string;
+};
+export type LignePerformance = { cle: string; libelle: string; type: 'interne' | 'externe' | 'direct'; leads: number; signes: number; enCours: number };
+export type VueCommerciale = {
+  aTraiter: ElementCommercial[];
+  performance: {
+    annee: string;
+    leads: number;
+    signes: number;
+    enCours: number;
+    tauxTransformation: number | null;
+    delaiMoyenJours: number | null;
+    apporteurs: LignePerformance[];
+  };
+};
+export function getVueCommerciale(slug: string, annee: string): Promise<VueCommerciale> {
+  return apiSociete<VueCommerciale>(slug, `/dossiers/commercial?annee=${encodeURIComponent(annee)}`);
+}
+
 export function getProjets(slug: string): Promise<Projet[]> {
   return apiSociete<Projet[]>(slug, '/dossiers');
 }

@@ -9,6 +9,13 @@
 //   offre refusée              propriétaire + apporteur       information
 //   contrat signé (Onboard)    propriétaire + DAF             projet lancé / factures brouillon
 //
+// Revue COO (22/10/2026) : la personne qui a CRÉÉ le lead (souvent le COO)
+// et l'apporteur interne suivent l'issue de leurs dossiers — offre acceptée
+// ou refusée, dossier perdu, offre expirée sans réponse (tournée des rappels),
+// contrat signé.
+//   dossier perdu              propriétaire + créateur + apporteur   information (motif)
+//   offre expirée              propriétaire + créateur + apporteur   refaire l'offre ou perdre
+//
 // Pas de notification à l'émission d'une facture ni à un paiement : c'est la
 // CFO qui les fait elle-même. L'apporteur n'est joignable que s'il est
 // INTERNE (compte HUB) ; un apporteur externe n'a pas de compte.
@@ -25,9 +32,11 @@ export type EvenementCrm =
   | 'offre_envoyee'
   | 'offre_acceptee'
   | 'offre_refusee'
-  | 'contrat_signe';
+  | 'contrat_signe'
+  | 'dossier_perdu'
+  | 'offre_expiree';
 
-export type CibleCrm = 'daf' | 'proprietaire' | 'apporteur';
+export type CibleCrm = 'daf' | 'proprietaire' | 'apporteur' | 'createur';
 
 // Actions manuelles du cycle qui notifient (les autres événements viennent de
 // la réponse du client et de la signature du contrat).
@@ -35,6 +44,7 @@ export const EVENEMENT_PAR_ACTION: Partial<Record<ActionCrm, EvenementCrm>> = {
   soumettre: 'dossier_soumis',
   renvoyer: 'dossier_renvoye',
   valider: 'offre_envoyee',
+  perdre: 'dossier_perdu',
 };
 
 // Ordre = priorité du titre quand une même personne cumule deux cibles (le
@@ -43,15 +53,17 @@ export const CIBLES_EVENEMENT: Record<EvenementCrm, CibleCrm[]> = {
   dossier_soumis: ['daf'],
   dossier_renvoye: ['proprietaire'],
   offre_envoyee: ['proprietaire'],
-  offre_acceptee: ['proprietaire', 'apporteur'],
-  offre_refusee: ['proprietaire', 'apporteur'],
-  contrat_signe: ['proprietaire', 'daf'],
+  offre_acceptee: ['proprietaire', 'apporteur', 'createur'],
+  offre_refusee: ['proprietaire', 'apporteur', 'createur'],
+  contrat_signe: ['proprietaire', 'daf', 'createur'],
+  dossier_perdu: ['proprietaire', 'createur', 'apporteur'],
+  offre_expiree: ['proprietaire', 'createur', 'apporteur'],
 };
 
 export type ContexteNotificationCrm = {
   code: string;
   programme: string;
-  commentaire?: string | null; // renvoi DAF
+  commentaire?: string | null; // renvoi DAF, motif de perte
   facturesPreparees?: number; // contrat signé
 };
 
@@ -90,6 +102,12 @@ export function titreNotificationCrm(
       }
       return `${dossier} — contrat signé, projet lancé`;
     }
+    case 'dossier_perdu':
+      return ctx.commentaire ? `${dossier} — dossier déclaré perdu : « ${extrait(ctx.commentaire)} »` : `${dossier} — dossier déclaré perdu`;
+    case 'offre_expiree':
+      return cible === 'proprietaire'
+        ? `${dossier} — offre expirée sans réponse du client, à refaire ou à déclarer perdue`
+        : `${dossier} — offre expirée sans réponse du client`;
   }
 }
 

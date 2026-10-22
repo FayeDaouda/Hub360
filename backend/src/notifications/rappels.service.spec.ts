@@ -5,10 +5,11 @@ import { RappelsService } from './rappels.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 
-function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[]; decisions?: unknown[] } = {}) {
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[]; decisions?: unknown[]; dossiers?: unknown[] } = {}) {
   const deja = new Set(o.dejaEnvoyes ?? []);
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
+    dossierCrm: { findMany: jest.fn().mockResolvedValue(o.dossiers ?? []) },
     facture: { findMany: jest.fn().mockResolvedValue(o.factures ?? []) },
     tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? []) },
     collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C1', utilisateurId: 'U1' }]) },
@@ -85,6 +86,19 @@ describe('RappelsService', () => {
     expect(await s.tournee(JOUR)).toBe(0);
     expect(notifications.envoyer).toHaveBeenCalledTimes(1);
     expect(notifications.envoyer.mock.calls[0][0]).not.toHaveProperty('cle');
+  });
+
+  // Revue COO (22/10/2026) : offre expirée → propriétaire, créateur du lead, apporteur interne.
+  it('offre expirée sans réponse : chacun une fois, titre « à refaire » pour le propriétaire seul', async () => {
+    const dossier = (dateValidite: string) => ({
+      id: 'DO1', societeId: 'S1', code: 'NF_OUA.26', programme: 'Immeuble R+5', proprietaireId: 'DG', creeParId: 'COO',
+      apporteurType: 'interne', apporteurUtilisateurId: 'AP', offres: [{ id: 'O1', statut: 'envoye', dateValidite }],
+    });
+    const r = await svc({ dossiers: [dossier('2026-10-13')] }).s.offresExpirees(JOUR);
+    expect(r.map((x) => x.cle)).toEqual(['offre-expiree:O1:DG', 'offre-expiree:O1:COO', 'offre-expiree:O1:AP']);
+    expect(r[0].titre).toContain('à refaire');
+    expect(r[1].titre).toBe('NF_OUA.26 · Immeuble R+5 — offre expirée sans réponse du client');
+    expect(await svc({ dossiers: [dossier('2026-10-14')] }).s.offresExpirees(JOUR)).toEqual([]);
   });
 
   it('notification non écrite : la clé est rendue, la tournée suivante réessaie', async () => {
