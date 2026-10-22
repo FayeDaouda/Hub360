@@ -1,3 +1,4 @@
+import { DelegationService } from './delegation.service';
 import { RentabiliteModule } from '../finances/rentabilite/rentabilite.module';
 import { SyntheseService } from './synthese.service';
 import { RelancesCeoService } from './relances-ceo.service';
@@ -18,7 +19,7 @@ import { SuiviReportingService } from './suivi-reporting.service';
   // Réglages : objectifs, jours fériés ; RH : feuilles de temps, absences à
   // valider ; Projets et Finances : alertes de l'accueil CEO.
   imports: [ReglagesModule, RhModule, ProjetsModule, FinancesModule, NotificationsModule, RentabiliteModule],
-  providers: [PilotageService, AttentionService, ChiffresPilotageService, ReportingRhService, SuiviReportingService, RelancesCeoService, SyntheseService],
+  providers: [PilotageService, AttentionService, ChiffresPilotageService, ReportingRhService, SuiviReportingService, RelancesCeoService, SyntheseService, DelegationService],
   controllers: [PilotageController],
 })
 export class PilotageModule {}

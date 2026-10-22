@@ -26,6 +26,7 @@ import { getAttention, getPilotage } from '@/lib/pilotage';
 import type { AttentionPilotage, IndicateurPilotage, VuePilotage } from '@/lib/types';
 import { ADecider } from './a-decider';
 import { Attention } from './attention';
+import { Delegation } from './delegation';
 import { SyntheseMensuelle } from './synthese-mensuelle';
 import { Reportings } from './reportings';
 import { Registre } from './registre';
@@ -122,6 +123,7 @@ export function Pilotage({ slug }: { slug: string }) {
         (§3.7).
       </p>
       {/* Dir. GC et CTO : ce qui attend leur décision d'abord, la supervision ensuite. */}
+      {session.role !== ROLE_CEO && <Delegation slug={slug} />}
       {(session.role === ROLE_DIR_GC || session.role === ROLE_CTO) && <ADecider slug={slug} vue={vue} onOnglet={ouvrir} />}
       {vue.chiffres && (
         <KpiStrip
@@ -139,6 +141,8 @@ export function Pilotage({ slug }: { slug: string }) {
         />
       )}
       {accueilCeo && attention && <Attention slug={slug} attention={attention} vue={vue} onOnglet={ouvrir} />}
+      {/* Délégation du CEO (revue CEO) : sa carte ; bandeau pour le délégataire. */}
+      {session.role === ROLE_CEO && <Delegation slug={slug} />}
 
       <div className="fin-onglets" ref={ongletsRef}>
         <div className="vue-toggle" role="tablist" aria-label="Pilotage">

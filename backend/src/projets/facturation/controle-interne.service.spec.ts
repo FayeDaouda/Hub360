@@ -20,6 +20,7 @@ function svc(o: { montantHt?: number; enAttente?: number; demande?: Record<strin
         ),
       ),
     },
+    delegationCeo: { findFirst: jest.fn().mockResolvedValue(null) }, // aucune délégation du CEO en cours
     demandeAvoir: {
       count: jest.fn().mockResolvedValue(o.enAttente ?? 0),
       create: jest.fn(({ data }) => Promise.resolve({ id: 'D1', ...data })),

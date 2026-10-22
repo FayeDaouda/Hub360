@@ -523,6 +523,7 @@ export type NotificationType =
   | 'connexion_secours'
   | 'attente_ceo'
   | 'synthese_mensuelle'
+  | 'delegation_ceo'
   | 'demande_droit_a_valider'
   | 'demande_droit_decidee'
   | 'visa_a_apposer'

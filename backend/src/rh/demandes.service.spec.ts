@@ -20,6 +20,7 @@ function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?:
   const update = jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...o.demande, ...data }));
   const majTache = jest.fn().mockReturnValue('majTache');
   const prisma = {
+    delegationCeo: { findFirst: jest.fn().mockResolvedValue(null) }, // aucune délégation du CEO en cours
     demandeAbsence: {
       findUnique: jest.fn().mockResolvedValue({ ...DEMANDE, ...o.demande }),
       update,

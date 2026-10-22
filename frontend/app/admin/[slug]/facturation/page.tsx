@@ -54,6 +54,7 @@ import { Clotures } from '@/components/finances/clotures';
 import { ExportComptable } from '@/components/finances/export-comptable';
 import { ParametresFacturationFenetre } from '@/components/finances/parametres-facturation';
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
+import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
@@ -328,6 +329,8 @@ export default function FinancesPage({ params }: Props) {
 
       {/* Qui valide (CFO ; CEO au-delà du seuil) : ce qui attend sa décision,
           avec l'encaissé du mois et le retard (revue CFO 20/10/2026). */}
+      {/* Délégataire du CEO (revue CEO) : ce qui lui est confié, et jusqu'à quand. */}
+      {session.role === 'CFO' && <Delegation slug={params.slug} />}
       {validateur && (
         <AValiderCfo
           slug={params.slug}

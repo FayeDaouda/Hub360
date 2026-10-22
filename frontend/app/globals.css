@@ -16323,3 +16323,55 @@ tr.is-demandeur .cal-nom {
   margin: 0;
   white-space: pre-wrap;
 }
+
+/* Délégation du CEO (revue CEO, 22/10/2026). */
+.dl {
+  display: grid;
+  gap: 0.6rem;
+}
+.dl-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.dl-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.dl-ligne > span {
+  display: grid;
+  gap: 0.15rem;
+}
+.dl-ligne .cell-sub {
+  white-space: normal;
+}
+.dl-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.dl-note,
+.dl-actions {
+  grid-column: 1 / -1;
+}
+.dl-bandeau {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.9rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--ocre) 55%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--ocre) 14%, transparent);
+  font-size: 0.88rem;
+}
+@media (max-width: 720px) {
+  .dl-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

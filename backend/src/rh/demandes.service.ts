@@ -15,6 +15,7 @@ import {
   DeposerAbsenceDto,
   DeposerRemboursementDto,
 } from './demandes.dto';
+import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 import {
   chevauche,
   joursOuvrables,
@@ -266,7 +267,10 @@ export class DemandesService {
         select: { societeId: true },
       });
       if (dossier?.societeId !== a.societeId) return false;
-      return a.role === d.n1Role || a.role === 'societe_admin';
+      if (a.role === d.n1Role || a.role === 'societe_admin') return true;
+      // Délégation du CEO (revue CEO) : le délégataire décide à sa place
+      // (sa propre demande reste exclue, cf. interdireSaPropreDemande).
+      return d.n1Role === ROLE_CEO && (await agitPourCeo(this.prisma, a));
     }
     const c = await this.prisma.collaborateur.findFirst({
       where: { utilisateurId: a.userId, societeId: a.societeId },
@@ -285,6 +289,8 @@ export class DemandesService {
     const ou: Prisma.DemandeAbsenceWhereInput[] = [];
     if (c) ou.push({ n1CollaborateurId: c.id });
     if (ROLES_N1.includes(a.role)) ou.push({ n1Role: a.role });
+    // Délégataire du CEO en fonction : les absences des directeurs (pas la sienne, filtrée plus bas).
+    if (a.role !== ROLE_CEO && (await agitPourCeo(this.prisma, a))) ou.push({ n1Role: ROLE_CEO });
     if (a.role === 'societe_admin') ou.push({ n1Role: { in: ROLES_N1 } });
     // CEO : la validation finale des demandes de la RH (après l'accord du CFO).
     if (a.role === ROLE_CEO) ou.push({ statut: toutes ? undefined : 'accord_n1', dossier: DEMANDEUR_RH });
@@ -582,6 +588,7 @@ export class DemandesService {
       ids = await this.notifications.comptesDe([d.n1CollaborateurId]);
     } else if (d.n1Role) {
       ids = await this.notifications.titulairesRole(s.societeId, d.n1Role);
+      if (d.n1Role === ROLE_CEO) ids = await avecDelegataire(this.prisma, s.societeId, ids as string[], s.compte);
     }
     await this.notifications.envoyer({ societeId: s.societeId, type, titre, destinataireIds: ids, parId });
   }

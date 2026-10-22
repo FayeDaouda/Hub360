@@ -4,8 +4,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { ArbitrerDecisionDto, CommentaireSyntheseDto, DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
+import { ArbitrerDecisionDto, CommentaireSyntheseDto, DelegationDto, DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
 import { SyntheseService } from './synthese.service';
+import { DelegationService } from './delegation.service';
 import { SuiviReportingService } from './suivi-reporting.service';
 import { AttentionService, type ActeurAttention } from './attention.service';
 import { type Acteur, PilotageService } from './pilotage.service';
@@ -25,7 +26,25 @@ export class PilotageController {
     private attentionService: AttentionService,
     private suivi: SuiviReportingService,
     private synthese: SyntheseService,
+    private delegation: DelegationService,
   ) {}
+
+  // Délégation du CEO (revue CEO, 22/10/2026).
+  @Get('delegation')
+  lireDelegation(@Req() req: R) {
+    return this.delegation.lire(req.user);
+  }
+
+  @Post('delegation')
+  deleguer(@Req() req: R, @Body() dto: DelegationDto) {
+    return this.delegation.creer(req.user, dto);
+  }
+
+  @Post('delegation/:id/revocation')
+  @HttpCode(200)
+  revoquerDelegation(@Req() req: R, @Param('id') id: string) {
+    return this.delegation.revoquer(req.user, id);
+  }
 
   // Synthèse mensuelle (revue CEO, 22/10/2026) : CEO et CFO ; le CFO commente.
   @Get('syntheses')

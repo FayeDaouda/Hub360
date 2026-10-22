@@ -7,6 +7,7 @@ import { refFacture } from '../domaine/config';
 import { ventilationTva } from '../domaine/gardes';
 import { moisClos, moisFr } from './cloture';
 import { FacturationService } from './facturation.service';
+import { agitPourCeo, avecDelegataire } from '../../commun/delegation-ceo';
 
 const ROLE_CEO = 'CEO (transverse)';
 const ROLE_CFO = 'CFO';
@@ -62,7 +63,9 @@ export class ControleInterneService {
 
     if (montantTtc > seuil) {
       await this.prisma.demandeAvoir.create({ data: { societeId, factureId, motif: p.motif, commentaire, montantTtc, demandeParId: acteur.userId } });
-      await this.notifications.envoyer({ societeId, type: 'avoir_a_valider', titre: `Avoir à valider · ${libelle}`, destinataireIds: ceo, parId: acteur.userId, factureId });
+      // Le délégataire du CEO en fonction aussi, sauf s'il est le demandeur.
+      const valideurs = await avecDelegataire(this.prisma, societeId, ceo, acteur.userId);
+      await this.notifications.envoyer({ societeId, type: 'avoir_a_valider', titre: `Avoir à valider · ${libelle}`, destinataireIds: valideurs, parId: acteur.userId, factureId });
       return { emis: false, seuil };
     }
     const demande = await this.prisma.demandeAvoir.create({
@@ -81,9 +84,10 @@ export class ControleInterneService {
 
   // Avoirs au-delà du seuil en attente : le CEO seulement.
   async avoirsAValider(societeId: string, acteur: Acteur) {
-    if (acteur.role !== ROLE_CEO) return [];
+    // Le CEO, ou son délégataire en fonction (revue CEO) — jamais sa propre demande.
+    if (!(await agitPourCeo(this.prisma, { ...acteur, societeId }))) return [];
     const demandes = await this.prisma.demandeAvoir.findMany({
-      where: { societeId, statut: 'a_valider' },
+      where: { societeId, statut: 'a_valider', OR: [{ demandeParId: null }, { demandeParId: { not: acteur.userId } }] },
       orderBy: { demandeLe: 'asc' },
       include: {
         facture: {
@@ -112,7 +116,7 @@ export class ControleInterneService {
   }
 
   async deciderAvoir(societeId: string, demandeId: string, acteur: Acteur, valide: boolean, motifRefus?: string) {
-    if (acteur.role !== ROLE_CEO) throw new ForbiddenException('Un avoir au-delà du seuil est validé par le CEO.');
+    if (!(await agitPourCeo(this.prisma, { ...acteur, societeId }))) throw new ForbiddenException('Un avoir au-delà du seuil est validé par le CEO (ou son délégataire).');
     const d = await this.prisma.demandeAvoir.findFirst({
       where: { id: demandeId, societeId },
       include: { facture: { select: { id: true, numero: true, reference: true, emiseLe: true, estAvoir: true, projetId: true } } },

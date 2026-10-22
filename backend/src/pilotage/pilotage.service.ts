@@ -26,6 +26,7 @@ import { ReportingRhService } from './reporting-rh.service';
 import { SuiviReportingService } from './suivi-reporting.service';
 import type { ArbitrerDecisionDto, SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
+import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 
 export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
@@ -499,6 +500,8 @@ export class PilotageService {
       saisir ? this.rattachables(a.societeId) : null,
     ]);
     const auteurs = await this.nomsComptes(decisions.filter((d) => d.proposition).flatMap((d) => [d.creeParId, d.arbitreParId]));
+    // Délégataire du CEO en fonction (revue CEO) : il arbitre, sauf ses propres propositions.
+    const delegue = !ARBITRES.has(a.role) && (await agitPourCeo(this.prisma, a));
     return {
       decisions: decisions.map((d) => ({
         id: d.id,
@@ -524,7 +527,7 @@ export class PilotageService {
               initiale: (d.proposeeInitiale as { texte: string; responsable: string; echeance: string | null } | null) ?? null,
             }
           : null,
-        peutArbitrer: d.proposition === 'proposee' && ARBITRES.has(a.role),
+        peutArbitrer: d.proposition === 'proposee' && (ARBITRES.has(a.role) || (delegue && d.creeParId !== a.userId)),
         responsableRole: d.responsableRole,
         responsableCollaborateurId: d.responsableCollaborateurId,
       })),
@@ -599,7 +602,7 @@ export class PilotageService {
         societeId: a.societeId,
         type: 'decision_proposee',
         titre: `Décision proposée par le ${libelleRole(a.role)} · ${numeroDecision(creee!.numero)} · ${court(dto.texte.trim())} · à accepter, modifier ou refuser`,
-        destinataireIds: arbitres,
+        destinataireIds: await avecDelegataire(this.prisma, a.societeId, arbitres, a.userId),
         parId: a.userId,
       });
     } else {
@@ -629,9 +632,12 @@ export class PilotageService {
   // jour de l'arbitrage, responsable prévenu, relances comme toute décision.
   // Refusée, elle reste au registre avec son motif. Le CTO est prévenu.
   async arbitrer(a: Acteur, id: string, dto: ArbitrerDecisionDto) {
-    if (!ARBITRES.has(a.role)) throw new ForbiddenException('Seul le CEO accepte, modifie ou refuse une décision proposée.');
+    const delegue = !ARBITRES.has(a.role) && (await agitPourCeo(this.prisma, a));
+    if (!ARBITRES.has(a.role) && !delegue) throw new ForbiddenException('Seul le CEO accepte, modifie ou refuse une décision proposée.');
     const d = await this.prisma.decisionRegistre.findFirst({ where: { id, societeId: a.societeId } });
     if (!d) throw new NotFoundException('Décision introuvable.');
+    // Délégataire du CEO : jamais sa propre proposition.
+    if (delegue && d.creeParId === a.userId) throw new ForbiddenException('Vous ne pouvez pas arbitrer votre propre proposition : elle attend le CEO.');
     if (d.proposition !== 'proposee') throw new ConflictException('Cette décision n’attend pas d’arbitrage.');
     const jour = aujourdhui();
     const numero = numeroDecision(d.numero);

@@ -12,6 +12,7 @@ import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import { ReglagesService } from '../reglages/reglages.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
+import { avecDelegataire } from '../commun/delegation-ceo';
 
 // Heure de la tournée (Dakar = UTC, pas d'heure d'été).
 const HEURE_TOURNEE = 7;
@@ -443,7 +444,14 @@ export class RappelsService implements OnApplicationBootstrap {
     };
     const joursDepuis = (d: Date) => Math.floor((maintenant - d.getTime()) / 86_400_000);
     const ouvres = (d: Date) => joursOuvresDepuis(d.toISOString().slice(0, 10), jour);
-    const pousser = async (r: Omit<Rappel, 'type' | 'destinataireIds'>) => rappels.push({ ...r, type: 'attente_ceo', destinataireIds: await ceoDe(r.societeId) });
+    // demandeurId : renseigné quand la décision se délègue (avoirs, propositions) —
+    // le délégataire en fonction est relancé aussi, jamais sur sa propre demande.
+    const pousser = async (r: Omit<Rappel, 'type' | 'destinataireIds'>, demandeurId?: string | null) =>
+      rappels.push({
+        ...r,
+        type: 'attente_ceo',
+        destinataireIds: demandeurId === undefined ? await ceoDe(r.societeId) : await avecDelegataire(this.prisma, r.societeId, await ceoDe(r.societeId), demandeurId),
+      });
 
     // 1. Offres soumises au-delà du seuil de contresignature.
     const offres = await this.prisma.dossierCrm.findMany({
@@ -471,7 +479,7 @@ export class RappelsService implements OnApplicationBootstrap {
     const palier = (d: Date) => Math.floor(ouvres(d) / JOURS_OUVRES_RELANCE_CEO);
     for (const a of await this.prisma.demandeAvoir.findMany({
       where: { statut: 'a_valider' },
-      select: { id: true, societeId: true, factureId: true, montantTtc: true, demandeLe: true },
+      select: { id: true, societeId: true, factureId: true, montantTtc: true, demandeLe: true, demandeParId: true },
     })) {
       const p = palier(a.demandeLe);
       if (p < 1) continue;
@@ -480,16 +488,16 @@ export class RappelsService implements OnApplicationBootstrap {
         societeId: a.societeId,
         titre: `Avoir à valider · ${fcfa(a.montantTtc.toNumber())} TTC · en attente depuis ${ouvres(a.demandeLe)} jours ouvrés`,
         factureId: a.factureId,
-      });
+      }, a.demandeParId);
     }
     for (const d of await this.prisma.decisionRegistre.findMany({
       where: { proposition: 'proposee' },
-      select: { id: true, societeId: true, numero: true, texte: true, createdAt: true },
+      select: { id: true, societeId: true, numero: true, texte: true, createdAt: true, creeParId: true },
     })) {
       const p = palier(d.createdAt);
       if (p < 1) continue;
       const texte = d.texte.length > 70 ? `${d.texte.slice(0, 69)}…` : d.texte;
-      await pousser({ cle: `ceo:decision:${d.id}:${p}`, societeId: d.societeId, titre: `Décision proposée ${numeroDecision(d.numero)} à arbitrer · ${texte} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés` });
+      await pousser({ cle: `ceo:decision:${d.id}:${p}`, societeId: d.societeId, titre: `Décision proposée ${numeroDecision(d.numero)} à arbitrer · ${texte} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés` }, d.creeParId);
     }
     for (const d of await this.prisma.demandeDroit.findMany({ where: { statut: 'en_attente' }, select: { id: true, societeId: true, module: true, createdAt: true } })) {
       const p = palier(d.createdAt);

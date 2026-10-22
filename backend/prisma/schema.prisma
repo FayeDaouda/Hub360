@@ -241,6 +241,7 @@ enum NotificationType {
   reglage_gouvernance_modifie // au CEO : un seuil de gouvernance changé dans Réglages
   droits_modifies // au CEO : une case de la matrice des droits changée (revue CIO)
   connexion_secours // au CEO et au CIO : connexion d'un compte technique de secours
+  delegation_ceo // au délégataire (et au CIO) : délégation du CEO accordée ou révoquée
   synthese_mensuelle // au CEO et au CFO : synthèse du mois générée à la clôture
   attente_ceo // au CEO : une décision l'attend depuis 24 h (offre, facture à contresigner) ou 3 jours ouvrés (le reste)
   demande_droit_a_valider // au CEO : modification des droits du rôle CIO à valider
@@ -333,6 +334,25 @@ model JournalDroit {
 
   @@index([societeId, createdAt])
   @@map("journal_droits")
+}
+
+// Délégation du CEO (revue CEO, 22/10/2026) : aucune par défaut ; le CEO
+// désigne, pour une période, un délégataire (CTO ou CFO). Jamais délégués :
+// les droits du CIO, les demandes du délégataire lui-même, le salaire du CFO.
+model DelegationCeo {
+  id              String    @id @default(uuid())
+  societeId       String    @map("societe_id")
+  delegataireId   String    @map("delegataire_id")
+  roleDelegataire String    @map("role_delegataire")
+  du              String // AAAA-MM-JJ
+  au              String // AAAA-MM-JJ, inclus
+  creeParId       String    @map("cree_par_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  revoqueLe       DateTime? @map("revoque_le")
+  revoqueParId    String?   @map("revoque_par_id")
+
+  @@index([societeId, au])
+  @@map("delegations_ceo")
 }
 
 // Synthèse mensuelle du CEO (revue CEO, 22/10/2026) : assemblée par le HUB

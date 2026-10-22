@@ -46,3 +46,10 @@ export class MessageReportingDto {
 export class CommentaireSyntheseDto {
   @IsString() @MaxLength(2000) texte!: string;
 }
+
+// Délégation du CEO (revue CEO) : délégataire (CTO ou CFO), période incluse.
+export class DelegationDto {
+  @IsString() delegataireId!: string;
+  @Matches(DATE) du!: string;
+  @Matches(DATE) au!: string;
+}

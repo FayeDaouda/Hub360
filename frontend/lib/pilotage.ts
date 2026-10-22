@@ -104,3 +104,12 @@ export type ListeSyntheses = { peutCommenter: boolean; syntheses: Synthese[] };
 export const getSyntheses = (slug: string) => apiSociete<ListeSyntheses>(slug, '/pilotage/syntheses');
 export const commenterSynthese = (slug: string, mois: string, texte: string) =>
   apiSociete<ListeSyntheses>(slug, `/pilotage/syntheses/${mois}/commentaire`, { method: 'PUT', body: { texte } });
+
+// Délégation du CEO (revue CEO, 22/10/2026) — backend pilotage/delegation.service.ts.
+export type DelegationCeo = { id: string; delegataire: string; role: string; du: string; au: string; enCours: boolean; perimetre: string[] };
+export type VueDelegation = { peutGerer: boolean; delegations: DelegationCeo[]; candidats: { id: string; nom: string; role: string }[]; jamais: string[] };
+export const getDelegation = (slug: string) => apiSociete<VueDelegation>(slug, '/pilotage/delegation');
+export const deleguer = (slug: string, d: { delegataireId: string; du: string; au: string }) =>
+  apiSociete<VueDelegation>(slug, '/pilotage/delegation', { method: 'POST', body: d });
+export const revoquerDelegation = (slug: string, id: string) =>
+  apiSociete<VueDelegation>(slug, `/pilotage/delegation/${id}/revocation`, { method: 'POST' });

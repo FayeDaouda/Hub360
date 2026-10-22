@@ -10,6 +10,7 @@ describe('PilotageService.saisir · registre', () => {
       projet: { count: jest.fn().mockResolvedValue(o.projets ?? 1) },
       cellule: { count: jest.fn().mockResolvedValue(1) },
       client: { count: jest.fn().mockResolvedValue(1) },
+      delegationCeo: { findFirst: jest.fn().mockResolvedValue(null) }, // aucune délégation du CEO
       decisionRegistre: {
         aggregate: jest.fn().mockResolvedValue({ _max: { numero: 2 } }),
         create: jest.fn(({ data }: { data: { numero: number } }) => Promise.resolve(data)),
@@ -49,6 +50,7 @@ describe('PilotageService · décisions proposées', () => {
   function svc(decision?: unknown) {
     const prisma = {
       collaborateur: { findFirst: jest.fn() },
+      delegationCeo: { findFirst: jest.fn().mockResolvedValue(null) }, // aucune délégation du CEO
       decisionRegistre: {
         aggregate: jest.fn().mockResolvedValue({ _max: { numero: 4 } }),
         create: jest.fn(({ data }: { data: { numero: number } }) => Promise.resolve(data)),
