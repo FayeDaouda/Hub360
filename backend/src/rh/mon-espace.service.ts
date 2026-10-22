@@ -140,6 +140,7 @@ export class MonEspaceService {
       where: { id: fiche.celluleId },
       select: {
         nom: true,
+        societeId: true,
         dispatcherId: true,
         membres: {
           select: {
@@ -162,7 +163,7 @@ export class MonEspaceService {
       },
     });
     return {
-      stats: await this.taches.statsEquipe(c.membres.map((m) => m.id)),
+      stats: await this.taches.statsEquipe(c.membres.map((m) => m.id), c.societeId),
       cellule: {
         nom: c.nom,
         pilote: c.dispatcher ? `${c.dispatcher.prenom} ${c.dispatcher.nom}`.trim() : null,

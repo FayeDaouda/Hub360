@@ -122,7 +122,12 @@ export function MesTaches({ slug }: { slug: string }) {
     const dimanche = decaler(lundi, 6);
     const reprises = ouvertes.filter((t) => t.statut === 'a_reprendre');
     const retards = ouvertes.filter((t) => t.statut === 'en_retard');
-    const semaine = ouvertes.filter((t) => (t.statut === 'en_cours' || t.statut === 'a_venir') && !!t.echeance && t.echeance <= dimanche);
+    // Prolongée : la nouvelle date accordée compte (le retard est qualifié).
+    const semaine = ouvertes.filter(
+      (t) =>
+        ((t.statut === 'en_cours' || t.statut === 'a_venir') && !!t.echeance && t.echeance <= dimanche) ||
+        (t.statut === 'prolongee' && !!t.prolongeeJusquau && t.prolongeeJusquau <= dimanche),
+    );
     const attente = ouvertes.filter((t) => t.statut === 'remise');
     const classees = new Set([...reprises, ...retards, ...semaine, ...attente]);
     const ensuite = ouvertes.filter((t) => !classees.has(t));
@@ -205,7 +210,7 @@ export function MesTaches({ slug }: { slug: string }) {
       aujourdhui={aujourdhui}
       sansProjet={sansProjet}
       onOuvrir={(prolongation) => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation })}
-      onRemettre={t.statut === 'remise' ? undefined : () => setARemettre({ tache: t })}
+      onRemettre={t.statut === 'remise' || t.statut === 'bloquee' ? undefined : () => setARemettre({ tache: t })}
       onDeposer={t.statut === 'remise' ? undefined : (f) => void deposer(t, f)}
     />
   );
@@ -495,12 +500,16 @@ function LigneTache({
   const echeance =
     t.statut === 'remise'
       ? { rel: 'En validation', date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · remise le ${jjmm(t.remisLe)}` : ''}` }
-      : t.echeance
-        ? {
-            rel: t.statut === 'a_reprendre' ? `Reprise · ${relatif(t.echeance, aujourdhui).toLowerCase()}` : relatif(t.echeance, aujourdhui),
-            date: t.statut === 'a_venir' && t.debut ? `démarre le ${jjmm(t.debut)} · due le ${jjmm(t.echeance)}` : `due le ${jjmm(t.echeance)}`,
-          }
-        : { rel: 'À planifier', date: 'pas encore de dates' };
+      : t.statut === 'bloquee'
+        ? { rel: 'Attend l’étape précédente', date: t.echeance ? `due le ${jjmm(t.echeance)}` : 'pas encore de dates' }
+        : t.statut === 'prolongee' && t.prolongeeJusquau
+          ? { rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`, date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · due le ${jjmm(t.echeance)}` : ''}` }
+          : t.echeance
+            ? {
+                rel: t.statut === 'a_reprendre' ? `Reprise · ${relatif(t.echeance, aujourdhui).toLowerCase()}` : relatif(t.echeance, aujourdhui),
+                date: t.statut === 'a_venir' && t.debut ? `démarre le ${jjmm(t.debut)} · due le ${jjmm(t.echeance)}` : `due le ${jjmm(t.echeance)}`,
+              }
+            : { rel: 'À planifier', date: 'pas encore de dates' };
 
   const glisser = onDeposer
     ? {

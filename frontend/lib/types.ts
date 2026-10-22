@@ -1664,7 +1664,9 @@ export type ProfilMonEspace = {
 export type AttestationTravail = { id: string; demandeLe: string; delivreeLe: string | null; nom: string | null };
 
 // --- RH · Remise et validation des tâches (lot 5c) -----------------------------
-export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'en_cours' | 'a_venir' | 'a_planifier';
+// prolongee : retard qualifié par une prolongation accordée ; bloquee : sa carte attend l'étape précédente
+// (règle commune des projets, la même que Production et Équipes).
+export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'prolongee' | 'bloquee' | 'en_cours' | 'a_venir' | 'a_planifier';
 
 // Tâche du gabarit assignée (TacheProjet), depuis oct. 2026.
 export type TacheMonEspace = {
@@ -1684,6 +1686,7 @@ export type TacheMonEspace = {
   manque: ManqueTache | null;
   etat: EtatTacheTemps | null;
   statut: StatutTache;
+  prolongeeJusquau: string | null; // statut « prolongee » : nouvelle date accordée
   remisLe: string | null;
   valideLe: string | null;
   renvoiMotif: string | null; // tant que la tâche est à reprendre

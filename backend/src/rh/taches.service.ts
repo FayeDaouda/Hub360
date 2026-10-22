@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
+import type { EtatTache } from '../projets/gabarit/etats';
+import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { TachesProjetService } from '../projets/gabarit/taches-projet.service';
 import { contexteDecision } from '../projets/gabarit/suppleance';
 import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
 import { ouDossierDuCompte } from './mon-compte';
 import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from './regles-temps';
-import { etatValidationGabarit, statsPerformances, statutTache } from './regles-taches';
+import { etatValidationGabarit, statsPerformances, statutSelonEtat, statutTache } from './regles-taches';
 import { chargerTachesAssignees } from './taches-assignees';
 
 type Acteur = { userId: string; societeId: string; role: string };
@@ -26,7 +28,13 @@ export class TachesService {
     private prisma: PrismaService,
     private reglages: ReglagesService,
     private tachesProjet: TachesProjetService,
+    private projetsOuverts: ProjetsOuvertsService,
   ) {}
+
+  // État de chaque tâche des projets ouverts, selon la règle commune.
+  private async etats(societeId: string, jour: string): Promise<Map<string, EtatTache>> {
+    return new Map((await this.projetsOuverts.etatsSociete(societeId, jour)).flatMap((p) => [...p.etatsTaches]));
+  }
 
   // --- Le salarié : ses tâches, leur temps et leur état de validation ----------
   async mesTaches(a: Acteur) {
@@ -40,11 +48,13 @@ export class TachesService {
     const societeId = dossier?.societeId ?? a.societeId;
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
     const absents = joursAbsents((dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })), feries);
+    const etats = taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
 
     const lignes = taches
       .map((t) => {
         const v = etatValidationGabarit(t);
         const planifiee = !!t.debut && !!t.echeance;
+        const etat = etats.get(t.id);
         return {
           id: t.id,
           etape: t.etape,
@@ -60,7 +70,9 @@ export class TachesService {
           heuresImputees: planifiee ? arrondi(heuresTache(t, absents, { debut: t.debut!, fin: jour }, feries)) : 0,
           manque: manqueTache(t, absents, feries),
           etat: etatTache(t, jour),
-          statut: statutTache(t, v, jour),
+          statut: statutSelonEtat(statutTache(t, v, jour), etat),
+          // Retard qualifié : la nouvelle date accordée (l'échéance de référence reste).
+          prolongeeJusquau: etat?.code === 'prolongee' ? etat.jusquau : null,
           version: t.version,
           remisLe: t.statut === 'a_valider' || t.statut === 'validee' ? t.remisLe : null,
           valideLe: t.valideeLe,
@@ -74,11 +86,12 @@ export class TachesService {
 
   // Statistiques d'une équipe (« Ma cellule ») : mêmes règles que « Mes
   // performances », sur les tâches de tous ses membres.
-  async statsEquipe(collaborateurIds: string[]) {
+  async statsEquipe(collaborateurIds: string[], societeId?: string) {
     const jour = aujourdhui();
     const taches = await chargerTachesAssignees(this.prisma, collaborateurIds);
+    const etats = societeId && taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
     return statsPerformances(
-      taches.map((t) => ({ statut: statutTache(t, etatValidationGabarit(t), jour), echeance: t.echeance, remisLe: t.remisLe })),
+      taches.map((t) => ({ statut: statutSelonEtat(statutTache(t, etatValidationGabarit(t), jour), etats.get(t.id)), echeance: t.echeance, remisLe: t.remisLe })),
     );
   }
 

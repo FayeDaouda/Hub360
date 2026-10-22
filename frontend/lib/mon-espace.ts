@@ -73,6 +73,8 @@ export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }
   remise: { libelle: 'Remis · à valider', pill: 'pill--info' },
   a_reprendre: { libelle: 'À reprendre', pill: 'pill--risque' },
   en_retard: { libelle: 'En retard', pill: 'pill--risque' },
+  prolongee: { libelle: 'Prolongée', pill: 'pill--attention' },
+  bloquee: { libelle: 'Attend l’étape précédente', pill: 'pill--neutre' },
   en_cours: { libelle: 'En cours', pill: 'pill--info' },
   a_venir: { libelle: 'À venir', pill: 'pill--neutre' },
   a_planifier: { libelle: 'À planifier', pill: 'pill--neutre' },
@@ -89,5 +91,6 @@ export function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
   }
   if (t.statut === 'a_venir') return `À venir · J-${ecartJours(aujourdhui, t.debut!)}`;
   if (t.statut === 'en_retard') return `En retard · ${ecartJours(t.echeance!, aujourdhui)} j`;
+  if (t.statut === 'prolongee' && t.prolongeeJusquau) return `Prolongée jusqu’au ${t.prolongeeJusquau.slice(8, 10)}/${t.prolongeeJusquau.slice(5, 7)}`;
   return STATUT_TACHE[t.statut].libelle;
 }

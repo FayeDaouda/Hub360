@@ -1,4 +1,4 @@
-import { statsPerformances, statutTache } from './regles-taches';
+import { statsPerformances, statutSelonEtat, statutTache } from './regles-taches';
 
 const J = '2026-09-23';
 const fenetre = (debut: string | null, echeance: string | null) => ({ debut, echeance });
@@ -29,5 +29,18 @@ describe('regles-taches', () => {
     ]);
     expect(s).toEqual({ total: 5, validees: 3, enCours: 2, enRetard: 1, respectDelais: { aTemps: 1, total: 2, pct: 50 } });
     expect(statsPerformances([]).respectDelais.pct).toBeNull();
+  });
+});
+
+// Règle commune des projets (22/10/2026) : même lecture que Production et Équipes.
+describe('statutSelonEtat', () => {
+  it('prolongation accordée = retard qualifié ; carte verrouillée = attend l’étape précédente', () => {
+    expect(statutSelonEtat('en_retard', { code: 'prolongee' })).toBe('prolongee');
+    expect(statutSelonEtat('en_retard', { code: 'verrouillee' })).toBe('bloquee');
+    expect(statutSelonEtat('en_cours', { code: 'verrouillee' })).toBe('bloquee');
+    expect(statutSelonEtat('en_retard', { code: 'en_retard' })).toBe('en_retard');
+    // Remise, reprise, validée : le circuit de validation prime.
+    expect(statutSelonEtat('remise', { code: 'verrouillee' })).toBe('remise');
+    expect(statutSelonEtat('en_retard', undefined)).toBe('en_retard');
   });
 });
