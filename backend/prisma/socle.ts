@@ -71,7 +71,8 @@ export async function installerSocle(prisma: PrismaClient) {
       nom: 'Grey Concrete',
       slug: 'grey-concrete',
       logoUrl: '/logos/grey-concrete.jpg',
-      logoUrlSombre: '/logos/grey-concrete.jpg',
+      // Symbole seul (G recadré, trait renforcé) : lisible en petit à côté du nom.
+      logoUrlSombre: '/logos/grey-concrete-symbole.png',
       couleurMarque: '#c4c4c0',
       icone: 'building-2',
       secteur: 'Promotion immobilière',

@@ -10,12 +10,10 @@ export default function PortailLayout({ children }: { children: ReactNode }) {
   return (
     <ContenuAcces logoVersPortail={false} className="portail">
       <header className="portail-entete">
-        <h1 className="portail-titre">
-          Bienvenue sur <span className="portail-titre-marque">hub360°</span>
-        </h1>
-        <p className="portail-sous-titre">
-          Choisissez votre société pour accéder à votre espace.
-        </p>
+        {/* Le logo hub360° est juste au-dessus : le titre va droit à l'action
+            au lieu de répéter la marque. */}
+        <h1 className="portail-titre">Choisissez votre société</h1>
+        <p className="portail-sous-titre">Vous vous connecterez ensuite à votre espace.</p>
       </header>
       {children}
     </ContenuAcces>

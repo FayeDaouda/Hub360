@@ -1,10 +1,21 @@
+import type { CSSProperties } from 'react';
+import { colonnesPortail } from '@/lib/portail';
+
 // Affiché automatiquement par Next.js pendant que PortailPage (async) va
 // chercher les sociétés — même gabarit que les vraies cartes, sous l'en-tête
 // déjà en place (layout), pour que rien ne saute à l'arrivée des données.
+// Quatre emplacements : le groupe compte quatre sociétés.
+const SQUELETTES = 4;
+
 export default function PortailLoading() {
   return (
-    <ul className="portail-societes" aria-busy="true" aria-label="Chargement des sociétés">
-      {[0, 1, 2].map((i) => (
+    <ul
+      className="portail-societes"
+      style={{ '--colonnes': colonnesPortail(SQUELETTES) } as CSSProperties}
+      aria-busy="true"
+      aria-label="Chargement des sociétés"
+    >
+      {Array.from({ length: SQUELETTES }, (_, i) => (
         <li key={i}>
           <div className="societe-carte societe-carte--squelette">
             <div className="auth-squelette societe-carte-logo" />

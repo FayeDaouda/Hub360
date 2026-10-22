@@ -3,6 +3,7 @@
 import { CSSProperties, MouseEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
+import { colonnesPortail } from '@/lib/portail';
 import { Societe } from '@/lib/types';
 import { SocieteAvatar } from './societe-avatar';
 
@@ -23,7 +24,7 @@ export function SocieteGrid({ societes }: { societes: Societe[] }) {
   const router = useRouter();
   const [leavingSlug, setLeavingSlug] = useState<string | null>(null);
 
-  // Précharge les écrans de connexion (1 à 3 sociétés) : une fois l'animation
+  // Précharge les écrans de connexion (une poignée de sociétés) : une fois l'animation
   // de sortie jouée, la navigation est instantanée (prod — sans effet en dev).
   useEffect(() => {
     societes.forEach((societe) => router.prefetch(`/login/${societe.slug}`));
@@ -42,7 +43,10 @@ export function SocieteGrid({ societes }: { societes: Societe[] }) {
   }
 
   return (
-    <ul className={`portail-societes${leavingSlug ? ' is-navigating' : ''}`}>
+    <ul
+      className={`portail-societes${leavingSlug ? ' is-navigating' : ''}`}
+      style={{ '--colonnes': colonnesPortail(societes.length) } as CSSProperties}
+    >
       {societes.map((societe, index) => {
         const style: StyleCarte = {
           '--i': String(index),

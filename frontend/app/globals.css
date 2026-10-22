@@ -519,6 +519,7 @@ button {
   --fl-trait: rgb(69 97 246 / 0.3);
   --fl-voile: rgb(69 97 246 / 0.06);
   --fl-eclat-op: 0.55;
+  --fl-calme: rgb(240 243 253 / 0.86);
   /* Changement de composition (portail -> connexion, rotation d'écran). */
   --fl-glisse: 1.1s cubic-bezier(0.65, 0, 0.35, 1);
 
@@ -541,6 +542,7 @@ button {
   --fl-trait: rgb(92 124 255 / 0.55);
   --fl-voile: rgb(46 76 220 / 0.14);
   --fl-eclat-op: 0.9;
+  --fl-calme: rgb(4 8 26 / 0.8);
 }
 
 /* Lumière ambiante : les bulles « éclairent » le fond autour d'elles. */
@@ -603,7 +605,8 @@ button {
     left var(--fl-glisse),
     top var(--fl-glisse),
     width var(--fl-glisse),
-    rotate var(--fl-glisse);
+    rotate var(--fl-glisse),
+    opacity var(--fl-glisse);
   will-change: transform;
 }
 
@@ -752,7 +755,8 @@ button {
   transition:
     left var(--fl-glisse),
     top var(--fl-glisse),
-    width var(--fl-glisse);
+    width var(--fl-glisse),
+    opacity var(--fl-glisse);
   will-change: transform;
 }
 .fl-perle--bleu {
@@ -926,6 +930,139 @@ button {
     --x: 12%;
     --y: 44%;
     --l: clamp(18px, 4.5vw, 38px);
+  }
+}
+
+/* Portail : le fond encadre les cartes au lieu de leur faire concurrence.
+   - Zone centrale protégée : aucune bulle ni perle n'y entre (grille 2×2
+     comprise), les grandes formes restent dans les coins.
+   - Voile : dégradé radial couleur de fond au centre (::after, au-dessus des
+     bulles) — les bords restent vifs, la zone de lecture est calme.
+   - Profondeur de champ (grand écran) : grandes bulles floues, perles
+     nettes. Le flou est posé sur .fl-bulle-corps, enfant non animé d'un
+     calque déjà composité : peint une fois, pas recalculé à chaque image.
+   Le tout glisse vers la composition de la connexion au clic (transitions
+   --fl-glisse). */
+.fond-liquide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse 48% 52% at 50% 55%,
+    var(--fl-calme) 0%,
+    color-mix(in srgb, var(--fl-calme) 60%, transparent) 55%,
+    transparent 100%
+  );
+  transition: opacity var(--fl-glisse);
+}
+.auth-shell:has(> .portail) .fond-liquide::after {
+  opacity: 1;
+}
+.auth-shell:has(> .portail) .fl-bulle {
+  opacity: calc(var(--fl-bulle-op) * 0.82);
+}
+/* Éclat posé au centre de l'écran : sous les cartes sur le portail. */
+.auth-shell:has(> .portail) .fl-eclat:nth-child(2) {
+  display: none;
+}
+
+@media (orientation: landscape) and (min-width: 768px) {
+  .auth-shell:has(> .portail) .fl-bulle--bleu {
+    --x: 1%;
+    --y: 3%;
+    --l: clamp(250px, 26vw, 520px);
+  }
+  .auth-shell:has(> .portail) .fl-bulle--jaune {
+    --x: 91%;
+    --y: 9%;
+    --l: clamp(190px, 20vw, 400px);
+  }
+  .auth-shell:has(> .portail) .fl-bulle--cyan {
+    --x: 97%;
+    --y: 57%;
+    --l: clamp(80px, 7.5vw, 150px);
+  }
+  .auth-shell:has(> .portail) .fl-bulle--orange {
+    --x: 10%;
+    --y: 103%;
+    --l: clamp(210px, 22vw, 430px);
+  }
+  .auth-shell:has(> .portail) .fl-bulle--azur {
+    --x: 100%;
+    --y: 101%;
+    --l: clamp(190px, 20vw, 400px);
+  }
+  .auth-shell:has(> .portail) .fl-perle--bleu {
+    --x: 29%;
+    --y: 9%;
+  }
+  .auth-shell:has(> .portail) .fl-perle--jaune {
+    --x: 81%;
+    --y: 34%;
+  }
+  .auth-shell:has(> .portail) .fl-perle--orange {
+    --x: 7%;
+    --y: 47%;
+  }
+  .auth-shell:has(> .portail) .fl-perle--cyan {
+    --x: 65%;
+    --y: 5%;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 1024px) {
+  .fl-bulle-corps {
+    transition: filter var(--fl-glisse);
+  }
+  .auth-shell:has(> .portail) .fl-bulle:not(.fl-bulle--cyan) .fl-bulle-corps {
+    filter: blur(clamp(5px, 0.55vw, 10px));
+  }
+}
+
+@media (orientation: portrait), (max-width: 767px) {
+  .auth-shell:has(> .portail) .fl-bulle--bleu {
+    --y: 5%;
+    --l: clamp(200px, 56vw, 460px);
+  }
+  .auth-shell:has(> .portail) .fl-bulle--jaune {
+    --y: 6%;
+    --l: clamp(150px, 40vw, 340px);
+  }
+  /* Le cyan longeait le titre (« C » de « Choisissez » posé dessus). */
+  .auth-shell:has(> .portail) .fl-bulle--cyan,
+  .auth-shell:has(> .portail) .fl-perle--cyan {
+    opacity: 0;
+  }
+  .auth-shell:has(> .portail) .fl-bulle--orange {
+    --x: 100%;
+    --y: 101%;
+    --l: clamp(180px, 50vw, 420px);
+  }
+  .auth-shell:has(> .portail) .fl-bulle--azur {
+    --x: 0%;
+    --y: 103%;
+    --l: clamp(180px, 50vw, 420px);
+  }
+  .auth-shell:has(> .portail) .fl-perle--bleu {
+    --x: 7%;
+    --y: 15%;
+  }
+  .auth-shell:has(> .portail) .fl-perle--orange {
+    --x: 52%;
+    --y: 97%;
+  }
+}
+
+/* Téléphones et tablettes : grandes bulles et vagues immobiles. Sous des
+   cartes en verre (backdrop-filter), un fond qui bouge force le recalcul du
+   flou à chaque image — c'est ce qui coûte en GPU et en batterie. Perles et
+   éclats, petits et hors des cartes, gardent la vie du décor. */
+@media (max-width: 767px), (pointer: coarse) {
+  .fl-bulle,
+  .fond-liquide-vagues {
+    animation: none;
+    will-change: auto;
   }
 }
 
@@ -1616,50 +1753,28 @@ button {
 }
 .portail-titre {
   margin: 0;
-  font-size: clamp(1.7rem, 1.2rem + 1.9vw, 2.75rem);
+  font-size: clamp(1.55rem, 1.15rem + 1.5vw, 2.35rem);
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.025em;
-}
-/* « hub360° » aux couleurs des pétales du logo (teintes ≥ 3:1 sur le fond,
-   seuil des grands titres). */
-.portail-titre-marque {
-  background: linear-gradient(
-    90deg,
-    var(--portail-marque-1),
-    var(--portail-marque-2) 35%,
-    var(--portail-marque-3) 70%,
-    var(--portail-marque-4)
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+  text-wrap: balance;
 }
 .portail-sous-titre {
-  margin: 0.75rem 0 0;
+  margin: 0.6rem 0 0;
   color: var(--auth-texte-doux);
-  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.08rem);
+  font-size: clamp(0.92rem, 0.88rem + 0.2vw, 1.02rem);
   line-height: 1.55;
-}
-
-.auth-shell {
-  --portail-marque-1: #3949ab;
-  --portail-marque-2: #0277a3;
-  --portail-marque-3: #b77f00;
-  --portail-marque-4: #c44d14;
-}
-:root[data-theme='dark'] .auth-shell {
-  --portail-marque-1: #8b9bff;
-  --portail-marque-2: #38c8ff;
-  --portail-marque-3: #ffd24a;
-  --portail-marque-4: #ff9152;
+  text-wrap: balance;
 }
 
 .portail-societes {
+  --carte-max: 340px;
+  --portail-gouttiere: clamp(0.9rem, 2vw, 1.25rem);
   list-style: none;
   width: 100%;
-  max-width: 1080px;
+  max-width: calc(
+    var(--colonnes, 3) * var(--carte-max) + (var(--colonnes, 3) - 1) * var(--portail-gouttiere)
+  );
   margin: 0;
   padding: 0;
   /* flex-wrap plutôt que grid : une carte seule sur la dernière ligne reste
@@ -1667,12 +1782,12 @@ button {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: clamp(0.9rem, 2vw, 1.25rem);
+  gap: var(--portail-gouttiere);
 }
 .portail-societes > li {
   display: flex;
   flex: 1 1 290px;
-  max-width: 340px;
+  max-width: var(--carte-max);
 }
 .portail-societes.is-navigating {
   pointer-events: none;
@@ -1856,17 +1971,20 @@ button {
 }
 
 @media (max-width: 639px) {
+  .portail-societes {
+    --portail-gouttiere: 0.7rem;
+  }
   .portail-societes > li {
     max-width: none;
   }
   .societe-carte {
-    min-height: 88px;
-    padding: 0.9rem;
+    min-height: 80px;
+    padding: 0.8rem 0.9rem 0.8rem 0.8rem;
     border-radius: 20px;
   }
   .societe-carte-logo {
-    width: 56px;
-    height: 56px;
+    width: 54px;
+    height: 54px;
     border-radius: 14px;
   }
   .societe-carte-fleche {
@@ -2047,11 +2165,6 @@ button {
   .selecteur-theme,
   .societe-carte {
     border: 1px solid CanvasText;
-  }
-  .portail-titre-marque {
-    background: none;
-    color: CanvasText;
-    -webkit-text-fill-color: CanvasText;
   }
 }
 
