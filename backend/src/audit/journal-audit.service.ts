@@ -30,6 +30,7 @@ const ACTIONS_COMPTE: Record<EvenementCompteType, string> = {
   salaire_modifie: 'Salaire modifié',
   double_facteur_active: 'Double authentification activée',
   double_facteur_reinitialise: 'Double authentification réinitialisée',
+  connexion_secours: 'Connexion du compte de secours',
 };
 // Journal de la paie (revue RH 20/10/2026) : jamais de montant.
 const ACTIONS_PAIE: Record<ActionPaie, string> = {

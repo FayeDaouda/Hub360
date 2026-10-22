@@ -6,10 +6,12 @@ import { ComptesService } from './comptes.service';
 import { ConfirmationIdentiteService } from './confirmation-identite.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     PassportModule,
+    NotificationsModule, // connexions du compte de secours (revue CIO)
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'change-moi-en-production',
       signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },

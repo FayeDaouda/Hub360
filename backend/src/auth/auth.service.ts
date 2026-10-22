@@ -1,3 +1,4 @@
+import { NotificationsService } from '../notifications/notifications.service';
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as QRCode from 'qrcode';
@@ -15,17 +16,26 @@ import {
 } from './totp';
 
 // Double authentification obligatoire pour la direction (tous les rôles sauf
-// Salarié, phase 4) et pour le Salarié chef de cellule, qui valide le travail
-// des autres (revue Salarié 19/10/2026) ; facultative pour les autres
-// Salariés, qui l'activent eux-mêmes une fois connectés. Appliquée en
-// production ; HUB_DOUBLE_FACTEUR = « obligatoire » | « desactive » force
-// l'un ou l'autre (poste de dev, démo).
+// Salarié, phase 4), les comptes techniques et le Salarié chef de cellule, qui
+// valide le travail des autres (revue Salarié 19/10/2026) ; facultative pour
+// les autres Salariés, qui l'activent eux-mêmes une fois connectés.
+// Appliquée en production. HUB_DOUBLE_FACTEUR = « obligatoire » la force
+// partout ; « desactive » ne vaut que sur un poste de développement ou un
+// serveur de démonstration (HUB_DONNEES_DEMO=autorise) — jamais sur un HUB
+// réel (revue CIO, 22/10/2026).
 const ROLE_SALARIE = 'Salarié';
 export function doubleFacteurExige(role: string, env: NodeJS.ProcessEnv = process.env, chefDeCellule = false): boolean {
   const reglage = env.HUB_DOUBLE_FACTEUR;
-  const applique = reglage === 'obligatoire' || (reglage !== 'desactive' && env.NODE_ENV === 'production');
+  const production = env.NODE_ENV === 'production';
+  const desactivable = !production || env.HUB_DONNEES_DEMO === 'autorise';
+  const applique = reglage === 'obligatoire' || (production && !(reglage === 'desactive' && desactivable));
   return applique && (role !== ROLE_SALARIE || chefDeCellule);
 }
+
+// Comptes techniques de secours (revue CIO, 22/10/2026) : sans usage
+// quotidien, accès confié au CEO ; chaque connexion est tracée au journal et
+// notifiée au CEO et au CIO.
+export const ROLES_SECOURS: ReadonlySet<string> = new Set(['holding_admin', 'societe_admin']);
 
 // Jeton d'étape entre le mot de passe et le code : signé avec une autre clé
 // que les sessions (jamais accepté comme session), valable 10 minutes.
@@ -37,6 +47,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private notifications: NotificationsService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -233,6 +244,26 @@ export class AuthService {
     return { societe, acces };
   }
 
+  // Connexion d'un compte de secours : trace (journal d'audit) et alerte au
+  // CEO et au CIO de la société. L'échec de l'alerte ne bloque pas l'accès.
+  private async tracerSecours(utilisateur: { id: string; email: string }, societe: { id: string; nom: string }) {
+    const le = new Date();
+    await this.prisma.evenementCompte.create({
+      data: { utilisateurId: utilisateur.id, type: 'connexion_secours', parId: utilisateur.id, detail: `Connexion à ${societe.nom}` },
+    });
+    const destinataires = await this.prisma.utilisateurSocieteRole.findMany({
+      where: { societeId: societe.id, role: { nom: { in: ['CEO (transverse)', 'CIO (transverse)'] } }, utilisateur: { actif: true } },
+      select: { utilisateurId: true },
+    });
+    await this.notifications.envoyer({
+      societeId: societe.id,
+      type: 'connexion_secours',
+      titre: `Connexion du compte de secours ${utilisateur.email} · ${societe.nom} · le ${le.toLocaleString('fr-FR', { timeZone: 'Africa/Dakar', dateStyle: 'short', timeStyle: 'short' })}`,
+      destinataireIds: destinataires.map((d) => d.utilisateurId),
+      parId: null,
+    });
+  }
+
   private async ouvrirSession(
     utilisateur: { id: string; email: string; nom: string; prenom: string; sessionsValidesDepuis: Date | null },
     societeSlug: string,
@@ -247,6 +278,8 @@ export class AuthService {
     for (const p of acces.role.permissions) {
       permissions[p.module.cle] = p.niveau;
     }
+
+    if (ROLES_SECOURS.has(acces.role.nom)) await this.tracerSecours(utilisateur, societe);
 
     const payload = {
       sub: utilisateur.id,

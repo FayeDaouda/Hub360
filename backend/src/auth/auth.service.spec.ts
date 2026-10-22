@@ -43,7 +43,8 @@ function svc(affectations: unknown[]) {
   } as unknown as PrismaService;
   const sign = jest.fn().mockReturnValue('jeton');
   const jwt = { sign } as unknown as JwtService;
-  return { svc: new AuthService(prisma, jwt), findMany, update, sign };
+  const notifications = { envoyer: jest.fn() };
+  return { svc: new AuthService(prisma, jwt, notifications as never), findMany, update, sign, notifications, evenement: (prisma as unknown as { evenementCompte: { create: jest.Mock } }).evenementCompte.create };
 }
 
 const DTO = { email: 'a@b.c', motDePasse: 'x', societeSlug: 'grey-concrete' };
@@ -132,7 +133,7 @@ describe('Double authentification', () => {
       sign: jest.fn().mockReturnValue('jeton'),
       verify: jest.fn().mockReturnValue({ sub: 'U1', slug: 'grey-concrete', but: 'double-facteur' }),
     } as unknown as JwtService;
-    return { s: new AuthService(prisma, jwt), update, updateMany };
+    return { s: new AuthService(prisma, jwt, { envoyer: jest.fn() } as never), update, updateMany };
   }
 
   it('obligatoire pour la direction en production, jamais pour le Salarié ; réglable', () => {
@@ -142,7 +143,12 @@ describe('Double authentification', () => {
     expect(doubleFacteurExige('Salarié', { NODE_ENV: 'production' }, true)).toBe(true);
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'development' })).toBe(false);
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'obligatoire' })).toBe(true);
-    expect(doubleFacteurExige('CFO', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
+    // Revue CIO (22/10/2026) : « desactive » n'est accepté en production que
+    // sur un serveur de démonstration ; jamais sur un HUB réel.
+    expect(doubleFacteurExige('CFO', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(true);
+    expect(doubleFacteurExige('CIO (transverse)', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive', HUB_DONNEES_DEMO: 'autorise' })).toBe(false);
+    expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
+    expect(doubleFacteurExige('societe_admin', { NODE_ENV: 'production' })).toBe(true);
   });
 
   it('mot de passe juste + double facteur actif : pas de session, une étape « code »', async () => {
@@ -168,5 +174,19 @@ describe('Double authentification', () => {
     const res = await svc2(enCours).s.activerDoubleFacteur('jeton', codeAuPas(SECRET, pasCourant()));
     expect(res.codesSecours).toHaveLength(8);
     expect(res.role).toBe('CFO');
+  });
+});
+
+// Revue CIO (22/10/2026) : compte technique de secours — chaque connexion
+// tracée au journal et notifiée au CEO et au CIO.
+describe('AuthService · compte de secours', () => {
+  it('connexion d’un compte technique : trace et alerte ; compte ordinaire : rien', async () => {
+    const secours = svc([affectation('S1', 'societe_admin')]);
+    await secours.svc.login(DTO);
+    expect(secours.evenement).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'connexion_secours', utilisateurId: 'U1' }) });
+    expect(secours.notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'connexion_secours', titre: expect.stringContaining('compte de secours a@b.c') }));
+    const ordinaire = svc([affectation('S1', 'CFO')]);
+    await ordinaire.svc.login(DTO);
+    expect(ordinaire.notifications.envoyer).not.toHaveBeenCalled();
   });
 });
