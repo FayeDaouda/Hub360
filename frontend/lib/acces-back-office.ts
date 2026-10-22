@@ -77,7 +77,13 @@ export function sectionAccessible(session: Session, cle: string): boolean {
   // comme Mon espace — le serveur ne sert que les tâches du compte connecté.
   // Testé avant societe_admin, qui verrait sinon toutes les sections.
   if (cle === 'mes-taches') return session.role === ROLE_SALARIE;
-  if (session.role === 'societe_admin') return true;
+  // Administration : ses lignes de la matrice font foi pour les sections
+  // qu'elle gouverne (bilan avant déploiement, 22/10/2026 : la page RH lui
+  // était proposée alors que la matrice la lui ferme) ; le reste est ouvert.
+  if (session.role === 'societe_admin') {
+    const moduleSection = SECTIONS_DIRECTION[cle];
+    return !moduleSection || niveauSuffisant(session, moduleSection, 'lecture');
+  }
   if (ROLES_HORS_BACK_OFFICE.has(session.role)) return false;
   // Mes réglages (19/10/2026) : compte, sécurité, apparence — chacun les
   // siens, hors matrice (le CIO garde aussi les Réglages du HUB).
