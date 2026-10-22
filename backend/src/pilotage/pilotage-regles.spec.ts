@@ -33,6 +33,9 @@ describe('registre des décisions', () => {
     expect(statutDecision({ echeance: '2026-10-05', closeLe: null }, '2026-10-05')).toBe('ouverte');
     expect(statutDecision({ echeance: '2026-09-22', closeLe: null }, '2026-10-05')).toBe('echeance_depassee');
     expect(statutDecision({ echeance: '2026-09-22', closeLe: '2026-10-01' }, '2026-10-05')).toBe('close');
+    expect(statutDecision({ echeance: '2026-09-22', closeLe: null, proposition: 'proposee' }, '2026-10-05')).toBe('proposee');
+    expect(statutDecision({ echeance: '2026-11-22', closeLe: null, proposition: 'refusee' }, '2026-10-05')).toBe('refusee');
+    expect(statutDecision({ echeance: '2026-09-22', closeLe: null, proposition: 'acceptee' }, '2026-10-05')).toBe('echeance_depassee');
   });
 });
 

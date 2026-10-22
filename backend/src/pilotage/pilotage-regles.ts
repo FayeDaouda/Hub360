@@ -82,9 +82,15 @@ export function relanceDecision(echeance: string, jour: string): string | null {
 
 export const numeroDecision = (n: number) => `D-${String(n).padStart(3, '0')}`;
 
-export type StatutDecision = 'ouverte' | 'echeance_depassee' | 'close';
+export type StatutDecision = 'proposee' | 'refusee' | 'ouverte' | 'echeance_depassee' | 'close';
 
-export function statutDecision(d: { echeance: string | null; closeLe: string | null }, aujourdhui: string): StatutDecision {
+// Une proposition (CTO → CEO) n'est pas encore une décision : ni ouverte, ni
+// relancée, ni comptée ; refusée, elle reste au registre pour la trace.
+export function statutDecision(
+  d: { echeance: string | null; closeLe: string | null; proposition?: 'proposee' | 'acceptee' | 'refusee' | null },
+  aujourdhui: string,
+): StatutDecision {
+  if (d.proposition === 'proposee' || d.proposition === 'refusee') return d.proposition;
   if (d.closeLe) return 'close';
   return d.echeance && d.echeance < aujourdhui ? 'echeance_depassee' : 'ouverte';
 }
@@ -92,6 +98,10 @@ export function statutDecision(d: { echeance: string | null; closeLe: string | n
 // Instances qui saisissent leurs décisions dans le HUB (maquette) ; les
 // autres décisions sont inscrites par le HUB lui-même.
 export const INSTANCES_SAISIE = ['CODIR', 'Coordination opérationnelle'] as const;
+
+// Décisions en vigueur (ni proposées, ni refusées) : filtre Prisma commun
+// aux indicateurs, aux relances et aux clôtures.
+export const DECISION_EN_VIGUEUR = { OR: [{ proposition: null }, { proposition: 'acceptee' as const }] };
 
 // --- Indicateurs -----------------------------------------------------------
 

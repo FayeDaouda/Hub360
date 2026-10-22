@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarClock, ChevronRight, FileWarning, Hourglass, ReceiptText, Scale, UserCheck } from 'lucide-react';
+import { CalendarClock, ChevronRight, FileWarning, Gavel, Hourglass, ReceiptText, Scale, UserCheck } from 'lucide-react';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
 import { formatMontant } from '@/lib/format';
@@ -55,8 +55,26 @@ export function Attention({
       (d.statut === 'ouverte' && !!d.echeance && d.echeance <= ajouterJours(jour, FENETRE_DECISIONS_JOURS)),
   );
   const reportings = vue.reportings.filter((r) => r.statut === 'en_retard');
+  // Revue CTO (22/10/2026) : le CTO ne reporte plus au CEO, il lui propose des décisions.
+  const proposees = vue.decisions.filter((d) => d.peutArbitrer);
 
   const toutes: Rubrique[] = [
+    {
+      cle: 'proposees',
+      titre: 'Décisions proposées par le CTO',
+      icone: <Gavel size={16} aria-hidden />,
+      couleur: 'var(--iris)',
+      lignes: proposees.map((d) => {
+        const depuis = joursEntre(d.date, jour);
+        return {
+          cle: d.id,
+          titre: `${d.numero} · ${d.texte}`,
+          detail: `${d.proposition?.par ? `${d.proposition.par} · ` : ''}${d.responsable}${d.echeance ? ` · échéance proposée le ${jjmm(d.echeance)}` : ''}`,
+          pill: { libelle: depuis > 2 ? `Depuis ${depuis} j` : 'À arbitrer', ton: depuis > 2 ? 'risque' : 'attention' },
+          onClick: () => onOnglet('registre'),
+        };
+      }),
+    },
     {
       cle: 'retards',
       titre: 'Projets en retard',

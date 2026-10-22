@@ -44,7 +44,17 @@ export type NouvelleDecision = {
   projetId?: string;
   celluleId?: string;
   clientId?: string;
+  proposer?: boolean; // CTO : soumettre au CEO au lieu d'inscrire
 };
+
+// Arbitrage du CEO sur une décision proposée par le CTO.
+export type ArbitrageDecision =
+  | { issue: 'accepter' }
+  | { issue: 'refuser'; motif: string }
+  | { issue: 'modifier'; texte?: string; responsableRole?: string; responsableCollaborateurId?: string; echeance?: string; motif?: string };
+export function arbitrerDecision(slug: string, id: string, arbitrage: ArbitrageDecision): Promise<VuePilotage> {
+  return apiSociete<VuePilotage>(slug, `/pilotage/decisions/${id}/arbitrage`, { method: 'POST', body: arbitrage });
+}
 
 // Décisions rattachées à une fiche (projet, cellule ou client).
 export type DecisionRattachee = {
@@ -55,7 +65,7 @@ export type DecisionRattachee = {
   texte: string;
   responsable: string;
   echeance: string | null;
-  statut: 'ouverte' | 'echeance_depassee' | 'close';
+  statut: 'proposee' | 'ouverte' | 'echeance_depassee' | 'close';
 };
 export function getDecisionsRattachees(slug: string, cible: { projet?: string; cellule?: string; client?: string }): Promise<DecisionRattachee[]> {
   const [cle, id] = Object.entries(cible).find(([, v]) => !!v) ?? ['projet', ''];

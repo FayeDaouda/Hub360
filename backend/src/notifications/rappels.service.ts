@@ -6,7 +6,7 @@ import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { moisClos, moisFr } from '../projets/facturation/cloture';
-import { echeanceReporting, moisAReporter, numeroDecision, rappelsReporting, relanceDecision, RELANCES_AVANT_AUTEUR, REPORTINGS } from '../pilotage/pilotage-regles';
+import { DECISION_EN_VIGUEUR, echeanceReporting, moisAReporter, numeroDecision, rappelsReporting, relanceDecision, RELANCES_AVANT_AUTEUR, REPORTINGS } from '../pilotage/pilotage-regles';
 import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from './notifications.service';
 
@@ -344,7 +344,7 @@ export class RappelsService implements OnApplicationBootstrap {
   // chaque semaine ; après 2 relances sans effet, l'auteur est prévenu (une fois).
   async decisions(jour: string): Promise<Rappel[]> {
     const ouvertes = await this.prisma.decisionRegistre.findMany({
-      where: { origine: 'saisie', closeLe: null, echeance: { not: null } },
+      where: { origine: 'saisie', closeLe: null, echeance: { not: null }, ...DECISION_EN_VIGUEUR },
       select: { id: true, societeId: true, numero: true, texte: true, echeance: true, responsable: true, responsableRole: true, responsableCollaborateurId: true, creeParId: true },
     });
     const rappels: Rappel[] = [];

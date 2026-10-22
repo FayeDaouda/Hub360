@@ -84,7 +84,7 @@ export function lienNotificationAdmin(
   if (n.type === 'bulletin_depose' || n.type === 'attestation_delivree') return `${base}/mon-espace?onglet=documents`;
   if (n.type === 'absence_decidee') return `${base}/mon-espace?onglet=conges`;
   if (n.type === 'remboursement_traite') return `${base}/mon-espace?onglet=remboursements`;
-  if (n.type === 'decision_assignee' || n.type === 'rappel_decision' || n.type === 'decision_en_retard') return `${base}?onglet=registre`;
+  if (['decision_assignee', 'rappel_decision', 'decision_en_retard', 'decision_proposee', 'decision_arbitree'].includes(n.type)) return `${base}?onglet=registre`;
   if ((n.type === 'facture_emise' || n.type === 'facture_payee' || n.type === 'rappel_facture') && n.factureId) {
     return `${base}/facturation?facture=${n.factureId}`;
   }

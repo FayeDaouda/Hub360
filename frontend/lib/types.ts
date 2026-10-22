@@ -509,6 +509,8 @@ export type NotificationType =
   | 'visa_a_apposer'
   | 'arrivant_a_affecter'
   | 'rappel_decision'
+  | 'decision_proposee'
+  | 'decision_arbitree'
   | 'decision_en_retard'
   // Profil de facturation (lot 6 CFO) : coordonnées de paiement changées (CEO).
   | 'coordonnees_paiement_modifiees'
@@ -1768,7 +1770,8 @@ export type SuiviReporting = {
 // Reporting que l'acteur doit encore déposer (« À traiter » de la page RH).
 export type ReportingADeposer = Pick<ReportingPilotage, 'type' | 'mois' | 'periode' | 'echeance' | 'statut'>;
 
-export type StatutDecision = 'ouverte' | 'echeance_depassee' | 'close';
+// « proposee » / « refusee » : proposition du CTO au CEO, pas encore (ou jamais) en vigueur.
+export type StatutDecision = 'proposee' | 'refusee' | 'ouverte' | 'echeance_depassee' | 'close';
 
 export type OptionRattachement = { id: string; libelle: string };
 
@@ -1786,6 +1789,18 @@ export type DecisionRegistre = {
   peutCloturer: boolean;
   // Rattachement facultatif (revue CTO) : projet, cellule ou client.
   rattachement: { type: 'projet' | 'cellule' | 'client'; libelle: string } | null;
+  // Proposition du CTO au CEO (revue CTO, 22/10/2026) ; null = inscrite directement.
+  proposition: {
+    etat: 'proposee' | 'acceptee' | 'refusee';
+    par: string | null;
+    arbitreLe: string | null;
+    arbitrePar: string | null;
+    motif: string | null;
+    initiale: { texte: string; responsable: string; echeance: string | null } | null; // si modifiée
+  } | null;
+  peutArbitrer: boolean;
+  responsableRole: string | null;
+  responsableCollaborateurId: string | null;
 };
 
 // « À votre attention » (accueil du CEO, Pilotage) — backend
@@ -1822,6 +1837,7 @@ export type VuePilotage = {
     instances: string[];
     responsables: ResponsableDecision[]; // titulaires d'un compte HUB seulement
     rattachables: { projets: OptionRattachement[]; cellules: OptionRattachement[]; clients: OptionRattachement[] } | null;
+    peutProposer: boolean; // CTO : « Proposer au CEO »
   } | null; // null = pas de saisie
   // Chiffres clés en tête de page, selon la matrice (backend pilotage/chiffres.service.ts).
   chiffres: {

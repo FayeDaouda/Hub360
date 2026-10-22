@@ -245,6 +245,8 @@ enum NotificationType {
   arrivant_a_affecter // au Dir. GC : compte Salarié créé, cellule à choisir
   // Registre des décisions (revue CTO) : relance au responsable, retard à l'auteur.
   rappel_decision
+  decision_proposee // au CEO : le CTO lui soumet une décision
+  decision_arbitree // au CTO : acceptée, modifiée ou refusée
   decision_en_retard
 }
 
@@ -2471,27 +2473,35 @@ enum OrigineDecision {
 // Numéro D-NNN séquentiel par société, jamais réutilisé. Une décision
 // inscrite par le HUB a une `cleOrigine` (idempotence) et se clôt seule.
 model DecisionRegistre {
-  id                         String          @id @default(uuid())
-  societeId                  String          @map("societe_id")
+  id                         String           @id @default(uuid())
+  societeId                  String           @map("societe_id")
   numero                     Int
   date                       String // AAAA-MM-JJ
   instance                   String // « CODIR », « RH · congés », « Projets · AM_SL.26 »…
   origine                    OrigineDecision
-  cleOrigine                 String?         @map("cle_origine")
+  cleOrigine                 String?          @map("cle_origine")
   texte                      String
   responsable                String // libellé affiché
-  responsableRole            String?         @map("responsable_role")
-  responsableCollaborateurId String?         @map("responsable_collaborateur_id") // pas de FK : le libellé reste
+  responsableRole            String?          @map("responsable_role")
+  responsableCollaborateurId String?          @map("responsable_collaborateur_id") // pas de FK : le libellé reste
   echeance                   String? // AAAA-MM-JJ
   // Rattachement facultatif (revue CTO, 21/10/2026) : visible sur la fiche
   // du projet, de la cellule ou du client.
-  projetId                   String?         @map("projet_id")
-  celluleId                  String?         @map("cellule_id")
-  clientId                   String?         @map("client_id")
-  closeLe                    DateTime?       @map("close_le")
-  closeParId                 String?         @map("close_par_id")
-  creeParId                  String?         @map("cree_par_id")
-  createdAt                  DateTime        @default(now()) @map("created_at")
+  projetId                   String?          @map("projet_id")
+  celluleId                  String?          @map("cellule_id")
+  clientId                   String?          @map("client_id")
+  closeLe                    DateTime?        @map("close_le")
+  closeParId                 String?          @map("close_par_id")
+  creeParId                  String?          @map("cree_par_id")
+  // Décision proposée par le CTO au CEO (revue CTO, 22/10/2026) : null =
+  // inscrite directement. Le CEO l'accepte (telle quelle ou modifiée) ou la
+  // refuse, motif obligatoire ; la proposition d'origine reste tracée.
+  proposition                EtatProposition?
+  arbitreLe                  DateTime?        @map("arbitre_le")
+  arbitreParId               String?          @map("arbitre_par_id")
+  motifArbitrage             String?          @map("motif_arbitrage")
+  proposeeInitiale           Json?            @map("proposee_initiale") // { texte, responsable, echeance } si modifiée
+  createdAt                  DateTime         @default(now()) @map("created_at")
 
   societe Societe  @relation(fields: [societeId], references: [id], onDelete: Cascade)
   projet  Projet?  @relation(fields: [projetId], references: [id], onDelete: SetNull)
@@ -2501,6 +2511,12 @@ model DecisionRegistre {
   @@unique([societeId, numero])
   @@unique([societeId, cleOrigine])
   @@map("decisions_registre")
+}
+
+enum EtatProposition {
+  proposee
+  acceptee
+  refusee
 }
 
 enum DecisionProlongation {

@@ -9,6 +9,7 @@ import { partATemps } from '../equipe/equipes-regles';
 import { ajouterJours, statutDevisEffectif } from '../devis/domaine';
 import { etatCarte, etatTache, indexTaches, resumeEtape, type CarteSource, type EtatTache, type TacheSource } from '../projets/gabarit/etats';
 import {
+  DECISION_EN_VIGUEUR,
   echeanceReporting,
   evaluer,
   INSTANCES_SAISIE,
@@ -23,7 +24,7 @@ import {
 import { ChiffresPilotageService } from './chiffres.service';
 import { ReportingRhService } from './reporting-rh.service';
 import { SuiviReportingService } from './suivi-reporting.service';
-import type { SaisirDecisionDto } from './dto';
+import type { ArbitrerDecisionDto, SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 
 export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
@@ -31,6 +32,11 @@ export type Acteur = { userId: string; societeId: string; role: string; permissi
 // Rôles qui saisissent et clôturent les décisions des instances (choix du
 // 05/10/2026 : « par fonction », la matrice reste en lecture).
 const ROLES_REGISTRE = new Set(['CTO (transverse)', 'CEO (transverse)', 'societe_admin']);
+// Revue CTO (22/10/2026) : pas de reporting CTO → CEO ; le CTO propose une
+// décision, le CEO l'arbitre.
+const ROLE_CTO = 'CTO (transverse)';
+const ROLE_CEO = 'CEO (transverse)';
+const ARBITRES = new Set([ROLE_CEO, 'societe_admin']);
 
 // Rôles proposés comme responsables d'une décision (fonctions de direction).
 const ROLES_RESPONSABLES = ['Dir. GC', 'COO', 'CFO', 'CEO (transverse)', 'CTO (transverse)', 'CIO (transverse)', 'RH'];
@@ -93,7 +99,7 @@ export class PilotageService {
         horsObjectif: indicateurs.filter((i) => i.evaluation === 'hors_objectif').length,
         suivis: suivis.length,
         reportingsADeposer: reportings.filter((r) => r.statut === 'a_deposer' || r.statut === 'en_retard').length,
-        decisionsOuvertes: registre.decisions.filter((d) => d.statut !== 'close').length,
+        decisionsOuvertes: registre.decisions.filter((d) => d.statut === 'ouverte' || d.statut === 'echeance_depassee').length,
       },
       // Chiffres clés en tête de page, selon la matrice (chiffres.service.ts).
       chiffres,
@@ -151,7 +157,7 @@ export class PilotageService {
         }),
         this.chargeEquipes(societeId, mois, jour),
         this.prisma.reportingMensuel.findMany({ where: { societeId }, select: { type: true, mois: true, deposeLe: true } }),
-        this.prisma.decisionRegistre.findMany({ where: { societeId, closeLe: null }, select: { echeance: true, closeLe: true } }),
+        this.prisma.decisionRegistre.findMany({ where: { societeId, closeLe: null, ...DECISION_EN_VIGUEUR }, select: { echeance: true, closeLe: true } }),
       ]);
 
     const { signees, avecSuivi } = offres;
@@ -536,6 +542,7 @@ export class PilotageService {
       }),
       saisir ? this.rattachables(a.societeId) : null,
     ]);
+    const auteurs = await this.nomsComptes(decisions.filter((d) => d.proposition).flatMap((d) => [d.creeParId, d.arbitreParId]));
     return {
       decisions: decisions.map((d) => ({
         id: d.id,
@@ -546,10 +553,24 @@ export class PilotageService {
         texte: d.texte,
         responsable: d.responsable,
         echeance: d.echeance,
-        statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null }, jour),
+        statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition }, jour),
         rattachement: rattachementDe(d),
         closeLe: d.closeLe ? jourIso(d.closeLe) : null,
-        peutCloturer: d.origine === 'saisie' && !d.closeLe && this.peutCloturer(a, d, collaborateurId),
+        peutCloturer: d.origine === 'saisie' && !d.closeLe && enVigueur(d) && this.peutCloturer(a, d, collaborateurId),
+        // Proposition CTO → CEO : qui l'a soumise, qui l'a tranchée, et ce qui a changé.
+        proposition: d.proposition
+          ? {
+              etat: d.proposition,
+              par: (d.creeParId && auteurs.get(d.creeParId)) ?? null,
+              arbitreLe: d.arbitreLe ? jourIso(d.arbitreLe) : null,
+              arbitrePar: (d.arbitreParId && auteurs.get(d.arbitreParId)) ?? null,
+              motif: d.motifArbitrage,
+              initiale: (d.proposeeInitiale as { texte: string; responsable: string; echeance: string | null } | null) ?? null,
+            }
+          : null,
+        peutArbitrer: d.proposition === 'proposee' && ARBITRES.has(a.role),
+        responsableRole: d.responsableRole,
+        responsableCollaborateurId: d.responsableCollaborateurId,
       })),
       saisie: saisir
         ? {
@@ -559,9 +580,17 @@ export class PilotageService {
               ...collaborateurs.map((c) => ({ collaborateurId: c.id, libelle: nomDe(c) })),
             ],
             rattachables,
+            peutProposer: a.role === ROLE_CTO,
           }
         : null,
     };
+  }
+
+  private async nomsComptes(ids: (string | null)[]): Promise<Map<string, string>> {
+    const uniques = [...new Set(ids.filter((x): x is string => !!x))];
+    if (!uniques.length) return new Map();
+    const comptes = await this.prisma.utilisateur.findMany({ where: { id: { in: uniques } }, select: { id: true, prenom: true, nom: true } });
+    return new Map(comptes.map((u) => [u.id, nomDe(u)]));
   }
 
   private peutCloturer(a: Acteur, d: { responsableRole: string | null; responsableCollaborateurId: string | null }, collaborateurId: string | null) {
@@ -581,13 +610,16 @@ export class PilotageService {
 
   async saisir(a: Acteur, dto: SaisirDecisionDto) {
     if (!ROLES_REGISTRE.has(a.role)) throw new ForbiddenException('Saisir une décision est réservé au CTO et au CEO.');
+    if (dto.proposer && a.role !== ROLE_CTO) throw new ForbiddenException('Proposer une décision au CEO est réservé au CTO.');
     const jour = aujourdhui();
     const date = dto.date ?? jour;
     if (date > jour) throw new BadRequestException('Une décision ne peut pas être datée dans le futur.');
     if (dto.echeance < date) throw new BadRequestException('L’échéance précède la date de la décision.');
     const responsable = await this.responsable(a.societeId, dto);
     const rattachement = await this.rattachementSaisi(a.societeId, dto);
-    await this.creerNumerotee(a.societeId, (numero) => ({
+    const arbitres = dto.proposer ? await this.notifications.titulairesRole(a.societeId, ROLE_CEO) : [];
+    if (dto.proposer && !arbitres.length) throw new BadRequestException('Aucun compte HUB actif ne porte le rôle CEO : la proposition ne serait jamais reçue.');
+    const creee = await this.creerNumerotee(a.societeId, (numero) => ({
       ...rattachement,
       societeId: a.societeId,
       numero,
@@ -598,22 +630,92 @@ export class PilotageService {
       ...responsable,
       echeance: dto.echeance,
       creeParId: a.userId,
+      proposition: dto.proposer ? 'proposee' : null,
     }));
-    // Le responsable (fiche d'équipe ou titulaires du rôle) est prévenu.
-    const texte = dto.texte.trim();
-    await this.notifications.envoyer({
-      societeId: a.societeId,
-      type: 'decision_assignee',
-      titre: `Décision à mettre en œuvre · ${texte.length > 80 ? `${texte.slice(0, 79)}…` : texte} · échéance ${dto.echeance.slice(8, 10)}/${dto.echeance.slice(5, 7)}`,
-      destinataireIds: responsable.responsableCollaborateurId
-        ? await this.notifications.comptesDe([responsable.responsableCollaborateurId])
-        : await this.notifications.titulairesRole(a.societeId, responsable.responsableRole!),
-      parId: a.userId,
-    });
+    if (dto.proposer) {
+      // Le CEO reçoit la proposition ; le responsable n'est prévenu qu'à l'acceptation.
+      await this.notifications.envoyer({
+        societeId: a.societeId,
+        type: 'decision_proposee',
+        titre: `Décision proposée par le CTO · ${numeroDecision(creee!.numero)} · ${court(dto.texte.trim())} · à accepter, modifier ou refuser`,
+        destinataireIds: arbitres,
+        parId: a.userId,
+      });
+    } else {
+      await this.prevenirResponsable(a, { texte: dto.texte.trim(), echeance: dto.echeance, ...responsable });
+    }
     return this.vue(a);
   }
 
-  private async responsable(societeId: string, dto: SaisirDecisionDto) {
+  // Le responsable (fiche d'équipe ou titulaires du rôle) est prévenu.
+  private async prevenirResponsable(
+    a: Acteur,
+    d: { texte: string; echeance: string; responsableRole: string | null; responsableCollaborateurId: string | null },
+  ) {
+    await this.notifications.envoyer({
+      societeId: a.societeId,
+      type: 'decision_assignee',
+      titre: `Décision à mettre en œuvre · ${court(d.texte)} · échéance ${d.echeance.slice(8, 10)}/${d.echeance.slice(5, 7)}`,
+      destinataireIds: d.responsableCollaborateurId
+        ? await this.notifications.comptesDe([d.responsableCollaborateurId])
+        : await this.notifications.titulairesRole(a.societeId, d.responsableRole!),
+      parId: a.userId,
+    });
+  }
+
+  // Arbitrage par le CEO d'une décision proposée par le CTO. Acceptée (telle
+  // quelle ou modifiée), elle entre en vigueur ce jour : date de la décision =
+  // jour de l'arbitrage, responsable prévenu, relances comme toute décision.
+  // Refusée, elle reste au registre avec son motif. Le CTO est prévenu.
+  async arbitrer(a: Acteur, id: string, dto: ArbitrerDecisionDto) {
+    if (!ARBITRES.has(a.role)) throw new ForbiddenException('Seul le CEO accepte, modifie ou refuse une décision proposée.');
+    const d = await this.prisma.decisionRegistre.findFirst({ where: { id, societeId: a.societeId } });
+    if (!d) throw new NotFoundException('Décision introuvable.');
+    if (d.proposition !== 'proposee') throw new ConflictException('Cette décision n’attend pas d’arbitrage.');
+    const jour = aujourdhui();
+    const numero = numeroDecision(d.numero);
+    let titre: string;
+    if (dto.issue === 'refuser') {
+      const motif = dto.motif?.trim();
+      if (!motif || motif.length < 3) throw new BadRequestException('Le motif du refus est obligatoire.');
+      await this.prisma.decisionRegistre.update({
+        where: { id },
+        data: { proposition: 'refusee', arbitreLe: new Date(), arbitreParId: a.userId, motifArbitrage: motif },
+      });
+      titre = `Décision ${numero} refusée par le CEO · ${court(d.texte)} · « ${court(motif)} »`;
+    } else {
+      const modifiee = dto.issue === 'modifier';
+      const texte = modifiee && dto.texte ? dto.texte.trim() : d.texte;
+      const echeance = (modifiee && dto.echeance) || d.echeance!;
+      const responsable =
+        modifiee && (dto.responsableRole || dto.responsableCollaborateurId)
+          ? await this.responsable(a.societeId, dto)
+          : { responsable: d.responsable, responsableRole: d.responsableRole, responsableCollaborateurId: d.responsableCollaborateurId };
+      if (echeance < jour) throw new BadRequestException('L’échéance proposée est passée : modifiez-la avant d’accepter.');
+      const change = texte !== d.texte || echeance !== d.echeance || responsable.responsable !== d.responsable;
+      if (modifiee && !change) throw new BadRequestException('Rien n’a été modifié : acceptez la décision telle quelle.');
+      await this.prisma.decisionRegistre.update({
+        where: { id },
+        data: {
+          proposition: 'acceptee',
+          arbitreLe: new Date(),
+          arbitreParId: a.userId,
+          motifArbitrage: modifiee ? (dto.motif?.trim() ?? null) : null,
+          date: jour,
+          texte,
+          echeance,
+          ...responsable,
+          proposeeInitiale: change ? { texte: d.texte, responsable: d.responsable, echeance: d.echeance } : Prisma.DbNull,
+        },
+      });
+      await this.prevenirResponsable(a, { texte, echeance, responsableRole: responsable.responsableRole, responsableCollaborateurId: responsable.responsableCollaborateurId });
+      titre = `Décision ${numero} ${change ? 'acceptée avec modifications' : 'acceptée'} par le CEO · ${court(texte)}`;
+    }
+    await this.notifications.envoyer({ societeId: a.societeId, type: 'decision_arbitree', titre, destinataireIds: [d.creeParId], parId: a.userId });
+    return this.vue(a);
+  }
+
+  private async responsable(societeId: string, dto: Pick<SaisirDecisionDto, 'responsableRole' | 'responsableCollaborateurId'>) {
     if (!!dto.responsableRole === !!dto.responsableCollaborateurId) throw new BadRequestException('Un responsable, rôle ou collaborateur, est requis.');
     if (dto.responsableRole) {
       if (!ROLES_RESPONSABLES.includes(dto.responsableRole)) throw new BadRequestException('Rôle responsable inconnu.');
@@ -666,7 +768,12 @@ export class PilotageService {
     if (!cible.projetId && !cible.celluleId && !cible.clientId) throw new BadRequestException('Projet, cellule ou client requis.');
     const jour = aujourdhui();
     const decisions = await this.prisma.decisionRegistre.findMany({
-      where: { societeId: a.societeId, ...(cible.projetId ? { projetId: cible.projetId } : cible.celluleId ? { celluleId: cible.celluleId } : { clientId: cible.clientId }) },
+      where: {
+        societeId: a.societeId,
+        ...(cible.projetId ? { projetId: cible.projetId } : cible.celluleId ? { celluleId: cible.celluleId } : { clientId: cible.clientId }),
+        // Une proposition refusée n'a jamais été une décision : pas sur la fiche.
+        OR: [{ proposition: null }, { proposition: { in: ['proposee', 'acceptee'] } }],
+      },
       orderBy: { numero: 'desc' },
     });
     return decisions.map((d) => ({
@@ -677,7 +784,7 @@ export class PilotageService {
       texte: d.texte,
       responsable: d.responsable,
       echeance: d.echeance,
-      statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null }, jour),
+      statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition }, jour),
     }));
   }
 
@@ -686,6 +793,7 @@ export class PilotageService {
     if (!d) throw new NotFoundException('Décision introuvable.');
     if (d.origine !== 'saisie') throw new ConflictException('Une décision inscrite par le HUB se clôt d’elle-même.');
     if (d.closeLe) throw new ConflictException('Décision déjà close.');
+    if (!enVigueur(d)) throw new ConflictException('Une décision proposée ou refusée ne se clôt pas : elle n’est pas en vigueur.');
     if (!this.peutCloturer(a, d, await this.collaborateurDuCompte(a))) {
       throw new ForbiddenException('Seuls le responsable, le CTO et le CEO clôturent une décision.');
     }
@@ -853,6 +961,10 @@ export class PilotageService {
     }));
   }
 }
+
+// Ni proposée en attente, ni refusée.
+const enVigueur = (d: { proposition: string | null }) => d.proposition === null || d.proposition === 'acceptee';
+const court = (texte: string, n = 80) => (texte.length > n ? `${texte.slice(0, n - 1)}…` : texte);
 
 // Libellé du rattachement d'une décision (« Projet FS_POI.26 »…), null sans.
 function rattachementDe(d: { projet: { code: string } | null; cellule: { nom: string } | null; client: { nom: string } | null }) {

@@ -1,21 +1,55 @@
 'use client';
 
 import { useState } from 'react';
-import { cloturerDecision, saisirDecision } from '@/lib/pilotage';
+import { createPortal } from 'react-dom';
+import { ChampModal } from '@/components/admin/champ-modal';
+import { arbitrerDecision, cloturerDecision, saisirDecision, type ArbitrageDecision } from '@/lib/pilotage';
 import type { DecisionRegistre, ResponsableDecision, StatutDecision, VuePilotage } from '@/lib/types';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 const PILL_STATUT: Record<StatutDecision, string> = {
+  proposee: 'pill--attention',
+  refusee: 'pill--neutre',
   ouverte: 'pill--azur',
   echeance_depassee: 'pill--risque',
   close: 'pill--succes',
 };
 const libelleStatut = (d: DecisionRegistre) =>
-  d.statut === 'ouverte' ? 'Ouverte' : d.statut === 'echeance_depassee' ? 'Échéance dépassée' : `Close le ${jjmmaaaa(d.closeLe ?? '')}`;
+  d.statut === 'proposee'
+    ? 'Proposée au CEO'
+    : d.statut === 'refusee'
+      ? 'Refusée'
+      : d.statut === 'ouverte'
+        ? 'Ouverte'
+        : d.statut === 'echeance_depassee'
+          ? 'Échéance dépassée'
+          : `Close le ${jjmmaaaa(d.closeLe ?? '')}`;
 
 const valeurResponsable = (r: ResponsableDecision) => ('role' in r ? `role:${r.role}` : `collaborateur:${r.collaborateurId}`);
+// « role:Dir. GC » → { responsableRole } ; « collaborateur:id » → { responsableCollaborateurId }.
+const champsResponsable = (valeur: string) => {
+  const [genre, id] = valeur.split(/:(.*)/s);
+  return genre === 'role' ? { responsableRole: id } : { responsableCollaborateurId: id };
+};
+const valeurDe = (d: DecisionRegistre) =>
+  d.responsableRole ? `role:${d.responsableRole}` : d.responsableCollaborateurId ? `collaborateur:${d.responsableCollaborateurId}` : '';
+
+// Trace d'une proposition CTO → CEO, sous le texte de la décision.
+function traceProposition(d: DecisionRegistre): string | null {
+  const p = d.proposition;
+  if (!p) return null;
+  const par = p.par ? ` par ${p.par}` : '';
+  if (p.etat === 'proposee') return `Proposée${par} · en attente du CEO`;
+  const arbitre = `${p.arbitreLe ? ` le ${jjmmaaaa(p.arbitreLe)}` : ''}${p.arbitrePar ? ` par ${p.arbitrePar}` : ''}`;
+  if (p.etat === 'refusee') return `Proposée${par} · refusée${arbitre}${p.motif ? ` · « ${p.motif} »` : ''}`;
+  if (!p.initiale) return `Proposée${par} · acceptée${arbitre}`;
+  const i = p.initiale;
+  return `Proposée${par} · acceptée avec modifications${arbitre}${p.motif ? ` (« ${p.motif} »)` : ''} · proposition d’origine : « ${i.texte} », ${i.responsable}${
+    i.echeance ? `, échéance ${jjmmaaaa(i.echeance)}` : ''
+  }`;
+}
 
 // Registre des décisions (manuel §4.1) : décision, responsable, échéance.
 // Les décisions prises dans le HUB s'inscrivent seules et se closent seules ;
@@ -26,8 +60,25 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
   const [saisie, setSaisie] = useState(false);
   const [enCours, setEnCours] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  const ouvertes = vue.decisions.filter((d) => d.statut !== 'close');
+  const [aModifier, setAModifier] = useState<DecisionRegistre | null>(null);
+  const [aRefuser, setARefuser] = useState<DecisionRegistre | null>(null);
+  // Ouvertes : les propositions en attente d'abord (le CEO les tranche).
+  const ouvertes = vue.decisions
+    .filter((d) => d.statut === 'proposee' || d.statut === 'ouverte' || d.statut === 'echeance_depassee')
+    .sort((a, b) => Number(b.statut === 'proposee') - Number(a.statut === 'proposee'));
   const liste = filtre === 'ouvertes' ? ouvertes : vue.decisions;
+
+  async function arbitrer(d: DecisionRegistre, arbitrage: ArbitrageDecision) {
+    setEnCours(d.id);
+    setErreur(null);
+    try {
+      onVue(await arbitrerDecision(slug, d.id, arbitrage));
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'L’arbitrage a échoué.');
+    } finally {
+      setEnCours(null);
+    }
+  }
 
   async function cloturer(d: DecisionRegistre) {
     setEnCours(d.id);
@@ -66,6 +117,9 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
       </header>
 
       {vue.saisie && saisie && <SaisieDecision slug={slug} saisie={vue.saisie} onVue={onVue} onFermer={() => setSaisie(false)} />}
+      {vue.saisie && aModifier && (
+        <ModifierProposition key={aModifier.id} slug={slug} decision={aModifier} saisie={vue.saisie} onVue={onVue} onFermer={() => setAModifier(null)} />
+      )}
       {erreur && <p className="field-erreur">{erreur}</p>}
 
       {liste.length === 0 ? (
@@ -91,10 +145,11 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
               </span>
               <span role="cell" className="pi-instance">
                 <strong>{d.instance}</strong>
-                <small>{d.origine === 'hub' ? 'inscrite par le HUB' : 'saisie'}</small>
+                <small>{d.origine === 'hub' ? 'inscrite par le HUB' : d.proposition ? 'proposée par le CTO' : 'saisie'}</small>
               </span>
               <span role="cell" className="pi-texte">
                 {d.texte}
+                {traceProposition(d) && <small className="pi-proposition">{traceProposition(d)}</small>}
                 {d.rattachement && (
                   <small className="pi-rattachement">
                     {d.rattachement.type === 'projet' ? 'Projet' : d.rattachement.type === 'cellule' ? 'Cellule' : 'Client'} · {d.rattachement.libelle}
@@ -112,12 +167,146 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
                     {enCours === d.id ? '…' : 'Clôturer'}
                   </button>
                 )}
+                {d.peutArbitrer && (
+                  <span className="pi-arbitrage">
+                    <button type="button" className="btn-primary pi-cloturer" disabled={enCours === d.id} onClick={() => arbitrer(d, { issue: 'accepter' })}>
+                      {enCours === d.id ? '…' : 'Accepter'}
+                    </button>
+                    <button type="button" className="btn-ghost pi-cloturer" disabled={enCours === d.id} onClick={() => setAModifier(d)}>
+                      Modifier
+                    </button>
+                    <button type="button" className="btn-ghost pi-cloturer" disabled={enCours === d.id} onClick={() => setARefuser(d)}>
+                      Refuser
+                    </button>
+                  </span>
+                )}
               </span>
             </div>
           ))}
         </div>
       )}
+      {/* Hors du panneau « glass » : une modale fixe y serait piégée. */}
+      {aRefuser &&
+        createPortal(
+          <ChampModal
+            titre={`Refuser ${aRefuser.numero}`}
+            label="Motif du refus (transmis au CTO)"
+            confirmer="Refuser la décision"
+            onSubmit={async (motif) => {
+              if (motif.trim().length < 3) throw new Error('Le motif du refus est obligatoire.');
+              onVue(await arbitrerDecision(slug, aRefuser.id, { issue: 'refuser', motif: motif.trim() }));
+              setARefuser(null);
+            }}
+            onClose={() => setARefuser(null)}
+          />,
+          document.body,
+        )}
     </section>
+  );
+}
+
+// Choix du responsable : fonctions pourvues, puis collaborateurs ayant un compte.
+function ChoixResponsable({ responsables, valeur, onChange }: { responsables: ResponsableDecision[]; valeur: string; onChange: (v: string) => void }) {
+  const roles = responsables.filter((r) => 'role' in r);
+  const collaborateurs = responsables.filter((r) => 'collaborateurId' in r);
+  return (
+    <select className="field-input" value={valeur} onChange={(e) => onChange(e.target.value)}>
+      <option value="">Choisir…</option>
+      <optgroup label="Fonctions">
+        {roles.map((r) => (
+          <option key={valeurResponsable(r)} value={valeurResponsable(r)}>
+            {r.libelle}
+          </option>
+        ))}
+      </optgroup>
+      <optgroup label="Collaborateurs">
+        {collaborateurs.map((r) => (
+          <option key={valeurResponsable(r)} value={valeurResponsable(r)}>
+            {r.libelle}
+          </option>
+        ))}
+      </optgroup>
+    </select>
+  );
+}
+
+// CEO : accepter une proposition du CTO après l'avoir modifiée. La
+// proposition d'origine reste tracée au registre.
+function ModifierProposition({
+  slug,
+  decision,
+  saisie,
+  onVue,
+  onFermer,
+}: {
+  slug: string;
+  decision: DecisionRegistre;
+  saisie: NonNullable<VuePilotage['saisie']>;
+  onVue: (v: VuePilotage) => void;
+  onFermer: () => void;
+}) {
+  const [texte, setTexte] = useState(decision.texte);
+  const [responsable, setResponsable] = useState(valeurDe(decision));
+  const [echeance, setEcheance] = useState(decision.echeance ?? '');
+  const [motif, setMotif] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function accepter() {
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      onVue(
+        await arbitrerDecision(slug, decision.id, {
+          issue: 'modifier',
+          texte: texte.trim(),
+          ...(responsable !== valeurDe(decision) ? champsResponsable(responsable) : {}),
+          echeance,
+          ...(motif.trim() ? { motif: motif.trim() } : {}),
+        }),
+      );
+      onFermer();
+    } catch (e) {
+      setErreur(e instanceof Error && e.message ? e.message : 'La modification a échoué.');
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  return (
+    <div className="pi-saisie">
+      <p className="pi-aide">
+        Modifier puis accepter <strong>{decision.numero}</strong>
+        {decision.proposition?.par ? `, proposée par ${decision.proposition.par}` : ''}. La proposition d’origine reste au registre.
+      </p>
+      <div className="eq-creer-grille pi-saisie-grille">
+        <label className="eq-creer-large">
+          <span>Décision</span>
+          <textarea className="field-input" rows={2} maxLength={500} value={texte} onChange={(e) => setTexte(e.target.value)} />
+        </label>
+        <label>
+          <span>Responsable</span>
+          <ChoixResponsable responsables={saisie.responsables} valeur={responsable} onChange={setResponsable} />
+        </label>
+        <label>
+          <span>Échéance</span>
+          <input className="field-input" type="date" value={echeance} min={aujourdhui()} onChange={(e) => setEcheance(e.target.value)} />
+        </label>
+        <label className="eq-creer-large">
+          <span>Note au CTO (facultatif)</span>
+          <input className="field-input" maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
+        </label>
+      </div>
+      {erreur && <p className="field-erreur">{erreur}</p>}
+      <div className="pi-saisie-actions">
+        <button type="button" className="btn-ghost" onClick={onFermer}>
+          Annuler
+        </button>
+        <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !echeance} onClick={accepter}>
+          {envoi ? 'Acceptation…' : 'Accepter avec ces modifications'}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -141,11 +330,9 @@ function SaisieDecision({
   const [rattache, setRattache] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  const roles = saisie.responsables.filter((r) => 'role' in r);
-  const collaborateurs = saisie.responsables.filter((r) => 'collaborateurId' in r);
 
-  async function enregistrer() {
-    const [genre, id] = responsable.split(/:(.*)/s);
+  // `proposer` (CTO) : soumise au CEO, en vigueur seulement une fois acceptée.
+  async function enregistrer(proposer: boolean) {
     const [typeR, idR] = rattache ? rattache.split(/:(.*)/s) : ['', ''];
     setEnvoi(true);
     setErreur(null);
@@ -155,8 +342,9 @@ function SaisieDecision({
           instance,
           texte: texte.trim(),
           date,
-          ...(genre === 'role' ? { responsableRole: id } : { responsableCollaborateurId: id }),
+          ...champsResponsable(responsable),
           echeance,
+          ...(proposer ? { proposer: true } : {}),
           ...(typeR === 'projet' ? { projetId: idR } : typeR === 'cellule' ? { celluleId: idR } : typeR === 'client' ? { clientId: idR } : {}),
         }),
       );
@@ -191,23 +379,7 @@ function SaisieDecision({
         </label>
         <label>
           <span>Responsable</span>
-          <select className="field-input" value={responsable} onChange={(e) => setResponsable(e.target.value)}>
-            <option value="">Choisir…</option>
-            <optgroup label="Fonctions">
-              {roles.map((r) => (
-                <option key={valeurResponsable(r)} value={valeurResponsable(r)}>
-                  {r.libelle}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Collaborateurs">
-              {collaborateurs.map((r) => (
-                <option key={valeurResponsable(r)} value={valeurResponsable(r)}>
-                  {r.libelle}
-                </option>
-              ))}
-            </optgroup>
-          </select>
+          <ChoixResponsable responsables={saisie.responsables} valeur={responsable} onChange={setResponsable} />
         </label>
         <label>
           <span>Échéance</span>
@@ -237,13 +409,21 @@ function SaisieDecision({
           </label>
         )}
       </div>
+      {saisie.peutProposer && (
+        <p className="pi-aide">« Proposer au CEO » : la décision attend son accord (accepter, modifier ou refuser) avant d’entrer en vigueur.</p>
+      )}
       {erreur && <p className="field-erreur">{erreur}</p>}
       <div className="pi-saisie-actions">
         <button type="button" className="btn-ghost" onClick={onFermer}>
           Annuler
         </button>
-        <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={enregistrer}>
-          {envoi ? 'Inscription…' : 'Inscrire au registre'}
+        {saisie.peutProposer && (
+          <button type="button" className="btn-ghost" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={() => enregistrer(true)}>
+            Proposer au CEO
+          </button>
+        )}
+        <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={() => enregistrer(false)}>
+          {envoi ? 'Envoi…' : 'Inscrire au registre'}
         </button>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
+import { ArbitrerDecisionDto, DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
 import { SuiviReportingService } from './suivi-reporting.service';
 import { AttentionService, type ActeurAttention } from './attention.service';
 import { type Acteur, PilotageService } from './pilotage.service';
@@ -107,6 +107,13 @@ export class PilotageController {
   @Post('decisions')
   saisir(@Req() req: R, @Body() dto: SaisirDecisionDto) {
     return this.pilotage.saisir(req.user, dto);
+  }
+
+  // Décision proposée par le CTO : le CEO l'accepte, la modifie ou la refuse.
+  @Post('decisions/:id/arbitrage')
+  @HttpCode(200)
+  arbitrer(@Req() req: R, @Param('id') id: string, @Body() dto: ArbitrerDecisionDto) {
+    return this.pilotage.arbitrer(req.user, id, dto);
   }
 
   @Post('decisions/:id/cloture')
