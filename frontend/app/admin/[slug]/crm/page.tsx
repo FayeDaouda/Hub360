@@ -63,6 +63,7 @@ const PILL_SITUATION: Record<Situation, string> = {
 };
 const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu', 'expiree', 'archive'];
 const LIBELLE_FILTRE: Partial<Record<Situation, string>> = { en_validation: 'En validation', archive: 'Archivés' };
+const joursDepuis = (iso: string) => Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86_400_000));
 const aCompleter = (p: Projet) => !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
 const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', developpement: 'pill--info', amenagement: 'pill--attention' };
 const pillCategorie = (p: Projet) => (p.categorie && PILL_CATEGORIE[p.categorie]) || 'pill--neutre';
@@ -494,6 +495,10 @@ export default function CrmPage({ params }: Props) {
                             </td>
                             <td data-label="Situation">
                               <span className={`pill ${PILL_SITUATION[s]}`}>{LIBELLE_SITUATION[s]}</span>
+                              {/* Revue CEO : au-delà du seuil, le demandeur voit que l'offre attend le CEO. */}
+                              {projet.contresignatureCeo && projet.soumisLe && (
+                                <span className="cell-sub">En attente du CEO depuis {joursDepuis(projet.soumisLe)} j</span>
+                              )}
                             </td>
                           </tr>
                         );

@@ -89,7 +89,13 @@ export class CrmService {
             .includes(terme),
         );
     const opts = this.optsFormat(acteur);
-    return filtres.map((d) => versDossierCrm(d, opts));
+    // Revue CEO (22/10/2026) : une offre soumise au-delà du seuil attend le
+    // CEO ; le demandeur le voit (« En attente du CEO depuis X j »).
+    const chezCeo = new Set<string>();
+    for (const d of filtres.filter((x) => x.statut === 'en_validation')) {
+      if ((await this.seuilCeo.offreAuDelaDuSeuil(societeId, d.id)) !== null) chezCeo.add(d.id);
+    }
+    return filtres.map((d) => ({ ...versDossierCrm(d, opts), contresignatureCeo: chezCeo.has(d.id) }));
   }
 
   async creer(societeId: string, acteur: Acteur, dto: CreerDossierDto) {

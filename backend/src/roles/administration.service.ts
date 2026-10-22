@@ -74,7 +74,7 @@ export class AdministrationService {
       });
     }
     for (const d of demandes) {
-      elements.push({ type: 'droit_cio', cle: `droit-${d.id}`, titre: `Droits du CIO · ${d.module} → ${d.apres}`, detail: `en attente de la validation du CEO depuis le ${jjmm(d.createdAt)}`, ton: 'info', le: d.createdAt.toISOString() });
+      elements.push({ type: 'droit_cio', cle: `droit-${d.id}`, titre: `Droits du CIO · ${d.module} → ${d.apres}`, detail: `en attente du CEO depuis ${Math.floor((maintenant - d.createdAt.getTime()) / JOUR)} j (demandée le ${jjmm(d.createdAt)})`, ton: 'info', le: d.createdAt.toISOString() });
     }
     // Un compte par personne (un compte peut porter plusieurs rôles).
     const comptes = new Map<string, { u: (typeof membres)[number]['utilisateur']; roles: string[] }>();

@@ -217,7 +217,11 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
               <Undo2 size={14} strokeWidth={2} aria-hidden /> Faire un avoir
             </button>
           )}
-          {f.avoirEnAttente && <span className="pill pill--attention">Avoir en attente du CEO</span>}
+          {f.avoirEnAttente && (
+            <span className="pill pill--attention">
+              Avoir en attente du CEO{f.avoirEnAttenteDepuis ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j` : ''}
+            </span>
+          )}
           {f.projet && (
             <Link className="btn-ghost" href={lienFacturationProjet(slug, f.projet.id)}>
               Facturation du projet

@@ -349,7 +349,7 @@ export class FacturationService {
         devisEcheancier: { select: { numero: true, codeDossier: true, rangDossier: true, dateReponse: true } },
         dossierCrm: { select: { id: true, code: true, client: true, type: true, localite: { select: { nom: true } } } },
         lignes: { orderBy: { ordre: 'asc' } },
-        demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true } },
+        demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true, demandeLe: true } },
       },
       orderBy: [{ creeLe: 'desc' }],
     });
@@ -387,6 +387,8 @@ export class FacturationService {
         statutEffectif,
         // Avoir demandé au-delà du seuil, en attente du CEO (contrôle interne).
         avoirEnAttente: (f.demandesAvoir ?? []).length > 0,
+        // Revue CEO : le demandeur voit depuis quand l'avoir attend le CEO.
+        avoirEnAttenteDepuis: f.demandesAvoir?.[0]?.demandeLe.toISOString() ?? null,
         montantHt,
         tauxTva,
         montantTva,
@@ -1065,7 +1067,7 @@ export class FacturationService {
     const [factures, projet, lignesMensuelles] = await Promise.all([
       this.prisma.facture.findMany({
         where: { projetId },
-        include: { paiements: true, lignes: { orderBy: { ordre: 'asc' } }, demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true } } },
+        include: { paiements: true, lignes: { orderBy: { ordre: 'asc' } }, demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true, demandeLe: true } } },
       }),
       // En-tête du projet pour la page Facturation (qui n'appelle pas les
       // routes Projets, fermées aux rôles de direction) + phase (mensualités).
@@ -1136,6 +1138,8 @@ export class FacturationService {
         statutEffectif,
         // Avoir demandé au-delà du seuil, en attente du CEO (contrôle interne).
         avoirEnAttente: (f.demandesAvoir ?? []).length > 0,
+        // Revue CEO : le demandeur voit depuis quand l'avoir attend le CEO.
+        avoirEnAttenteDepuis: f.demandesAvoir?.[0]?.demandeLe.toISOString() ?? null,
         montantHt,
         tauxTva,
         montantTva,

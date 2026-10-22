@@ -253,6 +253,7 @@ export type Projet = {
   // droit Finances : le statut seul).
   offreExpiree: boolean;
   soumisLe: string | null; // soumis au CFO le… (en validation seulement) — délai 48 h
+  contresignatureCeo?: boolean; // revue CEO : offre au-delà du seuil, en attente du CEO
   // Renvoyé par le CFO (retour en « Nouveau projet ») : quand et pourquoi ; null sinon.
   renvoi: { le: string; commentaire: string } | null;
   // null = lead actif ; sinon figé, consultable dans « Archivés » (code réservé).
@@ -519,6 +520,8 @@ export type NotificationType =
   | 'suppleance_designee'
   | 'reglage_gouvernance_modifie'
   | 'droits_modifies'
+  | 'connexion_secours'
+  | 'attente_ceo'
   | 'demande_droit_a_valider'
   | 'demande_droit_decidee'
   | 'visa_a_apposer'
@@ -818,6 +821,7 @@ export type Facture = {
   statut: StatutFacture;
   statutEffectif: StatutFactureEffectif;
   avoirEnAttente: boolean; // avoir demandé au-delà du seuil, en attente du CEO
+  avoirEnAttenteDepuis?: string | null; // date de la demande (revue CEO)
   montantHt: number; // FCFA
   tauxTva: number; // %
   montantTva: number; // FCFA — dérivé
@@ -1168,6 +1172,7 @@ export type FactureCentrale = {
   statut: StatutFacture;
   statutEffectif: StatutFactureEffectif;
   avoirEnAttente: boolean; // avoir demandé au-delà du seuil, en attente du CEO
+  avoirEnAttenteDepuis?: string | null; // date de la demande (revue CEO)
   montantHt: number;
   tauxTva: number;
   montantTva: number;

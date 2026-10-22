@@ -5,11 +5,14 @@ import { RappelsService } from './rappels.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 
-function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[]; decisions?: unknown[]; dossiers?: unknown[] } = {}) {
+function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; absences?: unknown[]; dejaEnvoyes?: string[]; clotures?: unknown[]; societes?: unknown[]; reportings?: unknown[]; decisions?: unknown[]; dossiers?: unknown[]; ceo?: { offres?: unknown[]; avoirs?: unknown[]; proposees?: unknown[]; droits?: unknown[] } } = {}) {
   const deja = new Set(o.dejaEnvoyes ?? []);
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
-    dossierCrm: { findMany: jest.fn().mockResolvedValue(o.dossiers ?? []) },
+    dossierCrm: { findMany: jest.fn(({ where }: { where: { statut: string } }) => Promise.resolve(where.statut === 'en_validation' ? (o.ceo?.offres ?? []) : (o.dossiers ?? []))) },
+    demandeAvoir: { findMany: jest.fn().mockResolvedValue(o.ceo?.avoirs ?? []) },
+    demandeDroit: { findMany: jest.fn().mockResolvedValue(o.ceo?.droits ?? []) },
+    changementSalaire: { findMany: jest.fn().mockResolvedValue([]) },
     facture: { findMany: jest.fn().mockResolvedValue(o.factures ?? []) },
     tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? []) },
     collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C1', utilisateurId: 'U1' }]) },
@@ -20,7 +23,7 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
     journalCloture: { findMany: jest.fn().mockResolvedValue(o.clotures ?? []) },
     societe: { findMany: jest.fn().mockResolvedValue(o.societes ?? []) },
     reportingMensuel: { findMany: jest.fn().mockResolvedValue(o.reportings ?? []) },
-    decisionRegistre: { findMany: jest.fn().mockResolvedValue(o.decisions ?? []) },
+    decisionRegistre: { findMany: jest.fn(({ where }: { where: { proposition?: string } }) => Promise.resolve(where.proposition === 'proposee' ? (o.ceo?.proposees ?? []) : (o.decisions ?? []))) },
     rappelEnvoye: {
       count: jest.fn(({ where }: { where: { cle: { startsWith: string } } }) => Promise.resolve([...deja].filter((c) => c.startsWith(where.cle.startsWith)).length)),
       createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
@@ -32,7 +35,8 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
     },
   } as unknown as PrismaService;
   const notifications = { envoyer: jest.fn().mockResolvedValue(1), titulairesRole: jest.fn().mockResolvedValue(['CFO1']), comptesDe: jest.fn().mockResolvedValue(['CHEF']) };
-  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService, { regle: jest.fn((_s: string, cle: string) => Promise.resolve(cle === 'signalement_rh_apres_relances' ? 2 : 3)) } as never), notifications };
+  const seuilCeo = { offreAuDelaDuSeuil: jest.fn().mockResolvedValue(60_000_000), montantsAffaire: jest.fn().mockResolvedValue(new Map()), seuil: jest.fn().mockResolvedValue(50_000_000) };
+  return { s: new RappelsService(prisma, notifications as unknown as NotificationsService, { regle: jest.fn((_s: string, cle: string) => Promise.resolve(cle === 'signalement_rh_apres_relances' ? 2 : 3)) } as never, seuilCeo as never), notifications };
 }
 
 const tache = (finLe: string) => ({
@@ -99,6 +103,27 @@ describe('RappelsService', () => {
     expect(r[0].titre).toContain('à refaire');
     expect(r[1].titre).toBe('NF_OUA.26 · Immeuble R+5 — offre expirée sans réponse du client');
     expect(await svc({ dossiers: [dossier('2026-10-14')] }).s.offresExpirees(JOUR)).toEqual([]);
+  });
+
+  // Revue CEO (22/10/2026) : 24 h pour une offre à contresigner, 3 jours ouvrés pour le reste.
+  it('relances du CEO : offre après 24 h, avoir après 3 jours ouvrés, rien avant', async () => {
+    const il_y_a = (h: number) => new Date(Date.now() - h * 3_600_000);
+    const { s } = svc({
+      ceo: {
+        offres: [
+          { id: 'O1', societeId: 'S1', code: 'NF_OUA.26', transitions: [{ creeLe: il_y_a(30) }] },
+          { id: 'O2', societeId: 'S1', code: 'AB_YOF.26', transitions: [{ creeLe: il_y_a(5) }] },
+        ],
+        avoirs: [
+          { id: 'A1', societeId: 'S1', factureId: 'F1', montantTtc: new Prisma.Decimal(24_780_000), demandeLe: new Date('2026-10-08T09:00:00Z') },
+          { id: 'A2', societeId: 'S1', factureId: 'F2', montantTtc: new Prisma.Decimal(2_000_000), demandeLe: new Date('2026-10-13T09:00:00Z') },
+        ],
+        proposees: [{ id: 'D10', societeId: 'S1', numero: 10, texte: 'Revue des marges', createdAt: new Date('2026-10-13T09:00:00Z') }],
+      },
+    });
+    const r = await s.ceo(JOUR);
+    expect(r.map((x) => x.cle)).toEqual([expect.stringMatching(/^ceo:offre:O1:1$/), 'ceo:avoir:A1:1']);
+    expect(r[0]).toMatchObject({ type: 'attente_ceo', dossierCrmId: 'O1', titre: expect.stringContaining('validité de 7 jours') });
   });
 
   it('notification non écrite : la clé est rendue, la tournée suivante réessaie', async () => {

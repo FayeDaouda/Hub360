@@ -312,9 +312,9 @@ export class NotificationsService {
   }
 
   // `types` : seulement ces notifications (onglet de Mon espace ouvert).
-  async marquerLues(societeId: string, utilisateurId: string, types?: NotificationType[]) {
+  async marquerLues(societeId: string, utilisateurId: string, types?: NotificationType[], ids?: string[]) {
     await this.prisma.notification.updateMany({
-      where: { destinataireId: utilisateurId, societeId, luLe: null, ...(types?.length && { type: { in: types } }) },
+      where: { destinataireId: utilisateurId, societeId, luLe: null, ...(types?.length && { type: { in: types } }), ...(ids?.length && { id: { in: ids } }) },
       data: { luLe: new Date() },
     });
     return this.flux(societeId, utilisateurId);

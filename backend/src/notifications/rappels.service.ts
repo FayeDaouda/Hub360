@@ -10,12 +10,16 @@ import { DECISION_EN_VIGUEUR, echeanceReporting, moisAReporter, numeroDecision, 
 import { planNotificationsCrm } from '../crm/notifications-crm';
 import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import { ReglagesService } from '../reglages/reglages.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
 
 // Heure de la tournée (Dakar = UTC, pas d'heure d'été).
 const HEURE_TOURNEE = 7;
 // Facture échue : premier rappel le lendemain de l'échéance, puis chaque semaine.
 const JOURS_ENTRE_RAPPELS_FACTURE = 7;
+// Revue CEO (22/10/2026) : délai avant de relancer le CEO, hors offres et factures à contresigner.
+const JOURS_OUVRES_RELANCE_CEO = 3;
+const ROLE_CEO = 'CEO (transverse)';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 const decaler = (jour: string, n: number) => {
@@ -49,6 +53,7 @@ export class RappelsService implements OnApplicationBootstrap {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private reglages: ReglagesService,
+    private seuilCeo: SeuilCeoService,
   ) {}
 
   // Serveur redémarré après l'heure : la tournée du jour est rattrapée.
@@ -72,6 +77,7 @@ export class RappelsService implements OnApplicationBootstrap {
         ...(await this.clotures(jour)),
         ...(await this.reportings(jour)),
         ...(await this.decisions(jour)),
+        ...(await this.ceo(jour)),
       ];
       let envoyes = 0;
       for (const r of rappels) if (await this.envoyer(r)) envoyes++;
@@ -418,6 +424,88 @@ export class RappelsService implements OnApplicationBootstrap {
           destinataireIds: [d.creeParId],
         });
       }
+    }
+    return rappels;
+  }
+
+  // Revue CEO (22/10/2026) : ce qui attend le CEO est relancé — 24 h pour
+  // une offre à contresigner (une offre n'est valable que 7 jours une fois
+  // envoyée), puis chaque jour ; 3 jours ouvrés pour le reste
+  // (avoirs, décisions proposées, droits du CIO, salaire du CFO), puis tous
+  // les 3 jours ouvrés.
+  async ceo(jour: string): Promise<Rappel[]> {
+    const maintenant = Date.now();
+    const rappels: Rappel[] = [];
+    const ceos = new Map<string, Promise<string[]>>();
+    const ceoDe = (societeId: string) => {
+      if (!ceos.has(societeId)) ceos.set(societeId, this.notifications.titulairesRole(societeId, ROLE_CEO));
+      return ceos.get(societeId)!;
+    };
+    const joursDepuis = (d: Date) => Math.floor((maintenant - d.getTime()) / 86_400_000);
+    const ouvres = (d: Date) => joursOuvresDepuis(d.toISOString().slice(0, 10), jour);
+    const pousser = async (r: Omit<Rappel, 'type' | 'destinataireIds'>) => rappels.push({ ...r, type: 'attente_ceo', destinataireIds: await ceoDe(r.societeId) });
+
+    // 1. Offres soumises au-delà du seuil de contresignature.
+    const offres = await this.prisma.dossierCrm.findMany({
+      where: { statut: 'en_validation', archiveLe: null },
+      select: { id: true, societeId: true, code: true, transitions: { where: { vers: 'en_validation' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } } },
+    });
+    for (const o of offres) {
+      const soumise = o.transitions[0]?.creeLe;
+      if (!soumise || maintenant - soumise.getTime() < 86_400_000) continue;
+      const montant = await this.seuilCeo.offreAuDelaDuSeuil(o.societeId, o.id);
+      if (montant === null) continue;
+      const j = joursDepuis(soumise);
+      await pousser({
+        cle: `ceo:offre:${o.id}:${j}`,
+        societeId: o.societeId,
+        titre: `Offre à contresigner · ${o.code} · ${fcfa(montant)} TTC · en attente depuis ${j} j (validité de 7 jours une fois envoyée)`,
+        dossierCrmId: o.id,
+      });
+    }
+
+    // 2. Factures à contresigner : relancées par le Pilotage (relances-ceo.service.ts),
+    // qui sait quelles tranches sont prêtes à émettre.
+
+    // 3. Le reste : 3 jours ouvrés, puis tous les 3 jours ouvrés.
+    const palier = (d: Date) => Math.floor(ouvres(d) / JOURS_OUVRES_RELANCE_CEO);
+    for (const a of await this.prisma.demandeAvoir.findMany({
+      where: { statut: 'a_valider' },
+      select: { id: true, societeId: true, factureId: true, montantTtc: true, demandeLe: true },
+    })) {
+      const p = palier(a.demandeLe);
+      if (p < 1) continue;
+      await pousser({
+        cle: `ceo:avoir:${a.id}:${p}`,
+        societeId: a.societeId,
+        titre: `Avoir à valider · ${fcfa(a.montantTtc.toNumber())} TTC · en attente depuis ${ouvres(a.demandeLe)} jours ouvrés`,
+        factureId: a.factureId,
+      });
+    }
+    for (const d of await this.prisma.decisionRegistre.findMany({
+      where: { proposition: 'proposee' },
+      select: { id: true, societeId: true, numero: true, texte: true, createdAt: true },
+    })) {
+      const p = palier(d.createdAt);
+      if (p < 1) continue;
+      const texte = d.texte.length > 70 ? `${d.texte.slice(0, 69)}…` : d.texte;
+      await pousser({ cle: `ceo:decision:${d.id}:${p}`, societeId: d.societeId, titre: `Décision proposée ${numeroDecision(d.numero)} à arbitrer · ${texte} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés` });
+    }
+    for (const d of await this.prisma.demandeDroit.findMany({ where: { statut: 'en_attente' }, select: { id: true, societeId: true, module: true, createdAt: true } })) {
+      const p = palier(d.createdAt);
+      if (p < 1) continue;
+      await pousser({ cle: `ceo:droit:${d.id}:${p}`, societeId: d.societeId, titre: `Droits du CIO à valider · ${d.module} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés` });
+    }
+    // Salaire du CFO : seul cas où le CEO valide un salaire.
+    for (const c of await this.prisma.changementSalaire.findMany({
+      where: { statut: 'a_valider' },
+      select: { id: true, proposeLe: true, dossier: { select: { societeId: true, prenom: true, nom: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } } },
+    })) {
+      const compte = c.dossier.utilisateurId ?? c.dossier.collaborateur?.utilisateurId ?? null;
+      if (!compte || !(await this.notifications.titulairesRole(c.dossier.societeId, 'CFO')).includes(compte)) continue;
+      const p = palier(c.proposeLe);
+      if (p < 1) continue;
+      await pousser({ cle: `ceo:salaire:${c.id}:${p}`, societeId: c.dossier.societeId, titre: `Salaire à valider · ${c.dossier.prenom} ${c.dossier.nom} · en attente depuis ${ouvres(c.proposeLe)} jours ouvrés` });
     }
     return rappels;
   }

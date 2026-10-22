@@ -241,6 +241,7 @@ enum NotificationType {
   reglage_gouvernance_modifie // au CEO : un seuil de gouvernance changé dans Réglages
   droits_modifies // au CEO : une case de la matrice des droits changée (revue CIO)
   connexion_secours // au CEO et au CIO : connexion d'un compte technique de secours
+  attente_ceo // au CEO : une décision l'attend depuis 24 h (offre, facture à contresigner) ou 3 jours ouvrés (le reste)
   demande_droit_a_valider // au CEO : modification des droits du rôle CIO à valider
   demande_droit_decidee // au demandeur : modification des droits du CIO acceptée ou refusée
   ts_a_valider // au CTO : TS au-delà du seuil, demandé par le Dir. GC

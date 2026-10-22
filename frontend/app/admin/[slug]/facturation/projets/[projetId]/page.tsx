@@ -557,7 +557,11 @@ export default function FacturationPage({ params }: Props) {
                                 </button>
                               )}
                               {/* Avoir motivé (contrôle interne) ; au-delà du seuil, en attente du CEO. */}
-                              {a.annulable && f.avoirEnAttente && <span className="pill pill--attention">Avoir en attente du CEO</span>}
+                              {a.annulable && f.avoirEnAttente && (
+                                <span className="pill pill--attention">
+                                  Avoir en attente du CEO{f.avoirEnAttenteDepuis ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j` : ''}
+                                </span>
+                              )}
                               {a.annulable && !f.avoirEnAttente && (
                                 <button type="button" className="lien-inline" disabled={busy} onClick={() => setAvoirPour(f)}>
                                   <Undo2 size={12} strokeWidth={2} aria-hidden /> Avoir

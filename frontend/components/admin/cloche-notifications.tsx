@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bell, Volume2, VolumeX } from 'lucide-react';
 import { useNotificationsPoll } from '@/lib/use-notifications-poll';
-import { libelleAlerteDerivee, lienNotificationAdmin } from '@/lib/notifications';
+import { estDecision, libelleAlerteDerivee, lienNotificationAdmin } from '@/lib/notifications';
 import type { Session } from '@/lib/types';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { NotifToast } from '@/components/notif-toast';
@@ -29,6 +29,8 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
   // réelle de l'appareil.
   const [son, setSon] = useState(true);
   useEffect(() => setSon(sonActive()), []);
+  // Revue CEO (22/10/2026) : les décisions ne se perdent plus dans les informations.
+  const [onglet, setOnglet] = useState<'decisions' | 'informations'>('decisions');
 
   useEffect(() => {
     if (!ouvert) return;
@@ -56,7 +58,11 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
   }
 
   const nonLues = flux?.nonLues ?? 0;
-  const elements = flux?.elements ?? [];
+  const tous = flux?.elements ?? [];
+  const decisions = tous.filter(estDecision);
+  const informations = tous.filter((n) => !estDecision(n));
+  const nonLu = (l: typeof tous) => l.filter((n) => n.derivee || !n.lu).length;
+  const elements = onglet === 'decisions' ? decisions : informations;
 
   return (
     <div className="notif" ref={boiteRef}>
@@ -105,8 +111,22 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
             </span>
           </div>
 
+          <div className="notif-onglets" role="tablist" aria-label="Notifications">
+            {(
+              [
+                ['decisions', 'Décisions', decisions],
+                ['informations', 'Informations', informations],
+              ] as const
+            ).map(([cle, libelle, liste]) => (
+              <button key={cle} type="button" role="tab" aria-selected={onglet === cle} className={onglet === cle ? 'is-active' : ''} onClick={() => setOnglet(cle)}>
+                {libelle}
+                {nonLu(liste) > 0 && <span className="notif-onglet-compte">{nonLu(liste)}</span>}
+              </button>
+            ))}
+          </div>
+
           {elements.length === 0 ? (
-            <p className="notif-vide">Rien à signaler.</p>
+            <p className="notif-vide">{onglet === 'decisions' ? 'Aucune décision ne vous attend.' : 'Rien à signaler.'}</p>
           ) : (
             <ul className="notif-liste">
               {elements.map((n) => {

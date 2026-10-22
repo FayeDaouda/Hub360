@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BadgeCheck, CalendarClock, ChevronRight, FileCheck2, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, Undo2, UserCheck } from 'lucide-react';
+import { BadgeCheck, CalendarClock, ShieldCheck, ChevronRight, FileCheck2, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, Undo2, UserCheck } from 'lucide-react';
 import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { getProjets } from '@/lib/crm';
 import { getAvoirsAValider, LIBELLE_MOTIF_AVOIR, type AvoirAValider } from '@/lib/facturation';
@@ -11,6 +11,8 @@ import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import type { Projet } from '@/lib/types';
 import { getDemandesDroit, type DemandeDroit } from '@/lib/roles';
+import { getNotifications, marquerLuesParId } from '@/lib/notifications';
+import type { NotificationItem, NotificationType } from '@/lib/types';
 import { DecisionDroit } from './decision-droit';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
@@ -32,6 +34,14 @@ const ajouterJours = (iso: string, n: number) => {
 const joursEntre = (de: string, a: string) =>
   Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${de}T12:00:00Z`).getTime()) / 86_400_000);
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+// Alertes de contrôle interne (droits, argent, accès) — lues, pas décidées.
+const TYPES_CONTROLE: ReadonlySet<NotificationType> = new Set<NotificationType>([
+  'droits_modifies',
+  'coordonnees_paiement_modifiees',
+  'coordonnees_apporteur_modifiees',
+  'connexion_secours',
+  'reglage_gouvernance_modifie',
+]);
 const NIVEAU_DROIT: Record<DemandeDroit['apres'], string> = { aucun: 'aucun', lecture: 'lecture', ecriture: 'écriture', validation: 'validation' };
 
 type Ligne = {
@@ -85,6 +95,19 @@ export function Attention({
       .then(setSalaires)
       .catch(() => setSalaires([]));
   }, [slug]);
+  // Contrôle interne (revue CEO) : ce qui touche aux droits, à l'argent et
+  // aux accès, sur 7 jours, jusqu'à ce qu'il l'ait vu.
+  const [controles, setControles] = useState<NotificationItem[]>([]);
+  useEffect(() => {
+    const depuis = Date.now() - 7 * 86_400_000;
+    getNotifications(slug)
+      .then((f) => setControles(f.elements.filter((n) => TYPES_CONTROLE.has(n.type) && !n.lu && Date.parse(n.date) >= depuis)))
+      .catch(() => setControles([]));
+  }, [slug]);
+  const vu = (id: string) => {
+    setControles((l) => l.filter((n) => n.id !== id));
+    void marquerLuesParId(slug, [id]).catch(() => undefined);
+  };
   const aContresigner = offres.filter((o) => valideAffaire(session, seuil, o.offre?.montantTtc ?? 0));
   const depuisJours = (iso: string) => Math.max(0, joursEntre(iso.slice(0, 10), jour));
 
@@ -110,6 +133,19 @@ export function Attention({
         detail: `demandé par ${d.demandePar}`,
         pill: { libelle: 'À valider', ton: 'attention' as const },
         onClick: () => setDroitOuvert(d),
+      })),
+    },
+    {
+      cle: 'controle',
+      titre: 'Contrôle interne · 7 derniers jours',
+      icone: <ShieldCheck size={16} aria-hidden />,
+      couleur: 'var(--corail)',
+      lignes: controles.map((n) => ({
+        cle: n.id,
+        titre: n.titre,
+        detail: `${new Date(n.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} · touchez pour marquer vu`,
+        pill: { libelle: 'Vu', ton: 'neutre' as const },
+        onClick: () => vu(n.id),
       })),
     },
     {

@@ -41,7 +41,10 @@ function traceProposition(d: DecisionRegistre): string | null {
   const p = d.proposition;
   if (!p) return null;
   const par = p.par ? ` par ${p.par}` : '';
-  if (p.etat === 'proposee') return `Proposée${par} · en attente du CEO`;
+  if (p.etat === 'proposee') {
+    const jours = Math.max(0, Math.floor((Date.now() - Date.parse(`${d.date}T00:00:00Z`)) / 86_400_000));
+    return `Proposée${par} · en attente du CEO depuis ${jours} j`;
+  }
   const arbitre = `${p.arbitreLe ? ` le ${jjmmaaaa(p.arbitreLe)}` : ''}${p.arbitrePar ? ` par ${p.arbitrePar}` : ''}`;
   if (p.etat === 'refusee') return `Proposée${par} · refusée${arbitre}${p.motif ? ` · « ${p.motif} »` : ''}`;
   if (!p.initiale) return `Proposée${par} · acceptée${arbitre}`;

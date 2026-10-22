@@ -25,6 +25,11 @@ export function marquerTypesLus(slug: string, types: NotificationType[]): Promis
   return apiSociete<FluxNotifications>(slug, '/notifications/lecture', { method: 'PATCH', body: { types } });
 }
 
+// Ces notifications seulement (« Vu », contrôle interne du CEO).
+export function marquerLuesParId(slug: string, ids: string[]): Promise<FluxNotifications> {
+  return apiSociete<FluxNotifications>(slug, '/notifications/lecture', { method: 'PATCH', body: { ids } });
+}
+
 export function marquerNotificationsLues(slug: string): Promise<FluxNotifications> {
   return apiSociete<FluxNotifications>(slug, '/notifications/lecture', {
     method: 'PATCH',
@@ -101,6 +106,10 @@ export function lienNotificationAdmin(
   if (n.type === 'facture_a_valider') {
     return n.factureId ? `/admin/${slug}/facturation?facture=${n.factureId}` : `/admin/${slug}/facturation?onglet=factures`;
   }
+  // Relance du CEO (revue CEO) : la facture, le dossier, sinon son panneau.
+  if (n.type === 'attente_ceo' && n.factureId) return `${base}/facturation?facture=${n.factureId}`;
+  if (n.type === 'attente_ceo' && !n.dossierCrmId) return base;
+  if (n.type === 'connexion_secours') return `${base}?onglet=journal`;
   if (n.dossierCrmId) return `/admin/${slug}/crm?dossier=${n.dossierCrmId}`;
   // Mention dans un fil : le projet ouvert dans la vue « Projets · gabarit ».
   if (n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;
@@ -112,3 +121,41 @@ export function lienNotificationAdmin(
 export function libelleAlerteDerivee(n: Pick<NotificationItem, 'type'>): string {
   return n.type === 'fiche_a_completer' ? 'Relance' : 'Échéance';
 }
+
+// Cloche à deux onglets (revue CEO, 22/10/2026) : ce qui demande une action
+// du destinataire (« Décisions ») et le reste (« Informations »). Les alertes
+// dérivées (fiche à compléter) sont des décisions.
+const TYPES_DECISION: ReadonlySet<NotificationType> = new Set<NotificationType>([
+  'prolongation_demandee',
+  'dossier_soumis',
+  'dossier_renvoye',
+  'rappel_offre',
+  'rappel_facture',
+  'rappel_tache',
+  'avenant_ts',
+  'signalement_recu',
+  'tache_remise',
+  'tache_renvoyee',
+  'absence_a_decider',
+  'remboursement_a_traiter',
+  'decision_assignee',
+  'ecart_temps_signale',
+  'rappel_demande',
+  'salaire_a_valider',
+  'avoir_a_valider',
+  'cloture_a_faire',
+  'reporting_question',
+  'reporting_a_deposer',
+  'reporting_en_retard',
+  'ts_a_valider',
+  'demande_droit_a_valider',
+  'visa_a_apposer',
+  'arrivant_a_affecter',
+  'rappel_decision',
+  'decision_proposee',
+  'commission_a_payer',
+  'facture_a_valider',
+  'fiche_a_completer',
+  'attente_ceo',
+]);
+export const estDecision = (n: Pick<NotificationItem, 'type' | 'derivee'>) => n.derivee || TYPES_DECISION.has(n.type);

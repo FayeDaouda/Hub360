@@ -16209,3 +16209,39 @@ tr.is-demandeur .cal-nom {
   color: var(--text-muted);
   font-size: 0.88rem;
 }
+
+/* Cloche : onglets Décisions / Informations (revue CEO, 22/10/2026). */
+.notif-onglets {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.notif-onglets button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.notif-onglets button.is-active {
+  background: color-mix(in srgb, var(--iris) 22%, transparent);
+  color: var(--text);
+  font-weight: 600;
+}
+.notif-onglet-compte {
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--ocre);
+  color: #1a1206;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
