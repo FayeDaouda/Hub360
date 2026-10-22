@@ -132,7 +132,7 @@ export class FacturationController {
 
   @Post(':factureId/emission')
   @RequiertPermission('finances_factures', 'validation')
-  @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
+  @ValidationCeoAuDelaDuSeuil('facture', 'factureId', { exclusif: true })
   emettre(
     @Req() req: R,
     @Param('id') id: string,

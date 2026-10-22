@@ -133,7 +133,7 @@ export class FacturationCentraleController {
   // Validation par le CFO = émission (numéro, échéance).
   @Post(':id/emission')
   @RequiertPermission('finances_factures', 'validation')
-  @ValidationCeoAuDelaDuSeuil('facture', 'id')
+  @ValidationCeoAuDelaDuSeuil('facture', 'id', { exclusif: true })
   emettre(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.facturation.emettreParId(req.user.societeId, id, req.user.userId);
   }

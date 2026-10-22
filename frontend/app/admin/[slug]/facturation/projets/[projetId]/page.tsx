@@ -21,7 +21,7 @@ import {
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
+import { contresigneAffaire, useContresignature, useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import {
   CATEGORIES,
   JALONS_FACTURE,
@@ -67,12 +67,13 @@ const PILL_REGLEMENT: Record<StatutReglementBureau, string> = {
 // enregistre les paiements »). Affichage seulement — le serveur revérifie.
 type Droits = { ecriture: boolean; validation: boolean };
 
-function actionsPossibles(f: Facture, droits: Droits, valide: (montantTtc: number) => boolean) {
-  // CEO : validation des seules affaires au-delà du seuil de contresignature.
+function actionsPossibles(f: Facture, droits: Droits, valide: (montantTtc: number) => boolean, contresigne: (montantTtc: number) => boolean) {
+  // CEO : validation des seules affaires au-delà du seuil de contresignature ;
+  // émission exclusive au-delà du seuil (le CEO ou son délégataire, revue CEO).
   const d = { ...droits, validation: droits.validation && valide(f.affaireTtc) };
   return {
     modifiable: f.statut === 'brouillon' && d.ecriture,
-    emissible: f.statut === 'brouillon' && d.validation,
+    emissible: f.statut === 'brouillon' && droits.validation && contresigne(f.affaireTtc),
     encaissable: f.statut === 'emise' && !f.estAvoir && d.validation,
     annulable: f.statut === 'emise' && !f.estAvoir && d.validation,
   };
@@ -89,6 +90,8 @@ export default function FacturationPage({ params }: Props) {
   const peutReglerBureau = niveauSuffisant(session, 'finances_charges', 'validation');
   const seuilCeo = useSeuilCeo(params.slug, session);
   const valide = (montantTtc: number) => valideAffaire(session, seuilCeo, montantTtc);
+  const contresignature = useContresignature(params.slug, session);
+  const contresigne = (montantTtc: number) => contresigneAffaire(session, contresignature, montantTtc);
   const [etudesChoisies, setEtudesChoisies] = useState<Set<string>>(new Set());
   // Facture du bureau d'études en cours de saisie (une étude de l'étape 05).
   const [saisieBureau, setSaisieBureau] = useState<{
@@ -468,7 +471,7 @@ export default function FacturationPage({ params }: Props) {
                   </thead>
                   <tbody>
                     {factu.factures.map((f) => {
-                      const a = actionsPossibles(f, droits, valide);
+                      const a = actionsPossibles(f, droits, valide, contresigne);
                       const cls = f.estAvoir
                         ? 'factu-l--avoir'
                         : f.statut === 'annulee'

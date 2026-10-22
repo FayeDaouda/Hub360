@@ -4,6 +4,7 @@ import { formatFcfa, signataireRequis } from '../contrats/domaine';
 import { montantTtcLignes } from '../devis/domaine';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
+import { agitPourCeo } from '../commun/delegation-ceo';
 import { ReglagesService } from '../reglages/reglages.service';
 
 // Validation financière du CEO au-delà du seuil (décision du 12/10/2026) : le
@@ -29,6 +30,8 @@ type FactureAffaire = {
   dossierCrmId: string | null;
   projetId: string | null;
 };
+
+export type ActeurSeuil = { userId: string; role: string };
 
 @Injectable()
 export class SeuilCeoService {
@@ -80,25 +83,29 @@ export class SeuilCeoService {
     );
   }
 
-  // --- Contrôles (le CEO seulement ; tout autre rôle passe) -----------------
+  // --- Contrôles ---------------------------------------------------------------
+  // Le CEO ne valide qu'au-delà du seuil. Contresignature exclusive (revue
+  // CEO, 22/10/2026) : au-delà du seuil, envoyer une offre ou un devis et
+  // émettre une facture reviennent au CEO seul — ou à son délégataire (CFO)
+  // en fonction ; le compte de secours (administration) passe, tracé. Les
+  // encaissements et les avoirs (circuit propre) ne sont pas exclusifs.
 
-  async verifierDevis(role: string, societeId: string, devisId: string) {
-    if (role !== ROLE_CEO) return;
+  async verifierDevis(acteur: ActeurSeuil, societeId: string, devisId: string, exclusif = false) {
+    if (acteur.role !== ROLE_CEO && !exclusif) return;
     const devis = await this.prisma.devis.findFirst({ where: { id: devisId, societeId }, select: { lignes: LIGNES_TTC } });
     if (!devis) throw new NotFoundException('Devis introuvable');
-    await this.exigerAuDela(societeId, montantTtcLignes(devis.lignes));
+    await this.controler(acteur, societeId, montantTtcLignes(devis.lignes), exclusif);
   }
 
   // Offre d'un dossier soumise au CFO (brouillon le plus récent, celle que
-  // « Valider » envoie — cf. DevisService.emettreOffre).
-  async verifierOffreDossier(role: string, societeId: string, dossierId: string) {
-    if (role !== ROLE_CEO) return;
+  // « Valider » envoie — cf. DevisService.emettreOffre) : exclusive.
+  async verifierOffreDossier(acteur: ActeurSeuil, societeId: string, dossierId: string) {
     const offre = await this.prisma.devis.findFirst({
       where: { societeId, dossierCrmId: dossierId, statut: 'brouillon' },
       select: { lignes: LIGNES_TTC },
       orderBy: { creeLe: 'desc' },
     });
-    if (offre) await this.exigerAuDela(societeId, montantTtcLignes(offre.lignes));
+    if (offre) await this.controler(acteur, societeId, montantTtcLignes(offre.lignes), true);
   }
 
   // Montant TTC de l'offre soumise d'un dossier si elle dépasse le seuil de
@@ -114,14 +121,25 @@ export class SeuilCeoService {
     return signataireRequis(montant, await this.seuil(societeId)) === 'ceo' ? montant : null;
   }
 
-  async verifierFacture(role: string, societeId: string, factureId: string) {
-    if (role !== ROLE_CEO) return;
+  async verifierFacture(acteur: ActeurSeuil, societeId: string, factureId: string, exclusif = false) {
+    if (acteur.role !== ROLE_CEO && !exclusif) return;
     const f = await this.prisma.facture.findFirst({
       where: { id: factureId, societeId },
       select: { id: true, montantHt: true, tauxTva: true, devisEcheancierId: true, devisOrigineId: true, dossierCrmId: true, projetId: true },
     });
     if (!f) throw new NotFoundException('Facture introuvable');
-    await this.exigerAuDela(societeId, (await this.montantsAffaire([f])).get(f.id)!);
+    await this.controler(acteur, societeId, (await this.montantsAffaire([f])).get(f.id)!, exclusif);
+  }
+
+  private async controler(acteur: ActeurSeuil, societeId: string, montantTtc: number, exclusif: boolean) {
+    if (acteur.role === ROLE_CEO) return this.exigerAuDela(societeId, montantTtc);
+    if (!exclusif || acteur.role === 'societe_admin') return;
+    const seuil = await this.seuil(societeId);
+    if (signataireRequis(montantTtc, seuil) !== 'ceo') return;
+    if (await agitPourCeo(this.prisma, { ...acteur, societeId })) return;
+    throw new ForbiddenException(
+      `Affaire de ${formatFcfa(montantTtc)} TTC, au-delà du seuil de contresignature (${formatFcfa(seuil)}) : elle revient au CEO (ou à son délégataire).`,
+    );
   }
 
   private async exigerAuDela(societeId: string, montantTtc: number) {

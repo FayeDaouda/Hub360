@@ -13,7 +13,7 @@ const libelleRole = (r: string) => r.replace(/\s*\(transverse\)$/, '');
 // Ce que le délégataire peut décider, selon sa fonction (ses propres droits
 // font foi : le CTO n'a pas la main sur les finances).
 export const PERIMETRE_DELEGATION: Record<string, string[]> = {
-  CFO: ['avoirs au-delà du seuil', 'décisions proposées', 'absences des directeurs'],
+  CFO: ['contresignature des offres et factures au-delà du seuil', 'avoirs au-delà du seuil', 'décisions proposées', 'absences des directeurs'],
   'CTO (transverse)': ['décisions proposées', 'absences des directeurs'],
 };
 export const JAMAIS_DELEGUE = ['droits du CIO', 'ses propres demandes', 'salaire du CFO'];

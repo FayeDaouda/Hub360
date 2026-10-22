@@ -10,6 +10,7 @@ function svc(o: { devis?: unknown[]; factures?: unknown[]; taches?: unknown[]; a
   const prisma = {
     devis: { findMany: jest.fn().mockResolvedValue(o.devis ?? []) },
     dossierCrm: { findMany: jest.fn(({ where }: { where: { statut: string } }) => Promise.resolve(where.statut === 'en_validation' ? (o.ceo?.offres ?? []) : (o.dossiers ?? []))) },
+    delegationCeo: { findFirst: jest.fn().mockResolvedValue(null) },
     demandeAvoir: { findMany: jest.fn().mockResolvedValue(o.ceo?.avoirs ?? []) },
     demandeDroit: { findMany: jest.fn().mockResolvedValue(o.ceo?.droits ?? []) },
     changementSalaire: { findMany: jest.fn().mockResolvedValue([]) },

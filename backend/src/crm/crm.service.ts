@@ -14,6 +14,7 @@ import {
   TypeBien,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { avecDelegataire } from '../commun/delegation-ceo';
 import { PHASES_PAR_CATEGORIE } from '../projets/domaine/config';
 import { versDossierCrm, versProjetExecution } from '../commun/format-contrat';
 import { aLaPermission } from '../commun/permission.guard';
@@ -383,9 +384,10 @@ export class CrmService {
         `Action « ${action} » : accès insuffisant sur le module « ${regle.module} » (niveau requis : ${regle.niveau}).`,
       );
     }
-    // Validation de l'offre : le CEO seulement au-delà du seuil de contresignature.
+    // Validation de l'offre : au-delà du seuil de contresignature, le CEO seul
+    // (ou son délégataire) ; en deçà, pas le CEO.
     if (regle.module === 'finances_devis' && regle.niveau === 'validation') {
-      await this.seuilCeo.verifierOffreDossier(acteur.role, societeId, id);
+      await this.seuilCeo.verifierOffreDossier(acteur, societeId, id);
     }
     if (!regle.de.includes(dossier.statut)) {
       throw new ConflictException(
@@ -476,7 +478,8 @@ export class CrmService {
           societeId,
           type: 'dossier_soumis',
           titre: `${dossierMaj.code} · ${dossierMaj.programme} — offre de ${Math.round(montant).toLocaleString('fr-FR')} FCFA TTC à contresigner (au-delà du seuil)`,
-          destinataireIds: await this.notifications.titulairesRole(societeId, ROLE_CEO),
+          // Le délégataire du CEO en fonction aussi (revue CEO).
+          destinataireIds: await avecDelegataire(this.prisma, societeId, await this.notifications.titulairesRole(societeId, ROLE_CEO), acteur.userId),
           parId: acteur.userId,
           dossierCrmId: id,
         });

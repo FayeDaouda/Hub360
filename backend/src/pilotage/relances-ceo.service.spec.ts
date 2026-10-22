@@ -11,6 +11,7 @@ describe('RelancesCeoService.factures', () => {
           Promise.resolve(where.id ? [{ id: 'F1', montantHt: 1, tauxTva: 18, devisEcheancierId: 'D', devisOrigineId: null, dossierCrmId: null, projetId: 'P' }] : []),
         ),
       },
+      delegationCeo: { findFirst: jest.fn().mockResolvedValue(null) },
       rappelEnvoye: {
         createMany: jest.fn(({ data }: { data: { cle: string }[] }) => {
           const neuf = !cles.has(data[0].cle);

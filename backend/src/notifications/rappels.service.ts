@@ -469,7 +469,7 @@ export class RappelsService implements OnApplicationBootstrap {
         societeId: o.societeId,
         titre: `Offre à contresigner · ${o.code} · ${fcfa(montant)} TTC · en attente depuis ${j} j (validité de 7 jours une fois envoyée)`,
         dossierCrmId: o.id,
-      });
+      }, null);
     }
 
     // 2. Factures à contresigner : relancées par le Pilotage (relances-ceo.service.ts),

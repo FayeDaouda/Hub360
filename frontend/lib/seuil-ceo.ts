@@ -34,3 +34,33 @@ export function valideAffaire(session: Session, seuil: number | null, montantTtc
   if (session.role !== ROLE_CEO) return true;
   return seuil !== null && montantTtc > seuil;
 }
+
+// Contresignature exclusive (revue CEO, 22/10/2026) : au-delà du seuil,
+// envoyer une offre ou un devis et émettre une facture reviennent au CEO
+// seul — ou au CFO délégataire en fonction. Même règle que le serveur
+// (seuil-ceo.service.ts, « exclusif »). Les encaissements et les avoirs
+// suivent valideAffaire.
+export type Contresignature = { seuil: number | null; delegue: boolean };
+
+export function useContresignature(slug: string, session: Session): Contresignature {
+  const [etat, setEtat] = useState<Contresignature>({ seuil: null, delegue: false });
+  const concerne = session.role === ROLE_CEO || session.role === 'CFO';
+  useEffect(() => {
+    if (!concerne) return;
+    getSeuilContresignature(slug)
+      .then((r) => setEtat((e) => ({ ...e, seuil: r.seuilTtc })))
+      .catch(() => undefined);
+    if (session.role === 'CFO') {
+      apiSociete<{ delegations: { enCours: boolean }[] }>(slug, '/pilotage/delegation')
+        .then((v) => setEtat((e) => ({ ...e, delegue: v.delegations.some((d) => d.enCours) })))
+        .catch(() => undefined);
+    }
+  }, [slug, concerne, session.role]);
+  return etat;
+}
+
+export function contresigneAffaire(session: Session, c: Contresignature, montantTtc: number): boolean {
+  if (session.role === ROLE_CEO) return c.seuil !== null && montantTtc > c.seuil;
+  if (session.role === 'CFO') return c.seuil !== null && (montantTtc <= c.seuil || c.delegue);
+  return true;
+}

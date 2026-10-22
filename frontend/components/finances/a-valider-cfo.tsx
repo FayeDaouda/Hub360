@@ -28,7 +28,7 @@ import { formatMontant, formatMontantCompact } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
-import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
+import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
@@ -76,7 +76,7 @@ export function AValiderCfo({
 }) {
   const router = useRouter();
   const session = useSessionCourante();
-  const seuilCeo = useSeuilCeo(slug, session);
+  const contresignature = useContresignature(slug, session);
   const [offres, setOffres] = useState<Projet[]>([]);
   const [absences, setAbsences] = useState<DemandeAbsence[]>([]);
   const [salaires, setSalaires] = useState<SalaireAValider[]>([]);
@@ -132,7 +132,7 @@ export function AValiderCfo({
 
   const elements: Element[] = [];
   // 1. Offres soumises : le compteur des 48 h (le CEO ne voit que les siennes).
-  for (const o of offres.filter((x) => valideAffaire(session, seuilCeo, x.offre?.montantTtc ?? 0))) {
+  for (const o of offres.filter((x) => contresigneAffaire(session, contresignature, x.offre?.montantTtc ?? 0))) {
     const ecoule = o.soumisLe ? (maintenant - Date.parse(o.soumisLe)) / HEURE : 0;
     const reste = Math.round(DELAI_OFFRE_H - ecoule);
     elements.push({
@@ -167,7 +167,7 @@ export function AValiderCfo({
   }
   // 2. Factures directes préparées, à émettre.
   // Le CEO ne voit que celles au-delà du seuil : en deçà, c'est au CFO (revue CEO).
-  for (const f of (factures ?? []).filter((x) => aValiderCfo(x) && valideAffaire(session, seuilCeo, x.montantTtc))) {
+  for (const f of (factures ?? []).filter((x) => aValiderCfo(x) && contresigneAffaire(session, contresignature, x.montantTtc))) {
     const jours = Math.floor((maintenant - Date.parse(f.creeLe)) / JOUR);
     elements.push({
       cle: `facture-${f.id}`,

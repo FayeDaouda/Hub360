@@ -71,7 +71,7 @@ export class DevisController {
 
   @Post(':id/envoi')
   @RequiertPermission('finances_devis', 'validation')
-  @ValidationCeoAuDelaDuSeuil('devis', 'id')
+  @ValidationCeoAuDelaDuSeuil('devis', 'id', { exclusif: true })
   envoyer(@Req() req: R, @Param('id') id: string) {
     return this.devis.envoyer(req.user.societeId, id);
   }

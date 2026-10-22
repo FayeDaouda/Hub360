@@ -17,7 +17,7 @@ import {
 } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
 import { ROLE_CEO } from '@/lib/acces-back-office';
-import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
+import { contresigneAffaire, useContresignature, useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
 import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
 import {
@@ -90,6 +90,8 @@ export default function FinancesPage({ params }: Props) {
   const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.
   const seuilCeo = useSeuilCeo(params.slug, session);
+  // Envoi d'un devis, émission d'une facture : exclusifs au-delà du seuil (revue CEO).
+  const contresignature = useContresignature(params.slug, session);
   const searchParams = useSearchParams();
   const projetFiltre = searchParams.get('projetId') ?? undefined;
 
@@ -593,7 +595,7 @@ export default function FinancesPage({ params }: Props) {
           slug={params.slug}
           devis={devisPanneau}
           document={documentDepuisDevis(devisPanneau)}
-          droits={{ ...droits, devisValidation: droits.devisValidation && valideAffaire(session, seuilCeo, devisPanneau.montantTtc) }}
+          droits={{ ...droits, devisValidation: droits.devisValidation && contresigneAffaire(session, contresignature, devisPanneau.montantTtc) }}
           onMaj={recharger}
           onClose={() => setDevisOuvert(null)}
           onTelecharger={() => setDocumentAImprimer(documentDepuisDevis(devisPanneau))}
@@ -609,6 +611,7 @@ export default function FinancesPage({ params }: Props) {
           droits={{
             ecriture: droits.facturesEcriture,
             validation: droits.facturesValidation && valideAffaire(session, seuilCeo, facturePanneau.affaireTtc),
+            emission: droits.facturesValidation && contresigneAffaire(session, contresignature, facturePanneau.affaireTtc),
           }}
           onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
           onSupprimee={() => {

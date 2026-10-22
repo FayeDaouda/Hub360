@@ -11,7 +11,7 @@ import {
   type ActionCrm,
 } from '@/lib/cycle-crm';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
+import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import { STATUTS_CRM, type Projet, type TransitionDossier } from '@/lib/types';
 
 type Props = {
@@ -27,7 +27,7 @@ type Props = {
 // sont définitives (onboard crée le projet, perdu sort du pipeline).
 export function CycleDossier({ slug, projet, onAgir }: Props) {
   const session = useSessionCourante();
-  const seuilCeo = useSeuilCeo(slug, session);
+  const contresignature = useContresignature(slug, session);
   const [historique, setHistorique] = useState<TransitionDossier[] | null>(null);
   const [action, setAction] = useState<ActionCrm | null>(null);
   const [texte, setTexte] = useState('');
@@ -54,7 +54,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
   const actions = actionsPossibles(projet.statut, session).filter(
     (a) =>
       !(ACTIONS_CRM[a].module === 'finances_devis' && ACTIONS_CRM[a].niveau === 'validation') ||
-      valideAffaire(session, seuilCeo, projet.offre?.montantTtc ?? 0),
+      contresigneAffaire(session, contresignature, projet.offre?.montantTtc ?? 0),
   );
   // Actions permises par le rôle mais pas encore par l'offre (étape F).
   const blocages = actions

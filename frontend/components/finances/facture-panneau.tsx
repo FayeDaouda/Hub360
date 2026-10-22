@@ -18,7 +18,7 @@ type Props = {
   document: FactureDocumentProps | null; // aperçu : le modèle imprimé (lot 6)
   statut: { libelle: string; classe: string };
   societeNom: string;
-  droits: { ecriture: boolean; validation: boolean };
+  droits: { ecriture: boolean; validation: boolean; emission?: boolean };
   onMaj: (f: FactureCentrale) => void;
   onSupprimee: () => void;
   onTelecharger: () => void;
@@ -174,7 +174,8 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
         {relance && <p className="fiche-crm-aide" role="status">{relance}</p>}
         {erreur && <p className="field-erreur">{erreur}</p>}
         <div className="fac-actions">
-          {brouillon && droits.validation && (
+          {/* Émission : exclusive au-delà du seuil de contresignature (revue CEO). */}
+          {brouillon && (droits.emission ?? droits.validation) && (
             <button type="button" className="btn-primary" disabled={enCours} onClick={() => agir(async () => onMaj(await emettreFactureCentrale(slug, f.id)))}>
               Valider et émettre
             </button>

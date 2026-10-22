@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { avecDelegataire } from '../commun/delegation-ceo';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -77,7 +78,7 @@ export class RelancesCeoService implements OnApplicationBootstrap {
         societeId,
         type: 'attente_ceo',
         titre: `Facture à contresigner · ${libelles.get(f.id) ?? 'facture directe'} · affaire de ${fcfa(affaire)} TTC · prête depuis ${Math.floor(heures / 24)} j`,
-        destinataireIds: ceo,
+        destinataireIds: await avecDelegataire(this.prisma, societeId, ceo, null),
         factureId: f.id,
       });
       if (ecrites) envoyes++;
