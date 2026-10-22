@@ -2,7 +2,14 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarClock, ChevronRight, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, UserCheck } from 'lucide-react';
+import { BadgeCheck, CalendarClock, ChevronRight, FileCheck2, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, Undo2, UserCheck } from 'lucide-react';
+import { DecisionAvoir } from '@/components/finances/decision-avoir';
+import { getProjets } from '@/lib/crm';
+import { getAvoirsAValider, LIBELLE_MOTIF_AVOIR, type AvoirAValider } from '@/lib/facturation';
+import { useSessionCourante } from '@/lib/layout-contexte';
+import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
+import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
+import type { Projet } from '@/lib/types';
 import { getDemandesDroit, type DemandeDroit } from '@/lib/roles';
 import { DecisionDroit } from './decision-droit';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
@@ -34,7 +41,9 @@ type Ligne = {
   pill?: { libelle: string; ton: 'risque' | 'attention' | 'neutre' };
 } & ({ href: string } | { onClick: () => void });
 
-type Rubrique = { cle: string; titre: string; icone: ReactNode; couleur: string; lignes: Ligne[] };
+// decision : ce qui attend la décision du CEO lui-même (revue CEO, 22/10/2026) ;
+// le reste se lit « à suivre ».
+type Rubrique = { cle: string; titre: string; icone: ReactNode; couleur: string; lignes: Ligne[]; decision?: boolean };
 
 // « À votre attention » (accueil du CEO) : ce qui demande une décision ou une
 // relance, rassemblé sur une page ; chaque ligne mène à l'élément concerné.
@@ -54,11 +63,30 @@ export function Attention({
   // Droits du CIO à valider (revue CIO, 22/10/2026) : le CEO seul tranche.
   const [droits, setDroits] = useState<DemandeDroit[]>([]);
   const [droitOuvert, setDroitOuvert] = useState<DemandeDroit | null>(null);
+  // Revue CEO (22/10/2026) : toutes ses décisions ici, aucune ailleurs seulement —
+  // offres à contresigner, avoirs au-delà du seuil, salaire du CFO.
+  const session = useSessionCourante();
+  const seuil = useSeuilCeo(slug, session);
+  const [offres, setOffres] = useState<Projet[]>([]);
+  const [avoirs, setAvoirs] = useState<AvoirAValider[]>([]);
+  const [avoirOuvert, setAvoirOuvert] = useState<AvoirAValider | null>(null);
+  const [salaires, setSalaires] = useState<SalaireAValider[]>([]);
   useEffect(() => {
     getDemandesDroit(slug)
       .then((l) => setDroits(l.filter((d) => d.peutDecider)))
       .catch(() => setDroits([]));
+    getProjets(slug)
+      .then((l) => setOffres(l.filter((d) => d.statut === 'en_validation')))
+      .catch(() => setOffres([]));
+    getAvoirsAValider(slug)
+      .then(setAvoirs)
+      .catch(() => setAvoirs([]));
+    getSalairesAValider(slug)
+      .then(setSalaires)
+      .catch(() => setSalaires([]));
   }, [slug]);
+  const aContresigner = offres.filter((o) => valideAffaire(session, seuil, o.offre?.montantTtc ?? 0));
+  const depuisJours = (iso: string) => Math.max(0, joursEntre(iso.slice(0, 10), jour));
 
   const decisions = vue.decisions.filter(
     (d) =>
@@ -72,6 +100,7 @@ export function Attention({
   const toutes: Rubrique[] = [
     {
       cle: 'droits',
+      decision: true,
       titre: 'Droits du CIO à valider',
       icone: <KeyRound size={16} aria-hidden />,
       couleur: 'var(--corail)',
@@ -85,6 +114,7 @@ export function Attention({
     },
     {
       cle: 'proposees',
+      decision: true,
       titre: 'Décisions proposées',
       icone: <Gavel size={16} aria-hidden />,
       couleur: 'var(--iris)',
@@ -118,29 +148,93 @@ export function Attention({
       })),
     },
     {
-      cle: 'factures',
-      titre: 'Factures F1, F2, F3',
+      cle: 'offres',
+      titre: 'Offres à contresigner',
+      decision: true,
+      icone: <FileCheck2 size={16} aria-hidden />,
+      couleur: 'var(--ocre)',
+      lignes: aContresigner.map((o) => ({
+        cle: o.id,
+        titre: `${o.code} · ${o.client.nom}`,
+        detail: `${o.offre ? `${formatMontant(o.offre.montantTtc)} TTC · ` : ''}au-delà du seuil · validité de 7 jours une fois envoyée`,
+        pill: { libelle: o.soumisLe ? `Depuis ${depuisJours(o.soumisLe)} j` : 'À valider', ton: 'attention' as const },
+        href: `${base}/crm?dossier=${o.id}`,
+      })),
+    },
+    {
+      cle: 'avoirs',
+      titre: 'Avoirs à valider',
+      decision: true,
+      icone: <Undo2 size={16} aria-hidden />,
+      couleur: 'var(--corail)',
+      lignes: avoirs.map((a) => ({
+        cle: a.id,
+        titre: `${a.reference ?? 'Facture'}${a.client ? ` · ${a.client}` : ''}`,
+        detail: `${formatMontant(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()}${a.demandePar ? ` · demandé par ${a.demandePar}` : ''}`,
+        pill: { libelle: `Depuis ${depuisJours(a.demandeLe)} j`, ton: depuisJours(a.demandeLe) > 2 ? ('risque' as const) : ('attention' as const) },
+        onClick: () => setAvoirOuvert(a),
+      })),
+    },
+    {
+      cle: 'factures-ceo',
+      titre: 'Factures à valider par vous',
+      decision: true,
       icone: <ReceiptText size={16} aria-hidden />,
       couleur: 'var(--ocre)',
-      lignes: (attention.factures ?? []).map((f) => ({
-        cle: `${f.etat}:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
-        titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
-        detail:
-          f.etat === 'a_emettre'
-            ? `Prête à émettre${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`
-            : `${f.reference ?? 'Facture'} · échue depuis ${f.joursRetard} j · reste ${formatMontant(f.montantTtc ?? 0)}`,
-        pill:
-          f.etat === 'impayee'
-            ? { libelle: 'En retard', ton: 'risque' }
-            : f.parVous
-              ? { libelle: 'À valider par vous', ton: 'attention' }
-              : { libelle: 'À émettre', ton: 'attention' },
-        href: f.factureId
-          ? `${base}/facturation?facture=${f.factureId}`
-          : f.projetId
-            ? lienFacturationProjet(slug, f.projetId)
-            : `${base}/facturation`,
+      lignes: (attention.factures ?? [])
+        .filter((f) => f.etat === 'a_emettre' && f.parVous)
+        .map((f) => ({
+          cle: `parvous:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
+          titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
+          detail: `Au-delà du seuil${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`,
+          pill: { libelle: 'À valider par vous', ton: 'attention' as const },
+          href: f.factureId ? `${base}/facturation?facture=${f.factureId}` : f.projetId ? lienFacturationProjet(slug, f.projetId) : `${base}/facturation`,
+        })),
+    },
+    {
+      cle: 'salaires',
+      titre: 'Salaire à valider',
+      decision: true,
+      icone: <BadgeCheck size={16} aria-hidden />,
+      couleur: 'var(--jade)',
+      lignes: salaires.map((x) => ({
+        cle: x.id,
+        titre: x.salarie,
+        detail: `${LIBELLE_MOTIF_SALAIRE[x.motif]}${x.proposePar ? ` · proposé par ${x.proposePar}` : ''}`,
+        pill: { libelle: `Depuis ${depuisJours(x.proposeLe)} j`, ton: 'attention' as const },
+        href: `${base}/rh`,
       })),
+    },
+    {
+      // Maquette du boss : gardées, mais séparées des décisions (revue CEO).
+      cle: 'factures',
+      titre: 'Pour information · émission par le CFO',
+      icone: <ReceiptText size={16} aria-hidden />,
+      couleur: 'var(--ocre)',
+      lignes: (attention.factures ?? [])
+        .filter((f) => f.etat === 'a_emettre' && !f.parVous)
+        .map((f) => ({
+          cle: `${f.etat}:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
+          titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
+          detail: `Prête à émettre${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`,
+          pill: { libelle: 'Le CFO émet', ton: 'neutre' as const },
+          href: f.factureId ? `${base}/facturation?facture=${f.factureId}` : f.projetId ? lienFacturationProjet(slug, f.projetId) : `${base}/facturation`,
+        })),
+    },
+    {
+      cle: 'impayees',
+      titre: 'Factures impayées après échéance',
+      icone: <ReceiptText size={16} aria-hidden />,
+      couleur: 'var(--corail)',
+      lignes: (attention.factures ?? [])
+        .filter((f) => f.etat === 'impayee')
+        .map((f) => ({
+          cle: `${f.etat}:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
+          titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
+          detail: `${f.reference ?? 'Facture'} · échue depuis ${f.joursRetard} j · reste ${formatMontant(f.montantTtc ?? 0)}`,
+          pill: { libelle: 'En retard', ton: 'risque' as const },
+          href: f.factureId ? `${base}/facturation?facture=${f.factureId}` : `${base}/facturation`,
+        })),
     },
     {
       cle: 'ts',
@@ -189,6 +283,7 @@ export function Attention({
     },
     {
       cle: 'absences',
+      decision: true,
       titre: 'Absences à valider',
       icone: <UserCheck size={16} aria-hidden />,
       couleur: 'var(--jade)',
@@ -202,24 +297,45 @@ export function Attention({
     },
   ];
   const rubriques = toutes.filter((r) => r.lignes.length > 0);
-
+  const aDecider = rubriques.filter((r) => r.decision);
+  const aSuivre = rubriques.filter((r) => !r.decision);
+  const nbDecisions = aDecider.reduce((s, r) => s + r.lignes.length, 0);
   const total = rubriques.reduce((s, r) => s + r.lignes.length, 0);
 
   return (
     <section className="pa" aria-labelledby="pa-titre">
       <header className="pa-entete">
         <h2 id="pa-titre">À votre attention</h2>
-        <span className="pa-compte">{total ? pluriel(total, 'point') + ' à traiter' : 'Rien en attente'}</span>
+        <span className="pa-compte">{nbDecisions ? `${pluriel(nbDecisions, 'décision')} à prendre` : total ? 'Aucune décision en attente' : 'Rien en attente'}</span>
       </header>
       {total === 0 ? (
         <p className="panel glass-panel pa-vide">Aucun retard, aucune facture ni décision en attente : tout est à jour.</p>
       ) : (
-        <div className="pa-rubriques">
-          {rubriques.map((r) => (
-            <RubriqueAttention key={r.cle} rubrique={r} />
-          ))}
-        </div>
+        <>
+          {/* Revue CEO : d'abord ce que lui seul décide, puis ce qu'il suit. */}
+          <h3 className="pa-groupe">À décider · {nbDecisions}</h3>
+          {aDecider.length ? (
+            <div className="pa-rubriques">
+              {aDecider.map((r) => (
+                <RubriqueAttention key={r.cle} rubrique={r} />
+              ))}
+            </div>
+          ) : (
+            <p className="pa-groupe-vide">Aucune décision ne vous attend.</p>
+          )}
+          {aSuivre.length > 0 && (
+            <>
+              <h3 className="pa-groupe">À suivre</h3>
+              <div className="pa-rubriques">
+                {aSuivre.map((r) => (
+                  <RubriqueAttention key={r.cle} rubrique={r} />
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
+      {avoirOuvert && <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />}
       {droitOuvert && <DecisionDroit slug={slug} demande={droitOuvert} onFait={(l) => setDroits(l.filter((d) => d.peutDecider))} onClose={() => setDroitOuvert(null)} />}
     </section>
   );

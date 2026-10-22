@@ -285,8 +285,8 @@ export default function FinancesPage({ params }: Props) {
     <>
       <div className="fin-entete">
         <p className="fin-sous-titre">
-          Direction {societe?.nom ?? ''} : devis et factures. CFO, CEO, CTO, CIO : tout, y compris tableau de bord et
-          rentabilité. Les équipes ne voient aucun montant.
+          Direction {societe?.nom ?? ''} : devis et factures. Chacun y voit et y fait ce que la matrice des droits lui ouvre ;
+          au-delà du seuil de contresignature, le CEO valide. Les équipes ne voient aucun montant.
         </p>
         <div className="factu-actions-tete">
           <button type="button" className="btn-ghost fin-bouton-grille" onClick={() => setGrille(true)}>

@@ -166,7 +166,8 @@ export function AValiderCfo({
     });
   }
   // 2. Factures directes préparées, à émettre.
-  for (const f of (factures ?? []).filter(aValiderCfo)) {
+  // Le CEO ne voit que celles au-delà du seuil : en deçà, c'est au CFO (revue CEO).
+  for (const f of (factures ?? []).filter((x) => aValiderCfo(x) && valideAffaire(session, seuilCeo, x.montantTtc))) {
     const jours = Math.floor((maintenant - Date.parse(f.creeLe)) / JOUR);
     elements.push({
       cle: `facture-${f.id}`,
