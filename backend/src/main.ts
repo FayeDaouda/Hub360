@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
@@ -16,7 +17,13 @@ async function bootstrap() {
     }
   }
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // En production, l'API est derrière un seul relais (Caddy, deploy/) : sans
+  // cette confiance, chaque requête paraît venir du relais, et toute la société
+  // partagerait la limite de 5 connexions par minute (bilan avant déploiement,
+  // 22/10/2026). Hors production, pas de relais : l'en-tête n'est pas cru.
+  if (process.env.NODE_ENV === 'production') app.set('trust proxy', Number(process.env.HUB_RELAIS ?? 1));
 
   // En-têtes de sécurité HTTP standards (X-Content-Type-Options, X-Frame-Options,
   // HSTS en HTTPS, CSP…). API JSON pure : les défauts conviennent.
