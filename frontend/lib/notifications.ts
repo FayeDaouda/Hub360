@@ -110,6 +110,7 @@ export function lienNotificationAdmin(
   if (n.type === 'attente_ceo' && n.factureId) return `${base}/facturation?facture=${n.factureId}`;
   if (n.type === 'attente_ceo' && !n.dossierCrmId) return base;
   if (n.type === 'connexion_secours') return `${base}?onglet=journal`;
+  if (n.type === 'synthese_mensuelle') return `${base}?onglet=synthese`;
   if (n.dossierCrmId) return `/admin/${slug}/crm?dossier=${n.dossierCrmId}`;
   // Mention dans un fil : le projet ouvert dans la vue « Projets · gabarit ».
   if (n.projetId) return `/admin/${slug}/projets?projet=${n.projetId}`;

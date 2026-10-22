@@ -333,7 +333,8 @@ export class PilotageService {
   }
 
   // Reporting {société} prérempli depuis le HUB pour un mois clos.
-  private async contenuDirection(societeId: string, mois: string, jour: string) {
+  // Public : repris par la synthèse mensuelle du CEO (même calcul).
+  async contenuDirection(societeId: string, mois: string, jour: string) {
     const { debut, fin } = bornesMois(mois);
     const [projets, remises, conversion, objectifConversion, charge] = await Promise.all([
       this.etapesProjets(societeId, jour),

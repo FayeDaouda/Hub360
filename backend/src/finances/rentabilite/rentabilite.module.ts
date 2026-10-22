@@ -10,5 +10,7 @@ import { RentabiliteService } from './rentabilite.service';
   imports: [ReglagesModule, RhModule],
   providers: [RentabiliteService],
   controllers: [RentabiliteController],
+  // Marge provisoire de la synthèse mensuelle du CEO (Pilotage).
+  exports: [RentabiliteService],
 })
 export class RentabiliteModule {}

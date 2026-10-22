@@ -522,6 +522,7 @@ export type NotificationType =
   | 'droits_modifies'
   | 'connexion_secours'
   | 'attente_ceo'
+  | 'synthese_mensuelle'
   | 'demande_droit_a_valider'
   | 'demande_droit_decidee'
   | 'visa_a_apposer'

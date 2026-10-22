@@ -41,3 +41,8 @@ export class DeposerReportingDto {
 export class MessageReportingDto {
   @IsString() @MinLength(3) @MaxLength(2000) texte!: string;
 }
+
+// Commentaire du CFO sur la synthèse mensuelle (revue CEO) ; vide = retiré.
+export class CommentaireSyntheseDto {
+  @IsString() @MaxLength(2000) texte!: string;
+}

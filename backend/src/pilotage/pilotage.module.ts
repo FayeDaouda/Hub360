@@ -1,3 +1,5 @@
+import { RentabiliteModule } from '../finances/rentabilite/rentabilite.module';
+import { SyntheseService } from './synthese.service';
 import { RelancesCeoService } from './relances-ceo.service';
 import { Module } from '@nestjs/common';
 import { FinancesModule } from '../finances/finances.module';
@@ -15,8 +17,8 @@ import { SuiviReportingService } from './suivi-reporting.service';
 @Module({
   // Réglages : objectifs, jours fériés ; RH : feuilles de temps, absences à
   // valider ; Projets et Finances : alertes de l'accueil CEO.
-  imports: [ReglagesModule, RhModule, ProjetsModule, FinancesModule, NotificationsModule],
-  providers: [PilotageService, AttentionService, ChiffresPilotageService, ReportingRhService, SuiviReportingService, RelancesCeoService],
+  imports: [ReglagesModule, RhModule, ProjetsModule, FinancesModule, NotificationsModule, RentabiliteModule],
+  providers: [PilotageService, AttentionService, ChiffresPilotageService, ReportingRhService, SuiviReportingService, RelancesCeoService, SyntheseService],
   controllers: [PilotageController],
 })
 export class PilotageModule {}

@@ -16245,3 +16245,81 @@ tr.is-demandeur .cal-nom {
   font-weight: 700;
   text-align: center;
 }
+
+/* Synthèse mensuelle du CEO (revue CEO, 22/10/2026). */
+.sy {
+  display: grid;
+  gap: 1rem;
+}
+.sy-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+.sy-tete h2 {
+  margin: 0;
+}
+.sy-mois {
+  width: auto;
+  min-width: 12rem;
+}
+.sy-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 0.8rem;
+}
+.sy-section {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+}
+.sy-section h3,
+.sy-commentaire h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sy-section dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.sy-section dl > div {
+  display: grid;
+  gap: 0.1rem;
+  padding-left: 0.55rem;
+  border-left: 3px solid transparent;
+}
+.sy-section dl > div[data-ton='risque'] {
+  border-left-color: var(--corail);
+}
+.sy-section dl > div[data-ton='attention'] {
+  border-left-color: var(--ocre);
+}
+.sy-section dl > div[data-ton='succes'] {
+  border-left-color: var(--jade);
+}
+.sy-section dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.sy-section dd {
+  margin: 0;
+  font-weight: 600;
+}
+.sy-commentaire {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.sy-commentaire textarea {
+  width: 100%;
+}
+.sy-commentaire-texte {
+  margin: 0;
+  white-space: pre-wrap;
+}

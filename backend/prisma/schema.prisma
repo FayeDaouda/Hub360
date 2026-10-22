@@ -241,6 +241,7 @@ enum NotificationType {
   reglage_gouvernance_modifie // au CEO : un seuil de gouvernance changé dans Réglages
   droits_modifies // au CEO : une case de la matrice des droits changée (revue CIO)
   connexion_secours // au CEO et au CIO : connexion d'un compte technique de secours
+  synthese_mensuelle // au CEO et au CFO : synthèse du mois générée à la clôture
   attente_ceo // au CEO : une décision l'attend depuis 24 h (offre, facture à contresigner) ou 3 jours ouvrés (le reste)
   demande_droit_a_valider // au CEO : modification des droits du rôle CIO à valider
   demande_droit_decidee // au demandeur : modification des droits du CIO acceptée ou refusée
@@ -332,6 +333,24 @@ model JournalDroit {
 
   @@index([societeId, createdAt])
   @@map("journal_droits")
+}
+
+// Synthèse mensuelle du CEO (revue CEO, 22/10/2026) : assemblée par le HUB
+// à la clôture du mois, à partir de ce qu'il sait déjà — aucun travail du
+// CFO, qui peut y ajouter un commentaire. Instantané figé : une réouverture
+// suivie d'une nouvelle clôture la régénère (le commentaire est gardé).
+model SyntheseMensuelle {
+  id               String    @id @default(uuid())
+  societeId        String    @map("societe_id")
+  mois             String // AAAA-MM
+  contenu          Json // sections { titre, lignes: { libelle, valeur, ton? }[] }
+  genereLe         DateTime  @map("genere_le")
+  commentaire      String?
+  commentaireParId String?   @map("commentaire_par_id")
+  commentaireLe    DateTime? @map("commentaire_le")
+
+  @@unique([societeId, mois])
+  @@map("syntheses_mensuelles")
 }
 
 // Modification des droits du rôle CIO (revue CIO, 22/10/2026) : le CIO ne

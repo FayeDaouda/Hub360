@@ -90,3 +90,17 @@ export function getJournalAudit(slug: string, debut?: string, fin?: string): Pro
   const q = new URLSearchParams({ ...(debut ? { debut } : {}), ...(fin ? { fin } : {}) }).toString();
   return apiSociete<JournalAudit>(slug, `/journal-audit${q ? `?${q}` : ''}`);
 }
+
+// Synthèse mensuelle du CEO (revue CEO, 22/10/2026) — backend pilotage/synthese.service.ts.
+export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };
+export type Synthese = {
+  mois: string;
+  libelle: string;
+  genereLe: string;
+  sections: { titre: string; lignes: LigneSynthese[] }[];
+  commentaire: { texte: string; par: string | null; le: string | null } | null;
+};
+export type ListeSyntheses = { peutCommenter: boolean; syntheses: Synthese[] };
+export const getSyntheses = (slug: string) => apiSociete<ListeSyntheses>(slug, '/pilotage/syntheses');
+export const commenterSynthese = (slug: string, mois: string, texte: string) =>
+  apiSociete<ListeSyntheses>(slug, `/pilotage/syntheses/${mois}/commentaire`, { method: 'PUT', body: { texte } });

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { TypeReporting } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { ArbitrerDecisionDto, DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
+import { ArbitrerDecisionDto, CommentaireSyntheseDto, DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
+import { SyntheseService } from './synthese.service';
 import { SuiviReportingService } from './suivi-reporting.service';
 import { AttentionService, type ActeurAttention } from './attention.service';
 import { type Acteur, PilotageService } from './pilotage.service';
@@ -23,7 +24,19 @@ export class PilotageController {
     private pilotage: PilotageService,
     private attentionService: AttentionService,
     private suivi: SuiviReportingService,
+    private synthese: SyntheseService,
   ) {}
+
+  // Synthèse mensuelle (revue CEO, 22/10/2026) : CEO et CFO ; le CFO commente.
+  @Get('syntheses')
+  syntheses(@Req() req: R) {
+    return this.synthese.liste(req.user);
+  }
+
+  @Put('syntheses/:mois/commentaire')
+  commenterSynthese(@Req() req: R, @Param('mois') mois: string, @Body() dto: CommentaireSyntheseDto) {
+    return this.synthese.commenter(req.user, mois, dto.texte);
+  }
 
   @Get()
   vue(@Req() req: R) {
