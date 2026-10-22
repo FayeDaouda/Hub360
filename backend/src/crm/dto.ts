@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  Matches,
   MaxLength,
   Min,
   MinLength,
@@ -19,6 +20,7 @@ import { ACTIONS_CRM, ActionCrm } from './cycle';
 import {
   Categorie,
   Gamme,
+  ModePaiement,
   NatureDossier,
   Standing,
   TypeBien,
@@ -124,4 +126,19 @@ export class ModifierFicheDto {
   @IsOptional() @IsEnum(Gamme) gamme?: Gamme;
   // Validée et nettoyée par normaliserFiche (valeurs connues seulement).
   @IsOptional() @IsObject() ficheProgramme?: Record<string, unknown>;
+}
+
+// Commissions des apporteurs (revue COO, 22/10/2026).
+export class PayerCommissionDto {
+  @Matches(/^\d{4}-\d{2}-\d{2}$/) date!: string;
+  @IsEnum(ModePaiement) mode!: ModePaiement;
+  @IsOptional() @IsString() @MaxLength(120) reference?: string;
+}
+
+export class CoordonneesApporteurDto {
+  @IsOptional() @IsString() @MaxLength(120) banque?: string;
+  @IsOptional() @IsString() @MaxLength(60) rib?: string;
+  @IsOptional() @IsString() @MaxLength(30) wave?: string;
+  @IsOptional() @IsString() @MaxLength(30) orangeMoney?: string;
+  @IsOptional() @IsString() @MaxLength(64) confirmation?: string;
 }

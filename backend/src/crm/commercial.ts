@@ -24,6 +24,8 @@ export type DossierCommercial = ChampsFiche & {
   // HT de l'offre en cours (de l'offre acceptée une fois signé) ; null sans
   // offre ou sans le droit de voir les montants (lot D).
   montantHt: number | null;
+  // Commissions de l'apporteur sur ce dossier (lot C) ; 0 sans le droit.
+  commissions: { versees: number; aPayer: number };
 };
 
 export type TypeATraiter = 'fiche_incomplete' | 'lead_sans_proprietaire' | 'offre_chez_client' | 'apporteur_incomplet';
@@ -114,6 +116,8 @@ export type LignePerformance = {
   signes: number;
   enCours: number;
   signeHt: number; // somme HT des offres acceptées (0 sans le droit)
+  commissionsVersees: number;
+  commissionsAPayer: number;
 };
 
 // Apporteur d'un dossier : compte HUB (interne), nom + structure (externe),
@@ -134,8 +138,10 @@ export function performanceCommerciale(dossiers: DossierCommercial[]) {
   const lignes = new Map<string, LignePerformance>();
   for (const d of dossiers) {
     const a = apporteurDe(d);
-    const l = lignes.get(a.cle) ?? { ...a, leads: 0, signes: 0, enCours: 0, signeHt: 0 };
+    const l = lignes.get(a.cle) ?? { ...a, leads: 0, signes: 0, enCours: 0, signeHt: 0, commissionsVersees: 0, commissionsAPayer: 0 };
     l.leads++;
+    l.commissionsVersees += d.commissions.versees;
+    l.commissionsAPayer += d.commissions.aPayer;
     if (d.statut === 'onboard') {
       l.signes++;
       l.signeHt += d.montantHt ?? 0;
@@ -147,6 +153,8 @@ export function performanceCommerciale(dossiers: DossierCommercial[]) {
     leads: dossiers.length,
     signes: signes.length,
     signeHt: signes.reduce((s, d) => s + (d.montantHt ?? 0), 0),
+    commissionsVersees: dossiers.reduce((s, d) => s + d.commissions.versees, 0),
+    commissionsAPayer: dossiers.reduce((s, d) => s + d.commissions.aPayer, 0),
     enCours: dossiers.filter((d) => !d.archive && EN_COURS.has(d.statut)).length,
     tauxTransformation: dossiers.length ? Math.round((signes.length / dossiers.length) * 100) : null,
     delaiMoyenJours: delais.length ? Math.round(delais.reduce((s, x) => s + x, 0) / delais.length) : null,

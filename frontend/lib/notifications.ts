@@ -89,6 +89,8 @@ export function lienNotificationAdmin(
     return `${base}/facturation?facture=${n.factureId}`;
   }
   if (n.type === 'signalement_recu') return `${base}/reglages?section=signalements`;
+  // Commission d'apporteur à payer : « À valider aujourd'hui » du CFO, dans Finances.
+  if (n.type === 'commission_a_payer') return `${base}/facturation`;
   // Élément ajouté en TS : les devis du projet (l'avenant y est en préparation).
   if (n.type === 'avenant_ts' && n.projetId) return `${base}/facturation?projetId=${n.projetId}`;
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).

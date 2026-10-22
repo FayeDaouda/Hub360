@@ -11,7 +11,9 @@ import {
   PREFIXE_TEST,
   type FormatNumero,
   ANNEXE_CGV,
+  MODES_COMMISSION,
   type AnnexeCgv,
+  type ModeCommission,
   type ParametresFacturation,
   type ProfilFacturation,
 } from '@/lib/facturation';
@@ -23,7 +25,7 @@ const LOGO_MAX = 600 * 1024;
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
-type ChampTexte = Exclude<keyof ProfilFacturation, 'logoDocument' | 'cgvAnnexe'>;
+type ChampTexte = Exclude<keyof ProfilFacturation, 'logoDocument' | 'cgvAnnexe' | 'modeCommission'>;
 const CHAMPS: { cle: ChampTexte; libelle: string; long?: boolean; aide?: string }[] = [
   { cle: 'raisonSociale', libelle: 'Raison sociale' },
   { cle: 'adresse', libelle: 'Adresse', long: true },
@@ -287,6 +289,22 @@ export function ParametresFacturationFenetre({
                 ))}
               </select>
               <span className="cell-sub">La page 1 de chaque facture cite toujours les CGV, l’offre acceptée et les articles clés.</span>
+            </label>
+            <label className="field">
+              <span className="field-label">Commissions des apporteurs</span>
+              <select
+                className="field-input"
+                value={profil.modeCommission ?? 'encaisse_prorata'}
+                disabled={lecture || !!envoi}
+                onChange={(e) => setProfil({ ...profil, modeCommission: e.target.value as ModeCommission })}
+              >
+                {(Object.keys(MODES_COMMISSION) as ModeCommission[]).map((k) => (
+                  <option key={k} value={k}>
+                    {MODES_COMMISSION[k]}
+                  </option>
+                ))}
+              </select>
+              <span className="cell-sub">Le % est celui de la fiche apporteur. Le mode s’applique aux dossiers signés à partir de son changement ; le COO suit, le CFO paie.</span>
             </label>
             {!lecture && confirmerPaiement && (
               <div className="pf-alerte" role="alert">

@@ -39,7 +39,17 @@ export type ElementCommercial = {
   detail: string;
   tri: string;
 };
-export type LignePerformance = { cle: string; libelle: string; type: 'interne' | 'externe' | 'direct'; leads: number; signes: number; enCours: number; signeHt: number };
+export type LignePerformance = {
+  cle: string;
+  libelle: string;
+  type: 'interne' | 'externe' | 'direct';
+  leads: number;
+  signes: number;
+  enCours: number;
+  signeHt: number;
+  commissionsVersees: number;
+  commissionsAPayer: number;
+};
 export type EtapePipeline = 'preparation' | 'en_validation' | 'chez_client' | 'expiree' | 'signe' | 'perdu';
 export type VueCommerciale = {
   aTraiter: ElementCommercial[];
@@ -49,6 +59,8 @@ export type VueCommerciale = {
     leads: number;
     signes: number;
     signeHt: number;
+    commissionsVersees: number;
+    commissionsAPayer: number;
     enCours: number;
     tauxTransformation: number | null;
     delaiMoyenJours: number | null;

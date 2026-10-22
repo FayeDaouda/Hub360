@@ -4,6 +4,7 @@ import { aLaPermission } from '../commun/permission.guard';
 import { montantHtLignes } from '../devis/domaine';
 import { PrismaService } from '../prisma/prisma.service';
 import { aTraiterCommercial, performanceCommerciale, totauxPipeline, type DossierCommercial } from './commercial';
+import { CommissionsService } from './commissions.service';
 
 type Acteur = { societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
@@ -18,12 +19,17 @@ const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 // performance de l'année par apporteur et, avec le droit, totaux HT par étape.
 @Injectable()
 export class CommercialService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private commissions: CommissionsService,
+  ) {}
 
   async vue(a: Acteur, annee: string) {
     const maintenant = new Date();
     const jour = jourIso(maintenant);
     const montants = voitMontantsPipeline(a);
+    // Commissions à jour des derniers encaissements avant de les additionner.
+    if (montants) await this.commissions.synchroniser(a.societeId);
     const [enCours, delAnnee] = await Promise.all([
       this.dossiers(a.societeId, { archiveLe: null, statut: { in: ['nouveau_projet', 'en_validation', 'offre_envoyee'] } }, false),
       this.dossiers(a.societeId, { createdAt: { gte: new Date(`${annee}-01-01T00:00:00Z`), lt: new Date(`${Number(annee) + 1}-01-01T00:00:00Z`) } }, montants),
@@ -69,6 +75,7 @@ export class CommercialService {
           select: { statut: true, dateEnvoi: true, dateValidite: true, lignes: { select: { quantite: true, prixUnitaire: true } } },
         },
         transitions: { where: { vers: 'onboard' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
+        commissions: { select: { statut: true, montant: true } },
       },
     });
     return lignes.map((d) => {
@@ -103,6 +110,10 @@ export class CommercialService {
           : null,
         signeLe: d.transitions[0] ? jourIso(d.transitions[0].creeLe) : null,
         montantHt: montants && offreMontant ? montantHtLignes(offreMontant.lignes) : null,
+        commissions: {
+          versees: montants ? d.commissions.filter((c) => c.statut === 'payee').reduce((s, c) => s + c.montant.toNumber(), 0) : 0,
+          aPayer: montants ? d.commissions.filter((c) => c.statut === 'a_payer').reduce((s, c) => s + c.montant.toNumber(), 0) : 0,
+        },
       };
     });
   }

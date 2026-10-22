@@ -17,6 +17,7 @@ const dossier = (o: Partial<DossierCommercial> = {}): DossierCommercial => ({
   offre: null,
   signeLe: null,
   montantHt: null,
+  commissions: { versees: 0, aPayer: 0 },
   ...complet,
   ...o,
 });
@@ -63,12 +64,13 @@ describe('performanceCommerciale', () => {
   it('par apporteur, taux de transformation et délai moyen lead → signature', () => {
     const notaire = { type: 'externe' as const, nom: 'Me Aliou Ndiaye', structure: 'Notaire', telephone: '77', email: null };
     const p = performanceCommerciale([
-      dossier({ id: '1', statut: 'onboard', apporteur: notaire, creeLe: new Date('2026-03-01T10:00:00Z'), signeLe: '2026-03-31', montantHt: 9_000_000 }),
+      dossier({ id: '1', statut: 'onboard', apporteur: notaire, creeLe: new Date('2026-03-01T10:00:00Z'), signeLe: '2026-03-31', montantHt: 9_000_000, commissions: { versees: 120_000, aPayer: 240_000 } }),
       dossier({ id: '2', statut: 'perdu', apporteur: { ...notaire, nom: ' me aliou ndiaye ' } }),
       dossier({ id: '3', statut: 'onboard', creeLe: new Date('2026-04-01T10:00:00Z'), signeLe: '2026-04-11' }),
       dossier({ id: '4', statut: 'offre_envoyee' }),
     ]);
-    expect(p).toMatchObject({ leads: 4, signes: 2, signeHt: 9_000_000, enCours: 1, tauxTransformation: 50, delaiMoyenJours: 20 });
+    expect(p).toMatchObject({ leads: 4, signes: 2, signeHt: 9_000_000, commissionsVersees: 120_000, commissionsAPayer: 240_000, enCours: 1, tauxTransformation: 50, delaiMoyenJours: 20 });
+    expect(p.apporteurs[1]).toMatchObject({ commissionsVersees: 120_000, commissionsAPayer: 240_000 });
     expect(p.apporteurs.map((a) => [a.libelle, a.leads, a.signes, a.enCours, a.signeHt])).toEqual([
       ['Affaire directe', 2, 1, 1, 0],
       ['Me Aliou Ndiaye · Notaire', 2, 1, 0, 9_000_000],

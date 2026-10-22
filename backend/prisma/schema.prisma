@@ -233,6 +233,9 @@ enum NotificationType {
   reporting_question // à l'émetteur : question du destinataire
   reporting_reponse // à l'auteur de la question
   coordonnees_paiement_modifiees // au CEO : banque, RIB, Wave ou Orange Money changés (lot 6)
+  commission_a_payer // au CFO : commission d'apporteur devenue exigible (revue COO)
+  commission_payee // au COO : commission réglée par le CFO
+  coordonnees_apporteur_modifiees // au CFO et au CEO : coordonnées de paiement d'un apporteur changées
   // Revue Dir. GC (lot 4, 21/10/2026)
   reglage_gouvernance_modifie // au CEO : un seuil de gouvernance changé dans Réglages
   ts_a_valider // au CTO : TS au-delà du seuil, demandé par le Dir. GC
@@ -678,6 +681,8 @@ model DossierCrm {
   archivePar           Utilisateur?           @relation("DossierArchivePar", fields: [archiveParId], references: [id], onDelete: SetNull)
   projet               Projet? // 0..1 — créé au passage à onboard (transaction pivot)
   transitions          DossierCrmTransition[]
+  commissions          CommissionApporteur[]
+  coordonneesApporteur CoordonneesApporteur[]
   offres               Devis[] // la plus récente = l'offre en cours (étape F)
   contrat              Contrat? // étape G — sa signature déclenche l'Onboard
   notifications        Notification[]
@@ -1488,37 +1493,100 @@ enum AnnexeCgv {
   jamais
 }
 
+// Commission d'apporteur (revue COO, 22/10/2026). Par défaut : % des
+// honoraires HT encaissés, due à chaque encaissement au prorata ; autre
+// mode : % des honoraires HT du contrat signé, due à la signature.
+enum ModeCommission {
+  encaisse_prorata
+  signature_contrat
+}
+
+enum StatutCommission {
+  a_payer
+  payee
+}
+
+// Une ligne par fait générateur : un encaissement d'honoraires (cle
+// « paiement:<id> ») ou la signature (cle « signature:<dossier> »). Calculée
+// par le HUB, idempotente ; le COO suit, le CFO paie.
+model CommissionApporteur {
+  id           String           @id @default(uuid())
+  societeId    String           @map("societe_id")
+  dossierCrmId String           @map("dossier_crm_id")
+  cle          String
+  paiementId   String?          @map("paiement_id") // pas de FK : un encaissement supprimé laisse la trace
+  baseHt       Decimal          @map("base_ht") @db.Decimal(14, 0)
+  taux         Decimal          @db.Decimal(3, 1)
+  montant      Decimal          @db.Decimal(14, 0)
+  exigibleLe   String           @map("exigible_le") // AAAA-MM-JJ
+  statut       StatutCommission @default(a_payer)
+  payeeLe      String?          @map("payee_le")
+  payeeParId   String?          @map("payee_par_id")
+  modePaiement ModePaiement?    @map("mode_paiement")
+  reference    String           @default("")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  dossier DossierCrm @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, cle])
+  @@index([dossierCrmId])
+  @@map("commissions_apporteur")
+}
+
+// Coordonnées de paiement de l'apporteur d'un dossier — protégées comme
+// celles de la société : versionnées, identité confirmée à chaque
+// changement, CFO et CEO prévenus (revue COO, 22/10/2026).
+model CoordonneesApporteur {
+  id           String   @id @default(uuid())
+  dossierCrmId String   @map("dossier_crm_id")
+  banque       String   @default("")
+  rib          String   @default("")
+  wave         String   @default("")
+  orangeMoney  String   @default("") @map("orange_money")
+  confirmation String? // « code » ou « mot_de_passe »
+  parId        String?  @map("par_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  dossier DossierCrm @relation(fields: [dossierCrmId], references: [id], onDelete: Cascade)
+
+  @@index([dossierCrmId, createdAt])
+  @@map("coordonnees_apporteur")
+}
+
 // Profil de facturation de la société (lot 6) : ce qu'imprime la facture
 // (identité, NINEA, RCCM, contact, règlement, pied). Versionné comme la
 // numérotation : la dernière ligne fait foi, les autres tracent les changements.
 model ProfilFacturation {
-  id                 String    @id @default(uuid())
-  societeId          String    @map("societe_id")
-  raisonSociale      String    @map("raison_sociale")
-  adresse            String    @default("")
-  ninea              String    @default("")
-  rccm               String    @default("")
-  cofi               String    @default("") // code fiscal imprimé après le NINEA (« COFI 292 » dans les CGV)
-  capital            String    @default("") // « 1 000 000 FCFA »
-  telephone          String    @default("")
-  email              String    @default("")
-  banque             String    @default("")
-  rib                String    @default("") // RIB ou IBAN
-  wave               String    @default("")
-  orangeMoney        String    @default("") @map("orange_money")
-  conditionsPaiement String    @default("") @map("conditions_paiement")
-  mentionsPied       String    @default("") @map("mentions_pied")
+  id                 String         @id @default(uuid())
+  societeId          String         @map("societe_id")
+  raisonSociale      String         @map("raison_sociale")
+  adresse            String         @default("")
+  ninea              String         @default("")
+  rccm               String         @default("")
+  cofi               String         @default("") // code fiscal imprimé après le NINEA (« COFI 292 » dans les CGV)
+  capital            String         @default("") // « 1 000 000 FCFA »
+  telephone          String         @default("")
+  email              String         @default("")
+  banque             String         @default("")
+  rib                String         @default("") // RIB ou IBAN
+  wave               String         @default("")
+  orangeMoney        String         @default("") @map("orange_money")
+  conditionsPaiement String         @default("") @map("conditions_paiement")
+  mentionsPied       String         @default("") @map("mentions_pied")
   // Logo pour les documents (SVG ou PNG transparent, data URI) ; null = logo
   // de la société.
-  logoDocument       String?   @map("logo_document")
+  logoDocument       String?        @map("logo_document")
   // CGV complètes en annexe : sur la 1re facture du projet par défaut (les
   // suivantes citent les articles clés), sur toutes, ou jamais.
-  cgvAnnexe          AnnexeCgv @default(premiere_facture) @map("cgv_annexe")
+  cgvAnnexe          AnnexeCgv      @default(premiere_facture) @map("cgv_annexe")
+  // Commissions des apporteurs (revue COO, 22/10/2026) : mode réglé par le
+  // CFO, figé pour chaque dossier à la date de sa signature.
+  modeCommission     ModeCommission @default(encaisse_prorata) @map("mode_commission")
   // Coordonnées de paiement changées dans cette version : identité confirmée
   // par « code » (double authentification) ou « mot_de_passe » ; null sinon.
   confirmation       String?
-  parId              String?   @map("par_id")
-  createdAt          DateTime  @default(now()) @map("created_at")
+  parId              String?        @map("par_id")
+  createdAt          DateTime       @default(now()) @map("created_at")
 
   @@index([societeId, createdAt])
   @@map("profils_facturation")

@@ -125,6 +125,7 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
                 <th>Signés</th>
                 {p.montants && <th>Signé HT</th>}
                 <th>En cours</th>
+                {p.montants && <th>Commissions versées</th>}
               </tr>
             </thead>
             <tbody>
@@ -138,6 +139,12 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
                   <td>{a.signes}</td>
                   {p.montants && <td>{a.signeHt ? formatMontantCompact(a.signeHt) : '—'}</td>}
                   <td>{a.enCours}</td>
+                  {p.montants && (
+                    <td>
+                      {a.type === 'direct' ? '—' : formatMontantCompact(a.commissionsVersees)}
+                      {a.commissionsAPayer > 0 && <span className="cell-sub">{formatMontantCompact(a.commissionsAPayer)} à payer</span>}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

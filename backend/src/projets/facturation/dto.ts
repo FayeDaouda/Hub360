@@ -1,4 +1,4 @@
-import { AnnexeCgv, MotifAvoir } from '@prisma/client';
+import { AnnexeCgv, ModeCommission, MotifAvoir } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,
@@ -167,6 +167,7 @@ export class ProfilFacturationDto {
   // undefined = logo inchangé ; null = retiré (logo de la société).
   @IsOptional() @ValidateIf((_, v) => v !== null) @IsString() logoDocument?: string | null;
   @IsOptional() @IsEnum(AnnexeCgv) cgvAnnexe?: AnnexeCgv;
+  @IsOptional() @IsEnum(ModeCommission) modeCommission?: ModeCommission;
   // Mot de passe ou code de double authentification : exigé si les
   // coordonnées de paiement changent (vérifié par le service, jamais stocké).
   @IsOptional() @IsString() @MaxLength(200) confirmation?: string;

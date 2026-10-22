@@ -16132,3 +16132,65 @@ tr.is-demandeur .cal-nom {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Fiche apporteur · paiement (revue COO, lot C) : commissions et coordonnées. */
+.pa-apporteur {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.pa-apporteur-bloc {
+  display: grid;
+  gap: 0.5rem;
+}
+.pa-apporteur-titre {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+.pa-apporteur-liste {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pa-apporteur-liste li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.8rem;
+}
+.pa-apporteur-liste li > span:first-child {
+  display: grid;
+}
+.pa-apporteur-liste .cell-sub {
+  white-space: normal;
+}
+.pa-apporteur-edition {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.pa-apporteur-edition > .pf-alerte,
+.pa-apporteur-edition > .field-erreur,
+.pa-apporteur-edition > .modal-actions {
+  grid-column: 1 / -1;
+}
+.pc-coordonnee {
+  display: block;
+}
+.pc-champs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+@media (max-width: 560px) {
+  .pa-apporteur-edition,
+  .pc-champs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

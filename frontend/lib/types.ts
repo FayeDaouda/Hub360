@@ -526,6 +526,9 @@ export type NotificationType =
   | 'decision_en_retard'
   // Profil de facturation (lot 6 CFO) : coordonnées de paiement changées (CEO).
   | 'coordonnees_paiement_modifiees'
+  | 'commission_a_payer'
+  | 'commission_payee'
+  | 'coordonnees_apporteur_modifiees'
   // Facture directe d'un lead préparée, à valider par le CFO — ouvre la facture.
   | 'facture_a_valider'
   // Alerte dérivée (jamais stockée) : lead « Nouveau projet » encore

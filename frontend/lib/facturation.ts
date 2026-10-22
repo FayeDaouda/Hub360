@@ -336,8 +336,14 @@ export type ProfilFacturation = {
   mentionsPied: string;
   logoDocument?: string | null; // SVG / PNG transparent en data URI ; null = logo de la société
   cgvAnnexe?: AnnexeCgv; // CGV complètes en annexe : 1re facture du projet (défaut), toutes, jamais
+  modeCommission?: ModeCommission; // commissions des apporteurs (revue COO)
 };
 export type AnnexeCgv = 'premiere_facture' | 'toujours' | 'jamais';
+export type ModeCommission = 'encaisse_prorata' | 'signature_contrat';
+export const MODES_COMMISSION: Record<ModeCommission, string> = {
+  encaisse_prorata: '% des honoraires HT encaissés, due à chaque encaissement (au prorata)',
+  signature_contrat: '% des honoraires HT du contrat signé, due à la signature',
+};
 export const ANNEXE_CGV: Record<AnnexeCgv, string> = {
   premiere_facture: 'Sur la première facture de chaque projet',
   toujours: 'Sur toutes les factures',

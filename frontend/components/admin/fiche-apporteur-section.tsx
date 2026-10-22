@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { getSession } from '@/lib/auth';
 import { modifierApporteur } from '@/lib/crm';
+import { PaiementApporteur } from '@/components/crm/paiement-apporteur';
 import { formatNombre } from '@/lib/format';
 import type { Projet } from '@/lib/types';
 import {
@@ -125,6 +126,7 @@ export function FicheApporteurSection({ slug, projet, onModifie }: Props) {
             Modifier la fiche apporteur
           </button>
         )}
+        {!saisie && ap && <PaiementApporteur slug={slug} dossierId={projet.id} />}
       </div>
     </section>
   );

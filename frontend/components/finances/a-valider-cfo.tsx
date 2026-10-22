@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ClipboardList,
   FileCheck2,
+  HandCoins,
   HardHat,
   Lock,
   TriangleAlert,
@@ -20,6 +21,8 @@ import { getProjets } from '@/lib/crm';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { getAvoirsAValider, getClotures, LIBELLE_MOTIF_AVOIR, lienFacturationProjet, type AvoirAValider, type MoisCloture } from '@/lib/facturation';
 import { DecisionAvoir } from '@/components/finances/decision-avoir';
+import { PayerCommission } from '@/components/finances/payer-commission';
+import { getCommissions, type CommissionApporteur } from '@/lib/commissions';
 import { aValiderCfo } from '@/lib/finances';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -81,6 +84,9 @@ export function AValiderCfo({
   const [avoirs, setAvoirs] = useState<AvoirAValider[]>([]);
   const [moisTermine, setMoisTermine] = useState<MoisCloture | null>(null);
   const [avoirOuvert, setAvoirOuvert] = useState<AvoirAValider | null>(null);
+  const [commissions, setCommissions] = useState<CommissionApporteur[]>([]);
+  const [commissionOuverte, setCommissionOuverte] = useState<CommissionApporteur | null>(null);
+  const [versionCommissions, setVersionCommissions] = useState(0);
   const [tout, setTout] = useState(false);
   const [maintenant] = useState(() => Date.now());
 
@@ -108,6 +114,12 @@ export function AValiderCfo({
       .then((l) => setMoisTermine(l[0] ?? null))
       .catch(() => setMoisTermine(null));
   }, [slug, version]);
+  // Commissions des apporteurs à payer (revue COO) : le CFO paie.
+  useEffect(() => {
+    getCommissions(slug)
+      .then((l) => setCommissions(l.peutPayer ? l.lignes.filter((c) => c.statut === 'a_payer') : []))
+      .catch(() => setCommissions([]));
+  }, [slug, versionCommissions]);
 
   const tresorerie = useMemo(() => {
     const mois = new Date().toISOString().slice(0, 7);
@@ -182,6 +194,22 @@ export function AValiderCfo({
       ton: 'attention',
       action: 'Régler',
       ouvrir: () => router.push(lienFacturationProjet(slug, b.projet.id)),
+    });
+  }
+  // 3 bis. Commissions des apporteurs exigibles (revue COO, 22/10/2026).
+  for (const c of commissions) {
+    const jours = Math.floor((maintenant - Date.parse(`${c.exigibleLe}T00:00:00Z`)) / JOUR);
+    elements.push({
+      cle: `commission-${c.id}`,
+      groupe: 3,
+      tri: c.exigibleLe,
+      icone: HandCoins,
+      titre: `Commission à payer · ${c.apporteur} · ${c.code}`,
+      detail: `${formatMontant(c.montant)} · ${c.taux} % de ${formatMontant(c.baseHt)} HT ${c.source === 'encaissement' ? 'encaissés' : 'signés'}`,
+      quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
+      ton: jours > 7 ? 'risque' : 'attention',
+      action: 'Payer',
+      ouvrir: () => setCommissionOuverte(c),
     });
   }
   // 4. Salaires proposés par la RH.
@@ -308,6 +336,9 @@ export function AValiderCfo({
         </ul>
       )}
       {avoirOuvert && <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />}
+      {commissionOuverte && (
+        <PayerCommission slug={slug} commission={commissionOuverte} onFait={() => setVersionCommissions((v) => v + 1)} onClose={() => setCommissionOuverte(null)} />
+      )}
       {elements.length > VISIBLES && (
         <button type="button" className="at-rh-plus" aria-expanded={tout} onClick={() => setTout((x) => !x)}>
           <ChevronDown size={15} aria-hidden className={tout ? 'is-ouvert' : undefined} />

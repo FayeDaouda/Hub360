@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
-import type { AnnexeCgv } from '@prisma/client';
+import type { AnnexeCgv, ModeCommission } from '@prisma/client';
 import { ConfirmationIdentiteService } from '../../auth/confirmation-identite.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -82,11 +82,12 @@ export class ParametresFacturationService {
       // Sans profil saisi : ce que la société affiche déjà (nom, coordonnées,
       // mentions légales reprises des CGV), à compléter par le CFO.
       profil: profil
-        ? { ...Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, profil[c]])), logoDocument: profil.logoDocument, cgvAnnexe: profil.cgvAnnexe, parDefaut: false }
+        ? { ...Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, profil[c]])), logoDocument: profil.logoDocument, cgvAnnexe: profil.cgvAnnexe, modeCommission: profil.modeCommission, parDefaut: false }
         : {
             ...Object.fromEntries(CHAMPS_PROFIL.map((c) => [c, ''])),
             logoDocument: null,
             cgvAnnexe: 'premiere_facture',
+            modeCommission: 'encaisse_prorata',
             raisonSociale: societe.nom,
             adresse: societe.coordonnees ?? '',
             mentionsPied: societe.mentionsLegales ?? '',
@@ -108,7 +109,7 @@ export class ParametresFacturationService {
     return this.lire(a);
   }
 
-  async modifierProfil(a: Acteur, p: Profil & { logoDocument?: string | null; cgvAnnexe?: AnnexeCgv; confirmation?: string }) {
+  async modifierProfil(a: Acteur, p: Profil & { logoDocument?: string | null; cgvAnnexe?: AnnexeCgv; modeCommission?: ModeCommission; confirmation?: string }) {
     if (a.role !== ROLE_CFO) throw new ForbiddenException('Seul le CFO règle le profil de facturation.');
     if (!p.raisonSociale?.trim()) throw new BadRequestException('La raison sociale est obligatoire.');
     if (p.logoDocument && (!LOGO.test(p.logoDocument) || p.logoDocument.length > LOGO_MAX * 1.37)) {
@@ -126,6 +127,8 @@ export class ParametresFacturationService {
         ...valeurs,
         logoDocument: p.logoDocument === undefined ? (avant?.logoDocument ?? null) : p.logoDocument,
         cgvAnnexe: p.cgvAnnexe ?? avant?.cgvAnnexe ?? 'premiere_facture',
+        // Commissions des apporteurs (revue COO) : vaut pour les dossiers signés à partir de ce jour.
+        modeCommission: p.modeCommission ?? avant?.modeCommission ?? 'encaisse_prorata',
         confirmation: confirmePar,
         parId: a.userId,
       },
