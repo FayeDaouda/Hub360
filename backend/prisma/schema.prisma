@@ -238,6 +238,9 @@ enum NotificationType {
   coordonnees_apporteur_modifiees // au CFO et au CEO : coordonnées de paiement d'un apporteur changées
   // Revue Dir. GC (lot 4, 21/10/2026)
   reglage_gouvernance_modifie // au CEO : un seuil de gouvernance changé dans Réglages
+  droits_modifies // au CEO : une case de la matrice des droits changée (revue CIO)
+  demande_droit_a_valider // au CEO : modification des droits du rôle CIO à valider
+  demande_droit_decidee // au demandeur : modification des droits du CIO acceptée ou refusée
   ts_a_valider // au CTO : TS au-delà du seuil, demandé par le Dir. GC
   ts_decide // au demandeur : TS accepté (ajouté) ou refusé par le CTO
   suppleance_designee // au suppléant désigné par un Dir. GC pour son absence
@@ -310,19 +313,50 @@ model Signalement {
 // Changements de la matrice des droits (écran Rôles) : qui a changé quel
 // niveau, quand — lu par le journal d'audit (CEO, CIO). Jamais modifié.
 model JournalDroit {
-  id        String            @id @default(uuid())
-  societeId String            @map("societe_id") // société de l'auteur au moment du changement
-  roleNom   String            @map("role_nom")
-  module    String // clé du module (crm, projets…)
-  avant     NiveauPermission? // null = aucune ligne avant
-  apres     NiveauPermission
-  parId     String?           @map("par_id") // audit, pas de FK
-  createdAt DateTime          @default(now()) @map("created_at")
+  id          String            @id @default(uuid())
+  societeId   String            @map("societe_id") // société de l'auteur au moment du changement
+  roleNom     String            @map("role_nom")
+  module      String // clé du module (crm, projets…)
+  avant       NiveauPermission? // null = aucune ligne avant
+  apres       NiveauPermission
+  parId       String?           @map("par_id") // audit, pas de FK
+  // Rôle CIO (revue CIO, 22/10/2026) : la modification demandée (parId) n'est
+  // appliquée qu'une fois validée par le CEO (valideParId).
+  valideParId String?           @map("valide_par_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
 
   societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
 
   @@index([societeId, createdAt])
   @@map("journal_droits")
+}
+
+// Modification des droits du rôle CIO (revue CIO, 22/10/2026) : le CIO ne
+// modifie pas son propre rôle ; la demande attend la validation du CEO, qui
+// l'accepte (appliquée, tracée) ou la refuse (motif).
+enum StatutDemandeDroit {
+  en_attente
+  acceptee
+  refusee
+}
+
+model DemandeDroit {
+  id           String             @id @default(uuid())
+  societeId    String             @map("societe_id")
+  roleId       String             @map("role_id")
+  roleNom      String             @map("role_nom")
+  module       String
+  avant        NiveauPermission?
+  apres        NiveauPermission
+  demandeParId String?            @map("demande_par_id")
+  statut       StatutDemandeDroit @default(en_attente)
+  decideParId  String?            @map("decide_par_id")
+  decideLe     DateTime?          @map("decide_le")
+  motif        String?
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  @@index([societeId, statut])
+  @@map("demandes_droit")
 }
 
 // Rappels quotidiens déjà envoyés : la clé (ex. « tache:<id>:veille:<finLe> »)

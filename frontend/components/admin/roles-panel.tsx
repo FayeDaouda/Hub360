@@ -22,6 +22,8 @@ export function RolesPanel({ slug }: { slug: string }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [essai, setEssai] = useState(0);
   const [enCours, setEnCours] = useState<string | null>(null); // `${roleId}:${cle}` en vol
+  // Rôle CIO (revue CIO, 22/10/2026) : la case attend la validation du CEO.
+  const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
     let annule = false;
@@ -56,8 +58,17 @@ export function RolesPanel({ slug }: { slug: string }) {
       ),
     });
     setEnCours(cleEnCours);
+    setInfo(null);
+    const revenir = () =>
+      setMatrice((m) =>
+        m ? { ...m, roles: m.roles.map((r) => (r.id === roleId ? { ...r, permissions: { ...r.permissions, [moduleCle]: precedent } } : r)) } : m,
+      );
     try {
-      await majPermissionRole(slug, roleId, moduleCle, niveau);
+      const r = await majPermissionRole(slug, roleId, moduleCle, niveau);
+      if (r.enAttente) {
+        revenir();
+        setInfo('Les droits du CIO ne changent qu’après validation du CEO : la demande lui est envoyée.');
+      }
     } catch (e) {
       setMatrice((m) =>
         m
@@ -105,6 +116,11 @@ export function RolesPanel({ slug }: { slug: string }) {
       {erreur && (
         <p className="field-erreur" role="alert">
           {erreur}
+        </p>
+      )}
+      {info && (
+        <p className="pi-aide" role="status">
+          {info}
         </p>
       )}
       <div className="admin-table-wrap admin-table-wrap--fixe">

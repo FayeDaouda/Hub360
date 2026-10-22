@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CalendarClock, ChevronRight, FileWarning, Gavel, Hourglass, ReceiptText, Scale, UserCheck } from 'lucide-react';
+import { CalendarClock, ChevronRight, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, UserCheck } from 'lucide-react';
+import { getDemandesDroit, type DemandeDroit } from '@/lib/roles';
+import { DecisionDroit } from './decision-droit';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
 import { formatMontant } from '@/lib/format';
@@ -48,6 +50,14 @@ export function Attention({
 }) {
   const jour = new Date().toISOString().slice(0, 10);
   const base = `/admin/${slug}`;
+  // Droits du CIO à valider (revue CIO, 22/10/2026) : le CEO seul tranche.
+  const [droits, setDroits] = useState<DemandeDroit[]>([]);
+  const [droitOuvert, setDroitOuvert] = useState<DemandeDroit | null>(null);
+  useEffect(() => {
+    getDemandesDroit(slug)
+      .then((l) => setDroits(l.filter((d) => d.peutDecider)))
+      .catch(() => setDroits([]));
+  }, [slug]);
 
   const decisions = vue.decisions.filter(
     (d) =>
@@ -59,6 +69,19 @@ export function Attention({
   const proposees = vue.decisions.filter((d) => d.peutArbitrer);
 
   const toutes: Rubrique[] = [
+    {
+      cle: 'droits',
+      titre: 'Droits du CIO à valider',
+      icone: <KeyRound size={16} aria-hidden />,
+      couleur: 'var(--corail)',
+      lignes: droits.map((d) => ({
+        cle: d.id,
+        titre: `${d.module} · ${d.avant} → ${d.apres}`,
+        detail: `demandé par ${d.demandePar}`,
+        pill: { libelle: 'À valider', ton: 'attention' as const },
+        onClick: () => setDroitOuvert(d),
+      })),
+    },
     {
       cle: 'proposees',
       titre: 'Décisions proposées',
@@ -196,6 +219,7 @@ export function Attention({
           ))}
         </div>
       )}
+      {droitOuvert && <DecisionDroit slug={slug} demande={droitOuvert} onFait={(l) => setDroits(l.filter((d) => d.peutDecider))} onClose={() => setDroitOuvert(null)} />}
     </section>
   );
 }

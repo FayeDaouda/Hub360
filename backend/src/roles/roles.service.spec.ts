@@ -31,11 +31,13 @@ function svc(opts: {
       upsert,
       findUnique: jest.fn().mockResolvedValue(opts.permissionActuelle ?? null),
     },
-    utilisateur: { updateMany: revoquer },
+    utilisateur: { updateMany: revoquer, findUnique: jest.fn().mockResolvedValue({ prenom: 'Awa', nom: 'Diallo' }) },
+    demandeDroit: { findFirst: jest.fn().mockResolvedValue(null), create: jest.fn(), findMany: jest.fn().mockResolvedValue([]), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     journalDroit: { create: tracer },
     $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
   } as unknown as PrismaService;
-  return { svc: new RolesService(prisma), upsert, revoquer, tracer };
+  const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CEO1']) };
+  return { svc: new RolesService(prisma, notifications as never), upsert, revoquer, tracer, notifications, prisma: prisma as unknown as Record<string, Record<string, jest.Mock>> };
 }
 
 describe('RolesService.listerAvecPermissions', () => {
@@ -102,6 +104,7 @@ describe('RolesService.majPermission', () => {
       roleId: 'R1',
       moduleCle: 'crm',
       niveau: 'ecriture',
+      enAttente: false,
     });
     expect(upsert).toHaveBeenCalledWith({
       where: { roleId_moduleId: { roleId: 'R1', moduleId: 'M1' } },
@@ -131,7 +134,7 @@ describe('RolesService.majPermission', () => {
     });
     await s.majPermission('S1', 'R1', 'crm', 'ecriture', 'societe_admin', 'U9');
     expect(tracer).toHaveBeenCalledWith({
-      data: { societeId: 'S1', roleNom: 'CFO', module: 'crm', avant: 'lecture', apres: 'ecriture', parId: 'U9' },
+      data: { societeId: 'S1', roleNom: 'CFO', module: 'crm', avant: 'lecture', apres: 'ecriture', parId: 'U9', valideParId: null },
     });
   });
 
@@ -210,5 +213,39 @@ describe('RolesService.majPermission', () => {
     await expect(s.majPermission('S1', 'R1', 'inexistant', 'lecture', 'societe_admin')).rejects.toThrow(
       NotFoundException,
     );
+  });
+});
+
+// Revue CIO (22/10/2026) : le CEO prévenu de chaque changement ; le rôle CIO
+// ne se modifie que par une demande validée par le CEO.
+describe('RolesService · contrôle du CIO', () => {
+  const crm = { id: 'M1', cle: 'crm', nom: 'CRM' };
+  it('changement ordinaire : appliqué, tracé, CEO prévenu', async () => {
+    const { svc: s, tracer, notifications } = svc({ roleTrouve: { id: 'R1', nom: 'Dir. GC', societeId: 'S1' }, moduleTrouve: crm, permissionActuelle: { niveau: 'ecriture' } } as never);
+    await s.majPermission('S1', 'R1', 'crm', 'lecture', 'CIO (transverse)', 'CIO1');
+    expect(tracer).toHaveBeenCalledWith({ data: expect.objectContaining({ roleNom: 'Dir. GC', avant: 'ecriture', apres: 'lecture', parId: 'CIO1', valideParId: null }) });
+    expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'droits_modifies', destinataireIds: ['CEO1'] }));
+  });
+
+  it('rôle CIO : rien d’appliqué, une demande attend le CEO', async () => {
+    const { svc: s, upsert, prisma, notifications } = svc({ roleTrouve: { id: 'RC', nom: 'CIO (transverse)', societeId: null }, moduleTrouve: crm, permissionActuelle: { niveau: 'ecriture' } } as never);
+    const r = await s.majPermission('S1', 'RC', 'crm', 'lecture', 'CIO (transverse)', 'CIO1');
+    expect(r).toMatchObject({ enAttente: true, niveau: 'ecriture' });
+    expect(upsert).not.toHaveBeenCalled();
+    expect(prisma.demandeDroit.create).toHaveBeenCalledWith({ data: expect.objectContaining({ roleNom: 'CIO (transverse)', avant: 'ecriture', apres: 'lecture', demandeParId: 'CIO1' }) });
+    expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'demande_droit_a_valider', destinataireIds: ['CEO1'] }));
+  });
+
+  it('décision : le CEO seul ; refus motivé ; acceptée = appliquée « validée par » le CEO', async () => {
+    const demande = { id: 'D1', societeId: 'S1', roleId: 'RC', roleNom: 'CIO (transverse)', module: 'crm', avant: 'ecriture', apres: 'lecture', demandeParId: 'CIO1', statut: 'en_attente' };
+    const { svc: s, prisma, tracer, notifications } = svc({ moduleTrouve: crm, permissionActuelle: { niveau: 'ecriture' } } as never);
+    prisma.demandeDroit.findFirst.mockResolvedValue(demande);
+    (prisma.module as unknown as Record<string, jest.Mock>).findUniqueOrThrow = jest.fn().mockResolvedValue(crm);
+    await expect(s.decider('S1', 'CIO (transverse)', 'CIO1', 'D1', true)).rejects.toThrow('Seul le CEO');
+    await expect(s.decider('S1', 'CEO (transverse)', 'CEO1', 'D1', false)).rejects.toThrow('motif');
+    await s.decider('S1', 'CEO (transverse)', 'CEO1', 'D1', true);
+    expect(tracer).toHaveBeenCalledWith({ data: expect.objectContaining({ apres: 'lecture', parId: 'CIO1', valideParId: 'CEO1' }) });
+    expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'demande_droit_decidee', destinataireIds: ['CIO1'] }));
+    expect(notifications.envoyer).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'droits_modifies' }));
   });
 });

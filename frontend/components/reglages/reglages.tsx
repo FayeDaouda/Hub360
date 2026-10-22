@@ -8,6 +8,7 @@ import { ROLE_CIO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { afficher, getReglages, libelleVersion, type Reglages as DonneesReglages } from '@/lib/reglages';
 import { getSignalements, type Signalement } from '@/lib/signalements';
+import { ATraiterAdministration } from './a-traiter-administration';
 import { Administration } from './administration';
 import { GabaritPanel } from './gabarit-panel';
 import { JournalPanel } from './journal-panel';
@@ -97,6 +98,8 @@ export function Reglages({ slug }: { slug: string }) {
   return (
     <>
       {entete}
+      {/* CIO : sa page d'arrivée — ce qui attend l'administration (revue CIO). */}
+      <ATraiterAdministration slug={slug} onSection={choisir} />
       <div className="reg-tuiles" role="tablist" aria-label="Sections des réglages">
         {[
           { s: 'gabarit' as const, icone: ClipboardList, label: 'Gabarit Conception', valeur: gabarit.libelle, sous: `${gabarit.projets} projet(s) en ${gabarit.libelle}` },

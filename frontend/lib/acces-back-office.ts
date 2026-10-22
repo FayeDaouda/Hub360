@@ -108,7 +108,8 @@ export function premiereSectionAccessible(session: Session): string | null {
 // (revue CTO, 21/10/2026).
 // Le COO arrive sur le CRM, « À traiter aujourd'hui » et sa performance
 // commerciale en tête (revue COO, 22/10/2026).
-const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation', [ROLE_CTO]: 'projets', [ROLE_COO]: 'crm' };
+// Le CIO arrive sur Réglages, « À traiter aujourd'hui » en tête (revue CIO, 22/10/2026).
+const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation', [ROLE_CTO]: 'projets', [ROLE_COO]: 'crm', [ROLE_CIO]: 'parametres' };
 const CHEMIN_ARRIVEE: Record<string, string> = { [ROLE_CTO]: 'projets?vue=production' };
 
 // Section d'arrivée propre au rôle, si accessible (null sinon) : sur

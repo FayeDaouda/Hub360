@@ -89,6 +89,10 @@ export function lienNotificationAdmin(
     return `${base}/facturation?facture=${n.factureId}`;
   }
   if (n.type === 'signalement_recu') return `${base}/reglages?section=signalements`;
+  // Droits (revue CIO) : le CEO lit le journal, valide les droits du CIO dans « À votre attention ».
+  if (n.type === 'droits_modifies') return `${base}?onglet=journal`;
+  if (n.type === 'demande_droit_a_valider') return base;
+  if (n.type === 'demande_droit_decidee') return `${base}/reglages?section=administration`;
   // Commission d'apporteur à payer : « À valider aujourd'hui » du CFO, dans Finances.
   if (n.type === 'commission_a_payer') return `${base}/facturation`;
   // Élément ajouté en TS : les devis du projet (l'avenant y est en préparation).
