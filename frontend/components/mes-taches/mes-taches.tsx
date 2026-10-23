@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { createPortal, flushSync } from 'react-dom';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlarmClock, AtSign, CalendarClock, Check, CheckCircle2, ChevronDown, Ellipsis, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, AtSign, CalendarClock, Check, CheckCircle2, ChevronDown, Ellipsis, Hourglass, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { getAbsencesAValider } from '@/lib/demandes';
@@ -564,8 +564,13 @@ export function MesTaches({ slug }: { slug: string }) {
                         un filtre : sa liste complète. */}
                     {SECTIONS.filter((f) => (filtre === null || filtre === f) && !(avecCote && f === 'attente')).map((f) => {
                       const liste = filtre ? g[f] : g.sections[f];
+                      // Une reprise en retard est listée une fois, sous « En
+                      // retard » : la section le dit, pour que le compteur de
+                      // la carte (qui la compte aussi) se comprenne.
+                      const ailleurs = filtre ? 0 : g[f].length - g.sections[f].length;
+                      const note = ailleurs > 0 ? `et ${ailleurs} autre${ailleurs > 1 ? 's' : ''} en retard, plus haut` : undefined;
                       return (
-                        <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={liste.length} masquerTitre={!!filtre} sansCompte>
+                        <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={liste.length} masquerTitre={!!filtre} sansCompte note={note}>
                           {liste.map((t) => ligne(t))}
                         </Groupe>
                       );
@@ -629,15 +634,9 @@ export function MesTaches({ slug }: { slug: string }) {
         )}
       </div>
 
+      {/* Glisser-déposer et raccourcis clavier : dans l'aide « ? » (fiche
+          Mes tâches) ; ici, seulement le lien vers l'historique. */}
       <p className="dmd-note mt-pied">
-        {/* Espace HORS du span : dans un inline-flex, il serait avalé
-            (« remettre.Historique »). */}
-        <span className="mt-astuce">
-          <Paperclip size={13} aria-hidden /> Glissez un fichier sur une tâche pour la déposer.
-        </span>{' '}
-        <span className="mt-raccourcis">
-          <kbd>J</kbd> <kbd>K</kbd> pour passer d’une tâche à l’autre, <kbd>Entrée</kbd> pour l’ouvrir, <kbd>D</kbd> pour la déposer.
-        </span>{' '}
         Historique et respect des délais :{' '}
         <Link className="lien-inline" href={`${base}/mon-espace?onglet=performances`}>
           Mon espace › Mes performances
@@ -702,6 +701,7 @@ function Groupe({
   masquerTitre = false,
   projet = false,
   sansCompte = false,
+  note,
   children,
 }: {
   titre: string;
@@ -710,6 +710,7 @@ function Groupe({
   masquerTitre?: boolean;
   projet?: boolean;
   sansCompte?: boolean;
+  note?: string;
   children: ReactNode;
 }) {
   if (n === 0) return null;
@@ -718,6 +719,7 @@ function Groupe({
       {!masquerTitre && (
         <h2 className={`mt-groupe-titre${projet ? ' mt-groupe-titre--projet' : ''}`} data-ton={ton}>
           {titre} {!sansCompte && <span className="mt-groupe-compte">{n}</span>}
+          {note && <span className="mt-groupe-note">{note}</span>}
         </h2>
       )}
       <ul className="mt-lignes">{children}</ul>

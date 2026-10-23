@@ -10,6 +10,9 @@ export type FicheAide = {
   resume: string;
   // Ce que permet chaque niveau de la matrice (cumulatif : écriture inclut lecture).
   actions: Partial<Record<Exclude<NiveauPermission, 'aucun'>, string>>;
+  // Gestes et raccourcis de la page (hors de la page elle-même, pour ne pas
+  // l'encombrer).
+  astuces?: string[];
 };
 
 export const FICHES_AIDE: Record<string, FicheAide> = {
@@ -18,6 +21,10 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
     resume:
       'Ce que vous avez à faire, par urgence : tâches en retard (reprises comprises), à reprendre, à rendre cette semaine, puis vos remises en attente de validation. Une mention non lue s’affiche sur la ligne de sa tâche. « Déposer » envoie la tâche à votre N+1, avec fichiers et commentaire si besoin ; « Demander un délai » lui demande une prolongation.',
     actions: {},
+    astuces: [
+      'Glissez un fichier sur une tâche pour la déposer.',
+      'Clavier : J et K pour passer d’une tâche à l’autre, Entrée pour l’ouvrir, D pour la déposer.',
+    ],
   },
   'tableau-de-bord': {
     titre: 'Pilotage',

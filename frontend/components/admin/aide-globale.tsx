@@ -100,6 +100,11 @@ function Guide({ session, onSignaler }: { session: Session; onSignaler: () => vo
                   {a}
                 </span>
               ))}
+              {f.astuces?.map((a) => (
+                <span key={a} className="aide-action aide-astuce">
+                  {a}
+                </span>
+              ))}
             </li>
           );
         })}

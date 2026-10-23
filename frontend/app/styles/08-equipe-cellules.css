@@ -171,10 +171,11 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--ocre);
-  /* Ocre reste clair/doré (cohérent avec le reste de sa famille) : texte
-     foncé plutôt que blanc pour rester lisible — cf. mémoire contraste. */
-  color: var(--ocre-fonce);
+  /* Compteur « à lire » : l'indigo d'action (texte blanc 5,1:1), pas
+     l'ambre réservé aux statuts ; liseré du fond pour le détacher. */
+  background: var(--action);
+  color: var(--action-texte);
+  box-shadow: 0 0 0 2px var(--bg);
   font-size: var(--t-12);
   font-weight: 600;
   display: flex;

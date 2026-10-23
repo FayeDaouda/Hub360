@@ -1142,6 +1142,14 @@ tr.is-demandeur .cal-nom {
 .mt-court {
   display: none;
 }
+@media (hover: hover) and (pointer: fine) and (min-width: 721px) {
+  /* Colonne des actions de largeur fixe (place de « Demander un délai » +
+     « Déposer ») : la colonne des échéances tombe au même endroit sur
+     toutes les lignes, qu'il y ait un ou deux boutons. */
+  .mt-liste .mt-ligne {
+    grid-template-columns: minmax(0, 1fr) 11rem 14.5rem;
+  }
+}
 @media (hover: hover) and (pointer: fine) {
   .mt-ligne .mt-secondaire {
     opacity: 0;
@@ -1344,8 +1352,8 @@ tr.is-demandeur .cal-nom {
    faisait « technique » et se répétait sur chaque ligne. */
 .mt-code {
   font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 400;
+  color: var(--text-muted);
   text-decoration: none;
 }
 .mt-code:hover {
@@ -1712,6 +1720,14 @@ tr.is-demandeur .cal-nom {
 }
 .mt-decider .dmd-note {
   margin: 0;
+}
+.mt-groupe-note {
+  margin-left: var(--e-8);
+  font-size: var(--t-12);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
 }
 .mt-pied {
   margin: 1rem 0 0;
