@@ -4,18 +4,18 @@
    ========================================================================== */
 
 /* <select> de statut — allure de pastille : mêmes variables --pill-* que
-   .pill (fond plein, texte blanc), couleur selon la valeur. Reste un select
+   .pill (fond teinté, texte coloré), couleur selon la valeur. Reste un select
    natif (accessible, éditable au clavier). Les variantes --* servent aussi
    de couleur aux pastilles de statut CRM (.pill.statut-select--*). */
 .statut-select {
   font-family: inherit;
-  font-size: 0.74rem;
+  font-size: var(--t-12);
   font-weight: 600;
   padding: 0.25rem 1.4rem 0.25rem 0.6rem;
   border-radius: 999px;
-  border: 1px solid transparent;
-  background-color: var(--pill-fond, var(--pill-neutre));
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--pill-fond, var(--pill-neutre)) 22%, transparent);
+  background-color: color-mix(in srgb, var(--pill-fond, var(--pill-neutre)) var(--pill-teinte), var(--pill-surface));
+  color: color-mix(in srgb, var(--pill-fond, var(--pill-neutre)), var(--pill-encre));
   cursor: pointer;
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
@@ -81,7 +81,7 @@
     margin: 0.15rem 0;
     padding: 0.3rem 0.75rem;
     border-radius: 999px;
-    font-size: 0.74rem;
+    font-size: var(--t-12);
     font-weight: 600;
   }
   .statut-select option::checkmark {
@@ -134,7 +134,7 @@
 .chip {
   display: inline-flex;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
@@ -177,7 +177,7 @@
 }
 
 .dossier-code {
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   letter-spacing: 0.02em;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;

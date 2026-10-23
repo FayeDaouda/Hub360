@@ -50,7 +50,7 @@
 
 .cell-sub .pill {
   margin-right: 0.15rem;
-  font-size: 0.68rem;
+  font-size: var(--t-12);
   padding: 0.12rem 0.45rem;
 }
 
@@ -217,7 +217,7 @@
 /* Texte d'appoint sous un champ verrouillé/désactivé (ex. Nature figée sur
    Mandat client, sept. 2026) — explique pourquoi, pas une erreur de saisie. */
 .field-hint {
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
 }
 
@@ -408,7 +408,7 @@
   flex: 1 1 auto;
 }
 .crm-ligne-code {
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }

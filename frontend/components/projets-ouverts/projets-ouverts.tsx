@@ -851,7 +851,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
                     <span className={`pill pill--${pt.ton}`}>{pt.libelle}</span>
                     {t.fil > 0 && (
                       <span className="po-tache-fil" aria-label={`${t.fil} message(s)`}>
-                        <MessageCircle size={13} strokeWidth={2} aria-hidden /> {t.fil}
+                        <MessageCircle size={13} aria-hidden /> {t.fil}
                       </span>
                     )}
                   </span>

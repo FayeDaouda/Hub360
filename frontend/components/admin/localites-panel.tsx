@@ -91,7 +91,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
           className="btn-ghost btn-ghost--sm"
           onClick={() => setEssai((n) => n + 1)}
         >
-          <RefreshCw size={15} strokeWidth={2} aria-hidden />
+          <RefreshCw size={15} aria-hidden />
           <span>Réessayer</span>
         </button>
       </div>
@@ -124,7 +124,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
           ))}
         </div>
         <div className="champ-recherche localites-recherche">
-          <Search size={15} strokeWidth={1.75} aria-hidden />
+          <Search size={15} aria-hidden />
           <input
             type="search"
             className="field-input"
@@ -135,7 +135,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
           />
         </div>
         <button type="button" className="btn-primary" onClick={() => setEdition(null)}>
-          <Plus size={15} strokeWidth={2} aria-hidden />
+          <Plus size={15} aria-hidden />
           Ajouter une localité
         </button>
       </div>
@@ -143,7 +143,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
       <p className="localites-intro">
         Partagé par toutes les sociétés du HUB. Chaque code est unique sur les trois onglets ; un
         code déjà utilisé par un dossier est figé{' '}
-        <Lock size={11} strokeWidth={2} aria-label="(verrou)" /> : seul le nom reste modifiable.
+        <Lock size={11} aria-label="(verrou)" /> : seul le nom reste modifiable.
       </p>
 
       {groupes.length === 0 && (
@@ -162,7 +162,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
                 <span className="localites-code">
                   {l.code}
                   {l.codeVerrouille && (
-                    <Lock size={11} strokeWidth={2} aria-label="code figé (déjà utilisé)" />
+                    <Lock size={11} aria-label="code figé (déjà utilisé)" />
                   )}
                 </span>
                 <span className="localites-nom">
@@ -182,7 +182,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
                   aria-label={`Modifier « ${l.nom} »`}
                   title="Modifier"
                 >
-                  <Pencil size={14} strokeWidth={2} />
+                  <Pencil size={14} />
                 </button>
               </li>
             ))}

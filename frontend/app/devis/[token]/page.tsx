@@ -109,7 +109,7 @@ export default function DevisPublicPage({ params }: Props) {
                 disabled={busy}
                 onClick={() => repondre('refuse')}
               >
-                <XCircle size={16} strokeWidth={2} aria-hidden /> Refuser
+                <XCircle size={16} aria-hidden /> Refuser
               </button>
               <button
                 type="button"
@@ -117,7 +117,7 @@ export default function DevisPublicPage({ params }: Props) {
                 disabled={busy}
                 onClick={() => repondre('accepte')}
               >
-                <CheckCircle2 size={16} strokeWidth={2} aria-hidden /> Accepter le devis
+                <CheckCircle2 size={16} aria-hidden /> Accepter le devis
               </button>
             </div>
           ) : (
@@ -125,7 +125,7 @@ export default function DevisPublicPage({ params }: Props) {
           )}
 
           <button type="button" className="lien-inline devis-public-telecharger" onClick={() => window.print()}>
-            <Download size={13} strokeWidth={2} aria-hidden /> Télécharger / imprimer
+            <Download size={13} aria-hidden /> Télécharger / imprimer
           </button>
         </div>
       </div>

@@ -79,7 +79,7 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
             </h2>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 
@@ -130,7 +130,7 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
                 disabled={lignes.length === 1}
                 onClick={() => setLignes((ls) => ls.filter((_, j) => j !== i))}
               >
-                <X size={15} strokeWidth={2} />
+                <X size={15} />
               </button>
             </div>
           ))}

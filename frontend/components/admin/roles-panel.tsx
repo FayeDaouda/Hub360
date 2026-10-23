@@ -97,7 +97,7 @@ export function RolesPanel({ slug }: { slug: string }) {
           className="btn-ghost btn-ghost--sm"
           onClick={() => setEssai((n) => n + 1)}
         >
-          <RefreshCw size={15} strokeWidth={2} aria-hidden />
+          <RefreshCw size={15} aria-hidden />
           <span>Réessayer</span>
         </button>
       </div>

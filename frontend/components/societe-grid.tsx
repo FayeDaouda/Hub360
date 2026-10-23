@@ -93,7 +93,7 @@ export function SocieteGrid({ societes }: { societes: SocietePortail[] }) {
             >
               {identite}
               <span className="societe-carte-fleche" aria-hidden>
-                <ArrowRight size={18} strokeWidth={2} />
+                <ArrowRight size={18} />
               </span>
             </a>
           </li>

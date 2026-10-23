@@ -443,7 +443,7 @@ export function LignesDevisEditeur({
                       disabled={lignes.length === 1}
                       onClick={() => retirerLigne(i)}
                     >
-                      <Trash2 size={12} strokeWidth={2} aria-hidden />
+                      <Trash2 size={12} aria-hidden />
                     </button>
                   </td>
                 </tr>
@@ -455,14 +455,14 @@ export function LignesDevisEditeur({
 
       <div className="lignes-devis-ajouts">
         <button type="button" className="lien-inline" onClick={() => changer([...lignes, ligneVide()])}>
-          <Plus size={13} strokeWidth={2} aria-hidden /> Ajouter une prestation
+          <Plus size={13} aria-hidden /> Ajouter une prestation
         </button>
         <button
           type="button"
           className="lien-inline lignes-devis-ajout-secondaire"
           onClick={() => changer([...lignes, ligneVide(true)])}
         >
-          <Plus size={12} strokeWidth={2} aria-hidden /> Ligne hors catalogue
+          <Plus size={12} aria-hidden /> Ligne hors catalogue
         </button>
       </div>
 

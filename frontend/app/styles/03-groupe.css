@@ -130,7 +130,7 @@
 }
 .groupe-resume dt {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -140,13 +140,13 @@
   margin: 0.2rem 0 0;
   font-family: var(--font-titre);
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .groupe-resume small {
   color: var(--text-muted);
   font-family: var(--font-sans);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 500;
 }
 
@@ -178,7 +178,7 @@
   padding: 0 0.4rem;
   border-radius: 999px;
   background: color-mix(in srgb, currentColor 16%, transparent);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
 }
 .groupe-onglet:focus-visible {
   outline: 2px solid var(--argile);
@@ -202,7 +202,7 @@
   padding: 0.7rem 0.6rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-align: left;
@@ -246,8 +246,8 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--violet-hub) 18%, transparent);
   color: var(--text);
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   vertical-align: 0.1em;
 }
 .groupe-email {
@@ -266,7 +266,7 @@
   background: linear-gradient(135deg, var(--violet-hub), var(--cyan-hub));
   color: #fff;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .groupe-action-compte {
@@ -280,7 +280,7 @@
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.74rem;
+  font-size: var(--t-12);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -392,8 +392,8 @@
 .groupe-salaire-devise {
   padding-right: 0.7rem;
   color: var(--text-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.04em;
 }
 
@@ -403,7 +403,7 @@
   gap: 0.3rem;
   min-height: 1rem;
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: var(--t-12);
 }
 .groupe-etat:empty {
   min-height: 0;
@@ -486,7 +486,7 @@
   .groupe-table td::before {
     content: attr(data-libelle);
     color: var(--text-muted);
-    font-size: 0.68rem;
+    font-size: var(--t-12);
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;

@@ -38,12 +38,12 @@ export function NavigationMobile({
       <nav className="nav-mobile" aria-label="Navigation principale">
         {visibles.map((i) => (
           <Link key={i.cle} href={i.href} className={`nav-mobile-item${i.cle === active ? ' is-active' : ''}`} aria-current={i.cle === active ? 'page' : undefined}>
-            <i.icone size={21} strokeWidth={i.cle === active ? 2.2 : 1.8} aria-hidden />
+            <i.icone size={21} strokeWidth={i.cle === active ? 2.2 : 1.5} aria-hidden />
             <span>{i.libelle}</span>
           </Link>
         ))}
         <button type="button" className={`nav-mobile-item${plusActif ? ' is-active' : ''}`} aria-haspopup="dialog" onClick={() => setPlus(true)}>
-          <Menu size={21} strokeWidth={plusActif ? 2.2 : 1.8} aria-hidden />
+          <Menu size={21} strokeWidth={plusActif ? 2.2 : 1.5} aria-hidden />
           <span>Plus</span>
         </button>
       </nav>
@@ -85,7 +85,7 @@ function PanneauPlus({
 
   const lien = (i: ItemNav) => (
     <Link key={i.cle} href={i.href} className={`feuille-ligne${i.cle === active ? ' is-active' : ''}`} onClick={onClose}>
-      <i.icone size={19} strokeWidth={1.8} aria-hidden />
+      <i.icone size={19} aria-hidden />
       <span>{i.libelle}</span>
     </Link>
   );
@@ -101,7 +101,7 @@ function PanneauPlus({
         <div className="feuille-tete">
           <strong>Plus</strong>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </div>
         {autres.length > 0 && <div className="feuille-groupe">{autres.map(lien)}</div>}
@@ -109,11 +109,11 @@ function PanneauPlus({
           {administration && lien(administration)}
           {lien(reglages)}
           <button type="button" className="feuille-ligne" onClick={() => aide('guide')}>
-            <HelpCircle size={19} strokeWidth={1.8} aria-hidden />
+            <HelpCircle size={19} aria-hidden />
             <span>Aide</span>
           </button>
           <button type="button" className="feuille-ligne" onClick={() => aide('signaler')}>
-            <MessageSquareWarning size={19} strokeWidth={1.8} aria-hidden />
+            <MessageSquareWarning size={19} aria-hidden />
             <span>Signaler un problème</span>
           </button>
         </div>
@@ -136,7 +136,7 @@ function PanneauPlus({
         </div>
         <div className="feuille-groupe">
           <button type="button" className="feuille-ligne feuille-ligne--alerte" onClick={onDeconnexion}>
-            <LogOut size={19} strokeWidth={1.8} aria-hidden />
+            <LogOut size={19} aria-hidden />
             <span>Se déconnecter</span>
           </button>
         </div>

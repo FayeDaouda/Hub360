@@ -73,7 +73,7 @@
     display: block;
     margin: 1.1rem 0 1rem;
     font-size: 1.6rem;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.15;
   }
@@ -113,7 +113,7 @@
     padding: 0.8rem 0.85rem;
   }
   .kpi-tuile-label {
-    font-size: 0.74rem;
+    font-size: var(--t-12);
   }
   .kpi-tuile-valeur {
     font-size: 1.35rem;
@@ -146,7 +146,7 @@
     background: none;
     color: var(--text-muted);
     font: inherit;
-    font-size: 0.68rem;
+    font-size: var(--t-12);
     font-weight: 600;
     text-decoration: none;
     -webkit-tap-highlight-color: transparent;
@@ -158,7 +158,7 @@
     transition: background 0.2s ease;
   }
   .nav-mobile-item.is-active {
-    color: var(--brand);
+    color: var(--lien);
   }
   .nav-mobile-item.is-active svg {
     background: color-mix(in oklch, var(--brand) 16%, transparent);
@@ -238,7 +238,7 @@
   color: var(--text-muted);
 }
 .feuille-ligne.is-active {
-  color: var(--brand);
+  color: var(--lien);
   font-weight: 600;
 }
 .feuille-ligne--alerte,
@@ -415,7 +415,7 @@
 .cal-cellule-table {
   border-collapse: separate;
   border-spacing: 2px;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
 }
 .cal-cellule-table th {
   font-weight: 600;
@@ -429,11 +429,11 @@
 }
 .cal-cellule-table thead th span {
   display: block;
-  font-size: 0.62rem;
+  font-size: var(--t-12);
   opacity: 0.7;
 }
 .cal-cellule-table thead th.is-periode {
-  color: var(--brand);
+  color: var(--lien);
 }
 .cal-nom {
   position: sticky;
@@ -477,7 +477,7 @@ tr.is-demandeur .cal-nom {
   align-items: center;
   gap: 0.3rem 0.5rem;
   margin: 0;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
 }
 .cal-puce {
@@ -506,7 +506,7 @@ tr.is-demandeur .cal-nom {
   align-items: center;
   gap: 0.6rem;
   min-height: 2.5rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.15em;
 }
 
@@ -665,9 +665,9 @@ tr.is-demandeur .cal-nom {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-style: normal;
-  font-weight: 700;
+  font-weight: 600;
 }
 /* Mon temps · le mois jour par jour (19/10/2026). */
 .tc-grille {
@@ -677,8 +677,8 @@ tr.is-demandeur .cal-nom {
 }
 .tc-entete {
   padding-bottom: 0.15rem;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   color: var(--text-muted);
   text-align: center;
 }
@@ -717,7 +717,7 @@ tr.is-demandeur .cal-nom {
   box-shadow: 0 0 0 2px color-mix(in oklch, var(--brand) 25%, transparent);
 }
 .tc-numero {
-  font-weight: 700;
+  font-weight: 600;
 }
 .tc-valeur {
   justify-self: end;
@@ -760,7 +760,7 @@ tr.is-demandeur .cal-nom {
   .tc-jour {
     min-height: 2.8rem;
     padding: 0.25rem;
-    font-size: 0.68rem;
+    font-size: var(--t-12);
   }
   .tc-jour--absence .tc-valeur,
   .tc-jour--ferie .tc-valeur {
@@ -778,8 +778,8 @@ tr.is-demandeur .cal-nom {
   border-radius: 999px;
   background: var(--pill-risque);
   color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   line-height: 1;
   vertical-align: middle;
 }
@@ -1020,13 +1020,13 @@ tr.is-demandeur .cal-nom {
   font-weight: 600;
 }
 .mt-filtre-aide {
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
 }
 .mt-filtre-compte {
   flex: none;
   font-size: 1.45rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: color-mix(in oklch, var(--ton) 85%, var(--text));
@@ -1267,7 +1267,7 @@ tr.is-demandeur .cal-nom {
 }
 .mt-calme .mt-calme-titre {
   font-size: 0.98rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
 }
 .mt-groupe + .mt-groupe,
@@ -1282,8 +1282,8 @@ tr.is-demandeur .cal-nom {
   gap: 0.5rem;
   margin: 0;
   padding: 0.85rem 0.9rem 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -1423,7 +1423,7 @@ tr.is-demandeur .cal-nom {
   color: var(--text);
 }
 .mt-echeance-date {
-  font-size: 0.74rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
 }
 .mt-action {
@@ -1465,7 +1465,7 @@ tr.is-demandeur .cal-nom {
 .mt-accueil-titre {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .mt-accueil-sous {
   margin: 0.15rem 0 0;
@@ -1489,7 +1489,7 @@ tr.is-demandeur .cal-nom {
   cursor: pointer;
 }
 .mt-titre-bouton:hover {
-  color: var(--brand);
+  color: var(--lien);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1544,7 +1544,7 @@ tr.is-demandeur .cal-nom {
   border-bottom-width: 2px;
   border-radius: 5px;
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   color: var(--text);
 }
@@ -1591,10 +1591,10 @@ tr.is-demandeur .cal-nom {
   border: 0;
   border-radius: 999px;
   background: color-mix(in oklch, var(--brand) 12%, transparent);
-  color: var(--brand);
+  color: var(--lien);
   font: inherit;
   font-size: 0.86rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .mt-toast-annuler:hover {
@@ -1634,7 +1634,7 @@ tr.is-demandeur .cal-nom {
   }
 }
 .mt-groupe-titre--projet {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   letter-spacing: 0.02em;
   text-transform: none;
   font-size: 0.78rem;
@@ -1732,7 +1732,7 @@ tr.is-demandeur .cal-nom {
 .dmd-proposition {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--lien);
 }
 .rh-decisions {
   flex-wrap: wrap;

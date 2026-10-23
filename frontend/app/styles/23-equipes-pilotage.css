@@ -66,8 +66,8 @@
   font-size: 1.15rem;
 }
 .eq-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 600;
   color: color-mix(in srgb, var(--iris) 55%, var(--text));
 }
 .eq-badges {
@@ -161,8 +161,8 @@
   justify-content: center;
   background: var(--brand-gradient) center / cover no-repeat;
   color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
 }
 .eq-avatar--modifiable {
   cursor: pointer;
@@ -200,7 +200,7 @@
 }
 .eq-pct {
   color: color-mix(in srgb, #7fd4a0 70%, var(--text));
-  font-weight: 700;
+  font-weight: 600;
 }
 .eq-affectation {
   min-width: 0;
@@ -225,7 +225,7 @@
 }
 .eq-creer-grille label > span {
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .eq-creer-large {
   grid-column: 1 / -1;
@@ -237,8 +237,8 @@
   padding: 0 0.85rem;
   border-radius: 10px;
   background: color-mix(in srgb, var(--iris) 14%, transparent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 .eq-creer-bouton {
   justify-self: start;
@@ -251,7 +251,7 @@
 }
 .eq-format {
   color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 .eq-nomenclature dl {
   display: grid;
@@ -625,8 +625,8 @@
 .pi-ligne--tete {
   padding-block: 0.2rem;
   color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -663,7 +663,7 @@
 }
 .pi-instance small {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: var(--t-12);
 }
 .pi-rattachement {
   display: block;
@@ -743,7 +743,7 @@
 }
 .pi-tendance-mois {
   fill: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--t-12);
 }
 .pi-progression {
   display: flex;
@@ -792,7 +792,7 @@
 }
 .pi-rubriques dd {
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .pi-deposer {
@@ -897,7 +897,7 @@
 .fin-carte-titre {
   margin: 0;
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .fin-carte-sous-titre {
   margin: 0.2rem 0 0;
@@ -942,7 +942,7 @@
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 50%;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.9rem;
 }
 .fin-compteur--non-echue {
@@ -1075,7 +1075,7 @@
 .fin-ventes-total {
   margin: 0.4rem 0 0;
   font-size: 1.9rem;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 .fin-ventes-mois {
@@ -1083,7 +1083,7 @@
   /* Assombri en clair, éclairci en sombre : lisible sur les deux thèmes. */
   color: color-mix(in srgb, var(--fin-vert) 65%, var(--text));
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 .fin-histo {
@@ -1107,7 +1107,7 @@
   left: 0;
   bottom: -0.45rem;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
 }
 .fin-histo-barres {
   position: relative;

@@ -128,7 +128,7 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
         />
         {erreur && (
           <p id={ID_ERREUR} className="auth-erreur" role="alert">
-            <CircleAlert size={17} strokeWidth={2} aria-hidden />
+            <CircleAlert size={17} aria-hidden />
             {erreur}
           </p>
         )}

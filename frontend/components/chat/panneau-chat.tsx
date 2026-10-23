@@ -125,7 +125,7 @@ export function PanneauChat({
             onClick={onRetourListe}
             aria-label="Retour à la liste"
           >
-            <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+            <ChevronLeft size={18} aria-hidden />
           </button>
         ) : null}
         <div className="pchat-tete-txt">
@@ -152,7 +152,7 @@ export function PanneauChat({
             aria-label="Nouvelle conversation"
             title="Nouvelle conversation"
           >
-            <Plus size={18} strokeWidth={2} />
+            <Plus size={18} />
           </button>
         )}
         <button
@@ -161,7 +161,7 @@ export function PanneauChat({
           onClick={onFermer}
           aria-label="Fermer les messages"
         >
-          <X size={18} strokeWidth={1.75} />
+          <X size={18} />
         </button>
       </header>
 
@@ -200,7 +200,7 @@ export function PanneauChat({
                   title="Fiche contact"
                   onClick={() => setFiche(m.utilisateurId)}
                 >
-                  <Info size={16} strokeWidth={1.75} />
+                  <Info size={16} />
                 </button>
               </li>
             ))
@@ -308,7 +308,7 @@ export function PanneauChat({
                 disabled={!brouillon.trim() || envoiEnCours}
                 aria-label="Envoyer"
               >
-                <SendHorizonal size={17} strokeWidth={2} aria-hidden />
+                <SendHorizonal size={17} aria-hidden />
               </button>
             </form>
           )}

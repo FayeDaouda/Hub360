@@ -26,5 +26,5 @@ const DEFAULT_ICON: LucideIcon = Briefcase;
 
 export function SocieteIcon({ icone, className }: { icone: string | null; className?: string }) {
   const Icon = (icone && ICONS[icone]) || DEFAULT_ICON;
-  return <Icon className={className} strokeWidth={1.75} />;
+  return <Icon className={className} />;
 }

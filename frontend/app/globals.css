@@ -5,7 +5,8 @@
    octet). Un nouveau style va dans le fichier de son domaine ; une règle qui
    doit en surcharger une autre va dans un fichier importé après elle.
    Les jetons (couleurs, typo, espacements, rayons, ombres, mouvement) sont
-   en tête de 01-fondations.css. */
+   dans 00-jetons.css. */
+@import './styles/00-jetons.css';
 @import './styles/01-fondations.css';
 @import './styles/02-acces.css';
 @import './styles/03-groupe.css';

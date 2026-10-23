@@ -91,7 +91,7 @@ export function ContenuAcces({
             {ATOUTS.map(({ Icone, titre, texte }) => (
               <li key={titre} className="auth-atout">
                 <span className="auth-atout-icone">
-                  <Icone size={18} strokeWidth={1.75} aria-hidden />
+                  <Icone size={18} aria-hidden />
                 </span>
                 <span className="auth-atout-texte">
                   <strong>{titre}</strong>

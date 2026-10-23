@@ -148,7 +148,7 @@ export default function FacturationPage({ params }: Props) {
   return (
     <>
       <Link href={retour} className="lien-retour lien-retour--facturation">
-        <ArrowLeft size={15} strokeWidth={2} aria-hidden />
+        <ArrowLeft size={15} aria-hidden />
         <span>Finances</span>
       </Link>
 
@@ -169,7 +169,7 @@ export default function FacturationPage({ params }: Props) {
               </span>
               <h2>
                 <span className="module-icone module-icone--facturation" aria-hidden>
-                  <ReceiptText size={17} strokeWidth={1.75} />
+                  <ReceiptText size={17} />
                 </span>
                 Facturation client
               </h2>
@@ -525,7 +525,7 @@ export default function FacturationPage({ params }: Props) {
                                   disabled={busy}
                                   onClick={() => setEditId(f.id)}
                                 >
-                                  <Pencil size={12} strokeWidth={2} aria-hidden /> Modifier
+                                  <Pencil size={12} aria-hidden /> Modifier
                                 </button>
                               )}
                               {a.emissible && (
@@ -545,7 +545,7 @@ export default function FacturationPage({ params }: Props) {
                                     }
                                   }}
                                 >
-                                  <Send size={12} strokeWidth={2} aria-hidden /> Émettre
+                                  <Send size={12} aria-hidden /> Émettre
                                 </button>
                               )}
                               {a.encaissable && (
@@ -555,7 +555,7 @@ export default function FacturationPage({ params }: Props) {
                                   disabled={busy}
                                   onClick={() => setPaiementsId(f.id)}
                                 >
-                                  <Wallet size={12} strokeWidth={2} aria-hidden /> Paiements
+                                  <Wallet size={12} aria-hidden /> Paiements
                                   {f.paiements.length > 0 && ` (${f.paiements.length})`}
                                 </button>
                               )}
@@ -567,7 +567,7 @@ export default function FacturationPage({ params }: Props) {
                               )}
                               {a.annulable && !f.avoirEnAttente && (
                                 <button type="button" className="lien-inline" disabled={busy} onClick={() => setAvoirPour(f)}>
-                                  <Undo2 size={12} strokeWidth={2} aria-hidden /> Avoir
+                                  <Undo2 size={12} aria-hidden /> Avoir
                                 </button>
                               )}
                               {a.modifiable && (
@@ -583,7 +583,7 @@ export default function FacturationPage({ params }: Props) {
                                     }
                                   }}
                                 >
-                                  <Trash2 size={12} strokeWidth={2} aria-hidden />
+                                  <Trash2 size={12} aria-hidden />
                                 </button>
                               )}
                             </span>
@@ -819,7 +819,7 @@ function CreationFacture({
               disabled={busy || !Number(montant)}
               onClick={soumettreUnique}
             >
-              <Plus size={15} strokeWidth={2} aria-hidden /> Créer le brouillon
+              <Plus size={15} aria-hidden /> Créer le brouillon
             </button>
           </div>
         </>
@@ -898,7 +898,7 @@ function CreationFacture({
               }
               onClick={soumettreEcheancier}
             >
-              <Plus size={15} strokeWidth={2} aria-hidden /> Créer l’échéancier
+              <Plus size={15} aria-hidden /> Créer l’échéancier
             </button>
           </div>
         </>
@@ -1116,7 +1116,7 @@ function ModalePaiements({
                           setMotif('');
                         }}
                       >
-                        <Trash2 size={12} strokeWidth={2} aria-hidden />
+                        <Trash2 size={12} aria-hidden />
                       </button>
                     </td>
                   </tr>
@@ -1214,7 +1214,7 @@ function ModalePaiements({
               disabled={busy || !Number(montant)}
               onClick={ajouter}
             >
-              <Plus size={15} strokeWidth={2} aria-hidden /> Ajouter le versement
+              <Plus size={15} aria-hidden /> Ajouter le versement
             </button>
           </div>
         </div>

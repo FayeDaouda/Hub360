@@ -1,0 +1,223 @@
+/* ==========================================================================
+   Jetons de hub360° — source unique des couleurs, de la typographie, des
+   espacements, des rayons, des ombres et du mouvement.
+   Direction « flashy maîtrisé » (audit UX + planche de style, 23/10/2026) :
+   le fond liquide et le verre restent la signature ; au-dessus, une seule
+   couleur d'action (indigo dérivé du logo), des couleurs de statut réservées
+   aux statuts, des neutres teintés indigo et Geist pour lire les montants.
+   Contrastes mesurés (WCAG) : tout texte ≥ 4,5:1 sur sa surface, dans les
+   deux thèmes.
+
+   Les anciens noms (--argile, --iris, --sauge, --ocre, --text-muted…) sont
+   gardés comme alias : tout le code qui les consomme se re-thème sans être
+   réécrit. Pour du nouveau code, préférer les noms sémantiques
+   (--action, --lien, --ok-texte, --surface-2, --t-14, --e-16, --r-10…).
+
+   Points de rupture (les media queries ne lisent pas les variables) :
+   560 px (petit téléphone) · 720 px (coque mobile) · 1100 px (tablette,
+   colonnes qui s'empilent) · 1440 px (grand écran).
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* --- Neutres teintés indigo ------------------------------------------- */
+  --bg: #f6f6fa;
+  --surface: #ffffff;
+  --surface-2: #eff0f6; /* survol, champs, pistes de jauge */
+  --border: #e4e5ee;
+  --border-hover: #d3d5e2;
+  --text: #12152a;
+  --text-muted: #5a6080; /* secondaire — 6,1:1 sur la surface */
+  --text-subtle: #62678a; /* discret : méta, aides — 5,5:1 */
+  --encre: #12152a;
+  --sable: #f6f6fa;
+
+  /* --- Action : un seul indigo (boutons pleins, liens, nav active, focus) */
+  --action: #5b5be8; /* texte blanc dessus : 5,1:1 */
+  --action-survol: #4b49d6;
+  --action-texte: #ffffff;
+  --lien: #4b49d6; /* lien / texte d'action sur la surface : 6,5:1 */
+  --focus: #5e5ce6;
+  /* Alias historiques : Argile (accent CTA) et Iris (marque, liens) sont
+     fusionnés dans l'indigo d'action — le magenta ne vient pas du logo. */
+  --argile: var(--action);
+  --argile-fonce: #2a2870; /* texte sur fond teinté, fin de dégradé */
+  --argile-tint: #ebebfc;
+  --iris: var(--action);
+  --iris-fonce: #2a2870;
+  --iris-tint: #ebebfc;
+  --brand: var(--action);
+  --accent: var(--action);
+  --accent-fort: var(--argile-fonce);
+
+  /* --- Statuts, réservés aux statuts ------------------------------------
+     Base (aplat, teinte) + texte lisible sur la surface du thème. */
+  --ok: #1a7f5a; /* validé, payé, complet */
+  --ok-texte: #16754f;
+  --attention: #d99a1e; /* échéance proche — jamais de texte blanc dessus */
+  --attention-texte: #8a5a00;
+  --danger: #d3343a; /* retard, refus — texte blanc dessus : 4,9:1 */
+  --danger-texte: #c9303a;
+  --info: #06b6d4; /* en cours, en validation (bleu-vert du logo) */
+  --info-texte: #0e7490;
+  /* Alias historiques */
+  --sauge: var(--ok);
+  --sauge-fonce: #0f4d37;
+  --sauge-tint: #e4f2ec;
+  --ocre: var(--attention);
+  --ocre-fonce: oklch(30% 0.09 82);
+  --ocre-tint: oklch(95% 0.025 82);
+  --turquoise: var(--info);
+  --turquoise-fonce: oklch(34% 0.1 200);
+  --turquoise-tint: oklch(95% 0.025 200);
+
+  /* --- Catégories (accents ponctuels, toujours avec un libellé) ---------
+     Inchangées pour l'instant ; à recalibrer loin des teintes de statut
+     quand une catégorie en a besoin (cf. planche de style). */
+  --azur: oklch(52% 0.18 255);
+  --azur-fonce: oklch(28% 0.13 255);
+  --azur-tint: oklch(95% 0.025 255);
+  --mandarine: oklch(62% 0.19 45);
+  --mandarine-fonce: oklch(32% 0.13 45);
+  --mandarine-tint: oklch(95% 0.025 45);
+  --jade: oklch(54% 0.13 172);
+  --jade-fonce: oklch(30% 0.095 172);
+  --jade-tint: oklch(95% 0.025 172);
+  --fuchsia: oklch(56% 0.21 325);
+  --fuchsia-fonce: oklch(30% 0.15 325);
+  --fuchsia-tint: oklch(95% 0.025 325);
+  --corail: oklch(64% 0.19 18);
+  --corail-fonce: oklch(32% 0.13 18);
+  --corail-tint: oklch(95% 0.025 18);
+  /* Exception scopée à la checkbox de checklist avant-projet. */
+  --bleu: #2563eb;
+
+  /* --- Marque hub360° : les 4 pétales du logo ---------------------------
+     Logo, portail, atmosphère, comparaison de séries dans les graphiques —
+     jamais un bouton ni un statut. Chaque société garde son propre logo. */
+  --violet-hub: #4f6bff;
+  --jaune-hub: #ffd02e;
+  --orange-hub: #ff7a3c;
+  --cyan-hub: #06b6d4;
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--azur),
+    var(--turquoise),
+    oklch(72% 0.16 150),
+    oklch(85% 0.15 95),
+    var(--mandarine)
+  );
+  --hub-logo-encre: #040712;
+  --hub-logo-exposant: #6c3889;
+
+  /* --- Back-office ------------------------------------------------------ */
+  --admin-surface: var(--surface);
+  --admin-fond: #f3f3f8;
+  --admin-bordure: var(--border);
+  --admin-texte-doux: var(--text-muted);
+  --admin-accent: var(--action);
+
+  /* --- Verre (chrome : barres, menus, modales) --------------------------- */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(18, 21, 42, 0.08);
+  --glass-sheen: rgba(255, 255, 255, 0.55);
+  --glass-sheen-faible: rgba(255, 255, 255, 0.15);
+  --glass-ombre: rgba(30, 30, 90, 0.12);
+
+  /* --- Typographie : Geist partout, 7 tailles, 3 graisses (400/500/600) - */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+  /* Titres et gros chiffres : même famille (un seul jeton à changer si une
+     police de marque sous licence complète arrive pour le portail). */
+  --font-titre: var(--font-sans);
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --t-12: 0.75rem; /* minimum : méta, libellés en capitales */
+  --t-13: 0.8125rem;
+  --t-14: 0.875rem; /* texte courant de l'application */
+  --t-16: 1rem;
+  --t-20: 1.25rem;
+  --t-24: 1.5rem;
+  --t-32: 2rem; /* gros chiffres */
+  --t-display: clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem);
+
+  /* --- Espacements (base 4 px) ----------------------------------------- */
+  --e-4: 4px;
+  --e-8: 8px;
+  --e-12: 12px;
+  --e-16: 16px;
+  --e-24: 24px;
+  --e-32: 32px;
+  --e-48: 48px;
+
+  /* --- Rayons ----------------------------------------------------------- */
+  --r-6: 6px; /* chips, badges */
+  --r-10: 10px; /* champs, boutons */
+  --r-14: 14px; /* cartes */
+  --r-20: 20px; /* panneaux */
+  --radius-md: var(--r-14);
+  --radius-lg: var(--r-20);
+
+  /* --- Profondeur : ombres douces teintées indigo en clair -------------- */
+  --ombre-1: 0 1px 2px rgba(40, 40, 120, 0.06);
+  --ombre-2: 0 1px 2px rgba(40, 40, 120, 0.06), 0 10px 28px rgba(60, 60, 160, 0.09);
+  --ombre-3: 0 2px 6px rgba(40, 40, 120, 0.08), 0 24px 56px rgba(60, 60, 160, 0.16);
+  --shadow-sm: var(--ombre-1);
+  --shadow-md: var(--ombre-2);
+
+  /* --- Mouvement : 3 durées, une seule courbe, rien qui rebondit -------- */
+  --duree-court: 120ms; /* survol, appui */
+  --duree-moyen: 200ms; /* menus, onglets */
+  --duree-long: 320ms; /* panneaux, modales */
+  --courbe: cubic-bezier(0.2, 0, 0, 1);
+
+  /* --- Atmosphère du back-office : halos atténués de moitié ------------- */
+  --atmosphere-op: 0.07;
+}
+
+/* --- Mode sombre (thème par défaut) --------------------------------------
+   Bascule par attribut sur <html> (lib/theme.ts), pas par
+   prefers-color-scheme : préférence choisie et mémorisée par la personne.
+   Ne redéfinit que ce qui change d'un thème à l'autre. --surface reste une
+   couleur PLEINE : modales, menus et tableaux la supposent opaque. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0e1a;
+  --surface: #12162a;
+  --surface-2: #1a1f36;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  --text: #eceef6;
+  --text-muted: #a3a9c2; /* 7,7:1 */
+  --text-subtle: #858cab; /* 5,4:1 */
+
+  --action-survol: #4e4edb;
+  --lien: #8b8dff; /* 6,3:1 */
+  --focus: #8b8dff;
+
+  --ok-texte: #4ade9f;
+  --attention-texte: #f2b640;
+  --danger-texte: #ff6b70;
+  --info-texte: #4fd1e8;
+
+  --hub-logo-encre: #ffffff;
+  --hub-logo-exposant: #0394b9;
+
+  --admin-fond: #0b0e1a;
+  --admin-surface: #12162a;
+  --admin-bordure: rgba(255, 255, 255, 0.1);
+  --admin-texte-doux: #a3a9c2;
+
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-sheen: rgba(255, 255, 255, 0.3);
+  --glass-sheen-faible: rgba(255, 255, 255, 0.06);
+  --glass-ombre: rgba(0, 0, 0, 0.32);
+
+  /* En sombre, la profondeur vient surtout des liserés et des surfaces. */
+  --ombre-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --ombre-2: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --ombre-3: 0 24px 56px rgba(0, 0, 0, 0.5);
+
+  --atmosphere-op: 0.18;
+}

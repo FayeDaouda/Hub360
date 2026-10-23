@@ -32,7 +32,7 @@ export function RechercheGlobale({ slug }: { slug: string }) {
   return (
     <>
       <button type="button" className="admin-search recherche-declencheur" aria-label="Rechercher" onClick={() => setOuvert(true)}>
-        <Search size={15} strokeWidth={1.75} aria-hidden />
+        <Search size={15} aria-hidden />
         <span className="recherche-declencheur-texte">Rechercher…</span>
         <kbd className="recherche-raccourci">{mac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
@@ -104,7 +104,7 @@ function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => vo
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal recherche-palette" role="dialog" aria-modal="true" aria-label="Recherche" onClick={(e) => e.stopPropagation()} onKeyDown={onKeyDown}>
         <div className="champ-recherche recherche-champ">
-          <Search size={16} strokeWidth={1.75} aria-hidden />
+          <Search size={16} aria-hidden />
           <input
             ref={champ}
             type="search"
@@ -117,7 +117,7 @@ function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => vo
             aria-activedescendant={ordonnes[actif] ? `recherche-${ordonnes[actif].id}` : undefined}
           />
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </div>
         <div id="recherche-resultats" className="recherche-resultats" role="listbox" aria-label="Résultats">

@@ -51,7 +51,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
         <header className="modal-header">
           <h2 id="clo-titre">Clôtures mensuelles</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="modal-body clo-corps">

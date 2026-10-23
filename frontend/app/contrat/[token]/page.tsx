@@ -119,7 +119,7 @@ export default function ContratPublicPage({ params }: Props) {
               <div className="contrat-texte">{contrat.contenu}</div>
             ) : contrat.document ? (
               <button type="button" className="lien-inline" onClick={() => telecharger('document')}>
-                <Download size={13} strokeWidth={2} aria-hidden /> {contrat.document.nom}
+                <Download size={13} aria-hidden /> {contrat.document.nom}
               </button>
             ) : null}
             <p className="field-aide">
@@ -139,7 +139,7 @@ export default function ContratPublicPage({ params }: Props) {
                       <span className="cell-sub">ci-dessus</span>
                     ) : a.fichierNom ? (
                       <button type="button" className="lien-inline" onClick={() => telecharger(a.id)}>
-                        <Download size={13} strokeWidth={2} aria-hidden /> {a.fichierNom}
+                        <Download size={13} aria-hidden /> {a.fichierNom}
                       </button>
                     ) : null}
                   </li>
@@ -149,7 +149,7 @@ export default function ContratPublicPage({ params }: Props) {
 
           {contrat.statut === 'signe' ? (
             <p className="devis-public-message">
-              <CheckCircle2 size={16} strokeWidth={2} aria-hidden /> Contrat signé
+              <CheckCircle2 size={16} aria-hidden /> Contrat signé
               {contrat.signeLe ? ` le ${formatDate(contrat.signeLe)}` : ''}. Merci — l’équipe revient
               vers vous pour la suite.
             </p>

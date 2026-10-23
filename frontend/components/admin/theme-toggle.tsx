@@ -58,7 +58,7 @@ export function ThemeToggle() {
         title="Mode d’affichage"
         onClick={() => setOuvert((o) => !o)}
       >
-        {sombre ? <Moon size={16} strokeWidth={1.75} /> : <Sun size={16} strokeWidth={1.75} />}
+        {sombre ? <Moon size={16} /> : <Sun size={16} />}
       </button>
 
       {ouvert && (
@@ -76,7 +76,7 @@ export function ThemeToggle() {
                 title={libelle}
                 onClick={() => choisir(valeur)}
               >
-                <Icone size={17} strokeWidth={2} aria-hidden />
+                <Icone size={17} aria-hidden />
               </button>
             ))}
           </div>

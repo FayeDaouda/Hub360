@@ -62,7 +62,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
         <header className="modal-header">
           <h2 id="rtp-titre">Paramètres de la rentabilité</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={() => onClose(modifie)}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="modal-body rtp-corps">

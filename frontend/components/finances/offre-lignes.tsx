@@ -152,7 +152,7 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
               <span role="cell" data-label="Prix unitaire" className="offre-prix">
                 {p && !p.prixModifiable ? (
                   <>
-                    <Lock size={12} strokeWidth={2} aria-label="Prix du catalogue figé" />
+                    <Lock size={12} aria-label="Prix du catalogue figé" />
                     {formatMontant(Number(l.prixUnitaire) || 0)}
                     {p.unite && PAR_UNITE[p.unite] && <small>{PAR_UNITE[p.unite]}</small>}
                   </>
@@ -180,7 +180,7 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
                   disabled={lignes.length === 1}
                   onClick={() => changer(lignes.filter((_, idx) => idx !== i))}
                 >
-                  <X size={14} strokeWidth={2} />
+                  <X size={14} />
                 </button>
               </span>
             </div>
@@ -188,7 +188,7 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
         })}
       </div>
       <button type="button" className="offre-ajouter" onClick={() => changer([...lignes, ligneVide()])}>
-        <Plus size={14} strokeWidth={2} aria-hidden /> Ajouter une prestation
+        <Plus size={14} aria-hidden /> Ajouter une prestation
       </button>
       <p className="offre-aide">
         Calcul automatique : total HT = prix unitaire × surface du terrain (m²) × quantité (planches) pour la conception ;

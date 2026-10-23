@@ -78,7 +78,7 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
         <header className="modal-header">
           <h2 id="modal-titre-catalogue">Catalogue produits / services</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 
@@ -112,7 +112,7 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
                           disabled={busy}
                           onClick={() => retirer(p.id)}
                         >
-                          <Trash2 size={12} strokeWidth={2} aria-hidden />
+                          <Trash2 size={12} aria-hidden />
                         </button>
                       </td>
                     </tr>
@@ -164,7 +164,7 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
                 Fermer
               </button>
               <button type="submit" className="btn-primary" disabled={busy}>
-                <Plus size={15} strokeWidth={2} aria-hidden /> Ajouter au catalogue
+                <Plus size={15} aria-hidden /> Ajouter au catalogue
               </button>
             </div>
           </form>

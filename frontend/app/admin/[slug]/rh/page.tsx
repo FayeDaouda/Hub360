@@ -299,10 +299,10 @@ export default function RhPage({ params }: Props) {
           <span className="rh-entete-actions">
             {/* Tous les bulletins du mois en une fois (revue RH 20/10/2026). */}
             <button type="button" className="btn-ghost" onClick={() => setDepotBulletins(true)}>
-              <FileStack size={16} strokeWidth={2} aria-hidden /> Bulletins du mois
+              <FileStack size={16} aria-hidden /> Bulletins du mois
             </button>
             <button type="button" className="btn-primary" onClick={() => setOuvert('nouveau')}>
-              <Plus size={16} strokeWidth={2} aria-hidden /> Nouveau salarié
+              <Plus size={16} aria-hidden /> Nouveau salarié
             </button>
           </span>
         )}
@@ -689,7 +689,7 @@ function FicheDossier({
             <span className="cell-sub">{sousTitre}</span>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 
@@ -871,7 +871,7 @@ function FicheDossier({
                     )}
                     {ecriture && (
                       <label className="btn-ghost btn-ghost--sm">
-                        <Paperclip size={14} strokeWidth={2} aria-hidden />
+                        <Paperclip size={14} aria-hidden />
                         {piece?.nom ? 'Remplacer' : 'Joindre'}
                         <input type="file" hidden onChange={(e) => joindre(p.type, e.target.files?.[0])} />
                       </label>
@@ -901,7 +901,7 @@ function FicheDossier({
                     />
                   </label>
                   <label className={`btn-ghost btn-ghost--sm${moisBulletin ? '' : ' is-disabled'}`}>
-                    <Paperclip size={14} strokeWidth={2} aria-hidden />
+                    <Paperclip size={14} aria-hidden />
                     {dossier.bulletins.some((b) => b.mois === moisBulletin) ? 'Remplacer le bulletin' : 'Déposer le bulletin'}
                     <input
                       type="file"

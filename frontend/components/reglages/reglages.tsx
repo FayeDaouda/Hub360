@@ -136,7 +136,7 @@ export function Reglages({ slug }: { slug: string }) {
             onClick={() => choisir(t.s)}
           >
             <span className="kpi-tuile-icone" aria-hidden>
-              <t.icone size={17} strokeWidth={2} />
+              <t.icone size={17} />
             </span>
             <span className="reg-tuile-label">{t.label}</span>
             <span className={`reg-tuile-valeur${t.alerte ? ' is-alerte' : ''}`}>{t.valeur}</span>

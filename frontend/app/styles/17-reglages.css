@@ -58,7 +58,7 @@
 }
 .reg-tuile-valeur {
   font-size: 1.6rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
@@ -88,7 +88,7 @@
     padding: calc(0.7rem - 1px) calc(0.8rem - 1px);
   }
   .reg-tuile-label {
-    font-size: 0.74rem;
+    font-size: var(--t-12);
   }
   .reg-tuile-valeur {
     font-size: 1.05rem;
@@ -153,7 +153,7 @@
 }
 .reg-ligne--tete {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -168,8 +168,8 @@
   padding-left: 1.25rem;
 }
 .reg-numero {
-  color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--lien);
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 .reg-numero--1 { color: var(--azur); }

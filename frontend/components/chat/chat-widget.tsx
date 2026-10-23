@@ -203,7 +203,7 @@ export function ChatWidget({
           }
         }}
       >
-        <MessageSquare size={17} strokeWidth={1.75} aria-hidden />
+        <MessageSquare size={17} aria-hidden />
         {total > 0 && <span className="admin-cloche-badge">{total}</span>}
       </button>
 

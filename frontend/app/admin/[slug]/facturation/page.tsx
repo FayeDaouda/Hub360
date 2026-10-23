@@ -297,33 +297,33 @@ export default function FinancesPage({ params }: Props) {
           </button>
           {validateur && (
             <button type="button" className="btn-ghost" onClick={() => setClotures(true)}>
-              <Lock size={15} strokeWidth={1.75} aria-hidden /> Clôtures
+              <Lock size={15} aria-hidden /> Clôtures
             </button>
           )}
           {paramsFacturation && (
             <button type="button" className="btn-ghost" onClick={() => setParametresOuverts(true)}>
-              <Settings2 size={15} strokeWidth={1.75} aria-hidden /> Paramètres de facturation
+              <Settings2 size={15} aria-hidden /> Paramètres de facturation
             </button>
           )}
           {validateur && (
             <button type="button" className="btn-ghost" disabled={!factures} onClick={() => setExportComptable(true)}>
-              <FileSpreadsheet size={15} strokeWidth={1.75} aria-hidden /> Export comptable
+              <FileSpreadsheet size={15} aria-hidden /> Export comptable
             </button>
           )}
           {droits.catalogue && (
             <button type="button" className="btn-ghost" onClick={() => setModalCatalogue(true)}>
-              <Package size={15} strokeWidth={1.75} aria-hidden /> Catalogue
+              <Package size={15} aria-hidden /> Catalogue
             </button>
           )}
           {droits.facturesEcriture && (
             <button type="button" className="btn-ghost" onClick={() => setNouvelle({})}>
-              <Plus size={15} strokeWidth={2} aria-hidden /> Nouvelle facture
+              <Plus size={15} aria-hidden /> Nouvelle facture
             </button>
           )}
           {droits.devisEcriture && (
             // Filtré sur un projet : devis complémentaire (TS) ; sinon offre d'un lead.
             <button type="button" className="btn-primary" onClick={() => (projetFiltre ? setModalDevis(true) : setOffre({}))}>
-              <Plus size={15} strokeWidth={2} aria-hidden /> Nouveau devis
+              <Plus size={15} aria-hidden /> Nouveau devis
             </button>
           )}
         </div>

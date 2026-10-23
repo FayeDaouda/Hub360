@@ -61,8 +61,8 @@
   border: none;
   background: none;
   color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 600;
   cursor: pointer;
 }
 .crm-code:focus-visible {
@@ -172,13 +172,13 @@
 }
 .fiche-crm-code {
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 1.6rem;
 }
 .fiche-crm-client {
   margin: 0.2rem 0 0;
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .fiche-crm-meta {
   margin: 0.25rem 0 0;
@@ -199,7 +199,7 @@
   margin: 0;
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -207,8 +207,8 @@
   padding: 0.25rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -295,7 +295,7 @@
   margin: 0;
 }
 .fiche-crm-valeur {
-  font-weight: 700;
+  font-weight: 600;
 }
 .fiche-crm-aide {
   margin: 0;
@@ -317,18 +317,18 @@
 }
 .fiche-crm-apporteur dt {
   color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 .fiche-crm-apporteur dd {
   margin: 0.2rem 0 0;
-  font-weight: 700;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .fiche-crm-pourcent {
-  color: var(--accent);
+  color: var(--lien);
   font-size: 1.25rem;
 }
 .fiche-crm-passation {
@@ -384,7 +384,7 @@
 }
 .fiche-crm-sous-titre {
   margin: 0.2rem 0 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 .fiche-crm .field-input.is-manquant {
   border-color: var(--ocre);
@@ -398,9 +398,9 @@
   min-height: 2.6rem;
 }
 .fiche-crm-code-loc {
-  color: var(--accent);
+  color: var(--lien);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .crm-a-choisir {
   border: 1px solid var(--ocre);
@@ -423,7 +423,7 @@
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: not-allowed;
 }
 .fiche-crm-archive {
@@ -468,7 +468,7 @@
     justify-self: center;
   }
   .fiche-crm-etapes li {
-    font-size: 0.72rem;
+    font-size: var(--t-12);
   }
 }
 

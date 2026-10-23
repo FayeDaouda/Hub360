@@ -222,7 +222,7 @@ a.admin-nav-item:hover {
 }
 
 .admin-nav-btn {
-  color: var(--argile);
+  color: var(--lien);
 }
 /* « Aide » est un bouton comme « Se déconnecter », sans sa couleur d'alerte. */
 .admin-nav-btn.admin-nav-btn--neutre {
@@ -243,7 +243,7 @@ a.admin-nav-item:hover {
 .admin-nav-tag {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 0.6rem;
+  font-size: var(--t-12);
   color: var(--sidebar-text-muted);
   border: 1px solid var(--sidebar-border);
   border-radius: 999px;
@@ -510,7 +510,7 @@ a.admin-nav-item:hover {
   border: 1px solid var(--glass-border);
   border-radius: 6px;
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
 }
 @media (max-width: 720px) {
@@ -557,8 +557,8 @@ a.admin-nav-item:hover {
 .recherche-groupe {
   margin: 0.5rem 0.5rem 0.25rem;
   color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -798,7 +798,7 @@ button:focus-visible .repli-badge {
 
 button:hover .repli-icone,
 button:focus-visible .repli-icone {
-  color: var(--argile);
+  color: var(--lien);
 }
 
 .repli-icone.est-replie {
@@ -838,18 +838,20 @@ button:focus-visible .repli-icone {
   flex-shrink: 0;
 }
 
-/* Pastilles de statut (refonte du 12/10/2026) — fond plein + texte blanc,
-   mêmes couleurs dans les deux thèmes. Une seule source : les variables
-   --pill-* ci-dessous ; une variante ne fait que choisir son --pill-fond.
-   Teintes foncées et adoucies, vérifiées : blanc ≥ 4,5:1 (AA) sur chacune,
-   et pastille ≥ 3:1 sur le fond sombre (#12162b) comme sur le clair. */
+/* Pastilles de statut — fond teinté + texte de la couleur du statut
+   (planche de style, 23/10/2026 ; remplace le fond plein + texte blanc du
+   12/10). Une seule source : les variables --pill-* ci-dessous ; une
+   variante ne fait que choisir son --pill-fond (teinte de base, foncée).
+   Clair : texte = teinte assombrie de 15 % sur fond teinté 12 % (≥ 5,1:1).
+   Sombre : texte = teinte éclaircie de 45 % sur fond teinté 16 % (≥ 6,4:1).
+   L'aplat plein est réservé à la seule tuile d'alerte d'un écran. */
 :root {
   /* 5 statuts */
-  --pill-succes: #2e7d4f; /* vert — fait, validé, dans l'objectif */
-  --pill-info: #346cb3; /* bleu — en cours, information */
-  --pill-attention: #9a5b00; /* ambre — à surveiller */
-  --pill-risque: #be4136; /* rouge — en retard, dépassé, hors objectif */
-  --pill-neutre: #687083; /* gris — à fixer, brouillon (indépendant du fond) */
+  --pill-succes: #1a7f5a; /* vert émeraude — fait, validé, dans l'objectif */
+  --pill-info: #0e7490; /* bleu-vert — en cours, information */
+  --pill-attention: #8a5a00; /* ambre — à surveiller */
+  --pill-risque: #c9303a; /* rouge — en retard, dépassé, hors objectif */
+  --pill-neutre: #5a6080; /* gris indigo — à fixer, brouillon */
   /* Matrice des rôles */
   --pill-aucun: #626979;
   --pill-lecture: #1d7480;
@@ -862,28 +864,42 @@ button:focus-visible .repli-icone {
   --pill-nature-promotion-interne: #8a6420;
   --pill-phase: #75695a;
   --pill-azur: #4463bd;
+  /* Rendu teinté, réglé par thème */
+  --pill-teinte: 12%;
+  --pill-encre: black 15%;
+  --pill-surface: var(--surface);
   /* Valeurs chiffrées (texte, pas de fond) : rouge hors objectif, vert
-     atteint — mêmes teintes que les pastilles, éclaircies en sombre. */
-  --valeur-risque: var(--pill-risque);
-  --valeur-succes: var(--pill-succes);
+     atteint — les couleurs de texte de statut du thème. */
+  --valeur-risque: var(--danger-texte);
+  --valeur-succes: var(--ok-texte);
 }
 :root[data-theme='dark'] {
-  --valeur-risque: #f2867b;
-  --valeur-succes: #6fcf97;
+  --pill-teinte: 16%;
+  --pill-encre: white 45%;
 }
 
 .pill {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 500;
   padding: 0.22rem 0.6rem;
   border-radius: 999px;
   white-space: nowrap;
-  background: var(--pill-fond, var(--pill-neutre));
-  color: #fff;
-  /* Documents imprimés (facture) : garder le fond, sinon texte blanc sur blanc. */
+  background: color-mix(in srgb, var(--pill-fond, var(--pill-neutre)) var(--pill-teinte), var(--pill-surface));
+  color: color-mix(in srgb, var(--pill-fond, var(--pill-neutre)), var(--pill-encre));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pill-fond, var(--pill-neutre)) 22%, transparent);
+  /* Documents imprimés (facture) : garder le fond teinté. */
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+}
+
+/* Papier (facture imprimée, offre) : clair dans les deux thèmes, donc
+   pastilles au rendu clair quel que soit le thème de l'application. */
+.fd,
+.offre-document {
+  --pill-surface: #ffffff;
+  --pill-teinte: 12%;
+  --pill-encre: black 15%;
 }
 
 .pill--succes {
@@ -933,7 +949,7 @@ button:focus-visible .repli-icone {
    pour garder sa forme sur un fond clair. À poser APRÈS les variantes. */
 .pill--sur-couleur {
   background: #fff;
-  color: var(--pill-fond, var(--pill-neutre));
+  color: color-mix(in srgb, var(--pill-fond, var(--pill-neutre)), black 15%);
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--pill-fond, var(--pill-neutre)) 35%, transparent);
 }
 
@@ -976,7 +992,7 @@ button:focus-visible .repli-icone {
 
 .admin-table th {
   text-align: left;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;

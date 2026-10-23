@@ -155,7 +155,7 @@ export function OffreDossier({
               className="lien-inline"
               onClick={() => navigator.clipboard?.writeText(lienEmis.lienPublic)}
             >
-              <Copy size={12} strokeWidth={2} aria-hidden /> Copier
+              <Copy size={12} aria-hidden /> Copier
             </button>
           </span>
           <button type="button" aria-label="Fermer" onClick={() => onLienEmis(null)}>

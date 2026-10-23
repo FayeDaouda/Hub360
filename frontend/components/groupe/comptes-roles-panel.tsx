@@ -114,7 +114,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
           </p>
           {societe && (
             <button type="button" className="btn-primary" style={{ marginTop: '0.75rem' }} onClick={() => setNouveau(true)}>
-              <Plus size={15} strokeWidth={2} aria-hidden /> Nouveau compte
+              <Plus size={15} aria-hidden /> Nouveau compte
             </button>
           )}
         </div>
@@ -375,7 +375,7 @@ function ActionsCompte({
               <header className="modal-header">
                 <h2>Invitation renvoyée</h2>
                 <button type="button" className="modal-close" aria-label="Fermer" onClick={() => setInvitation(null)}>
-                  <X size={18} strokeWidth={1.75} />
+                  <X size={18} />
                 </button>
               </header>
               <div className="modal-body">

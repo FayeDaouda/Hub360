@@ -1121,7 +1121,7 @@
   border: 1px dashed var(--border);
   border-radius: 10px;
   list-style: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.95rem;
 }
 .auth-df-retour {
@@ -1506,7 +1506,7 @@
   flex: none;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--auth-texte-doux);

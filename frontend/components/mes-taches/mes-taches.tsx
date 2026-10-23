@@ -495,7 +495,7 @@ export function MesTaches({ slug }: { slug: string }) {
                 onClick={() => choisirFiltre(f.cle)}
               >
                 <span className="mt-filtre-icone" aria-hidden>
-                  <f.icone size={16} strokeWidth={2} />
+                  <f.icone size={16} />
                 </span>
                 <span className="mt-filtre-texte">
                   <span className="mt-filtre-libelle">{f.libelle}</span>
@@ -543,7 +543,7 @@ export function MesTaches({ slug }: { slug: string }) {
 
           {!filtre && urgences === 0 && (
             <div className="mt-calme">
-              <CheckCircle2 size={28} strokeWidth={1.75} aria-hidden />
+              <CheckCircle2 size={28} aria-hidden />
               <div>
                 <p className="mt-calme-titre">Tout est à jour</p>
                 <p>Rien en retard, rien à reprendre, rien à rendre d’ici dimanche.</p>

@@ -30,7 +30,7 @@ export function AideGlobale({ session }: { session: Session }) {
   return (
     <>
       <button type="button" className="admin-icon-btn" aria-label="Aide et signalement d’un problème" title="Aide" onClick={() => setOnglet('guide')}>
-        <HelpCircle size={18} strokeWidth={1.75} />
+        <HelpCircle size={18} />
       </button>
       {onglet &&
         createPortal(<Panneau session={session} onglet={onglet} onOnglet={setOnglet} onClose={() => setOnglet(null)} />, document.body)}
@@ -51,7 +51,7 @@ function Panneau({ session, onglet, onOnglet, onClose }: { session: Session; ong
         <header className="modal-header">
           <h2 id="aide-titre">Aide</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="vue-toggle aide-onglets" role="tablist" aria-label="Aide">

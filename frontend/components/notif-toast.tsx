@@ -31,7 +31,7 @@ export function NotifToast({ notification, href, onFermer }: Props) {
 
   const corps = (
     <>
-      <Bell size={15} strokeWidth={1.75} aria-hidden />
+      <Bell size={15} aria-hidden />
       <span className="notif-toast-txt">{notification.titre}</span>
     </>
   );

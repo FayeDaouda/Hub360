@@ -76,7 +76,7 @@ export function ChampModal({
             onClick={onClose}
             disabled={enCours}
           >
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <form

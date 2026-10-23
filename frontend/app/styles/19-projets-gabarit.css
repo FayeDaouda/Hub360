@@ -37,18 +37,18 @@
 .po-kicker {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .po-kicker--code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   letter-spacing: 0.04em;
 }
 .po-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 .po-code--grand {
   font-size: 1.45rem;
@@ -73,7 +73,7 @@
   line-height: 1.1;
 }
 .po-ton--validation {
-  color: var(--iris);
+  color: var(--lien);
 }
 .po-ton--risque {
   color: var(--fuchsia);
@@ -361,7 +361,7 @@
   color: inherit;
   font: inherit;
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .po-fil-bouton:hover,
@@ -397,8 +397,8 @@
   font-size: 0.92rem;
 }
 .po-fil-mention {
-  color: var(--iris);
-  font-weight: 700;
+  color: var(--lien);
+  font-weight: 600;
 }
 .po-fil-reponse {
   margin-left: 0.75rem;
@@ -418,7 +418,7 @@
   color: var(--fuchsia);
   font: inherit;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .po-fil-texte {
@@ -435,7 +435,7 @@
 }
 .po-avance {
   color: var(--sauge);
-  font-weight: 700;
+  font-weight: 600;
 }
 :root[data-theme='dark'] .po-avance {
   color: color-mix(in oklch, var(--sauge) 55%, white);
@@ -507,7 +507,7 @@
   padding: 1.5rem;
 }
 .po-panneau-label {
-  font-weight: 700;
+  font-weight: 600;
 }
 /* Remise d'une tâche : fichiers + commentaire facultatifs. */
 .po-remise-champs {
@@ -539,7 +539,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--lien);
   font: inherit;
   text-align: left;
   text-decoration: underline;

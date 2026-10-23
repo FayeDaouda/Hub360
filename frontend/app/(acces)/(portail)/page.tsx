@@ -10,7 +10,7 @@ export default async function PortailPage() {
   if (societes.length === 0) {
     return (
       <p className="portail-vide">
-        <Building2 size={18} strokeWidth={1.75} aria-hidden />
+        <Building2 size={18} aria-hidden />
         Aucune société active pour le moment.
       </p>
     );

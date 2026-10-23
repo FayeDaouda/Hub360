@@ -230,7 +230,7 @@ export function DetailDossierModal({
             </p>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <DecisionsFiche slug={slug} cible={{ client: projet.client.id }} />
@@ -323,7 +323,7 @@ export function DetailDossierModal({
               <strong>{projet.creePar?.nom ?? 'Non renseigné'}</strong>
               <span className="fiche-crm-aide">automatique, non modifiable</span>
             </div>
-            <ArrowRight size={18} strokeWidth={2} aria-hidden className="fiche-crm-fleche" />
+            <ArrowRight size={18} aria-hidden className="fiche-crm-fleche" />
             <div className="fiche-crm-carte fiche-crm-carte--proprio">
               <span className="fiche-crm-aide">Propriétaire</span>
               {peutReassigner && !archive && proprietaires && proprietaires.length > 0 ? (
@@ -384,7 +384,7 @@ export function DetailDossierModal({
             </p>
             {!confirmerArchive ? (
               <button type="button" className="btn-ghost" onClick={() => setConfirmerArchive(true)}>
-                <Archive size={16} strokeWidth={1.75} aria-hidden /> Archiver ce lead
+                <Archive size={16} aria-hidden /> Archiver ce lead
               </button>
             ) : (
               <div className="fiche-crm-archive-confirmer" role="group" aria-label="Confirmer l’archivage">

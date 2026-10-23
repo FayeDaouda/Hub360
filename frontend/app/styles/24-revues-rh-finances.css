@@ -125,7 +125,7 @@
   }
   .admin-table.rh-table :is(.rh-matricule, .rh-c-contrat) {
     color: var(--text-muted);
-    font-size: 0.72rem;
+    font-size: var(--t-12);
   }
   .admin-table.rh-table .rh-matricule {
     grid-area: matricule;
@@ -190,7 +190,7 @@
   }
   .admin-table.temps-liste td.num::before {
     display: block;
-    font-size: 0.68rem;
+    font-size: var(--t-12);
     font-weight: 400;
     color: var(--text-muted);
   }
@@ -680,11 +680,11 @@
 }
 .tre-table td[data-tranche='plus90'] {
   color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
-  font-weight: 700;
+  font-weight: 600;
 }
 .tre-total,
 .tre-pied td {
-  font-weight: 700;
+  font-weight: 600;
 }
 .tre-detail > td {
   padding-top: 0;
@@ -921,7 +921,7 @@
   }
   .admin-table.fin-table tr.fin-ligne :is(.fl-ref, .fl-projet, .fl-date) {
     color: var(--text-muted);
-    font-size: 0.74rem;
+    font-size: var(--t-12);
   }
   .admin-table.fin-table tr.fin-ligne .fl-client strong {
     font-size: 0.95rem;
@@ -1420,7 +1420,7 @@
 .fd-raison {
   color: var(--fd-encre);
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .fd-titre {
   text-align: right;
@@ -1428,7 +1428,7 @@
 .fd-titre h1 {
   margin: 0;
   font-size: 1.7rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
@@ -1473,7 +1473,7 @@
 .fd-etiquette {
   margin-bottom: 0.3rem !important;
   color: var(--fd-doux);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1484,7 +1484,7 @@
 }
 .fd-client-nom {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .fd-adresse {
   white-space: pre-line;
@@ -1513,7 +1513,7 @@
   padding: 0.55rem 0.4rem;
   border-bottom: 1.5px solid var(--fd-encre);
   color: var(--fd-doux);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-align: left;
@@ -1557,10 +1557,10 @@
 }
 .fd-ttc dt {
   color: var(--fd-encre);
-  font-weight: 700;
+  font-weight: 600;
 }
 .fd-ttc dd {
-  font-weight: 800;
+  font-weight: 600;
 }
 .fd-lettres {
   padding: 0.7rem 0.9rem;
@@ -1610,7 +1610,7 @@
   padding-top: 0.9rem;
   border-top: 1px solid var(--fd-filet);
   color: var(--fd-doux);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   text-align: center;
 }
 /* Échéancier de l'offre à gauche, totaux à droite ; empilés sur mobile. */
@@ -1655,14 +1655,14 @@
 .fd-recap-presente th,
 .fd-recap-presente td {
   color: var(--fd-encre);
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
 /* Conditions : les CGV citées en page 1, en petit, avant le pied. */
 .fd-conditions {
   display: grid;
   gap: 0.25rem;
   color: var(--fd-doux);
-  font-size: 0.74rem;
+  font-size: var(--t-12);
   line-height: 1.45;
 }
 .fd-conditions strong {
@@ -1684,10 +1684,10 @@
 .fd-annexe h2 {
   margin: 0;
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .fd-articles {
-  font-size: 0.66rem;
+  font-size: var(--t-12);
   line-height: 1.4;
 }
 .fd-articles section {
@@ -1696,8 +1696,8 @@
 }
 .fd-articles h3 {
   margin: 0 0 0.1rem;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
 }
 .fd-articles p {
   margin: 0 0 0.12rem;
@@ -1709,7 +1709,7 @@
   padding-top: 0.6rem;
   border-top: 1px solid var(--fd-filet);
   color: var(--fd-doux);
-  font-size: 0.7rem;
+  font-size: var(--t-12);
   text-align: center;
 }
 /* Dans le panneau, l'annexe ne s'imprime qu'au téléchargement. */

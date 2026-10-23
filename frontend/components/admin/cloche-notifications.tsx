@@ -76,7 +76,7 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
         }
         onClick={basculer}
       >
-        <Bell size={18} strokeWidth={1.75} aria-hidden />
+        <Bell size={18} aria-hidden />
         {nonLues > 0 && <span className="admin-cloche-badge">{nonLues}</span>}
       </button>
 
@@ -98,9 +98,9 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
                 }}
               >
                 {son ? (
-                  <Volume2 size={15} strokeWidth={1.75} aria-hidden />
+                  <Volume2 size={15} aria-hidden />
                 ) : (
-                  <VolumeX size={15} strokeWidth={1.75} aria-hidden />
+                  <VolumeX size={15} aria-hidden />
                 )}
               </button>
               {nonLues > 0 && (

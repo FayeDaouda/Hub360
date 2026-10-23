@@ -51,7 +51,7 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
         <header className="modal-header">
           <h2 id="modal-titre-mdp">Mon compte</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 

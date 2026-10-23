@@ -59,7 +59,7 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
               return (
                 <li key={`${e.type}-${e.dossierId}`} className="at-rh-ligne" data-ton={e.ton}>
                   <span className="at-rh-icone" aria-hidden>
-                    <g.icone size={16} strokeWidth={2} />
+                    <g.icone size={16} />
                   </span>
                   <span className="at-rh-corps">
                     <strong>

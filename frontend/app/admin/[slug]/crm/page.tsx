@@ -256,7 +256,7 @@ export default function CrmPage({ params }: Props) {
         </div>
         {peutEcrire && (
           <button type="button" className="btn-primary" onClick={() => setModalOuvert(true)}>
-            <Plus size={16} strokeWidth={2} aria-hidden />
+            <Plus size={16} aria-hidden />
             <span>Nouveau projet</span>
           </button>
         )}
@@ -358,7 +358,7 @@ export default function CrmPage({ params }: Props) {
                 Registre des projets <span>{filtres.length}</span>
               </h2>
               <div className="champ-recherche crm-recherche">
-                <Search size={15} strokeWidth={1.75} aria-hidden />
+                <Search size={15} aria-hidden />
                 <input type="search" className="field-input" placeholder="Filtrer par code ou client" value={recherche} onChange={(e) => setRecherche(e.target.value)} />
               </div>
               <BoutonExport

@@ -69,7 +69,7 @@
   width: 100%;
   margin-top: 0.6rem;
   padding: 0.8rem 1rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
 }
 @media (max-width: 640px) {
@@ -221,7 +221,7 @@
 }
 .fin-mois td {
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   background: color-mix(in srgb, var(--text) 5%, transparent);
 }
@@ -233,7 +233,7 @@
   background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 .fin-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -297,8 +297,8 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--sauge) 18%, transparent);
   color: color-mix(in srgb, var(--sauge) 70%, var(--text));
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -342,7 +342,7 @@
   gap: 0.45rem;
   flex-shrink: 0;
   min-width: 9rem;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 .grille-prix svg {
@@ -352,7 +352,7 @@
   margin: 0.6rem 0 0.7rem;
   color: var(--text-muted);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -371,7 +371,7 @@
   font-size: 0.88rem;
 }
 .grille-societe dt {
-  font-weight: 700;
+  font-weight: 600;
 }
 .grille-societe dd {
   margin: 0;
@@ -413,7 +413,7 @@
   margin: 0;
   color: var(--text-muted);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -429,8 +429,8 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--iris) 22%, transparent);
   color: color-mix(in srgb, var(--iris) 55%, var(--text));
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -455,7 +455,7 @@
   background: none;
   color: var(--text-muted);
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .offre-bascule button.is-active {
@@ -465,7 +465,7 @@
 .offre-choix {
   display: grid;
   gap: 0.4rem;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.88rem;
 }
 .offre-choix small {
@@ -538,13 +538,13 @@
 }
 .offre-type {
   font-size: 1.7rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--papier-texte);
 }
 .offre-etiquette {
   color: var(--papier-gris);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -581,7 +581,7 @@
 }
 .offre-message small {
   color: var(--papier-gris);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
 }
 .offre-references {
   display: grid;
@@ -596,11 +596,11 @@
 }
 .offre-references dd {
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 .offre-lead {
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 .offre-alerte {
   display: flex;
@@ -623,14 +623,14 @@
 }
 .offre-programme dt {
   color: var(--text-muted);
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .offre-programme dd {
   margin: 0.15rem 0 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 .offre-a-completer {
   color: color-mix(in oklch, var(--ocre) 80%, var(--text));
@@ -664,8 +664,8 @@
 .offre-ligne.offre-ligne--tete,
 .offre-echeance.offre-echeance--tete {
   color: var(--text-muted);
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -675,7 +675,7 @@
 }
 .offre-designation small {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: var(--t-12);
 }
 .offre-unite {
   color: var(--text-muted);
@@ -725,7 +725,7 @@
   color: var(--text);
   font: inherit;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 .offre-totaux {
@@ -751,13 +751,13 @@
   align-items: baseline;
 }
 .offre-totaux-ttc strong {
-  color: var(--argile);
+  color: var(--lien);
   font-size: 1.35rem;
 }
 .offre-echeances-total {
   color: color-mix(in srgb, #7fd4a0 65%, var(--text));
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .offre-echeance {
   display: grid;
@@ -792,7 +792,7 @@
   border-top: 1px solid var(--border);
 }
 .offre-articles dt {
-  font-weight: 700;
+  font-weight: 600;
 }
 .offre-articles dd {
   margin: 0;
@@ -808,10 +808,10 @@
 .offre-numero {
   display: inline-block;
   min-width: 1.8rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 .offre-lettre {
-  color: var(--argile);
+  color: var(--lien);
 }
 .offre-numero {
   color: color-mix(in srgb, var(--iris) 60%, var(--text));
@@ -837,7 +837,7 @@
   background: color-mix(in srgb, var(--text) 4%, transparent);
   color: var(--text-muted);
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
 }
 .offre-soumettre.btn-primary {
   border-style: solid;
@@ -872,8 +872,8 @@
     display: block;
     margin-bottom: 0.2rem;
     color: var(--text-muted);
-    font-size: 0.68rem;
-    font-weight: 700;
+    font-size: var(--t-12);
+    font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -920,8 +920,8 @@
 .ft-filtres label > span,
 .ft-sous-titre {
   color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -950,7 +950,7 @@
 }
 .ft-tuile > small {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: var(--t-12);
 }
 .ft-colonnes {
   display: grid;
@@ -1003,7 +1003,7 @@
 }
 .ft-ecart {
   color: color-mix(in srgb, #7fd4a0 70%, var(--text));
-  font-weight: 700;
+  font-weight: 600;
 }
 .ft-ecart.is-hors-cible {
   color: var(--danger);
@@ -1105,7 +1105,7 @@
 }
 .ft-qui small {
   color: color-mix(in oklch, var(--ocre) 85%, var(--text));
-  font-size: 0.74rem;
+  font-size: var(--t-12);
 }
 .ft-detail {
   overflow: hidden;

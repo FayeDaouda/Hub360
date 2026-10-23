@@ -239,7 +239,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                       disabled={enCours}
                       onClick={() => choisirFichier('annexe', a.id)}
                     >
-                      <Paperclip size={12} strokeWidth={2} aria-hidden /> Joindre
+                      <Paperclip size={12} aria-hidden /> Joindre
                     </button>
                     {a.statut !== 'non_necessaire' ? (
                       <button
@@ -290,7 +290,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                   : 'Email non envoyé (client sans adresse, ou envoi indisponible) — transmets ce lien au client.'}{' '}
                 Lien (ne sera plus réaffiché) : <code>{lien.url}</code>{' '}
                 <button type="button" className="lien-inline" onClick={() => navigator.clipboard?.writeText(lien.url)}>
-                  <Copy size={12} strokeWidth={2} aria-hidden /> Copier
+                  <Copy size={12} aria-hidden /> Copier
                 </button>
               </span>
               <button type="button" aria-label="Fermer" onClick={() => setLien(null)}>
@@ -324,7 +324,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                   disabled={enCours}
                   onClick={() => choisirFichier('document')}
                 >
-                  <Paperclip size={12} strokeWidth={2} aria-hidden />{' '}
+                  <Paperclip size={12} aria-hidden />{' '}
                   {c.document ? 'Remplacer le contrat' : 'Déposer le contrat'}
                 </button>
               )}

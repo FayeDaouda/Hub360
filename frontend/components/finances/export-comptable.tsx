@@ -86,7 +86,7 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
         <header className="modal-header">
           <h2 id="exc-titre">Export comptable</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="modal-body exc-corps">

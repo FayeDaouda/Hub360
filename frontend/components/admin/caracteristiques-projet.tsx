@@ -353,7 +353,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                     majFiche({ composition: [...fiche.composition, { de: libre, a: libre, usage: null, typologie: '', nb: 1 }] });
                   }}
                 >
-                  <Plus size={15} strokeWidth={2} aria-hidden /> Ajouter une ligne
+                  <Plus size={15} aria-hidden /> Ajouter une ligne
                 </button>
                 <p className="fp-totaux">
                   {totauxImmeuble.length
@@ -516,7 +516,7 @@ function LigneCompo({
         }}
       />
       <button type="button" className="fp-retirer" aria-label="Retirer la ligne" onClick={onRetirer}>
-        <X size={15} strokeWidth={2} />
+        <X size={15} />
       </button>
     </>
   );

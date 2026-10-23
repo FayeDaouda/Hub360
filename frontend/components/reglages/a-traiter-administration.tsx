@@ -53,7 +53,7 @@ export function ATraiterAdministration({ slug, onSection }: { slug: string; onSe
             return (
               <li key={e.cle} className="at-rh-ligne" data-ton={e.ton}>
                 <span className="at-rh-icone" aria-hidden>
-                  <t.icone size={16} strokeWidth={2} />
+                  <t.icone size={16} />
                 </span>
                 <span className="at-rh-corps">
                   <strong>{e.titre}</strong>

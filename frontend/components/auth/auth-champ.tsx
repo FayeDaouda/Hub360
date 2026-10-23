@@ -51,7 +51,7 @@ export function AuthChamp({
   return (
     <div className="auth-champ-groupe">
       <div className="auth-champ" onMouseDown={focaliser}>
-        <Icone className="auth-champ-icone" size={20} strokeWidth={1.6} aria-hidden />
+        <Icone className="auth-champ-icone" size={20} aria-hidden />
         <div className="auth-champ-corps">
           <label htmlFor={idChamp} className="auth-champ-libelle">
             {libelle}
@@ -91,9 +91,9 @@ export function AuthChamp({
             onClick={() => setVisible((v) => !v)}
           >
             {visible ? (
-              <EyeOff size={19} strokeWidth={1.6} aria-hidden />
+              <EyeOff size={19} aria-hidden />
             ) : (
-              <Eye size={19} strokeWidth={1.6} aria-hidden />
+              <Eye size={19} aria-hidden />
             )}
           </button>
         )}
@@ -104,7 +104,7 @@ export function AuthChamp({
         <p id={idAlerte} className="auth-champ-alerte" aria-live="polite">
           {majuscules && (
             <>
-              <ArrowBigUp size={14} strokeWidth={2} aria-hidden />
+              <ArrowBigUp size={14} aria-hidden />
               Verrouillage des majuscules activé
             </>
           )}

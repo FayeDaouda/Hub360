@@ -42,7 +42,7 @@
   cursor: pointer;
 }
 .rh-matricule {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 .rh-nom {
@@ -125,8 +125,8 @@
 .rh-section {
   margin: 1.25rem 0 0.6rem;
   color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -283,7 +283,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
 }
 /* Mon espace en deux blocs (revue Salarié 19/10/2026) */

@@ -65,7 +65,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
             </p>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 
@@ -88,7 +88,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               {lien.emailEnvoye ? 'Devis envoyé par e-mail au client.' : 'E-mail non envoyé : transmettez le lien au client.'} <code>{lien.url}</code>
             </span>
             <button type="button" className="lien-inline" onClick={() => navigator.clipboard?.writeText(lien.url)}>
-              <Copy size={12} strokeWidth={2} aria-hidden /> Copier
+              <Copy size={12} aria-hidden /> Copier
             </button>
           </div>
         )}
@@ -113,16 +113,16 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
                 })
               }
             >
-              <Send size={14} strokeWidth={2} aria-hidden /> Envoyer
+              <Send size={14} aria-hidden /> Envoyer
             </button>
           )}
           {d.statut === 'envoye' && droits.devisEcriture && (
             <>
               <button type="button" className="btn-ghost" disabled={enCours} onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'accepte'))}>
-                <CheckCircle2 size={14} strokeWidth={2} aria-hidden /> Accepté
+                <CheckCircle2 size={14} aria-hidden /> Accepté
               </button>
               <button type="button" className="btn-ghost" disabled={enCours} onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'refuse'))}>
-                <XCircle size={14} strokeWidth={2} aria-hidden /> Refusé
+                <XCircle size={14} aria-hidden /> Refusé
               </button>
             </>
           )}
@@ -133,7 +133,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               disabled={enCours}
               onClick={() => window.confirm('Convertir ce devis en facture ?') && agir(() => convertirDevis(slug, d.id), onClose)}
             >
-              <ReceiptText size={14} strokeWidth={2} aria-hidden /> Convertir en facture
+              <ReceiptText size={14} aria-hidden /> Convertir en facture
             </button>
           )}
           {!d.dossierCrm && d.statut === 'brouillon' && droits.devisEcriture && (
@@ -148,11 +148,11 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
           )}
           {d.projetId && (d.statut === 'accepte' || d.statut === 'transforme') && droits.facturesEcriture && (
             <Link className="btn-primary" href={lienFacturationProjet(slug, d.projetId)}>
-              <ReceiptText size={14} strokeWidth={2} aria-hidden /> Facturer les tranches
+              <ReceiptText size={14} aria-hidden /> Facturer les tranches
             </Link>
           )}
           <button type="button" className="btn-ghost" onClick={onTelecharger}>
-            <Download size={14} strokeWidth={2} aria-hidden /> Télécharger
+            <Download size={14} aria-hidden /> Télécharger
           </button>
         </div>
       </aside>

@@ -74,7 +74,7 @@ export function SelecteurTheme() {
             data-valeur={valeur}
             onClick={() => choisir(valeur)}
           >
-            <Icone size={17} strokeWidth={1.9} aria-hidden />
+            <Icone size={17} aria-hidden />
           </button>
         );
       })}

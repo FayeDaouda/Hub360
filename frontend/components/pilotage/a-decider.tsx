@@ -330,7 +330,7 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilot
           {visibles.map((e) => (
             <li key={e.cle} className="at-rh-ligne" data-ton={e.ton}>
               <span className="at-rh-icone" aria-hidden>
-                <e.icone size={16} strokeWidth={2} />
+                <e.icone size={16} />
               </span>
               <span className="at-rh-corps">
                 <strong>{e.titre}</strong>

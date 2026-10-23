@@ -1,21 +1,15 @@
 import type { Viewport } from 'next';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+import { LucideProvider } from 'lucide-react';
 import './globals.css';
 import { SCRIPT_THEME_INITIAL } from '@/lib/theme';
 import { SynchroTheme } from '@/components/synchro-theme';
 
-// Auto-hébergées par next/font — identiques sur toutes les machines (Mac,
-// Windows, Linux), pas besoin qu'elles soient installées localement.
-// Inter = corps de texte / données. Space Grotesk = titres et gros chiffres
-// (police de travail validée en attendant « A-Space Demo » du site vitrine —
-// cf. Direction visuelle §2 / §7).
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
-const display = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['500', '700'],
-  variable: '--font-display',
-  display: 'swap',
-});
+// Geist et Geist Mono (paquet `geist`, auto-hébergées par next/font/local) :
+// une seule famille pour les titres, le texte, les montants et les codes —
+// identique sur Mac, Windows et Linux. Les jetons --font-sans / --font-titre
+// / --font-mono (app/styles/00-jetons.css) lisent ces variables.
 
 // viewport-fit=cover : sans lui, env(safe-area-inset-*) vaut 0 sur iPhone —
 // en app installée (manifest « standalone »), la barre d'accueil recouvrait
@@ -48,7 +42,7 @@ export default function RootLayout({
     // suppressHydrationWarning : data-theme(-pref) est posé par le script ci-dessous
     // avant l'hydratation, donc absent du HTML serveur — écart voulu (un seul
     // niveau : n'étouffe rien chez les enfants).
-    <html lang="fr" className={`${inter.variable} ${display.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
         {/* Pose data-theme avant l'hydratation — évite un flash clair→sombre
             au chargement (cf. lib/theme.ts). */}
@@ -56,7 +50,9 @@ export default function RootLayout({
       </head>
       <body>
         <SynchroTheme />
-        {children}
+        {/* Trait des icônes Lucide affiné (2 → 1,5) partout ; une icône qui
+            passe son propre strokeWidth le garde. */}
+        <LucideProvider>{children}</LucideProvider>
       </body>
     </html>
   );

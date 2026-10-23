@@ -70,7 +70,7 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
             )}
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 

@@ -81,7 +81,7 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
             </p>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
 
@@ -209,13 +209,13 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
                 })
               }
             >
-              <BellRing size={14} strokeWidth={2} aria-hidden /> Relancer
+              <BellRing size={14} aria-hidden /> Relancer
             </button>
           )}
           {/* Avoir motivé (contrôle interne) : facture émise d'un projet. */}
           {f.statut === 'emise' && !f.estAvoir && f.projet && droits.validation && !f.avoirEnAttente && (
             <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setAvoir(true)}>
-              <Undo2 size={14} strokeWidth={2} aria-hidden /> Faire un avoir
+              <Undo2 size={14} aria-hidden /> Faire un avoir
             </button>
           )}
           {f.avoirEnAttente && (
@@ -229,7 +229,7 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
             </Link>
           )}
           <button type="button" className="btn-ghost" onClick={onTelecharger}>
-            <Download size={14} strokeWidth={2} aria-hidden /> Télécharger
+            <Download size={14} aria-hidden /> Télécharger
           </button>
         </div>
         {/* Dans le panneau : un clic dans la fenêtre ne ferme pas le panneau. */}

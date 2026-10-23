@@ -45,7 +45,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.7rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
 }
 .pchat-etat--reconnexion {
@@ -129,7 +129,7 @@
 }
 .pchat-canal-quand {
   flex: none;
-  font-size: 0.7rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -140,7 +140,7 @@
   white-space: normal;
 }
 .pchat-annuaire-role {
-  font-size: 0.72rem;
+  font-size: var(--t-12);
   font-weight: 400;
   color: var(--text-muted);
   white-space: nowrap;
@@ -155,8 +155,8 @@
   border-radius: 999px;
   background: var(--argile);
   color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   display: grid;
   place-items: center;
 }
@@ -177,14 +177,14 @@
   background: var(--surface);
   border-radius: 999px;
   padding: 0.25rem 0.8rem;
-  font-size: 0.74rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
   cursor: pointer;
 }
 .pchat-jour {
   align-self: center;
   margin: 0.7rem 0 0.5rem;
-  font-size: 0.68rem;
+  font-size: var(--t-12);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -199,7 +199,7 @@
   align-items: flex-end;
 }
 .pchat-msg-auteur {
-  font-size: 0.7rem;
+  font-size: var(--t-12);
   color: var(--text-muted);
   margin: 0 0 0.15rem 0.15rem;
 }
@@ -220,7 +220,7 @@
 .pchat-msg-heure {
   display: inline-block;
   margin-left: 0.5rem;
-  font-size: 0.64rem;
+  font-size: var(--t-12);
   opacity: 0.6;
   vertical-align: baseline;
   font-variant-numeric: tabular-nums;

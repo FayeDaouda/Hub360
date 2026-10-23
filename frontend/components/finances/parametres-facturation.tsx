@@ -123,7 +123,7 @@ export function ParametresFacturationFenetre({
         <header className="modal-header">
           <h2 id="pf-titre">Paramètres de facturation</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={!!envoi} onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="modal-body pf-corps">

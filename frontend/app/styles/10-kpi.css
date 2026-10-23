@@ -174,7 +174,7 @@
   z-index: 1;
   margin: 0.4rem 0 0;
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
   transition: letter-spacing 0.22s ease;
@@ -185,7 +185,7 @@
   letter-spacing: -0.02em;
 }
 .kpi-tuile--alerte .kpi-tuile-valeur {
-  color: var(--argile);
+  color: var(--lien);
 }
 .kpi-tuile--pleine .kpi-tuile-valeur {
   color: #fff;
@@ -227,8 +227,8 @@
   gap: 0.2rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   white-space: nowrap;
 }
 .kpi-tuile-badge--hausse {
@@ -301,8 +301,8 @@
   overflow: hidden;
 }
 .kpi-funnel-seg-val {
-  font-size: 0.62rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   color: #fff;
   line-height: 1;
 }
@@ -439,7 +439,7 @@
     height: 10px;
   }
   .kpi-tuile-label {
-    font-size: 0.66rem;
+    font-size: var(--t-12);
   }
   .kpi-tuile-valeur {
     margin-top: 0.25rem;
@@ -447,7 +447,7 @@
   }
   .kpi-tuile-sous {
     margin-top: 0.15rem;
-    font-size: 0.66rem;
+    font-size: var(--t-12);
   }
   /* Le pictogramme décoratif (aucune donnée) cède la place en premier ; le
      vrai delta (badge) et l'anneau (vrai %) restent tant qu'il y a la place. */
@@ -459,7 +459,7 @@
   }
   .kpi-tuile-badge {
     padding: 0.1rem 0.3rem;
-    font-size: 0.58rem;
+    font-size: var(--t-12);
     gap: 0.12rem;
   }
   .kpi-tuile-anneau {

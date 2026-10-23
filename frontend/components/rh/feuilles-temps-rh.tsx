@@ -238,18 +238,18 @@ function DetailFeuille({
         <p className="dmd-note">Feuille contrôlée le {jjmmaaaa(f.controleLe)} : chiffres figés à cette date.</p>
       ) : f.statut === 'en_cours' ? (
         <p className="dmd-note">
-          <Clock size={13} strokeWidth={2} aria-hidden /> Mois en cours : le contrôle s’ouvre une fois le mois clos.
+          <Clock size={13} aria-hidden /> Mois en cours : le contrôle s’ouvre une fois le mois clos.
         </p>
       ) : f.statut === 'cloture' ? (
         <p className="dmd-note">
-          <Clock size={13} strokeWidth={2} aria-hidden /> Mois clos : le contrôle s’ouvre le 3 du mois suivant, le temps que les dernières
+          <Clock size={13} aria-hidden /> Mois clos : le contrôle s’ouvre le 3 du mois suivant, le temps que les dernières
           absences et remises soient saisies.
         </p>
       ) : (
         controlable && (
           <div className="integ-confirmer">
             <button type="button" className="btn-primary" onClick={() => setConfirmation(true)}>
-              <ClipboardCheck size={16} strokeWidth={2} aria-hidden /> Contrôler la feuille
+              <ClipboardCheck size={16} aria-hidden /> Contrôler la feuille
             </button>
           </div>
         )

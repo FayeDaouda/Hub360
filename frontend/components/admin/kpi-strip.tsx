@@ -119,7 +119,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
             <div className="kpi-tuile-tete">
               {Icone && (
                 <span className="kpi-tuile-icone" aria-hidden>
-                  <Icone size={18} strokeWidth={2} />
+                  <Icone size={18} />
                 </span>
               )}
               <span className="kpi-tuile-tete-droite">
@@ -135,7 +135,7 @@ export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
                 )}
                 {DecorIcone && (
                   <span className="kpi-tuile-decor" aria-hidden>
-                    <DecorIcone size={18} strokeWidth={1.5} />
+                    <DecorIcone size={18} />
                   </span>
                 )}
               </span>

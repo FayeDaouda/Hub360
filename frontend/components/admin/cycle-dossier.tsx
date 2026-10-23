@@ -103,7 +103,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
         </span>
         {projet.verrouillee && (
           <span className="cycle-dossier-verrou" title="Contenu figé depuis la soumission à la DAF">
-            <Lock size={12} strokeWidth={2} aria-hidden />
+            <Lock size={12} aria-hidden />
             Fiche figée
           </span>
         )}

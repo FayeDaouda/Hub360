@@ -155,7 +155,7 @@ function DetailIntegration({
       {ecriture && (
         <div className="integ-confirmer">
           <button type="button" className="btn-primary" disabled={!j90Fait} onClick={() => setConfirmation(true)}>
-            <UserCheck size={16} strokeWidth={2} aria-hidden /> Confirmer l’intégration
+            <UserCheck size={16} aria-hidden /> Confirmer l’intégration
           </button>
           {!j90Fait && <span className="cell-sub">Possible une fois le point J90 enregistré.</span>}
         </div>

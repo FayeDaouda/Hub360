@@ -58,7 +58,7 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
           <h2 id="grille-titre">Grille tarifaire et société</h2>
           <span className="grille-verrou">Verrouillée</span>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <p className="grille-intro">
@@ -79,7 +79,7 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
                 </small>
               </span>
               <span className="grille-prix">
-                <Lock size={12} strokeWidth={2} aria-label="Verrouillé" />
+                <Lock size={12} aria-label="Verrouillé" />
                 {formatMontant(p.prixUnitaire!)}
               </span>
             </li>
@@ -91,7 +91,7 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
                 <small>{x.unite}</small>
               </span>
               <span className="grille-prix">
-                <Lock size={12} strokeWidth={2} aria-label="Verrouillé" />
+                <Lock size={12} aria-label="Verrouillé" />
                 {x.valeur == null ? '—' : pourcent(x.valeur)}
               </span>
             </li>

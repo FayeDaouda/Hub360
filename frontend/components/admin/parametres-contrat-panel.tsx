@@ -74,7 +74,7 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
       <div className="dash-erreur" role="alert">
         <p>{erreur}</p>
         <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setEssai((n) => n + 1)}>
-          <RefreshCw size={15} strokeWidth={2} aria-hidden />
+          <RefreshCw size={15} aria-hidden />
           <span>Réessayer</span>
         </button>
       </div>
@@ -207,7 +207,7 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
                       }
                     }}
                   >
-                    <Trash2 size={14} strokeWidth={2} />
+                    <Trash2 size={14} />
                   </button>
                 )}
               </div>
@@ -232,7 +232,7 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
               setNouvelleAnnexe('');
             }}
           >
-            <Plus size={14} strokeWidth={2} aria-hidden /> Ajouter
+            <Plus size={14} aria-hidden /> Ajouter
           </button>
         </div>
       </section>

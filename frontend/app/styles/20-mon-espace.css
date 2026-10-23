@@ -33,7 +33,7 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 .me-demande {
   display: flex;
@@ -109,7 +109,7 @@
 .me-consigne {
   margin: 0;
   color: color-mix(in oklch, var(--fuchsia) 55%, var(--text-muted));
-  font-weight: 700;
+  font-weight: 600;
 }
 .me-envoyer {
   justify-self: start;
@@ -140,14 +140,14 @@
 }
 .me-lignes dd {
   margin: 0;
-  font-weight: 700;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 .me-intertitre {
   margin: 0.4rem 0 0;
   color: var(--text-muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -159,11 +159,11 @@
 }
 .me-ok {
   color: var(--sauge);
-  font-weight: 700;
+  font-weight: 600;
 }
 .me-attente {
   color: color-mix(in oklch, var(--ocre) 75%, var(--text));
-  font-weight: 700;
+  font-weight: 600;
 }
 :root[data-theme='dark'] .me-ok {
   color: color-mix(in oklch, var(--sauge) 55%, white);
@@ -218,8 +218,8 @@
   height: 2.3rem;
   border-radius: 0.6rem;
   color: #fff;
-  font-size: 0.66rem;
-  font-weight: 800;
+  font-size: var(--t-12);
+  font-weight: 600;
 }
 .me-doc-pdf--contrat {
   background: var(--fuchsia);
@@ -236,10 +236,10 @@
   padding: 0;
   border: none;
   background: none;
-  color: var(--iris);
+  color: var(--lien);
   font: inherit;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 :root[data-theme='dark'] .me-doc-lien {
@@ -291,7 +291,7 @@
   }
   .po-etape-tete {
     gap: 0.3rem;
-    font-size: 0.7rem;
+    font-size: var(--t-12);
   }
   /* « J43 / 40 » reste à droite du titre. */
   .po-dossier-tete {
@@ -335,8 +335,8 @@
   border-radius: 999px;
   background: color-mix(in oklch, var(--brand) 16%, transparent);
   color: color-mix(in oklch, var(--brand) 80%, var(--text));
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: var(--t-12);
+  font-weight: 600;
   white-space: nowrap;
 }
 .po-miennes {
@@ -354,7 +354,7 @@
   accent-color: var(--brand);
 }
 .po-lien-bouton {
-  color: var(--brand);
+  color: var(--lien);
   text-decoration: underline;
   cursor: pointer;
 }

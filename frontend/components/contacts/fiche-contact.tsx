@@ -32,7 +32,7 @@ export function FicheContactModal({ slug, utilisateurId, onClose }: { slug: stri
         <header className="modal-header">
           <h2 id="fiche-contact-titre">{nom}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="modal-body">

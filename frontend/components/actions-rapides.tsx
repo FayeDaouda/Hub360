@@ -19,7 +19,7 @@ export function ActionsRapides({ actions }: { actions: ActionRapide[] }) {
         return (
           <Link key={a.cle} href={a.href} className="actions-rapides-item">
             <span className="actions-rapides-icone" aria-hidden>
-              <Icone size={17} strokeWidth={1.75} />
+              <Icone size={17} />
             </span>
             <span>{a.label}</span>
           </Link>

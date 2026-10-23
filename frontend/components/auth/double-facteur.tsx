@@ -23,7 +23,7 @@ function Erreur({ texte }: { texte: string | null }) {
   if (!texte) return null;
   return (
     <p className="auth-erreur" role="alert">
-      <CircleAlert size={17} strokeWidth={2} aria-hidden />
+      <CircleAlert size={17} aria-hidden />
       {texte}
     </p>
   );

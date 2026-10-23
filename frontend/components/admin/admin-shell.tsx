@@ -231,7 +231,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               aria-label="Fermer le menu"
               onClick={() => setMenuOuvert(false)}
             >
-              <X size={18} strokeWidth={1.75} />
+              <X size={18} />
             </button>
           </div>
 
@@ -241,7 +241,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             const estActif = item.cle === active;
             const contenu = (
               <>
-                <Icone size={18} strokeWidth={1.75} aria-hidden />
+                <Icone size={18} aria-hidden />
                 <span className="admin-nav-label">{item.libelle}</span>
                 {item.chemin === undefined ? (
                   <span className="admin-nav-tag">bientôt</span>
@@ -313,7 +313,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
                 onBlur={masquerInfobulle}
                 onClick={() => setMenuOuvert(false)}
               >
-                <ShieldCheck size={18} strokeWidth={1.75} aria-hidden />
+                <ShieldCheck size={18} aria-hidden />
                 <span className="admin-nav-label">Administration du HUB</span>
               </Link>
             )}
@@ -330,7 +330,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
                 onClick={() => setMenuOuvert(false)}
                 aria-current={active === 'parametres' ? 'page' : undefined}
               >
-                <Settings size={18} strokeWidth={1.75} aria-hidden />
+                <Settings size={18} aria-hidden />
                 <span className="admin-nav-label">Réglages</span>
               </Link>
             )}
@@ -347,7 +347,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
                 onClick={() => setMenuOuvert(false)}
                 aria-current={active === 'mes-reglages' ? 'page' : undefined}
               >
-                <Settings size={18} strokeWidth={1.75} aria-hidden />
+                <Settings size={18} aria-hidden />
                 <span className="admin-nav-label">Réglages</span>
               </Link>
             )}
@@ -363,7 +363,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
                 ouvrirAide();
               }}
             >
-              <LifeBuoy size={18} strokeWidth={1.75} aria-hidden />
+              <LifeBuoy size={18} aria-hidden />
               <span className="admin-nav-label">Aide</span>
             </button>
             <button
@@ -375,7 +375,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               onBlur={masquerInfobulle}
               onClick={deconnexion}
             >
-              <LogOut size={18} strokeWidth={1.75} aria-hidden />
+              <LogOut size={18} aria-hidden />
               <span className="admin-nav-label">Se déconnecter</span>
             </button>
           </div>
@@ -410,7 +410,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
               aria-label="Ouvrir le menu"
               onClick={() => setMenuOuvert(true)}
             >
-              <Menu size={20} strokeWidth={1.75} />
+              <Menu size={20} />
             </button>
             {/* Titre vide : la page porte son propre h1 (ex. salut de Mes tâches). */}
             {titre && <h1 className="admin-title">{titre}</h1>}

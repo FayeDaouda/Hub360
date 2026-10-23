@@ -175,7 +175,7 @@
 .temps-chiffres dd {
   margin: 0.15rem 0 0;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .temps-alerte {
@@ -239,7 +239,7 @@
   border-radius: 999px;
   background: var(--accent);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
 }
 .mes-initiales--sm {
   width: 2.25rem;
@@ -273,7 +273,7 @@
   cursor: default;
 }
 .me-membre:not(:disabled):hover strong {
-  color: var(--brand);
+  color: var(--lien);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

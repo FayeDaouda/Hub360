@@ -87,7 +87,7 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
         </div>
         {onAnnuler && (
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onAnnuler}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         )}
       </header>

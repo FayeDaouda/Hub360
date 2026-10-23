@@ -43,7 +43,7 @@ export function DecisionTs({ slug, demande, onFait, onClose }: { slug: string; d
         <header className="modal-header">
           <h2 id="dts-titre">Travail supplémentaire · {demande.code}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
-            <X size={18} strokeWidth={1.75} />
+            <X size={18} />
           </button>
         </header>
         <div className="modal-body da-corps">
