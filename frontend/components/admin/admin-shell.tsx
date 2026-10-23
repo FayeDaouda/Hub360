@@ -26,7 +26,7 @@ import { clearSession, niveauSuffisant } from '@/lib/auth';
 import { estAdministrateurHub, sectionAccessible, sectionArrivee } from '@/lib/acces-back-office';
 import type { Session, Societe } from '@/lib/types';
 import { SocieteAvatar } from '@/components/societe-avatar';
-import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
+import { MenuCompte } from '@/components/admin/menu-compte';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { ClocheNotifications } from '@/components/admin/cloche-notifications';
 import { RechercheGlobale } from '@/components/admin/recherche-globale';
@@ -89,9 +89,6 @@ function centrerOnglets(racine: ParentNode = document) {
   });
 }
 
-function initiales(utilisateur: Session['utilisateur']): string {
-  return `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`.toUpperCase();
-}
 
 // Repli en rail d'icônes (desktop uniquement — cf. media query 960px) :
 // préférence mémorisée, pas remise à zéro à chaque navigation.
@@ -113,7 +110,6 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
   // voir la mémoire « responsive-all-devices ». Au-dessus de ce seuil, la
   // classe n'a aucun effet (la sidebar reste dans le flux de la grille).
   const [menuOuvert, setMenuOuvert] = useState(false);
-  const [mdpOuvert, setMdpOuvert] = useState(false);
   // Onglet actif ramené à l'écran : à l'arrivée sur une page, et après un choix.
   useEffect(() => {
     const t = setTimeout(() => centrerOnglets(), 600);
@@ -442,16 +438,8 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             <span className="masque-mobile">
               <ThemeToggle />
             </span>
-            <button
-              type="button"
-              className="admin-user"
-              title={`${session.utilisateur.email} · mon compte (mot de passe, double authentification)`}
-              aria-label="Mon compte"
-              onClick={() => setMdpOuvert(true)}
-            >
-              {initiales(session.utilisateur)}
-            </button>
-            {mdpOuvert && <ChangerMotDePasseModal onClose={() => setMdpOuvert(false)} />}
+            {/* Menu du compte : identité, sécurité, accès personnels, apparence, aide, déconnexion. */}
+            <MenuCompte session={session} base={base} onDeconnexion={deconnexion} />
           </div>
         </header>
 

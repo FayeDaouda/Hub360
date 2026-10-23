@@ -1275,3 +1275,189 @@ button:focus-visible .repli-icone {
 .menu-actions-liste svg {
   color: var(--text-muted);
 }
+
+/* --- Menu du compte (components/admin/menu-compte.tsx) ------------------- */
+.mc {
+  position: relative;
+  display: inline-flex;
+}
+.mc .admin-user[aria-expanded='true'] {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 0 0 3px color-mix(in srgb, var(--action) 45%, transparent);
+}
+.mc-menu {
+  position: absolute;
+  top: calc(100% + var(--e-8));
+  right: 0;
+  z-index: 45;
+  width: min(20rem, calc(100vw - 2rem));
+  padding: var(--e-8);
+  border: 1px solid var(--border);
+  border-radius: var(--r-20);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible), var(--ombre-3);
+  animation: mc-entree var(--duree-moyen) var(--courbe);
+  transform-origin: top right;
+}
+@keyframes mc-entree {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+.mc-identite {
+  display: flex;
+  align-items: center;
+  gap: var(--e-12);
+  padding: var(--e-12);
+}
+.mc-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.mc-qui {
+  display: grid;
+  min-width: 0;
+  line-height: 1.35;
+}
+.mc-qui strong {
+  font-size: var(--t-14);
+  font-weight: 600;
+}
+.mc-email,
+.mc-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t-12);
+  color: var(--text-muted);
+}
+.mc-role {
+  color: var(--text-subtle);
+}
+.mc-securite {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0 var(--e-4) var(--e-4);
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: color-mix(in srgb, var(--attention) 12%, var(--surface));
+  color: var(--attention-texte);
+  font-size: var(--t-13);
+  text-decoration: none;
+}
+.mc-securite.is-ok {
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
+  color: var(--ok-texte);
+}
+.mc-securite:hover,
+.mc-securite:focus-visible {
+  filter: brightness(1.04);
+}
+.mc-securite-exigee {
+  font-weight: 600;
+}
+.mc-groupe {
+  display: grid;
+  gap: 2px;
+  padding: var(--e-4) 0;
+  border-top: 1px solid var(--border);
+}
+.mc-libelle {
+  padding: var(--e-4) var(--e-12) 2px;
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.mc-item {
+  display: flex;
+  align-items: center;
+  gap: var(--e-12);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--e-12);
+  border: 0;
+  border-radius: var(--r-10);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-14);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duree-court) var(--courbe);
+}
+.mc-item svg {
+  color: var(--text-muted);
+}
+.mc-item:hover,
+.mc-item:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+.mc-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+.mc-theme {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e-4);
+  margin: var(--e-4) var(--e-8) var(--e-4);
+  padding: 3px;
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+}
+.mc-theme button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e-8);
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  font: 500 var(--t-13) / 1 var(--font-sans);
+  cursor: pointer;
+}
+.mc-theme button.is-actif {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--ombre-1), inset 0 0 0 1px var(--border);
+}
+.mc-theme button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.mc-deconnexion,
+.mc-deconnexion svg {
+  color: var(--danger-texte);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-menu {
+    animation: none;
+  }
+}
+/* Téléphone : le menu se cale sous la barre du haut, à droite. */
+@media (max-width: 720px) {
+  .mc-menu {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 64px);
+    right: var(--e-8);
+    width: calc(100vw - 2 * var(--e-8));
+    max-height: calc(100dvh - 140px);
+    overflow-y: auto;
+  }
+}
