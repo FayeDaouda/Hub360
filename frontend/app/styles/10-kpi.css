@@ -336,7 +336,6 @@
   }
   .kpi-tuile-valeur {
     margin-top: 0.3rem;
-    font-size: 1.3rem;
   }
 }
 @media (max-width: 560px) {
@@ -346,27 +345,27 @@
     gap: 0.5rem;
   }
   .kpi-tuile {
-    padding: 0.55rem 0.4rem;
-    border-radius: 12px;
-    border-left-width: 2px;
+    padding: 0.7rem 0.65rem;
+    border-radius: var(--r-10);
   }
   .kpi-tuile-tete {
     gap: 0.25rem;
   }
   .kpi-tuile-icone {
-    width: 18px;
-    height: 18px;
+    width: 26px;
+    height: 26px;
+    margin-bottom: var(--e-8);
+    border-radius: var(--r-6);
   }
   .kpi-tuile-icone svg {
-    width: 10px;
-    height: 10px;
+    width: 15px;
+    height: 15px;
   }
   .kpi-tuile-label {
     font-size: var(--t-12);
   }
   .kpi-tuile-valeur {
     margin-top: 0.25rem;
-    font-size: 1.05rem;
   }
   .kpi-tuile-sous {
     margin-top: 0.15rem;

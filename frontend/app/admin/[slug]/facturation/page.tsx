@@ -36,6 +36,7 @@ import { KpiStrip } from '@/components/admin/kpi-strip';
 import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
+import { MenuActions, type ActionMenu } from '@/components/menu-actions';
 import { ImpressionDocument } from '@/components/impression-document';
 import { CGV_PAR_SOCIETE } from '@/lib/cgv';
 import type { FactureDocumentProps } from '@/components/finances/facture-document';
@@ -284,6 +285,18 @@ export default function FinancesPage({ params }: Props) {
   const devisPanneau = devisOuvert ? (devis ?? []).find((d) => d.id === devisOuvert) : undefined;
   const facturePanneau = factureOuverte ? (factures ?? []).find((f) => f.id === factureOuverte) : undefined;
 
+  const outils: ActionMenu[] = [
+    { cle: 'grille', libelle: 'Grille tarifaire', onClick: () => setGrille(true) },
+    ...(validateur ? [{ cle: 'clotures', libelle: 'Clôtures', icone: Lock, onClick: () => setClotures(true) }] : []),
+    ...(paramsFacturation
+      ? [{ cle: 'parametres', libelle: 'Paramètres de facturation', icone: Settings2, onClick: () => setParametresOuverts(true) }]
+      : []),
+    ...(validateur
+      ? [{ cle: 'export', libelle: 'Export comptable', icone: FileSpreadsheet, desactive: !factures, onClick: () => setExportComptable(true) }]
+      : []),
+    ...(droits.catalogue ? [{ cle: 'catalogue', libelle: 'Catalogue', icone: Package, onClick: () => setModalCatalogue(true) }] : []),
+  ];
+
   return (
     <>
       <div className="fin-entete">
@@ -292,29 +305,23 @@ export default function FinancesPage({ params }: Props) {
           au-delà du seuil de contresignature, le CEO valide. Les équipes ne voient aucun montant.
         </p>
         <div className="factu-actions-tete">
-          <button type="button" className="btn-ghost fin-bouton-grille" onClick={() => setGrille(true)}>
-            Grille tarifaire
-          </button>
-          {validateur && (
-            <button type="button" className="btn-ghost" onClick={() => setClotures(true)}>
-              <Lock size={15} aria-hidden /> Clôtures
-            </button>
-          )}
-          {paramsFacturation && (
-            <button type="button" className="btn-ghost" onClick={() => setParametresOuverts(true)}>
-              <Settings2 size={15} aria-hidden /> Paramètres de facturation
-            </button>
-          )}
-          {validateur && (
-            <button type="button" className="btn-ghost" disabled={!factures} onClick={() => setExportComptable(true)}>
-              <FileSpreadsheet size={15} aria-hidden /> Export comptable
-            </button>
-          )}
-          {droits.catalogue && (
-            <button type="button" className="btn-ghost" onClick={() => setModalCatalogue(true)}>
-              <Package size={15} aria-hidden /> Catalogue
-            </button>
-          )}
+          {/* Outils : alignés sur desktop, repliés dans « Plus d'actions »
+              sur téléphone (le premier chiffre reste visible sans défiler). */}
+          {outils.map((o) => {
+            const Icone = o.icone;
+            return (
+              <button
+                key={o.cle}
+                type="button"
+                className={`btn-ghost fin-outil${o.cle === 'grille' ? ' fin-bouton-grille' : ''}`}
+                disabled={o.desactive}
+                onClick={o.onClick}
+              >
+                {Icone && <Icone size={15} aria-hidden />} {o.libelle}
+              </button>
+            );
+          })}
+          <MenuActions actions={outils} className="fin-outils-menu" />
           {droits.facturesEcriture && (
             <button type="button" className="btn-ghost" onClick={() => setNouvelle({})}>
               <Plus size={15} aria-hidden /> Nouvelle facture

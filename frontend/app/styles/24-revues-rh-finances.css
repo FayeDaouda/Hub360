@@ -1,5 +1,5 @@
 /* RH · coque mobile (revue RH 20/10/2026, lot 11) : ≤ 720 px seulement.
-   Tuiles en bandeau qui défile, listes en lignes compactes d'application
+   Tuiles en grille de 2 colonnes, listes en lignes compactes d'application
    (au lieu de cartes de 6 lignes par salarié), « À traiter » aéré. */
 @media (max-width: 720px) {
   .rh-entete-actions {
@@ -11,33 +11,11 @@
     justify-content: center;
   }
 
-  /* 7 tuiles : un bandeau horizontal (2 tuiles et l'amorce de la 3e). */
+  /* 7 tuiles : grille de 2 colonnes comme partout (lot 5 de l'audit UX —
+     le bandeau défilant cachait 5 tuiles sur 7 sans indice), la 7e sur
+     toute la largeur. */
   .rh-kpi .kpi-strip {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 42%;
-    margin-inline: calc(-1 * var(--ef-gx, 16px));
-    padding: 0.15rem var(--ef-gx, 16px) 0.5rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-padding-inline: var(--ef-gx, 16px);
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-  .rh-kpi .kpi-strip::-webkit-scrollbar {
-    display: none;
-  }
-  .rh-kpi .kpi-strip > * {
-    scroll-snap-align: start;
-  }
-  .rh-kpi .kpi-strip > :last-child:nth-child(odd) {
-    grid-column: auto;
-  }
-  .rh-kpi .kpi-tuile-sous {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   /* « À traiter » : le texte prend toute la largeur, l'échéance et l'action
@@ -842,7 +820,7 @@
 }
 
 /* Finances · version mobile (revue CFO 20/10/2026, lot 8) : ≤ 720 px
-   seulement, même modèle que la page RH (lot 11) — tuiles en bandeau,
+   seulement, même modèle que la page RH (lot 11) — tuiles en grille,
    listes Devis / Factures en lignes compactes, en-tête rangé en grille. */
 @media (max-width: 720px) {
   .fin-entete .factu-actions-tete {
@@ -856,34 +834,8 @@
     min-height: 2.6rem;
   }
 
-  /* 5 tuiles : un bandeau horizontal, comme la page RH. */
-  .fin-kpi .kpi-strip {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 42%;
-    margin-inline: calc(-1 * var(--ef-gx, 16px));
-    padding: 0.15rem var(--ef-gx, 16px) 0.5rem;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-padding-inline: var(--ef-gx, 16px);
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-  }
-  .fin-kpi .kpi-strip::-webkit-scrollbar {
-    display: none;
-  }
-  .fin-kpi .kpi-strip > * {
-    scroll-snap-align: start;
-  }
-  .fin-kpi .kpi-strip > :last-child:nth-child(odd) {
-    grid-column: auto;
-  }
-  .fin-kpi .kpi-tuile-sous {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
+  /* 5 tuiles : grille de 2 colonnes (cf. 22-finances.css), plus de bandeau
+     défilant (lot 5 de l'audit UX). */
 
   /* Devis et factures : une ligne compacte par document, à filet ;
      toute la ligne ouvre le panneau (onClick existant sur la ligne). */
@@ -1349,8 +1301,14 @@
   .exc-journaux {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* En-tête Finances : 5 actions, la grille 2 × 2 passe à 2 colonnes libres. */
-  .fin-entete .factu-actions-tete > :last-child:nth-child(odd) {
+  /* En-tête Finances (lot 5 de l'audit UX) : l'action principale en
+     premier sur toute la largeur, puis « Plus d'actions » (les 5 outils
+     repliés) et « Nouvelle facture » côte à côte. */
+  .fin-entete .factu-actions-tete > .fin-outil {
+    display: none;
+  }
+  .fin-entete .factu-actions-tete > .btn-primary {
+    order: -1;
     grid-column: 1 / -1;
   }
 }

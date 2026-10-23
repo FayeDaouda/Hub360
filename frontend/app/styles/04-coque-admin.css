@@ -1196,3 +1196,62 @@ button:focus-visible .repli-icone {
   }
 }
 
+
+/* Menu « Plus d'actions » (components/menu-actions.tsx) : liste dépliée
+   sous son bouton, cibles tactiles de 44 px. */
+.menu-actions {
+  position: relative;
+}
+.menu-actions-bouton {
+  width: 100%;
+}
+.menu-actions-chevron {
+  margin-left: auto;
+  transition: transform var(--duree-court) var(--courbe);
+}
+.menu-actions-chevron.est-ouvert {
+  transform: rotate(180deg);
+}
+.menu-actions-liste {
+  position: absolute;
+  top: calc(100% + var(--e-8));
+  left: 0;
+  z-index: 40;
+  min-width: 100%;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  margin: 0;
+  padding: var(--e-4);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  box-shadow: var(--ombre-3);
+}
+.menu-actions-liste button {
+  display: flex;
+  align-items: center;
+  gap: var(--e-12);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--e-12);
+  border: 0;
+  border-radius: var(--r-10);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-14);
+  text-align: left;
+  cursor: pointer;
+}
+.menu-actions-liste button:hover,
+.menu-actions-liste button:focus-visible {
+  background: var(--surface-2);
+}
+.menu-actions-liste button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.menu-actions-liste svg {
+  color: var(--text-muted);
+}

@@ -115,15 +115,17 @@
 .fin-entete .factu-actions-tete {
   margin-left: 0;
 }
+/* Desktop : les outils sont alignés, le menu replié ne sert qu'au téléphone. */
+@media (min-width: 721px) {
+  .fin-outils-menu {
+    display: none;
+  }
+}
 /* 5 tuiles sur une ligne quand la place le permet (maquette). */
 @media (min-width: 1200px) {
   .fin-kpi .kpi-strip {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-}
-.fin-kpi .kpi-tuile-valeur {
-  font-size: 1.35rem;
-  overflow-wrap: anywhere;
 }
 /* Entre mobile et grand écran : 3 + 2 plutôt qu'une 5e tuile orpheline. */
 @media (min-width: 561px) and (max-width: 1199px) {
@@ -137,18 +139,14 @@
     grid-column: span 3;
   }
 }
-/* Mobile : montants complets en FCFA, trop longs pour 4 colonnes — 2 par
-   rangée, la 5e sur toute la largeur. */
+/* Mobile : 2 tuiles par rangée, la 5e sur toute la largeur. La taille des
+   montants suit la largeur de chaque tuile (cf. 10-kpi.css). */
 @media (max-width: 560px) {
   .fin-kpi .kpi-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .fin-kpi .kpi-tuile:last-child {
     grid-column: 1 / -1;
-  }
-  .fin-kpi .kpi-tuile-valeur {
-    font-size: 1.05rem;
-    overflow-wrap: normal;
   }
 }
 .fin-onglets {

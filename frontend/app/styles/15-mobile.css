@@ -115,12 +115,6 @@
   .kpi-tuile-label {
     font-size: var(--t-12);
   }
-  .kpi-tuile-valeur {
-    font-size: 1.35rem;
-  }
-  .kpi-tuile-valeur--long {
-    font-size: 1.05rem;
-  }
   /* Barre d'onglets du bas. */
   .nav-mobile {
     position: fixed;
@@ -292,13 +286,6 @@
   }
   .admin-table td:not(:first-child)::before {
     margin-right: auto;
-  }
-}
-@media (max-width: 560px) {
-  /* Montant long (« 13 546 400 FCFA ») : plus petit plutôt que coupé. */
-  .kpi-tuile-valeur--long {
-    font-size: 0.78rem;
-    line-height: 1.25;
   }
 }
 /* Texte d'aide des champs de filtre : lisible sur le verre. */

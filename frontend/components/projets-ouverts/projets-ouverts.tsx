@@ -481,9 +481,15 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
   const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
   const factures = pastillesFactures(d);
   // Bandeau des étapes défilant (mobile) : l'étape ouverte reste visible.
+  // Défilement horizontal du seul bandeau — scrollIntoView faisait aussi
+  // défiler la page (bandeau sous la ligne de flottaison sur téléphone).
   const etapesRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    etapesRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    const bandeau = etapesRef.current;
+    const ouverte = bandeau?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!bandeau || !ouverte) return;
+    const decalage = ouverte.getBoundingClientRect().left - bandeau.getBoundingClientRect().left;
+    bandeau.scrollLeft += decalage - (bandeau.clientWidth - ouverte.offsetWidth) / 2;
   }, [etape]);
 
   return (
