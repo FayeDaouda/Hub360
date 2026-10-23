@@ -97,6 +97,11 @@
   -webkit-backdrop-filter: blur(6px);
   overflow-y: auto;
 }
+/* Confirmation demandée depuis un tiroir ou une autre modale : au-dessus
+   de tout (cf. components/confirmation.tsx). */
+.modal-backdrop--premier-plan {
+  z-index: 120;
+}
 
 .modal {
   width: 100%;

@@ -7,6 +7,7 @@ import { marquerReponseDevis, relancerDevis } from '@/lib/devis';
 import { completudeFiche, type OffreEmise } from '@/lib/crm';
 import { formatDateCourte, formatMontantCompact } from '@/lib/format';
 import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = {
   slug: string;
@@ -44,6 +45,7 @@ export function OffreDossier({
   lienEmis,
   onLienEmis,
 }: Props) {
+  const confirmer = useConfirmer();
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -77,12 +79,15 @@ export function OffreDossier({
     });
   }
 
-  function saisirReponse(o: Offre, reponse: 'accepte' | 'refuse') {
-    const texte =
-      reponse === 'accepte'
-        ? 'Enregistrer l’ACCEPTATION du client (réponse reçue par un autre canal) ?'
-        : 'Enregistrer le REFUS du client ? Le dossier passera en « Perdu ».';
-    if (!window.confirm(texte)) return;
+  async function saisirReponse(o: Offre, reponse: 'accepte' | 'refuse') {
+    const accepte = reponse === 'accepte';
+    const ok = await confirmer({
+      titre: accepte ? 'Enregistrer l’acceptation du client ?' : 'Enregistrer le refus du client ?',
+      message: accepte ? 'Réponse reçue par un autre canal.' : 'Le dossier passera en « Perdu ».',
+      confirmer: accepte ? 'Enregistrer l’acceptation' : 'Enregistrer le refus',
+      danger: !accepte,
+    });
+    if (!ok) return;
     void agir(() => marquerReponseDevis(slug, o.id, reponse));
   }
 

@@ -316,7 +316,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: #b3261e;
+  background: var(--danger);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);

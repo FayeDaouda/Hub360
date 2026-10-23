@@ -21,6 +21,7 @@ import {
   type Projet,
   type StatutAnnexeContrat,
 } from '@/lib/types';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = {
   slug: string;
@@ -45,6 +46,7 @@ const LIBELLE_ANNEXE: Record<StatutAnnexeContrat, string> = {
 // fait passer le dossier en Onboard. Contient le prix : visible avec
 // finances_devis (clé `offre` présente sur le dossier), comme l'offre.
 export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
+  const confirmer = useConfirmer();
   const [etat, setEtat] = useState<EtatContrat | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -117,9 +119,11 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
       await agir(() => majAnnexeContrat(slug, projet.id, cible.annexeId!, 'jointe', fichier));
     } else if (cible.type === 'scan') {
       if (
-        !window.confirm(
-          'Enregistrer ce contrat papier signé ? Le dossier passera en Onboard (projet et factures brouillon créés).',
-        )
+        !(await confirmer({
+          titre: 'Enregistrer le contrat papier signé ?',
+          message: 'Le dossier passera en Onboard (projet et factures brouillon créés).',
+          confirmer: 'Enregistrer',
+        }))
       ) {
         return;
       }
@@ -348,8 +352,15 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                   type="button"
                   className="btn-ghost btn-ghost--sm"
                   disabled={enCours}
-                  onClick={() => {
-                    if (window.confirm('Retirer l’envoi ? Le lien du client cessera de fonctionner.')) {
+                  onClick={async () => {
+                    if (
+                      await confirmer({
+                        titre: 'Retirer l’envoi ?',
+                        message: 'Le lien du client cessera de fonctionner.',
+                        confirmer: 'Retirer l’envoi',
+                        danger: true,
+                      })
+                    ) {
                       void agir(() => retirerEnvoiContrat(slug, projet.id));
                     }
                   }}

@@ -5,6 +5,7 @@ import { LucideProvider } from 'lucide-react';
 import './globals.css';
 import { SCRIPT_THEME_INITIAL } from '@/lib/theme';
 import { SynchroTheme } from '@/components/synchro-theme';
+import { ConfirmationProvider } from '@/components/confirmation';
 
 // Geist et Geist Mono (paquet `geist`, auto-hébergées par next/font/local) :
 // une seule famille pour les titres, le texte, les montants et les codes —
@@ -52,7 +53,10 @@ export default function RootLayout({
         <SynchroTheme />
         {/* Trait des icônes Lucide affiné (2 → 1,5) partout ; une icône qui
             passe son propre strokeWidth le garde. */}
-        <LucideProvider>{children}</LucideProvider>
+        <LucideProvider strokeWidth={1.5}>
+          {/* Confirmations dans la modale de l'app (useConfirmer). */}
+          <ConfirmationProvider>{children}</ConfirmationProvider>
+        </LucideProvider>
       </body>
     </html>
   );

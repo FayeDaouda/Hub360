@@ -5,6 +5,7 @@ import { CheckCircle2, Download, XCircle } from 'lucide-react';
 import { getDevisPublic, repondreDevisPublic } from '@/lib/devis';
 import { STATUTS_DEVIS, type DevisPublic, type StatutDevisEffectif } from '@/lib/types';
 import { DocumentFacturation } from '@/components/document-facturation';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = { params: { token: string } };
 
@@ -31,6 +32,7 @@ function formatDate(iso: string): string {
 }
 
 export default function DevisPublicPage({ params }: Props) {
+  const confirmer = useConfirmer();
   const [devis, setDevis] = useState<DevisPublic | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -42,11 +44,14 @@ export default function DevisPublicPage({ params }: Props) {
   }, [params.token]);
 
   async function repondre(reponse: 'accepte' | 'refuse') {
-    const confirmation =
-      reponse === 'accepte'
-        ? 'Confirmez-vous l’acceptation de ce devis ?'
-        : 'Confirmez-vous le refus de ce devis ?';
-    if (!window.confirm(confirmation)) return;
+    const accepte = reponse === 'accepte';
+    const ok = await confirmer({
+      titre: accepte ? 'Accepter ce devis ?' : 'Refuser ce devis ?',
+      message: accepte ? 'Confirmez-vous l’acceptation de ce devis ?' : 'Confirmez-vous le refus de ce devis ?',
+      confirmer: accepte ? 'Accepter le devis' : 'Refuser le devis',
+      danger: !accepte,
+    });
+    if (!ok) return;
     setBusy(true);
     setErreur(null);
     try {

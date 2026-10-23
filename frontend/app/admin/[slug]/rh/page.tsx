@@ -60,6 +60,7 @@ import { getQuestionsOuvertes, getReportingsADeposer } from '@/lib/pilotage';
 import { DepotBulletins } from '@/components/rh/depot-bulletins';
 import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = { params: { slug: string } };
 
@@ -549,6 +550,7 @@ function FicheDossier({
   onChange: (d: DossierPersonnel) => void;
   onClose: () => void;
 }) {
+  const confirmer = useConfirmer();
   const [form, setForm] = useState<MajDossier>(dossier ? versFormulaire(dossier) : CHAMPS_VIDES);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -616,7 +618,16 @@ function FicheDossier({
   }
 
   async function retirer(mois: string) {
-    if (!dossier || !window.confirm(`Retirer le bulletin de ${libelleMois(mois)} ? Le salarié ne le verra plus.`)) return;
+    if (!dossier) return;
+    if (
+      !(await confirmer({
+        titre: `Retirer le bulletin de ${libelleMois(mois)} ?`,
+        message: 'Le salarié ne le verra plus.',
+        confirmer: 'Retirer',
+        danger: true,
+      }))
+    )
+      return;
     setErreur(null);
     try {
       onChange(await retirerBulletin(slug, dossier.id, mois));
@@ -646,7 +657,15 @@ function FicheDossier({
           setDepart(ouvertes);
           return;
         }
-        if (!window.confirm('Archiver ce dossier (départ) ? Le compte HUB du salarié sera désactivé immédiatement.')) return;
+        if (
+          !(await confirmer({
+            titre: 'Archiver ce dossier (départ) ?',
+            message: 'Le compte HUB du salarié sera désactivé immédiatement.',
+            confirmer: 'Archiver',
+            danger: true,
+          }))
+        )
+          return;
       }
       onChange(await archiverDossier(slug, dossier.id, !dossier.archiveLe));
     } catch (e) {
@@ -656,7 +675,15 @@ function FicheDossier({
 
   async function confirmerDepart() {
     if (!dossier || !depart) return;
-    if (!window.confirm('Confirmer le départ ? Les tâches sont confiées et le compte HUB du salarié est désactivé immédiatement.')) return;
+    if (
+      !(await confirmer({
+        titre: 'Confirmer le départ ?',
+        message: 'Les tâches sont confiées et le compte HUB du salarié est désactivé immédiatement.',
+        confirmer: 'Confirmer le départ',
+        danger: true,
+      }))
+    )
+      return;
     setErreur(null);
     try {
       const reaffectations = depart.taches.map((t) => ({ tacheId: t.id, collaborateurId: confies[t.id] }));

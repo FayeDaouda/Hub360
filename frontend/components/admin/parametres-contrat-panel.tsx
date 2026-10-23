@@ -10,12 +10,14 @@ import {
   retirerAnnexeGabarit,
 } from '@/lib/contrats';
 import type { ParametresContrat } from '@/lib/types';
+import { useConfirmer } from '@/components/confirmation';
 
 // Réglages des contrats de la société (étape G) — societe_admin ou CIO.
 // Tout est vide au départ : le texte du contrat et le signataire viennent de
 // la société, jamais inventés ; tant qu'ils manquent, la préparation d'un
 // contrat refuse en disant quoi renseigner.
 export function ParametresContratPanel({ slug }: { slug: string }) {
+  const confirmer = useConfirmer();
   const [p, setP] = useState<ParametresContrat | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [essai, setEssai] = useState(0);
@@ -201,8 +203,15 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
                     disabled={enCours}
                     aria-label={`Retirer « ${a.libelle} »`}
                     title="Retirer"
-                    onClick={() => {
-                      if (window.confirm(`Retirer « ${a.libelle} » ? Les contrats déjà préparés la gardent.`)) {
+                    onClick={async () => {
+                      if (
+                        await confirmer({
+                          titre: `Retirer « ${a.libelle} » ?`,
+                          message: 'Les contrats déjà préparés la gardent.',
+                          confirmer: 'Retirer',
+                          danger: true,
+                        })
+                      ) {
                         void agir(() => retirerAnnexeGabarit(slug, a.id));
                       }
                     }}

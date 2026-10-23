@@ -201,6 +201,30 @@ table,
   font-variant-numeric: tabular-nums;
 }
 
+/* Lien d'évitement : invisible tant qu'on ne tabule pas, puis en haut à
+   gauche, au-dessus de tout. */
+.lien-evitement {
+  position: fixed;
+  top: calc(var(--e-8) + env(safe-area-inset-top, 0px));
+  left: var(--e-8);
+  z-index: 130;
+  padding: var(--e-8) var(--e-16);
+  border-radius: var(--r-10);
+  background: var(--action);
+  color: var(--action-texte);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--duree-court) var(--courbe);
+}
+.lien-evitement:focus-visible {
+  transform: none;
+}
+/* Cible du lien : le contenu reçoit le focus sans dessiner d'anneau. */
+#contenu:focus {
+  outline: none;
+}
+
 /* Focus clavier visible partout (anneau indigo, décalé). Les composants qui
    dessinent leur propre focus le gardent : leur règle est plus spécifique. */
 :focus-visible {

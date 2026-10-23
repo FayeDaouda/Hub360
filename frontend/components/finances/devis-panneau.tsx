@@ -8,6 +8,7 @@ import { lienFacturationProjet } from '@/lib/facturation';
 import { jjmmaaaa, statutDevis } from '@/lib/finances';
 import type { Devis } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = {
   slug: string;
@@ -23,6 +24,7 @@ type Props = {
 // Une offre de dossier se prépare et se soumet au CFO depuis le CRM (lien) ;
 // un devis libre s'envoie, se marque accepté ou refusé, puis se convertit.
 export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose, onTelecharger }: Props) {
+  const confirmer = useConfirmer();
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [lien, setLien] = useState<{ url: string; emailEnvoye: boolean } | null>(null);
@@ -131,7 +133,14 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               type="button"
               className="btn-ghost"
               disabled={enCours}
-              onClick={() => window.confirm('Convertir ce devis en facture ?') && agir(() => convertirDevis(slug, d.id), onClose)}
+              onClick={async () =>
+                (await confirmer({
+                  titre: 'Convertir ce devis en facture ?',
+                  message: 'La facture est émise tout de suite, avec un numéro définitif.',
+                  confirmer: 'Convertir',
+                })) &&
+                agir(() => convertirDevis(slug, d.id), onClose)
+              }
             >
               <ReceiptText size={14} aria-hidden /> Convertir en facture
             </button>
@@ -141,7 +150,15 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               type="button"
               className="btn-ghost"
               disabled={enCours}
-              onClick={() => window.confirm('Supprimer ce brouillon de devis ?') && agir(() => supprimerDevis(slug, d.id), onClose)}
+              onClick={async () =>
+                (await confirmer({
+                  titre: 'Supprimer ce brouillon de devis ?',
+                  message: 'Le brouillon de devis sera supprimé.',
+                  confirmer: 'Supprimer',
+                  danger: true,
+                })) &&
+                agir(() => supprimerDevis(slug, d.id), onClose)
+              }
             >
               Supprimer le brouillon
             </button>

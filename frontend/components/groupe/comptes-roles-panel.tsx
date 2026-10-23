@@ -22,6 +22,7 @@ import type {
   SocieteComptes,
   StatutCompteGroupe,
 } from '@/lib/types';
+import { useConfirmer } from '@/components/confirmation';
 
 const LIBELLE_STATUT: Record<StatutCompteGroupe, string> = {
   actif: 'Actif',
@@ -313,6 +314,7 @@ function ActionsCompte({
   compte: CompteGroupe;
   onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
 }) {
+  const confirmer = useConfirmer();
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<InvitationCompte | null>(null);
@@ -320,7 +322,12 @@ function ActionsCompte({
   async function agir() {
     if (
       compte.statut === 'actif' &&
-      !window.confirm(`Désactiver le compte de ${compte.prenom} ${compte.nom} ? Ses sessions seront coupées immédiatement.`)
+      !(await confirmer({
+        titre: `Désactiver le compte de ${compte.prenom} ${compte.nom} ?`,
+        message: 'Ses sessions seront coupées immédiatement.',
+        confirmer: 'Désactiver',
+        danger: true,
+      }))
     ) {
       return;
     }
@@ -338,9 +345,12 @@ function ActionsCompte({
 
   async function reinitialiser2fa() {
     if (
-      !window.confirm(
-        `Retirer la double authentification de ${compte.prenom} ${compte.nom} (téléphone perdu ou changé) ? Ses sessions sont coupées ; il la réactivera à sa prochaine connexion.`,
-      )
+      !(await confirmer({
+        titre: `Retirer la double authentification de ${compte.prenom} ${compte.nom} ?`,
+        message: 'Téléphone perdu ou changé : ses sessions sont coupées ; il la réactivera à sa prochaine connexion.',
+        confirmer: 'Retirer',
+        danger: true,
+      }))
     ) {
       return;
     }

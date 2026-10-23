@@ -9,6 +9,7 @@ import {
 } from '@/lib/devis';
 import type { ProduitService } from '@/lib/types';
 import { formatMontantCompact } from '@/lib/format';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = {
   slug: string;
@@ -21,6 +22,7 @@ type Props = {
 // l'alimente ici au fil de l'eau. Piocher dedans reste une option à côté de
 // la ligne libre sur chaque devis, jamais une contrainte.
 export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Props) {
+  const confirmer = useConfirmer();
   const [designation, setDesignation] = useState('');
   const [prixUnitaire, setPrixUnitaire] = useState('');
   const [tauxTva, setTauxTva] = useState('18');
@@ -52,7 +54,14 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
   }
 
   async function retirer(id: string) {
-    if (!window.confirm('Retirer cet item du catalogue ? Les devis existants qui le référencent ne sont pas affectés.')) {
+    if (
+      !(await confirmer({
+        titre: 'Retirer cet item du catalogue ?',
+        message: 'Les devis existants qui le référencent ne sont pas affectés.',
+        confirmer: 'Retirer',
+        danger: true,
+      }))
+    ) {
       return;
     }
     setBusy(true);

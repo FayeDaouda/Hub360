@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 type Props = {
@@ -13,7 +13,12 @@ type Props = {
   // message d'erreur en ligne — utile pour un 409 serveur.
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
+  // Au-dessus de tout (tiroirs, panneaux, autres modales) : confirmation
+  // demandée depuis l'intérieur d'un panneau déjà ouvert.
+  auPremierPlan?: boolean;
 };
+
+const FOCUSABLES = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function ConfirmModal({
   titre,
@@ -23,16 +28,47 @@ export function ConfirmModal({
   danger = false,
   onConfirm,
   onClose,
+  auPremierPlan = false,
 }: Props) {
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const boite = useRef<HTMLDivElement>(null);
+  const boutonAnnuler = useRef<HTMLButtonElement>(null);
+  const boutonConfirmer = useRef<HTMLButtonElement>(null);
+
+  // Focus à l'ouverture : sur « Annuler » pour une action destructrice (un
+  // Entrée réflexe ne supprime rien), sinon sur l'action ; rendu à
+  // l'élément d'origine à la fermeture.
+  useEffect(() => {
+    const origine = document.activeElement as HTMLElement | null;
+    (danger ? boutonAnnuler : boutonConfirmer).current?.focus();
+    return () => origine?.focus?.();
+  }, [danger]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !enCours) onClose();
+      if (e.key === 'Escape' && !enCours) {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+      // Tabulation piégée dans la boîte de dialogue.
+      if (e.key === 'Tab' && boite.current) {
+        const elements = [...boite.current.querySelectorAll<HTMLElement>(FOCUSABLES)];
+        if (!elements.length) return;
+        const premier = elements[0];
+        const dernier = elements[elements.length - 1];
+        if (e.shiftKey && document.activeElement === premier) {
+          e.preventDefault();
+          dernier.focus();
+        } else if (!e.shiftKey && document.activeElement === dernier) {
+          e.preventDefault();
+          premier.focus();
+        }
+      }
     }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose, enCours]);
 
   async function lancer() {
@@ -47,12 +83,17 @@ export function ConfirmModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={() => !enCours && onClose()}>
+    <div
+      className={`modal-backdrop${auPremierPlan ? ' modal-backdrop--premier-plan' : ''}`}
+      onClick={() => !enCours && onClose()}
+    >
       <div
+        ref={boite}
         className="modal modal--sm"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-titre"
+        aria-describedby="confirm-message"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-header">
@@ -68,13 +109,16 @@ export function ConfirmModal({
           </button>
         </header>
         <div className="modal-body">
-          <p className="modal-message">{message}</p>
+          <p id="confirm-message" className="modal-message">
+            {message}
+          </p>
           {erreur && <p className="field-erreur">{erreur}</p>}
           <div className="modal-actions">
-            <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
+            <button ref={boutonAnnuler} type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
               {annuler}
             </button>
             <button
+              ref={boutonConfirmer}
               type="button"
               className={danger ? 'btn-danger' : 'btn-primary'}
               onClick={lancer}

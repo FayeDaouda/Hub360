@@ -8,6 +8,7 @@ import { DemandeAvoir } from '@/components/finances/demande-avoir';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { FactureDocument, type FactureDocumentProps } from '@/components/finances/facture-document';
+import { useConfirmer } from '@/components/confirmation';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -29,6 +30,7 @@ type Props = {
 // bandeau « à valider par le CFO » d'une facture directe préparée, document,
 // encaissements. Le CFO (validation) l'émet et enregistre les encaissements.
 export function FacturePanneau({ slug, facture: f, document, statut, societeNom, droits, onMaj, onSupprimee, onTelecharger, onClose }: Props) {
+  const confirmer = useConfirmer();
   const [avoir, setAvoir] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -185,8 +187,13 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
               type="button"
               className="btn-ghost"
               disabled={enCours}
-              onClick={() =>
-                window.confirm('Supprimer ce brouillon de facture ? Aucun numéro n’a encore été attribué.') &&
+              onClick={async () =>
+                (await confirmer({
+                  titre: 'Supprimer ce brouillon de facture ?',
+                  message: 'Aucun numéro n’a encore été attribué.',
+                  confirmer: 'Supprimer',
+                  danger: true,
+                })) &&
                 agir(async () => {
                   await supprimerFactureCentrale(slug, f.id);
                   onSupprimee();

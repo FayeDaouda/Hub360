@@ -178,6 +178,10 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
 
   return (
     <div className={`admin${repliee ? ' admin--repliee' : ''}`}>
+      {/* Premier arrêt de tabulation : passer la navigation d'un coup. */}
+      <a className="lien-evitement" href="#contenu">
+        Aller au contenu
+      </a>
       {/* Halos flous en fond — sans eux le verre dépoli des cartes n'a rien
           d'intéressant à révéler (retour boss, sept. 2026, sur la 1ère passe
           dark/light). Fixes (ne défilent pas), sous tout le reste. */}
@@ -252,19 +256,23 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             );
 
             if (estActif) {
+              // Vrai lien (atteignable au clavier, annoncé « page courante ») :
+              // depuis une sous-page, il ramène à l'accueil de la section.
               return (
-                <span
+                <Link
                   key={item.cle}
+                  href={item.chemin ? `${base}/${item.chemin}` : base}
                   className={`admin-nav-item admin-nav-item--${item.cle} is-active`}
                   title={repliee ? undefined : item.titreComplet}
                   onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
                   onMouseLeave={masquerInfobulle}
                   onFocus={(e) => afficherInfobulle(e, item.libelle)}
                   onBlur={masquerInfobulle}
+                  onClick={() => setMenuOuvert(false)}
                   aria-current="page"
                 >
                   {contenu}
-                </span>
+                </Link>
               );
             }
             if (item.chemin === undefined) {
@@ -393,7 +401,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
           document.body,
         )}
 
-      <main className="admin-main">
+      <main id="contenu" className="admin-main" tabIndex={-1}>
         <header className="admin-topbar">
           <div className="admin-topbar-left">
             {/* Téléphone : la marque de la société à la place du menu (navigation en bas). */}

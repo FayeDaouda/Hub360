@@ -39,6 +39,7 @@ import {
   type StatutReglementBureau,
 } from '@/lib/types';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
+import { useConfirmer } from '@/components/confirmation';
 
 type Props = { params: { slug: string; projetId: string } };
 
@@ -80,6 +81,7 @@ function actionsPossibles(f: Facture, droits: Droits, valide: (montantTtc: numbe
 }
 
 export default function FacturationPage({ params }: Props) {
+  const confirmer = useConfirmer();
   useTitrePage('Facturation');
   const session = useSessionCourante();
   const droits: Droits = {
@@ -340,11 +342,13 @@ export default function FacturationPage({ params }: Props) {
                               type="button"
                               className="lien-inline"
                               disabled={busy}
-                              onClick={() => {
+                              onClick={async () => {
                                 if (
-                                  window.confirm(
-                                    `Confirmer le règlement de ${e.bureau} (${e.libelle}) par Grey Concrete ?`,
-                                  )
+                                  await confirmer({
+                                    titre: `Confirmer le règlement de ${e.bureau} ?`,
+                                    message: `${e.libelle} : réglé par Grey Concrete.`,
+                                    confirmer: 'Confirmer le règlement',
+                                  })
                                 ) {
                                   void action(() =>
                                     marquerBureauRegle(params.slug, params.projetId, e.blocId!),
@@ -533,11 +537,14 @@ export default function FacturationPage({ params }: Props) {
                                   type="button"
                                   className="lien-inline"
                                   disabled={busy}
-                                  onClick={() => {
+                                  onClick={async () => {
                                     if (
-                                      window.confirm(
-                                        'Émettre la facture ? Un numéro définitif lui est attribué et elle ne sera plus modifiable (correction par avoir).',
-                                      )
+                                      await confirmer({
+                                        titre: 'Émettre la facture ?',
+                                        message:
+                                          'Un numéro définitif lui est attribué et elle ne sera plus modifiable (correction par avoir).',
+                                        confirmer: 'Émettre',
+                                      })
                                     ) {
                                       void action(() =>
                                         emettreFacture(params.slug, params.projetId, f.id),
@@ -575,8 +582,15 @@ export default function FacturationPage({ params }: Props) {
                                   type="button"
                                   className="lien-inline btn-ghost--danger"
                                   disabled={busy}
-                                  onClick={() => {
-                                    if (window.confirm('Supprimer ce brouillon ?')) {
+                                  onClick={async () => {
+                                    if (
+                                      await confirmer({
+                                        titre: 'Supprimer ce brouillon ?',
+                                        message: 'Le brouillon de facture sera supprimé.',
+                                        confirmer: 'Supprimer',
+                                        danger: true,
+                                      })
+                                    ) {
                                       void action(() =>
                                         supprimerFacture(params.slug, params.projetId, f.id),
                                       );
