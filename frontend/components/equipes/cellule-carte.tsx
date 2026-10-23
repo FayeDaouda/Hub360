@@ -78,12 +78,8 @@ export function CelluleCarte({
         )}{' '}
         · {CLIENTELES[c.clientele]} · {PROCESSUS[c.processus].iso}
       </p>
-      {c.pilote?.sansCompte && (
-        <p className="eq-alerte" role="note">
-          {c.pilote.nom} n’a pas de compte HUB : les remises et demandes de la cellule remontent au Dir. GC. Créez-lui un compte, ou désignez un
-          autre pilote.
-        </p>
-      )}
+      {/* Détail (remontée au Dir. GC) : un seul bandeau en tête de la liste. */}
+      {c.pilote?.sansCompte && <span className="pill pill--attention eq-sans-compte">Pilote sans compte HUB</span>}
       <DecisionsFiche slug={slug} cible={{ cellule: c.id }} />
       {ecriture && (
         <div className="eq-cellule-actions">

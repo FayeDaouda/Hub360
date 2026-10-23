@@ -506,7 +506,7 @@ export default function CrmPage({ params }: Props) {
                     </tbody>
                   </table>
                 </div>
-                <p className="crm-pied">Cliquer une ligne ouvre la fiche. Les valeurs en ambre sont manquantes.</p>
+                <p className="crm-pied">Chaque ligne ouvre sa fiche. Les valeurs en ambre sont manquantes.</p>
               </>
             )}
           </section>

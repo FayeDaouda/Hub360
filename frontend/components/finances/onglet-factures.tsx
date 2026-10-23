@@ -72,7 +72,7 @@ export function OngletFactures({
           </tbody>
         </table>
       </div>
-      <p className="fin-pied">Cliquer une ligne ouvre le document. Aucun document ne se supprime : une facture se corrige par un avoir.</p>
+      <p className="fin-pied">Chaque ligne ouvre son document. Aucun document ne se supprime : une facture se corrige par un avoir.</p>
     </section>
   );
 }

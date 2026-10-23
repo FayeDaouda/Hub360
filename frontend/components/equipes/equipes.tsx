@@ -98,9 +98,12 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
     },
   ];
 
+  // Pilotes sans compte HUB : signalés une fois pour toutes les cellules.
+  const sansCompte = vue.cellules.filter((c) => c.pilote?.sansCompte).map((c) => c.pilote!.nom);
+
   return (
     <div className="eq">
-      <p className="eq-sous-titre">Cliquez sur un indicateur pour ouvrir la liste correspondante et agir directement.</p>
+      <p className="eq-sous-titre">Choisissez un indicateur pour ouvrir la liste correspondante et agir directement.</p>
       <div className="eq-tuiles" role="tablist" aria-label="Indicateurs">
         {tuiles.map((t) => (
           <button
@@ -119,6 +122,13 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
       </div>
       {erreur && <p className="field-erreur">{erreur}</p>}
 
+      {liste === 'cellules' && sansCompte.length > 0 && (
+        <p className="eq-alerte" role="note">
+          {sansCompte.length === 1
+            ? `${sansCompte[0]} n’a pas de compte HUB : les remises et demandes de sa cellule remontent au Dir. GC. Créez-lui un compte, ou désignez un autre pilote.`
+            : `${sansCompte.length} pilotes n’ont pas de compte HUB (${sansCompte.join(', ')}) : les remises et demandes de leur cellule remontent au Dir. GC. Créez-leur un compte, ou désignez d’autres pilotes.`}
+        </p>
+      )}
       {liste === 'cellules' && (
         <div className="eq-colonnes">
           <div className="eq-cellules">

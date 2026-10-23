@@ -143,8 +143,10 @@ export function Attention({
       lignes: controles.map((n) => ({
         cle: n.id,
         titre: n.titre,
-        detail: `${new Date(n.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} · touchez pour marquer vu`,
-        pill: { libelle: 'Vu', ton: 'neutre' as const },
+        // La ligne entière marque l'alerte comme vue : l'action est dite par
+        // la pastille (« Vu » seul se lisait comme un état déjà acquis).
+        detail: new Date(n.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
+        pill: { libelle: 'Marquer vu', ton: 'neutre' as const },
         onClick: () => vu(n.id),
       })),
     },

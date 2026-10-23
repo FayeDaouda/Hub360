@@ -75,8 +75,13 @@
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+/* Pastille dans la carte de cellule ; le détail est dans .eq-alerte. */
+.eq-sans-compte {
+  justify-self: start;
+  align-self: start;
+}
 .eq-alerte {
-  margin: 0;
+  margin: 0 0 var(--e-16);
   padding: 0.4rem 0.6rem;
   border-radius: 8px;
   background: color-mix(in oklch, var(--pill-attention) 14%, transparent);

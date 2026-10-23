@@ -62,7 +62,7 @@ export function OngletDevis({ devis, projets, onOuvrir }: { devis: Devis[]; proj
           </tbody>
         </table>
       </div>
-      <p className="fin-pied">Cliquer une ligne ouvre le document. Aucun document ne se supprime : un devis refusé reste tracé.</p>
+      <p className="fin-pied">Chaque ligne ouvre son document. Aucun document ne se supprime : un devis refusé reste tracé.</p>
     </section>
   );
 }
