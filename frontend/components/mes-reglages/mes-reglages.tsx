@@ -9,6 +9,9 @@ import { ouvrirAide } from '@/components/admin/aide-globale';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
 import { DoubleFacteurCompte } from '@/components/auth/double-facteur-compte';
 import { OPTIONS_THEME } from '@/components/selecteur-theme';
+import { AvatarPersonne } from '@/components/avatar-personne';
+import { ProfilModal } from '@/components/admin/profil-modal';
+import { nomAffiche } from '@/lib/profil';
 
 // « CEO (transverse) » → « CEO » ; socle technique en clair.
 const libelleRole = (role: string) => (role === 'societe_admin' ? 'Administration de la société' : role.replace(/\s*\(transverse\)$/, ''));
@@ -21,14 +24,25 @@ export function MesReglages() {
   const session = useSessionCourante();
   const { preference, choisir } = usePreferenceTheme();
   const [mdp, setMdp] = useState(false);
+  const [profil, setProfil] = useState(false);
   const [son, setSon] = useState(true);
   useEffect(() => setSon(sonActive()), []);
 
   return (
     <div className="rg-page">
       <Bloc icone={UserRound} titre="Mon compte">
+        <div className="rg-profil">
+          <AvatarPersonne nom={nomAffiche(session.utilisateur)} photo={session.utilisateur.photoUrl} cle={session.utilisateur.id} taille="lg" />
+          <span>
+            <strong>{nomAffiche(session.utilisateur)}</strong>
+            <span className="po-aide">Photo et nom affiché dans la messagerie, les fils et les mentions.</span>
+          </span>
+          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setProfil(true)}>
+            Modifier mon profil
+          </button>
+        </div>
         <dl className="fc-liste">
-          <dt>Nom</dt>
+          <dt>Nom officiel</dt>
           <dd>
             {session.utilisateur.prenom} {session.utilisateur.nom}
           </dd>
@@ -101,6 +115,7 @@ export function MesReglages() {
       </Bloc>
 
       {mdp && <ChangerMotDePasseModal onClose={() => setMdp(false)} />}
+      {profil && <ProfilModal onClose={() => setProfil(false)} />}
     </div>
   );
 }

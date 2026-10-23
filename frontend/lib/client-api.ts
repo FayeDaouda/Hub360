@@ -3,6 +3,10 @@ import { getSession } from './auth';
 // Base de l'API NestJS. Override possible via NEXT_PUBLIC_API_URL.
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+// Adresse absolue d'une ressource de l'API (ex. une photo de profil
+// « /photos/<clé> », lue par une balise <img>).
+export const urlApi = (chemin: string) => `${API_URL}${chemin}`;
+
 // Erreur normalisée : `message` reprend le message métier renvoyé par NestJS
 // (les gardes 409, la validation 400…) pour que les `catch` existants des
 // pages — `e instanceof Error ? e.message : …` — l'affichent tel quel.

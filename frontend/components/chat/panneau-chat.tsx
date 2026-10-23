@@ -9,6 +9,7 @@ import type {
   MembreAnnuaire,
   MessageChat,
 } from '@/lib/types';
+import { AvatarPersonne } from '@/components/avatar-personne';
 
 type Props = {
   slug: string;
@@ -179,14 +180,9 @@ export function PanneauChat({
                   className="pchat-canal"
                   onClick={() => onNouveauDm(m.utilisateurId)}
                 >
-                  <span className="pchat-canal-pastille pchat-canal-pastille--direct" aria-hidden>
-                    {m.prenom.charAt(0)}
-                    {m.nom.charAt(0)}
-                  </span>
+                  <AvatarPersonne nom={m.nomAffiche || `${m.prenom} ${m.nom}`} photo={m.photoUrl} cle={m.utilisateurId} taille="sm" />
                   <span className="pchat-canal-nom pchat-canal-nom--annuaire">
-                    <span>
-                      {m.prenom} {m.nom}
-                    </span>
+                    <span>{m.nomAffiche || `${m.prenom} ${m.nom}`}</span>
                     <span className="pchat-annuaire-role">
                       {m.role}
                       {m.cellule ? ` · ${m.cellule}` : ''}
@@ -196,7 +192,7 @@ export function PanneauChat({
                 <button
                   type="button"
                   className="pchat-annuaire-fiche"
-                  aria-label={`Fiche contact de ${m.prenom} ${m.nom}`}
+                  aria-label={`Fiche contact de ${m.nomAffiche || `${m.prenom} ${m.nom}`}`}
                   title="Fiche contact"
                   onClick={() => setFiche(m.utilisateurId)}
                 >

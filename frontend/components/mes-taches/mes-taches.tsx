@@ -16,6 +16,7 @@ import { getMesMentions, marquerMentionLue, publierCommentaire, type CorpsRemise
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { TacheDrawer } from './tache-drawer';
+import { prenomAffiche } from '@/lib/profil';
 
 type MesTachesApi = { taches: TacheMonEspace[]; stats: StatsPerformances };
 type Filtre = 'reprises' | 'retards' | 'semaine' | 'attente' | 'mentions';
@@ -459,7 +460,7 @@ export function MesTaches({ slug }: { slug: string }) {
       <div className="mt-accueil">
         <div>
           <h1 className="mt-accueil-titre">
-            {new Date().getHours() >= 18 ? 'Bonsoir' : 'Bonjour'} {utilisateur.prenom}
+            {new Date().getHours() >= 18 ? 'Bonsoir' : 'Bonjour'} {prenomAffiche(utilisateur)}
           </h1>
           <p className="mt-accueil-sous">
             <span className="mt-accueil-date">

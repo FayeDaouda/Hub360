@@ -16,6 +16,9 @@ type LayoutCtx = {
   // document imprimable) doivent déjà gérer son absence transitoire.
   societe: Societe | null;
   definirTitre: (titre: string) => void;
+  // Session modifiée sans reconnexion (nom affiché, photo) : enregistrée et
+  // propagée à toute la coquille.
+  majSession: (session: Session) => void;
 };
 
 const Ctx = createContext<LayoutCtx | null>(null);
@@ -44,6 +47,10 @@ export function useTitrePage(titre: string) {
 // ne rend `children` qu'une fois la session prête).
 export function useSessionCourante(): Session {
   return useLayoutCtx().session;
+}
+
+export function useMajSession(): (session: Session) => void {
+  return useLayoutCtx().majSession;
 }
 
 // Société déjà chargée par le layout — peut être `null` brièvement (chargée

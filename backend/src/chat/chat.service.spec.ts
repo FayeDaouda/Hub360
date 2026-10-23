@@ -97,7 +97,7 @@ describe('ChatService.annuaire', () => {
     });
     const res = await s.annuaire(acteur('Dir. GC'));
     expect(res).toEqual([
-      { utilisateurId: 'U3', prenom: 'Bineta', nom: 'Sarr', role: 'Architecte', cellule: 'Cellule Archi 1' },
+      { utilisateurId: 'U3', prenom: 'Bineta', nom: 'Sarr', nomAffiche: null, photoUrl: null, role: 'Architecte', cellule: 'Cellule Archi 1' },
     ]);
   });
 

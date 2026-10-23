@@ -91,6 +91,19 @@ model Utilisateur {
   motDePasseHash        String?   @map("mot_de_passe_hash")
   nom                   String
   prenom                String
+  // Profil (menu du compte, 23/10/2026). Nom affiché : choisi par la
+  // personne, montré là où l'on échange (salutation, avatar, messagerie,
+  // fils, mentions) ; le nom officiel (nom/prenom, géré par la RH) reste
+  // partout où il y a une trace de travail. Photo : image carrée allégée par
+  // le navigateur, servie par /photos/:photoCle (clé non devinable, changée
+  // à chaque nouvelle photo — le cache du navigateur suit).
+  nomAffiche            String?   @map("nom_affiche")
+  photo                 Bytes?
+  photoType             String?   @map("photo_type")
+  photoCle              String?   @unique @map("photo_cle")
+  // Connexions (sécurité du compte) : la dernière et la précédente.
+  derniereConnexionLe   DateTime? @map("derniere_connexion_le")
+  connexionPrecedenteLe DateTime? @map("connexion_precedente_le")
   // Double authentification (application TOTP, RFC 6238) : secret chiffré
   // (AES-256-GCM), actif dès totpActifLe ; dernier pas accepté (anti-rejeu)
   // et codes de secours à usage unique (SHA-256).
@@ -174,6 +187,7 @@ enum EvenementCompteType {
   double_facteur_active // par le titulaire, à la connexion
   double_facteur_reinitialise // par l'administration du HUB (téléphone perdu)
   connexion_secours // revue CIO : connexion d'un compte technique (secours), CEO et CIO prévenus
+  deconnexion_partout // le titulaire coupe toutes ses sessions (menu du compte)
 }
 
 // -- Notifications collaborateur --

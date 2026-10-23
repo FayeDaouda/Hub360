@@ -5,6 +5,8 @@ import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
 import { ConfirmationIdentiteService } from './confirmation-identite.service';
 import { AuthController } from './auth.controller';
+import { MonCompteController, PhotosController } from './profil.controller';
+import { ProfilService } from './profil.service';
 import { JwtStrategy } from './jwt.strategy';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -17,8 +19,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
       signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, ComptesService, ConfirmationIdentiteService, JwtStrategy],
+  controllers: [AuthController, MonCompteController, PhotosController],
+  providers: [AuthService, ComptesService, ConfirmationIdentiteService, ProfilService, JwtStrategy],
   exports: [JwtModule, ComptesService, ConfirmationIdentiteService],
 })
 export class AuthModule {}

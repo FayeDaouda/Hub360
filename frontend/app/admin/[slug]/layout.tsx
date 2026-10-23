@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getSociete } from '@/lib/api';
-import { clearSession, getSession } from '@/lib/auth';
+import { clearSession, getSession, remplacerSession } from '@/lib/auth';
 import {
   premiereSectionAccessible,
   sectionAccessible,
@@ -70,7 +70,17 @@ export default function AdminLayout({ children, params }: Props) {
   if (!session || sectionRefusee) return null;
 
   return (
-    <LayoutProvider value={{ session, societe, definirTitre: setTitre }}>
+    <LayoutProvider
+      value={{
+        session,
+        societe,
+        definirTitre: setTitre,
+        majSession: (s) => {
+          remplacerSession(s);
+          setSession(s);
+        },
+      }}
+    >
       <AdminShell
         societe={societe}
         session={session}

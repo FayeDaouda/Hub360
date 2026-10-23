@@ -28,6 +28,10 @@ export type Session = {
     email: string;
     nom: string;
     prenom: string;
+    // Profil (menu du compte) : absents d'une session ouverte avant leur
+    // arrivée — nom officiel et initiales en repli.
+    nomAffiche?: string | null;
+    photoUrl?: string | null;
   };
   societe: {
     id: string;
@@ -587,7 +591,7 @@ export type MessageChat = {
   canalId: string;
   texte: string;
   envoyeLe: string; // ISO 8601
-  auteur: { id: string; nom: string };
+  auteur: { id: string; nom: string; photoUrl?: string | null };
 };
 
 export type PageMessagesChat = {
@@ -608,6 +612,8 @@ export type MembreAnnuaire = {
   utilisateurId: string;
   prenom: string;
   nom: string;
+  nomAffiche?: string | null; // choisi par la personne (menu du compte)
+  photoUrl?: string | null;
   role: string;
   cellule: string | null;
 };

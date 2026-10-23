@@ -5,10 +5,12 @@ import { collaborateurDuCompte, commenteSansEcriture, perimetreProjets, ROLE_SAL
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { estOuvert, motifRefusResolution } from './fil';
+import { nomPublic } from '../../auth/profil';
 
 type Acteur = { userId: string };
-const nom = (p: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}` : null);
-const PERSONNE = { select: { id: true, prenom: true, nom: true } } as const;
+// Nom affiché (choisi par la personne) dans les fils et les mentions.
+const nom = (p: { prenom: string; nom: string; nomAffiche?: string | null } | null) => (p ? nomPublic(p) : null);
+const PERSONNE = { select: { id: true, prenom: true, nom: true, nomAffiche: true } } as const;
 
 // Fils de discussion d'un projet ouvert (maquette « Projets ») : un par
 // carte (« Fil de la carte ») et un par tâche ; @mention notifiée.
@@ -25,7 +27,7 @@ export class FilsProjetService {
   async mentionnables(societeId: string) {
     const utilisateurs = await this.prisma.utilisateur.findMany({
       where: { actif: true, roles: { some: { societeId } } },
-      select: { id: true, prenom: true, nom: true },
+      select: { id: true, prenom: true, nom: true, nomAffiche: true },
       orderBy: [{ prenom: 'asc' }, { nom: 'asc' }],
     });
     return utilisateurs.map((u) => ({ id: u.id, nom: nom(u)! }));
@@ -204,8 +206,8 @@ export class FilsProjetService {
     creeLe: Date;
     resoluLe: Date | null;
     auteurId: string | null;
-    auteur: { prenom: string; nom: string } | null;
-    mentionne: { id: string; prenom: string; nom: string } | null;
+    auteur: { prenom: string; nom: string; nomAffiche?: string | null } | null;
+    mentionne: { id: string; prenom: string; nom: string; nomAffiche?: string | null } | null;
   }) {
     return {
       id: c.id,

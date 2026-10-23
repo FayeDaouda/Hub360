@@ -4,6 +4,7 @@ import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { CLIENTELES, ETATS_POSTE, PROCESSUS, STATUTS_CELLULE } from '@/lib/equipes';
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
 import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur } from '@/lib/types';
+import { couleurPersonne, srcPhoto } from '@/lib/profil';
 
 type Props = {
   slug: string;
@@ -114,7 +115,7 @@ export function CelluleCarte({
             <li key={m.id}>
               <label
                 className={`eq-avatar${ecriture ? ' eq-avatar--modifiable' : ''}`}
-                style={m.photoUrl ? { backgroundImage: `url(${m.photoUrl})` } : undefined}
+                style={m.photoUrl ? { backgroundImage: `url(${srcPhoto(m.photoUrl)})` } : { background: couleurPersonne(m.id) }}
                 title={ecriture ? `Changer la photo de ${m.nom}` : undefined}
               >
                 {!m.photoUrl &&

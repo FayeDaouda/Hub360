@@ -8,6 +8,7 @@ import { Prisma, TypeCanal } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { estRoleBackOffice } from '../commun/back-office.guard';
 import { ChatBus } from './chat.bus';
+import { cheminPhoto, nomPublic } from '../auth/profil';
 
 type Acteur = { userId: string; societeId: string; role: string };
 
@@ -26,14 +27,14 @@ export type MessageRendu = {
   canalId: string;
   texte: string;
   envoyeLe: Date;
-  auteur: { id: string; nom: string };
+  auteur: { id: string; nom: string; photoUrl: string | null };
 };
 
 type CanalNommable = {
   type: TypeCanal;
   cellule: { nom: string } | null;
-  participant1: { id: string; prenom: string; nom: string } | null;
-  participant2: { id: string; prenom: string; nom: string } | null;
+  participant1: { id: string; prenom: string; nom: string; nomAffiche: string | null } | null;
+  participant2: { id: string; prenom: string; nom: string; nomAffiche: string | null } | null;
 };
 
 const SELECT_CANAL = {
@@ -43,8 +44,8 @@ const SELECT_CANAL = {
   participant1Id: true,
   participant2Id: true,
   cellule: { select: { nom: true } },
-  participant1: { select: { id: true, prenom: true, nom: true } },
-  participant2: { select: { id: true, prenom: true, nom: true } },
+  participant1: { select: { id: true, prenom: true, nom: true, nomAffiche: true } },
+  participant2: { select: { id: true, prenom: true, nom: true, nomAffiche: true } },
 } satisfies Prisma.CanalSelect;
 
 @Injectable()
@@ -158,7 +159,7 @@ export class ChatService {
         canalId: true,
         texte: true,
         createdAt: true,
-        auteur: { select: { id: true, prenom: true, nom: true } },
+        auteur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
       },
     });
     const aPlus = lignes.length > PAGE;
@@ -194,7 +195,7 @@ export class ChatService {
         canalId: true,
         texte: true,
         createdAt: true,
-        auteur: { select: { id: true, prenom: true, nom: true } },
+        auteur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
       },
     });
     const rendu = rendreMessage(message);
@@ -248,6 +249,7 @@ export class ChatService {
           nom: true,
           role: true,
           cellule: { select: { nom: true } },
+          utilisateur: { select: { nomAffiche: true, photoCle: true } },
         },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       }),
@@ -257,7 +259,7 @@ export class ChatService {
           role: { nom: { not: 'holding_admin' }, supprimeLe: null },
         },
         select: {
-          utilisateur: { select: { id: true, prenom: true, nom: true } },
+          utilisateur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
           role: { select: { nom: true } },
         },
       }),
@@ -265,7 +267,7 @@ export class ChatService {
 
     const parId = new Map<
       string,
-      { utilisateurId: string; prenom: string; nom: string; role: string; cellule: string | null }
+      { utilisateurId: string; prenom: string; nom: string; nomAffiche: string | null; photoUrl: string | null; role: string; cellule: string | null }
     >();
     for (const c of collabs) {
       if (c.utilisateurId && c.utilisateurId !== acteur.userId) {
@@ -273,6 +275,8 @@ export class ChatService {
           utilisateurId: c.utilisateurId,
           prenom: c.prenom,
           nom: c.nom,
+          nomAffiche: c.utilisateur?.nomAffiche ?? null,
+          photoUrl: cheminPhoto(c.utilisateur?.photoCle),
           role: c.role,
           cellule: c.cellule?.nom ?? null,
         });
@@ -285,6 +289,8 @@ export class ChatService {
           utilisateurId: u.id,
           prenom: u.prenom,
           nom: u.nom,
+          nomAffiche: u.nomAffiche,
+          photoUrl: cheminPhoto(u.photoCle),
           role: d.role.nom === 'societe_admin' ? 'Administration' : d.role.nom,
           cellule: null,
         });
@@ -344,7 +350,7 @@ export class ChatService {
     if (c.type === TypeCanal.general) return 'Général';
     if (c.type === TypeCanal.cellule) return c.cellule?.nom ?? 'Cellule';
     const autre = c.participant1?.id === moi ? c.participant2 : c.participant1;
-    return autre ? `${autre.prenom} ${autre.nom}`.trim() : 'Conversation';
+    return autre ? nomPublic(autre) : 'Conversation';
   }
 
   // Un seul Général par société ; l'index partiel garantit l'unicité même en
@@ -382,13 +388,14 @@ function rendreMessage(m: {
   canalId: string;
   texte: string;
   createdAt: Date;
-  auteur: { id: string; prenom: string; nom: string };
+  auteur: { id: string; prenom: string; nom: string; nomAffiche: string | null; photoCle: string | null };
 }): MessageRendu {
   return {
     id: m.id,
     canalId: m.canalId,
     texte: m.texte,
     envoyeLe: m.createdAt,
-    auteur: { id: m.auteur.id, nom: `${m.auteur.prenom} ${m.auteur.nom}`.trim() },
+    // Nom affiché (choisi par la personne) dans la conversation.
+    auteur: { id: m.auteur.id, nom: nomPublic(m.auteur), photoUrl: cheminPhoto(m.auteur.photoCle) },
   };
 }

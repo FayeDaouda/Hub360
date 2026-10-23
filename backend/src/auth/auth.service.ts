@@ -14,6 +14,7 @@ import {
   lienOtpauth,
   verifierCode,
 } from './totp';
+import { cheminPhoto } from './profil';
 
 // Double authentification obligatoire pour la direction (tous les rôles sauf
 // Salarié, phase 4), les comptes techniques et le Salarié chef de cellule, qui
@@ -281,6 +282,17 @@ export class AuthService {
 
     if (ROLES_SECOURS.has(acces.role.nom)) await this.tracerSecours(utilisateur, societe);
 
+    // Connexions (sécurité du compte : « connexion précédente le… ») et profil
+    // affiché dans la coquille (nom affiché, photo).
+    const avant = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateur.id },
+      select: { derniereConnexionLe: true, nomAffiche: true, photoCle: true },
+    });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateur.id },
+      data: { derniereConnexionLe: new Date(), connexionPrecedenteLe: avant?.derniereConnexionLe ?? null },
+    });
+
     const payload = {
       sub: utilisateur.id,
       email: utilisateur.email,
@@ -298,6 +310,8 @@ export class AuthService {
         email: utilisateur.email,
         nom: utilisateur.nom,
         prenom: utilisateur.prenom,
+        nomAffiche: avant?.nomAffiche ?? null,
+        photoUrl: cheminPhoto(avant?.photoCle),
       },
       societe: {
         id: societe.id,

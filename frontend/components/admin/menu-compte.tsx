@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent as KeyboardEventReact } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CircleHelp, IdCard, KeyRound, LogOut, MessageSquareWarning, Settings, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
+import { CircleHelp, IdCard, KeyRound, LogOut, PenLine, MessageSquareWarning, Settings, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import { apiAuth } from '@/lib/client-api';
 import { libelleRole } from '@/lib/groupe';
@@ -11,6 +11,9 @@ import { usePreferenceTheme } from '@/lib/theme';
 import { OPTIONS_THEME } from '@/components/selecteur-theme';
 import { ouvrirAide } from '@/components/admin/aide-globale';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
+import { AvatarPersonne } from '@/components/avatar-personne';
+import { ProfilModal } from '@/components/admin/profil-modal';
+import { nomAffiche } from '@/lib/profil';
 
 // Menu du compte (avatar, en haut à droite) : qui je suis (nom, e-mail, rôle,
 // société), l'état de ma double authentification, mes accès personnels
@@ -24,6 +27,7 @@ type EtatDoubleFacteur = { actifLe: string | null; exige: boolean };
 export function MenuCompte({ session, base, onDeconnexion }: { session: Session; base: string; onDeconnexion: () => void }) {
   const [ouvert, setOuvert] = useState(false);
   const [mdp, setMdp] = useState(false);
+  const [profil, setProfil] = useState(false);
   const [doubleFacteur, setDoubleFacteur] = useState<EtatDoubleFacteur | null>(null);
   const { preference, choisir } = usePreferenceTheme();
   const racine = useRef<HTMLDivElement>(null);
@@ -32,7 +36,7 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
   const id = useId();
   const chemin = usePathname();
   const u = session.utilisateur;
-  const initiales = `${u.prenom?.[0] ?? ''}${u.nom?.[0] ?? ''}`.toUpperCase() || u.email[0]?.toUpperCase();
+  const affiche = nomAffiche(u);
 
   // Changement de page : le menu se referme.
   useEffect(() => setOuvert(false), [chemin]);
@@ -86,25 +90,21 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
         ref={bouton}
         type="button"
         className="admin-user"
-        aria-label={`Mon compte · ${u.prenom} ${u.nom}`}
+        aria-label={`Mon compte · ${affiche}`}
         aria-haspopup="true"
         aria-expanded={ouvert}
         aria-controls={id}
         onClick={() => setOuvert((o) => !o)}
       >
-        {initiales}
+        <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="md" />
       </button>
 
       {ouvert && (
         <div id={id} ref={liste} className="mc-menu" role="dialog" aria-label="Mon compte" onKeyDown={naviguer}>
           <div className="mc-identite">
-            <span className="mc-avatar" aria-hidden>
-              {initiales}
-            </span>
+            <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="lg" />
             <span className="mc-qui">
-              <strong>
-                {u.prenom} {u.nom}
-              </strong>
+              <strong>{affiche}</strong>
               <span className="mc-email">{u.email}</span>
               <span className="mc-role">
                 {libelleRole(session.role)} · {session.societe.nom}
@@ -129,6 +129,18 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
           )}
 
           <nav className="mc-groupe" aria-label="Mes accès">
+            <button
+              type="button"
+              className="mc-item"
+              data-item
+              onClick={() => {
+                fermer();
+                setProfil(true);
+              }}
+            >
+              <PenLine size={16} aria-hidden /> Modifier mon profil
+              <span className="mc-item-aide">photo, nom affiché</span>
+            </button>
             <Link href={`${base}/mon-espace`} className="mc-item" data-item onClick={fermer}>
               <UserRound size={16} aria-hidden /> Mon espace
             </Link>
@@ -206,6 +218,7 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
       )}
 
       {mdp && <ChangerMotDePasseModal onClose={() => setMdp(false)} />}
+      {profil && <ProfilModal onClose={() => setProfil(false)} />}
     </div>
   );
 }

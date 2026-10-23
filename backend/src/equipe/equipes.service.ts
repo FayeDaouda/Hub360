@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { chargeDuMois, codeCellule, estEnCours, partATemps, prefixeSociete, tachesEnCours, type TacheEquipe } from './equipes-regles';
+import { photoMembre } from '../auth/profil';
 
 const jour = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
@@ -34,7 +35,13 @@ export class EquipesService {
           membres: {
             orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
             include: {
-              dossierPersonnel: { select: { absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } } },
+              utilisateur: { select: { photoCle: true } },
+              dossierPersonnel: {
+                select: {
+                  absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } },
+                  utilisateur: { select: { photoCle: true } },
+                },
+              },
             },
           },
         },
@@ -138,7 +145,7 @@ export class EquipesService {
             nom: nomDe(m),
             role: m.role,
             niveau: m.niveau,
-            photoUrl: m.photoCle,
+            photoUrl: photoMembre(m),
             poste: titulaires.get(m.id) ?? null,
             estPilote: c.dispatcherId === m.id,
             taches: charge.taches,

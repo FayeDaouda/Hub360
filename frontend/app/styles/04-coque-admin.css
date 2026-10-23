@@ -1312,18 +1312,6 @@ button:focus-visible .repli-icone {
   gap: var(--e-12);
   padding: var(--e-12);
 }
-.mc-avatar {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--brand-gradient);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
 .mc-qui {
   display: grid;
   min-width: 0;
@@ -1460,4 +1448,135 @@ button:focus-visible .repli-icone {
     max-height: calc(100dvh - 140px);
     overflow-y: auto;
   }
+}
+
+/* --- Avatar d'une personne (components/avatar-personne.tsx) -------------- */
+.av {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.av img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.av--xs { width: 24px; height: 24px; font-size: 10px; }
+.av--sm { width: 32px; height: 32px; font-size: var(--t-12); }
+.av--md { width: 38px; height: 38px; font-size: var(--t-13); }
+.av--lg { width: 48px; height: 48px; font-size: var(--t-16); }
+.av--xl { width: 96px; height: 96px; font-size: var(--t-32); }
+/* Absence validée qui couvre aujourd'hui : pastille ambre au bord. */
+.av-absent {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 30%;
+  height: 30%;
+  min-width: 9px;
+  min-height: 9px;
+  border-radius: 50%;
+  background: var(--attention);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+/* L'avatar du menu remplit le bouton rond de la barre du haut. */
+.admin-user:has(.av) {
+  background: none;
+  overflow: visible;
+}
+.admin-user .av {
+  width: 100%;
+  height: 100%;
+}
+.mc-item-aide {
+  margin-left: auto;
+  font-size: var(--t-12);
+  color: var(--text-subtle);
+}
+
+/* --- Mon profil (components/admin/profil-modal.tsx) ---------------------- */
+.profil-corps {
+  display: grid;
+  gap: var(--e-24);
+}
+.profil-photo {
+  display: flex;
+  align-items: center;
+  gap: var(--e-16);
+}
+.profil-photo-cible {
+  position: relative;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.profil-photo-voile {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(10, 12, 26, 0.45);
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--duree-court) var(--courbe);
+}
+.profil-photo-cible:hover .profil-photo-voile,
+.profil-photo-cible:focus-within .profil-photo-voile,
+.profil-photo-cible.is-en-cours .profil-photo-voile {
+  opacity: 1;
+}
+.profil-photo-cible:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.profil-photo-actions {
+  display: grid;
+  gap: var(--e-4);
+  min-width: 0;
+}
+.profil-photo-actions strong {
+  font-size: var(--t-16);
+}
+.profil-photo-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-8);
+  margin-top: var(--e-4);
+}
+.profil-photo-boutons label {
+  cursor: pointer;
+}
+.profil-photo-boutons .is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.profil-nom {
+  display: grid;
+  gap: var(--e-8);
+}
+.profil-fait {
+  margin: 0;
+  color: var(--ok-texte);
+  font-size: var(--t-13);
+}
+/* Réglages du compte : en-tête du profil. */
+.rg-profil {
+  display: flex;
+  align-items: center;
+  gap: var(--e-12);
+  margin-bottom: var(--e-12);
+}
+.rg-profil > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin-right: auto;
 }

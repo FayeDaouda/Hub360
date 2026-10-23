@@ -3,6 +3,7 @@ import { ModePaiementSalaire, Prisma, SituationFamiliale, TypePieceDossier } fro
 import { PrismaService } from '../prisma/prisma.service';
 import { ouDossierDuCompte } from './mon-compte';
 import { TachesService } from './taches.service';
+import { cheminPhoto, photoMembre } from '../auth/profil';
 
 type Acteur = { userId: string; societeId?: string };
 
@@ -13,6 +14,8 @@ export const DOCUMENTS_SALARIE: TypePieceDossier[] = ['contrat_signe', 'fiche_po
 const INCLURE = {
   societe: { select: { nom: true } },
   collaborateur: { select: { photoCle: true, cellule: { select: { nom: true } } } },
+  // Photo choisie par la personne (menu du compte) : prime sur la fiche d'équipe.
+  utilisateur: { select: { photoCle: true } },
   pieces: { where: { type: { in: DOCUMENTS_SALARIE } }, select: { type: true, nom: true, createdAt: true } },
   bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
   attestations: { select: { id: true, demandeLe: true, delivreeLe: true, nom: true }, orderBy: { demandeLe: 'desc' } },
@@ -151,7 +154,8 @@ export class MonEspaceService {
             niveau: true,
             photoCle: true,
             utilisateurId: true,
-            dossierPersonnel: { select: { utilisateurId: true } },
+            utilisateur: { select: { photoCle: true } },
+            dossierPersonnel: { select: { utilisateurId: true, utilisateur: { select: { photoCle: true } } } },
           },
           orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
         },
@@ -174,7 +178,7 @@ export class MonEspaceService {
           niveau: m.niveau,
           estChef: m.id === c.dispatcherId,
           estMoi: m.id === fiche.id,
-          photo: m.photoCle,
+          photo: photoMembre(m),
           // Compte HUB du membre (fiche contact) ; null s'il n'en a pas.
           utilisateurId: m.utilisateurId ?? m.dossierPersonnel?.utilisateurId ?? null,
         })),
@@ -206,7 +210,7 @@ function versProfil(d: DossierProfil) {
     societe: d.societe.nom,
     cellule: d.collaborateur?.cellule?.nom ?? null,
     // Photo de la fiche d'équipe (Équipes) : en-tête de Mon espace.
-    photo: d.collaborateur?.photoCle ?? null,
+    photo: cheminPhoto(d.utilisateur?.photoCle) ?? d.collaborateur?.photoCle ?? null,
     typeContrat: d.typeContrat,
     dateEntree: d.dateEntree,
     dateFin: d.dateFin,
