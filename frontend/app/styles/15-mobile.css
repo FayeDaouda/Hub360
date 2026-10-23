@@ -519,6 +519,7 @@ tr.is-demandeur .cal-nom {
 }
 .at-rh-ligne {
   --ton: var(--pill-neutre);
+  --ton-texte: var(--text);
   position: relative;
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) auto auto;
@@ -553,7 +554,7 @@ tr.is-demandeur .cal-nom {
   height: 2rem;
   border-radius: 9px;
   background: color-mix(in oklch, var(--ton) 15%, transparent);
-  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+  color: var(--ton-texte);
 }
 .at-rh-corps {
   display: grid;
@@ -574,7 +575,7 @@ tr.is-demandeur .cal-nom {
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
-  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+  color: var(--ton-texte);
 }
 .at-rh-ligne[data-ton='neutre'] .at-rh-quand {
   color: var(--text-muted);
@@ -920,25 +921,34 @@ tr.is-demandeur .cal-nom {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.6rem;
 }
+/* --ton : teinte (fonds, filets) ; --ton-texte : texte lisible sur la
+   surface du thème — les couleurs de statut (un mélange avec l'encre
+   indigo virait au framboise en clair). */
 .mt-filtre,
 .mt-ligne,
 .mt-groupe-titre {
   --ton: var(--pill-neutre);
+  --ton-texte: var(--text);
 }
 [data-ton='risque'] {
   --ton: var(--pill-risque);
+  --ton-texte: var(--danger-texte);
 }
 [data-ton='attention'] {
   --ton: var(--pill-attention);
+  --ton-texte: var(--attention-texte);
 }
 [data-ton='info'] {
   --ton: var(--pill-info);
+  --ton-texte: var(--info-texte);
 }
 [data-ton='iris'] {
   --ton: var(--iris);
+  --ton-texte: var(--lien);
 }
 [data-ton='succes'] {
   --ton: var(--pill-succes);
+  --ton-texte: var(--ok-texte);
 }
 .mt-filtre {
   display: flex;
@@ -989,7 +999,7 @@ tr.is-demandeur .cal-nom {
   height: 32px;
   border-radius: 9px;
   background: color-mix(in oklch, var(--ton) 16%, transparent);
-  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+  color: var(--ton-texte);
 }
 .mt-filtre-texte {
   display: grid;
@@ -1016,7 +1026,7 @@ tr.is-demandeur .cal-nom {
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+  color: var(--ton-texte);
 }
 .mt-bandeau {
   display: flex;
@@ -1313,7 +1323,7 @@ tr.is-demandeur .cal-nom {
   border-radius: 999px;
   letter-spacing: 0;
   background: color-mix(in oklch, var(--ton) 16%, transparent);
-  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+  color: var(--ton-texte);
 }
 .mt-lignes {
   display: grid;
@@ -1341,6 +1351,9 @@ tr.is-demandeur .cal-nom {
   width: 3px;
   border-radius: 3px;
   background: var(--ton);
+}
+.mt-ligne--ouvrable {
+  cursor: pointer;
 }
 .mt-ligne:hover {
   background: color-mix(in oklch, var(--text) 4%, transparent);
@@ -1430,7 +1443,7 @@ tr.is-demandeur .cal-nom {
 .mt-echeance-rel {
   font-size: 0.85rem;
   font-weight: 600;
-  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+  color: var(--ton-texte);
 }
 .mt-ligne[data-ton='neutre'] .mt-echeance-rel {
   color: var(--text);
@@ -1474,6 +1487,14 @@ tr.is-demandeur .cal-nom {
   justify-content: space-between;
   gap: 0.6rem 1rem;
   margin-bottom: 0.9rem;
+}
+/* En-tête fixe : la salutation porte le même voile que la barre du haut et
+   la bande des cartes, sans interstice — sinon le halo de l'atmosphère
+   passait entre les deux et dessinait une bande colorée (visible en clair). */
+.page-entete-fixe .mt-accueil {
+  margin: 0 calc(-1 * var(--ef-gx));
+  padding: 0 var(--ef-gx) 0.9rem;
+  background: var(--ef-voile);
 }
 .mt-accueil-titre {
   margin: 0;

@@ -830,10 +830,16 @@ function LigneTache({
 
   return (
     <li
-      className={`mt-ligne${survol ? ' is-depot' : fichierEnVol && onFichiers ? ' is-cible' : ''}`}
+      className={`mt-ligne mt-ligne--ouvrable${survol ? ' is-depot' : fichierEnVol && onFichiers ? ' is-cible' : ''}`}
       data-ton={ton}
       data-tache={t.id}
       style={transition(t.id)}
+      // Toute la ligne ouvre la tâche ; ses boutons et liens gardent leur
+      // propre action. Au clavier : le titre (bouton) reste le point d'entrée.
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('button, a, input, label, select, textarea')) return;
+        onOuvrir(false);
+      }}
       {...glisser}
     >
       <span className="mt-corps">
@@ -1006,7 +1012,15 @@ function LigneMention({ slug, m, base, onOuvrir, onMaj }: { slug: string; m: Men
     });
 
   return (
-    <li className={`mt-ligne mt-mention${m.lue ? ' is-lue' : ''}`} data-ton={m.lue ? 'neutre' : 'iris'}>
+    <li
+      className={`mt-ligne mt-mention${m.tacheId ? ' mt-ligne--ouvrable' : ''}${m.lue ? ' is-lue' : ''}`}
+      data-ton={m.lue ? 'neutre' : 'iris'}
+      // Comme une tâche : toute la ligne ouvre la tâche mentionnée.
+      onClick={(e) => {
+        if (!m.tacheId || (e.target as HTMLElement).closest('button, a, input, label, select, textarea')) return;
+        onOuvrir();
+      }}
+    >
       <span className="mt-corps">
         <span className="mt-titre">
           {!m.lue && <span className="mt-nouveau" aria-label="Non lue" />}
