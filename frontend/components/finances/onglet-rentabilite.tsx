@@ -7,7 +7,6 @@ import { BoutonExport } from '@/components/bouton-export';
 import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite';
 import { ParametresRentabilite } from '@/components/finances/parametres-rentabilite';
 import { ApiError } from '@/lib/client-api';
-import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
 import { exporterCsv } from '@/lib/export-csv';
 import { formatMontant } from '@/lib/format';
 import {
@@ -112,19 +111,19 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                   {
                     cle: 'ht',
                     label: 'Montant HT facturé',
-                    valeur: formatMontant(donnees.totaux.ht ?? 0),
+                    montant: donnees.totaux.ht ?? 0,
                     sousTexte: `${donnees.projetsComplets} projet(s) aux données complètes, avoirs déduits`,
                     icone: Banknote,
-                    degrade: DEGRADE_ETAT.marque,
+                    etat: 'marque',
                   },
-                  { cle: 'cout', label: 'Coût salarial direct', valeur: formatMontant(donnees.totaux.cout ?? 0), sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`, icone: Users, degrade: DEGRADE_ETAT.marque },
+                  { cle: 'cout', label: 'Coût salarial direct', montant: donnees.totaux.cout ?? 0, sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`, icone: Users, etat: 'marque' },
                   {
                     cle: 'marge',
                     label: 'Marge directe provisoire',
-                    valeur: donnees.totaux.marge === null ? 'Données insuffisantes' : formatMontant(donnees.totaux.marge),
+                    ...(donnees.totaux.marge === null ? { valeur: 'Données insuffisantes' } : { montant: donnees.totaux.marge }),
                     sousTexte: donnees.totaux.marge === null ? 'aucun projet aux données complètes' : `${formatTaux(donnees.totaux.taux)} · cible ${formatParametre(p.marge_cible)}`,
                     icone: Percent,
-                    degrade: DEGRADE_ETAT[(donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque'],
+                    etat: (donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque',
                   },
                 ]
               : [
@@ -134,7 +133,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     valeur: donnees.projetsComplets ? formatTaux(donnees.totaux.taux) : 'Données insuffisantes',
                     sousTexte: `${donnees.projetsComplets} projet(s) aux données complètes · cible ${formatParametre(p.marge_cible)}`,
                     icone: Percent,
-                    degrade: DEGRADE_ETAT.marque,
+                    etat: 'marque',
                   },
                 ]
           }

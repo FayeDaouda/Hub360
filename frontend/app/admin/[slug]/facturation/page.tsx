@@ -31,9 +31,9 @@ import {
   type Projet,
   type ProjetRef,
 } from '@/lib/types';
-import { formatMontant, formatMontantCompact } from '@/lib/format';
+import { formatMontantCompact } from '@/lib/format';
 import { KpiStrip } from '@/components/admin/kpi-strip';
-import { DEGRADE_ETAT, etatEnRetard } from '@/lib/couleurs-etat';
+import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
 import { ImpressionDocument } from '@/components/impression-document';
@@ -402,10 +402,10 @@ export default function FinancesPage({ params }: Props) {
             {
               cle: 'offres',
               label: 'Offres en cours',
-              valeur: formatMontant(kpi.offresEnCours.montant),
+              montant: kpi.offresEnCours.montant,
               sousTexte: `${pluriel(kpi.offresEnCours.nombre, 'offre')} en validation ou chez le client`,
               icone: FileText,
-              degrade: DEGRADE_ETAT.marque,
+              etat: 'marque',
             },
             {
               cle: 'transformation',
@@ -413,31 +413,31 @@ export default function FinancesPage({ params }: Props) {
               valeur: kpi.transformation.pct == null ? '—' : `${kpi.transformation.pct} %`,
               sousTexte: `${pluriel(kpi.transformation.acceptes, 'acceptée')} · ${pluriel(kpi.transformation.refuses, 'refusée')}`,
               icone: TrendingUp,
-              degrade: DEGRADE_ETAT.marque,
+              etat: 'marque',
             },
             {
               cle: 'facture',
               label: `Facturé en ${kpi.annee}`,
-              valeur: formatMontant(kpi.facture.montant),
+              montant: kpi.facture.montant,
               sousTexte: `TTC · ${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
               icone: FileText,
-              degrade: DEGRADE_ETAT.marque,
+              etat: 'marque',
             },
             {
               cle: 'encaisse',
               label: `Encaissé en ${kpi.annee}`,
-              valeur: formatMontant(kpi.encaisse.montant),
+              montant: kpi.encaisse.montant,
               sousTexte: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
               icone: Banknote,
-              degrade: DEGRADE_ETAT.marque,
+              etat: 'marque',
             },
             {
               cle: 'reste',
               label: 'Reste à encaisser',
-              valeur: formatMontant(kpi.resteAEncaisser.montant),
+              montant: kpi.resteAEncaisser.montant,
               sousTexte: `dont ${formatMontantCompact(kpi.resteAEncaisser.enRetard.montant)} en retard · ${formatMontantCompact(kpi.resteAEncaisser.aEchoir.montant)} à échoir`,
               icone: Clock,
-              degrade: DEGRADE_ETAT[etatEnRetard(kpi.resteAEncaisser.enRetard.nombre)],
+              etat: etatEnRetard(kpi.resteAEncaisser.enRetard.nombre),
             },
           ]}
         />

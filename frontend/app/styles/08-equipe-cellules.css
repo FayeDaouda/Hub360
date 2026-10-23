@@ -62,7 +62,7 @@
     box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .kpi-tuile--clic:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: var(--argile);
   box-shadow: var(--shadow-md);
 }
@@ -74,13 +74,11 @@
   outline: 2px solid var(--argile);
   outline-offset: -1px;
 }
-/* Sur une tuile --pleine, le contour Argile en dur jurerait contre un
-   dégradé sauge/ocre/marque — un liseré blanc translucide marche sur
-   n'importe laquelle des 4 couleurs plutôt qu'une seule teinte figée. */
-.kpi-tuile--pleine.kpi-tuile--clic:hover {
+/* Sur la tuile d'alerte (aplat rouge), un liseré blanc translucide. */
+.kpi-tuile--alerte.kpi-tuile--clic:hover {
   border-color: rgba(255, 255, 255, 0.55);
 }
-.kpi-tuile--pleine.kpi-tuile--actif {
+.kpi-tuile--alerte.kpi-tuile--actif {
   outline-color: rgba(255, 255, 255, 0.7);
 }
 
@@ -103,7 +101,7 @@
   outline: 2px solid var(--argile);
   outline-offset: 2px;
 }
-.kpi-tuile--pleine.kpi-tuile--clic:focus-visible {
+.kpi-tuile--alerte.kpi-tuile--clic:focus-visible {
   outline-color: rgba(255, 255, 255, 0.8);
 }
 

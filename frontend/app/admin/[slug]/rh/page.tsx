@@ -21,8 +21,7 @@ import {
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
-import { formatMontant } from '@/lib/format';
-import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
+import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { ApiError } from '@/lib/client-api';
@@ -213,7 +212,7 @@ export default function RhPage({ params }: Props) {
   };
   // Couleur = sens (lib/couleurs-etat.ts) : ambre à traiter, rouge en
   // retard / hors objectif, vert rien en attente, iris sans objectif.
-  const tuiles: { cle: string; libelle: string; valeur: number | string | null; aide: string; actif: boolean; onClick: () => void; icone: LucideIcon; etat: EtatTuile }[] = [
+  const tuiles: { cle: string; libelle: string; valeur: number | string | null; montant?: number; aide: string; actif: boolean; onClick: () => void; icone: LucideIcon; etat: EtatTuile }[] = [
     {
       cle: 'effectif',
       libelle: 'Effectif du groupe',
@@ -229,7 +228,8 @@ export default function RhPage({ params }: Props) {
       // rémunération saisie dans l'administration du HUB a été retirée.
       cle: 'masse',
       libelle: 'Masse salariale brute / mois',
-      valeur: masse ? (masse.renseignes ? formatMontant(masse.masse) : '—') : null,
+      valeur: masse ? (masse.renseignes ? null : '—') : null,
+      montant: masse?.renseignes ? masse.masse : undefined,
       aide: masse ? `${masse.renseignes}/${masse.total} salaires renseignés` : 'calcul…',
       actif: false,
       onClick: () => ouvrir('personnel'),
@@ -327,9 +327,10 @@ export default function RhPage({ params }: Props) {
             cle: t.cle,
             label: t.libelle,
             valeur: t.valeur ?? '…',
+            montant: t.montant,
             sousTexte: t.aide,
             icone: t.icone,
-            degrade: DEGRADE_ETAT[t.etat],
+            etat: t.etat,
             action: { type: 'filtre' as const, actif: t.actif, onClick: t.onClick },
           }))}
         />

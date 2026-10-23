@@ -2,8 +2,6 @@
    Bandeaux de KPI — CRM & Projets
    ========================================================================= */
 
-/* Bandeau KPI — panneau Encre distinct posé sur la page Sable (pas un thème
-   sombre général : juste ce composant, assumé comme un bloc à part). */
 .kpi-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -12,125 +10,55 @@
 }
 
 .kpi-tuile {
+  /* Tuile unique (lot 2 de l'audit UX, 23/10/2026) : surface opaque, chiffre
+     en couleur de texte ; l'état ne teinte que la pastille d'icône
+     (--kpi-ton). Un seul aplat par bandeau : .kpi-tuile--alerte. */
+  --kpi-ton: var(--text-muted);
+  --kpi-ton-texte: var(--text-muted);
   position: relative;
   /* Conteneur de requête : la valeur se dimensionne sur la largeur de SA
      tuile (cqi), pas sur l'écran — un montant long ne déborde plus. */
   container-type: inline-size;
-  /* Empêche tout élément interne (icône, anneau, pastille, décor de
-     .kpi-tuile--pleine) de déborder sur la tuile voisine. */
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
-  border-radius: var(--radius-lg);
-  padding: 1.1rem 1.25rem;
+  border-radius: var(--r-14);
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible), var(--ombre-1);
+  padding: var(--e-16) 1.1rem;
   min-width: 0;
   color: var(--text);
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow var(--duree-moyen) var(--courbe);
 }
 
-/* Tuile volontairement en retrait (« Annulés ») : même famille « pleine
-   couleur » que les autres (lueur, anneau — cf. .kpi-tuile--pleine
-   plus bas), mais un dégradé gris/noir plutôt qu'une teinte vive — on ne met
-   pas une mauvaise nouvelle au même poids visuel qu'un succès. */
-.kpi-tuile--attenue {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklch, #4a4658 82%, transparent),
-      color-mix(in oklch, var(--encre) 90%, transparent)
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 12px 28px rgba(20, 15, 31, 0.28);
+/* États : seule la pastille d'icône (et le chiffre d'un risque) se teinte. */
+.kpi-tuile--succes {
+  --kpi-ton: var(--ok);
+  --kpi-ton-texte: var(--ok-texte);
+}
+.kpi-tuile--attention {
+  --kpi-ton: var(--attention);
+  --kpi-ton-texte: var(--attention-texte);
+}
+.kpi-tuile--risque {
+  --kpi-ton: var(--danger);
+  --kpi-ton-texte: var(--danger-texte);
+}
+.kpi-tuile--risque .kpi-tuile-valeur {
+  color: var(--danger-texte);
 }
 
-/* --- Tuile « pleine couleur » (accent + les 3 sens) ------------------------
-   Verre teinté plutôt qu'un aplat opaque (sept. 2026 — l'aplat plein rendait
-   ces tuiles trop chargées à côté du reste de l'app, cf. mémoire) : dégradé
-   translucide + flou + reflet en haut, même recette que .projet-carte au
-   survol / .phase-pastille faite. Texte blanc (texture diagonale retirée le
-   19/10/2026, demande du user), et deux formes décoratives abstraites (lueur + anneau) façon carte
-   premium. `--pleine` porte tout ce qui est PARTAGÉ ; chaque variante
-   ci-dessous ne fixe que sa couleur (background + ombre). */
-.kpi-tuile--pleine {
-  border-left-color: transparent;
+/* La tuile qui demande une action : la seule en aplat (rouge danger, texte
+   blanc ≥ 4,8:1). */
+.kpi-tuile--alerte {
+  background: var(--danger);
+  border-color: transparent;
   color: #fff;
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 28px color-mix(in srgb, var(--danger) 32%, transparent);
 }
 
-/* Accent = Iris (couleur de marque/identité), pas le dégradé de marque
-   entier (trop chargé sur une petite tuile) — reste utilisé par « À
-   assigner » (page Projets). */
-.kpi-tuile--accent {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklch, var(--iris) 80%, transparent),
-      color-mix(in oklch, var(--iris-fonce) 88%, transparent)
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 12px 28px color-mix(in oklch, var(--iris-fonce) 30%, transparent);
-}
-.kpi-tuile--sens-sauge {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklch, var(--sauge) 80%, transparent),
-      color-mix(in oklch, var(--sauge-fonce) 88%, transparent)
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 12px 28px color-mix(in oklch, var(--sauge-fonce) 30%, transparent);
-}
-.kpi-tuile--sens-argile {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklch, var(--argile) 80%, transparent),
-      color-mix(in oklch, var(--argile-fonce) 88%, transparent)
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 12px 28px color-mix(in oklch, var(--argile-fonce) 30%, transparent);
-}
-/* Ocre reste clair/doré partout ailleurs (tint + fonce, cf. mémoire
-   contraste) — mais une carte pleine avec du texte blanc dessus a besoin
-   d'un ton plus profond (cuivré) pour rester lisible ; même famille de
-   teinte, pas le doré vif des pastilles. */
-.kpi-tuile--sens-ocre {
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in oklch, oklch(50% 0.13 70) 80%, transparent),
-      color-mix(in oklch, oklch(32% 0.1 70) 88%, transparent)
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 12px 28px oklch(50% 0.13 70 / 0.28);
-}
-
-/* Dégradé vif propre à chaque tuile (demande boss, sept. 2026 — même
-   principe que .stat-card--degrade sur le tableau de bord) — --kpi-a/--kpi-b
-   posées en inline style depuis la page appelante (DEGRADE_KPI, un point de
-   vérité par page : CRM/Projets/Facturation choisissent chacune leurs 4
-   couleurs). Couleurs pleines plutôt que la dilution color-mix des variantes
-   de sens ci-dessus — assumé décoratif, pas lié à la hiérarchie de module. */
-.kpi-tuile--degrade {
-  background:
-    linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 12px 28px color-mix(in oklch, var(--kpi-a) 35%, transparent);
-}
-
-/* Tête + libellé alignés sur .stat-card-chip/.stat-card-label du tableau de
-   bord (style de base, retour boss sept. 2026) : icône seule sur sa ligne,
-   libellé juste en dessous — l'anneau/la pastille de tendance/le décor
-   (spécifiques aux tuiles KpiStrip, absents du dashboard) restent à droite
-   de la même ligne que l'icône plutôt que de forcer une 3e ligne. */
+/* Tête : pastille d'icône, et à droite anneau / tendance / décor. */
 .kpi-tuile-tete {
   position: relative;
   z-index: 1;
@@ -149,61 +77,59 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 34px;
-  height: 34px;
-  margin-bottom: 0.6rem;
-  border-radius: var(--radius-md);
-  /* Pastille pleine (Encre) — un repère vivant, pas un carré grisâtre.
-     .kpi-tuile--pleine la recolore ci-dessous. */
-  background: var(--encre);
-  color: #efe7d8;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 32px;
+  height: 32px;
+  margin-bottom: var(--e-12);
+  border-radius: var(--r-10);
+  /* Repli neutre : la pastille sert aussi hors d'une .kpi-tuile (Réglages). */
+  background: color-mix(in srgb, var(--kpi-ton, var(--text-muted)) 14%, var(--surface));
+  color: var(--kpi-ton-texte, var(--text-muted));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kpi-ton, var(--text-muted)) 20%, transparent);
+  transition: transform var(--duree-moyen) var(--courbe);
 }
-.kpi-tuile--pleine .kpi-tuile-icone {
+.kpi-tuile--marque .kpi-tuile-icone {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.kpi-tuile--alerte .kpi-tuile-icone {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
+  box-shadow: none;
 }
 
 .kpi-tuile-label {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--t-13);
+  font-weight: 500;
   color: var(--text-muted);
 }
-.kpi-tuile--pleine .kpi-tuile-label {
-  color: rgba(255, 255, 255, 0.75);
+.kpi-tuile--alerte .kpi-tuile-label {
+  color: #fff;
 }
 .kpi-tuile-valeur {
   position: relative;
   z-index: 1;
-  margin: 0.4rem 0 0;
+  margin: var(--e-4) 0 0;
   font-size: clamp(1.15rem, 12cqi, 1.75rem);
   line-height: 1.15;
   overflow-wrap: break-word;
   font-weight: 600;
   color: var(--text);
-  letter-spacing: -0.01em;
-  transition: letter-spacing 0.22s ease;
-}
-/* Resserrement à peine perceptible au survol — seulement sur les tuiles
-   cliquables, comme le reste des micro-réactions de hover. */
-.kpi-tuile--clic:hover .kpi-tuile-valeur {
   letter-spacing: -0.02em;
 }
 .kpi-tuile--alerte .kpi-tuile-valeur {
-  color: var(--lien);
-}
-.kpi-tuile--pleine .kpi-tuile-valeur {
   color: #fff;
 }
 .kpi-tuile-sous {
   position: relative;
   z-index: 1;
-  margin: 0.3rem 0 0;
-  font-size: 0.76rem;
+  margin: var(--e-4) 0 0;
+  font-size: var(--t-12);
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
-.kpi-tuile--pleine .kpi-tuile-sous {
-  color: rgba(255, 255, 255, 0.7);
+.kpi-tuile--alerte .kpi-tuile-sous {
+  color: #fff;
 }
 
 /* Anneau miniature — un vrai pourcentage (ex. taux de conversion), pas un
@@ -213,15 +139,15 @@
   stroke-width: 3;
 }
 .kpi-tuile-anneau-trait {
-  stroke: var(--sauge);
+  stroke: var(--ok);
   stroke-width: 3;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: stroke-dashoffset 0.6s var(--courbe);
 }
-.kpi-tuile--pleine .kpi-tuile-anneau-piste {
+.kpi-tuile--alerte .kpi-tuile-anneau-piste {
   stroke: rgba(255, 255, 255, 0.28);
 }
-.kpi-tuile--pleine .kpi-tuile-anneau-trait {
+.kpi-tuile--alerte .kpi-tuile-anneau-trait {
   stroke: #fff;
 }
 
@@ -237,34 +163,28 @@
   white-space: nowrap;
 }
 .kpi-tuile-badge--hausse {
-  background: var(--sauge-tint);
-  color: var(--sauge-fonce);
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  color: var(--ok-texte);
 }
 .kpi-tuile-badge--baisse {
-  background: #f6e3e1;
-  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  color: var(--danger-texte);
 }
 .kpi-tuile-badge--stable {
-  background: var(--admin-fond);
+  background: var(--surface-2);
   color: var(--text-muted);
 }
-/* Sur fond dégradé, les 3 nuances (sauge/danger/neutre) ne ressortent plus
-   assez — la flèche de la pastille porte déjà le sens, une seule teinte
-   translucide suffit. */
-.kpi-tuile--pleine .kpi-tuile-badge--hausse,
-.kpi-tuile--pleine .kpi-tuile-badge--baisse,
-.kpi-tuile--pleine .kpi-tuile-badge--stable {
+.kpi-tuile--alerte .kpi-tuile-badge {
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
 }
 
-/* Icône décorative pure (ex. pictogramme de tendance sur « Pipeline actif ») :
-   aucune donnée dessinée, assumée comme un repère graphique et rien de plus. */
+/* Icône décorative pure : aucune donnée dessinée, un repère graphique. */
 .kpi-tuile-decor {
   display: inline-flex;
   color: var(--border-hover);
 }
-.kpi-tuile--pleine .kpi-tuile-decor {
+.kpi-tuile--alerte .kpi-tuile-decor {
   color: rgba(255, 255, 255, 0.55);
 }
 
@@ -391,19 +311,17 @@
   background: var(--argile);
 }
 
-/* Lisibilité quand la mini-liste vit dans une tuile « pleine couleur » (ex.
-   « Charge par cellule », page Projets) — piste/texte foncés illisibles sur
-   un dégradé vif sinon. */
-.kpi-tuile--pleine .kpi-minibars-label {
+/* Lisibilité quand la mini-liste vit dans la tuile d'alerte (aplat rouge). */
+.kpi-tuile--alerte .kpi-minibars-label {
   color: rgba(255, 255, 255, 0.75);
 }
-.kpi-tuile--pleine .kpi-minibars-piste {
+.kpi-tuile--alerte .kpi-minibars-piste {
   background: rgba(255, 255, 255, 0.25);
 }
-.kpi-tuile--pleine .kpi-minibars-barre {
+.kpi-tuile--alerte .kpi-minibars-barre {
   background: #fff;
 }
-.kpi-tuile--pleine .kpi-minibars li {
+.kpi-tuile--alerte .kpi-minibars li {
   color: #fff;
 }
 

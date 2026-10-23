@@ -1,19 +1,13 @@
-// Couleur = sens (décision du 12/10/2026) pour les tuiles en dégradé : seule
-// la teinte suit l'état, le style dégradé reste. Partagé par le Pilotage,
-// puis Finances, CRM et RH.
+// Couleur = sens (décision du 12/10/2026) : l'état d'une tuile KPI. Depuis le
+// lot 2 de l'audit UX (23/10/2026), il ne teinte que la pastille d'icône ;
+// la première tuile « risque » d'un bandeau passe en aplat rouge (cf.
+// components/admin/kpi-strip.tsx). Partagé par Pilotage, Finances, CRM, RH,
+// Projets.
 //  · risque    : au moins un élément en retard ou hors objectif ;
 //  · attention : à surveiller, à traiter dans les délais ;
 //  · succes    : objectif atteint, rien en retard ;
-//  · marque    : chiffre sans objectif (iris, couleur de marque du HUB).
-// Texte blanc ≥ 3,7:1 sur la teinte claire, ≥ 5,7:1 sur la foncée.
+//  · marque    : chiffre sans objectif (neutre).
 export type EtatTuile = 'risque' | 'attention' | 'succes' | 'marque';
-
-export const DEGRADE_ETAT: Record<EtatTuile, { a: string; b: string }> = {
-  risque: { a: '#b3372f', b: '#d0544a' },
-  attention: { a: '#94560a', b: '#b57414' },
-  succes: { a: '#26734a', b: '#3a9462' },
-  marque: { a: '#6b2fb8', b: '#8c55d6' },
-};
 
 // Mêmes règles que backend/src/pilotage/chiffres.service.ts.
 export const etatATraiter = (n: number): EtatTuile => (n > 0 ? 'attention' : 'succes');

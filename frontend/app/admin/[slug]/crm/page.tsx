@@ -38,7 +38,7 @@ import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
-import { DEGRADE_ETAT, DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
+import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
@@ -343,11 +343,11 @@ export default function CrmPage({ params }: Props) {
           <div className="crm-kpi">
           <KpiStrip
             tuiles={[
-              { cle: 'actif', label: 'Pipeline actif', valeur: kpi.actifs, sousTexte: 'projets hors Perdu et Expirée', icone: FolderOpen, degrade: DEGRADE_ETAT.marque, action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') } },
-              { cle: 'fiches', label: 'Fiches à compléter', valeur: kpi.aCompleter, sousTexte: kpi.fichesEchues ? `dont ${kpi.fichesEchues} au-delà de 72 h` : 'fiche incomplète · délai 72 h', icone: FileWarning, degrade: DEGRADE_ETAT[etatSelonDelai(kpi.aCompleter, kpi.fichesEchues)], action: { type: 'filtre', actif: situation === 'a_completer', onClick: () => basculer('a_completer') } },
-              { cle: 'cfo', label: 'En attente CFO', valeur: kpi.par('en_validation'), sousTexte: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h', icone: Clock3, degrade: DEGRADE_ETAT[etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues)], action: { type: 'filtre', actif: situation === 'en_validation', onClick: () => basculer('en_validation') } },
-              { cle: 'client', label: 'Chez le client', valeur: kpi.par('offre_envoyee'), sousTexte: 'offres envoyées · validité 7 jours', icone: Send, degrade: DEGRADE_ETAT.marque, action: { type: 'filtre', actif: situation === 'offre_envoyee', onClick: () => basculer('offre_envoyee') } },
-              { cle: 'surface', label: 'Surface vendue', valeur: `${formatNombre(kpi.surfaceVendue)} m²`, sousTexte: kpi.detailSurface, icone: Home, degrade: DEGRADE_ETAT.marque, action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') } },
+              { cle: 'actif', label: 'Pipeline actif', valeur: kpi.actifs, sousTexte: 'projets hors Perdu et Expirée', icone: FolderOpen, etat: 'marque', action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') } },
+              { cle: 'fiches', label: 'Fiches à compléter', valeur: kpi.aCompleter, sousTexte: kpi.fichesEchues ? `dont ${kpi.fichesEchues} au-delà de 72 h` : 'fiche incomplète · délai 72 h', icone: FileWarning, etat: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues), action: { type: 'filtre', actif: situation === 'a_completer', onClick: () => basculer('a_completer') } },
+              { cle: 'cfo', label: 'En attente CFO', valeur: kpi.par('en_validation'), sousTexte: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h', icone: Clock3, etat: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues), action: { type: 'filtre', actif: situation === 'en_validation', onClick: () => basculer('en_validation') } },
+              { cle: 'client', label: 'Chez le client', valeur: kpi.par('offre_envoyee'), sousTexte: 'offres envoyées · validité 7 jours', icone: Send, etat: 'marque', action: { type: 'filtre', actif: situation === 'offre_envoyee', onClick: () => basculer('offre_envoyee') } },
+              { cle: 'surface', label: 'Surface vendue', valeur: `${formatNombre(kpi.surfaceVendue)} m²`, sousTexte: kpi.detailSurface, icone: Home, etat: 'marque', action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') } },
             ]}
           />
           </div>

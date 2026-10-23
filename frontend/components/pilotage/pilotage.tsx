@@ -18,8 +18,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
-import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
-import { formatMontant } from '@/lib/format';
 import { ROLE_CEO, ROLE_CIO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getAttention, getPilotage } from '@/lib/pilotage';
@@ -132,10 +130,10 @@ export function Pilotage({ slug }: { slug: string }) {
             .map((x) => ({
               cle: x.cle,
               label: TUILES[x.cle].libelle,
-              valeur: TUILES[x.cle].montant ? formatMontant(x.valeur) : String(x.valeur),
+              ...(TUILES[x.cle].montant ? { montant: x.valeur } : { valeur: String(x.valeur) }),
               sousTexte: x.aide,
               icone: TUILES[x.cle].icone,
-              degrade: DEGRADE_ETAT[x.etat],
+              etat: x.etat,
               action: { type: 'lien' as const, href: lien(x.cle) },
             }))}
         />

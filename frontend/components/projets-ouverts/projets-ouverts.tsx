@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlarmClock, AtSign, CalendarPlus, CheckCheck, ChevronDown, Hourglass, MessageCircle, RotateCcw } from 'lucide-react';
 import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
-import { DEGRADE_ETAT, etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
+import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { getMesTaches } from '@/lib/mon-espace';
@@ -334,7 +334,7 @@ function tuilesSalarie(
   ouvrirRemise: () => void,
 ): KpiTuile[] {
   const n = (v: number | undefined) => (v === undefined ? '…' : v);
-  const etat = (v: number | undefined, f: (x: number) => EtatTuile) => DEGRADE_ETAT[v === undefined ? 'marque' : f(v)];
+  const etat = (v: number | undefined, f: (x: number) => EtatTuile): EtatTuile => (v === undefined ? 'marque' : f(v));
   const lien = (filtre: string) => ({ type: 'lien' as const, href: `/admin/${slug}/mes-taches?filtre=${filtre}` });
   const aValider = tableau?.kpi.aValiderParVous.length ?? 0;
   return [
@@ -344,7 +344,7 @@ function tuilesSalarie(
       valeur: n(perso?.reprises),
       sousTexte: 'renvoyées par votre N+1',
       icone: RotateCcw,
-      degrade: etat(perso?.reprises, etatEnRetard),
+      etat: etat(perso?.reprises, etatEnRetard),
       action: lien('reprises'),
     },
     {
@@ -353,7 +353,7 @@ function tuilesSalarie(
       valeur: n(perso?.retards),
       sousTexte: 'échéance dépassée',
       icone: AlarmClock,
-      degrade: etat(perso?.retards, etatEnRetard),
+      etat: etat(perso?.retards, etatEnRetard),
       action: lien('retards'),
     },
     {
@@ -362,7 +362,7 @@ function tuilesSalarie(
       valeur: n(perso?.attente),
       sousTexte: 'chez votre chef de team',
       icone: Hourglass,
-      degrade: etat(perso?.attente, etatATraiter),
+      etat: etat(perso?.attente, etatATraiter),
       action: lien('attente'),
     },
     aValider > 0
@@ -372,7 +372,7 @@ function tuilesSalarie(
           valeur: aValider,
           sousTexte: 'remises de votre cellule',
           icone: CheckCheck,
-          degrade: DEGRADE_ETAT[etatATraiter(aValider)],
+          etat: etatATraiter(aValider),
           action: { type: 'popup' as const, onClick: ouvrirRemise },
         }
       : {
@@ -381,7 +381,7 @@ function tuilesSalarie(
           valeur: n(perso?.mentions),
           sousTexte: 'dans les fils des projets',
           icone: AtSign,
-          degrade: etat(perso?.mentions, etatATraiter),
+          etat: etat(perso?.mentions, etatATraiter),
           action: lien('mentions'),
         },
   ];
@@ -397,7 +397,7 @@ function tuilesProjets(
 ): KpiTuile[] {
   const k = tableau?.kpi;
   const n = (v: number | undefined) => (v === undefined ? '…' : v);
-  const etat = (v: number | undefined, f: (x: number) => EtatTuile) => DEGRADE_ETAT[v === undefined ? 'marque' : f(v)];
+  const etat = (v: number | undefined, f: (x: number) => EtatTuile): EtatTuile => (v === undefined ? 'marque' : f(v));
   const aValider = k?.aValiderParVous.length;
   const signalements = k ? (salarie ? k.mentions : k.tsNonAcceptes + k.mentions) : undefined;
   return [
@@ -408,7 +408,7 @@ function tuilesProjets(
           valeur: n(aValider),
           sousTexte: 'jamais sa propre tâche · cliquer pour valider',
           icone: CheckCheck,
-          degrade: etat(aValider, etatATraiter),
+          etat: etat(aValider, etatATraiter),
           ...(aValider ? { action: { type: 'popup' as const, onClick: ouvrirRemise } } : {}),
         }
       : {
@@ -417,7 +417,7 @@ function tuilesProjets(
           valeur: n(k?.remisesAValider),
           sousTexte: 'tous projets · chef de team ou DPLG',
           icone: CheckCheck,
-          degrade: etat(k?.remisesAValider, etatATraiter),
+          etat: etat(k?.remisesAValider, etatATraiter),
         },
     {
       cle: 'retard',
@@ -425,7 +425,7 @@ function tuilesProjets(
       valeur: n(k?.tachesEnRetard),
       sousTexte: 'échéance de référence dépassée',
       icone: Hourglass,
-      degrade: etat(k?.tachesEnRetard, etatEnRetard),
+      etat: etat(k?.tachesEnRetard, etatEnRetard),
     },
     {
       cle: 'prolongations',
@@ -433,7 +433,7 @@ function tuilesProjets(
       valeur: n(k?.prolongations),
       sousTexte: 'le retard est qualifié par le chef de team ou le DPLG',
       icone: CalendarPlus,
-      degrade: etat(k?.prolongations, etatATraiter),
+      etat: etat(k?.prolongations, etatATraiter),
     },
     {
       cle: 'signalements',
@@ -442,7 +442,7 @@ function tuilesProjets(
       sousTexte: salarie || !k ? 'mises à jour à reporter, @mentions' : `${k.tsNonAcceptes} TS non accepté(s) · ${k.mentions} tâche(s)`,
       icone: AtSign,
       // TS au-delà du délai réglé = en retard ; mention ouverte = à traiter.
-      degrade: DEGRADE_ETAT[!k ? 'marque' : !salarie && k.tsNonAcceptes > 0 ? 'risque' : etatATraiter(k.mentions)],
+      etat: !k ? 'marque' : !salarie && k.tsNonAcceptes > 0 ? 'risque' : etatATraiter(k.mentions),
     },
   ];
 }

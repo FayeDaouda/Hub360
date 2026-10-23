@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlarmClock, CalendarClock, Gauge, TriangleAlert } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
-import { DEGRADE_ETAT } from '@/lib/couleurs-etat';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getProduction, jjmm, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
@@ -95,7 +94,7 @@ export function Production({ slug }: { slug: string }) {
             valeur: c.enRetard,
             sousTexte: retard ? 'filtre actif' : 'tâches en retard ou livraison dépassée',
             icone: TriangleAlert,
-            degrade: DEGRADE_ETAT[c.enRetard ? 'risque' : 'succes'],
+            etat: c.enRetard ? 'risque' : 'succes',
             action: { type: 'filtre', actif: retard, onClick: () => setRetard((x) => !x) },
           },
           {
@@ -104,7 +103,7 @@ export function Production({ slug }: { slug: string }) {
             valeur: c.livraisons15,
             sousTexte: livraison ? 'filtre actif' : undefined,
             icone: CalendarClock,
-            degrade: DEGRADE_ETAT[c.livraisons15 ? 'attention' : 'succes'],
+            etat: c.livraisons15 ? 'attention' : 'succes',
             action: { type: 'filtre', actif: livraison, onClick: () => setLivraison((x) => !x) },
           },
           {
@@ -113,7 +112,7 @@ export function Production({ slug }: { slug: string }) {
             valeur: c.enAttente,
             sousTexte: 'remises, visas, prolongations, TS',
             icone: AlarmClock,
-            degrade: DEGRADE_ETAT[c.enAttente ? 'attention' : 'succes'],
+            etat: c.enAttente ? 'attention' : 'succes',
             action: { type: 'lien', href: `/admin/${slug}` },
           },
           {
@@ -122,7 +121,7 @@ export function Production({ slug }: { slug: string }) {
             valeur: c.chargeMoyenne === null ? '—' : `${c.chargeMoyenne} %`,
             sousTexte: vue.charge.zone ? `zone normale ${vue.charge.zone.de} à ${vue.charge.zone.a} %` : undefined,
             icone: Gauge,
-            degrade: DEGRADE_ETAT[tonCharge(c.chargeMoyenne, vue.charge.zone) === 'succes' ? 'succes' : 'attention'],
+            etat: tonCharge(c.chargeMoyenne, vue.charge.zone) === 'succes' ? 'succes' : 'attention',
           },
         ]}
       />
