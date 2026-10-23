@@ -8748,6 +8748,189 @@ tr.is-demandeur .cal-nom {
 .mt-liste {
   display: grid;
   padding: 0.35rem;
+  /* visible (le verre est en hidden) : un conteneur qui coupe empêcherait
+     les titres de section de coller en haut et rognerait le menu « ⋯ ». Les
+     lignes ont leurs propres coins, la marge intérieure suffit. */
+  overflow: visible;
+}
+/* Titres de section collés sous l'en-tête fixe au défilement : on sait
+   toujours dans quelle section on est. */
+.mt-liste .mt-groupe-titre {
+  position: sticky;
+  top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px));
+  z-index: 3;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+/* Sombre : carte de liste plus opaque — les halos colorés du fond ne
+   passent plus derrière le texte dense (même principe que le portail). */
+:root[data-theme='dark'] .mt-liste,
+:root[data-theme='dark'] .mt-cote-bloc {
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+}
+
+/* Page bornée : sur très grand écran, l'œil ne traverse plus 1 300 px entre
+   le titre d'une tâche et son échéance. */
+.mt-page {
+  max-width: 1480px;
+}
+/* Grand écran (≥ 1400 px) : liste + colonne « Chez mon N+1 » / mentions. */
+.mt-colonnes[data-cote] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.25rem;
+  align-items: start;
+}
+.mt-cote {
+  position: sticky;
+  top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px) + 0.5rem);
+  display: grid;
+  gap: 1rem;
+}
+.mt-cote-bloc {
+  padding: 0.35rem;
+}
+.mt-cote-liste {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0 0.1rem 0.25rem;
+  list-style: none;
+}
+.mt-cote-tache {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mt-cote-tache:hover {
+  background: color-mix(in oklch, var(--text) 5%, transparent);
+}
+.mt-cote-tache:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+.mt-cote-titre {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.mt-cote-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.mt-cote-vide {
+  margin: 0;
+  padding: 0.2rem 0.9rem 0.8rem;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+/* Mentions dans la colonne : une seule colonne, date puis actions dessous. */
+.mt-cote .mt-ligne {
+  grid-template-columns: minmax(0, 1fr);
+}
+.mt-cote .mt-echeance {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  text-align: left;
+}
+.mt-cote .mt-action {
+  justify-content: flex-start;
+}
+
+/* Actions secondaires (« Demander un délai ») : révélées au survol ou au
+   focus clavier de la ligne, place réservée (rien ne bouge). Le menu « ⋯ »
+   est réservé au téléphone. */
+.mt-plus,
+.mt-court {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mt-ligne .mt-secondaire {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .mt-ligne:hover .mt-secondaire,
+  .mt-ligne:focus-within .mt-secondaire {
+    opacity: 1;
+  }
+}
+.mt-plus {
+  position: relative;
+}
+.mt-plus-bouton {
+  min-width: 36px;
+  justify-content: center;
+}
+.mt-plus-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  z-index: 10;
+  display: grid;
+  min-width: 12rem;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.45);
+}
+.mt-plus-menu button {
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 4px);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.mt-plus-menu button:hover,
+.mt-plus-menu button:focus-visible {
+  background: color-mix(in oklch, var(--text) 6%, transparent);
+  outline: none;
+}
+
+/* Téléphone : en-tête compact (la première tâche visible sans défiler) et
+   un seul bouton par carte. */
+@media (max-width: 720px) {
+  /* .mt-page : passe devant les règles de base déclarées plus bas. */
+  .mt-page .mt-accueil {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    margin-bottom: 0.6rem;
+  }
+  .mt-page .mt-accueil-titre {
+    font-size: 1.1rem;
+  }
+  .mt-page .mt-accueil-sous {
+    font-size: 0.8rem;
+  }
+  .mt-accueil-date,
+  .mt-long {
+    display: none;
+  }
+  .mt-court {
+    display: inline;
+  }
+  .mt-accueil .vue-toggle {
+    flex: none;
+  }
+  .mt-secondaire {
+    display: none;
+  }
+  .mt-plus {
+    display: inline-flex;
+  }
 }
 .mt-filtre-etat {
   display: flex;
@@ -8853,19 +9036,17 @@ tr.is-demandeur .cal-nom {
   font-size: 0.78rem;
   color: var(--text-muted);
 }
+/* Code projet : texte simple (lot B, 23/10/2026) — la pastille monospace
+   faisait « technique » et se répétait sur chaque ligne. */
 .mt-code {
-  padding: 0.08rem 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: color-mix(in oklch, var(--text) 4%, transparent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
 }
 .mt-code:hover {
-  border-color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .mt-motif {
   display: flex;
@@ -9071,19 +9252,6 @@ tr.is-demandeur .cal-nom {
   }
   .mt-echeance {
     text-align: left;
-  }
-  /* Deux boutons (« Demander un délai » + « Déposer ») : l'échéance prend sa
-     ligne, les boutons passent dessous, à droite (sous le pouce) — sinon la
-     date s'écrasait sur 4 lignes. */
-  .mt-ligne:has(.mt-action > :nth-child(2)) .mt-echeance {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    align-items: baseline;
-  }
-  .mt-ligne:has(.mt-action > :nth-child(2)) .mt-action {
-    grid-column: 1 / -1;
   }
 }
 @media (prefers-reduced-motion: reduce) {

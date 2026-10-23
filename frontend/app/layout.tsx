@@ -1,3 +1,4 @@
+import type { Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { SCRIPT_THEME_INITIAL } from '@/lib/theme';
@@ -15,6 +16,15 @@ const display = Space_Grotesk({
   variable: '--font-display',
   display: 'swap',
 });
+
+// viewport-fit=cover : sans lui, env(safe-area-inset-*) vaut 0 sur iPhone —
+// en app installée (manifest « standalone »), la barre d'accueil recouvrait
+// les libellés de la navigation du bas (qui réserve déjà cette marge).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata = {
   title: 'hub360°',

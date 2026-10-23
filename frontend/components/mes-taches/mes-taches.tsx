@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlarmClock, AtSign, CalendarClock, ChevronDown, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, AtSign, CalendarClock, ChevronDown, Ellipsis, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
+import { useMediaQuery } from '@/lib/media';
 import { ecartJours, getMesTaches, getTachesAValider } from '@/lib/mon-espace';
 import { getMesMentions, marquerMentionLue, publierCommentaire, type MentionRecue } from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
@@ -52,6 +53,14 @@ function relatif(echeance: string, aujourdhui: string): string {
 // reprendre dont l'échéance est passée compte aussi « En retard ». Les cartes
 // se recoupent donc ; la liste, elle, montre chaque tâche une seule fois, à sa
 // place la plus urgente.
+// « déposée il y a 4 j » : depuis quand le N+1 a la tâche entre les mains.
+function attenteDepuis(remisLe: string, aujourdhui: string): string {
+  const n = ecartJours(remisLe.slice(0, 10), aujourdhui);
+  if (n <= 0) return 'déposée aujourd’hui';
+  if (n === 1) return 'déposée hier';
+  return `déposée il y a ${n} j`;
+}
+
 const FILTRES: { cle: Filtre; libelle: string; aide: string; icone: LucideIcon; ton: Ton }[] = [
   { cle: 'retards', libelle: 'En retard', aide: 'échéance dépassée', icone: AlarmClock, ton: 'risque' },
   { cle: 'reprises', libelle: 'À reprendre', aide: 'renvoyées par votre N+1', icone: RotateCcw, ton: 'risque' },
@@ -86,7 +95,10 @@ export function MesTaches({ slug }: { slug: string }) {
   const [aRemettre, setARemettre] = useState<{ tache: TacheMonEspace; pieces?: Pieces } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  useEnteteFixe();
+  // Après le chargement : l'en-tête des cartes n'existe pas sous le squelette.
+  useEnteteFixe(!!donnees);
+  // Grand écran : colonne de droite « Chez mon N+1 » + mentions (lot B).
+  const large = useMediaQuery('(min-width: 1400px)');
 
   // Vue préférée : confort de cet appareil seulement.
   useEffect(() => {
@@ -202,6 +214,10 @@ export function MesTaches({ slug }: { slug: string }) {
   const { urgences } = g;
   const nbADecider = aDecider.taches + aDecider.absences;
   const filtreActif = FILTRES.find((f) => f.cle === filtre);
+  // Colonne de droite : vue par urgence sans filtre, sur grand écran. Les
+  // tâches en validation et les mentions sans tâche y passent (la liste
+  // principale ne garde que ce qui demande une action).
+  const avecCote = large && vue === 'urgence' && !filtre;
 
   function choisirFiltre(f: Filtre) {
     setFiltre((x) => (x === f ? null : f));
@@ -231,7 +247,9 @@ export function MesTaches({ slug }: { slug: string }) {
   // Lignes réellement affichées (« Plus tard » est replié) : une mention non
   // lue s'y accroche ; les autres restent dans la section Mentions.
   const affichees = new Set(
-    (vue === 'projet' || filtre ? selection : SECTIONS.flatMap((cle) => g.sections[cle])).map((t) => t.id),
+    (vue === 'projet' || filtre ? selection : SECTIONS.filter((cle) => !(avecCote && cle === 'attente')).flatMap((cle) => g.sections[cle])).map(
+      (t) => t.id,
+    ),
   );
   const mentionsDe = new Map<string, MentionRecue[]>();
   if (filtre !== 'mentions') {
@@ -250,6 +268,17 @@ export function MesTaches({ slug }: { slug: string }) {
       .then(() => chargerMentions())
       .catch(() => undefined);
   }
+
+  const ligneMention = (m: MentionRecue) => (
+    <LigneMention
+      key={m.id}
+      slug={slug}
+      m={m}
+      onOuvrir={() => (m.tacheId ? setTiroir({ projetId: m.projetId, tacheId: m.tacheId, prolongation: false }) : undefined)}
+      base={base}
+      onMaj={() => void chargerMentions()}
+    />
+  );
 
   const ligne = (t: TacheMonEspace, sansProjet = false) => (
     <LigneTache
@@ -276,8 +305,10 @@ export function MesTaches({ slug }: { slug: string }) {
             {new Date().getHours() >= 18 ? 'Bonsoir' : 'Bonjour'} {utilisateur.prenom}
           </h1>
           <p className="mt-accueil-sous">
-            {new Date(`${aujourdhui}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
-            {' · '}
+            <span className="mt-accueil-date">
+              {new Date(`${aujourdhui}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
+              {' · '}
+            </span>
             {urgences === 0
               ? 'rien d’urgent aujourd’hui'
               : `${urgences} tâche${urgences > 1 ? 's demandent' : ' demande'} votre attention`}
@@ -287,7 +318,10 @@ export function MesTaches({ slug }: { slug: string }) {
         <div className="vue-toggle" role="group" aria-label="Présentation">
           {(['urgence', 'projet'] as const).map((v) => (
             <button key={v} type="button" className={vue === v ? 'is-active' : ''} aria-pressed={vue === v} onClick={() => choisirVue(v)}>
-              {v === 'urgence' ? 'Par urgence' : 'Par projet'}
+              <span className="mt-long">{v === 'urgence' ? 'Par urgence' : 'Par projet'}</span>
+              <span className="mt-court" aria-hidden>
+                {v === 'urgence' ? 'Urgence' : 'Projet'}
+              </span>
             </button>
           ))}
         </div>
@@ -342,66 +376,97 @@ export function MesTaches({ slug }: { slug: string }) {
         </div>
       )}
 
-      <section className="panel glass-panel mt-liste" aria-live="polite">
-        {filtreActif && (
-          <div className="mt-filtre-etat">
-            <span>{`${filtreActif.libelle} · ${filtre === 'mentions' ? mentions.length : compte[filtreActif.cle]}`}</span>
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={toutAfficher}>
-              <X size={14} aria-hidden /> Tout afficher
-            </button>
-          </div>
-        )}
+      <div className="mt-colonnes" data-cote={avecCote || undefined}>
+        <section className="panel glass-panel mt-liste" aria-live="polite">
+          {filtreActif && (
+            <div className="mt-filtre-etat">
+              <span>{`${filtreActif.libelle} · ${filtre === 'mentions' ? mentions.length : compte[filtreActif.cle]}`}</span>
+              <button type="button" className="btn-ghost btn-ghost--sm" onClick={toutAfficher}>
+                <X size={14} aria-hidden /> Tout afficher
+              </button>
+            </div>
+          )}
 
-        {!filtre && urgences === 0 && (
-          <p className="mt-calme">Rien d’urgent : aucune reprise, aucun retard, aucune échéance d’ici dimanche.</p>
-        )}
+          {!filtre && urgences === 0 && (
+            <p className="mt-calme">Rien d’urgent : aucune reprise, aucun retard, aucune échéance d’ici dimanche.</p>
+          )}
 
-        {vue === 'projet' && filtre !== 'mentions'
-          ? parProjet.map((p) => (
-              <Groupe key={p.projetId} titre={`${p.code} · ${p.client}`} ton="neutre" n={p.taches.length} projet>
-                {p.taches.map((t) => ligne(t, true))}
-              </Groupe>
-            ))
-          : (
-                <>
-                  {/* Sans filtre : sections sans compteur (déjà sur les cartes,
-                      et une reprise en retard n'est listée qu'une fois). Avec
-                      un filtre : sa liste complète. */}
-                  {SECTIONS.filter((f) => filtre === null || filtre === f).map((f) => {
-                    const liste = filtre ? g[f] : g.sections[f];
-                    return (
-                      <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={liste.length} masquerTitre={!!filtre} sansCompte>
-                        {liste.map((t) => ligne(t))}
-                      </Groupe>
-                    );
-                  })}
-                  {filtre === null && g.ensuite.length > 0 && (
-                    <details className="mt-plus-tard">
-                      <summary>
-                        <ChevronDown size={16} aria-hidden className="mt-plus-tard-chevron" />
-                        Plus tard · {g.ensuite.length}
-                      </summary>
-                      <ul className="mt-lignes">{g.ensuite.map((t) => ligne(t))}</ul>
-                    </details>
-                  )}
-                </>
+          {vue === 'projet' && filtre !== 'mentions'
+            ? parProjet.map((p) => (
+                <Groupe key={p.projetId} titre={`${p.code} · ${p.client}`} ton="neutre" n={p.taches.length} projet>
+                  {p.taches.map((t) => ligne(t, true))}
+                </Groupe>
+              ))
+            : (
+                  <>
+                    {/* Sans filtre : sections sans compteur (déjà sur les cartes,
+                        et une reprise en retard n'est listée qu'une fois). Avec
+                        un filtre : sa liste complète. */}
+                    {SECTIONS.filter((f) => (filtre === null || filtre === f) && !(avecCote && f === 'attente')).map((f) => {
+                      const liste = filtre ? g[f] : g.sections[f];
+                      return (
+                        <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={liste.length} masquerTitre={!!filtre} sansCompte>
+                          {liste.map((t) => ligne(t))}
+                        </Groupe>
+                      );
+                    })}
+                    {filtre === null && g.ensuite.length > 0 && (
+                      <details className="mt-plus-tard">
+                        <summary>
+                          <ChevronDown size={16} aria-hidden className="mt-plus-tard-chevron" />
+                          Plus tard · {g.ensuite.length}
+                        </summary>
+                        <ul className="mt-lignes">{g.ensuite.map((t) => ligne(t))}</ul>
+                      </details>
+                    )}
+                  </>
+                )}
+
+          {(filtre === null || filtre === 'mentions') && !avecCote && (
+            <Groupe titre="Mentions" ton="iris" n={mentionsSeules.length} masquerTitre={filtre === 'mentions'} sansCompte>
+              {mentionsSeules.map(ligneMention)}
+            </Groupe>
+          )}
+        </section>
+
+        {avecCote && (
+          <aside className="mt-cote" aria-label="En attente de validation et mentions">
+            <section className="panel glass-panel mt-cote-bloc">
+              <h2 className="mt-groupe-titre" data-ton="info">
+                Chez mon N+1
+              </h2>
+              {g.attente.length === 0 ? (
+                <p className="mt-cote-vide">Aucune tâche en attente de validation.</p>
+              ) : (
+                <ul className="mt-cote-liste">
+                  {g.attente.map((t) => (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        className="mt-cote-tache"
+                        onClick={() => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false })}
+                      >
+                        <span className="mt-cote-titre">{t.libelle}</span>
+                        <span className="mt-cote-meta">
+                          v{String(t.version).padStart(2, '0')} · {t.remisLe ? attenteDepuis(t.remisLe, aujourdhui) : 'en validation'}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-
-        {(filtre === null || filtre === 'mentions') && (
-          <Groupe titre="Mentions" ton="iris" n={mentionsSeules.length} masquerTitre={filtre === 'mentions'} sansCompte>
-            {mentionsSeules.map((m) => (
-              <LigneMention
-                key={m.id}
-                slug={slug}
-                m={m}
-                onOuvrir={() => (m.tacheId ? setTiroir({ projetId: m.projetId, tacheId: m.tacheId, prolongation: false }) : undefined)}
-                base={base}
-                onMaj={() => void chargerMentions()}
-              />
-            ))}
-          </Groupe>
+            </section>
+            {mentionsSeules.length > 0 && (
+              <section className="panel glass-panel mt-cote-bloc">
+                <h2 className="mt-groupe-titre" data-ton="iris">
+                  Mentions
+                </h2>
+                <ul className="mt-lignes">{mentionsSeules.map(ligneMention)}</ul>
+              </section>
+            )}
+          </aside>
         )}
-      </section>
+      </div>
 
       <p className="dmd-note mt-pied">
         {/* Espace HORS du span : dans un inline-flex, il serait avalé
@@ -592,9 +657,17 @@ function LigneTache({
         {/* « Demander un délai » : la prolongation est accordée (ou non) par
             le N+1 — le bouton ne prolonge rien lui-même. */}
         {t.statut === 'en_retard' && (
-          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onOuvrir(true)}>
-            Demander un délai
-          </button>
+          <>
+            <button type="button" className="btn-ghost btn-ghost--sm mt-secondaire" onClick={() => onOuvrir(true)}>
+              Demander un délai
+            </button>
+            <MenuPlus
+              actions={[
+                { libelle: 'Demander un délai', faire: () => onOuvrir(true) },
+                { libelle: 'Ouvrir la tâche', faire: () => onOuvrir(false) },
+              ]}
+            />
+          </>
         )}
         {onDeposerTache && (
           <button type="button" className={enRetard ? 'btn-primary btn-primary--sm' : 'btn-ghost btn-ghost--sm'} onClick={onDeposerTache}>
@@ -603,6 +676,60 @@ function LigneTache({
         )}
       </span>
     </li>
+  );
+}
+
+// Téléphone : un seul bouton visible par carte (« Déposer ») ; les actions
+// secondaires passent dans ce menu « ⋯ » (masqué sur ordinateur, où elles
+// apparaissent au survol de la ligne).
+function MenuPlus({ actions }: { actions: { libelle: string; faire: () => void }[] }) {
+  const [ouvert, setOuvert] = useState(false);
+  const boite = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!ouvert) return;
+    const dehors = (e: PointerEvent) => {
+      if (!boite.current?.contains(e.target as Node)) setOuvert(false);
+    };
+    const echap = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOuvert(false);
+    };
+    document.addEventListener('pointerdown', dehors);
+    document.addEventListener('keydown', echap);
+    return () => {
+      document.removeEventListener('pointerdown', dehors);
+      document.removeEventListener('keydown', echap);
+    };
+  }, [ouvert]);
+  return (
+    <span className="mt-plus" ref={boite}>
+      <button
+        type="button"
+        className="btn-ghost btn-ghost--sm mt-plus-bouton"
+        aria-label="Autres actions"
+        aria-haspopup="menu"
+        aria-expanded={ouvert}
+        onClick={() => setOuvert((o) => !o)}
+      >
+        <Ellipsis size={16} aria-hidden />
+      </button>
+      {ouvert && (
+        <span className="mt-plus-menu" role="menu">
+          {actions.map((a) => (
+            <button
+              key={a.libelle}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOuvert(false);
+                a.faire();
+              }}
+            >
+              {a.libelle}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
   );
 }
 
