@@ -353,7 +353,10 @@ export const numeroEtape = (n: number) => String(n).padStart(2, '0');
 const v = (n: number) => `v${String(n).padStart(2, '0')}`;
 
 // Pastille d'une tâche : libellé + ton.
-export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
+// `echeance` (date effective : accordée ou de référence) : une reprise dont
+// l'échéance est passée est aussi en retard — même règle que « Mes tâches »
+// (le retard est un attribut, pas une catégorie).
+export function pastilleTache(e: EtatTache, echeance?: string | null): { libelle: string; ton: Ton } {
   switch (e.code) {
     case 'validee':
       if (e.ecart && e.ecart > 0) return { libelle: `Validé · avance ${e.ecart} h`, ton: 'succes' };
@@ -363,8 +366,14 @@ export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
       return { libelle: 'Visa DPLG à apposer', ton: 'attention' };
     case 'a_valider':
       return { libelle: `À valider · ${v(e.version)}`, ton: 'attention' };
-    case 'reprise':
+    case 'reprise': {
+      const jour = new Date().toISOString().slice(0, 10);
+      if (echeance && echeance < jour) {
+        const jours = Math.round((Date.parse(jour) - Date.parse(echeance.slice(0, 10))) / 86_400_000);
+        return { libelle: `Reprise · ${jours} j de retard`, ton: 'risque' };
+      }
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };
+    }
     case 'en_retard':
       return { libelle: `En retard · ${e.jours} j`, ton: 'risque' };
     case 'prolongee':

@@ -84,6 +84,15 @@ export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }
   a_planifier: { libelle: 'À planifier', pill: 'pill--neutre' },
 };
 
+// Retard (règle validée le 23/10/2026 : le retard est un attribut, pas une
+// catégorie) : échéance passée — la date accordée pour une prolongée —,
+// reprises comprises. Une tâche « bloquée » attend l'étape précédente : son
+// retard ne lui est pas imputable. Partagée par « Mes tâches » et « Projets ».
+export const dateEffective = (t: TacheMonEspace) => (t.statut === 'prolongee' && t.prolongeeJusquau ? t.prolongeeJusquau : t.echeance);
+export const estEnRetard = (t: TacheMonEspace, aujourdhui: string) =>
+  t.statut === 'en_retard' ||
+  ((t.statut === 'a_reprendre' || t.statut === 'prolongee') && !!dateEffective(t) && dateEffective(t)! < aujourdhui);
+
 export const ecartJours = (de: string, a: string) =>
   Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
 

@@ -9,7 +9,7 @@ import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
 import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { getMesTaches } from '@/lib/mon-espace';
+import { estEnRetard, getMesTaches } from '@/lib/mon-espace';
 import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
   ajouterTs,
@@ -127,7 +127,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       .then(([t, m]) =>
         setPerso({
           reprises: t.taches.filter((x) => x.statut === 'a_reprendre').length,
-          retards: t.taches.filter((x) => x.statut === 'en_retard').length,
+          // Même règle que « Mes tâches » : reprises en retard comprises.
+          retards: t.taches.filter((x) => x.statut !== 'validee' && estEnRetard(x, new Date().toISOString().slice(0, 10))).length,
           attente: t.taches.filter((x) => x.statut === 'remise').length,
           mentions: m.filter((x) => !x.lue).length,
         }),
@@ -360,7 +361,7 @@ function tuilesSalarie(
       cle: 'attente',
       label: 'Mes remises en attente',
       valeur: n(perso?.attente),
-      sousTexte: 'chez votre chef de team',
+      sousTexte: 'déposées chez votre N+1',
       icone: Hourglass,
       etat: etat(perso?.attente, etatATraiter),
       action: lien('attente'),
@@ -832,7 +833,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
       ) : (
         <ul className="po-taches">
           {c.taches.map((t) => {
-            const pt = pastilleTache(t.etat);
+            const pt = pastilleTache(t.etat, t.prolongation.accordeeJusquau ?? t.finLe);
             const eteint = t.etat.code === 'non_necessaire' || t.etat.code === 'desactivee';
             return (
               <li key={t.id}>

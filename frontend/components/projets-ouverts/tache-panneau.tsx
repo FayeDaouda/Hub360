@@ -161,7 +161,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   }
 
   const chargeDe = (id: string) => charges?.charges.find((c) => c.collaborateurId === id);
-  const pastille = pastilleTache(tache.etat);
+  const pastille = pastilleTache(tache.etat, tache.prolongation.accordeeJusquau ?? tache.finLe);
   const piecesVersion = tache.pieces.filter((f) => f.version === tache.version);
   const ecart = tache.etat.code === 'validee' ? tache.etat.ecart : null;
   const v = tache.validation;
@@ -172,6 +172,14 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
 
   // Résumé : ce qu'il faut savoir d'un coup d'œil.
   const echeance = tache.prolongation.accordeeJusquau ?? tache.finLe;
+  // Retard affiché : en retard, ou reprise dont l'échéance est passée.
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const joursRetard =
+    tache.etat.code === 'en_retard'
+      ? tache.etat.jours
+      : tache.etat.code === 'reprise' && echeance && echeance < aujourdhui
+        ? Math.round((Date.parse(aujourdhui) - Date.parse(echeance.slice(0, 10))) / 86_400_000)
+        : null;
   const resume: [string, React.ReactNode][] = [];
   if (gestionnaire) resume.push(['Assignée à', tache.assigne?.nom ?? 'À assigner']);
   resume.push([
@@ -180,7 +188,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       <>
         {jjmmaaaa(echeance)}
         {tache.prolongation.accordeeJusquau && <span className="tp-secondaire"> · délai accordé</span>}
-        {tache.etat.code === 'en_retard' && <span className="po-retard"> · {tache.etat.jours} j de retard</span>}
+        {joursRetard !== null && <span className="po-retard"> · {joursRetard} j de retard</span>}
       </>
     ) : (
       'pas encore de date'

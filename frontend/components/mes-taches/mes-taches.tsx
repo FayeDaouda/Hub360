@@ -11,7 +11,7 @@ import { getAbsencesAValider } from '@/lib/demandes';
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
-import { ecartJours, getMesTaches, getTachesAValider, relancerTache, remettreTache } from '@/lib/mon-espace';
+import { dateEffective, ecartJours, estEnRetard, getMesTaches, getTachesAValider, relancerTache, remettreTache } from '@/lib/mon-espace';
 import { getMesMentions, marquerMentionLue, publierCommentaire, type CorpsRemise, type MentionRecue } from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
@@ -61,7 +61,6 @@ const decaler = (iso: string, jours: number) => {
 const jourSemaine = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
 // Date qui fait foi pour l'urgence : la nouvelle date accordée si la tâche est
 // prolongée, sinon l'échéance.
-const dateEffective = (t: TacheMonEspace) => (t.statut === 'prolongee' && t.prolongeeJusquau ? t.prolongeeJusquau : t.echeance);
 const parDateEffective = (a: TacheMonEspace, b: TacheMonEspace) =>
   (dateEffective(a) ?? '9999').localeCompare(dateEffective(b) ?? '9999');
 
@@ -183,16 +182,8 @@ export function MesTaches({ slug }: { slug: string }) {
     const ouvertes = vues.filter((t) => t.statut !== 'validee').sort(parEcheance);
     const lundi = decaler(aujourdhui, -((jourSemaine(aujourdhui) + 6) % 7));
     const dimanche = decaler(lundi, 6);
-    // En retard : échéance passée (date accordée pour une prolongée), reprises
-    // comprises — du plus ancien au plus récent. Une tâche « bloquée » attend
-    // l'étape précédente : son retard ne lui est pas imputable.
-    const retards = ouvertes
-      .filter(
-        (t) =>
-          t.statut === 'en_retard' ||
-          ((t.statut === 'a_reprendre' || t.statut === 'prolongee') && !!dateEffective(t) && dateEffective(t)! < aujourdhui),
-      )
-      .sort(parDateEffective);
+    // En retard (lib/mon-espace.ts::estEnRetard), du plus ancien au plus récent.
+    const retards = ouvertes.filter((t) => estEnRetard(t, aujourdhui)).sort(parDateEffective);
     const enRetard = new Set(retards);
     const reprises = ouvertes.filter((t) => t.statut === 'a_reprendre');
     const semaine = ouvertes
