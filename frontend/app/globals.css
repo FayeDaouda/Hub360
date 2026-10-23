@@ -506,9 +506,9 @@ button {
    (reflet spéculaire, liseré, cœur dense, halo) en dérive. Position/taille
    (--x, --y, --l, --ratio, --r, --forme) par bulle, réarrangées en portrait.
    Seuls transform/opacity sont animés : composités, zéro repeinture.
-   Les perles et éclats sont placés hors des zones de texte à toutes les
-   largeurs ≥ 1024px : la gouttière entre présentation et carte reste entre
-   46 % et 50 % de la largeur d'écran (grille centrée, max 1180px). */
+   Valeurs de base = composition de la connexion (présentation + carte) :
+   grandes formes dans les coins, perles hors du texte, de la carte et de la
+   gouttière entre les deux colonnes (≥ 1024px). */
 .fond-liquide {
   /* Clair « billes de verre sur papier » (23/10/2026) : fond blanc cassé
      chaud vers gris-bleu très pâle, halos ambiants à peine perceptibles. */
@@ -601,7 +601,7 @@ button {
   translate: -50% -50%;
   rotate: var(--r, 0deg);
   border-radius: var(--forme, 50%);
-  opacity: var(--fl-bulle-op);
+  opacity: calc(var(--fl-bulle-op) * var(--fl-attenuation, 0.82));
   animation: fl-derive var(--duree, 28s) ease-in-out var(--delai, 0s) infinite alternate;
   transition:
     left var(--fl-glisse),
@@ -674,9 +674,9 @@ button {
 .fl-bulle--bleu {
   --c: #2f4dff;
   --c2: #7fd8ff;
-  --x: 3%;
-  --y: 5%;
-  --l: clamp(280px, 31vw, 600px);
+  --x: 1%;
+  --y: 3%;
+  --l: clamp(250px, 26vw, 520px);
   --ratio: 1.25;
   --r: -22deg;
   --forme: 62% 38% 56% 44% / 58% 46% 54% 42%;
@@ -685,9 +685,9 @@ button {
 .fl-bulle--jaune {
   --c: #ffb81c;
   --c2: #ff6f14;
-  --x: 61%;
-  --y: 19%;
-  --l: clamp(230px, 25vw, 480px);
+  --x: 93%;
+  --y: 8%;
+  --l: clamp(190px, 20vw, 400px);
   --ratio: 1.5;
   --r: -14deg;
   --forme: 46% 54% 62% 38% / 54% 62% 38% 46%;
@@ -697,9 +697,9 @@ button {
 .fl-bulle--cyan {
   --c: #16b8ff;
   --c2: #9cf3ff;
-  --x: 58%;
-  --y: 55%;
-  --l: clamp(120px, 11vw, 220px);
+  --x: 98%;
+  --y: 72%;
+  --l: clamp(70px, 6.5vw, 130px);
   --ratio: 0.82;
   --r: 14deg;
   --forme: 58% 42% 48% 52% / 44% 56% 44% 56%;
@@ -709,9 +709,9 @@ button {
 .fl-bulle--orange {
   --c: #ff6a1f;
   --c2: #4a78ff;
-  --x: 45%;
-  --y: 97%;
-  --l: clamp(260px, 27vw, 520px);
+  --x: 8%;
+  --y: 104%;
+  --l: clamp(210px, 22vw, 430px);
   --ratio: 1.2;
   --r: 18deg;
   --forme: 54% 46% 40% 60% / 60% 52% 48% 40%;
@@ -722,8 +722,8 @@ button {
   --c: #2856ff;
   --c2: #58e1ff;
   --x: 100%;
-  --y: 90%;
-  --l: clamp(240px, 24vw, 470px);
+  --y: 101%;
+  --l: clamp(190px, 20vw, 400px);
   --ratio: 1.1;
   --r: -8deg;
   --forme: 50% 50% 46% 54% / 56% 44% 56% 44%;
@@ -763,31 +763,31 @@ button {
 }
 .fl-perle--bleu {
   --c: #5a74ff;
-  --x: 33%;
+  --x: 30%;
   --y: 8%;
   --l: clamp(34px, 3.9vw, 66px);
   --duree: 9s;
 }
 .fl-perle--jaune {
   --c: #ffc53a;
-  --x: 47%;
-  --y: 36%;
+  --x: 90%;
+  --y: 30%;
   --l: clamp(28px, 3vw, 52px);
   --duree: 11s;
   --delai: -4s;
 }
 .fl-perle--orange {
   --c: #ff7a2e;
-  --x: 49%;
-  --y: 68%;
+  --x: 40%;
+  --y: 93%;
   --l: clamp(32px, 3.6vw, 60px);
   --duree: 10s;
   --delai: -2s;
 }
 .fl-perle--cyan {
   --c: #2ccfff;
-  --x: 95%;
-  --y: 47%;
+  --x: 64%;
+  --y: 6%;
   --l: clamp(34px, 3.8vw, 64px);
   --duree: 12s;
   --delai: -7s;
@@ -809,7 +809,7 @@ button {
   animation: fl-scintille 3.6s ease-in-out infinite alternate;
 }
 .fl-eclat:nth-child(1) { left: 44%; top: 8%; }
-.fl-eclat:nth-child(2) { left: 50%; top: 60%; --c: #ffab5c; animation-delay: -1.2s; }
+.fl-eclat:nth-child(2) { left: 50%; top: 96%; --c: #ffab5c; animation-delay: -1.2s; }
 .fl-eclat:nth-child(3) { left: 4%; top: 55%; animation-delay: -2.1s; }
 .fl-eclat:nth-child(4) { left: 71%; top: 7%; --c: #ffd36b; animation-delay: -0.6s; }
 .fl-eclat:nth-child(5) { left: 88%; top: 66%; animation-delay: -2.8s; }
@@ -858,158 +858,55 @@ button {
   }
 }
 
-/* Composition centrée (portail, écrans à carte seule — en paysage) : le
-   jaune quitte l'axe du logo, le cyan passe sous le bord gauche de la carte,
-   les perles encadrent la carte au lieu de la toucher. Déduite du contenu
-   affiché (:has) : le fond, monté une seule fois par le layout (acces), glisse
-   d'une composition à l'autre quand on passe du portail à la connexion. */
-@media (orientation: landscape) and (min-width: 768px) {
-  .auth-shell:has(> .auth-shell-contenu--centre) .fl-bulle--jaune {
-    --x: 74%;
-    --y: 21%;
-  }
-  .auth-shell:has(> .auth-shell-contenu--centre) .fl-bulle--cyan {
-    --x: 36%;
-    --y: 67%;
-  }
-  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--jaune {
-    --x: 72%;
-    --y: 42%;
-  }
-  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--orange {
-    --x: 26%;
-    --y: 70%;
-  }
-}
-
-/* Portrait (téléphone, tablette debout) : les bulles migrent vers les bords
-   pour encadrer une colonne unique au lieu de passer sous la carte. */
-@media (orientation: portrait), (max-width: 767px) {
-  .fl-bulle--bleu {
-    --x: 2%;
-    --y: 9%;
-    --l: clamp(220px, 66vw, 520px);
-    --r: -30deg;
-  }
-  /* Au-dessus du titre, quelle que soit la hauteur du contenu (portail à
-     plusieurs sociétés, connexion) : jamais de texte clair sur le jaune. */
-  .fl-bulle--jaune {
-    --x: 100%;
-    --y: 20%;
-    --l: clamp(170px, 46vw, 400px);
-    --ratio: 0.85;
-    --r: 8deg;
-  }
-  .fl-bulle--cyan {
-    --x: 0%;
-    --y: 58%;
-    --l: clamp(90px, 22vw, 200px);
-  }
-  .fl-bulle--orange {
-    --x: 97%;
-    --y: 98%;
-    --l: clamp(210px, 60vw, 500px);
-  }
-  .fl-bulle--azur {
-    --x: 3%;
-    --y: 100%;
-    --l: clamp(200px, 58vw, 480px);
-  }
-  .fl-perle--bleu {
-    --x: 9%;
-    --y: 31%;
-    --l: clamp(22px, 6vw, 48px);
-  }
-  .fl-perle--jaune {
-    display: none;
-  }
-  .fl-perle--orange {
-    --x: 78%;
-    --y: 82%;
-    --l: clamp(22px, 6vw, 48px);
-  }
-  .fl-perle--cyan {
-    --x: 12%;
-    --y: 44%;
-    --l: clamp(18px, 4.5vw, 38px);
-  }
-}
-
-/* Portail : le fond encadre les cartes au lieu de leur faire concurrence.
-   - Zone centrale protégée : aucune bulle ni perle n'y entre (grille 2×2
-     comprise), les grandes formes restent dans les coins.
+/* Fond calme sur tous les écrans d'accès (revue portail + connexion,
+   22-23/10/2026) : le décor encadre le contenu au lieu de lui faire
+   concurrence.
+   - Zone protégée : aucune bulle ni perle derrière le texte ou les cartes
+     (connexion : ni derrière la carte, ni dans la gouttière entre les deux
+     colonnes) ; les grandes formes restent dans les coins.
    - Voile : dégradé radial couleur de fond au centre (::after, au-dessus des
      bulles) — les bords restent vifs, la zone de lecture est calme.
-   - Profondeur de champ (grand écran) : grandes bulles floues, perles
-     nettes. Le flou est posé sur .fl-bulle-corps, enfant non animé d'un
-     calque déjà composité : peint une fois, pas recalculé à chaque image.
-   Le tout glisse vers la composition de la connexion au clic (transitions
-   --fl-glisse). */
+   - Profondeur de champ (sombre, grand écran) : grandes bulles floues,
+     perles nettes. Le flou est posé sur .fl-bulle-corps, enfant non animé
+     d'un calque déjà composité : peint une fois, pas recalculé par image.
+   - Clair : « billes de verre sur papier » (voir plus bas).
+   Compositions déduites du contenu affiché (:has) : le fond, monté une seule
+   fois par le layout (acces), glisse de l'une à l'autre (--fl-glisse). */
 .fond-liquide::after {
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0;
   background: radial-gradient(
     ellipse 48% 52% at 50% 55%,
     var(--fl-calme) 0%,
     color-mix(in srgb, var(--fl-calme) 60%, transparent) 55%,
     transparent 100%
   );
-  transition: opacity var(--fl-glisse);
-}
-.auth-shell:has(> .portail) .fond-liquide::after {
-  opacity: 1;
-}
-.auth-shell:has(> .portail) .fl-bulle {
-  opacity: calc(var(--fl-bulle-op) * var(--fl-attenuation, 0.82));
-}
-/* Éclat posé au centre de l'écran : sous les cartes sur le portail. */
-.auth-shell:has(> .portail) .fl-eclat:nth-child(2) {
-  display: none;
 }
 
+/* Composition centrée (portail, activation, mot de passe oublié,
+   réinitialisation — en paysage). La composition de base (plus haut) est
+   celle de la connexion, présentation + carte. */
 @media (orientation: landscape) and (min-width: 768px) {
-  .auth-shell:has(> .portail) .fl-bulle--bleu {
-    --x: 1%;
-    --y: 3%;
-    --l: clamp(250px, 26vw, 520px);
-  }
-  .auth-shell:has(> .portail) .fl-bulle--jaune {
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-bulle--jaune {
     --x: 91%;
     --y: 9%;
-    --l: clamp(190px, 20vw, 400px);
   }
-  .auth-shell:has(> .portail) .fl-bulle--cyan {
-    --x: 98%;
-    --y: 72%;
-    --l: clamp(70px, 6.5vw, 130px);
-  }
-  .auth-shell:has(> .portail) .fl-bulle--orange {
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-bulle--orange {
     --x: 10%;
     --y: 103%;
-    --l: clamp(210px, 22vw, 430px);
   }
-  .auth-shell:has(> .portail) .fl-bulle--azur {
-    --x: 100%;
-    --y: 101%;
-    --l: clamp(190px, 20vw, 400px);
-  }
-  .auth-shell:has(> .portail) .fl-perle--bleu {
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--bleu {
     --x: 29%;
     --y: 9%;
   }
-  .auth-shell:has(> .portail) .fl-perle--jaune {
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--jaune {
     --x: 81%;
     --y: 34%;
   }
-  .auth-shell:has(> .portail) .fl-perle--orange {
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--orange {
     --x: 7%;
     --y: 47%;
-  }
-  .auth-shell:has(> .portail) .fl-perle--cyan {
-    --x: 65%;
-    --y: 5%;
   }
 }
 
@@ -1019,57 +916,71 @@ button {
   }
   /* Sombre seulement : sur fond clair, une bulle floue devient une tache
      délavée — la netteté fait le relief (cf. mode clair ci-dessous). */
-  :root[data-theme='dark'] .auth-shell:has(> .portail) .fl-bulle-corps {
+  :root[data-theme='dark'] .fl-bulle-corps {
     filter: blur(clamp(5px, 0.55vw, 10px));
   }
 }
 
+/* Portrait (téléphone, tablette debout) : une seule colonne — les bulles
+   restent dans les coins, rien ne longe le titre ni les cartes. */
 @media (orientation: portrait), (max-width: 767px) {
-  .auth-shell:has(> .portail) .fl-bulle--bleu {
+  .fl-bulle--bleu {
+    --x: 2%;
     --y: 5%;
     --l: clamp(200px, 56vw, 460px);
+    --r: -30deg;
   }
-  .auth-shell:has(> .portail) .fl-bulle--jaune {
+  /* Au-dessus du titre, quelle que soit la hauteur du contenu (portail à
+     plusieurs sociétés, connexion) : jamais de texte clair sur le jaune. */
+  .fl-bulle--jaune {
+    --x: 100%;
     --y: 6%;
     --l: clamp(150px, 40vw, 340px);
+    --ratio: 0.85;
+    --r: 8deg;
   }
   /* Le cyan longeait le titre (« C » de « Choisissez » posé dessus). */
-  .auth-shell:has(> .portail) .fl-bulle--cyan,
-  .auth-shell:has(> .portail) .fl-perle--cyan {
+  .fl-bulle--cyan,
+  .fl-perle--cyan {
     opacity: 0;
   }
-  .auth-shell:has(> .portail) .fl-bulle--orange {
+  .fl-bulle--orange {
     --x: 100%;
     --y: 101%;
     --l: clamp(180px, 50vw, 420px);
   }
-  .auth-shell:has(> .portail) .fl-bulle--azur {
+  .fl-bulle--azur {
     --x: 0%;
     --y: 103%;
     --l: clamp(180px, 50vw, 420px);
   }
-  .auth-shell:has(> .portail) .fl-perle--bleu {
+  .fl-perle--bleu {
     --x: 7%;
     --y: 15%;
+    --l: clamp(22px, 6vw, 48px);
   }
-  .auth-shell:has(> .portail) .fl-perle--orange {
+  .fl-perle--jaune {
+    display: none;
+  }
+  .fl-perle--orange {
     --x: 52%;
     --y: 97%;
+    --l: clamp(22px, 6vw, 48px);
   }
 }
 
-/* Mode clair du portail — « billes de verre sur papier » : pas de flou,
+/* Mode clair — « billes de verre sur papier » (23/10/2026) : pas de flou,
    bulles ~18 % plus petites, pleine opacité et saturées, fin contour net
-   (box-shadow sans flou : pas d'artefact sur élément tourné), halo coloré
-   réduit (c'est lui qui « délavait » le fond autour des bulles). */
-:root:not([data-theme='dark']) .auth-shell:has(> .portail) .fl-bulle {
+   (outline, pas de box-shadow flou : pas d'artefact sur élément tourné),
+   halo coloré réduit (c'est lui qui « délavait » le fond autour des bulles). */
+:root:not([data-theme='dark']) .fl-bulle {
   --fl-echelle: 0.82;
   --fl-attenuation: 1.1;
 }
-:root:not([data-theme='dark']) .auth-shell:has(> .portail) .fl-bulle::before {
+:root:not([data-theme='dark']) .fl-bulle::before {
   opacity: 0.35;
 }
-:root:not([data-theme='dark']) .auth-shell:has(> .portail) .fl-bulle-corps {
+:root:not([data-theme='dark']) .fl-bulle-corps {
   filter: saturate(1.18);
   outline: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
   outline-offset: -1px;
@@ -1411,6 +1322,33 @@ button {
 .auth-carte-sous-titre strong {
   color: var(--auth-texte);
   font-weight: 600;
+}
+/* Connexion : tuile de la société à gauche du titre (même verre que les
+   cartes du portail, lueur de sa couleur de marque). */
+.auth-carte-entete--societe {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.auth-carte-societe {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--auth-champ-bord),
+    0 12px 28px -12px color-mix(in srgb, var(--societe-color) 70%, transparent);
+}
+.auth-carte-societe .avatar {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: inherit;
+}
+.auth-carte-societe .avatar img {
+  padding: 0;
+  filter: none;
 }
 .auth-carte-pied {
   margin: 1.75rem 0 0;
