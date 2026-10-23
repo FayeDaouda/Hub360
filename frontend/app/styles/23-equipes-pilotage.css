@@ -1020,6 +1020,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Désignation catalogue sous le code produit (« CO2 » → « Conception… »). */
+.fin-barres-detail {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
 .fin-barres strong {
   min-width: 7.5rem;
   text-align: right;
@@ -1086,11 +1094,26 @@
   font-weight: 600;
   white-space: nowrap;
 }
+.fin-histo-cadre {
+  margin-top: 1.8rem;
+}
 .fin-histo {
   position: relative;
   height: 12rem;
-  margin-top: 1.8rem;
   padding-left: 1.4rem;
+}
+/* Axe des mois : mêmes 12 colonnes et même écart que les barres. */
+.fin-histo-mois {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0.5rem 0 0;
+  padding: 0 0 0 1.4rem;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: var(--t-12);
+  text-align: center;
+  white-space: nowrap;
 }
 .fin-histo-grille {
   position: absolute;
@@ -1172,8 +1195,13 @@
   .fin-ventes-mois {
     font-size: 1.2rem;
   }
-  .fin-histo-barres {
+  .fin-histo-barres,
+  .fin-histo-mois {
     gap: 0.25rem;
+  }
+  /* Téléphone : un mois sur deux, sinon les libellés se chevauchent. */
+  .fin-histo-mois li:nth-child(even) {
+    visibility: hidden;
   }
 }
 /* Desktop : la liste occupe le reste de la fenêtre et défile en interne,

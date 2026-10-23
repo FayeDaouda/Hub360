@@ -79,7 +79,11 @@
   height: 100%;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
 }
-.rh-tiroir .rh-fiche .modal-body {
+.rh-tiroir /* Date d'entrée et contrat sur une ligne : jamais « 06/03/ » puis « 2023 ». */
+.rh-table :is(.rh-c-entree, .rh-c-contrat) {
+  white-space: nowrap;
+}
+.rh-fiche .modal-body {
   flex: 1;
   max-height: none;
 }
@@ -88,12 +92,14 @@
   color: var(--text-muted);
   font-size: 0.82rem;
 }
+/* 7 tuiles : une seule ligne seulement quand chacune garde ~200 px
+   (libellé sur 2 lignes, montant entier) ; sinon 4 + 3. */
 .rh-kpi .kpi-strip {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-@media (max-width: 1300px) {
+@media (min-width: 1800px) {
   .rh-kpi .kpi-strip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 }
 @media (max-width: 640px) {

@@ -13,6 +13,9 @@
 
 .kpi-tuile {
   position: relative;
+  /* Conteneur de requête : la valeur se dimensionne sur la largeur de SA
+     tuile (cqi), pas sur l'écran — un montant long ne déborde plus. */
+  container-type: inline-size;
   /* Empêche tout élément interne (icône, anneau, pastille, décor de
      .kpi-tuile--pleine) de déborder sur la tuile voisine. */
   overflow: hidden;
@@ -173,7 +176,9 @@
   position: relative;
   z-index: 1;
   margin: 0.4rem 0 0;
-  font-size: 1.75rem;
+  font-size: clamp(1.15rem, 12cqi, 1.75rem);
+  line-height: 1.15;
+  overflow-wrap: break-word;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;

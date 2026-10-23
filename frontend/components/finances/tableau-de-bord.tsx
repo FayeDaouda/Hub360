@@ -128,8 +128,11 @@ function BarresCarte({ titre, sousTitre, barres, vide, pied }: { titre: string; 
       ) : (
         <ul className="fin-barres">
           {barres.map((b) => (
-            <li key={b.cle} title={`${b.libelle} · facturé ${formatMontant(b.facture)} · encaissé ${formatMontant(b.encaisse)}`}>
-              <span className="fin-barres-libelle">{b.libelle}</span>
+            <li key={b.cle} title={`${b.detail ? `${b.libelle} · ${b.detail}` : b.libelle} · facturé ${formatMontant(b.facture)} · encaissé ${formatMontant(b.encaisse)}`}>
+              <span className="fin-barres-libelle">
+                {b.libelle}
+                {b.detail && <span className="fin-barres-detail">{b.detail}</span>}
+              </span>
               <span className="fin-jauge" aria-hidden>
                 <span className="fin-jauge-facture" style={{ width: `${(b.facture / max) * 100}%` }} />
                 <span className="fin-jauge-encaisse" style={{ width: `${(Math.max(0, b.encaisse) / max) * 100}%` }} />
@@ -144,30 +147,52 @@ function BarresCarte({ titre, sousTitre, barres, vide, pied }: { titre: string; 
   );
 }
 
-// Histogramme des ventes : une colonne par mois, facturé (gris) dont encaissé (vert).
+// Histogramme des ventes : une colonne par mois, facturé (gris) dont encaissé
+// (vert). Axe des mois sous les colonnes (« oct. », année ajoutée en janvier
+// et sur la première colonne) ; le détail chiffré de chaque mois est lu par
+// les lecteurs d'écran (texte masqué) et affiché au survol.
 function Histogramme({ mois }: { mois: Barre[] }) {
   const max = Math.max(...mois.map((m) => m.facture), 0);
   return (
-    <div className="fin-histo">
-      <div className="fin-histo-grille" aria-hidden>
-        <span />
-        <span />
-        <span />
+    <div className="fin-histo-cadre">
+      <div className="fin-histo">
+        <div className="fin-histo-grille" aria-hidden>
+          <span />
+          <span />
+          <span />
+        </div>
+        <span className="fin-histo-zero" aria-hidden>
+          0
+        </span>
+        <ol className="fin-histo-barres">
+          {mois.map((m) => {
+            const detail = `${m.libelle} · facturé ${formatMontant(m.facture)} · encaissé ${formatMontant(m.encaisse)}`;
+            return (
+              <li key={m.cle} title={detail}>
+                <span className="sr-only">{detail}</span>
+                {m.facture > 0 && (
+                  <span className="fin-histo-facture" style={{ height: `${(m.facture / max) * 100}%` }}>
+                    <span className="fin-histo-encaisse" style={{ height: `${(Math.max(0, m.encaisse) / m.facture) * 100}%` }} />
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
       </div>
-      <span className="fin-histo-zero" aria-hidden>
-        0
-      </span>
-      <ol className="fin-histo-barres">
-        {mois.map((m) => (
-          <li key={m.cle} title={`${m.libelle} · facturé ${formatMontant(m.facture)} · encaissé ${formatMontant(m.encaisse)}`}>
-            {m.facture > 0 && (
-              <span className="fin-histo-facture" style={{ height: `${(m.facture / max) * 100}%` }}>
-                <span className="fin-histo-encaisse" style={{ height: `${(Math.max(0, m.encaisse) / m.facture) * 100}%` }} />
-              </span>
-            )}
-          </li>
+      <ol className="fin-histo-mois" aria-hidden>
+        {mois.map((m, i) => (
+          <li key={m.cle}>{moisCourt(m.cle, i === 0)}</li>
         ))}
       </ol>
     </div>
   );
+}
+
+// « 2026-10 » → « oct. » ; « janv. 27 » en janvier et sur la première colonne,
+// pour situer l'année sans charger l'axe.
+function moisCourt(cle: string, premier: boolean): string {
+  const [a, m] = cle.split('-').map(Number);
+  const libelle = new Date(a, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
+  return premier || m === 1 ? `${libelle} ${String(a).slice(2)}` : libelle;
 }

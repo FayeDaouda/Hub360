@@ -161,7 +161,9 @@ function emisesDouzeMois(factures: FactureCentrale[], mois: string[]) {
   return factures.filter((f) => estEmise(f) && f.emiseLe && f.emiseLe.slice(0, 7) >= debut);
 }
 
-export type Barre = { cle: string; libelle: string; facture: number; encaisse: number };
+// `detail` : précision sous le libellé (désignation d'un produit dont le
+// libellé est un code catalogue, ex. « CO2 »).
+export type Barre = { cle: string; libelle: string; detail?: string; facture: number; encaisse: number };
 
 // Ventes : facturé TTC par mois d'émission, et ce qui en est encaissé.
 export function ventesMensuelles(factures: FactureCentrale[], maintenant = new Date()): Barre[] {
@@ -209,11 +211,19 @@ export function produitsPrincipaux(
   const offres = new Map(devis.map((d) => [d.id, d]));
   const lignes = new Map(devis.flatMap((d) => d.lignes.map((l) => [l.id, l] as const)));
   const codes = new Map(catalogue.map((p) => [p.id, p.code ?? p.designation]));
+  // Désignation du catalogue, affichée sous le code (« CO2 » seul ne dit rien).
+  // La désignation reprend parfois le code en tête (« CO2 — Conception… ») :
+  // retiré, le code est déjà le libellé.
+  const sansCode = (code: string, designation: string) =>
+    designation.startsWith(code) ? designation.slice(code.length).replace(/^[\s—–:·-]+/, '') : designation;
+  const designations = new Map(
+    catalogue.filter((p) => p.code).map((p) => [p.code!, sansCode(p.code!, p.designation)]),
+  );
   const parId = new Map(factures.map((f) => [f.id, f]));
   const libelle = (l: Devis['lignes'][number]) => (l.produitServiceId && codes.get(l.produitServiceId)) || l.designation;
   const parProduit = new Map<string, Barre>();
   const ajouter = (cle: string, ht: number, encaisseHt: number) => {
-    const b = parProduit.get(cle) ?? { cle, libelle: cle, facture: 0, encaisse: 0 };
+    const b = parProduit.get(cle) ?? { cle, libelle: cle, detail: designations.get(cle), facture: 0, encaisse: 0 };
     b.facture += ht;
     b.encaisse += encaisseHt;
     parProduit.set(cle, b);

@@ -970,6 +970,14 @@ button:focus-visible .repli-icone {
   background-attachment: local, local, scroll, scroll;
 }
 
+/* Sur un panneau en verre, le « couvercle » opaque (--surface) de ces ombres
+   dessinait une bande sombre au bord droit, même sans débordement — on
+   croyait la dernière colonne coupée. Retiré là (comme .fin-table-wrap) ;
+   l'indice de défilement reviendra avec les surfaces de données opaques. */
+.glass-panel .admin-table-wrap {
+  background: none;
+}
+
 /* Bloc « Projets en cours » : hauteur bornée à ~10 lignes plutôt que de
    pousser le reste de la page — le surplus (rangée plus haute qu'attendu,
    petit écran) passe en scroll interne, la pagination reste la voie normale

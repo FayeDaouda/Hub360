@@ -385,6 +385,10 @@ export default function RhPage({ params }: Props) {
     );
   }
 
+  // Une seule société dans la liste : la colonne répéterait le même nom sur
+  // chaque ligne — elle ne s'affiche que si la liste en mélange plusieurs.
+  const colonneSociete = new Set(visibles.map((d) => d.societeId)).size > 1;
+
   return (
     <>
       {entete}
@@ -442,7 +446,7 @@ export default function RhPage({ params }: Props) {
                 <tr>
                   <th>Matricule</th>
                   <th>Salarié</th>
-                  <th>Société</th>
+                  {colonneSociete && <th>Société</th>}
                   <th>Équipe</th>
                   <th>Contrat</th>
                   <th>Dossier</th>
@@ -460,7 +464,7 @@ export default function RhPage({ params }: Props) {
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
                       {d.paiementDemandeMode && <span className="pill pill--attention">Moyen de paiement à valider</span>}
                     </td>
-                    <td data-label="Société" className="rh-c-societe">{d.societe.nom}</td>
+                    {colonneSociete && <td data-label="Société" className="rh-c-societe">{d.societe.nom}</td>}
                     <td data-label="Équipe" className="rh-c-equipe">{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
                     <td data-label="Contrat" className="rh-c-contrat">
                       {LIBELLE_CONTRAT[d.typeContrat]}
