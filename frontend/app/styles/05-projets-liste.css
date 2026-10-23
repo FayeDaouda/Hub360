@@ -1,0 +1,487 @@
+/* ==========================================================================
+   Page Projets (app/admin/[slug]/projets) — liste + création.
+   Réutilise .panel, .admin-table, .pill, .progress du back-office.
+   ========================================================================== */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--argile);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.6rem 1rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Cellules de tableau enrichies (ligne principale + sous-ligne discrète) */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.cell-fort {
+  display: block;
+  font-weight: 600;
+}
+
+.cell-sub {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.cell-sub .pill {
+  margin-right: 0.15rem;
+  font-size: 0.68rem;
+  padding: 0.12rem 0.45rem;
+}
+
+.cell-code {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* Ligne fraîchement créée : court halo qui s'estompe */
+@keyframes ligne-nouvelle {
+  from {
+    background: rgba(26, 127, 75, 0.14);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+.admin-table tr.is-nouveau td {
+  animation: ligne-nouvelle 2.4s ease-out both;
+}
+
+.panel .empty-state {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2.75rem 1rem;
+}
+
+/* --- Modale « Nouveau projet » --- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4rem 1.25rem 2rem;
+  background: rgba(20, 20, 18, 0.45);
+  /* Flou le contenu de la page derrière le voile — l'effet « verre » a sa
+     place ici (un scrim), pas sur les cartes/tuiles elles-mêmes. */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+@keyframes modal-depuis-bas {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .modal {
+    animation: modal-depuis-bas 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal {
+    animation: none;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.4rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.field-input {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.55rem 0.75rem;
+  width: 100%;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--argile);
+}
+
+.field-input:disabled {
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Champ posé dans un panneau verre (Foncier, CRM, tableau de bord…) : le
+   fond plein --surface d'un .field-input normal tranche sur le translucide
+   du panneau — même souci que .btn-ghost, pas propre à une seule page,
+   corrigé ici pour tout panneau .glass-panel plutôt qu'en surcharge locale. */
+.glass-panel .field-input {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+.glass-panel .field-input:disabled {
+  background: color-mix(in oklch, var(--glass-bg) 55%, transparent);
+}
+
+/* Texte d'appoint sous un champ verrouillé/désactivé (ex. Nature figée sur
+   Mandat client, sept. 2026) — explique pourquoi, pas une erreur de saisie. */
+.field-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Champ de recherche/filtre local (CRM, dashboard…) — icône loupe cohérente
+   avec la barre globale de la topbar, sur le même style de champ que le
+   reste des formulaires (pas la pilule de la topbar). */
+.champ-recherche {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.champ-recherche svg {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.champ-recherche .field-input {
+  padding-left: 2.15rem;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.field-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0.9rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+}
+
+.field-erreur {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.83rem;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap; /* 3 boutons sur mobile : on passe à la ligne, jamais tronqués */
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+/* Tableau -> cartes empilées sous 720px : un tableau à 6 colonnes ne se lit
+   pas en scroll horizontal sur mobile. Chaque ligne devient une carte, le
+   libellé de colonne (data-label) sert d'étiquette. */
+@media (max-width: 720px) {
+  /* Cartes empilées : plus de défilement horizontal, donc plus d'ombres de
+     défilement — leur fond opaque (--surface) dessinait deux bandes sombres
+     sur les bords de chaque carte posée sur le verre. */
+  .admin-table-wrap {
+    background: none;
+  }
+
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table,
+  .admin-table tbody,
+  .admin-table tr,
+  .admin-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 0.9rem;
+  }
+
+  .admin-table tr + tr {
+    margin-top: 0.7rem;
+  }
+
+  .admin-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.25rem;
+    padding: 0.3rem 0;
+    border: none;
+    white-space: normal;
+  }
+
+  .admin-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* La 1re cellule fait office de titre de carte */
+  .admin-table td:first-child {
+    justify-content: flex-start;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .admin-table td:first-child::before {
+    display: none;
+  }
+
+  .cell-stack {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .cell-sub {
+    white-space: normal;
+  }
+
+  /* Cellule-carte : le contenu long (2 pastilles, libellés) passe à la ligne
+     au lieu d'être coupé au bord de la carte. */
+  .admin-table td {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+  .admin-table td .pill {
+    white-space: normal;
+  }
+}
+
+/* Liste CRM condensée (mobile) : une ligne par dossier, tap -> détail en
+   modale. Coexiste avec le tableau desktop (.crm-liste-desktop) — CSS bascule
+   l'un ou l'autre, même principe que la bascule tableau -> cartes ci-dessus. */
+.crm-liste-mobile {
+  display: none;
+}
+@media (max-width: 720px) {
+  .crm-liste-desktop {
+    display: none;
+  }
+  .crm-liste-mobile {
+    display: block;
+    /* Bloc scrollable à hauteur limitée — pas la page entière qui défile. */
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+}
+.crm-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.crm-liste li + li {
+  border-top: 1px solid var(--border);
+}
+.crm-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.crm-ligne:hover,
+.crm-ligne:focus-visible {
+  background: var(--bg);
+}
+.crm-ligne-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.crm-ligne-code {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.crm-ligne-nom {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-ligne-statut {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal {
+    max-width: none;
+    width: 100%;
+    min-height: 100dvh;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+  }
+
+  /* Conteneur à overflow → seul enfant « rétrécissable » du corps (flex) :
+     il absorbait toute la hauteur manquante et devenait un second scroll
+     imbriqué (lignes de l'offre coupées). C'est le corps qui défile. */
+  .modal-body > .admin-table-wrap {
+    flex-shrink: 0;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cibles tactiles — charte responsive §4 : ≥ ~40px, quelle que soit la
+   largeur, dès que le pointeur est grossier (doigt). */
+@media (pointer: coarse) {
+  .btn-ghost--sm,
+  .vue-toggle button,
+  .admin-periode-toggle button {
+    min-height: 40px;
+  }
+  .modal-close,
+  .admin-icon-btn,
+  .admin-menu-btn,
+  .admin-sidebar-close {
+    width: 42px;
+    height: 42px;
+  }
+  .lien-inline {
+    padding: 0.4rem 0;
+  }
+  .admin-nav-item {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-table tr.is-nouveau td {
+    animation: none;
+  }
+}
+

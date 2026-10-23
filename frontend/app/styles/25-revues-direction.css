@@ -1,0 +1,612 @@
+/* Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : une ligne par
+   projet en colonnes sur grand écran, des cartes empilées sur téléphone. */
+.prod-onglets {
+  margin-bottom: 1rem;
+}
+.prod {
+  display: grid;
+  gap: 1rem;
+}
+.prod-section {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+}
+.prod-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.prod-filtre {
+  width: auto;
+  min-width: 12rem;
+}
+.prod-liste,
+.prod-echeances {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.prod-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.7fr);
+  align-items: start;
+  gap: 0.4rem 1rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.prod-ligne:hover {
+  border-color: color-mix(in oklch, var(--pill-info) 45%, var(--border));
+}
+.prod-ligne[data-risque] {
+  border-left-color: var(--pill-risque);
+}
+.prod-ligne > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.35rem;
+  min-width: 0;
+}
+.prod-projet,
+.prod-avancement,
+.prod-calendrier {
+  flex-direction: column;
+  align-items: flex-start !important;
+}
+/* .cell-sub est sur une ligne ailleurs : ici le client et la cellule passent à la ligne. */
+.prod-ligne .cell-sub {
+  white-space: normal;
+}
+.prod-etiquette {
+  flex-basis: 100%;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.prod-souffrance {
+  color: color-mix(in oklch, var(--pill-attention) 75%, var(--text));
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.prod-alerte {
+  color: color-mix(in oklch, var(--pill-risque) 80%, var(--text));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.prod-barre {
+  display: block;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text) 10%, transparent);
+}
+.prod-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pill-info);
+}
+.prod-bas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.prod-cellules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.75rem;
+}
+.prod-cellule {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.prod-cellule-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+.prod-membre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.prod-membre-nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prod-membre-pct {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.prod-membre[data-ton='risque'] .prod-barre > span {
+  background: var(--pill-risque);
+}
+.prod-membre[data-ton='succes'] .prod-barre > span {
+  background: var(--pill-succes);
+}
+.prod-membre[data-ton='risque'] .prod-membre-pct {
+  color: color-mix(in oklch, var(--pill-risque) 80%, var(--text));
+  font-weight: 600;
+}
+.prod-echeance {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.prod-echeance:hover {
+  background: color-mix(in oklch, var(--text) 6%, transparent);
+}
+.prod-echeance-date {
+  min-width: 2.8rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+@media (max-width: 1100px) {
+  .prod-ligne {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .prod-projet {
+    grid-column: 1 / -1;
+  }
+  .prod-bas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .prod-ligne {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .prod-filtre {
+    width: 100%;
+  }
+}
+
+/* Décisions du registre rattachées à une fiche (revue CTO, 21/10/2026). */
+.dec-fiche {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.dec-fiche-titre {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.dec-fiche-lien {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dec-fiche ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dec-fiche li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+}
+.dec-fiche-texte small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+/* Téléphone : la pastille passe sous le texte, qui garde toute la largeur. */
+@media (max-width: 560px) {
+  .dec-fiche li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .dec-fiche li > .pill {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* CRM · vue commerciale du COO (revue COO, 22/10/2026) : « À traiter
+   aujourd'hui » et performance de l'année, côte à côte sur grand écran. */
+.crm-coo {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+.crm-coo > .panel {
+  margin: 0;
+}
+.crm-perf {
+  display: grid;
+  gap: 0.8rem;
+}
+.crm-perf-chiffres {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+.crm-perf-chiffres > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+}
+.crm-perf-chiffres dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.crm-perf-chiffres dd {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.crm-perf-chiffres .cell-sub,
+.crm-perf-table .cell-sub {
+  white-space: normal;
+}
+.crm-perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+.crm-perf-table th {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.crm-perf-table th:first-child,
+.crm-perf-table td:first-child {
+  text-align: left;
+}
+.crm-perf-table th,
+.crm-perf-table td {
+  padding: 0.45rem 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.crm-perf-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.crm-perf-table td:first-child {
+  white-space: normal;
+}
+.crm-perf-table td .cell-sub {
+  display: block;
+}
+@media (max-width: 1100px) {
+  .crm-coo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .crm-perf-chiffres {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Pipeline en FCFA HT (revue COO, lot D) : une puce par étape. */
+.crm-perf-sous-titre {
+  margin: 0 0 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.crm-perf-pipeline ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crm-perf-pipeline li {
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+}
+.crm-perf-pipeline strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 560px) {
+  .crm-perf-pipeline ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Fiche apporteur · paiement (revue COO, lot C) : commissions et coordonnées. */
+.pa-apporteur {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.pa-apporteur-bloc {
+  display: grid;
+  gap: 0.5rem;
+}
+.pa-apporteur-titre {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+.pa-apporteur-liste {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pa-apporteur-liste li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.8rem;
+}
+.pa-apporteur-liste li > span:first-child {
+  display: grid;
+}
+.pa-apporteur-liste .cell-sub {
+  white-space: normal;
+}
+.pa-apporteur-edition {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.pa-apporteur-edition > .pf-alerte,
+.pa-apporteur-edition > .field-erreur,
+.pa-apporteur-edition > .modal-actions {
+  grid-column: 1 / -1;
+}
+.pc-coordonnee {
+  display: block;
+}
+.pc-champs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+@media (max-width: 560px) {
+  .pa-apporteur-edition,
+  .pc-champs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* « À votre attention » du CEO (revue CEO, 22/10/2026) : deux groupes. */
+.pa-groupe {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pa-groupe-vide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* Cloche : onglets Décisions / Informations (revue CEO, 22/10/2026). */
+.notif-onglets {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.notif-onglets button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.notif-onglets button.is-active {
+  background: color-mix(in srgb, var(--iris) 22%, transparent);
+  color: var(--text);
+  font-weight: 600;
+}
+.notif-onglet-compte {
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--ocre);
+  color: #1a1206;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Synthèse mensuelle du CEO (revue CEO, 22/10/2026). */
+.sy {
+  display: grid;
+  gap: 1rem;
+}
+.sy-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+.sy-tete h2 {
+  margin: 0;
+}
+.sy-mois {
+  width: auto;
+  min-width: 12rem;
+}
+.sy-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 0.8rem;
+}
+.sy-section {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+}
+.sy-section h3,
+.sy-commentaire h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sy-section dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.sy-section dl > div {
+  display: grid;
+  gap: 0.1rem;
+  padding-left: 0.55rem;
+  border-left: 3px solid transparent;
+}
+.sy-section dl > div[data-ton='risque'] {
+  border-left-color: var(--corail);
+}
+.sy-section dl > div[data-ton='attention'] {
+  border-left-color: var(--ocre);
+}
+.sy-section dl > div[data-ton='succes'] {
+  border-left-color: var(--jade);
+}
+.sy-section dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.sy-section dd {
+  margin: 0;
+  font-weight: 600;
+}
+.sy-commentaire {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.sy-commentaire textarea {
+  width: 100%;
+}
+.sy-commentaire-texte {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Délégation du CEO (revue CEO, 22/10/2026). */
+.dl {
+  display: grid;
+  gap: 0.6rem;
+}
+.dl-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.dl-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.dl-ligne > span {
+  display: grid;
+  gap: 0.15rem;
+}
+.dl-ligne .cell-sub {
+  white-space: normal;
+}
+.dl-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.dl-note,
+.dl-actions {
+  grid-column: 1 / -1;
+}
+.dl-bandeau {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 0.9rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--ocre) 55%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--ocre) 14%, transparent);
+  font-size: 0.88rem;
+}
+@media (max-width: 720px) {
+  .dl-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

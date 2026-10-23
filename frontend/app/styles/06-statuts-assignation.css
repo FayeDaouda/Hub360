@@ -1,0 +1,344 @@
+/* ==========================================================================
+   CRM : statut éditable en ligne + bandeau · Projets : chips d'assignation,
+   modale d'assignation aux sous-groupes.
+   ========================================================================== */
+
+/* <select> de statut — allure de pastille : mêmes variables --pill-* que
+   .pill (fond plein, texte blanc), couleur selon la valeur. Reste un select
+   natif (accessible, éditable au clavier). Les variantes --* servent aussi
+   de couleur aux pastilles de statut CRM (.pill.statut-select--*). */
+.statut-select {
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.25rem 1.4rem 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-color: var(--pill-fond, var(--pill-neutre));
+  color: #fff;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 0.72rem center, right 0.5rem center;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.statut-select:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 1px;
+}
+
+/* Cycle CRM, couleur = sens : gris (nouveau, rien d'engagé) · ambre (chez
+   la DAF, attend une décision) · bleu (offre en cours chez le client) ·
+   vert (acquis) · rouge (perdu). Mapping statut → variante :
+   lib/cycle-crm.ts::CLASSE_STATUT. */
+.statut-select--nouveau {
+  --pill-fond: var(--pill-neutre);
+}
+
+.statut-select--daf {
+  --pill-fond: var(--pill-attention);
+}
+
+.statut-select--devis {
+  --pill-fond: var(--pill-info);
+}
+
+.statut-select--valide {
+  --pill-fond: var(--pill-succes);
+}
+
+.statut-select--annule {
+  --pill-fond: var(--pill-risque);
+}
+
+/* Liste ouverte : chaque option dans sa couleur, texte blanc. Chrome récent
+   (select personnalisable, base-select) dessine la liste dans la page ;
+   ailleurs, les options gardent ce style là où le navigateur l'applique
+   (Firefox) — la liste système de Safari l'ignore. */
+.statut-select option {
+  background-color: var(--pill-fond, var(--pill-neutre));
+  color: #fff;
+}
+@supports (appearance: base-select) {
+  .statut-select,
+  .statut-select::picker(select) {
+    appearance: base-select;
+  }
+  .statut-select::picker-icon {
+    display: none; /* flèche dessinée par background-image */
+  }
+  .statut-select::picker(select) {
+    padding: 0.3rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+  .statut-select option {
+    margin: 0.15rem 0;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .statut-select option::checkmark {
+    display: none;
+  }
+  .statut-select option:hover,
+  .statut-select option:focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--pill-fond, var(--pill-neutre)) 60%, transparent);
+    outline-offset: 1px;
+  }
+}
+
+/* Bandeau d'information (validation CRM -> projet créé) */
+.crm-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  background: #e7f6ec;
+  border: 1px solid #b7e2c6;
+  color: #1a7f4b;
+  font-size: 0.85rem;
+}
+
+.crm-banner button {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+/* Chips (sous-groupes assignés dans le tableau Projets) */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Pastille d'info (jamais cliquable en soi — pas de bordure de bouton) :
+   fond teinté Iris, la couleur de marque/identité (cf. :root), pour signaler
+   « ceci est une donnée affichée », pas une action. .chip--filtre (plus bas)
+   est le seul variant réellement cliquable et garde border-color transparent
+   à dessein — d'où le border ici en 1px transparent plutôt que `none`. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: var(--iris-tint);
+  color: var(--iris-fonce);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.cell-actions {
+  text-align: right;
+}
+
+.btn-ghost--sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.dossier {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.dossier:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.dossier-code {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pill--phase {
+  --pill-fond: var(--pill-phase);
+}
+
+.empty-state--bloc {
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 3rem 1.5rem;
+}
+
+/* Fiche projet */
+/* Retour — navigation plus significative qu'une action ponctuelle sur la
+   fiche (Modifier/Localisation) : glass dès le repos, plus grand/plus marqué
+   que les boutons secondaires, flèche qui glisse vers la gauche au survol
+   pour renforcer le sens « retour ». Partagé par 11 pages (toute sous-section
+   projet) — un seul point de vérité pour ce niveau de navigation. Reprend la
+   couleur du module (.lien-retour--<module>, mêmes tokens que
+   .projet-carte--* et .module-icone--*) quand on revient D'UNE section vers
+   la fiche projet — Iris par défaut (retour fiche -> liste, pas de module). */
+.lien-retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.7rem;
+  margin-bottom: 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in oklch, var(--mod-solide, var(--iris)) 20%, transparent);
+  background: color-mix(in oklch, var(--mod-solide, var(--iris)) 6%, var(--surface) 94%);
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--mod-solide-fonce, var(--iris-fonce));
+  text-decoration: none;
+  transition:
+    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lien-retour--facturation {
+  --mod-solide: var(--argile);
+  --mod-solide-fonce: var(--argile-fonce);
+}
+
+.lien-retour svg {
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lien-retour:hover {
+  background: color-mix(in oklch, var(--mod-solide, var(--iris)) 13%, var(--surface) 87%);
+  border-color: color-mix(in oklch, var(--mod-solide, var(--iris)) 42%, transparent);
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--mod-solide, var(--iris)) 18%, transparent);
+  transform: translateY(-1px);
+}
+
+.lien-retour:hover svg {
+  transform: translateX(-3px);
+}
+
+/* Sombre : --mod-solide-fonce (texte pensé pour un fond tinté CLAIR) sur le
+   fond sombre du lien était quasi illisible — on éclaircit avec --text. */
+:root[data-theme='dark'] .lien-retour {
+  color: color-mix(in oklch, var(--mod-solide, var(--iris)) 45%, var(--text) 55%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lien-retour,
+  .lien-retour svg {
+    transition: none;
+  }
+}
+
+.projet-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.projet-entete-titre h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.3rem 0 0.4rem;
+  font-size: 1.35rem;
+}
+
+/* Badge d'icône de module — fait écho à la carte d'entrée du module sur la
+   fiche projet (.projet-carte-icone), pour que la couleur de hiérarchie se
+   poursuive une fois DANS la page, pas seulement sur la carte qui y mène.
+   Sobre à dessein (pas de glass ici) : ces pages sont des formulaires/
+   checklists denses, la couleur reste un simple repère d'identité en tête de
+   page. Mêmes variables que .projet-carte--* et .phase-etape--*. */
+.module-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--mod-solide, var(--text-muted)) 14%, white 86%);
+  color: var(--mod-solide, var(--text-muted));
+  flex-shrink: 0;
+}
+
+.module-icone--facturation {
+  --mod-solide: var(--argile);
+}
+
+.projet-entete-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.87rem;
+}
+
+/* Colonnes lecture seule dans une table par ailleurs modifiable (ex. lots :
+   entreprise / marché / versé, gérés par l'administration). */
+.ro {
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dossier,
+  .kpi-tuile,
+  .kpi-tuile--clic,
+  .kpi-tuile-icone,
+  .kpi-tuile-valeur {
+    transition: none;
+  }
+}
+
+/* Pastille de catégorie (Conception / Aménagement) — CRM, dossiers, fiche. */
+.pill--cat-conception {
+  --pill-fond: var(--pill-cat-conception);
+}
+
+.pill--cat-amenagement {
+  --pill-fond: var(--pill-cat-amenagement);
+}
+
+.projet-entete-sur {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.projet-entete-sur {
+  margin-bottom: 0.1rem;
+}
+

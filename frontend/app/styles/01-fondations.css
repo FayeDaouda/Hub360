@@ -1,0 +1,481 @@
+:root {
+  color-scheme: light;
+
+  /* --- Direction visuelle Hub 360 (virage « flashy », sept. 2026) -----------
+     Palette libre, indépendante de l'ancien kit navy/beige/taupe (décision
+     boss). Même architecture qu'avant (Encre / Sable + 3 couleurs de sens +
+     accents tintés) — seules les teintes changent, pour que tout le code
+     existant qui consomme ces tokens se re-thème sans être réécrit.
+     Argile reste la couleur de signature (CTA, statuts actifs, ce qui doit
+     accrocher l'œil en premier) ; Iris est la couleur de marque (liens,
+     avatars, dégradé de marque). Chaque couleur de sens/action a été
+     recalibrée en OKLCH pour rester lisible en blanc dessus (boutons,
+     pastilles, bulles de chat) — cf. mémoire contraste, sept. 2026. */
+  --encre: #140f1f;
+  --sable: #f5f3fc;
+  --argile: oklch(55% 0.22 355); /* accent principal (ex-terracotta -> flamingo) */
+  --argile-fonce: oklch(30% 0.15 355); /* texte sur fond Argile tinté */
+  --sauge: oklch(48% 0.165 142); /* validé / positif (ex-sauge -> vert vif) */
+  --sauge-fonce: oklch(28% 0.11 142);
+  --ocre: oklch(72% 0.15 82); /* attention / échéance (ambre vif) */
+  --ocre-fonce: oklch(30% 0.09 82);
+
+  /* Couleur de marque (liens, avatars, éléments d'identité) — distincte
+     d'Argile pour ne pas diluer la couleur de signature. */
+  --iris: oklch(50% 0.22 300);
+  --iris-fonce: oklch(28% 0.15 300); /* texte sur fond Iris tinté */
+  --turquoise: oklch(68% 0.13 200); /* accent secondaire (anneaux, info) */
+  --turquoise-fonce: oklch(34% 0.1 200);
+  /* Ajoutées pour la hiérarchie de couleur des cartes projet (sept. 2026) —
+     Étude et Exécution n'avaient pas encore de couleur de charte propre.
+     --bleu (plus bas) reste l'exception scopée à la checkbox avant-projet ;
+     Azur est la vraie couleur de charte pour tout usage « technique ». */
+  --azur: oklch(52% 0.18 255);
+  --azur-fonce: oklch(28% 0.13 255);
+  --mandarine: oklch(62% 0.19 45); /* exécution / chantier (action, intensité) */
+  --mandarine-fonce: oklch(32% 0.13 45);
+  /* Foncier/Documents/Images étaient en gris « neutre » délibéré (transverses,
+     pas une étape) — demande explicite sept. 2026 : leur donner chacun sa
+     propre couleur, comme les autres modules. Hues choisies pour rester bien
+     séparées de tout le reste (dont Sauge/Ocre/Danger, réservés aux statuts). */
+  --jade: oklch(54% 0.13 172); /* Foncier */
+  --jade-fonce: oklch(30% 0.095 172);
+  --fuchsia: oklch(56% 0.21 325); /* Documents */
+  --fuchsia-fonce: oklch(30% 0.15 325);
+  --corail: oklch(64% 0.19 18); /* Images */
+  --corail-fonce: oklch(32% 0.13 18);
+
+  /* Fonds tintés des pastilles (jamais de texte noir plat dessus) */
+  --argile-tint: oklch(95% 0.025 355);
+  --sauge-tint: oklch(95% 0.025 142);
+  --ocre-tint: oklch(95% 0.025 82);
+  --iris-tint: oklch(95% 0.025 300);
+  --turquoise-tint: oklch(95% 0.025 200);
+  --azur-tint: oklch(95% 0.025 255);
+  --mandarine-tint: oklch(95% 0.025 45);
+  --jade-tint: oklch(95% 0.025 172);
+  --fuchsia-tint: oklch(95% 0.025 325);
+  --corail-tint: oklch(95% 0.025 18);
+
+  --bg: #f5f3fc;
+  --surface: #ffffff;
+  --border: #e7e2f5;
+  --border-hover: #d9d2f0;
+  --text: #17132a;
+  --text-muted: #6e6785;
+  /* Plat (border-color, accent-color…) : Iris. Le dégradé de marque a son
+     propre token car un <gradient> n'est pas une <color> CSS valide partout.
+     Calé sur le vrai spectre du logo (bleu -> turquoise -> vert -> jaune ->
+     orange, sept. 2026) — signature de marque isolée de la hiérarchie de
+     couleur des modules (Avant-projet/Permis/Étude/Exécution/Facturation) :
+     Azur/Turquoise/Mandarine s'y retrouvent déjà (bonne surprise), Iris et
+     Argile restent hors spectre par choix (kickoff / clôture, pas des étapes
+     du dégradé). Vert/jaune ne sont des repères que du dégradé, pas des
+     couleurs de module — inutile de leur donner un token à part. */
+  --brand: var(--iris);
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--azur),
+    var(--turquoise),
+    oklch(72% 0.16 150),
+    oklch(85% 0.15 95),
+    var(--mandarine)
+  );
+  --accent: var(--argile);
+  --accent-fort: var(--argile-fonce);
+  --danger: #b3261e;
+  /* Exception scopée à la checkbox de checklist avant-projet (demande
+     explicite, sept. 2026) — la règle ci-dessus (pas de bleu/vert/ambre
+     génériques) reste la direction par défaut ailleurs. */
+  --bleu: #2563eb;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-sm: 0 1px 2px rgba(20, 15, 35, 0.07);
+  --shadow-md: 0 8px 24px rgba(20, 15, 35, 0.1);
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Helvetica, Arial, sans-serif;
+  /* Titres, noms de carte, gros chiffres KPI */
+  --font-titre: var(--font-display), var(--font-inter), 'Segoe UI', sans-serif;
+
+  /* Jetons back-office : jusqu'ici seulement des valeurs de repli éparpillées,
+     désormais centralisés ici — un seul endroit à faire évoluer. */
+  --admin-surface: var(--surface);
+  --admin-fond: #eee8fb;
+  --admin-bordure: var(--border);
+  --admin-texte-doux: var(--text-muted);
+  --admin-accent: var(--argile);
+
+  /* --- Accents hub360° (refonte dark/light, sept. 2026) ---------------------
+     4 couleurs de la nouvelle identité (mêmes teintes que le nouveau logo),
+     identiques dans les deux modes — seuls les fonds/surfaces changent entre
+     clair et sombre. Additifs pour l'instant : n'a encore remplacé QUE le
+     décoratif des tuiles KPI du tableau de bord (stat-card.tsx) — la
+     hiérarchie de couleur des modules (Azur/Turquoise/Sauge…) est un chantier
+     séparé, à traiter module par module (décision boss). */
+  --violet-hub: #4f6bff;
+  --jaune-hub: #ffd02e;
+  --orange-hub: #ff7a3c;
+  --cyan-hub: #06b6d4;
+
+  /* Logo vectoriel (components/hub-logo.tsx) — mêmes teintes que les deux
+     PNG officiels : encre sombre + « 360° » prune en clair, encre blanche +
+     « 360° » bleu en sombre (couleurs converties en sRGB). */
+  --hub-logo-encre: #040712;
+  --hub-logo-exposant: #6c3889;
+
+  /* Verre translucide — additif, opt-in (.glass-panel), n'affecte pas
+     --surface (qui doit rester opaque : modales, menus, tables en dépendent
+     partout dans l'appli). */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  /* Verre liquide premium — reflet spéculaire + ombre flottante, cf.
+     .admin-search/.admin-icon-btn/.admin-periode-label/.glass-panel. */
+  --glass-sheen: rgba(255, 255, 255, 0.55);
+  --glass-sheen-faible: rgba(255, 255, 255, 0.15);
+  --glass-ombre: rgba(23, 19, 42, 0.14);
+}
+
+/* --- Mode sombre (refonte dark/light, sept. 2026) ---------------------------
+   Bascule par attribut sur <html> (lib/theme.ts + composant ThemeToggle),
+   pas par prefers-color-scheme : préférence choisie et mémorisée par la
+   personne, pas déduite de l'OS. Ne redéfinit QUE les jetons déjà consommés
+   partout (--bg/--surface/--border/--text/--text-muted/--admin-*) : tout ce
+   qui les utilise déjà (panels, tuiles, tableaux) se re-thème sans être
+   réécrit — même principe que le virage « flashy » de sept. 2026 plus haut.
+   --surface reste une couleur PLEINE (pas de transparence) pour ne rien
+   casser côté modales/menus qui la supposent opaque. Déploiement progressif
+   module par module (décision boss) : le tableau de bord est à jour, le
+   reste de l'admin peut avoir des aspérités tant qu'il n'est pas repassé. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0e1a;
+  --surface: #12162b;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.2);
+  --text: #f5f7fa;
+  --text-muted: rgba(245, 247, 250, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --admin-fond: #0a0e1a;
+  --admin-surface: #12162b;
+  --admin-bordure: rgba(255, 255, 255, 0.1);
+  --admin-texte-doux: rgba(245, 247, 250, 0.6);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-sheen: rgba(255, 255, 255, 0.3);
+  --glass-sheen-faible: rgba(255, 255, 255, 0.06);
+  --glass-ombre: rgba(0, 0, 0, 0.32);
+  --hub-logo-encre: #ffffff;
+  --hub-logo-exposant: #0394b9;
+}
+
+/* Verre liquide premium — flou/saturation renforcés, reflet spéculaire fixe
+   qui simule la lumière sur une surface courbe (::before), liseré haut
+   clair / bas sombre pour la profondeur, ombre portée flottante, et un
+   bord « un peu allumé » : un halo teinté accent qui déborde très
+   doucement à l'extérieur (spread négatif, discret — pas de néon). */
+.glass-panel {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    inset 0 -1px 0 var(--glass-sheen-faible),
+    0 16px 40px var(--glass-ombre),
+    0 0 24px -6px color-mix(in oklch, var(--argile) 30%, transparent);
+  overflow: hidden;
+}
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 70% at 12% -10%, var(--glass-sheen), transparent 60%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+/* Halos de fond (refonte dark/light, retour boss sept. 2026) — sans cette
+   couche, le backdrop-filter des cartes en verre n'a rien d'intéressant à
+   flouter derrière lui. Fixed (ne défilent pas avec le contenu), z-index 0 :
+   .admin-sidebar/.admin-main restent opaques ou passent par-dessus en ordre
+   naturel. Opacité plus forte en sombre (identité par défaut), très discrète
+   en clair pour ne pas polluer la lisibilité sur fond blanc. */
+.admin-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.admin-atmosphere-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  opacity: var(--atmosphere-op, 0.35);
+}
+
+:root[data-theme='dark'] {
+  --atmosphere-op: 0.35;
+}
+:root:not([data-theme='dark']) {
+  --atmosphere-op: 0.14;
+}
+
+.admin-atmosphere-blob--violet {
+  top: -160px;
+  left: 20%;
+  width: 560px;
+  height: 560px;
+  background: var(--violet-hub);
+}
+.admin-atmosphere-blob--orange {
+  top: 30%;
+  right: -180px;
+  width: 520px;
+  height: 520px;
+  background: var(--orange-hub);
+}
+.admin-atmosphere-blob--cyan {
+  bottom: -200px;
+  left: 35%;
+  width: 560px;
+  height: 560px;
+  background: var(--cyan-hub);
+}
+
+/* Bascule clair/sombre (topbar admin) — popover « Mode d'affichage » plutôt
+   qu'un simple switch inline (retour boss sept. 2026, maquette de référence).
+   Structure calquée sur .notif/.notif-menu (ClocheNotifications) — même
+   pattern d'ouverture pour toute la topbar. Le déclencheur réutilise
+   .admin-icon-btn (déjà utilisé par les autres boutons ronds de la topbar). */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+}
+
+.theme-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(15rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  padding: 1rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-md);
+  z-index: 40;
+}
+
+.theme-menu-titre {
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.theme-menu-segmente {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--admin-fond);
+  margin-bottom: 0.8rem;
+}
+
+.theme-menu-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-menu-option.est-actif {
+  background: linear-gradient(135deg, var(--violet-hub), var(--cyan-hub));
+  color: #fff;
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--violet-hub) 40%, transparent);
+}
+
+.theme-menu-etat {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.theme-menu-desc {
+  margin: 0.25rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+/* Sous ~640px, le déclencheur est trop près du bord gauche pour qu'un popover
+   ancré à droite (right: 0) reste dans l'écran — centré sous le bouton à la
+   place, la largeur déjà bornée par calc(100vw - 2rem) fait le reste. */
+@media (max-width: 640px) {
+  .theme-menu {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Titres et libellés forts en police display (géométrique) — le corps de
+   texte et les données de tableau restent en Inter. cf. Direction visuelle §2 */
+h1,
+h2,
+h3,
+.admin-title,
+.kpi-tuile-valeur {
+  font-family: var(--font-titre);
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* État vide générique (admin, collab) — couleur héritée du contexte
+   (l'ancienne valeur pointait vers un jeton du portail, inexistant hors de
+   celui-ci : même rendu). */
+.empty-state {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+/* Squelettes de chargement (admin, collab, pages publiques). */
+.skeleton {
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.06) 30%,
+    rgba(255, 255, 255, 0.13) 50%,
+    rgba(255, 255, 255, 0.06) 70%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-md);
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* Avatar : logo (ou repli couleur+icône/initiale) d'une société. Utilisé
+   par les cartes du portail (thème "glass"), les shells admin/collab et les
+   documents imprimés. */
+/* Tuile carrée plutôt que ronde : les logos fournis ne sont pas tous carrés.
+   Fond blanc par défaut pour que n'importe quel logo reste lisible. */
+.avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.1rem;
+  overflow: hidden;
+}
+
+.avatar-lg {
+  width: 72px;
+  height: 72px;
+  font-size: 1.6rem;
+  margin: 0 auto 1rem;
+}
+
+.avatar-xl {
+  width: 96px;
+  height: 96px;
+  font-size: 2rem;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.avatar-lg img {
+  padding: 10px;
+}
+
+.avatar-xl img {
+  padding: 8px;
+}
+
+/* Thème "glass" (portail + login) : le logo flotte sans tuile — une ombre
+   portée suffit à le détacher d'un fond quelconque. Déclaré après les
+   règles de padding par taille ci-dessus pour être sûr de l'emporter,
+   quelle que soit la taille combinée (md/lg/xl). */
+.avatar--glass {
+  background: transparent;
+}
+
+.avatar--glass img {
+  padding: 0;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* Icône de secours quand une société n'a pas encore de logo — hérite du
+   blanc défini sur .avatar via currentColor. */
+.avatar-fallback-icon {
+  width: 22px;
+  height: 22px;
+}
+

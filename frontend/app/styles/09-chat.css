@@ -1,0 +1,338 @@
+/* ==========================================================================
+   Chat multi-canaux (lot 3) — panneau latéral droit, plein écran < 640px
+   ========================================================================== */
+.pchat {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(23rem, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 40px -20px rgba(30, 22, 18, 0.28);
+  z-index: 55;
+}
+@media (max-width: 640px) {
+  .pchat {
+    inset: 0;
+    width: 100vw;
+    border-left: none;
+  }
+}
+
+.pchat-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.pchat-tete-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  flex: 1;
+}
+.pchat-tete-txt strong {
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pchat-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.pchat-etat--reconnexion {
+  color: var(--ocre-fonce);
+}
+.pchat-etat-point {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--sauge);
+}
+.pchat-retour,
+.pchat-fermer {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pchat-retour:hover,
+.pchat-fermer:hover {
+  background: var(--admin-fond, #f4f2ec);
+  color: var(--text);
+}
+
+/* -- Liste des canaux -- */
+.pchat-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.pchat-canal {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pchat-canal:hover {
+  background: var(--admin-fond, #f4f2ec);
+}
+.pchat-canal-pastille {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--admin-fond, #f4f2ec);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.pchat-canal-pastille--direct {
+  background: var(--argile-tint);
+  color: var(--argile-fonce);
+}
+.pchat-canal-nom {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pchat-canal-quand {
+  flex: none;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.pchat-canal-nom--annuaire {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  white-space: normal;
+}
+.pchat-annuaire-role {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pchat-canal-badge {
+  flex: none;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--argile);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+/* -- Fil de messages -- */
+.pchat-fil {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.7rem 0.85rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.pchat-plus {
+  align-self: center;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pchat-jour {
+  align-self: center;
+  margin: 0.7rem 0 0.5rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.pchat-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 0.35rem;
+}
+.pchat-msg--mien {
+  align-items: flex-end;
+}
+.pchat-msg-auteur {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 0 0 0.15rem 0.15rem;
+}
+.pchat-msg-bulle {
+  max-width: 82%;
+  padding: 0.42rem 0.65rem 0.5rem;
+  border-radius: 12px;
+  background: var(--admin-fond, #f4f2ec);
+  font-size: 0.87rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.pchat-msg--mien .pchat-msg-bulle {
+  background: var(--argile);
+  color: #fff;
+}
+.pchat-msg-heure {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.64rem;
+  opacity: 0.6;
+  vertical-align: baseline;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- Zone de saisie -- */
+.pchat-saisie {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border-top: 1px solid var(--border);
+}
+.pchat-saisie--lecture {
+  margin: 0;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.pchat-saisie-champ {
+  flex: 1;
+  resize: none;
+  max-height: 7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  font-size: 0.87rem;
+  line-height: 1.4;
+  background: var(--surface);
+  color: var(--text);
+}
+.pchat-saisie-champ:focus {
+  outline: none;
+  border-color: var(--argile);
+}
+.pchat-saisie-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--argile);
+  color: #fff;
+  cursor: pointer;
+}
+.pchat-saisie-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.pchat-vide {
+  margin: auto;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.carte-pin span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--admin-accent, #86713f);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: rotate(-45deg);
+}
+
+.fiche-carte {
+  height: 220px;
+  border: 1px solid var(--admin-bordure, #e4dfd4);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Petites modales (confirmation, champ unique) — Phase 3 polish */
+.modal--sm {
+  max-width: 440px;
+}
+.modal-message {
+  margin: 0 0 0.9rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+.modal-message strong {
+  font-weight: 600;
+}
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #b3261e;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.6rem 1rem;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease;
+}
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+

@@ -1,0 +1,337 @@
+/* ---------- RH · Intégration (lot 3) : liste + détail ---------- */
+.integ {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 1rem;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .integ {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.integ-carte {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.integ-carte:hover {
+  border-color: var(--border-hover);
+}
+.integ-carte.is-active {
+  border-color: var(--accent);
+}
+.integ-carte:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.integ-carte-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+}
+.integ-jalons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.integ-mission {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+.integ-mission dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.integ-mission dd {
+  margin: 0.15rem 0 0;
+  white-space: pre-line;
+}
+.integ-point {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.integ-point > .btn-ghost {
+  justify-self: start;
+}
+.integ-cr {
+  margin: 0;
+  white-space: pre-line;
+}
+.integ-form {
+  display: grid;
+  gap: 0.6rem;
+}
+.integ-confirmer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+}
+/* Notes et sous-lignes longues des écrans RH (lots 2-3) : passent à la ligne
+   (.cell-sub est en nowrap, pensé pour les cellules de tableau). */
+.dmd-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.dmd-ligne .cell-sub,
+.integ-carte .cell-sub,
+.integ-detail .cell-sub {
+  white-space: normal;
+}
+
+/* ---------- RH · Temps de travail (lot 4) : feuilles, Mon temps, durées ---------- */
+.temps-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1rem;
+  align-items: start;
+}
+/* Côte à côte seulement quand le tableau (7 colonnes) tient sans défiler. */
+@media (min-width: 1500px) {
+  .temps-grille {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+/* Une grille à piste unique s'élargit à son contenu le plus large (tableau) :
+   on la borne pour que textes et tableaux restent dans le panneau. */
+.temps-panel {
+  grid-template-columns: minmax(0, 1fr);
+  scroll-margin-top: 1rem;
+}
+.temps-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+.temps-entete > div:first-child {
+  display: grid;
+  gap: 0.3rem;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.temps-entete .admin-periode-toggle {
+  flex-wrap: wrap;
+}
+.temps-entete .vue-toggle,
+.rh-onglets {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.temps-entete .vue-toggle button,
+.rh-onglets button {
+  white-space: nowrap;
+}
+.temps-mois {
+  margin-bottom: 1rem;
+}
+.temps-mois .admin-periode-toggle {
+  flex-wrap: wrap;
+}
+.temps-mois {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.temps-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.temps-table tr.is-active td {
+  background: color-mix(in oklch, var(--accent) 9%, transparent);
+}
+.temps-chiffres {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+.temps-chiffres dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.temps-chiffres dd {
+  margin: 0.15rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.temps-alerte {
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .temps-alerte {
+  color: var(--ocre);
+}
+.temps-table .cell-sub.temps-alerte {
+  white-space: normal;
+}
+.durees-intro {
+  margin-bottom: 1rem;
+}
+.durees-liste {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.durees-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.durees-ligne:last-child {
+  border-bottom: none;
+}
+.durees-saisie {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.durees-saisie .field-input {
+  width: 7.5rem;
+  text-align: right;
+}
+
+/* ---------- RH · Mon espace (lot 5) ---------- */
+.mes-entete {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+  min-width: 0;
+}
+.mes-entete > div {
+  min-width: 0;
+}
+.mes-initiales {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.mes-initiales--sm {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.8rem;
+}
+.mes-photo {
+  object-fit: cover;
+  background: var(--surface);
+}
+/* Ma cellule : membre cliquable → fiche contact. */
+.me-membre {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.me-membre > span:last-child {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.me-membre:disabled {
+  cursor: default;
+}
+.me-membre:not(:disabled):hover strong {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mes-nom {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.mes-sous-titre {
+  margin: 0.15rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  white-space: normal;
+}
+.perf-statut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+.perf-statut .cell-sub {
+  white-space: normal;
+}
+.mes-infos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 0.6rem 1rem;
+  margin: 0;
+}
+.mes-infos dt {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+/* « septembre 2026 » en tête de ligne : majuscule initiale (::first-letter
+   exige une boîte bloc). */
+.mes-mois {
+  display: inline-block;
+}
+.mes-mois::first-letter {
+  text-transform: uppercase;
+}
+.rh-bulletin-depot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.rh-bulletin-depot .field {
+  min-width: 170px;
+}
+.rh-bulletin-depot .is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.mes-infos dd {
+  margin: 0.15rem 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+

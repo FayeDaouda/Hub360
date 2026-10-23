@@ -1,0 +1,404 @@
+/* =========================================================================
+   Équipe — cellules & collaborateurs (Phase 3, §09)
+   ========================================================================= */
+
+/* Sélecteur de dispatcher — un par cellule, admin uniquement (sept. 2026). */
+
+.btn-ghost--danger {
+  color: #b3261e;
+  margin-right: auto;
+}
+
+/* Rangée de raccourcis d'accueil (admin & collaborateur) */
+.actions-rapides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+}
+.actions-rapides-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.9rem 0.5rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+.actions-rapides-item:hover {
+  border-color: var(--argile);
+}
+.actions-rapides-icone {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--encre);
+  color: #d3c9b7;
+  flex: none;
+}
+
+/* Tuile KPI rendue interactive (accueil collab uniquement — l'admin passe
+   sans `action`, donc reste un <div> statique). Reset des styles <button>. */
+.kpi-tuile--clic {
+  width: 100%;
+  display: block;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  text-decoration: none; /* tuile-lien (<a>) : pas de soulignement */
+  cursor: pointer;
+  /* Easing qui ralentit en fin de course plutôt qu'un ease linéaire — posé
+     seulement sur les tuiles réellement cliquables : le hover annonce une
+     vraie interaction, pas un décor sur une tuile statique. */
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.15s ease,
+    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kpi-tuile--clic:hover {
+  transform: translateY(-3px);
+  border-color: var(--argile);
+  box-shadow: var(--shadow-md);
+}
+.kpi-tuile--clic:hover .kpi-tuile-icone {
+  transform: scale(1.08) rotate(-4deg);
+}
+/* Tuile-filtre actuellement engagée — liseré permanent, pas juste au survol. */
+.kpi-tuile--actif {
+  outline: 2px solid var(--argile);
+  outline-offset: -1px;
+}
+/* Sur une tuile --pleine, le contour Argile en dur jurerait contre un
+   dégradé sauge/ocre/marque — un liseré blanc translucide marche sur
+   n'importe laquelle des 4 couleurs plutôt qu'une seule teinte figée. */
+.kpi-tuile--pleine.kpi-tuile--clic:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.kpi-tuile--pleine.kpi-tuile--actif {
+  outline-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Pastille de filtre actif, à côté de la recherche — mêmes codes que .chip,
+   en cliquable/fermable. */
+.chip--filtre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  color: var(--argile-fonce);
+  background: var(--argile-tint);
+  border-color: transparent;
+  font-weight: 600;
+}
+.chip--filtre:hover {
+  border-color: var(--argile);
+}
+.kpi-tuile--clic:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 2px;
+}
+.kpi-tuile--pleine.kpi-tuile--clic:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.8);
+}
+
+/* Cloche d'alertes — topbar collab (v0 : compteur worklist) */
+/* Verre liquide premium — pas de overflow:hidden ici (contrairement à
+   .admin-icon-btn) : le badge de compteur déborde volontairement du bouton
+   (top/right négatifs) et serait rogné. Le rai de lumière au survol est
+   plutôt clippé sur lui-même en cercle (::after, clip-path). */
+.admin-cloche {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    color 0.15s ease,
+    border-color 260ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-cloche::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: circle(50%);
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, var(--glass-sheen) 50%, transparent 60%);
+  background-size: 220% 220%;
+  background-position: -60% -60%;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.admin-cloche:hover {
+  color: var(--text);
+  border-color: var(--argile);
+  transform: translateY(-2px) scale(1.06);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 10px 22px var(--glass-ombre);
+}
+.admin-cloche:hover::after {
+  opacity: 1;
+  animation: cloche-balayage 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes cloche-balayage {
+  from {
+    background-position: -60% -60%;
+  }
+  to {
+    background-position: 160% 160%;
+  }
+}
+.admin-cloche-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--ocre);
+  /* Ocre reste clair/doré (cohérent avec le reste de sa famille) : texte
+     foncé plutôt que blanc pour rester lisible — cf. mémoire contraste. */
+  color: var(--ocre-fonce);
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Panneau de notifications (lot 2) — ancré sous la cloche */
+.notif {
+  position: relative;
+  display: inline-flex;
+}
+.notif-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 12px 32px rgba(30, 22, 18, 0.14);
+  z-index: 40;
+  overflow: hidden;
+}
+/* Mobile : la cloche n'est pas au bord droit de l'écran — ancré sur elle, le
+   menu (100vw − 2rem) débordait à gauche, hors écran. On l'ancre sur la barre
+   du haut (admin ET collab), pleine largeur, juste en dessous. */
+@media (max-width: 720px) {
+  .admin-topbar {
+    position: relative;
+  }
+  .notif {
+    position: static;
+  }
+  .notif-menu {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+}
+.notif-menu-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.notif-tout-lu {
+  border: 0;
+  background: transparent;
+  color: var(--argile);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notif-menu-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.notif-son-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.notif-son-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+.notif-vide {
+  margin: 0;
+  padding: 1.1rem 0.9rem;
+  font-size: 0.83rem;
+  color: var(--text-muted);
+}
+.notif-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.notif-item {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+}
+.notif-liste li:last-child .notif-item {
+  border-bottom: 0;
+}
+a.notif-item:hover {
+  background: var(--admin-fond, #f4f2ec);
+}
+.notif-point {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: transparent;
+}
+.notif-point[data-etat='nonlu'] {
+  background: var(--argile);
+}
+.notif-point[data-etat='echeance'] {
+  background: var(--ocre);
+}
+.notif-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.notif-titre {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.notif-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Toast de notification — bandeau éphémère (5 s), une seule notif à la fois.
+   cf. lib/use-notifications-poll.ts pour le minutage. */
+.notif-toast-hote {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  pointer-events: none;
+}
+
+.notif-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  pointer-events: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.55rem 0.6rem 0.55rem 1rem;
+  box-shadow: var(--shadow-md);
+  animation: notif-toast-entree 0.25s ease;
+}
+
+.notif-toast--sortie {
+  animation: notif-toast-sortie 0.3s ease forwards;
+}
+
+.notif-toast-corps {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.notif-toast-txt {
+  font-size: 0.85rem;
+  max-width: 46vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notif-toast-fermer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.notif-toast-fermer:hover {
+  background: var(--admin-fond);
+  color: var(--text);
+}
+
+@keyframes notif-toast-entree {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes notif-toast-sortie {
+  to {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+@media (max-width: 620px) {
+  .notif-toast-txt {
+    max-width: 60vw;
+  }
+}
+

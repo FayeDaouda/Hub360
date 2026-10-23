@@ -1,0 +1,334 @@
+/* ==========================================================================
+   RH · Dossiers du personnel (app/admin/[slug]/rh) — lot 1, sept. 2026.
+   Réutilise KpiStrip, .admin-table, .vue-toggle, .progress, .modal.
+   ========================================================================== */
+.rh-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.rh-sous-titre {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.rh-liste {
+  margin-top: 1.25rem;
+  padding: 1.1rem 1.25rem;
+}
+.rh-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.rh-outils .rh-archives {
+  margin-left: auto;
+}
+.rh-outils .bouton-export {
+  margin-left: 0;
+}
+.rh-archives {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.rh-matricule {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+.rh-nom {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.rh-nom:hover {
+  text-decoration: underline;
+}
+.rh-nom:focus-visible {
+  outline: 2px solid var(--argile);
+  outline-offset: 2px;
+}
+.rh-fiche {
+  max-width: 980px;
+}
+/* Fiche du dossier en panneau latéral (maquette RH · Groupe). */
+.modal-backdrop.rh-tiroir {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+.rh-tiroir .rh-fiche {
+  display: flex;
+  flex-direction: column;
+  width: min(980px, 100%);
+  height: 100%;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+.rh-tiroir .rh-fiche .modal-body {
+  flex: 1;
+  max-height: none;
+}
+.rh-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.rh-kpi .kpi-strip {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+@media (max-width: 1300px) {
+  .rh-kpi .kpi-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .rh-kpi .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rh-tiroir .rh-fiche {
+    border-radius: 0;
+  }
+}
+.rh-fiche .modal-body {
+  max-height: min(78vh, 900px);
+  overflow-y: auto;
+}
+.rh-completude {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.rh-completude-piste {
+  width: min(320px, 50vw);
+}
+.rh-section {
+  margin: 1.25rem 0 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rh-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 0.75rem 0.9rem;
+}
+.rh-grille--2 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.rh-pieces {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.rh-piece {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.rh-piece-point {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border-hover);
+}
+.rh-piece-point.est-joint {
+  background: var(--sauge);
+}
+.rh-piece-libelle {
+  display: grid;
+  min-width: 0;
+}
+.rh-manquant {
+  color: var(--ocre-fonce);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+:root[data-theme='dark'] .rh-manquant {
+  color: var(--ocre);
+}
+.rh-piece label.btn-ghost {
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .rh-piece {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+
+/* ---------- RH · Demandes (lot 2) : congés, remboursements, décision N+1 ---------- */
+.btn-primary--sm {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+}
+@media (pointer: coarse) {
+  .btn-primary--sm {
+    min-height: 40px;
+  }
+}
+.dmd-section {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1.1rem 1.25rem;
+}
+.dmd-titre {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1rem;
+}
+.dmd-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 0 1rem;
+}
+.dmd-grille > .dmd-section {
+  align-content: start;
+}
+.dmd-liste {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dmd-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.dmd-ligne > span:first-child {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.dmd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+/* Mon compte : double authentification (revue Salarié 19/10/2026) */
+.mon-compte-titre {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+}
+.mon-compte-titre--suite {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.df-compte {
+  display: grid;
+  gap: 0.75rem;
+}
+.df-compte p {
+  margin: 0;
+}
+.df-compte-etapes {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.85rem;
+}
+.df-compte-qr {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.df-compte-qr img {
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 0.4rem;
+}
+.df-compte-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
+/* Mon espace en deux blocs (revue Salarié 19/10/2026) */
+.mes-blocs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 0.6rem;
+}
+.mes-blocs button {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 1.15rem;
+}
+/* E. Mentions sur téléphone : date sur sa ligne, les trois actions dessous. */
+@media (max-width: 720px) {
+  .mt-mention .mt-echeance {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  .mt-mention .mt-action {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+/* F. Remise : « Joindre des fichiers » au lieu du champ natif. */
+.po-remise-joindre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  cursor: pointer;
+}
+.po-remise-joindre.is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.po-remise-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+/* J. Double authentification : bouton à sa taille. */
+.df-compte > button {
+  width: fit-content;
+}

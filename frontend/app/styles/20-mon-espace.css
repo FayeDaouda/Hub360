@@ -1,0 +1,528 @@
+/* ---------- Mon espace (maquette du boss) ---------- */
+.me-colonnes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: stretch;
+  gap: 1rem;
+}
+.me-colonnes > .dmd-section {
+  align-content: start;
+}
+.me-cellule-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+.me-cellule {
+  grid-template-rows: auto 1fr auto;
+}
+.me-pied {
+  align-self: end;
+}
+.me-vide {
+  padding: 1.1rem 0.75rem;
+  color: var(--text-muted);
+}
+.me-pastille {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.me-demande {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.me-demande > span:first-child {
+  display: grid;
+  gap: 0.1rem;
+}
+.me-demande:hover,
+.me-demande.is-actif {
+  border-color: var(--fuchsia);
+}
+.me-decision .modal-header,
+.me-decision .modal-body {
+  padding-left: 0;
+  padding-right: 0;
+}
+@media (max-width: 900px) {
+  .me-colonnes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.me-colonnes--egales {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.me-solde {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.me-solde > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 10%, transparent);
+}
+.me-solde span {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.me-solde strong {
+  font-size: 1.35rem;
+}
+.me-solde .is-restant strong {
+  color: var(--sauge);
+}
+:root[data-theme='dark'] .me-solde .is-restant strong {
+  color: color-mix(in oklch, var(--sauge) 55%, white);
+}
+.me-case-jointe {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+.me-case-jointe input[type='checkbox'] {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.me-consigne {
+  margin: 0;
+  color: color-mix(in oklch, var(--fuchsia) 55%, var(--text-muted));
+  font-weight: 700;
+}
+.me-envoyer {
+  justify-self: start;
+}
+@media (max-width: 900px) {
+  .me-colonnes--egales {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .me-solde {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.me-lignes {
+  display: grid;
+  margin: 0;
+}
+.me-lignes > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.me-lignes dt {
+  color: var(--text-muted);
+}
+.me-lignes dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.me-intertitre {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.me-paiement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.me-ok {
+  color: var(--sauge);
+  font-weight: 700;
+}
+.me-attente {
+  color: color-mix(in oklch, var(--ocre) 75%, var(--text));
+  font-weight: 700;
+}
+:root[data-theme='dark'] .me-ok {
+  color: color-mix(in oklch, var(--sauge) 55%, white);
+}
+@media (max-width: 640px) {
+  .me-lignes > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+}
+.rh-paiement-demande {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.8rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--ocre) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ocre) 12%, transparent);
+}
+.me-documents {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+.me-documents > .dmd-section {
+  align-content: start;
+}
+.me-docs {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.me-doc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 9%, transparent);
+}
+.me-doc-pdf {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 0.6rem;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+.me-doc-pdf--contrat {
+  background: var(--fuchsia);
+}
+.me-doc-pdf--bulletin {
+  background: var(--iris);
+}
+.me-doc-texte {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.me-doc-lien {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--iris);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+:root[data-theme='dark'] .me-doc-lien {
+  color: color-mix(in oklch, var(--iris) 45%, white);
+}
+@media (max-width: 1100px) {
+  .me-documents {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Lignes de tâche et panneau selon la largeur réellement disponible (colonne
+   des cartes étroite à côté du panneau, mobile) plutôt que celle de l'écran. */
+.po-cartes {
+  container: po-cartes / inline-size;
+}
+.po-panneau {
+  container: po-panneau / inline-size;
+}
+@container po-cartes (max-width: 620px) {
+  .po-tache {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    gap: 0.35rem 0.75rem;
+  }
+  .po-tache-libelle {
+    grid-column: 1 / -1;
+  }
+}
+@container po-cartes (max-width: 420px) {
+  .po-tache {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .po-tache-etat {
+    grid-column: 1 / -1;
+    justify-items: start;
+  }
+}
+@container po-panneau (max-width: 360px) {
+  .po-panneau-lignes > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+@media (min-width: 1201px) {
+  /* Les six étapes tiennent sur la largeur du dossier, sans défilement. */
+  .po-etapes {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .po-etape-tete {
+    gap: 0.3rem;
+    font-size: 0.7rem;
+  }
+  /* « J43 / 40 » reste à droite du titre. */
+  .po-dossier-tete {
+    flex-wrap: nowrap;
+  }
+  .po-dossier-tete > div:first-child {
+    flex: 1 1 0;
+  }
+  .po-dossier-jour {
+    flex: none;
+    max-width: 22rem;
+  }
+}
+
+/* Projets · revue Salarié (19/10/2026) : liste compacte sous 3 projets,
+   « Seulement mes tâches », tâches à moi par étape, cartes closes repliées. */
+.po-colonnes--compacte {
+  grid-template-columns: minmax(0, 1fr);
+}
+.po-projets-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.po-projet--ligne {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: auto;
+  padding: 0.55rem 0.85rem;
+  background: color-mix(in oklch, var(--surface) 70%, transparent);
+}
+.po-etape-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.po-etape-moi {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--brand) 16%, transparent);
+  color: color-mix(in oklch, var(--brand) 80%, var(--text));
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.po-miennes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.po-miennes input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+}
+.po-lien-bouton {
+  color: var(--brand);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.po-carte--repliee {
+  padding: 0;
+}
+.po-carte-deplier {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-carte-deplier:hover {
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.po-carte-repliee-titre {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+.po-carte--repliee .po-chevron {
+  transform: rotate(-90deg);
+}
+.po-carte-repliee-droite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.po-carte-replier {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.po-carte-replier:hover {
+  background: color-mix(in oklch, var(--text) 6%, transparent);
+  color: var(--text);
+}
+
+/* Projets · gabarit, desktop : l'écran tient dans la fenêtre, sans défilement
+   de page. « Projets ouverts » défile en interne ; le dossier garde son
+   en-tête et ses étapes fixes, et deux zones défilent séparément : les cartes
+   de l'étape et le panneau (tâche ou fil de la carte). --po-haut = haut de la
+   page, mesuré (projets-ouverts.tsx). Tablette, mobile et fenêtres basses
+   (< 820 px, où les zones seraient trop étroites) : défilement normal. */
+@media (min-width: 1201px) and (min-height: 820px) {
+  .admin-main:has(.po) {
+    padding-bottom: 1.5rem;
+  }
+  .po {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--po-haut, 8rem) - 1.5rem);
+    overflow: hidden;
+  }
+  .po > * {
+    flex: none;
+  }
+  .po > .po-colonnes {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .po > .po-colonnes.po-colonnes--compacte {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .po-liste,
+  .po-dossier {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .po-liste > *,
+  .po-dossier > * {
+    flex: none;
+  }
+  .po-liste > ul,
+  .po-dossier > .po-corps {
+    flex: 1;
+    min-height: 0;
+  }
+  .po-liste > ul {
+    align-content: start;
+    overflow-y: auto;
+    padding-right: 0.3rem;
+  }
+  .po-corps {
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .po-cartes,
+  .po-corps > .po-panneau {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .po-cartes {
+    align-content: start;
+    padding-right: 0.4rem;
+  }
+  .po-corps > .po-panneau {
+    position: static;
+    align-content: start;
+    padding-right: 0.4rem;
+  }
+  /* En-têtes resserrés : la hauteur gagnée va aux zones qui défilent. */
+  .po {
+    gap: 0.9rem;
+  }
+  .po-tuile {
+    gap: 0.15rem;
+    padding: 0.7rem 1rem;
+  }
+  .po-tuile-valeur {
+    font-size: 1.5rem;
+  }
+  .po-dossier {
+    gap: 0.8rem;
+    padding: 0.9rem 1.1rem;
+  }
+  .po-dossier-titre {
+    margin: 0.1rem 0 0.15rem;
+  }
+  .po-dossier-tete .po-pastilles {
+    margin-top: 0.35rem;
+  }
+  .po-etape {
+    gap: 0.15rem;
+    padding: 0.5rem 0.7rem;
+  }
+  .po-etape strong {
+    font-size: 0.92rem;
+  }
+  /* Barres de défilement discrètes, assorties au verre. */
+  .po-liste > ul,
+  .po-cartes,
+  .po-corps > .po-panneau {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--text-muted) 45%, transparent) transparent;
+  }
+  .po-liste > ul::-webkit-scrollbar,
+  .po-cartes::-webkit-scrollbar,
+  .po-corps > .po-panneau::-webkit-scrollbar {
+    width: 6px;
+  }
+  .po-liste > ul::-webkit-scrollbar-thumb,
+  .po-cartes::-webkit-scrollbar-thumb,
+  .po-corps > .po-panneau::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--text-muted) 45%, transparent);
+  }
+}
+

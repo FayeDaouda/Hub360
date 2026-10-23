@@ -1,0 +1,1904 @@
+/* RH · coque mobile (revue RH 20/10/2026, lot 11) : ≤ 720 px seulement.
+   Tuiles en bandeau qui défile, listes en lignes compactes d'application
+   (au lieu de cartes de 6 lignes par salarié), « À traiter » aéré. */
+@media (max-width: 720px) {
+  .rh-entete-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .rh-entete-actions > * {
+    justify-content: center;
+  }
+
+  /* 7 tuiles : un bandeau horizontal (2 tuiles et l'amorce de la 3e). */
+  .rh-kpi .kpi-strip {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 42%;
+    margin-inline: calc(-1 * var(--ef-gx, 16px));
+    padding: 0.15rem var(--ef-gx, 16px) 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--ef-gx, 16px);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .rh-kpi .kpi-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .rh-kpi .kpi-strip > * {
+    scroll-snap-align: start;
+  }
+  .rh-kpi .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+  .rh-kpi .kpi-tuile-sous {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* « À traiter » : le texte prend toute la largeur, l'échéance et l'action
+     sur une ligne en dessous. */
+  .at-rh-ligne {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    grid-template-areas: 'icone corps corps' '. quand action';
+    align-items: center;
+  }
+  .at-rh-icone {
+    grid-area: icone;
+    align-self: start;
+  }
+  .at-rh-corps {
+    grid-area: corps;
+  }
+  .at-rh-quand {
+    grid-column: auto;
+    grid-row: auto;
+    grid-area: quand;
+  }
+  .at-rh-ligne > button {
+    grid-column: auto;
+    grid-row: auto;
+    grid-area: action;
+  }
+
+  /* Listes Personnel et Feuilles de temps : lignes séparées par un filet,
+     toute la ligne ouvre le salarié. */
+  .admin-table:is(.rh-table, .temps-liste) tr {
+    position: relative;
+    display: grid;
+    gap: 0.2rem 0.75rem;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .admin-table:is(.rh-table, .temps-liste) tr + tr {
+    margin-top: 0;
+  }
+  .admin-table:is(.rh-table, .temps-liste) tr:last-child {
+    border-bottom: 0;
+  }
+  .admin-table:is(.rh-table, .temps-liste) td,
+  .admin-table:is(.rh-table, .temps-liste) td:first-child {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  /* :nth-child(n) : égale la spécificité de la règle des cartes de tableau. */
+  .admin-table:is(.rh-table, .temps-liste) td:nth-child(n) > * {
+    margin-left: 0;
+    text-align: left;
+  }
+  .admin-table:is(.rh-table, .temps-liste) td .cell-sub {
+    display: block;
+    margin-top: 0.15rem;
+  }
+  .admin-table:is(.rh-table, .temps-liste) td::before {
+    display: none;
+  }
+  .admin-table:is(.rh-table, .temps-liste) .rh-nom {
+    font-size: 0.95rem;
+  }
+  .admin-table:is(.rh-table, .temps-liste) .rh-nom::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Personnel :  GH-0001 · CDI            ▬▬ 22 %
+                  Rokhaya Ndoye — Responsable 3D
+                  Études et ingénierie */
+  .admin-table.rh-table tr {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'matricule contrat dossier' 'salarie salarie salarie' 'equipe equipe equipe';
+    column-gap: 0.35rem;
+  }
+  .admin-table.rh-table :is(.rh-matricule, .rh-c-contrat) {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+  .admin-table.rh-table .rh-matricule {
+    grid-area: matricule;
+  }
+  .admin-table.rh-table .rh-c-contrat {
+    grid-area: contrat;
+  }
+  .admin-table.rh-table .rh-c-contrat::before {
+    content: '· ';
+    display: inline;
+    font-size: inherit;
+  }
+  .admin-table.rh-table .rh-c-dossier {
+    grid-area: dossier;
+    justify-self: end;
+    font-size: 0.75rem;
+  }
+  .admin-table.rh-table .rh-c-dossier .progress-track {
+    width: 3.5rem;
+  }
+  .admin-table.rh-table .rh-c-salarie {
+    grid-area: salarie;
+  }
+  .admin-table.rh-table .rh-c-salarie .pill {
+    margin-top: 0.3rem;
+  }
+  .admin-table.rh-table .rh-c-equipe {
+    grid-area: equipe;
+    color: var(--text-muted);
+  }
+  .admin-table.rh-table :is(.rh-c-societe, .rh-c-entree) {
+    display: none;
+  }
+
+  /* Feuilles :  Ousmane Bâ — Architecte          [À contrôler]
+                 66 h      176 h      0 j      38 %
+                 imputées  dispo.     absences occupation */
+  .admin-table.temps-liste tr {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas: 'salarie salarie statut statut' 'a b c d';
+  }
+  .admin-table.temps-liste td:first-child {
+    grid-area: salarie;
+  }
+  .admin-table.temps-liste .tl-statut {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: 0.25rem;
+    grid-area: statut;
+  }
+  .admin-table.temps-liste .tl-cellule {
+    display: none;
+  }
+  .admin-table.temps-liste td.num {
+    display: flex;
+    flex-direction: column-reverse;
+    margin-top: 0.35rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  .admin-table.temps-liste td.num::before {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .admin-table.temps-liste tr.is-active {
+    background: color-mix(in oklch, var(--iris, var(--argile)) 8%, transparent);
+  }
+}
+
+/* RH · historique des salaires (revue RH validée 20/10/2026). */
+.sal-bloc {
+  display: grid;
+  gap: 0.75rem;
+}
+.sal-vigueur {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+.sal-vigueur strong {
+  font-size: 1.15rem;
+}
+.sal-attente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid color-mix(in oklch, var(--pill-attention) 45%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--pill-attention) 8%, transparent);
+  font-size: 0.88rem;
+}
+.sal-proposer {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.sal-proposer > .field-label {
+  margin: 0;
+  font-weight: 600;
+}
+.sal-proposer-champs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.sal-proposer-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.sal-historique {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sal-historique li {
+  display: grid;
+  grid-template-columns: 6.5rem 8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.sal-historique li:last-child {
+  border-bottom: 0;
+}
+.sal-date {
+  color: var(--text-muted);
+}
+.sal-montant {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sal-motif {
+  display: grid;
+  min-width: 0;
+}
+.sav {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.sav-liste {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sav-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.6rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.sav-ligne:last-child {
+  border-bottom: 0;
+}
+.sav-corps {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.sav-detail {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 0.6rem;
+}
+.sav-montants {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+}
+.sav-montants > span:not([aria-hidden]) {
+  display: grid;
+  gap: 0.1rem;
+}
+.sav-montants strong {
+  font-size: 1.1rem;
+}
+.sav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+@media (max-width: 720px) {
+  .sal-proposer-champs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sal-proposer-pied .btn-primary,
+  .sav-actions > * {
+    flex: 1;
+    justify-content: center;
+  }
+  .sal-historique li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'montant statut' 'date date' 'motif motif';
+  }
+  .sal-montant {
+    grid-area: montant;
+  }
+  .sal-historique .pill {
+    grid-area: statut;
+  }
+  .sal-date {
+    grid-area: date;
+  }
+  .sal-motif {
+    grid-area: motif;
+  }
+}
+
+/* Finances · « À valider aujourd'hui » du CFO (revue CFO 20/10/2026) : même
+   liste que « À traiter » de la RH (.at-rh-*), deux chiffres de trésorerie en tête. */
+.avc-tresorerie {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.avc-chiffre {
+  --ton: var(--pill-succes);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in oklch, var(--ton) 30%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ton) 7%, transparent);
+}
+.avc-chiffre[data-ton='risque'] {
+  --ton: var(--pill-risque);
+}
+.avc-chiffre > span:last-child {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+.avc-chiffre-icone {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--ton) 16%, transparent);
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.avc-chiffre-libelle {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.avc-chiffre strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  /* Deux chiffres côte à côte : libellé, montant ; l'icône s'efface. */
+  .avc-chiffre {
+    padding: 0.6rem 0.7rem;
+  }
+  .avc-chiffre-icone {
+    display: none;
+  }
+  .avc-chiffre strong {
+    font-size: 1.05rem;
+  }
+}
+
+/* Écrans de validation sur téléphone (revue CFO 20/10/2026, lot 1) : un
+   panneau ouvert masque la barre d'onglets (feuille d'application) ; l'offre
+   et ses actions (Valider, Renvoyer) viennent juste après la situation ; les
+   actions d'une facture restent au pied de l'écran. */
+@media (max-width: 720px) {
+  body:has(.fiche-crm-fond, .modal-backdrop, .feuille-fond) .nav-mobile {
+    display: none;
+  }
+  .fiche-crm {
+    padding: 1.1rem 1rem calc(1.25rem + env(safe-area-inset-bottom));
+    gap: 1.1rem;
+  }
+  .fiche-crm:has(> .fiche-crm-actions) > * {
+    order: 3;
+  }
+  .fiche-crm:has(> .fiche-crm-actions) > :is(header, .fiche-crm-section:first-of-type) {
+    order: 1;
+  }
+  .fiche-crm > .fiche-crm-actions {
+    order: 2;
+  }
+  .fiche-crm .cycle-dossier-actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+  .fiche-crm .fac-actions {
+    position: sticky;
+    bottom: calc(-1.25rem - env(safe-area-inset-bottom));
+    z-index: 1;
+    margin-inline: -1rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    background: var(--surface);
+    box-shadow: 0 -10px 24px color-mix(in oklch, var(--bg) 55%, transparent);
+  }
+  .fiche-crm .fac-actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+}
+
+/* Contrôle interne (revue CFO 20/10/2026) : demande et décision d'avoir,
+   clôtures mensuelles. */
+.da-corps,
+.clo-corps {
+  display: grid;
+  gap: 0.8rem;
+}
+.da-resume {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.da-resume > div {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.da-resume dt {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.da-resume dd {
+  margin: 0;
+}
+.clo-modal {
+  max-width: 640px;
+}
+.clo-liste {
+  display: grid;
+  gap: 0.5rem;
+  max-height: min(60vh, 32rem);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.clo-ligne {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.clo-ligne[data-clos] {
+  background: color-mix(in oklch, var(--pill-succes) 5%, transparent);
+}
+.clo-ligne > .btn-ghost {
+  justify-self: start;
+}
+.clo-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+}
+.clo-periode::first-letter {
+  text-transform: uppercase;
+}
+.clo-tete .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.clo-chiffres {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.clo-confirmer {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+  font-size: 0.88rem;
+}
+.clo-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+@media (max-width: 720px) {
+  .da-resume > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+  .clo-boutons > * {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Finances · Trésorerie (revue CFO 20/10/2026, lot 3) : encaissements
+   attendus à 30 / 60 / 90 jours, balance âgée des créances. */
+.tre {
+  display: grid;
+  gap: 1rem;
+}
+.tre-section {
+  display: grid;
+  gap: 0.85rem;
+}
+.tre-tete {
+  display: grid;
+  gap: 0.25rem;
+}
+.tre-tete .dmd-note {
+  margin: 0;
+}
+.tre-tete--ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.tre-cartes {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.tre-carte {
+  --ton: var(--pill-info);
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--ton) 28%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ton) 6%, var(--surface));
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tre-carte[data-ton='risque'] {
+  --ton: var(--pill-risque);
+}
+.tre-carte[data-ton='neutre'] {
+  --ton: var(--pill-neutre);
+}
+.tre-carte:hover,
+.tre-carte.is-active {
+  border-color: color-mix(in oklch, var(--ton) 65%, var(--border));
+  background: color-mix(in oklch, var(--ton) 12%, var(--surface));
+}
+.tre-carte-titre {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.tre-carte strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.tre-liste {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tre-liste > li {
+  border-bottom: 1px solid var(--border);
+}
+.tre-liste > li:last-child {
+  border-bottom: 0;
+}
+.tre-ligne {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.2rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tre-ligne:hover {
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.tre-ligne-date {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.tre-ligne-corps {
+  display: grid;
+  min-width: 0;
+}
+.tre-ligne-montant {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tre-creance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+.tre-creance > .tre-ligne {
+  flex: 1 1 18rem;
+  width: auto;
+}
+.tre-client {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.tre-client svg.is-ouvert {
+  transform: rotate(180deg);
+}
+.tre-table td[data-tranche='j60'],
+.tre-table td[data-tranche='j90'] {
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+  font-weight: 600;
+}
+.tre-table td[data-tranche='plus90'] {
+  color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
+  font-weight: 700;
+}
+.tre-total,
+.tre-pied td {
+  font-weight: 700;
+}
+.tre-detail > td {
+  padding-top: 0;
+  background: color-mix(in oklch, var(--text) 2%, transparent);
+}
+@media (max-width: 1100px) {
+  .tre-cartes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .tre-cartes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tre-cartes > :first-child {
+    grid-column: 1 / -1;
+  }
+  .tre-carte strong {
+    font-size: 1.05rem;
+  }
+  .tre-table .tre-detail > td::before {
+    display: none;
+  }
+  .tre-ligne {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+}
+@media (max-width: 720px) {
+  /* Une carte par client : seulement les tranches où il doit quelque chose. */
+  .tre-table td[data-vide] {
+    display: none;
+  }
+  .tre-table tfoot {
+    display: block;
+    width: 100%;
+    margin-top: 0.7rem;
+  }
+  .tre-table tfoot tr {
+    display: block;
+    width: 100%;
+    background: color-mix(in oklch, var(--text) 4%, transparent);
+  }
+}
+
+/* Pilotage · suivi d'un reporting déposé (revue CFO 20/10/2026, lot 5). */
+.pi-pastilles {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.sr {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.sr-tete {
+  display: grid;
+  gap: 0.4rem;
+}
+.sr-tete .po-kicker {
+  margin: 0;
+}
+.sr-lu,
+.sr-attente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.sr-lu {
+  color: color-mix(in oklch, var(--pill-succes) 85%, var(--text));
+  font-weight: 600;
+}
+.sr-attente {
+  color: var(--text-muted);
+}
+.sr-actions,
+.sr-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.sr-boutons {
+  justify-content: flex-end;
+}
+.sr-formulaire {
+  display: grid;
+  gap: 0.5rem;
+}
+.sr-fil {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sr-question {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--pill-attention);
+  border-radius: var(--radius-md);
+}
+.sr-question[data-etat='repondue'] {
+  border-left-color: var(--pill-succes);
+}
+.sr-message {
+  display: grid;
+  gap: 0.2rem;
+}
+.sr-message--reponse {
+  margin-left: 1rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.sr-auteur {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.sr-auteur strong {
+  color: var(--text);
+}
+.sr-texte {
+  margin: 0;
+  white-space: pre-wrap;
+}
+@media (max-width: 720px) {
+  .sr-actions > *,
+  .sr-boutons > * {
+    flex: 1;
+    justify-content: center;
+  }
+  .sr-message--reponse {
+    margin-left: 0.5rem;
+  }
+}
+/* Pastilles d'état dans une colonne étroite : elles passent à la ligne. */
+.pi-pastilles {
+  min-width: 0;
+}
+.pi-pastilles .pill {
+  max-width: 100%;
+  white-space: normal;
+}
+
+/* Finances · version mobile (revue CFO 20/10/2026, lot 8) : ≤ 720 px
+   seulement, même modèle que la page RH (lot 11) — tuiles en bandeau,
+   listes Devis / Factures en lignes compactes, en-tête rangé en grille. */
+@media (max-width: 720px) {
+  .fin-entete .factu-actions-tete {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .fin-entete .factu-actions-tete > * {
+    justify-content: center;
+    min-height: 2.6rem;
+  }
+
+  /* 5 tuiles : un bandeau horizontal, comme la page RH. */
+  .fin-kpi .kpi-strip {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 42%;
+    margin-inline: calc(-1 * var(--ef-gx, 16px));
+    padding: 0.15rem var(--ef-gx, 16px) 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--ef-gx, 16px);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .fin-kpi .kpi-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .fin-kpi .kpi-strip > * {
+    scroll-snap-align: start;
+  }
+  .fin-kpi .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+  .fin-kpi .kpi-tuile-sous {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* Devis et factures : une ligne compacte par document, à filet ;
+     toute la ligne ouvre le panneau (onClick existant sur la ligne). */
+  .admin-table.fin-table tr.fin-ligne {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 0.75rem;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .admin-table.fin-table tr.fin-ligne + tr {
+    margin-top: 0;
+  }
+  .admin-table.fin-table tr.fin-ligne td,
+  .admin-table.fin-table tr.fin-ligne td:first-child {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  /* :nth-child(n) : égale la spécificité de la règle des cartes de tableau. */
+  .admin-table.fin-table tr.fin-ligne td:nth-child(n) > * {
+    margin-left: 0;
+    text-align: left;
+  }
+  .admin-table.fin-table tr.fin-ligne td::before {
+    display: none;
+  }
+  .admin-table.fin-table tr.fin-ligne :is(.fl-ref, .fl-projet, .fl-date) {
+    color: var(--text-muted);
+    font-size: 0.74rem;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-client strong {
+    font-size: 0.95rem;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-ttc {
+    justify-self: end;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-statut {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+
+  /* Devis :  FS_NGO.26-OF1                 [En validation CFO]
+              Fatou Sarr                      8 496 000 FCFA
+              FS_NGO.26 · créé le 29/09                        */
+  .admin-table.fin-table.fin-table--devis tr.fin-ligne {
+    grid-template-areas: 'ref statut' 'client ttc' 'meta meta';
+  }
+  .fin-table--devis .fl-ref {
+    grid-area: ref;
+  }
+  .fin-table--devis .fl-statut {
+    grid-area: statut;
+  }
+  .fin-table--devis .fl-client {
+    grid-area: client;
+  }
+  .fin-table--devis .fl-ttc {
+    grid-area: ttc;
+  }
+  .admin-table.fin-table--devis tr.fin-ligne .fl-projet {
+    grid-area: meta;
+  }
+  .admin-table.fin-table--devis tr.fin-ligne .fl-date {
+    grid-area: meta;
+    justify-self: end;
+  }
+  .admin-table.fin-table--devis tr.fin-ligne .fl-date::before {
+    content: 'créé le ';
+    display: inline;
+    font-size: inherit;
+  }
+  .admin-table.fin-table tr.fin-ligne .fl-ht {
+    display: none;
+  }
+
+  /* Factures :  F2026-0015 · 3/3                     [En retard]
+                 Teranga Capital SA                 2 643 200 FCFA
+                 échéance 12/10/2026          ▬▬ 0 FCFA encaissé  */
+  .admin-table.fin-table.fin-table--factures tr.fin-ligne {
+    grid-template-areas: 'ref statut' 'client ttc' 'echeance encaisse';
+  }
+  .fin-table--factures .fl-ref {
+    grid-area: ref;
+  }
+  .fin-table--factures .fl-ref .cell-stack {
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+  .fin-table--factures .fl-statut {
+    grid-area: statut;
+  }
+  .fin-table--factures .fl-client {
+    grid-area: client;
+  }
+  .fin-table--factures .fl-ttc {
+    grid-area: ttc;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-echeance {
+    grid-area: echeance;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-echeance.fin-retard {
+    color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
+    font-weight: 600;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-echeance::before {
+    content: 'échéance ';
+    display: inline;
+    font-size: inherit;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-encaisse {
+    grid-area: encaisse;
+    justify-self: end;
+    font-size: 0.78rem;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne :is(.fl-date, .fl-payee) {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .fin-table--factures .fl-encaisse .fin-encaisse {
+    min-width: 6.5rem;
+  }
+  .fin-table--factures .fl-encaisse .fin-encaisse strong::after {
+    content: ' encaissés';
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+}
+@media (max-width: 720px) {
+  .admin-table.fin-table tr.fin-ligne td .cell-stack {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .admin-table.fin-table--factures tr.fin-ligne .fl-ref .cell-stack {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+  .fin-ligne:hover td {
+    background: none;
+  }
+}
+@media (max-width: 380px) {
+  /* Petit téléphone : une tuile et demie, montant sur une ligne. */
+  .fin-kpi .kpi-strip {
+    grid-auto-columns: 58%;
+  }
+}
+
+/* Finances · Rentabilité par projet (lot 7, phase 1) : marge directe
+   provisoire, bandeau des réserves, fiche et paramètres. */
+.rt {
+  display: grid;
+  gap: 1rem;
+}
+.rt-bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.6rem 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in oklch, var(--pill-attention) 40%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--pill-attention) 7%, var(--surface));
+  font-size: 0.86rem;
+}
+.rt-bandeau > svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+}
+.rt-bandeau > span {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+.rt-liste {
+  display: grid;
+  gap: 0.75rem;
+}
+.rt-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.75rem;
+}
+.rt-outils .field {
+  min-width: 12rem;
+}
+.rt-outils > :last-child:not(.field) {
+  margin-left: auto;
+}
+.rt-taux-ligne {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.rt-negatif {
+  color: color-mix(in oklch, var(--pill-risque) 85%, var(--text));
+}
+.rt-signal {
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+  font-weight: 600;
+}
+.rt-heures .cell-sub {
+  display: block;
+}
+.rtf-synthese {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+.rtf-synthese > div {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.rtf-synthese dt {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+.rtf-synthese dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.rtf-qualite {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+.rtf-mois {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rtf-mois > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+.rtf-mois > li:last-child {
+  border-bottom: 0;
+}
+.rtf-mois-nom {
+  flex: 1 1 10rem;
+  font-weight: 600;
+}
+.rtf-mois-nom::first-letter {
+  text-transform: uppercase;
+}
+.rtp-modal {
+  max-width: 640px;
+}
+.rtp-corps {
+  display: grid;
+  gap: 0.85rem;
+}
+.rtp-form {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.rtp-form > .field-label {
+  margin: 0;
+  font-weight: 600;
+}
+.rtp-champs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.rtp-vide {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 720px) {
+  .rt-outils .field {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .rtp-champs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rtf-synthese > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+  /* Une ligne compacte par projet (même modèle que Devis / Factures). */
+  .admin-table.rt-table tr.fin-ligne {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'projet marge' 'taux taux' 'signaux heures' 'etat etat';
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+  }
+  .admin-table.rt-table--taux tr.fin-ligne {
+    grid-template-areas: 'projet taux' 'signaux heures' 'etat etat';
+  }
+  .admin-table.rt-table tr.fin-ligne + tr {
+    margin-top: 0;
+  }
+  .admin-table.rt-table tr.fin-ligne td,
+  .admin-table.rt-table tr.fin-ligne td:first-child {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.82rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  .admin-table.rt-table tr.fin-ligne td:nth-child(n) > * {
+    margin-left: 0;
+    text-align: left;
+  }
+  .admin-table.rt-table tr.fin-ligne td::before {
+    display: none;
+  }
+  .admin-table.rt-table tr.fin-ligne td .cell-stack {
+    align-items: flex-start;
+  }
+  .rt-table .rt-projet {
+    grid-area: projet;
+  }
+  .rt-table .rt-marge {
+    grid-area: marge;
+    justify-self: end;
+    white-space: nowrap;
+  }
+  .rt-table .rt-taux {
+    grid-area: taux;
+  }
+  .rt-table--taux .rt-taux {
+    justify-self: end;
+  }
+  .rt-table .rt-signaux {
+    grid-area: signaux;
+  }
+  .rt-table .rt-heures {
+    grid-area: heures;
+    justify-self: end;
+  }
+  .rt-table .rt-etat {
+    grid-area: etat;
+  }
+  .admin-table.rt-table tr.fin-ligne .rt-signaux .cell-stack {
+    flex-direction: row;
+    gap: 0.4rem;
+  }
+  .admin-table.rt-table tr.fin-ligne .rt-etat .cell-stack {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .admin-table.rt-table tr.fin-ligne :is(.rt-ht, .rt-cout) {
+    display: none;
+  }
+}
+@media (min-width: 721px) {
+  /* Tuiles de la rentabilité : elles prennent toute la largeur (3 ou 1). */
+  .rt-kpi .kpi-strip {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+}
+.rt-table .rt-etat .pill,
+.rt-table .rt-taux .pill {
+  white-space: nowrap;
+}
+.rt-blocages {
+  display: grid;
+  gap: 0.6rem;
+  border-color: color-mix(in oklch, var(--pill-attention) 40%, var(--border));
+}
+.rt-blocages-liste {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rt-blocages-liste > li {
+  font-size: 0.9rem;
+}
+.rt-blocages-liste .cell-sub {
+  display: block;
+  margin-top: 0.1rem;
+}
+
+/* Finances · export comptable générique (lot 4). */
+.exc-modal {
+  max-width: 600px;
+}
+.exc-corps {
+  display: grid;
+  gap: 0.8rem;
+}
+.exc-journaux {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.exc-journal {
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.exc-journal .field-label {
+  margin: 0;
+  font-weight: 600;
+}
+.exc-chiffres {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.exc-journal .btn-ghost {
+  justify-self: start;
+}
+@media (max-width: 720px) {
+  .exc-journaux {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* En-tête Finances : 5 actions, la grille 2 × 2 passe à 2 colonnes libres. */
+  .fin-entete .factu-actions-tete > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+/* Fenêtres en grille (export, avoir, clôtures, paramètres) : une seule
+   colonne qui ne s'élargit jamais au-delà de la fenêtre, textes repliés. */
+:is(.exc-corps, .da-corps, .clo-corps, .rtp-corps, .sav-detail) {
+  grid-template-columns: minmax(0, 1fr);
+}
+:is(.exc-corps, .da-corps, .clo-corps, .rtp-corps) .cell-sub {
+  white-space: normal;
+}
+
+/* Facture et avoir au modèle imprimé (lot 6, dans l'esprit Zervant) : une
+   feuille blanche, noir sur blanc dans les deux thèmes (c'est du papier),
+   filets gris, total TTC seul en gras. A4 à l'impression. */
+.fd {
+  --fd-encre: #1b1b1f;
+  --fd-doux: #5d5d66;
+  --fd-filet: #e3e3e8;
+  --fd-fond: #f6f6f8;
+  display: grid;
+  gap: 1.4rem;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2.4rem 2.6rem;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--fd-encre);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.fd p {
+  margin: 0;
+}
+.fd-essai {
+  padding: 0.45rem 0.7rem;
+  border: 1px dashed #b57414;
+  border-radius: 4px;
+  color: #8a530a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.fd-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1.2rem 2rem;
+}
+.fd-emetteur {
+  display: grid;
+  gap: 0.15rem;
+  color: var(--fd-doux);
+  font-size: 0.8rem;
+}
+.fd-logo {
+  width: auto;
+  max-width: 250px;
+  max-height: 84px;
+  margin-bottom: 0.6rem;
+  object-fit: contain;
+  object-position: left center;
+}
+.fd-raison {
+  color: var(--fd-encre);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.fd-titre {
+  text-align: right;
+}
+.fd-titre h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.fd-numero {
+  margin-top: 0.15rem !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fd-dates,
+.fd-refs {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.6rem 0 0;
+}
+.fd-dates > div,
+.fd-refs > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+.fd-refs > div {
+  justify-content: space-between;
+}
+.fd dt {
+  color: var(--fd-doux);
+  white-space: nowrap;
+}
+.fd dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fd-blocs {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 6px;
+  background: var(--fd-fond);
+}
+.fd-etiquette {
+  margin-bottom: 0.3rem !important;
+  color: var(--fd-doux);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fd-client {
+  display: grid;
+  gap: 0.1rem;
+}
+.fd-client-nom {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.fd-adresse {
+  white-space: pre-line;
+}
+.fd-refs dd {
+  text-align: right;
+}
+.fd-code {
+  display: block;
+  color: var(--fd-doux);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+.fd-refs {
+  align-content: start;
+  margin: 0;
+}
+.fd-objet {
+  font-weight: 600;
+}
+.fd-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fd-table th {
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1.5px solid var(--fd-encre);
+  color: var(--fd-doux);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.fd-table td {
+  padding: 0.6rem 0.4rem;
+  border-bottom: 1px solid var(--fd-filet);
+  vertical-align: top;
+}
+.fd-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fd-detail {
+  display: block;
+  color: var(--fd-doux);
+  font-size: 0.78rem;
+}
+.fd-totaux {
+  display: flex;
+  justify-content: flex-end;
+}
+.fd-totaux dl {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 17rem;
+  margin: 0;
+}
+.fd-totaux dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.fd-ttc {
+  margin-top: 0.2rem;
+  padding-top: 0.5rem;
+  border-top: 1.5px solid var(--fd-encre);
+  font-size: 1rem;
+}
+.fd-ttc dt {
+  color: var(--fd-encre);
+  font-weight: 700;
+}
+.fd-ttc dd {
+  font-weight: 800;
+}
+.fd-lettres {
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--fd-encre);
+  background: var(--fd-fond);
+}
+.fd-lettres strong::first-letter {
+  text-transform: uppercase;
+}
+.fd-bas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 1.5rem;
+  align-items: start;
+  break-inside: avoid;
+}
+.fd-reglement {
+  display: grid;
+  gap: 0.35rem;
+}
+/* Cachet et signature : un cadre vide, en bas à droite, à tamponner. */
+.fd-cachet {
+  min-height: 7.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--fd-filet);
+  border-radius: 6px;
+}
+.fd-reglement dl {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+}
+.fd-reglement dl > div {
+  display: flex;
+  gap: 0.6rem;
+}
+.fd-reglement dt {
+  min-width: 9rem;
+}
+.fd-rappel {
+  color: var(--fd-doux);
+  font-size: 0.78rem;
+}
+.fd-pied {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--fd-filet);
+  color: var(--fd-doux);
+  font-size: 0.72rem;
+  text-align: center;
+}
+/* Échéancier de l'offre à gauche, totaux à droite ; empilés sur mobile. */
+.fd-chiffres {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+.fd-chiffres .fd-totaux {
+  margin-left: auto;
+}
+/* Récapitulatif de l'échéancier de l'offre (factures de tranche). */
+.fd-recap {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: 0.2rem;
+  max-width: 25rem;
+  break-inside: avoid;
+}
+.fd-recap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.fd-recap th,
+.fd-recap td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--fd-filet);
+  text-align: left;
+  font-weight: 400;
+}
+.fd-recap th {
+  color: var(--fd-doux);
+}
+.fd-recap td.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fd-recap-presente th,
+.fd-recap-presente td {
+  color: var(--fd-encre);
+  font-weight: 700 !important;
+}
+/* Conditions : les CGV citées en page 1, en petit, avant le pied. */
+.fd-conditions {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--fd-doux);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.fd-conditions strong {
+  color: var(--fd-encre);
+  font-weight: 600;
+}
+/* Annexe CGV : une feuille à part, nouvelle page à l'impression, en bloc
+   simple sur une colonne (grille et colonnes CSS se fragmentent mal). */
+.fd.fd-annexe {
+  display: block;
+  margin-top: 1.5rem;
+  break-before: page;
+}
+.fd-annexe header {
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1.5px solid var(--fd-encre);
+}
+.fd-annexe h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.fd-articles {
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
+.fd-articles section {
+  margin-bottom: 0.45rem;
+  break-inside: avoid;
+}
+.fd-articles h3 {
+  margin: 0 0 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.fd-articles p {
+  margin: 0 0 0.12rem;
+  text-align: justify;
+  hyphens: auto;
+}
+.fd-annexe-pied {
+  margin-top: 0.6rem !important;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--fd-filet);
+  color: var(--fd-doux);
+  font-size: 0.7rem;
+  text-align: center;
+}
+/* Dans le panneau, l'annexe ne s'imprime qu'au téléchargement. */
+.fac-document .fd-annexe {
+  display: none;
+}
+.fac-document .fd {
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+@media (max-width: 720px) {
+  .fd {
+    padding: 1.3rem 1.1rem;
+    font-size: 0.8rem;
+  }
+  .fd-titre {
+    text-align: left;
+  }
+  .fd-dates > div {
+    justify-content: flex-start;
+  }
+  .fd-blocs {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+  .fd-totaux dl {
+    min-width: 0;
+    width: 100%;
+  }
+  .fd-table th:nth-child(2),
+  .fd-table td:nth-child(2),
+  .fd-table th:nth-child(3),
+  .fd-table td:nth-child(3),
+  .fd-table th:nth-child(4),
+  .fd-table td:nth-child(4) {
+    display: none;
+  }
+  .fd-bas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 12mm 16mm;
+    @bottom-right {
+      content: 'Page ' counter(page) '/' counter(pages);
+      color: #5d5d66;
+      font-family: var(--font-sans, Arial, sans-serif);
+      font-size: 8pt;
+    }
+  }
+  /* Le fond de l'application ne s'imprime pas sous la facture. */
+  html:has(#impression-document .fd),
+  body:has(#impression-document .fd) {
+    background: #ffffff !important;
+  }
+  #impression-document .fd-cachet {
+    min-height: 6rem;
+  }
+  /* Plus serré sur papier : une facture tient sur une page. */
+  #impression-document .fd {
+    gap: 1rem;
+    max-width: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 9.5pt;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* Paramètres de facturation (lot 6). */
+.pf-modal {
+  max-width: 760px;
+}
+.pf-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  max-height: min(78vh, 52rem);
+  overflow-y: auto;
+}
+.pf-section {
+  display: grid;
+  gap: 0.6rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.pf-section:last-of-type {
+  border-bottom: 0;
+}
+.pf-apercu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+.pf-apercu strong {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.pf-verrou {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  color: color-mix(in oklch, var(--pill-attention) 85%, var(--text));
+  font-size: 0.86rem;
+}
+.pf-format {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.pf-apercu-ligne {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.pf-profil {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 0.75rem;
+}
+.pf-profil .pf-long {
+  grid-column: 1 / -1;
+}
+.pf-logo {
+  display: grid;
+  gap: 0.35rem;
+}
+.pf-logo-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+/* Fond blanc : le logo est vu tel qu'il sera imprimé. */
+.pf-logo-apercu {
+  display: grid;
+  place-items: center;
+  width: 12rem;
+  height: 4.5rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+.pf-logo-apercu img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.pf-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.pf-logo-actions .btn-ghost {
+  cursor: pointer;
+}
+.pf-alerte {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--pill-attention) 14%, transparent);
+  color: color-mix(in oklch, var(--pill-attention) 70%, var(--text));
+  font-size: 0.86rem;
+}
+.pf-case {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.pf-case input {
+  margin-top: 0.2rem;
+}
+.pf-ok {
+  margin: 0;
+  color: color-mix(in oklch, var(--pill-succes) 85%, var(--text));
+  font-weight: 600;
+}
+@media (max-width: 720px) {
+  .pf-format,
+  .pf-profil {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

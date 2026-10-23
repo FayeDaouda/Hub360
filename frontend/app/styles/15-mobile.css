@@ -1,0 +1,1758 @@
+/* ---------- Coque mobile (≤ 720 px) — refonte 20/10/2026 ----------
+   Une application de téléphone, pas un bureau rétréci : barre du haut sur
+   une ligne (marque, recherche, messages, cloche, avatar), grand titre de
+   page, navigation par onglets en bas (navigation-mobile.tsx), contenu
+   d'abord (introductions masquées), tuiles lisibles sur 2 colonnes. */
+.nav-mobile,
+.admin-grand-titre,
+.admin-topbar-marque {
+  display: none;
+}
+@media (max-width: 720px) {
+  .admin-sidebar,
+  .admin-backdrop,
+  .admin-menu-btn,
+  .masque-mobile {
+    display: none !important;
+  }
+  /* « body » : passe devant les gouttières de l'en-tête fixe définies plus
+     bas dans la feuille (1,25 rem), qui débordaient de 4 px. */
+  body .admin-main,
+  body .admin-main:has(.page-entete-fixe) {
+    --ef-gx: 1rem;
+    --ef-gy: 0.5rem;
+    padding: 0 1rem calc(5.5rem + env(safe-area-inset-bottom));
+  }
+  .admin-main .admin-topbar,
+  .admin-main:has(.page-entete-fixe) .admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    min-height: 3.5rem;
+    margin: 0 -1rem;
+    padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
+  }
+  .admin-main .admin-topbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in oklch, var(--bg) 86%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  }
+  .admin-topbar .admin-title {
+    display: none;
+  }
+  .admin-topbar-marque {
+    display: inline-flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+  .admin-topbar-marque > * {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .admin-topbar-actions {
+    gap: 0.35rem;
+  }
+  .admin-topbar-actions .admin-icon-btn,
+  .admin-topbar-actions .admin-search.recherche-declencheur,
+  .admin-topbar-actions .admin-user {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    justify-content: center;
+  }
+  .admin-grand-titre {
+    display: block;
+    margin: 1.1rem 0 1rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  /* Mes tâches : « Bonjour Khadija » tient lieu de titre. */
+  .admin-main:has(.mt-accueil) .admin-grand-titre {
+    display: none;
+  }
+  .admin-main:has(.mt-accueil) .mt-accueil {
+    margin-top: 1.1rem;
+  }
+  /* Contenu d'abord : les phrases d'introduction (pensées pour l'écran
+     large) cèdent la place. */
+  .po-sous-titre,
+  .po-acces,
+  .rh-sous-titre,
+  .eq-sous-titre,
+  .reg-sous-titre,
+  .fin-sous-titre {
+    display: none;
+  }
+  .admin-atmosphere {
+    opacity: 0.35;
+  }
+  .panel {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+  /* Tuiles : 2 colonnes lisibles (une tuile seule en fin prend la ligne). */
+  .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .kpi-strip > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .kpi-tuile {
+    padding: 0.8rem 0.85rem;
+  }
+  .kpi-tuile-label {
+    font-size: 0.74rem;
+  }
+  .kpi-tuile-valeur {
+    font-size: 1.35rem;
+  }
+  .kpi-tuile-valeur--long {
+    font-size: 1.05rem;
+  }
+  /* Barre d'onglets du bas. */
+  .nav-mobile {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: color-mix(in oklch, var(--surface) 90%, transparent);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+  .nav-mobile-item {
+    display: grid;
+    justify-items: center;
+    gap: 0.2rem;
+    padding: 0.3rem 0 0.2rem;
+    border: 0;
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-mobile-item svg {
+    box-sizing: content-box;
+    padding: 0.2rem 0.9rem;
+    border-radius: 999px;
+    transition: background 0.2s ease;
+  }
+  .nav-mobile-item.is-active {
+    color: var(--brand);
+  }
+  .nav-mobile-item.is-active svg {
+    background: color-mix(in oklch, var(--brand) 16%, transparent);
+  }
+}
+/* Panneau « Plus » : monte du bas (téléphone). */
+.feuille-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  background: color-mix(in oklch, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.feuille {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: 0.5rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
+  background: var(--surface);
+  box-shadow: 0 -18px 50px color-mix(in oklch, var(--bg) 60%, transparent);
+  animation: feuille-entree 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes feuille-entree {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feuille {
+    animation: none;
+  }
+}
+.feuille-poignee {
+  justify-self: center;
+  width: 2.5rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+.feuille-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.05rem;
+}
+.feuille-groupe {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.feuille-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 3rem;
+  padding: 0 1rem;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  text-decoration: none;
+}
+.feuille-ligne + .feuille-ligne {
+  border-top: 1px solid var(--border);
+}
+.feuille-ligne svg {
+  color: var(--text-muted);
+}
+.feuille-ligne.is-active {
+  color: var(--brand);
+  font-weight: 600;
+}
+.feuille-ligne--alerte,
+.feuille-ligne--alerte svg {
+  color: var(--pill-risque);
+}
+.feuille-theme {
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+.feuille-libelle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Revue mobile de tout le HUB (20/10/2026) ---------- */
+@media (max-width: 720px) {
+  /* Barres d'onglets : défilent au doigt au lieu d'être coupées ; l'onglet
+     actif est ramené à l'écran (admin-shell.tsx). */
+  .vue-toggle {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .vue-toggle::-webkit-scrollbar {
+    display: none;
+  }
+  .vue-toggle > button {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  /* Cartes de tableau : un sous-texte (poste, client…) passe sous la valeur
+     au lieu de faire une 3e colonne ; une valeur longue reste à droite. */
+  .admin-table td > .cell-sub {
+    flex-basis: 100%;
+    margin-top: -0.25rem;
+    text-align: right;
+  }
+  .admin-table td:first-child > .cell-sub {
+    text-align: left;
+  }
+  .admin-table td:not(:first-child) > :last-child {
+    margin-left: auto;
+    text-align: right;
+  }
+  /* Valeur en texte simple passée à la ligne : à droite elle aussi (le
+     libellé garde la gauche grâce à sa marge automatique). */
+  .admin-table td:not(:first-child) {
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .admin-table td:not(:first-child)::before {
+    margin-right: auto;
+  }
+}
+@media (max-width: 560px) {
+  /* Montant long (« 13 546 400 FCFA ») : plus petit plutôt que coupé. */
+  .kpi-tuile-valeur--long {
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+}
+/* Texte d'aide des champs de filtre : lisible sur le verre. */
+.champ-recherche .field-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* RH · dépôt groupé des bulletins du mois (20/10/2026). */
+.rh-entete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.db-modal {
+  max-width: 760px;
+}
+.db-corps {
+  display: grid;
+  gap: 0.8rem;
+}
+.db-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+.db-choisir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+.db-choisir.is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.db-bilan {
+  margin: 0;
+  font-weight: 600;
+}
+.db-alerte {
+  color: var(--pill-attention);
+}
+.db-liste {
+  display: grid;
+  gap: 0.35rem;
+  max-height: min(50vh, 26rem);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.db-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.db-ligne[data-etat='alerte'] {
+  border-color: color-mix(in oklch, var(--pill-attention) 55%, var(--border));
+}
+.db-ligne[data-etat='fait'] {
+  opacity: 0.75;
+}
+.db-fichier {
+  overflow: hidden;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.db-salarie {
+  min-width: 0;
+  padding-block: 0.35rem;
+  font-size: 0.85rem;
+}
+.db-etat .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .db-ligne {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .db-salarie {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* Calendrier de la cellule au moment de décider d'une absence (20/10/2026). */
+.cal-cellule {
+  display: grid;
+  gap: 0.5rem;
+}
+.cal-cellule .dmd-note,
+.cal-cellule .field-erreur {
+  margin: 0;
+}
+.cal-cellule-squelette {
+  height: 6rem;
+  border-radius: var(--radius-md);
+}
+.cal-cellule-defile {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.cal-cellule-table {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 0.72rem;
+}
+.cal-cellule-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.cal-cellule-table thead th {
+  min-width: 1.6rem;
+  padding: 0.2rem 0;
+  text-align: center;
+  line-height: 1.1;
+}
+.cal-cellule-table thead th span {
+  display: block;
+  font-size: 0.62rem;
+  opacity: 0.7;
+}
+.cal-cellule-table thead th.is-periode {
+  color: var(--brand);
+}
+.cal-nom {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 8rem;
+  max-width: 10rem;
+  padding: 0 0.5rem;
+  overflow: hidden;
+  background: var(--surface);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+tr.is-demandeur .cal-nom {
+  color: var(--text);
+}
+.cal-cellule-table td {
+  height: 1.5rem;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--text) 5%, transparent);
+}
+.cal-cellule-table td.is-weekend {
+  background: transparent;
+}
+.cal-cellule-table td.is-periode {
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand) 45%, transparent);
+}
+.cal-demande {
+  background: var(--brand) !important;
+}
+.cal-validee {
+  background: var(--pill-risque) !important;
+}
+.cal-en_attente {
+  background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--pill-attention) 80%, transparent) 0 3px, transparent 3px 6px) !important;
+}
+.cal-legende {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.cal-puce {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-left: 0.3rem;
+  border-radius: 3px;
+}
+
+@media (max-width: 720px) {
+  .cal-nom {
+    min-width: 6rem;
+    max-width: 7rem;
+  }
+}
+/* Liste RH : le calendrier de la cellule se déplie sous la demande. */
+.rh-absence-cellule {
+  flex-basis: 100%;
+  min-width: 0;
+}
+
+/* RH · salaire masqué dans la fiche (affichage tracé, 20/10/2026). */
+.rh-salaire-masque {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+/* RH · « À traiter aujourd'hui » (revue RH 20/10/2026). */
+.at-rh {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.at-rh-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.at-rh-liste {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.at-rh-ligne {
+  --ton: var(--pill-neutre);
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+}
+.at-rh-ligne[data-ton='risque'] {
+  --ton: var(--pill-risque);
+}
+.at-rh-ligne[data-ton='attention'] {
+  --ton: var(--pill-attention);
+}
+.at-rh-ligne::before {
+  content: '';
+  position: absolute;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  left: 0.3rem;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--ton);
+}
+.at-rh-ligne:hover {
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.at-rh-icone {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--ton) 15%, transparent);
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.at-rh-corps {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.at-rh-corps strong {
+  font-size: 0.92rem;
+}
+/* Détail (commentaire d'un écart…) : 2 lignes au plus. */
+.at-rh-corps .cell-sub {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.at-rh-quand {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.at-rh-ligne[data-ton='neutre'] .at-rh-quand {
+  color: var(--text-muted);
+}
+.at-rh-plus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.at-rh-plus svg.is-ouvert {
+  transform: rotate(180deg);
+}
+@media (max-width: 720px) {
+  .at-rh-ligne {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+  .at-rh-quand {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .at-rh-ligne > button {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}
+
+/* Réglages personnels (19/10/2026). */
+.rg-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.rg-bloc {
+  margin-top: 0;
+}
+.rg-bouton {
+  width: fit-content;
+}
+.rg-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+/* Mes performances · bilan mois par mois (19/10/2026). */
+.bilan-mois::first-letter {
+  text-transform: uppercase;
+}
+.bilan-barre {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: min(10rem, 100%);
+  height: 1.15rem;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--text) 8%, transparent);
+  overflow: hidden;
+}
+.bilan-barre > span {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in oklch, var(--pill-succes) 70%, transparent);
+}
+.bilan-barre > em {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+}
+/* Mon temps · le mois jour par jour (19/10/2026). */
+.tc-grille {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.tc-entete {
+  padding-bottom: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+.tc-jour {
+  display: grid;
+  align-content: space-between;
+  min-height: 3.6rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+}
+.tc-jour--vide {
+  border: 0;
+}
+.tc-jour--travail {
+  background: color-mix(in oklch, var(--brand) calc(6% + var(--tc-charge, 0) * 34%), transparent);
+}
+.tc-jour--absence {
+  background: color-mix(in oklch, var(--pill-attention) 16%, transparent);
+}
+.tc-jour--ferie {
+  background: color-mix(in oklch, var(--iris) 12%, transparent);
+}
+.tc-jour--weekend {
+  border-style: dashed;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.tc-jour--hors {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+.tc-jour.is-aujourdhui {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--brand) 25%, transparent);
+}
+.tc-numero {
+  font-weight: 700;
+}
+.tc-valeur {
+  justify-self: end;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.tc-legende {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.tc-puce {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-left: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+.tc-puce--travail {
+  background: color-mix(in oklch, var(--brand) 30%, transparent);
+}
+.tc-puce--absence {
+  background: color-mix(in oklch, var(--pill-attention) 16%, transparent);
+}
+.tc-puce--ferie {
+  background: color-mix(in oklch, var(--iris) 12%, transparent);
+}
+.tc-puce--hors {
+  border-style: dashed;
+}
+@media (max-width: 720px) {
+  .tc-grille {
+    gap: 0.2rem;
+  }
+  .tc-jour {
+    min-height: 2.8rem;
+    padding: 0.25rem;
+    font-size: 0.68rem;
+  }
+  .tc-jour--absence .tc-valeur,
+  .tc-jour--ferie .tc-valeur {
+    font-size: 0;
+  }
+}
+/* Pastille de nouveautés d'un onglet / d'un bloc de Mon espace. */
+.mes-pastille {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--pill-risque);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+/* Mon espace : blocs et onglets sur une ligne, dans l'en-tête fixe. */
+.mes-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+.mes-navigation .mes-blocs,
+.mes-navigation .rh-onglets {
+  margin-bottom: 0;
+}
+.mes-navigation .rh-onglets {
+  min-width: 0;
+}
+/* Fiche contact (revue Salarié 19/10/2026) */
+.fc-liste {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.55rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.fc-liste dt {
+  color: var(--text-muted);
+}
+.fc-liste dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.fc-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pchat-annuaire-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pchat-annuaire-ligne > .pchat-canal {
+  flex: 1;
+  min-width: 0;
+}
+.pchat-annuaire-fiche {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pchat-annuaire-fiche:hover {
+  background: var(--admin-fond, #f4f2ec);
+  color: var(--text);
+}
+/* Écart de feuille de temps (revue Salarié 19/10/2026) */
+.temps-ecart {
+  display: grid;
+  gap: 0.5rem;
+}
+.temps-ecart .dmd-note {
+  margin: 0;
+}
+/* Texte et champs réservés aux lecteurs d'écran. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Remise : « Prendre une photo » seulement sur écran tactile (téléphone). */
+.po-remise-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  cursor: pointer;
+}
+.po-remise-photo.is-desactive {
+  opacity: 0.5;
+  pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .po-remise-photo {
+    display: none;
+  }
+}
+/* En-tête fixe d'une page (Mes tâches, Mon espace — 19/10/2026) : la barre
+   du haut colle en haut, `.entete-fixe` juste dessous (hauteur réelle de la
+   barre mesurée : lib/entete-fixe.ts). Page racine : `.page-entete-fixe`. */
+.admin-main:has(.page-entete-fixe) {
+  --ef-gx: 2rem;
+  --ef-gy: 1.5rem;
+  --ef-voile: color-mix(in oklch, var(--bg) 84%, transparent);
+}
+@media (max-width: 960px) {
+  .admin-main:has(.page-entete-fixe) {
+    --ef-gx: 1.25rem;
+    --ef-gy: 1.1rem;
+  }
+}
+.admin-main:has(.page-entete-fixe) .admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: calc(-1 * var(--ef-gy)) calc(-1 * var(--ef-gx)) 0;
+  padding: var(--ef-gy) var(--ef-gx) 0.85rem;
+}
+/* Voile flou sur un calque : un backdrop-filter sur la barre elle-même en
+   ferait le bloc conteneur de ses enfants « fixed » (panneau du chat
+   réduit à la hauteur de la barre — trouvé en revue mobile 20/10/2026). */
+.admin-main:has(.page-entete-fixe) .admin-topbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ef-voile);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+.entete-fixe {
+  position: sticky;
+  top: var(--ef-topbar-h, 0px);
+  z-index: 25;
+  margin: 0 calc(-1 * var(--ef-gx)) 1.1rem;
+  padding: 0.15rem var(--ef-gx) 0.9rem;
+  background: var(--ef-voile);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+.mt-filtres {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+.mt-filtre,
+.mt-ligne,
+.mt-groupe-titre {
+  --ton: var(--pill-neutre);
+}
+[data-ton='risque'] {
+  --ton: var(--pill-risque);
+}
+[data-ton='attention'] {
+  --ton: var(--pill-attention);
+}
+[data-ton='info'] {
+  --ton: var(--pill-info);
+}
+[data-ton='iris'] {
+  --ton: var(--iris);
+}
+[data-ton='succes'] {
+  --ton: var(--pill-succes);
+}
+.mt-filtre {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--surface) 78%, transparent);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.mt-filtre:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--ton) 45%, var(--border));
+  transform: translateY(-1px);
+}
+.mt-filtre:focus-visible {
+  outline: 2px solid var(--ton);
+  outline-offset: 2px;
+}
+.mt-filtre.is-actif {
+  border-color: var(--ton);
+  background: color-mix(in oklch, var(--ton) 13%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ton) 20%, transparent);
+}
+.mt-filtre:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+/* Carte vide = bonne nouvelle (coche verte, « aucun retard »), pas une
+   carte grisée qui ressemble à une erreur. */
+.mt-filtre.is-vide:disabled {
+  opacity: 0.9;
+}
+.mt-filtre-icone {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: color-mix(in oklch, var(--ton) 16%, transparent);
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.mt-filtre-texte {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.mt-filtre-libelle,
+.mt-filtre-aide {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-filtre-libelle {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.mt-filtre-aide {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.mt-filtre-compte {
+  flex: none;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.mt-bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid color-mix(in oklch, var(--pill-info) 35%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--pill-info) 10%, var(--surface));
+}
+.mt-bandeau p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+.mt-liste {
+  display: grid;
+  padding: 0.35rem;
+  /* visible (le verre est en hidden) : un conteneur qui coupe empêcherait
+     les titres de section de coller en haut et rognerait le menu « ⋯ ». Les
+     lignes ont leurs propres coins, la marge intérieure suffit. */
+  overflow: visible;
+}
+/* Titres de section collés sous l'en-tête fixe au défilement : on sait
+   toujours dans quelle section on est. */
+.mt-liste .mt-groupe-titre {
+  position: sticky;
+  top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px));
+  z-index: 3;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+/* Sombre : carte de liste plus opaque — les halos colorés du fond ne
+   passent plus derrière le texte dense (même principe que le portail). */
+:root[data-theme='dark'] .mt-liste,
+:root[data-theme='dark'] .mt-cote-bloc {
+  background: color-mix(in oklch, var(--surface) 88%, transparent);
+}
+
+/* Page bornée : sur très grand écran, l'œil ne traverse plus 1 300 px entre
+   le titre d'une tâche et son échéance. */
+.mt-page {
+  max-width: 1480px;
+}
+/* Grand écran (≥ 1400 px) : liste + colonne « Chez mon N+1 » / mentions. */
+.mt-colonnes[data-cote] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.25rem;
+  align-items: start;
+}
+.mt-cote {
+  position: sticky;
+  top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px) + 0.5rem);
+  display: grid;
+  gap: 1rem;
+}
+.mt-cote-bloc {
+  padding: 0.35rem;
+}
+.mt-cote-liste {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0 0.1rem 0.25rem;
+  list-style: none;
+}
+.mt-cote-tache {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mt-cote-tache:hover {
+  background: color-mix(in oklch, var(--text) 5%, transparent);
+}
+.mt-cote-tache:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+.mt-cote-titre {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.mt-cote-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.mt-cote-vide {
+  margin: 0;
+  padding: 0.2rem 0.9rem 0.8rem;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+/* Mentions dans la colonne : une seule colonne, date puis actions dessous. */
+.mt-cote .mt-ligne {
+  grid-template-columns: minmax(0, 1fr);
+}
+.mt-cote .mt-echeance {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  text-align: left;
+}
+.mt-cote .mt-action {
+  justify-content: flex-start;
+}
+
+/* Actions secondaires (« Demander un délai ») : révélées au survol ou au
+   focus clavier de la ligne, place réservée (rien ne bouge). Le menu « ⋯ »
+   est réservé au téléphone. */
+.mt-plus,
+.mt-court {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .mt-ligne .mt-secondaire {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .mt-ligne:hover .mt-secondaire,
+  .mt-ligne:focus-within .mt-secondaire {
+    opacity: 1;
+  }
+}
+.mt-plus {
+  position: relative;
+}
+.mt-plus-bouton {
+  min-width: 36px;
+  justify-content: center;
+}
+.mt-plus-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  z-index: 10;
+  display: grid;
+  min-width: 12rem;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.45);
+}
+.mt-plus-menu button {
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 4px);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.mt-plus-menu button:hover,
+.mt-plus-menu button:focus-visible {
+  background: color-mix(in oklch, var(--text) 6%, transparent);
+  outline: none;
+}
+
+/* Téléphone : en-tête compact (la première tâche visible sans défiler) et
+   un seul bouton par carte. */
+@media (max-width: 720px) {
+  /* .mt-page : passe devant les règles de base déclarées plus bas. */
+  .mt-page .mt-accueil {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    margin-bottom: 0.6rem;
+  }
+  .mt-page .mt-accueil-titre {
+    font-size: 1.1rem;
+  }
+  .mt-page .mt-accueil-sous {
+    font-size: 0.8rem;
+  }
+  .mt-accueil-date,
+  .mt-long {
+    display: none;
+  }
+  .mt-court {
+    display: inline;
+  }
+  .mt-accueil .vue-toggle {
+    flex: none;
+  }
+  .mt-secondaire {
+    display: none;
+  }
+  .mt-plus {
+    display: inline-flex;
+  }
+}
+.mt-filtre-etat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.65rem 0.55rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.mt-filtre-etat .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.mt-calme {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 1.1rem 0.9rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.mt-calme > svg {
+  flex: none;
+  color: var(--pill-succes);
+}
+.mt-calme p {
+  margin: 0;
+}
+.mt-calme .mt-calme-titre {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mt-groupe + .mt-groupe,
+.mt-groupe + .mt-plus-tard,
+.mt-calme + .mt-groupe {
+  border-top: 1px solid var(--border);
+}
+.mt-groupe-titre,
+.mt-plus-tard > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.85rem 0.9rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.mt-groupe-titre::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ton);
+}
+.mt-groupe-compte {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0;
+  background: color-mix(in oklch, var(--ton) 16%, transparent);
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.mt-lignes {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0.15rem 0.15rem 0.5rem;
+  list-style: none;
+}
+.mt-ligne {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11rem minmax(6.5rem, auto);
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 0.75rem 0.7rem 1.15rem;
+  border-radius: var(--radius-md);
+  transition: background 0.15s ease;
+}
+.mt-ligne::before {
+  content: '';
+  position: absolute;
+  left: 0.4rem;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--ton);
+}
+.mt-ligne:hover {
+  background: color-mix(in oklch, var(--text) 4%, transparent);
+}
+.mt-corps {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.mt-titre {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.mt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+/* Code projet : texte simple (lot B, 23/10/2026) — la pastille monospace
+   faisait « technique » et se répétait sur chaque ligne. */
+.mt-code {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+.mt-code:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.mt-motif {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--pill-risque) 11%, transparent);
+  color: color-mix(in oklch, var(--pill-risque) 70%, var(--text));
+  font-size: 0.8rem;
+}
+.mt-motif svg {
+  flex: none;
+  margin-top: 0.15rem;
+}
+/* Mention non lue accrochée à sa tâche : ouvre le fil (panneau) et la
+   marque comme lue. */
+.mt-pastille-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--iris) 13%, transparent);
+  color: color-mix(in oklch, var(--iris) 72%, var(--text));
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mt-pastille-mention:hover {
+  background: color-mix(in oklch, var(--iris) 22%, transparent);
+}
+.mt-pastille-mention:focus-visible {
+  outline: 2px solid var(--iris);
+  outline-offset: 2px;
+}
+.mt-echeance {
+  display: grid;
+  gap: 0.1rem;
+  text-align: right;
+}
+.mt-echeance-rel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: color-mix(in oklch, var(--ton) 85%, var(--text));
+}
+.mt-ligne[data-ton='neutre'] .mt-echeance-rel {
+  color: var(--text);
+}
+.mt-echeance-date {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.mt-action {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+.mt-nouveau {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--iris);
+}
+.mt-plus-tard > summary {
+  padding-bottom: 0.85rem;
+  cursor: pointer;
+  list-style: none;
+}
+.mt-plus-tard > summary::-webkit-details-marker {
+  display: none;
+}
+.mt-plus-tard-chevron {
+  transition: transform 0.15s ease;
+}
+.mt-plus-tard[open] .mt-plus-tard-chevron {
+  transform: rotate(180deg);
+}
+/* Accueil, frise de la semaine, tâche ouverte, dépôt, mentions (19/10/2026) */
+.mt-accueil {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.9rem;
+}
+.mt-accueil-titre {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.mt-accueil-sous {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.mt-accueil-sous::first-letter {
+  text-transform: uppercase;
+}
+.mt-titre-bouton {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.mt-titre-bouton:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mt-ligne.is-depot {
+  outline: 2px dashed var(--brand);
+  outline-offset: -2px;
+  background: color-mix(in oklch, var(--brand) 8%, transparent);
+}
+/* Lot C (23/10/2026) — un fichier survole la fenêtre : chaque tâche qui
+   peut le recevoir s'allume (la ligne survolée passe en is-depot). */
+.mt-ligne.is-cible {
+  outline: 1.5px dashed color-mix(in oklch, var(--brand) 55%, transparent);
+  outline-offset: -2px;
+  background: color-mix(in oklch, var(--brand) 4%, transparent);
+}
+.mt-depot-aide {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  translate: -50% 0;
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+/* Navigation clavier : la ligne active se voit, et reste visible sous les
+   en-têtes collés quand on la fait défiler. */
+.mt-ligne[data-tache] {
+  scroll-margin-top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px) + 2.5rem);
+  scroll-margin-bottom: 6rem;
+}
+.mt-ligne:has(.mt-titre-bouton:focus-visible) {
+  background: color-mix(in oklch, var(--brand) 7%, transparent);
+}
+.mt-titre-bouton:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.mt-raccourcis {
+  display: none;
+}
+.mt-raccourcis kbd {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mt-raccourcis {
+    display: inline;
+  }
+}
+/* « Tâche déposée · Annuler » — barre qui se vide pendant le délai. */
+.mt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: min(92vw, 30rem);
+  padding: 0.7rem 0.75rem 0.7rem 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  translate: -50% 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 44px -16px rgb(0 0 0 / 0.5);
+  animation: mt-toast-entree 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mt-toast > svg {
+  flex: none;
+  color: var(--pill-succes);
+}
+.mt-toast-texte {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-toast-annuler {
+  flex: none;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--brand) 12%, transparent);
+  color: var(--brand);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mt-toast-annuler:hover {
+  background: color-mix(in oklch, var(--brand) 20%, transparent);
+}
+.mt-toast-barre {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--pill-succes);
+  transform-origin: left;
+  animation: mt-toast-barre var(--mt-toast-duree, 5s) linear forwards;
+}
+@keyframes mt-toast-entree {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes mt-toast-barre {
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (max-width: 720px) {
+  /* Au-dessus de la navigation du bas. */
+  .mt-toast,
+  .mt-depot-aide {
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-toast {
+    animation: none;
+  }
+}
+.mt-groupe-titre--projet {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+.mt-mention-texte {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 0.86rem;
+}
+.mt-mention.is-lue .mt-titre,
+.mt-mention.is-lue .mt-mention-texte {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.mt-reponse {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.mt-astuce {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+@media (hover: none) {
+  .mt-astuce {
+    display: none;
+  }
+}
+.panneau-lateral .po-panneau {
+  position: static;
+  padding-left: 0;
+  border-left: 0;
+}
+@media (max-width: 1280px) {
+  .mt-filtre-aide {
+    display: none;
+  }
+}
+/* Téléphone : seul l'en-tête de la page reste fixe (la barre du haut
+   défilerait sinon avec lui sur un tiers de l'écran). */
+@media (max-width: 720px) {
+  .entete-fixe {
+    top: var(--ef-topbar-h, 56px);
+  }
+}
+@media (max-width: 720px) {
+  .mt-filtres {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .mt-filtre {
+    flex: 0 0 auto;
+    min-width: 9.5rem;
+    scroll-snap-align: start;
+  }
+  .mt-ligne {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .mt-corps {
+    grid-column: 1 / -1;
+  }
+  .mt-echeance {
+    text-align: left;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-filtre,
+  .mt-plus-tard-chevron {
+    transition: none;
+  }
+  .mt-filtre:hover:not(:disabled) {
+    transform: none;
+  }
+}
+/* Mes tâches (revue Salarié 19/10/2026) */
+.mt-decider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+.mt-decider .dmd-note {
+  margin: 0;
+}
+.mt-pied {
+  margin: 1rem 0 0;
+}
+.dmd-proposition {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.rh-decisions {
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0;
+}
+.rh-livrable {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 200px);
+}
+.rh-livrable select {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .rh-livrable {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.rh-onglets {
+  margin-bottom: 1rem;
+}
+.dmd-a-decider {
+  margin: 0 0 1rem;
+}
+

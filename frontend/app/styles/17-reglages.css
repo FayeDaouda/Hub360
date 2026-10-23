@@ -1,0 +1,328 @@
+/* ---------- Réglages · HUB 360° (maquette du boss) ---------- */
+.reg-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+.reg-sous-titre {
+  flex: 1 1 320px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.reg-badge {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+/* Tuiles de section (maquette du boss) : pastille d'icône, libellé, valeur,
+   précision ; effet de verre ; la section ouverte est cerclée d'accent. */
+.reg-tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.reg-tuile {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.reg-tuile .kpi-tuile-icone {
+  margin-bottom: 0.25rem;
+}
+.reg-tuile:hover {
+  border-color: var(--border-hover);
+}
+.reg-tuile.glass-panel.is-active {
+  border: 2px solid var(--accent);
+  padding: calc(1rem - 1px) calc(1.25rem - 1px);
+}
+.reg-tuile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.reg-tuile-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.reg-tuile-valeur {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.reg-tuile-valeur.is-alerte {
+  color: var(--ocre);
+}
+.reg-tuile-sous {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+@media (max-width: 1100px) {
+  .reg-tuiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Téléphone : 2 colonnes compactes (empilées, les 6 tuiles repoussaient le
+   contenu de deux écrans — revue mobile 20/10/2026). */
+@media (max-width: 520px) {
+  .reg-tuiles {
+    gap: 0.6rem;
+  }
+  .reg-tuile {
+    gap: 0.2rem;
+    padding: 0.7rem 0.8rem;
+  }
+  .reg-tuile.glass-panel.is-active {
+    padding: calc(0.7rem - 1px) calc(0.8rem - 1px);
+  }
+  .reg-tuile-label {
+    font-size: 0.74rem;
+  }
+  .reg-tuile-valeur {
+    font-size: 1.05rem;
+  }
+  .reg-tuile-sous {
+    display: none;
+  }
+}
+/* Panneaux en verre (style du HUB). */
+.reg-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+.reg-pied {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+}
+.reg-pied .lien-inline {
+  white-space: normal;
+  text-align: left;
+}
+.reg-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+}
+.reg-entete .cell-sub,
+.reg-texte {
+  white-space: normal;
+}
+.reg-gabarit {
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  /* Le tableau défile dans le panneau, en-tête fixe (maquette). */
+  max-height: calc(100dvh - 31rem);
+  min-height: 16rem;
+  overflow-y: auto;
+}
+.reg-ligne--tete {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  /* Verre presque opaque : les lignes qui défilent dessous ne transparaissent pas. */
+  background: color-mix(in oklch, var(--surface) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+.reg-ligne {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 13rem 13rem;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+}
+.reg-ligne > span:nth-child(2) {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.reg-ligne--tete {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.reg-ligne--etape {
+  margin-top: 0.6rem;
+}
+.reg-ligne--carte {
+  background: color-mix(in oklch, var(--accent) 6%, transparent);
+}
+.reg-ligne--tache > span:nth-child(2) {
+  padding-left: 1.25rem;
+}
+.reg-numero {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+}
+.reg-numero--1 { color: var(--azur); }
+.reg-numero--2 { color: var(--turquoise); }
+.reg-numero--3 { color: var(--iris); }
+.reg-numero--4 { color: var(--mandarine); }
+.reg-numero--5 { color: var(--jade); }
+.reg-numero--6 { color: var(--fuchsia); }
+.reg-visa {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.reg-visa.is-modifie {
+  color: var(--accent, var(--text));
+  font-weight: 600;
+}
+.reg-fenetre,
+.reg-temps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.reg-num {
+  width: 4.5rem;
+  padding: 0.3rem 0.6rem;
+}
+.reg-num--jour {
+  width: 3.6rem;
+}
+.reg-num--large {
+  width: min(100%, 22rem);
+  text-align: left;
+}
+.reg-num.is-modifie {
+  border-color: var(--accent);
+}
+.reg-motif {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.5rem -1.25rem -1.1rem;
+  padding: 0.8rem 1.25rem;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+.reg-motif-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.reg-motif-ligne .field-input {
+  flex: 1 1 280px;
+}
+.reg-valeur {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.reg-valeur-libelle {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: start;
+}
+.reg-valeur-libelle .cell-sub {
+  white-space: normal;
+}
+.reg-valeur-champ {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.reg-multi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+}
+.reg-multi .reg-num {
+  width: 3.8rem;
+}
+.reg-panel .dmd-titre {
+  font-size: 1.3rem;
+}
+/* Champs rectangulaires arrondis (maquette), pas en pilule. */
+.reg-panel .field-input {
+  border-radius: 8px;
+}
+.reg-multi label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.reg-choix {
+  max-width: 22rem;
+}
+/* Onglets de l'Administration (6) : défilent sur mobile au lieu d'élargir la page. */
+.reg-admin-onglets .admin-periode-toggle {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.reg-admin-onglets .admin-periode-toggle button {
+  white-space: nowrap;
+}
+.factu-alerte-avenant {
+  margin-left: 0.35rem;
+}
+.reg-lot {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.reg-lot-lignes {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}
+@media (max-width: 900px) {
+  .reg-ligne {
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+  }
+  .reg-ligne > span:nth-child(3),
+  .reg-ligne > span:nth-child(4) {
+    grid-column: 2;
+  }
+  .reg-ligne > span:nth-child(3):empty,
+  .reg-ligne > span:nth-child(4):empty,
+  .reg-ligne--tete > span:nth-child(n + 3) {
+    display: none;
+  }
+  .reg-valeur {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

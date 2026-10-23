@@ -1,0 +1,331 @@
+/* =============================================================================
+   Devis — lien public (sans compte), cf. cadrage « Devis » §page publique.
+   Page de MARQUE (identité de la société émettrice, pas l'esthétique HUB
+   admin, pas un gabarit tiers copié) : bannière sombre dégradée (noir d'encre
+   → societe.couleurMarque, posée en inline style — jamais une teinte HUB en
+   dur) façon en-tête de facture premium, corps clair en dessous. Le dégradé
+   sert deux fois (bannière + barre Total) pour que l'œil relie les deux.
+   ============================================================================= */
+
+.devis-public-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1.25rem;
+  background: var(--bg);
+}
+
+.devis-public-page-corps {
+  width: 100%;
+  max-width: 760px;
+}
+
+.devis-public-page-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+.devis-public-page-actions .devis-public-actions {
+  width: 100%;
+}
+.devis-public-telecharger {
+  color: var(--text-muted);
+}
+
+.devis-public-doc {
+  width: 100%;
+  max-width: 760px;
+  background: var(--surface);
+  border-radius: var(--radius-lg, 20px);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(20, 20, 18, 0.12);
+}
+
+.devis-public-introuvable {
+  text-align: center;
+  padding: 3.5rem 2rem;
+}
+
+.devis-public-banniere {
+  padding: 2rem 2.25rem 1.75rem;
+  color: #fff;
+}
+
+.devis-public-banniere-marque {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+.devis-public-banniere-marque span {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.devis-public-banniere-bas {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.devis-public-banniere-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+.devis-public-banniere-bas h1 {
+  margin: 0.2rem 0 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.devis-public-banniere-infos {
+  display: flex;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+  margin: 0;
+  text-align: right;
+}
+.devis-public-banniere-infos dt {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.6);
+}
+.devis-public-banniere-infos dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.devis-public-corps {
+  padding: 1.75rem 2.25rem 2.25rem;
+}
+
+.devis-public-corps-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.devis-public-objet {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.devis-public-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+.devis-public-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 0 0.6rem 0.6rem;
+  border-bottom: 2px solid var(--border);
+}
+.devis-public-table td {
+  padding: 0.75rem 0.6rem;
+}
+.devis-public-table tbody tr:nth-child(odd) {
+  background: color-mix(in oklch, var(--bg) 60%, transparent);
+}
+.devis-public-table th:first-child,
+.devis-public-table td:first-child {
+  color: var(--text-muted);
+  width: 2.5rem;
+}
+.devis-public-table th:nth-child(3),
+.devis-public-table th:nth-child(4),
+.devis-public-table th:nth-child(5),
+.devis-public-table td:nth-child(3),
+.devis-public-table td:nth-child(4),
+.devis-public-table td:nth-child(5) {
+  text-align: right;
+}
+
+.devis-public-recap {
+  margin-left: auto;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.75rem;
+}
+.devis-public-recap-ligne {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  padding: 0 0.25rem;
+}
+.devis-public-recap-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.1rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-top: 0.25rem;
+}
+
+.devis-public-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.devis-public-message {
+  text-align: center;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Pied réglementaire d'un document (conditions CGV, mentions légales,
+   coordonnées) — sobre, lisible à l'impression. */
+.document-pied {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.1rem 1.5rem 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-align: center;
+}
+.document-pied p {
+  margin: 0;
+}
+.document-pied-legal {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.devis-public-pied {
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  padding: 1rem 0 1.5rem;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .devis-public-page {
+    padding: 0;
+  }
+  .devis-public-doc {
+    border-radius: 0;
+    min-height: 100dvh;
+  }
+  /* Hors du document plein écran : sans ceci, boutons collés aux bords. */
+  .devis-public-page-actions {
+    padding: 0 1rem 1.5rem;
+  }
+  .devis-public-banniere,
+  .devis-public-corps {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  .devis-public-banniere-bas {
+    align-items: flex-start;
+  }
+  .devis-public-banniere-infos {
+    text-align: left;
+    gap: 1rem;
+  }
+  .devis-public-table {
+    font-size: 0.82rem;
+  }
+  .devis-public-recap {
+    max-width: none;
+  }
+  .devis-public-actions {
+    flex-direction: column-reverse;
+  }
+  .devis-public-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Impression / téléchargement — pas de lib, le navigateur fait foi (même
+   principe que la page « Mes indicateurs »). print-color-adjust force
+   l'impression du dégradé (les navigateurs l'omettent par défaut pour
+   économiser l'encre) : ici c'est l'identité du document, pas un décor. */
+@media print {
+  .devis-public-page {
+    padding: 0;
+    background: none;
+  }
+  .devis-public-doc {
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .devis-public-banniere,
+  .devis-public-recap-total {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .devis-public-page-actions {
+    display: none;
+  }
+}
+
+/* Impression d'UN document depuis une page admin (sidebar, tableaux…) — le
+   document est portalé en enfant direct de body (cf. ImpressionDocument) ;
+   cette règle masque tout le reste au moment d'imprimer, quelle que soit la
+   profondeur d'imbrication du reste de l'UI. Hors impression, le portail
+   reste invisible (jamais affiché à l'écran). `:has()` est essentiel ici :
+   sans lui, la règle s'appliquerait à TOUTE page qui imprime (y compris la
+   page publique du devis, qui n'a pas de portail) et viderait son body. */
+#impression-document {
+  display: none;
+}
+@media print {
+  body:has(#impression-document) > *:not(#impression-document) {
+    display: none !important;
+  }
+  #impression-document {
+    display: block !important;
+  }
+  #impression-document .devis-public-doc {
+    max-width: none;
+  }
+  #impression-document .devis-public-banniere,
+  #impression-document .devis-public-recap-total {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* <fieldset> utilisé seulement pour désactiver un groupe de champs d'un coup
+   (mode consultation) — sans cadre ni marges propres. */
+.fieldset-nu {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+

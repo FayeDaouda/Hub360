@@ -1,0 +1,98 @@
+/* ==========================================================================
+   Section « Facturation client » (module gestion, admin only)
+   Réutilise .panel, .admin-table, .pill, .chip, .field-*, .modal-*, .btn-*,
+   .vue-toggle, .lien-inline. N'ajoute que le strict nécessaire.
+   ========================================================================== */
+
+.factu-saisie-bureau {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+.factu-resume {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.5rem;
+}
+.factu-resume > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.factu-resume-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.factu-resume-val {
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* En-tête du bloc création : titre + bascule unique / échéancier */
+.factu-creer-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+/* Chip de jalon sous le libellé, colonne « Objet » : à côté, libellé long +
+   chip (nowrap) élargissaient le tableau au-delà de 1440px et rognaient les
+   actions. */
+.factu-chip {
+  align-self: flex-start;
+  margin-top: 0.3rem;
+}
+
+/* Bouton « Catalogue » + « Nouveau devis » dans l'entête de la page centrale */
+.factu-actions-tete {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  /* Seul enfant de .panel-tete depuis le retrait du titre en doublon
+     (déjà porté par le topbar, cf. useTitrePage) — pousse le groupe à
+     droite comme avant, où .panel-tete ne pouvait compter que sur le titre
+     comme second enfant pour justify-content: space-between. */
+  margin-left: auto;
+}
+
+/* Groupe de boutons d'action dans une cellule de tableau */
+.factu-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.85rem;
+  justify-content: flex-end;
+}
+
+/* Lignes en lecture seule : avoir (négatif) et facture annulée */
+.factu-l--avoir td,
+.factu-l--annulee td {
+  color: var(--text-muted);
+}
+.factu-l--annulee td:first-child {
+  text-decoration: line-through;
+}
+
+.factu-pai-resume {
+  margin: 0 0 1rem;
+  font-size: 0.87rem;
+  color: var(--text-muted);
+}
+.factu-pai-resume strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  /* Le tableau passe en cartes empilées (règle .admin-table globale) : les
+     actions reprennent l'alignement à gauche comme le reste de la carte. */
+  .factu-actions {
+    justify-content: flex-start;
+  }
+}
+

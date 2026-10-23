@@ -1,0 +1,609 @@
+/* ---------- Projets · gabarit (maquette « Projets » du boss, vue CIO) ---------- */
+.po {
+  display: grid;
+  gap: 1.1rem;
+  min-width: 0;
+}
+.po-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+}
+.po-sous-titre {
+  flex: 1 1 28rem;
+  margin: 0;
+  color: var(--text-muted);
+}
+.po-entete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.po-acces {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.po-aide {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.po-kicker {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.po-kicker--code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+.po-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+.po-code--grand {
+  font-size: 1.45rem;
+}
+
+/* Tuiles */
+.po-tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.po-tuile {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem 1.2rem;
+}
+.po-tuile-libelle {
+  font-size: 0.92rem;
+}
+.po-tuile-valeur {
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+.po-ton--validation {
+  color: var(--iris);
+}
+.po-ton--risque {
+  color: var(--fuchsia);
+}
+.po-ton--attention {
+  color: var(--ocre);
+}
+
+/* Colonnes : projets ouverts | dossier */
+.po-colonnes {
+  display: grid;
+  grid-template-columns: minmax(15rem, 19rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+}
+.po-liste {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+.po-liste-titre {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.po-liste ul {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-projet {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-projet:hover {
+  border-color: color-mix(in oklch, var(--brand) 45%, var(--border));
+}
+/* Sélection = élément actif : iris (--brand), comme la barre latérale. */
+.po-projet.is-actif,
+.po-etape.is-actif,
+.po-tache.is-actif {
+  border-color: var(--brand);
+  background: color-mix(in oklch, var(--brand) 10%, transparent);
+}
+/* Bloc cliqué = fond blanc (user 19/10/2026), dans les deux thèmes : les
+   couleurs de texte du thème clair y sont reposées pour rester lisibles. */
+.po-projet.is-actif,
+.po-etape.is-actif,
+.po-tache.is-actif,
+.po-fil-bouton.is-actif {
+  --text: #17132a;
+  --text-muted: #6e6785;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--brand) 22%, transparent);
+}
+.po-tache.is-actif .po-retard {
+  color: var(--fuchsia);
+}
+.po-projet-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.po-barre {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.po-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sauge);
+}
+
+/* Pastilles (fonds translucides : lisibles en clair comme en sombre) */
+.po-pastilles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+/* Dossier */
+.po-dossier {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.1rem 1.25rem;
+}
+.po-dossier-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+.po-dossier-tete > div:first-child {
+  flex: 1 1 26rem;
+  min-width: 0;
+}
+.po-dossier-titre {
+  margin: 0.15rem 0 0.25rem;
+  font-size: 1.05rem;
+}
+.po-dossier-jour {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 0.2rem;
+  text-align: right;
+}
+.po-dossier-jour strong {
+  font-size: 1.35rem;
+}
+.po-etapes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+.po-etape {
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-etape-tete {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.po-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+}
+.po-cartes {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+.po-carte {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.po-carte-tete {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.po-carte-tete h3 {
+  margin: 0.15rem 0 0;
+  font-size: 1.02rem;
+}
+.po-carte-droite {
+  display: grid;
+  justify-items: end;
+  gap: 0.3rem;
+  text-align: right;
+}
+.po-carte-descriptif {
+  margin: 0;
+}
+.po-statut-chantier {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.po-statut-chantier .field-input {
+  width: auto;
+}
+.po-visite {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.4rem 0 0.6rem;
+}
+.po-visite-champ {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.84rem;
+}
+.po-visite-champ .field-input {
+  width: auto;
+}
+.po-carte.is-eteinte .po-tache,
+.po-tache.is-eteinte {
+  opacity: 0.55;
+}
+.po-attente {
+  margin: 0;
+  color: color-mix(in oklch, var(--ocre) 80%, var(--text));
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.po-taches {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-tache {
+  display: grid;
+  /* Colonne d'état de largeur fixe : les lignes restent alignées d'une tâche à l'autre. */
+  grid-template-columns: minmax(0, 1.5fr) minmax(5.5rem, 1fr) 2.6rem 3rem 9.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 4%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-tache:hover {
+  border-color: color-mix(in oklch, var(--fuchsia) 40%, var(--border));
+}
+.po-tache-libelle {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  font-size: 0.92rem;
+}
+.po-tache-assigne,
+.po-tache-heures,
+.po-tache-echeance {
+  font-size: 0.88rem;
+}
+.po-tache-heures,
+.po-tache-echeance {
+  font-variant-numeric: tabular-nums;
+}
+.po-tache-etat {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+}
+.po-tache-fil {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+.po-fil-bouton {
+  justify-self: start;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.po-fil-bouton:hover,
+.po-fil-bouton.is-actif {
+  border-color: var(--fuchsia);
+}
+.po-fil {
+  gap: 0.5rem;
+}
+.po-fil-liste {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-fil-liste > li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.po-fil-liste > li.is-ouvert {
+  border-color: color-mix(in oklch, var(--ocre) 55%, var(--border));
+}
+.po-fil-message p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.po-fil-message p:last-child {
+  font-size: 0.92rem;
+}
+.po-fil-mention {
+  color: var(--iris);
+  font-weight: 700;
+}
+.po-fil-reponse {
+  margin-left: 0.75rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid var(--border);
+}
+.po-fil-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.po-lien {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fuchsia);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.po-fil-texte {
+  width: 100%;
+  resize: vertical;
+}
+.po-fil-envoi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+.po-retard {
+  color: var(--fuchsia);
+}
+.po-avance {
+  color: var(--sauge);
+  font-weight: 700;
+}
+:root[data-theme='dark'] .po-avance {
+  color: color-mix(in oklch, var(--sauge) 55%, white);
+}
+:root[data-theme='dark'] .po-retard {
+  color: color-mix(in oklch, var(--fuchsia) 60%, white);
+}
+
+/* Panneau de la tâche */
+.po-panneau {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border);
+}
+.po-panneau--vide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.po-panneau-titre {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.po-panneau-lignes {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.po-panneau-lignes > div {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.po-panneau-lignes dt {
+  color: var(--text-muted);
+}
+.po-panneau-lignes dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.po-panneau-note {
+  margin: 0;
+  font-weight: 600;
+}
+.po-descriptif {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--text-muted) 9%, transparent);
+}
+.po-descriptif p:last-child {
+  margin: 0;
+  white-space: pre-line;
+}
+.po-panneau-bloc {
+  display: grid;
+  gap: 0.25rem;
+}
+.po-panneau-bloc p {
+  margin: 0;
+}
+.po-vide {
+  padding: 1.5rem;
+}
+.po-panneau-label {
+  font-weight: 700;
+}
+/* Remise d'une tâche : fichiers + commentaire facultatifs. */
+.po-remise-champs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  margin-top: 0.75rem;
+}
+.po-remise-fichiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.po-remise-fichiers .pill {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.po-remise-retirer {
+  display: inline-flex;
+  margin-left: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.po-fichier {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.po-case {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.po-case input {
+  margin-top: 0.2rem;
+}
+.po-historique {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 1200px) {
+  .po-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .po-panneau {
+    position: static;
+    padding: 1rem 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+}
+@media (max-width: 1000px) {
+  .po-colonnes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .po-tuiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .po-liste ul {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15rem, 80%);
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+}
+@media (max-width: 640px) {
+  .po-dossier {
+    padding: 0.9rem;
+  }
+  .po-dossier-jour {
+    justify-items: start;
+    text-align: left;
+  }
+  .po-etapes {
+    grid-template-columns: repeat(6, minmax(8rem, 1fr));
+  }
+  .po-carte-droite {
+    justify-items: start;
+    text-align: left;
+  }
+}
+

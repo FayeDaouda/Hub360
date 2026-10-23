@@ -1,0 +1,504 @@
+/* =========================================================================
+   Bandeaux de KPI — CRM & Projets
+   ========================================================================= */
+
+/* Bandeau KPI — panneau Encre distinct posé sur la page Sable (pas un thème
+   sombre général : juste ce composant, assumé comme un bloc à part). */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.9rem;
+  margin: 0 0 1.1rem;
+}
+
+.kpi-tuile {
+  position: relative;
+  /* Empêche tout élément interne (icône, anneau, pastille, décor de
+     .kpi-tuile--pleine) de déborder sur la tuile voisine. */
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+  min-width: 0;
+  color: var(--text);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Tuile volontairement en retrait (« Annulés ») : même famille « pleine
+   couleur » que les autres (lueur, anneau — cf. .kpi-tuile--pleine
+   plus bas), mais un dégradé gris/noir plutôt qu'une teinte vive — on ne met
+   pas une mauvaise nouvelle au même poids visuel qu'un succès. */
+.kpi-tuile--attenue {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, #4a4658 82%, transparent),
+      color-mix(in oklch, var(--encre) 90%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 28px rgba(20, 15, 31, 0.28);
+}
+
+/* --- Tuile « pleine couleur » (accent + les 3 sens) ------------------------
+   Verre teinté plutôt qu'un aplat opaque (sept. 2026 — l'aplat plein rendait
+   ces tuiles trop chargées à côté du reste de l'app, cf. mémoire) : dégradé
+   translucide + flou + reflet en haut, même recette que .projet-carte au
+   survol / .phase-pastille faite. Texte blanc (texture diagonale retirée le
+   19/10/2026, demande du user), et deux formes décoratives abstraites (lueur + anneau) façon carte
+   premium. `--pleine` porte tout ce qui est PARTAGÉ ; chaque variante
+   ci-dessous ne fixe que sa couleur (background + ombre). */
+.kpi-tuile--pleine {
+  border-left-color: transparent;
+  color: #fff;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+
+/* Accent = Iris (couleur de marque/identité), pas le dégradé de marque
+   entier (trop chargé sur une petite tuile) — reste utilisé par « À
+   assigner » (page Projets). */
+.kpi-tuile--accent {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--iris) 80%, transparent),
+      color-mix(in oklch, var(--iris-fonce) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--iris-fonce) 30%, transparent);
+}
+.kpi-tuile--sens-sauge {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--sauge) 80%, transparent),
+      color-mix(in oklch, var(--sauge-fonce) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--sauge-fonce) 30%, transparent);
+}
+.kpi-tuile--sens-argile {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--argile) 80%, transparent),
+      color-mix(in oklch, var(--argile-fonce) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px color-mix(in oklch, var(--argile-fonce) 30%, transparent);
+}
+/* Ocre reste clair/doré partout ailleurs (tint + fonce, cf. mémoire
+   contraste) — mais une carte pleine avec du texte blanc dessus a besoin
+   d'un ton plus profond (cuivré) pour rester lisible ; même famille de
+   teinte, pas le doré vif des pastilles. */
+.kpi-tuile--sens-ocre {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in oklch, oklch(50% 0.13 70) 80%, transparent),
+      color-mix(in oklch, oklch(32% 0.1 70) 88%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 12px 28px oklch(50% 0.13 70 / 0.28);
+}
+
+/* Dégradé vif propre à chaque tuile (demande boss, sept. 2026 — même
+   principe que .stat-card--degrade sur le tableau de bord) — --kpi-a/--kpi-b
+   posées en inline style depuis la page appelante (DEGRADE_KPI, un point de
+   vérité par page : CRM/Projets/Facturation choisissent chacune leurs 4
+   couleurs). Couleurs pleines plutôt que la dilution color-mix des variantes
+   de sens ci-dessus — assumé décoratif, pas lié à la hiérarchie de module. */
+.kpi-tuile--degrade {
+  background:
+    linear-gradient(135deg, var(--kpi-a), var(--kpi-b));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 12px 28px color-mix(in oklch, var(--kpi-a) 35%, transparent);
+}
+
+/* Tête + libellé alignés sur .stat-card-chip/.stat-card-label du tableau de
+   bord (style de base, retour boss sept. 2026) : icône seule sur sa ligne,
+   libellé juste en dessous — l'anneau/la pastille de tendance/le décor
+   (spécifiques aux tuiles KpiStrip, absents du dashboard) restent à droite
+   de la même ligne que l'icône plutôt que de forcer une 3e ligne. */
+.kpi-tuile-tete {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.kpi-tuile-tete-droite {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+.kpi-tuile-icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.6rem;
+  border-radius: var(--radius-md);
+  /* Pastille pleine (Encre) — un repère vivant, pas un carré grisâtre.
+     .kpi-tuile--pleine la recolore ci-dessous. */
+  background: var(--encre);
+  color: #efe7d8;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kpi-tuile--pleine .kpi-tuile-icone {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.kpi-tuile-label {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.kpi-tuile--pleine .kpi-tuile-label {
+  color: rgba(255, 255, 255, 0.75);
+}
+.kpi-tuile-valeur {
+  position: relative;
+  z-index: 1;
+  margin: 0.4rem 0 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  transition: letter-spacing 0.22s ease;
+}
+/* Resserrement à peine perceptible au survol — seulement sur les tuiles
+   cliquables, comme le reste des micro-réactions de hover. */
+.kpi-tuile--clic:hover .kpi-tuile-valeur {
+  letter-spacing: -0.02em;
+}
+.kpi-tuile--alerte .kpi-tuile-valeur {
+  color: var(--argile);
+}
+.kpi-tuile--pleine .kpi-tuile-valeur {
+  color: #fff;
+}
+.kpi-tuile-sous {
+  position: relative;
+  z-index: 1;
+  margin: 0.3rem 0 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.kpi-tuile--pleine .kpi-tuile-sous {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Anneau miniature — un vrai pourcentage (ex. taux de conversion), pas un
+   graphique inventé. */
+.kpi-tuile-anneau-piste {
+  stroke: var(--border);
+  stroke-width: 3;
+}
+.kpi-tuile-anneau-trait {
+  stroke: var(--sauge);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kpi-tuile--pleine .kpi-tuile-anneau-piste {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+.kpi-tuile--pleine .kpi-tuile-anneau-trait {
+  stroke: #fff;
+}
+
+/* Pastille de tendance — un vrai delta vs une vraie période antérieure. */
+.kpi-tuile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.kpi-tuile-badge--hausse {
+  background: var(--sauge-tint);
+  color: var(--sauge-fonce);
+}
+.kpi-tuile-badge--baisse {
+  background: #f6e3e1;
+  color: var(--danger);
+}
+.kpi-tuile-badge--stable {
+  background: var(--admin-fond);
+  color: var(--text-muted);
+}
+/* Sur fond dégradé, les 3 nuances (sauge/danger/neutre) ne ressortent plus
+   assez — la flèche de la pastille porte déjà le sens, une seule teinte
+   translucide suffit. */
+.kpi-tuile--pleine .kpi-tuile-badge--hausse,
+.kpi-tuile--pleine .kpi-tuile-badge--baisse,
+.kpi-tuile--pleine .kpi-tuile-badge--stable {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+/* Icône décorative pure (ex. pictogramme de tendance sur « Pipeline actif ») :
+   aucune donnée dessinée, assumée comme un repère graphique et rien de plus. */
+.kpi-tuile-decor {
+  display: inline-flex;
+  color: var(--border-hover);
+}
+.kpi-tuile--pleine .kpi-tuile-decor {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Funnel CRM */
+.kpi-funnel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.1rem;
+  margin: 0 0 1.4rem;
+}
+.kpi-funnel-barre {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--border);
+}
+.kpi-funnel-barre--mince {
+  height: 7px;
+}
+.kpi-funnel-seg {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+}
+.kpi-funnel-seg--nouveau { background: var(--argile); }
+.kpi-funnel-seg--daf { background: var(--iris); }
+.kpi-funnel-seg--devis { background: var(--ocre); }
+.kpi-funnel-seg--valide { background: var(--sauge); }
+.kpi-funnel-seg--annule { background: #a8635c; }
+.kpi-funnel-barre {
+  align-items: stretch;
+}
+.kpi-funnel-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.kpi-funnel-seg-val {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+/* Ocre reste clair/doré : texte foncé plutôt que blanc pour rester lisible
+   dans ce segment (cf. mémoire contraste). */
+.kpi-funnel-seg--devis .kpi-funnel-seg-val {
+  color: var(--ocre-fonce);
+}
+
+.kpi-funnel-seg--mandat { background: var(--brand); }
+.kpi-funnel-seg--promotion { background: #8a7fa8; }
+
+.kpi-funnel-legende {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.kpi-funnel-legende b {
+  color: var(--text);
+  margin-left: 0.15rem;
+}
+.kpi-funnel-puce {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  margin-right: 0.4rem;
+  vertical-align: baseline;
+}
+.kpi-funnel-nature {
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+.kpi-funnel-nature-txt {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.kpi-funnel-nature-txt b {
+  color: var(--text);
+}
+
+/* Mini-barres (charge par cellule) */
+.kpi-minibars {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.kpi-minibars li {
+  display: grid;
+  grid-template-columns: 1fr 3.5rem auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+}
+.kpi-minibars-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
+.kpi-minibars-piste {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.kpi-minibars-barre {
+  display: block;
+  height: 100%;
+  background: var(--argile);
+}
+
+/* Lisibilité quand la mini-liste vit dans une tuile « pleine couleur » (ex.
+   « Charge par cellule », page Projets) — piste/texte foncés illisibles sur
+   un dégradé vif sinon. */
+.kpi-tuile--pleine .kpi-minibars-label {
+  color: rgba(255, 255, 255, 0.75);
+}
+.kpi-tuile--pleine .kpi-minibars-piste {
+  background: rgba(255, 255, 255, 0.25);
+}
+.kpi-tuile--pleine .kpi-minibars-barre {
+  background: #fff;
+}
+.kpi-tuile--pleine .kpi-minibars li {
+  color: #fff;
+}
+
+/* Mobile : les 4 tuiles restent alignées en une seule rangée (pas d'empilement
+   2×2 ni 1 colonne) — elles rétrécissent plutôt que de changer de forme. */
+@media (max-width: 900px) {
+  .kpi-strip {
+    gap: 0.6rem;
+  }
+  .kpi-tuile {
+    padding: 0.7rem 0.65rem;
+  }
+  .kpi-tuile-valeur {
+    margin-top: 0.3rem;
+    font-size: 1.3rem;
+  }
+}
+@media (max-width: 560px) {
+  .kpi-strip {
+    /* Espacé plutôt que collé — la largeur en moins vient des tuiles,
+       pas d'un rapprochement entre elles. */
+    gap: 0.5rem;
+  }
+  .kpi-tuile {
+    padding: 0.55rem 0.4rem;
+    border-radius: 12px;
+    border-left-width: 2px;
+  }
+  .kpi-tuile-tete {
+    gap: 0.25rem;
+  }
+  .kpi-tuile-icone {
+    width: 18px;
+    height: 18px;
+  }
+  .kpi-tuile-icone svg {
+    width: 10px;
+    height: 10px;
+  }
+  .kpi-tuile-label {
+    font-size: 0.66rem;
+  }
+  .kpi-tuile-valeur {
+    margin-top: 0.25rem;
+    font-size: 1.05rem;
+  }
+  .kpi-tuile-sous {
+    margin-top: 0.15rem;
+    font-size: 0.66rem;
+  }
+  /* Le pictogramme décoratif (aucune donnée) cède la place en premier ; le
+     vrai delta (badge) et l'anneau (vrai %) restent tant qu'il y a la place. */
+  .kpi-tuile-decor {
+    display: none;
+  }
+  .kpi-tuile-tete-droite {
+    gap: 0.25rem;
+  }
+  .kpi-tuile-badge {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.58rem;
+    gap: 0.12rem;
+  }
+  .kpi-tuile-anneau {
+    width: 16px;
+    height: 16px;
+  }
+}
+/* En-dessous, même l'anneau cède la place au chiffre + au filet de couleur :
+   il n'y a plus la largeur pour un 5ᵉ élément dans l'en-tête. */
+@media (max-width: 380px) {
+  .kpi-tuile-anneau {
+    display: none;
+  }
+}
+
+/* Localisation projet : carte reléguée dans une modale (§3.4 — plein écran < 640px
+   via la règle .modal générique, rien de spécifique à réinventer ici). */
+.modal--large {
+  max-width: 860px;
+}
+.fiche-carte--grand {
+  height: 440px;
+}
+.fiche-carte-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+}
+.fiche-carte-actions .lien-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+@media (max-width: 640px) {
+  .fiche-carte--grand {
+    height: 300px;
+  }
+}
+

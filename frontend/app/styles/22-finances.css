@@ -1,0 +1,1145 @@
+/* ---------- Finances · facture directe d'un lead (maquette, oct. 2026) ---------- */
+.nfd-bloc {
+  gap: 0.7rem;
+}
+.nfd-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 11rem) auto;
+  gap: 0.5rem;
+}
+.nfd-totaux {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem 1.4rem;
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+}
+.nfd-totaux strong {
+  color: var(--text);
+}
+.nfd-totaux .nfd-ttc,
+.nfd-ttc {
+  color: var(--fuchsia);
+}
+:root[data-theme='dark'] .nfd-ttc {
+  color: color-mix(in oklch, var(--fuchsia) 60%, white);
+}
+.nfd-preparer {
+  justify-self: stretch;
+}
+.fac-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.fac-titre .pill {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+}
+.fac-document {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.fac-paiement {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+}
+.fac-paiement .dmd-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.fac-bouton {
+  justify-self: start;
+}
+.fac-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+.factu-ligne {
+  cursor: pointer;
+}
+.fiche-crm-facture {
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+@media (max-width: 640px) {
+  .nfd-ligne {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .nfd-ligne input:first-child {
+    grid-column: 1 / -1;
+  }
+  .fac-paiement {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.factu-ref-prevue {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------------
+   Finances · Devis et factures (maquette du boss, oct. 2026)
+   --------------------------------------------------------------------------- */
+.admin-nav-tag--statut {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.fin-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.fin-sous-titre {
+  flex: 1 1 22rem;
+  margin: 0;
+  max-width: 46rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.fin-entete .factu-actions-tete {
+  margin-left: 0;
+}
+/* 5 tuiles sur une ligne quand la place le permet (maquette). */
+@media (min-width: 1200px) {
+  .fin-kpi .kpi-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.fin-kpi .kpi-tuile-valeur {
+  font-size: 1.35rem;
+  overflow-wrap: anywhere;
+}
+/* Entre mobile et grand écran : 3 + 2 plutôt qu'une 5e tuile orpheline. */
+@media (min-width: 561px) and (max-width: 1199px) {
+  .fin-kpi .kpi-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .fin-kpi .kpi-tuile {
+    grid-column: span 2;
+  }
+  .fin-kpi .kpi-tuile:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+/* Mobile : montants complets en FCFA, trop longs pour 4 colonnes — 2 par
+   rangée, la 5e sur toute la largeur. */
+@media (max-width: 560px) {
+  .fin-kpi .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fin-kpi .kpi-tuile:last-child {
+    grid-column: 1 / -1;
+  }
+  .fin-kpi .kpi-tuile-valeur {
+    font-size: 1.05rem;
+    overflow-wrap: normal;
+  }
+}
+.fin-onglets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+.fin-onglets .vue-toggle {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fin-onglets .vue-toggle button {
+  white-space: nowrap;
+}
+.fin-devise {
+  font-family: var(--font-sans);
+}
+.fin-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.fin-filtres button {
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fin-filtres button:hover {
+  background: color-mix(in srgb, var(--text) 13%, transparent);
+}
+/* Feuilles de temps (RH) : export aligné à droite au-dessus du tableau. */
+.temps-export {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+/* Bouton « Exporter (Excel) » : poussé à droite dans une rangée de filtres. */
+.bouton-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.fin-filtres button.bouton-export {
+  background: none;
+}
+.fin-filtres button.is-active {
+  background: color-mix(in oklch, var(--argile) 85%, transparent);
+  color: #fff;
+}
+/* Ombres de défilement : leur « couvercle » opaque dessinait une bande sombre
+   sur le verre du panneau, même sans débordement. */
+.fin-table-wrap {
+  background: none;
+}
+.fin-table .num {
+  white-space: nowrap;
+}
+.fin-mois td {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.fin-ligne {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.fin-ligne:hover td {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+.fin-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.fin-code--leger {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.fin-alerte {
+  margin-left: 0.35rem;
+}
+.fin-retard {
+  color: var(--danger);
+  font-weight: 600;
+}
+.fin-encaisse {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 7rem;
+}
+.fin-barre {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.fin-barre > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sauge);
+}
+.fin-pied {
+  margin: 0.9rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+/* Grille tarifaire et société (panneau, lecture seule) */
+.fin-bouton-grille {
+  border-color: color-mix(in srgb, var(--iris) 45%, var(--border));
+  background: color-mix(in srgb, var(--iris) 12%, transparent);
+}
+.grille {
+  gap: 1rem;
+}
+.grille-tete {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.grille-tete h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+.grille-tete .modal-close {
+  margin-left: auto;
+}
+.grille-verrou {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sauge) 18%, transparent);
+  color: color-mix(in srgb, var(--sauge) 70%, var(--text));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.grille-intro {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.grille-liste {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.grille-liste li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.grille-liste li > span:first-child {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.grille-liste strong {
+  font-size: 0.92rem;
+}
+.grille-liste small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.grille-prix {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  min-width: 9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.grille-prix svg {
+  color: var(--text-muted);
+}
+.grille-section {
+  margin: 0.6rem 0 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.grille-societe {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.grille-societe div {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-size: 0.88rem;
+}
+.grille-societe dt {
+  font-weight: 700;
+}
+.grille-societe dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.grille-note {
+  margin: 0;
+  color: var(--ocre);
+  font-size: 0.8rem;
+}
+@media (max-width: 560px) {
+  .grille-prix {
+    min-width: 0;
+  }
+  .grille-societe div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+}
+
+/* Nouvelle offre (panneau, maquette Finances) ------------------------------ */
+.fiche-crm.offre {
+  width: min(58rem, 100vw);
+  gap: 1.1rem;
+}
+.offre-carte {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.offre-section {
+  display: grid;
+  gap: 0.7rem;
+}
+.offre-titre-section {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.offre-titre-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+.offre-badge {
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--iris) 22%, transparent);
+  color: color-mix(in srgb, var(--iris) 55%, var(--text));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.offre-aide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.offre-bascule {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.offre-bascule button {
+  padding: 0.7rem 0.8rem;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.offre-bascule button.is-active {
+  background: color-mix(in oklch, var(--argile) 85%, transparent);
+  color: #fff;
+}
+.offre-choix {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+.offre-choix small {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.78rem;
+}
+.offre-nouveau {
+  display: grid;
+  justify-items: start;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--iris) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--iris) 12%, transparent);
+  font-size: 0.88rem;
+}
+.offre-nouveau p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+/* Bouton pervenche de la maquette (renvoi vers le CRM), pas l'accent rose. */
+.btn-primary.offre-nouveau-bouton {
+  background: #5a63e8;
+  border-color: #5a63e8;
+  text-decoration: none;
+}
+.btn-primary.offre-nouveau-bouton:hover {
+  background: #4b53d6;
+}
+
+/* Document (papier clair dans les deux thèmes, comme le devis imprimé). */
+.offre-document {
+  --papier-texte: #1d1d24;
+  --papier-gris: #6b6b74;
+  display: grid;
+  gap: 1rem;
+  padding: 1.3rem 1.4rem;
+  border-radius: var(--radius-md);
+  background: #f6f4ef;
+  color: var(--papier-texte);
+}
+.offre-document-tete,
+.offre-document-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.2rem;
+}
+.offre-document-corps {
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  padding-top: 1rem;
+  border-top: 1px solid #dcd8cf;
+}
+.offre-client,
+.offre-emetteur,
+.offre-message {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+.offre-emetteur {
+  justify-items: end;
+  text-align: right;
+  color: var(--papier-gris);
+}
+.offre-emetteur strong {
+  color: var(--papier-texte);
+}
+.offre-type {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--papier-texte);
+}
+.offre-etiquette {
+  color: var(--papier-gris);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.offre-client strong {
+  font-size: 1rem;
+}
+.offre-client > span:not(.offre-etiquette) {
+  color: var(--papier-gris);
+}
+.offre-document textarea,
+.offre-document input.offre-ninea {
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #d6d2c8;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--papier-texte);
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.offre-document input.offre-ninea {
+  resize: none;
+}
+.offre-document textarea:focus,
+.offre-document input.offre-ninea:focus {
+  outline: 2px solid color-mix(in oklch, var(--argile) 55%, transparent);
+  outline-offset: 1px;
+}
+.offre-document textarea.offre-a-renseigner {
+  border-color: var(--ocre);
+}
+.offre-message small {
+  color: var(--papier-gris);
+  font-size: 0.72rem;
+}
+.offre-references {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 0.45rem 1.2rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+.offre-references dt {
+  color: var(--papier-gris);
+}
+.offre-references dd {
+  margin: 0;
+  font-weight: 700;
+}
+.offre-lead {
+  margin: 0;
+  font-weight: 700;
+}
+.offre-alerte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--ocre) 14%, transparent);
+  color: color-mix(in oklch, var(--ocre) 80%, var(--text));
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.offre-programme {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem 1rem;
+  margin: 0;
+}
+.offre-programme dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.offre-programme dd {
+  margin: 0.15rem 0 0;
+  font-weight: 700;
+}
+.offre-a-completer {
+  color: color-mix(in oklch, var(--ocre) 80%, var(--text));
+}
+.offre-programme-resume {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.offre-commodites {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Prestations et échéancier : grilles qui s'empilent en cartes sur mobile. */
+.offre-lignes,
+.offre-echeancier {
+  display: grid;
+  gap: 0.5rem;
+}
+.offre-ligne {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 0.95fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr) 2.4rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.offre-ligne.offre-ligne--tete,
+.offre-echeance.offre-echeance--tete {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.offre-designation {
+  display: grid;
+  gap: 0.2rem;
+}
+.offre-designation small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.offre-unite {
+  color: var(--text-muted);
+}
+.offre-prix {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+.offre-prix svg,
+.offre-prix small {
+  color: var(--text-muted);
+}
+.offre-num {
+  text-align: right;
+  white-space: nowrap;
+}
+.offre-ecart {
+  border-color: var(--ocre) !important;
+  box-shadow: 0 0 0 1px var(--ocre);
+}
+.offre-retirer {
+  display: inline-grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.offre-retirer:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.offre-ajouter {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px dashed color-mix(in srgb, var(--text) 35%, transparent);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.offre-totaux {
+  justify-self: end;
+  display: grid;
+  gap: 0.45rem;
+  width: min(100%, 22rem);
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.offre-totaux p {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.offre-totaux-ttc {
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border);
+  align-items: baseline;
+}
+.offre-totaux-ttc strong {
+  color: var(--argile);
+  font-size: 1.35rem;
+}
+.offre-echeances-total {
+  color: color-mix(in srgb, #7fd4a0 65%, var(--text));
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.offre-echeance {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.6fr) minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.offre-note {
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: #f6f4ef;
+  color: #1d1d24;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.offre-articles {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.offre-articles > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 1.45fr);
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.offre-articles > div + div {
+  border-top: 1px solid var(--border);
+}
+.offre-articles dt {
+  font-weight: 700;
+}
+.offre-articles dd {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 85%, transparent);
+}
+.offre-articles dd p {
+  margin: 0;
+}
+.offre-articles dd p + p {
+  margin-top: 0.35rem;
+}
+.offre-lettre,
+.offre-numero {
+  display: inline-block;
+  min-width: 1.8rem;
+  font-weight: 800;
+}
+.offre-lettre {
+  color: var(--argile);
+}
+.offre-numero {
+  color: color-mix(in srgb, var(--iris) 60%, var(--text));
+}
+.offre-articles--cgv {
+  max-height: 26rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.offre-soumission {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.offre-soumettre {
+  width: 100%;
+  justify-content: center;
+  padding: 0.85rem 1rem;
+  border: 1px dashed color-mix(in srgb, var(--text) 30%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+}
+.offre-soumettre.btn-primary {
+  border-style: solid;
+  color: #fff;
+}
+@media (max-width: 720px) {
+  .offre-document-tete,
+  .offre-document-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .offre-emetteur {
+    justify-items: start;
+    text-align: left;
+  }
+  .offre-programme {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .offre-ligne--tete,
+  .offre-echeance--tete {
+    display: none;
+  }
+  .offre-ligne,
+  .offre-echeance {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .offre-ligne > [data-label]::before,
+  .offre-echeance > [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .offre-designation {
+    grid-column: 1 / -1;
+  }
+  .offre-num {
+    text-align: left;
+  }
+  .offre-prix {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .offre-prix::before {
+    flex-basis: 100%;
+  }
+  .offre-articles > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.3rem;
+  }
+}
+
+/* Feuille de temps (maquette Finances) --------------------------------------- */
+.ft {
+  --fin-piste: color-mix(in srgb, var(--text) 10%, transparent);
+  display: grid;
+  gap: 1.1rem;
+}
+.ft-entete {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem 1.4rem;
+}
+.ft-filtres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1rem;
+}
+.ft-filtres label {
+  display: grid;
+  gap: 0.35rem;
+  min-width: min(100%, 17rem);
+}
+.ft-filtres label > span,
+.ft-sous-titre {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ft-tuiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.ft-tuile {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.ft-tuile > span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.ft-tuile > strong {
+  font-size: 1.35rem;
+}
+.ft-tuile > strong.is-accent {
+  color: color-mix(in srgb, #7fd4a0 70%, var(--text));
+}
+.ft-tuile > small {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+.ft-colonnes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+.ft-gauche {
+  display: grid;
+  gap: 1.1rem;
+  min-width: 0;
+}
+.ft-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+  margin-bottom: 0.9rem;
+}
+.ft-titre > span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.ft-pipe {
+  display: grid;
+  gap: 0.95rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ft-pipe li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) auto 3.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.88rem;
+}
+.ft-pipe li strong::before {
+  content: '';
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.8rem;
+  border-radius: 50%;
+  background: var(--fin-piste, color-mix(in srgb, var(--text) 18%, transparent));
+}
+.ft-pipe li.is-atteinte strong::before {
+  background: #7fd4a0;
+}
+.ft-ecart {
+  color: color-mix(in srgb, #7fd4a0 70%, var(--text));
+  font-weight: 700;
+}
+.ft-ecart.is-hors-cible {
+  color: var(--danger);
+}
+.ft-cible {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.ft-table {
+  font-size: 0.82rem;
+}
+.ft-table th,
+.ft-table td {
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+}
+.ft-table .cell-sub {
+  display: block;
+  max-width: 9.5rem;
+  white-space: normal;
+}
+.ft-table .ft-tranche {
+  display: block;
+  max-width: 9.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ft-table .pill {
+  white-space: nowrap;
+}
+.ft-info {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.ft-sous-titre {
+  margin: 0.4rem 0 0.7rem;
+}
+.ft-etapes {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.ft-etapes li {
+  display: grid;
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.88rem;
+}
+.ft-jauge {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+}
+.ft-jauge--0 {
+  background: #4fc3c9;
+}
+.ft-jauge--1 {
+  background: #ec4f8c;
+}
+.ft-jauge--2 {
+  background: #f2b23a;
+}
+.ft-jauge--3 {
+  background: #8f9cf7;
+}
+.ft-taches {
+  display: grid;
+  max-height: 26rem;
+  margin: 0;
+  padding: 0 0.3rem 0 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.ft-taches li {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 0.9fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0;
+  font-size: 0.84rem;
+}
+.ft-taches li + li {
+  border-top: 1px solid var(--border);
+}
+.ft-qui {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.ft-qui small {
+  color: color-mix(in oklch, var(--ocre) 85%, var(--text));
+  font-size: 0.74rem;
+}
+.ft-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+@media (max-width: 1200px) {
+  .ft-colonnes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .ft-tuiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .ft-tuiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ft-pipe li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 0.8rem;
+  }
+  .ft-ecart,
+  .ft-cible {
+    font-size: 0.78rem;
+  }
+  .ft-taches li {
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+  }
+  .ft-detail {
+    display: none;
+  }
+}
+

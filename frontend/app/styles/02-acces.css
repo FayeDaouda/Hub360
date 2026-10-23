@@ -1,0 +1,1853 @@
+/* ==========================================================================
+   Écrans d'authentification — « liquid glass » (maquette validée, sept. 2026)
+   Connexion, mot de passe oublié, activation, réinitialisation partagent le
+   même cadre (components/auth/auth-shell.tsx). Base = clair, surcharge
+   sombre sous :root[data-theme='dark'] — même convention que le reste du
+   fichier. Composants : .fond-liquide (décor), .selecteur-theme, .hub-logo,
+   .auth-shell / .auth-presentation / .auth-carte / .auth-champ / .auth-bouton.
+   ========================================================================== */
+
+/* --- Logo vectoriel (components/hub-logo.tsx) ----------------------------- */
+.hub-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hub-logo-encre {
+  fill: var(--hub-logo-encre);
+}
+.hub-logo-exposant {
+  fill: var(--hub-logo-exposant);
+}
+
+/* --- Fond liquid glass (components/fond-liquide.tsx) ----------------------
+   Bulles : couleur de base --c + teinte de rebond --c2 ; tout le volume
+   (reflet spéculaire, liseré, cœur dense, halo) en dérive. Position/taille
+   (--x, --y, --l, --ratio, --r, --forme) par bulle, réarrangées en portrait.
+   Seuls transform/opacity sont animés : composités, zéro repeinture.
+   Valeurs de base = composition de la connexion (présentation + carte) :
+   grandes formes dans les coins, perles hors du texte, de la carte et de la
+   gouttière entre les deux colonnes (≥ 1024px). */
+.fond-liquide {
+  /* Clair « billes de verre sur papier » (23/10/2026) : fond blanc cassé
+     chaud vers gris-bleu très pâle, halos ambiants à peine perceptibles. */
+  --fl-haut: #fbfaf8;
+  --fl-bas: #edf0f6;
+  --fl-nuit: #1c2a78;
+  --fl-densite: 78%;
+  --fl-halo-op: 0.18;
+  --fl-bulle-op: 0.9;
+  --fl-trait: rgb(69 97 246 / 0.3);
+  --fl-voile: rgb(69 97 246 / 0.06);
+  --fl-eclat-op: 0.55;
+  --fl-calme: rgb(247 247 249 / 0.82);
+  /* Changement de composition (portail -> connexion, rotation d'écran). */
+  --fl-glisse: 1.1s cubic-bezier(0.65, 0, 0.35, 1);
+
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  background: linear-gradient(170deg, var(--fl-haut) 0%, var(--fl-bas) 100%);
+}
+
+:root[data-theme='dark'] .fond-liquide {
+  --fl-haut: #060b24;
+  --fl-bas: #02040d;
+  --fl-nuit: #020622;
+  --fl-densite: 58%;
+  --fl-halo-op: 0.55;
+  --fl-bulle-op: 1;
+  --fl-trait: rgb(92 124 255 / 0.55);
+  --fl-voile: rgb(46 76 220 / 0.14);
+  --fl-eclat-op: 0.9;
+  --fl-calme: rgb(4 8 26 / 0.8);
+}
+
+/* Lumière ambiante : les bulles « éclairent » le fond autour d'elles. */
+.fond-liquide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: var(--fl-halo-op);
+  background:
+    radial-gradient(38% 42% at 4% 6%, rgb(47 77 255 / 0.55), transparent 70%),
+    radial-gradient(34% 36% at 62% 18%, rgb(255 184 28 / 0.28), transparent 70%),
+    radial-gradient(30% 34% at 46% 100%, rgb(255 106 31 / 0.32), transparent 70%),
+    radial-gradient(30% 40% at 100% 88%, rgb(40 86 255 / 0.45), transparent 70%),
+    radial-gradient(60% 50% at 50% 50%, rgb(40 60 180 / 0.18), transparent 80%);
+}
+
+.fond-liquide-vagues {
+  position: absolute;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
+  animation: fl-houle 38s ease-in-out infinite alternate;
+}
+.fond-liquide-nappe {
+  fill: url(#fond-liquide-voile);
+}
+.fond-liquide-filet {
+  fill: none;
+  stroke: url(#fond-liquide-trait);
+  stroke-width: 1.3;
+  vector-effect: non-scaling-stroke;
+}
+.fond-liquide-filet--doux {
+  opacity: 0.5;
+}
+.fond-liquide-stop-plein {
+  stop-color: var(--fl-trait);
+}
+.fond-liquide-stop-vide {
+  stop-color: var(--fl-trait);
+  stop-opacity: 0;
+}
+.fond-liquide-stop-voile {
+  stop-color: var(--fl-voile);
+}
+
+.fl-bulle {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: calc(var(--l) * var(--fl-echelle, 1));
+  aspect-ratio: var(--ratio, 1);
+  translate: -50% -50%;
+  rotate: var(--r, 0deg);
+  border-radius: var(--forme, 50%);
+  opacity: calc(var(--fl-bulle-op) * var(--fl-attenuation, 0.82));
+  animation: fl-derive var(--duree, 28s) ease-in-out var(--delai, 0s) infinite alternate;
+  transition:
+    left var(--fl-glisse),
+    top var(--fl-glisse),
+    width var(--fl-glisse),
+    rotate var(--fl-glisse),
+    opacity var(--fl-glisse);
+  will-change: transform;
+}
+
+/* Halo : la bulle éclaire le fond autour d'elle. Dégradé radial peint une
+   fois, PAS un box-shadow à grand flou — sur un élément tourné, Chrome
+   (écrans haute densité) découpe ce flou en rectangles visibles. */
+.fl-bulle::before {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--c) 50%, transparent) 55%,
+    color-mix(in srgb, var(--c) 16%, transparent) 78%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.fl-bulle-corps {
+  --c-clair: color-mix(in srgb, var(--c) 45%, #fff);
+  --c-fonce: color-mix(in srgb, var(--c) var(--fl-densite), var(--fl-nuit));
+  --c-lisere: color-mix(in srgb, var(--c) 35%, #fff);
+
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    /* reflet spéculaire, haut-gauche */
+    radial-gradient(20% 13% at 31% 19%, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0) 100%),
+    /* caustique : lumière qui traverse et ressort en bas */
+    radial-gradient(38% 24% at 62% 84%, color-mix(in srgb, var(--c2) 70%, #fff 10%), transparent 100%),
+    /* corps : clair côté lumière, dense vers le bord opposé */
+    radial-gradient(
+      95% 95% at 34% 28%,
+      var(--c-clair) 0%,
+      var(--c) 36%,
+      color-mix(in srgb, var(--c-fonce) 90%, transparent) 78%,
+      color-mix(in srgb, var(--c-fonce) 82%, transparent) 100%
+    );
+  /* Ombres internes seulement : découpées à la forme, sans artefact. */
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c-lisere) 70%, transparent),
+    inset -3px -4px 5px -2px color-mix(in srgb, var(--c2) 60%, #fff),
+    inset 0 0 22px 1px color-mix(in srgb, var(--c-clair) 55%, transparent),
+    inset 16px 20px 34px -14px rgb(255 255 255 / 0.55),
+    inset -26px -30px 60px -22px var(--c2);
+}
+
+/* Arc spéculaire net le long du bord éclairé — la signature « verre ». */
+.fl-bulle-corps::before {
+  content: '';
+  position: absolute;
+  inset: 6% 10% 40% 8%;
+  border-radius: 50%;
+  border-top: 2px solid rgb(255 255 255 / 0.7);
+  filter: blur(1px);
+  -webkit-mask-image: linear-gradient(90deg, transparent 5%, #000 35%, #000 55%, transparent 90%);
+  mask-image: linear-gradient(90deg, transparent 5%, #000 35%, #000 55%, transparent 90%);
+}
+
+.fl-bulle--bleu {
+  --c: #2f4dff;
+  --c2: #7fd8ff;
+  --x: 1%;
+  --y: 3%;
+  --l: clamp(250px, 26vw, 520px);
+  --ratio: 1.25;
+  --r: -22deg;
+  --forme: 62% 38% 56% 44% / 58% 46% 54% 42%;
+  --duree: 30s;
+}
+.fl-bulle--jaune {
+  --c: #ffb81c;
+  --c2: #ff6f14;
+  --x: 93%;
+  --y: 8%;
+  --l: clamp(190px, 20vw, 400px);
+  --ratio: 1.5;
+  --r: -14deg;
+  --forme: 46% 54% 62% 38% / 54% 62% 38% 46%;
+  --duree: 26s;
+  --delai: -6s;
+}
+.fl-bulle--cyan {
+  --c: #16b8ff;
+  --c2: #9cf3ff;
+  --x: 98%;
+  --y: 72%;
+  --l: clamp(70px, 6.5vw, 130px);
+  --ratio: 0.82;
+  --r: 14deg;
+  --forme: 58% 42% 48% 52% / 44% 56% 44% 56%;
+  --duree: 22s;
+  --delai: -11s;
+}
+.fl-bulle--orange {
+  --c: #ff6a1f;
+  --c2: #4a78ff;
+  --x: 8%;
+  --y: 104%;
+  --l: clamp(210px, 22vw, 430px);
+  --ratio: 1.2;
+  --r: 18deg;
+  --forme: 54% 46% 40% 60% / 60% 52% 48% 40%;
+  --duree: 32s;
+  --delai: -3s;
+}
+.fl-bulle--azur {
+  --c: #2856ff;
+  --c2: #58e1ff;
+  --x: 100%;
+  --y: 101%;
+  --l: clamp(190px, 20vw, 400px);
+  --ratio: 1.1;
+  --r: -8deg;
+  --forme: 50% 50% 46% 54% / 56% 44% 56% 44%;
+  --duree: 27s;
+  --delai: -15s;
+}
+
+/* Perles : petites sphères de verre, plus transparentes que les bulles. */
+.fl-perle {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--l);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  opacity: var(--fl-bulle-op);
+  background:
+    radial-gradient(30% 22% at 33% 25%, rgb(255 255 255 / 0.95), transparent 100%),
+    radial-gradient(
+      circle at 50% 56%,
+      color-mix(in srgb, var(--c) 30%, transparent) 0%,
+      color-mix(in srgb, var(--c) 70%, transparent) 72%,
+      color-mix(in srgb, var(--c) 45%, #fff) 100%
+    );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, #fff),
+    inset -5px -7px 14px -3px var(--c),
+    0 0 18px -6px var(--c);
+  animation: fl-flotte var(--duree, 9s) ease-in-out var(--delai, 0s) infinite alternate;
+  transition:
+    left var(--fl-glisse),
+    top var(--fl-glisse),
+    width var(--fl-glisse),
+    opacity var(--fl-glisse);
+  will-change: transform;
+}
+.fl-perle--bleu {
+  --c: #5a74ff;
+  --x: 30%;
+  --y: 8%;
+  --l: clamp(34px, 3.9vw, 66px);
+  --duree: 9s;
+}
+.fl-perle--jaune {
+  --c: #ffc53a;
+  --x: 95%;
+  --y: 37%;
+  --l: clamp(28px, 3vw, 52px);
+  --duree: 11s;
+  --delai: -4s;
+}
+.fl-perle--orange {
+  --c: #ff7a2e;
+  --x: 40%;
+  --y: 93%;
+  --l: clamp(32px, 3.6vw, 60px);
+  --duree: 10s;
+  --delai: -2s;
+}
+.fl-perle--cyan {
+  --c: #2ccfff;
+  --x: 64%;
+  --y: 6%;
+  --l: clamp(34px, 3.8vw, 64px);
+  --duree: 12s;
+  --delai: -7s;
+}
+
+/* Éclats : poussières lumineuses qui scintillent. */
+.fl-eclats {
+  position: absolute;
+  inset: 0;
+}
+.fl-eclat {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--c, #9db2ff);
+  box-shadow: 0 0 8px 2px var(--c, #9db2ff);
+  opacity: var(--fl-eclat-op);
+  animation: fl-scintille 3.6s ease-in-out infinite alternate;
+}
+.fl-eclat:nth-child(1) { left: 44%; top: 8%; }
+.fl-eclat:nth-child(2) { left: 50%; top: 96%; --c: #ffab5c; animation-delay: -1.2s; }
+.fl-eclat:nth-child(3) { left: 4%; top: 55%; animation-delay: -2.1s; }
+.fl-eclat:nth-child(4) { left: 71%; top: 7%; --c: #ffd36b; animation-delay: -0.6s; }
+.fl-eclat:nth-child(5) { left: 88%; top: 66%; animation-delay: -2.8s; }
+.fl-eclat:nth-child(6) { left: 58%; top: 90%; --c: #ffab5c; animation-delay: -1.7s; }
+.fl-eclat:nth-child(7) { left: 28%; top: 97%; animation-delay: -3.1s; }
+.fl-eclat:nth-child(8) { left: 93%; top: 22%; --c: #7fe3ff; animation-delay: -0.9s; }
+
+@keyframes fl-derive {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  35% {
+    transform: translate3d(4%, -5%, 0) rotate(5deg) scale(1.04);
+  }
+  70% {
+    transform: translate3d(-3%, 4%, 0) rotate(-4deg) scale(0.97);
+  }
+  100% {
+    transform: translate3d(2%, 2%, 0) rotate(2deg) scale(1.02);
+  }
+}
+@keyframes fl-flotte {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(8%, -26%, 0);
+  }
+}
+@keyframes fl-scintille {
+  from {
+    opacity: calc(var(--fl-eclat-op) * 0.25);
+    transform: scale(0.7);
+  }
+  to {
+    opacity: var(--fl-eclat-op);
+    transform: scale(1.15);
+  }
+}
+@keyframes fl-houle {
+  from {
+    transform: translate3d(-1.5%, 0, 0);
+  }
+  to {
+    transform: translate3d(1.5%, -1%, 0);
+  }
+}
+
+/* Fond calme sur tous les écrans d'accès (revue portail + connexion,
+   22-23/10/2026) : le décor encadre le contenu au lieu de lui faire
+   concurrence.
+   - Zone protégée : aucune bulle ni perle derrière le texte ou les cartes
+     (connexion : ni derrière la carte, ni dans la gouttière entre les deux
+     colonnes) ; les grandes formes restent dans les coins.
+   - Voile : dégradé radial couleur de fond au centre (::after, au-dessus des
+     bulles) — les bords restent vifs, la zone de lecture est calme.
+   - Profondeur de champ (sombre, grand écran) : grandes bulles floues,
+     perles nettes. Le flou est posé sur .fl-bulle-corps, enfant non animé
+     d'un calque déjà composité : peint une fois, pas recalculé par image.
+   - Clair : « billes de verre sur papier » (voir plus bas).
+   Compositions déduites du contenu affiché (:has) : le fond, monté une seule
+   fois par le layout (acces), glisse de l'une à l'autre (--fl-glisse). */
+.fond-liquide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 48% 52% at 50% 55%,
+    var(--fl-calme) 0%,
+    color-mix(in srgb, var(--fl-calme) 60%, transparent) 55%,
+    transparent 100%
+  );
+}
+
+/* Composition centrée (portail, activation, mot de passe oublié,
+   réinitialisation — en paysage). La composition de base (plus haut) est
+   celle de la connexion, présentation + carte. */
+@media (orientation: landscape) and (min-width: 768px) {
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-bulle--jaune {
+    --x: 91%;
+    --y: 9%;
+  }
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-bulle--orange {
+    --x: 10%;
+    --y: 103%;
+  }
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--bleu {
+    --x: 29%;
+    --y: 9%;
+  }
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--jaune {
+    --x: 81%;
+    --y: 34%;
+  }
+  .auth-shell:has(> .auth-shell-contenu--centre) .fl-perle--orange {
+    --x: 7%;
+    --y: 47%;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 1024px) {
+  .fl-bulle-corps {
+    transition: filter var(--fl-glisse);
+  }
+  /* Sombre seulement : sur fond clair, une bulle floue devient une tache
+     délavée — la netteté fait le relief (cf. mode clair ci-dessous). */
+  :root[data-theme='dark'] .fl-bulle-corps {
+    filter: blur(clamp(5px, 0.55vw, 10px));
+  }
+}
+
+/* Portrait (téléphone, tablette debout) : une seule colonne — les bulles
+   restent dans les coins, rien ne longe le titre ni les cartes. */
+@media (orientation: portrait), (max-width: 767px) {
+  .fl-bulle--bleu {
+    --x: 2%;
+    --y: 5%;
+    --l: clamp(200px, 56vw, 460px);
+    --r: -30deg;
+  }
+  /* Au-dessus du titre, quelle que soit la hauteur du contenu (portail à
+     plusieurs sociétés, connexion) : jamais de texte clair sur le jaune. */
+  .fl-bulle--jaune {
+    --x: 100%;
+    --y: 6%;
+    --l: clamp(150px, 40vw, 340px);
+    --ratio: 0.85;
+    --r: 8deg;
+  }
+  /* Le cyan longeait le titre (« C » de « Choisissez » posé dessus). */
+  .fl-bulle--cyan,
+  .fl-perle--cyan {
+    opacity: 0;
+  }
+  .fl-bulle--orange {
+    --x: 100%;
+    --y: 101%;
+    --l: clamp(180px, 50vw, 420px);
+  }
+  .fl-bulle--azur {
+    --x: 0%;
+    --y: 103%;
+    --l: clamp(180px, 50vw, 420px);
+  }
+  .fl-perle--bleu {
+    --x: 7%;
+    --y: 15%;
+    --l: clamp(22px, 6vw, 48px);
+  }
+  .fl-perle--jaune {
+    display: none;
+  }
+  .fl-perle--orange {
+    --x: 52%;
+    --y: 97%;
+    --l: clamp(22px, 6vw, 48px);
+  }
+}
+
+/* Mode clair — « billes de verre sur papier » (23/10/2026) : pas de flou,
+   bulles ~18 % plus petites, légèrement désaturées (sinon l'orange et le
+   jaune passent devant le contenu), fin contour net
+   (outline, pas de box-shadow flou : pas d'artefact sur élément tourné),
+   halo coloré réduit (c'est lui qui « délavait » le fond autour des bulles). */
+:root:not([data-theme='dark']) .fl-bulle {
+  --fl-echelle: 0.82;
+  --fl-attenuation: 1;
+}
+:root:not([data-theme='dark']) .fl-bulle::before {
+  opacity: 0.35;
+}
+:root:not([data-theme='dark']) .fl-bulle-corps {
+  filter: saturate(0.94);
+  outline: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
+  outline-offset: -1px;
+}
+
+/* Téléphones et tablettes : grandes bulles et vagues immobiles. Sous des
+   cartes en verre (backdrop-filter), un fond qui bouge force le recalcul du
+   flou à chaque image — c'est ce qui coûte en GPU et en batterie. Perles et
+   éclats, petits et hors des cartes, gardent la vie du décor. */
+@media (max-width: 767px), (pointer: coarse) {
+  .fl-bulle,
+  .fond-liquide-vagues {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* --- Sélecteur de thème (components/selecteur-theme.tsx) ------------------
+   Curseur positionné depuis data-theme-pref (posé avant l'hydratation) :
+   déjà au bon endroit au premier paint. */
+.selecteur-theme {
+  --st-case: 40px;
+  --st-hauteur: 34px;
+  --st-fond: rgb(255 255 255 / 0.55);
+  --st-bord: rgb(20 26 51 / 0.1);
+  --st-reflet: rgb(255 255 255 / 0.9);
+  --st-ombre: rgb(40 50 110 / 0.2);
+  --st-curseur: #fff;
+  --st-texte: rgb(20 26 51 / 0.55);
+  --st-texte-actif: #3552e6;
+
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--st-case);
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--st-fond);
+  border: 1px solid var(--st-bord);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 var(--st-reflet),
+    0 10px 28px -12px var(--st-ombre);
+}
+:root[data-theme='dark'] .selecteur-theme {
+  --st-fond: rgb(14 20 48 / 0.45);
+  --st-bord: rgb(255 255 255 / 0.12);
+  --st-reflet: rgb(255 255 255 / 0.12);
+  --st-ombre: rgb(0 0 0 / 0.5);
+  --st-curseur: rgb(255 255 255 / 0.14);
+  --st-texte: rgb(226 231 255 / 0.55);
+  --st-texte-actif: #fff;
+}
+
+.selecteur-theme-curseur {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: var(--st-case);
+  height: var(--st-hauteur);
+  border-radius: 999px;
+  background: var(--st-curseur);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.25),
+    0 4px 14px -4px rgb(0 0 0 / 0.3);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+:root[data-theme-pref='dark'] .selecteur-theme-curseur {
+  transform: translateX(100%);
+}
+
+.selecteur-theme-option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: var(--st-hauteur);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--st-texte);
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.selecteur-theme-option:hover,
+:root:not([data-theme-pref]) .selecteur-theme-option[data-valeur='light'],
+:root[data-theme-pref='light'] .selecteur-theme-option[data-valeur='light'],
+:root[data-theme-pref='dark'] .selecteur-theme-option[data-valeur='dark'] {
+  color: var(--st-texte-actif);
+}
+.selecteur-theme-option:focus-visible {
+  outline: 2px solid var(--st-texte-actif);
+  outline-offset: 1px;
+}
+
+/* --- Cadre (components/auth/auth-shell.tsx) ------------------------------- */
+.auth-shell {
+  --auth-texte: #141a33;
+  --auth-texte-doux: rgb(20 26 51 / 0.68);
+  --auth-texte-discret: rgb(20 26 51 / 0.5);
+  /* Clair : verre plus opaque et contour gris fin — une bordure blanche sur
+     fond clair ne détachait pas la carte (23/10/2026). */
+  --auth-carte-fond: rgb(255 255 255 / 0.74);
+  --auth-carte-bord: rgb(20 26 51 / 0.09);
+  --auth-carte-reflet: rgb(255 255 255 / 0.95);
+  --auth-carte-sheen: rgb(255 255 255 / 0.5);
+  --auth-carte-ombre: rgb(44 58 130 / 0.26);
+  --auth-champ-fond: rgb(255 255 255 / 0.6);
+  --auth-champ-fond-focus: rgb(255 255 255 / 0.85);
+  --auth-champ-bord: rgb(20 26 51 / 0.12);
+  --auth-champ-bord-survol: rgb(20 26 51 / 0.24);
+  --auth-accent: #4561f6;
+  --auth-accent-2: #5d43ef;
+  --auth-focus: #4561f6;
+  --auth-lien: #3552e6;
+  --auth-danger: #b3261e;
+  --auth-alerte: #9a6400;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--auth-texte);
+}
+:root[data-theme='dark'] .auth-shell {
+  --auth-texte: #f3f5ff;
+  --auth-texte-doux: rgb(226 231 255 / 0.72);
+  --auth-texte-discret: rgb(226 231 255 / 0.52);
+  --auth-carte-fond: rgb(14 22 54 / 0.42);
+  --auth-carte-bord: rgb(255 255 255 / 0.14);
+  --auth-carte-reflet: rgb(255 255 255 / 0.2);
+  --auth-carte-sheen: rgb(255 255 255 / 0.1);
+  --auth-carte-ombre: rgb(0 0 0 / 0.5);
+  --auth-champ-fond: rgb(255 255 255 / 0.04);
+  --auth-champ-fond-focus: rgb(255 255 255 / 0.07);
+  --auth-champ-bord: rgb(255 255 255 / 0.15);
+  --auth-champ-bord-survol: rgb(255 255 255 / 0.28);
+  --auth-focus: #8aa6ff;
+  --auth-lien: #7ea2ff;
+  --auth-danger: #ff9b91;
+  --auth-alerte: #ffd36b;
+}
+
+.auth-shell-barre {
+  position: absolute;
+  z-index: 2;
+  top: max(1.25rem, env(safe-area-inset-top));
+  right: max(1.25rem, env(safe-area-inset-right));
+}
+
+.auth-shell-contenu {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  /* Colonne bornée à la largeur disponible : sans ça, une colonne « auto »
+     prend la largeur naturelle de son contenu (ex. 3 cartes société côte à
+     côte) et la page déborde horizontalement sur mobile. */
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  justify-items: center;
+  gap: clamp(1.5rem, 4vh, 2.5rem);
+  padding: 5.5rem max(1rem, env(safe-area-inset-right)) max(2.5rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+}
+
+/* Présentation hub360° (colonne gauche sur grand écran). */
+.auth-presentation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 34rem;
+}
+
+.auth-logo {
+  display: block;
+  width: clamp(150px, 40vw, 176px);
+  border-radius: 12px;
+  color: inherit;
+}
+.auth-logo:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 6px;
+}
+
+.auth-accroche {
+  margin: 1.25rem 0 0;
+  font-family: var(--font-titre);
+  font-size: clamp(1.45rem, 1.1rem + 1.6vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.auth-intro {
+  display: none;
+  margin: 1rem 0 0;
+  max-width: 40ch;
+  color: var(--auth-texte-doux);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.auth-atouts,
+.auth-signature {
+  display: none;
+}
+
+.auth-atouts {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  gap: 1.1rem;
+}
+
+.auth-atout {
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+}
+
+.auth-atout-icone {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--auth-texte);
+  background: var(--auth-champ-fond);
+  border: 1px solid var(--auth-champ-bord);
+  box-shadow: inset 0 1px 0 var(--auth-carte-reflet);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.auth-atout-texte {
+  display: grid;
+  gap: 0.12rem;
+}
+.auth-atout-texte strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.auth-atout-texte span {
+  font-size: 0.84rem;
+  color: var(--auth-texte-discret);
+}
+
+.auth-signature {
+  position: relative;
+  margin: 2.75rem 0 0;
+  padding-top: 1.1rem;
+  color: var(--auth-texte-doux);
+  font-size: 0.9rem;
+}
+.auth-signature::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1.75rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--auth-texte-discret);
+}
+
+.auth-logo--seul {
+  display: flex;
+  justify-content: center;
+}
+
+/* Carte vitrée */
+.auth-carte {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: 460px;
+  padding: clamp(1.6rem, 1rem + 2.6vw, 2.9rem) clamp(1.25rem, 0.6rem + 2.9vw, 2.9rem);
+  border-radius: clamp(22px, 1rem + 1vw, 28px);
+  background: var(--auth-carte-fond);
+  border: 1px solid var(--auth-carte-bord);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  box-shadow:
+    inset 0 1px 0 var(--auth-carte-reflet),
+    inset 0 -1px 0 rgb(255 255 255 / 0.04),
+    0 32px 80px -28px var(--auth-carte-ombre);
+}
+.auth-carte::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(120% 65% at 0% 0%, var(--auth-carte-sheen), transparent 60%);
+  pointer-events: none;
+}
+
+/* Spécificité renforcée : doit battre la règle d'animation d'entrée de
+   .auth-carte déclarée plus bas (le vrai formulaire, lui, s'anime). */
+.auth-carte.auth-carte--squelette {
+  animation: none;
+}
+.auth-squelette {
+  border-radius: 12px;
+  background: linear-gradient(
+    100deg,
+    var(--auth-champ-fond) 30%,
+    var(--auth-champ-bord) 50%,
+    var(--auth-champ-fond) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.auth-carte-entete {
+  margin-bottom: 1.75rem;
+}
+.auth-carte-titre {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.35rem + 0.8vw, 1.95rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.auth-carte-sous-titre {
+  margin: 0.45rem 0 0;
+  color: var(--auth-texte-doux);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.auth-carte-sous-titre strong {
+  color: var(--auth-texte);
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* Connexion : tuile de la société à gauche du titre (même verre que les
+   cartes du portail, lueur de sa couleur de marque). */
+.auth-carte-entete--societe {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.auth-carte-societe {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--auth-champ-bord),
+    0 12px 28px -12px color-mix(in srgb, var(--societe-color) 70%, transparent);
+}
+.auth-carte-societe .avatar {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: inherit;
+}
+.auth-carte-societe .avatar img {
+  padding: 0;
+  filter: none;
+}
+.auth-carte-pied {
+  margin: 1.75rem 0 0;
+  text-align: center;
+  color: var(--auth-texte-doux);
+  font-size: 0.9rem;
+}
+.auth-carte-pied .auth-lien {
+  white-space: nowrap;
+}
+
+/* Formulaire */
+.auth-formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth-champ {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 60px;
+  padding: 0.5rem 0.5rem 0.5rem 1.05rem;
+  border-radius: 14px;
+  background: var(--auth-champ-fond);
+  border: 1px solid var(--auth-champ-bord);
+  cursor: text;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.auth-champ:hover {
+  border-color: var(--auth-champ-bord-survol);
+}
+.auth-champ:focus-within {
+  background: var(--auth-champ-fond-focus);
+  border-color: color-mix(in srgb, var(--auth-focus) 75%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--auth-focus) 20%, transparent);
+}
+.auth-champ:has(.auth-champ-saisie[aria-invalid='true']) {
+  border-color: color-mix(in srgb, var(--auth-danger) 55%, transparent);
+}
+
+.auth-champ-icone {
+  flex: none;
+  color: var(--auth-texte-doux);
+  transition: color 0.18s ease;
+}
+.auth-champ:focus-within .auth-champ-icone {
+  color: var(--auth-focus);
+}
+
+.auth-champ-corps {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.auth-champ-libelle {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--auth-texte-doux);
+  cursor: text;
+}
+
+/* 16px minimum : en dessous, iOS zoome la page au focus. */
+.auth-champ-saisie {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--auth-texte);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.auth-champ-saisie::placeholder {
+  color: var(--auth-texte-discret);
+  opacity: 1;
+}
+/* Edge ajoute son propre œil : doublon avec .auth-champ-oeil. */
+.auth-champ-saisie::-ms-reveal,
+.auth-champ-saisie::-ms-clear {
+  display: none;
+}
+/* Remplissage auto (gestionnaire de mots de passe) : garder le fond vitré
+   au lieu du jaune/bleu natif, et la couleur de texte du thème. */
+.auth-champ-saisie:-webkit-autofill,
+.auth-champ-saisie:-webkit-autofill:hover,
+.auth-champ-saisie:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--auth-texte);
+  caret-color: var(--auth-texte);
+  transition: background-color 600000s 0s;
+}
+
+.auth-champ-oeil {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--auth-texte-doux);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+.auth-champ-oeil:hover {
+  color: var(--auth-texte);
+  background: var(--auth-champ-fond-focus);
+}
+.auth-champ-oeil:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: -2px;
+}
+
+.auth-champ-alerte {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0 0.3rem;
+  color: var(--auth-alerte);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.auth-champ-alerte:empty {
+  margin: 0;
+}
+
+.auth-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: 0.1rem;
+  font-size: 0.9rem;
+}
+
+.auth-case {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--auth-texte);
+  cursor: pointer;
+  user-select: none;
+}
+.auth-case input {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border-radius: 6px;
+  border: 1.5px solid var(--auth-champ-bord-survol);
+  background: var(--auth-champ-fond) center / 14px 14px no-repeat;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.auth-case input:checked {
+  border-color: transparent;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")
+      center / 13px 13px no-repeat,
+    linear-gradient(135deg, var(--auth-accent), var(--auth-accent-2));
+  box-shadow: 0 4px 12px -3px color-mix(in srgb, var(--auth-accent) 70%, transparent);
+}
+.auth-case input:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 2px;
+}
+
+.auth-lien {
+  color: var(--auth-lien);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.auth-lien:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-lien:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 3px;
+}
+/* Écran tactile : zone de toucher agrandie (≈ 44 px de haut) par un padding
+   compensé — même rendu, doigt moins précis accepté. */
+@media (pointer: coarse) {
+  .auth-lien {
+    display: inline-block;
+    padding: 0.7rem 0.3rem;
+    margin: -0.7rem -0.3rem;
+  }
+  .selecteur-theme-option::after {
+    content: '';
+    position: absolute;
+    inset: -7px 0;
+  }
+}
+
+/* Double authentification (après le mot de passe). */
+.auth-df-texte {
+  margin: 0;
+  line-height: 1.5;
+}
+.auth-df-aide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.auth-df-etapes {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.5;
+}
+.auth-df-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.auth-df-qr img {
+  border-radius: 8px;
+  background: #fff;
+}
+.auth-df-codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+}
+.auth-df-retour {
+  align-self: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.auth-erreur {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  color: var(--auth-danger);
+  background: color-mix(in srgb, var(--auth-danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--auth-danger) 30%, transparent);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  animation: auth-secousse 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.auth-erreur svg {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.auth-message {
+  margin: 0;
+  color: var(--auth-texte-doux);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/* Bouton principal — dégradé de l'accent, reflet balayant au survol. Texte
+   blanc ≥ 4.8:1 sur les deux extrémités du dégradé. */
+.auth-bouton {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 0.35rem;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--auth-accent) 0%, var(--auth-accent-2) 100%);
+  color: #fff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 14px 32px -12px color-mix(in srgb, var(--auth-accent) 80%, transparent);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+.auth-bouton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.25) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+}
+.auth-bouton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    0 18px 38px -12px color-mix(in srgb, var(--auth-accent) 90%, transparent);
+}
+.auth-bouton:hover:not(:disabled)::after {
+  transform: translateX(120%);
+}
+.auth-bouton:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+}
+.auth-bouton:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 3px;
+}
+.auth-bouton:disabled {
+  cursor: progress;
+  filter: saturate(0.85);
+  opacity: 0.85;
+}
+.auth-bouton-fleche {
+  transition: transform 0.2s ease;
+}
+.auth-bouton:hover:not(:disabled) .auth-bouton-fleche {
+  transform: translateX(3px);
+}
+.auth-bouton-roue {
+  animation: auth-rotation 0.8s linear infinite;
+}
+
+/* --- Portail (app/(acces)/(portail)) -------------------------------------
+   Même vocabulaire que la carte de connexion (verre, reflet, accent), en
+   cartes société. Grille centrée quel que soit le nombre de sociétés (une
+   seule carte ne se cale plus à gauche). */
+.portail {
+  gap: clamp(1.75rem, 4.5vh, 2.75rem);
+}
+.portail .auth-logo {
+  width: clamp(168px, 44vw, 220px);
+}
+
+.portail-entete {
+  max-width: 40rem;
+  text-align: center;
+}
+.portail-titre {
+  margin: 0;
+  font-size: clamp(1.55rem, 1.15rem + 1.5vw, 2.35rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.portail-sous-titre {
+  margin: 0.6rem 0 0;
+  color: var(--auth-texte-doux);
+  font-size: clamp(0.92rem, 0.88rem + 0.2vw, 1.02rem);
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+.portail-societes {
+  --colonnes: 3;
+  --carte-max: 340px;
+  --portail-gouttiere: clamp(0.9rem, 2vw, 1.25rem);
+  list-style: none;
+  width: 100%;
+  max-width: calc(
+    var(--colonnes) * var(--carte-max) + (var(--colonnes) - 1) * var(--portail-gouttiere)
+  );
+  margin: 0;
+  padding: 0;
+  /* flex-wrap plutôt que grid : une carte seule sur la dernière ligne reste
+     centrée au lieu de se caler à gauche. */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--portail-gouttiere);
+}
+.portail-societes > li {
+  display: flex;
+  flex: 1 1 290px;
+  max-width: var(--carte-max);
+}
+.portail-societes[data-colonnes='1'] {
+  --colonnes: 1;
+}
+.portail-societes[data-colonnes='2'] {
+  --colonnes: 2;
+}
+/* Tablette : 3 cartes = 2 + 1 orpheline → une colonne de cartes larges. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .portail-societes[data-colonnes='3'] {
+    --colonnes: 1;
+    --carte-max: 520px;
+  }
+}
+.portail-societes.is-navigating {
+  pointer-events: none;
+}
+
+/* Lueur de survol portée par le <li> (calque séparé dont seules opacity et
+   transform bougent, composités par le GPU) plutôt qu'un box-shadow animé
+   sur la carte : la carte est en verre (backdrop-filter), la repeindre à
+   chaque image coûte cher. Ombre extérieure seulement : rien sous le verre. */
+.portail-societes > li {
+  position: relative;
+  isolation: isolate;
+}
+.portail-societes > li::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 22px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 30px 70px -28px var(--auth-carte-ombre),
+    0 0 44px -14px color-mix(in srgb, var(--societe-color, transparent) 70%, transparent);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.societe-carte {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 104px;
+  padding: 1.1rem 1.1rem 1.1rem 1.15rem;
+  border-radius: 22px;
+  color: inherit;
+  text-decoration: none;
+  background: var(--auth-carte-fond);
+  border: 1px solid var(--auth-carte-bord);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow:
+    inset 0 1px 0 var(--auth-carte-reflet),
+    0 24px 60px -30px var(--auth-carte-ombre);
+  /* backwards (pas both) : une fois entrée, la carte rend la main à
+     transform pour le survol et la sortie. */
+  animation: auth-apparition 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(0.12s + var(--i, 0) * 0.07s);
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease,
+    opacity 0.22s ease;
+}
+/* Halo de la couleur de marque derrière le logo + reflet du verre. */
+.societe-carte::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 85% at 8% 50%, color-mix(in srgb, var(--societe-color) 26%, transparent), transparent 72%),
+    radial-gradient(120% 70% at 0% 0%, var(--auth-carte-sheen), transparent 60%);
+}
+/* Reflet balayant au survol (même geste que .auth-bouton). */
+.societe-carte::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 0.12) 50%, transparent 65%);
+  transform: translateX(-110%);
+  transition: transform 0.9s ease;
+}
+.societe-carte:focus-visible {
+  outline: 2px solid var(--auth-focus);
+  outline-offset: 4px;
+}
+.societe-carte:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.societe-carte-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px var(--auth-champ-bord),
+    0 10px 24px -10px rgb(0 0 0 / 0.45);
+}
+.societe-carte-logo .avatar {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: inherit;
+}
+.societe-carte-logo .avatar img {
+  padding: 0;
+  filter: none;
+}
+
+.societe-carte-corps {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+.societe-carte-nom {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.societe-carte-secteur {
+  color: var(--auth-texte-doux);
+  font-size: 0.86rem;
+}
+
+.societe-carte-fleche {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  color: var(--auth-texte-doux);
+  background: var(--auth-champ-fond);
+  border: 1px solid var(--auth-champ-bord);
+  transition:
+    color 0.35s ease,
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.societe-carte:focus-visible .societe-carte-fleche {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-2));
+}
+
+/* Survol : seulement avec une vraie souris (pas d'état « collé » après un
+   tap sur mobile). */
+@media (hover: hover) and (pointer: fine) {
+  a.societe-carte:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--societe-color) 50%, var(--auth-carte-bord));
+  }
+  .portail-societes:not(.is-navigating) > li:has(> a.societe-carte:hover)::before {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+  a.societe-carte:hover::after {
+    transform: translateX(110%);
+  }
+  a.societe-carte:hover .societe-carte-fleche {
+    color: #fff;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-2));
+    box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--auth-accent) 80%, transparent);
+    transform: translateX(2px);
+  }
+}
+
+/* Sortie vers la connexion : la carte choisie se resserre et reste (repère
+   pendant le chargement), logo, titre et autres cartes s'effacent — puis le
+   fond glisse vers la composition de la connexion. */
+.portail .auth-logo--seul,
+.portail-entete {
+  transition:
+    opacity 0.22s ease,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.portail:has(.is-navigating) .auth-logo--seul,
+.portail:has(.is-navigating) .portail-entete {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.portail-societes.is-navigating .societe-carte:not(.is-leaving) {
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+}
+.societe-carte.is-leaving {
+  transform: scale(0.97);
+}
+
+/* Société annoncée, pas encore ouverte : même carte, en retrait (logo et nom
+   adoucis), pastille « Bientôt » à la place de la flèche. Aucun survol (les
+   effets sont réservés à a.societe-carte). */
+.societe-carte--bientot {
+  cursor: default;
+}
+.societe-carte--bientot .societe-carte-logo,
+.societe-carte--bientot .societe-carte-corps {
+  opacity: 0.72;
+}
+.societe-carte-bientot {
+  flex: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--auth-texte-doux);
+  background: var(--auth-champ-fond);
+  border: 1px solid var(--auth-champ-bord);
+}
+
+.societe-carte.societe-carte--squelette {
+  animation: none;
+  pointer-events: none;
+}
+
+.portail-vide {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.9rem 1.3rem;
+  border-radius: 999px;
+  color: var(--auth-texte-doux);
+  background: var(--auth-carte-fond);
+  border: 1px solid var(--auth-carte-bord);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+@media (max-width: 639px) {
+  .portail-societes {
+    --portail-gouttiere: 0.7rem;
+  }
+  .portail-societes > li {
+    max-width: none;
+  }
+  .societe-carte {
+    min-height: 80px;
+    padding: 0.8rem 0.9rem 0.8rem 0.8rem;
+    border-radius: 20px;
+  }
+  .societe-carte-logo {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+  }
+  .societe-carte-fleche {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Entrée : fondu + légère montée, en cascade — court (< 0.6s), le champ
+   e-mail est focalisable immédiatement. backwards (pas both) : une fois
+   entrés, les éléments rendent la main à opacity/transform, sinon
+   l'animation figée écraserait la transition de sortie du portail. */
+.auth-presentation > *,
+.auth-logo--seul,
+.auth-carte,
+.portail-entete,
+.portail-vide {
+  animation: auth-apparition 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.portail-entete { animation-delay: 0.05s; }
+.portail-vide { animation-delay: 0.12s; }
+.auth-presentation > :nth-child(2) { animation-delay: 0.05s; }
+.auth-presentation > :nth-child(3) { animation-delay: 0.1s; }
+.auth-presentation > :nth-child(4) { animation-delay: 0.15s; }
+.auth-presentation > :nth-child(5) { animation-delay: 0.2s; }
+.auth-carte { animation-delay: 0.08s; }
+
+@keyframes auth-apparition {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes auth-secousse {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-3px); }
+  40%, 60% { transform: translateX(3px); }
+}
+@keyframes auth-rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Tablette (640px+) : l'accroche est suivie de son paragraphe. */
+@media (min-width: 640px) {
+  .auth-intro {
+    display: block;
+  }
+  .auth-logo {
+    width: 184px;
+  }
+}
+
+/* Grand écran (1024px+) : présentation à gauche, carte à droite. */
+@media (min-width: 1024px) {
+  .auth-shell-contenu--duo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+    align-items: center;
+    column-gap: clamp(3rem, 8vw, 8rem);
+    padding-top: 4.5rem;
+    padding-inline: clamp(2rem, 5vw, 4rem);
+  }
+  .auth-shell-contenu--duo .auth-presentation {
+    align-items: flex-start;
+    text-align: left;
+    justify-self: start;
+  }
+  .auth-shell-contenu--duo .auth-logo {
+    width: clamp(176px, 14vw, 210px);
+  }
+  .auth-shell-contenu--duo .auth-accroche {
+    margin-top: 2rem;
+  }
+  .auth-shell-contenu--duo .auth-atouts {
+    display: grid;
+  }
+  .auth-shell-contenu--duo .auth-signature {
+    display: block;
+  }
+}
+
+/* Écran large mais bas (portable 13", fenêtre réduite) : on resserre la
+   colonne de présentation plutôt que de faire défiler. */
+@media (min-width: 1024px) and (max-height: 780px) {
+  .auth-shell-contenu--duo .auth-accroche {
+    margin-top: 1.25rem;
+  }
+  .auth-atouts {
+    margin-top: 1.6rem;
+    gap: 0.75rem;
+  }
+  .auth-atout-icone {
+    width: 38px;
+    height: 38px;
+  }
+  .auth-signature {
+    margin-top: 1.75rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .auth-shell-contenu {
+    padding-top: 5rem;
+  }
+  /* Petit téléphone (SE, Android compact) : la carte passe avant l'accroche. */
+  @media (max-height: 700px) {
+    .auth-accroche {
+      display: none;
+    }
+    .auth-shell-contenu {
+      padding-top: 4.5rem;
+    }
+}
+  .selecteur-theme {
+    --st-case: 36px;
+    --st-hauteur: 30px;
+  }
+  .auth-options {
+    font-size: 0.86rem;
+  }
+}
+
+/* Sans backdrop-filter, ou si la personne réduit la transparence : carte
+   quasi opaque, le texte reste lisible quel que soit le décor. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-shell {
+    --auth-carte-fond: rgb(255 255 255 / 0.92);
+  }
+  :root[data-theme='dark'] .auth-shell {
+    --auth-carte-fond: rgb(12 18 44 / 0.94);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .auth-shell {
+    --auth-carte-fond: rgb(255 255 255 / 0.94);
+  }
+  :root[data-theme='dark'] .auth-shell {
+    --auth-carte-fond: rgb(12 18 44 / 0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fond-liquide *,
+  .auth-squelette,
+  .auth-presentation > *,
+  .portail-entete,
+  .portail-vide,
+  .societe-carte,
+  .auth-logo--seul,
+  .auth-carte,
+  .auth-erreur {
+    animation: none !important;
+  }
+  .auth-bouton,
+  .auth-bouton::after,
+  .selecteur-theme-curseur,
+  .fl-bulle,
+  .fl-perle,
+  .societe-carte,
+  .societe-carte::after,
+  .societe-carte-fleche {
+    transition: none;
+  }
+}
+
+/* Contraste forcé (Windows) : le décor disparaît, les bordures système
+   prennent le relais. */
+@media (forced-colors: active) {
+  .fond-liquide {
+    display: none;
+  }
+  .auth-carte,
+  .auth-champ,
+  .selecteur-theme,
+  .societe-carte {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* Espace (après connexion) */
+.espace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-weight: 600;
+}
+
+/* Action secondaire — même langage d'interaction que les cartes de module et
+   le stepper (sept. 2026) : au repos, contour discret ; au survol, un simple
+   SOUFFLE de l'effet glass (fond translucide + flou léger + halo discret,
+   élévation d'1px) — jamais la couleur pleine, réservée aux cartes qui
+   représentent une vraie navigation vers une section. Teinte par défaut :
+   Argile, la couleur de signature/CTA (alignée sur .btn-primary, correction
+   sept. 2026 — Iris est réservé à l'identité de marque, pas aux boutons
+   génériques) — .btn-ghost--danger garde la sienne. */
+.btn-ghost {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.9rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text);
+  transition:
+    background 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Rai de lumière au survol — même recette que .admin-icon-btn/
+   .admin-periode-label (« liquid glass » partout, sept. 2026) : ce bouton en
+   était resté à un simple fond teinté, sans le balayage spéculaire. */
+.btn-ghost::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(120deg, transparent, var(--glass-sheen), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.btn-ghost:hover {
+  /* Mixé contre --surface (pas un « white » littéral, bug corrigé sept.
+     2026) : sinon le survol reste pâle/plat en thème sombre au lieu de
+     suivre le fond réel du bouton. */
+  background: color-mix(in oklch, var(--argile) 12%, var(--surface) 88%);
+  border-color: color-mix(in oklch, var(--argile) 35%, transparent);
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--argile) 18%, transparent);
+  transform: translateY(-1px);
+}
+.btn-ghost:hover::after {
+  left: 130%;
+}
+
+.btn-ghost--danger:hover {
+  background: color-mix(in oklch, var(--danger) 12%, var(--surface) 88%);
+  border-color: color-mix(in oklch, var(--danger) 35%, transparent);
+  box-shadow: 0 6px 16px color-mix(in oklch, var(--danger) 18%, transparent);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn-ghost:disabled:hover {
+  background: transparent;
+  border-color: var(--border);
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.btn-ghost:disabled:hover::after {
+  left: -60%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-ghost {
+    transition: none;
+  }
+  .btn-ghost::after {
+    transition: none;
+  }
+}
+
+.espace-welcome {
+  max-width: 640px;
+  margin: 4rem auto;
+  padding: 0 1.5rem;
+}
+
+.espace-welcome h1 {
+  margin: 0 0 0.5rem;
+}
+
+.espace-note {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+

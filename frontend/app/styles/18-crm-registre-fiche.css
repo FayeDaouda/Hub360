@@ -1,0 +1,474 @@
+/* ---------- CRM · Registre des projets (maquette du boss) ---------- */
+.crm-entete,
+.crm-filtres,
+.crm-registre-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+/* Recherche + export groupés à droite du titre. */
+.crm-registre-tete .crm-recherche {
+  margin-left: auto;
+}
+.crm-registre-tete .bouton-export {
+  margin-left: 0;
+}
+.crm-onglets,
+.crm-situations {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.crm-onglets button,
+.crm-situations button {
+  white-space: nowrap;
+}
+.crm-compte {
+  margin-left: 0.25rem;
+  opacity: 0.7;
+  font-size: 0.75rem;
+}
+.crm-annee .field-input {
+  width: auto;
+  border-radius: 999px;
+  padding: 0.4rem 2rem 0.4rem 0.9rem;
+}
+.crm-titre-registre {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.crm-titre-registre span {
+  margin-left: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.crm-recherche {
+  flex: 0 1 22rem;
+  min-width: min(100%, 14rem);
+}
+.crm-registre .crm-ligne-registre {
+  cursor: pointer;
+}
+.crm-registre .crm-ligne-registre:hover td {
+  background: color-mix(in oklch, var(--accent) 6%, transparent);
+}
+.crm-code {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crm-code:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.crm-manquant {
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .crm-manquant {
+  color: var(--ocre);
+}
+.crm-completude {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 6.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.crm-completude--complete {
+  background: var(--accent);
+}
+.crm-completude--partielle {
+  background: var(--ocre);
+}
+/* 5 tuiles sur une ligne quand la place le permet (maquette). */
+@media (min-width: 1200px) {
+  .crm-kpi .kpi-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+/* Registre : textes longs sur une ligne, complets en infobulle (maquette). */
+.crm-tronque {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crm-tronque--programme {
+  max-width: 15rem;
+}
+.crm-tronque--apporteur {
+  max-width: 13rem;
+}
+/* Offre acceptée : l'action se passe dans Finances (maquette CTO). */
+.offre-dossier--acceptee {
+  display: grid;
+  gap: 0.5rem;
+  text-align: center;
+}
+.offre-dossier-cta {
+  justify-content: center;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+.offre-dossier-suite {
+  margin: 0;
+}
+.crm-pied {
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ---------- CRM · fiche du dossier en panneau latéral (maquette du boss) ---------- */
+.fiche-crm-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: color-mix(in oklch, var(--bg) 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.fiche-crm {
+  display: grid;
+  align-content: start;
+  gap: 1.4rem;
+  width: min(46rem, 100vw);
+  height: 100dvh;
+  overflow-y: auto;
+  padding: 1.6rem 1.75rem 2rem;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: -24px 0 60px color-mix(in oklch, var(--bg) 60%, transparent);
+  animation: fiche-crm-entree 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fiche-crm-entree {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fiche-crm {
+    animation: none;
+  }
+}
+.fiche-crm-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.fiche-crm-code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6rem;
+}
+.fiche-crm-client {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.fiche-crm-meta {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+}
+.fiche-crm-section {
+  display: grid;
+  gap: 0.7rem;
+}
+.fiche-crm-titre-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+}
+.fiche-crm-titre {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.fiche-crm-badge {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.fiche-crm-badge--ok {
+  border-color: color-mix(in oklch, var(--sauge) 40%, transparent);
+  background: color-mix(in oklch, var(--sauge) 16%, transparent);
+  color: var(--sauge-fonce);
+}
+:root[data-theme='dark'] .fiche-crm-badge--ok {
+  color: var(--sauge);
+}
+.fiche-crm-etapes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fiche-crm-etapes li {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.fiche-crm-etapes li::before {
+  content: '';
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.fiche-crm-etapes li.is-fait,
+.fiche-crm-etapes li.is-courant {
+  color: var(--text);
+}
+.fiche-crm-etapes li.is-fait::before {
+  background: var(--accent);
+}
+.fiche-crm-etapes li.is-courant::before {
+  background: var(--iris);
+}
+.fiche-crm-etapes.is-perdu li::before {
+  background: var(--border);
+}
+.fiche-crm-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.fiche-crm-alerte {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid color-mix(in oklch, var(--ocre) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--ocre) 14%, transparent);
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .fiche-crm-alerte {
+  color: var(--ocre);
+}
+.fiche-crm-champs {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.fiche-crm-champs > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.fiche-crm-champs > div:last-child {
+  border-bottom: none;
+}
+.fiche-crm-champs dt {
+  font-weight: 600;
+}
+.fiche-crm-champs dd {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+}
+.fiche-crm-valeur {
+  font-weight: 700;
+}
+.fiche-crm-aide {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.fiche-crm-carte {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.fiche-crm-apporteur {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 0.8rem 1rem;
+  margin: 0 0 0.4rem;
+}
+.fiche-crm-apporteur dt {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.fiche-crm-apporteur dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.fiche-crm-pourcent {
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+.fiche-crm-passation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+.fiche-crm-carte--proprio {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--iris), color-mix(in oklch, var(--iris) 70%, var(--azur)));
+  color: #fff;
+}
+.fiche-crm-carte--proprio .fiche-crm-aide {
+  color: color-mix(in oklch, #fff 80%, transparent);
+}
+.fiche-crm-carte--proprio .field-input {
+  background: color-mix(in oklch, #000 18%, transparent);
+  color: #fff;
+}
+.fiche-crm-fleche {
+  color: var(--text-muted);
+}
+.fiche-crm-historique {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fiche-crm-historique li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 1rem;
+}
+.fiche-crm-historique time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fiche-crm-actions {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+/* Lead incomplet : « Caractéristiques du projet » (champ manquant cerné d'ambre). */
+.fiche-crm-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.1rem;
+}
+.fiche-crm-programme {
+  gap: 0.9rem;
+  padding: 1.2rem 1.25rem;
+}
+.fiche-crm-sous-titre {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+.fiche-crm .field-input.is-manquant {
+  border-color: var(--ocre);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--ocre) 45%, transparent);
+}
+.fiche-crm-lecture {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.6rem;
+}
+.fiche-crm-code-loc {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.crm-a-choisir {
+  border: 1px solid var(--ocre);
+  background: transparent;
+  color: var(--ocre-fonce);
+}
+:root[data-theme='dark'] .crm-a-choisir {
+  color: var(--ocre);
+}
+.offre-bloquee {
+  display: grid;
+  flex: 1 1 100%;
+  gap: 0.45rem;
+  text-align: center;
+}
+.offre-bloquee-bouton {
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: not-allowed;
+}
+.fiche-crm-archive {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+.fiche-crm-archive > p {
+  flex: 1 1 18rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.fiche-crm-archive .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.fiche-crm-archive-confirmer {
+  display: grid;
+  flex: 1 1 100%;
+  gap: 0.6rem;
+}
+@media (max-width: 640px) {
+  .fiche-crm {
+    padding: 1.1rem 1rem 1.5rem;
+  }
+  .fiche-crm-champs > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fiche-crm-passation,
+  .fiche-crm-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fiche-crm-fleche {
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+  .fiche-crm-etapes li {
+    font-size: 0.72rem;
+  }
+}
+

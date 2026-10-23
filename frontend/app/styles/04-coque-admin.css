@@ -1,0 +1,1180 @@
+/* ==========================================================================
+   Back-office société (app/admin/[slug]) — dashboard dense, sobre : sidebar
+   fixe + grille de contenu. Réutilisé par tout module admin à venir, pas
+   seulement le tableau de bord.
+   ========================================================================== */
+
+.admin {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--bg);
+  /* Même courbe que .kpi-tuile-icone / indic-bar-grow — la « signature »
+     d'accélération douce de l'appli, pour que le repli se sente cohérent
+     avec le reste plutôt qu'une transition CSS par défaut. */
+  transition: grid-template-columns 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Repli en rail d'icônes (desktop) — cf. admin-shell.tsx / collab-shell.tsx.
+   Un seul point de vérité pour la largeur : la sidebar n'a pas de `width`
+   propre, elle occupe simplement la colonne de la grille. */
+.admin--repliee {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.admin-sidebar {
+  /* Sidebar volontairement sombre — ancre de navigation stable pendant que
+     le contenu (Sable) devient coloré. Tokens scopés (même principe que les
+     jetons --auth-* des écrans d'accès) car --text/--border/--bg restent
+     clairs partout ailleurs. */
+  --sidebar-text: rgba(245, 243, 252, 0.92);
+  --sidebar-text-muted: rgba(245, 243, 252, 0.6);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Verre réel (retour boss sept. 2026, « style de menu » de référence) — pas
+     un aplat opaque : translucide + flou marqué, pour que les halos de fond
+     (.admin-atmosphere, déjà sous toute la page) se devinent au travers.
+     Volontairement sombre dans les DEUX thèmes (ancre de navigation stable
+     pendant que le contenu bascule clair/sombre) — cf. mémoire. */
+  background: rgba(10, 14, 26, 0.55);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border-right: 1px solid var(--sidebar-border);
+  color: var(--sidebar-text);
+  /* Pas de padding/overflow ici : la pilule de repli (.admin-sidebar-toggle)
+     est positionnée par rapport au vrai bord de cet élément — le padding et
+     le scroll vivent dans .admin-sidebar-scroll pour ne pas décaler ni
+     découper la pilule qui déborde volontairement dessus. */
+}
+
+/* Mode clair : le voile à 55 % devenait un gris-bleu terne sur le fond
+   lavande (barre « éteinte ») — même barre sombre, plus dense, libellés
+   secondaires plus nets. */
+:root:not([data-theme='dark']) .admin-sidebar {
+  --sidebar-text-muted: rgba(245, 243, 252, 0.74);
+  background: rgba(16, 19, 38, 0.9);
+}
+
+.admin-sidebar-scroll {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem 1rem;
+  overflow-y: auto;
+}
+
+/* Bulles de verre décoratives — même esprit que .admin-atmosphere mais
+   contenues dans la sidebar, pour la « texture » vue sur la maquette de
+   référence (sept. 2026). Purement atmosphérique, sous le contenu (z-index
+   0), jamais interactives. */
+.admin-sidebar::before,
+.admin-sidebar::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(50px);
+}
+.admin-sidebar::before {
+  top: 40%;
+  left: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(79, 107, 255, 0.55),
+    rgba(79, 107, 255, 0.1) 60%,
+    transparent 75%
+  );
+}
+.admin-sidebar::after {
+  bottom: 12%;
+  right: -80px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(
+    circle at 65% 70%,
+    rgba(255, 122, 60, 0.45),
+    rgba(6, 182, 212, 0.18) 55%,
+    transparent 75%
+  );
+}
+
+.admin-backdrop {
+  display: none;
+}
+
+.admin-menu-btn,
+.admin-sidebar-close {
+  display: none;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.admin-brand-fallback {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-gradient);
+  color: #fff;
+  font-weight: 600;
+}
+
+.admin-brand-text {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.admin-brand-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-brand-text span {
+  color: var(--sidebar-text-muted);
+  font-size: 0.75rem;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-sidebar-footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  color: var(--sidebar-text-muted);
+  text-decoration: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a.admin-nav-item:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
+}
+
+/* Item actif = liseré lumineux + fond teinté translucide, pas un aplat plein
+   (retour boss sept. 2026, « style de menu » de référence — cohérent avec le
+   verre de la sidebar : un remplissage opaque aurait fait un bloc peint sur
+   un fond qui, lui, est du vrai verre). box-shadow inset plutôt qu'un vrai
+   border : évite tout décalage de layout sur les items non actifs. Chaque
+   .admin-nav-item--<cle> ne pose que 2 variables, comme .projet-carte--* et
+   .phase-etape--* — un seul point de vérité par couleur. */
+.admin-nav-item.is-active {
+  background: color-mix(in oklch, var(--brand) 22%, transparent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in oklch, var(--brand) 70%, transparent),
+    0 0 20px color-mix(in oklch, var(--brand) 35%, transparent);
+}
+
+/* Une seule couleur active dans tout le HUB (décision du 12/10/2026) : la
+   couleur de marque, iris (--brand) — plus de teinte par section. */
+.admin-nav-item.is-soon {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.admin-nav-btn {
+  color: var(--argile);
+}
+/* « Aide » est un bouton comme « Se déconnecter », sans sa couleur d'alerte. */
+.admin-nav-btn.admin-nav-btn--neutre {
+  color: inherit;
+}
+
+.admin-nav-btn:hover {
+  background: var(--sidebar-hover-bg);
+  color: #fff;
+}
+
+.admin-nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-nav-tag {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  color: var(--sidebar-text-muted);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 999px;
+  padding: 0.08rem 0.4rem;
+}
+
+/* Bouton de repli — pilule accrochée sur le bord droit de la sidebar,
+   débordant légèrement sur le contenu principal (référence : pastille
+   « Write a review » débordant sur une carte, sept. 2026). Centrée sur la
+   hauteur de la sidebar ; arrondie côté contenu, plate côté sidebar. Position
+   absolue par rapport à .admin-sidebar (position: sticky, donc un vrai
+   conteneur pour ce positionnement) — indépendante de la largeur courante,
+   donc reste au même endroit sidebar repliée ou non. Desktop only : masquée
+   sous le seuil mobile (media query plus bas), qui garde le hamburger/panneau. */
+.admin-sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: -14px;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 28px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in oklch, #140f1f 90%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--sidebar-text-muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.admin-sidebar-toggle:hover {
+  background: #140f1f;
+  color: var(--sidebar-text);
+}
+
+.admin-sidebar-toggle-icone {
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-sidebar-toggle-icone.est-tournee {
+  transform: rotate(180deg);
+}
+
+/* --- Contenu masqué / recentré en mode replié --------------------------- */
+.admin--repliee .admin-brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.admin--repliee .admin-brand-text,
+.admin--repliee .admin-nav-label,
+.admin--repliee .admin-nav-tag {
+  display: none;
+}
+
+.admin--repliee .admin-nav-item {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Étiquette flottante au survol/focus d'un item en rail replié — même
+   principe que la maquette de référence (rail d'icônes + info-bulle), mais
+   en portail (voir admin-shell.tsx / collab-shell.tsx) : positionnée en
+   `fixed` d'après getBoundingClientRect(), donc jamais rognée par l'overflow
+   de la sidebar. */
+.sidebar-infobulle {
+  position: fixed;
+  transform: translateY(-50%);
+  background: var(--encre);
+  color: #fff;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.admin-main {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 1.5rem 2rem 3rem;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.admin-title {
+  margin: 0;
+  font-size: 1.4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Verre liquide premium (topbar) : flou/saturation + reflet spéculaire fixe
+   (::before) + un rai de lumière qui balaie au survol (::after) — même
+   recette sur .admin-search/.admin-icon-btn/.admin-periode-label. */
+.admin-search {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--text-muted);
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    border-color 260ms ease,
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-search:focus-within {
+  border-color: var(--argile);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 0 0 3px color-mix(in oklch, var(--argile) 22%, transparent);
+}
+
+.admin-search input {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  width: 160px;
+  color: var(--text);
+}
+
+.admin-search input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Réglages › Signalements : un retour par carte, statut modifiable. */
+.sig-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sig-ligne {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 12px);
+}
+.sig-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sig-texte {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sig-page {
+  overflow-wrap: anywhere;
+}
+.sig-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.sig-statut {
+  width: auto;
+}
+/* Aide (barre du haut) : guide selon les droits + « Signaler un problème ». */
+.aide-panneau {
+  max-width: 640px;
+}
+.aide-onglets {
+  margin: 0 1.25rem;
+}
+.aide-corps {
+  max-height: min(70vh, 40rem);
+  overflow-y: auto;
+}
+@media (max-width: 640px) {
+  .aide-corps {
+    max-height: calc(100dvh - 9rem);
+  }
+}
+.aide-intro {
+  margin: 0 0 0.75rem;
+}
+.aide-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.aide-sections li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.aide-action {
+  font-size: 0.88rem;
+}
+.aide-reperes {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+.aide-reperes li + li {
+  margin-top: 0.3rem;
+}
+/* Recherche globale : déclencheur (pilule de la topbar) et palette. */
+.recherche-declencheur {
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.recherche-declencheur-texte {
+  min-width: 7rem;
+  text-align: left;
+}
+.recherche-raccourci {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+@media (max-width: 720px) {
+  .recherche-declencheur {
+    padding: 0.55rem;
+  }
+  .recherche-declencheur-texte,
+  .recherche-raccourci {
+    display: none;
+  }
+}
+.recherche-palette {
+  max-width: 620px;
+}
+.recherche-champ {
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+/* La loupe seule : « svg » visait aussi la croix du bouton Fermer, posée
+   par-dessus la loupe (revue mobile 20/10/2026). */
+.recherche-champ > svg {
+  left: 1.5rem;
+}
+/* Croix native du champ « search » : le bouton Fermer suffit. */
+.recherche-champ input::-webkit-search-cancel-button {
+  display: none;
+}
+.recherche-champ .field-input {
+  flex: 1;
+  min-width: 0;
+}
+.recherche-resultats {
+  max-height: min(60vh, 28rem);
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+.recherche-aide {
+  margin: 0;
+  padding: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.recherche-groupe {
+  margin: 0.5rem 0.5rem 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.recherche-resultat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.recherche-resultat.is-actif {
+  background: color-mix(in oklch, var(--argile) 14%, transparent);
+}
+
+.admin-icon-btn {
+  position: relative;
+  overflow: hidden;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--glass-sheen-faible);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease,
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 200ms ease;
+}
+/* Rai de lumière qui balaie la pastille au survol — un triangle clair
+   incliné qui traverse de gauche à droite, comme un reflet qui glisse sur
+   du verre bombé. */
+.admin-icon-btn::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 40%;
+  height: 140%;
+  background: linear-gradient(120deg, transparent, var(--glass-sheen), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.admin-icon-btn:hover {
+  transform: translateY(-2px) scale(1.06);
+  border-color: var(--glass-sheen);
+  color: var(--text);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen),
+    0 10px 22px var(--glass-ombre);
+}
+.admin-icon-btn:hover::after {
+  left: 130%;
+}
+
+/* Bouton hamburger (topbar) et bouton de fermeture (en tête de sidebar) —
+   masqués par défaut, réapparaissent sous le seuil tablette/mobile
+   (cf. media query .admin en bas de fichier). */
+.admin-menu-btn,
+.admin-sidebar-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.admin-sidebar-close {
+  margin-left: auto;
+  /* Sidebar sombre : ce bouton vit dedans, contrairement au hamburger de la
+     topbar qui partage la même règle de base ci-dessus. */
+  color: var(--sidebar-text, var(--text));
+}
+
+.admin-user {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-gradient);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+button.admin-user {
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.admin-user:hover {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 10px 22px var(--glass-ombre),
+    0 0 0 3px var(--glass-sheen-faible);
+}
+
+/* Sélecteur de période + libellé de la fenêtre affichée */
+.admin-periode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+/* Verre réel (retour boss sept. 2026, « liquid glass » partout) — même
+   recette que .theme-menu-segmente : piste translucide floutée, pastille
+   active en dégradé glossy + lueur plutôt qu'un aplat plat. */
+.admin-periode-toggle {
+  display: inline-flex;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.admin-periode-toggle button {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-periode-toggle button.is-active {
+  background: linear-gradient(135deg, var(--argile), var(--argile-fonce));
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 6px 16px color-mix(in oklch, var(--argile) 45%, transparent);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.3rem;
+}
+
+/* Panneaux du tableau de bord en verre réel (retour boss sept. 2026, « liquid
+   glass partout ») — sélecteur composé pour battre .panel ci-dessus quel que
+   soit l'ordre dans la feuille, sans toucher .panel lui-même (utilisé sur
+   TOUTES les pages admin ; ce chantier reste scopé au dashboard pour
+   l'instant, cf. mémoire « progressif, module par module »). */
+.panel.glass-panel {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+}
+
+.panel-title {
+  margin: 0 0 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.panel-title--repliable {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+/* Badge rond autour du chevron replier/déplier — repris partout où une
+   section est rétractable (panneau Programme, groupes du Suivi
+   opérationnel) pour que le contrôle se voie et s'attrape facilement,
+   pas juste une flèche nue à côté d'un titre. */
+.repli-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border-hover);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+button:hover .repli-badge,
+button:focus-visible .repli-badge {
+  background: var(--argile-tint);
+  border-color: var(--argile);
+}
+
+.repli-icone {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.18s ease, color 0.15s ease;
+}
+
+button:hover .repli-icone,
+button:focus-visible .repli-icone {
+  color: var(--argile);
+}
+
+.repli-icone.est-replie {
+  transform: rotate(-90deg);
+}
+
+@keyframes gauge-sweep {
+  from {
+    stroke-dashoffset: 327;
+  }
+}
+
+/* Jalons */
+.jalons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.jalon {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.jalon:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.jalon .pill {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Pastilles de statut (refonte du 12/10/2026) — fond plein + texte blanc,
+   mêmes couleurs dans les deux thèmes. Une seule source : les variables
+   --pill-* ci-dessous ; une variante ne fait que choisir son --pill-fond.
+   Teintes foncées et adoucies, vérifiées : blanc ≥ 4,5:1 (AA) sur chacune,
+   et pastille ≥ 3:1 sur le fond sombre (#12162b) comme sur le clair. */
+:root {
+  /* 5 statuts */
+  --pill-succes: #2e7d4f; /* vert — fait, validé, dans l'objectif */
+  --pill-info: #346cb3; /* bleu — en cours, information */
+  --pill-attention: #9a5b00; /* ambre — à surveiller */
+  --pill-risque: #be4136; /* rouge — en retard, dépassé, hors objectif */
+  --pill-neutre: #687083; /* gris — à fixer, brouillon (indépendant du fond) */
+  /* Matrice des rôles */
+  --pill-aucun: #626979;
+  --pill-lecture: #1d7480;
+  --pill-ecriture: #b23c72;
+  --pill-validation: #3d7a34;
+  /* Catégories, natures de dossier, phase, azur */
+  --pill-cat-conception: #1f7a68;
+  --pill-cat-amenagement: #8a6a3c;
+  --pill-nature-mandat-client: #5c6680;
+  --pill-nature-promotion-interne: #8a6420;
+  --pill-phase: #75695a;
+  --pill-azur: #4463bd;
+  /* Valeurs chiffrées (texte, pas de fond) : rouge hors objectif, vert
+     atteint — mêmes teintes que les pastilles, éclaircies en sombre. */
+  --valeur-risque: var(--pill-risque);
+  --valeur-succes: var(--pill-succes);
+}
+:root[data-theme='dark'] {
+  --valeur-risque: #f2867b;
+  --valeur-succes: #6fcf97;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--pill-fond, var(--pill-neutre));
+  color: #fff;
+  /* Documents imprimés (facture) : garder le fond, sinon texte blanc sur blanc. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pill--succes {
+  --pill-fond: var(--pill-succes);
+}
+.pill--info {
+  --pill-fond: var(--pill-info);
+}
+.pill--attention {
+  --pill-fond: var(--pill-attention);
+}
+.pill--risque {
+  --pill-fond: var(--pill-risque);
+}
+.pill--neutre {
+  --pill-fond: var(--pill-neutre);
+}
+
+/* Niveau de permission (matrice des rôles). */
+.pill--aucun {
+  --pill-fond: var(--pill-aucun);
+}
+.pill--lecture {
+  --pill-fond: var(--pill-lecture);
+}
+.pill--ecriture {
+  --pill-fond: var(--pill-ecriture);
+}
+.pill--validation {
+  --pill-fond: var(--pill-validation);
+}
+.statut-select--aucun {
+  --pill-fond: var(--pill-aucun);
+}
+.statut-select--lecture {
+  --pill-fond: var(--pill-lecture);
+}
+.statut-select--ecriture {
+  --pill-fond: var(--pill-ecriture);
+}
+.statut-select--validation {
+  --pill-fond: var(--pill-validation);
+}
+
+/* Pastille posée sur une surface colorée (tuile KPI, carte sur un halo) :
+   inversée — fond blanc, texte de la couleur du statut ; liseré discret
+   pour garder sa forme sur un fond clair. À poser APRÈS les variantes. */
+.pill--sur-couleur {
+  background: #fff;
+  color: var(--pill-fond, var(--pill-neutre));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--pill-fond, var(--pill-neutre)) 35%, transparent);
+}
+
+/* Tableau */
+/* Ombres de défilement : un dégradé apparaît sur le bord quand il reste du
+   contenu à faire défiler horizontalement, et disparaît en fin de course
+   (technique background-attachment: local). Utile pour les tableaux larges
+   comme le CRM sur un écran < ~1600px. */
+.admin-table-wrap {
+  overflow-x: auto;
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) 0 0 / 28px 100% no-repeat,
+    linear-gradient(to left, var(--surface) 30%, transparent) 100% 0 / 28px 100% no-repeat,
+    radial-gradient(farthest-side at 0 50%, rgba(20, 20, 18, 0.12), transparent) 0 0 / 14px 100%
+      no-repeat,
+    radial-gradient(farthest-side at 100% 50%, rgba(20, 20, 18, 0.12), transparent) 100% 0 /
+      14px 100% no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* Bloc « Projets en cours » : hauteur bornée à ~10 lignes plutôt que de
+   pousser le reste de la page — le surplus (rangée plus haute qu'attendu,
+   petit écran) passe en scroll interne, la pagination reste la voie normale
+   pour voir la suite. */
+.admin-table-wrap--fixe {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.admin-table-wrap--fixe thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.7rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-table th:first-child,
+.admin-table td:first-child {
+  padding-left: 0;
+}
+
+.admin-table th:last-child,
+.admin-table td:last-child {
+  padding-right: 0;
+}
+
+.admin-table td {
+  padding: 0.8rem 0.5rem;
+  font-size: 0.87rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Barre d'avancement d'un projet (colonne du tableau) */
+.progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.progress-track {
+  width: 72px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--argile);
+}
+/* Même code couleur que les pastilles de statut (.pill--*) juste à côté dans
+   le tableau — la barre porte le même sens plutôt qu'une teinte uniforme. */
+.progress-fill--info {
+  background: var(--argile);
+}
+.progress-fill--succes {
+  background: var(--sauge);
+}
+.progress-fill--attention {
+  background: var(--ocre);
+}
+.progress-fill--neutre {
+  background: var(--text-muted);
+}
+
+.progress-val {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 38px;
+  white-space: nowrap;
+}
+
+/* États de chargement — variante claire du shimmer du portail (fond sombre). */
+.admin .skeleton {
+  background: linear-gradient(
+    100deg,
+    rgba(20, 20, 18, 0.045) 30%,
+    rgba(20, 20, 18, 0.09) 50%,
+    rgba(20, 20, 18, 0.045) 70%
+  );
+  background-size: 200% 100%;
+}
+
+.admin-skeleton-panel {
+  height: 320px;
+  border-radius: var(--radius-lg);
+}
+
+.admin-skeleton-panel--sm {
+  height: 150px;
+}
+
+/* Tablette portrait et mobile : la sidebar fixe (264px) ne rentre plus à
+   côté du contenu — elle sort de la grille et devient un panneau
+   escamotable au-dessus, ouvert/fermé par le bouton hamburger de la
+   topbar. Seuil aligné sur un iPad portrait (768px tient dans ce mode,
+   1024px paysage garde la sidebar fixe). */
+@media (max-width: 960px) {
+  .admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    width: min(84vw, 300px);
+    box-shadow: var(--shadow-md);
+    transform: translateX(-100%);
+    transition: transform 220ms ease;
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .admin-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(20, 20, 18, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+
+  .admin-backdrop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .admin-menu-btn,
+  .admin-sidebar-close {
+    display: inline-flex;
+  }
+
+  .admin-main {
+    padding: 1.1rem 1.25rem 3rem;
+  }
+
+  /* Le repli en rail est un confort desktop — sous ce seuil, le panneau
+     mobile doit rester complet même si la préférence « replié » est activée
+     sur cet appareil (même clé localStorage que le desktop). */
+  .admin-sidebar-toggle {
+    display: none;
+  }
+
+  .admin--repliee .admin-brand,
+  .admin--repliee .admin-nav-item {
+    justify-content: revert;
+  }
+
+  /* `revert` remonterait jusqu'au style UA (span => inline) et casserait la
+     mise en colonne de .admin-brand-text, qui est elle-même un conteneur
+     flex — pas juste un enfant blockifié par un parent flex. Valeur
+     explicite, identique à la règle de base. */
+  .admin--repliee .admin-brand-text {
+    display: flex;
+  }
+
+  .admin--repliee .admin-nav-label,
+  .admin--repliee .admin-nav-tag {
+    display: revert;
+  }
+}
+
+@media (max-width: 640px) {
+
+  .admin-search input {
+    width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-search {
+    display: none;
+  }
+  /* La recherche reste accessible sur téléphone : la loupe seule. */
+  .admin-search.recherche-declencheur {
+    display: inline-flex;
+  }
+
+  .admin-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar {
+    transition: none;
+  }
+
+  .admin-backdrop {
+    transition: none;
+  }
+}
+
