@@ -8656,6 +8656,9 @@ tr.is-demandeur .cal-nom {
 [data-ton='iris'] {
   --ton: var(--iris);
 }
+[data-ton='succes'] {
+  --ton: var(--pill-succes);
+}
 .mt-filtre {
   display: flex;
   align-items: center;
@@ -8691,6 +8694,11 @@ tr.is-demandeur .cal-nom {
 .mt-filtre:disabled {
   cursor: default;
   opacity: 0.55;
+}
+/* Carte vide = bonne nouvelle (coche verte, « aucun retard »), pas une
+   carte grisée qui ressemble à une erreur. */
+.mt-filtre.is-vide:disabled {
+  opacity: 0.9;
 }
 .mt-filtre-icone {
   flex: none;
@@ -8948,10 +8956,25 @@ tr.is-demandeur .cal-nom {
   gap: 0.3rem;
 }
 .mt-calme {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
   margin: 0;
-  padding: 1rem 0.9rem;
+  padding: 1.1rem 0.9rem;
   font-size: 0.88rem;
   color: var(--text-muted);
+}
+.mt-calme > svg {
+  flex: none;
+  color: var(--pill-succes);
+}
+.mt-calme p {
+  margin: 0;
+}
+.mt-calme .mt-calme-titre {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
 }
 .mt-groupe + .mt-groupe,
 .mt-groupe + .mt-plus-tard,
@@ -9180,6 +9203,141 @@ tr.is-demandeur .cal-nom {
   outline: 2px dashed var(--brand);
   outline-offset: -2px;
   background: color-mix(in oklch, var(--brand) 8%, transparent);
+}
+/* Lot C (23/10/2026) — un fichier survole la fenêtre : chaque tâche qui
+   peut le recevoir s'allume (la ligne survolée passe en is-depot). */
+.mt-ligne.is-cible {
+  outline: 1.5px dashed color-mix(in oklch, var(--brand) 55%, transparent);
+  outline-offset: -2px;
+  background: color-mix(in oklch, var(--brand) 4%, transparent);
+}
+.mt-depot-aide {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  translate: -50% 0;
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+/* Navigation clavier : la ligne active se voit, et reste visible sous les
+   en-têtes collés quand on la fait défiler. */
+.mt-ligne[data-tache] {
+  scroll-margin-top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px) + 2.5rem);
+  scroll-margin-bottom: 6rem;
+}
+.mt-ligne:has(.mt-titre-bouton:focus-visible) {
+  background: color-mix(in oklch, var(--brand) 7%, transparent);
+}
+.mt-titre-bouton:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.mt-raccourcis {
+  display: none;
+}
+.mt-raccourcis kbd {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mt-raccourcis {
+    display: inline;
+  }
+}
+/* « Tâche déposée · Annuler » — barre qui se vide pendant le délai. */
+.mt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: min(92vw, 30rem);
+  padding: 0.7rem 0.75rem 0.7rem 1rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  translate: -50% 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 44px -16px rgb(0 0 0 / 0.5);
+  animation: mt-toast-entree 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mt-toast > svg {
+  flex: none;
+  color: var(--pill-succes);
+}
+.mt-toast-texte {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-toast-annuler {
+  flex: none;
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--brand) 12%, transparent);
+  color: var(--brand);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mt-toast-annuler:hover {
+  background: color-mix(in oklch, var(--brand) 20%, transparent);
+}
+.mt-toast-barre {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--pill-succes);
+  transform-origin: left;
+  animation: mt-toast-barre var(--mt-toast-duree, 5s) linear forwards;
+}
+@keyframes mt-toast-entree {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes mt-toast-barre {
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (max-width: 720px) {
+  /* Au-dessus de la navigation du bas. */
+  .mt-toast,
+  .mt-depot-aide {
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt-toast {
+    animation: none;
+  }
 }
 .mt-groupe-titre--projet {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

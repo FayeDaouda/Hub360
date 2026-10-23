@@ -1,17 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from 'react';
+import { createPortal, flushSync } from 'react-dom';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlarmClock, AtSign, CalendarClock, ChevronDown, Ellipsis, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, AtSign, CalendarClock, Check, CheckCircle2, ChevronDown, Ellipsis, Hourglass, Paperclip, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
-import { ecartJours, getMesTaches, getTachesAValider } from '@/lib/mon-espace';
-import { getMesMentions, marquerMentionLue, publierCommentaire, type MentionRecue } from '@/lib/projets-ouverts';
+import { ecartJours, getMesTaches, getTachesAValider, remettreTache } from '@/lib/mon-espace';
+import { getMesMentions, marquerMentionLue, publierCommentaire, type CorpsRemise, type MentionRecue } from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { TacheDrawer } from './tache-drawer';
@@ -24,6 +25,30 @@ type Ton = 'risque' | 'attention' | 'info' | 'iris' | 'neutre';
 type Pieces = { nom: string; url: string }[];
 
 const MAX_PIECES = 5;
+// Délai pendant lequel un dépôt peut être annulé (envoi différé, aucune
+// annulation côté serveur).
+const DELAI_ANNULATION_MS = 5000;
+
+// Changement d'état animé (View Transitions) : une tâche déposée glisse vers
+// sa nouvelle place (« En validation », colonne de droite) au lieu de sauter.
+function animer(maj: () => void) {
+  const reduit = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!reduit && typeof document.startViewTransition === 'function') {
+    document.startViewTransition(() => flushSync(maj));
+  } else {
+    maj();
+  }
+}
+// Nom de transition d'une tâche (unique : une tâche n'est rendue qu'une fois).
+const transition = (id: string) => ({ viewTransitionName: `mt-${id}` }) as CSSProperties;
+// Ce qu'une carte vide dit de bien (un « 0 » gris ressemblait à une erreur).
+const VIDE: Record<Filtre, string> = {
+  retards: 'aucun retard',
+  reprises: 'rien à reprendre',
+  semaine: 'rien d’ici dimanche',
+  attente: 'rien en attente',
+  mentions: 'tout est lu',
+};
 const CLE_VUE = 'hub.mes-taches.vue';
 
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
@@ -94,6 +119,14 @@ export function MesTaches({ slug }: { slug: string }) {
   const [tiroir, setTiroir] = useState<{ projetId: string; tacheId: string; prolongation: boolean } | null>(null);
   const [aRemettre, setARemettre] = useState<{ tache: TacheMonEspace; pieces?: Pieces } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Dépôts différés (lot C) : affichés comme déposés tout de suite, envoyés
+  // après DELAI_ANNULATION_MS sauf « Annuler ». Le détail vit dans une ref
+  // (lu par les minuteries), la liste des ids dans l'état (rendu).
+  const depots = useRef(new Map<string, { tache: TacheMonEspace; corps: CorpsRemise; minuterie: number }>());
+  const [enEnvoi, setEnEnvoi] = useState<string[]>([]);
+  const [toast, setToast] = useState<{ id: string; libelle: string } | null>(null);
+  // Un fichier est glissé au-dessus de la fenêtre : les tâches s'allument.
+  const [fichierEnVol, setFichierEnVol] = useState(false);
 
   // Après le chargement : l'en-tête des cartes n'existe pas sous le squelette.
   useEnteteFixe(!!donnees);
@@ -141,7 +174,11 @@ export function MesTaches({ slug }: { slug: string }) {
   }, [slug, chargerTaches, chargerMentions]);
 
   const g = useMemo(() => {
-    const ouvertes = (donnees?.taches ?? []).filter((t) => t.statut !== 'validee').sort(parEcheance);
+    // Dépôt en attente d'envoi : déjà « en validation » à l'écran.
+    const vues = (donnees?.taches ?? []).map((t) =>
+      enEnvoi.includes(t.id) ? { ...t, statut: 'remise' as const, version: t.version + 1, remisLe: aujourdhui, renvoiMotif: null } : t,
+    );
+    const ouvertes = vues.filter((t) => t.statut !== 'validee').sort(parEcheance);
     const lundi = decaler(aujourdhui, -((jourSemaine(aujourdhui) + 6) % 7));
     const dimanche = decaler(lundi, 6);
     // En retard : échéance passée (date accordée pour une prolongée), reprises
@@ -187,7 +224,88 @@ export function MesTaches({ slug }: { slug: string }) {
     // Tâches qui demandent une action (sans double compte).
     const urgences = new Set([...retards, ...reprises, ...semaine]).size;
     return { ouvertes, retards, reprises, semaine, attente, sections, ensuite, dimanche, enRetard, tonDe, rang, urgences };
-  }, [donnees, aujourdhui]);
+  }, [donnees, aujourdhui, enEnvoi]);
+
+  // Fichier glissé au-dessus de la fenêtre (compteur : dragenter/dragleave
+  // se déclenchent à chaque élément traversé). Lâché hors d'une tâche, il
+  // n'est pas ouvert par le navigateur.
+  useEffect(() => {
+    let profondeur = 0;
+    const fichiers = (e: globalThis.DragEvent) => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+    const entre = (e: globalThis.DragEvent) => {
+      if (!fichiers(e)) return;
+      profondeur += 1;
+      setFichierEnVol(true);
+    };
+    const sort = (e: globalThis.DragEvent) => {
+      if (!fichiers(e)) return;
+      profondeur = Math.max(0, profondeur - 1);
+      if (profondeur === 0) setFichierEnVol(false);
+    };
+    const dessus = (e: globalThis.DragEvent) => {
+      if (fichiers(e)) e.preventDefault();
+    };
+    const fin = (e: globalThis.DragEvent) => {
+      if (fichiers(e)) e.preventDefault();
+      profondeur = 0;
+      setFichierEnVol(false);
+    };
+    window.addEventListener('dragenter', entre);
+    window.addEventListener('dragleave', sort);
+    window.addEventListener('dragover', dessus);
+    window.addEventListener('drop', fin);
+    return () => {
+      window.removeEventListener('dragenter', entre);
+      window.removeEventListener('dragleave', sort);
+      window.removeEventListener('dragover', dessus);
+      window.removeEventListener('drop', fin);
+    };
+  }, []);
+
+  // Quitter la page pendant le délai d'annulation : les dépôts partent tout
+  // de suite (rien n'est perdu) ; fermer l'onglet demande confirmation.
+  useEffect(() => {
+    const enCours = depots.current;
+    const avantFermeture = (e: BeforeUnloadEvent) => {
+      if (enCours.size) e.preventDefault();
+    };
+    window.addEventListener('beforeunload', avantFermeture);
+    return () => {
+      window.removeEventListener('beforeunload', avantFermeture);
+      for (const d of enCours.values()) {
+        clearTimeout(d.minuterie);
+        void remettreTache(slug, d.tache, d.corps).catch(() => undefined);
+      }
+      enCours.clear();
+    };
+  }, [slug]);
+
+  // Clavier (ordinateur) : J / K passe d'une tâche à l'autre, Entrée l'ouvre
+  // (bouton du titre), D la dépose. Rien quand on écrit ou qu'une fenêtre
+  // (dépôt, panneau de tâche) est ouverte.
+  useEffect(() => {
+    const surTouche = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const touche = e.key.toLowerCase();
+      if (touche !== 'j' && touche !== 'k' && touche !== 'd') return;
+      if ((e.target as HTMLElement | null)?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('.modal-backdrop, .fiche-crm-fond')) return;
+      const titres = [...document.querySelectorAll<HTMLButtonElement>('.mt-liste [data-tache] .mt-titre-bouton')];
+      if (!titres.length) return;
+      const i = titres.findIndex((b) => b.closest('[data-tache]')?.contains(document.activeElement));
+      if (touche === 'd') {
+        if (i < 0) return;
+        titres[i].closest('[data-tache]')?.querySelector<HTMLButtonElement>('[data-action="deposer"]')?.click();
+      } else {
+        const suivant = i < 0 ? 0 : touche === 'j' ? Math.min(i + 1, titres.length - 1) : Math.max(i - 1, 0);
+        titres[suivant].focus();
+        titres[suivant].scrollIntoView({ block: 'nearest' });
+      }
+      e.preventDefault();
+    };
+    document.addEventListener('keydown', surTouche);
+    return () => document.removeEventListener('keydown', surTouche);
+  }, []);
 
   const nonLues = mentions.filter((m) => !m.lue).length;
   const compte: Record<Filtre, number> = {
@@ -228,6 +346,39 @@ export function MesTaches({ slug }: { slug: string }) {
   function rafraichir() {
     void chargerTaches();
     void chargerMentions();
+  }
+
+  // Dépôt confirmé dans la fenêtre : affiché comme fait, envoyé après le
+  // délai d'annulation.
+  function deposerDiffere(t: TacheMonEspace, corps: CorpsRemise) {
+    setErreur(null);
+    const minuterie = window.setTimeout(() => void envoyer(t.id), DELAI_ANNULATION_MS);
+    depots.current.set(t.id, { tache: t, corps, minuterie });
+    animer(() => setEnEnvoi((ids) => [...ids.filter((x) => x !== t.id), t.id]));
+    setToast({ id: t.id, libelle: t.libelle });
+  }
+  async function envoyer(id: string) {
+    const d = depots.current.get(id);
+    if (!d) return;
+    depots.current.delete(id);
+    setToast((x) => (x?.id === id ? null : x));
+    try {
+      const r = await remettreTache(slug, d.tache, d.corps);
+      setDonnees(r);
+      setEnEnvoi((ids) => ids.filter((x) => x !== id));
+    } catch (e) {
+      // Échec : la tâche revient à sa place, avec le motif.
+      animer(() => setEnEnvoi((ids) => ids.filter((x) => x !== id)));
+      setErreur(`Le dépôt de « ${d.tache.libelle} » a échoué : ${e instanceof Error ? e.message : 'erreur inconnue'}.`);
+    }
+  }
+  function annulerDepot(id: string) {
+    const d = depots.current.get(id);
+    if (!d) return;
+    clearTimeout(d.minuterie);
+    depots.current.delete(id);
+    setToast(null);
+    animer(() => setEnEnvoi((ids) => ids.filter((x) => x !== id)));
   }
 
   // Fichiers glissés sur une ligne : lus puis remis via la fenêtre habituelle.
@@ -294,6 +445,7 @@ export function MesTaches({ slug }: { slug: string }) {
       onOuvrir={(prolongation) => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation })}
       onDeposerTache={t.statut === 'remise' || t.statut === 'bloquee' ? undefined : () => setARemettre({ tache: t })}
       onFichiers={t.statut === 'remise' ? undefined : (f) => void deposer(t, f)}
+      fichierEnVol={fichierEnVol}
     />
   );
 
@@ -336,8 +488,8 @@ export function MesTaches({ slug }: { slug: string }) {
               <button
                 key={f.cle}
                 type="button"
-                className={`mt-filtre${actif ? ' is-actif' : ''}`}
-                data-ton={n > 0 ? f.ton : 'neutre'}
+                className={`mt-filtre${actif ? ' is-actif' : ''}${n === 0 ? ' is-vide' : ''}`}
+                data-ton={n > 0 ? f.ton : 'succes'}
                 aria-pressed={actif}
                 disabled={!disponible(f.cle)}
                 onClick={() => choisirFiltre(f.cle)}
@@ -347,9 +499,11 @@ export function MesTaches({ slug }: { slug: string }) {
                 </span>
                 <span className="mt-filtre-texte">
                   <span className="mt-filtre-libelle">{f.libelle}</span>
-                  <span className="mt-filtre-aide">{f.cle === 'semaine' ? `d’ici le ${jjmm(g.dimanche)}` : f.aide}</span>
+                  <span className="mt-filtre-aide">
+                    {n === 0 ? VIDE[f.cle] : f.cle === 'semaine' ? `d’ici le ${jjmm(g.dimanche)}` : f.aide}
+                  </span>
                 </span>
-                <span className="mt-filtre-compte">{n}</span>
+                <span className="mt-filtre-compte">{n === 0 ? <Check size={20} strokeWidth={2.5} aria-label="0" /> : n}</span>
               </button>
             );
           })}
@@ -388,7 +542,13 @@ export function MesTaches({ slug }: { slug: string }) {
           )}
 
           {!filtre && urgences === 0 && (
-            <p className="mt-calme">Rien d’urgent : aucune reprise, aucun retard, aucune échéance d’ici dimanche.</p>
+            <div className="mt-calme">
+              <CheckCircle2 size={28} strokeWidth={1.75} aria-hidden />
+              <div>
+                <p className="mt-calme-titre">Tout est à jour</p>
+                <p>Rien en retard, rien à reprendre, rien à rendre d’ici dimanche.</p>
+              </div>
+            </div>
           )}
 
           {vue === 'projet' && filtre !== 'mentions'
@@ -444,6 +604,7 @@ export function MesTaches({ slug }: { slug: string }) {
                       <button
                         type="button"
                         className="mt-cote-tache"
+                        style={transition(t.id)}
                         onClick={() => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false })}
                       >
                         <span className="mt-cote-titre">{t.libelle}</span>
@@ -474,6 +635,9 @@ export function MesTaches({ slug }: { slug: string }) {
         <span className="mt-astuce">
           <Paperclip size={13} aria-hidden /> Glissez un fichier sur une tâche pour la déposer.
         </span>{' '}
+        <span className="mt-raccourcis">
+          <kbd>J</kbd> <kbd>K</kbd> pour passer d’une tâche à l’autre, <kbd>Entrée</kbd> pour l’ouvrir, <kbd>D</kbd> pour la déposer.
+        </span>{' '}
         Historique et respect des délais :{' '}
         <Link className="lien-inline" href={`${base}/mon-espace?onglet=performances`}>
           Mon espace › Mes performances
@@ -486,10 +650,12 @@ export function MesTaches({ slug }: { slug: string }) {
           slug={slug}
           tache={aRemettre.tache}
           piecesInitiales={aRemettre.pieces}
-          onRemise={setDonnees}
+          onEnvoyer={(corps) => deposerDiffere(aRemettre.tache, corps)}
           onClose={() => setARemettre(null)}
         />
       )}
+      {fichierEnVol && <p className="mt-depot-aide">Lâchez le fichier sur la tâche à déposer</p>}
+      {toast && <ToastDepot key={toast.id} libelle={toast.libelle} onAnnuler={() => annulerDepot(toast.id)} />}
       {tiroir && (
         <TacheDrawer
           key={`${tiroir.tacheId}:${tiroir.prolongation}`}
@@ -571,6 +737,7 @@ function LigneTache({
   onOuvrir,
   onDeposerTache,
   onFichiers,
+  fichierEnVol,
 }: {
   t: TacheMonEspace;
   ton: Ton;
@@ -583,6 +750,7 @@ function LigneTache({
   onOuvrir: (prolongation: boolean) => void;
   onDeposerTache?: () => void;
   onFichiers?: (fichiers: FileList) => void;
+  fichierEnVol: boolean;
 }) {
   const [survol, setSurvol] = useState(false);
   const echeance =
@@ -616,7 +784,13 @@ function LigneTache({
     : {};
 
   return (
-    <li className={`mt-ligne${survol ? ' is-depot' : ''}`} data-ton={ton} {...glisser}>
+    <li
+      className={`mt-ligne${survol ? ' is-depot' : fichierEnVol && onFichiers ? ' is-cible' : ''}`}
+      data-ton={ton}
+      data-tache={t.id}
+      style={transition(t.id)}
+      {...glisser}
+    >
       <span className="mt-corps">
         <button type="button" className="mt-titre mt-titre-bouton" onClick={() => onOuvrir(false)}>
           {t.libelle}
@@ -670,12 +844,36 @@ function LigneTache({
           </>
         )}
         {onDeposerTache && (
-          <button type="button" className={enRetard ? 'btn-primary btn-primary--sm' : 'btn-ghost btn-ghost--sm'} onClick={onDeposerTache}>
+          <button
+            type="button"
+            className={enRetard ? 'btn-primary btn-primary--sm' : 'btn-ghost btn-ghost--sm'}
+            data-action="deposer"
+            onClick={onDeposerTache}
+          >
             Déposer
           </button>
         )}
       </span>
     </li>
+  );
+}
+
+// « Tâche déposée · Annuler » : barre qui se vide pendant le délai
+// d'annulation (au-dessus de la navigation du bas sur téléphone).
+function ToastDepot({ libelle, onAnnuler }: { libelle: string; onAnnuler: () => void }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="mt-toast" role="status" style={{ '--mt-toast-duree': `${DELAI_ANNULATION_MS}ms` } as CSSProperties}>
+      <CheckCircle2 size={17} aria-hidden />
+      <span className="mt-toast-texte">
+        « {libelle} » déposée
+      </span>
+      <button type="button" className="mt-toast-annuler" onClick={onAnnuler}>
+        Annuler
+      </button>
+      <span className="mt-toast-barre" aria-hidden />
+    </div>,
+    document.body,
   );
 }
 
