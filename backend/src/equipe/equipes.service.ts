@@ -146,6 +146,13 @@ export class EquipesService {
             role: m.role,
             niveau: m.niveau,
             photoUrl: photoMembre(m),
+            // Absence validée par la RH qui couvre aujourd'hui (pastille de l'avatar).
+            absentJusquau:
+              (m.dossierPersonnel?.absences ?? [])
+                .filter((a) => a.dateDebut <= aujourdhui && aujourdhui <= a.dateFin)
+                .map((a) => a.dateFin)
+                .sort()
+                .pop() ?? null,
             poste: titulaires.get(m.id) ?? null,
             estPilote: c.dispatcherId === m.id,
             taches: charge.taches,

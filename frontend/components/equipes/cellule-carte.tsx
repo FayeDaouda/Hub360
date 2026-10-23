@@ -116,8 +116,13 @@ export function CelluleCarte({
               <label
                 className={`eq-avatar${ecriture ? ' eq-avatar--modifiable' : ''}`}
                 style={m.photoUrl ? { backgroundImage: `url(${srcPhoto(m.photoUrl)})` } : { background: couleurPersonne(m.id) }}
-                title={ecriture ? `Changer la photo de ${m.nom}` : undefined}
+                title={
+                  [m.absentJusquau ? `Absent·e jusqu’au ${m.absentJusquau.split('-').reverse().slice(0, 2).join('/')}` : null, ecriture ? `Changer la photo de ${m.nom}` : null]
+                    .filter(Boolean)
+                    .join(' · ') || undefined
+                }
               >
+                {m.absentJusquau && <span className="av-absent" aria-label="Absent aujourd'hui" />}
                 {!m.photoUrl &&
                   m.nom
                     .split(' ')

@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent as KeyboardEventReact } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CircleHelp, IdCard, KeyRound, LogOut, PenLine, MessageSquareWarning, Settings, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
+import { CalendarOff, CircleHelp, Clock, IdCard, KeyRound, LogOut, MonitorSmartphone, PenLine, MessageSquareWarning, Settings, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import { apiAuth } from '@/lib/client-api';
 import { libelleRole } from '@/lib/groupe';
@@ -13,7 +13,8 @@ import { ouvrirAide } from '@/components/admin/aide-globale';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
 import { AvatarPersonne } from '@/components/avatar-personne';
 import { ProfilModal } from '@/components/admin/profil-modal';
-import { nomAffiche } from '@/lib/profil';
+import { deconnecterPartout, getProfil, nomAffiche, type Profil } from '@/lib/profil';
+import { useConfirmer } from '@/components/confirmation';
 
 // Menu du compte (avatar, en haut à droite) : qui je suis (nom, e-mail, rôle,
 // société), l'état de ma double authentification, mes accès personnels
@@ -24,11 +25,29 @@ import { nomAffiche } from '@/lib/profil';
 
 type EtatDoubleFacteur = { actifLe: string | null; exige: boolean };
 
+const LIBELLE_ABSENCE: Record<NonNullable<Profil['absence']>['type'], string> = {
+  conge_paye: 'congés payés',
+  maladie: 'arrêt maladie',
+  permission_exceptionnelle: 'permission exceptionnelle',
+  autre: 'absence',
+};
+const jjmm = (iso: string) => iso.slice(0, 10).split('-').reverse().slice(0, 2).join('/');
+// « le 22/10 à 18 h 40 », « aujourd'hui à 9 h 05 ».
+function quand(iso: string): string {
+  const d = new Date(iso);
+  const heure = `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
+  const jour = d.toDateString() === new Date().toDateString() ? 'aujourd’hui' : `le ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${jour} à ${heure}`;
+}
+
 export function MenuCompte({ session, base, onDeconnexion }: { session: Session; base: string; onDeconnexion: () => void }) {
   const [ouvert, setOuvert] = useState(false);
   const [mdp, setMdp] = useState(false);
-  const [profil, setProfil] = useState(false);
+  const [edition, setEdition] = useState(false);
   const [doubleFacteur, setDoubleFacteur] = useState<EtatDoubleFacteur | null>(null);
+  // Profil : connexion précédente et absence en cours (pastille de l'avatar).
+  const [profil, setProfilLu] = useState<Profil | null>(null);
+  const confirmer = useConfirmer();
   const { preference, choisir } = usePreferenceTheme();
   const racine = useRef<HTMLDivElement>(null);
   const bouton = useRef<HTMLButtonElement>(null);
@@ -41,13 +60,38 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
   // Changement de page : le menu se referme.
   useEffect(() => setOuvert(false), [chemin]);
 
-  // État de la double authentification, lu à l'ouverture.
+  // Profil lu au chargement (absence → pastille de l'avatar) puis à chaque
+  // ouverture, avec l'état de la double authentification.
+  useEffect(() => {
+    getProfil()
+      .then(setProfilLu)
+      .catch(() => setProfilLu(null));
+  }, []);
   useEffect(() => {
     if (!ouvert) return;
     apiAuth<EtatDoubleFacteur>('/auth/double-facteur')
       .then(setDoubleFacteur)
       .catch(() => setDoubleFacteur(null));
+    getProfil()
+      .then(setProfilLu)
+      .catch(() => undefined);
   }, [ouvert]);
+
+  async function deconnecterTout() {
+    fermer();
+    const ok = await confirmer({
+      titre: 'Se déconnecter de tous les appareils ?',
+      message: 'Toutes vos sessions sont coupées, celle-ci comprise (ordinateurs, téléphone…). Il faudra vous reconnecter partout.',
+      confirmer: 'Tout déconnecter',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deconnecterPartout();
+    } finally {
+      onDeconnexion();
+    }
+  }
 
   useEffect(() => {
     if (!ouvert) return;
@@ -96,7 +140,7 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
         aria-controls={id}
         onClick={() => setOuvert((o) => !o)}
       >
-        <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="md" />
+        <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="md" absent={!!profil?.absence} />
       </button>
 
       {ouvert && (
@@ -111,6 +155,17 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
               </span>
             </span>
           </div>
+
+          {/* Absence validée par la RH qui couvre aujourd'hui. */}
+          {profil?.absence && (
+            <p className="mc-absence">
+              <CalendarOff size={16} aria-hidden />
+              <span>
+                Absent·e jusqu’au {jjmm(profil.absence.jusquau)}
+                <span className="mc-absence-type"> · {LIBELLE_ABSENCE[profil.absence.type]}</span>
+              </span>
+            </p>
+          )}
 
           {/* Sécurité du compte : état réel de la double authentification. */}
           {doubleFacteur && (
@@ -128,6 +183,13 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
             </Link>
           )}
 
+          {/* Connexion précédente : repérer un accès qu'on ne reconnaît pas. */}
+          {profil?.connexionPrecedenteLe && (
+            <p className="mc-connexion">
+              <Clock size={14} aria-hidden /> Connexion précédente {quand(profil.connexionPrecedenteLe)}
+            </p>
+          )}
+
           <nav className="mc-groupe" aria-label="Mes accès">
             <button
               type="button"
@@ -135,7 +197,7 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
               data-item
               onClick={() => {
                 fermer();
-                setProfil(true);
+                setEdition(true);
               }}
             >
               <PenLine size={16} aria-hidden /> Modifier mon profil
@@ -213,12 +275,15 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
             <button type="button" className="mc-item mc-deconnexion" data-item onClick={onDeconnexion}>
               <LogOut size={16} aria-hidden /> Se déconnecter
             </button>
+            <button type="button" className="mc-item mc-item--discret" data-item onClick={() => void deconnecterTout()}>
+              <MonitorSmartphone size={16} aria-hidden /> Se déconnecter de tous les appareils
+            </button>
           </div>
         </div>
       )}
 
       {mdp && <ChangerMotDePasseModal onClose={() => setMdp(false)} />}
-      {profil && <ProfilModal onClose={() => setProfil(false)} />}
+      {edition && <ProfilModal onClose={() => setEdition(false)} />}
     </div>
   );
 }

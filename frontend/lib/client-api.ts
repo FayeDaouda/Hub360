@@ -1,4 +1,4 @@
-import { getSession } from './auth';
+import { clearSession, getSession } from './auth';
 
 // Base de l'API NestJS. Override possible via NEXT_PUBLIC_API_URL.
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -49,7 +49,20 @@ export async function apiAuth<T>(chemin: string, options: Options = {}): Promise
   });
 
   if (!res.ok) {
-    throw new ApiError(await messageErreur(res), res.status);
+    const message = await messageErreur(res);
+    // Jeton refusé par le garde (session coupée : « se déconnecter de tous les
+    // appareils », mot de passe réinitialisé, compte désactivé) : la session
+    // locale est effacée et l'on revient à l'écran de connexion de la société.
+    // Un 401 métier (code de double authentification erroné…) porte son propre
+    // message et reste une erreur ordinaire.
+    // Messages du garde (backend jwt.strategy) : « Unauthorized », ou « …
+    // reconnecte-toi. » (session invalide, expirée, société introuvable).
+    const sessionRefusee = message === 'Unauthorized' || /reconnecte-toi\.?$/.test(message);
+    if (res.status === 401 && session && sessionRefusee && typeof window !== 'undefined') {
+      clearSession();
+      window.location.assign(`/login/${session.societe.slug}?session=expiree`);
+    }
+    throw new ApiError(message, res.status);
   }
   if (options.sansCorps || res.status === 204) {
     return undefined as T;

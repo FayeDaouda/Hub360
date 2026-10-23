@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { cheminPhoto, lirePhoto, normaliserNomAffiche } from './profil';
+import { ouDossierDuCompte } from '../rh/mon-compte';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
@@ -22,21 +23,16 @@ export class ProfilService {
         photoCle: true,
         derniereConnexionLe: true,
         connexionPrecedenteLe: true,
-        // Absence validée par la RH qui couvre aujourd'hui (la plus longue).
-        dossierPersonnel: {
-          select: {
-            absences: {
-              where: { statut: 'validee', dateDebut: { lte: jour }, dateFin: { gte: jour } },
-              orderBy: { dateFin: 'desc' },
-              take: 1,
-              select: { dateFin: true, type: true },
-            },
-          },
-        },
       },
     });
     if (!u) throw new NotFoundException('Compte introuvable');
-    const absence = u.dossierPersonnel?.absences[0] ?? null;
+    // Absence validée par la RH qui couvre aujourd'hui (la plus longue) — sur
+    // le dossier du compte, rattaché directement ou par la fiche d'équipe.
+    const absence = await this.prisma.demandeAbsence.findFirst({
+      where: { statut: 'validee', dateDebut: { lte: jour }, dateFin: { gte: jour }, dossier: ouDossierDuCompte(utilisateurId) },
+      orderBy: { dateFin: 'desc' },
+      select: { dateFin: true, type: true },
+    });
     return {
       nomOfficiel: `${u.prenom} ${u.nom}`.trim(),
       nomAffiche: u.nomAffiche,

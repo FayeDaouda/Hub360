@@ -160,6 +160,7 @@
   grid-template-columns: 2.2rem minmax(0, 1.5fr) minmax(0, 0.9fr) 3.5rem minmax(0, 1.2fr);
 }
 .eq-avatar {
+  position: relative; /* pastille d'absence */
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 50%;

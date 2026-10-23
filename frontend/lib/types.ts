@@ -428,6 +428,7 @@ export type CelluleEquipe = {
     role: string;
     niveau: NiveauCollaborateur;
     photoUrl: string | null; // data URI en transition (cf. Collaborateur.photoUrl)
+    absentJusquau?: string | null; // absence validée qui couvre aujourd'hui
     poste: string | null;
     estPilote: boolean;
     taches: number; // tâches du mois en cours

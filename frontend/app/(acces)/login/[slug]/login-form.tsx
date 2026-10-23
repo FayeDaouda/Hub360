@@ -1,8 +1,8 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, CircleAlert, LoaderCircle, Lock, Mail } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight, CircleAlert, Info, LoaderCircle, Lock, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { EchecConnexion, estEtape, login, type EtapeConnexion, type MotifEchecConnexion } from '@/lib/api';
 import { saveSession } from '@/lib/auth';
@@ -26,6 +26,9 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
   const [motDePasse, setMotDePasse] = useState('');
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Retour après une session coupée (déconnexion de tous les appareils, mot
+  // de passe réinitialisé…) : on dit pourquoi, sans alarmer.
+  const sessionExpiree = useSearchParams().get('session') === 'expiree';
   const [loading, setLoading] = useState(false);
   // Double authentification : étape rendue par le serveur après le mot de passe.
   const [etape, setEtape] = useState<EtapeConnexion | null>(null);
@@ -117,6 +120,12 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
         </Link>
       </div>
 
+      {sessionExpiree && !error && (
+        <p className="auth-info" role="status">
+          <Info size={17} aria-hidden />
+          Votre session a été fermée. Reconnectez-vous pour continuer.
+        </p>
+      )}
       {error && (
         <p id={ID_ERREUR} className="auth-erreur" role="alert">
           <CircleAlert size={17} aria-hidden />

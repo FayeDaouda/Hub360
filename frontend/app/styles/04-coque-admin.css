@@ -1580,3 +1580,36 @@ button:focus-visible .repli-icone {
   min-width: 0;
   margin-right: auto;
 }
+
+/* Menu du compte : absence en cours, connexion précédente, déconnexion partout. */
+.mc-absence {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0 var(--e-4) var(--e-4);
+  padding: var(--e-8) var(--e-12);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--t-13);
+}
+.mc-absence svg {
+  color: var(--attention-texte);
+}
+.mc-absence-type {
+  color: var(--text-muted);
+}
+.mc-connexion {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 2px var(--e-12) var(--e-8);
+  font-size: var(--t-12);
+  color: var(--text-subtle);
+}
+.mc-item--discret {
+  min-height: 34px;
+  font-size: var(--t-13);
+  color: var(--text-muted);
+}
