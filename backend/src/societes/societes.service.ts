@@ -5,7 +5,9 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SocietesService {
   constructor(private prisma: PrismaService) {}
 
-  // Liste publique pour le portail — pas besoin d'être connecté pour voir les cartes
+  // Liste publique pour le portail — pas besoin d'être connecté pour voir les
+  // cartes. Les sociétés pas encore ouvertes (accesOuvert = false) y figurent
+  // en « Bientôt », après les sociétés ouvertes.
   async findAllActives() {
     return this.prisma.societe.findMany({
       where: { actif: true },
@@ -18,16 +20,18 @@ export class SocietesService {
         couleurMarque: true,
         icone: true,
         secteur: true,
+        accesOuvert: true,
       },
-      orderBy: { nom: 'asc' },
+      orderBy: [{ accesOuvert: 'desc' }, { nom: 'asc' }],
     });
   }
 
   // Fiche publique d'une société (utilisée par l'écran de login pour afficher
-  // son nom/logo avant même que l'utilisateur ne se connecte)
+  // son nom/logo avant même que l'utilisateur ne se connecte). Société pas
+  // encore ouverte = introuvable : pas d'écran de connexion.
   async findBySlug(slug: string) {
     return this.prisma.societe.findFirst({
-      where: { slug, actif: true },
+      where: { slug, actif: true, accesOuvert: true },
       select: {
         id: true,
         nom: true,

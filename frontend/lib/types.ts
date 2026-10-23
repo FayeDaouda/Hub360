@@ -14,6 +14,13 @@ export type Societe = {
   penaliteRetardMensuelle: number | null; // % par mois (CGV art. 13)
 };
 
+// Carte du portail (GET /societes, public) : accesOuvert = false → société du
+// groupe annoncée « Bientôt », sans écran de connexion.
+export type SocietePortail = Pick<
+  Societe,
+  'id' | 'nom' | 'slug' | 'logoUrl' | 'logoUrlSombre' | 'couleurMarque' | 'icone' | 'secteur'
+> & { accesOuvert: boolean };
+
 export type Session = {
   access_token: string;
   utilisateur: {

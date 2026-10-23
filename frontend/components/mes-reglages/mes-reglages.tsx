@@ -71,7 +71,6 @@ export function MesReglages() {
             </button>
           ))}
         </div>
-        <p className="dmd-note">« Système » suit le réglage clair ou sombre de votre appareil.</p>
       </Bloc>
 
       <Bloc icone={BellRing} titre="Notifications">

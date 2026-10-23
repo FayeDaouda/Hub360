@@ -1,18 +1,18 @@
 'use client';
 
 import { KeyboardEvent, useRef } from 'react';
-import { Monitor, Moon, Sun, type LucideIcon } from 'lucide-react';
+import { Moon, Sun, type LucideIcon } from 'lucide-react';
 import { usePreferenceTheme, type PreferenceTheme } from '@/lib/theme';
 
-// Les 3 choix d'affichage, dans l'ordre de la maquette — partagés avec le
-// popover ThemeToggle de l'admin (une seule définition).
+// Les choix d'affichage (clair, sombre — « Système » retiré le 23/10/2026),
+// partagés avec le popover ThemeToggle de l'admin, Mes réglages et la
+// navigation mobile (une seule définition).
 export const OPTIONS_THEME: { valeur: PreferenceTheme; libelle: string; Icone: LucideIcon }[] = [
   { valeur: 'light', libelle: 'Clair', Icone: Sun },
   { valeur: 'dark', libelle: 'Sombre', Icone: Moon },
-  { valeur: 'system', libelle: 'Système', Icone: Monitor },
 ];
 
-// Contrôle segmenté clair / sombre / système (écran de connexion, maquette
+// Contrôle segmenté clair / sombre (écran de connexion, maquette
 // sept. 2026). Le curseur glissant est positionné en CSS depuis l'attribut
 // data-theme-pref de <html> (posé avant l'hydratation) : il est déjà au bon
 // endroit au premier paint, sans saut. Clavier : motif radiogroup ARIA —

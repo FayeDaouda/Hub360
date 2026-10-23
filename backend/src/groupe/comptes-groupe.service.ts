@@ -80,7 +80,7 @@ export class ComptesGroupeService {
   async lister() {
     const [societes, roles, affectations, dossiers, cellules] = await Promise.all([
       this.prisma.societe.findMany({
-        where: { actif: true },
+        where: { actif: true, accesOuvert: true },
         select: { id: true, nom: true, slug: true },
         orderBy: { nom: 'asc' },
       }),

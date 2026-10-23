@@ -49,6 +49,10 @@ model Societe {
   // (téléversé) au lieu d'être généré depuis le modèle. null = toujours modèle.
   contratSeuilSurMesureHt      Decimal? @map("contrat_seuil_sur_mesure_ht") @db.Decimal(14, 0)
   actif                        Boolean  @default(true)
+  // Société du groupe annoncée sur le portail avant d'être ouverte (carte
+  // « Bientôt », non cliquable) : pas d'écran de connexion, absente des
+  // listes de gestion (RH, comptes du groupe, rappels) tant que false.
+  accesOuvert                  Boolean  @default(true) @map("acces_ouvert")
   createdAt                    DateTime @default(now()) @map("created_at")
 
   roles                 UtilisateurSocieteRole[]

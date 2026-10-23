@@ -1120,9 +1120,6 @@ button {
 :root[data-theme-pref='dark'] .selecteur-theme-curseur {
   transform: translateX(100%);
 }
-:root[data-theme-pref='system'] .selecteur-theme-curseur {
-  transform: translateX(200%);
-}
 
 .selecteur-theme-option {
   position: relative;
@@ -1140,8 +1137,7 @@ button {
 .selecteur-theme-option:hover,
 :root:not([data-theme-pref]) .selecteur-theme-option[data-valeur='light'],
 :root[data-theme-pref='light'] .selecteur-theme-option[data-valeur='light'],
-:root[data-theme-pref='dark'] .selecteur-theme-option[data-valeur='dark'],
-:root[data-theme-pref='system'] .selecteur-theme-option[data-valeur='system'] {
+:root[data-theme-pref='dark'] .selecteur-theme-option[data-valeur='dark'] {
   color: var(--st-texte-actif);
 }
 .selecteur-theme-option:focus-visible {
@@ -1921,7 +1917,7 @@ button {
 /* Survol : seulement avec une vraie souris (pas d'état « collé » après un
    tap sur mobile). */
 @media (hover: hover) and (pointer: fine) {
-  .societe-carte:hover {
+  a.societe-carte:hover {
     transform: translateY(-4px);
     border-color: color-mix(in srgb, var(--societe-color) 50%, var(--auth-carte-bord));
     box-shadow:
@@ -1929,10 +1925,10 @@ button {
       0 30px 70px -28px var(--auth-carte-ombre),
       0 0 44px -14px color-mix(in srgb, var(--societe-color) 70%, transparent);
   }
-  .societe-carte:hover::after {
+  a.societe-carte:hover::after {
     transform: translateX(110%);
   }
-  .societe-carte:hover .societe-carte-fleche {
+  a.societe-carte:hover .societe-carte-fleche {
     color: #fff;
     border-color: transparent;
     background: linear-gradient(135deg, var(--auth-accent), var(--auth-accent-2));
@@ -1949,6 +1945,28 @@ button {
 }
 .societe-carte.is-leaving {
   transform: scale(0.97);
+}
+
+/* Société annoncée, pas encore ouverte : même carte, en retrait (logo et nom
+   adoucis), pastille « Bientôt » à la place de la flèche. Aucun survol (les
+   effets sont réservés à a.societe-carte). */
+.societe-carte--bientot {
+  cursor: default;
+}
+.societe-carte--bientot .societe-carte-logo,
+.societe-carte--bientot .societe-carte-corps {
+  opacity: 0.72;
+}
+.societe-carte-bientot {
+  flex: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--auth-texte-doux);
+  background: var(--auth-champ-fond);
+  border: 1px solid var(--auth-champ-bord);
 }
 
 .societe-carte.societe-carte--squelette {

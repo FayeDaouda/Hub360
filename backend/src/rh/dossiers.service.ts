@@ -143,7 +143,7 @@ export class DossiersPersonnelService {
   async options() {
     const [societes, collaborateurs, comptes] = await Promise.all([
       this.prisma.societe.findMany({
-        where: { actif: true },
+        where: { actif: true, accesOuvert: true },
         select: { id: true, nom: true },
         orderBy: { nom: 'asc' },
       }),
@@ -429,8 +429,8 @@ export class DossiersPersonnelService {
     const { societeId, collaborateurId, utilisateurId, ...reste } = dto;
     const data: Prisma.DossierPersonnelUncheckedUpdateInput = { ...reste };
     if (societeId) {
-      const s = await this.prisma.societe.findFirst({ where: { id: societeId, actif: true } });
-      if (!s) throw new BadRequestException('Société inconnue ou inactive.');
+      const s = await this.prisma.societe.findFirst({ where: { id: societeId, actif: true, accesOuvert: true } });
+      if (!s) throw new BadRequestException('Société inconnue, inactive ou pas encore ouverte.');
       data.societeId = societeId;
     }
     if (collaborateurId !== undefined) {

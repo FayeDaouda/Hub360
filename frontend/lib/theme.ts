@@ -6,18 +6,17 @@ import { useCallback, useSyncExternalStore } from 'react';
 // validée sur maquette). Choisie et mémorisée par la personne (localStorage,
 // par appareil, même motif que notification-sound.ts). Le défaut reste
 // 'dark' : l'app a UN mode assumé, pas une simple copie de la préférence OS.
-// « system » (ajouté avec le nouvel écran de connexion, maquette sept. 2026)
-// suit le réglage de l'appareil — mais seulement si la personne le choisit
-// explicitement, jamais par défaut.
+// Deux choix seulement : l'option « Système » (suivre l'appareil) a été
+// retirée le 23/10/2026 (revue du portail) — une ancienne valeur « system »
+// encore stockée retombe sur le défaut.
 export type Theme = 'dark' | 'light';
-export type PreferenceTheme = Theme | 'system';
+export type PreferenceTheme = Theme;
 
 const CLE_THEME = 'hub_theme';
 const PREFERENCE_PAR_DEFAUT: PreferenceTheme = 'dark';
-const REQUETE_OS_CLAIR = '(prefers-color-scheme: light)';
 
 function estPreference(valeur: unknown): valeur is PreferenceTheme {
-  return valeur === 'dark' || valeur === 'light' || valeur === 'system';
+  return valeur === 'dark' || valeur === 'light';
 }
 
 export function lirePreferenceTheme(): PreferenceTheme {
@@ -29,29 +28,22 @@ export function lirePreferenceTheme(): PreferenceTheme {
   }
 }
 
-export function resoudreTheme(preference: PreferenceTheme): Theme {
-  if (preference !== 'system') return preference;
-  if (typeof window === 'undefined' || !window.matchMedia) return 'dark';
-  return window.matchMedia(REQUETE_OS_CLAIR).matches ? 'light' : 'dark';
-}
-
-// Pose le thème effectif ET la préférence sur <html> : data-theme pilote
-// tous les jetons CSS, data-theme-pref permet aux sélecteurs (ex. le curseur
+// Pose le thème sur <html> : data-theme pilote tous les jetons CSS,
+// data-theme-pref (même valeur depuis le retrait de « Système ») permet aux sélecteurs (ex. le curseur
 // de SelecteurTheme) d'afficher le bon état dès le premier paint, avant
 // l'hydratation React. Transition en fondu (View Transitions) quand la
 // bascule vient d'un geste de la personne, instantanée sinon.
 function appliquer(preference: PreferenceTheme, anime: boolean): void {
   if (typeof document === 'undefined') return;
   const racine = document.documentElement;
-  const theme = resoudreTheme(preference);
   racine.dataset.themePref = preference;
-  if (racine.dataset.theme === theme) return;
+  if (racine.dataset.theme === preference) return;
 
   // startViewTransition exécute ce rappel de façon asynchrone (après la
   // capture de l'ancien état) : on notifie ici, pas seulement à l'appelant,
   // sinon les abonnés reliraient l'ancien data-theme.
   const basculer = () => {
-    racine.dataset.theme = theme;
+    racine.dataset.theme = preference;
     notifier();
   };
   const mouvementReduit = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -93,24 +85,15 @@ export function definirPreferenceTheme(preference: PreferenceTheme): void {
 }
 
 // Synchronisation globale, démarrée une fois (composant SynchroTheme dans le
-// layout racine) : suit le réglage OS en direct quand « system » est choisi,
-// et répercute un changement fait dans un autre onglet.
+// layout racine) : répercute un changement fait dans un autre onglet.
 export function demarrerSynchroTheme(): () => void {
-  const requeteOs = window.matchMedia(REQUETE_OS_CLAIR);
-  const surChangementOs = () => {
-    if (lirePreferenceTheme() !== 'system') return;
-    appliquer('system', true);
-    notifier();
-  };
   const surStockage = (evenement: StorageEvent) => {
     if (evenement.key !== CLE_THEME) return;
     appliquer(lirePreferenceTheme(), false);
     notifier();
   };
-  requeteOs.addEventListener('change', surChangementOs);
   window.addEventListener('storage', surStockage);
   return () => {
-    requeteOs.removeEventListener('change', surChangementOs);
     window.removeEventListener('storage', surStockage);
   };
 }
@@ -132,4 +115,4 @@ export function usePreferenceTheme() {
 // les attributs sur <html> dès le premier paint pour éviter un flash
 // clair→sombre à chaque chargement. Chaîne littérale (pas d'import) : injectée
 // telle quelle dans un <script> côté serveur.
-export const SCRIPT_THEME_INITIAL = `(function(){var d=document.documentElement,p='${PREFERENCE_PAR_DEFAUT}',t;try{var v=localStorage.getItem('${CLE_THEME}');if(v==='light'||v==='dark'||v==='system')p=v;}catch(e){}t=p;if(p==='system'){try{t=window.matchMedia('${REQUETE_OS_CLAIR}').matches?'light':'dark';}catch(e){t='dark';}}d.dataset.themePref=p;d.dataset.theme=t;})();`;
+export const SCRIPT_THEME_INITIAL = `(function(){var d=document.documentElement,p='${PREFERENCE_PAR_DEFAUT}';try{var v=localStorage.getItem('${CLE_THEME}');if(v==='light'||v==='dark')p=v;}catch(e){}d.dataset.themePref=p;d.dataset.theme=p;})();`;

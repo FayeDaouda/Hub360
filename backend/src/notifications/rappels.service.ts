@@ -356,7 +356,8 @@ export class RappelsService implements OnApplicationBootstrap {
     const mois = moisAReporter(jour);
     if (!mois.length) return [];
     const [societes, deposes] = await Promise.all([
-      this.prisma.societe.findMany({ select: { id: true } }),
+      // Sociétés « Bientôt » : personne n'y dépose encore de reporting.
+      this.prisma.societe.findMany({ where: { accesOuvert: true }, select: { id: true } }),
       this.prisma.reportingMensuel.findMany({ where: { mois: { in: mois } }, select: { societeId: true, type: true, mois: true } }),
     ]);
     const fait = new Set(deposes.map((d) => `${d.societeId}:${d.type}:${d.mois}`));

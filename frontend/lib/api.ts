@@ -1,4 +1,4 @@
-import { Session, Societe } from './types';
+import { Session, Societe, SocietePortail } from './types';
 
 // Navigateur : NEXT_PUBLIC_API_URL (« /api » derrière Caddy en production).
 // Serveur Next (portail, page de connexion) : une URL relative n'a pas de
@@ -9,7 +9,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:3001/api';
 
-export async function getSocietes(): Promise<Societe[]> {
+export async function getSocietes(): Promise<SocietePortail[]> {
   const res = await fetch(`${API_URL}/societes`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Impossible de charger les sociétés');
   return res.json();

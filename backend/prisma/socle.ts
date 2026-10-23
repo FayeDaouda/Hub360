@@ -4,7 +4,7 @@ import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
 
 // Socle RÉEL du HUB : rôles, modules, société Grey Concrete (pied des
-// documents), matrice de permissions validée par le boss, catalogue réel,
+// documents), autres sociétés du groupe annoncées « Bientôt », matrice de permissions validée par le boss, catalogue réel,
 // annexes de contrat. Aucune donnée fictive — partagé par le seed de démo
 // (seed.ts) et l'amorçage d'une vraie installation (demarrage.ts).
 // Idempotent : upserts, rejouable sans rien dupliquer.
@@ -85,6 +85,36 @@ export async function installerSocle(prisma: PrismaClient) {
       where: { societeId_moduleId: { societeId: grey.id, moduleId: mod.id } },
       update: {},
       create: { societeId: grey.id, moduleId: mod.id, actif: true },
+    });
+  }
+
+  // --- Autres sociétés du groupe, annoncées « Bientôt » sur le portail ------
+  // Logos fournis (public/logos) ; Grey Holding n'a pas de symbole carré :
+  // sa tuile reprend les tracés de son logo, « GREY » sur « HOLDING ».
+  // Secteur pas encore communiqué : vide (rien d'inventé). Extra viendra avec
+  // son logo. update vide : une fois ouverte (accesOuvert passé à true), un
+  // re-seed ne la referme pas.
+  const SOCIETES_BIENTOT = [
+    {
+      nom: "CODE'D Group",
+      slug: 'coded',
+      logoUrl: '/logos/coded.jpg',
+      logoUrlSombre: '/logos/coded.jpg',
+      couleurMarque: '#e84e0e',
+    },
+    {
+      nom: 'Grey Holding',
+      slug: 'grey-holding',
+      logoUrl: '/logos/grey-holding.svg',
+      logoUrlSombre: '/logos/grey-holding-symbole.svg',
+      couleurMarque: '#b1b1b1',
+    },
+  ];
+  for (const societe of SOCIETES_BIENTOT) {
+    await prisma.societe.upsert({
+      where: { slug: societe.slug },
+      update: {},
+      create: { ...societe, accesOuvert: false },
     });
   }
 

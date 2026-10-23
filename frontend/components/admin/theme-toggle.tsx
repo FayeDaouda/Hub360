@@ -14,10 +14,6 @@ const ETAT: Record<PreferenceTheme, { titre: string; description: string }> = {
     titre: 'Mode clair activé',
     description: 'Fond clair et lumineux, même signature verre dépoli.',
   },
-  system: {
-    titre: 'Mode système activé',
-    description: 'Suit automatiquement le réglage clair/sombre de votre appareil.',
-  },
 };
 
 // Bascule clair/sombre du topbar admin — refonte dark/light, sept. 2026
