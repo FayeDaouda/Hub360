@@ -7,9 +7,17 @@ import type { RemettreTacheDto } from './dto';
 import { motifNonAssignable, tachesAssignees } from './assignation';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
+import { apresJoursOuvres, joursOuvresApres } from './calendrier';
 import { agitCommeDplg, collaborateurDuCompte, peutDecider, peutQualifier, peutViser, ROLE_CTO, verifierCircuit } from './validation';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
+
+// Délai de relance : 3 jours ouvrés après le dépôt, puis après chaque relance.
+export const DELAI_RELANCE_JOURS_OUVRES = 3;
+export function relancePossibleLe(remisLe: Date, derniereRelance: Date | null, feries: Set<string>): string {
+  const base = [remisLe, derniereRelance].filter((d): d is Date => !!d).reduce((a, b) => (a > b ? a : b));
+  return apresJoursOuvres(base.toISOString().slice(0, 10), DELAI_RELANCE_JOURS_OUVRES, feries);
+}
 
 type Acteur = { userId: string };
 type ActeurRole = Acteur & { role: string };
@@ -485,12 +493,87 @@ export class TachesProjetService {
   // un compte et n'est pas absent ; sinon l'Architecte DPLG (ou son
   // suppléant) ; le CTO pour le travail d'un Dir. GC.
   private async valideurs(ctx: ContexteDecision, assigneId: string | null, chefId: string | null): Promise<string[]> {
-    if (assigneId && ctx.dplgCollaborateurs.has(assigneId)) return ctx.comptesCto;
+    return (await this.circuit(ctx, assigneId, chefId)).ids;
+  }
+
+  // Le même circuit, avec le rôle de la personne qui valide (affiché à l'assigné).
+  private async circuit(ctx: ContexteDecision, assigneId: string | null, chefId: string | null): Promise<{ ids: string[]; role: string }> {
+    if (assigneId && ctx.dplgCollaborateurs.has(assigneId)) return { ids: ctx.comptesCto, role: 'CTO' };
     if (chefId && chefId !== assigneId && !ctx.collaborateursAbsents.has(chefId)) {
       const chef = await this.comptesDe([chefId]);
-      if (chef.length) return chef;
+      if (chef.length) return { ids: chef, role: 'chef de team' };
     }
-    return ctx.comptesDplg;
+    return { ids: ctx.comptesDplg, role: 'Architecte DPLG' };
+  }
+
+  // Qui valide, en clair, pour l'assigné (Mes tâches, panneau) : les MÊMES
+  // personnes que celles prévenues au dépôt (circuit plus haut), et non le
+  // nom du signataire des contrats, souvent vide. null : personne à prévenir.
+  async nomsValideurs(societeId: string, taches: { id: string; assigneId: string | null; chefId: string | null }[]): Promise<Map<string, string | null>> {
+    const resultat = new Map<string, string | null>();
+    if (!taches.length) return resultat;
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const parTache = await Promise.all(
+      taches.map(async (t) => ({ id: t.id, ...(await this.circuit(ctx, t.assigneId, t.chefId)) })),
+    );
+    const personnes = await this.prisma.utilisateur.findMany({
+      where: { id: { in: [...new Set(parTache.flatMap((x) => x.ids))] }, actif: true },
+      select: { id: true, prenom: true, nom: true },
+    });
+    const nomDe = new Map(personnes.map((u) => [u.id, `${u.prenom} ${u.nom}`.trim()]));
+    for (const x of parTache) {
+      const noms = x.ids.map((id) => nomDe.get(id)).filter((n): n is string => !!n);
+      resultat.set(x.id, noms.length ? `${noms.join(' ou ')} (${x.role})` : null);
+    }
+    return resultat;
+  }
+
+  // Relance du validateur par l'assigné (Mes tâches, lot D, règle validée le
+  // 23/10/2026) : possible 3 jours ouvrés après le dépôt, puis 3 jours ouvrés
+  // après la relance précédente. Prévient les mêmes personnes que le dépôt et
+  // laisse une trace dans l'historique de la tâche.
+  async relancer(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string) {
+    verifierCircuit(acteur.role);
+    const tache = await this.prisma.tacheProjet.findFirst({
+      where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
+      select: {
+        id: true,
+        libelle: true,
+        statut: true,
+        version: true,
+        assigneId: true,
+        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        evenements: { where: { type: { in: ['remise', 'relance'] } }, orderBy: { creeLe: 'desc' }, select: { type: true, creeLe: true } },
+      },
+    });
+    if (!tache) throw new NotFoundException('Tâche introuvable');
+    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée relance son validateur.');
+    if (tache.statut !== 'a_valider') throw new ConflictException('Cette tâche n’attend pas de validation.');
+    const remise = tache.evenements.find((e) => e.type === 'remise');
+    const relance = tache.evenements.find((e) => e.type === 'relance');
+    if (!remise) throw new ConflictException('Aucun dépôt à relancer.');
+    const feries = (await this.reglages.joursFeries([societeId])).get(societeId) ?? new Set<string>();
+    const possibleLe = relancePossibleLe(remise.creeLe, relance?.creeLe ?? null, feries);
+    if (aujourdhui() < possibleLe) {
+      throw new ConflictException(`Relance possible à partir du ${possibleLe.split('-').reverse().join('/')}.`);
+    }
+    const jours = joursOuvresApres(remise.creeLe.toISOString().slice(0, 10), aujourdhui(), feries);
+    const vNN = `v${String(tache.version).padStart(2, '0')}`;
+    await this.prisma.evenementTacheProjet.create({
+      data: { tacheId: tache.id, type: 'relance', parId: acteur.userId, detail: `Relance du validateur · ${vNN} déposée il y a ${jours} jours ouvrés` },
+    });
+    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const valideurs = await this.valideurs(ctx, collaborateurId, tache.projet.cellules[0]?.cellule.dispatcherId ?? null);
+    await this.notifier(
+      societeId,
+      projetId,
+      tache.projet.code,
+      'tache_remise',
+      `Relance · ${vNN} à valider depuis ${jours} jours ouvrés · ${tache.projet.code} · ${tache.libelle}`,
+      acteur.userId,
+      valideurs,
+    );
   }
 
   // La nouvelle date dépasse-t-elle la livraison du projet (jour J de son horizon) ?

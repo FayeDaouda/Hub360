@@ -2350,6 +2350,7 @@ enum TypeEvenementTache {
   reprise
   prolongation // demande ou décision de prolongation
   visa // visa DPLG apposé ou refusé (revue Dir. GC, 21/10/2026)
+  relance // l'assigné relance son validateur (3 jours ouvrés sans réponse)
 }
 
 model EvenementTacheProjet {

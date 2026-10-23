@@ -21,6 +21,8 @@ export type TacheAssignee = Tache & {
   valideeLe: Date | null;
   remisLe: Date | null; // dernière remise
   renvoiMotif: string | null; // dernier renvoi en reprise
+  chefId: string | null; // chef de team de la cellule du projet (circuit de validation)
+  derniereRelance: Date | null; // dernière relance du validateur par l'assigné
 };
 
 const numeroEtape = (n: number) => String(n).padStart(2, '0');
@@ -40,13 +42,16 @@ export async function chargerTachesAssignees(prisma: PrismaService, collaborateu
       version: true,
       valideeLe: true,
       carte: { select: { libelle: true, etapeNumero: true, etapeLibelle: true } },
-      projet: { select: { id: true, code: true, programme: true, client: { select: { nom: true } } } },
-      evenements: { where: { type: { in: ['remise', 'reprise'] } }, orderBy: { creeLe: 'desc' }, select: { type: true, detail: true, creeLe: true } },
+      projet: {
+        select: { id: true, code: true, programme: true, client: { select: { nom: true } }, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } },
+      },
+      evenements: { where: { type: { in: ['remise', 'reprise', 'relance'] } }, orderBy: { creeLe: 'desc' }, select: { type: true, detail: true, creeLe: true } },
     },
   });
   return taches.map((t) => {
     const remise = t.evenements.find((e) => e.type === 'remise') ?? null;
     const reprise = t.evenements.find((e) => e.type === 'reprise') ?? null;
+    const relance = t.evenements.find((e) => e.type === 'relance') ?? null;
     return {
       id: t.id,
       collaborateurId: t.assigneId!,
@@ -66,6 +71,8 @@ export async function chargerTachesAssignees(prisma: PrismaService, collaborateu
       remisLe: remise?.creeLe ?? null,
       // « Remise vNN renvoyée en reprise : motif » → motif
       renvoiMotif: t.statut === 'reprise' && reprise ? reprise.detail.replace(/^.*?reprise : /, '') : null,
+      chefId: t.projet.cellules?.[0]?.cellule.dispatcherId ?? null,
+      derniereRelance: relance?.creeLe ?? null,
     };
   });
 }

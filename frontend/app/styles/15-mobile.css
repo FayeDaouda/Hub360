@@ -1111,6 +1111,24 @@ tr.is-demandeur .cal-nom {
   font-size: 0.88rem;
   font-weight: 600;
 }
+/* Relance du validateur : discrète, sous la tâche, après 3 jours ouvrés. */
+.mt-cote-item {
+  display: grid;
+  justify-items: start;
+  gap: var(--e-4);
+  padding-bottom: var(--e-4);
+}
+.mt-cote-relancer,
+.mt-cote-relance-ok {
+  margin-left: 0.75rem;
+}
+.mt-cote-relance-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-4);
+  font-size: var(--t-12);
+  color: var(--ok-texte);
+}
 .mt-cote-meta {
   font-size: 0.75rem;
   color: var(--text-muted);

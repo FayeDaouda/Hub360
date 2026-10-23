@@ -4,7 +4,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
 import type { EtatTache } from '../projets/gabarit/etats';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
-import { TachesProjetService } from '../projets/gabarit/taches-projet.service';
+import { relancePossibleLe, TachesProjetService } from '../projets/gabarit/taches-projet.service';
 import { contexteDecision } from '../projets/gabarit/suppleance';
 import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
 import { ouDossierDuCompte } from './mon-compte';
@@ -49,6 +49,13 @@ export class TachesService {
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
     const absents = joursAbsents((dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })), feries);
     const etats = taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
+    // En validation : qui valide (mêmes personnes que celles prévenues) et
+    // quand une relance devient possible (3 jours ouvrés).
+    const enValidation = taches.filter((t) => t.statut === 'a_valider');
+    const validateurs = await this.tachesProjet.nomsValideurs(
+      societeId,
+      enValidation.map((t) => ({ id: t.id, assigneId: t.collaborateurId, chefId: t.chefId })),
+    );
 
     const lignes = taches
       .map((t) => {
@@ -77,6 +84,8 @@ export class TachesService {
           remisLe: t.statut === 'a_valider' || t.statut === 'validee' ? t.remisLe : null,
           valideLe: t.valideeLe,
           renvoiMotif: t.renvoiMotif,
+          validateur: t.statut === 'a_valider' ? (validateurs.get(t.id) ?? null) : null,
+          relancePossibleLe: t.statut === 'a_valider' && t.remisLe ? relancePossibleLe(t.remisLe, t.derniereRelance, feries) : null,
         };
       })
       .sort((x, y) => (x.echeance ?? '9999').localeCompare(y.echeance ?? '9999'));
@@ -97,6 +106,11 @@ export class TachesService {
 
   async remettre(a: Acteur, projetId: string, tacheId: string, corps: RemettreTacheDto = {}) {
     await this.tachesProjet.remettre(a.societeId, a, projetId, tacheId, corps);
+    return this.mesTaches(a);
+  }
+
+  async relancer(a: Acteur, projetId: string, tacheId: string) {
+    await this.tachesProjet.relancer(a.societeId, a, projetId, tacheId);
     return this.mesTaches(a);
   }
 

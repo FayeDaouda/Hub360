@@ -47,6 +47,17 @@ export function joursOuvresApres(de: string, a: string, feries: Feries = AUCUN_F
   return n;
 }
 
+// Date du n-ième jour ouvré strictement après `de` (ex. relance possible
+// 3 jours ouvrés après un dépôt).
+export function apresJoursOuvres(de: string, n: number, feries: Feries = AUCUN_FERIE): string {
+  let d = de;
+  for (let k = 0; k < n; ) {
+    d = lendemain(d);
+    if (estOuvre(d, feries)) k++;
+  }
+  return d;
+}
+
 // Écart de performance d'une tâche validée, en heures ouvrées : positif =
 // avance (heures restant jusqu'à l'échéance incluse), négatif = retard.
 export function ecartHeures(valideeLe: string, echeance: string, feries: Feries = AUCUN_FERIE): number {

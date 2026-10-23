@@ -4,14 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { createPortal, flushSync } from 'react-dom';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlarmClock, AtSign, CalendarClock, Check, CheckCircle2, ChevronDown, Ellipsis, Hourglass, RotateCcw, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, AtSign, BellRing, CalendarClock, Check, CheckCircle2, ChevronDown, Ellipsis, Hourglass, RotateCcw, X, type LucideIcon } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
-import { ecartJours, getMesTaches, getTachesAValider, remettreTache } from '@/lib/mon-espace';
+import { ecartJours, getMesTaches, getTachesAValider, relancerTache, remettreTache } from '@/lib/mon-espace';
 import { getMesMentions, marquerMentionLue, publierCommentaire, type CorpsRemise, type MentionRecue } from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
@@ -110,6 +110,8 @@ export function MesTaches({ slug }: { slug: string }) {
   const base = `/admin/${slug}`;
   const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [donnees, setDonnees] = useState<MesTachesApi | null>(null);
+  // Relance du validateur, par tâche (aside « Chez mon N+1 »).
+  const [relances, setRelances] = useState<Record<string, 'envoi' | 'ok' | { erreur: string }>>({});
   const [mentions, setMentions] = useState<MentionRecue[]>([]);
   const [aDecider, setADecider] = useState({ taches: 0, absences: 0 });
   // ?filtre= : lien d'une tuile de Projets (« Mes tâches en retard »…).
@@ -346,6 +348,18 @@ export function MesTaches({ slug }: { slug: string }) {
   function rafraichir() {
     void chargerTaches();
     void chargerMentions();
+  }
+
+  // Relance du validateur : la liste revient du serveur (prochaine relance
+  // repoussée de 3 jours ouvrés) ; « Relance envoyée » reste affiché.
+  async function relancer(t: TacheMonEspace) {
+    setRelances((r) => ({ ...r, [t.id]: 'envoi' }));
+    try {
+      setDonnees(await relancerTache(slug, t));
+      setRelances((r) => ({ ...r, [t.id]: 'ok' }));
+    } catch (e) {
+      setRelances((r) => ({ ...r, [t.id]: { erreur: e instanceof Error ? e.message : 'Relance impossible.' } }));
+    }
   }
 
   // Dépôt confirmé dans la fenêtre : affiché comme fait, envoyé après le
@@ -604,21 +618,43 @@ export function MesTaches({ slug }: { slug: string }) {
                 <p className="mt-cote-vide">Aucune tâche en attente de validation.</p>
               ) : (
                 <ul className="mt-cote-liste">
-                  {g.attente.map((t) => (
-                    <li key={t.id}>
-                      <button
-                        type="button"
-                        className="mt-cote-tache"
-                        style={transition(t.id)}
-                        onClick={() => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false })}
-                      >
-                        <span className="mt-cote-titre">{t.libelle}</span>
-                        <span className="mt-cote-meta">
-                          v{String(t.version).padStart(2, '0')} · {t.remisLe ? attenteDepuis(t.remisLe, aujourdhui) : 'en validation'}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
+                  {g.attente.map((t) => {
+                    const relance = relances[t.id];
+                    const relancable = !!t.relancePossibleLe && t.relancePossibleLe <= aujourdhui && relance !== 'ok';
+                    return (
+                      <li key={t.id} className="mt-cote-item">
+                        <button
+                          type="button"
+                          className="mt-cote-tache"
+                          style={transition(t.id)}
+                          onClick={() => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false })}
+                        >
+                          <span className="mt-cote-titre">{t.libelle}</span>
+                          <span className="mt-cote-meta">
+                            v{String(t.version).padStart(2, '0')} · {t.remisLe ? attenteDepuis(t.remisLe, aujourdhui) : 'en validation'}
+                          </span>
+                          <span className="mt-cote-meta">chez {t.validateur ?? 'un validateur à désigner'}</span>
+                        </button>
+                        {relance === 'ok' ? (
+                          <span className="mt-cote-relance-ok" role="status">
+                            <Check size={14} aria-hidden /> Relance envoyée
+                          </span>
+                        ) : (
+                          relancable && (
+                            <button
+                              type="button"
+                              className="btn-ghost btn-ghost--sm mt-cote-relancer"
+                              disabled={relance === 'envoi'}
+                              onClick={() => void relancer(t)}
+                            >
+                              <BellRing size={14} aria-hidden /> {relance === 'envoi' ? 'Envoi…' : 'Relancer'}
+                            </button>
+                          )
+                        )}
+                        {relance && typeof relance === 'object' && <span className="field-erreur">{relance.erreur}</span>}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

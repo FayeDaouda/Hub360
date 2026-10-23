@@ -1707,6 +1707,10 @@ export type TacheMonEspace = {
   remisLe: string | null;
   valideLe: string | null;
   renvoiMotif: string | null; // tant que la tâche est à reprendre
+  // En validation : qui valide (« Aïssatou Faye (chef de team) »), null si
+  // personne à prévenir ; date à partir de laquelle on peut le relancer.
+  validateur: string | null;
+  relancePossibleLe: string | null;
 };
 
 export type StatsPerformances = {

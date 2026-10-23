@@ -54,6 +54,7 @@ export const LIBELLE_PAIEMENT_SALAIRE: Record<ModePaiementSalaire, string> = {
 // Remise et validation des tâches du gabarit (mêmes règles que Projets) :
 //   GET  …/mon-espace/taches                              mes tâches + stats
 //   POST …/mon-espace/taches/:projetId/:tacheId/remise
+//   POST …/mon-espace/taches/:projetId/:tacheId/relance
 //   GET  …/taches/a-valider                               remises qui m'attendent
 //   POST …/taches/:projetId/:tacheId/decision             { decision, motif? }
 type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
@@ -61,6 +62,9 @@ type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
 export const getMesTaches = (slug: string) => apiSociete<MesTaches>(slug, '/mon-espace/taches');
 export const remettreTache = (slug: string, t: TacheMonEspace, corps: CorpsRemise = {}) =>
   apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/remise`, { method: 'POST', body: corps });
+// Relancer son validateur (3 jours ouvrés après le dépôt, puis après la relance précédente).
+export const relancerTache = (slug: string, t: TacheMonEspace) =>
+  apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/relance`, { method: 'POST' });
 // Fichier d'une remise à valider (le valideur, ou l'assigné).
 export const telechargerPieceRemise = (slug: string, t: TacheAValider, pieceId: string) =>
   telecharger(slug, `/taches/${t.projetId}/${t.id}/pieces/${pieceId}`);
