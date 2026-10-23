@@ -289,7 +289,7 @@ export function AValiderCfo({
             <Banknote size={16} />
           </span>
           <span>
-            <span className="avc-chiffre-libelle">Encaissé ce mois-ci</span>
+            <span className="avc-chiffre-libelle">Encaissé ce mois</span>
             <strong>{factures ? formatMontantCompact(tresorerie.encaisseMois) : '…'}</strong>
           </span>
         </div>

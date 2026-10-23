@@ -417,15 +417,15 @@ export default function FinancesPage({ params }: Props) {
             },
             {
               cle: 'facture',
-              label: 'Facturé TTC',
+              label: `Facturé en ${kpi.annee}`,
               valeur: formatMontant(kpi.facture.montant),
-              sousTexte: `${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
+              sousTexte: `TTC · ${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
               icone: FileText,
               degrade: DEGRADE_ETAT.marque,
             },
             {
               cle: 'encaisse',
-              label: 'Encaissé',
+              label: `Encaissé en ${kpi.annee}`,
               valeur: formatMontant(kpi.encaisse.montant),
               sousTexte: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
               icone: Banknote,
@@ -435,9 +435,9 @@ export default function FinancesPage({ params }: Props) {
               cle: 'reste',
               label: 'Reste à encaisser',
               valeur: formatMontant(kpi.resteAEncaisser.montant),
-              sousTexte: `${pluriel(kpi.resteAEncaisser.enRetard, 'facture')} en retard`,
+              sousTexte: `dont ${formatMontantCompact(kpi.resteAEncaisser.enRetard.montant)} en retard · ${formatMontantCompact(kpi.resteAEncaisser.aEchoir.montant)} à échoir`,
               icone: Clock,
-              degrade: DEGRADE_ETAT[etatEnRetard(kpi.resteAEncaisser.enRetard)],
+              degrade: DEGRADE_ETAT[etatEnRetard(kpi.resteAEncaisser.enRetard.nombre)],
             },
           ]}
         />

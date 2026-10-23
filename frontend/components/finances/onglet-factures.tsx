@@ -27,7 +27,7 @@ export function OngletFactures({
 }: {
   factures: FactureCentrale[];
   onOuvrir: (f: FactureCentrale) => void;
-  filtreInitial?: FiltreFacture; // ?filtre= (tuile « Reste à encaisser en retard » du Pilotage)
+  filtreInitial?: FiltreFacture; // ?filtre= (tuile « En retard de paiement » du Pilotage)
 }) {
   const [filtre, setFiltre] = useState<FiltreFacture>(filtreInitial);
   const visibles = factures.filter((f) => dansFiltreFacture(f, filtre));

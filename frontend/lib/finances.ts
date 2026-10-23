@@ -105,23 +105,40 @@ export function parMois<T extends { creeLe: string }>(liste: T[]): { mois: strin
 export const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // --- Tuiles ------------------------------------------------------------------------
-export function indicateursFinances(devis: Devis[], factures: FactureCentrale[]) {
+// Libellés et périodes harmonisés (23/10/2026, décision du user) : les cumuls
+// « Facturé » et « Encaissé » portent sur l'année civile en cours (= exercice
+// SYSCOHADA), donc sur la même période — « % du facturé » a un sens. Le reste
+// à encaisser n'a pas de période : une facture ouverte reste due, quelle que
+// soit sa date ; il se scinde en « en retard » (échu) et « à échoir ».
+export function indicateursFinances(devis: Devis[], factures: FactureCentrale[], maintenant = new Date()) {
+  const annee = String(maintenant.getFullYear());
   const enCours = devis.filter((d) => filtreDevis(d) === 'en_cours');
   const acceptes = devis.filter((d) => filtreDevis(d) === 'acceptes').length;
   const refuses = devis.filter((d) => d.statutEffectif === 'refuse').length;
-  // Facturé net : tout document émis, avoirs (négatifs) compris — une facture
-  // annulée et son avoir s'annulent.
-  const emises = factures.filter(estEmise);
+  // Facturé net de l'année : tout document émis dans l'année, avoirs
+  // (négatifs) compris — une facture annulée et son avoir s'annulent.
+  const emises = factures.filter((f) => estEmise(f) && f.emiseLe?.startsWith(annee));
   const factureTtc = emises.reduce((s, f) => s + f.montantTtc, 0);
-  const encaisse = factures.reduce((s, f) => s + (f.estAvoir ? 0 : f.montantPaye), 0);
+  // Encaissé de l'année : paiements datés de l'année, quelle que soit l'année
+  // de la facture (une facture de décembre payée en janvier compte en janvier).
+  const encaisse = factures.reduce(
+    (s, f) => s + (f.estAvoir ? 0 : f.paiements.filter((p) => p.date.startsWith(annee)).reduce((t, p) => t + p.montant, 0)),
+    0,
+  );
+  const ouvertes = factures.filter(estOuverte);
+  const enRetard = ouvertes.filter((f) => f.statutEffectif === 'en_retard');
+  const montantRetard = enRetard.reduce((s, f) => s + f.resteAPayer, 0);
+  const montantOuvert = ouvertes.reduce((s, f) => s + f.resteAPayer, 0);
   return {
+    annee,
     offresEnCours: { montant: enCours.reduce((s, d) => s + d.montantTtc, 0), nombre: enCours.length },
     transformation: { pct: acceptes + refuses ? Math.round((acceptes / (acceptes + refuses)) * 100) : null, acceptes, refuses },
     facture: { montant: factureTtc, emises: emises.filter((f) => !f.estAvoir).length, aValider: factures.filter(aValiderCfo).length },
     encaisse: { montant: encaisse, pct: factureTtc > 0 ? Math.round((encaisse / factureTtc) * 100) : null },
     resteAEncaisser: {
-      montant: factures.filter(estOuverte).reduce((s, f) => s + f.resteAPayer, 0),
-      enRetard: factures.filter((f) => f.statutEffectif === 'en_retard').length,
+      montant: montantOuvert,
+      enRetard: { montant: montantRetard, nombre: enRetard.length },
+      aEchoir: { montant: montantOuvert - montantRetard, nombre: ouvertes.length - enRetard.length },
     },
   };
 }

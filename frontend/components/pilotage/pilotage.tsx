@@ -50,9 +50,9 @@ const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string
 // Libellé, icône et destination de chaque chiffre clé (valeurs et état :
 // serveur). Montants en FCFA ; le reste en nombre.
 const TUILES: Record<string, { libelle: string; icone: LucideIcon; montant?: boolean; chemin: string }> = {
-  facture_mois: { libelle: 'Facturé du mois', icone: ReceiptText, montant: true, chemin: 'facturation?onglet=factures' },
-  encaisse_mois: { libelle: 'Encaissé du mois', icone: Banknote, montant: true, chemin: 'facturation?onglet=factures' },
-  reste_retard: { libelle: 'Reste à encaisser en retard', icone: AlarmClock, montant: true, chemin: 'facturation?onglet=factures&filtre=en_retard' },
+  facture_mois: { libelle: 'Facturé ce mois', icone: ReceiptText, montant: true, chemin: 'facturation?onglet=factures' },
+  encaisse_mois: { libelle: 'Encaissé ce mois', icone: Banknote, montant: true, chemin: 'facturation?onglet=factures' },
+  reste_retard: { libelle: 'En retard de paiement', icone: AlarmClock, montant: true, chemin: 'facturation?onglet=factures&filtre=en_retard' },
   projets_ouverts: { libelle: 'Projets ouverts', icone: FolderKanban, chemin: 'projets' },
   pipeline: { libelle: 'Pipeline actif', icone: FolderOpen, chemin: 'crm' },
   fiches: { libelle: 'Fiches à compléter', icone: FileWarning, chemin: 'crm' },
@@ -111,7 +111,7 @@ export function Pilotage({ slug }: { slug: string }) {
 
   if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
   const t = vue.tuiles;
-  // « Reste à encaisser en retard » : la carte Factures de « À votre
+  // « En retard de paiement » : la carte Factures de « À votre
   // attention » quand elle est affichée (CEO), sinon Finances filtrées.
   const carteFactures = accueilCeo && !!attention?.factures?.length;
   const lien = (cle: string) =>
