@@ -111,11 +111,13 @@
 .eq-poste strong {
   font-size: 0.82rem;
 }
-/* Poste occupé : carte claire en thème sombre, sombre en thème clair. */
+/* Poste occupé : carte pleine sur la surface 2 (plus d'encre inversée,
+   blanche en thème sombre — lot 3 de l'audit UX) ; poste ouvert en ambre,
+   reporté en retrait. */
 .eq-poste--occupe {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--text) 90%, transparent);
-  color: var(--surface);
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+  color: var(--text);
 }
 .eq-poste--ouvert {
   border-color: var(--ocre);

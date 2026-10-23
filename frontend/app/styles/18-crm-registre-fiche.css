@@ -104,6 +104,36 @@
 .crm-tronque--programme {
   max-width: 15rem;
 }
+/* Registre (desktop) : le tableau tient dans la largeur à 1440 px — la
+   colonne Situation (statut du dossier) ne doit jamais être cachée hors
+   champ. Programme prend l'espace restant (≥ 7 rem, tronqué) ; Client et
+   Type passent à la ligne au lieu d'élargir le tableau. */
+.crm-registre .crm-c-programme {
+  width: 100%;
+  min-width: 7rem;
+  max-width: 0;
+}
+.crm-registre .crm-c-programme .crm-tronque--programme,
+.crm-registre .crm-c-programme .crm-manquant {
+  display: block;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-registre :is(.crm-c-client, .crm-c-type),
+.crm-registre .crm-c-client :is(.cell-fort, .cell-sub) {
+  white-space: normal;
+}
+.crm-registre :is(.crm-c-client, .crm-c-type) {
+  min-width: 6rem;
+  max-width: 12rem;
+}
+/* Grand écran : la place existe, le client garde son nom sur une ligne. */
+@media (min-width: 1400px) {
+  .crm-registre .crm-c-client {
+    min-width: 10.5rem;
+  }
+}
 .crm-tronque--apporteur {
   max-width: 13rem;
 }

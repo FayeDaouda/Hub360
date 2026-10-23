@@ -744,7 +744,7 @@ button.admin-user {
    TOUTES les pages admin ; ce chantier reste scopé au dashboard pour
    l'instant, cf. mémoire « progressif, module par module »). */
 .panel.glass-panel {
-  background: var(--glass-bg);
+  background: var(--surface-donnees);
   border-color: var(--glass-border);
 }
 
@@ -961,21 +961,15 @@ button:focus-visible .repli-icone {
 .admin-table-wrap {
   overflow-x: auto;
   background:
-    linear-gradient(to right, var(--surface) 30%, transparent) 0 0 / 28px 100% no-repeat,
-    linear-gradient(to left, var(--surface) 30%, transparent) 100% 0 / 28px 100% no-repeat,
-    radial-gradient(farthest-side at 0 50%, rgba(20, 20, 18, 0.12), transparent) 0 0 / 14px 100%
+    /* Couvercles de la couleur du panneau (--surface-donnees) : invisibles
+       sans débordement, ils masquent l'ombre en fin de course. */
+    linear-gradient(to right, var(--surface-donnees) 30%, transparent) 0 0 / 28px 100% no-repeat,
+    linear-gradient(to left, var(--surface-donnees) 30%, transparent) 100% 0 / 28px 100% no-repeat,
+    radial-gradient(farthest-side at 0 50%, var(--ombre-defilement), transparent) 0 0 / 14px 100%
       no-repeat,
-    radial-gradient(farthest-side at 100% 50%, rgba(20, 20, 18, 0.12), transparent) 100% 0 /
+    radial-gradient(farthest-side at 100% 50%, var(--ombre-defilement), transparent) 100% 0 /
       14px 100% no-repeat;
   background-attachment: local, local, scroll, scroll;
-}
-
-/* Sur un panneau en verre, le « couvercle » opaque (--surface) de ces ombres
-   dessinait une bande sombre au bord droit, même sans débordement — on
-   croyait la dernière colonne coupée. Retiré là (comme .fin-table-wrap) ;
-   l'indice de défilement reviendra avec les surfaces de données opaques. */
-.glass-panel .admin-table-wrap {
-  background: none;
 }
 
 /* Bloc « Projets en cours » : hauteur bornée à ~10 lignes plutôt que de

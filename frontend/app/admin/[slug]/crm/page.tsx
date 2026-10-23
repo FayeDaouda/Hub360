@@ -415,7 +415,7 @@ export default function CrmPage({ params }: Props) {
                   </ul>
                 </div>
 
-                <div className="admin-table-wrap admin-table-wrap--fixe crm-liste-desktop">
+                <div className="admin-table-wrap crm-liste-desktop">
                   <table className="admin-table crm-registre">
                     <thead>
                       <tr>
@@ -448,14 +448,14 @@ export default function CrmPage({ params }: Props) {
                                 <span className="pill crm-a-choisir">À choisir</span>
                               )}
                             </td>
-                            <td data-label="Client">
+                            <td data-label="Client" className="crm-c-client">
                               <span className="cell-stack">
                                 <span className="cell-fort">{projet.client.nom}</span>
                                 <span className="cell-sub">{projet.localite?.nom ?? projet.localisation}</span>
                               </span>
                             </td>
-                            <td data-label="Type">{projet.type ? TYPES_BIEN[projet.type] : '—'}</td>
-                            <td data-label="Programme">
+                            <td data-label="Type" className="crm-c-type">{projet.type ? TYPES_BIEN[projet.type] : '—'}</td>
+                            <td data-label="Programme" className="crm-c-programme">
                               {projet.programme.trim() ? (
                                 <span className="crm-tronque crm-tronque--programme" title={projet.programme}>
                                   {projet.programme}

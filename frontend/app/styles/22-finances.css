@@ -211,11 +211,6 @@
   background: color-mix(in oklch, var(--argile) 85%, transparent);
   color: #fff;
 }
-/* Ombres de défilement : leur « couvercle » opaque dessinait une bande sombre
-   sur le verre du panneau, même sans débordement. */
-.fin-table-wrap {
-  background: none;
-}
 .fin-table .num {
   white-space: nowrap;
 }

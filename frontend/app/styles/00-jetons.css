@@ -118,6 +118,14 @@
   --admin-texte-doux: var(--text-muted);
   --admin-accent: var(--action);
 
+  /* --- Surface de données : panneaux de tableaux, listes, chiffres ------
+     Quasi opaque (≥ 92 %) : les halos de l'atmosphère se devinent sur les
+     bords sans traverser les lignes de données. Le verre translucide
+     (--glass-bg) reste au chrome : barres, menus, modales, écrans d'accès. */
+  --surface-donnees: rgba(255, 255, 255, 0.94);
+  /* Ombre de défilement d'un tableau large (bord qui cache des colonnes). */
+  --ombre-defilement: rgba(30, 30, 80, 0.16);
+
   /* --- Verre (chrome : barres, menus, modales) --------------------------- */
   --glass-bg: rgba(255, 255, 255, 0.6);
   --glass-border: rgba(18, 21, 42, 0.08);
@@ -208,6 +216,9 @@
   --admin-bordure: rgba(255, 255, 255, 0.1);
   --admin-texte-doux: #a3a9c2;
 
+  --surface-donnees: rgba(18, 22, 42, 0.92);
+  /* Sur fond sombre une ombre ne se voit pas : lueur indigo au bord. */
+  --ombre-defilement: rgba(139, 141, 255, 0.32);
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-sheen: rgba(255, 255, 255, 0.3);

@@ -204,14 +204,14 @@
    fond plein --surface d'un .field-input normal tranche sur le translucide
    du panneau — même souci que .btn-ghost, pas propre à une seule page,
    corrigé ici pour tout panneau .glass-panel plutôt qu'en surcharge locale. */
+/* Champ dans un panneau de données : surface pleine (lot 3), désactivé en
+   surface 2 — plus de verre sous la saisie. */
 .glass-panel .field-input {
-  background: var(--glass-bg);
-  border-color: var(--glass-border);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: var(--surface);
+  border-color: var(--border-hover);
 }
 .glass-panel .field-input:disabled {
-  background: color-mix(in oklch, var(--glass-bg) 55%, transparent);
+  background: var(--surface-2);
 }
 
 /* Texte d'appoint sous un champ verrouillé/désactivé (ex. Nature figée sur

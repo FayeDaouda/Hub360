@@ -1,11 +1,11 @@
-/* Verre liquide premium — flou/saturation renforcés, reflet spéculaire fixe
-   qui simule la lumière sur une surface courbe (::before), liseré haut
-   clair / bas sombre pour la profondeur, ombre portée flottante, et un
-   bord « un peu allumé » : un halo teinté accent qui déborde très
-   doucement à l'extérieur (spread négatif, discret — pas de néon). */
+/* Panneau du back-office (données) — garde la signature du verre : reflet
+   spéculaire (::before), liseré haut clair / bas sombre, ombre flottante et
+   halo teinté discret ; mais un fond quasi opaque (--surface-donnees, lot 3
+   de l'audit UX) pour que les halos de l'atmosphère ne traversent plus les
+   tableaux et les chiffres. */
 .glass-panel {
   position: relative;
-  background: var(--glass-bg);
+  background: var(--surface-donnees);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   backdrop-filter: blur(28px) saturate(180%);
