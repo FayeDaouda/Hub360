@@ -9,6 +9,7 @@ import {
   type CommentaireFil,
   type MessageFil,
 } from '@/lib/projets-ouverts';
+import { Infobulle } from '@/components/infobulle';
 
 type Props = {
   slug: string;
@@ -76,9 +77,9 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
 
   return (
     <div className="po-panneau-bloc po-fil">
-      <p className="po-kicker">Fil de discussion</p>
-      <p className="po-aide">
-        une @mention notifie la personne ; le commentaire reste ouvert jusqu’à une réponse ou sa résolution par l’auteur
+      <p className="tp-section">
+        Discussion{fil && fil.length > 0 ? ` · ${fil.length}` : ''}{' '}
+        <Infobulle>Une @mention notifie la personne. Un commentaire reste ouvert jusqu’à une réponse, ou jusqu’à ce que son auteur le marque résolu.</Infobulle>
       </p>
       {!fil ? (
         <p className="po-aide">Chargement…</p>

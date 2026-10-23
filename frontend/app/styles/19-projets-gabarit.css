@@ -424,18 +424,14 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.5rem;
 }
+/* Retard / avance : couleurs de statut (lisibles dans les deux thèmes), plus
+   le fuchsia d'une catégorie. */
 .po-retard {
-  color: var(--fuchsia);
+  color: var(--danger-texte);
 }
 .po-avance {
-  color: var(--sauge);
+  color: var(--ok-texte);
   font-weight: 600;
-}
-:root[data-theme='dark'] .po-avance {
-  color: color-mix(in oklch, var(--sauge) 55%, white);
-}
-:root[data-theme='dark'] .po-retard {
-  color: color-mix(in oklch, var(--fuchsia) 60%, white);
 }
 
 /* Panneau de la tâche */
@@ -500,8 +496,11 @@
 .po-vide {
   padding: 1.5rem;
 }
+/* Libellé de champ : discret — ce sont les titres de section qui dominent. */
 .po-panneau-label {
-  font-weight: 600;
+  font-size: var(--t-13);
+  font-weight: 500;
+  color: var(--text-muted);
 }
 /* Remise d'une tâche : fichiers + commentaire facultatifs. */
 .po-remise-champs {
@@ -601,3 +600,130 @@
   }
 }
 
+
+/* --- Panneau de tâche réorganisé (lot E de Mes tâches, 23/10/2026) -------- */
+.tp-fil {
+  margin: 0;
+  font-size: var(--t-13);
+  color: var(--text-muted);
+}
+.tp-fil-code {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+.tp {
+  gap: var(--e-16);
+}
+.tp-entete {
+  display: grid;
+  gap: var(--e-8);
+}
+.tp .po-panneau-titre {
+  font-size: var(--t-24);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.tp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-8);
+}
+.tp-actions .btn-ghost[aria-expanded='true'] {
+  border-color: var(--action);
+  color: var(--lien);
+}
+.tp-formulaire {
+  gap: var(--e-8);
+  padding: var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface-2);
+}
+/* Titre de section : plus fort que les libellés de champ. */
+.tp-section {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0;
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.tp-secondaire {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.tp .po-panneau-lignes > div {
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+}
+.tp-details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding-block: var(--e-4);
+}
+.tp-details > summary::-webkit-details-marker {
+  display: none;
+}
+.tp-details > summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--duree-court) var(--courbe);
+}
+.tp-details[open] > summary::after {
+  transform: rotate(45deg);
+}
+.tp-details[open] > summary {
+  margin-bottom: var(--e-8);
+}
+
+/* Infobulle « ? » (components/infobulle.tsx). */
+.infobulle {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+.infobulle-bouton {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-hover);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font: 600 11px/1 var(--font-sans);
+  cursor: help;
+}
+.infobulle-bouton:hover,
+.infobulle-bouton[aria-expanded='true'] {
+  border-color: var(--action);
+  color: var(--lien);
+}
+.infobulle-texte {
+  position: absolute;
+  top: calc(100% + var(--e-8));
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: min(18rem, 80vw);
+  padding: var(--e-8) var(--e-12);
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  background: var(--surface);
+  box-shadow: var(--ombre-2);
+  color: var(--text);
+  font-size: var(--t-13);
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+}

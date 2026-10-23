@@ -166,9 +166,9 @@
   z-index: 60;
   display: flex;
   justify-content: flex-end;
-  background: color-mix(in oklch, var(--bg) 55%, transparent);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* Voile léger, sans flou : la liste reste lisible derrière le tiroir
+     (on garde le contexte). */
+  background: color-mix(in srgb, var(--bg) 35%, transparent);
 }
 .fiche-crm {
   display: grid;

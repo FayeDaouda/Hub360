@@ -701,6 +701,13 @@ export function MesTaches({ slug }: { slug: string }) {
           prolongation={tiroir.prolongation}
           onMaj={rafraichir}
           onClose={() => setTiroir(null)}
+          onVoisine={(sens) => {
+            // Ordre affiché dans la liste (sections, vue, filtre) : celui de J / K.
+            const ids = [...document.querySelectorAll<HTMLElement>('.mt-liste .mt-ligne[data-tache]')].map((el) => el.dataset.tache!);
+            const suivant = ids[ids.indexOf(tiroir.tacheId) + sens];
+            const t = suivant && donnees?.taches.find((x) => x.id === suivant);
+            if (t) setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false });
+          }}
         />
       )}
     </div>

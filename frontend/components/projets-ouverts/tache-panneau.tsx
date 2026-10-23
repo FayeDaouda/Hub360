@@ -25,6 +25,7 @@ import {
 } from '@/lib/projets-ouverts';
 import { ChampsRemise, corpsRemise, SAISIE_REMISE_VIDE, type SaisieRemise } from './champs-remise';
 import { FilDiscussion } from './fil-discussion';
+import { Infobulle } from '@/components/infobulle';
 
 type Props = {
   slug: string;
@@ -42,10 +43,12 @@ type Props = {
   prolongationOuverte?: boolean;
 };
 
-// Panneau d'une tâche (maquette « Projets ») : qui, qui valide, durée,
-// fenêtre et échéance figées, écart, descriptif, assignation (à la tâche ou à
-// toute la carte), fichiers, fil de discussion et historique. Remise et
-// validation : avec les vues chef de team et collaborateur.
+// Panneau d'une tâche (maquette « Projets », réorganisé le 23/10/2026) :
+// en-tête (étape, nom de la tâche, statut) ; barre d'actions « Déposer » /
+// « Demander un délai » qui ouvre UN formulaire à la fois ; résumé (échéance,
+// validation, durée) ; décisions du valideur (remise, prolongation, visa) et
+// assignation ; discussion ; « Détails » repliés (fenêtre, échéance figée,
+// écart) ; fichiers et historique. Les règles du système sont dans des « ? ».
 export function TachePanneau({ slug, projetId, code, carte, tache, assignables, moiId, mentionnables, onMaj, prolongationOuverte = false }: Props) {
   const [aLaCarte, setALaCarte] = useState(false);
   const [enCours, setEnCours] = useState(false);
@@ -55,7 +58,8 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const [motif, setMotif] = useState('');
   // Visa DPLG : refus en cours de saisie (motif obligatoire).
   const [refusVisa, setRefusVisa] = useState<string | null>(null);
-  const [prolonger, setProlonger] = useState(prolongationOuverte);
+  // Formulaire ouvert sous la barre d'actions : un seul à la fois.
+  const [action, setAction] = useState<'deposer' | 'delai' | null>(prolongationOuverte ? 'delai' : null);
   const [jusquau, setJusquau] = useState('');
   const [motifProlongation, setMotifProlongation] = useState('');
   const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
@@ -79,7 +83,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     setErreur(null);
     setRenvoi(false);
     setMotif('');
-    setProlonger(prolongationOuverte);
+    setAction(prolongationOuverte ? 'delai' : null);
     setJusquau('');
     setMotifProlongation('');
     setSaisie(SAISIE_REMISE_VIDE);
@@ -160,56 +164,202 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const piecesVersion = tache.pieces.filter((f) => f.version === tache.version);
   const ecart = tache.etat.code === 'validee' ? tache.etat.ecart : null;
   const v = tache.validation;
+  const gestionnaire = assignables !== null;
   const assignable =
     assignables !== null && carte.etat.code !== 'desactivee' && tache.statut !== 'validee' && tache.statut !== 'non_necessaire';
-  const lignes: [string, React.ReactNode][] = [
-    ['Assignée à', tache.assigne?.nom ?? 'À assigner'],
-    [
-      'Validation',
-      v.mode === 'depot' ? 'dépôt du justificatif = validation (exception écrite au principe 4)' : `${v.nom ?? 'à désigner'} · ${v.role}`,
-    ],
-    ['Durée standard', dureeStandard(tache)],
+  const basculer = (a: 'deposer' | 'delai') => setAction((x) => (x === a ? null : a));
+
+  // Résumé : ce qu'il faut savoir d'un coup d'œil.
+  const echeance = tache.prolongation.accordeeJusquau ?? tache.finLe;
+  const resume: [string, React.ReactNode][] = [];
+  if (gestionnaire) resume.push(['Assignée à', tache.assigne?.nom ?? 'À assigner']);
+  resume.push([
+    'Échéance',
+    echeance ? (
+      <>
+        {jjmmaaaa(echeance)}
+        {tache.prolongation.accordeeJusquau && <span className="tp-secondaire"> · délai accordé</span>}
+        {tache.etat.code === 'en_retard' && <span className="po-retard"> · {tache.etat.jours} j de retard</span>}
+      </>
+    ) : (
+      'pas encore de date'
+    ),
+  ]);
+  resume.push([
+    'Validation',
+    v.mode === 'depot' ? (
+      <>
+        le dépôt vaut validation{' '}
+        <Infobulle>Tâche sans temps atelier : déposer le justificatif suffit (exception écrite au principe 4).</Infobulle>
+      </>
+    ) : (
+      <>
+        {v.nom ?? 'à désigner'} <span className="tp-secondaire">({v.role})</span>
+        {/* Pourquoi pas le chef de team : utile au gestionnaire, pas à l'assigné. */}
+        {gestionnaire && v.motif && <span className="tp-secondaire"> · {v.motif}</span>}
+      </>
+    ),
+  ]);
+  resume.push([
+    'Durée prévue',
+    <>
+      {dureeStandard(tache)}{' '}
+      {tache.heures !== null && <Infobulle>Temps calculé à partir de la durée standard de la tâche : rien à saisir.</Infobulle>}
+    </>,
+  ]);
+  if (tache.valideeLe) {
+    resume.push(['Validée', `le ${jjmmaaaa(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`]);
+  }
+
+  // Détails repliés : les règles de calendrier.
+  const details: [string, React.ReactNode][] = [
     [
       'Fenêtre',
       tache.debutJ !== null && tache.debutLe && tache.finLe
         ? `J${tache.debutJ} → J${tache.finJ} · ${jjmmaaaa(tache.debutLe)} → ${jjmmaaaa(tache.finLe)}`
         : '—',
     ],
-    ['Échéance de référence', tache.finLe ? `${jjmmaaaa(tache.finLe)} · délai figé` : '—'],
+    [
+      'Échéance de référence',
+      tache.finLe ? (
+        <>
+          {jjmmaaaa(tache.finLe)}{' '}
+          <Infobulle>Délai figé à l’ouverture du projet : une prolongation accordée qualifie le retard, elle ne déplace pas cette date.</Infobulle>
+        </>
+      ) : (
+        '—'
+      ),
+    ],
   ];
   if (ecart) {
-    lignes.push([
-      'Écart (performance)',
+    details.push([
+      'Écart',
       <span key="ecart" className={ecart > 0 ? 'po-avance' : 'po-retard'}>
         {ecart > 0 ? `${ecart} h d’avance à la remise` : `${-ecart} h de retard à la remise`}
       </span>,
     ]);
   }
   if (tache.prolongation.accordeeJusquau) {
-    lignes.push(['Prolongation', `accordée jusqu’au ${jjmmaaaa(tache.prolongation.accordeeJusquau)} · retard qualifié, échéance de référence inchangée`]);
-  }
-  if (tache.valideeLe) {
-    lignes.push(['Validée', `le ${jjmmaaaa(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`]);
+    details.push(['Prolongation', `accordée jusqu’au ${jjmmaaaa(tache.prolongation.accordeeJusquau)}`]);
   }
 
+  const lignes = (l: [string, React.ReactNode][]) => (
+    <dl className="po-panneau-lignes">
+      {l.map(([dt, dd]) => (
+        <div key={dt}>
+          <dt>{dt}</dt>
+          <dd>{dd}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+
   return (
-    <aside className="po-panneau" aria-label={`Tâche ${tache.libelle}`}>
-      <p className="po-kicker">
-        {numeroEtape(carte.etapeNumero)} {carte.etapeLibelle} · {carte.libelle}
-      </p>
-      <h3 className="po-panneau-titre">{tache.libelle}</h3>
-      <div className="po-pastilles">
-        <span className={`pill pill--${pastille.ton}`}>{pastille.libelle}</span>
-        {tache.sourceNative && <span className="pill pill--neutre">source native exigée</span>}
-      </div>
-      <dl className="po-panneau-lignes">
-        {lignes.map(([dt, dd]) => (
-          <div key={dt}>
-            <dt>{dt}</dt>
-            <dd>{dd}</dd>
+    <aside className="po-panneau tp" aria-label={`Tâche ${tache.libelle}`}>
+      <header className="tp-entete">
+        <p className="po-kicker">
+          {numeroEtape(carte.etapeNumero)} {carte.etapeLibelle} · {carte.libelle}
+        </p>
+        <h2 className="po-panneau-titre">{tache.libelle}</h2>
+        <div className="po-pastilles">
+          <span className={`pill pill--${pastille.ton}`}>{pastille.libelle}</span>
+          {tache.sourceNative && <span className="pill pill--neutre">source native exigée</span>}
+        </div>
+      </header>
+
+      {(tache.peutRemettre || tache.peutDemanderProlongation) && (
+        <div className="tp-actions" role="group" aria-label="Actions sur la tâche">
+          {tache.peutRemettre && (
+            // Formulaire ouvert : son propre bouton « Déposer » est l'action
+            // principale ; celui de la barre passe en contour (un seul plein).
+            <button type="button" className={action === 'deposer' ? 'btn-ghost' : 'btn-primary'} aria-expanded={action === 'deposer'} onClick={() => basculer('deposer')}>
+              {v.mode === 'depot' ? 'Déposer le justificatif' : tache.statut === 'reprise' ? 'Déposer la reprise' : 'Déposer'}
+            </button>
+          )}
+          {tache.peutDemanderProlongation && (
+            <button type="button" className="btn-ghost" aria-expanded={action === 'delai'} onClick={() => basculer('delai')}>
+              Demander un délai
+            </button>
+          )}
+        </div>
+      )}
+
+      {action === 'deposer' && tache.peutRemettre && (
+        <div className="po-panneau-bloc tp-formulaire">
+          <p className="tp-section">
+            {tache.statut === 'reprise' ? 'Reprise demandée' : 'Dépôt'} · v{String(tache.version + 1).padStart(2, '0')}
+          </p>
+          <p className="po-aide">
+            {v.mode === 'depot'
+              ? 'Le dépôt du justificatif vaut validation.'
+              : `Part en validation chez ${v.nom ?? 'un validateur à désigner'} (${v.role}).`}
+          </p>
+          <ChampsRemise id={`po-remise-${tache.id}`} valeur={saisie} onChange={setSaisie} />
+          <div className="po-decision">
+            <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setAction(null)}>
+              Annuler
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={enCours}
+              onClick={() =>
+                agir(() => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)), 'La remise a échoué.', () => {
+                  setSaisie(SAISIE_REMISE_VIDE);
+                  setAction(null);
+                })
+              }
+            >
+              {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Déposer'}
+            </button>
           </div>
-        ))}
-      </dl>
+        </div>
+      )}
+
+      {action === 'delai' && tache.peutDemanderProlongation && (
+        <div className="po-panneau-bloc tp-formulaire">
+          <p className="tp-section">
+            Demander un délai{' '}
+            <Infobulle>
+              Votre N+1 accorde ou refuse. Accordé, le retard est qualifié jusqu’à la nouvelle date ; l’échéance de référence ne change pas.
+            </Infobulle>
+          </p>
+          <label className="po-panneau-label" htmlFor="po-jusquau">
+            Nouvelle date
+          </label>
+          <input id="po-jusquau" className="field-input" type="date" value={jusquau} min={tache.finLe ?? undefined} onChange={(e) => setJusquau(e.target.value)} />
+          <label className="po-panneau-label" htmlFor="po-motif-prolongation">
+            Motif
+          </label>
+          <textarea
+            id="po-motif-prolongation"
+            className="field-input"
+            rows={2}
+            maxLength={500}
+            value={motifProlongation}
+            onChange={(e) => setMotifProlongation(e.target.value)}
+          />
+          <div className="po-decision">
+            <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setAction(null)}>
+              Annuler
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={enCours || !jusquau || motifProlongation.trim().length < 3}
+              onClick={() =>
+                agir(() => demanderProlongation(slug, projetId, tache.id, jusquau, motifProlongation.trim()), 'La demande a échoué.', () => setAction(null))
+              }
+            >
+              Envoyer la demande
+            </button>
+          </div>
+        </div>
+      )}
+      {erreur && <p className="field-erreur">{erreur}</p>}
+
+      {lignes(resume)}
+
       {tache.avenant && (
         <p className="po-panneau-note">
           Facturé par l’avenant{' '}
@@ -226,37 +376,14 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       )}
       {tache.descriptif && (
         <div className="po-descriptif">
-          <p className="po-kicker">Descriptif</p>
+          <p className="tp-section">Descriptif</p>
           <p>{tache.descriptif}</p>
         </div>
       )}
-      {tache.peutRemettre && (
-        <div className="po-panneau-bloc">
-          <p className="po-kicker">
-            {tache.statut === 'reprise' ? 'Reprise demandée' : 'À déposer'} · v{String(tache.version + 1).padStart(2, '0')}
-          </p>
-          <p className="po-aide">
-            {v.mode === 'depot'
-              ? 'Le dépôt du justificatif vaut validation (exception écrite au principe 4).'
-              : `Votre remise part en validation auprès de : ${v.nom ?? 'à désigner'} (${v.role}).`}
-          </p>
-          <ChampsRemise id={`po-remise-${tache.id}`} valeur={saisie} onChange={setSaisie} />
-          <div className="po-decision">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={enCours}
-              onClick={() => agir(() => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)), 'La remise a échoué.', () => setSaisie(SAISIE_REMISE_VIDE))}
-            >
-              {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Déposer la tâche'}
-            </button>
-          </div>
-        </div>
-      )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+
       {tache.prolongation.enAttente && (
         <div className="po-panneau-bloc">
-          <p className="po-kicker">Prolongation demandée</p>
+          <p className="tp-section">Délai demandé</p>
           <p className="po-aide">
             Jusqu’au {jjmmaaaa(tache.prolongation.enAttente.jusquau)} : {tache.prolongation.enAttente.motif}
           </p>
@@ -280,53 +407,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               </button>
             </div>
           ) : (
-            <p className="po-aide">En attente de la décision du chef de team ou de l’Architecte DPLG.</p>
-          )}
-        </div>
-      )}
-      {tache.peutDemanderProlongation && (
-        <div className="po-panneau-bloc">
-          {prolonger ? (
-            <>
-              <p className="po-kicker">Demander un délai</p>
-              <p className="po-aide">L’échéance de référence reste figée : accordée, la prolongation qualifie le retard jusqu’à la nouvelle date.</p>
-              <label className="po-panneau-label" htmlFor="po-jusquau">
-                Nouvelle date
-              </label>
-              <input id="po-jusquau" className="field-input" type="date" value={jusquau} min={tache.finLe ?? undefined} onChange={(e) => setJusquau(e.target.value)} />
-              <label className="po-panneau-label" htmlFor="po-motif-prolongation">
-                Motif
-              </label>
-              <textarea
-                id="po-motif-prolongation"
-                className="field-input"
-                rows={2}
-                maxLength={500}
-                value={motifProlongation}
-                onChange={(e) => setMotifProlongation(e.target.value)}
-              />
-              <div className="po-decision">
-                <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setProlonger(false)}>
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={enCours || !jusquau || motifProlongation.trim().length < 3}
-                  onClick={() =>
-                    agir(() => demanderProlongation(slug, projetId, tache.id, jusquau, motifProlongation.trim()), 'La demande a échoué.', () => setProlonger(false))
-                  }
-                >
-                  Envoyer la demande
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="po-decision">
-              <button type="button" className="btn-ghost" onClick={() => setProlonger(true)}>
-                Demander un délai
-              </button>
-            </div>
+            <p className="po-aide">En attente de la réponse du validateur.</p>
           )}
         </div>
       )}
@@ -334,7 +415,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           attend la signature de l'architecte ; apposé, il est daté et nommé. */}
       {tache.visa && (tache.statut === 'validee' || tache.visa.le) && (
         <div className="po-panneau-bloc">
-          <p className="po-panneau-label">Visa DPLG</p>
+          <p className="tp-section">Visa DPLG</p>
           {tache.visa.nonTrace ? (
             <p className="po-aide">Visa non tracé (antérieur au 21/10/2026) : la tâche a été validée avant la règle du visa.</p>
           ) : tache.visa.le ? (
@@ -387,7 +468,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       )}
       {tache.peutDecider && (
         <div className="po-panneau-bloc">
-          <p className="po-kicker">Remise v{String(tache.version).padStart(2, '0')} à valider</p>
+          <p className="tp-section">Remise v{String(tache.version).padStart(2, '0')} à valider</p>
           {piecesVersion.length ? (
             <ul className="po-historique">
               {piecesVersion.map((f) => (
@@ -430,7 +511,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       )}
       {assignable && (
         <div className="po-panneau-bloc">
-          <label className="po-panneau-label" htmlFor="po-assigner">
+          <label className="tp-section" htmlFor="po-assigner">
             Assigner
           </label>
           <select
@@ -474,9 +555,21 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           )}
         </div>
       )}
+
+      <FilDiscussion slug={slug} projetId={projetId} tacheId={tache.id} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
+
+      <details className="tp-details">
+        <summary className="tp-section">Détails</summary>
+        {lignes(details)}
+      </details>
+
       <div className="po-panneau-bloc">
-        <p className="po-kicker">Fichiers</p>
-        <p className="po-aide">nommage {code}_ÉTAPE_LIVRABLE_vNN, une version par reprise</p>
+        <p className="tp-section">
+          Fichiers déposés{' '}
+          <Infobulle>
+            Une version par dépôt (v01, v02…). Convention de nommage : {code}_ÉTAPE_LIVRABLE_vNN.
+          </Infobulle>
+        </p>
         {tache.pieces.length ? (
           <ul className="po-historique">
             {tache.pieces.map((f) => (
@@ -492,9 +585,8 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           <p className="po-aide">Aucun fichier.</p>
         )}
       </div>
-      <FilDiscussion slug={slug} projetId={projetId} tacheId={tache.id} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
       <div className="po-panneau-bloc">
-        <p className="po-kicker">Historique</p>
+        <p className="tp-section">Historique</p>
         {!historique ? (
           <p className="po-aide">Chargement…</p>
         ) : historique.length === 0 ? (
@@ -515,7 +607,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
 }
 
 function dureeStandard(t: TacheOuverte): string {
-  if (t.heures !== null) return `${String(t.heures).replace('.', ',')} h · temps calculé, aucune saisie`;
+  if (t.heures !== null) return `${String(t.heures).replace('.', ',')} h`;
   if (t.temps.type === 'partage') return t.temps.libelle;
   return 'Sans temps atelier';
 }

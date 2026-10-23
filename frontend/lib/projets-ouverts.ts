@@ -96,7 +96,9 @@ export type TacheOuverte = {
   peutViser: boolean; // l'architecte DPLG connecté peut apposer le visa
   assigne: { id: string; nom: string; cellule: string | null } | null;
   aMoi: boolean; // assignée à la personne connectée
-  validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string };
+  // nom : les comptes réellement prévenus ; motif : pourquoi pas le chef de
+  // team (« Ousmane Bâ sans compte HUB », « tâche du chef de team »…).
+  validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string; motif?: string };
   peutDecider: boolean; // remise à trancher par la personne connectée
   peutRemettre: boolean; // la personne connectée est l'assignée, tâche ouverte
   // Prolongation : l'échéance de référence reste figée ; accordée, elle
@@ -363,7 +365,7 @@ export function pastilleTache(e: EtatTache): { libelle: string; ton: Ton } {
     case 'reprise':
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };
     case 'en_retard':
-      return { libelle: `En attente · retard ${e.jours} j`, ton: 'risque' };
+      return { libelle: `En retard · ${e.jours} j`, ton: 'risque' };
     case 'prolongee':
       return { libelle: `Retard qualifié · jusqu’au ${jjmm(e.jusquau)}`, ton: 'attention' };
     case 'en_cours':

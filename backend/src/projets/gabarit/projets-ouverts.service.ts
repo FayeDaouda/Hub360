@@ -294,17 +294,26 @@ export class ProjetsOuvertsService {
 
     // Validation (maquette) : sans temps atelier, le dépôt du justificatif vaut
     // validation ; sinon le chef de team, et l'Architecte DPLG quand la tâche
-    // est celle du chef de team.
+    // est celle du chef de team. Noms : les comptes réellement prévenus (même
+    // circuit que les notifications), le signataire des contrats à défaut.
+    // `motif` (pourquoi pas le chef) n'est affiché qu'aux gestionnaires.
+    const nomsDplg = (await this.nomsComptes(ctx.comptesDplg)) ?? dplg;
+    const nomsCto = await this.nomsComptes(ctx.comptesCto);
     const validation = (temps: Temps, assigneId: string | null) =>
       temps.type === 'sans'
         ? { mode: 'depot' as const }
         : assigneId && ctx.dplgCollaborateurs.has(assigneId)
-          ? { mode: 'personne' as const, nom: null, role: 'travail du Dir. GC : CTO' }
+          ? { mode: 'personne' as const, nom: nomsCto, role: 'CTO', motif: 'travail du Dir. GC' }
           : chef && assigneId !== chef.id && (ctx.collaborateursAbsents.has(chef.id) || (!chef.utilisateur?.actif && !chef.dossierPersonnel?.utilisateur?.actif))
             ? // Chef sans compte HUB ou absent : la remise remonte à l'Architecte DPLG.
-              { mode: 'personne' as const, nom: dplg, role: `${nom(chef)} ${ctx.collaborateursAbsents.has(chef.id) ? 'absent' : 'sans compte HUB'} : Architecte DPLG` }
+              {
+                mode: 'personne' as const,
+                nom: nomsDplg,
+                role: 'Architecte DPLG',
+                motif: `${nom(chef)} ${ctx.collaborateursAbsents.has(chef.id) ? 'absent' : 'sans compte HUB'}`,
+              }
             : chef && assigneId === chef.id
-          ? { mode: 'personne' as const, nom: dplg, role: 'tâche du chef de team : Architecte DPLG' }
+          ? { mode: 'personne' as const, nom: nomsDplg, role: 'Architecte DPLG', motif: 'tâche du chef de team' }
           : { mode: 'personne' as const, nom: nom(chef), role: 'chef de team' };
 
     const facture = (f: 'F1' | 'F2' | 'F3') => {
@@ -714,6 +723,14 @@ export class ProjetsOuvertsService {
   }
 
   // Personne connectée face aux règles du jour (suppléance, escalade au CTO).
+  // « Prénom Nom » des comptes actifs (« A ou B »), null s'il n'y en a aucun.
+  private async nomsComptes(ids: string[]): Promise<string | null> {
+    if (!ids.length) return null;
+    const u = await this.prisma.utilisateur.findMany({ where: { id: { in: ids }, actif: true }, select: { prenom: true, nom: true } });
+    const noms = u.map((x) => `${x.prenom} ${x.nom}`.trim()).filter(Boolean);
+    return noms.length ? noms.join(' ou ') : null;
+  }
+
   private async decideur(societeId: string, acteur: Acteur): Promise<{ decideur: Decideur; ctx: ContexteDecision }> {
     const [collaborateurId, ctx] = await Promise.all([
       collaborateurDuCompte(this.prisma, societeId, acteur.userId),
