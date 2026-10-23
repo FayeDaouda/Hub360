@@ -22,6 +22,9 @@ export type TacheAssignee = Tache & {
   remisLe: Date | null; // dernière remise
   renvoiMotif: string | null; // dernier renvoi en reprise
   chefId: string | null; // chef de team de la cellule du projet (circuit de validation)
+  etapeNumero: number;
+  fichierObligatoire: boolean;
+  parDepot: boolean; // sans temps atelier : le dépôt du justificatif vaut validation
   derniereRelance: Date | null; // dernière relance du validateur par l'assigné
 };
 
@@ -41,6 +44,8 @@ export async function chargerTachesAssignees(prisma: PrismaService, collaborateu
       statut: true,
       version: true,
       valideeLe: true,
+      temps: true,
+      fichierObligatoire: true,
       carte: { select: { libelle: true, etapeNumero: true, etapeLibelle: true } },
       projet: {
         select: { id: true, code: true, programme: true, client: { select: { nom: true } }, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } },
@@ -72,6 +77,9 @@ export async function chargerTachesAssignees(prisma: PrismaService, collaborateu
       // « Remise vNN renvoyée en reprise : motif » → motif
       renvoiMotif: t.statut === 'reprise' && reprise ? reprise.detail.replace(/^.*?reprise : /, '') : null,
       chefId: t.projet.cellules?.[0]?.cellule.dispatcherId ?? null,
+      etapeNumero: t.carte.etapeNumero,
+      fichierObligatoire: t.fichierObligatoire ?? false,
+      parDepot: (t.temps as { type?: string } | null)?.type === 'sans',
       derniereRelance: relance?.creeLe ?? null,
     };
   });

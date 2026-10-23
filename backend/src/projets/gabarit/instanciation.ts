@@ -117,6 +117,7 @@ export function instancier(contenu: ContenuGabarit, ctx: ContexteOuverture): Car
           descriptif: t.descriptif ?? null,
           sourceNative: !!t.sourceNative,
           visaRequis: !!t.visaDplg,
+          fichierObligatoire: !t.fichierFacultatif,
           ...dates(t.fenetre ?? carte.fenetre),
           temps: t.temps,
           heures: heuresDe(t, motifs[i] !== null),

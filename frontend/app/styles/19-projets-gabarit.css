@@ -727,3 +727,102 @@
   text-transform: none;
   white-space: normal;
 }
+
+/* --- Formulaire de dépôt unique (lot F, 23/10/2026) ---------------------- */
+.depot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-8);
+  min-width: 0;
+}
+.depot-tache {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+}
+.depot-message {
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.depot-message strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.depot-requis {
+  color: var(--attention-texte);
+}
+/* Zone de dépôt en pointillés : glisser ou parcourir. */
+.depot-zone {
+  display: grid;
+  justify-items: center;
+  gap: var(--e-4);
+  padding: var(--e-16);
+  border: 1.5px dashed var(--border-hover);
+  border-radius: var(--r-14);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--text-muted);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--duree-court) var(--courbe), background var(--duree-court) var(--courbe);
+}
+.depot-zone:hover,
+.depot-zone:focus-within,
+.depot-zone.is-survol {
+  border-color: var(--action);
+  background: color-mix(in srgb, var(--action) 8%, var(--surface));
+  color: var(--text);
+}
+.depot-zone:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.depot-zone.is-desactive {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.depot-zone-texte {
+  font-size: var(--t-14);
+  color: var(--text);
+}
+.depot-zone-lien {
+  color: var(--lien);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.depot-zone-aide {
+  font-size: var(--t-12);
+}
+.depot-fichiers {
+  display: grid;
+  gap: var(--e-4);
+}
+.depot-fichier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-8);
+  padding: var(--e-8) var(--e-12);
+  border: 1px solid var(--border);
+  border-radius: var(--r-10);
+  background: var(--surface);
+}
+.depot-fichier-noms {
+  display: grid;
+  min-width: 0;
+}
+.depot-fichier-origine {
+  overflow: hidden;
+  font-size: var(--t-12);
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.depot-fichier-final {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-4);
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--t-12);
+  color: var(--text);
+}

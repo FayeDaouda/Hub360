@@ -1711,6 +1711,11 @@ export type TacheMonEspace = {
   // personne à prévenir ; date à partir de laquelle on peut le relancer.
   validateur: string | null;
   relancePossibleLe: string | null;
+  // Dépôt (lot F) : numéro d'étape (nommage des fichiers), fichier exigé,
+  // et cas où le dépôt du justificatif vaut validation.
+  etapeNumero: number;
+  fichierObligatoire: boolean;
+  parDepot: boolean;
 };
 
 export type StatsPerformances = {

@@ -23,7 +23,8 @@ import {
   type EvenementTache,
   type TacheOuverte,
 } from '@/lib/projets-ouverts';
-import { ChampsRemise, corpsRemise, SAISIE_REMISE_VIDE, type SaisieRemise } from './champs-remise';
+import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from './champs-remise';
+import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
 
@@ -289,12 +290,15 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           <p className="tp-section">
             {tache.statut === 'reprise' ? 'Reprise demandée' : 'Dépôt'} · v{String(tache.version + 1).padStart(2, '0')}
           </p>
-          <p className="po-aide">
-            {v.mode === 'depot'
-              ? 'Le dépôt du justificatif vaut validation.'
-              : `Part en validation chez ${v.nom ?? 'un validateur à désigner'} (${v.role}).`}
-          </p>
-          <ChampsRemise id={`po-remise-${tache.id}`} valeur={saisie} onChange={setSaisie} />
+          <FormulaireDepot
+            id={`po-remise-${tache.id}`}
+            nommage={{ code, etapeNumero: carte.etapeNumero, tache: tache.libelle, version: tache.version + 1 }}
+            validateur={v.mode === 'personne' && v.nom ? `${v.nom} (${v.role})` : null}
+            parDepot={v.mode === 'depot'}
+            obligatoire={tache.fichierObligatoire}
+            valeur={saisie}
+            onChange={setSaisie}
+          />
           <div className="po-decision">
             <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setAction(null)}>
               Annuler
@@ -302,7 +306,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
             <button
               type="button"
               className="btn-primary"
-              disabled={enCours}
+              disabled={enCours || !depotPret(saisie, tache.fichierObligatoire)}
               onClick={() =>
                 agir(() => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)), 'La remise a échoué.', () => {
                   setSaisie(SAISIE_REMISE_VIDE);

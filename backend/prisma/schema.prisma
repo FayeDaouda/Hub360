@@ -2489,6 +2489,10 @@ model TacheProjet {
   // team, n'est faite qu'une fois visée par l'architecte DPLG (Dir. GC).
   // Repris du gabarit à l'ouverture du projet.
   visaRequis   Boolean           @default(false) @map("visa_requis")
+  // Dépôt sans fichier refusé (case du gabarit, cochée par défaut — lot F,
+  // 23/10/2026). Les tâches des projets ouverts avant la règle restent
+  // facultatives (comme le visa : la version du gabarit est figée au projet).
+  fichierObligatoire Boolean    @default(true) @map("fichier_obligatoire")
   visaLe       DateTime?         @map("visa_le")
   visaParId    String?           @map("visa_par_id")
   // Validée avant la règle du visa (21/10/2026) : ni bloquée ni réputée visée

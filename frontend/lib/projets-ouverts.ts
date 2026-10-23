@@ -98,6 +98,7 @@ export type TacheOuverte = {
   aMoi: boolean; // assignée à la personne connectée
   // nom : les comptes réellement prévenus ; motif : pourquoi pas le chef de
   // team (« Ousmane Bâ sans compte HUB », « tâche du chef de team »…).
+  fichierObligatoire: boolean; // dépôt sans fichier refusé (case du gabarit)
   validation: { mode: 'depot' } | { mode: 'personne'; nom: string | null; role: string; motif?: string };
   peutDecider: boolean; // remise à trancher par la personne connectée
   peutRemettre: boolean; // la personne connectée est l'assignée, tâche ouverte

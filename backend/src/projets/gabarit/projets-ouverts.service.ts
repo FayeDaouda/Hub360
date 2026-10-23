@@ -377,6 +377,7 @@ export class ProjetsOuvertsService {
           libelle: t.libelle,
           descriptif: t.descriptif,
           sourceNative: t.sourceNative,
+          fichierObligatoire: t.fichierObligatoire,
           debutJ: t.debutJ,
           finJ: t.finJ,
           debutLe: t.debutLe,

@@ -49,12 +49,13 @@ export class TachesService {
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
     const absents = joursAbsents((dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })), feries);
     const etats = taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
-    // En validation : qui valide (mêmes personnes que celles prévenues) et
-    // quand une relance devient possible (3 jours ouvrés).
-    const enValidation = taches.filter((t) => t.statut === 'a_valider');
+    // Qui valide (mêmes personnes que celles prévenues au dépôt) : dès qu'une
+    // tâche est à déposer (message du dépôt) ou en validation (« Chez mon
+    // N+1 »), et quand une relance devient possible (3 jours ouvrés).
+    const ouvertes = taches.filter((t) => t.statut === 'a_faire' || t.statut === 'reprise' || t.statut === 'a_valider');
     const validateurs = await this.tachesProjet.nomsValideurs(
       societeId,
-      enValidation.map((t) => ({ id: t.id, assigneId: t.collaborateurId, chefId: t.chefId })),
+      ouvertes.filter((t) => !t.parDepot).map((t) => ({ id: t.id, assigneId: t.collaborateurId, chefId: t.chefId })),
     );
 
     const lignes = taches
@@ -84,7 +85,10 @@ export class TachesService {
           remisLe: t.statut === 'a_valider' || t.statut === 'validee' ? t.remisLe : null,
           valideLe: t.valideeLe,
           renvoiMotif: t.renvoiMotif,
-          validateur: t.statut === 'a_valider' ? (validateurs.get(t.id) ?? null) : null,
+          validateur: validateurs.get(t.id) ?? null,
+          etapeNumero: t.etapeNumero,
+          fichierObligatoire: t.fichierObligatoire,
+          parDepot: t.parDepot,
           relancePossibleLe: t.statut === 'a_valider' && t.remisLe ? relancePossibleLe(t.remisLe, t.derniereRelance, feries) : null,
         };
       })

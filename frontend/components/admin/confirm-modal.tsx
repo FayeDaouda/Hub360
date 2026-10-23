@@ -16,6 +16,8 @@ type Props = {
   // Au-dessus de tout (tiroirs, panneaux, autres modales) : confirmation
   // demandée depuis l'intérieur d'un panneau déjà ouvert.
   auPremierPlan?: boolean;
+  // Action impossible tant que le formulaire du message est incomplet.
+  confirmerDesactive?: boolean;
 };
 
 const FOCUSABLES = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -29,6 +31,7 @@ export function ConfirmModal({
   onConfirm,
   onClose,
   auPremierPlan = false,
+  confirmerDesactive = false,
 }: Props) {
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -122,7 +125,7 @@ export function ConfirmModal({
               type="button"
               className={danger ? 'btn-danger' : 'btn-primary'}
               onClick={lancer}
-              disabled={enCours}
+              disabled={enCours || confirmerDesactive}
             >
               {enCours ? '…' : confirmer}
             </button>

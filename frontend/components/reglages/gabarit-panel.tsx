@@ -36,6 +36,8 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         if (t && (t.type === 'heures' || t.type === 'par_unite' || t.type === 'total')) m.set(cle(c.cle, tache, 'heures'), t.heures);
         // Visa DPLG (revue Dir. GC) : case par tâche, 1 = exigé.
         if (tache) m.set(cle(c.cle, tache, 'visa'), (cible as TacheGabarit).visaDplg ? 1 : 0);
+        // Fichier au dépôt (lot F, 23/10/2026) : obligatoire par défaut.
+        if (tache) m.set(cle(c.cle, tache, 'fichier'), (cible as TacheGabarit).fichierFacultatif ? 0 : 1);
       }
     }
     return m;
@@ -61,17 +63,24 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
       />
     );
   };
-  const visa = (carte: string, tache: string) => {
-    const k = cle(carte, tache, 'visa');
+  // Case à cocher d'une tâche (1 = oui) : visa DPLG, fichier obligatoire.
+  const caseTache = (carte: string, tache: string, c: 'visa' | 'fichier', libelle: string) => {
+    const k = cle(carte, tache, c);
     const coche = (saisies[k] ?? String(origines.get(k))) === '1';
     const modifie = k in saisies && Number(saisies[k]) !== origines.get(k);
     return (
       <label className={`reg-visa${modifie ? ' is-modifie' : ''}`}>
         <input type="checkbox" checked={coche} onChange={(e) => setSaisies((s) => ({ ...s, [k]: e.target.checked ? '1' : '0' }))} />
-        Visa DPLG
+        {libelle}
       </label>
     );
   };
+  const visa = (carte: string, tache: string) => (
+    <>
+      {caseTache(carte, tache, 'visa', 'Visa DPLG')}
+      {caseTache(carte, tache, 'fichier', 'Fichier obligatoire')}
+    </>
+  );
   const fenetre = (carte: string, tache?: string) => (
     <span className="reg-fenetre">
       J {champ(carte, tache, 'debut', 'jour')} → J {champ(carte, tache, 'fin', 'jour')}
@@ -100,8 +109,8 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         </span>
       </div>
       <p className="dmd-note">
-        Fenêtres en jours ouvrés (J1 = ouverture du projet), durées standard et visa DPLG (la tâche validée attend la signature de
-        l’architecte). Un enregistrement crée la version{' '}
+        Fenêtres en jours ouvrés (J1 = ouverture du projet), durées standard, visa DPLG (la tâche validée attend la signature de
+        l’architecte) et fichier obligatoire (sans fichier, la tâche ne peut pas être déposée). Un enregistrement crée la version{' '}
         {libelleVersion(gabarit.numero + 1)} : elle s’applique aux projets ouverts ensuite. Les projets en cours gardent leur
         version, leurs fenêtres et leurs durées (délais figés).
       </p>

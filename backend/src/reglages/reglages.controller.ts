@@ -8,7 +8,7 @@ import { ReglagesService } from './reglages.service';
 class ChangementDto {
   @IsString() @MaxLength(80) carte: string;
   @IsOptional() @IsString() @MaxLength(80) tache?: string;
-  @IsIn(['debut', 'fin', 'heures', 'visa']) champ: 'debut' | 'fin' | 'heures' | 'visa';
+  @IsIn(['debut', 'fin', 'heures', 'visa', 'fichier']) champ: 'debut' | 'fin' | 'heures' | 'visa' | 'fichier';
   @IsNumber() valeur: number;
 }
 

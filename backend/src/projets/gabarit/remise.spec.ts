@@ -7,7 +7,7 @@ import { TachesProjetService } from './taches-projet.service';
 // Remise d'une tâche : fichiers et commentaire facultatifs, rattachés à la
 // version remise ; le valideur voit « sans fichier joint » sinon.
 describe('TachesProjetService.remettre — fichiers', () => {
-  function svc() {
+  function svc(fichierObligatoire = false) {
     const evenement = jest.fn();
     const pieces = jest.fn();
     const tx = {
@@ -18,8 +18,8 @@ describe('TachesProjetService.remettre — fichiers', () => {
     const prisma = {
       tacheProjet: {
         findFirst: jest.fn().mockResolvedValue({
-          id: 'T1', libelle: 'Plan masse', statut: 'reprise', version: 1, temps: { type: 'fixe' }, assigneId: 'C1',
-          carte: { desactivation: null, ouvreApres: [] },
+          id: 'T1', libelle: 'Plan masse', statut: 'reprise', version: 1, temps: { type: 'fixe' }, assigneId: 'C1', fichierObligatoire,
+          carte: { desactivation: null, ouvreApres: [], etapeNumero: 2 },
           projet: { code: 'GC-01', cellules: [{ cellule: { dispatcherId: 'C2' } }] },
         }),
       },
@@ -40,7 +40,8 @@ describe('TachesProjetService.remettre — fichiers', () => {
   it('fichiers rattachés à la nouvelle version, commentaire dans l’historique', async () => {
     const { s, evenement, pieces } = svc();
     await s.remettre('S1', acteur, 'P1', 'T1', { pieces: [{ nom: 'plan.pdf', url: 'data:application/pdf;base64,AA' }], commentaire: ' corrigé ' });
-    expect(pieces).toHaveBeenCalledWith({ data: [expect.objectContaining({ tacheId: 'T1', version: 2, nom: 'plan.pdf' })] });
+    // Renommé selon la règle du HUB (CODE_ÉTAPE_TÂCHE_vNN).
+    expect(pieces).toHaveBeenCalledWith({ data: [expect.objectContaining({ tacheId: 'T1', version: 2, nom: 'GC-01_02_PLAN-MASSE_v02.pdf' })] });
     expect(evenement.mock.calls[0][0].data.detail).toBe('Remise v02 · 1 fichier · « corrigé »');
   });
 
@@ -53,5 +54,11 @@ describe('TachesProjetService.remettre — fichiers', () => {
 
   it('refuse un fichier qui n’est pas un data URI', async () => {
     await expect(svc().s.remettre('S1', acteur, 'P1', 'T1', { pieces: [{ nom: 'x', url: 'http://ailleurs' }] })).rejects.toThrow(BadRequestException);
+  });
+
+  it('fichier obligatoire (case du gabarit) : dépôt sans fichier refusé', async () => {
+    const { s, pieces } = svc(true);
+    await expect(s.remettre('S1', acteur, 'P1', 'T1')).rejects.toThrow('Joignez au moins un fichier');
+    expect(pieces).not.toHaveBeenCalled();
   });
 });

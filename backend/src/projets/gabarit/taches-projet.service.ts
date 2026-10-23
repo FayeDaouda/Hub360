@@ -8,6 +8,7 @@ import { motifNonAssignable, tachesAssignees } from './assignation';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
 import { apresJoursOuvres, joursOuvresApres } from './calendrier';
+import { nomFichierDepot } from './nom-fichier';
 import { agitCommeDplg, collaborateurDuCompte, peutDecider, peutQualifier, peutViser, ROLE_CTO, verifierCircuit } from './validation';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
@@ -134,7 +135,15 @@ export class TachesProjetService {
         temps: true,
         assigneId: true,
         cle: true,
-        carte: { select: { desactivation: true, ouvreApres: true, taches: { where: { visaRequis: true, statut: 'validee', visaLe: null, visaNonTrace: false }, select: { libelle: true } } } },
+        fichierObligatoire: true,
+        carte: {
+          select: {
+            desactivation: true,
+            ouvreApres: true,
+            etapeNumero: true,
+            taches: { where: { visaRequis: true, statut: 'validee', visaLe: null, visaNonTrace: false }, select: { libelle: true } },
+          },
+        },
         projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
       },
     });
@@ -151,10 +160,24 @@ export class TachesProjetService {
       throw new ConflictException(`Dépôt impossible : visa DPLG attendu sur ${tache.carte.taches.map((t) => `« ${t.libelle} »`).join(', ')}.`);
     }
 
-    const pieces = corps.pieces ?? [];
-    if (pieces.some((f) => !f.url.startsWith('data:'))) throw new BadRequestException('Fichier invalide.');
+    const recues = corps.pieces ?? [];
+    if (recues.some((f) => !f.url.startsWith('data:'))) throw new BadRequestException('Fichier invalide.');
+    if (tache.fichierObligatoire && recues.length === 0) throw new BadRequestException('Joignez au moins un fichier : il est obligatoire pour cette tâche.');
     const version = tache.version + 1;
     const vNN = `v${String(version).padStart(2, '0')}`;
+    // Renommés selon la règle du HUB (CODE_ÉTAPE_TÂCHE_vNN) : personne n'a à la retenir.
+    const pieces = recues.map((f, rang) => ({
+      ...f,
+      nom: nomFichierDepot({
+        code: tache.projet.code,
+        etapeNumero: tache.carte.etapeNumero,
+        tache: tache.libelle,
+        version,
+        nomOrigine: f.nom,
+        rang,
+        total: recues.length,
+      }),
+    }));
     const depot = (tache.temps as Temps).type === 'sans';
     const commentaire = corps.commentaire?.trim();
     const detail = [
