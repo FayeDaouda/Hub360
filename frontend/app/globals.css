@@ -510,16 +510,18 @@ button {
    largeurs ≥ 1024px : la gouttière entre présentation et carte reste entre
    46 % et 50 % de la largeur d'écran (grille centrée, max 1180px). */
 .fond-liquide {
-  --fl-haut: #f6f7ff;
-  --fl-bas: #e8ecfb;
+  /* Clair « billes de verre sur papier » (23/10/2026) : fond blanc cassé
+     chaud vers gris-bleu très pâle, halos ambiants à peine perceptibles. */
+  --fl-haut: #fbfaf8;
+  --fl-bas: #edf0f6;
   --fl-nuit: #1c2a78;
   --fl-densite: 78%;
-  --fl-halo-op: 0.3;
+  --fl-halo-op: 0.18;
   --fl-bulle-op: 0.9;
   --fl-trait: rgb(69 97 246 / 0.3);
   --fl-voile: rgb(69 97 246 / 0.06);
   --fl-eclat-op: 0.55;
-  --fl-calme: rgb(240 243 253 / 0.86);
+  --fl-calme: rgb(247 247 249 / 0.82);
   /* Changement de composition (portail -> connexion, rotation d'écran). */
   --fl-glisse: 1.1s cubic-bezier(0.65, 0, 0.35, 1);
 
@@ -594,7 +596,7 @@ button {
   position: absolute;
   left: var(--x);
   top: var(--y);
-  width: var(--l);
+  width: calc(var(--l) * var(--fl-echelle, 1));
   aspect-ratio: var(--ratio, 1);
   translate: -50% -50%;
   rotate: var(--r, 0deg);
@@ -960,7 +962,7 @@ button {
   opacity: 1;
 }
 .auth-shell:has(> .portail) .fl-bulle {
-  opacity: calc(var(--fl-bulle-op) * 0.82);
+  opacity: calc(var(--fl-bulle-op) * var(--fl-attenuation, 0.82));
 }
 /* Éclat posé au centre de l'écran : sous les cartes sur le portail. */
 .auth-shell:has(> .portail) .fl-eclat:nth-child(2) {
@@ -979,9 +981,9 @@ button {
     --l: clamp(190px, 20vw, 400px);
   }
   .auth-shell:has(> .portail) .fl-bulle--cyan {
-    --x: 97%;
-    --y: 57%;
-    --l: clamp(80px, 7.5vw, 150px);
+    --x: 98%;
+    --y: 72%;
+    --l: clamp(70px, 6.5vw, 130px);
   }
   .auth-shell:has(> .portail) .fl-bulle--orange {
     --x: 10%;
@@ -1015,7 +1017,9 @@ button {
   .fl-bulle-corps {
     transition: filter var(--fl-glisse);
   }
-  .auth-shell:has(> .portail) .fl-bulle:not(.fl-bulle--cyan) .fl-bulle-corps {
+  /* Sombre seulement : sur fond clair, une bulle floue devient une tache
+     délavée — la netteté fait le relief (cf. mode clair ci-dessous). */
+  :root[data-theme='dark'] .auth-shell:has(> .portail) .fl-bulle-corps {
     filter: blur(clamp(5px, 0.55vw, 10px));
   }
 }
@@ -1052,6 +1056,23 @@ button {
     --x: 52%;
     --y: 97%;
   }
+}
+
+/* Mode clair du portail — « billes de verre sur papier » : pas de flou,
+   bulles ~18 % plus petites, pleine opacité et saturées, fin contour net
+   (box-shadow sans flou : pas d'artefact sur élément tourné), halo coloré
+   réduit (c'est lui qui « délavait » le fond autour des bulles). */
+:root:not([data-theme='dark']) .auth-shell:has(> .portail) .fl-bulle {
+  --fl-echelle: 0.82;
+  --fl-attenuation: 1.1;
+}
+:root:not([data-theme='dark']) .auth-shell:has(> .portail) .fl-bulle::before {
+  opacity: 0.35;
+}
+:root:not([data-theme='dark']) .auth-shell:has(> .portail) .fl-bulle-corps {
+  filter: saturate(1.18);
+  outline: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
+  outline-offset: -1px;
 }
 
 /* Téléphones et tablettes : grandes bulles et vagues immobiles. Sous des
@@ -1150,11 +1171,13 @@ button {
   --auth-texte: #141a33;
   --auth-texte-doux: rgb(20 26 51 / 0.68);
   --auth-texte-discret: rgb(20 26 51 / 0.5);
-  --auth-carte-fond: rgb(255 255 255 / 0.5);
-  --auth-carte-bord: rgb(255 255 255 / 0.8);
+  /* Clair : verre plus opaque et contour gris fin — une bordure blanche sur
+     fond clair ne détachait pas la carte (23/10/2026). */
+  --auth-carte-fond: rgb(255 255 255 / 0.74);
+  --auth-carte-bord: rgb(20 26 51 / 0.09);
   --auth-carte-reflet: rgb(255 255 255 / 0.95);
   --auth-carte-sheen: rgb(255 255 255 / 0.5);
-  --auth-carte-ombre: rgb(40 50 110 / 0.2);
+  --auth-carte-ombre: rgb(44 58 130 / 0.26);
   --auth-champ-fond: rgb(255 255 255 / 0.6);
   --auth-champ-fond-focus: rgb(255 255 255 / 0.85);
   --auth-champ-bord: rgb(20 26 51 / 0.12);
