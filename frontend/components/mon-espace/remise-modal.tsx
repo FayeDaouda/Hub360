@@ -27,15 +27,15 @@ export function RemiseModal({
   const [saisie, setSaisie] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: piecesInitiales ?? [] });
   return (
     <ConfirmModal
-      titre="Remettre la tâche"
+      titre="Déposer la tâche"
       message={
         <>
           « {tache.libelle} » ({tache.projetCode}) part en validation chez votre chef de team (ou l’Architecte DPLG). Vous ne pourrez
-          plus la remettre tant qu’elle n’est pas validée ou renvoyée en reprise.
+          plus la déposer à nouveau tant qu’elle n’est pas validée ou renvoyée en reprise.
           <ChampsRemise id={`remise-${tache.id}`} valeur={saisie} onChange={setSaisie} />
         </>
       }
-      confirmer="Remettre"
+      confirmer="Déposer"
       onConfirm={async () => {
         onRemise(await remettreTache(slug, tache, corpsRemise(saisie)));
         onClose(); // ConfirmModal ne se ferme pas seule après succès

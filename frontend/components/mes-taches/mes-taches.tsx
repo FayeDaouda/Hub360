@@ -24,7 +24,6 @@ type Pieces = { nom: string; url: string }[];
 
 const MAX_PIECES = 5;
 const CLE_VUE = 'hub.mes-taches.vue';
-const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const parEcheance = (a: TacheMonEspace, b: TacheMonEspace) => (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999');
@@ -34,6 +33,11 @@ const decaler = (iso: string, jours: number) => {
   return d.toISOString().slice(0, 10);
 };
 const jourSemaine = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
+// Date qui fait foi pour l'urgence : la nouvelle date accordée si la tâche est
+// prolongée, sinon l'échéance.
+const dateEffective = (t: TacheMonEspace) => (t.statut === 'prolongee' && t.prolongeeJusquau ? t.prolongeeJusquau : t.echeance);
+const parDateEffective = (a: TacheMonEspace, b: TacheMonEspace) =>
+  (dateEffective(a) ?? '9999').localeCompare(dateEffective(b) ?? '9999');
 
 // Échéance lue d'un coup d'œil : « 14 j de retard », « Aujourd’hui », « Dans 3 j ».
 function relatif(echeance: string, aujourdhui: string): string {
@@ -44,21 +48,30 @@ function relatif(echeance: string, aujourdhui: string): string {
   return `Dans ${n} j`;
 }
 
+// Le retard est un attribut, pas une catégorie (23/10/2026) : une tâche à
+// reprendre dont l'échéance est passée compte aussi « En retard ». Les cartes
+// se recoupent donc ; la liste, elle, montre chaque tâche une seule fois, à sa
+// place la plus urgente.
 const FILTRES: { cle: Filtre; libelle: string; aide: string; icone: LucideIcon; ton: Ton }[] = [
-  { cle: 'reprises', libelle: 'À reprendre', aide: 'renvoyées par votre N+1', icone: RotateCcw, ton: 'risque' },
   { cle: 'retards', libelle: 'En retard', aide: 'échéance dépassée', icone: AlarmClock, ton: 'risque' },
+  { cle: 'reprises', libelle: 'À reprendre', aide: 'renvoyées par votre N+1', icone: RotateCcw, ton: 'risque' },
   { cle: 'semaine', libelle: 'Cette semaine', aide: 'à rendre d’ici dimanche', icone: CalendarClock, ton: 'attention' },
-  { cle: 'attente', libelle: 'En validation', aide: 'remises chez votre N+1', icone: Hourglass, ton: 'info' },
+  { cle: 'attente', libelle: 'En validation', aide: 'déposées chez votre N+1', icone: Hourglass, ton: 'info' },
   { cle: 'mentions', libelle: 'Mentions', aide: 'à lire dans les fils', icone: AtSign, ton: 'iris' },
 ];
 
-// « Mes tâches » (revue Salarié, 19/10/2026) : la réponse à « qu'est-ce que
-// je dois faire aujourd'hui ? ». En-tête fixe (barre du haut, filtres, frise
-// de la semaine) ; un filtre ou un jour n'affiche que sa liste. Une tâche
-// s'ouvre en panneau latéral (celui de Projets) ; un fichier glissé sur sa
-// ligne prépare sa remise. Vue par urgence ou par projet.
+// « Mes tâches » (revue Salarié, 19/10/2026 ; logique et mots revus le
+// 23/10/2026) : la réponse à « qu'est-ce que je dois faire aujourd'hui ? ».
+// Salut + résumé (pas de second titre « Mes tâches »), cartes-filtres en
+// en-tête fixe ; un filtre n'affiche que sa liste. Vue par urgence : en
+// retard (du plus ancien), à reprendre, cette semaine, en validation. Une
+// mention non lue s'affiche sur la ligne de sa tâche. Une tâche s'ouvre en
+// panneau latéral (celui de Projets) ; un fichier glissé sur sa ligne prépare
+// son dépôt. Vue par urgence ou par projet.
 export function MesTaches({ slug }: { slug: string }) {
-  useTitrePage('Mes tâches');
+  // Titre vide : le salut tient lieu de titre (la barre latérale situe déjà
+  // la page).
+  useTitrePage('');
   const { utilisateur } = useSessionCourante();
   const base = `/admin/${slug}`;
   const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -68,7 +81,6 @@ export function MesTaches({ slug }: { slug: string }) {
   // ?filtre= : lien d'une tuile de Projets (« Mes tâches en retard »…).
   const demande = useSearchParams().get('filtre');
   const [filtreChoisi, setFiltre] = useState<Filtre | null>(FILTRES.some((f) => f.cle === demande) ? (demande as Filtre) : null);
-  const [jour, setJour] = useState<string | null>(null);
   const [vue, setVue] = useState<Vue>('urgence');
   const [tiroir, setTiroir] = useState<{ projetId: string; tacheId: string; prolongation: boolean } | null>(null);
   const [aRemettre, setARemettre] = useState<{ tache: TacheMonEspace; pieces?: Pieces } | null>(null);
@@ -120,36 +132,55 @@ export function MesTaches({ slug }: { slug: string }) {
     const ouvertes = (donnees?.taches ?? []).filter((t) => t.statut !== 'validee').sort(parEcheance);
     const lundi = decaler(aujourdhui, -((jourSemaine(aujourdhui) + 6) % 7));
     const dimanche = decaler(lundi, 6);
+    // En retard : échéance passée (date accordée pour une prolongée), reprises
+    // comprises — du plus ancien au plus récent. Une tâche « bloquée » attend
+    // l'étape précédente : son retard ne lui est pas imputable.
+    const retards = ouvertes
+      .filter(
+        (t) =>
+          t.statut === 'en_retard' ||
+          ((t.statut === 'a_reprendre' || t.statut === 'prolongee') && !!dateEffective(t) && dateEffective(t)! < aujourdhui),
+      )
+      .sort(parDateEffective);
+    const enRetard = new Set(retards);
     const reprises = ouvertes.filter((t) => t.statut === 'a_reprendre');
-    const retards = ouvertes.filter((t) => t.statut === 'en_retard');
-    // Prolongée : la nouvelle date accordée compte (le retard est qualifié).
-    const semaine = ouvertes.filter(
-      (t) =>
-        ((t.statut === 'en_cours' || t.statut === 'a_venir') && !!t.echeance && t.echeance <= dimanche) ||
-        (t.statut === 'prolongee' && !!t.prolongeeJusquau && t.prolongeeJusquau <= dimanche),
-    );
+    const semaine = ouvertes
+      .filter(
+        (t) =>
+          !enRetard.has(t) &&
+          (t.statut === 'en_cours' || t.statut === 'a_venir' || t.statut === 'prolongee') &&
+          !!dateEffective(t) &&
+          dateEffective(t)! <= dimanche,
+      )
+      .sort(parDateEffective);
     const attente = ouvertes.filter((t) => t.statut === 'remise');
-    const classees = new Set([...reprises, ...retards, ...semaine, ...attente]);
+    // Sections de la vue par urgence : chaque tâche une fois, à sa place la
+    // plus urgente (une reprise en retard est dans « En retard »).
+    const sections: Record<Section, TacheMonEspace[]> = {
+      retards,
+      reprises: reprises.filter((t) => !enRetard.has(t)),
+      semaine,
+      attente,
+    };
+    const classees = new Set([...retards, ...reprises, ...semaine, ...attente]);
     const ensuite = ouvertes.filter((t) => !classees.has(t));
     // Ton d'une tâche, quelle que soit la vue : la bande de sa ligne.
     const tonDe = (t: TacheMonEspace): Ton =>
-      reprises.includes(t) || retards.includes(t) ? 'risque' : semaine.includes(t) ? 'attention' : attente.includes(t) ? 'info' : 'neutre';
-    // Ordre d'urgence (vue par projet) : reprise, retard, semaine, validation, le reste.
+      enRetard.has(t) || t.statut === 'a_reprendre' ? 'risque' : semaine.includes(t) ? 'attention' : attente.includes(t) ? 'info' : 'neutre';
+    // Ordre d'urgence (vue par projet) : retard, reprise, semaine, validation, le reste.
     const rang = (t: TacheMonEspace) => {
-      const i = [reprises, retards, semaine, attente].findIndex((l) => l.includes(t));
-      return i < 0 ? 4 : i;
+      const i = SECTIONS.findIndex((cle) => sections[cle].includes(t));
+      return i < 0 ? SECTIONS.length : i;
     };
-    const jours = [0, 1, 2, 3, 4].map((i) => {
-      const d = decaler(lundi, i);
-      return { date: d, n: ouvertes.filter((t) => t.statut !== 'remise' && t.echeance === d).length };
-    });
-    return { ouvertes, reprises, retards, semaine, attente, ensuite, dimanche, jours, tonDe, rang };
+    // Tâches qui demandent une action (sans double compte).
+    const urgences = new Set([...retards, ...reprises, ...semaine]).size;
+    return { ouvertes, retards, reprises, semaine, attente, sections, ensuite, dimanche, enRetard, tonDe, rang, urgences };
   }, [donnees, aujourdhui]);
 
   const nonLues = mentions.filter((m) => !m.lue).length;
   const compte: Record<Filtre, number> = {
-    reprises: g.reprises.length,
     retards: g.retards.length,
+    reprises: g.reprises.length,
     semaine: g.semaine.length,
     attente: g.attente.length,
     mentions: nonLues,
@@ -168,22 +199,15 @@ export function MesTaches({ slug }: { slug: string }) {
     );
   }
 
-  const urgences = compte.reprises + compte.retards + compte.semaine;
+  const { urgences } = g;
   const nbADecider = aDecider.taches + aDecider.absences;
   const filtreActif = FILTRES.find((f) => f.cle === filtre);
-  const auMoinsUnFiltre = filtre !== null || jour !== null;
 
   function choisirFiltre(f: Filtre) {
-    setJour(null);
     setFiltre((x) => (x === f ? null : f));
-  }
-  function choisirJour(d: string) {
-    setFiltre(null);
-    setJour((x) => (x === d ? null : d));
   }
   function toutAfficher() {
     setFiltre(null);
-    setJour(null);
   }
   function rafraichir() {
     void chargerTaches();
@@ -201,37 +225,56 @@ export function MesTaches({ slug }: { slug: string }) {
     }
   }
 
+  // Tâches à afficher selon le filtre (cartes) et la vue.
+  const selection: TacheMonEspace[] = filtre === 'mentions' ? [] : filtre ? g[filtre] : g.ouvertes;
+  const parProjet = groupesParProjet(selection, g.rang);
+  // Lignes réellement affichées (« Plus tard » est replié) : une mention non
+  // lue s'y accroche ; les autres restent dans la section Mentions.
+  const affichees = new Set(
+    (vue === 'projet' || filtre ? selection : SECTIONS.flatMap((cle) => g.sections[cle])).map((t) => t.id),
+  );
+  const mentionsDe = new Map<string, MentionRecue[]>();
+  if (filtre !== 'mentions') {
+    for (const m of mentions) {
+      if (m.lue || !m.tacheId || !affichees.has(m.tacheId)) continue;
+      mentionsDe.set(m.tacheId, [...(mentionsDe.get(m.tacheId) ?? []), m]);
+    }
+  }
+  const mentionsSeules = mentions.filter((m) => !(m.tacheId && mentionsDe.has(m.tacheId)));
+
+  // Pastille de mention : ouvre la tâche (le fil est dans le panneau) et
+  // marque ses mentions comme lues.
+  function ouvrirMentions(t: TacheMonEspace, liste: MentionRecue[]) {
+    setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false });
+    void Promise.all(liste.map((m) => marquerMentionLue(slug, m.id)))
+      .then(() => chargerMentions())
+      .catch(() => undefined);
+  }
+
   const ligne = (t: TacheMonEspace, sansProjet = false) => (
     <LigneTache
       key={t.id}
       t={t}
       ton={g.tonDe(t)}
+      enRetard={g.enRetard.has(t)}
       base={base}
       aujourdhui={aujourdhui}
       sansProjet={sansProjet}
+      mentions={mentionsDe.get(t.id)}
+      onMentions={(liste) => ouvrirMentions(t, liste)}
       onOuvrir={(prolongation) => setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation })}
-      onRemettre={t.statut === 'remise' || t.statut === 'bloquee' ? undefined : () => setARemettre({ tache: t })}
-      onDeposer={t.statut === 'remise' ? undefined : (f) => void deposer(t, f)}
+      onDeposerTache={t.statut === 'remise' || t.statut === 'bloquee' ? undefined : () => setARemettre({ tache: t })}
+      onFichiers={t.statut === 'remise' ? undefined : (f) => void deposer(t, f)}
     />
   );
-
-  // Tâches à afficher selon le filtre ou le jour (vue par projet, ou jour).
-  const selection: TacheMonEspace[] = jour
-    ? g.ouvertes.filter((t) => t.echeance === jour)
-    : filtre && filtre !== 'mentions'
-      ? g[filtre]
-      : filtre === 'mentions'
-        ? []
-        : g.ouvertes;
-  const parProjet = groupesParProjet(selection, g.rang);
 
   return (
     <div className="mt-page page-entete-fixe">
       <div className="mt-accueil">
         <div>
-          <h2 className="mt-accueil-titre">
+          <h1 className="mt-accueil-titre">
             {new Date().getHours() >= 18 ? 'Bonsoir' : 'Bonjour'} {utilisateur.prenom}
-          </h2>
+          </h1>
           <p className="mt-accueil-sous">
             {new Date(`${aujourdhui}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
             {' · '}
@@ -277,38 +320,11 @@ export function MesTaches({ slug }: { slug: string }) {
             );
           })}
         </div>
-        <div className="mt-semaine" role="group" aria-label="Ma semaine : échéances par jour">
-          {g.jours.map((j) => {
-            const actif = jour === j.date;
-            const passe = j.date < aujourdhui;
-            return (
-              <button
-                key={j.date}
-                type="button"
-                className={`mt-jour${actif ? ' is-actif' : ''}${j.date === aujourdhui ? ' is-aujourdhui' : ''}${passe ? ' is-passe' : ''}`}
-                aria-pressed={actif}
-                disabled={j.n === 0}
-                onClick={() => choisirJour(j.date)}
-                title={`${j.n} échéance${j.n > 1 ? 's' : ''} le ${jjmm(j.date)}`}
-              >
-                <span className="mt-jour-nom">
-                  {j.date === aujourdhui ? 'Auj.' : JOURS[jourSemaine(j.date)]} {Number(j.date.slice(8, 10))}
-                </span>
-                <span className="mt-jour-points" aria-hidden>
-                  {Array.from({ length: Math.min(j.n, 4) }, (_, i) => (
-                    <span key={i} className="mt-jour-point" />
-                  ))}
-                  {j.n > 4 && <span className="mt-jour-plus">+{j.n - 4}</span>}
-                </span>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {erreur && <p className="field-erreur">{erreur}</p>}
 
-      {nbADecider > 0 && !auMoinsUnFiltre && (
+      {nbADecider > 0 && !filtre && (
         <div className="mt-bandeau">
           <p>
             <strong>Vous êtes N+1.</strong>{' '}
@@ -327,20 +343,16 @@ export function MesTaches({ slug }: { slug: string }) {
       )}
 
       <section className="panel glass-panel mt-liste" aria-live="polite">
-        {auMoinsUnFiltre && (
+        {filtreActif && (
           <div className="mt-filtre-etat">
-            <span>
-              {jour
-                ? `Échéance le ${new Date(`${jour}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })} · ${selection.length}`
-                : `${filtreActif!.libelle} · ${filtre === 'mentions' ? mentions.length : compte[filtre!]}`}
-            </span>
+            <span>{`${filtreActif.libelle} · ${filtre === 'mentions' ? mentions.length : compte[filtreActif.cle]}`}</span>
             <button type="button" className="btn-ghost btn-ghost--sm" onClick={toutAfficher}>
               <X size={14} aria-hidden /> Tout afficher
             </button>
           </div>
         )}
 
-        {!auMoinsUnFiltre && urgences === 0 && (
+        {!filtre && urgences === 0 && (
           <p className="mt-calme">Rien d’urgent : aucune reprise, aucun retard, aucune échéance d’ici dimanche.</p>
         )}
 
@@ -350,21 +362,19 @@ export function MesTaches({ slug }: { slug: string }) {
                 {p.taches.map((t) => ligne(t, true))}
               </Groupe>
             ))
-          : jour
-            ? (
-                <Groupe titre="Échéances du jour" ton="attention" n={selection.length} masquerTitre>
-                  {selection.map((t) => ligne(t))}
-                </Groupe>
-              )
-            : (
+          : (
                 <>
-                  {(['reprises', 'retards', 'semaine', 'attente'] as const)
-                    .filter((f) => filtre === null || filtre === f)
-                    .map((f) => (
-                      <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={g[f].length} masquerTitre={!!filtre}>
-                        {g[f].map((t) => ligne(t))}
+                  {/* Sans filtre : sections sans compteur (déjà sur les cartes,
+                      et une reprise en retard n'est listée qu'une fois). Avec
+                      un filtre : sa liste complète. */}
+                  {SECTIONS.filter((f) => filtre === null || filtre === f).map((f) => {
+                    const liste = filtre ? g[f] : g.sections[f];
+                    return (
+                      <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={liste.length} masquerTitre={!!filtre} sansCompte>
+                        {liste.map((t) => ligne(t))}
                       </Groupe>
-                    ))}
+                    );
+                  })}
                   {filtre === null && g.ensuite.length > 0 && (
                     <details className="mt-plus-tard">
                       <summary>
@@ -377,9 +387,9 @@ export function MesTaches({ slug }: { slug: string }) {
                 </>
               )}
 
-        {!jour && (filtre === null || filtre === 'mentions') && (
-          <Groupe titre="Mentions" ton="iris" n={mentions.length} masquerTitre={filtre === 'mentions'}>
-            {mentions.map((m) => (
+        {(filtre === null || filtre === 'mentions') && (
+          <Groupe titre="Mentions" ton="iris" n={mentionsSeules.length} masquerTitre={filtre === 'mentions'} sansCompte>
+            {mentionsSeules.map((m) => (
               <LigneMention
                 key={m.id}
                 slug={slug}
@@ -394,9 +404,11 @@ export function MesTaches({ slug }: { slug: string }) {
       </section>
 
       <p className="dmd-note mt-pied">
+        {/* Espace HORS du span : dans un inline-flex, il serait avalé
+            (« remettre.Historique »). */}
         <span className="mt-astuce">
-          <Paperclip size={13} aria-hidden /> Glissez un fichier sur une tâche pour la remettre.{' '}
-        </span>
+          <Paperclip size={13} aria-hidden /> Glissez un fichier sur une tâche pour la déposer.
+        </span>{' '}
         Historique et respect des délais :{' '}
         <Link className="lien-inline" href={`${base}/mon-espace?onglet=performances`}>
           Mon espace › Mes performances
@@ -429,9 +441,12 @@ export function MesTaches({ slug }: { slug: string }) {
   );
 }
 
-const TITRES: Record<Exclude<Filtre, 'mentions'>, string> = {
-  reprises: 'À reprendre',
+type Section = Exclude<Filtre, 'mentions'>;
+// Ordre d'urgence des sections (et des cartes).
+const SECTIONS: Section[] = ['retards', 'reprises', 'semaine', 'attente'];
+const TITRES: Record<Section, string> = {
   retards: 'En retard',
+  reprises: 'À reprendre',
   semaine: 'À rendre cette semaine',
   attente: 'En attente de validation',
 };
@@ -445,8 +460,8 @@ function groupesParProjet(taches: TacheMonEspace[], rang: (t: TacheMonEspace) =>
     parId.set(t.projetId, p);
   }
   const groupes = [...parId.values()];
-  for (const p of groupes) p.taches.sort((a, b) => rang(a) - rang(b) || parEcheance(a, b));
-  return groupes.sort((a, b) => rang(a.taches[0]) - rang(b.taches[0]) || parEcheance(a.taches[0], b.taches[0]));
+  for (const p of groupes) p.taches.sort((a, b) => rang(a) - rang(b) || parDateEffective(a, b));
+  return groupes.sort((a, b) => rang(a.taches[0]) - rang(b.taches[0]) || parDateEffective(a.taches[0], b.taches[0]));
 }
 
 function Groupe({
@@ -455,6 +470,7 @@ function Groupe({
   n,
   masquerTitre = false,
   projet = false,
+  sansCompte = false,
   children,
 }: {
   titre: string;
@@ -462,6 +478,7 @@ function Groupe({
   n: number;
   masquerTitre?: boolean;
   projet?: boolean;
+  sansCompte?: boolean;
   children: ReactNode;
 }) {
   if (n === 0) return null;
@@ -469,7 +486,7 @@ function Groupe({
     <div className="mt-groupe">
       {!masquerTitre && (
         <h2 className={`mt-groupe-titre${projet ? ' mt-groupe-titre--projet' : ''}`} data-ton={ton}>
-          {titre} <span className="mt-groupe-compte">{n}</span>
+          {titre} {!sansCompte && <span className="mt-groupe-compte">{n}</span>}
         </h2>
       )}
       <ul className="mt-lignes">{children}</ul>
@@ -480,38 +497,44 @@ function Groupe({
 function LigneTache({
   t,
   ton,
+  enRetard,
   base,
   aujourdhui,
   sansProjet,
+  mentions,
+  onMentions,
   onOuvrir,
-  onRemettre,
-  onDeposer,
+  onDeposerTache,
+  onFichiers,
 }: {
   t: TacheMonEspace;
   ton: Ton;
+  enRetard: boolean;
   base: string;
   aujourdhui: string;
   sansProjet: boolean;
+  mentions?: MentionRecue[];
+  onMentions: (liste: MentionRecue[]) => void;
   onOuvrir: (prolongation: boolean) => void;
-  onRemettre?: () => void;
-  onDeposer?: (fichiers: FileList) => void;
+  onDeposerTache?: () => void;
+  onFichiers?: (fichiers: FileList) => void;
 }) {
   const [survol, setSurvol] = useState(false);
   const echeance =
     t.statut === 'remise'
-      ? { rel: 'En validation', date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · remise le ${jjmm(t.remisLe)}` : ''}` }
+      ? { rel: 'En validation', date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${jjmm(t.remisLe)}` : ''}` }
       : t.statut === 'bloquee'
-        ? { rel: 'Attend l’étape précédente', date: t.echeance ? `due le ${jjmm(t.echeance)}` : 'pas encore de dates' }
+        ? { rel: 'Attend l’étape précédente', date: t.echeance ? `à rendre le ${jjmm(t.echeance)}` : 'pas encore de dates' }
         : t.statut === 'prolongee' && t.prolongeeJusquau
-          ? { rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`, date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · due le ${jjmm(t.echeance)}` : ''}` }
+          ? { rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`, date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${jjmm(t.echeance)}` : ''}` }
           : t.echeance
             ? {
                 rel: t.statut === 'a_reprendre' ? `Reprise · ${relatif(t.echeance, aujourdhui).toLowerCase()}` : relatif(t.echeance, aujourdhui),
-                date: t.statut === 'a_venir' && t.debut ? `démarre le ${jjmm(t.debut)} · due le ${jjmm(t.echeance)}` : `due le ${jjmm(t.echeance)}`,
+                date: t.statut === 'a_venir' && t.debut ? `démarre le ${jjmm(t.debut)} · à rendre le ${jjmm(t.echeance)}` : `à rendre le ${jjmm(t.echeance)}`,
               }
             : { rel: 'À planifier', date: 'pas encore de dates' };
 
-  const glisser = onDeposer
+  const glisser = onFichiers
     ? {
         onDragOver: (e: DragEvent) => {
           if (!e.dataTransfer.types.includes('Files')) return;
@@ -522,7 +545,7 @@ function LigneTache({
         onDrop: (e: DragEvent) => {
           e.preventDefault();
           setSurvol(false);
-          if (e.dataTransfer.files.length) onDeposer(e.dataTransfer.files);
+          if (e.dataTransfer.files.length) onFichiers(e.dataTransfer.files);
         },
       }
     : {};
@@ -552,20 +575,30 @@ function LigneTache({
             <RotateCcw size={13} aria-hidden /> {t.renvoiMotif}
           </span>
         )}
+        {mentions && mentions.length > 0 && (
+          <button type="button" className="mt-pastille-mention" title={`« ${mentions[0].texte} »`} onClick={() => onMentions(mentions)}>
+            <AtSign size={13} aria-hidden />
+            {mentions.length === 1
+              ? `${mentions[0].auteur ?? 'Quelqu’un'} vous mentionne`
+              : `${mentions.length} mentions non lues`}
+          </button>
+        )}
       </span>
       <span className="mt-echeance">
-        <span className="mt-echeance-rel">{survol ? 'Déposez pour remettre' : echeance.rel}</span>
+        <span className="mt-echeance-rel">{survol ? 'Lâchez pour déposer' : echeance.rel}</span>
         <span className="mt-echeance-date">{echeance.date}</span>
       </span>
       <span className="mt-action">
+        {/* « Demander un délai » : la prolongation est accordée (ou non) par
+            le N+1 — le bouton ne prolonge rien lui-même. */}
         {t.statut === 'en_retard' && (
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onOuvrir(true)}>
-            Prolonger
+            Demander un délai
           </button>
         )}
-        {onRemettre && (
-          <button type="button" className={ton === 'neutre' ? 'btn-ghost btn-ghost--sm' : 'btn-primary btn-primary--sm'} onClick={onRemettre}>
-            Remettre
+        {onDeposerTache && (
+          <button type="button" className={enRetard ? 'btn-primary btn-primary--sm' : 'btn-ghost btn-ghost--sm'} onClick={onDeposerTache}>
+            Déposer
           </button>
         )}
       </span>

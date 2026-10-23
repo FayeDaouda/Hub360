@@ -233,7 +233,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       {tache.peutRemettre && (
         <div className="po-panneau-bloc">
           <p className="po-kicker">
-            {tache.statut === 'reprise' ? 'Reprise demandée' : 'À remettre'} · v{String(tache.version + 1).padStart(2, '0')}
+            {tache.statut === 'reprise' ? 'Reprise demandée' : 'À déposer'} · v{String(tache.version + 1).padStart(2, '0')}
           </p>
           <p className="po-aide">
             {v.mode === 'depot'
@@ -248,7 +248,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               disabled={enCours}
               onClick={() => agir(() => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)), 'La remise a échoué.', () => setSaisie(SAISIE_REMISE_VIDE))}
             >
-              {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Remettre la tâche'}
+              {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Déposer la tâche'}
             </button>
           </div>
         </div>
@@ -288,7 +288,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
         <div className="po-panneau-bloc">
           {prolonger ? (
             <>
-              <p className="po-kicker">Demander une prolongation</p>
+              <p className="po-kicker">Demander un délai</p>
               <p className="po-aide">L’échéance de référence reste figée : accordée, la prolongation qualifie le retard jusqu’à la nouvelle date.</p>
               <label className="po-panneau-label" htmlFor="po-jusquau">
                 Nouvelle date
@@ -324,7 +324,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           ) : (
             <div className="po-decision">
               <button type="button" className="btn-ghost" onClick={() => setProlonger(true)}>
-                Demander une prolongation
+                Demander un délai
               </button>
             </div>
           )}

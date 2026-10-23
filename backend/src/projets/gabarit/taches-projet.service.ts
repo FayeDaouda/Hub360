@@ -134,7 +134,7 @@ export class TachesProjetService {
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée remet sa tâche.');
     if (tache.statut !== 'a_faire' && tache.statut !== 'reprise') throw new ConflictException('Cette tâche n’attend pas de remise.');
-    if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : rien à remettre.');
+    if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : rien à déposer.');
     if (await this.carteVerrouillee(projetId, tache.carte.ouvreApres)) {
       throw new ConflictException('La carte s’ouvre quand les tâches dont elle dépend sont validées.');
     }

@@ -8884,6 +8884,33 @@ tr.is-demandeur .cal-nom {
   flex: none;
   margin-top: 0.15rem;
 }
+/* Mention non lue accrochée à sa tâche : ouvre le fil (panneau) et la
+   marque comme lue. */
+.mt-pastille-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--iris) 13%, transparent);
+  color: color-mix(in oklch, var(--iris) 72%, var(--text));
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.mt-pastille-mention:hover {
+  background: color-mix(in oklch, var(--iris) 22%, transparent);
+}
+.mt-pastille-mention:focus-visible {
+  outline: 2px solid var(--iris);
+  outline-offset: 2px;
+}
 .mt-echeance {
   display: grid;
   gap: 0.1rem;
@@ -8949,69 +8976,6 @@ tr.is-demandeur .cal-nom {
 }
 .mt-accueil-sous::first-letter {
   text-transform: uppercase;
-}
-.mt-semaine {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.4rem;
-  margin-top: 0.55rem;
-}
-.mt-jour {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  min-width: 0;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--text) 4%, transparent);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
-}
-.mt-jour:hover:not(:disabled) {
-  border-color: var(--border-hover);
-}
-.mt-jour:disabled {
-  cursor: default;
-  color: var(--text-muted);
-}
-.mt-jour.is-passe {
-  opacity: 0.7;
-}
-.mt-jour.is-aujourdhui {
-  border-color: color-mix(in oklch, var(--brand) 45%, transparent);
-  font-weight: 700;
-}
-.mt-jour.is-actif {
-  border-color: var(--pill-attention);
-  background: color-mix(in oklch, var(--pill-attention) 14%, var(--surface));
-}
-.mt-jour-nom {
-  white-space: nowrap;
-}
-.mt-jour-points {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.mt-jour-point {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--pill-attention);
-}
-.mt-jour.is-passe .mt-jour-point {
-  background: var(--pill-risque);
-}
-.mt-jour-plus {
-  font-size: 0.68rem;
-  color: var(--text-muted);
 }
 .mt-titre-bouton {
   width: fit-content;
@@ -9088,20 +9052,6 @@ tr.is-demandeur .cal-nom {
   }
 }
 @media (max-width: 720px) {
-  .mt-semaine {
-    gap: 0.25rem;
-  }
-  .mt-jour {
-    justify-content: center;
-    padding: 0.35rem 0.3rem;
-  }
-  .mt-jour-points {
-    display: none;
-  }
-  .mt-jour:not(:disabled) .mt-jour-nom::after {
-    content: ' •';
-    color: var(--pill-attention);
-  }
   .mt-filtres {
     display: flex;
     overflow-x: auto;
@@ -9121,6 +9071,19 @@ tr.is-demandeur .cal-nom {
   }
   .mt-echeance {
     text-align: left;
+  }
+  /* Deux boutons (« Demander un délai » + « Déposer ») : l'échéance prend sa
+     ligne, les boutons passent dessous, à droite (sous le pouce) — sinon la
+     date s'écrasait sur 4 lignes. */
+  .mt-ligne:has(.mt-action > :nth-child(2)) .mt-echeance {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  .mt-ligne:has(.mt-action > :nth-child(2)) .mt-action {
+    grid-column: 1 / -1;
   }
 }
 @media (prefers-reduced-motion: reduce) {

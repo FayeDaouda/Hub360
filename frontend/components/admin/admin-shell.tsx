@@ -412,7 +412,8 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             >
               <Menu size={20} strokeWidth={1.75} />
             </button>
-            <h1 className="admin-title">{titre}</h1>
+            {/* Titre vide : la page porte son propre h1 (ex. salut de Mes tâches). */}
+            {titre && <h1 className="admin-title">{titre}</h1>}
           </div>
           <div className="admin-topbar-actions">
             <RechercheGlobale slug={session.societe.slug} />
@@ -447,9 +448,11 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
         </header>
 
         {/* Téléphone : grand titre sous la barre (masqué sur ordinateur, où le titre est dans la barre). */}
-        <h1 className="admin-grand-titre" aria-hidden>
-          {titre}
-        </h1>
+        {titre && (
+          <h1 className="admin-grand-titre" aria-hidden>
+            {titre}
+          </h1>
+        )}
         {children}
       </main>
 

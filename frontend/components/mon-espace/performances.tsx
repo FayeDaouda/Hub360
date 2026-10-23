@@ -222,7 +222,7 @@ export function MesPerformances({ slug }: { slug: string }) {
 
       {aMesTaches ? (
         <p className="dmd-note me-pied">
-          Vos tâches en cours, à remettre ou à reprendre :{' '}
+          Vos tâches en cours, à déposer ou à reprendre :{' '}
           <Link className="lien-inline" href={`${base}/mes-taches`}>
             Mes tâches
           </Link>
@@ -303,7 +303,7 @@ export function MesPerformances({ slug }: { slug: string }) {
                           className="btn-ghost btn-ghost--sm"
                           onClick={() => setARemettre(t)}
                         >
-                          Remettre
+                          Déposer
                         </button>
                       )}
                     </span>
