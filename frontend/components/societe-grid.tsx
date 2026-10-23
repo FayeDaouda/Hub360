@@ -49,9 +49,11 @@ export function SocieteGrid({ societes }: { societes: SocietePortail[] }) {
   return (
     <ul
       className={`portail-societes${leavingSlug ? ' is-navigating' : ''}`}
-      style={{ '--colonnes': colonnesPortail(societes.length) } as CSSProperties}
+      data-colonnes={colonnesPortail(societes.length)}
     >
       {societes.map((societe, index) => {
+        // Sur le <li> : la carte en hérite, et la lueur de survol (li::before)
+        // aussi.
         const style: StyleCarte = {
           '--i': String(index),
           '--societe-color': societe.couleurMarque || FALLBACK_COLOR,
@@ -73,8 +75,8 @@ export function SocieteGrid({ societes }: { societes: SocietePortail[] }) {
 
         if (!societe.accesOuvert) {
           return (
-            <li key={societe.id}>
-              <div className="societe-carte societe-carte--bientot" style={style}>
+            <li key={societe.id} style={style}>
+              <div className="societe-carte societe-carte--bientot">
                 {identite}
                 <span className="societe-carte-bientot">Bientôt</span>
               </div>
@@ -83,11 +85,10 @@ export function SocieteGrid({ societes }: { societes: SocietePortail[] }) {
         }
 
         return (
-          <li key={societe.id}>
+          <li key={societe.id} style={style}>
             <a
               href={`/login/${societe.slug}`}
               className={`societe-carte${leavingSlug === societe.slug ? ' is-leaving' : ''}`}
-              style={style}
               onClick={(event) => handleClick(event, societe.slug)}
             >
               {identite}

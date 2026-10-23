@@ -770,8 +770,8 @@ button {
 }
 .fl-perle--jaune {
   --c: #ffc53a;
-  --x: 90%;
-  --y: 30%;
+  --x: 95%;
+  --y: 37%;
   --l: clamp(28px, 3vw, 52px);
   --duree: 11s;
   --delai: -4s;
@@ -970,18 +970,19 @@ button {
 }
 
 /* Mode clair — « billes de verre sur papier » (23/10/2026) : pas de flou,
-   bulles ~18 % plus petites, pleine opacité et saturées, fin contour net
+   bulles ~18 % plus petites, légèrement désaturées (sinon l'orange et le
+   jaune passent devant le contenu), fin contour net
    (outline, pas de box-shadow flou : pas d'artefact sur élément tourné),
    halo coloré réduit (c'est lui qui « délavait » le fond autour des bulles). */
 :root:not([data-theme='dark']) .fl-bulle {
   --fl-echelle: 0.82;
-  --fl-attenuation: 1.1;
+  --fl-attenuation: 1;
 }
 :root:not([data-theme='dark']) .fl-bulle::before {
   opacity: 0.35;
 }
 :root:not([data-theme='dark']) .fl-bulle-corps {
-  filter: saturate(1.18);
+  filter: saturate(0.94);
   outline: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
   outline-offset: -1px;
 }
@@ -1322,6 +1323,7 @@ button {
 .auth-carte-sous-titre strong {
   color: var(--auth-texte);
   font-weight: 600;
+  white-space: nowrap;
 }
 /* Connexion : tuile de la société à gauche du titre (même verre que les
    cartes du portail, lueur de sa couleur de marque). */
@@ -1549,6 +1551,20 @@ button {
   outline: 2px solid var(--auth-focus);
   outline-offset: 3px;
 }
+/* Écran tactile : zone de toucher agrandie (≈ 44 px de haut) par un padding
+   compensé — même rendu, doigt moins précis accepté. */
+@media (pointer: coarse) {
+  .auth-lien {
+    display: inline-block;
+    padding: 0.7rem 0.3rem;
+    margin: -0.7rem -0.3rem;
+  }
+  .selecteur-theme-option::after {
+    content: '';
+    position: absolute;
+    inset: -7px 0;
+  }
+}
 
 /* Double authentification (après le mot de passe). */
 .auth-df-texte {
@@ -1725,12 +1741,13 @@ button {
 }
 
 .portail-societes {
+  --colonnes: 3;
   --carte-max: 340px;
   --portail-gouttiere: clamp(0.9rem, 2vw, 1.25rem);
   list-style: none;
   width: 100%;
   max-width: calc(
-    var(--colonnes, 3) * var(--carte-max) + (var(--colonnes, 3) - 1) * var(--portail-gouttiere)
+    var(--colonnes) * var(--carte-max) + (var(--colonnes) - 1) * var(--portail-gouttiere)
   );
   margin: 0;
   padding: 0;
@@ -1746,8 +1763,45 @@ button {
   flex: 1 1 290px;
   max-width: var(--carte-max);
 }
+.portail-societes[data-colonnes='1'] {
+  --colonnes: 1;
+}
+.portail-societes[data-colonnes='2'] {
+  --colonnes: 2;
+}
+/* Tablette : 3 cartes = 2 + 1 orpheline → une colonne de cartes larges. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .portail-societes[data-colonnes='3'] {
+    --colonnes: 1;
+    --carte-max: 520px;
+  }
+}
 .portail-societes.is-navigating {
   pointer-events: none;
+}
+
+/* Lueur de survol portée par le <li> (calque séparé dont seules opacity et
+   transform bougent, composités par le GPU) plutôt qu'un box-shadow animé
+   sur la carte : la carte est en verre (backdrop-filter), la repeindre à
+   chaque image coûte cher. Ombre extérieure seulement : rien sous le verre. */
+.portail-societes > li {
+  position: relative;
+  isolation: isolate;
+}
+.portail-societes > li::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 22px;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 30px 70px -28px var(--auth-carte-ombre),
+    0 0 44px -14px color-mix(in srgb, var(--societe-color, transparent) 70%, transparent);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .societe-carte {
@@ -1776,7 +1830,6 @@ button {
   animation-delay: calc(0.12s + var(--i, 0) * 0.07s);
   transition:
     transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.35s ease,
     border-color 0.35s ease,
     opacity 0.22s ease;
 }
@@ -1881,10 +1934,10 @@ button {
   a.societe-carte:hover {
     transform: translateY(-4px);
     border-color: color-mix(in srgb, var(--societe-color) 50%, var(--auth-carte-bord));
-    box-shadow:
-      inset 0 1px 0 var(--auth-carte-reflet),
-      0 30px 70px -28px var(--auth-carte-ombre),
-      0 0 44px -14px color-mix(in srgb, var(--societe-color) 70%, transparent);
+  }
+  .portail-societes:not(.is-navigating) > li:has(> a.societe-carte:hover)::before {
+    opacity: 1;
+    transform: translateY(-4px);
   }
   a.societe-carte:hover::after {
     transform: translateX(110%);
@@ -1898,8 +1951,20 @@ button {
   }
 }
 
-/* Sortie vers la connexion : la carte choisie se resserre, les autres
-   s'effacent — puis le fond glisse vers la composition de la connexion. */
+/* Sortie vers la connexion : la carte choisie se resserre et reste (repère
+   pendant le chargement), logo, titre et autres cartes s'effacent — puis le
+   fond glisse vers la composition de la connexion. */
+.portail .auth-logo--seul,
+.portail-entete {
+  transition:
+    opacity 0.22s ease,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.portail:has(.is-navigating) .auth-logo--seul,
+.portail:has(.is-navigating) .portail-entete {
+  opacity: 0;
+  transform: translateY(-8px);
+}
 .portail-societes.is-navigating .societe-carte:not(.is-leaving) {
   opacity: 0;
   transform: translateY(6px) scale(0.98);
@@ -1973,13 +2038,15 @@ button {
 }
 
 /* Entrée : fondu + légère montée, en cascade — court (< 0.6s), le champ
-   e-mail est focalisable immédiatement. */
+   e-mail est focalisable immédiatement. backwards (pas both) : une fois
+   entrés, les éléments rendent la main à opacity/transform, sinon
+   l'animation figée écraserait la transition de sortie du portail. */
 .auth-presentation > *,
 .auth-logo--seul,
 .auth-carte,
 .portail-entete,
 .portail-vide {
-  animation: auth-apparition 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: auth-apparition 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .portail-entete { animation-delay: 0.05s; }
 .portail-vide { animation-delay: 0.12s; }

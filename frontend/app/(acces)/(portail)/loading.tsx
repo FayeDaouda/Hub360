@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react';
 import { colonnesPortail } from '@/lib/portail';
 
 // Affiché automatiquement par Next.js pendant que PortailPage (async) va
@@ -11,7 +10,7 @@ export default function PortailLoading() {
   return (
     <ul
       className="portail-societes"
-      style={{ '--colonnes': colonnesPortail(SQUELETTES) } as CSSProperties}
+      data-colonnes={colonnesPortail(SQUELETTES)}
       aria-busy="true"
       aria-label="Chargement des sociétés"
     >
