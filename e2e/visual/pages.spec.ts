@@ -95,6 +95,10 @@ async function captureScreenAndTabs(page: Page, baseName: string, hasTabs = fals
     if (!(await tab.isVisible()) || (await tab.getAttribute('aria-selected')) === 'true') continue;
     const label = slugOf((await tab.innerText()).trim());
     await tab.click();
+    // The pointer would stay on the clicked tab: its hover and press
+    // transitions would then be captured at a random point.
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await waitForContent(page);
     await resetHorizontalScroll(page);
     const [name, theme] = splitTheme(baseName);
