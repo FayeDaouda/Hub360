@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { enregistrerGabarit, libelleVersion, type CarteGabarit, type Changement, type GabaritEnService, type Reglages, type TacheGabarit, type Temps } from '@/lib/reglages';
 import { BarreMotif } from './barre-motif';
 
@@ -20,6 +20,40 @@ const suffixe = (t: Temps) => (t.type === 'par_unite' ? `h par ${t.unite}` : t.t
 // suivante ; les projets en cours gardent la leur.
 export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; gabarit: GabaritEnService; onEnregistre: (r: Reglages) => void }) {
   const [saisies, setSaisies] = useState<Record<string, string>>({});
+  const etapes = gabarit.contenu.etapes;
+
+  // En-tête collé (raccourcis des étapes + colonnes) : sa hauteur (--reg-tete-h)
+  // arrête les étapes visées juste dessous ; l'étape en lecture s'allume.
+  const section = useRef<HTMLElement>(null);
+  const tete = useRef<HTMLDivElement>(null);
+  const [etapeVue, setEtapeVue] = useState(etapes[0]?.numero);
+  useEffect(() => {
+    const el = tete.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => section.current?.style.setProperty('--reg-tete-h', `${el.offsetHeight}px`));
+    obs.observe(el);
+    let attente = 0;
+    const suivre = () => {
+      cancelAnimationFrame(attente);
+      attente = requestAnimationFrame(() => {
+        // + la marge d'arrêt des ancres (scroll-padding : 1 rem) et un peu de jeu.
+        const bas = el.getBoundingClientRect().bottom + 24;
+        const vue = etapes.filter((e) => (document.getElementById(`reg-etape-${e.numero}`)?.getBoundingClientRect().top ?? Infinity) <= bas).pop();
+        setEtapeVue((vue ?? etapes[0])?.numero);
+      });
+    };
+    suivre();
+    window.addEventListener('scroll', suivre, { passive: true });
+    return () => {
+      obs.disconnect();
+      window.removeEventListener('scroll', suivre);
+      cancelAnimationFrame(attente);
+    };
+  }, [etapes]);
+  const allerA = (numero: number) => {
+    const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById(`reg-etape-${numero}`)?.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' });
+  };
 
   // Valeur d'origine de chaque champ modifiable, pour ne compter que les vrais changements.
   const origines = useMemo(() => {
@@ -99,7 +133,7 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
   };
 
   return (
-    <section className="panel glass-panel dmd-section reg-panel">
+    <section ref={section} className="panel glass-panel dmd-section reg-panel">
       <div className="reg-entete">
         <h2 className="dmd-titre">
           Gabarit {gabarit.code} · version en service : {gabarit.libelle}
@@ -115,16 +149,42 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         version, leurs fenêtres et leurs durées (délais figés).
       </p>
 
+      {/* Collé sous la barre du haut pendant la lecture du tableau. Les
+          colonnes y sont visuelles ; celles du tableau restent pour les
+          lecteurs d'écran. */}
+      <div ref={tete} className="reg-gabarit-tete">
+        <nav className="reg-etapes" aria-label="Aller à l’étape">
+          {etapes.map((e) => (
+            <button
+              key={e.cle}
+              type="button"
+              className={`reg-etape-puce${e.numero === etapeVue ? ' is-actif' : ''}`}
+              aria-current={e.numero === etapeVue ? 'true' : undefined}
+              onClick={() => allerA(e.numero)}
+            >
+              <span className={`reg-numero reg-numero--${e.numero}`}>{String(e.numero).padStart(2, '0')}</span>
+              {e.libelle}
+            </button>
+          ))}
+        </nav>
+        <div className="reg-ligne reg-ligne--tete" aria-hidden>
+          <span>Ét.</span>
+          <span>Carte · tâche</span>
+          <span>Fenêtre (jours ouvrés)</span>
+          <span>Temps standard</span>
+        </div>
+      </div>
+
       <div className="reg-gabarit" role="table" aria-label={`Gabarit ${gabarit.code}`}>
-        <div className="reg-ligne reg-ligne--tete" role="row">
-          <span role="columnheader">Ét.</span>
+        <div className="reg-ligne sr-only" role="row">
+          <span role="columnheader">Étape</span>
           <span role="columnheader">Carte · tâche</span>
           <span role="columnheader">Fenêtre (jours ouvrés)</span>
           <span role="columnheader">Temps standard</span>
         </div>
-        {gabarit.contenu.etapes.map((e) => (
+        {etapes.map((e) => (
           <div key={e.cle} role="rowgroup">
-            <div className="reg-ligne reg-ligne--etape" role="row">
+            <div id={`reg-etape-${e.numero}`} className="reg-ligne reg-ligne--etape" role="row">
               <span className={`reg-numero reg-numero--${e.numero}`}>{String(e.numero).padStart(2, '0')}</span>
               <strong>{e.libelle}</strong>
             </div>

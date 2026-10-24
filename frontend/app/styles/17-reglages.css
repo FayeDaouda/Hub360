@@ -101,6 +101,12 @@
 .reg-panel {
   grid-template-columns: minmax(0, 1fr);
 }
+/* Défilement (lot S2, 24/10/2026) : le panneau rogne sans devenir une zone
+   de défilement (clip, pas hidden) — l'en-tête du gabarit et la barre du
+   motif collent alors à l'écran, pas au panneau. */
+.reg-panel.glass-panel {
+  overflow: clip;
+}
 .reg-pied {
   margin: 1rem 0 0;
   font-size: 0.8rem;
@@ -124,19 +130,58 @@
   display: grid;
   align-content: start;
   gap: 0.15rem;
-  /* Le tableau défile dans le panneau, en-tête fixe (maquette). */
-  max-height: calc(100dvh - 31rem);
-  min-height: 16rem;
-  overflow-y: auto;
 }
-.reg-ligne--tete {
+/* En-tête du gabarit, collé sous la barre du haut : raccourcis des étapes
+   (l'étape en lecture s'allume) et noms de colonnes. Fond du panneau rendu
+   opaque : les lignes passent dessous sans transparaître. */
+.reg-gabarit-tete {
   position: sticky;
-  top: 0;
-  z-index: 1;
-  /* Verre presque opaque : les lignes qui défilent dessous ne transparaissent pas. */
-  background: color-mix(in oklch, var(--surface) 94%, transparent);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  top: var(--ef-topbar-h, 0px);
+  z-index: 3;
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 -1.25rem;
+  padding: 0.55rem 1.25rem 0.2rem;
+  background: linear-gradient(var(--surface-donnees), var(--surface-donnees)), var(--bg);
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+.reg-etapes {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+}
+.reg-etape-puce {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-13);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--duree-court) var(--courbe),
+    border-color var(--duree-court) var(--courbe),
+    color var(--duree-court) var(--courbe);
+}
+.reg-etape-puce:hover {
+  color: var(--text);
+  border-color: color-mix(in oklch, var(--text) 25%, transparent);
+}
+.reg-etape-puce.is-actif {
+  color: var(--text);
+  border-color: var(--action);
+  background: color-mix(in oklch, var(--action) 14%, transparent);
+}
+.reg-ligne--etape {
+  /* Raccourci d'étape : arrêt juste sous l'en-tête collé. */
+  scroll-margin-top: var(--reg-tete-h, 5.5rem);
 }
 .reg-ligne {
   display: grid;
@@ -215,9 +260,6 @@
   border-color: var(--accent);
 }
 .reg-motif {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
   display: grid;
   gap: 0.4rem;
   margin: 0.5rem -1.25rem -1.1rem;
@@ -227,6 +269,18 @@
   background: color-mix(in oklch, var(--surface) 90%, transparent);
   backdrop-filter: blur(22px) saturate(160%);
   -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+/* Modifications en attente : la barre reste en bas de l'écran (au-dessus de
+   la navigation du bas sur téléphone, --ef-nav-h) jusqu'à l'enregistrement. */
+.reg-motif--actif {
+  position: sticky;
+  bottom: var(--ef-nav-h, 0px);
+  z-index: 3;
+  box-shadow: 0 -14px 30px -18px rgb(0 0 0 / 0.45);
+}
+/* Le champ en cours de saisie ne passe pas sous la barre. */
+html:has(.reg-motif--actif) {
+  scroll-padding-bottom: calc(var(--ef-nav-h, 0px) + 6rem);
 }
 .reg-motif-ligne {
   display: flex;
@@ -323,6 +377,32 @@
   }
   .reg-valeur {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* En-tête collé réduit aux raccourcis d'étapes (colonnes empilées). */
+  .reg-gabarit-tete {
+    padding-bottom: 0.55rem;
+  }
+  .reg-gabarit-tete .reg-ligne--tete {
+    display: none;
+  }
+}
+/* Téléphone : panneaux à 1 rem de marge intérieure (15-mobile.css). */
+@media (max-width: 720px) {
+  .reg-gabarit-tete,
+  .reg-motif {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+  }
+  .reg-motif {
+    margin-bottom: -1rem;
+  }
+  /* Deux lignes : le motif, puis les deux actions côte à côte. */
+  .reg-motif-ligne .field-input {
+    flex-basis: 100%;
+  }
+  .reg-motif-ligne > button {
+    flex: 1 1 0;
+    justify-content: center;
   }
 }
 

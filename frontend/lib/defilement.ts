@@ -5,7 +5,8 @@ import { useEffect, useLayoutEffect } from 'react';
 // Défilement du back-office (lot S0, 24/10/2026) — une seule règle pour
 // toutes les pages, branchée une fois dans la coque (admin-shell.tsx) :
 // - hauteur réelle de la barre du haut (--ef-topbar-h), pour ce qui colle
-//   dessous et pour le scroll-padding des ancres ;
+//   dessous et pour le scroll-padding des ancres ; et de la navigation du bas
+//   sur téléphone (--ef-nav-h, 0 ailleurs), pour ce qui colle en bas ;
 // - `data-defile` sur <html> dès que la page a quitté le haut (voile de la
 //   barre) ;
 // - bandeaux (onglets, filtres, étapes, liste des projets) : l'élément actif
@@ -14,7 +15,7 @@ import { useEffect, useLayoutEffect } from 'react';
 //   l'horizontale) et `data-bord-y` (haut / milieu / bas) pour le fondu des
 //   bords qui annonce la suite (01-fondations.css).
 
-const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul';
+const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes';
 const ZONES = '.po-dossier-defile';
 const ACTIF = '.is-active, .is-actif, [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"]';
 
@@ -46,18 +47,25 @@ function ramener(bandeau: HTMLElement, actif: HTMLElement, doux: boolean) {
 }
 
 export function useDefilementCoque() {
-  // Barre du haut : mesurée avant la peinture (pas de saut des en-têtes collés).
+  // Barres du haut et du bas : mesurées avant la peinture (pas de saut des
+  // éléments collés). La navigation du bas est masquée hors téléphone (0).
   useLayoutEffect(() => {
     const barre = document.querySelector<HTMLElement>('.admin-topbar');
     if (!barre) return;
+    const nav = document.querySelector<HTMLElement>('.nav-mobile');
     const racine = document.documentElement;
-    const mesurer = () => racine.style.setProperty('--ef-topbar-h', `${barre.offsetHeight}px`);
+    const mesurer = () => {
+      racine.style.setProperty('--ef-topbar-h', `${barre.offsetHeight}px`);
+      racine.style.setProperty('--ef-nav-h', `${nav?.offsetHeight ?? 0}px`);
+    };
     mesurer();
     const obs = new ResizeObserver(mesurer);
     obs.observe(barre);
+    if (nav) obs.observe(nav);
     return () => {
       obs.disconnect();
       racine.style.removeProperty('--ef-topbar-h');
+      racine.style.removeProperty('--ef-nav-h');
     };
   }, []);
 
