@@ -6,6 +6,7 @@ import {
   AlarmClock,
   Banknote,
   CalendarCheck,
+  ChevronDown,
   Clock3,
   FileWarning,
   FolderKanban,
@@ -20,6 +21,7 @@ import {
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ROLE_CEO, ROLE_CIO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
+import { useMediaQuery } from '@/lib/media';
 import { getAttention, getPilotage } from '@/lib/pilotage';
 import type { AttentionPilotage, IndicateurPilotage, VuePilotage } from '@/lib/types';
 import { ADecider } from './a-decider';
@@ -162,22 +164,9 @@ export function Pilotage({ slug }: { slug: string }) {
 
       {onglet === 'indicateurs' && (
         <div className="pi-indicateurs">
-          {vue.indicateurs.map((i) => {
-            const pill = PILL_EVALUATION[i.evaluation];
-            return (
-              <section key={i.cle} className="panel glass-panel pi-indicateur">
-                <header className="pi-indicateur-tete">
-                  <h2>{i.titre}</h2>
-                  {pill && <span className={`pill ${pill.classe}`}>{pill.libelle}</span>}
-                </header>
-                <strong className={`pi-valeur${tonValeur(i)}`}>{i.affichage}</strong>
-                <Progression indicateur={i} />
-                <p className="pi-objectif">{i.texteObjectif}</p>
-                <Tendance indicateur={i} unite={i.cle === 'nouveaux_projets' ? '' : '%'} />
-                <p className="pi-source">{i.source}</p>
-              </section>
-            );
-          })}
+          {vue.indicateurs.map((i) => (
+            <IndicateurCarte key={i.cle} indicateur={i} />
+          ))}
         </div>
       )}
       {onglet === 'reportings' && <Reportings slug={slug} reportings={vue.reportings} onVue={setVue} />}
@@ -185,5 +174,41 @@ export function Pilotage({ slug }: { slug: string }) {
       {onglet === 'journal' && <JournalAudit slug={slug} />}
       {onglet === 'synthese' && <SyntheseMensuelle slug={slug} />}
     </div>
+  );
+}
+
+// Carte d'un indicateur du manuel. Sur téléphone (lot S3 du défilement) :
+// titre, évaluation, valeur et progression ; objectif, tendance et source au
+// toucher — toute la carte ouvre (bouton du titre étiré).
+function IndicateurCarte({ indicateur: i }: { indicateur: IndicateurPilotage }) {
+  const mobile = useMediaQuery('(max-width: 720px)');
+  const [ouvert, setOuvert] = useState(false);
+  const pill = PILL_EVALUATION[i.evaluation];
+  const detail = !mobile || ouvert;
+  return (
+    <section className={`panel glass-panel pi-indicateur${mobile ? ' pi-indicateur--repliable' : ''}`}>
+      <header className="pi-indicateur-tete">
+        <h2>
+          {mobile ? (
+            <button type="button" className="pi-bascule" aria-expanded={ouvert} onClick={() => setOuvert((o) => !o)}>
+              {i.titre}
+            </button>
+          ) : (
+            i.titre
+          )}
+        </h2>
+        {pill && <span className={`pill ${pill.classe}`}>{pill.libelle}</span>}
+      </header>
+      <strong className={`pi-valeur${tonValeur(i)}`}>{i.affichage}</strong>
+      <Progression indicateur={i} />
+      {detail && (
+        <>
+          <p className="pi-objectif">{i.texteObjectif}</p>
+          <Tendance indicateur={i} unite={i.cle === 'nouveaux_projets' ? '' : '%'} />
+          <p className="pi-source">{i.source}</p>
+        </>
+      )}
+      {mobile && <ChevronDown size={16} className={`pi-chevron${ouvert ? ' is-ouvert' : ''}`} aria-hidden />}
+    </section>
   );
 }

@@ -5,6 +5,7 @@ import { CLIENTELES, ETATS_POSTE, PROCESSUS, STATUTS_CELLULE } from '@/lib/equip
 import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
 import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur } from '@/lib/types';
 import { couleurPersonne, srcPhoto } from '@/lib/profil';
+import { ancreCellule } from './sommaire-cellules';
 
 type Props = {
   slug: string;
@@ -44,7 +45,7 @@ export function CelluleCarte({
   }
 
   return (
-    <section className={`panel glass-panel eq-cellule eq-cellule--${c.statut}`} aria-labelledby={`eq-${c.id}`}>
+    <section id={ancreCellule(c.id)} className={`panel glass-panel eq-cellule eq-cellule--${c.statut}`} aria-labelledby={`eq-${c.id}`}>
       <header className="eq-cellule-tete">
         <h2 id={`eq-${c.id}`}>
           <span className="eq-code">{c.code}</span> {c.nom}

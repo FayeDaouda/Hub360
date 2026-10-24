@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { definirDispatcher, getVueEquipes, majCollaborateur, renommerCellule, supprimerCellule } from '@/lib/equipe';
 import { getAbsencesAValider } from '@/lib/demandes';
@@ -12,6 +12,10 @@ import { ConfirmModal } from '@/components/admin/confirm-modal';
 import { CelluleCarte } from './cellule-carte';
 import { CreerCellule } from './creer-cellule';
 import { Nomenclature } from './nomenclature';
+import { SommaireCellules, ancreCellule } from './sommaire-cellules';
+import { useSectionEnLecture } from '@/lib/defilement';
+import { useEnteteFixe } from '@/lib/entete-fixe';
+import { useMediaQuery } from '@/lib/media';
 
 type Liste = 'cellules' | 'affecter' | 'projets' | 'taches' | 'absences';
 
@@ -67,6 +71,18 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
     agir(() => definirDispatcher(slug, celluleId, collaborateurId), 'Le pilote n’a pas été modifié.');
   const majMembre = (collaborateurId: string, patch: { niveau?: NiveauCollaborateur; photo?: string | null }) =>
     agir(() => majCollaborateur(slug, collaborateurId, patch), 'La modification a échoué.');
+
+  // Sommaire des cellules : barre de raccourcis collée tant que les cellules
+  // tiennent sur une colonne (≤ 1100 px), sinon en tête de la colonne de
+  // droite collée (23-equipes-pilotage.css).
+  const etroit = useMediaQuery('(max-width: 1100px)');
+  const barreRaccourcis = useRef<HTMLElement>(null);
+  const avecSommaire = liste === 'cellules' && !!vue;
+  useEnteteFixe(avecSommaire && etroit);
+  const enLecture = useSectionEnLecture(
+    avecSommaire ? vue.cellules.map((c) => ancreCellule(c.id)) : [],
+    etroit ? barreRaccourcis : undefined,
+  );
 
   if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
   const i = vue.indicateurs;
@@ -129,6 +145,9 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
             : `${sansCompte.length} pilotes n’ont pas de compte HUB (${sansCompte.join(', ')}) : les remises et demandes de leur cellule remontent au Dir. GC. Créez-leur un compte, ou désignez d’autres pilotes.`}
         </p>
       )}
+      {liste === 'cellules' && etroit && (
+        <SommaireCellules cellules={vue.cellules} enLecture={enLecture} compact barre={barreRaccourcis} />
+      )}
       {liste === 'cellules' && (
         <div className="eq-colonnes">
           <div className="eq-cellules">
@@ -148,6 +167,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
             ))}
           </div>
           <aside className="eq-cote">
+            {!etroit && <SommaireCellules cellules={vue.cellules} enLecture={enLecture} compact={false} />}
             {ecriture && <CreerCellule slug={slug} vue={vue} onCreee={charger} />}
             <Nomenclature prefixe={vue.prochainsCodes.ARC.split('-')[0]} />
           </aside>

@@ -151,34 +151,6 @@
   overflow-x: auto;
   padding-bottom: 0.1rem;
 }
-.reg-etape-puce {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: var(--t-13);
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background var(--duree-court) var(--courbe),
-    border-color var(--duree-court) var(--courbe),
-    color var(--duree-court) var(--courbe);
-}
-.reg-etape-puce:hover {
-  color: var(--text);
-  border-color: color-mix(in oklch, var(--text) 25%, transparent);
-}
-.reg-etape-puce.is-actif {
-  color: var(--text);
-  border-color: var(--action);
-  background: color-mix(in oklch, var(--action) 14%, transparent);
-}
 .reg-ligne--etape {
   /* Raccourci d'étape : arrêt juste sous l'en-tête collé. */
   scroll-margin-top: var(--reg-tete-h, 5.5rem);

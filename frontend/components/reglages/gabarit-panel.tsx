@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { allerA, useSectionEnLecture } from '@/lib/defilement';
 import { enregistrerGabarit, libelleVersion, type CarteGabarit, type Changement, type GabaritEnService, type Reglages, type TacheGabarit, type Temps } from '@/lib/reglages';
 import { BarreMotif } from './barre-motif';
 
@@ -26,34 +27,15 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
   // arrête les étapes visées juste dessous ; l'étape en lecture s'allume.
   const section = useRef<HTMLElement>(null);
   const tete = useRef<HTMLDivElement>(null);
-  const [etapeVue, setEtapeVue] = useState(etapes[0]?.numero);
   useEffect(() => {
     const el = tete.current;
     if (!el) return;
     const obs = new ResizeObserver(() => section.current?.style.setProperty('--reg-tete-h', `${el.offsetHeight}px`));
     obs.observe(el);
-    let attente = 0;
-    const suivre = () => {
-      cancelAnimationFrame(attente);
-      attente = requestAnimationFrame(() => {
-        // + la marge d'arrêt des ancres (scroll-padding : 1 rem) et un peu de jeu.
-        const bas = el.getBoundingClientRect().bottom + 24;
-        const vue = etapes.filter((e) => (document.getElementById(`reg-etape-${e.numero}`)?.getBoundingClientRect().top ?? Infinity) <= bas).pop();
-        setEtapeVue((vue ?? etapes[0])?.numero);
-      });
-    };
-    suivre();
-    window.addEventListener('scroll', suivre, { passive: true });
-    return () => {
-      obs.disconnect();
-      window.removeEventListener('scroll', suivre);
-      cancelAnimationFrame(attente);
-    };
-  }, [etapes]);
-  const allerA = (numero: number) => {
-    const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    document.getElementById(`reg-etape-${numero}`)?.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' });
-  };
+    return () => obs.disconnect();
+  }, []);
+  const ancre = (numero: number) => `reg-etape-${numero}`;
+  const etapeVue = useSectionEnLecture(etapes.map((e) => ancre(e.numero)), tete);
 
   // Valeur d'origine de chaque champ modifiable, pour ne compter que les vrais changements.
   const origines = useMemo(() => {
@@ -158,9 +140,9 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
             <button
               key={e.cle}
               type="button"
-              className={`reg-etape-puce${e.numero === etapeVue ? ' is-actif' : ''}`}
-              aria-current={e.numero === etapeVue ? 'true' : undefined}
-              onClick={() => allerA(e.numero)}
+              className={`puce-ancre${ancre(e.numero) === etapeVue ? ' is-actif' : ''}`}
+              aria-current={ancre(e.numero) === etapeVue ? 'true' : undefined}
+              onClick={() => allerA(ancre(e.numero))}
             >
               <span className={`reg-numero reg-numero--${e.numero}`}>{String(e.numero).padStart(2, '0')}</span>
               {e.libelle}
@@ -184,7 +166,7 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         </div>
         {etapes.map((e) => (
           <div key={e.cle} role="rowgroup">
-            <div id={`reg-etape-${e.numero}`} className="reg-ligne reg-ligne--etape" role="row">
+            <div id={ancre(e.numero)} className="reg-ligne reg-ligne--etape" role="row">
               <span className={`reg-numero reg-numero--${e.numero}`}>{String(e.numero).padStart(2, '0')}</span>
               <strong>{e.libelle}</strong>
             </div>

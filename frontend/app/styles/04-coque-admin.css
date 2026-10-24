@@ -1624,6 +1624,37 @@ button:focus-visible .repli-icone {
   white-space: nowrap;
 }
 
+/* Puce de raccourci vers une section (Réglages · étapes du gabarit, Équipes ·
+   cellules) : la section en lecture s'allume (lib/defilement.ts). */
+.puce-ancre {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--t-13);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--duree-court) var(--courbe),
+    border-color var(--duree-court) var(--courbe),
+    color var(--duree-court) var(--courbe);
+}
+.puce-ancre:hover {
+  color: var(--text);
+  border-color: color-mix(in oklch, var(--text) 25%, transparent);
+}
+.puce-ancre.is-actif {
+  color: var(--text);
+  border-color: var(--action);
+  background: color-mix(in oklch, var(--action) 14%, transparent);
+}
+
 /* Menu du compte : absence en cours, connexion précédente, déconnexion partout. */
 .mc-absence {
   display: flex;

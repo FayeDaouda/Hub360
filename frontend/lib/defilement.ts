@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 
 // Défilement du back-office (lot S0, 24/10/2026) — une seule règle pour
 // toutes les pages, branchée une fois dans la coque (admin-shell.tsx) :
@@ -15,8 +15,8 @@ import { useEffect, useLayoutEffect } from 'react';
 //   l'horizontale) et `data-bord-y` (haut / milieu / bas) pour le fondu des
 //   bords qui annonce la suite (01-fondations.css).
 
-const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes';
-const ZONES = '.po-dossier-defile';
+const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes, .eq-raccourcis-liste';
+const ZONES = '.po-dossier-defile, .eq-cote';
 const ACTIF = '.is-active, .is-actif, [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"]';
 
 function bord(position: number, max: number, debut: string, fin: string): string | undefined {
@@ -126,4 +126,42 @@ export function useDefilementCoque() {
       delete racine.dataset.defile;
     };
   }, []);
+}
+
+// Sommaires et raccourcis (Réglages · gabarit, Équipes) : la section en
+// lecture est la dernière dont le haut est passé sous le repère — un en-tête
+// collé, à défaut la barre du haut — plus la marge d'arrêt des ancres
+// (scroll-padding : 1 rem) et un peu de jeu. En bas de page : la dernière.
+export function useSectionEnLecture(ids: string[], repere?: RefObject<HTMLElement>): string | undefined {
+  const cle = ids.join('|');
+  const [enLecture, setEnLecture] = useState<string | undefined>(ids[0]);
+  useEffect(() => {
+    const liste = cle ? cle.split('|') : [];
+    let attente = 0;
+    const suivre = () => {
+      cancelAnimationFrame(attente);
+      attente = requestAnimationFrame(() => {
+        const haut = (repere?.current ?? document.querySelector('.admin-topbar'))?.getBoundingClientRect().bottom ?? 0;
+        const enBas = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+        const passees = liste.filter((id) => (document.getElementById(id)?.getBoundingClientRect().top ?? Infinity) <= haut + 24);
+        setEnLecture(enBas && window.scrollY > 0 ? liste[liste.length - 1] : (passees.pop() ?? liste[0]));
+      });
+    };
+    suivre();
+    window.addEventListener('scroll', suivre, { passive: true });
+    window.addEventListener('resize', suivre);
+    return () => {
+      window.removeEventListener('scroll', suivre);
+      window.removeEventListener('resize', suivre);
+      cancelAnimationFrame(attente);
+    };
+  }, [cle, repere]);
+  return enLecture;
+}
+
+// Aller à une section (sommaire, raccourci) : défilement doux, sauf si la
+// personne a demandé moins d'animations.
+export function allerA(id: string) {
+  const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById(id)?.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' });
 }

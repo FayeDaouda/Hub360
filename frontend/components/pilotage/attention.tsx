@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BadgeCheck, CalendarClock, ShieldCheck, ChevronRight, FileCheck2, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, Undo2, UserCheck } from 'lucide-react';
+import { BadgeCheck, CalendarClock, ShieldCheck, ChevronDown, ChevronRight, FileCheck2, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, Undo2, UserCheck } from 'lucide-react';
 import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { getProjets } from '@/lib/crm';
 import { getAvoirsAValider, LIBELLE_MOTIF_AVOIR, type AvoirAValider } from '@/lib/facturation';
 import { useSessionCourante } from '@/lib/layout-contexte';
+import { useMediaQuery } from '@/lib/media';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
 import { useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import type { Projet } from '@/lib/types';
@@ -366,7 +367,7 @@ export function Attention({
               <h3 className="pa-groupe">À suivre</h3>
               <div className="pa-rubriques">
                 {aSuivre.map((r) => (
-                  <RubriqueAttention key={r.cle} rubrique={r} />
+                  <RubriqueAttention key={r.cle} rubrique={r} repliable />
                 ))}
               </div>
             </>
@@ -379,47 +380,85 @@ export function Attention({
   );
 }
 
-function RubriqueAttention({ rubrique: r }: { rubrique: Rubrique }) {
+// `repliable` (« À suivre ») : sur téléphone, la rubrique se replie sur son
+// titre et son nombre (lot S3 du défilement) ; une ancre vers elle (#pa-…,
+// tuile « En retard de paiement ») la rouvre.
+function RubriqueAttention({ rubrique: r, repliable = false }: { rubrique: Rubrique; repliable?: boolean }) {
   const [tout, setTout] = useState(false);
+  const mobile = useMediaQuery('(max-width: 720px)');
+  const [ouvert, setOuvert] = useState(false);
+  useEffect(() => {
+    if (!repliable) return;
+    const ancre = `#pa-${r.cle}`;
+    const surAncre = () => window.location.hash === ancre && setOuvert(true);
+    // Lien interne (next/link) : pas de hashchange, on écoute le clic.
+    const surClic = (e: MouseEvent) => {
+      if ((e.target as Element | null)?.closest?.(`a[href="${ancre}"]`)) setOuvert(true);
+    };
+    surAncre();
+    window.addEventListener('hashchange', surAncre);
+    document.addEventListener('click', surClic);
+    return () => {
+      window.removeEventListener('hashchange', surAncre);
+      document.removeEventListener('click', surClic);
+    };
+  }, [repliable, r.cle]);
+  const bascule = repliable && mobile;
   const lignes = tout ? r.lignes : r.lignes.slice(0, LIGNES_VISIBLES);
+  const titre = (
+    <>
+      <span className="pa-icone">{r.icone}</span>
+      {r.titre}
+      <span className="pa-nombre">{r.lignes.length}</span>
+    </>
+  );
   return (
     <section id={`pa-${r.cle}`} className="panel glass-panel pa-rubrique" style={{ ['--pa-couleur' as string]: r.couleur }}>
       <h3 className="pa-rubrique-titre">
-        <span className="pa-icone">{r.icone}</span>
-        {r.titre}
-        <span className="pa-nombre">{r.lignes.length}</span>
+        {bascule ? (
+          <button type="button" className="pa-bascule" aria-expanded={ouvert} aria-controls={`pa-${r.cle}-liste`} onClick={() => setOuvert((o) => !o)}>
+            {titre}
+            <ChevronDown size={16} className="pa-bascule-chevron" aria-hidden />
+          </button>
+        ) : (
+          titre
+        )}
       </h3>
-      <ul className="pa-liste">
-        {lignes.map((l) => {
-          const contenu = (
-            <>
-              <span className="pa-texte">
-                <strong>{l.titre}</strong>
-                <span className="cell-sub">{l.detail}</span>
-              </span>
-              {l.pill && <span className={`pill pill--${l.pill.ton}`}>{l.pill.libelle}</span>}
-              <ChevronRight size={16} className="pa-chevron" aria-hidden />
-            </>
-          );
-          return (
-            <li key={l.cle}>
-              {'href' in l ? (
-                <Link href={l.href} className="pa-ligne" title={`${l.titre} — ${l.detail}`}>
-                  {contenu}
-                </Link>
-              ) : (
-                <button type="button" className="pa-ligne" title={`${l.titre} — ${l.detail}`} onClick={l.onClick}>
-                  {contenu}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {r.lignes.length > LIGNES_VISIBLES && (
-        <button type="button" className="btn-ghost btn-ghost--sm pa-plus" onClick={() => setTout((v) => !v)}>
-          {tout ? 'Réduire' : `Afficher tout (${r.lignes.length})`}
-        </button>
+      {(!bascule || ouvert) && (
+        <>
+          <ul id={`pa-${r.cle}-liste`} className="pa-liste">
+            {lignes.map((l) => {
+              const contenu = (
+                <>
+                  <span className="pa-texte">
+                    <strong>{l.titre}</strong>
+                    <span className="cell-sub">{l.detail}</span>
+                  </span>
+                  {l.pill && <span className={`pill pill--${l.pill.ton}`}>{l.pill.libelle}</span>}
+                  <ChevronRight size={16} className="pa-chevron" aria-hidden />
+                </>
+              );
+              return (
+                <li key={l.cle}>
+                  {'href' in l ? (
+                    <Link href={l.href} className="pa-ligne" title={`${l.titre} — ${l.detail}`}>
+                      {contenu}
+                    </Link>
+                  ) : (
+                    <button type="button" className="pa-ligne" title={`${l.titre} — ${l.detail}`} onClick={l.onClick}>
+                      {contenu}
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {r.lignes.length > LIGNES_VISIBLES && (
+            <button type="button" className="btn-ghost btn-ghost--sm pa-plus" onClick={() => setTout((v) => !v)}>
+              {tout ? 'Réduire' : `Afficher tout (${r.lignes.length})`}
+            </button>
+          )}
+        </>
       )}
     </section>
   );
