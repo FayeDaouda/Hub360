@@ -22,3 +22,15 @@ export function lireFichier(
     lecteur.readAsDataURL(file);
   });
 }
+
+// Télécharge un fichier reçu de l'API. Seules les data URI base64 sont
+// suivies : un lien d'un autre schéma (`javascript:…`) exécuterait du code
+// dans la session courante (audit du 24/10/2026, C1). Même règle que
+// backend/src/commun/fichier-joint.ts.
+export function telechargerFichier(f: { nom: string; url: string }): void {
+  if (!/^data:[^,]*;base64,/.test(f.url)) throw new Error('Fichier invalide.');
+  const a = document.createElement('a');
+  a.href = f.url;
+  a.download = f.nom;
+  a.click();
+}

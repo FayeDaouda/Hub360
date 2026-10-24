@@ -9,6 +9,7 @@ import type {
   TypePieceDossier,
 } from './types';
 import { apiSociete } from './client-api';
+import { telechargerFichier } from './fichiers';
 import type { CorpsRemise } from './projets-ouverts';
 
 // RH · Mon espace (lot 5) — API NestJS, dossier du compte connecté :
@@ -34,10 +35,7 @@ export const demanderPaiement = (slug: string, corps: { modePaiement: ModePaieme
 
 async function telecharger(slug: string, chemin: string) {
   const f = await apiSociete<{ nom: string; url: string }>(slug, chemin);
-  const a = document.createElement('a');
-  a.href = f.url;
-  a.download = f.nom;
-  a.click();
+  telechargerFichier(f);
 }
 export const telechargerDocument = (slug: string, type: TypePieceDossier) => telecharger(slug, `/mon-espace/documents/${type}`);
 export const telechargerBulletin = (slug: string, mois: string) => telecharger(slug, `/mon-espace/bulletins/${mois}`);

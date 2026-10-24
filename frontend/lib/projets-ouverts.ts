@@ -1,4 +1,5 @@
 import { apiSociete } from './client-api';
+import { telechargerFichier } from './fichiers';
 import type { Temps } from './reglages';
 import type { StatutDevisEffectif } from './types';
 
@@ -206,10 +207,7 @@ export function remettreTache(slug: string, projetId: string, tacheId: string, c
 
 export async function telechargerPieceRemise(slug: string, projetId: string, tacheId: string, pieceId: string) {
   const f = await apiSociete<{ nom: string; url: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/pieces/${pieceId}`);
-  const a = document.createElement('a');
-  a.href = f.url;
-  a.download = f.nom;
-  a.click();
+  telechargerFichier(f);
 }
 
 // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG.

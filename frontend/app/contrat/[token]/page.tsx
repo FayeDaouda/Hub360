@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Download } from 'lucide-react';
 import { getContratPublic, getFichierContratPublic, signerContrat } from '@/lib/contrats';
+import { telechargerFichier } from '@/lib/fichiers';
 import { formatMontant } from '@/lib/format';
 import type { ContratPublic } from '@/lib/types';
 import { SignaturePad } from '@/components/signature-pad';
@@ -35,11 +36,7 @@ export default function ContratPublicPage({ params }: Props) {
   async function telecharger(cible: string) {
     setErreur(null);
     try {
-      const f = await getFichierContratPublic(params.token, cible);
-      const a = document.createElement('a');
-      a.href = f.url;
-      a.download = f.nom;
-      a.click();
+      telechargerFichier(await getFichierContratPublic(params.token, cible));
     } catch {
       setErreur('Téléchargement impossible.');
     }

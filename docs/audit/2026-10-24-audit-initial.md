@@ -72,7 +72,7 @@ schéma Prisma 2 749 lignes, 75 modèles, 135 migrations.
 
 | # | Constat | Mesure | Fichiers |
 |---|---|---|---|
-| C1 | XSS stockée par fichier joint : 6 points d'entrée enregistrent l'URL du fichier sans vérifier son schéma, et le front ouvre les fichiers par `a.href = url; a.click()`. **Rejoué sur l'environnement de référence** : un compte Salarié dépose un justificatif d'absence `javascript:…` (201), l'API le restitue tel quel à la RH, et le clic exécute le code dans la session RH (dont le jeton est en `localStorage`). | 6 points d'entrée sans contrôle (4 le font : remise de tâche, bulletin, pièce RH, attestation) | back `rh/demandes.service.ts` (justificatifs d'absence l. 145 et de remboursement l. 232), `contrats/contrats.service.ts` (document l. 210, annexe l. 233, scan signé l. 298), `projets/facturation/facturation.service.ts` (facture du bureau d'études l. 869) ; front `lib/demandes.ts`, `lib/mon-espace.ts`, `lib/projets-ouverts.ts`, `lib/signalements.ts` |
+| C1 | **Corrigé le 24/10/2026** (voir « Correction C1 »). XSS stockée par fichier joint : 6 points d'entrée enregistrent l'URL du fichier sans vérifier son schéma, et le front ouvre les fichiers par `a.href = url; a.click()`. **Rejoué sur l'environnement de référence** : un compte Salarié dépose un justificatif d'absence `javascript:…` (201), l'API le restitue tel quel à la RH, et le clic exécute le code dans la session RH (dont le jeton est en `localStorage`). | 6 points d'entrée sans contrôle (4 le font : remise de tâche, bulletin, pièce RH, attestation) | back `rh/demandes.service.ts` (justificatifs d'absence l. 145 et de remboursement l. 232), `contrats/contrats.service.ts` (document l. 210, annexe l. 233, scan signé l. 298), `projets/facturation/facturation.service.ts` (facture du bureau d'études l. 869) ; front `lib/demandes.ts`, `lib/mon-espace.ts`, `lib/projets-ouverts.ts`, `lib/signalements.ts` |
 | C2 | Dépendances vulnérables en production | back 2 critiques + 6 élevées (`npm audit`), front 1 critique + 2 élevées | `backend/package-lock.json`, `frontend/package-lock.json` |
 
 #### Élevée
@@ -122,6 +122,18 @@ liste blanche ; `helmet` sur l'API ; limitation de débit sur la connexion
 (5/min) ; aucun secret dans le dépôt ; duplication textuelle globale faible
 (1,31 %, 69 clones) ; contrôleurs fins (2 sur 40 accèdent directement à Prisma).
 
+## Correction C1 (validée par le user, 24/10/2026)
+
+- Back : règle unique `commun/fichier-joint.ts` (`@UrlFichierJoint`), appliquée
+  aux 5 DTO de fichiers ; tout ce qui n'est pas une data URI base64 est refusé
+  en 400 « Fichier invalide. ». Les types de fichiers ne sont pas filtrés
+  (liste blanche = décision métier encore ouverte).
+- Front : une seule fonction `telechargerFichier` (`lib/fichiers.ts`) remplace
+  les 6 copies et refuse tout autre schéma, y compris pour d'anciennes données.
+- Vérifié : 729 tests unitaires, 14 tests e2e API (dont l'attaque rejouée), 232
+  captures identiques avant/après sur deux environnements neufs, 8 tests de
+  fumée, et l'attaque rejouée sur l'application refusée (400).
+
 ## Plan proposé (à valider)
 
 Chaque phase : petits commits Conventional Commits, puis `tsc`, lint, tests
@@ -161,11 +173,8 @@ clients natifs). Coût : 2 dépendances de développement et une de production
 
 ## Décisions attendues
 
-0. **Faille C1 (bug avéré, signalé avant toute correction).** La corriger
-   tout de suite, avant la phase 2 : validateur unique côté serveur (schéma
-   `data:`, liste blanche de types, poids) et téléchargement unique côté
-   front qui refuse tout autre schéma. Un fichier non conforme serait alors
-   refusé (400) : c'est le seul changement de comportement.
+0. **Liste blanche des types de fichiers** (suite de C1, corrigée) : quels
+   types accepter (PDF, images, DWG, Office, ZIP…) ?
 1. **Périmètre des modules.** La RH est volontairement « périmètre groupe »
    (`rh/temps.service.ts`), de même que Pilotage et les rôles transverses.
    La règle « chaque requête filtrée par la société active » doit-elle s'y

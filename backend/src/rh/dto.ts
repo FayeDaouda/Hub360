@@ -15,6 +15,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { UrlFichierJoint } from '../commun/fichier-joint';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -70,7 +71,7 @@ export class DecisionPaiementDto {
 
 export class PieceDto {
   @IsString() @MaxLength(300) nom: string;
-  @IsString() @MaxLength(20_000_000) url: string; // data URI
+  @UrlFichierJoint(20_000_000) url: string;
 }
 
 // Historique des salaires (revue RH validée 20/10/2026) : proposition de la RH.

@@ -11,11 +11,12 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { UrlFichierJoint } from '../commun/fichier-joint';
 
 // Fichier (data URI, seam S3 — même convention que FichierProjet).
 export class FichierContratDto {
   @IsString() @MinLength(1) @MaxLength(300) nom!: string;
-  @IsString() @MaxLength(20_000_000) url!: string;
+  @UrlFichierJoint(20_000_000) url!: string;
 }
 
 // PATCH …/contrat/annexes/:id — joindre un fichier, marquer « non

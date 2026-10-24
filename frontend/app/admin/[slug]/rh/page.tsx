@@ -25,7 +25,7 @@ import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat'
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { ApiError } from '@/lib/client-api';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, telechargerFichier } from '@/lib/fichiers';
 import {
   archiverDossier,
   deciderPaiement,
@@ -65,13 +65,6 @@ import { useConfirmer } from '@/components/confirmation';
 type Props = { params: { slug: string } };
 
 const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—');
-
-function telecharger(f: { nom: string; url: string }) {
-  const a = document.createElement('a');
-  a.href = f.url;
-  a.download = f.nom;
-  a.click();
-}
 
 // Mois de paie par défaut : le mois précédent (AAAA-MM).
 function moisPrecedent(): string {
@@ -602,7 +595,7 @@ function FicheDossier({
 
   async function ouvrirPiece(type: TypePieceDossier) {
     if (!dossier) return;
-    telecharger(await getPieceDossier(slug, dossier.id, type));
+    telechargerFichier(await getPieceDossier(slug, dossier.id, type));
   }
 
   // Bulletins de paie (lot 5b) : un dépôt sur un mois déjà servi le remplace.
@@ -963,7 +956,7 @@ function FicheDossier({
                         className="lien-inline"
                         onClick={() =>
                           getBulletin(slug, dossier.id, b.mois)
-                            .then(telecharger)
+                            .then(telechargerFichier)
                             .catch((e) => setErreur(messageErreur(e, 'Téléchargement impossible.')))
                         }
                       >
