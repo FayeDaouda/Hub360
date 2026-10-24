@@ -366,7 +366,6 @@ a.admin-nav-item:hover {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
 }
 .admin-main .admin-topbar {
   position: sticky;
@@ -396,6 +395,8 @@ html[data-defile] .admin-main .admin-topbar::before {
 }
 
 .admin-topbar-left {
+  /* Une seule ligne : le titre cède (points de suspension), les actions non. */
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -412,6 +413,7 @@ html[data-defile] .admin-main .admin-topbar::before {
 
 .admin-topbar-actions {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 0.75rem;
 }
@@ -567,7 +569,8 @@ html[data-defile] .admin-main .admin-topbar::before {
   font-size: var(--t-12);
   color: var(--text-muted);
 }
-@media (max-width: 720px) {
+/* Tablette et téléphone : la loupe seule, la barre tient sur une ligne. */
+@media (max-width: 1200px) {
   .recherche-declencheur {
     padding: 0.55rem;
   }

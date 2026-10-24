@@ -8,28 +8,41 @@ import { useEffect, useLayoutEffect } from 'react';
 //   dessous et pour le scroll-padding des ancres ;
 // - `data-defile` sur <html> dès que la page a quitté le haut (voile de la
 //   barre) ;
-// - bandeaux qui défilent à l'horizontale (onglets, filtres, étapes) :
-//   `data-bord` (debut / milieu / fin) pour le fondu des bords qui annonce
-//   la suite, et l'élément actif ramené à l'écran quand il change.
+// - bandeaux (onglets, filtres, étapes, liste des projets) : l'élément actif
+//   ramené à l'écran quand il change ;
+// - bandeaux et zones qui défilent : `data-bord` (debut / milieu / fin, à
+//   l'horizontale) et `data-bord-y` (haut / milieu / bas) pour le fondu des
+//   bords qui annonce la suite (01-fondations.css).
 
 const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul';
+const ZONES = '.po-dossier-defile';
 const ACTIF = '.is-active, .is-actif, [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"]';
 
+function bord(position: number, max: number, debut: string, fin: string): string | undefined {
+  if (max <= 1) return undefined;
+  return position <= 1 ? debut : position >= max - 1 ? fin : 'milieu';
+}
+
 function marquerBord(el: HTMLElement) {
-  const max = el.scrollWidth - el.clientWidth;
-  if (max <= 1) {
-    delete el.dataset.bord;
-    return;
-  }
-  el.dataset.bord = el.scrollLeft <= 1 ? 'debut' : el.scrollLeft >= max - 1 ? 'fin' : 'milieu';
+  const x = bord(el.scrollLeft, el.scrollWidth - el.clientWidth, 'debut', 'fin');
+  const y = bord(el.scrollTop, el.scrollHeight - el.clientHeight, 'haut', 'bas');
+  if (x) el.dataset.bord = x;
+  else delete el.dataset.bord;
+  if (y) el.dataset.bordY = y;
+  else delete el.dataset.bordY;
 }
 
 function ramener(bandeau: HTMLElement, actif: HTMLElement, doux: boolean) {
-  if (bandeau.scrollWidth <= bandeau.clientWidth) return;
-  const decalage = actif.getBoundingClientRect().left - bandeau.getBoundingClientRect().left;
-  const left = bandeau.scrollLeft + decalage - (bandeau.clientWidth - actif.offsetWidth) / 2;
   const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  bandeau.scrollTo({ left, behavior: doux && !reduit ? 'smooth' : 'auto' });
+  const behavior = doux && !reduit ? 'smooth' : 'auto';
+  const b = bandeau.getBoundingClientRect();
+  const a = actif.getBoundingClientRect();
+  // À l'horizontale : centré. À la verticale (liste) : juste rendu visible.
+  if (bandeau.scrollWidth > bandeau.clientWidth) {
+    bandeau.scrollTo({ left: bandeau.scrollLeft + a.left - b.left - (bandeau.clientWidth - actif.offsetWidth) / 2, behavior });
+  } else if (bandeau.scrollHeight > bandeau.clientHeight && (a.top < b.top || a.bottom > b.bottom)) {
+    bandeau.scrollTo({ top: bandeau.scrollTop + a.top - b.top - 8, behavior });
+  }
 }
 
 export function useDefilementCoque() {
@@ -70,10 +83,10 @@ export function useDefilementCoque() {
         redim.unobserve(bandeau);
         actifs.delete(bandeau);
       });
-      document.querySelectorAll<HTMLElement>(BANDEAUX).forEach((bandeau) => {
+      document.querySelectorAll<HTMLElement>(`${BANDEAUX}, ${ZONES}`).forEach((bandeau) => {
         const nouveau = !actifs.has(bandeau);
         if (nouveau) redim.observe(bandeau);
-        const actif = bandeau.querySelector<HTMLElement>(ACTIF);
+        const actif = bandeau.matches(BANDEAUX) ? bandeau.querySelector<HTMLElement>(ACTIF) : null;
         if (actif && actif !== actifs.get(bandeau)) ramener(bandeau, actif, !nouveau);
         actifs.set(bandeau, actif);
         marquerBord(bandeau);

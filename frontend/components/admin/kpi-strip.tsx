@@ -85,10 +85,12 @@ export type KpiTuile = {
     | { type: 'filtre'; actif: boolean; onClick: () => void };
 };
 
-export function KpiStrip({ tuiles }: { tuiles: KpiTuile[] }) {
+// `compact` : tuiles en une ligne (icône · libellé et sous-texte · valeur)
+// sur grand écran, pour les pages où l'espace de travail prime (Projets).
+export function KpiStrip({ tuiles, compact = false }: { tuiles: KpiTuile[]; compact?: boolean }) {
   const cleAlerte = tuiles.find((t) => t.etat === 'risque')?.cle;
   return (
-    <div className="kpi-strip">
+    <div className={`kpi-strip${compact ? ' kpi-strip--compact' : ''}`}>
       {tuiles.map((t) => {
         const Icone = t.icone;
         const DecorIcone = t.decorIcone;

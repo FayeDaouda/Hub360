@@ -206,6 +206,21 @@ html:has([aria-modal='true']) {
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fondu));
   mask-image: linear-gradient(90deg, transparent, #000 var(--fondu));
 }
+/* Zones qui défilent à la verticale (liste des projets, dossier) : idem en
+   haut et en bas (data-bord-y). */
+[data-bord-y] {
+  --fondu-y: 2.25rem;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-y), #000 calc(100% - var(--fondu-y)), transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-y), #000 calc(100% - var(--fondu-y)), transparent);
+}
+[data-bord-y='haut'] {
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - var(--fondu-y)), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - var(--fondu-y)), transparent);
+}
+[data-bord-y='bas'] {
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-y));
+  mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-y));
+}
 @media (pointer: coarse) {
   [data-bord] {
     scrollbar-width: none;

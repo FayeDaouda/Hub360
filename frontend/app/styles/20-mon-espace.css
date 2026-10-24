@@ -410,20 +410,23 @@
   color: var(--text);
 }
 
-/* Projets · gabarit, desktop : l'écran tient dans la fenêtre, sans défilement
-   de page. « Projets ouverts » défile en interne ; le dossier garde son
-   en-tête et ses étapes fixes, et deux zones défilent séparément : les cartes
-   de l'étape et le panneau (tâche ou fil de la carte). --po-haut = haut de la
-   page, mesuré (projets-ouverts.tsx). Tablette, mobile et fenêtres basses
-   (< 820 px, où les zones seraient trop étroites) : défilement normal. */
+/* Projets · gabarit, desktop (lot S1 du défilement, 24/10/2026) : l'espace
+   de travail tient dans la fenêtre, sous la barre du haut collée. Deux
+   colonnes qui défilent chacune : « Projets ouverts » (liste) et le dossier,
+   d'un seul tenant (en-tête, étapes, cartes) — les étapes restent collées en
+   haut du dossier pour changer d'étape sans remonter. Fondu en bas tant
+   qu'il y a une suite (data-bord-y, lib/defilement.ts). --po-haut = haut de
+   la page, mesuré (projets-ouverts.tsx). Tablette, mobile et fenêtres
+   basses (< 820 px) : défilement normal de la page. */
 @media (min-width: 1201px) and (min-height: 820px) {
   .admin-main:has(.po) {
-    padding-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
   }
   .po {
     display: flex;
     flex-direction: column;
-    height: calc(100dvh - var(--po-haut, 8rem) - 1.5rem);
+    gap: 0.9rem;
+    height: calc(100dvh - var(--po-haut, 8rem) - 1.25rem);
     overflow: hidden;
   }
   .po > * {
@@ -445,53 +448,67 @@
     min-height: 0;
     overflow: hidden;
   }
-  .po-liste > *,
-  .po-dossier > * {
+  .po-liste > * {
     flex: none;
   }
-  .po-liste > ul,
-  .po-dossier > .po-corps {
+  .po-liste > ul {
     flex: 1;
     min-height: 0;
-  }
-  .po-liste > ul {
     align-content: start;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding-right: 0.3rem;
   }
-  .po-corps {
-    grid-template-rows: minmax(0, 1fr);
-    align-items: stretch;
+  .po-dossier {
+    padding: 0;
   }
-  .po-cartes,
-  .po-corps > .po-panneau {
+  .po-dossier > .skeleton {
+    margin: 0.9rem 1.1rem;
+  }
+  .po-dossier-defile {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.8rem;
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding: 0.9rem 1.1rem 1.25rem;
   }
-  .po-cartes {
-    align-content: start;
-    padding-right: 0.4rem;
+  /* Étapes collées en haut du dossier : fond du panneau, filet quand le
+     contenu passe dessous. */
+  .po-dossier-defile > .po-etapes {
+    position: sticky;
+    /* Collé au ras du haut de la zone (au-dessus de son padding de 0,9 rem). */
+    top: -0.9rem;
+    z-index: 2;
+    margin: 0 -1.1rem;
+    padding: 0.6rem 1.1rem 0.7rem;
+    /* Surface du panneau rendue opaque : rien ne transparaît dessous. */
+    background: linear-gradient(var(--surface-donnees), var(--surface-donnees)), var(--bg);
+    border-bottom: 1px solid transparent;
+    transition: border-color var(--duree-court) var(--courbe);
   }
-  .po-corps > .po-panneau {
-    position: static;
-    align-content: start;
-    padding-right: 0.4rem;
+  .po-dossier-defile:is([data-bord-y='milieu'], [data-bord-y='bas']) > .po-etapes {
+    border-bottom-color: color-mix(in oklch, var(--border) 70%, transparent);
   }
-  /* En-têtes resserrés : la hauteur gagnée va aux zones qui défilent. */
-  .po {
-    gap: 0.9rem;
+  /* Fondu du bas seulement : en haut, les étapes collées ne s'estompent pas. */
+  .po-dossier-defile[data-bord-y='milieu'] {
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - var(--fondu-y)), transparent);
+    mask-image: linear-gradient(180deg, #000 calc(100% - var(--fondu-y)), transparent);
   }
+  .po-dossier-defile[data-bord-y='bas'] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* Tuiles d'Équipes (po-tuile) resserrées sur ce même seuil. */
   .po-tuile {
     gap: 0.15rem;
     padding: 0.7rem 1rem;
   }
   .po-tuile-valeur {
     font-size: 1.5rem;
-  }
-  .po-dossier {
-    gap: 0.8rem;
-    padding: 0.9rem 1.1rem;
   }
   .po-dossier-titre {
     margin: 0.1rem 0 0.15rem;
@@ -503,9 +520,12 @@
     gap: 0.15rem;
     padding: 0.5rem 0.7rem;
   }
+  .po-etape-tete {
+    flex-wrap: wrap;
+    column-gap: 0.4rem;
+  }
   .po-etape strong {
     font-size: 0.92rem;
   }
-  /* Barres de défilement : règle globale (01-fondations.css). */
 }
 

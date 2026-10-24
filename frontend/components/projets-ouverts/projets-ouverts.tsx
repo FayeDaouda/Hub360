@@ -218,6 +218,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
 
       <div className="po-kpi">
         <KpiStrip
+          compact
           tuiles={
             salarie ? tuilesSalarie(perso, tableau, slug, ouvrirRemiseAValider) : tuilesProjets(tableau, dplg, false, ouvrirRemiseAValider)
           }
@@ -293,21 +294,24 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
             {!dossier ? (
               <div className="skeleton admin-skeleton-panel" aria-hidden />
             ) : (
-              <Dossier
-                slug={slug}
-                dossier={dossier}
-                etape={etape}
-                onEtape={setEtape}
-                selection={selection}
-                onSelection={setSelection}
-                assignables={peutAssigner ? assignables : null}
-                moiId={session.utilisateur.id}
-                mentionnables={peutEcrireFil ? mentionnables : null}
-                onMaj={recharger}
-                salarie={salarie}
-                miennes={miennes}
-                onMiennes={setMiennes}
-              />
+              // Zone qui défile (desktop) ; key : un autre projet repart du haut.
+              <div className="po-dossier-defile" key={dossier.id}>
+                <Dossier
+                  slug={slug}
+                  dossier={dossier}
+                  etape={etape}
+                  onEtape={setEtape}
+                  selection={selection}
+                  onSelection={setSelection}
+                  assignables={peutAssigner ? assignables : null}
+                  moiId={session.utilisateur.id}
+                  mentionnables={peutEcrireFil ? mentionnables : null}
+                  onMaj={recharger}
+                  salarie={salarie}
+                  miennes={miennes}
+                  onMiennes={setMiennes}
+                />
+              </div>
             )}
           </section>
         </div>
@@ -481,6 +485,17 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
   const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
   const factures = pastillesFactures(d);
+  // Changer d'étape (desktop, où le dossier défile seul) : si on était
+  // descendu, les cartes repartent juste sous les étapes collées.
+  const etapesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const bandeau = etapesRef.current;
+    const defile = bandeau?.parentElement;
+    const avant = bandeau?.previousElementSibling as HTMLElement | null;
+    if (!bandeau || !defile || !avant || defile.scrollHeight <= defile.clientHeight) return;
+    const haut = avant.offsetTop + avant.offsetHeight + parseFloat(getComputedStyle(defile).rowGap || '0');
+    if (defile.scrollTop > haut) defile.scrollTop = haut;
+  }, [etape]);
 
   return (
     <>
@@ -531,7 +546,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
       </header>
       <DecisionsFiche slug={slug} cible={{ projet: d.id }} />
 
-      <div className="po-etapes" role="tablist" aria-label="Étapes">
+      <div ref={etapesRef} className="po-etapes" role="tablist" aria-label="Étapes">
         {d.etapes.map((e) => {
           const p = pastilleEtape(e);
           return (

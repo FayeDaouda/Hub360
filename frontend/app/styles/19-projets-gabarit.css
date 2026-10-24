@@ -170,6 +170,13 @@
   min-width: 0;
   padding: 1.1rem 1.25rem;
 }
+/* Enveloppe du dossier (zone qui défile sur grand écran, 20-mon-espace.css) :
+   ailleurs, simple relais de la grille et de son espacement. */
+.po-dossier-defile {
+  display: grid;
+  gap: inherit;
+  min-width: 0;
+}
 .po-dossier-tete {
   display: flex;
   flex-wrap: wrap;

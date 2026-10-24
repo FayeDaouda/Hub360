@@ -30,6 +30,49 @@
   transition: box-shadow var(--duree-moyen) var(--courbe);
 }
 
+/* Bandeau compact (KpiStrip `compact`, lot S1 du défilement) : une ligne par
+   tuile sur grand écran — icône · libellé et sous-texte · valeur — pour
+   laisser la hauteur à l'espace de travail (Projets). */
+@media (min-width: 1201px) {
+  .kpi-strip--compact {
+    margin-bottom: 0;
+  }
+  .kpi-strip--compact .kpi-tuile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'icone libelle valeur'
+      'icone sous valeur';
+    align-items: center;
+    column-gap: var(--e-12);
+    padding: var(--e-12) var(--e-16);
+  }
+  .kpi-strip--compact .kpi-tuile-tete {
+    grid-area: icone;
+  }
+  .kpi-strip--compact .kpi-tuile-icone {
+    margin-bottom: 0;
+  }
+  .kpi-strip--compact .kpi-tuile-decor {
+    display: none;
+  }
+  .kpi-strip--compact .kpi-tuile-label {
+    grid-area: libelle;
+    align-self: end;
+    line-height: 1.3;
+  }
+  .kpi-strip--compact .kpi-tuile-sous {
+    grid-area: sous;
+    align-self: start;
+    margin: 0;
+  }
+  .kpi-strip--compact .kpi-tuile-valeur {
+    grid-area: valeur;
+    margin: 0;
+    font-size: 1.6rem;
+  }
+}
+
 /* États : seule la pastille d'icône (et le chiffre d'un risque) se teinte. */
 .kpi-tuile--succes {
   --kpi-ton: var(--ok);
