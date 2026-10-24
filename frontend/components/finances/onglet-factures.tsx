@@ -5,7 +5,6 @@ import { dansFiltreFacture, jjmmaaaa, libelleMois, parMois, payeeLe, statutFactu
 import { formatMontant } from '@/lib/format';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
-import { useHautMesure } from './use-haut-mesure';
 import type { FactureCentrale } from '@/lib/types';
 
 const FILTRES: { cle: FiltreFacture; libelle: string }[] = [
@@ -32,11 +31,10 @@ export function OngletFactures({
   const [filtre, setFiltre] = useState<FiltreFacture>(filtreInitial);
   const visibles = factures.filter((f) => dansFiltreFacture(f, filtre));
 
-  const cadre = useHautMesure<HTMLElement>();
 
   return (
-    <section ref={cadre} className="panel glass-panel fin-liste">
-      <div className="fin-filtres" role="group" aria-label="Filtrer les factures">
+    <section className="panel glass-panel fin-liste liste-collee">
+      <div className="fin-filtres liste-collee-outils liste-collee-outils--partout" role="group" aria-label="Filtrer les factures">
         {FILTRES.map((f) => (
           <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
             {f.libelle} ({factures.filter((x) => dansFiltreFacture(x, f.cle)).length})

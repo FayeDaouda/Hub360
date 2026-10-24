@@ -1302,36 +1302,6 @@
     visibility: hidden;
   }
 }
-/* Desktop : la liste occupe le reste de la fenêtre et défile en interne,
-   en-tête de colonnes et pied fixes (maquette). --fin-haut : cf.
-   use-haut-mesure.ts. Mobile et fenêtres basses : défilement normal. */
-@media (min-width: 721px) and (min-height: 700px) {
-  .admin-main:has(.fin-liste) {
-    padding-bottom: 1.5rem;
-  }
-  .fin-liste {
-    display: flex;
-    flex-direction: column;
-    height: max(24rem, calc(100dvh - var(--fin-haut, 26rem) - 1.5rem));
-  }
-  .fin-liste > * {
-    flex: none;
-  }
-  .fin-liste > .fin-table-wrap {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .fin-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-}
 @media (max-width: 720px) {
   .admin-table .fin-mois td {
     background: none;

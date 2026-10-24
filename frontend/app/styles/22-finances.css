@@ -189,6 +189,37 @@
 .fin-filtres button:hover {
   background: color-mix(in srgb, var(--text) 13%, transparent);
 }
+/* Téléphone : filtres sur une ligne qui défile au doigt (barre collée
+   courte). Le fondu du bord est un calque collé à droite, pas un masque : un
+   masque effacerait aussi le fond opaque de la barre. */
+@media (max-width: 720px) {
+  .fin-filtres {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fin-filtres > * {
+    flex: none;
+  }
+  .fin-filtres[data-bord] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .fin-filtres::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    flex: none;
+    width: 2rem;
+    margin-left: -2rem;
+    background: linear-gradient(to right, transparent, var(--surface-donnees));
+    pointer-events: none;
+  }
+  .fin-filtres[data-bord='fin']::after,
+  .fin-filtres:not([data-bord])::after {
+    opacity: 0;
+  }
+}
 /* Feuilles de temps (RH) : export aligné à droite au-dessus du tableau. */
 .temps-export {
   display: flex;

@@ -1033,6 +1033,46 @@ button:focus-visible .repli-icone {
    pousser le reste de la page — le surplus (rangée plus haute qu'attendu,
    petit écran) passe en scroll interne, la pagination reste la voie normale
    pour voir la suite. */
+/* Listes à en-tête collé (lot S4 du défilement, 24/10/2026 — CRM, Finances,
+   RH) : la liste suit la page ; sa barre d'outils (filtres, recherche,
+   export) colle sous la barre du haut, l'en-tête de colonnes juste dessous
+   (hauteur de la barre d'outils : --outils-h, lib/defilement.ts). Le
+   panneau rogne sans être une zone de défilement (clip), sinon rien ne
+   collerait à l'écran. Fonds rendus opaques : les lignes passent dessous. */
+.liste-collee.glass-panel {
+  overflow: clip;
+}
+.liste-collee-outils {
+  z-index: 4;
+  padding-block: 0.55rem;
+  margin-top: -0.55rem;
+  background: linear-gradient(var(--surface-donnees), var(--surface-donnees)), var(--bg);
+}
+/* Collée dès la tablette ; sur téléphone, seulement une barre courte
+   (--partout : une ligne de filtres) — titre, recherche et export y
+   prendraient un quart de l'écran. */
+.liste-collee-outils--partout {
+  position: sticky;
+  top: var(--ef-topbar-h, 0px);
+}
+@media (min-width: 721px) {
+  .liste-collee-outils {
+    position: sticky;
+    top: var(--ef-topbar-h, 0px);
+  }
+}
+/* En-tête de colonnes : seulement quand le tableau tient en largeur
+   (data-entete-colle, mesuré) ; sinon il garde son défilement horizontal. */
+.liste-collee[data-entete-colle] .admin-table-wrap {
+  overflow: visible;
+}
+.liste-collee[data-entete-colle] .admin-table thead th {
+  position: sticky;
+  top: calc(var(--ef-topbar-h, 0px) + var(--outils-h, 0px));
+  z-index: 3;
+  background: linear-gradient(var(--surface-donnees), var(--surface-donnees)), var(--bg);
+}
+
 .admin-table-wrap--fixe {
   max-height: 560px;
   overflow-y: auto;

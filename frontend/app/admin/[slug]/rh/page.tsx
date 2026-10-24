@@ -395,8 +395,8 @@ export default function RhPage({ params }: Props) {
     <>
       {entete}
 
-      <section className="panel glass-panel rh-liste">
-        <div className="rh-outils">
+      <section className="panel glass-panel rh-liste liste-collee">
+        <div className="rh-outils liste-collee-outils">
           <div className="vue-toggle" role="group" aria-label="Société">
             <button type="button" className={societe === 'tous' ? 'is-active' : ''} onClick={() => setSociete('tous')}>
               Tous · {actifs.length}

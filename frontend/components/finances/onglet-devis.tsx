@@ -5,7 +5,6 @@ import { filtreDevis, jjmmaaaa, libelleMois, parMois, statutDevis, type FiltreDe
 import { formatMontant } from '@/lib/format';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
-import { useHautMesure } from './use-haut-mesure';
 import type { Devis } from '@/lib/types';
 
 const FILTRES: { cle: FiltreDevis; libelle: string }[] = [
@@ -23,11 +22,10 @@ export function OngletDevis({ devis, projets, onOuvrir }: { devis: Devis[]; proj
   const visibles = devis.filter((d) => filtre === 'tout' || filtreDevis(d) === filtre);
   const compte = (f: FiltreDevis) => (f === 'tout' ? devis.length : devis.filter((d) => filtreDevis(d) === f).length);
 
-  const cadre = useHautMesure<HTMLElement>();
 
   return (
-    <section ref={cadre} className="panel glass-panel fin-liste">
-      <div className="fin-filtres" role="group" aria-label="Filtrer les devis">
+    <section className="panel glass-panel fin-liste liste-collee">
+      <div className="fin-filtres liste-collee-outils liste-collee-outils--partout" role="group" aria-label="Filtrer les devis">
         {FILTRES.map((f) => (
           <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
             {f.libelle} ({compte(f.cle)})

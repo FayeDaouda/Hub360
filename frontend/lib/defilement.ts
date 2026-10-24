@@ -9,14 +9,20 @@ import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 //   sur téléphone (--ef-nav-h, 0 ailleurs), pour ce qui colle en bas ;
 // - `data-defile` sur <html> dès que la page a quitté le haut (voile de la
 //   barre) ;
+// - listes à en-tête collé (.liste-collee) : hauteur de la barre d'outils
+//   (--outils-h) pour coller l'en-tête de colonnes dessous, et
+//   `data-entete-colle` seulement si le tableau tient en largeur (sinon il
+//   garde son défilement horizontal, en-tête non collé) ;
 // - bandeaux (onglets, filtres, étapes, liste des projets) : l'élément actif
 //   ramené à l'écran quand il change ;
 // - bandeaux et zones qui défilent : `data-bord` (debut / milieu / fin, à
 //   l'horizontale) et `data-bord-y` (haut / milieu / bas) pour le fondu des
 //   bords qui annonce la suite (01-fondations.css).
 
-const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes, .eq-raccourcis-liste';
+const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes, .eq-raccourcis-liste, .fin-filtres';
 const ZONES = '.po-dossier-defile, .eq-cote';
+const OUTILS = '.liste-collee-outils';
+const TABLEAUX = '.liste-collee .admin-table-wrap, .liste-collee .admin-table';
 const ACTIF = '.is-active, .is-actif, [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"]';
 
 function bord(position: number, max: number, debut: string, fin: string): string | undefined {
@@ -31,6 +37,16 @@ function marquerBord(el: HTMLElement) {
   else delete el.dataset.bord;
   if (y) el.dataset.bordY = y;
   else delete el.dataset.bordY;
+}
+
+function ajusterEntete(liste: HTMLElement | null) {
+  if (!liste) return;
+  const cadre = liste.querySelector<HTMLElement>('.admin-table-wrap');
+  const tableau = cadre?.querySelector<HTMLElement>('table');
+  // En tableau (pas en cartes, téléphone) et sans débordement horizontal.
+  const entete = tableau?.querySelector<HTMLElement>('thead th');
+  const tient = !!cadre && !!tableau && !!entete?.offsetParent && tableau.offsetWidth <= cadre.clientWidth + 1;
+  liste.toggleAttribute('data-entete-colle', tient);
 }
 
 function ramener(bandeau: HTMLElement, actif: HTMLElement, doux: boolean) {
@@ -83,13 +99,31 @@ export function useDefilementCoque() {
 
     // Bandeaux : suivis dès qu'ils apparaissent (pages chargées après coup).
     const actifs = new Map<HTMLElement, HTMLElement | null>();
-    const redim = new ResizeObserver((entrees) => entrees.forEach((e) => marquerBord(e.target as HTMLElement)));
+    const redim = new ResizeObserver((entrees) =>
+      entrees.forEach(({ target }) => {
+        const el = target as HTMLElement;
+        if (el.matches(OUTILS)) el.closest<HTMLElement>('.liste-collee')?.style.setProperty('--outils-h', `${el.offsetHeight}px`);
+        else if (el.matches(TABLEAUX)) ajusterEntete(el.closest<HTMLElement>('.liste-collee'));
+        else marquerBord(el);
+      }),
+    );
+    const listes = new Set<HTMLElement>();
     let attente = 0;
     const balayer = () => {
       actifs.forEach((_, bandeau) => {
         if (bandeau.isConnected) return;
         redim.unobserve(bandeau);
         actifs.delete(bandeau);
+      });
+      listes.forEach((el) => {
+        if (el.isConnected) return;
+        redim.unobserve(el);
+        listes.delete(el);
+      });
+      document.querySelectorAll<HTMLElement>(`${OUTILS}, ${TABLEAUX}`).forEach((el) => {
+        if (listes.has(el)) return;
+        listes.add(el);
+        redim.observe(el);
       });
       document.querySelectorAll<HTMLElement>(`${BANDEAUX}, ${ZONES}`).forEach((bandeau) => {
         const nouveau = !actifs.has(bandeau);

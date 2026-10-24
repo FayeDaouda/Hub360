@@ -272,7 +272,7 @@ export default function CrmPage({ params }: Props) {
       )}
 
       {onglet === 'clients' ? (
-        <section className="panel glass-panel">
+        <section className="panel glass-panel liste-collee">
           <h2 className="crm-titre-registre">
             Clients <span>{clients.length}</span>
           </h2>
@@ -352,8 +352,8 @@ export default function CrmPage({ params }: Props) {
           />
           </div>
 
-          <section className="panel glass-panel">
-            <div className="crm-registre-tete">
+          <section className="panel glass-panel liste-collee">
+            <div className="crm-registre-tete liste-collee-outils">
               <h2 className="crm-titre-registre">
                 Registre des projets <span>{filtres.length}</span>
               </h2>

@@ -373,9 +373,8 @@
   }
   .crm-liste-mobile {
     display: block;
-    /* Bloc scrollable à hauteur limitée — pas la page entière qui défile. */
-    max-height: 60vh;
-    overflow-y: auto;
+    /* La liste suit la page (lot S4 du défilement) : plus de boîte de 60 vh
+       qui défilait dans la page. */
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
   }
