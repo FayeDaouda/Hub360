@@ -197,7 +197,10 @@ function IndicateurCarte({ indicateur: i }: { indicateur: IndicateurPilotage }) 
             i.titre
           )}
         </h2>
-        {pill && <span className={`pill ${pill.classe}`}>{pill.libelle}</span>}
+        <span className="pi-indicateur-etat">
+          {pill && <span className={`pill ${pill.classe}`}>{pill.libelle}</span>}
+          {mobile && <ChevronDown size={16} className={`pi-chevron${ouvert ? ' is-ouvert' : ''}`} aria-hidden />}
+        </span>
       </header>
       <strong className={`pi-valeur${tonValeur(i)}`}>{i.affichage}</strong>
       <Progression indicateur={i} />
@@ -208,7 +211,6 @@ function IndicateurCarte({ indicateur: i }: { indicateur: IndicateurPilotage }) 
           <p className="pi-source">{i.source}</p>
         </>
       )}
-      {mobile && <ChevronDown size={16} className={`pi-chevron${ouvert ? ' is-ouvert' : ''}`} aria-hidden />}
     </section>
   );
 }
