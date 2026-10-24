@@ -506,23 +506,6 @@
   .po-etape strong {
     font-size: 0.92rem;
   }
-  /* Barres de défilement discrètes, assorties au verre. */
-  .po-liste > ul,
-  .po-cartes,
-  .po-corps > .po-panneau {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklch, var(--text-muted) 45%, transparent) transparent;
-  }
-  .po-liste > ul::-webkit-scrollbar,
-  .po-cartes::-webkit-scrollbar,
-  .po-corps > .po-panneau::-webkit-scrollbar {
-    width: 6px;
-  }
-  .po-liste > ul::-webkit-scrollbar-thumb,
-  .po-cartes::-webkit-scrollbar-thumb,
-  .po-corps > .po-panneau::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: color-mix(in oklch, var(--text-muted) 45%, transparent);
-  }
+  /* Barres de défilement : règle globale (01-fondations.css). */
 }
 

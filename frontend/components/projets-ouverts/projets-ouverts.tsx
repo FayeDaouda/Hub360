@@ -481,17 +481,6 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
   const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
   const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
   const factures = pastillesFactures(d);
-  // Bandeau des étapes défilant (mobile) : l'étape ouverte reste visible.
-  // Défilement horizontal du seul bandeau — scrollIntoView faisait aussi
-  // défiler la page (bandeau sous la ligne de flottaison sur téléphone).
-  const etapesRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const bandeau = etapesRef.current;
-    const ouverte = bandeau?.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (!bandeau || !ouverte) return;
-    const decalage = ouverte.getBoundingClientRect().left - bandeau.getBoundingClientRect().left;
-    bandeau.scrollLeft += decalage - (bandeau.clientWidth - ouverte.offsetWidth) / 2;
-  }, [etape]);
 
   return (
     <>
@@ -542,7 +531,7 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
       </header>
       <DecisionsFiche slug={slug} cible={{ projet: d.id }} />
 
-      <div className="po-etapes" role="tablist" aria-label="Étapes" ref={etapesRef}>
+      <div className="po-etapes" role="tablist" aria-label="Étapes">
         {d.etapes.map((e) => {
           const p = pastilleEtape(e);
           return (

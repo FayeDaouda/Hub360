@@ -33,7 +33,7 @@ export function MesReglages() {
       <Bloc icone={UserRound} titre="Mon compte">
         <div className="rg-profil">
           <AvatarPersonne nom={nomAffiche(session.utilisateur)} photo={session.utilisateur.photoUrl} cle={session.utilisateur.id} taille="lg" />
-          <span>
+          <span className="rg-profil-texte">
             <strong>{nomAffiche(session.utilisateur)}</strong>
             <span className="po-aide">Photo et nom affiché dans la messagerie, les fils et les mentions.</span>
           </span>

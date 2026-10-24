@@ -346,19 +346,53 @@ a.admin-nav-item:hover {
 }
 
 .admin-main {
+  /* Gouttières, reprises par la barre du haut et les en-têtes collés qui
+     débordent jusqu'aux bords (15-mobile.css : .entete-fixe). */
+  --ef-gx: 2rem;
+  --ef-gy: 1.5rem;
+  --ef-voile: color-mix(in oklch, var(--bg) 84%, transparent);
   position: relative;
   z-index: 1;
   min-width: 0;
-  padding: 1.5rem 2rem 3rem;
+  padding: var(--ef-gy) var(--ef-gx) 3rem;
 }
 
+/* Barre du haut : collée en haut sur toutes les pages (lot S0) — recherche,
+   messages, notifications et compte restent à portée. Transparente en haut
+   de page ; voile flou et filet dès qu'on a défilé (html[data-defile],
+   lib/defilement.ts). */
 .admin-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
   flex-wrap: wrap;
+}
+.admin-main .admin-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: calc(-1 * var(--ef-gy)) calc(-1 * var(--ef-gx)) 0.65rem;
+  padding: var(--ef-gy) var(--ef-gx) 0.85rem;
+}
+/* Voile sur un calque : un backdrop-filter sur la barre elle-même en ferait
+   le bloc conteneur de ses enfants « fixed » (panneau du chat réduit à la
+   hauteur de la barre — trouvé en revue mobile 20/10/2026). */
+.admin-main .admin-topbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ef-voile);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  opacity: 0;
+  transition: opacity var(--duree-court) var(--courbe);
+  pointer-events: none;
+}
+html[data-defile] .admin-main .admin-topbar::before {
+  opacity: 1;
 }
 
 .admin-topbar-left {
@@ -1156,7 +1190,8 @@ button:focus-visible .repli-icone {
   }
 
   .admin-main {
-    padding: 1.1rem 1.25rem 3rem;
+    --ef-gx: 1.25rem;
+    --ef-gy: 1.1rem;
   }
 
   /* Le repli en rail est un confort desktop — sous ce seuil, le panneau
@@ -1569,16 +1604,21 @@ button:focus-visible .repli-icone {
 }
 /* Réglages du compte : en-tête du profil. */
 .rg-profil {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--e-12);
+  column-gap: var(--e-12);
+  row-gap: var(--e-8);
   margin-bottom: var(--e-12);
 }
-.rg-profil > span {
+.rg-profil-texte {
   display: grid;
   gap: 2px;
-  min-width: 0;
-  margin-right: auto;
+}
+.rg-profil > .btn-ghost {
+  grid-column: 2;
+  justify-self: start;
+  white-space: nowrap;
 }
 
 /* Menu du compte : absence en cours, connexion précédente, déconnexion partout. */

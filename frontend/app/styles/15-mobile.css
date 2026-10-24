@@ -34,16 +34,6 @@
     margin: 0 -1rem;
     padding: calc(0.5rem + env(safe-area-inset-top)) 1rem 0.5rem;
   }
-  .admin-main .admin-topbar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: color-mix(in oklch, var(--bg) 86%, transparent);
-    backdrop-filter: blur(18px) saturate(150%);
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
-    border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
-  }
   .admin-topbar .admin-title {
     display: none;
   }
@@ -872,38 +862,16 @@ tr.is-demandeur .cal-nom {
     display: none;
   }
 }
-/* En-tête fixe d'une page (Mes tâches, Mon espace — 19/10/2026) : la barre
-   du haut colle en haut, `.entete-fixe` juste dessous (hauteur réelle de la
-   barre mesurée : lib/entete-fixe.ts). Page racine : `.page-entete-fixe`. */
-.admin-main:has(.page-entete-fixe) {
-  --ef-gx: 2rem;
-  --ef-gy: 1.5rem;
-  --ef-voile: color-mix(in oklch, var(--bg) 84%, transparent);
-}
-@media (max-width: 960px) {
-  .admin-main:has(.page-entete-fixe) {
-    --ef-gx: 1.25rem;
-    --ef-gy: 1.1rem;
-  }
-}
+/* En-tête fixe d'une page (Mes tâches, Mon espace — 19/10/2026) :
+   `.entete-fixe` colle juste sous la barre du haut (hauteur mesurée par la
+   coque : lib/defilement.ts). Page racine : `.page-entete-fixe`. La barre
+   garde son voile en haut de page : il prolonge celui de l'en-tête. */
 .admin-main:has(.page-entete-fixe) .admin-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  margin: calc(-1 * var(--ef-gy)) calc(-1 * var(--ef-gx)) 0;
-  padding: var(--ef-gy) var(--ef-gx) 0.85rem;
+  margin-bottom: 0;
 }
-/* Voile flou sur un calque : un backdrop-filter sur la barre elle-même en
-   ferait le bloc conteneur de ses enfants « fixed » (panneau du chat
-   réduit à la hauteur de la barre — trouvé en revue mobile 20/10/2026). */
 .admin-main:has(.page-entete-fixe) .admin-topbar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--ef-voile);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  opacity: 1;
+  border-bottom: 0;
 }
 .entete-fixe {
   position: sticky;
@@ -1558,7 +1526,8 @@ tr.is-demandeur .cal-nom {
 /* Navigation clavier : la ligne active se voit, et reste visible sous les
    en-têtes collés quand on la fait défiler. */
 .mt-ligne[data-tache] {
-  scroll-margin-top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px) + 2.5rem);
+  /* + scroll-padding-top du document (barre + en-tête + 1 rem). */
+  scroll-margin-top: 1.5rem;
   scroll-margin-bottom: 6rem;
 }
 .mt-ligne:has(.mt-titre-bouton:focus-visible) {

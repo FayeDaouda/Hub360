@@ -33,6 +33,7 @@ import { RechercheGlobale } from '@/components/admin/recherche-globale';
 import { AideGlobale, ouvrirAide } from '@/components/admin/aide-globale';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { NavigationMobile } from '@/components/admin/navigation-mobile';
+import { useDefilementCoque } from '@/lib/defilement';
 
 type NavItem = {
   cle: string;
@@ -79,17 +80,6 @@ export function activeAdminDepuisPathname(pathname: string, slug: string): strin
   return NAV.find((item) => item.chemin === segment)?.cle ?? 'tableau-de-bord';
 }
 
-// Barres d'onglets défilantes (mobile) : l'onglet actif — ou celui qu'on
-// touche — est ramené au centre ; sinon il peut rester hors de l'écran.
-function centrerOnglets(racine: ParentNode = document) {
-  racine.querySelectorAll<HTMLElement>('.vue-toggle').forEach((barre) => {
-    if (barre.scrollWidth <= barre.clientWidth) return;
-    const actif = barre.querySelector<HTMLElement>('.is-active, [aria-selected="true"], [aria-pressed="true"]');
-    if (actif) barre.scrollLeft = actif.offsetLeft - (barre.clientWidth - actif.offsetWidth) / 2;
-  });
-}
-
-
 // Repli en rail d'icônes (desktop uniquement — cf. media query 960px) :
 // préférence mémorisée, pas remise à zéro à chaque navigation.
 const CLE_SIDEBAR_REPLIEE = 'hub-sidebar-repliee';
@@ -110,19 +100,9 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
   // voir la mémoire « responsive-all-devices ». Au-dessus de ce seuil, la
   // classe n'a aucun effet (la sidebar reste dans le flux de la grille).
   const [menuOuvert, setMenuOuvert] = useState(false);
-  // Onglet actif ramené à l'écran : à l'arrivée sur une page, et après un choix.
-  useEffect(() => {
-    const t = setTimeout(() => centrerOnglets(), 600);
-    return () => clearTimeout(t);
-  }, [active, titre]);
-  useEffect(() => {
-    const surClic = (e: MouseEvent) => {
-      const barre = (e.target as HTMLElement | null)?.closest('.vue-toggle');
-      if (barre) setTimeout(() => centrerOnglets(barre.parentElement ?? document), 80);
-    };
-    document.addEventListener('click', surClic);
-    return () => document.removeEventListener('click', surClic);
-  }, []);
+  // Barre du haut collée, voile au défilement, bandeaux horizontaux
+  // (fondu des bords, onglet actif ramené à l'écran) : lib/defilement.ts.
+  useDefilementCoque();
   // Lu après le premier rendu (localStorage indisponible côté serveur) —
   // évite un flash pour la majorité des utilisateurs (repli non activé par
   // défaut), au prix d'un très bref sursaut pour ceux qui l'ont activé.

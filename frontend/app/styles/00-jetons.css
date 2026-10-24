@@ -125,6 +125,8 @@
   --surface-donnees: rgba(255, 255, 255, 0.94);
   /* Ombre de défilement d'un tableau large (bord qui cache des colonnes). */
   --ombre-defilement: rgba(30, 30, 80, 0.16);
+  /* Pouce des barres de défilement (fines, assorties au thème). */
+  --defile-pouce: color-mix(in oklch, var(--text-muted) 40%, transparent);
 
   /* --- Verre (chrome : barres, menus, modales) --------------------------- */
   --glass-bg: rgba(255, 255, 255, 0.6);

@@ -170,6 +170,51 @@ body {
   padding: 0;
 }
 
+/* Défilement (lot S0, 24/10/2026) : une seule page qui défile, des barres
+   fines aux couleurs du thème, une gouttière réservée (la page ne saute pas
+   quand une fenêtre la fige), et les ancres / le focus clavier qui
+   s'arrêtent sous la barre du haut et l'en-tête collé (lib/defilement.ts). */
+html {
+  scrollbar-gutter: stable;
+  scrollbar-color: var(--defile-pouce) transparent;
+  scroll-padding-top: calc(var(--ef-topbar-h, 0px) + var(--ef-entete-h, 0px) + 1rem);
+}
+* {
+  scrollbar-width: thin;
+}
+/* Fenêtre, tiroir ou panneau modal ouvert : la page derrière ne bouge plus,
+   et le bout du défilement d'un panneau ne passe pas à la page. */
+html:has([aria-modal='true']) {
+  overflow: hidden;
+}
+[aria-modal='true'],
+.modal-body {
+  overscroll-behavior: contain;
+}
+/* Bandeaux qui défilent à l'horizontale (onglets, filtres, étapes) : le
+   bord qui a une suite s'estompe (data-bord posé par lib/defilement.ts). */
+[data-bord] {
+  --fondu: 1.75rem;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fondu), #000 calc(100% - var(--fondu)), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 var(--fondu), #000 calc(100% - var(--fondu)), transparent);
+}
+[data-bord='debut'] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--fondu)), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - var(--fondu)), transparent);
+}
+[data-bord='fin'] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fondu));
+  mask-image: linear-gradient(90deg, transparent, #000 var(--fondu));
+}
+@media (pointer: coarse) {
+  [data-bord] {
+    scrollbar-width: none;
+  }
+  [data-bord]::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   background: var(--bg);
   color: var(--text);
