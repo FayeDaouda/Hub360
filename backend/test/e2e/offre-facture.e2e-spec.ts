@@ -57,7 +57,8 @@ describe('Offre → contrat → facture payée', () => {
 
     const emise: Facture = (await cfo.post(`/factures/${brouillon!.id}/emission`).expect(201)).body;
     expect(emise.statut).toBe('emise');
-    expect(emise.reference).toMatch(/^F\d{4}-\d{4}$/);
+    // Format de numérotation de la démo (préfixe GC, réglable par le CFO).
+    expect(emise.reference).toMatch(/^GC-\d{4}-\d{4}$/);
     reference = emise.reference!;
 
     const payee: Facture = (
