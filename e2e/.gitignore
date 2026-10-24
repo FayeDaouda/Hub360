@@ -1,0 +1,4 @@
+# Reference environment (code copies, logs, pids, fixtures, auth states, reports)
+.state/
+# Visual reference captures: machine-specific rendering, regenerated per phase
+.reference/

@@ -1,0 +1,17 @@
+{
+  "name": "hub-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-level safety net for hub360°: visual reference captures and smoke tests on an isolated reference environment.",
+  "scripts": {
+    "env:up": "bash scripts/reference-env.sh up",
+    "env:down": "bash scripts/reference-env.sh down",
+    "visual:baseline": "playwright test --project=visual-desktop --project=visual-mobile --update-snapshots",
+    "visual": "playwright test --project=visual-desktop --project=visual-mobile",
+    "smoke": "playwright test --project=smoke",
+    "report": "playwright show-report .state/report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0"
+  }
+}
