@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
@@ -16,7 +16,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule, // connexions du compte de secours (revue CIO)
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'change-moi-en-production',
-      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+      // Format déjà vérifié au démarrage (src/config/environnement.ts : 7d, 12h…).
+      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as JwtSignOptions['expiresIn'] },
     }),
   ],
   controllers: [AuthController, MonCompteController, PhotosController],
