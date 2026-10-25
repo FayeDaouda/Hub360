@@ -15,10 +15,12 @@ import {
   ValidationRhDto,
 } from './demandes.dto';
 import { PieceDto } from './dto';
+import { GroupScope } from '../tenancy/group-scope.decorator';
 
 type R = { user: { userId: string; societeId: string; role: string } };
 
 // Le salarié (espace collaborateur) : ses congés, absences et remboursements.
+@GroupScope()
 @Controller('societes/:slug/mon-espace')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class MesDemandesController {
@@ -58,6 +60,7 @@ export class MesDemandesController {
 
 // Le N+1 (chef de cellule côté collaborateur ; Dir. GC, CTO ou CEO côté direction) : le
 // service vérifie qu'il est bien le N+1 de chaque demande.
+@GroupScope()
 @Controller('societes/:slug/absences')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class ValidationsAbsencesController {
@@ -94,6 +97,7 @@ export class ValidationsAbsencesController {
 
 // La RH : toutes les demandes ; validation finale et suivi des remboursements.
 // Module « rh » : lecture CFO/CEO, écriture RH.
+@GroupScope()
 @Controller('societes/:slug/rh/demandes')
 @PermissionSelonMethode('rh')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)

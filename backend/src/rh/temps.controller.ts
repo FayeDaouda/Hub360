@@ -6,6 +6,7 @@ import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { TempsService } from './temps.service';
+import { GroupScope } from '../tenancy/group-scope.decorator';
 
 const MOIS = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -25,6 +26,7 @@ class TraiterEcartDto {
 type R = { user: { userId: string; societeId: string } };
 
 // RH · Feuilles de temps (lot 4). Module « rh » : lecture CFO/CEO, contrôle RH.
+@GroupScope()
 @Controller('societes/:slug/rh/feuilles-temps')
 @PermissionSelonMethode('rh')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
@@ -49,6 +51,7 @@ export class FeuillesTempsController {
 }
 
 // Le salarié : son temps calculé, en lecture seule ; il peut signaler un écart.
+@GroupScope()
 @Controller('societes/:slug/mon-espace/temps')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class MonTempsController {

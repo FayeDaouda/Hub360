@@ -28,6 +28,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { ReglagesModule } from './reglages/reglages.module';
 import { PilotageModule } from './pilotage/pilotage.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
+import { TenantContextInterceptor } from './tenancy/tenant-context.interceptor';
 import { FiltreExceptionsGlobal } from './commun/exception.filter';
 
 @Module({
@@ -68,6 +69,8 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     AuditModule,
   ],
   providers: [
+    // Société active de chaque requête (ADR 0001), avant tout le reste.
+    { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
     { provide: APP_INTERCEPTOR, useClass: SerialisationInterceptor },
     { provide: APP_FILTER, useClass: FiltreExceptionsGlobal },
   ],

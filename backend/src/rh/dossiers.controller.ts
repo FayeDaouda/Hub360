@@ -7,11 +7,13 @@ import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { DossiersPersonnelService } from './dossiers.service';
 import { ArchivageDto, DecisionPaiementDto, DossierPersonnelDto, PieceDto, PropositionSalaireDto } from './dto';
 import { SalairesService } from './salaires.service';
+import { GroupScope } from '../tenancy/group-scope.decorator';
 
 type R = { user: { userId: string } };
 
 // RH · Dossiers du personnel (groupe) — module « rh » de la matrice : lecture
 // en GET (CFO, CEO), écriture sinon (RH ; admin inchangé).
+@GroupScope()
 @Controller('societes/:slug/rh/dossiers')
 @PermissionSelonMethode('rh')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)

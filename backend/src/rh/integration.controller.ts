@@ -5,6 +5,7 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { IntegrationService } from './integration.service';
+import { GroupScope } from '../tenancy/group-scope.decorator';
 
 class PointIntegrationDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/) realiseLe: string;
@@ -14,6 +15,7 @@ class PointIntegrationDto {
 type R = { user: { userId: string } };
 
 // RH · Intégration (lot 3). Module « rh » : lecture CFO/CEO, écriture RH.
+@GroupScope()
 @Controller('societes/:slug/rh/integrations')
 @PermissionSelonMethode('rh')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
