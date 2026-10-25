@@ -6,6 +6,7 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 import * as tenantContext from '../../src/tenancy/tenant-context';
 import { runInGroupScope, runInTenant } from '../../src/tenancy/tenant-context';
 import { COMPTES, MOT_DE_PASSE, SLUG, connecter, demarrer } from './app';
+import { urlBaseE2e } from './base';
 
 // Isolation entre sociétés (ADR 0001) : le compte d'une autre société, avec
 // tous les droits chez elle, ne lit, ne modifie ni ne liste aucune donnée de
@@ -21,7 +22,8 @@ describe('Isolation entre sociétés', () => {
 
   beforeAll(async () => {
     app = await demarrer();
-    prisma = new PrismaClient();
+    // Explicitement la base de test, jamais celle de backend/.env.
+    prisma = new PrismaClient({ datasources: { db: { url: urlBaseE2e() } } });
 
     // Seconde société, avec le compte « tout voir » d'une société (societe_admin).
     const societe = await prisma.societe.create({ data: { nom: 'Société Isolation', slug: AUTRE.slug } });
