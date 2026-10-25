@@ -279,7 +279,6 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             </p>
           )}
           {c.statut === 'signe' && c.signatureTrace && (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={c.signatureTrace} alt="Signature du client" className="contrat-signature" />
           )}
           {c.statut === 'envoye' && c.dateEnvoi && (

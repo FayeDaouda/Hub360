@@ -7,17 +7,19 @@ import { getSociete } from '@/lib/api';
 import { LoginForm } from './login-form';
 
 type Props = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 // getSociete est appelé ici ET dans la page : Next mémoïse le fetch sur la
 // requête, un seul appel réseau.
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const societe = await getSociete(params.slug);
   return { title: societe ? `Connexion · ${societe.nom} — hub360°` : 'Connexion — hub360°' };
 }
 
-export default async function LoginPage({ params }: Props) {
+export default async function LoginPage(props: Props) {
+  const params = await props.params;
   const societe = await getSociete(params.slug);
   if (!societe) notFound();
 

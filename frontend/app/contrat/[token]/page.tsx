@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { CheckCircle2, Download } from 'lucide-react';
 import { getContratPublic, getFichierContratPublic, signerContrat } from '@/lib/contrats';
 import { telechargerFichier } from '@/lib/fichiers';
@@ -8,7 +8,7 @@ import { formatMontant } from '@/lib/format';
 import type { ContratPublic } from '@/lib/types';
 import { SignaturePad } from '@/components/signature-pad';
 
-type Props = { params: { token: string } };
+type Props = { params: Promise<{ token: string }> };
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -17,7 +17,8 @@ function formatDate(iso: string): string {
 // Page CLIENT du contrat (étape G) — sans compte, le jeton du lien EST
 // l'authentification. Consultation du contrat et de ses annexes, puis
 // signature : bouton « J'accepte » ou signature tracée à l'écran (horodatée).
-export default function ContratPublicPage({ params }: Props) {
+export default function ContratPublicPage(props: Props) {
+  const params = use(props.params);
   const [contrat, setContrat] = useState<ContratPublic | null | undefined>(undefined);
   const [nom, setNom] = useState('');
   const [lu, setLu] = useState(false);

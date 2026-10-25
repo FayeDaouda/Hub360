@@ -166,7 +166,7 @@ export function useDefilementCoque() {
 // lecture est la dernière dont le haut est passé sous le repère — un en-tête
 // collé, à défaut la barre du haut — plus la marge d'arrêt des ancres
 // (scroll-padding : 1 rem) et un peu de jeu. En bas de page : la dernière.
-export function useSectionEnLecture(ids: string[], repere?: RefObject<HTMLElement>): string | undefined {
+export function useSectionEnLecture(ids: string[], repere?: RefObject<HTMLElement | null>): string | undefined {
   const cle = ids.join('|');
   const [enLecture, setEnLecture] = useState<string | undefined>(ids[0]);
   useEffect(() => {

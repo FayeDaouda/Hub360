@@ -1,19 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { clearSession, getSession } from '@/lib/auth';
 import { destinationForSession } from '@/lib/session-redirect';
 import { Session } from '@/lib/types';
 
 type Props = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 // Écran générique « connecté » — filet de sécurité pour un rôle qui n'a pas
 // (encore) de surface dédiée. holding_admin → /groupe, societe_admin →
 // /admin/[slug] : chacun est renvoyé chez lui.
-export default function EspacePage({ params }: Props) {
+export default function EspacePage(props: Props) {
+  const params = use(props.params);
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
 

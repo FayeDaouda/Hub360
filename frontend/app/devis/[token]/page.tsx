@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { CheckCircle2, Download, XCircle } from 'lucide-react';
 import { getDevisPublic, repondreDevisPublic } from '@/lib/devis';
 import { STATUTS_DEVIS, type DevisPublic, type StatutDevisEffectif } from '@/lib/types';
 import { DocumentFacturation } from '@/components/document-facturation';
 import { useConfirmer } from '@/components/confirmation';
 
-type Props = { params: { token: string } };
+type Props = { params: Promise<{ token: string }> };
 
 const MESSAGE_STATUT: Partial<Record<DevisPublic['statutEffectif'], (d: DevisPublic) => string>> = {
   accepte: (d) => `Vous avez accepté ce devis${d.dateReponse ? ` le ${formatDate(d.dateReponse)}` : ''}.`,
@@ -31,7 +31,8 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export default function DevisPublicPage({ params }: Props) {
+export default function DevisPublicPage(props: Props) {
+  const params = use(props.params);
   const confirmer = useConfirmer();
   const [devis, setDevis] = useState<DevisPublic | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Clock3, FileWarning, FolderOpen, Home, Plus, Search, Send } from 'lucide-react';
 import {
@@ -43,7 +43,7 @@ import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-eta
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
 type Props = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 // Situation d'un dossier dans le registre : son statut, sauf une offre
@@ -68,7 +68,8 @@ const aCompleter = (p: Projet) => !p.archive && p.statut === 'nouveau_projet' &&
 const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', developpement: 'pill--info', amenagement: 'pill--attention' };
 const pillCategorie = (p: Projet) => (p.categorie && PILL_CATEGORIE[p.categorie]) || 'pill--neutre';
 
-export default function CrmPage({ params }: Props) {
+export default function CrmPage(props: Props) {
+  const params = use(props.params);
   useTitrePage('CRM · Registre des projets');
   const session = useSessionCourante();
   // Lecture seule pour un rôle qui n'a que la lecture sur le CRM (CFO, CEO…)
