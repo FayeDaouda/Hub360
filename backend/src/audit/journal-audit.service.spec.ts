@@ -90,6 +90,19 @@ describe('JournalAuditService', () => {
     expect(lignes.find((l) => l.action === 'Profil de facturation modifié')!.detail).toBe('adresse');
     expect(lignes.find((l) => l.action === 'Coordonnées de paiement des factures modifiées')!.detail).toBe('RIB · confirmé par mot de passe');
   });
+  it('deux lignes au même horodatage gardent toujours le même ordre', async () => {
+    const s = svc();
+    const prisma = (s as unknown as { prisma: { facture: { findMany: jest.Mock } } }).prisma;
+    const emise = (id: string, numero: number) => ({
+      id, numero, emiseLe: new Date('2026-10-11T08:00:00Z'), estAvoir: false, montantHt: dec(100_000), tauxTva: dec(18), emiseParId: null, libelle: 'Acompte',
+    });
+    const ordre = async (factures: unknown[]) => {
+      prisma.facture.findMany = jest.fn().mockResolvedValueOnce(factures).mockResolvedValue([]);
+      const { lignes } = await s.journal({ userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' }, '2026-10-01', '2026-10-14');
+      return lignes.filter((l) => l.action === 'Facture émise').map((l) => l.id);
+    };
+    expect(await ordre([emise('FA', 14), emise('FB', 15)])).toEqual(await ordre([emise('FB', 15), emise('FA', 14)]));
+  });
 });
 
 describe('periode', () => {

@@ -306,7 +306,10 @@ export class JournalAuditService {
       fin: new Date(jusque.getTime() - 86_400_000).toISOString().slice(0, 10),
       lignes: lignes
         .map(({ parId, ...l }): LigneAudit => ({ ...l, par: parId ? (auteurs.get(parId) ?? 'compte supprimé') : null }))
-        .sort((x, y) => y.le.getTime() - x.le.getTime()),
+        // Plus récent d'abord ; à égalité d'horodatage, par contenu (ex. F2026-0014
+        // avant F2026-0015) : sinon deux lignes simultanées s'inversaient d'un
+        // chargement à l'autre, la base ne garantissant aucun ordre entre elles.
+        .sort((x, y) => y.le.getTime() - x.le.getTime() || x.detail.localeCompare(y.detail, 'fr') || x.action.localeCompare(y.action, 'fr')),
     };
   }
 }
