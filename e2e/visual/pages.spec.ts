@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_PATH, COMPANY_SLUG, installSeedNoiseFilter, readFixtures, resetHorizontalScroll, storageStateOf, THEMES, useTheme, waitForContent, type Role } from '../support/reference';
+import { ADMIN_PATH, COMPANY_SLUG, cspViolations, installCaptureGuards, installSeedNoiseFilter, readFixtures, resetHorizontalScroll, storageStateOf, THEMES, useTheme, waitForContent, type Role } from '../support/reference';
 
 // Visual reference of every screen, per role, theme and viewport (the two
 // viewports are two Playwright projects). Each top-level tab of a page is
@@ -79,6 +79,8 @@ async function expectFullPageScreenshot(page: Page, name: string) {
   // Two consecutive captures of a very tall viewport (Réglages: ~14 000 px
   // on a phone) take longer than the default 15 s.
   await expect(page).toHaveScreenshot(name, { timeout: 60_000 });
+  // Aucune violation de la politique de contenu sur l'écran capturé.
+  expect(await cspViolations(page), `violations CSP sur ${name}`).toEqual([]);
   await page.setViewportSize(viewport);
 }
 
@@ -117,6 +119,7 @@ test.describe('public', () => {
       test(`${screen.name} (${theme})`, async ({ page }) => {
         await useTheme(page, theme);
         await installSeedNoiseFilter(page);
+        await installCaptureGuards(page);
         await page.goto(screen.path);
         await captureScreenAndTabs(page, `public--${screen.name}--${theme}`, screen.tabs);
       });
@@ -132,6 +135,7 @@ for (const [role, screens] of Object.entries(SCREENS_BY_ROLE) as [Role, Screen[]
         test(`${screen.name} (${theme})`, async ({ page }) => {
           await useTheme(page, theme);
           await installSeedNoiseFilter(page);
+          await installCaptureGuards(page);
           await page.goto(screen.path);
           await captureScreenAndTabs(page, `${role}--${screen.name}--${theme}`, screen.tabs);
         });
