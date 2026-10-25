@@ -415,7 +415,7 @@ export default function FacturationPage(props: Props) {
                       <span className="field-label">Facture (PDF, facultatif)</span>
                       <input
                         type="file"
-                        accept={FICHIERS_ACCEPTES.projet}
+                        accept={FICHIERS_ACCEPTES.contrat}
                         className="field-input"
                         onChange={(ev) => setSaisieBureau({ ...saisieBureau, fichier: ev.target.files?.[0] })}
                       />

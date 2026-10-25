@@ -25,7 +25,10 @@ class FichierRh {
 class FichierProjet {
   @UrlFichierJoint(1_000, 'projet') url!: string;
 }
-const erreurs = (classe: typeof FichierRh | typeof FichierProjet, url: unknown) => validateSync(plainToInstance(classe, { url }));
+class FichierContrat {
+  @UrlFichierJoint(1_000, 'contrat') url!: string;
+}
+const erreurs = (classe: typeof FichierRh | typeof FichierProjet | typeof FichierContrat, url: unknown) => validateSync(plainToInstance(classe, { url }));
 
 describe('typeDuContenu', () => {
   it.each(Object.entries(ECHANTILLONS))('reconnaît %s par son contenu', (type, octets) => {
@@ -56,6 +59,16 @@ describe('UrlFichierJoint', () => {
 
   it.each(Object.keys(ECHANTILLONS) as TypeFichier[])('Projet ACCEPTÉ : %s', (type) => {
     expect(erreurs(FichierProjet, dataUri(ECHANTILLONS[type]))).toHaveLength(0);
+  });
+
+  it.each(['pdf', 'jpeg', 'png', 'heic', 'docx', 'xlsx'] as TypeFichier[])('Contrat ACCEPTÉ : %s', (type) => {
+    expect(erreurs(FichierContrat, dataUri(ECHANTILLONS[type]))).toHaveLength(0);
+  });
+
+  it.each(['webp', 'dwg', 'dxf', 'pptx'] as TypeFichier[])('Contrat REFUSÉ : %s', (type) => {
+    expect(erreurs(FichierContrat, dataUri(ECHANTILLONS[type]))[0].constraints).toMatchObject({
+      typeFichierAccepte: 'Type de fichier refusé : PDF, JPG, PNG, HEIC, DOCX, XLSX uniquement.',
+    });
   });
 
   it('le type déclaré par le navigateur ne compte pas : un SVG déclaré PDF est refusé', () => {

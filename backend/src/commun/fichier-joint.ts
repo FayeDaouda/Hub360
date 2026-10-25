@@ -12,14 +12,16 @@ export const DATA_URI_BASE64 = /^data:[^,;]*(;[^,;]+)*;base64,[A-Za-z0-9+/]*={0,
 // le navigateur. Refusés partout : SVG et HTML (scripts), ZIP (contenu
 // incontrôlable) et tout ce qui n'est pas reconnu.
 export type TypeFichier = 'pdf' | 'jpeg' | 'png' | 'heic' | 'webp' | 'dwg' | 'dxf' | 'docx' | 'xlsx' | 'pptx';
-export type UsageFichier = 'rh' | 'projet';
+export type UsageFichier = 'rh' | 'projet' | 'contrat';
 
 export const TYPES_PAR_USAGE: Record<UsageFichier, readonly TypeFichier[]> = {
   // Justificatifs, pièces du dossier, bulletins, attestations.
   rh: ['pdf', 'jpeg', 'png', 'heic'],
-  // Livrables de projet, contrats et factures de bureaux d'études. Formats BIM
-  // (Revit, ArchiCAD, SketchUp) à ajouter après confirmation de l'équipe.
+  // Livrables de projet. Formats BIM (Revit, ArchiCAD, SketchUp) à ajouter
+  // après confirmation de l'équipe.
   projet: ['pdf', 'jpeg', 'png', 'heic', 'webp', 'dwg', 'dxf', 'docx', 'xlsx', 'pptx'],
+  // Contrats (document, annexes, scan signé) et factures des bureaux d'études.
+  contrat: ['pdf', 'jpeg', 'png', 'heic', 'docx', 'xlsx'],
 };
 
 const LIBELLES: Record<TypeFichier, string> = {

@@ -13,6 +13,7 @@ const MAX_OCTETS = 15 * 1024 * 1024;
 export const FICHIERS_ACCEPTES = {
   rh: '.pdf,.jpg,.jpeg,.png,.heic',
   projet: '.pdf,.jpg,.jpeg,.png,.heic,.webp,.dwg,.dxf,.docx,.xlsx,.pptx',
+  contrat: '.pdf,.jpg,.jpeg,.png,.heic,.docx,.xlsx',
 } as const;
 
 export function lireFichier(

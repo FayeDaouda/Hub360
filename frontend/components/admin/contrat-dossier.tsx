@@ -144,7 +144,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
 
   return (
     <section className="offre-dossier" aria-label="Contrat">
-      <input ref={entreeFichier} type="file" accept={FICHIERS_ACCEPTES.projet} hidden onChange={fichierChoisi} />
+      <input ref={entreeFichier} type="file" accept={FICHIERS_ACCEPTES.contrat} hidden onChange={fichierChoisi} />
       <div className="cycle-dossier-tete">
         <span className="field-label">Contrat</span>
         {c && (
