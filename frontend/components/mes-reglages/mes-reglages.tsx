@@ -14,7 +14,8 @@ import { ProfilModal } from '@/components/admin/profil-modal';
 import { nomAffiche } from '@/lib/profil';
 
 // « CEO (transverse) » → « CEO » ; socle technique en clair.
-const libelleRole = (role: string) => (role === 'societe_admin' ? 'Administration de la société' : role.replace(/\s*\(transverse\)$/, ''));
+const libelleRole = (role: string) =>
+  role === 'societe_admin' ? 'Administration de la société' : role.replace(/\s*\(transverse\)$/, '');
 
 // Réglages personnels (revue Salarié 19/10/2026) : ce que chacun règle pour
 // lui-même — compte, mot de passe, double authentification, apparence, son.
@@ -32,7 +33,12 @@ export function MesReglages() {
     <div className="rg-page">
       <Bloc icone={UserRound} titre="Mon compte">
         <div className="rg-profil">
-          <AvatarPersonne nom={nomAffiche(session.utilisateur)} photo={session.utilisateur.photoUrl} cle={session.utilisateur.id} taille="lg" />
+          <AvatarPersonne
+            nom={nomAffiche(session.utilisateur)}
+            photo={session.utilisateur.photoUrl}
+            cle={session.utilisateur.id}
+            taille="lg"
+          />
           <span className="rg-profil-texte">
             <strong>{nomAffiche(session.utilisateur)}</strong>
             <span className="po-aide">Photo et nom affiché dans la messagerie, les fils et les mentions.</span>
@@ -54,13 +60,15 @@ export function MesReglages() {
           <dd>{session.societe.nom}</dd>
         </dl>
         <p className="dmd-note">
-          Poste, téléphone et coordonnées : Mon espace › Mon dossier › Mes informations. Nom, e-mail ou rôle à corriger : voyez avec la
-          RH.
+          Poste, téléphone et coordonnées : Mon espace › Mon dossier › Mes informations. Nom, e-mail ou rôle à corriger
+          : voyez avec la RH.
         </p>
       </Bloc>
 
       <Bloc icone={KeyRound} titre="Mot de passe">
-        <p className="dmd-note">Au moins 10 caractères. Vos autres appareils devront se reconnecter après le changement.</p>
+        <p className="dmd-note">
+          Au moins 10 caractères. Vos autres appareils devront se reconnecter après le changement.
+        </p>
         <button type="button" className="btn-ghost btn-ghost--sm rg-bouton" onClick={() => setMdp(true)}>
           Changer mon mot de passe
         </button>

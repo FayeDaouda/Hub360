@@ -29,16 +29,35 @@ export function AideGlobale({ session }: { session: Session }) {
   }, []);
   return (
     <>
-      <button type="button" className="admin-icon-btn" aria-label="Aide et signalement d’un problème" title="Aide" onClick={() => setOnglet('guide')}>
+      <button
+        type="button"
+        className="admin-icon-btn"
+        aria-label="Aide et signalement d’un problème"
+        title="Aide"
+        onClick={() => setOnglet('guide')}
+      >
         <HelpCircle size={18} />
       </button>
       {onglet &&
-        createPortal(<Panneau session={session} onglet={onglet} onOnglet={setOnglet} onClose={() => setOnglet(null)} />, document.body)}
+        createPortal(
+          <Panneau session={session} onglet={onglet} onOnglet={setOnglet} onClose={() => setOnglet(null)} />,
+          document.body,
+        )}
     </>
   );
 }
 
-function Panneau({ session, onglet, onOnglet, onClose }: { session: Session; onglet: Onglet; onOnglet: (o: Onglet) => void; onClose: () => void }) {
+function Panneau({
+  session,
+  onglet,
+  onOnglet,
+  onClose,
+}: {
+  session: Session;
+  onglet: Onglet;
+  onOnglet: (o: Onglet) => void;
+  onClose: () => void;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -47,7 +66,13 @@ function Panneau({ session, onglet, onOnglet, onClose }: { session: Session; ong
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal aide-panneau" role="dialog" aria-modal="true" aria-labelledby="aide-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal aide-panneau"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="aide-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="aide-titre">Aide</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
@@ -61,13 +86,24 @@ function Panneau({ session, onglet, onOnglet, onClose }: { session: Session; ong
               ['signaler', 'Signaler un problème'],
             ] as const
           ).map(([o, libelle]) => (
-            <button key={o} type="button" role="tab" aria-selected={onglet === o} className={onglet === o ? 'is-active' : ''} onClick={() => onOnglet(o)}>
+            <button
+              key={o}
+              type="button"
+              role="tab"
+              aria-selected={onglet === o}
+              className={onglet === o ? 'is-active' : ''}
+              onClick={() => onOnglet(o)}
+            >
               {libelle}
             </button>
           ))}
         </div>
         <div className="modal-body aide-corps">
-          {onglet === 'guide' ? <Guide session={session} onSignaler={() => onOnglet('signaler')} /> : <Signaler session={session} onClose={onClose} />}
+          {onglet === 'guide' ? (
+            <Guide session={session} onSignaler={() => onOnglet('signaler')} />
+          ) : (
+            <Signaler session={session} onClose={onClose} />
+          )}
         </div>
       </div>
     </div>
@@ -80,12 +116,15 @@ function Guide({ session, onSignaler }: { session: Session; onSignaler: () => vo
     const moduleMatrice = moduleDeSection(cle);
     return moduleMatrice ? (session.permissions?.[moduleMatrice] ?? 'aucun') : 'aucun';
   };
-  const sections = [...ORDRE_SECTIONS, 'parametres'].filter((cle) => sectionAccessible(session, cle) && FICHES_AIDE[cle]);
+  const sections = [...ORDRE_SECTIONS, 'parametres'].filter(
+    (cle) => sectionAccessible(session, cle) && FICHES_AIDE[cle],
+  );
 
   return (
     <>
       <p className="aide-intro">
-        Bonjour {session.utilisateur.prenom}. Voici ce que votre rôle (<strong>{session.role}</strong>) vous ouvre dans le HUB, dans l’ordre du menu.
+        Bonjour {session.utilisateur.prenom}. Voici ce que votre rôle (<strong>{session.role}</strong>) vous ouvre dans
+        le HUB, dans l’ordre du menu.
       </p>
       <ul className="aide-sections">
         {sections.map((cle) => {
@@ -175,8 +214,8 @@ function Signaler({ session, onClose }: { session: Session; onClose: () => void 
   return (
     <>
       <p className="aide-intro">
-        Décrivez ce qui ne va pas, ce que vous attendiez ou votre idée. La page où vous êtes, votre rôle et votre appareil sont joints
-        automatiquement.
+        Décrivez ce qui ne va pas, ce que vous attendiez ou votre idée. La page où vous êtes, votre rôle et votre
+        appareil sont joints automatiquement.
       </p>
       <label className="field">
         <span className="field-label">Le problème</span>
@@ -199,7 +238,12 @@ function Signaler({ session, onClose }: { session: Session; onClose: () => void 
         <button type="button" className="btn-ghost" onClick={onClose} disabled={envoi}>
           Annuler
         </button>
-        <button type="button" className="btn-primary" onClick={envoyer} disabled={envoi || description.trim().length < 10}>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={envoyer}
+          disabled={envoi || description.trim().length < 10}
+        >
           {envoi ? 'Envoi…' : 'Envoyer'}
         </button>
       </div>

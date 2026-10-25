@@ -6,7 +6,10 @@ export const PROCESSUS: Record<ProcessusCellule, { libelle: string; iso: string 
   DIR: { libelle: 'Pilotage et direction', iso: '§5 Leadership · §9.3 Revue de direction' },
   ARC: { libelle: 'Réalisation · conception architecturale', iso: '§8.3 Conception et développement' },
   INT: { libelle: 'Réalisation · architecture intérieure', iso: '§8.3 Conception et développement' },
-  ETU: { libelle: 'Réalisation · études techniques', iso: '§8.4 Maîtrise des prestataires externes (bureaux d’études)' },
+  ETU: {
+    libelle: 'Réalisation · études techniques',
+    iso: '§8.4 Maîtrise des prestataires externes (bureaux d’études)',
+  },
 };
 // Ordre de la nomenclature (DIR d'abord) et du formulaire de création (ARC d'abord).
 export const PROCESSUS_NOMENCLATURE: ProcessusCellule[] = ['DIR', 'ARC', 'INT', 'ETU'];

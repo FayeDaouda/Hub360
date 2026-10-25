@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 
 // À poser après JwtAuthGuard sur les routes /societes/:slug/… ouvertes à
 // TOUS les membres d'une société (admin comme collaborateur) — par ex.

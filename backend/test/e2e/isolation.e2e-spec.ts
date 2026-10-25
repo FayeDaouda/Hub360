@@ -16,7 +16,11 @@ const AUTRE = { slug: 'societe-isolation', email: 'admin.isolation@hub.group' };
 describe('Isolation entre sociétés', () => {
   let app: INestApplication;
   let prisma: PrismaClient;
-  let autre: { get: (c: string) => request.Test; post: (c: string, b?: object) => request.Test; patch: (c: string, b?: object) => request.Test };
+  let autre: {
+    get: (c: string) => request.Test;
+    post: (c: string, b?: object) => request.Test;
+    patch: (c: string, b?: object) => request.Test;
+  };
   let grey: { dossierId: string; devisId: string; factureId: string; projetId: string; clientId: string };
   let autreSocieteId: string;
 
@@ -30,9 +34,16 @@ describe('Isolation entre sociétés', () => {
     autreSocieteId = societe.id;
     const role = await prisma.role.findFirstOrThrow({ where: { societeId: null, nom: 'societe_admin' } });
     const utilisateur = await prisma.utilisateur.create({
-      data: { email: AUTRE.email, prenom: 'Admin', nom: 'Isolation', motDePasseHash: await hacherMotDePasse(MOT_DE_PASSE) },
+      data: {
+        email: AUTRE.email,
+        prenom: 'Admin',
+        nom: 'Isolation',
+        motDePasseHash: await hacherMotDePasse(MOT_DE_PASSE),
+      },
     });
-    await prisma.utilisateurSocieteRole.create({ data: { utilisateurId: utilisateur.id, societeId: societe.id, roleId: role.id } });
+    await prisma.utilisateurSocieteRole.create({
+      data: { utilisateurId: utilisateur.id, societeId: societe.id, roleId: role.id },
+    });
 
     const greySociete = await prisma.societe.findUniqueOrThrow({ where: { slug: SLUG } });
     const [dossier, devis, facture, projet, client] = await Promise.all([
@@ -42,7 +53,13 @@ describe('Isolation entre sociétés', () => {
       prisma.projet.findFirstOrThrow({ where: { societeId: greySociete.id } }),
       prisma.client.findFirstOrThrow({ where: { societeId: greySociete.id } }),
     ]);
-    grey = { dossierId: dossier.id, devisId: devis.id, factureId: facture.id, projetId: projet.id, clientId: client.id };
+    grey = {
+      dossierId: dossier.id,
+      devisId: devis.id,
+      factureId: facture.id,
+      projetId: projet.id,
+      clientId: client.id,
+    };
 
     const r = await request(app.getHttpServer())
       .post('/api/auth/login')
@@ -69,7 +86,9 @@ describe('Isolation entre sociétés', () => {
       ['/factures', grey.factureId],
     ] as const) {
       const r = await autre.get(route).expect(200);
-      const ids = (Array.isArray(r.body) ? r.body : (r.body.lignes ?? r.body.factures ?? [])).map((l: { id: string }) => l.id);
+      const ids = (Array.isArray(r.body) ? r.body : (r.body.lignes ?? r.body.factures ?? [])).map(
+        (l: { id: string }) => l.id,
+      );
       expect(ids).not.toContain(id);
     }
   });
@@ -91,7 +110,11 @@ describe('Isolation entre sociétés', () => {
 
   it.each([
     ['modifier un devis', () => autre.patch(`/devis/${grey.devisId}`, { objet: 'Intrusion' })],
-    ['enregistrer un paiement', () => autre.post(`/factures/${grey.factureId}/paiements`, { date: '2026-10-25', montant: 1000, mode: 'virement' })],
+    [
+      'enregistrer un paiement',
+      () =>
+        autre.post(`/factures/${grey.factureId}/paiements`, { date: '2026-10-25', montant: 1000, mode: 'virement' }),
+    ],
     ['agir sur un dossier CRM', () => autre.post(`/dossiers/${grey.dossierId}/actions`, { action: 'valider' })],
   ])('écriture par identifiant refusée : %s', async (_cas, appel) => {
     const r = await appel();
@@ -125,7 +148,9 @@ describe('Isolation entre sociétés', () => {
         expect(await client().facture.count({ where: { id: grey.factureId } })).toBe(0);
         const maj = await client().devis.updateMany({ where: { id: grey.devisId }, data: { objet: 'Intrusion' } });
         expect(maj.count).toBe(0);
-        await expect(client().devis.update({ where: { id: grey.devisId }, data: { objet: 'Intrusion' } })).rejects.toThrow();
+        await expect(
+          client().devis.update({ where: { id: grey.devisId }, data: { objet: 'Intrusion' } }),
+        ).rejects.toThrow();
         // Périmètre groupe assumé : la ligne redevient visible.
         expect(await runInGroupScope(() => client().devis.findUnique({ where: { id: grey.devisId } }))).not.toBeNull();
       });
@@ -134,7 +159,9 @@ describe('Isolation entre sociétés', () => {
     it('refuse une ligne destinée à une autre société', async () => {
       const greySocieteId = (await prisma.societe.findUniqueOrThrow({ where: { slug: SLUG } })).id;
       await runInCompany(autreSocieteId, async () => {
-        await expect(client().client.create({ data: { societeId: greySocieteId, nom: 'Intrus', type: 'particulier' } })).rejects.toThrow('autre société');
+        await expect(
+          client().client.create({ data: { societeId: greySocieteId, nom: 'Intrus', type: 'particulier' } }),
+        ).rejects.toThrow('autre société');
       });
     });
 
@@ -144,7 +171,13 @@ describe('Isolation entre sociétés', () => {
           client().devis.create({ data: { societeId: autreSocieteId, clientId: grey.clientId, objet: 'Intrusion' } }),
         ).rejects.toThrow('référence une donnée');
         await expect(
-          client().devis.create({ data: { societe: { connect: { id: autreSocieteId } }, client: { connect: { id: grey.clientId } }, objet: 'Intrusion' } }),
+          client().devis.create({
+            data: {
+              societe: { connect: { id: autreSocieteId } },
+              client: { connect: { id: grey.clientId } },
+              objet: 'Intrusion',
+            },
+          }),
         ).rejects.toThrow('référence une donnée');
       });
       expect(await prisma.devis.count({ where: { objet: 'Intrusion' } })).toBe(0);
@@ -153,11 +186,17 @@ describe('Isolation entre sociétés', () => {
     it('accepte une relation vers une ligne créée plus tôt dans la même transaction', async () => {
       await runInCompany(autreSocieteId, () =>
         client().$transaction(async (tx) => {
-          const nouveau = await tx.client.create({ data: { societeId: autreSocieteId, nom: 'Client de la transaction', type: 'particulier' } });
-          await tx.devis.create({ data: { societeId: autreSocieteId, clientId: nouveau.id, objet: 'Devis de la transaction' } });
+          const nouveau = await tx.client.create({
+            data: { societeId: autreSocieteId, nom: 'Client de la transaction', type: 'particulier' },
+          });
+          await tx.devis.create({
+            data: { societeId: autreSocieteId, clientId: nouveau.id, objet: 'Devis de la transaction' },
+          });
         }),
       );
-      expect(await prisma.devis.count({ where: { societeId: autreSocieteId, objet: 'Devis de la transaction' } })).toBe(1);
+      expect(await prisma.devis.count({ where: { societeId: autreSocieteId, objet: 'Devis de la transaction' } })).toBe(
+        1,
+      );
     });
 
     it('refuse toute opération sur une donnée de société hors contexte (refus par défaut)', async () => {
@@ -185,7 +224,9 @@ describe('Isolation entre sociétés', () => {
       expect(vus).not.toContainEqual(undefined);
       const identifiee = vus.findIndex((v) => v?.companyId);
       expect(identifiee).toBeGreaterThanOrEqual(0);
-      expect(vus.slice(identifiee)).toEqual(vus.slice(identifiee).map(() => ({ scope: 'company', companyId: autreSocieteId })));
+      expect(vus.slice(identifiee)).toEqual(
+        vus.slice(identifiee).map(() => ({ scope: 'company', companyId: autreSocieteId })),
+      );
     } finally {
       espion.mockRestore();
     }
@@ -193,6 +234,9 @@ describe('Isolation entre sociétés', () => {
 
   it('un jeton de Grey Concrete ne donne pas accès à l’autre société', async () => {
     const jeton = await connecter(app, COMPTES.cfo);
-    await request(app.getHttpServer()).get(`/api/societes/${AUTRE.slug}/devis`).set({ Authorization: `Bearer ${jeton}` }).expect(403);
+    await request(app.getHttpServer())
+      .get(`/api/societes/${AUTRE.slug}/devis`)
+      .set({ Authorization: `Bearer ${jeton}` })
+      .expect(403);
   });
 });

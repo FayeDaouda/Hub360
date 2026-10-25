@@ -34,14 +34,22 @@ describe('ProjetsOuvertsService.definirDateVisite', () => {
     await s.definirDateVisite('S1', 'P1', '2026-10-17');
     expect(prisma.projet.update).toHaveBeenCalledWith({ where: { id: 'P1' }, data: { dateVisiteSite: '2026-10-17' } });
     const fenetre = { debutLe: '2026-10-17', finLe: '2026-10-18' };
-    expect(prisma.carteProjet.updateMany).toHaveBeenCalledWith({ where: { projetId: 'P1', cle: CARTE_RELEVES }, data: fenetre });
-    expect(prisma.tacheProjet.updateMany).toHaveBeenCalledWith({ where: { projetId: 'P1', carte: { cle: CARTE_RELEVES } }, data: fenetre });
+    expect(prisma.carteProjet.updateMany).toHaveBeenCalledWith({
+      where: { projetId: 'P1', cle: CARTE_RELEVES },
+      data: fenetre,
+    });
+    expect(prisma.tacheProjet.updateMany).toHaveBeenCalledWith({
+      where: { projetId: 'P1', carte: { cle: CARTE_RELEVES } },
+      data: fenetre,
+    });
   });
 
   it('effacer la date retire l’échéance', async () => {
     const { s, prisma } = svc({ id: 'P1' });
     await s.definirDateVisite('S1', 'P1', null);
-    expect(prisma.tacheProjet.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { debutLe: null, finLe: null } }));
+    expect(prisma.tacheProjet.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { debutLe: null, finLe: null } }),
+    );
   });
 
   it('projet d’une autre société ou pas encore ouvert → 404, rien n’est modifié', async () => {

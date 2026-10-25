@@ -40,7 +40,9 @@ describe('calendrier ouvrable du projet', () => {
     expect(apresJoursOuvres('2026-10-22', 3)).toBe('2026-10-27');
     expect(relancePossibleLe(new Date('2026-10-22T09:00:00Z'), null, new Set())).toBe('2026-10-27');
     // Relancé le 27/10 : prochaine relance le vendredi 30/10.
-    expect(relancePossibleLe(new Date('2026-10-22T09:00:00Z'), new Date('2026-10-27T08:00:00Z'), new Set())).toBe('2026-10-30');
+    expect(relancePossibleLe(new Date('2026-10-22T09:00:00Z'), new Date('2026-10-27T08:00:00Z'), new Set())).toBe(
+      '2026-10-30',
+    );
     // Un jour férié ne compte pas.
     expect(relancePossibleLe(new Date('2026-10-22T09:00:00Z'), null, new Set(['2026-10-26']))).toBe('2026-10-28');
   });

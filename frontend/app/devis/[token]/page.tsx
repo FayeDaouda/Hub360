@@ -117,12 +117,7 @@ export default function DevisPublicPage(props: Props) {
               >
                 <XCircle size={16} aria-hidden /> Refuser
               </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={busy}
-                onClick={() => repondre('accepte')}
-              >
+              <button type="button" className="btn-primary" disabled={busy} onClick={() => repondre('accepte')}>
                 <CheckCircle2 size={16} aria-hidden /> Accepter le devis
               </button>
             </div>

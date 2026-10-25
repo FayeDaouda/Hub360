@@ -66,7 +66,8 @@ export class RentabiliteService {
   // Le contrôleur exige finances_marges en lecture (matrice) ; ici, le
   // niveau de détail selon la fonction.
   private acces(a: Acteur): Acces {
-    if (a.role === 'societe_admin') throw new ForbiddenException('La rentabilité par projet n’est pas ouverte au compte d’administration.');
+    if (a.role === 'societe_admin')
+      throw new ForbiddenException('La rentabilité par projet n’est pas ouverte au compte d’administration.');
     return ACCES_MONTANTS.has(a.role) ? 'montants' : 'taux';
   }
 
@@ -75,37 +76,76 @@ export class RentabiliteService {
   private async calculer(societeId: string, periode: string | null) {
     const jour = aujourdhui();
     const dansPeriode = (mois: string) => !periode || mois === periode;
-    const [projets, factures, brouillons, controles, dossiers, taches, prolongations, reprises, parametres, feries] = await Promise.all([
-      this.prisma.projet.findMany({
-        where: { societeId },
-        select: { id: true, code: true, programme: true, statut: true, phase: true, ouvertLe: true, client: { select: { nom: true } }, _count: { select: { taches: true } } },
-        orderBy: { code: 'asc' },
-      }),
-      // Émises (y compris annulées depuis par un avoir) et avoirs : HT négatif.
-      this.prisma.facture.findMany({
-        where: { societeId, projetId: { not: null }, emiseLe: { not: null } },
-        select: { id: true, projetId: true, numero: true, reference: true, emiseLe: true, estAvoir: true, statut: true, montantHt: true, libelle: true },
-        orderBy: { emiseLe: 'asc' },
-      }),
-      this.prisma.facture.findMany({
-        where: { societeId, projetId: { not: null }, statut: 'brouillon', estAvoir: false, montantHt: { gt: 0 } },
-        select: { projetId: true, montantHt: true },
-      }),
-      this.prisma.controleFeuilleTemps.findMany({ where: { dossier: { societeId } }, select: { dossierId: true, mois: true, detail: true, controleLe: true } }),
-      this.prisma.dossierPersonnel.findMany({
-        where: { societeId },
-        select: { id: true, prenom: true, nom: true, salaires: { where: { statut: 'valide' }, select: { montant: true, dateEffet: true, statut: true, decideLe: true } } },
-      }),
-      this.prisma.tacheProjet.findMany({ where: { projet: { societeId } }, select: { id: true, projetId: true } }),
-      this.prisma.prolongationTache.findMany({ where: { decision: 'accordee', tache: { projet: { societeId } } }, select: { tache: { select: { projetId: true } } } }),
-      this.prisma.evenementTacheProjet.findMany({ where: { type: 'reprise', tache: { projet: { societeId } } }, select: { tache: { select: { projetId: true } } } }),
-      this.prisma.parametreRentabilite.findMany({ where: { societeId } }),
-      this.reglages.joursFeries([societeId]),
-    ]);
+    const [projets, factures, brouillons, controles, dossiers, taches, prolongations, reprises, parametres, feries] =
+      await Promise.all([
+        this.prisma.projet.findMany({
+          where: { societeId },
+          select: {
+            id: true,
+            code: true,
+            programme: true,
+            statut: true,
+            phase: true,
+            ouvertLe: true,
+            client: { select: { nom: true } },
+            _count: { select: { taches: true } },
+          },
+          orderBy: { code: 'asc' },
+        }),
+        // Émises (y compris annulées depuis par un avoir) et avoirs : HT négatif.
+        this.prisma.facture.findMany({
+          where: { societeId, projetId: { not: null }, emiseLe: { not: null } },
+          select: {
+            id: true,
+            projetId: true,
+            numero: true,
+            reference: true,
+            emiseLe: true,
+            estAvoir: true,
+            statut: true,
+            montantHt: true,
+            libelle: true,
+          },
+          orderBy: { emiseLe: 'asc' },
+        }),
+        this.prisma.facture.findMany({
+          where: { societeId, projetId: { not: null }, statut: 'brouillon', estAvoir: false, montantHt: { gt: 0 } },
+          select: { projetId: true, montantHt: true },
+        }),
+        this.prisma.controleFeuilleTemps.findMany({
+          where: { dossier: { societeId } },
+          select: { dossierId: true, mois: true, detail: true, controleLe: true },
+        }),
+        this.prisma.dossierPersonnel.findMany({
+          where: { societeId },
+          select: {
+            id: true,
+            prenom: true,
+            nom: true,
+            salaires: {
+              where: { statut: 'valide' },
+              select: { montant: true, dateEffet: true, statut: true, decideLe: true },
+            },
+          },
+        }),
+        this.prisma.tacheProjet.findMany({ where: { projet: { societeId } }, select: { id: true, projetId: true } }),
+        this.prisma.prolongationTache.findMany({
+          where: { decision: 'accordee', tache: { projet: { societeId } } },
+          select: { tache: { select: { projetId: true } } },
+        }),
+        this.prisma.evenementTacheProjet.findMany({
+          where: { type: 'reprise', tache: { projet: { societeId } } },
+          select: { tache: { select: { projetId: true } } },
+        }),
+        this.prisma.parametreRentabilite.findMany({ where: { societeId } }),
+        this.reglages.joursFeries([societeId]),
+      ]);
     const ferieSet = feries.get(societeId) ?? new Set<string>();
     // Feuilles de tous les mois clos : elles fixent le mois arrêté du cumul.
     const clos = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).filter((m) => m < moisDe(jour));
-    const feuillesClos = await Promise.all(clos.map(async (m) => ({ mois: m, feuilles: (await this.temps.feuilles(m, societeId)).feuilles })));
+    const feuillesClos = await Promise.all(
+      clos.map(async (m) => ({ mois: m, feuilles: (await this.temps.feuilles(m, societeId)).feuilles })),
+    );
     const arrete = moisArrete(feuillesClos.map((x) => ({ mois: x.mois, statuts: x.feuilles.map((f) => f.statut) })));
     // Cumul : jusqu'au mois arrêté inclus (rien s'il n'y en a pas). Mois isolé : ce mois.
     const retenu = (m: string) => (periode ? m === periode : !!arrete && m <= arrete);
@@ -115,7 +155,20 @@ export class RentabiliteService {
     const params = parametres as LigneParametre[];
 
     const cumuls = new Map<string, Cumul>(
-      projets.map((p) => [p.id, { ht: 0, cout: 0, heures: 0, heuresAttente: 0, aFacturer: 0, sansSalaire: new Set(), parSalarie: new Map(), parMois: new Map(), derniere: null }]),
+      projets.map((p) => [
+        p.id,
+        {
+          ht: 0,
+          cout: 0,
+          heures: 0,
+          heuresAttente: 0,
+          aFacturer: 0,
+          sansSalaire: new Set(),
+          parSalarie: new Map(),
+          parMois: new Map(),
+          derniere: null,
+        },
+      ]),
     );
     const mois = (c: Cumul, m: string) => {
       if (!c.parMois.has(m)) c.parMois.set(m, { heures: 0, cout: 0, ht: 0 });
@@ -127,7 +180,9 @@ export class RentabiliteService {
 
     // Projets facturés avant le début du suivi des heures : le travail payé
     // par ces factures n'a jamais été compté en coût (marge gonflée).
-    const facturesAvantSuivi = new Set(factures.filter((f) => moisDe(jourIso(f.emiseLe!)) < MOIS_DEBUT_FEUILLES).map((f) => f.projetId!));
+    const facturesAvantSuivi = new Set(
+      factures.filter((f) => moisDe(jourIso(f.emiseLe!)) < MOIS_DEBUT_FEUILLES).map((f) => f.projetId!),
+    );
     for (const f of factures) {
       const c = cumuls.get(f.projetId!);
       const m = moisDe(jourIso(f.emiseLe!));
@@ -148,7 +203,16 @@ export class RentabiliteService {
       if (!couts.has(k)) {
         const salaire = salaireDuMois(salaires.get(dossierId) ?? [], m, ferieSet);
         const debut = `${m}-01`;
-        couts.set(k, salaire === null ? null : coutHoraire(salaire, parametreAu(params, 'heures_annuelles', debut)!, parametreAu(params, 'coefficient_charges', debut)));
+        couts.set(
+          k,
+          salaire === null
+            ? null
+            : coutHoraire(
+                salaire,
+                parametreAu(params, 'heures_annuelles', debut)!,
+                parametreAu(params, 'coefficient_charges', debut),
+              ),
+        );
       }
       return couts.get(k)!;
     };
@@ -224,8 +288,13 @@ export class RentabiliteService {
       else {
         // Cumul : un projet commencé avant le suivi des heures a un coût
         // antérieur inconnu — jamais de marge sur cette base.
-        if (!periode && ((!!p.ouvertLe && p.ouvertLe.slice(0, 7) < MOIS_DEBUT_FEUILLES) || facturesAvantSuivi.has(p.id))) {
-          raisons.push(`projet commencé avant le suivi des heures (${moisFrancais(MOIS_DEBUT_FEUILLES)}) : coût antérieur inconnu`);
+        if (
+          !periode &&
+          ((!!p.ouvertLe && p.ouvertLe.slice(0, 7) < MOIS_DEBUT_FEUILLES) || facturesAvantSuivi.has(p.id))
+        ) {
+          raisons.push(
+            `projet commencé avant le suivi des heures (${moisFrancais(MOIS_DEBUT_FEUILLES)}) : coût antérieur inconnu`,
+          );
         }
         if (c.sansSalaire.size) raisons.push(`${c.sansSalaire.size} salarié(s) sans salaire validé`);
         // Heures de mois clos pas encore contrôlées : le coût serait
@@ -240,7 +309,14 @@ export class RentabiliteService {
       const marge = etat === 'complet' ? c.ht - c.cout : null;
       const taux = marge === null ? null : tauxMarge(c.ht, marge);
       return {
-        projet: { id: p.id, code: p.code, programme: p.programme, client: p.client.nom, statut: p.statut, phase: p.phase },
+        projet: {
+          id: p.id,
+          code: p.code,
+          programme: p.programme,
+          client: p.client.nom,
+          statut: p.statut,
+          phase: p.phase,
+        },
         ht: arrondi(c.ht),
         cout: arrondi(c.cout),
         marge: marge === null ? null : arrondi(marge),
@@ -261,7 +337,10 @@ export class RentabiliteService {
       feuilles: [...feuillesBloquantes.entries()]
         .sort(([x], [y]) => x.localeCompare(y))
         .map(([m, b]) => ({ mois: m, feuilles: b.feuilles.size, projets: b.projets.size })),
-      salaires: { salaries: salairesManquants.size, projets: new Set([...salairesManquants.values()].flatMap((x) => [...x])).size },
+      salaires: {
+        salaries: salairesManquants.size,
+        projets: new Set([...salairesManquants.values()].flatMap((x) => [...x])).size,
+      },
     };
     return { lignes, params, cible, factures, blocages, arrete };
   }
@@ -313,9 +392,15 @@ export class RentabiliteService {
       blocages: { ...blocages, rh, cfo },
       totaux:
         acces === 'montants'
-          ? { ...totaux, marge: margeTotale === null ? null : arrondi(margeTotale), taux: tauxTotal === null ? null : Math.round(tauxTotal * 10) / 10 }
+          ? {
+              ...totaux,
+              marge: margeTotale === null ? null : arrondi(margeTotale),
+              taux: tauxTotal === null ? null : Math.round(tauxTotal * 10) / 10,
+            }
           : { ht: null, cout: null, marge: null, taux: tauxTotal === null ? null : Math.round(tauxTotal * 10) / 10 },
-      lignes: lignes.map(({ _cumul, ...l }) => (acces === 'montants' ? l : { ...l, ht: null, cout: null, marge: null, aFacturer: null })),
+      lignes: lignes.map(({ _cumul, ...l }) =>
+        acces === 'montants' ? l : { ...l, ht: null, cout: null, marge: null, aFacturer: null },
+      ),
     };
   }
 
@@ -336,7 +421,8 @@ export class RentabiliteService {
       parametres: this.parametresEnVigueur(params),
       ...(montants ? ligne : { ...ligne, ht: null, cout: null, marge: null, aFacturer: null }),
       // Honoraires HT par heure contrôlée, coût horaire moyen.
-      parHeure: montants && c.heures ? { honoraires: arrondi(c.ht / c.heures), cout: arrondi(c.cout / c.heures) } : null,
+      parHeure:
+        montants && c.heures ? { honoraires: arrondi(c.ht / c.heures), cout: arrondi(c.cout / c.heures) } : null,
       factures: montants
         ? factures
             .filter((f) => f.projetId === projetId)
@@ -354,7 +440,11 @@ export class RentabiliteService {
         : null,
       mois: [...c.parMois.entries()]
         .sort(([x], [y]) => x.localeCompare(y))
-        .map(([m, v]) => ({ mois: m, heures: heures1(v.heures), ...(montants ? { cout: arrondi(v.cout), ht: arrondi(v.ht) } : { cout: null, ht: null }) })),
+        .map(([m, v]) => ({
+          mois: m,
+          heures: heures1(v.heures),
+          ...(montants ? { cout: arrondi(v.cout), ht: arrondi(v.ht) } : { cout: null, ht: null }),
+        })),
       salaries: c.parSalarie.size,
       qualite,
     };
@@ -363,17 +453,29 @@ export class RentabiliteService {
   // Détail par salarié : CFO et CEO seulement, à la demande ; chaque salarié
   // affiché est inscrit au journal de la paie (jamais le montant).
   async salaries(a: Acteur, projetId: string) {
-    if (this.acces(a) !== 'montants') throw new ForbiddenException('Le détail par salarié est réservé au CFO et au CEO.');
+    if (this.acces(a) !== 'montants')
+      throw new ForbiddenException('Le détail par salarié est réservé au CFO et au CEO.');
     const { lignes } = await this.calculer(a.societeId, null);
     const l = lignes.find((x) => x.projet.id === projetId);
     if (!l) throw new NotFoundException('Projet introuvable');
     const ids = [...l._cumul.parSalarie.keys(), ...l._cumul.sansSalaire];
-    const dossiers = await this.prisma.dossierPersonnel.findMany({ where: { id: { in: ids } }, select: { id: true, prenom: true, nom: true } });
-    if (ids.length) await this.prisma.journalPaie.createMany({ data: ids.map((dossierId) => ({ dossierId, action: 'cout_consulte' as const, parId: a.userId })) });
+    const dossiers = await this.prisma.dossierPersonnel.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, prenom: true, nom: true },
+    });
+    if (ids.length)
+      await this.prisma.journalPaie.createMany({
+        data: ids.map((dossierId) => ({ dossierId, action: 'cout_consulte' as const, parId: a.userId })),
+      });
     return dossiers
       .map((d) => {
         const s = l._cumul.parSalarie.get(d.id);
-        return { nom: nomDe(d), heures: s ? heures1(s.heures) : null, cout: s ? arrondi(s.cout) : null, sansSalaire: l._cumul.sansSalaire.has(d.id) };
+        return {
+          nom: nomDe(d),
+          heures: s ? heures1(s.heures) : null,
+          cout: s ? arrondi(s.cout) : null,
+          sansSalaire: l._cumul.sansSalaire.has(d.id),
+        };
       })
       .sort((x, y) => (y.cout ?? 0) - (x.cout ?? 0));
   }
@@ -382,7 +484,10 @@ export class RentabiliteService {
 
   async parametres(a: Acteur) {
     this.acces(a);
-    const lignes = await this.prisma.parametreRentabilite.findMany({ where: { societeId: a.societeId }, orderBy: [{ dateEffet: 'desc' }, { createdAt: 'desc' }] });
+    const lignes = await this.prisma.parametreRentabilite.findMany({
+      where: { societeId: a.societeId },
+      orderBy: [{ dateEffet: 'desc' }, { createdAt: 'desc' }],
+    });
     const auteurs = await this.prisma.utilisateur.findMany({
       where: { id: { in: [...new Set(lignes.map((l) => l.parId).filter((x): x is string => !!x))] } },
       select: { id: true, prenom: true, nom: true },
@@ -409,19 +514,41 @@ export class RentabiliteService {
     if (a.role !== ROLE_CFO) throw new ForbiddenException('Seul le CFO modifie les paramètres de rentabilité.');
     const def = PARAMETRES[p.cle as CleParametre];
     if (!def) throw new BadRequestException('Paramètre inconnu.');
-    if (p.valeur === null && !def.videPermis) throw new BadRequestException(`${def.libelle} : une valeur est obligatoire.`);
+    if (p.valeur === null && !def.videPermis)
+      throw new BadRequestException(`${def.libelle} : une valeur est obligatoire.`);
     if (p.valeur !== null && (!Number.isFinite(p.valeur) || p.valeur < def.min || p.valeur > def.max)) {
       throw new BadRequestException(`${def.libelle} : de ${def.min} à ${def.max} ${def.unite}.`);
     }
     if (!/^\d{4}-\d{2}-01$/.test(p.dateEffet)) throw new BadRequestException('La date d’effet est le 1er d’un mois.');
-    if (p.dateEffet < premierMoisModifiable(aujourdhui())) throw new BadRequestException('Un mois passé ne se réécrit pas : date d’effet à partir du mois en cours.');
+    if (p.dateEffet < premierMoisModifiable(aujourdhui()))
+      throw new BadRequestException('Un mois passé ne se réécrit pas : date d’effet à partir du mois en cours.');
     if (p.motif.trim().length < 3) throw new BadRequestException('Le motif est obligatoire.');
     await this.prisma.parametreRentabilite.create({
-      data: { societeId: a.societeId, cle: p.cle, valeur: p.valeur, dateEffet: p.dateEffet, motif: p.motif.trim(), parId: a.userId },
+      data: {
+        societeId: a.societeId,
+        cle: p.cle,
+        valeur: p.valeur,
+        dateEffet: p.dateEffet,
+        motif: p.motif.trim(),
+        parId: a.userId,
+      },
     });
     return this.parametres(a);
   }
 }
 
-const MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const MOIS_FR = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+];
 const moisFrancais = (m: string) => `${MOIS_FR[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;

@@ -17,10 +17,12 @@ export type Profil = {
 };
 
 export const getProfil = () => apiAuth<Profil>('/auth/moi');
-export const majNomAffiche = (nomAffiche: string | null) => apiAuth<Profil>('/auth/moi', { method: 'PATCH', body: { nomAffiche } });
+export const majNomAffiche = (nomAffiche: string | null) =>
+  apiAuth<Profil>('/auth/moi', { method: 'PATCH', body: { nomAffiche } });
 export const majPhoto = (image: string) => apiAuth<Profil>('/auth/moi/photo', { method: 'PUT', body: { image } });
 export const retirerPhoto = () => apiAuth<Profil>('/auth/moi/photo', { method: 'DELETE' });
-export const deconnecterPartout = () => apiAuth<{ ok: true }>('/auth/moi/deconnexion-partout', { method: 'POST', body: {} });
+export const deconnecterPartout = () =>
+  apiAuth<{ ok: true }>('/auth/moi/deconnexion-partout', { method: 'POST', body: {} });
 
 // Source d'une photo : chemin de l'API (photo du compte) ou data URI (photo
 // de fiche d'équipe posée par l'administration).

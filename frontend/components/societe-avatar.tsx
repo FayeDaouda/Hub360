@@ -15,9 +15,7 @@ type Props = {
 
 export function SocieteAvatar({ societe, size = 'md', theme = 'light', alt }: Props) {
   const sizeClass = size === 'lg' ? 'avatar-lg' : size === 'xl' ? 'avatar-xl' : '';
-  const className = ['avatar', sizeClass, theme === 'glass' ? 'avatar--glass' : '']
-    .filter(Boolean)
-    .join(' ');
+  const className = ['avatar', sizeClass, theme === 'glass' ? 'avatar--glass' : ''].filter(Boolean).join(' ');
 
   const logo = theme === 'light' ? societe.logoUrl : societe.logoUrlSombre || societe.logoUrl;
 

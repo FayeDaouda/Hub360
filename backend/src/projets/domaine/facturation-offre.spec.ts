@@ -84,14 +84,16 @@ describe('planFacturationOffre', () => {
   });
 
   it('total préparé = total de l’offre hors lignes mensuelles', () => {
-    const attendu = offre
-      .filter((l) => !['SU', 'EX'].includes(l.famille ?? ''))
-      .reduce((s, l) => s + l.montantHt, 0);
+    const attendu = offre.filter((l) => !['SU', 'EX'].includes(l.famille ?? '')).reduce((s, l) => s + l.montantHt, 0);
     expect(plan.reduce((s, f) => s + f.montantHt, 0)).toBe(attendu);
   });
 
   it('taux de TVA différents → factures séparées (une facture = un taux)', () => {
-    const p = planFacturationOffre([ligne('IM1', 'IM', 100, 18), ligne('IM2', 'IM', 100, 0)], { F1: 40, F2: 40, F3: 20 });
+    const p = planFacturationOffre([ligne('IM1', 'IM', 100, 18), ligne('IM2', 'IM', 100, 0)], {
+      F1: 40,
+      F2: 40,
+      F3: 20,
+    });
     expect(p.map((f) => f.tauxTva).sort()).toEqual([0, 18]);
   });
 });

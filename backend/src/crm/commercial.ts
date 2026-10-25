@@ -42,7 +42,8 @@ export type ElementATraiter = {
 
 const JOUR_MS = 86_400_000;
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const joursEntre = (de: string, a: string) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR_MS);
+const joursEntre = (de: string, a: string) =>
+  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR_MS);
 const EN_COURS = new Set(['nouveau_projet', 'en_validation', 'offre_envoyee']);
 
 // Fiche apporteur à compléter : sans % attribué (la commission ne pourrait
@@ -51,7 +52,8 @@ export function manquesApporteur(d: Pick<DossierCommercial, 'apporteur' | 'commi
   if (!d.apporteur) return [];
   const manques: string[] = [];
   if (d.commission === null) manques.push('% attribué');
-  if (d.apporteur.type === 'externe' && !d.apporteur.telephone && !d.apporteur.email) manques.push('téléphone ou e-mail');
+  if (d.apporteur.type === 'externe' && !d.apporteur.telephone && !d.apporteur.email)
+    manques.push('téléphone ou e-mail');
   return manques;
 }
 
@@ -77,7 +79,13 @@ export function aTraiterCommercial(dossiers: DossierCommercial[], jour: string, 
     }
     // 2. Lead sans propriétaire : personne ne le porte.
     if (!d.proprietaireId) {
-      elements.push({ ...base, type: 'lead_sans_proprietaire', ton: 'risque', detail: 'aucun Dir. GC ne porte ce lead', tri: d.creeLe.toISOString() });
+      elements.push({
+        ...base,
+        type: 'lead_sans_proprietaire',
+        ton: 'risque',
+        detail: 'aucun Dir. GC ne porte ce lead',
+        tri: d.creeLe.toISOString(),
+      });
     }
     // 3. Offre chez le client : validité, réponse attendue.
     if (d.statut === 'offre_envoyee' && d.offre?.statut === 'envoye' && d.offre.valideJusquau) {
@@ -88,7 +96,11 @@ export function aTraiterCommercial(dossiers: DossierCommercial[], jour: string, 
         type: 'offre_chez_client',
         ton: reste < 0 ? 'risque' : reste <= 2 ? 'attention' : 'info',
         detail: `${depuis !== null ? `envoyée il y a ${depuis} j, ` : ''}${
-          reste < 0 ? `expirée le ${jjmm(d.offre.valideJusquau)} sans réponse` : reste === 0 ? 'expire aujourd’hui' : `valable jusqu’au ${jjmm(d.offre.valideJusquau)}`
+          reste < 0
+            ? `expirée le ${jjmm(d.offre.valideJusquau)} sans réponse`
+            : reste === 0
+              ? 'expire aujourd’hui'
+              : `valable jusqu’au ${jjmm(d.offre.valideJusquau)}`
         }`,
         tri: d.offre.valideJusquau,
       });
@@ -127,26 +139,39 @@ function apporteurDe(d: DossierCommercial): Pick<LignePerformance, 'cle' | 'libe
   if (!a) return { cle: 'direct', libelle: 'Affaire directe', type: 'direct' };
   if (a.type === 'interne') return { cle: `interne:${a.id ?? a.nom}`, libelle: a.nom, type: 'interne' };
   const nom = a.nom.trim();
-  return { cle: `externe:${nom.toLowerCase()}`, libelle: a.structure ? `${nom} · ${a.structure}` : nom, type: 'externe' };
+  return {
+    cle: `externe:${nom.toLowerCase()}`,
+    libelle: a.structure ? `${nom} · ${a.structure}` : nom,
+    type: 'externe',
+  };
 }
 
 // Performance de l'année (leads créés dans l'année, archivés compris : un
 // lead abandonné est un lead non transformé).
 export function performanceCommerciale(dossiers: DossierCommercial[]) {
   const signes = dossiers.filter((d) => d.statut === 'onboard');
-  const delais = signes.filter((d) => d.signeLe).map((d) => joursEntre(d.creeLe.toISOString().slice(0, 10), d.signeLe!));
+  const delais = signes
+    .filter((d) => d.signeLe)
+    .map((d) => joursEntre(d.creeLe.toISOString().slice(0, 10), d.signeLe!));
   const lignes = new Map<string, LignePerformance>();
   for (const d of dossiers) {
     const a = apporteurDe(d);
-    const l = lignes.get(a.cle) ?? { ...a, leads: 0, signes: 0, enCours: 0, signeHt: 0, commissionsVersees: 0, commissionsAPayer: 0 };
+    const l = lignes.get(a.cle) ?? {
+      ...a,
+      leads: 0,
+      signes: 0,
+      enCours: 0,
+      signeHt: 0,
+      commissionsVersees: 0,
+      commissionsAPayer: 0,
+    };
     l.leads++;
     l.commissionsVersees += d.commissions.versees;
     l.commissionsAPayer += d.commissions.aPayer;
     if (d.statut === 'onboard') {
       l.signes++;
       l.signeHt += d.montantHt ?? 0;
-    }
-    else if (!d.archive && EN_COURS.has(d.statut)) l.enCours++;
+    } else if (!d.archive && EN_COURS.has(d.statut)) l.enCours++;
     lignes.set(a.cle, l);
   }
   return {
@@ -158,7 +183,9 @@ export function performanceCommerciale(dossiers: DossierCommercial[]) {
     enCours: dossiers.filter((d) => !d.archive && EN_COURS.has(d.statut)).length,
     tauxTransformation: dossiers.length ? Math.round((signes.length / dossiers.length) * 100) : null,
     delaiMoyenJours: delais.length ? Math.round(delais.reduce((s, x) => s + x, 0) / delais.length) : null,
-    apporteurs: [...lignes.values()].sort((a, b) => b.signes - a.signes || b.leads - a.leads || a.libelle.localeCompare(b.libelle)),
+    apporteurs: [...lignes.values()].sort(
+      (a, b) => b.signes - a.signes || b.leads - a.leads || a.libelle.localeCompare(b.libelle),
+    ),
   };
 }
 
@@ -166,7 +193,14 @@ export function performanceCommerciale(dossiers: DossierCommercial[]) {
 // somme HT de leur offre, sans le détail des offres. Archivés exclus ; une
 // offre envoyée dont la validité est passée compte en « expirée ».
 export type EtapePipeline = 'preparation' | 'en_validation' | 'chez_client' | 'expiree' | 'signe' | 'perdu';
-export const ETAPES_PIPELINE: EtapePipeline[] = ['preparation', 'en_validation', 'chez_client', 'expiree', 'signe', 'perdu'];
+export const ETAPES_PIPELINE: EtapePipeline[] = [
+  'preparation',
+  'en_validation',
+  'chez_client',
+  'expiree',
+  'signe',
+  'perdu',
+];
 
 export function etapePipeline(d: Pick<DossierCommercial, 'statut' | 'offre'>, jour: string): EtapePipeline {
   switch (d.statut) {
@@ -175,7 +209,9 @@ export function etapePipeline(d: Pick<DossierCommercial, 'statut' | 'offre'>, jo
     case 'en_validation':
       return 'en_validation';
     case 'offre_envoyee':
-      return d.offre?.statut === 'envoye' && d.offre.valideJusquau && d.offre.valideJusquau < jour ? 'expiree' : 'chez_client';
+      return d.offre?.statut === 'envoye' && d.offre.valideJusquau && d.offre.valideJusquau < jour
+        ? 'expiree'
+        : 'chez_client';
     case 'onboard':
       return 'signe';
     default:

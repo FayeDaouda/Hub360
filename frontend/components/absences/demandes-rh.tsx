@@ -56,7 +56,12 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
     }
   }
 
-  if (!donnees) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (!donnees)
+    return erreur ? (
+      <p className="field-erreur">{erreur}</p>
+    ) : (
+      <div className="skeleton admin-skeleton-panel" aria-hidden />
+    );
 
   // Une demande de la RH attend le CEO : elle n'est pas « à traiter » ici.
   const absencesATraiter = donnees.absences.filter((d) => d.statut === 'accord_n1' && d.valideurFinal !== 'ceo');
@@ -88,26 +93,44 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                 <span>
                   <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
                   <span className="cell-sub">
-                    {d.salarie?.matricule} · {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {jjmm(d.dateDebut)} → {jjmm(d.dateFin)}
+                    {d.salarie?.matricule} · {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {jjmm(d.dateDebut)} →{' '}
+                    {jjmm(d.dateFin)}
                     {d.commentaireRefus && ` — ${d.commentaireRefus}`}
                   </span>
                 </span>
                 <span className="dmd-actions">
                   {d.aJustificatif && (
-                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => agir(() => telechargerJustificatif(slug, `/rh/demandes/absences/${d.id}/justificatif`))}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-ghost--sm"
+                      onClick={() =>
+                        agir(() => telechargerJustificatif(slug, `/rh/demandes/absences/${d.id}/justificatif`))
+                      }
+                    >
                       <Paperclip size={14} aria-hidden /> Justificatif
                     </button>
                   )}
                   <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
-                  {d.statut === 'accord_n1' && d.valideurFinal === 'ceo' && <span className="cell-sub">validation finale : CEO</span>}
+                  {d.statut === 'accord_n1' && d.valideurFinal === 'ceo' && (
+                    <span className="cell-sub">validation finale : CEO</span>
+                  )}
                   {d.statut === 'accord_n1' && (
-                    <button type="button" className="btn-ghost btn-ghost--sm" aria-expanded={cellule === d.id} onClick={() => setCellule((x) => (x === d.id ? null : d.id))}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-ghost--sm"
+                      aria-expanded={cellule === d.id}
+                      onClick={() => setCellule((x) => (x === d.id ? null : d.id))}
+                    >
                       {cellule === d.id ? 'Masquer la cellule' : 'Voir la cellule'}
                     </button>
                   )}
                   {ecriture && d.statut === 'accord_n1' && d.valideurFinal !== 'ceo' && (
                     <>
-                      <button type="button" className="btn-primary btn-primary--sm" onClick={() => agir(() => validerAbsenceRh(slug, d.id, true))}>
+                      <button
+                        type="button"
+                        className="btn-primary btn-primary--sm"
+                        onClick={() => agir(() => validerAbsenceRh(slug, d.id, true))}
+                      >
                         Valider
                       </button>
                       <button
@@ -154,13 +177,24 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                 </span>
                 <span className="dmd-actions">
                   {r.justificatifs.map((j) => (
-                    <button key={j.id} type="button" className="btn-ghost btn-ghost--sm" onClick={() => agir(() => telechargerJustificatif(slug, `/rh/demandes/justificatifs/${j.id}`))}>
+                    <button
+                      key={j.id}
+                      type="button"
+                      className="btn-ghost btn-ghost--sm"
+                      onClick={() => agir(() => telechargerJustificatif(slug, `/rh/demandes/justificatifs/${j.id}`))}
+                    >
                       <Paperclip size={14} aria-hidden /> {j.nom}
                     </button>
                   ))}
-                  <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>{STATUT_REMBOURSEMENT[r.statut].libelle}</span>
+                  <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>
+                    {STATUT_REMBOURSEMENT[r.statut].libelle}
+                  </span>
                   {ecriture && r.statut === 'soumise' && (
-                    <button type="button" className="btn-primary btn-primary--sm" onClick={() => agir(() => transmettreRemboursement(slug, r.id))}>
+                    <button
+                      type="button"
+                      className="btn-primary btn-primary--sm"
+                      onClick={() => agir(() => transmettreRemboursement(slug, r.id))}
+                    >
                       Transmettre
                     </button>
                   )}

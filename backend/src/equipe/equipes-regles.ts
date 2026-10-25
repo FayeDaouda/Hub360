@@ -41,12 +41,23 @@ export function partATemps(taches: TacheEquipe[]): number | null {
 // selon l'état commun des projets (etats.ts) — le même que Production et le
 // reporting de la direction. Une prolongation accordée qualifie le retard :
 // la tâche n'est pas comptée en retard.
-const EN_COURS: ReadonlySet<EtatTache['code']> = new Set(['en_cours', 'en_retard', 'prolongee', 'a_valider', 'reprise', 'a_viser']);
+const EN_COURS: ReadonlySet<EtatTache['code']> = new Set([
+  'en_cours',
+  'en_retard',
+  'prolongee',
+  'a_valider',
+  'reprise',
+  'a_viser',
+]);
 export const estEnCours = (code: EtatTache['code']) => EN_COURS.has(code);
 export function tachesEnCours(codes: EtatTache['code'][]) {
   const enCours = codes.filter(estEnCours);
   const enRetard = enCours.filter((c) => c === 'en_retard').length;
-  return { enCours: enCours.length, enRetard, pctATemps: enCours.length ? pourcent(enCours.length - enRetard, enCours.length) : null };
+  return {
+    enCours: enCours.length,
+    enRetard,
+    pctATemps: enCours.length ? pourcent(enCours.length - enRetard, enCours.length) : null,
+  };
 }
 
 // Charge du mois en cours d'un collaborateur : tâches dont la fenêtre touche
@@ -55,12 +66,19 @@ export function tachesEnCours(codes: EtatTache['code'][]) {
 export function chargeDuMois(taches: TacheEquipe[], absences: Periode[], aujourdhui: string, feries: Feries) {
   const mois = bornesMois(aujourdhui.slice(0, 7));
   const actives = taches.filter(
-    (t) => t.statut !== 'non_necessaire' && !!t.debut && !!t.echeance && t.debut <= mois.fin && t.echeance >= mois.debut,
+    (t) =>
+      t.statut !== 'non_necessaire' && !!t.debut && !!t.echeance && t.debut <= mois.fin && t.echeance >= mois.debut,
   );
   const absents = joursAbsents(absences, feries);
   const periode = { debut: mois.debut, fin: aujourdhui };
   return {
     taches: actives.length,
-    heures: arrondi(actives.reduce((s, t) => s + heuresTache({ id: '', debut: t.debut, echeance: t.echeance, heures: t.heures }, absents, periode, feries), 0)),
+    heures: arrondi(
+      actives.reduce(
+        (s, t) =>
+          s + heuresTache({ id: '', debut: t.debut, echeance: t.echeance, heures: t.heures }, absents, periode, feries),
+        0,
+      ),
+    ),
   };
 }

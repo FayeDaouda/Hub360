@@ -69,13 +69,7 @@ export function ChampModal({
       >
         <header className="modal-header">
           <h2 id="champ-titre">{titre}</h2>
-          <button
-            type="button"
-            className="modal-close"
-            aria-label="Fermer"
-            onClick={onClose}
-            disabled={enCours}
-          >
+          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose} disabled={enCours}>
             <X size={18} />
           </button>
         </header>
@@ -104,11 +98,7 @@ export function ChampModal({
             <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
               Annuler
             </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={enCours || valeur.trim() === ''}
-            >
+            <button type="submit" className="btn-primary" disabled={enCours || valeur.trim() === ''}>
               {enCours ? '…' : confirmer}
             </button>
           </div>

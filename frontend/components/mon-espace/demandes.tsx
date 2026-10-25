@@ -41,7 +41,11 @@ function versIso(jjmmaaaa: string): string | null {
 // frappe — le pavé numérique d'un iPhone n'en a pas (revue mobile 20/10/2026).
 function formaterDate(saisie: string): string {
   const c = saisie.replace(/\D/g, '').slice(0, 8);
-  return c.length > 4 ? `${c.slice(0, 2)}/${c.slice(2, 4)}/${c.slice(4)}` : c.length > 2 ? `${c.slice(0, 2)}/${c.slice(2)}` : c;
+  return c.length > 4
+    ? `${c.slice(0, 2)}/${c.slice(2, 4)}/${c.slice(4)}`
+    : c.length > 2
+      ? `${c.slice(0, 2)}/${c.slice(2)}`
+      : c;
 }
 
 // Pièce jointe présentée comme la case de la maquette (« Justificatif joint ») :
@@ -131,7 +135,9 @@ export function CongesAbsences({ slug }: { slug: string }) {
             cle: 'restant',
             label: 'Restant',
             valeur: `${solde.disponible} j`,
-            sousTexte: solde.enAttente ? `dont ${solde.enAttente} j réservés par vos demandes en attente` : 'à poser cette année',
+            sousTexte: solde.enAttente
+              ? `dont ${solde.enAttente} j réservés par vos demandes en attente`
+              : 'à poser cette année',
             icone: Plane,
           },
           {
@@ -157,21 +163,21 @@ export function CongesAbsences({ slug }: { slug: string }) {
           },
         ]}
       />
-    <div className="me-colonnes me-colonnes--egales">
-      <FormAbsence slug={slug} solde={solde} onFait={charger} />
-      <section className="panel glass-panel dmd-section">
-        <h2 className="dmd-titre">Mes demandes</h2>
-        {absences.length === 0 ? (
-          <p className="dmd-note">Aucune demande.</p>
-        ) : (
-          <ul className="dmd-liste">
-            {absences.map((d) => (
-              <LigneAbsence key={d.id} slug={slug} d={d} onFait={charger} />
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+      <div className="me-colonnes me-colonnes--egales">
+        <FormAbsence slug={slug} solde={solde} onFait={charger} />
+        <section className="panel glass-panel dmd-section">
+          <h2 className="dmd-titre">Mes demandes</h2>
+          {absences.length === 0 ? (
+            <p className="dmd-note">Aucune demande.</p>
+          ) : (
+            <ul className="dmd-liste">
+              {absences.map((d) => (
+                <LigneAbsence key={d.id} slug={slug} d={d} onFait={charger} />
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </>
   );
 }
@@ -205,7 +211,9 @@ export function RemboursementsSante({ slug }: { slug: string }) {
                     {r.motifRejet && ` · ${r.motifRejet}`}
                   </span>
                 </span>
-                <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>{STATUT_REMBOURSEMENT[r.statut].libelle}</span>
+                <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>
+                  {STATUT_REMBOURSEMENT[r.statut].libelle}
+                </span>
               </li>
             ))}
           </ul>
@@ -243,10 +251,18 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
         <span className={`pill ${statut.pill}`}>{statut.libelle}</span>
         {d.statut === 'autres_dates' && (
           <>
-            <button type="button" className="btn-primary btn-primary--sm" onClick={() => agir(repondreAutresDates(slug, d.id, true))}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              onClick={() => agir(repondreAutresDates(slug, d.id, true))}
+            >
               Accepter
             </button>
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => agir(repondreAutresDates(slug, d.id, false))}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              onClick={() => agir(repondreAutresDates(slug, d.id, false))}
+            >
               Retirer
             </button>
           </>
@@ -310,8 +326,8 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
       <h2 className="dmd-titre">Demander une absence ou un congé</h2>
       <p className="dmd-note">
         Restant : <strong>{solde.disponible} j</strong>
-        {solde.enAttente > 0 && ` (dont ${solde.enAttente} j en attente de décision, réservés)`}. Décompte hors dimanches et jours
-        fériés des Réglages.
+        {solde.enAttente > 0 && ` (dont ${solde.enAttente} j en attente de décision, réservés)`}. Décompte hors
+        dimanches et jours fériés des Réglages.
       </p>
       <label className="field">
         <span className="field-label">Type</span>
@@ -326,11 +342,23 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
       <div className="rh-grille">
         <label className="field">
           <span className="field-label">Du</span>
-          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={debut} onChange={(e) => setDebut(formaterDate(e.target.value))} />
+          <input
+            className="field-input"
+            inputMode="numeric"
+            placeholder="JJ/MM/AAAA"
+            value={debut}
+            onChange={(e) => setDebut(formaterDate(e.target.value))}
+          />
         </label>
         <label className="field">
           <span className="field-label">Au (inclus)</span>
-          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={fin} onChange={(e) => setFin(formaterDate(e.target.value))} />
+          <input
+            className="field-input"
+            inputMode="numeric"
+            placeholder="JJ/MM/AAAA"
+            value={fin}
+            onChange={(e) => setFin(formaterDate(e.target.value))}
+          />
         </label>
       </div>
       <label className="field">
@@ -344,7 +372,12 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
           onChange={(e) => setMotif(e.target.value)}
         />
       </label>
-      <CaseJointe libelle="Justificatif joint" fichiers={fichiers} onChange={setFichiers} onErreur={(m) => setEtat({ envoi: false, erreur: m })} />
+      <CaseJointe
+        libelle="Justificatif joint"
+        fichiers={fichiers}
+        onChange={setFichiers}
+        onErreur={(m) => setEtat({ envoi: false, erreur: m })}
+      />
       {suppleants.length > 0 && (
         <label className="field">
           <span className="field-label">Suppléant pendant votre absence</span>
@@ -356,16 +389,23 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
               </option>
             ))}
           </select>
-          <span className="cell-sub">Remises, prolongations et TS lui reviennent tant que votre absence validée dure ; il est prévenu dès l’envoi.</span>
+          <span className="cell-sub">
+            Remises, prolongations et TS lui reviennent tant que votre absence validée dure ; il est prévenu dès
+            l’envoi.
+          </span>
         </label>
       )}
       {/* Seulement une date complète mais invalide (pas avant toute saisie). */}
-      {((debut.length === 10 && !isoDebut) || (fin.length === 10 && !isoFin)) && <p className="me-consigne">Date invalide : JJ/MM/AAAA.</p>}
+      {((debut.length === 10 && !isoDebut) || (fin.length === 10 && !isoFin)) && (
+        <p className="me-consigne">Date invalide : JJ/MM/AAAA.</p>
+      )}
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
       <button type="submit" className="btn-primary me-envoyer" disabled={etat.envoi || !pret}>
         {etat.envoi ? 'Envoi…' : 'Envoyer à mon N+1'}
       </button>
-      <p className="dmd-note me-pied">Circuit : vous → votre N+1 (décision) → RH Holding (validation finale et paie).</p>
+      <p className="dmd-note me-pied">
+        Circuit : vous → votre N+1 (décision) → RH Holding (validation finale et paie).
+      </p>
     </form>
   );
 }
@@ -386,7 +426,13 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
     if (!isoSoins) return;
     setEtat({ envoi: true, erreur: null });
     try {
-      await deposerRemboursement(slug, { categorie, beneficiaire, dateSoins: isoSoins, montant: somme, justificatifs: fichiers });
+      await deposerRemboursement(slug, {
+        categorie,
+        beneficiaire,
+        dateSoins: isoSoins,
+        montant: somme,
+        justificatifs: fichiers,
+      });
       setDateSoins('');
       setMontant('');
       setFichiers([]);
@@ -407,7 +453,13 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
       <div className="rh-grille">
         <label className="field">
           <span className="field-label">Date des soins</span>
-          <input className="field-input" inputMode="numeric" placeholder="JJ/MM/AAAA" value={dateSoins} onChange={(e) => setDateSoins(formaterDate(e.target.value))} />
+          <input
+            className="field-input"
+            inputMode="numeric"
+            placeholder="JJ/MM/AAAA"
+            value={dateSoins}
+            onChange={(e) => setDateSoins(formaterDate(e.target.value))}
+          />
         </label>
         <label className="field">
           <span className="field-label">Bénéficiaire</span>
@@ -419,7 +471,11 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
         </label>
         <label className="field">
           <span className="field-label">Nature des frais</span>
-          <select className="field-input" value={categorie} onChange={(e) => setCategorie(e.target.value as CategorieSoins)}>
+          <select
+            className="field-input"
+            value={categorie}
+            onChange={(e) => setCategorie(e.target.value as CategorieSoins)}
+          >
             {Object.entries(LIBELLE_SOINS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
@@ -429,7 +485,13 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
         </label>
         <label className="field">
           <span className="field-label">Montant payé (FCFA)</span>
-          <input className="field-input" inputMode="numeric" placeholder="ex. 25000" value={montant} onChange={(e) => setMontant(e.target.value)} />
+          <input
+            className="field-input"
+            inputMode="numeric"
+            placeholder="ex. 25000"
+            value={montant}
+            onChange={(e) => setMontant(e.target.value)}
+          />
         </label>
       </div>
       <CaseJointe

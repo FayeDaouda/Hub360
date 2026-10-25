@@ -49,11 +49,7 @@ export type NouvelleFacture = {
   libelle?: string;
 };
 
-export function creerFacture(
-  slug: string,
-  projetId: string,
-  body: NouvelleFacture,
-): Promise<Facturation> {
+export function creerFacture(slug: string, projetId: string, body: NouvelleFacture): Promise<Facturation> {
   return apiSociete<Facturation>(slug, base(projetId), { method: 'POST', body });
 }
 
@@ -64,11 +60,7 @@ export type NouvelEcheancier = {
 };
 
 // Facture (brouillon) de la mensualité du mois d'une ligne SU / EX de l'offre.
-export function creerMensualite(
-  slug: string,
-  projetId: string,
-  ligneDevisId: string,
-): Promise<Facturation> {
+export function creerMensualite(slug: string, projetId: string, ligneDevisId: string): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/mensualites`, {
     method: 'POST',
     body: { ligneDevisId },
@@ -76,11 +68,7 @@ export function creerMensualite(
 }
 
 // Refacturation des études : une facture, une ligne par étude (bureau × 1,10).
-export function refacturerEtudes(
-  slug: string,
-  projetId: string,
-  blocIds: string[],
-): Promise<Facturation> {
+export function refacturerEtudes(slug: string, projetId: string, blocIds: string[]): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/refacturation-etudes`, {
     method: 'POST',
     body: { blocIds },
@@ -99,11 +87,7 @@ export function saisirFactureBureau(
 }
 
 // Règlement du bureau d'études (après encaissement du client) — CFO.
-export function marquerBureauRegle(
-  slug: string,
-  projetId: string,
-  blocId: string,
-): Promise<Facturation> {
+export function marquerBureauRegle(slug: string, projetId: string, blocId: string): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/etudes/${blocId}/reglement`, {
     method: 'POST',
   });
@@ -114,11 +98,7 @@ export function getBureauxARegler(slug: string): Promise<BureauARegler[]> {
   return apiSociete<BureauARegler[]>(slug, '/factures/bureaux-a-regler');
 }
 
-export function creerEcheancier(
-  slug: string,
-  projetId: string,
-  body: NouvelEcheancier,
-): Promise<Facturation> {
+export function creerEcheancier(slug: string, projetId: string, body: NouvelEcheancier): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/echeancier`, {
     method: 'POST',
     body,
@@ -137,21 +117,13 @@ export function majFacture(
   });
 }
 
-export function emettreFacture(
-  slug: string,
-  projetId: string,
-  factureId: string,
-): Promise<Facturation> {
+export function emettreFacture(slug: string, projetId: string, factureId: string): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/${factureId}/emission`, {
     method: 'POST',
   });
 }
 
-export function supprimerFacture(
-  slug: string,
-  projetId: string,
-  factureId: string,
-): Promise<Facturation> {
+export function supprimerFacture(slug: string, projetId: string, factureId: string): Promise<Facturation> {
   return apiSociete<Facturation>(slug, `${base(projetId)}/${factureId}`, {
     method: 'DELETE',
   });
@@ -160,7 +132,8 @@ export function supprimerFacture(
 // --- Contrôle interne (revue CFO validée 20/10/2026) --------------------------
 // Tout avoir est motivé et le CEO prévenu ; au-delà du seuil (Réglages), il
 // attend la validation du CEO. Un mois clôturé n'accepte plus de paiement.
-export type MotifAvoir = 'erreur_facturation' | 'remise_commerciale' | 'litige_client' | 'annulation_prestation' | 'autre';
+export type MotifAvoir =
+  'erreur_facturation' | 'remise_commerciale' | 'litige_client' | 'annulation_prestation' | 'autre';
 export const LIBELLE_MOTIF_AVOIR: Record<MotifAvoir, string> = {
   erreur_facturation: 'Erreur de facturation',
   remise_commerciale: 'Remise commerciale',
@@ -182,7 +155,14 @@ export type AvoirAValider = {
   demandePar: string | null;
   peutDecider: boolean;
 };
-export type ChiffresMois = { factures: number; factureTtc: number; avoirs: number; avoirsTtc: number; paiements: number; encaisse: number };
+export type ChiffresMois = {
+  factures: number;
+  factureTtc: number;
+  avoirs: number;
+  avoirsTtc: number;
+  paiements: number;
+  encaisse: number;
+};
 export type MoisCloture = {
   mois: string;
   periode: string;
@@ -206,9 +186,13 @@ export function creerAvoir(
 }
 export const getAvoirsAValider = (slug: string) => apiSociete<AvoirAValider[]>(slug, '/factures/avoirs/a-valider');
 export const deciderAvoir = (slug: string, id: string, valide: boolean, motifRefus?: string) =>
-  apiSociete<AvoirAValider[]>(slug, `/factures/avoirs/${id}/decision`, { method: 'POST', body: { valide, motifRefus } });
+  apiSociete<AvoirAValider[]>(slug, `/factures/avoirs/${id}/decision`, {
+    method: 'POST',
+    body: { valide, motifRefus },
+  });
 export const getClotures = (slug: string) => apiSociete<MoisCloture[]>(slug, '/factures/clotures');
-export const cloturerMois = (slug: string, mois: string) => apiSociete<MoisCloture[]>(slug, `/factures/clotures/${mois}`, { method: 'POST', body: {} });
+export const cloturerMois = (slug: string, mois: string) =>
+  apiSociete<MoisCloture[]>(slug, `/factures/clotures/${mois}`, { method: 'POST', body: {} });
 export const rouvrirMois = (slug: string, mois: string, motif: string) =>
   apiSociete<MoisCloture[]>(slug, `/factures/clotures/${mois}/reouverture`, { method: 'POST', body: { motif } });
 
@@ -266,11 +250,10 @@ export function supprimerPaiement(
   paiementId: string,
   motif: string, // obligatoire (14/10/2026), gardé avec la trace
 ): Promise<Facturation> {
-  return apiSociete<Facturation>(
-    slug,
-    `${base(projetId)}/${factureId}/paiements/${paiementId}`,
-    { method: 'DELETE', body: { motif } },
-  );
+  return apiSociete<Facturation>(slug, `${base(projetId)}/${factureId}/paiements/${paiementId}`, {
+    method: 'DELETE',
+    body: { motif },
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -318,7 +301,13 @@ export function getFeuilleTemps(slug: string, dossierId: string): Promise<Feuill
 }
 
 // --- Paramètres de facturation (lot 6, à la manière de Zervant) ---------------
-export type FormatNumero = { prefixe: string; formatAnnee: 'AAAA' | 'AA'; separateur: string; chiffres: number; numeroDepart: number };
+export type FormatNumero = {
+  prefixe: string;
+  formatAnnee: 'AAAA' | 'AA';
+  separateur: string;
+  chiffres: number;
+  numeroDepart: number;
+};
 export type ProfilFacturation = {
   raisonSociale: string;
   adresse: string;
@@ -365,7 +354,8 @@ export type ParametresFacturation = {
   penaliteRetardMensuelle: number | null;
 };
 export const PREFIXE_TEST = 'TEST';
-export const getParametresFacturation = (slug: string) => apiSociete<ParametresFacturation>(slug, '/factures/parametres');
+export const getParametresFacturation = (slug: string) =>
+  apiSociete<ParametresFacturation>(slug, '/factures/parametres');
 export const modifierNumerotation = (slug: string, f: FormatNumero & { motif: string }) =>
   apiSociete<ParametresFacturation>(slug, '/factures/parametres/numerotation', { method: 'POST', body: f });
 export const modifierProfilFacturation = (slug: string, p: ProfilFacturation & { confirmation?: string }) =>
@@ -376,4 +366,3 @@ export function formaterNumero(f: FormatNumero, annee: number, sequence: number)
   const an = f.formatAnnee === 'AA' ? String(annee % 100).padStart(2, '0') : String(annee);
   return [f.prefixe, an, String(sequence).padStart(f.chiffres, '0')].filter(Boolean).join(f.separateur);
 }
-

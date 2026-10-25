@@ -111,9 +111,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
   // qu'un ::after positionné dans la sidebar : .admin-sidebar a un
   // overflow-y auto, qui force overflow-x à `auto` lui aussi (règle CSS
   // overflow) et aurait rogné toute étiquette débordant du rail de 76px.
-  const [infobulle, setInfobulle] = useState<{ texte: string; top: number; left: number } | null>(
-    null,
-  );
+  const [infobulle, setInfobulle] = useState<{ texte: string; top: number; left: number } | null>(null);
 
   useEffect(() => {
     setRepliee(localStorage.getItem(CLE_SIDEBAR_REPLIEE) === '1');
@@ -216,73 +214,73 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
           </div>
 
           <nav className="admin-nav">
-          {NAV.filter((item) => sectionAccessible(session, item.cle)).map((item) => {
-            const Icone = item.icone;
-            const estActif = item.cle === active;
-            const contenu = (
-              <>
-                <Icone size={18} aria-hidden />
-                <span className="admin-nav-label">{item.libelle}</span>
-                {item.chemin === undefined ? (
-                  <span className="admin-nav-tag">bientôt</span>
-                ) : (
-                  item.tag && <span className="admin-nav-tag admin-nav-tag--statut">{item.tag}</span>
-                )}
-              </>
-            );
+            {NAV.filter((item) => sectionAccessible(session, item.cle)).map((item) => {
+              const Icone = item.icone;
+              const estActif = item.cle === active;
+              const contenu = (
+                <>
+                  <Icone size={18} aria-hidden />
+                  <span className="admin-nav-label">{item.libelle}</span>
+                  {item.chemin === undefined ? (
+                    <span className="admin-nav-tag">bientôt</span>
+                  ) : (
+                    item.tag && <span className="admin-nav-tag admin-nav-tag--statut">{item.tag}</span>
+                  )}
+                </>
+              );
 
-            if (estActif) {
-              // Vrai lien (atteignable au clavier, annoncé « page courante ») :
-              // depuis une sous-page, il ramène à l'accueil de la section.
+              if (estActif) {
+                // Vrai lien (atteignable au clavier, annoncé « page courante ») :
+                // depuis une sous-page, il ramène à l'accueil de la section.
+                return (
+                  <Link
+                    key={item.cle}
+                    href={item.chemin ? `${base}/${item.chemin}` : base}
+                    className={`admin-nav-item admin-nav-item--${item.cle} is-active`}
+                    title={repliee ? undefined : item.titreComplet}
+                    onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
+                    onMouseLeave={masquerInfobulle}
+                    onFocus={(e) => afficherInfobulle(e, item.libelle)}
+                    onBlur={masquerInfobulle}
+                    onClick={() => setMenuOuvert(false)}
+                    aria-current="page"
+                  >
+                    {contenu}
+                  </Link>
+                );
+              }
+              if (item.chemin === undefined) {
+                return (
+                  <span
+                    key={item.cle}
+                    className="admin-nav-item is-soon"
+                    title={repliee ? undefined : item.titreComplet}
+                    onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
+                    onMouseLeave={masquerInfobulle}
+                    onFocus={(e) => afficherInfobulle(e, item.libelle)}
+                    onBlur={masquerInfobulle}
+                    aria-disabled
+                  >
+                    {contenu}
+                  </span>
+                );
+              }
               return (
                 <Link
                   key={item.cle}
                   href={item.chemin ? `${base}/${item.chemin}` : base}
-                  className={`admin-nav-item admin-nav-item--${item.cle} is-active`}
+                  className="admin-nav-item"
                   title={repliee ? undefined : item.titreComplet}
                   onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
                   onMouseLeave={masquerInfobulle}
                   onFocus={(e) => afficherInfobulle(e, item.libelle)}
                   onBlur={masquerInfobulle}
                   onClick={() => setMenuOuvert(false)}
-                  aria-current="page"
                 >
                   {contenu}
                 </Link>
               );
-            }
-            if (item.chemin === undefined) {
-              return (
-                <span
-                  key={item.cle}
-                  className="admin-nav-item is-soon"
-                  title={repliee ? undefined : item.titreComplet}
-                  onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
-                  onMouseLeave={masquerInfobulle}
-                  onFocus={(e) => afficherInfobulle(e, item.libelle)}
-                  onBlur={masquerInfobulle}
-                  aria-disabled
-                >
-                  {contenu}
-                </span>
-              );
-            }
-            return (
-              <Link
-                key={item.cle}
-                href={item.chemin ? `${base}/${item.chemin}` : base}
-                className="admin-nav-item"
-                title={repliee ? undefined : item.titreComplet}
-                onMouseEnter={(e) => afficherInfobulle(e, item.libelle)}
-                onMouseLeave={masquerInfobulle}
-                onFocus={(e) => afficherInfobulle(e, item.libelle)}
-                onBlur={masquerInfobulle}
-                onClick={() => setMenuOuvert(false)}
-              >
-                {contenu}
-              </Link>
-            );
-          })}
+            })}
           </nav>
 
           <div className="admin-sidebar-footer">
@@ -304,9 +302,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             {sectionAccessible(session, 'parametres') && (
               <Link
                 href={`${base}/reglages`}
-                className={`admin-nav-item admin-nav-item--parametres${
-                  active === 'parametres' ? ' is-active' : ''
-                }`}
+                className={`admin-nav-item admin-nav-item--parametres${active === 'parametres' ? ' is-active' : ''}`}
                 onMouseEnter={(e) => afficherInfobulle(e, 'Réglages')}
                 onMouseLeave={masquerInfobulle}
                 onFocus={(e) => afficherInfobulle(e, 'Réglages')}
@@ -368,10 +364,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
 
       {infobulle &&
         createPortal(
-          <div
-            className="sidebar-infobulle"
-            style={{ top: infobulle.top, left: infobulle.left }}
-          >
+          <div className="sidebar-infobulle" style={{ top: infobulle.top, left: infobulle.left }}>
             {infobulle.texte}
           </div>,
           document.body,
@@ -448,7 +441,11 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             ? { cle: 'parametres', libelle: 'Réglages du HUB', icone: Settings, href: `${base}/reglages` }
             : { cle: 'mes-reglages', libelle: 'Réglages', icone: Settings, href: `${base}/mes-reglages` }
         }
-        administration={estAdministrateurHub(session) ? { cle: 'groupe', libelle: 'Administration du HUB', icone: ShieldCheck, href: '/groupe' } : null}
+        administration={
+          estAdministrateurHub(session)
+            ? { cle: 'groupe', libelle: 'Administration du HUB', icone: ShieldCheck, href: '/groupe' }
+            : null
+        }
         onDeconnexion={deconnexion}
       />
     </div>

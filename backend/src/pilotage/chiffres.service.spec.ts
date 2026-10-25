@@ -8,8 +8,16 @@ const JOUR = '2026-10-12';
 const FEUILLES = { total: 3, controlees: 1 };
 const HEURE = 3600 * 1000;
 const FICHE_COMPLETE = {
-  code: 'X', categorie: 'conception', localiteId: 'L', type: 'villa', surfaceTerrain: 300, nbPlanches: 2,
-  clientId: 'C', standing: 's', gamme: 'g', programme: 'Villa',
+  code: 'X',
+  categorie: 'conception',
+  localiteId: 'L',
+  type: 'villa',
+  surfaceTerrain: 300,
+  nbPlanches: 2,
+  clientId: 'C',
+  standing: 's',
+  gamme: 'g',
+  programme: 'Villa',
 };
 
 function svc(o: { dossiers?: object[] } = {}) {
@@ -37,7 +45,8 @@ function svc(o: { dossiers?: object[] } = {}) {
 describe('ChiffresPilotageService', () => {
   it('rangée selon la matrice : Finances + Projets, sinon CRM, sinon RH', async () => {
     const s = svc();
-    const jeu = async (permissions: Record<string, 'lecture'>) => (await s.tuiles({ societeId: 'S', role: 'X', permissions }, JOUR, FEUILLES))?.jeu ?? null;
+    const jeu = async (permissions: Record<string, 'lecture'>) =>
+      (await s.tuiles({ societeId: 'S', role: 'X', permissions }, JOUR, FEUILLES))?.jeu ?? null;
     expect(await jeu({ finances_factures: 'lecture', projets: 'lecture', crm: 'lecture' })).toBe('finances');
     expect(await jeu({ crm: 'lecture', pilotage: 'lecture' })).toBe('crm');
     expect(await jeu({ rh: 'lecture', pilotage: 'lecture' })).toBe('rh');
@@ -45,7 +54,15 @@ describe('ChiffresPilotageService', () => {
   });
 
   it('finances : facturé net des avoirs, encaissé du mois, reste en retard en rouge', async () => {
-    const r = await svc().tuiles({ societeId: 'S', role: 'CEO (transverse)', permissions: { finances_factures: 'validation', projets: 'lecture' } }, JOUR, FEUILLES);
+    const r = await svc().tuiles(
+      {
+        societeId: 'S',
+        role: 'CEO (transverse)',
+        permissions: { finances_factures: 'validation', projets: 'lecture' },
+      },
+      JOUR,
+      FEUILLES,
+    );
     expect(r!.tuiles).toEqual([
       expect.objectContaining({ cle: 'facture_mois', valeur: 590_000, etat: 'marque' }),
       expect.objectContaining({ cle: 'encaisse_mois', valeur: 300_000, etat: 'marque' }),
@@ -58,8 +75,21 @@ describe('ChiffresPilotageService', () => {
     const maintenant = Date.now();
     const r = await svc({
       dossiers: [
-        { ...FICHE_COMPLETE, gamme: null, statut: 'nouveau_projet', createdAt: new Date(maintenant - 80 * HEURE), offres: [], transitions: [] },
-        { ...FICHE_COMPLETE, statut: 'en_validation', createdAt: new Date(maintenant - 100 * HEURE), offres: [], transitions: [{ creeLe: new Date(maintenant - 10 * HEURE) }] },
+        {
+          ...FICHE_COMPLETE,
+          gamme: null,
+          statut: 'nouveau_projet',
+          createdAt: new Date(maintenant - 80 * HEURE),
+          offres: [],
+          transitions: [],
+        },
+        {
+          ...FICHE_COMPLETE,
+          statut: 'en_validation',
+          createdAt: new Date(maintenant - 100 * HEURE),
+          offres: [],
+          transitions: [{ creeLe: new Date(maintenant - 10 * HEURE) }],
+        },
       ],
     }).tuiles({ societeId: 'S', role: 'COO', permissions: { crm: 'ecriture' } }, JOUR, FEUILLES);
     expect(r!.tuiles.find((t) => t.cle === 'fiches')).toMatchObject({ valeur: 1, etat: 'risque' });

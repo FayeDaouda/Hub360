@@ -180,7 +180,15 @@ export function normaliserFiche(brut: unknown): FicheProgramme {
           const a = Math.min(entier(r.a, -SOUS_SOLS_MAX, GABARIT_MAX, 0, 'Composition · à'), gabarit);
           if (de > a) return [];
           const typologie = typeof r.typologie === 'string' ? r.typologie.trim().slice(0, 20) : '';
-          return [{ de, a, usage: parmi(USAGES_NIVEAU, r.usage, 'Composition · usage'), typologie, nb: entier(r.nb, 1, 999, 1, 'Composition · nombre') }];
+          return [
+            {
+              de,
+              a,
+              usage: parmi(USAGES_NIVEAU, r.usage, 'Composition · usage'),
+              typologie,
+              nb: entier(r.nb, 1, 999, 1, 'Composition · nombre'),
+            },
+          ];
         });
 
   return {
@@ -191,7 +199,12 @@ export function normaliserFiche(brut: unknown): FicheProgramme {
     toitureTerrasse: f.toitureTerrasse === true,
     typologieVilla: forme === 'villa' ? parmi(TYPOLOGIES_VILLA, f.typologieVilla, 'Typologie de la villa') : null,
     suiteParentale: forme === 'villa' && f.suiteParentale === true,
-    annexes: forme === 'villa' ? [...new Set(liste(f.annexes).filter((x) => (ANNEXES as readonly string[]).includes(x)))] as Un<typeof ANNEXES>[] : [],
+    annexes:
+      forme === 'villa'
+        ? ([...new Set(liste(f.annexes).filter((x) => (ANNEXES as readonly string[]).includes(x)))] as Un<
+            typeof ANNEXES
+          >[])
+        : [],
     composition,
     commodites: [...new Set(liste(f.commodites).filter((x) => CLES_COMMODITES.has(x)))],
   };
@@ -211,7 +224,10 @@ export function controleComposition(f: FicheProgramme): { nonDecrits: number[]; 
   for (const l of f.composition) for (let n = l.de; n <= l.a; n++) compte.set(n, (compte.get(n) ?? 0) + 1);
   return {
     nonDecrits: niveaux(f).filter((n) => !compte.has(n)),
-    enDouble: [...compte.entries()].filter(([, c]) => c > 1).map(([n]) => n).sort((x, y) => x - y),
+    enDouble: [...compte.entries()]
+      .filter(([, c]) => c > 1)
+      .map(([n]) => n)
+      .sort((x, y) => x - y),
   };
 }
 

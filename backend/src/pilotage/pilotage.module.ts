@@ -19,7 +19,16 @@ import { SuiviReportingService } from './suivi-reporting.service';
   // Réglages : objectifs, jours fériés ; RH : feuilles de temps, absences à
   // valider ; Projets et Finances : alertes de l'accueil CEO.
   imports: [ReglagesModule, RhModule, ProjetsModule, FinancesModule, NotificationsModule, RentabiliteModule],
-  providers: [PilotageService, AttentionService, ChiffresPilotageService, ReportingRhService, SuiviReportingService, RelancesCeoService, SyntheseService, DelegationService],
+  providers: [
+    PilotageService,
+    AttentionService,
+    ChiffresPilotageService,
+    ReportingRhService,
+    SuiviReportingService,
+    RelancesCeoService,
+    SyntheseService,
+    DelegationService,
+  ],
   controllers: [PilotageController],
 })
 export class PilotageModule {}

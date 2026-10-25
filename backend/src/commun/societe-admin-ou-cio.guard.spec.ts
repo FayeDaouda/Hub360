@@ -24,39 +24,29 @@ describe('SocieteAdminOuCioGuard', () => {
 
   it('AUTORISÉ : CIO connecté sur cette société, sans être societe_admin', () => {
     expect(
-      new SocieteAdminOuCioGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'grey', role: ROLE_CIO } })),
-      ),
+      new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user: { societeSlug: 'grey', role: ROLE_CIO } }))),
     ).toBe(true);
   });
 
   it('REFUSÉ : CIO dont le jeton porte une AUTRE société → 403 (sinon écriture dans la société du jeton)', () => {
     expect(() =>
-      new SocieteAdminOuCioGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'autre', role: ROLE_CIO } })),
-      ),
+      new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user: { societeSlug: 'autre', role: ROLE_CIO } }))),
     ).toThrow(ForbiddenException);
   });
 
   it('REFUSÉ : societe_admin d’une AUTRE société → 403', () => {
     expect(() =>
-      new SocieteAdminOuCioGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'autre', role: 'societe_admin' } })),
-      ),
+      new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user: { societeSlug: 'autre', role: 'societe_admin' } }))),
     ).toThrow(ForbiddenException);
   });
 
   it('REFUSÉ : ni societe_admin ni CIO (ex. collaborateur, Dir. GC) → 403', () => {
     expect(() =>
-      new SocieteAdminOuCioGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'grey', role: 'collaborateur' } })),
-      ),
+      new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user: { societeSlug: 'grey', role: 'collaborateur' } }))),
     ).toThrow(ForbiddenException);
   });
 
   it('token absent → 403', () => {
-    expect(() =>
-      new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user: undefined }))),
-    ).toThrow(ForbiddenException);
+    expect(() => new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user: undefined })))).toThrow(ForbiddenException);
   });
 });

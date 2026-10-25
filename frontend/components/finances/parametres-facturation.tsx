@@ -39,7 +39,12 @@ const CHAMPS: { cle: ChampTexte; libelle: string; long?: boolean; aide?: string 
   { cle: 'rib', libelle: 'RIB ou IBAN' },
   { cle: 'wave', libelle: 'Numéro Wave' },
   { cle: 'orangeMoney', libelle: 'Numéro Orange Money' },
-  { cle: 'conditionsPaiement', libelle: 'Conditions de paiement', long: true, aide: 'Ex. « Paiement à 15 jours à réception de facture. »' },
+  {
+    cle: 'conditionsPaiement',
+    libelle: 'Conditions de paiement',
+    long: true,
+    aide: 'Ex. « Paiement à 15 jours à réception de facture. »',
+  },
   { cle: 'mentionsPied', libelle: 'Mentions légales (pied de page)', long: true },
 ];
 
@@ -82,7 +87,8 @@ export function ParametresFacturationFenetre({
   function choisirLogo(fichier: File | undefined) {
     if (!fichier) return;
     setErreur(null);
-    if (!['image/svg+xml', 'image/png'].includes(fichier.type)) return setErreur('Logo : un fichier SVG ou PNG (fond transparent).');
+    if (!['image/svg+xml', 'image/png'].includes(fichier.type))
+      return setErreur('Logo : un fichier SVG ou PNG (fond transparent).');
     if (fichier.size > LOGO_MAX) return setErreur('Logo : 600 Ko au plus.');
     const lecteur = new FileReader();
     lecteur.onload = () => setProfil((x) => ({ ...x, logoDocument: String(lecteur.result) }));
@@ -94,7 +100,10 @@ export function ParametresFacturationFenetre({
     lancer(
       'profil',
       async () => {
-        const r = await modifierProfilFacturation(slug, { ...profil, ...(paiementChange.length ? { confirmation: preuve } : {}) });
+        const r = await modifierProfilFacturation(slug, {
+          ...profil,
+          ...(paiementChange.length ? { confirmation: preuve } : {}),
+        });
         setConfirmerPaiement(false);
         return r;
       },
@@ -119,7 +128,13 @@ export function ParametresFacturationFenetre({
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div className="modal pf-modal" role="dialog" aria-modal="true" aria-labelledby="pf-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal pf-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pf-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="pf-titre">Paramètres de facturation</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={!!envoi} onClick={onClose}>
@@ -127,24 +142,29 @@ export function ParametresFacturationFenetre({
           </button>
         </header>
         <div className="modal-body pf-corps">
-          {lecture && <p className="dmd-note">Consultation seule : le CFO règle la numérotation et le profil de facturation.</p>}
+          {lecture && (
+            <p className="dmd-note">Consultation seule : le CFO règle la numérotation et le profil de facturation.</p>
+          )}
 
           <section className="pf-section">
             <h3 className="fiche-crm-titre">Numérotation des factures et des avoirs</h3>
             <p className="dmd-note">
-              Une seule suite pour les factures et les avoirs, attribuée à l’émission, sans trou, qui repart au numéro de départ chaque 1er janvier.
-              Le préfixe {PREFIXE_TEST} sert aux essais : changez-le le jour où vous facturez vos vrais clients.
+              Une seule suite pour les factures et les avoirs, attribuée à l’émission, sans trou, qui repart au numéro
+              de départ chaque 1er janvier. Le préfixe {PREFIXE_TEST} sert aux essais : changez-le le jour où vous
+              facturez vos vrais clients.
             </p>
             <div className="pf-apercu">
               <span className="field-label">Prochain numéro</span>
               <strong>{p.prochain}</strong>
-              {p.format.prefixe.toUpperCase() === PREFIXE_TEST && <span className="pill pill--attention">factures d’essai</span>}
+              {p.format.prefixe.toUpperCase() === PREFIXE_TEST && (
+                <span className="pill pill--attention">factures d’essai</span>
+              )}
               {p.parDefaut && <span className="pill pill--neutre">format par défaut</span>}
             </div>
             {p.verrouille && (
               <p className="pf-verrou">
-                <Lock size={14} aria-hidden /> Format verrouillé pour {p.annee} : une vraie facture a déjà été émise. Il pourra changer à partir du 1er
-                janvier.
+                <Lock size={14} aria-hidden /> Format verrouillé pour {p.annee} : une vraie facture a déjà été émise. Il
+                pourra changer à partir du 1er janvier.
               </p>
             )}
             <div className="pf-format">
@@ -156,7 +176,9 @@ export function ParametresFacturationFenetre({
                   maxLength={10}
                   value={format.prefixe}
                   disabled={formatFige}
-                  onChange={(e) => setFormat({ ...format, prefixe: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                  onChange={(e) =>
+                    setFormat({ ...format, prefixe: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })
+                  }
                 />
                 <datalist id="pf-prefixes">
                   {[...new Set([PREFIXE_TEST, ...p.prefixes])].map((x) => (
@@ -166,14 +188,24 @@ export function ParametresFacturationFenetre({
               </label>
               <label className="field">
                 <span className="field-label">Année</span>
-                <select className="field-input" value={format.formatAnnee} disabled={formatFige} onChange={(e) => setFormat({ ...format, formatAnnee: e.target.value as 'AAAA' | 'AA' })}>
+                <select
+                  className="field-input"
+                  value={format.formatAnnee}
+                  disabled={formatFige}
+                  onChange={(e) => setFormat({ ...format, formatAnnee: e.target.value as 'AAAA' | 'AA' })}
+                >
                   <option value="AAAA">{p.annee}</option>
                   <option value="AA">{String(p.annee % 100).padStart(2, '0')}</option>
                 </select>
               </label>
               <label className="field">
                 <span className="field-label">Séparateur</span>
-                <select className="field-input" value={format.separateur} disabled={formatFige} onChange={(e) => setFormat({ ...format, separateur: e.target.value })}>
+                <select
+                  className="field-input"
+                  value={format.separateur}
+                  disabled={formatFige}
+                  onChange={(e) => setFormat({ ...format, separateur: e.target.value })}
+                >
                   <option value="-">tiret (-)</option>
                   <option value="/">barre (/)</option>
                   <option value=".">point (.)</option>
@@ -182,7 +214,12 @@ export function ParametresFacturationFenetre({
               </label>
               <label className="field">
                 <span className="field-label">Chiffres</span>
-                <select className="field-input" value={format.chiffres} disabled={formatFige} onChange={(e) => setFormat({ ...format, chiffres: Number(e.target.value) })}>
+                <select
+                  className="field-input"
+                  value={format.chiffres}
+                  disabled={formatFige}
+                  onChange={(e) => setFormat({ ...format, chiffres: Number(e.target.value) })}
+                >
                   {[3, 4, 5, 6].map((n) => (
                     <option key={n} value={n}>
                       {n}
@@ -197,7 +234,9 @@ export function ParametresFacturationFenetre({
                   inputMode="numeric"
                   value={format.numeroDepart}
                   disabled={formatFige}
-                  onChange={(e) => setFormat({ ...format, numeroDepart: Number(e.target.value.replace(/\D/g, '')) || 1 })}
+                  onChange={(e) =>
+                    setFormat({ ...format, numeroDepart: Number(e.target.value.replace(/\D/g, '')) || 1 })
+                  }
                 />
               </label>
             </div>
@@ -205,18 +244,33 @@ export function ParametresFacturationFenetre({
               <>
                 <p className="pf-apercu-ligne">
                   Aperçu de la première facture de ce format : <strong>{apercu}</strong>
-                  <span className="cell-sub"> (si ce préfixe a déjà servi cette année, la suite continue au numéro suivant)</span>
+                  <span className="cell-sub">
+                    {' '}
+                    (si ce préfixe a déjà servi cette année, la suite continue au numéro suivant)
+                  </span>
                 </p>
                 <label className="field">
                   <span className="field-label">Motif (obligatoire)</span>
-                  <input className="field-input" maxLength={300} value={motif} disabled={!!envoi} onChange={(e) => setMotif(e.target.value)} />
+                  <input
+                    className="field-input"
+                    maxLength={300}
+                    value={motif}
+                    disabled={!!envoi}
+                    onChange={(e) => setMotif(e.target.value)}
+                  />
                 </label>
                 <div className="modal-actions">
                   <button
                     type="button"
                     className="btn-primary"
                     disabled={!!envoi || motif.trim().length < 3}
-                    onClick={() => lancer('format', () => modifierNumerotation(slug, { ...format, motif: motif.trim() }), 'Numérotation enregistrée.')}
+                    onClick={() =>
+                      lancer(
+                        'format',
+                        () => modifierNumerotation(slug, { ...format, motif: motif.trim() }),
+                        'Numérotation enregistrée.',
+                      )
+                    }
                   >
                     {envoi === 'format' ? 'Enregistrement…' : 'Enregistrer la numérotation'}
                   </button>
@@ -241,19 +295,41 @@ export function ParametresFacturationFenetre({
 
           <section className="pf-section">
             <h3 className="fiche-crm-titre">Profil imprimé sur les factures</h3>
-            {p.profil.parDefaut && <p className="dmd-note">Pré-rempli avec les coordonnées et mentions légales déjà connues de la société : à vérifier et compléter.</p>}
+            {p.profil.parDefaut && (
+              <p className="dmd-note">
+                Pré-rempli avec les coordonnées et mentions légales déjà connues de la société : à vérifier et
+                compléter.
+              </p>
+            )}
             <div className="pf-logo">
               <span className="field-label">Logo des factures</span>
               <div className="pf-logo-ligne">
-                <div className="pf-logo-apercu">{profil.logoDocument ? <img src={profil.logoDocument} alt="Logo des factures" /> : <span className="cell-sub">Logo de la société</span>}</div>
+                <div className="pf-logo-apercu">
+                  {profil.logoDocument ? (
+                    <img src={profil.logoDocument} alt="Logo des factures" />
+                  ) : (
+                    <span className="cell-sub">Logo de la société</span>
+                  )}
+                </div>
                 {!lecture && (
                   <div className="pf-logo-actions">
                     <label className="btn-ghost">
                       <ImageUp size={15} aria-hidden /> {profil.logoDocument ? 'Remplacer' : 'Choisir un fichier'}
-                      <input type="file" accept="image/svg+xml,image/png" hidden disabled={!!envoi} onChange={(e) => (choisirLogo(e.target.files?.[0]), (e.target.value = ''))} />
+                      <input
+                        type="file"
+                        accept="image/svg+xml,image/png"
+                        hidden
+                        disabled={!!envoi}
+                        onChange={(e) => (choisirLogo(e.target.files?.[0]), (e.target.value = ''))}
+                      />
                     </label>
                     {profil.logoDocument && (
-                      <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => setProfil({ ...profil, logoDocument: null })}>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        disabled={!!envoi}
+                        onClick={() => setProfil({ ...profil, logoDocument: null })}
+                      >
                         <Trash2 size={15} aria-hidden /> Retirer
                       </button>
                     )}
@@ -267,9 +343,22 @@ export function ParametresFacturationFenetre({
                 <label key={c.cle} className={`field${c.long ? ' pf-long' : ''}`}>
                   <span className="field-label">{c.libelle}</span>
                   {c.long ? (
-                    <textarea className="field-input" rows={2} value={profil[c.cle]} disabled={lecture || !!envoi} placeholder={c.aide} onChange={(e) => (setProfil({ ...profil, [c.cle]: e.target.value }), setConfirmerPaiement(false))} />
+                    <textarea
+                      className="field-input"
+                      rows={2}
+                      value={profil[c.cle]}
+                      disabled={lecture || !!envoi}
+                      placeholder={c.aide}
+                      onChange={(e) => (setProfil({ ...profil, [c.cle]: e.target.value }), setConfirmerPaiement(false))}
+                    />
                   ) : (
-                    <input className="field-input" value={profil[c.cle]} disabled={lecture || !!envoi} placeholder={c.aide} onChange={(e) => (setProfil({ ...profil, [c.cle]: e.target.value }), setConfirmerPaiement(false))} />
+                    <input
+                      className="field-input"
+                      value={profil[c.cle]}
+                      disabled={lecture || !!envoi}
+                      placeholder={c.aide}
+                      onChange={(e) => (setProfil({ ...profil, [c.cle]: e.target.value }), setConfirmerPaiement(false))}
+                    />
                   )}
                 </label>
               ))}
@@ -288,7 +377,9 @@ export function ParametresFacturationFenetre({
                   </option>
                 ))}
               </select>
-              <span className="cell-sub">La page 1 de chaque facture cite toujours les CGV, l’offre acceptée et les articles clés.</span>
+              <span className="cell-sub">
+                La page 1 de chaque facture cite toujours les CGV, l’offre acceptée et les articles clés.
+              </span>
             </label>
             <label className="field">
               <span className="field-label">Commissions des apporteurs</span>
@@ -304,17 +395,23 @@ export function ParametresFacturationFenetre({
                   </option>
                 ))}
               </select>
-              <span className="cell-sub">Le % est celui de la fiche apporteur. Le mode s’applique aux dossiers signés à partir de son changement ; le COO suit, le CFO paie.</span>
+              <span className="cell-sub">
+                Le % est celui de la fiche apporteur. Le mode s’applique aux dossiers signés à partir de son changement
+                ; le COO suit, le CFO paie.
+              </span>
             </label>
             {!lecture && confirmerPaiement && (
               <div className="pf-alerte" role="alert">
                 <p>
-                  Vous modifiez les coordonnées de paiement ({paiementChange.map((c) => LIBELLES[c]).join(', ')}). Elles seront imprimées sur toutes les
-                  prochaines factures ; le CEO sera prévenu et le changement gardé dans le journal d’audit. Vérifiez chaque chiffre.
+                  Vous modifiez les coordonnées de paiement ({paiementChange.map((c) => LIBELLES[c]).join(', ')}). Elles
+                  seront imprimées sur toutes les prochaines factures ; le CEO sera prévenu et le changement gardé dans
+                  le journal d’audit. Vérifiez chaque chiffre.
                 </p>
                 <label className="field">
                   <span className="field-label">
-                    {p.confirmation === 'code' ? 'Code de votre application de double authentification' : 'Votre mot de passe, pour confirmer'}
+                    {p.confirmation === 'code'
+                      ? 'Code de votre application de double authentification'
+                      : 'Votre mot de passe, pour confirmer'}
                   </span>
                   <input
                     className="field-input"
@@ -332,7 +429,12 @@ export function ParametresFacturationFenetre({
             {!lecture && (
               <div className="modal-actions">
                 {confirmerPaiement && (
-                  <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => (setConfirmerPaiement(false), setPreuve(''))}>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={!!envoi}
+                    onClick={() => (setConfirmerPaiement(false), setPreuve(''))}
+                  >
                     Revoir
                   </button>
                 )}
@@ -342,7 +444,11 @@ export function ParametresFacturationFenetre({
                   disabled={!!envoi || !profil.raisonSociale.trim() || (confirmerPaiement && !preuve.trim())}
                   onClick={enregistrerProfil}
                 >
-                  {envoi === 'profil' ? 'Enregistrement…' : confirmerPaiement ? 'Confirmer les nouvelles coordonnées' : 'Enregistrer le profil'}
+                  {envoi === 'profil'
+                    ? 'Enregistrement…'
+                    : confirmerPaiement
+                      ? 'Confirmer les nouvelles coordonnées'
+                      : 'Enregistrer le profil'}
                 </button>
               </div>
             )}

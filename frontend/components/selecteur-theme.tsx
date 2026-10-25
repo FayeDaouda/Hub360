@@ -49,12 +49,7 @@ export function SelecteurTheme() {
   }
 
   return (
-    <div
-      className="selecteur-theme"
-      role="radiogroup"
-      aria-label="Mode d’affichage"
-      onKeyDown={surTouche}
-    >
+    <div className="selecteur-theme" role="radiogroup" aria-label="Mode d’affichage" onKeyDown={surTouche}>
       <span className="selecteur-theme-curseur" aria-hidden />
       {OPTIONS_THEME.map(({ valeur, libelle, Icone }, index) => {
         const actif = preference === valeur;

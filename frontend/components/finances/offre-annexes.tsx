@@ -102,8 +102,9 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
           ))}
         </div>
         <p className="offre-aide">
-          Échéancier imposé par les CGV et le catalogue : conception 40 / 40 / 20, DPC et SPC 50 / 50, suivi et extras au
-          mois. Seul le délai prévisionnel (en jours après la signature) se renseigne ; il est validé avec l’offre, puis figé.
+          Échéancier imposé par les CGV et le catalogue : conception 40 / 40 / 20, DPC et SPC 50 / 50, suivi et extras
+          au mois. Seul le délai prévisionnel (en jours après la signature) se renseigne ; il est validé avec l’offre,
+          puis figé.
         </p>
       </section>
 
@@ -132,8 +133,8 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
               <span className="offre-lettre">B</span> Validité
             </dt>
             <dd>
-              Offre valable {VALIDITE_JOURS} jours à compter de son émission (CGV art. 14). Acceptation par bon pour accord
-              en ligne horodaté.
+              Offre valable {VALIDITE_JOURS} jours à compter de son émission (CGV art. 14). Acceptation par bon pour
+              accord en ligne horodaté.
             </dd>
           </div>
           {penalite != null && (
@@ -170,7 +171,9 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
               </div>
             ))}
           </dl>
-          <p className="offre-aide">Le client accepte les conditions particulières et les CGV avec le bon pour accord en ligne.</p>
+          <p className="offre-aide">
+            Le client accepte les conditions particulières et les CGV avec le bon pour accord en ligne.
+          </p>
         </section>
       )}
     </>
@@ -189,7 +192,9 @@ function resumeEcheancier(echeancier: EcheanceOffre[]): string {
     const famille = e.famille.split(' · ')[0] === 'Conception' ? 'Conception' : e.famille.split(' · ').pop()!;
     parFamille.set(famille, [...(parFamille.get(famille) ?? []), e.part]);
   }
-  const morceaux = [...parFamille.entries()].map(([f, parts]) => (parts.length > 1 ? `${f} ${parts.join(' / ')}` : `${f} en une facture`));
+  const morceaux = [...parFamille.entries()].map(([f, parts]) =>
+    parts.length > 1 ? `${f} ${parts.join(' / ')}` : `${f} en une facture`,
+  );
   if (auMois) morceaux.push('suivi et extras au mois');
   return morceaux.join(' ; ');
 }

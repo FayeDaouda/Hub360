@@ -1,9 +1,4 @@
-import type {
-  ContratDossier,
-  ContratPublic,
-  ParametresContrat,
-  StatutAnnexeContrat,
-} from './types';
+import type { ContratDossier, ContratPublic, ParametresContrat, StatutAnnexeContrat } from './types';
 import { apiPublic, apiSociete } from './client-api';
 
 // Contrat d'un dossier CRM (étape G) — API NestJS :
@@ -31,11 +26,7 @@ export function regenererContrat(slug: string, dossierId: string): Promise<Contr
   return apiSociete<ContratDossier>(slug, `${base(dossierId)}/generation`, { method: 'POST' });
 }
 
-export function deposerDocumentContrat(
-  slug: string,
-  dossierId: string,
-  fichier: Fichier,
-): Promise<ContratDossier> {
+export function deposerDocumentContrat(slug: string, dossierId: string, fichier: Fichier): Promise<ContratDossier> {
   return apiSociete<ContratDossier>(slug, `${base(dossierId)}/document`, {
     method: 'POST',
     body: fichier,
@@ -83,7 +74,17 @@ export function getParametresContrat(slug: string): Promise<ParametresContrat> {
 
 export function majParametresContrat(
   slug: string,
-  patch: Partial<Pick<ParametresContrat, 'modele' | 'signataireNom' | 'signataireFonction' | 'signataireCeoNom' | 'signataireCeoFonction' | 'seuilSurMesureHt'>>,
+  patch: Partial<
+    Pick<
+      ParametresContrat,
+      | 'modele'
+      | 'signataireNom'
+      | 'signataireFonction'
+      | 'signataireCeoNom'
+      | 'signataireCeoFonction'
+      | 'seuilSurMesureHt'
+    >
+  >,
 ): Promise<ParametresContrat> {
   return apiSociete<ParametresContrat>(slug, '/parametres-contrat', { method: 'PATCH', body: patch });
 }

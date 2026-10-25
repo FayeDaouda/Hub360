@@ -5,22 +5,13 @@ import { FactureStatut } from '@prisma/client';
 // Statut effectif d'une facture : le statut stocké (cycle admin) enrichi de
 // l'état de paiement, calculé à la lecture. Pas de valeur Prisma dédiée — il
 // n'est jamais persisté.
-export type StatutFactureEffectif =
-  | 'brouillon'
-  | 'emise'
-  | 'partiellement_payee'
-  | 'payee'
-  | 'en_retard'
-  | 'annulee';
+export type StatutFactureEffectif = 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'en_retard' | 'annulee';
 
 // GARDE MIROIR de frontend/lib/types.ts::ventilationTva
 // FCFA sans décimale : la TVA est arrondie au franc. montantHt + tauxTva sont
 // les seules données stockées ; TVA et TTC en découlent — et restent figées de
 // fait une fois la facture émise (montantHt/tauxTva non modifiables).
-export function ventilationTva(
-  montantHt: number,
-  tauxTva: number,
-): { montantTva: number; montantTtc: number } {
+export function ventilationTva(montantHt: number, tauxTva: number): { montantTva: number; montantTtc: number } {
   const montantTva = Math.round((montantHt * tauxTva) / 100);
   return { montantTva, montantTtc: montantHt + montantTva };
 }
@@ -49,14 +40,10 @@ export function statutFactureEffectif(
 
 // Jours de retard d'une facture échue et non soldée (0 sinon). Comparaison de
 // dates AAAA-MM-JJ en UTC pour éviter tout décalage de fuseau.
-export function joursRetardFacture(
-  echeanceLe: string | null,
-  aujourdhui: string,
-): number {
+export function joursRetardFacture(echeanceLe: string | null, aujourdhui: string): number {
   if (!echeanceLe || echeanceLe >= aujourdhui) return 0;
   const jours = Math.floor(
-    (Date.parse(`${aujourdhui}T00:00:00Z`) - Date.parse(`${echeanceLe}T00:00:00Z`)) /
-      86_400_000,
+    (Date.parse(`${aujourdhui}T00:00:00Z`) - Date.parse(`${echeanceLe}T00:00:00Z`)) / 86_400_000,
   );
   return jours > 0 ? jours : 0;
 }

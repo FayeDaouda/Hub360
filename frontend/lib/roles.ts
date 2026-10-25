@@ -37,8 +37,16 @@ export type DemandeDroit = {
 export function getDemandesDroit(slug: string): Promise<DemandeDroit[]> {
   return apiSociete<DemandeDroit[]>(slug, '/droits/demandes');
 }
-export function deciderDemandeDroit(slug: string, id: string, accepter: boolean, motif?: string): Promise<DemandeDroit[]> {
-  return apiSociete<DemandeDroit[]>(slug, `/droits/demandes/${id}/decision`, { method: 'POST', body: { accepter, ...(motif ? { motif } : {}) } });
+export function deciderDemandeDroit(
+  slug: string,
+  id: string,
+  accepter: boolean,
+  motif?: string,
+): Promise<DemandeDroit[]> {
+  return apiSociete<DemandeDroit[]>(slug, `/droits/demandes/${id}/decision`, {
+    method: 'POST',
+    body: { accepter, ...(motif ? { motif } : {}) },
+  });
 }
 
 // « À traiter aujourd'hui » de l'administration (CIO) — backend roles/administration.service.ts.

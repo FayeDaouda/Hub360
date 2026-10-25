@@ -42,16 +42,14 @@ const req = (o: Partial<{ user: User; params: { id: string } }> = {}) => ({
 describe('AccesCanalGuard', () => {
   it('token absent → 403', async () => {
     const { svc } = prisma({});
-    await expect(
-      new AccesCanalGuard(svc).canActivate(ctxOf(req({ user: undefined }))),
-    ).rejects.toThrow(ForbiddenException);
+    await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req({ user: undefined })))).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('HORS PÉRIMÈTRE : canal inexistant dans SA société → 404, et le where porte le societeId', async () => {
     const { svc, canalFind } = prisma({ canal: null });
-    await expect(
-      new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-    ).rejects.toThrow(NotFoundException);
+    await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).rejects.toThrow(NotFoundException);
     expect(canalFind).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ id: 'CANAL1', societeId: 'S1' }),
@@ -64,9 +62,7 @@ describe('AccesCanalGuard', () => {
       const { svc, collabFind } = prisma({
         canal: { type: 'general', celluleId: null, participant1Id: null, participant2Id: null },
       });
-      await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-      ).resolves.toBe(true);
+      await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).resolves.toBe(true);
       expect(collabFind).not.toHaveBeenCalled();
     });
   });
@@ -76,27 +72,21 @@ describe('AccesCanalGuard', () => {
       const { svc } = prisma({
         canal: { type: 'direct', celluleId: null, participant1Id: 'U1', participant2Id: 'U2' },
       });
-      await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-      ).resolves.toBe(true);
+      await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).resolves.toBe(true);
     });
 
     it('AUTORISÉ : second participant', async () => {
       const { svc } = prisma({
         canal: { type: 'direct', celluleId: null, participant1Id: 'U2', participant2Id: 'U1' },
       });
-      await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-      ).resolves.toBe(true);
+      await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).resolves.toBe(true);
     });
 
     it('REFUSÉ DANS LE PÉRIMÈTRE : ni l’un ni l’autre participant → 403', async () => {
       const { svc } = prisma({
         canal: { type: 'direct', celluleId: null, participant1Id: 'U2', participant2Id: 'U3' },
       });
-      await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-      ).rejects.toThrow(/n'est pas la vôtre/);
+      await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).rejects.toThrow(/n'est pas la vôtre/);
     });
   });
 
@@ -106,9 +96,7 @@ describe('AccesCanalGuard', () => {
         canal: { type: 'cellule', celluleId: 'CEL1', participant1Id: null, participant2Id: null },
       });
       await expect(
-        new AccesCanalGuard(svc).canActivate(
-          ctxOf(req({ user: { ...USER, role: 'societe_admin' } })),
-        ),
+        new AccesCanalGuard(svc).canActivate(ctxOf(req({ user: { ...USER, role: 'societe_admin' } }))),
       ).resolves.toBe(true);
       expect(collabFind).not.toHaveBeenCalled();
     });
@@ -118,9 +106,7 @@ describe('AccesCanalGuard', () => {
         canal: { type: 'cellule', celluleId: 'CEL1', participant1Id: null, participant2Id: null },
         collab: { celluleId: 'CEL1' },
       });
-      await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-      ).resolves.toBe(true);
+      await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).resolves.toBe(true);
     });
 
     it('REFUSÉ DANS LE PÉRIMÈTRE : collaborateur d’une autre cellule → 403', async () => {
@@ -128,9 +114,9 @@ describe('AccesCanalGuard', () => {
         canal: { type: 'cellule', celluleId: 'CEL1', participant1Id: null, participant2Id: null },
         collab: { celluleId: 'CEL2' },
       });
-      await expect(
-        new AccesCanalGuard(svc).canActivate(ctxOf(req())),
-      ).rejects.toThrow(/n'est pas celui de votre cellule/);
+      await expect(new AccesCanalGuard(svc).canActivate(ctxOf(req()))).rejects.toThrow(
+        /n'est pas celui de votre cellule/,
+      );
     });
 
     it('REFUSÉ : rôle de direction sans fiche (pas de cellule) → 403 cellule', async () => {

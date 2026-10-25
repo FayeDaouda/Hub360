@@ -84,11 +84,27 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
     etroit ? barreRaccourcis : undefined,
   );
 
-  if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (!vue)
+    return erreur ? (
+      <p className="field-erreur">{erreur}</p>
+    ) : (
+      <div className="skeleton admin-skeleton-panel" aria-hidden />
+    );
   const i = vue.indicateurs;
   const tuiles: { cle: Liste; libelle: string; valeur: string; aide: string; ton?: string }[] = [
-    { cle: 'cellules', libelle: 'Cellules', valeur: `${i.cellules.actives} / ${i.cellules.total}`, aide: ecriture ? 'actives · créer, consulter' : 'actives · consulter' },
-    { cle: 'affecter', libelle: 'Salariés à affecter', valeur: String(i.salariesAAffecter), aide: 'sans cellule', ton: i.salariesAAffecter ? 'attention' : undefined },
+    {
+      cle: 'cellules',
+      libelle: 'Cellules',
+      valeur: `${i.cellules.actives} / ${i.cellules.total}`,
+      aide: ecriture ? 'actives · créer, consulter' : 'actives · consulter',
+    },
+    {
+      cle: 'affecter',
+      libelle: 'Salariés à affecter',
+      valeur: String(i.salariesAAffecter),
+      aide: 'sans cellule',
+      ton: i.salariesAAffecter ? 'attention' : undefined,
+    },
     {
       cle: 'projets',
       libelle: 'Projets signés',
@@ -280,7 +296,8 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
             <section className="panel glass-panel eq-liste">
               <h2>Absences à décider · 0</h2>
               <p className="eq-aide">
-                Aucune demande n’attend votre décision. {i.absencesEnAttente} demande(s) attendent leur N+1 dans la société.
+                Aucune demande n’attend votre décision. {i.absencesEnAttente} demande(s) attendent leur N+1 dans la
+                société.
               </p>
             </section>
           )}

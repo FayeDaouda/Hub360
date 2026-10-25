@@ -62,7 +62,11 @@ export function typeDuContenu(octets: Buffer): TypeFichier | null {
   if (commencePar(octets, 'RIFF') && commencePar(octets, 'WEBP', 8)) return 'webp';
   if (commencePar(octets, 'ftyp', 4) && MARQUES_HEIC.has(octets.subarray(8, 12).toString('latin1'))) return 'heic';
   if (/^AC10[0-3]\d/.test(octets.subarray(0, 6).toString('latin1'))) return 'dwg';
-  if (commencePar(octets, 'AutoCAD Binary DXF') || /^\s*0\s*\r?\n\s*SECTION\b/.test(octets.subarray(0, 64).toString('latin1'))) return 'dxf';
+  if (
+    commencePar(octets, 'AutoCAD Binary DXF') ||
+    /^\s*0\s*\r?\n\s*SECTION\b/.test(octets.subarray(0, 64).toString('latin1'))
+  )
+    return 'dxf';
   if (commencePar(octets, [0x50, 0x4b, 0x03, 0x04])) {
     const contenu = octets.toString('latin1');
     if (!contenu.includes('[Content_Types].xml')) return null;

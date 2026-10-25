@@ -61,11 +61,24 @@ const PILL_SITUATION: Record<Situation, string> = {
   expiree: 'pill--risque',
   archive: 'pill--neutre',
 };
-const FILTRES_SITUATION: Situation[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu', 'expiree', 'archive'];
+const FILTRES_SITUATION: Situation[] = [
+  'nouveau_projet',
+  'en_validation',
+  'offre_envoyee',
+  'onboard',
+  'perdu',
+  'expiree',
+  'archive',
+];
 const LIBELLE_FILTRE: Partial<Record<Situation, string>> = { en_validation: 'En validation', archive: 'Archivés' };
 const joursDepuis = (iso: string) => Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86_400_000));
-const aCompleter = (p: Projet) => !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
-const PILL_CATEGORIE: Record<string, string> = { conception: 'pill--succes', developpement: 'pill--info', amenagement: 'pill--attention' };
+const aCompleter = (p: Projet) =>
+  !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
+const PILL_CATEGORIE: Record<string, string> = {
+  conception: 'pill--succes',
+  developpement: 'pill--info',
+  amenagement: 'pill--attention',
+};
 const pillCategorie = (p: Projet) => (p.categorie && PILL_CATEGORIE[p.categorie]) || 'pill--neutre';
 
 export default function CrmPage(props: Props) {
@@ -133,7 +146,10 @@ export default function CrmPage(props: Props) {
 
   // Dossiers de l'année du pipeline choisie (création), puis situation et recherche.
   const annees = useMemo(
-    () => [...new Set([String(new Date().getFullYear()), ...(projets ?? []).map((p) => p.creeLe.slice(0, 4))])].sort().reverse(),
+    () =>
+      [...new Set([String(new Date().getFullYear()), ...(projets ?? []).map((p) => p.creeLe.slice(0, 4))])]
+        .sort()
+        .reverse(),
     [projets],
   );
   const duPipeline = useMemo(() => (projets ?? []).filter((p) => p.creeLe.startsWith(annee)), [projets, annee]);
@@ -155,7 +171,7 @@ export default function CrmPage(props: Props) {
 
   // Dérivé de `projets` (pas une copie figée) : reflète tout de suite un
   // changement de statut fait depuis la modale, sans avoir à la resynchroniser.
-  const detailProjet = detailId ? (projets ?? []).find((p) => p.id === detailId) ?? null : null;
+  const detailProjet = detailId ? ((projets ?? []).find((p) => p.id === detailId) ?? null) : null;
   // Réassigner et archiver : titulaires Dir. GC, administration, CIO (même
   // règle que CrmService.peutReassigner — le serveur tranche).
   const estDirectionOuCio =
@@ -174,9 +190,14 @@ export default function CrmPage(props: Props) {
       aCompleter: duPipeline.filter(aCompleter).length,
       // Délais (couleur = sens) : fiche incomplète au-delà de 72 h, offre
       // chez le CFO au-delà de 48 h.
-      fichesEchues: duPipeline.filter((p) => aCompleter(p) && Date.now() - new Date(p.creeLe).getTime() > DELAI_FICHE_MS).length,
+      fichesEchues: duPipeline.filter(
+        (p) => aCompleter(p) && Date.now() - new Date(p.creeLe).getTime() > DELAI_FICHE_MS,
+      ).length,
       cfoEchues: duPipeline.filter(
-        (p) => situationDe(p) === 'en_validation' && !!p.soumisLe && Date.now() - new Date(p.soumisLe).getTime() > DELAI_CFO_MS,
+        (p) =>
+          situationDe(p) === 'en_validation' &&
+          !!p.soumisLe &&
+          Date.now() - new Date(p.soumisLe).getTime() > DELAI_CFO_MS,
       ).length,
       tous: duPipeline.filter((p) => !p.archive).length,
       surfaceVendue: surfaces.reduce((t, x) => t + x, 0),
@@ -189,9 +210,7 @@ export default function CrmPage(props: Props) {
 
   function onCree(projet: Projet) {
     setProjets((actuels) => [projet, ...(actuels ?? [])]);
-    setClients((actuels) =>
-      actuels.some((c) => c.id === projet.client.id) ? actuels : [...actuels, projet.client],
-    );
+    setClients((actuels) => (actuels.some((c) => c.id === projet.client.id) ? actuels : [...actuels, projet.client]));
     setNouveauId(projet.id);
     setRecherche('');
     if (depuisFinances) setDetailId(projet.id);
@@ -201,12 +220,12 @@ export default function CrmPage(props: Props) {
   // serveur peut refuser (droit, statut changé entre-temps) — l'erreur
   // remonte à la fiche, qui l'affiche.
   async function onAgir(dossier: Projet, action: ActionCrm, commentaire?: string) {
-    const { projet: maj, projetCree, offreEmise, facturesPreparees } = await agirSurDossier(
-      params.slug,
-      dossier.id,
-      action,
-      commentaire,
-    );
+    const {
+      projet: maj,
+      projetCree,
+      offreEmise,
+      facturesPreparees,
+    } = await agirSurDossier(params.slug, dossier.id, action, commentaire);
     setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
     if (projetCree) {
       setMessage(
@@ -218,7 +237,6 @@ export default function CrmPage(props: Props) {
     }
     return offreEmise;
   }
-
 
   async function onRattacher(dossier: Projet, localiteId: string) {
     const maj = await rattacherLocalite(params.slug, dossier.id, localiteId);
@@ -248,10 +266,22 @@ export default function CrmPage(props: Props) {
       {session.role === ROLE_COO && <VueCommercialeCoo slug={params.slug} annee={annee} onOuvrir={setDetailId} />}
       <div className="crm-entete">
         <div className="vue-toggle crm-onglets" role="tablist" aria-label="Vue du CRM">
-          <button type="button" role="tab" aria-selected={onglet === 'registre'} className={onglet === 'registre' ? 'is-active' : ''} onClick={() => setOnglet('registre')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={onglet === 'registre'}
+            className={onglet === 'registre' ? 'is-active' : ''}
+            onClick={() => setOnglet('registre')}
+          >
             Registre des projets · {projets?.length ?? '…'}
           </button>
-          <button type="button" role="tab" aria-selected={onglet === 'clients'} className={onglet === 'clients' ? 'is-active' : ''} onClick={() => setOnglet('clients')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={onglet === 'clients'}
+            className={onglet === 'clients' ? 'is-active' : ''}
+            onClick={() => setOnglet('clients')}
+          >
             Clients · {clients.length}
           </button>
         </div>
@@ -321,17 +351,33 @@ export default function CrmPage(props: Props) {
         <>
           <div className="crm-filtres">
             <div className="vue-toggle crm-situations" role="group" aria-label="Situation">
-              <button type="button" className={situation === 'tous' ? 'is-active' : ''} aria-pressed={situation === 'tous'} onClick={() => setSituation('tous')}>
+              <button
+                type="button"
+                className={situation === 'tous' ? 'is-active' : ''}
+                aria-pressed={situation === 'tous'}
+                onClick={() => setSituation('tous')}
+              >
                 Tous <span className="crm-compte">{kpi.tous}</span>
               </button>
               {FILTRES_SITUATION.map((x) => (
-                <button key={x} type="button" className={situation === x ? 'is-active' : ''} aria-pressed={situation === x} onClick={() => basculer(x)}>
+                <button
+                  key={x}
+                  type="button"
+                  className={situation === x ? 'is-active' : ''}
+                  aria-pressed={situation === x}
+                  onClick={() => basculer(x)}
+                >
                   {LIBELLE_FILTRE[x] ?? LIBELLE_SITUATION[x]} <span className="crm-compte">{kpi.par(x)}</span>
                 </button>
               ))}
             </div>
             <label className="crm-annee">
-              <select className="field-input" aria-label="Année du pipeline" value={annee} onChange={(e) => setAnnee(e.target.value)}>
+              <select
+                className="field-input"
+                aria-label="Année du pipeline"
+                value={annee}
+                onChange={(e) => setAnnee(e.target.value)}
+              >
                 {annees.map((a) => (
                   <option key={a} value={a}>
                     Pipeline {a}
@@ -342,15 +388,69 @@ export default function CrmPage(props: Props) {
           </div>
 
           <div className="crm-kpi">
-          <KpiStrip
-            tuiles={[
-              { cle: 'actif', label: 'Pipeline actif', valeur: kpi.actifs, sousTexte: 'projets hors Perdu et Expirée', icone: FolderOpen, etat: 'marque', action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') } },
-              { cle: 'fiches', label: 'Fiches à compléter', valeur: kpi.aCompleter, sousTexte: kpi.fichesEchues ? `dont ${kpi.fichesEchues} au-delà de 72 h` : 'fiche incomplète · délai 72 h', icone: FileWarning, etat: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues), action: { type: 'filtre', actif: situation === 'a_completer', onClick: () => basculer('a_completer') } },
-              { cle: 'cfo', label: 'En attente CFO', valeur: kpi.par('en_validation'), sousTexte: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h', icone: Clock3, etat: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues), action: { type: 'filtre', actif: situation === 'en_validation', onClick: () => basculer('en_validation') } },
-              { cle: 'client', label: 'Chez le client', valeur: kpi.par('offre_envoyee'), sousTexte: 'offres envoyées · validité 7 jours', icone: Send, etat: 'marque', action: { type: 'filtre', actif: situation === 'offre_envoyee', onClick: () => basculer('offre_envoyee') } },
-              { cle: 'surface', label: 'Surface vendue', valeur: `${formatNombre(kpi.surfaceVendue)} m²`, sousTexte: kpi.detailSurface, icone: Home, etat: 'marque', action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') } },
-            ]}
-          />
+            <KpiStrip
+              tuiles={[
+                {
+                  cle: 'actif',
+                  label: 'Pipeline actif',
+                  valeur: kpi.actifs,
+                  sousTexte: 'projets hors Perdu et Expirée',
+                  icone: FolderOpen,
+                  etat: 'marque',
+                  action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') },
+                },
+                {
+                  cle: 'fiches',
+                  label: 'Fiches à compléter',
+                  valeur: kpi.aCompleter,
+                  sousTexte: kpi.fichesEchues
+                    ? `dont ${kpi.fichesEchues} au-delà de 72 h`
+                    : 'fiche incomplète · délai 72 h',
+                  icone: FileWarning,
+                  etat: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues),
+                  action: {
+                    type: 'filtre',
+                    actif: situation === 'a_completer',
+                    onClick: () => basculer('a_completer'),
+                  },
+                },
+                {
+                  cle: 'cfo',
+                  label: 'En attente CFO',
+                  valeur: kpi.par('en_validation'),
+                  sousTexte: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h',
+                  icone: Clock3,
+                  etat: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues),
+                  action: {
+                    type: 'filtre',
+                    actif: situation === 'en_validation',
+                    onClick: () => basculer('en_validation'),
+                  },
+                },
+                {
+                  cle: 'client',
+                  label: 'Chez le client',
+                  valeur: kpi.par('offre_envoyee'),
+                  sousTexte: 'offres envoyées · validité 7 jours',
+                  icone: Send,
+                  etat: 'marque',
+                  action: {
+                    type: 'filtre',
+                    actif: situation === 'offre_envoyee',
+                    onClick: () => basculer('offre_envoyee'),
+                  },
+                },
+                {
+                  cle: 'surface',
+                  label: 'Surface vendue',
+                  valeur: `${formatNombre(kpi.surfaceVendue)} m²`,
+                  sousTexte: kpi.detailSurface,
+                  icone: Home,
+                  etat: 'marque',
+                  action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') },
+                },
+              ]}
+            />
           </div>
 
           <section className="panel glass-panel liste-collee">
@@ -360,28 +460,42 @@ export default function CrmPage(props: Props) {
               </h2>
               <div className="champ-recherche crm-recherche">
                 <Search size={15} aria-hidden />
-                <input type="search" className="field-input" placeholder="Filtrer par code ou client" value={recherche} onChange={(e) => setRecherche(e.target.value)} />
+                <input
+                  type="search"
+                  className="field-input"
+                  placeholder="Filtrer par code ou client"
+                  value={recherche}
+                  onChange={(e) => setRecherche(e.target.value)}
+                />
               </div>
               <BoutonExport
                 desactive={!filtres.length}
                 onExporter={() =>
-                  exporterCsv(`registre-crm-${annee}`, [
-                    { titre: 'Code projet', valeur: (p) => p.code },
-                    { titre: 'Catégorie', valeur: (p) => libelleCategorie(p) },
-                    { titre: 'Client', valeur: (p) => p.client.nom },
-                    { titre: 'Localité', valeur: (p) => p.localite?.nom ?? p.localisation },
-                    { titre: 'Type', valeur: (p) => (p.type ? TYPES_BIEN[p.type] : null) },
-                    { titre: 'Programme', valeur: (p) => p.programme.trim() || null },
-                    {
-                      titre: 'Apporteur',
-                      valeur: (p) =>
-                        p.apporteur?.type === 'externe' ? p.apporteur.nom : p.apporteur?.type === 'interne' ? p.apporteur.utilisateur?.nom ?? 'Apporteur interne' : 'Affaire directe',
-                    },
-                    { titre: 'Commission (%)', valeur: (p) => p.commissionApporteur },
-                    { titre: 'Complétude', valeur: (p) => `${completudeFiche(p).faits}/${completudeFiche(p).total}` },
-                    { titre: 'Situation', valeur: (p) => LIBELLE_SITUATION[situationDe(p)] },
-                    { titre: 'Créé le', valeur: (p) => dateExport(p.creeLe) },
-                  ], filtres)
+                  exporterCsv(
+                    `registre-crm-${annee}`,
+                    [
+                      { titre: 'Code projet', valeur: (p) => p.code },
+                      { titre: 'Catégorie', valeur: (p) => libelleCategorie(p) },
+                      { titre: 'Client', valeur: (p) => p.client.nom },
+                      { titre: 'Localité', valeur: (p) => p.localite?.nom ?? p.localisation },
+                      { titre: 'Type', valeur: (p) => (p.type ? TYPES_BIEN[p.type] : null) },
+                      { titre: 'Programme', valeur: (p) => p.programme.trim() || null },
+                      {
+                        titre: 'Apporteur',
+                        valeur: (p) =>
+                          p.apporteur?.type === 'externe'
+                            ? p.apporteur.nom
+                            : p.apporteur?.type === 'interne'
+                              ? (p.apporteur.utilisateur?.nom ?? 'Apporteur interne')
+                              : 'Affaire directe',
+                      },
+                      { titre: 'Commission (%)', valeur: (p) => p.commissionApporteur },
+                      { titre: 'Complétude', valeur: (p) => `${completudeFiche(p).faits}/${completudeFiche(p).total}` },
+                      { titre: 'Situation', valeur: (p) => LIBELLE_SITUATION[situationDe(p)] },
+                      { titre: 'Créé le', valeur: (p) => dateExport(p.creeLe) },
+                    ],
+                    filtres,
+                  )
                 }
               />
             </div>
@@ -404,12 +518,19 @@ export default function CrmPage(props: Props) {
                   <ul className="crm-liste">
                     {filtres.map((projet) => (
                       <li key={projet.id}>
-                        <button type="button" className="crm-ligne" aria-haspopup="dialog" onClick={() => setDetailId(projet.id)}>
+                        <button
+                          type="button"
+                          className="crm-ligne"
+                          aria-haspopup="dialog"
+                          onClick={() => setDetailId(projet.id)}
+                        >
                           <span className="crm-ligne-txt">
                             <span className="crm-ligne-code">{projet.code}</span>
                             <span className="crm-ligne-nom">{projet.client.nom}</span>
                           </span>
-                          <span className={`pill crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>{LIBELLE_SITUATION[situationDe(projet)]}</span>
+                          <span className={`pill crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>
+                            {LIBELLE_SITUATION[situationDe(projet)]}
+                          </span>
                         </button>
                       </li>
                     ))}
@@ -436,9 +557,21 @@ export default function CrmPage(props: Props) {
                         const s = situationDe(projet);
                         const ap = projet.apporteur;
                         return (
-                          <tr key={projet.id} className={`crm-ligne-registre${projet.id === nouveauId ? ' is-nouveau' : ''}`} onClick={() => setDetailId(projet.id)}>
+                          <tr
+                            key={projet.id}
+                            className={`crm-ligne-registre${projet.id === nouveauId ? ' is-nouveau' : ''}`}
+                            onClick={() => setDetailId(projet.id)}
+                          >
                             <td data-label="Code projet" className="cell-code">
-                              <button type="button" className="crm-code" aria-haspopup="dialog" onClick={(e) => { e.stopPropagation(); setDetailId(projet.id); }}>
+                              <button
+                                type="button"
+                                className="crm-code"
+                                aria-haspopup="dialog"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDetailId(projet.id);
+                                }}
+                              >
                                 {projet.code}
                               </button>
                             </td>
@@ -455,7 +588,9 @@ export default function CrmPage(props: Props) {
                                 <span className="cell-sub">{projet.localite?.nom ?? projet.localisation}</span>
                               </span>
                             </td>
-                            <td data-label="Type" className="crm-c-type">{projet.type ? TYPES_BIEN[projet.type] : '—'}</td>
+                            <td data-label="Type" className="crm-c-type">
+                              {projet.type ? TYPES_BIEN[projet.type] : '—'}
+                            </td>
                             <td data-label="Programme" className="crm-c-programme">
                               {projet.programme.trim() ? (
                                 <span className="crm-tronque crm-tronque--programme" title={projet.programme}>
@@ -468,12 +603,17 @@ export default function CrmPage(props: Props) {
                             <td data-label="Apporteur">
                               <span className="cell-stack">
                                 <span className="cell-fort">
-                                  {ap?.type === 'externe' ? ap.nom : ap?.type === 'interne' ? ap.utilisateur?.nom ?? 'Apporteur interne' : 'Affaire directe'}
+                                  {ap?.type === 'externe'
+                                    ? ap.nom
+                                    : ap?.type === 'interne'
+                                      ? (ap.utilisateur?.nom ?? 'Apporteur interne')
+                                      : 'Affaire directe'}
                                 </span>
                                 <span className="cell-sub crm-tronque crm-tronque--apporteur">
                                   {ap
                                     ? [
-                                        projet.commissionApporteur != null && `${formatNombre(projet.commissionApporteur)} %`,
+                                        projet.commissionApporteur != null &&
+                                          `${formatNombre(projet.commissionApporteur)} %`,
                                         ap.type === 'interne' ? 'Interne' : ap.structure || ap.telephone,
                                       ]
                                         .filter(Boolean)
@@ -485,12 +625,18 @@ export default function CrmPage(props: Props) {
                               </span>
                             </td>
                             <td data-label="Complétude">
-                              <span className="crm-completude" title={c.manquants.length ? `Il manque : ${c.manquants.join(', ')}` : 'Fiche complète'}>
+                              <span
+                                className="crm-completude"
+                                title={c.manquants.length ? `Il manque : ${c.manquants.join(', ')}` : 'Fiche complète'}
+                              >
                                 <span>
                                   {c.faits}/{c.total}
                                 </span>
                                 <span className="progress-track">
-                                  <span className={`progress-fill ${c.faits === c.total ? 'crm-completude--complete' : 'crm-completude--partielle'}`} style={{ width: `${(c.faits / c.total) * 100}%` }} />
+                                  <span
+                                    className={`progress-fill ${c.faits === c.total ? 'crm-completude--complete' : 'crm-completude--partielle'}`}
+                                    style={{ width: `${(c.faits / c.total) * 100}%` }}
+                                  />
                                 </span>
                               </span>
                             </td>
@@ -498,7 +644,9 @@ export default function CrmPage(props: Props) {
                               <span className={`pill ${PILL_SITUATION[s]}`}>{LIBELLE_SITUATION[s]}</span>
                               {/* Revue CEO : au-delà du seuil, le demandeur voit que l'offre attend le CEO. */}
                               {projet.contresignatureCeo && projet.soumisLe && (
-                                <span className="cell-sub">En attente du CEO depuis {joursDepuis(projet.soumisLe)} j</span>
+                                <span className="cell-sub">
+                                  En attente du CEO depuis {joursDepuis(projet.soumisLe)} j
+                                </span>
                               )}
                             </td>
                           </tr>

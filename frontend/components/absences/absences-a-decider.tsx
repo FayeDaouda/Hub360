@@ -13,7 +13,9 @@ export function AbsencesADecider({ slug, onCompte }: { slug: string; onCompte?: 
   const [ouverte, setOuverte] = useState<string | null>(null);
 
   const charger = useCallback(() => {
-    getAbsencesAValider(slug).then(setListe).catch(() => setListe([]));
+    getAbsencesAValider(slug)
+      .then(setListe)
+      .catch(() => setListe([]));
   }, [slug]);
   useEffect(charger, [charger]);
   useEffect(() => onCompte?.(liste.length), [liste, onCompte]);

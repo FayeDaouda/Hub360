@@ -31,18 +31,32 @@ export function RechercheGlobale({ slug }: { slug: string }) {
 
   return (
     <>
-      <button type="button" className="admin-search recherche-declencheur" aria-label="Rechercher" onClick={() => setOuvert(true)}>
+      <button
+        type="button"
+        className="admin-search recherche-declencheur"
+        aria-label="Rechercher"
+        onClick={() => setOuvert(true)}
+      >
         <Search size={15} aria-hidden />
         <span className="recherche-declencheur-texte">Rechercher…</span>
         <kbd className="recherche-raccourci">{mac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
-      {ouvert && createPortal(<Palette slug={slug} onClose={() => setOuvert(false)} onContact={setContact} />, document.body)}
+      {ouvert &&
+        createPortal(<Palette slug={slug} onClose={() => setOuvert(false)} onContact={setContact} />, document.body)}
       {contact && <FicheContactModal slug={slug} utilisateurId={contact} onClose={() => setContact(null)} />}
     </>
   );
 }
 
-function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => void; onContact: (utilisateurId: string) => void }) {
+function Palette({
+  slug,
+  onClose,
+  onContact,
+}: {
+  slug: string;
+  onClose: () => void;
+  onContact: (utilisateurId: string) => void;
+}) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [resultats, setResultats] = useState<ResultatRecherche[] | null>(null);
@@ -102,7 +116,14 @@ function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => vo
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal recherche-palette" role="dialog" aria-modal="true" aria-label="Recherche" onClick={(e) => e.stopPropagation()} onKeyDown={onKeyDown}>
+      <div
+        className="modal recherche-palette"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Recherche"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={onKeyDown}
+      >
         <div className="champ-recherche recherche-champ">
           <Search size={16} aria-hidden />
           <input
@@ -124,7 +145,9 @@ function Palette({ slug, onClose, onContact }: { slug: string; onClose: () => vo
           {erreur ? (
             <p className="recherche-aide field-erreur">La recherche a échoué.</p>
           ) : q.trim().length < LONGUEUR_MIN ? (
-            <p className="recherche-aide">Tapez au moins {LONGUEUR_MIN} caractères. ↑ ↓ pour choisir, Entrée pour ouvrir.</p>
+            <p className="recherche-aide">
+              Tapez au moins {LONGUEUR_MIN} caractères. ↑ ↓ pour choisir, Entrée pour ouvrir.
+            </p>
           ) : !resultats ? (
             <p className="recherche-aide">Recherche…</p>
           ) : ordonnes.length === 0 ? (

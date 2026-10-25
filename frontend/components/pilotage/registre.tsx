@@ -27,14 +27,19 @@ const libelleStatut = (d: DecisionRegistre) =>
           ? 'Échéance dépassée'
           : `Close le ${jjmmaaaa(d.closeLe ?? '')}`;
 
-const valeurResponsable = (r: ResponsableDecision) => ('role' in r ? `role:${r.role}` : `collaborateur:${r.collaborateurId}`);
+const valeurResponsable = (r: ResponsableDecision) =>
+  'role' in r ? `role:${r.role}` : `collaborateur:${r.collaborateurId}`;
 // « role:Dir. GC » → { responsableRole } ; « collaborateur:id » → { responsableCollaborateurId }.
 const champsResponsable = (valeur: string) => {
   const [genre, id] = valeur.split(/:(.*)/s);
   return genre === 'role' ? { responsableRole: id } : { responsableCollaborateurId: id };
 };
 const valeurDe = (d: DecisionRegistre) =>
-  d.responsableRole ? `role:${d.responsableRole}` : d.responsableCollaborateurId ? `collaborateur:${d.responsableCollaborateurId}` : '';
+  d.responsableRole
+    ? `role:${d.responsableRole}`
+    : d.responsableCollaborateurId
+      ? `collaborateur:${d.responsableCollaborateurId}`
+      : '';
 
 // Trace d'une proposition CTO → CEO, sous le texte de la décision.
 function traceProposition(d: DecisionRegistre): string | null {
@@ -100,7 +105,10 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
       <header className="pi-registre-tete">
         <div>
           <h2>Registre des décisions (manuel §4.1)</h2>
-          <p className="pi-aide">Décision, responsable, échéance. Les décisions prises dans le HUB s’inscrivent seules ; celles des instances se saisissent ici.</p>
+          <p className="pi-aide">
+            Décision, responsable, échéance. Les décisions prises dans le HUB s’inscrivent seules ; celles des instances
+            se saisissent ici.
+          </p>
         </div>
         <div className="pi-registre-actions">
           {vue.saisie && !saisie && (
@@ -109,19 +117,38 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
             </button>
           )}
           <div className="vue-toggle" role="group" aria-label="Décisions">
-            <button type="button" className={filtre === 'ouvertes' ? 'is-active' : ''} aria-pressed={filtre === 'ouvertes'} onClick={() => setFiltre('ouvertes')}>
+            <button
+              type="button"
+              className={filtre === 'ouvertes' ? 'is-active' : ''}
+              aria-pressed={filtre === 'ouvertes'}
+              onClick={() => setFiltre('ouvertes')}
+            >
               Ouvertes · {ouvertes.length}
             </button>
-            <button type="button" className={filtre === 'toutes' ? 'is-active' : ''} aria-pressed={filtre === 'toutes'} onClick={() => setFiltre('toutes')}>
+            <button
+              type="button"
+              className={filtre === 'toutes' ? 'is-active' : ''}
+              aria-pressed={filtre === 'toutes'}
+              onClick={() => setFiltre('toutes')}
+            >
               Toutes · {vue.decisions.length}
             </button>
           </div>
         </div>
       </header>
 
-      {vue.saisie && saisie && <SaisieDecision slug={slug} saisie={vue.saisie} onVue={onVue} onFermer={() => setSaisie(false)} />}
+      {vue.saisie && saisie && (
+        <SaisieDecision slug={slug} saisie={vue.saisie} onVue={onVue} onFermer={() => setSaisie(false)} />
+      )}
       {vue.saisie && aModifier && (
-        <ModifierProposition key={aModifier.id} slug={slug} decision={aModifier} saisie={vue.saisie} onVue={onVue} onFermer={() => setAModifier(null)} />
+        <ModifierProposition
+          key={aModifier.id}
+          slug={slug}
+          decision={aModifier}
+          saisie={vue.saisie}
+          onVue={onVue}
+          onFermer={() => setAModifier(null)}
+        />
       )}
       {erreur && <p className="field-erreur">{erreur}</p>}
 
@@ -148,14 +175,21 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
               </span>
               <span role="cell" className="pi-instance">
                 <strong>{d.instance}</strong>
-                <small>{d.origine === 'hub' ? 'inscrite par le HUB' : d.proposition ? 'proposée au CEO' : 'saisie'}</small>
+                <small>
+                  {d.origine === 'hub' ? 'inscrite par le HUB' : d.proposition ? 'proposée au CEO' : 'saisie'}
+                </small>
               </span>
               <span role="cell" className="pi-texte">
                 {d.texte}
                 {traceProposition(d) && <small className="pi-proposition">{traceProposition(d)}</small>}
                 {d.rattachement && (
                   <small className="pi-rattachement">
-                    {d.rattachement.type === 'projet' ? 'Projet' : d.rattachement.type === 'cellule' ? 'Cellule' : 'Client'} · {d.rattachement.libelle}
+                    {d.rattachement.type === 'projet'
+                      ? 'Projet'
+                      : d.rattachement.type === 'cellule'
+                        ? 'Cellule'
+                        : 'Client'}{' '}
+                    · {d.rattachement.libelle}
                   </small>
                 )}
               </span>
@@ -166,19 +200,39 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
               <span role="cell" className="pi-statut">
                 <span className={`pill ${PILL_STATUT[d.statut]}`}>{libelleStatut(d)}</span>
                 {d.peutCloturer && (
-                  <button type="button" className="btn-ghost pi-cloturer" disabled={enCours === d.id} onClick={() => cloturer(d)}>
+                  <button
+                    type="button"
+                    className="btn-ghost pi-cloturer"
+                    disabled={enCours === d.id}
+                    onClick={() => cloturer(d)}
+                  >
                     {enCours === d.id ? '…' : 'Clôturer'}
                   </button>
                 )}
                 {d.peutArbitrer && (
                   <span className="pi-arbitrage">
-                    <button type="button" className="btn-primary pi-cloturer" disabled={enCours === d.id} onClick={() => arbitrer(d, { issue: 'accepter' })}>
+                    <button
+                      type="button"
+                      className="btn-primary pi-cloturer"
+                      disabled={enCours === d.id}
+                      onClick={() => arbitrer(d, { issue: 'accepter' })}
+                    >
                       {enCours === d.id ? '…' : 'Accepter'}
                     </button>
-                    <button type="button" className="btn-ghost pi-cloturer" disabled={enCours === d.id} onClick={() => setAModifier(d)}>
+                    <button
+                      type="button"
+                      className="btn-ghost pi-cloturer"
+                      disabled={enCours === d.id}
+                      onClick={() => setAModifier(d)}
+                    >
                       Modifier
                     </button>
-                    <button type="button" className="btn-ghost pi-cloturer" disabled={enCours === d.id} onClick={() => setARefuser(d)}>
+                    <button
+                      type="button"
+                      className="btn-ghost pi-cloturer"
+                      disabled={enCours === d.id}
+                      onClick={() => setARefuser(d)}
+                    >
                       Refuser
                     </button>
                   </span>
@@ -209,7 +263,15 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
 }
 
 // Choix du responsable : fonctions pourvues, puis collaborateurs ayant un compte.
-function ChoixResponsable({ responsables, valeur, onChange }: { responsables: ResponsableDecision[]; valeur: string; onChange: (v: string) => void }) {
+function ChoixResponsable({
+  responsables,
+  valeur,
+  onChange,
+}: {
+  responsables: ResponsableDecision[];
+  valeur: string;
+  onChange: (v: string) => void;
+}) {
   const roles = responsables.filter((r) => 'role' in r);
   const collaborateurs = responsables.filter((r) => 'collaborateurId' in r);
   return (
@@ -280,12 +342,19 @@ function ModifierProposition({
     <div className="pi-saisie">
       <p className="pi-aide">
         Modifier puis accepter <strong>{decision.numero}</strong>
-        {decision.proposition?.par ? `, proposée par ${decision.proposition.par}` : ''}. La proposition d’origine reste au registre.
+        {decision.proposition?.par ? `, proposée par ${decision.proposition.par}` : ''}. La proposition d’origine reste
+        au registre.
       </p>
       <div className="eq-creer-grille pi-saisie-grille">
         <label className="eq-creer-large">
           <span>Décision</span>
-          <textarea className="field-input" rows={2} maxLength={500} value={texte} onChange={(e) => setTexte(e.target.value)} />
+          <textarea
+            className="field-input"
+            rows={2}
+            maxLength={500}
+            value={texte}
+            onChange={(e) => setTexte(e.target.value)}
+          />
         </label>
         <label>
           <span>Responsable</span>
@@ -293,7 +362,13 @@ function ModifierProposition({
         </label>
         <label>
           <span>Échéance</span>
-          <input className="field-input" type="date" value={echeance} min={aujourdhui()} onChange={(e) => setEcheance(e.target.value)} />
+          <input
+            className="field-input"
+            type="date"
+            value={echeance}
+            min={aujourdhui()}
+            onChange={(e) => setEcheance(e.target.value)}
+          />
         </label>
         <label className="eq-creer-large">
           <span>Note au CTO (facultatif)</span>
@@ -305,7 +380,12 @@ function ModifierProposition({
         <button type="button" className="btn-ghost" onClick={onFermer}>
           Annuler
         </button>
-        <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !echeance} onClick={accepter}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={envoi || texte.trim().length < 3 || !responsable || !echeance}
+          onClick={accepter}
+        >
           {envoi ? 'Acceptation…' : 'Accepter avec ces modifications'}
         </button>
       </div>
@@ -348,7 +428,13 @@ function SaisieDecision({
           ...champsResponsable(responsable),
           echeance,
           ...(proposer ? { proposer: true } : {}),
-          ...(typeR === 'projet' ? { projetId: idR } : typeR === 'cellule' ? { celluleId: idR } : typeR === 'client' ? { clientId: idR } : {}),
+          ...(typeR === 'projet'
+            ? { projetId: idR }
+            : typeR === 'cellule'
+              ? { celluleId: idR }
+              : typeR === 'client'
+                ? { clientId: idR }
+                : {}),
         }),
       );
       onFermer();
@@ -374,11 +460,23 @@ function SaisieDecision({
         </label>
         <label>
           <span>Date de la décision</span>
-          <input className="field-input" type="date" value={date} max={aujourdhui()} onChange={(e) => setDate(e.target.value)} />
+          <input
+            className="field-input"
+            type="date"
+            value={date}
+            max={aujourdhui()}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </label>
         <label className="eq-creer-large">
           <span>Décision</span>
-          <textarea className="field-input" rows={2} maxLength={500} value={texte} onChange={(e) => setTexte(e.target.value)} />
+          <textarea
+            className="field-input"
+            rows={2}
+            maxLength={500}
+            value={texte}
+            onChange={(e) => setTexte(e.target.value)}
+          />
         </label>
         <label>
           <span>Responsable</span>
@@ -386,7 +484,13 @@ function SaisieDecision({
         </label>
         <label>
           <span>Échéance</span>
-          <input className="field-input" type="date" value={echeance} min={date} onChange={(e) => setEcheance(e.target.value)} />
+          <input
+            className="field-input"
+            type="date"
+            value={echeance}
+            min={date}
+            onChange={(e) => setEcheance(e.target.value)}
+          />
         </label>
         {saisie.rattachables && (
           <label>
@@ -414,7 +518,8 @@ function SaisieDecision({
       </div>
       {saisie.peutProposer && (
         <p className="pi-aide">
-          {saisie.peutInscrire ? '« Proposer au CEO » : la' : 'La'} décision attend l’accord du CEO (accepter, modifier ou refuser) avant d’entrer en vigueur.
+          {saisie.peutInscrire ? '« Proposer au CEO » : la' : 'La'} décision attend l’accord du CEO (accepter, modifier
+          ou refuser) avant d’entrer en vigueur.
         </p>
       )}
       {erreur && <p className="field-erreur">{erreur}</p>}
@@ -433,7 +538,12 @@ function SaisieDecision({
           </button>
         )}
         {saisie.peutInscrire && (
-          <button type="button" className="btn-primary" disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance} onClick={() => enregistrer(false)}>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={envoi || texte.trim().length < 3 || !responsable || !date || !echeance}
+            onClick={() => enregistrer(false)}
+          >
             {envoi ? 'Envoi…' : 'Inscrire au registre'}
           </button>
         )}

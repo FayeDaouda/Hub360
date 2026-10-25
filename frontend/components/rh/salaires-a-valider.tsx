@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { formatMontant } from '@/lib/format';
-import { deciderSalaire, getDetailSalaire, getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type DetailSalaire, type SalaireAValider } from '@/lib/rh';
+import {
+  deciderSalaire,
+  getDetailSalaire,
+  getSalairesAValider,
+  LIBELLE_MOTIF_SALAIRE,
+  type DetailSalaire,
+  type SalaireAValider,
+} from '@/lib/rh';
 
 const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : 'date inconnue');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
@@ -52,7 +59,8 @@ export function SalairesAValider({ slug }: { slug: string }) {
     }
   }
 
-  const ecart = ouvert && ouvert.actuel ? Math.round(((ouvert.montant - ouvert.actuel) / ouvert.actuel) * 1000) / 10 : null;
+  const ecart =
+    ouvert && ouvert.actuel ? Math.round(((ouvert.montant - ouvert.actuel) / ouvert.actuel) * 1000) / 10 : null;
 
   return (
     <section className="panel glass-panel sav" aria-label="Salaires à valider">
@@ -67,7 +75,8 @@ export function SalairesAValider({ slug }: { slug: string }) {
                 {s.salarie} · {LIBELLE_MOTIF_SALAIRE[s.motif]}
               </strong>
               <span className="cell-sub">
-                effet le {jjmmaaaa(s.dateEffet)} · proposé{s.proposePar ? ` par ${s.proposePar}` : ''} le {jjmmaaaa(s.proposeLe)}
+                effet le {jjmmaaaa(s.dateEffet)} · proposé{s.proposePar ? ` par ${s.proposePar}` : ''} le{' '}
+                {jjmmaaaa(s.proposeLe)}
               </span>
             </span>
             {ouvert?.id === s.id ? (
@@ -90,13 +99,21 @@ export function SalairesAValider({ slug }: { slug: string }) {
                   <span>
                     <span className="field-label">Proposé</span>
                     <strong>{formatMontant(ouvert.montant)}</strong>
-                    {ecart != null && <span className="cell-sub">{`${ecart > 0 ? '+' : ''}${ecart.toLocaleString('fr-FR')} %`}</span>}
+                    {ecart != null && (
+                      <span className="cell-sub">{`${ecart > 0 ? '+' : ''}${ecart.toLocaleString('fr-FR')} %`}</span>
+                    )}
                   </span>
                 </p>
                 {refus !== null && (
                   <label className="field">
                     <span className="field-label">Motif du refus (transmis à la RH)</span>
-                    <textarea className="field-input" rows={2} maxLength={300} value={refus} onChange={(e) => setRefus(e.target.value)} />
+                    <textarea
+                      className="field-input"
+                      rows={2}
+                      maxLength={300}
+                      value={refus}
+                      onChange={(e) => setRefus(e.target.value)}
+                    />
                   </label>
                 )}
                 <div className="sav-actions">
@@ -114,7 +131,12 @@ export function SalairesAValider({ slug }: { slug: string }) {
                       <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setRefus(null)}>
                         Annuler
                       </button>
-                      <button type="button" className="btn-primary" disabled={envoi || !refus.trim()} onClick={() => decider(false)}>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={envoi || !refus.trim()}
+                        onClick={() => decider(false)}
+                      >
                         Confirmer le refus
                       </button>
                     </>

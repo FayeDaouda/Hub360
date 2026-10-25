@@ -10,9 +10,7 @@ export function estImage(file: File): boolean {
   return file.type.startsWith('image/');
 }
 
-export function lireImageRedimensionnee(
-  file: File,
-): Promise<{ nom: string; url: string }> {
+export function lireImageRedimensionnee(file: File): Promise<{ nom: string; url: string }> {
   return new Promise((resolve, reject) => {
     const lecteur = new FileReader();
     lecteur.onerror = () => reject(new Error('Lecture impossible'));
@@ -31,9 +29,7 @@ export function lireImageRedimensionnee(
         ctx.drawImage(img, 0, 0, w, h);
         // Les images sans alpha -> JPEG (léger) ; sinon on garde le PNG source.
         const sortie =
-          file.type === 'image/png'
-            ? canvas.toDataURL('image/png')
-            : canvas.toDataURL('image/jpeg', QUALITE);
+          file.type === 'image/png' ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', QUALITE);
         resolve({ nom: file.name, url: sortie });
       };
       img.src = lecteur.result as string;

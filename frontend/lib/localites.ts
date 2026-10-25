@@ -11,10 +11,7 @@ export function getLocalites(slug: string): Promise<Localite[]> {
   return apiSociete<Localite[]>(slug, '/localites');
 }
 
-export function creerLocalite(
-  slug: string,
-  payload: NouvelleLocalitePayload,
-): Promise<Localite> {
+export function creerLocalite(slug: string, payload: NouvelleLocalitePayload): Promise<Localite> {
   return apiSociete<Localite>(slug, '/localites', { method: 'POST', body: payload });
 }
 
@@ -41,5 +38,8 @@ export function normaliserRecherche(s: string): string {
 // suggestion — en cas de collision, c'est la direction qui ajuste, jamais
 // une résolution automatique (règle validée, sept. 2026).
 export function proposerCodeLocalite(nom: string): string {
-  return normaliserRecherche(nom).replace(/[^a-z]/g, '').slice(0, 3).toUpperCase();
+  return normaliserRecherche(nom)
+    .replace(/[^a-z]/g, '')
+    .slice(0, 3)
+    .toUpperCase();
 }

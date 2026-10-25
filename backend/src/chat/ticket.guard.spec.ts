@@ -38,23 +38,17 @@ describe('TicketGuard', () => {
 
   it('token absent de la query → 401, sans appeler le store', () => {
     const { svc, consommer } = store(PAYLOAD);
-    expect(() =>
-      new TicketGuard(svc).canActivate(ctxOf(req({ query: {} }))),
-    ).toThrow(UnauthorizedException);
+    expect(() => new TicketGuard(svc).canActivate(ctxOf(req({ query: {} })))).toThrow(UnauthorizedException);
     expect(consommer).not.toHaveBeenCalled();
   });
 
   it('ticket inconnu ou déjà consommé (store renvoie null) → 401', () => {
     const { svc } = store(null);
-    expect(() =>
-      new TicketGuard(svc).canActivate(ctxOf(req())),
-    ).toThrow(UnauthorizedException);
+    expect(() => new TicketGuard(svc).canActivate(ctxOf(req()))).toThrow(UnauthorizedException);
   });
 
   it('HORS PÉRIMÈTRE : ticket valide mais émis pour un autre slug → 401', () => {
     const { svc } = store({ ...PAYLOAD, societeSlug: 'autre' });
-    expect(() =>
-      new TicketGuard(svc).canActivate(ctxOf(req())),
-    ).toThrow(UnauthorizedException);
+    expect(() => new TicketGuard(svc).canActivate(ctxOf(req()))).toThrow(UnauthorizedException);
   });
 });

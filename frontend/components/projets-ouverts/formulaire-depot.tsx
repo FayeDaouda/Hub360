@@ -38,7 +38,9 @@ export function FormulaireDepot({
             Part en validation chez <strong>{validateur ?? 'un validateur à désigner'}</strong>.
           </>
         )}
-        {avertissement && !parDepot && ' Vous ne pourrez plus la déposer à nouveau tant qu’elle n’est pas validée ou renvoyée en reprise.'}
+        {avertissement &&
+          !parDepot &&
+          ' Vous ne pourrez plus la déposer à nouveau tant qu’elle n’est pas validée ou renvoyée en reprise.'}
       </span>
       <ChampsRemise id={id} valeur={valeur} onChange={onChange} obligatoire={obligatoire} nommage={nommage} />
     </span>

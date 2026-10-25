@@ -1,10 +1,4 @@
-import type {
-  FeuillesTemps,
-  ManqueTache,
-  MonTemps,
-  SectionTache,
-  StatutFeuilleTemps,
-} from './types';
+import type { FeuillesTemps, ManqueTache, MonTemps, SectionTache, StatutFeuilleTemps } from './types';
 import { apiSociete } from './client-api';
 
 // RH · Temps de travail (lot 4) — API NestJS :
@@ -26,11 +20,15 @@ export const controlerFeuilleTemps = (slug: string, dossierId: string, mois: str
     method: 'POST',
     body: {},
   });
-export const getMonTemps = (slug: string, mois?: string) => apiSociete<MonTemps>(slug, avecMois('/mon-espace/temps', mois));
+export const getMonTemps = (slug: string, mois?: string) =>
+  apiSociete<MonTemps>(slug, avecMois('/mon-espace/temps', mois));
 export const signalerEcartTemps = (slug: string, mois: string, commentaire: string) =>
   apiSociete<MonTemps>(slug, '/mon-espace/temps/ecarts', { method: 'POST', body: { mois, commentaire } });
 export const traiterEcartTemps = (slug: string, ecartId: string, reponse: string) =>
-  apiSociete<{ id: string; mois: string }>(slug, `/rh/feuilles-temps/ecarts/${ecartId}/traitement`, { method: 'POST', body: { reponse } });
+  apiSociete<{ id: string; mois: string }>(slug, `/rh/feuilles-temps/ecarts/${ecartId}/traitement`, {
+    method: 'POST',
+    body: { reponse },
+  });
 
 export const LIBELLE_SECTION: Record<SectionTache, string> = {
   avant_projet: 'Avant-projet',

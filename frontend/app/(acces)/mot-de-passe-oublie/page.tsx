@@ -20,9 +20,7 @@ export default function MotDePasseOubliePage() {
       // Réponse constante : on l'affiche telle quelle, qu'il y ait un compte ou non.
       setMessage(r.message);
     } catch {
-      setMessage(
-        'Si un compte existe pour cette adresse, un lien de réinitialisation a été envoyé.',
-      );
+      setMessage('Si un compte existe pour cette adresse, un lien de réinitialisation a été envoyé.');
     }
   }
 
@@ -35,8 +33,7 @@ export default function MotDePasseOubliePage() {
           </h1>
           {!message && (
             <p className="auth-carte-sous-titre">
-              Saisis ton email : si un compte existe, tu recevras un lien pour définir un
-              nouveau mot de passe.
+              Saisis ton email : si un compte existe, tu recevras un lien pour définir un nouveau mot de passe.
             </p>
           )}
         </header>
@@ -62,9 +59,7 @@ export default function MotDePasseOubliePage() {
               required
             />
             <button type="submit" className="auth-bouton" disabled={enCours}>
-              {enCours && (
-                <LoaderCircle className="auth-bouton-roue" size={18} strokeWidth={2.2} aria-hidden />
-              )}
+              {enCours && <LoaderCircle className="auth-bouton-roue" size={18} strokeWidth={2.2} aria-hidden />}
               {enCours ? 'Envoi…' : 'Envoyer le lien'}
             </button>
           </form>

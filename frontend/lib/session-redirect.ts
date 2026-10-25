@@ -17,9 +17,7 @@ export function destinationForSession(session: Session): string {
       // menu) ; aucune → écran générique.
       const section = premiereSectionAccessible(session);
       if (section === null) return `/espace/${session.societe.slug}`;
-      return section
-        ? `/admin/${session.societe.slug}/${section}`
-        : `/admin/${session.societe.slug}`;
+      return section ? `/admin/${session.societe.slug}/${section}` : `/admin/${session.societe.slug}`;
     }
   }
 }

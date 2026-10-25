@@ -58,7 +58,12 @@ export function codeAuPas(secret: string, pas: number, chiffres = 6): string {
 export const pasCourant = (maintenant = Date.now()) => Math.floor(maintenant / 1000 / PAS_SECONDES);
 
 // Pas accepté (à mémoriser : un code ne sert qu'une fois), ou null.
-export function verifierCode(secret: string, code: string, dernierPas: number | null, maintenant = Date.now()): number | null {
+export function verifierCode(
+  secret: string,
+  code: string,
+  dernierPas: number | null,
+  maintenant = Date.now(),
+): number | null {
   if (!/^\d{6}$/.test(code)) return null;
   const courant = pasCourant(maintenant);
   for (let d = -FENETRE; d <= FENETRE; d++) {
@@ -76,7 +81,10 @@ export const lienOtpauth = (secret: string, compte: string, emetteur = 'HUB 360'
 // Clé dérivée du secret JWT du serveur : une fuite de la base seule ne livre
 // pas les secrets. Changer JWT_SECRET oblige chacun à réactiver son
 // application (la connexion le propose d'elle-même).
-const cle = () => createHash('sha256').update(`totp:${process.env.JWT_SECRET || 'change-moi-en-production'}`).digest();
+const cle = () =>
+  createHash('sha256')
+    .update(`totp:${process.env.JWT_SECRET || 'change-moi-en-production'}`)
+    .digest();
 
 export function chiffrerSecret(secret: string): string {
   const iv = randomBytes(12);
@@ -102,7 +110,8 @@ export const NB_CODES_SECOURS = 8;
 const ALPHABET_SECOURS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O, 1/I
 
 export const normaliserCodeSecours = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, '');
-export const hacherCodeSecours = (code: string) => createHash('sha256').update(normaliserCodeSecours(code)).digest('hex');
+export const hacherCodeSecours = (code: string) =>
+  createHash('sha256').update(normaliserCodeSecours(code)).digest('hex');
 
 export function genererCodesSecours(): { clairs: string[]; hashes: string[] } {
   const clairs = Array.from({ length: NB_CODES_SECOURS }, () => {

@@ -11,12 +11,7 @@ import { CrmService } from './crm.service';
 // et le client (existant inchangé, ou créé tel que saisi — plus de sigle).
 
 type Prive = {
-  resoudreCode: (
-    tx: unknown,
-    societeId: string,
-    client: unknown,
-    codeLocalite: string,
-  ) => Promise<string>;
+  resoudreCode: (tx: unknown, societeId: string, client: unknown, codeLocalite: string) => Promise<string>;
   resoudreClient: (tx: unknown, societeId: string, ref: unknown) => Promise<unknown>;
 };
 
@@ -35,7 +30,13 @@ function prismaMock(opts: { codes?: string[]; client?: object | null } = {}) {
 }
 
 function svc(prisma: ReturnType<typeof prismaMock>) {
-  return new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService) as unknown as Prive;
+  return new CrmService(
+    prisma as unknown as PrismaService,
+    {} as DevisService,
+    {} as FacturationService,
+    {} as NotificationsService,
+    {} as SeuilCeoService,
+  ) as unknown as Prive;
 }
 
 const annee = String(new Date().getFullYear()).slice(-2);
@@ -44,27 +45,18 @@ const DAOUDA = { nom: 'Daouda Faye Sow', type: 'particulier', sigle: null };
 describe('CrmService.resoudreCode', () => {
   it('généré selon la nomenclature', async () => {
     const prisma = prismaMock();
-    await expect(svc(prisma).resoudreCode(prisma, 'S1', DAOUDA, 'ALM')).resolves.toBe(
-      `DFS_ALM.${annee}`,
-    );
+    await expect(svc(prisma).resoudreCode(prisma, 'S1', DAOUDA, 'ALM')).resolves.toBe(`DFS_ALM.${annee}`);
   });
 
   it('base déjà prise → suffixe -2 ; -2 pris aussi → -3', async () => {
     const prisma = prismaMock({ codes: [`DFS_ALM.${annee}`, `DFS_ALM.${annee}-2`] });
-    await expect(svc(prisma).resoudreCode(prisma, 'S1', DAOUDA, 'ALM')).resolves.toBe(
-      `DFS_ALM.${annee}-3`,
-    );
+    await expect(svc(prisma).resoudreCode(prisma, 'S1', DAOUDA, 'ALM')).resolves.toBe(`DFS_ALM.${annee}-3`);
   });
 
   it('personne morale sans sigle → initiales de la raison sociale', async () => {
     const prisma = prismaMock();
     await expect(
-      svc(prisma).resoudreCode(
-        prisma,
-        'S1',
-        { nom: 'SCI Les Filaos', type: 'sci', sigle: null },
-        'ALM',
-      ),
+      svc(prisma).resoudreCode(prisma, 'S1', { nom: 'SCI Les Filaos', type: 'sci', sigle: null }, 'ALM'),
     ).resolves.toBe(`FIL_ALM.${annee}`);
   });
 
@@ -99,9 +91,7 @@ describe('CrmService.resoudreClient', () => {
 
   it('client d’une autre société → 404', async () => {
     const prisma = prismaMock({ client: null });
-    await expect(svc(prisma).resoudreClient(prisma, 'S1', { id: 'AUTRE' })).rejects.toThrow(
-      'Client introuvable',
-    );
+    await expect(svc(prisma).resoudreClient(prisma, 'S1', { id: 'AUTRE' })).rejects.toThrow('Client introuvable');
   });
 });
 
@@ -116,7 +106,13 @@ describe('CrmService.resoudreProprietaire', () => {
         findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService) as unknown as P;
+    const s = new CrmService(
+      prisma as unknown as PrismaService,
+      {} as DevisService,
+      {} as FacturationService,
+      {} as NotificationsService,
+      {} as SeuilCeoService,
+    ) as unknown as P;
     return (choisi?: string) => s.resoudreProprietaire(prisma, 'S1', choisi);
   };
 
@@ -180,7 +176,13 @@ describe('CrmService — fiche apporteur', () => {
       dossierCrm: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn(relu) },
     };
     const prisma = { $transaction: jest.fn((f: (t: typeof tx) => unknown) => f(tx)) };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
+    const s = new CrmService(
+      prisma as unknown as PrismaService,
+      {} as DevisService,
+      {} as FacturationService,
+      {} as NotificationsService,
+      {} as SeuilCeoService,
+    );
     return { s, tx };
   }
   const cio = { userId: 'U-CIO', role: 'CIO (transverse)', permissions: { crm: 'ecriture' as const } };
@@ -196,9 +198,7 @@ describe('CrmService — fiche apporteur', () => {
       apporteurStructure: null,
       commissionApporteur: null,
     });
-    expect(data.transitions.create.commentaire).toBe(
-      'Fiche apporteur : affaire directe, validée et verrouillée',
-    );
+    expect(data.transitions.create.commentaire).toBe('Fiche apporteur : affaire directe, validée et verrouillée');
   });
 
   it('apporteur externe → fiche complète, % saisi sans droit Finances', async () => {
@@ -222,9 +222,7 @@ describe('CrmService — fiche apporteur', () => {
       apporteurEmail: null,
       commissionApporteur: 4,
     });
-    expect(data.transitions.create.commentaire).toBe(
-      'Fiche apporteur : Aïssatou Ba (Notaire), validée et verrouillée',
-    );
+    expect(data.transitions.create.commentaire).toBe('Fiche apporteur : Aïssatou Ba (Notaire), validée et verrouillée');
     // Partie de la fiche apporteur : toujours dans la réponse.
     expect(projet.commissionApporteur).toBe(4);
   });
@@ -233,7 +231,13 @@ describe('CrmService — fiche apporteur', () => {
     const prisma = {
       dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), update: jest.fn(relu) },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
+    const s = new CrmService(
+      prisma as unknown as PrismaService,
+      {} as DevisService,
+      {} as FacturationService,
+      {} as NotificationsService,
+      {} as SeuilCeoService,
+    );
     return { s, prisma };
   }
   const coo = { userId: 'U-COO', role: 'COO', permissions: { crm: 'ecriture' as const } };
@@ -243,9 +247,9 @@ describe('CrmService — fiche apporteur', () => {
     'modification par %s → 403, rien écrit (le COO seul)',
     async (role) => {
       const { s, prisma } = svcModif({ statut: 'nouveau_projet', archiveLe: null });
-      await expect(
-        s.modifierApporteur('S1', { userId: 'X', role, permissions: {} }, 'D1', NOUVELLE),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(s.modifierApporteur('S1', { userId: 'X', role, permissions: {} }, 'D1', NOUVELLE)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(prisma.dossierCrm.update).not.toHaveBeenCalled();
     },
   );
@@ -273,11 +277,17 @@ describe('CrmService — fiche apporteur', () => {
 // tout rôle qui a l'écriture sur le CRM.
 describe('CrmService.peutReassigner', () => {
   const svcTitulaires = (ids: string[]) =>
-    new CrmService({
-      utilisateur: {
-        findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
-      },
-    } as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
+    new CrmService(
+      {
+        utilisateur: {
+          findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
+        },
+      } as unknown as PrismaService,
+      {} as DevisService,
+      {} as FacturationService,
+      {} as NotificationsService,
+      {} as SeuilCeoService,
+    );
   const acteur = (userId: string, role: string) => ({ userId, role, permissions: {} });
 
   it.each(['societe_admin', 'CIO (transverse)'])('%s → oui, en supervision', async (role) => {
@@ -285,15 +295,11 @@ describe('CrmService.peutReassigner', () => {
   });
 
   it('titulaire Dir. GC → oui (transfert entre collègues)', async () => {
-    await expect(
-      svcTitulaires(['U1', 'U2']).peutReassigner('S1', acteur('U1', 'Dir. GC')),
-    ).resolves.toBe(true);
+    await expect(svcTitulaires(['U1', 'U2']).peutReassigner('S1', acteur('U1', 'Dir. GC'))).resolves.toBe(true);
   });
 
   it('COO (écriture CRM, mais pas titulaire) → non', async () => {
-    await expect(svcTitulaires(['U1']).peutReassigner('S1', acteur('U9', 'COO'))).resolves.toBe(
-      false,
-    );
+    await expect(svcTitulaires(['U1']).peutReassigner('S1', acteur('U9', 'COO'))).resolves.toBe(false);
   });
 });
 
@@ -311,7 +317,13 @@ describe('CrmService.archiver', () => {
         findMany: jest.fn().mockResolvedValue(titulaires.map((id) => ({ id, prenom: 'P', nom: id }))),
       },
     };
-    const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
+    const s = new CrmService(
+      prisma as unknown as PrismaService,
+      {} as DevisService,
+      {} as FacturationService,
+      {} as NotificationsService,
+      {} as SeuilCeoService,
+    );
     return { s, prisma };
   };
   const cio = { userId: 'C1', role: 'CIO (transverse)', permissions: {} };
@@ -319,7 +331,9 @@ describe('CrmService.archiver', () => {
 
   it('COO (écriture CRM, pas Direction GC) → 403, rien écrit', async () => {
     const { s, prisma } = svcArchive(lead, ['U1']);
-    await expect(s.archiver('S1', { userId: 'U9', role: 'COO', permissions: {} }, 'D1')).rejects.toThrow(ForbiddenException);
+    await expect(s.archiver('S1', { userId: 'U9', role: 'COO', permissions: {} }, 'D1')).rejects.toThrow(
+      ForbiddenException,
+    );
     expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
   });
 

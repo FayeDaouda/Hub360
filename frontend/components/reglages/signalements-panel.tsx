@@ -19,7 +19,15 @@ const FILTRES: { cle: StatutSignalement | 'tous'; libelle: string }[] = [
 
 // Réglages › Signalements : les retours « Signaler un problème », du plus
 // récent au plus ancien, suivis jusqu'à leur correction.
-export function SignalementsPanel({ slug, signalements, onMaj }: { slug: string; signalements: Signalement[]; onMaj: (l: Signalement[]) => void }) {
+export function SignalementsPanel({
+  slug,
+  signalements,
+  onMaj,
+}: {
+  slug: string;
+  signalements: Signalement[];
+  onMaj: (l: Signalement[]) => void;
+}) {
   const [filtre, setFiltre] = useState<StatutSignalement | 'tous'>('a_traiter');
   const [erreur, setErreur] = useState<string | null>(null);
   const visibles = signalements.filter((s) => filtre === 'tous' || s.statut === filtre);
@@ -41,8 +49,15 @@ export function SignalementsPanel({ slug, signalements, onMaj }: { slug: string;
       </p>
       <div className="fin-filtres" role="group" aria-label="Filtrer les signalements">
         {FILTRES.map((f) => (
-          <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
-            {f.libelle} ({f.cle === 'tous' ? signalements.length : signalements.filter((s) => s.statut === f.cle).length})
+          <button
+            key={f.cle}
+            type="button"
+            className={filtre === f.cle ? 'is-active' : ''}
+            aria-pressed={filtre === f.cle}
+            onClick={() => setFiltre(f.cle)}
+          >
+            {f.libelle} (
+            {f.cle === 'tous' ? signalements.length : signalements.filter((s) => s.statut === f.cle).length})
           </button>
         ))}
       </div>
@@ -54,7 +69,9 @@ export function SignalementsPanel({ slug, signalements, onMaj }: { slug: string;
           {visibles.map((s) => (
             <li key={s.id} className="sig-ligne">
               <span className="sig-tete">
-                <span className={`pill pill--${STATUTS_SIGNALEMENT[s.statut].ton}`}>{STATUTS_SIGNALEMENT[s.statut].libelle}</span>
+                <span className={`pill pill--${STATUTS_SIGNALEMENT[s.statut].ton}`}>
+                  {STATUTS_SIGNALEMENT[s.statut].libelle}
+                </span>
                 <span className="cell-sub">
                   {jjmmaaaa(s.creeLe)} · {s.auteur ?? 'compte supprimé'} · {s.role} · {s.appareil}
                 </span>
@@ -63,7 +80,11 @@ export function SignalementsPanel({ slug, signalements, onMaj }: { slug: string;
               <span className="cell-sub sig-page">Page : {s.page}</span>
               <span className="sig-actions">
                 {s.aCapture && (
-                  <button type="button" className="lien-inline" onClick={() => ouvrirCaptureSignalement(slug, s.id).catch(() => setErreur('Capture indisponible.'))}>
+                  <button
+                    type="button"
+                    className="lien-inline"
+                    onClick={() => ouvrirCaptureSignalement(slug, s.id).catch(() => setErreur('Capture indisponible.'))}
+                  >
                     Voir la capture
                   </button>
                 )}

@@ -1,9 +1,4 @@
-import {
-  ArgumentsHost,
-  BadRequestException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ArgumentsHost, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { FiltreExceptionsGlobal } from './exception.filter';
 
@@ -53,10 +48,11 @@ describe('FiltreExceptionsGlobal', () => {
 
   it('Prisma P2002 → 409 générique, aucun nom de colonne relayé', () => {
     const { host, status, json } = faireHost();
-    const e = new Prisma.PrismaClientKnownRequestError(
-      'Unique constraint failed on the fields: (`email`)',
-      { code: 'P2002', clientVersion: '5.22.0', meta: { target: ['email'] } },
-    );
+    const e = new Prisma.PrismaClientKnownRequestError('Unique constraint failed on the fields: (`email`)', {
+      code: 'P2002',
+      clientVersion: '5.22.0',
+      meta: { target: ['email'] },
+    });
     filtre.catch(e, host);
 
     expect(status).toHaveBeenCalledWith(409);

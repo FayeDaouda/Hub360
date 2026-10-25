@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ROLE_CEO, ROLES_DELEGATAIRES } from '../commun/delegation-ceo';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,7 +19,12 @@ const libelleRole = (r: string) => r.replace(/\s*\(transverse\)$/, '');
 // Ce que le délégataire peut décider, selon sa fonction (ses propres droits
 // font foi : le CTO n'a pas la main sur les finances).
 export const PERIMETRE_DELEGATION: Record<string, string[]> = {
-  CFO: ['contresignature des offres et factures au-delà du seuil', 'avoirs au-delà du seuil', 'décisions proposées', 'absences des directeurs'],
+  CFO: [
+    'contresignature des offres et factures au-delà du seuil',
+    'avoirs au-delà du seuil',
+    'décisions proposées',
+    'absences des directeurs',
+  ],
   'CTO (transverse)': ['décisions proposées', 'absences des directeurs'],
 };
 export const JAMAIS_DELEGUE = ['droits du CIO', 'ses propres demandes', 'salaire du CFO'];
@@ -51,7 +62,11 @@ export class DelegationService {
       return {
         peutGerer: a.role === ROLE_CEO,
         delegations: delegations.map(vers),
-        candidats: candidats.map((c) => ({ id: c.utilisateur.id, nom: `${c.utilisateur.prenom} ${c.utilisateur.nom}`, role: libelleRole(c.role.nom) })),
+        candidats: candidats.map((c) => ({
+          id: c.utilisateur.id,
+          nom: `${c.utilisateur.prenom} ${c.utilisateur.nom}`,
+          role: libelleRole(c.role.nom),
+        })),
         jamais: JAMAIS_DELEGUE,
       };
     }
@@ -67,16 +82,29 @@ export class DelegationService {
     if (dto.au < dto.du) throw new BadRequestException('La fin précède le début.');
     if (dto.delegataireId === a.userId) throw new BadRequestException('Le CEO ne se délègue pas à lui-même.');
     const affectation = await this.prisma.utilisateurSocieteRole.findFirst({
-      where: { societeId: a.societeId, utilisateurId: dto.delegataireId, role: { nom: { in: [...ROLES_DELEGATAIRES] } }, utilisateur: { actif: true } },
+      where: {
+        societeId: a.societeId,
+        utilisateurId: dto.delegataireId,
+        role: { nom: { in: [...ROLES_DELEGATAIRES] } },
+        utilisateur: { actif: true },
+      },
       select: { role: { select: { nom: true } }, utilisateur: { select: { prenom: true, nom: true } } },
     });
     if (!affectation) throw new BadRequestException('Le délégataire est le CTO ou le CFO, avec un compte HUB actif.');
     const chevauche = await this.prisma.delegationCeo.count({
       where: { societeId: a.societeId, revoqueLe: null, du: { lte: dto.au }, au: { gte: dto.du } },
     });
-    if (chevauche) throw new ConflictException('Une délégation couvre déjà une partie de cette période : révoquez-la d’abord.');
+    if (chevauche)
+      throw new ConflictException('Une délégation couvre déjà une partie de cette période : révoquez-la d’abord.');
     await this.prisma.delegationCeo.create({
-      data: { societeId: a.societeId, delegataireId: dto.delegataireId, roleDelegataire: affectation.role.nom, du: dto.du, au: dto.au, creeParId: a.userId },
+      data: {
+        societeId: a.societeId,
+        delegataireId: dto.delegataireId,
+        roleDelegataire: affectation.role.nom,
+        du: dto.du,
+        au: dto.au,
+        creeParId: a.userId,
+      },
     });
     const perimetre = (PERIMETRE_DELEGATION[affectation.role.nom] ?? []).join(', ');
     await this.notifications.envoyer({
@@ -106,7 +134,12 @@ export class DelegationService {
   }
 
   private async noms(ids: string[]) {
-    const u = ids.length ? await this.prisma.utilisateur.findMany({ where: { id: { in: [...new Set(ids)] } }, select: { id: true, prenom: true, nom: true } }) : [];
+    const u = ids.length
+      ? await this.prisma.utilisateur.findMany({
+          where: { id: { in: [...new Set(ids)] } },
+          select: { id: true, prenom: true, nom: true },
+        })
+      : [];
     return new Map(u.map((x) => [x.id, `${x.prenom} ${x.nom}`]));
   }
 }

@@ -17,10 +17,7 @@ const TTL_MS = 60_000;
 // flux passe multi-nœuds (cf. artifact « Chat multi-canaux » §7).
 @Injectable()
 export class TicketStore implements OnModuleDestroy {
-  private readonly tickets = new Map<
-    string,
-    { payload: TicketPayload; expire: number }
-  >();
+  private readonly tickets = new Map<string, { payload: TicketPayload; expire: number }>();
   private readonly balayage: NodeJS.Timeout;
 
   constructor() {

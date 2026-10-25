@@ -582,7 +582,9 @@
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 .pa-ligne:hover,
 .pa-ligne:focus-visible {
@@ -1329,7 +1331,6 @@
     align-items: flex-end;
   }
 }
-
 
 /* Pilotage sur téléphone (lot S3 du défilement, 24/10/2026) : rubriques
    « À suivre » repliées sur leur titre et leur nombre, indicateurs sur leur

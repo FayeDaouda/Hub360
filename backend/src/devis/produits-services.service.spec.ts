@@ -36,7 +36,10 @@ describe('ProduitsServicesService.patch', () => {
     expect(tx.ligneDevis.updateMany).toHaveBeenCalledWith({
       where: {
         produitServiceId: 'p1',
-        devis: { statut: 'brouillon', OR: [{ dossierCrmId: null }, { dossierCrm: { statut: { not: 'en_validation' } } }] },
+        devis: {
+          statut: 'brouillon',
+          OR: [{ dossierCrmId: null }, { dossierCrm: { statut: { not: 'en_validation' } } }],
+        },
       },
       data: { prixUnitaire: 5500, tauxTva: undefined },
     });

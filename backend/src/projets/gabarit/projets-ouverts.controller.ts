@@ -6,7 +6,17 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ProjetsOuvertsService } from './projets-ouverts.service';
 import { TachesProjetService } from './taches-projet.service';
-import { AssignerTacheDto, DateVisiteDto, StatutChantierDto, DeciderProlongationTacheDto, DeciderTacheDto, DemanderProlongationTacheDto, PublierCommentaireDto, RemettreTacheDto, ViserTacheDto } from './dto';
+import {
+  AssignerTacheDto,
+  DateVisiteDto,
+  StatutChantierDto,
+  DeciderProlongationTacheDto,
+  DeciderTacheDto,
+  DemanderProlongationTacheDto,
+  PublierCommentaireDto,
+  RemettreTacheDto,
+  ViserTacheDto,
+} from './dto';
 import { FilsProjetService } from './fils-projet.service';
 
 type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
@@ -118,7 +128,12 @@ export class ProjetsOuvertsController {
   // Fichier d'une remise : quiconque voit le projet (même règle que l'historique).
   @Get(':id/taches/:tacheId/pieces/:pieceId')
   @RequiertPermission('projets', 'lecture')
-  async piece(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Param('pieceId') pieceId: string) {
+  async piece(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('tacheId') tacheId: string,
+    @Param('pieceId') pieceId: string,
+  ) {
     await this.fils.verifierLecture(req.user.societeId, req.user, id);
     return this.taches.piece(req.user.societeId, id, tacheId, pieceId);
   }
@@ -127,13 +142,23 @@ export class ProjetsOuvertsController {
   // (droits vérifiés par le service).
   @Post(':id/taches/:tacheId/prolongation')
   @RequiertPermission('projets', 'lecture')
-  demanderProlongation(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DemanderProlongationTacheDto) {
+  demanderProlongation(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('tacheId') tacheId: string,
+    @Body() dto: DemanderProlongationTacheDto,
+  ) {
     return this.taches.demanderProlongation(req.user.societeId, req.user, id, tacheId, dto.jusquau, dto.motif);
   }
 
   @Post(':id/taches/:tacheId/prolongation/decision')
   @RequiertPermission('projets', 'lecture')
-  deciderProlongation(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DeciderProlongationTacheDto) {
+  deciderProlongation(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('tacheId') tacheId: string,
+    @Body() dto: DeciderProlongationTacheDto,
+  ) {
     return this.taches.deciderProlongation(req.user.societeId, req.user, id, tacheId, dto.accorder);
   }
 
@@ -156,7 +181,12 @@ export class ProjetsOuvertsController {
   // Fil d'une carte (?carte=) ou d'une tâche (?tache=).
   @Get(':id/fil')
   @RequiertPermission('projets', 'lecture')
-  async fil(@Req() req: R, @Param('id') id: string, @Query('carte') carteId?: string, @Query('tache') tacheId?: string) {
+  async fil(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Query('carte') carteId?: string,
+    @Query('tache') tacheId?: string,
+  ) {
     await this.fils.verifierLecture(req.user.societeId, req.user, id);
     return this.fils.lire(req.user.societeId, id, { carteId, tacheId });
   }

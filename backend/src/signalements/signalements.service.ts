@@ -19,8 +19,10 @@ export class SignalementsService {
 
   async creer(a: Acteur, dto: CreerSignalementDto) {
     const description = dto.description.trim();
-    if (description.length < 10) throw new BadRequestException('Décrivez le problème en quelques mots (10 caractères au moins).');
-    if (dto.capture && !/^data:image\//.test(dto.capture)) throw new BadRequestException('La capture doit être une image.');
+    if (description.length < 10)
+      throw new BadRequestException('Décrivez le problème en quelques mots (10 caractères au moins).');
+    if (dto.capture && !/^data:image\//.test(dto.capture))
+      throw new BadRequestException('La capture doit être une image.');
     const s = await this.prisma.signalement.create({
       data: {
         societeId: a.societeId,
@@ -60,7 +62,9 @@ export class SignalementsService {
       },
     });
     const avecCapture = new Set(
-      (await this.prisma.signalement.findMany({ where: { societeId, capture: { not: null } }, select: { id: true } })).map((x) => x.id),
+      (
+        await this.prisma.signalement.findMany({ where: { societeId, capture: { not: null } }, select: { id: true } })
+      ).map((x) => x.id),
     );
     return l.map(({ auteur, ...s }) => ({
       ...s,
@@ -78,7 +82,11 @@ export class SignalementsService {
   async changerStatut(a: Acteur, id: string, statut: 'a_traiter' | 'en_cours' | 'corrige') {
     const { count } = await this.prisma.signalement.updateMany({
       where: { id, societeId: a.societeId },
-      data: { statut, traiteLe: statut === 'a_traiter' ? null : new Date(), traiteParId: statut === 'a_traiter' ? null : a.userId },
+      data: {
+        statut,
+        traiteLe: statut === 'a_traiter' ? null : new Date(),
+        traiteParId: statut === 'a_traiter' ? null : a.userId,
+      },
     });
     if (!count) throw new NotFoundException('Signalement introuvable');
     return this.lister(a.societeId);

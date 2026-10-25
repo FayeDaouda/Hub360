@@ -75,13 +75,21 @@ export class ReglagesService {
     });
     // parId est un audit sans FK : nom résolu à la lecture (compte supprimé → null).
     const ids = [...new Set(lignes.flatMap((l) => (l.parId ? [l.parId] : [])))];
-    const comptes = await this.prisma.utilisateur.findMany({ where: { id: { in: ids } }, select: { id: true, prenom: true, nom: true } });
+    const comptes = await this.prisma.utilisateur.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, prenom: true, nom: true },
+    });
     const noms = new Map(comptes.map((c) => [c.id, `${c.prenom} ${c.nom}`.trim()]));
-    return lignes.map(({ parId, ...l }) => ({ ...l, par: parId ? noms.get(parId) ?? null : null }));
+    return lignes.map(({ parId, ...l }) => ({ ...l, par: parId ? (noms.get(parId) ?? null) : null }));
   }
 
   // Un enregistrement = une nouvelle version (jamais de réécriture).
-  async majGabarit(societeId: string, userId: string, code: string, corps: { depuis: number; motif: string; changements: Changement[] }) {
+  async majGabarit(
+    societeId: string,
+    userId: string,
+    code: string,
+    corps: { depuis: number; motif: string; changements: Changement[] },
+  ) {
     const g = (await this.gabaritsDe(societeId))?.find((x) => x.code === code);
     if (!g) throw new NotFoundException('Gabarit inconnu.');
     const actuelle = await this.versionEnService(societeId, code, g.contenu);
@@ -104,7 +112,15 @@ export class ReglagesService {
     try {
       await this.prisma.$transaction([
         this.prisma.gabaritVersion.create({
-          data: { societeId, code, numero, libelle, contenu: resultat.contenu as unknown as Prisma.InputJsonValue, motif, creeParId: userId },
+          data: {
+            societeId,
+            code,
+            numero,
+            libelle,
+            contenu: resultat.contenu as unknown as Prisma.InputJsonValue,
+            motif,
+            creeParId: userId,
+          },
         }),
         this.prisma.journalReglage.createMany({
           data: resultat.appliques.map((ch) => ({
@@ -129,7 +145,12 @@ export class ReglagesService {
     return this.lire(societeId);
   }
 
-  async majValeurs(societeId: string, userId: string, section: Section, corps: { motif: string; valeurs: Record<string, unknown> }) {
+  async majValeurs(
+    societeId: string,
+    userId: string,
+    section: Section,
+    corps: { motif: string; valeurs: Record<string, unknown> },
+  ) {
     if (!(await this.gabaritsDe(societeId))) throw new NotFoundException('Réglages non définis pour cette société.');
     const defs = DEFINITIONS[section];
     const actuelles = await this.valeurs(societeId);
@@ -178,7 +199,11 @@ export class ReglagesService {
     const gouvernance = changements.filter((c) => c.def.gouvernance);
     if (gouvernance.length) {
       const ceo = await this.prisma.utilisateurSocieteRole.findMany({
-        where: { societeId, role: { nom: 'CEO (transverse)', supprimeLe: null, OR: [{ societeId }, { societeId: null }] }, utilisateur: { actif: true } },
+        where: {
+          societeId,
+          role: { nom: 'CEO (transverse)', supprimeLe: null, OR: [{ societeId }, { societeId: null }] },
+          utilisateur: { actif: true },
+        },
         select: { utilisateurId: true },
       });
       const destinataires = [...new Set(ceo.map((x) => x.utilisateurId))].filter((id) => id !== userId);
@@ -233,7 +258,7 @@ export class ReglagesService {
   // --- internes ---------------------------------------------------------------------
   private async gabaritsDe(societeId: string) {
     const s = await this.prisma.societe.findUnique({ where: { id: societeId }, select: { slug: true } });
-    return s ? GABARITS_PAR_SOCIETE[s.slug] ?? null : null;
+    return s ? (GABARITS_PAR_SOCIETE[s.slug] ?? null) : null;
   }
 
   private async valeurs(societeId: string): Promise<Map<string, unknown>> {
@@ -244,12 +269,20 @@ export class ReglagesService {
   // Version la plus récente ; bêta 1.0 est créée à la première lecture depuis
   // le gabarit par défaut (course entre deux lectures : contrainte d'unicité).
   private async versionEnService(societeId: string, code: string, defaut: ContenuGabarit) {
-    const derniere = () => this.prisma.gabaritVersion.findFirst({ where: { societeId, code }, orderBy: { numero: 'desc' } });
+    const derniere = () =>
+      this.prisma.gabaritVersion.findFirst({ where: { societeId, code }, orderBy: { numero: 'desc' } });
     const v = await derniere();
     if (v) return v;
     try {
       return await this.prisma.gabaritVersion.create({
-        data: { societeId, code, numero: 0, libelle: libelleVersion(0), contenu: defaut as unknown as Prisma.InputJsonValue, motif: 'Mise en service' },
+        data: {
+          societeId,
+          code,
+          numero: 0,
+          libelle: libelleVersion(0),
+          contenu: defaut as unknown as Prisma.InputJsonValue,
+          motif: 'Mise en service',
+        },
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return (await derniere())!;

@@ -44,7 +44,10 @@ export function DoubleFacteurCompte() {
     setBusy(true);
     setErreur(null);
     try {
-      const r = await apiAuth<{ codesSecours: string[] }>('/auth/double-facteur/compte/activation', { method: 'POST', body: { code } });
+      const r = await apiAuth<{ codesSecours: string[] }>('/auth/double-facteur/compte/activation', {
+        method: 'POST',
+        body: { code },
+      });
       setCodes(r.codesSecours);
       setEtat((x) => (x ? { ...x, actifLe: new Date().toISOString() } : x));
     } catch (err) {
@@ -60,15 +63,19 @@ export function DoubleFacteurCompte() {
     return (
       <div className="df-compte">
         <p>
-          <strong>Double authentification activée.</strong> Voici vos 8 codes de secours : chacun remplace une fois le code du téléphone si
-          vous le perdez. Ils ne seront plus jamais affichés.
+          <strong>Double authentification activée.</strong> Voici vos 8 codes de secours : chacun remplace une fois le
+          code du téléphone si vous le perdez. Ils ne seront plus jamais affichés.
         </p>
         <ul className="df-compte-codes">
           {codes.map((c) => (
             <li key={c}>{c}</li>
           ))}
         </ul>
-        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => navigator.clipboard?.writeText(codes.join('\n'))}>
+        <button
+          type="button"
+          className="btn-ghost btn-ghost--sm"
+          onClick={() => navigator.clipboard?.writeText(codes.join('\n'))}
+        >
           Copier les codes
         </button>
       </div>
@@ -78,8 +85,8 @@ export function DoubleFacteurCompte() {
   if (etat.actifLe) {
     return (
       <p className="dmd-note">
-        <span className="pill pill--succes">Activée</span> depuis le {jjmmaaaa(etat.actifLe)}. Téléphone perdu ou changé : demandez au CIO
-        de la réinitialiser.
+        <span className="pill pill--succes">Activée</span> depuis le {jjmmaaaa(etat.actifLe)}. Téléphone perdu ou changé
+        : demandez au CIO de la réinitialiser.
       </p>
     );
   }

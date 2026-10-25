@@ -6,7 +6,8 @@
 // tâches validées, dont 15 remises à temps ») ; « En cours » = tout ce qui
 // n'est pas encore validé.
 
-export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'prolongee' | 'bloquee' | 'en_cours' | 'a_venir' | 'a_planifier';
+export type StatutTache =
+  'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'prolongee' | 'bloquee' | 'en_cours' | 'a_venir' | 'a_planifier';
 
 // Statut affiné par l'état commun des projets (projets/gabarit/etats.ts), le
 // même que Production et Équipes (22/10/2026) : une prolongation accordée
@@ -23,7 +24,11 @@ export type EtatValidation = { remisLe: Date | null; valideLe: Date | null; renv
 
 const jour = (d: Date) => d.toISOString().slice(0, 10);
 
-export function statutTache(t: { debut: string | null; echeance: string | null }, v: EtatValidation, aujourdhui: string): StatutTache {
+export function statutTache(
+  t: { debut: string | null; echeance: string | null },
+  v: EtatValidation,
+  aujourdhui: string,
+): StatutTache {
   if (v?.valideLe) return 'validee';
   if (v?.remisLe) return 'remise';
   if (v?.renvoyeLe) return 'a_reprendre';

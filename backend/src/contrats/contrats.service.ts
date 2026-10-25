@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma, StatutAnnexeContrat } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -40,12 +35,20 @@ type SignatairesSociete = {
 };
 
 const montantTtcLignes = (lignes: LigneMontant[]) =>
-  lignes.reduce((s, l) => s + ventilationTva(Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()), l.tauxTva.toNumber()).montantTtc, 0);
+  lignes.reduce(
+    (s, l) =>
+      s +
+      ventilationTva(Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()), l.tauxTva.toNumber()).montantTtc,
+    0,
+  );
 
 // Nom et fonction du signataire requis, tels que réglés dans Paramètres →
 // Contrats (null si non renseignés).
 function signataireDe(s: SignatairesSociete, qui: Signataire) {
-  const [nom, fonction] = qui === 'ceo' ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction] : [s.contratSignataireNom, s.contratSignataireFonction];
+  const [nom, fonction] =
+    qui === 'ceo'
+      ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction]
+      : [s.contratSignataireNom, s.contratSignataireFonction];
   return nom && fonction ? { nom, fonction } : null;
 }
 
@@ -92,11 +95,19 @@ export class ContratsService {
     return {
       contrat: dossier.contrat ? this.formater(dossier.contrat) : null,
       preparation: {
-        offreAcceptee: offre ? { id: offre.id, reference: refDevis(offre), montantHt, montantTtc: requis!.montantTtc } : null,
+        offreAcceptee: offre
+          ? { id: offre.id, reference: refDevis(offre), montantHt, montantTtc: requis!.montantTtc }
+          : null,
         modePrevu: mode,
         seuilSurMesureHt: seuil,
         // Qui signe pour la société : le CEO au-delà du seuil (TTC), sinon l'Architecte DPLG.
-        signataire: requis ? { qui: requis.qui, seuilTtc: requis.seuil, ...(signataireDe(dossier.societe, requis.qui) ?? { nom: null, fonction: null }) } : null,
+        signataire: requis
+          ? {
+              qui: requis.qui,
+              seuilTtc: requis.seuil,
+              ...(signataireDe(dossier.societe, requis.qui) ?? { nom: null, fonction: null }),
+            }
+          : null,
         reglagesManquants: this.reglagesManquants(dossier.societe, mode, requis?.qui ?? 'dplg'),
       },
     };
@@ -177,9 +188,7 @@ export class ContratsService {
     const { qui } = await this.signatairePour(societeId, c.devis.lignes);
     const manquants = this.reglagesManquants(societe, 'modele', qui);
     if (manquants.length) {
-      throw new UnprocessableEntityException(
-        `À renseigner dans Paramètres → Contrats : ${manquants.join(', ')}.`,
-      );
+      throw new UnprocessableEntityException(`À renseigner dans Paramètres → Contrats : ${manquants.join(', ')}.`);
     }
     const signataire = signataireDe(societe, qui)!;
     await this.prisma.contrat.update({
@@ -444,7 +453,10 @@ export class ContratsService {
   ): string[] {
     const manquants: string[] = [];
     const titre = qui === 'ceo' ? 'du signataire au-delà du seuil (CEO)' : 'du signataire (Architecte DPLG)';
-    const [nom, fonction] = qui === 'ceo' ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction] : [s.contratSignataireNom, s.contratSignataireFonction];
+    const [nom, fonction] =
+      qui === 'ceo'
+        ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction]
+        : [s.contratSignataireNom, s.contratSignataireFonction];
     if (!nom) manquants.push(`nom ${titre}`);
     if (!fonction) manquants.push(`fonction ${titre}`);
     if (mode === 'modele' && !s.contratModele?.trim()) manquants.push('modèle de contrat');
@@ -456,7 +468,13 @@ export class ContratsService {
     x: {
       societe: string;
       dossier: { code: string; programme: string; localisation: string; client: { nom: string } };
-      offre: { numero: number | null; dateEnvoi: Date | null; codeDossier: string | null; rangDossier: number | null; lignes: { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[] };
+      offre: {
+        numero: number | null;
+        dateEnvoi: Date | null;
+        codeDossier: string | null;
+        rangDossier: number | null;
+        lignes: { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[];
+      };
       montantHt: number;
       signataire: { nom: string; fonction: string };
     },

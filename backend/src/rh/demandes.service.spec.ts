@@ -11,12 +11,28 @@ const NOTIFS = {
 } as unknown as NotificationsService;
 
 const DEMANDE = {
-  id: 'D1', dossierId: 'DOS1', type: 'conge_paye', dateDebut: '2026-10-05', dateFin: '2026-10-09', jours: 5,
-  statut: 'attente_n1', n1CollaborateurId: 'CHEF', n1Role: null, justificatifCle: null,
+  id: 'D1',
+  dossierId: 'DOS1',
+  type: 'conge_paye',
+  dateDebut: '2026-10-05',
+  dateFin: '2026-10-09',
+  jours: 5,
+  statut: 'attente_n1',
+  n1CollaborateurId: 'CHEF',
+  n1Role: null,
+  justificatifCle: null,
 };
-const TACHE = { id: 'T1', libelle: 'Plans APS', finLe: '2026-10-06', carte: { libelle: 'Livrables' }, projet: { code: 'PRJ.26' } };
+const TACHE = {
+  id: 'T1',
+  libelle: 'Plans APS',
+  finLe: '2026-10-06',
+  carte: { libelle: 'Livrables' },
+  projet: { code: 'PRJ.26' },
+};
 
-function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?: object | null; demandeurRh?: boolean } = {}) {
+function svc(
+  o: { demande?: object; moiCollab?: string; taches?: object[]; moi?: object | null; demandeurRh?: boolean } = {},
+) {
   const update = jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...o.demande, ...data }));
   const majTache = jest.fn().mockReturnValue('majTache');
   const prisma = {
@@ -27,29 +43,55 @@ function svc(o: { demande?: object; moiCollab?: string; taches?: object[]; moi?:
       create: jest.fn().mockImplementation(({ data }) => ({ ...DEMANDE, ...data })),
     },
     collaborateur: {
-      findFirst: jest.fn().mockResolvedValue(o.moiCollab === undefined ? { id: 'CHEF' } : o.moiCollab ? { id: o.moiCollab } : null),
-      findMany: jest.fn().mockResolvedValue([{ id: 'X1', prenom: 'Awa', nom: 'Diop' }, { id: 'X2', prenom: 'Modou', nom: 'Sy' }, { id: 'COLLAB', prenom: 'Pape', nom: 'Sy' }]),
+      findFirst: jest
+        .fn()
+        .mockResolvedValue(o.moiCollab === undefined ? { id: 'CHEF' } : o.moiCollab ? { id: o.moiCollab } : null),
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'X1', prenom: 'Awa', nom: 'Diop' },
+        { id: 'X2', prenom: 'Modou', nom: 'Sy' },
+        { id: 'COLLAB', prenom: 'Pape', nom: 'Sy' },
+      ]),
     },
     dossierPersonnel: {
-      findUnique: jest.fn().mockResolvedValue({ societeId: 'S', collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }),
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ societeId: 'S', collaborateur: { id: 'COLLAB', celluleId: 'CEL', societeId: 'S' } }),
       findFirst: jest.fn().mockResolvedValue(o.moi === undefined ? { id: 'DOS1', collaborateur: null } : o.moi),
-      findUniqueOrThrow: jest.fn().mockResolvedValue({ societeId: 'S', prenom: 'Awa', nom: 'Diop', utilisateurId: 'UA', collaborateur: null }),
+      findUniqueOrThrow: jest
+        .fn()
+        .mockResolvedValue({ societeId: 'S', prenom: 'Awa', nom: 'Diop', utilisateurId: 'UA', collaborateur: null }),
       // Demandeur RH ? (validation finale par le CEO) — non par défaut.
       count: jest.fn().mockResolvedValue(o.demandeurRh ? 1 : 0),
       findMany: jest.fn().mockResolvedValue(o.demandeurRh ? [{ id: 'DOS1' }] : []),
     },
     tacheProjet: { findMany: jest.fn().mockResolvedValue(o.taches ?? [TACHE]), update: majTache },
     evenementTacheProjet: { create: jest.fn().mockReturnValue('evt') },
-    $transaction: jest.fn().mockImplementation((ops: unknown[]) => Promise.resolve(ops.map(() => ({ ...DEMANDE, statut: 'accord_n1' })))),
+    $transaction: jest
+      .fn()
+      .mockImplementation((ops: unknown[]) => Promise.resolve(ops.map(() => ({ ...DEMANDE, statut: 'accord_n1' })))),
   } as unknown as PrismaService;
-  return { s: new DemandesService(prisma, { joursFeries: jest.fn().mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))) } as unknown as ReglagesService, NOTIFS), update, majTache };
+  return {
+    s: new DemandesService(
+      prisma,
+      {
+        joursFeries: jest
+          .fn()
+          .mockImplementation((ids: string[]) => Promise.resolve(new Map(ids.map((i) => [i, new Set<string>()])))),
+      } as unknown as ReglagesService,
+      NOTIFS,
+    ),
+    update,
+    majTache,
+  };
 }
 const CHEF = { userId: 'U', societeId: 'S', role: 'Salarié' };
 const CLE = 'tache:T1';
 
 describe('DemandesService.decider (N+1)', () => {
   it('refuse si l’appelant n’est pas le N+1', async () => {
-    await expect(svc({ moiCollab: 'AUTRE' }).s.decider(CHEF, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ForbiddenException);
+    await expect(
+      svc({ moiCollab: 'AUTRE' }).s.decider(CHEF, 'D1', { decision: 'refuser', motif: 'periode_critique' }),
+    ).rejects.toThrow(ForbiddenException);
   });
   it('refus : motif obligatoire, commentaire obligatoire si « autre »', async () => {
     const { s } = svc();
@@ -57,7 +99,9 @@ describe('DemandesService.decider (N+1)', () => {
     await expect(s.decider(CHEF, 'D1', { decision: 'refuser', motif: 'autre' })).rejects.toThrow('Autre');
   });
   it('valider : une tâche due pendant l’absence non confiée bloque', async () => {
-    await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [] })).rejects.toThrow('Tâche à confier');
+    await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [] })).rejects.toThrow(
+      'Tâche à confier',
+    );
   });
   it('valider : tâche confiée à quelqu’un d’autre → réassignée, accord N+1', async () => {
     const { s, majTache } = svc();
@@ -72,7 +116,9 @@ describe('DemandesService.decider (N+1)', () => {
     expect(types).toEqual(['absence_decidee', 'absence_a_decider', 'tache_assignee']);
   });
   it('on ne confie pas un livrable au demandeur lui-même', async () => {
-    await expect(svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'COLLAB' }] })).rejects.toThrow(BadRequestException);
+    await expect(
+      svc().s.decider(CHEF, 'D1', { decision: 'valider', delegations: [{ livrable: CLE, collaborateurId: 'COLLAB' }] }),
+    ).rejects.toThrow(BadRequestException);
   });
   it('sous conditions : tâche non délégable gardée par le salarié, date inchangée', async () => {
     const { s, majTache, update } = svc();
@@ -81,25 +127,39 @@ describe('DemandesService.decider (N+1)', () => {
     expect(update.mock.calls[0][0].data.traitementLivrables).toEqual([{ livrable: CLE, action: 'conserve' }]);
   });
   it('autres dates : période valide exigée', async () => {
-    await expect(svc().s.decider(CHEF, 'D1', { decision: 'autres_dates', dateDebut: '2026-10-10', dateFin: '2026-10-01' })).rejects.toThrow(BadRequestException);
+    await expect(
+      svc().s.decider(CHEF, 'D1', { decision: 'autres_dates', dateDebut: '2026-10-10', dateFin: '2026-10-01' }),
+    ).rejects.toThrow(BadRequestException);
   });
   it('demande déjà tranchée → 409', async () => {
-    await expect(svc({ demande: { statut: 'validee' } }).s.decider(CHEF, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ConflictException);
+    await expect(
+      svc({ demande: { statut: 'validee' } }).s.decider(CHEF, 'D1', { decision: 'refuser', motif: 'periode_critique' }),
+    ).rejects.toThrow(ConflictException);
   });
   it('N+1 « Dir. GC » : accepté pour le rôle Dir. GC, refusé pour un autre rôle', async () => {
     const dir = svc({ demande: { n1CollaborateurId: null, n1Role: 'Dir. GC' } });
-    await expect(dir.s.decider({ ...CHEF, role: 'COO' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ForbiddenException);
-    await expect(dir.s.decider({ ...CHEF, role: 'Dir. GC' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).resolves.toBeDefined();
+    await expect(
+      dir.s.decider({ ...CHEF, role: 'COO' }, 'D1', { decision: 'refuser', motif: 'periode_critique' }),
+    ).rejects.toThrow(ForbiddenException);
+    await expect(
+      dir.s.decider({ ...CHEF, role: 'Dir. GC' }, 'D1', { decision: 'refuser', motif: 'periode_critique' }),
+    ).resolves.toBeDefined();
   });
   it("N+1 « Dir. GC » : la Dir. GC d'une autre société du groupe ne décide pas", async () => {
     const dir = svc({ demande: { n1CollaborateurId: null, n1Role: 'Dir. GC' } });
-    await expect(dir.s.decider({ ...CHEF, societeId: 'AUTRE', role: 'Dir. GC' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ForbiddenException);
+    await expect(
+      dir.s.decider({ ...CHEF, societeId: 'AUTRE', role: 'Dir. GC' }, 'D1', {
+        decision: 'refuser',
+        motif: 'periode_critique',
+      }),
+    ).rejects.toThrow(ForbiddenException);
   });
 });
 
 describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   const CONGE = { type: 'conge_paye' as const, dateDebut: '2026-10-05', dateFin: '2026-10-09' };
-  const deposer = (role: string, moi?: object | null) => svc({ moi }).s.deposerAbsence({ userId: 'U', societeId: 'S', role }, CONGE);
+  const deposer = (role: string, moi?: object | null) =>
+    svc({ moi }).s.deposerAbsence({ userId: 'U', societeId: 'S', role }, CONGE);
   it('Salarié : chef de sa cellule, sinon Dir. GC', async () => {
     const membre = { id: 'DOS1', collaborateur: { id: 'C1', cellule: { id: 'CEL', dispatcherId: 'CHEF' } } };
     await expect(deposer('Salarié', membre)).resolves.toMatchObject({ n1CollaborateurId: 'CHEF' });
@@ -116,11 +176,17 @@ describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   it('personne ne décide de sa propre demande ; demande de la RH : validation finale par le CEO', async () => {
     // Le demandeur (compte UA) ne valide ni comme RH ni comme CEO.
     const propre = svc({ demande: { statut: 'accord_n1' } });
-    await expect(propre.s.validationRh({ userId: 'UA', societeId: 'S', role: 'RH' }, 'D1', true)).rejects.toThrow(ForbiddenException);
+    await expect(propre.s.validationRh({ userId: 'UA', societeId: 'S', role: 'RH' }, 'D1', true)).rejects.toThrow(
+      ForbiddenException,
+    );
     const rh = svc({ demande: { statut: 'accord_n1' }, demandeurRh: true });
     await expect(rh.s.validationRh({ userId: 'URH', societeId: 'S', role: 'RH' }, 'D1', true)).rejects.toThrow(/CEO/);
-    await expect(rh.s.validationFinaleCeo({ userId: 'UCEO', societeId: 'S', role: 'CFO' }, 'D1', true)).rejects.toThrow(ForbiddenException);
-    await expect(rh.s.validationFinaleCeo({ userId: 'UCEO', societeId: 'S', role: 'CEO (transverse)' }, 'D1', true)).resolves.toMatchObject({ statut: 'validee' });
+    await expect(rh.s.validationFinaleCeo({ userId: 'UCEO', societeId: 'S', role: 'CFO' }, 'D1', true)).rejects.toThrow(
+      ForbiddenException,
+    );
+    await expect(
+      rh.s.validationFinaleCeo({ userId: 'UCEO', societeId: 'S', role: 'CEO (transverse)' }, 'D1', true),
+    ).resolves.toMatchObject({ statut: 'validee' });
   });
   it('directeurs (COO, CFO, CTO, CIO) → CEO ; le CEO va directement à la RH', async () => {
     for (const role of ['COO', 'CFO', 'CTO (transverse)', 'CIO (transverse)']) {
@@ -130,22 +196,35 @@ describe('DemandesService.deposerAbsence (N+1 selon le compte)', () => {
   });
   it('N+1 « CEO » : le CEO décide pour un directeur', async () => {
     const ceo = svc({ demande: { n1CollaborateurId: null, n1Role: 'CEO (transverse)' } });
-    await expect(ceo.s.decider({ ...CHEF, role: 'CTO (transverse)' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).rejects.toThrow(ForbiddenException);
-    await expect(ceo.s.decider({ ...CHEF, role: 'CEO (transverse)' }, 'D1', { decision: 'refuser', motif: 'periode_critique' })).resolves.toBeDefined();
+    await expect(
+      ceo.s.decider({ ...CHEF, role: 'CTO (transverse)' }, 'D1', { decision: 'refuser', motif: 'periode_critique' }),
+    ).rejects.toThrow(ForbiddenException);
+    await expect(
+      ceo.s.decider({ ...CHEF, role: 'CEO (transverse)' }, 'D1', { decision: 'refuser', motif: 'periode_critique' }),
+    ).resolves.toBeDefined();
   });
   it('compte sans dossier du personnel → 404', async () => {
     await expect(deposer('collaborateur', null)).rejects.toThrow('Aucun dossier');
   });
   it('maquette : motif facultatif pour un congé payé, requis sinon', async () => {
     const maladie = { type: 'maladie' as const, dateDebut: '2026-10-05', dateFin: '2026-10-06' };
-    await expect(svc().s.deposerAbsence({ userId: 'U', societeId: 'S', role: 'Salarié' }, maladie)).rejects.toThrow('motif est requis');
+    await expect(svc().s.deposerAbsence({ userId: 'U', societeId: 'S', role: 'Salarié' }, maladie)).rejects.toThrow(
+      'motif est requis',
+    );
   });
 });
 
 describe('DemandesService.deposerRemboursement', () => {
   it('maquette : facture et ordonnance obligatoires', async () => {
-    const corps = { categorie: 'consultation' as const, beneficiaire: 'moi' as const, dateSoins: '2026-09-28', montant: 25_000 };
-    await expect(svc().s.deposerRemboursement({ userId: 'U', societeId: 'S', role: 'Salarié' }, corps)).rejects.toThrow('facture');
+    const corps = {
+      categorie: 'consultation' as const,
+      beneficiaire: 'moi' as const,
+      dateSoins: '2026-09-28',
+      montant: 25_000,
+    };
+    await expect(svc().s.deposerRemboursement({ userId: 'U', societeId: 'S', role: 'Salarié' }, corps)).rejects.toThrow(
+      'facture',
+    );
   });
 });
 
@@ -154,6 +233,8 @@ describe('DemandesService.validationRh', () => {
     await expect(svc().s.validationRh(CHEF, 'D1', true)).rejects.toThrow(ConflictException);
   });
   it('refus RH : motif obligatoire', async () => {
-    await expect(svc({ demande: { statut: 'accord_n1' } }).s.validationRh(CHEF, 'D1', false)).rejects.toThrow(BadRequestException);
+    await expect(svc({ demande: { statut: 'accord_n1' } }).s.validationRh(CHEF, 'D1', false)).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });

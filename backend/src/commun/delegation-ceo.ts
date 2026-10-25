@@ -11,7 +11,11 @@ export const ROLES_DELEGATAIRES: ReadonlySet<string> = new Set(['CTO (transverse
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 // Compte du délégataire en fonction ce jour-là, ou null.
-export async function delegataireCeo(prisma: PrismaService, societeId: string, jour = aujourdhui()): Promise<string | null> {
+export async function delegataireCeo(
+  prisma: PrismaService,
+  societeId: string,
+  jour = aujourdhui(),
+): Promise<string | null> {
   const d = await prisma.delegationCeo.findFirst({
     where: { societeId, revoqueLe: null, du: { lte: jour }, au: { gte: jour } },
     orderBy: { createdAt: 'desc' },
@@ -21,7 +25,10 @@ export async function delegataireCeo(prisma: PrismaService, societeId: string, j
 }
 
 // Le CEO, ou le délégataire en fonction.
-export async function agitPourCeo(prisma: PrismaService, acteur: { userId: string; societeId: string; role: string }): Promise<boolean> {
+export async function agitPourCeo(
+  prisma: PrismaService,
+  acteur: { userId: string; societeId: string; role: string },
+): Promise<boolean> {
   if (acteur.role === ROLE_CEO) return true;
   if (!ROLES_DELEGATAIRES.has(acteur.role)) return false;
   return (await delegataireCeo(prisma, acteur.societeId)) === acteur.userId;
@@ -29,7 +36,12 @@ export async function agitPourCeo(prisma: PrismaService, acteur: { userId: strin
 
 // Destinataires d'une décision du CEO : ses titulaires, plus le délégataire
 // en fonction — sauf s'il est lui-même le demandeur.
-export async function avecDelegataire(prisma: PrismaService, societeId: string, ceo: string[], demandeurId?: string | null): Promise<string[]> {
+export async function avecDelegataire(
+  prisma: PrismaService,
+  societeId: string,
+  ceo: string[],
+  demandeurId?: string | null,
+): Promise<string[]> {
   const d = await delegataireCeo(prisma, societeId);
   return d && d !== demandeurId && !ceo.includes(d) ? [...ceo, d] : ceo;
 }

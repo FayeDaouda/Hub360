@@ -3,9 +3,7 @@ import { RelanceDevisEmail } from './email.service';
 // Contenu de l'email de relance d'une offre (étape F). Pur (aucune I/O) —
 // même motif que contenu-devis.ts, dont il reprend le lien de réponse en
 // ligne : c'est un NOUVEAU lien (jeton régénéré), l'ancien ne marche plus.
-export function contenuRelanceDevis(
-  r: RelanceDevisEmail,
-): { sujet: string; texte: string; html: string } {
+export function contenuRelanceDevis(r: RelanceDevisEmail): { sujet: string; texte: string; html: string } {
   const marque = process.env.MAIL_MARQUE || 'hub360°';
   const ref = r.reference ?? '';
   const montant = formatMontant(r.montantTtc);
@@ -17,9 +15,7 @@ export function contenuRelanceDevis(
     : `Nous revenons vers vous au sujet du devis ${ref} (${montant} TTC) que nous vous avons transmis : vous pouvez l'accepter ou le refuser directement en ligne.`;
   const pied = `Ce lien remplace le précédent et vous est personnel — ne le transmettez pas. Généré via ${marque}.`;
 
-  const texte = [`Bonjour ${r.clientNom},`, '', intro, '', r.lien, '', pied, '', r.societeNom].join(
-    '\n',
-  );
+  const texte = [`Bonjour ${r.clientNom},`, '', intro, '', r.lien, '', pied, '', r.societeNom].join('\n');
 
   const html = [
     `<p>Bonjour ${echapper(r.clientNom)},</p>`,
@@ -42,9 +38,5 @@ function formatDate(iso: string): string {
 }
 
 function echapper(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

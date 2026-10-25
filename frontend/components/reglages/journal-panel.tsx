@@ -5,7 +5,13 @@ import { ApiError } from '@/lib/client-api';
 import { getJournalReglages, type LigneJournal } from '@/lib/reglages';
 
 const dateHeure = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 // Réglages · Journal (ISO 9001 §7.5.3) : chaque enregistrement, son motif,
 // son auteur et les valeurs modifiées. Jamais modifié ni supprimé.
@@ -39,7 +45,10 @@ export function JournalPanel({ slug, versionInitiale }: { slug: string; versionI
       ) : !lignes ? (
         <div className="skeleton admin-skeleton-panel" aria-hidden />
       ) : lots.length === 0 ? (
-        <p className="dmd-note">Aucune modification depuis la mise en service : le HUB applique les valeurs par défaut du gabarit {versionInitiale}.</p>
+        <p className="dmd-note">
+          Aucune modification depuis la mise en service : le HUB applique les valeurs par défaut du gabarit{' '}
+          {versionInitiale}.
+        </p>
       ) : (
         <ul className="dmd-liste">
           {lots.map((lot) => (

@@ -8,7 +8,13 @@ import { apiSociete } from './client-api';
 export type Acces = 'montants' | 'taux';
 export type Statut = 'vert' | 'ambre' | 'rouge' | null;
 export type EtatDonnees = 'complet' | 'insuffisant' | 'heures_non_suivies';
-export type ParametreEnVigueur = { cle: 'heures_annuelles' | 'coefficient_charges' | 'marge_cible'; libelle: string; unite: string; valeur: number | null; parDefaut: boolean };
+export type ParametreEnVigueur = {
+  cle: 'heures_annuelles' | 'coefficient_charges' | 'marge_cible';
+  libelle: string;
+  unite: string;
+  valeur: number | null;
+  parDefaut: boolean;
+};
 
 export type LigneRentabilite = {
   projet: { id: string; code: string; programme: string; client: string; statut: string; phase: string };
@@ -50,7 +56,18 @@ export type FicheRentabilite = LigneRentabilite & {
   arreteAu: string | null;
   parametres: ParametreEnVigueur[];
   parHeure: { honoraires: number; cout: number } | null;
-  factures: { id: string; reference: string | null; emiseLe: string; estAvoir: boolean; annulee: boolean; libelle: string; ht: number; horsCumul: boolean }[] | null;
+  factures:
+    | {
+        id: string;
+        reference: string | null;
+        emiseLe: string;
+        estAvoir: boolean;
+        annulee: boolean;
+        libelle: string;
+        ht: number;
+        horsCumul: boolean;
+      }[]
+    | null;
   mois: { mois: string; heures: number; cout: number | null; ht: number | null }[];
   salaries: number;
   qualite: string[];
@@ -62,32 +79,52 @@ export type Parametres = {
   peutModifier: boolean;
   premierMois: string; // AAAA-MM-01
   enVigueur: ParametreEnVigueur[];
-  definitions: Record<string, { libelle: string; defaut: number | null; min: number; max: number; unite: string; videPermis: boolean }>;
-  historique: { cle: string; libelle: string; valeur: number | null; dateEffet: string; motif: string; par: string | null; le: string }[];
+  definitions: Record<
+    string,
+    { libelle: string; defaut: number | null; min: number; max: number; unite: string; videPermis: boolean }
+  >;
+  historique: {
+    cle: string;
+    libelle: string;
+    valeur: number | null;
+    dateEffet: string;
+    motif: string;
+    par: string | null;
+    le: string;
+  }[];
 };
 
 const base = '/finances/rentabilite';
-export const getRentabilite = (slug: string, periode?: string) => apiSociete<Portefeuille>(slug, periode ? `${base}?periode=${periode}` : base);
-export const getFicheRentabilite = (slug: string, id: string) => apiSociete<FicheRentabilite>(slug, `${base}/projets/${id}`);
-export const getCoutSalaries = (slug: string, id: string) => apiSociete<CoutSalarie[]>(slug, `${base}/projets/${id}/salaries`);
+export const getRentabilite = (slug: string, periode?: string) =>
+  apiSociete<Portefeuille>(slug, periode ? `${base}?periode=${periode}` : base);
+export const getFicheRentabilite = (slug: string, id: string) =>
+  apiSociete<FicheRentabilite>(slug, `${base}/projets/${id}`);
+export const getCoutSalaries = (slug: string, id: string) =>
+  apiSociete<CoutSalarie[]>(slug, `${base}/projets/${id}/salaries`);
 export const getParametresRentabilite = (slug: string) => apiSociete<Parametres>(slug, `${base}/parametres`);
-export const modifierParametreRentabilite = (slug: string, p: { cle: string; valeur: number | null; dateEffet: string; motif: string }) =>
-  apiSociete<Parametres>(slug, `${base}/parametres`, { method: 'POST', body: p });
-
+export const modifierParametreRentabilite = (
+  slug: string,
+  p: { cle: string; valeur: number | null; dateEffet: string; motif: string },
+) => apiSociete<Parametres>(slug, `${base}/parametres`, { method: 'POST', body: p });
 
 export const LIBELLE_STATUT: Record<'vert' | 'ambre' | 'rouge', string> = {
   vert: 'Au-dessus de la cible',
   ambre: 'Sous la cible',
   rouge: 'Marge négative',
 };
-export const PILL_STATUT: Record<'vert' | 'ambre' | 'rouge', string> = { vert: 'pill--succes', ambre: 'pill--attention', rouge: 'pill--risque' };
+export const PILL_STATUT: Record<'vert' | 'ambre' | 'rouge', string> = {
+  vert: 'pill--succes',
+  ambre: 'pill--attention',
+  rouge: 'pill--risque',
+};
 export const LIBELLE_ETAT: Record<EtatDonnees, string> = {
   complet: 'Complet',
   insuffisant: 'Données insuffisantes',
   heures_non_suivies: 'Heures non suivies',
 };
 
-export const formatTaux = (t: number | null) => (t === null ? 'Non calculable' : `${t.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`);
+export const formatTaux = (t: number | null) =>
+  t === null ? 'Non calculable' : `${t.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
 // Les heures sont stockées par an (valeur exacte) ; le mois est affiché arrondi.
 export const formatParametre = (p: { valeur: number | null; unite: string; cle?: string }) =>
   p.valeur === null
@@ -101,5 +138,10 @@ export const formatParametre = (p: { valeur: number | null; unite: string; cle?:
 // « 30 septembre 2026 » : dernier jour du mois arrêté (AAAA-MM).
 export function finDeMois(mois: string): string {
   const [a, m] = mois.split('-').map(Number);
-  return new Date(Date.UTC(a, m, 0)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return new Date(Date.UTC(a, m, 0)).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }

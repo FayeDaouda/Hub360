@@ -5,8 +5,10 @@ import type { FactureCentrale } from './types';
 // factures de la société (la même que l'onglet Factures).
 
 const JOUR = 86_400_000;
-const ecartJours = (de: string, a: string) => Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR);
-export const ajouterJours = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * JOUR).toISOString().slice(0, 10);
+const ecartJours = (de: string, a: string) =>
+  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR);
+export const ajouterJours = (iso: string, n: number) =>
+  new Date(Date.parse(`${iso}T00:00:00Z`) + n * JOUR).toISOString().slice(0, 10);
 
 // Tranches d'âge, comptées depuis l'ÉCHÉANCE (décision du 20/10/2026 : la
 // pratique ; une facture sans échéance est réputée non échue).
@@ -45,11 +47,16 @@ export function balanceAgee(factures: FactureCentrale[], aujourdhui: string) {
     ligne.montants.total += f.resteAPayer;
     total[tranche] += f.resteAPayer;
     total.total += f.resteAPayer;
-    ligne.creances.push({ facture: f, tranche, retard: f.echeanceLe ? Math.max(0, ecartJours(f.echeanceLe.slice(0, 10), aujourdhui)) : 0 });
+    ligne.creances.push({
+      facture: f,
+      tranche,
+      retard: f.echeanceLe ? Math.max(0, ecartJours(f.echeanceLe.slice(0, 10), aujourdhui)) : 0,
+    });
     parClient.set(client, ligne);
   }
   // Le plus exposé d'abord : le plus vieux retard, puis le montant dû.
-  const poids = (l: LigneBalance) => l.montants.plus90 * 1e6 + l.montants.j90 * 1e4 + l.montants.j60 * 1e2 + l.montants.j30;
+  const poids = (l: LigneBalance) =>
+    l.montants.plus90 * 1e6 + l.montants.j90 * 1e4 + l.montants.j60 * 1e2 + l.montants.j30;
   const lignes = [...parClient.values()]
     .map((l) => ({ ...l, creances: l.creances.sort((a, b) => b.retard - a.retard) }))
     .sort((a, b) => poids(b) - poids(a) || b.montants.total - a.montants.total);
@@ -60,7 +67,15 @@ export function balanceAgee(factures: FactureCentrale[], aujourdhui: string) {
 // factures émises non soldées, à leur échéance ; « prévu » = tranches
 // préparées mais pas encore émises (F1/F2/F3, mensualités), à leur date
 // prévue. Ce qui est déjà en retard est à part ; sans date, « non daté ».
-export type Fenetre = { cle: string; libelle: string; du: string; au: string; sur: number; prevu: number; factures: FactureCentrale[] };
+export type Fenetre = {
+  cle: string;
+  libelle: string;
+  du: string;
+  au: string;
+  sur: number;
+  prevu: number;
+  factures: FactureCentrale[];
+};
 
 const resteTtc = (f: FactureCentrale) => (f.statut === 'brouillon' ? f.montantTtc : f.resteAPayer);
 // Brouillon attendu : une tranche chiffrée (pas une facture directe à valider,

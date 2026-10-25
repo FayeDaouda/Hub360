@@ -10,9 +10,7 @@ export function contenuLienCompte(l: LienCompte): {
   const marque = process.env.MAIL_MARQUE || 'hub360°';
   const invitation = l.type === 'invitation';
 
-  const sujet = invitation
-    ? `Activez votre accès ${marque}`
-    : `Réinitialisation de votre mot de passe ${marque}`;
+  const sujet = invitation ? `Activez votre accès ${marque}` : `Réinitialisation de votre mot de passe ${marque}`;
 
   const intro = invitation
     ? `Un accès ${marque} vient d'être créé pour vous. Cliquez sur le lien ci-dessous pour choisir votre mot de passe et activer votre compte.`
@@ -21,15 +19,7 @@ export function contenuLienCompte(l: LienCompte): {
   const validite = invitation ? '72 heures' : '1 heure';
   const pied = `Ce lien est valable ${validite} et à usage unique. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.`;
 
-  const texte = [
-    `Bonjour ${l.prenom},`,
-    '',
-    intro,
-    '',
-    l.lien,
-    '',
-    pied,
-  ].join('\n');
+  const texte = [`Bonjour ${l.prenom},`, '', intro, '', l.lien, '', pied].join('\n');
 
   const html = [
     `<p>Bonjour ${echapper(l.prenom)},</p>`,
@@ -42,9 +32,5 @@ export function contenuLienCompte(l: LienCompte): {
 }
 
 function echapper(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

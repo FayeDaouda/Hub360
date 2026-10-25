@@ -62,17 +62,15 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    const motDePasseValide = await verifierMotDePasse(
-      dto.motDePasse,
-      utilisateur.motDePasseHash,
-    );
+    const motDePasseValide = await verifierMotDePasse(dto.motDePasse, utilisateur.motDePasseHash);
     if (!motDePasseValide) {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
     const { societe, acces } = await this.acces(utilisateur.id, dto.societeSlug);
     if (utilisateur.totpActifLe) return this.etape('code', utilisateur.id, dto.societeSlug);
-    if (await this.exigePour(utilisateur.id, societe.id, acces.role.nom)) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
+    if (await this.exigePour(utilisateur.id, societe.id, acces.role.nom))
+      return this.etape('enrolement', utilisateur.id, dto.societeSlug);
     return this.ouvrirSession(utilisateur, dto.societeSlug);
   }
 
@@ -89,7 +87,10 @@ export class AuthService {
   // --- Double authentification ---------------------------------------------
 
   private etape(etape: EtapeConnexion['etape'], utilisateurId: string, societeSlug: string): EtapeConnexion {
-    const jeton = this.jwtService.sign({ sub: utilisateurId, slug: societeSlug, but: 'double-facteur' }, { secret: secretEtape(), expiresIn: '10m' });
+    const jeton = this.jwtService.sign(
+      { sub: utilisateurId, slug: societeSlug, but: 'double-facteur' },
+      { secret: secretEtape(), expiresIn: '10m' },
+    );
     return { etape, jeton };
   }
 
@@ -109,7 +110,8 @@ export class AuthService {
   async connexionAvecCode(jeton: string, saisie: string) {
     const { utilisateur, societeSlug } = await this.lireEtape(jeton);
     const secret = utilisateur.totpSecret ? dechiffrerSecret(utilisateur.totpSecret) : null;
-    if (!utilisateur.totpActifLe || !secret) throw new UnauthorizedException('Double authentification indisponible : contactez le CIO.');
+    if (!utilisateur.totpActifLe || !secret)
+      throw new UnauthorizedException('Double authentification indisponible : contactez le CIO.');
     const code = saisie.trim();
     if (/^\d{6}$/.test(code)) {
       const pas = verifierCode(secret, code, utilisateur.totpDernierPas);
@@ -149,7 +151,10 @@ export class AuthService {
   // parcours, la session en cours reste valable.
   async etatDoubleFacteur(utilisateurId: string, societeId: string, role: string) {
     const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpActifLe: true } });
-    return { actifLe: u?.totpActifLe?.toISOString() ?? null, exige: await this.exigePour(utilisateurId, societeId, role) };
+    return {
+      actifLe: u?.totpActifLe?.toISOString() ?? null,
+      exige: await this.exigePour(utilisateurId, societeId, role),
+    };
   }
 
   async preparerDoubleFacteurCompte(utilisateurId: string) {
@@ -164,12 +169,18 @@ export class AuthService {
   private async preparerPour(utilisateur: { id: string; email: string; totpActifLe: Date | null }) {
     if (utilisateur.totpActifLe) throw new ConflictException('Double authentification déjà active.');
     const secret = genererSecret();
-    await this.prisma.utilisateur.update({ where: { id: utilisateur.id }, data: { totpSecret: chiffrerSecret(secret), totpDernierPas: null } });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateur.id },
+      data: { totpSecret: chiffrerSecret(secret), totpDernierPas: null },
+    });
     const lien = lienOtpauth(secret, utilisateur.email);
     return { secret, qr: await QRCode.toDataURL(lien, { margin: 1, width: 220 }) };
   }
 
-  private async activerPour(utilisateur: { id: string; totpActifLe: Date | null; totpSecret: string | null }, code: string) {
+  private async activerPour(
+    utilisateur: { id: string; totpActifLe: Date | null; totpSecret: string | null },
+    code: string,
+  ) {
     if (utilisateur.totpActifLe) throw new ConflictException('Double authentification déjà active.');
     const secret = utilisateur.totpSecret ? dechiffrerSecret(utilisateur.totpSecret) : null;
     if (!secret) throw new BadRequestException('Recommencez l’activation : affichez un nouveau QR code.');
@@ -182,7 +193,12 @@ export class AuthService {
         data: { totpActifLe: new Date(), totpDernierPas: pas, totpCodesSecours: hashes },
       }),
       this.prisma.evenementCompte.create({
-        data: { utilisateurId: utilisateur.id, type: 'double_facteur_active', parId: utilisateur.id, detail: 'Application d’authentification' },
+        data: {
+          utilisateurId: utilisateur.id,
+          type: 'double_facteur_active',
+          parId: utilisateur.id,
+          detail: 'Application d’authentification',
+        },
       }),
     ]);
     return clairs;
@@ -235,8 +251,7 @@ export class AuthService {
       include: { role: { include: { permissions: { include: { module: true } } } } },
     });
     const acces =
-      affectations.find((a) => a.societeId === societe.id) ??
-      affectations.find((a) => a.societeId === null);
+      affectations.find((a) => a.societeId === societe.id) ?? affectations.find((a) => a.societeId === null);
 
     if (!acces) {
       throw new UnauthorizedException("Vous n'avez pas accès à cette société");
@@ -250,10 +265,19 @@ export class AuthService {
   private async tracerSecours(utilisateur: { id: string; email: string }, societe: { id: string; nom: string }) {
     const le = new Date();
     await this.prisma.evenementCompte.create({
-      data: { utilisateurId: utilisateur.id, type: 'connexion_secours', parId: utilisateur.id, detail: `Connexion à ${societe.nom}` },
+      data: {
+        utilisateurId: utilisateur.id,
+        type: 'connexion_secours',
+        parId: utilisateur.id,
+        detail: `Connexion à ${societe.nom}`,
+      },
     });
     const destinataires = await this.prisma.utilisateurSocieteRole.findMany({
-      where: { societeId: societe.id, role: { nom: { in: ['CEO (transverse)', 'CIO (transverse)'] } }, utilisateur: { actif: true } },
+      where: {
+        societeId: societe.id,
+        role: { nom: { in: ['CEO (transverse)', 'CIO (transverse)'] } },
+        utilisateur: { actif: true },
+      },
       select: { utilisateurId: true },
     });
     await this.notifications.envoyer({

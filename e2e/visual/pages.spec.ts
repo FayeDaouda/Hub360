@@ -1,5 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_PATH, COMPANY_SLUG, cspViolations, installCaptureGuards, installSeedNoiseFilter, readFixtures, resetHorizontalScroll, storageStateOf, THEMES, useTheme, waitForContent, type Role } from '../support/reference';
+import {
+  ADMIN_PATH,
+  COMPANY_SLUG,
+  cspViolations,
+  installCaptureGuards,
+  installSeedNoiseFilter,
+  readFixtures,
+  resetHorizontalScroll,
+  storageStateOf,
+  THEMES,
+  useTheme,
+  waitForContent,
+  type Role,
+} from '../support/reference';
 
 // Visual reference of every screen, per role, theme and viewport (the two
 // viewports are two Playwright projects). Each top-level tab of a page is
@@ -32,7 +45,9 @@ const SCREENS_BY_ROLE: Record<Exclude<Role, 'cfo'>, Screen[]> = {
     { name: 'projets-production', path: `${ADMIN_PATH}/projets?vue=production`, tabs: true },
     { name: 'projet-ouvert', path: `${ADMIN_PATH}/projets?projet=${fixtures.openedProjectId}`, tabs: true },
     { name: 'finances', path: `${ADMIN_PATH}/facturation`, tabs: true },
-    ...(fixtures.invoicedProjectId ? [{ name: 'finances-projet', path: `${ADMIN_PATH}/facturation/projets/${fixtures.invoicedProjectId}` }] : []),
+    ...(fixtures.invoicedProjectId
+      ? [{ name: 'finances-projet', path: `${ADMIN_PATH}/facturation/projets/${fixtures.invoicedProjectId}` }]
+      : []),
     { name: 'rh', path: `${ADMIN_PATH}/rh`, tabs: true },
     { name: 'equipe', path: `${ADMIN_PATH}/equipe`, tabs: true },
     { name: 'mon-espace', path: `${ADMIN_PATH}/mon-espace`, tabs: true },

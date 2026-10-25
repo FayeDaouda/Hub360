@@ -35,11 +35,7 @@ export function RolesPanel({ slug }: { slug: string }) {
       })
       .catch((e) => {
         if (!annule) {
-          setErreur(
-            e instanceof ApiError
-              ? e.message
-              : 'Impossible de charger les rôles — le serveur ne répond pas.',
-          );
+          setErreur(e instanceof ApiError ? e.message : 'Impossible de charger les rôles — le serveur ne répond pas.');
         }
       });
     return () => {
@@ -61,7 +57,14 @@ export function RolesPanel({ slug }: { slug: string }) {
     setInfo(null);
     const revenir = () =>
       setMatrice((m) =>
-        m ? { ...m, roles: m.roles.map((r) => (r.id === roleId ? { ...r, permissions: { ...r.permissions, [moduleCle]: precedent } } : r)) } : m,
+        m
+          ? {
+              ...m,
+              roles: m.roles.map((r) =>
+                r.id === roleId ? { ...r, permissions: { ...r.permissions, [moduleCle]: precedent } } : r,
+              ),
+            }
+          : m,
       );
     try {
       const r = await majPermissionRole(slug, roleId, moduleCle, niveau);
@@ -75,9 +78,7 @@ export function RolesPanel({ slug }: { slug: string }) {
           ? {
               ...m,
               roles: m.roles.map((r) =>
-                r.id === roleId
-                  ? { ...r, permissions: { ...r.permissions, [moduleCle]: precedent } }
-                  : r,
+                r.id === roleId ? { ...r, permissions: { ...r.permissions, [moduleCle]: precedent } } : r,
               ),
             }
           : m,
@@ -92,11 +93,7 @@ export function RolesPanel({ slug }: { slug: string }) {
     return (
       <div className="dash-erreur" role="alert">
         <p>{erreur}</p>
-        <button
-          type="button"
-          className="btn-ghost btn-ghost--sm"
-          onClick={() => setEssai((n) => n + 1)}
-        >
+        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setEssai((n) => n + 1)}>
           <RefreshCw size={15} aria-hidden />
           <span>Réessayer</span>
         </button>
@@ -149,9 +146,7 @@ export function RolesPanel({ slug }: { slug: string }) {
                   if (!role.modifiable) {
                     return (
                       <td data-label={m.nom} key={m.cle}>
-                        <span className={`pill pill--${niveau}`}>
-                          {NIVEAUX.find((n) => n.cle === niveau)?.libelle}
-                        </span>
+                        <span className={`pill pill--${niveau}`}>{NIVEAUX.find((n) => n.cle === niveau)?.libelle}</span>
                       </td>
                     );
                   }
@@ -162,9 +157,7 @@ export function RolesPanel({ slug }: { slug: string }) {
                         aria-label={`${role.nom} — ${m.nom}`}
                         value={niveau}
                         disabled={enCours === `${role.id}:${m.cle}`}
-                        onChange={(e) =>
-                          changerNiveau(role.id, m.cle, e.target.value as NiveauPermission)
-                        }
+                        onChange={(e) => changerNiveau(role.id, m.cle, e.target.value as NiveauPermission)}
                       >
                         {NIVEAUX.map((n) => (
                           <option key={n.cle} value={n.cle} className={`statut-select--${n.cle}`}>

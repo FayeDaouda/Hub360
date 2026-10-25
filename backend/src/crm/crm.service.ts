@@ -5,14 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  Categorie,
-  Client,
-  NatureDossier,
-  NiveauPermission,
-  Prisma,
-  TypeBien,
-} from '@prisma/client';
+import { Categorie, Client, NatureDossier, NiveauPermission, Prisma, TypeBien } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
 import { PHASES_PAR_CATEGORIE } from '../projets/domaine/config';
@@ -29,7 +22,13 @@ import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
 import { motifFicheIncomplete } from './fiche';
 import { codeAvecVariante, genererCodeDossier } from './nomenclature';
-import { ErreurFicheProgramme, normaliserFiche, planchesCalculees, resume, type FicheProgramme } from './fiche-programme';
+import {
+  ErreurFicheProgramme,
+  normaliserFiche,
+  planchesCalculees,
+  resume,
+  type FicheProgramme,
+} from './fiche-programme';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
@@ -50,7 +49,11 @@ const INCLUDE_DOSSIER = {
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
   // Dernière transition : celle qui a mené au statut actuel — soumission au
   // CFO (délai de 48 h, tuile « En attente CFO ») ou renvoi par le CFO.
-  transitions: { orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true, de: true, vers: true, commentaire: true } },
+  transitions: {
+    orderBy: { creeLe: 'desc' },
+    take: 1,
+    select: { creeLe: true, de: true, vers: true, commentaire: true },
+  },
 } as const;
 
 // Seul rôle habilité à modifier la fiche apporteur après sa création — pas
@@ -77,14 +80,7 @@ export class CrmService {
     const filtres = !terme
       ? dossiers
       : dossiers.filter((d) =>
-          [
-            d.code,
-            d.localisation,
-            d.localite?.code,
-            d.programme,
-            d.client.nom,
-            d.type,
-          ]
+          [d.code, d.localisation, d.localite?.code, d.programme, d.client.nom, d.type]
             .join(' ')
             .toLowerCase()
             .includes(terme),
@@ -114,11 +110,7 @@ export class CrmService {
       });
       if (!localite) throw new NotFoundException('Localité introuvable');
 
-      const proprietaireId = await this.resoudreProprietaire(
-        tx,
-        societeId,
-        dto.proprietaireId,
-      );
+      const proprietaireId = await this.resoudreProprietaire(tx, societeId, dto.proprietaireId);
       const dossier = await tx.dossierCrm.create({
         data: {
           societeId,
@@ -173,12 +165,7 @@ export class CrmService {
   // collègues), societe_admin et le CIO en supervision — PAS n'importe quel
   // rôle ayant l'écriture sur le CRM (le COO crée des fiches mais ne
   // réassigne pas).
-  async changerProprietaire(
-    societeId: string,
-    acteur: Acteur,
-    id: string,
-    proprietaireId: string,
-  ) {
+  async changerProprietaire(societeId: string, acteur: Acteur, id: string, proprietaireId: string) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
       select: { archiveLe: true },
@@ -203,16 +190,9 @@ export class CrmService {
   // Modifie la fiche apporteur, verrouillée depuis la création : le COO seul
   // (pas même l'administration). Toute étape du cycle, hors lead archivé ;
   // la modification est tracée dans l'historique de la fiche.
-  async modifierApporteur(
-    societeId: string,
-    acteur: Acteur,
-    id: string,
-    dto: ApporteurDto,
-  ) {
+  async modifierApporteur(societeId: string, acteur: Acteur, id: string, dto: ApporteurDto) {
     if (acteur.role !== ROLE_MODIF_APPORTEUR) {
-      throw new ForbiddenException(
-        `Après création, seul le ${ROLE_MODIF_APPORTEUR} peut modifier la fiche apporteur.`,
-      );
+      throw new ForbiddenException(`Après création, seul le ${ROLE_MODIF_APPORTEUR} peut modifier la fiche apporteur.`);
     }
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
@@ -245,12 +225,7 @@ export class CrmService {
   // localité — une seule fois : un dossier déjà rattaché ne se re-rattache pas
   // (son code a pu être généré à partir de cette localité). Le code du
   // dossier et son libellé historique `localisation` restent inchangés.
-  async rattacherLocalite(
-    societeId: string,
-    acteur: Acteur,
-    id: string,
-    localiteId: string,
-  ) {
+  async rattacherLocalite(societeId: string, acteur: Acteur, id: string, localiteId: string) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
       select: { localiteId: true, archiveLe: true },
@@ -364,13 +339,7 @@ export class CrmService {
   // texte obligatoire le cas échéant — puis écriture + ligne de journal dans
   // la même transaction. Le passage à « onboard » est la transaction pivot :
   // il crée le projet d'exécution et sa coquille avant-projet (une seule fois).
-  async agir(
-    societeId: string,
-    acteur: Acteur,
-    id: string,
-    action: ActionCrm,
-    commentaireSaisi: string | undefined,
-  ) {
+  async agir(societeId: string, acteur: Acteur, id: string, action: ActionCrm, commentaireSaisi: string | undefined) {
     const regle = REGLES_ACTIONS[action];
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
@@ -390,20 +359,15 @@ export class CrmService {
       await this.seuilCeo.verifierOffreDossier(acteur, societeId, id);
     }
     if (!regle.de.includes(dossier.statut)) {
-      throw new ConflictException(
-        `Action « ${action} » impossible depuis le statut « ${dossier.statut} ».`,
-      );
+      throw new ConflictException(`Action « ${action} » impossible depuis le statut « ${dossier.statut} ».`);
     }
     // La fiche se verrouille à la soumission : incomplète, elle le resterait.
-    const incomplete =
-      action === 'soumettre' && motifFicheIncomplete(dossier, 'avant de la soumettre au CFO');
+    const incomplete = action === 'soumettre' && motifFicheIncomplete(dossier, 'avant de la soumettre au CFO');
     if (incomplete) throw new ConflictException(incomplete);
     // Étape G : l'Onboard n'est plus un clic — c'est la SIGNATURE du contrat
     // qui le déclenche (onboarderParContrat), un seul chemin vers cet état.
     if (action === 'onboarder') {
-      throw new ConflictException(
-        'L’Onboard se fait à la signature du contrat (bloc « Contrat » de la fiche).',
-      );
+      throw new ConflictException('L’Onboard se fait à la signature du contrat (bloc « Contrat » de la fiche).');
     }
     const commentaire = commentaireSaisi?.trim() || null;
     if (regle.commentaireObligatoire && !commentaire) {
@@ -440,7 +404,12 @@ export class CrmService {
         where: { id },
         include: INCLUDE_DOSSIER,
       });
-      await this.notifications.notifierDossierCrm({ societeId, dossierId: id, evenement: 'offre_envoyee', parId: acteur.userId });
+      await this.notifications.notifierDossierCrm({
+        societeId,
+        dossierId: id,
+        evenement: 'offre_envoyee',
+        parId: acteur.userId,
+      });
       return {
         projet: versDossierCrm(d, opts),
         projetCree: null,
@@ -479,7 +448,12 @@ export class CrmService {
           type: 'dossier_soumis',
           titre: `${dossierMaj.code} · ${dossierMaj.programme} — offre de ${Math.round(montant).toLocaleString('fr-FR')} FCFA TTC à contresigner (au-delà du seuil)`,
           // Le délégataire du CEO en fonction aussi (revue CEO).
-          destinataireIds: await avecDelegataire(this.prisma, societeId, await this.notifications.titulairesRole(societeId, ROLE_CEO), acteur.userId),
+          destinataireIds: await avecDelegataire(
+            this.prisma,
+            societeId,
+            await this.notifications.titulairesRole(societeId, ROLE_CEO),
+            acteur.userId,
+          ),
           parId: acteur.userId,
           dossierCrmId: id,
         });
@@ -693,10 +667,7 @@ export class CrmService {
     };
   }
 
-  private titulairesProprietaire(
-    tx: Prisma.TransactionClient,
-    societeId: string,
-  ) {
+  private titulairesProprietaire(tx: Prisma.TransactionClient, societeId: string) {
     return tx.utilisateur.findMany({
       where: {
         actif: true,
@@ -724,9 +695,7 @@ export class CrmService {
     const titulaires = await this.titulairesProprietaire(tx, societeId);
     if (choisi) {
       if (!titulaires.some((u) => u.id === choisi)) {
-        throw new BadRequestException(
-          `Le propriétaire doit être titulaire du rôle ${ROLE_PROPRIETAIRE_DOSSIER}.`,
-        );
+        throw new BadRequestException(`Le propriétaire doit être titulaire du rôle ${ROLE_PROPRIETAIRE_DOSSIER}.`);
       }
       return choisi;
     }
@@ -761,9 +730,7 @@ export class CrmService {
   ): Promise<string> {
     const base = genererCodeDossier(client, codeLocalite);
     if (!base) {
-      throw new BadRequestException(
-        'Impossible de générer le code : nom du client manquant.',
-      );
+      throw new BadRequestException('Impossible de générer le code : nom du client manquant.');
     }
     const pris = new Set(
       (

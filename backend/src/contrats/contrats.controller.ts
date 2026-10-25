@@ -5,12 +5,7 @@ import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
 import { ContratsService } from './contrats.service';
-import {
-  AnnexeGabaritDto,
-  FichierContratDto,
-  MajAnnexeContratDto,
-  ParametresContratDto,
-} from './dto';
+import { AnnexeGabaritDto, FichierContratDto, MajAnnexeContratDto, ParametresContratDto } from './dto';
 
 type R = { user: { societeId: string; userId: string } };
 

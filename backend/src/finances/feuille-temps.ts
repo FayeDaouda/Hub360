@@ -7,7 +7,8 @@ import { arrondi, heuresTache, joursAbsents, joursTache, type Feries, type Perio
 // (prévu = bon pour accord + délai figé dans l'offre) et temps imputé
 // (tâches assignées du gabarit, calcul RH). Dates AAAA-MM-JJ.
 
-export const jours = (de: string, a: string) => Math.round((Date.parse(a.slice(0, 10)) - Date.parse(de.slice(0, 10))) / 86_400_000);
+export const jours = (de: string, a: string) =>
+  Math.round((Date.parse(a.slice(0, 10)) - Date.parse(de.slice(0, 10))) / 86_400_000);
 
 // --- Temps sur le pipe -------------------------------------------------------------
 export type CleEtape = 'lead' | 'soumission' | 'envoi' | 'accord' | 'facture' | 'encaissement';
@@ -18,9 +19,19 @@ const ETAPES: { cle: CleEtape; libelle: string; cible: string | null; seuil: num
   { cle: 'lead', libelle: 'Lead créé', cible: null, seuil: null },
   { cle: 'soumission', libelle: 'Offre soumise au CFO', cible: 'cible ≤ 5 j', seuil: 5 },
   { cle: 'envoi', libelle: 'Offre validée et envoyée', cible: 'cible ≤ 2 j (CFO)', seuil: 2 },
-  { cle: 'accord', libelle: 'Bon pour accord signé', cible: `validité ${VALIDITE_OFFRE_JOURS} j`, seuil: VALIDITE_OFFRE_JOURS },
+  {
+    cle: 'accord',
+    libelle: 'Bon pour accord signé',
+    cible: `validité ${VALIDITE_OFFRE_JOURS} j`,
+    seuil: VALIDITE_OFFRE_JOURS,
+  },
   { cle: 'facture', libelle: '1re facture émise', cible: 'cible ≤ 2 j', seuil: 2 },
-  { cle: 'encaissement', libelle: '1er encaissement', cible: `échéance ${DELAI_PAIEMENT_DIRECTE_JOURS} j`, seuil: DELAI_PAIEMENT_DIRECTE_JOURS },
+  {
+    cle: 'encaissement',
+    libelle: '1er encaissement',
+    cible: `échéance ${DELAI_PAIEMENT_DIRECTE_JOURS} j`,
+    seuil: DELAI_PAIEMENT_DIRECTE_JOURS,
+  },
 ];
 
 export type EtapePipe = {
@@ -38,7 +49,14 @@ export function tempsPipe(dates: Record<CleEtape, string | null>): EtapePipe[] {
     const date = dates[e.cle]?.slice(0, 10) ?? null;
     const ecartJours = date && precedente ? jours(precedente, date) : null;
     if (date) precedente = date;
-    return { cle: e.cle, libelle: e.libelle, date, ecartJours, cible: e.cible, horsCible: ecartJours != null && e.seuil != null && ecartJours > e.seuil };
+    return {
+      cle: e.cle,
+      libelle: e.libelle,
+      date,
+      ecartJours,
+      cible: e.cible,
+      horsCible: ecartJours != null && e.seuil != null && ecartJours > e.seuil,
+    };
   });
 }
 

@@ -101,11 +101,7 @@ export function demarrerSynchroTheme(): () => void {
 // Côté serveur (et pendant l'hydratation) : la préférence par défaut —
 // React bascule ensuite sur la vraie valeur sans erreur d'hydratation.
 export function usePreferenceTheme() {
-  const preference = useSyncExternalStore(
-    sAbonner,
-    lirePreferenceTheme,
-    () => PREFERENCE_PAR_DEFAUT,
-  );
+  const preference = useSyncExternalStore(sAbonner, lirePreferenceTheme, () => PREFERENCE_PAR_DEFAUT);
   const theme = useSyncExternalStore(sAbonner, lireThemeAffiche, () => 'dark' as const);
   const choisir = useCallback((suivante: PreferenceTheme) => definirPreferenceTheme(suivante), []);
   return { preference, theme, choisir };

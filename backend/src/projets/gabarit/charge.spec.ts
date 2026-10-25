@@ -6,7 +6,12 @@ const TACHE = { id: 'T', debut: P.debut, echeance: P.fin, heures: 8 };
 
 describe('chargeSurPeriode', () => {
   it('libre : seule la tâche à assigner compte', () => {
-    expect(chargeSurPeriode(P, [], TACHE, [])).toEqual({ disponibles: 40, assignees: 0, joursAbsence: 0, pourcentage: 20 });
+    expect(chargeSurPeriode(P, [], TACHE, [])).toEqual({
+      disponibles: 40,
+      assignees: 0,
+      joursAbsence: 0,
+      pourcentage: 20,
+    });
   });
 
   it('une autre tâche à cheval ne compte que pour sa part dans la période', () => {

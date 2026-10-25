@@ -1,10 +1,30 @@
-import { Body, Controller, Get, HttpCode, Param, ParseEnumPipe, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseEnumPipe,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { TypeReporting } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { ArbitrerDecisionDto, CommentaireSyntheseDto, DelegationDto, DeposerReportingDto, MessageReportingDto, SaisirDecisionDto } from './dto';
+import {
+  ArbitrerDecisionDto,
+  CommentaireSyntheseDto,
+  DelegationDto,
+  DeposerReportingDto,
+  MessageReportingDto,
+  SaisirDecisionDto,
+} from './dto';
 import { SyntheseService } from './synthese.service';
 import { DelegationService } from './delegation.service';
 import { SuiviReportingService } from './suivi-reporting.service';
@@ -100,7 +120,11 @@ export class PilotageController {
 
   @Post('reportings/:type/:mois/lecture')
   @HttpCode(200)
-  async lire(@Req() req: R, @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting, @Param('mois') mois: string) {
+  async lire(
+    @Req() req: R,
+    @Param('type', new ParseEnumPipe(TypeReporting)) type: TypeReporting,
+    @Param('mois') mois: string,
+  ) {
     await this.suivi.lire(req.user, type, mois);
     return this.pilotage.vue(req.user);
   }
@@ -132,7 +156,12 @@ export class PilotageController {
 
   // Décisions rattachées à une fiche (?projet= | ?cellule= | ?client=).
   @Get('decisions')
-  decisionsRattachees(@Req() req: R, @Query('projet') projetId?: string, @Query('cellule') celluleId?: string, @Query('client') clientId?: string) {
+  decisionsRattachees(
+    @Req() req: R,
+    @Query('projet') projetId?: string,
+    @Query('cellule') celluleId?: string,
+    @Query('client') clientId?: string,
+  ) {
     return this.pilotage.decisionsRattachees(req.user, { projetId, celluleId, clientId });
   }
 

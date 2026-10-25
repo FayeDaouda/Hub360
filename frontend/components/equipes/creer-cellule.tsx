@@ -39,7 +39,11 @@ export function CreerCellule({ slug, vue, onCreee }: Props) {
       <div className="eq-creer-grille">
         <label>
           <span>Processus</span>
-          <select className="field-input" value={processus} onChange={(e) => setProcessus(e.target.value as ProcessusCellule)}>
+          <select
+            className="field-input"
+            value={processus}
+            onChange={(e) => setProcessus(e.target.value as ProcessusCellule)}
+          >
             {PROCESSUS_CREATION.map((p) => (
               <option key={p} value={p}>
                 {p} · {PROCESSUS[p].libelle}
@@ -53,11 +57,21 @@ export function CreerCellule({ slug, vue, onCreee }: Props) {
         </label>
         <label className="eq-creer-large">
           <span>Nom d’usage</span>
-          <input className="field-input" value={nom} placeholder="ex. Architecture 5 — Clients externes" maxLength={120} onChange={(e) => setNom(e.target.value)} />
+          <input
+            className="field-input"
+            value={nom}
+            placeholder="ex. Architecture 5 — Clients externes"
+            maxLength={120}
+            onChange={(e) => setNom(e.target.value)}
+          />
         </label>
         <label>
           <span>Clientèle</span>
-          <select className="field-input" value={clientele} onChange={(e) => setClientele(e.target.value as ClienteleCellule)}>
+          <select
+            className="field-input"
+            value={clientele}
+            onChange={(e) => setClientele(e.target.value as ClienteleCellule)}
+          >
             {(Object.keys(CLIENTELES) as ClienteleCellule[]).map((c) => (
               <option key={c} value={c}>
                 {CLIENTELES[c]}

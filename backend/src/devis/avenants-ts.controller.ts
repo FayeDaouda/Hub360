@@ -25,7 +25,12 @@ export class AvenantsTsController {
   // par le service.
   @Post(':id/ts/demandes/:demandeId/decision')
   @RequiertPermission('projets', 'lecture')
-  deciderDemande(@Req() req: R, @Param('id') id: string, @Param('demandeId') demandeId: string, @Body() dto: DeciderDemandeTsDto) {
+  deciderDemande(
+    @Req() req: R,
+    @Param('id') id: string,
+    @Param('demandeId') demandeId: string,
+    @Body() dto: DeciderDemandeTsDto,
+  ) {
     return this.avenants.deciderDemande(req.user.societeId, req.user, id, demandeId, dto.accepter, dto.motif);
   }
 }

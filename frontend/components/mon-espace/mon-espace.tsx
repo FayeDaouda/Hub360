@@ -86,7 +86,9 @@ export function MonEspace({ slug }: { slug: string }) {
   const nouveautes = (o: Onglet) => (NOUVEAUTES[o] ?? []).reduce((n, t) => n + (nonLues[t] ?? 0), 0);
 
   // Titre (maquette) : « Mon espace · Prénom Nom » — celui du dossier RH, sinon du compte.
-  const nomAffiche = dossier ? `${dossier.prenom} ${dossier.nom}`.trim() : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
+  const nomAffiche = dossier
+    ? `${dossier.prenom} ${dossier.nom}`.trim()
+    : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
   useTitrePage(dossier === undefined ? 'Mon espace' : `Mon espace · ${nomAffiche}`);
   useEnteteFixe();
 
@@ -142,7 +144,9 @@ export function MonEspace({ slug }: { slug: string }) {
   const nom = dossier?.nom ?? utilisateur.nom;
   const choisir = (cle: Onglet) => router.replace(`${pathname}?onglet=${cle}`, { scroll: false });
   const nouveautesDuBloc = (b: Bloc) =>
-    visibles.filter((o) => o.bloc === b).reduce((n, o) => n + (o.cle === 'a-valider' ? aValider : nouveautes(o.cle)), 0);
+    visibles
+      .filter((o) => o.bloc === b)
+      .reduce((n, o) => n + (o.cle === 'a-valider' ? aValider : nouveautes(o.cle)), 0);
   const choisirBloc = (b: Bloc) => b !== courant.bloc && choisir(visibles.find((o) => o.bloc === b)!.cle);
 
   return (
@@ -203,8 +207,8 @@ export function MonEspace({ slug }: { slug: string }) {
 
       {dossier && !dossier.cellule && EQUIPE_ATTENDUE.has(role) && (
         <p className="mes-bandeau" role="status">
-          Votre dossier est créé par la RH. Vous n’êtes pas encore affecté à une équipe : votre responsable de société le fera depuis
-          la rubrique Équipes. Vos performances apparaîtront dès votre premier livrable assigné.
+          Votre dossier est créé par la RH. Vous n’êtes pas encore affecté à une équipe : votre responsable de société
+          le fera depuis la rubrique Équipes. Vos performances apparaîtront dès votre premier livrable assigné.
         </p>
       )}
 
@@ -247,7 +251,9 @@ function CarteMission({ mission }: { mission: NonNullable<ProfilMonEspace['missi
   return (
     <section className="panel glass-panel pi-fiche">
       <h2>Ma carte de mission</h2>
-      <p className="pi-aide">Rédigée par la RH à votre arrivée ; elle sert de repère jusqu’à la confirmation de votre intégration (90 jours).</p>
+      <p className="pi-aide">
+        Rédigée par la RH à votre arrivée ; elle sert de repère jusqu’à la confirmation de votre intégration (90 jours).
+      </p>
       <dl className="pi-rubriques">
         {rubriques.map(([libelle, valeur]) => (
           <div key={libelle}>

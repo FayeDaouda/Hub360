@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { TypeReporting } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,7 +46,10 @@ export class SuiviReportingService {
   // Accusé de lecture : une ligne par lecteur et par dépôt ; un second clic
   // ne change rien (la première lecture fait foi).
   async lire(a: Acteur, type: TypeReporting, mois: string) {
-    if (this.position(a, type) !== 'destinataire') throw new ForbiddenException(`Seul le destinataire (${REPORTINGS[type].destinataire}) accuse réception de ce reporting.`);
+    if (this.position(a, type) !== 'destinataire')
+      throw new ForbiddenException(
+        `Seul le destinataire (${REPORTINGS[type].destinataire}) accuse réception de ce reporting.`,
+      );
     const d = await this.depot(a, type, mois);
     await this.prisma.lectureReporting.upsert({
       where: { reportingId_lecteurId: { reportingId: d.id, lecteurId: a.userId } },
@@ -50,10 +59,13 @@ export class SuiviReportingService {
   }
 
   async questionner(a: Acteur, type: TypeReporting, mois: string, texte: string) {
-    if (this.position(a, type) !== 'destinataire') throw new ForbiddenException('Seul le destinataire pose une question sur ce reporting.');
+    if (this.position(a, type) !== 'destinataire')
+      throw new ForbiddenException('Seul le destinataire pose une question sur ce reporting.');
     if (texte.trim().length < 3) throw new BadRequestException('La question est vide.');
     const d = await this.depot(a, type, mois);
-    await this.prisma.questionReporting.create({ data: { reportingId: d.id, auteurId: a.userId, texte: texte.trim() } });
+    await this.prisma.questionReporting.create({
+      data: { reportingId: d.id, auteurId: a.userId, texte: texte.trim() },
+    });
     // Le titre ne recopie pas la question : elle se lit dans le reporting.
     await this.notifications.envoyer({
       societeId: a.societeId,
@@ -65,10 +77,14 @@ export class SuiviReportingService {
   }
 
   async repondre(a: Acteur, type: TypeReporting, mois: string, questionId: string, texte: string) {
-    if (this.position(a, type) !== 'emetteur') throw new ForbiddenException('Seul l’émetteur du reporting répond aux questions.');
+    if (this.position(a, type) !== 'emetteur')
+      throw new ForbiddenException('Seul l’émetteur du reporting répond aux questions.');
     if (texte.trim().length < 3) throw new BadRequestException('La réponse est vide.');
     const d = await this.depot(a, type, mois);
-    const q = await this.prisma.questionReporting.findFirst({ where: { id: questionId, reportingId: d.id }, select: { id: true, auteurId: true } });
+    const q = await this.prisma.questionReporting.findFirst({
+      where: { id: questionId, reportingId: d.id },
+      select: { id: true, auteurId: true },
+    });
     if (!q) throw new NotFoundException('Question introuvable.');
     // Conditionné sur « sans réponse » : deux réponses simultanées → une seule.
     const maj = await this.prisma.questionReporting.updateMany({
@@ -94,7 +110,10 @@ export class SuiviReportingService {
       this.prisma.lectureReporting.findMany({ where: { reportingId: { in: ids } }, orderBy: { luLe: 'asc' } }),
       this.prisma.questionReporting.findMany({ where: { reportingId: { in: ids } }, orderBy: { creeLe: 'asc' } }),
     ]);
-    const noms = await this.noms([...lectures.map((l) => l.lecteurId), ...questions.flatMap((q) => [q.auteurId, q.reponduParId])]);
+    const noms = await this.noms([
+      ...lectures.map((l) => l.lecteurId),
+      ...questions.flatMap((q) => [q.auteurId, q.reponduParId]),
+    ]);
     const nom = (id: string | null) => (id ? (noms.get(id) ?? 'compte supprimé') : null);
     return new Map(
       depots.map((d) => {
@@ -151,7 +170,12 @@ export class SuiviReportingService {
 
   private async noms(ids: (string | null)[]) {
     const uniques = [...new Set(ids.filter((x): x is string => !!x))];
-    const u = uniques.length ? await this.prisma.utilisateur.findMany({ where: { id: { in: uniques } }, select: { id: true, prenom: true, nom: true } }) : [];
+    const u = uniques.length
+      ? await this.prisma.utilisateur.findMany({
+          where: { id: { in: uniques } },
+          select: { id: true, prenom: true, nom: true },
+        })
+      : [];
     return new Map(u.map((x) => [x.id, nomDe(x)]));
   }
 }
@@ -160,7 +184,17 @@ export type Suivi = {
   lecture: { le: Date; par: string | null } | null;
   luParMoi: boolean;
   questionsOuvertes: number;
-  fil: { id: string; texte: string; le: Date; par: string | null; reponse: string | null; reponduLe: Date | null; reponduPar: string | null }[] | null;
+  fil:
+    | {
+        id: string;
+        texte: string;
+        le: Date;
+        par: string | null;
+        reponse: string | null;
+        reponduLe: Date | null;
+        reponduPar: string | null;
+      }[]
+    | null;
   peutLire: boolean;
   peutQuestionner: boolean;
   peutRepondre: boolean;

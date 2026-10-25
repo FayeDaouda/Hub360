@@ -7,7 +7,10 @@ type Acteur = { userId: string };
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
-const INCLUDE = { societe: { select: { nom: true } }, pointsIntegration: true } satisfies Prisma.DossierPersonnelInclude;
+const INCLUDE = {
+  societe: { select: { nom: true } },
+  pointsIntegration: true,
+} satisfies Prisma.DossierPersonnelInclude;
 type DossierSuivi = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLUDE }>;
 
 // RH · Intégration des nouveaux arrivants (lot 3) : points J30/J60/J90 puis
@@ -26,7 +29,12 @@ export class IntegrationService {
     return dossiers.filter(enSuivi).map((d) => versIntegration(d, jour));
   }
 
-  async enregistrerPoint(a: Acteur, dossierId: string, jalon: number, corps: { realiseLe: string; compteRendu: string }) {
+  async enregistrerPoint(
+    a: Acteur,
+    dossierId: string,
+    jalon: number,
+    corps: { realiseLe: string; compteRendu: string },
+  ) {
     if (!(JALONS as readonly number[]).includes(jalon)) throw new BadRequestException('Jalon inconnu (30, 60 ou 90).');
     if (!corps.compteRendu.trim()) throw new BadRequestException('Compte rendu obligatoire.');
     if (corps.realiseLe > aujourdhui()) throw new BadRequestException('Un point ne peut pas être daté dans le futur.');

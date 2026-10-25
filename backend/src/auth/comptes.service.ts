@@ -52,11 +52,7 @@ export class ComptesService {
   }
 
   // -- Définir le mot de passe (activation OU reset) ---------------------
-  async definirMotDePasse(
-    token: string,
-    motDePasse: string,
-    contexte: InvitationType,
-  ): Promise<void> {
+  async definirMotDePasse(token: string, motDePasse: string, contexte: InvitationType): Promise<void> {
     const inv = await this.consommer(token, contexte);
     const hash = await hacherMotDePasse(motDePasse);
     await this.prisma.utilisateur.update({
@@ -68,21 +64,12 @@ export class ComptesService {
         sessionsValidesDepuis: new Date(),
       },
     });
-    await this.journal(
-      inv.utilisateurId!,
-      contexte === 'invitation' ? 'compte_active' : 'mdp_reinitialise',
-      null,
-      '',
-    );
+    await this.journal(inv.utilisateurId!, contexte === 'invitation' ? 'compte_active' : 'mdp_reinitialise', null, '');
   }
 
   // -- Internes --------------------------------------------------------
 
-  private async emettreJeton(
-    type: InvitationType,
-    utilisateurId: string,
-    email: string,
-  ): Promise<string> {
+  private async emettreJeton(type: InvitationType, utilisateurId: string, email: string): Promise<string> {
     // Un nouveau jeton invalide les précédents non consommés du même (email, type).
     await this.prisma.invitation.updateMany({
       where: { email, type, usedAt: null },
@@ -127,12 +114,7 @@ export class ComptesService {
     return `${base}${chemin}?token=${clair}`;
   }
 
-  private journal(
-    utilisateurId: string,
-    type: EvenementCompteType,
-    parId: string | null,
-    detail: string,
-  ) {
+  private journal(utilisateurId: string, type: EvenementCompteType, parId: string | null, detail: string) {
     return this.prisma.evenementCompte.create({
       data: { utilisateurId, type, parId, detail },
     });

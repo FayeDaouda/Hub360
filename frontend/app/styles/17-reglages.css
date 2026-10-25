@@ -189,12 +189,24 @@
   font-family: var(--font-mono);
   font-weight: 600;
 }
-.reg-numero--1 { color: var(--azur); }
-.reg-numero--2 { color: var(--turquoise); }
-.reg-numero--3 { color: var(--iris); }
-.reg-numero--4 { color: var(--mandarine); }
-.reg-numero--5 { color: var(--jade); }
-.reg-numero--6 { color: var(--fuchsia); }
+.reg-numero--1 {
+  color: var(--azur);
+}
+.reg-numero--2 {
+  color: var(--turquoise);
+}
+.reg-numero--3 {
+  color: var(--iris);
+}
+.reg-numero--4 {
+  color: var(--mandarine);
+}
+.reg-numero--5 {
+  color: var(--jade);
+}
+.reg-numero--6 {
+  color: var(--fuchsia);
+}
 .reg-visa {
   display: inline-flex;
   align-items: center;
@@ -377,4 +389,3 @@ html:has(.reg-motif--actif) {
     justify-content: center;
   }
 }
-

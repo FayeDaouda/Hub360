@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  InputHTMLAttributes,
-  KeyboardEvent,
-  MouseEvent,
-  useId,
-  useRef,
-  useState,
-} from 'react';
+import { InputHTMLAttributes, KeyboardEvent, MouseEvent, useId, useRef, useState } from 'react';
 import { ArrowBigUp, Eye, EyeOff, type LucideIcon } from 'lucide-react';
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
@@ -19,16 +12,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> & {
 // au-dessus de la saisie, dans une même boîte vitrée. Pour un mot de passe :
 // bouton afficher/masquer + avertissement Verr. Maj (erreur de saisie n° 1
 // sur un écran de connexion). Toute la boîte est cliquable.
-export function AuthChamp({
-  libelle,
-  icone: Icone,
-  type = 'text',
-  id,
-  onKeyDown,
-  onKeyUp,
-  onBlur,
-  ...saisie
-}: Props) {
+export function AuthChamp({ libelle, icone: Icone, type = 'text', id, onKeyDown, onKeyUp, onBlur, ...saisie }: Props) {
   const idAuto = useId();
   const idChamp = id ?? idAuto;
   const idAlerte = `${idChamp}-majuscules`;
@@ -63,8 +47,7 @@ export function AuthChamp({
             type={motDePasse && visible ? 'text' : type}
             className="auth-champ-saisie"
             aria-describedby={
-              [saisie['aria-describedby'], majuscules ? idAlerte : null].filter(Boolean).join(' ') ||
-              undefined
+              [saisie['aria-describedby'], majuscules ? idAlerte : null].filter(Boolean).join(' ') || undefined
             }
             onKeyDown={(e) => {
               suivreMajuscules(e);
@@ -90,11 +73,7 @@ export function AuthChamp({
             title={visible ? 'Masquer' : 'Afficher'}
             onClick={() => setVisible((v) => !v)}
           >
-            {visible ? (
-              <EyeOff size={19} aria-hidden />
-            ) : (
-              <Eye size={19} aria-hidden />
-            )}
+            {visible ? <EyeOff size={19} aria-hidden /> : <Eye size={19} aria-hidden />}
           </button>
         )}
       </div>

@@ -3,9 +3,7 @@ import { RelanceFactureEmail } from './email.service';
 // Contenu de l'email de relance manuelle. Pur (aucune I/O) — même motif que
 // contenu-lien-compte.ts / contenu-devis.ts. Pas de lien (pas de page
 // publique de facture) : juste un rappel courtois du montant et du retard.
-export function contenuRelanceFacture(
-  r: RelanceFactureEmail,
-): { sujet: string; texte: string; html: string } {
+export function contenuRelanceFacture(r: RelanceFactureEmail): { sujet: string; texte: string; html: string } {
   const ref = r.reference ?? '';
   const montant = formatMontant(r.resteAPayer);
   const echeance = r.echeanceLe ? formatDate(r.echeanceLe) : null;
@@ -39,9 +37,5 @@ function formatDate(iso: string): string {
 }
 
 function echapper(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

@@ -1,7 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { dansFiltreFacture, jjmmaaaa, libelleMois, parMois, payeeLe, statutFacture, type FiltreFacture } from '@/lib/finances';
+import {
+  dansFiltreFacture,
+  jjmmaaaa,
+  libelleMois,
+  parMois,
+  payeeLe,
+  statutFacture,
+  type FiltreFacture,
+} from '@/lib/finances';
 import { formatMontant } from '@/lib/format';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
@@ -31,12 +39,21 @@ export function OngletFactures({
   const [filtre, setFiltre] = useState<FiltreFacture>(filtreInitial);
   const visibles = factures.filter((f) => dansFiltreFacture(f, filtre));
 
-
   return (
     <section className="panel glass-panel fin-liste liste-collee">
-      <div className="fin-filtres liste-collee-outils liste-collee-outils--partout" role="group" aria-label="Filtrer les factures">
+      <div
+        className="fin-filtres liste-collee-outils liste-collee-outils--partout"
+        role="group"
+        aria-label="Filtrer les factures"
+      >
         {FILTRES.map((f) => (
-          <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
+          <button
+            key={f.cle}
+            type="button"
+            className={filtre === f.cle ? 'is-active' : ''}
+            aria-pressed={filtre === f.cle}
+            onClick={() => setFiltre(f.cle)}
+          >
             {f.libelle} ({factures.filter((x) => dansFiltreFacture(x, f.cle)).length})
           </button>
         ))}
@@ -70,12 +87,22 @@ export function OngletFactures({
           </tbody>
         </table>
       </div>
-      <p className="fin-pied">Chaque ligne ouvre son document. Aucun document ne se supprime : une facture se corrige par un avoir.</p>
+      <p className="fin-pied">
+        Chaque ligne ouvre son document. Aucun document ne se supprime : une facture se corrige par un avoir.
+      </p>
     </section>
   );
 }
 
-function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: FactureCentrale[]; onOuvrir: (f: FactureCentrale) => void }) {
+function MoisFactures({
+  mois,
+  factures,
+  onOuvrir,
+}: {
+  mois: string;
+  factures: FactureCentrale[];
+  onOuvrir: (f: FactureCentrale) => void;
+}) {
   return (
     <>
       <tr className="fin-mois">
@@ -92,7 +119,10 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
           <tr key={f.id} className="fin-ligne" onClick={() => onOuvrir(f)}>
             <td data-label="Numéro" className="fl-ref">
               <span className="cell-stack">
-                <span className={`fin-code${f.reference ? '' : ' factu-ref-prevue'}`} title={f.reference ? undefined : 'Référence attribuée à la validation'}>
+                <span
+                  className={`fin-code${f.reference ? '' : ' factu-ref-prevue'}`}
+                  title={f.reference ? undefined : 'Référence attribuée à la validation'}
+                >
                   {f.reference ?? 'brouillon'}
                 </span>
                 {f.dossierCrm ? (
@@ -112,11 +142,18 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
                 {code && <span className="cell-sub fin-code fin-code--leger">{code}</span>}
               </span>
             </td>
-            <td data-label="Créée le" className="fl-date">{jjmmaaaa(f.creeLe)}</td>
-            <td data-label="Échéance" className={`fl-echeance${f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < aujourdhui() ? ' fin-retard' : ''}`}>
+            <td data-label="Créée le" className="fl-date">
+              {jjmmaaaa(f.creeLe)}
+            </td>
+            <td
+              data-label="Échéance"
+              className={`fl-echeance${f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < aujourdhui() ? ' fin-retard' : ''}`}
+            >
               {f.echeanceLe ? jjmmaaaa(f.echeanceLe) : '—'}
             </td>
-            <td data-label="Payée" className="fl-payee">{payee ? jjmmaaaa(payee) : ''}</td>
+            <td data-label="Payée" className="fl-payee">
+              {payee ? jjmmaaaa(payee) : ''}
+            </td>
             <td data-label="Total TTC" className="num fl-ttc">
               <strong>{formatMontant(f.montantTtc)}</strong>
             </td>
@@ -141,20 +178,27 @@ function MoisFactures({ mois, factures, onOuvrir }: { mois: string; factures: Fa
 }
 
 function exporterFactures(factures: FactureCentrale[]) {
-  exporterCsv('factures', [
-    { titre: 'Numéro', valeur: (f) => f.reference ?? 'brouillon' },
-    { titre: 'Libellé', valeur: (f) => f.libelle },
-    { titre: 'Client', valeur: (f) => f.client?.nom },
-    { titre: 'Projet / dossier', valeur: (f) => f.dossierCrm?.code ?? f.projet?.code },
-    { titre: 'Créée le', valeur: (f) => dateExport(f.creeLe) },
-    { titre: 'Émise le', valeur: (f) => dateExport(f.emiseLe) },
-    { titre: 'Échéance', valeur: (f) => dateExport(f.echeanceLe) },
-    { titre: 'Payée le', valeur: (f) => dateExport(payeeLe(f)) },
-    { titre: 'Montant HT (FCFA)', valeur: (f) => f.montantHt },
-    { titre: 'TVA (FCFA)', valeur: (f) => f.montantTva },
-    { titre: 'Montant TTC (FCFA)', valeur: (f) => f.montantTtc },
-    { titre: 'Encaissé (FCFA)', valeur: (f) => f.montantPaye },
-    { titre: 'Reste à encaisser (FCFA)', valeur: (f) => (f.estAvoir ? 0 : Math.max(0, f.montantTtc - f.montantPaye)) },
-    { titre: 'Statut', valeur: (f) => statutFacture(f).libelle },
-  ], factures);
+  exporterCsv(
+    'factures',
+    [
+      { titre: 'Numéro', valeur: (f) => f.reference ?? 'brouillon' },
+      { titre: 'Libellé', valeur: (f) => f.libelle },
+      { titre: 'Client', valeur: (f) => f.client?.nom },
+      { titre: 'Projet / dossier', valeur: (f) => f.dossierCrm?.code ?? f.projet?.code },
+      { titre: 'Créée le', valeur: (f) => dateExport(f.creeLe) },
+      { titre: 'Émise le', valeur: (f) => dateExport(f.emiseLe) },
+      { titre: 'Échéance', valeur: (f) => dateExport(f.echeanceLe) },
+      { titre: 'Payée le', valeur: (f) => dateExport(payeeLe(f)) },
+      { titre: 'Montant HT (FCFA)', valeur: (f) => f.montantHt },
+      { titre: 'TVA (FCFA)', valeur: (f) => f.montantTva },
+      { titre: 'Montant TTC (FCFA)', valeur: (f) => f.montantTtc },
+      { titre: 'Encaissé (FCFA)', valeur: (f) => f.montantPaye },
+      {
+        titre: 'Reste à encaisser (FCFA)',
+        valeur: (f) => (f.estAvoir ? 0 : Math.max(0, f.montantTtc - f.montantPaye)),
+      },
+      { titre: 'Statut', valeur: (f) => statutFacture(f).libelle },
+    ],
+    factures,
+  );
 }

@@ -10,7 +10,13 @@ import { TAUX_TVA_DEFAUT, type ProduitService, type Societe } from '@/lib/types'
 // prestations au mois. Les prestations sans prix fixe (forfaits selon le
 // projet, reprise majeure au tarif CO) n'y figurent pas.
 const ORDRE_FAMILLES = ['CO', 'IM', 'SU', 'TS', 'EX'];
-const UNITES: Record<string, string> = { m2: 'F/m²', piece: 'F/pièce', mois: 'F/mois', reprise: 'F/reprise', forfait: 'Forfait' };
+const UNITES: Record<string, string> = {
+  m2: 'F/m²',
+  piece: 'F/pièce',
+  mois: 'F/mois',
+  reprise: 'F/reprise',
+  forfait: 'Forfait',
+};
 
 const pourcent = (n: number) => `${n.toLocaleString('fr-FR')} %`;
 
@@ -53,7 +59,13 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
 
   return (
     <div className="fiche-crm-fond" onClick={onClose}>
-      <aside className="fiche-crm grille" role="dialog" aria-modal="true" aria-labelledby="grille-titre" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="fiche-crm grille"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="grille-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="grille-tete">
           <h2 id="grille-titre">Grille tarifaire et société</h2>
           <span className="grille-verrou">Verrouillée</span>
@@ -62,8 +74,8 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
           </button>
         </header>
         <p className="grille-intro">
-          Prix figés appliqués automatiquement à tous les devis en brouillon. Un devis soumis au CFO garde les prix du jour de sa
-          soumission.
+          Prix figés appliqués automatiquement à tous les devis en brouillon. Un devis soumis au CFO garde les prix du
+          jour de sa soumission.
         </p>
 
         <ul className="grille-liste">
@@ -71,7 +83,9 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
             <li key={p.id}>
               <span>
                 <strong>
-                  {p.code ? `${p.code} · ${p.designation.replace(new RegExp(`^${p.code}\\s*—\\s*`), '')}` : p.designation}
+                  {p.code
+                    ? `${p.code} · ${p.designation.replace(new RegExp(`^${p.code}\\s*—\\s*`), '')}`
+                    : p.designation}
                 </strong>
                 <small>
                   {UNITES[p.unite ?? ''] ?? p.unite}

@@ -26,7 +26,13 @@ export type FactureDocumentProps = {
   tranche: string | null; // « F2 · 2 sur 3 »
   offre: { reference: string; accepteeLe: string | null } | null; // date déjà formatée
   objet: string | null;
-  client: { nom: string; adresse?: string | null; ninea?: string | null; email?: string | null; telephone?: string | null };
+  client: {
+    nom: string;
+    adresse?: string | null;
+    ninea?: string | null;
+    email?: string | null;
+    telephone?: string | null;
+  };
   lignes: LigneFacture[];
   montantHt: number;
   tauxTva: number;
@@ -53,7 +59,8 @@ export type FactureDocumentProps = {
 // (la pénalité de l'art. 13 est déjà dans le pied).
 const ARTICLES_RAPPELES = [9, 15];
 
-const ligne = (...parts: (string | null | undefined | false)[]) => parts.filter((p): p is string => !!p && !!p.trim()).join(' · ');
+const ligne = (...parts: (string | null | undefined | false)[]) =>
+  parts.filter((p): p is string => !!p && !!p.trim()).join(' · ');
 // Montant d'avoir : imprimé en négatif, comme dans le journal des ventes.
 const montant = (n: number) => formatMontant(n);
 
@@ -71,8 +78,14 @@ export function FactureDocument(p: FactureDocumentProps) {
   const legal = ligne(e.raisonSociale, fiscal, e.capital && `Capital ${e.capital}`);
   const cgv = p.estAvoir ? null : p.cgv;
   const annexe = !!cgv && p.annexeCgv === 'jointe';
-  const echeance = p.aReception ? (p.dateEcheance ? `à réception, le ${p.dateEcheance}` : 'à réception') : p.dateEcheance;
-  const offre = p.offre && `${p.offre.reference}${p.offre.accepteeLe ? ` du\u00a0${p.offre.accepteeLe.replace(/ /g, '\u00a0')}` : ''}`;
+  const echeance = p.aReception
+    ? p.dateEcheance
+      ? `à réception, le ${p.dateEcheance}`
+      : 'à réception'
+    : p.dateEcheance;
+  const offre =
+    p.offre &&
+    `${p.offre.reference}${p.offre.accepteeLe ? ` du\u00a0${p.offre.accepteeLe.replace(/ /g, '\u00a0')}` : ''}`;
 
   return (
     <>
@@ -150,7 +163,9 @@ export function FactureDocument(p: FactureDocumentProps) {
         </section>
 
         {/* L'objet n'est rappelé que s'il dit autre chose que l'unique ligne. */}
-        {p.objet && !(p.lignes.length === 1 && p.lignes[0].designation === p.objet) && <p className="fd-objet">{p.objet}</p>}
+        {p.objet && !(p.lignes.length === 1 && p.lignes[0].designation === p.objet) && (
+          <p className="fd-objet">{p.objet}</p>
+        )}
 
         <table className="fd-table">
           <thead>
@@ -211,8 +226,8 @@ export function FactureDocument(p: FactureDocumentProps) {
               <>
                 <p className="fd-etiquette">Effet de l’avoir</p>
                 <p>
-                  Cet avoir annule {p.factureOrigine ? `la facture ${p.factureOrigine}` : 'la facture d’origine'} pour le montant indiqué. Il vient en
-                  déduction des sommes dues ou fait l’objet d’un remboursement.
+                  Cet avoir annule {p.factureOrigine ? `la facture ${p.factureOrigine}` : 'la facture d’origine'} pour
+                  le montant indiqué. Il vient en déduction des sommes dues ou fait l’objet d’un remboursement.
                 </p>
               </>
             ) : (
@@ -223,7 +238,13 @@ export function FactureDocument(p: FactureDocumentProps) {
                     <p>
                       {p.aReception ? (
                         <>
-                          À régler à réception{p.dateEcheance && <>, le <strong>{p.dateEcheance}</strong></>}.
+                          À régler à réception
+                          {p.dateEcheance && (
+                            <>
+                              , le <strong>{p.dateEcheance}</strong>
+                            </>
+                          )}
+                          .
                         </>
                       ) : (
                         <>
@@ -243,7 +264,9 @@ export function FactureDocument(p: FactureDocumentProps) {
                       ))}
                     </dl>
                   )}
-                  <p className="fd-rappel">Merci de rappeler le numéro {p.reference ?? 'de la facture'} avec votre règlement.</p>
+                  <p className="fd-rappel">
+                    Merci de rappeler le numéro {p.reference ?? 'de la facture'} avec votre règlement.
+                  </p>
                 </>
               )
             )}
@@ -259,7 +282,11 @@ export function FactureDocument(p: FactureDocumentProps) {
             <p>
               Prestations régies par les conditions générales de vente de {e.raisonSociale}, édition {cgv.edition}
               {p.offre ? `, acceptées avec l’offre ${p.offre.reference}` : ''}
-              {annexe ? ', jointes en annexe.' : p.annexeCgv === 'deja_remise' ? ', remises en annexe de la première facture du projet.' : '.'}
+              {annexe
+                ? ', jointes en annexe.'
+                : p.annexeCgv === 'deja_remise'
+                  ? ', remises en annexe de la première facture du projet.'
+                  : '.'}
             </p>
             {cgv.articles
               .filter((a) => ARTICLES_RAPPELES.includes(a.numero))
@@ -277,8 +304,8 @@ export function FactureDocument(p: FactureDocumentProps) {
         <footer className="fd-pied">
           {!p.estAvoir && p.penaliteRetardMensuelle != null && (
             <p>
-              Tout retard de paiement au-delà de l’échéance entraîne de plein droit des pénalités de {String(p.penaliteRetardMensuelle).replace('.', ',')} % par
-              mois sur les sommes dues.
+              Tout retard de paiement au-delà de l’échéance entraîne de plein droit des pénalités de{' '}
+              {String(p.penaliteRetardMensuelle).replace('.', ',')} % par mois sur les sommes dues.
             </p>
           )}
           {legal && <p>{legal}</p>}

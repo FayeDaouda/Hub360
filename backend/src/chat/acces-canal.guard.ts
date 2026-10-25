@@ -1,10 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { estRoleBackOffice } from '../commun/back-office.guard';
 
@@ -22,9 +16,7 @@ export class AccesCanalGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
-    const user = req.user as
-      | { societeId: string; userId: string; role: string }
-      | undefined;
+    const user = req.user as { societeId: string; userId: string; role: string } | undefined;
     const canalId = req.params.id as string | undefined;
     if (!user || !canalId) throw new ForbiddenException('Accès refusé');
 
@@ -42,10 +34,7 @@ export class AccesCanalGuard implements CanActivate {
     if (canal.type === 'general') return true;
 
     if (canal.type === 'direct') {
-      if (
-        user.userId === canal.participant1Id ||
-        user.userId === canal.participant2Id
-      ) {
+      if (user.userId === canal.participant1Id || user.userId === canal.participant2Id) {
         return true;
       }
       throw new ForbiddenException("Cette conversation n'est pas la vôtre");

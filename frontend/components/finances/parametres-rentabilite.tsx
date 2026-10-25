@@ -4,9 +4,19 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatParametre, getParametresRentabilite, modifierParametreRentabilite, type Parametres } from '@/lib/rentabilite';
+import {
+  formatParametre,
+  getParametresRentabilite,
+  modifierParametreRentabilite,
+  type Parametres,
+} from '@/lib/rentabilite';
 
-const libelleMois = (iso: string) => new Date(`${iso.slice(0, 7)}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const libelleMois = (iso: string) =>
+  new Date(`${iso.slice(0, 7)}-15T12:00:00Z`).toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 // Paramètres de la rentabilité (lot 7) : valeurs par défaut (pas
 // d'expert-comptable), modifiables par le CFO seul, au 1er d'un mois, à
@@ -44,7 +54,14 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
     setEnvoi(true);
     setErreur(null);
     try {
-      setP(await modifierParametreRentabilite(slug, { cle, valeur: desactive ? null : nombre, dateEffet: `${mois}-01`, motif: motif.trim() }));
+      setP(
+        await modifierParametreRentabilite(slug, {
+          cle,
+          valeur: desactive ? null : nombre,
+          dateEffet: `${mois}-01`,
+          motif: motif.trim(),
+        }),
+      );
       setModifie(true);
       setValeur('');
       setMotif('');
@@ -58,17 +75,29 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose(modifie)}>
-      <div className="modal rtp-modal" role="dialog" aria-modal="true" aria-labelledby="rtp-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal rtp-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rtp-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="rtp-titre">Paramètres de la rentabilité</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={() => onClose(modifie)}>
+          <button
+            type="button"
+            className="modal-close"
+            aria-label="Fermer"
+            disabled={envoi}
+            onClick={() => onClose(modifie)}
+          >
             <X size={18} />
           </button>
         </header>
         <div className="modal-body rtp-corps">
           <p className="dmd-note">
-            Valeurs par défaut, non validées par un expert-comptable. Seul le CFO les modifie ; une nouvelle valeur s’applique à partir du mois
-            choisi et ne réécrit jamais un mois passé.
+            Valeurs par défaut, non validées par un expert-comptable. Seul le CFO les modifie ; une nouvelle valeur
+            s’applique à partir du mois choisi et ne réécrit jamais un mois passé.
           </p>
           {!p && !erreur && <p className="dmd-note">Chargement…</p>}
           {p && (
@@ -91,7 +120,15 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                   <div className="rtp-champs">
                     <label className="field">
                       <span className="field-label">Paramètre</span>
-                      <select className="field-input" value={cle} disabled={envoi} onChange={(e) => { setCle(e.target.value); setDesactive(false); }}>
+                      <select
+                        className="field-input"
+                        value={cle}
+                        disabled={envoi}
+                        onChange={(e) => {
+                          setCle(e.target.value);
+                          setDesactive(false);
+                        }}
+                      >
                         {Object.entries(p.definitions).map(([k, d]) => (
                           <option key={k} value={k}>
                             {d.libelle}
@@ -103,28 +140,59 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                       <span className="field-label">
                         Valeur ({def.unite}, de {def.min} à {def.max})
                       </span>
-                      <input className="field-input" inputMode="decimal" value={valeur} disabled={envoi || desactive} onChange={(e) => setValeur(e.target.value)} />
+                      <input
+                        className="field-input"
+                        inputMode="decimal"
+                        value={valeur}
+                        disabled={envoi || desactive}
+                        onChange={(e) => setValeur(e.target.value)}
+                      />
                     </label>
                     <label className="field">
                       <span className="field-label">À partir de</span>
-                      <input className="field-input" type="month" min={p.premierMois.slice(0, 7)} value={mois} disabled={envoi} onChange={(e) => setMois(e.target.value)} />
+                      <input
+                        className="field-input"
+                        type="month"
+                        min={p.premierMois.slice(0, 7)}
+                        value={mois}
+                        disabled={envoi}
+                        onChange={(e) => setMois(e.target.value)}
+                      />
                     </label>
                   </div>
                   {def.videPermis && (
                     <label className="rtp-vide">
-                      <input type="checkbox" checked={desactive} disabled={envoi} onChange={(e) => setDesactive(e.target.checked)} />{' '}
-                      {cle === 'coefficient_charges' ? 'Désactiver (charges non comprises)' : 'Vider (pas de couleur de statut)'}
+                      <input
+                        type="checkbox"
+                        checked={desactive}
+                        disabled={envoi}
+                        onChange={(e) => setDesactive(e.target.checked)}
+                      />{' '}
+                      {cle === 'coefficient_charges'
+                        ? 'Désactiver (charges non comprises)'
+                        : 'Vider (pas de couleur de statut)'}
                     </label>
                   )}
                   <label className="field">
                     <span className="field-label">Motif (obligatoire)</span>
-                    <input className="field-input" value={motif} maxLength={300} disabled={envoi} onChange={(e) => setMotif(e.target.value)} />
+                    <input
+                      className="field-input"
+                      value={motif}
+                      maxLength={300}
+                      disabled={envoi}
+                      onChange={(e) => setMotif(e.target.value)}
+                    />
                   </label>
                   <div className="modal-actions">
                     <button
                       type="button"
                       className="btn-primary"
-                      disabled={envoi || motif.trim().length < 3 || !mois || (!desactive && (!valeur || !Number.isFinite(nombre)))}
+                      disabled={
+                        envoi ||
+                        motif.trim().length < 3 ||
+                        !mois ||
+                        (!desactive && (!valeur || !Number.isFinite(nombre)))
+                      }
                       onClick={enregistrer}
                     >
                       {envoi ? 'Enregistrement…' : 'Enregistrer'}
@@ -141,7 +209,9 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                   {p.historique.map((h, i) => (
                     <li key={`${h.cle}-${h.le}-${i}`}>
                       <span className="rtf-mois-nom">{h.libelle}</span>
-                      <span>{formatParametre({ valeur: h.valeur, unite: p.definitions[h.cle]?.unite ?? '', cle: h.cle })}</span>
+                      <span>
+                        {formatParametre({ valeur: h.valeur, unite: p.definitions[h.cle]?.unite ?? '', cle: h.cle })}
+                      </span>
                       <span>dès {libelleMois(h.dateEffet)}</span>
                       <span className="cell-sub">
                         {h.motif}

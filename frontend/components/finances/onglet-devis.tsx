@@ -17,17 +17,34 @@ const FILTRES: { cle: FiltreDevis; libelle: string }[] = [
 
 // Finances · Devis (maquette) : filtres, devis groupés par mois de création
 // avec le total TTC du mois ; une ligne ouvre le document.
-export function OngletDevis({ devis, projets, onOuvrir }: { devis: Devis[]; projets: Map<string, string>; onOuvrir: (d: Devis) => void }) {
+export function OngletDevis({
+  devis,
+  projets,
+  onOuvrir,
+}: {
+  devis: Devis[];
+  projets: Map<string, string>;
+  onOuvrir: (d: Devis) => void;
+}) {
   const [filtre, setFiltre] = useState<FiltreDevis>('tout');
   const visibles = devis.filter((d) => filtre === 'tout' || filtreDevis(d) === filtre);
   const compte = (f: FiltreDevis) => (f === 'tout' ? devis.length : devis.filter((d) => filtreDevis(d) === f).length);
 
-
   return (
     <section className="panel glass-panel fin-liste liste-collee">
-      <div className="fin-filtres liste-collee-outils liste-collee-outils--partout" role="group" aria-label="Filtrer les devis">
+      <div
+        className="fin-filtres liste-collee-outils liste-collee-outils--partout"
+        role="group"
+        aria-label="Filtrer les devis"
+      >
         {FILTRES.map((f) => (
-          <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
+          <button
+            key={f.cle}
+            type="button"
+            className={filtre === f.cle ? 'is-active' : ''}
+            aria-pressed={filtre === f.cle}
+            onClick={() => setFiltre(f.cle)}
+          >
             {f.libelle} ({compte(f.cle)})
           </button>
         ))}
@@ -60,12 +77,24 @@ export function OngletDevis({ devis, projets, onOuvrir }: { devis: Devis[]; proj
           </tbody>
         </table>
       </div>
-      <p className="fin-pied">Chaque ligne ouvre son document. Aucun document ne se supprime : un devis refusé reste tracé.</p>
+      <p className="fin-pied">
+        Chaque ligne ouvre son document. Aucun document ne se supprime : un devis refusé reste tracé.
+      </p>
     </section>
   );
 }
 
-function MoisDevis({ mois, devis, projets, onOuvrir }: { mois: string; devis: Devis[]; projets: Map<string, string>; onOuvrir: (d: Devis) => void }) {
+function MoisDevis({
+  mois,
+  devis,
+  projets,
+  onOuvrir,
+}: {
+  mois: string;
+  devis: Devis[];
+  projets: Map<string, string>;
+  onOuvrir: (d: Devis) => void;
+}) {
   return (
     <>
       <tr className="fin-mois">
@@ -87,7 +116,9 @@ function MoisDevis({ mois, devis, projets, onOuvrir }: { mois: string; devis: De
             <td data-label="Projet" className="fin-code fin-code--leger fl-projet">
               {projet ?? '—'}
             </td>
-            <td data-label="Créé le" className="fl-date">{jjmmaaaa(d.creeLe)}</td>
+            <td data-label="Créé le" className="fl-date">
+              {jjmmaaaa(d.creeLe)}
+            </td>
             <td data-label="Total HT" className="num fl-ht">
               {formatMontant(d.montantHt)}
             </td>
@@ -96,7 +127,9 @@ function MoisDevis({ mois, devis, projets, onOuvrir }: { mois: string; devis: De
             </td>
             <td data-label="Statut" className="fl-statut">
               <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
-              {d.alerteAvenant && <span className="pill pill--risque fin-alerte">Avenant non accepté · {d.alerteAvenant.jours} j</span>}
+              {d.alerteAvenant && (
+                <span className="pill pill--risque fin-alerte">Avenant non accepté · {d.alerteAvenant.jours} j</span>
+              )}
             </td>
           </tr>
         );
@@ -106,16 +139,20 @@ function MoisDevis({ mois, devis, projets, onOuvrir }: { mois: string; devis: De
 }
 
 function exporterDevis(devis: Devis[], projets: Map<string, string>) {
-  exporterCsv('devis', [
-    { titre: 'Numéro', valeur: (d) => d.reference ?? 'brouillon' },
-    { titre: 'Objet', valeur: (d) => d.objet },
-    { titre: 'Client', valeur: (d) => d.client.nom },
-    { titre: 'Projet / dossier', valeur: (d) => d.dossierCrm?.code ?? (d.projetId ? projets.get(d.projetId) : null) },
-    { titre: 'Créé le', valeur: (d) => dateExport(d.creeLe) },
-    { titre: 'Envoyé le', valeur: (d) => dateExport(d.dateEnvoi) },
-    { titre: 'Montant HT (FCFA)', valeur: (d) => d.montantHt },
-    { titre: 'TVA (FCFA)', valeur: (d) => d.montantTva },
-    { titre: 'Montant TTC (FCFA)', valeur: (d) => d.montantTtc },
-    { titre: 'Statut', valeur: (d) => statutDevis(d).libelle },
-  ], devis);
+  exporterCsv(
+    'devis',
+    [
+      { titre: 'Numéro', valeur: (d) => d.reference ?? 'brouillon' },
+      { titre: 'Objet', valeur: (d) => d.objet },
+      { titre: 'Client', valeur: (d) => d.client.nom },
+      { titre: 'Projet / dossier', valeur: (d) => d.dossierCrm?.code ?? (d.projetId ? projets.get(d.projetId) : null) },
+      { titre: 'Créé le', valeur: (d) => dateExport(d.creeLe) },
+      { titre: 'Envoyé le', valeur: (d) => dateExport(d.dateEnvoi) },
+      { titre: 'Montant HT (FCFA)', valeur: (d) => d.montantHt },
+      { titre: 'TVA (FCFA)', valeur: (d) => d.montantTva },
+      { titre: 'Montant TTC (FCFA)', valeur: (d) => d.montantTtc },
+      { titre: 'Statut', valeur: (d) => statutDevis(d).libelle },
+    ],
+    devis,
+  );
 }

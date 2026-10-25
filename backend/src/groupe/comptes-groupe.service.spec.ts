@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ComptesGroupeService } from './comptes-groupe.service';
 import type { ComptesService } from '../auth/comptes.service';
@@ -75,7 +71,17 @@ function mockPrisma(o: {
   };
   const comptes = { envoyerInvitation: invitation } as unknown as ComptesService;
   const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['DG']) };
-  return { svc: new ComptesGroupeService(prisma as unknown as PrismaService, comptes, notifications as unknown as NotificationsService), prisma, tx, invitation, notifications };
+  return {
+    svc: new ComptesGroupeService(
+      prisma as unknown as PrismaService,
+      comptes,
+      notifications as unknown as NotificationsService,
+    ),
+    prisma,
+    tx,
+    invitation,
+    notifications,
+  };
 }
 
 describe('ComptesGroupeService.lister', () => {
@@ -88,7 +94,11 @@ describe('ComptesGroupeService.lister', () => {
         { id: 'R3', nom: 'Autre', societeId: 'S2' },
       ],
       affectationsListe: [
-        { societeId: 'S1', role: { id: 'R1', nom: 'CFO' }, utilisateur: { ...UTIL, id: 'U2', nom: 'Sow', actif: false, motDePasseHash: null } },
+        {
+          societeId: 'S1',
+          role: { id: 'R1', nom: 'CFO' },
+          utilisateur: { ...UTIL, id: 'U2', nom: 'Sow', actif: false, motDePasseHash: null },
+        },
         { societeId: 'S1', role: { id: 'RA', nom: 'societe_admin' }, utilisateur: { ...UTIL } },
       ],
     });
@@ -156,7 +166,9 @@ describe('ComptesGroupeService.changerRole', () => {
     const avant = Date.now();
     const res = await svc.changerRole('U1', 'S1', 'R1', 'ADM');
     expect(tx).toHaveBeenCalledWith(['deleteMany', 'create', 'update', 'audit']);
-    expect(prisma.utilisateurSocieteRole.deleteMany).toHaveBeenCalledWith({ where: { utilisateurId: 'U1', societeId: 'S1' } });
+    expect(prisma.utilisateurSocieteRole.deleteMany).toHaveBeenCalledWith({
+      where: { utilisateurId: 'U1', societeId: 'S1' },
+    });
     // Pas de troncature à la seconde : un jeton de l'ancien rôle émis dans la
     // même seconde doit être refusé (iat * 1000 < coupure).
     const coupure: Date = prisma.utilisateur.update.mock.calls[0][0].data.sessionsValidesDepuis;
@@ -178,8 +190,15 @@ describe('ComptesGroupeService.changerRole', () => {
 
 describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle (cellule : le Dir. GC)', () => {
   const DOSSIER = {
-    id: 'D1', societeId: 'S1', prenom: 'Fatou', nom: 'Ba', poste: 'Dessinatrice', dateEntree: '2026-01-05',
-    archiveLe: null, utilisateurId: null, collaborateur: null,
+    id: 'D1',
+    societeId: 'S1',
+    prenom: 'Fatou',
+    nom: 'Ba',
+    poste: 'Dessinatrice',
+    dateEntree: '2026-01-05',
+    archiveLe: null,
+    utilisateurId: null,
+    collaborateur: null,
   };
   const ROLE = { id: 'RS', nom: 'Salarié', societeId: 'S1' };
   const DTO = { dossierId: 'D1', email: ' Fatou.Ba@GC.sn ', roleId: 'RS' };
@@ -193,15 +212,28 @@ describe('ComptesGroupeService.creerCompte — dossier RH → compte → rôle (
     const { svc, prisma, invitation, notifications } = pret();
     const res = await svc.creerCompte(DTO, 'CIO');
     expect(prisma.utilisateur.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ email: 'fatou.ba@gc.sn', prenom: 'Fatou', actif: false, motDePasseHash: null }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ email: 'fatou.ba@gc.sn', prenom: 'Fatou', actif: false, motDePasseHash: null }),
+      }),
     );
-    expect(prisma.utilisateurSocieteRole.create).toHaveBeenCalledWith({ data: { utilisateurId: 'UN', societeId: 'S1', roleId: 'RS' } });
+    expect(prisma.utilisateurSocieteRole.create).toHaveBeenCalledWith({
+      data: { utilisateurId: 'UN', societeId: 'S1', roleId: 'RS' },
+    });
     expect(prisma.collaborateur.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ role: 'Dessinatrice', dateArrivee: '2026-01-05', utilisateurId: 'UN' }),
     });
     expect(prisma.collaborateur.create.mock.calls[0][0].data).not.toHaveProperty('celluleId');
-    expect(notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'arrivant_a_affecter', destinataireIds: ['DG'], titre: 'Nouvel arrivant à affecter · Fatou Ba · Dessinatrice' }));
-    expect(prisma.dossierPersonnel.update).toHaveBeenCalledWith({ where: { id: 'D1' }, data: { collaborateurId: 'C9' } });
+    expect(notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'arrivant_a_affecter',
+        destinataireIds: ['DG'],
+        titre: 'Nouvel arrivant à affecter · Fatou Ba · Dessinatrice',
+      }),
+    );
+    expect(prisma.dossierPersonnel.update).toHaveBeenCalledWith({
+      where: { id: 'D1' },
+      data: { collaborateurId: 'C9' },
+    });
     expect(invitation).toHaveBeenCalledWith('UN', 'fatou.ba@gc.sn', 'Fatou', 'CIO');
     expect(res.lien).toContain('/activer');
   });
@@ -243,9 +275,13 @@ describe('ComptesGroupeService.changerActif', () => {
     tx.mockResolvedValue([{ ...UTIL, actif: false }]);
     const res = await svc.changerActif('U1', false, 'CIO');
     expect(prisma.utilisateur.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ actif: false, sessionsValidesDepuis: expect.any(Date) }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ actif: false, sessionsValidesDepuis: expect.any(Date) }),
+      }),
     );
-    expect(prisma.evenementCompte.create).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'compte_desactive' }) });
+    expect(prisma.evenementCompte.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ type: 'compte_desactive' }),
+    });
     expect(res.statut).toBe('desactive');
   });
 

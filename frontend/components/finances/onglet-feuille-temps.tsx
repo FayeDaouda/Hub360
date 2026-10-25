@@ -38,10 +38,16 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
   const [erreur, setErreur] = useState<string | null>(null);
 
   const clients = useMemo(
-    () => [...new Map((dossiers ?? []).map((d) => [d.client.id, d.client.nom])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr')),
+    () =>
+      [...new Map((dossiers ?? []).map((d) => [d.client.id, d.client.nom])).entries()].sort((a, b) =>
+        a[1].localeCompare(b[1], 'fr'),
+      ),
     [dossiers],
   );
-  const proposes = useMemo(() => (dossiers ?? []).filter((d) => !d.archive && (!client || d.client.id === client)), [dossiers, client]);
+  const proposes = useMemo(
+    () => (dossiers ?? []).filter((d) => !d.archive && (!client || d.client.id === client)),
+    [dossiers, client],
+  );
   // Par défaut : le dossier onboard le plus récent, sinon le premier.
   useEffect(() => {
     if (proposes.length && !proposes.some((d) => d.id === dossierId)) {
@@ -69,7 +75,12 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
         <div className="ft-filtres">
           <label>
             <span>Client</span>
-            <select className="field-input" value={client} onChange={(e) => setClient(e.target.value)} disabled={!dossiers}>
+            <select
+              className="field-input"
+              value={client}
+              onChange={(e) => setClient(e.target.value)}
+              disabled={!dossiers}
+            >
               <option value="">Tous les clients</option>
               {clients.map(([id, nom]) => (
                 <option key={id} value={id}>
@@ -80,7 +91,12 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
           </label>
           <label>
             <span>Projet</span>
-            <select className="field-input" value={dossierId} onChange={(e) => setDossierId(e.target.value)} disabled={!dossiers}>
+            <select
+              className="field-input"
+              value={dossierId}
+              onChange={(e) => setDossierId(e.target.value)}
+              disabled={!dossiers}
+            >
               {proposes.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.code} · {STATUTS_CRM[d.statut]}
@@ -90,7 +106,10 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
           </label>
         </div>
         <div className="ft-tuiles">
-          <Tuile titre="Cycle commercial" valeur={i?.cycleCommercialJours != null ? `${i.cycleCommercialJours} j` : '—'}>
+          <Tuile
+            titre="Cycle commercial"
+            valeur={i?.cycleCommercialJours != null ? `${i.cycleCommercialJours} j` : '—'}
+          >
             création du lead → bon pour accord ·{' '}
             {f && (
               <Link className="lien-inline" href={`/admin/${slug}/crm?dossier=${f.dossier.id}`}>
@@ -98,7 +117,10 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
               </Link>
             )}
           </Tuile>
-          <Tuile titre="Signature → 1er encaissement" valeur={i?.signatureEncaissementJours != null ? `${i.signatureEncaissementJours} j` : '—'}>
+          <Tuile
+            titre="Signature → 1er encaissement"
+            valeur={i?.signatureEncaissementJours != null ? `${i.signatureEncaissementJours} j` : '—'}
+          >
             vitesse de transformation en cash ·{' '}
             <button type="button" className="lien-inline" onClick={onVoirFactures}>
               voir les factures
@@ -115,7 +137,11 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
               </>
             )}
           </Tuile>
-          <Tuile titre="Honoraires HT / heure imputée" valeur={i?.honorairesParHeure != null ? formatMontant(i.honorairesParHeure) : '—'} accent>
+          <Tuile
+            titre="Honoraires HT / heure imputée"
+            valeur={i?.honorairesParHeure != null ? formatMontant(i.honorairesParHeure) : '—'}
+            accent
+          >
             {f?.offre && (
               <>
                 sur {formatMontant(f.offre.montantHt)} HT signés ·{' '}
@@ -147,7 +173,9 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                   <li key={e.cle} className={e.date ? 'is-atteinte' : undefined}>
                     <strong>{e.libelle}</strong>
                     <span className="fin-code">{e.date ? jjmmaaaa(e.date) : '—'}</span>
-                    <span className={`ft-ecart${e.horsCible ? ' is-hors-cible' : ''}`}>{e.ecartJours != null ? `+${e.ecartJours} j` : e.date ? '—' : ''}</span>
+                    <span className={`ft-ecart${e.horsCible ? ' is-hors-cible' : ''}`}>
+                      {e.ecartJours != null ? `+${e.ecartJours} j` : e.date ? '—' : ''}
+                    </span>
                     <span className="ft-cible">{e.cible}</span>
                   </li>
                 ))}
@@ -195,7 +223,9 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                             <td data-label="Échéance">{t.echeance ? jjmmaa(t.echeance) : '—'}</td>
                             <td data-label="Payée">{t.payee ? jjmmaa(t.payee) : '—'}</td>
                             <td data-label="Délai">
-                              <span className={`pill pill--${d.ton}`}>{d.texte('jours' in t.delai ? t.delai.jours : 0)}</span>
+                              <span className={`pill pill--${d.ton}`}>
+                                {d.texte('jours' in t.delai ? t.delai.jours : 0)}
+                              </span>
                             </td>
                           </tr>
                         );
@@ -217,11 +247,13 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
               )}
             </div>
             <p className="ft-info">
-              Aucune saisie : le temps vient de la durée standard des tâches assignées (gabarit GC-CONCEPTION), répartie sur
-              leur fenêtre, hors absences validées. Contrôlé par la RH, non modifiable.
+              Aucune saisie : le temps vient de la durée standard des tâches assignées (gabarit GC-CONCEPTION), répartie
+              sur leur fenêtre, hors absences validées. Contrôlé par la RH, non modifiable.
             </p>
             {!f.temps || f.temps.taches.length === 0 ? (
-              <p className="fin-pied">{f.dossier.projet ? 'Aucune tâche assignée sur ce projet.' : 'Le projet n’est pas encore ouvert.'}</p>
+              <p className="fin-pied">
+                {f.dossier.projet ? 'Aucune tâche assignée sur ce projet.' : 'Le projet n’est pas encore ouvert.'}
+              </p>
             ) : (
               <>
                 <h3 className="ft-sous-titre">Répartition par étape</h3>
@@ -230,7 +262,12 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                     <li key={e.etape}>
                       <span>{e.etape}</span>
                       <span className="fin-jauge" aria-hidden>
-                        <span className={`ft-jauge ft-jauge--${n % 4}`} style={{ width: `${(e.heures / Math.max(...f.temps!.repartition.map((x) => x.heures))) * 100}%` }} />
+                        <span
+                          className={`ft-jauge ft-jauge--${n % 4}`}
+                          style={{
+                            width: `${(e.heures / Math.max(...f.temps!.repartition.map((x) => x.heures))) * 100}%`,
+                          }}
+                        />
                       </span>
                       <strong>{heures(e.heures)}</strong>
                     </li>
@@ -246,8 +283,9 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                         <small>{t.libelle}</small>
                       </span>
                       <span className="ft-detail">
-                        {t.libelle} · {t.heuresStandard != null ? `${heures(t.heuresStandard)} standard` : 'sans durée standard'} · {t.joursEcoules} j ouvrés
-                        écoulés
+                        {t.libelle} ·{' '}
+                        {t.heuresStandard != null ? `${heures(t.heuresStandard)} standard` : 'sans durée standard'} ·{' '}
+                        {t.joursEcoules} j ouvrés écoulés
                       </span>
                       <strong>{heures(t.heures)}</strong>
                     </li>
@@ -262,7 +300,17 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
   );
 }
 
-function Tuile({ titre, valeur, accent, children }: { titre: string; valeur: string; accent?: boolean; children: ReactNode }) {
+function Tuile({
+  titre,
+  valeur,
+  accent,
+  children,
+}: {
+  titre: string;
+  valeur: string;
+  accent?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className="ft-tuile">
       <span>{titre}</span>

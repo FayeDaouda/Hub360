@@ -6,7 +6,16 @@ import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { moisClos, moisFr } from '../projets/facturation/cloture';
-import { DECISION_EN_VIGUEUR, echeanceReporting, moisAReporter, numeroDecision, rappelsReporting, relanceDecision, RELANCES_AVANT_AUTEUR, REPORTINGS } from '../pilotage/pilotage-regles';
+import {
+  DECISION_EN_VIGUEUR,
+  echeanceReporting,
+  moisAReporter,
+  numeroDecision,
+  rappelsReporting,
+  relanceDecision,
+  RELANCES_AVANT_AUTEUR,
+  REPORTINGS,
+} from '../pilotage/pilotage-regles';
 import { planNotificationsCrm } from '../crm/notifications-crm';
 import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import { ReglagesService } from '../reglages/reglages.service';
@@ -154,7 +163,11 @@ export class RappelsService implements OnApplicationBootstrap {
   // COO) : propriétaire, créateur du lead et apporteur interne, une fois.
   async offresExpirees(jour: string): Promise<Rappel[]> {
     const dossiers = await this.prisma.dossierCrm.findMany({
-      where: { statut: 'offre_envoyee', archiveLe: null, offres: { some: { statut: 'envoye', dateValidite: { lt: jour } } } },
+      where: {
+        statut: 'offre_envoyee',
+        archiveLe: null,
+        offres: { some: { statut: 'envoye', dateValidite: { lt: jour } } },
+      },
       select: {
         id: true,
         societeId: true,
@@ -172,7 +185,9 @@ export class RappelsService implements OnApplicationBootstrap {
       const offre = d.offres[0];
       // Seule l'offre en cours compte : une offre refaite repart de zéro.
       if (!offre || offre.statut !== 'envoye' || !offre.dateValidite || offre.dateValidite >= jour) continue;
-      const proprietaire = d.proprietaireId ? [d.proprietaireId] : await this.notifications.titulairesRole(d.societeId, ROLE_PROPRIETAIRE_DOSSIER);
+      const proprietaire = d.proprietaireId
+        ? [d.proprietaireId]
+        : await this.notifications.titulairesRole(d.societeId, ROLE_PROPRIETAIRE_DOSSIER);
       const plan = planNotificationsCrm(
         'offre_expiree',
         { code: d.code, programme: d.programme },
@@ -185,7 +200,14 @@ export class RappelsService implements OnApplicationBootstrap {
         null,
       );
       for (const p of plan) {
-        rappels.push({ cle: `offre-expiree:${offre.id}:${p.destinataireId}`, societeId: d.societeId, type: 'offre_expiree', titre: p.titre, destinataireIds: [p.destinataireId], dossierCrmId: d.id });
+        rappels.push({
+          cle: `offre-expiree:${offre.id}:${p.destinataireId}`,
+          societeId: d.societeId,
+          type: 'offre_expiree',
+          titre: p.titre,
+          destinataireIds: [p.destinataireId],
+          dossierCrmId: d.id,
+        });
       }
     }
     return rappels;
@@ -226,7 +248,10 @@ export class RappelsService implements OnApplicationBootstrap {
         societeId: f.societeId,
         type: 'rappel_facture',
         titre: `Facture échue · ${refFacture(f) ?? 'sans numéro'} · ${retard} jour${retard > 1 ? 's' : ''} de retard · reste ${fcfa(reste)}`,
-        destinataireIds: [f.projet?.dossierCrm.proprietaireId ?? f.dossierCrm?.proprietaireId, ...cfo.get(f.societeId)!],
+        destinataireIds: [
+          f.projet?.dossierCrm.proprietaireId ?? f.dossierCrm?.proprietaireId,
+          ...cfo.get(f.societeId)!,
+        ],
         projetId: f.projetId,
         factureId: f.id,
       });
@@ -298,20 +323,48 @@ export class RappelsService implements OnApplicationBootstrap {
     const [absences, remboursements, attestations, dossiersRh] = await Promise.all([
       this.prisma.demandeAbsence.findMany({
         where: { statut: { in: ['attente_n1', 'accord_n1'] } },
-        select: { id: true, statut: true, createdAt: true, decisionN1Le: true, dateDebut: true, dateFin: true, n1CollaborateurId: true, n1Role: true, dossier: DOSSIER },
+        select: {
+          id: true,
+          statut: true,
+          createdAt: true,
+          decisionN1Le: true,
+          dateDebut: true,
+          dateFin: true,
+          n1CollaborateurId: true,
+          n1Role: true,
+          dossier: DOSSIER,
+        },
       }),
-      this.prisma.demandeRemboursement.findMany({ where: { statut: 'soumise' }, select: { id: true, createdAt: true, dossier: DOSSIER } }),
-      this.prisma.demandeAttestation.findMany({ where: { delivreeLe: null }, select: { id: true, demandeLe: true, dossier: DOSSIER } }),
+      this.prisma.demandeRemboursement.findMany({
+        where: { statut: 'soumise' },
+        select: { id: true, createdAt: true, dossier: DOSSIER },
+      }),
+      this.prisma.demandeAttestation.findMany({
+        where: { delivreeLe: null },
+        select: { id: true, demandeLe: true, dossier: DOSSIER },
+      }),
       // Demandeurs titulaires du rôle RH : leur validation finale revient au CEO.
       this.prisma.dossierPersonnel.findMany({
-        where: { OR: [{ utilisateur: { roles: { some: { role: { nom: 'RH' } } } } }, { collaborateur: { utilisateur: { roles: { some: { role: { nom: 'RH' } } } } } }] },
+        where: {
+          OR: [
+            { utilisateur: { roles: { some: { role: { nom: 'RH' } } } } },
+            { collaborateur: { utilisateur: { roles: { some: { role: { nom: 'RH' } } } } } },
+          ],
+        },
         select: { id: true },
       }),
     ]);
     const demandeurRh = new Set(dossiersRh.map((d) => d.id));
     const rappels: Rappel[] = [];
     // Renvoie le palier atteint (0 : pas encore de relance).
-    const ajouter = async (cle: string, depuis: Date, dossier: { societeId: string; prenom: string; nom: string }, objet: string, chez: string, ids: (string | null)[]) => {
+    const ajouter = async (
+      cle: string,
+      depuis: Date,
+      dossier: { societeId: string; prenom: string; nom: string },
+      objet: string,
+      chez: string,
+      ids: (string | null)[],
+    ) => {
       const n = joursOuvresDepuis(depuis.toISOString().slice(0, 10), jour);
       const palier = Math.floor(n / (await delai(dossier.societeId)).relance);
       if (palier < 1) return 0;
@@ -327,8 +380,19 @@ export class RappelsService implements OnApplicationBootstrap {
     for (const a of absences) {
       const periode = `absence du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)}`;
       if (a.statut === 'attente_n1') {
-        const ids = a.n1CollaborateurId ? await this.notifications.comptesDe([a.n1CollaborateurId]) : a.n1Role ? await role(a.dossier.societeId, a.n1Role) : [];
-        const palier = await ajouter(`demande:absence:${a.id}:n1`, a.createdAt, a.dossier, periode, 'en attente de votre décision', ids);
+        const ids = a.n1CollaborateurId
+          ? await this.notifications.comptesDe([a.n1CollaborateurId])
+          : a.n1Role
+            ? await role(a.dossier.societeId, a.n1Role)
+            : [];
+        const palier = await ajouter(
+          `demande:absence:${a.id}:n1`,
+          a.createdAt,
+          a.dossier,
+          periode,
+          'en attente de votre décision',
+          ids,
+        );
         // N relances du N+1 restées sans réponse : la demande est signalée
         // aussi à la RH (au CEO si la demandeuse est la RH), une seule fois.
         if (palier > (await delai(a.dossier.societeId)).signalement) {
@@ -343,14 +407,35 @@ export class RappelsService implements OnApplicationBootstrap {
         }
       } else {
         const final = demandeurRh.has(a.dossier.id) ? 'CEO (transverse)' : 'RH';
-        await ajouter(`demande:absence:${a.id}:final`, a.decisionN1Le ?? a.createdAt, a.dossier, periode, 'en attente de validation finale', await role(a.dossier.societeId, final));
+        await ajouter(
+          `demande:absence:${a.id}:final`,
+          a.decisionN1Le ?? a.createdAt,
+          a.dossier,
+          periode,
+          'en attente de validation finale',
+          await role(a.dossier.societeId, final),
+        );
       }
     }
     for (const r of remboursements) {
-      await ajouter(`demande:remboursement:${r.id}`, r.createdAt, r.dossier, 'remboursement', 'à transmettre', await role(r.dossier.societeId, 'RH'));
+      await ajouter(
+        `demande:remboursement:${r.id}`,
+        r.createdAt,
+        r.dossier,
+        'remboursement',
+        'à transmettre',
+        await role(r.dossier.societeId, 'RH'),
+      );
     }
     for (const t of attestations) {
-      await ajouter(`demande:attestation:${t.id}`, t.demandeLe, t.dossier, 'attestation de travail', 'à délivrer', await role(t.dossier.societeId, 'RH'));
+      await ajouter(
+        `demande:attestation:${t.id}`,
+        t.demandeLe,
+        t.dossier,
+        'attestation de travail',
+        'à délivrer',
+        await role(t.dossier.societeId, 'RH'),
+      );
     }
     return rappels;
   }
@@ -365,14 +450,20 @@ export class RappelsService implements OnApplicationBootstrap {
     const [societes, deposes] = await Promise.all([
       // Sociétés « Bientôt » : personne n'y dépose encore de reporting.
       this.prisma.societe.findMany({ where: { accesOuvert: true }, select: { id: true } }),
-      this.prisma.reportingMensuel.findMany({ where: { mois: { in: mois } }, select: { societeId: true, type: true, mois: true } }),
+      this.prisma.reportingMensuel.findMany({
+        where: { mois: { in: mois } },
+        select: { societeId: true, type: true, mois: true },
+      }),
     ]);
     const fait = new Set(deposes.map((d) => `${d.societeId}:${d.type}:${d.mois}`));
     const court = (role: string) => role.replace(/\s*\(transverse\)$/, '');
     const rappels: Rappel[] = [];
     for (const { id: societeId } of societes) {
       const joursAvant = await this.reglages.regle<number>(societeId, 'rappel_reporting_jours_avant');
-      for (const [type, { emetteur, destinataire }] of Object.entries(REPORTINGS) as [keyof typeof REPORTINGS, (typeof REPORTINGS)[keyof typeof REPORTINGS]][]) {
+      for (const [type, { emetteur, destinataire }] of Object.entries(REPORTINGS) as [
+        keyof typeof REPORTINGS,
+        (typeof REPORTINGS)[keyof typeof REPORTINGS],
+      ][]) {
         const emetteurs = await this.notifications.titulairesRole(societeId, emetteur);
         if (!emetteurs.length) continue; // pas d'émetteur dans la société : pas de reporting
         const titre = type === 'rh' ? 'Reporting RH' : 'Reporting de la direction';
@@ -389,7 +480,8 @@ export class RappelsService implements OnApplicationBootstrap {
                   : r.nature === 'avant'
                     ? `${titre} de ${moisFr(m)} à déposer au ${court(destinataire)} avant le ${echeance} · prérempli par le HUB, à compléter`
                     : `${titre} de ${moisFr(m)} en retard (dû le ${echeance}) · à déposer au ${court(destinataire)}`,
-              destinataireIds: r.cible === 'emetteur' ? emetteurs : await this.notifications.titulairesRole(societeId, destinataire),
+              destinataireIds:
+                r.cible === 'emetteur' ? emetteurs : await this.notifications.titulairesRole(societeId, destinataire),
             });
           }
         }
@@ -404,7 +496,17 @@ export class RappelsService implements OnApplicationBootstrap {
   async decisions(jour: string): Promise<Rappel[]> {
     const ouvertes = await this.prisma.decisionRegistre.findMany({
       where: { origine: 'saisie', closeLe: null, echeance: { not: null }, ...DECISION_EN_VIGUEUR },
-      select: { id: true, societeId: true, numero: true, texte: true, echeance: true, responsable: true, responsableRole: true, responsableCollaborateurId: true, creeParId: true },
+      select: {
+        id: true,
+        societeId: true,
+        numero: true,
+        texte: true,
+        echeance: true,
+        responsable: true,
+        responsableRole: true,
+        responsableCollaborateurId: true,
+        creeParId: true,
+      },
     });
     const rappels: Rappel[] = [];
     for (const d of ouvertes) {
@@ -414,7 +516,12 @@ export class RappelsService implements OnApplicationBootstrap {
         ? await this.notifications.comptesDe([d.responsableCollaborateurId])
         : await this.notifications.titulairesRole(d.societeId, d.responsableRole ?? '');
       const texte = d.texte.length > 70 ? `${d.texte.slice(0, 69)}…` : d.texte;
-      const etat = suffixe === 'avant' ? `échéance le ${jjmm(d.echeance!)}` : suffixe === 'jour' ? 'échéance aujourd’hui' : `échéance dépassée depuis le ${jjmm(d.echeance!)}`;
+      const etat =
+        suffixe === 'avant'
+          ? `échéance le ${jjmm(d.echeance!)}`
+          : suffixe === 'jour'
+            ? 'échéance aujourd’hui'
+            : `échéance dépassée depuis le ${jjmm(d.echeance!)}`;
       rappels.push({
         cle: `decision:${d.id}:resp:${suffixe}`,
         societeId: d.societeId,
@@ -423,7 +530,9 @@ export class RappelsService implements OnApplicationBootstrap {
         destinataireIds: responsables,
       });
       // Relances déjà parties (sans compter celle-ci) : au-delà de 2, l'auteur est prévenu.
-      const envoyees = await this.prisma.rappelEnvoye.count({ where: { cle: { startsWith: `decision:${d.id}:resp:` } } });
+      const envoyees = await this.prisma.rappelEnvoye.count({
+        where: { cle: { startsWith: `decision:${d.id}:resp:` } },
+      });
       if (suffixe.startsWith('retard') && envoyees >= RELANCES_AVANT_AUTEUR && d.creeParId) {
         rappels.push({
           cle: `decision:${d.id}:auteur`,
@@ -458,13 +567,26 @@ export class RappelsService implements OnApplicationBootstrap {
       rappels.push({
         ...r,
         type: 'attente_ceo',
-        destinataireIds: demandeurId === undefined ? await ceoDe(r.societeId) : await avecDelegataire(this.prisma, r.societeId, await ceoDe(r.societeId), demandeurId),
+        destinataireIds:
+          demandeurId === undefined
+            ? await ceoDe(r.societeId)
+            : await avecDelegataire(this.prisma, r.societeId, await ceoDe(r.societeId), demandeurId),
       });
 
     // 1. Offres soumises au-delà du seuil de contresignature.
     const offres = await this.prisma.dossierCrm.findMany({
       where: { statut: 'en_validation', archiveLe: null },
-      select: { id: true, societeId: true, code: true, transitions: { where: { vers: 'en_validation' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } } },
+      select: {
+        id: true,
+        societeId: true,
+        code: true,
+        transitions: {
+          where: { vers: 'en_validation' },
+          orderBy: { creeLe: 'desc' },
+          take: 1,
+          select: { creeLe: true },
+        },
+      },
     });
     for (const o of offres) {
       const soumise = o.transitions[0]?.creeLe;
@@ -472,12 +594,15 @@ export class RappelsService implements OnApplicationBootstrap {
       const montant = await this.seuilCeo.offreAuDelaDuSeuil(o.societeId, o.id);
       if (montant === null) continue;
       const j = joursDepuis(soumise);
-      await pousser({
-        cle: `ceo:offre:${o.id}:${j}`,
-        societeId: o.societeId,
-        titre: `Offre à contresigner · ${o.code} · ${fcfa(montant)} TTC · en attente depuis ${j} j (validité de 7 jours une fois envoyée)`,
-        dossierCrmId: o.id,
-      }, null);
+      await pousser(
+        {
+          cle: `ceo:offre:${o.id}:${j}`,
+          societeId: o.societeId,
+          titre: `Offre à contresigner · ${o.code} · ${fcfa(montant)} TTC · en attente depuis ${j} j (validité de 7 jours une fois envoyée)`,
+          dossierCrmId: o.id,
+        },
+        null,
+      );
     }
 
     // 2. Factures à contresigner : relancées par le Pilotage (relances-ceo.service.ts),
@@ -491,12 +616,15 @@ export class RappelsService implements OnApplicationBootstrap {
     })) {
       const p = palier(a.demandeLe);
       if (p < 1) continue;
-      await pousser({
-        cle: `ceo:avoir:${a.id}:${p}`,
-        societeId: a.societeId,
-        titre: `Avoir à valider · ${fcfa(a.montantTtc.toNumber())} TTC · en attente depuis ${ouvres(a.demandeLe)} jours ouvrés`,
-        factureId: a.factureId,
-      }, a.demandeParId);
+      await pousser(
+        {
+          cle: `ceo:avoir:${a.id}:${p}`,
+          societeId: a.societeId,
+          titre: `Avoir à valider · ${fcfa(a.montantTtc.toNumber())} TTC · en attente depuis ${ouvres(a.demandeLe)} jours ouvrés`,
+          factureId: a.factureId,
+        },
+        a.demandeParId,
+      );
     }
     for (const d of await this.prisma.decisionRegistre.findMany({
       where: { proposition: 'proposee' },
@@ -505,23 +633,53 @@ export class RappelsService implements OnApplicationBootstrap {
       const p = palier(d.createdAt);
       if (p < 1) continue;
       const texte = d.texte.length > 70 ? `${d.texte.slice(0, 69)}…` : d.texte;
-      await pousser({ cle: `ceo:decision:${d.id}:${p}`, societeId: d.societeId, titre: `Décision proposée ${numeroDecision(d.numero)} à arbitrer · ${texte} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés` }, d.creeParId);
+      await pousser(
+        {
+          cle: `ceo:decision:${d.id}:${p}`,
+          societeId: d.societeId,
+          titre: `Décision proposée ${numeroDecision(d.numero)} à arbitrer · ${texte} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés`,
+        },
+        d.creeParId,
+      );
     }
-    for (const d of await this.prisma.demandeDroit.findMany({ where: { statut: 'en_attente' }, select: { id: true, societeId: true, module: true, createdAt: true } })) {
+    for (const d of await this.prisma.demandeDroit.findMany({
+      where: { statut: 'en_attente' },
+      select: { id: true, societeId: true, module: true, createdAt: true },
+    })) {
       const p = palier(d.createdAt);
       if (p < 1) continue;
-      await pousser({ cle: `ceo:droit:${d.id}:${p}`, societeId: d.societeId, titre: `Droits du CIO à valider · ${d.module} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés` });
+      await pousser({
+        cle: `ceo:droit:${d.id}:${p}`,
+        societeId: d.societeId,
+        titre: `Droits du CIO à valider · ${d.module} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés`,
+      });
     }
     // Salaire du CFO : seul cas où le CEO valide un salaire.
     for (const c of await this.prisma.changementSalaire.findMany({
       where: { statut: 'a_valider' },
-      select: { id: true, proposeLe: true, dossier: { select: { societeId: true, prenom: true, nom: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } } },
+      select: {
+        id: true,
+        proposeLe: true,
+        dossier: {
+          select: {
+            societeId: true,
+            prenom: true,
+            nom: true,
+            utilisateurId: true,
+            collaborateur: { select: { utilisateurId: true } },
+          },
+        },
+      },
     })) {
       const compte = c.dossier.utilisateurId ?? c.dossier.collaborateur?.utilisateurId ?? null;
       if (!compte || !(await this.notifications.titulairesRole(c.dossier.societeId, 'CFO')).includes(compte)) continue;
       const p = palier(c.proposeLe);
       if (p < 1) continue;
-      await pousser({ cle: `ceo:salaire:${c.id}:${p}`, societeId: c.dossier.societeId, titre: `Salaire à valider · ${c.dossier.prenom} ${c.dossier.nom} · en attente depuis ${ouvres(c.proposeLe)} jours ouvrés` });
+      await pousser({
+        cle: `ceo:salaire:${c.id}:${p}`,
+        societeId: c.dossier.societeId,
+        titre: `Salaire à valider · ${c.dossier.prenom} ${c.dossier.nom} · en attente depuis ${ouvres(c.proposeLe)} jours ouvrés`,
+      });
     }
     return rappels;
   }
@@ -531,7 +689,11 @@ export class RappelsService implements OnApplicationBootstrap {
   async clotures(jour: string): Promise<Rappel[]> {
     const [a, m, j] = jour.split('-').map(Number);
     const precedent = m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`;
-    const societes = await this.prisma.facture.findMany({ where: { emiseLe: { not: null } }, distinct: ['societeId'], select: { societeId: true } });
+    const societes = await this.prisma.facture.findMany({
+      where: { emiseLe: { not: null } },
+      distinct: ['societeId'],
+      select: { societeId: true },
+    });
     const rappels: Rappel[] = [];
     for (const { societeId } of societes) {
       const depuis = await this.reglages.regle<number>(societeId, 'rappel_cloture_jour');
@@ -553,7 +715,11 @@ const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 // Jours ouvrés (lundi → vendredi) écoulés après `depuis`, jusqu'à `jour` inclus.
 export function joursOuvresDepuis(depuis: string, jour: string): number {
   let n = 0;
-  for (let d = new Date(`${decaler(depuis, 1)}T00:00:00Z`); d <= new Date(`${jour}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) {
+  for (
+    let d = new Date(`${decaler(depuis, 1)}T00:00:00Z`);
+    d <= new Date(`${jour}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1)
+  ) {
     const js = d.getUTCDay();
     if (js !== 0 && js !== 6) n++;
   }

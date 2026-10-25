@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { demanderAttestation, telechargerAttestation, telechargerBulletin, telechargerDocument } from '@/lib/mon-espace';
+import {
+  demanderAttestation,
+  telechargerAttestation,
+  telechargerBulletin,
+  telechargerDocument,
+} from '@/lib/mon-espace';
 import { libelleMois } from '@/lib/temps';
 import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
 
@@ -52,7 +57,13 @@ export function MesDocuments({
   const enAttente = dossier.attestations.find((a) => !a.delivreeLe);
   const delivrees = dossier.attestations.filter((a) => a.delivreeLe);
 
-  const ligne = (cle: string, titre: string, depose: string, teinte: 'contrat' | 'bulletin', action: () => Promise<void>) => (
+  const ligne = (
+    cle: string,
+    titre: string,
+    depose: string,
+    teinte: 'contrat' | 'bulletin',
+    action: () => Promise<void>,
+  ) => (
     <li key={cle} className="me-doc">
       <span className={`me-doc-pdf me-doc-pdf--${teinte}`} aria-hidden>
         PDF
@@ -79,7 +90,9 @@ export function MesDocuments({
           ) : (
             <ul className="me-docs">
               {documents.map((d) =>
-                ligne(d.type, LIBELLE_DOCUMENT[d.type] ?? d.type, d.ajouteLe!, 'contrat', () => telechargerDocument(slug, d.type)),
+                ligne(d.type, LIBELLE_DOCUMENT[d.type] ?? d.type, d.ajouteLe!, 'contrat', () =>
+                  telechargerDocument(slug, d.type),
+                ),
               )}
             </ul>
           )}
@@ -93,7 +106,9 @@ export function MesDocuments({
           {dossier.bulletins.length > 0 && (
             <ul className="me-docs">
               {dossier.bulletins.map((b) =>
-                ligne(b.mois, `Bulletin · ${libelleMois(b.mois)}`, b.deposeLe, 'bulletin', () => telechargerBulletin(slug, b.mois)),
+                ligne(b.mois, `Bulletin · ${libelleMois(b.mois)}`, b.deposeLe, 'bulletin', () =>
+                  telechargerBulletin(slug, b.mois),
+                ),
               )}
             </ul>
           )}
@@ -105,7 +120,9 @@ export function MesDocuments({
           {delivrees.length > 0 && (
             <ul className="me-docs">
               {delivrees.map((a) =>
-                ligne(a.id, 'Attestation de travail', a.delivreeLe!, 'contrat', () => telechargerAttestation(slug, a.id)),
+                ligne(a.id, 'Attestation de travail', a.delivreeLe!, 'contrat', () =>
+                  telechargerAttestation(slug, a.id),
+                ),
               )}
             </ul>
           )}

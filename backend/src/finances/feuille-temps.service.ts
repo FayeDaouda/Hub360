@@ -7,7 +7,8 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { refDevis } from '../devis/domaine';
 import { delaiTranche, jours, prevueLe, tempsImpute, tempsPipe } from './feuille-temps';
 
-const jour = (d: Date | string | null | undefined) => (d ? (typeof d === 'string' ? d.slice(0, 10) : d.toISOString().slice(0, 10)) : null);
+const jour = (d: Date | string | null | undefined) =>
+  d ? (typeof d === 'string' ? d.slice(0, 10) : d.toISOString().slice(0, 10)) : null;
 const premier = (dates: (string | null)[]) => dates.filter((d): d is string => !!d).sort()[0] ?? null;
 
 // Finances · Feuille de temps d'un dossier (maquette du boss, oct. 2026) :
@@ -33,7 +34,12 @@ export class FeuilleTempsService {
         transitions: { select: { vers: true, creeLe: true }, orderBy: { creeLe: 'asc' } },
         offres: {
           orderBy: { creeLe: 'desc' },
-          include: { lignes: { orderBy: { ordre: 'asc' }, include: { produitService: { select: { code: true, famille: true } } } } },
+          include: {
+            lignes: {
+              orderBy: { ordre: 'asc' },
+              include: { produitService: { select: { code: true, famille: true } } },
+            },
+          },
         },
       },
     });
@@ -41,8 +47,10 @@ export class FeuilleTempsService {
     const aujourdhui = new Date().toISOString().slice(0, 10);
 
     // Offre de référence : l'acceptée, sinon la plus récente.
-    const offre = dossier.offres.find((o) => o.statut === 'accepte' || o.statut === 'transforme') ?? dossier.offres[0] ?? null;
-    const accord = offre && (offre.statut === 'accepte' || offre.statut === 'transforme') ? jour(offre.dateReponse) : null;
+    const offre =
+      dossier.offres.find((o) => o.statut === 'accepte' || o.statut === 'transforme') ?? dossier.offres[0] ?? null;
+    const accord =
+      offre && (offre.statut === 'accepte' || offre.statut === 'transforme') ? jour(offre.dateReponse) : null;
     const factures = await this.prisma.facture.findMany({
       where: {
         societeId,
@@ -67,14 +75,22 @@ export class FeuilleTempsService {
     // Facturation de l'offre acceptée : une ligne par échéance du plan.
     const parts = (offre?.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
     const delais = (offre?.delaisEcheancier as Record<string, number> | null) ?? {};
-    const echeances = offre && accord ? echeancierOffre(lignesOffreDepuisDevis(offre.lignes), parts, delais).filter((e) => e.cle) : [];
+    const echeances =
+      offre && accord ? echeancierOffre(lignesOffreDepuisDevis(offre.lignes), parts, delais).filter((e) => e.cle) : [];
     const facturation = echeances.map((e) => {
       const f = factures.find((x) => x.devisEcheancierId === offre!.id && x.cleEcheance === e.cle);
       const facturee = f && f.statut !== 'brouillon' ? jour(f.emiseLe) : null;
-      const { montantTtc } = f ? ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()) : { montantTtc: e.montantTtc };
+      const { montantTtc } = f
+        ? ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber())
+        : { montantTtc: e.montantTtc };
       const paye = f ? f.paiements.reduce((s, p) => s + p.montant.toNumber(), 0) : 0;
       const payee = f && facturee && paye >= montantTtc ? (f.paiements.at(-1)?.date ?? null) : null;
-      const t = { prevue: prevueLe(accord, e.delaiJours), facturee, echeance: facturee ? (f!.echeanceLe ?? null) : null, payee };
+      const t = {
+        prevue: prevueLe(accord, e.delaiJours),
+        facturee,
+        echeance: facturee ? (f!.echeanceLe ?? null) : null,
+        payee,
+      };
       return {
         cle: e.cle!,
         famille: e.famille,
@@ -93,7 +109,13 @@ export class FeuilleTempsService {
     const montantHt = offre ? lignesOffreDepuisDevis(offre.lignes).reduce((s, l) => s + l.montantHt, 0) : 0;
 
     return {
-      dossier: { id: dossier.id, code: dossier.code, statut: dossier.statut, client: dossier.client, projet: dossier.projet ? { id: dossier.projet.id, code: dossier.projet.code } : null },
+      dossier: {
+        id: dossier.id,
+        code: dossier.code,
+        statut: dossier.statut,
+        client: dossier.client,
+        projet: dossier.projet ? { id: dossier.projet.id, code: dossier.projet.code } : null,
+      },
       offre: offre ? { id: offre.id, reference: refDevis(offre), statut: offre.statut, montantHt } : null,
       dernierEvenement: jour(dossier.transitions.at(-1)?.creeLe ?? dossier.createdAt),
       pipe: tempsPipe(dates),
@@ -120,7 +142,9 @@ export class FeuilleTempsService {
             select: {
               prenom: true,
               nom: true,
-              dossierPersonnel: { select: { absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } } },
+              dossierPersonnel: {
+                select: { absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } },
+              },
             },
           },
         },

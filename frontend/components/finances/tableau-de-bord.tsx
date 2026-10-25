@@ -1,7 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { clientsPrincipaux, facturesOuvertes, produitsPrincipaux, ventesMensuelles, type Barre, type Tranche } from '@/lib/finances';
+import {
+  clientsPrincipaux,
+  facturesOuvertes,
+  produitsPrincipaux,
+  ventesMensuelles,
+  type Barre,
+  type Tranche,
+} from '@/lib/finances';
 import { formatMontant } from '@/lib/format';
 import type { Devis, FactureCentrale, ProduitService } from '@/lib/types';
 
@@ -60,7 +67,11 @@ export function TableauDeBordFinances({ devis, factures, catalogue }: Props) {
         sousTitre="12 derniers mois · facturé HT par prestation"
         barres={produitsPrincipaux(factures, devis, catalogue)}
         vide="Aucune prestation facturée sur les 12 derniers mois."
-        pied={<p className="fin-pied">Répartition des factures selon les lignes des devis acceptés (au prorata des tranches).</p>}
+        pied={
+          <p className="fin-pied">
+            Répartition des factures selon les lignes des devis acceptés (au prorata des tranches).
+          </p>
+        }
       />
     </div>
   );
@@ -117,7 +128,19 @@ function Anneau({ tranches, total }: { tranches: Tranche[]; total: Tranche }) {
 
 // Barres horizontales (clients, produits) : piste = facturé, relatif au premier ;
 // part verte = encaissé.
-function BarresCarte({ titre, sousTitre, barres, vide, pied }: { titre: string; sousTitre: string; barres: Barre[]; vide: string; pied: ReactNode }) {
+function BarresCarte({
+  titre,
+  sousTitre,
+  barres,
+  vide,
+  pied,
+}: {
+  titre: string;
+  sousTitre: string;
+  barres: Barre[];
+  vide: string;
+  pied: ReactNode;
+}) {
   const max = barres[0]?.facture ?? 0;
   return (
     <section className="panel glass-panel fin-carte fin-barres-carte">
@@ -128,7 +151,10 @@ function BarresCarte({ titre, sousTitre, barres, vide, pied }: { titre: string; 
       ) : (
         <ul className="fin-barres">
           {barres.map((b) => (
-            <li key={b.cle} title={`${b.detail ? `${b.libelle} · ${b.detail}` : b.libelle} · facturé ${formatMontant(b.facture)} · encaissé ${formatMontant(b.encaisse)}`}>
+            <li
+              key={b.cle}
+              title={`${b.detail ? `${b.libelle} · ${b.detail}` : b.libelle} · facturé ${formatMontant(b.facture)} · encaissé ${formatMontant(b.encaisse)}`}
+            >
               <span className="fin-barres-libelle">
                 {b.libelle}
                 {b.detail && <span className="fin-barres-detail">{b.detail}</span>}
@@ -172,7 +198,10 @@ function Histogramme({ mois }: { mois: Barre[] }) {
                 <span className="sr-only">{detail}</span>
                 {m.facture > 0 && (
                   <span className="fin-histo-facture" style={{ height: `${(m.facture / max) * 100}%` }}>
-                    <span className="fin-histo-encaisse" style={{ height: `${(Math.max(0, m.encaisse) / m.facture) * 100}%` }} />
+                    <span
+                      className="fin-histo-encaisse"
+                      style={{ height: `${(Math.max(0, m.encaisse) / m.facture) * 100}%` }}
+                    />
                   </span>
                 )}
               </li>

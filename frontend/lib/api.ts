@@ -47,11 +47,7 @@ export class EchecConnexion extends Error {
 export type EtapeConnexion = { etape: 'code' | 'enrolement'; jeton: string };
 export const estEtape = (r: Session | EtapeConnexion): r is EtapeConnexion => 'etape' in r;
 
-export async function login(
-  email: string,
-  motDePasse: string,
-  societeSlug: string,
-): Promise<Session | EtapeConnexion> {
+export async function login(email: string, motDePasse: string, societeSlug: string): Promise<Session | EtapeConnexion> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}/auth/login`, {
@@ -87,7 +83,8 @@ async function postDoubleFacteur<T>(chemin: string, body: unknown): Promise<T> {
   throw new Error(typeof c?.message === 'string' ? c.message : 'Code incorrect.');
 }
 
-export const connexionAvecCode = (jeton: string, code: string) => postDoubleFacteur<Session>('login/code', { jeton, code });
+export const connexionAvecCode = (jeton: string, code: string) =>
+  postDoubleFacteur<Session>('login/code', { jeton, code });
 export const preparerDoubleFacteur = (jeton: string) =>
   postDoubleFacteur<{ secret: string; qr: string }>('double-facteur/preparation', { jeton });
 export const activerDoubleFacteur = (jeton: string, code: string) =>

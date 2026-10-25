@@ -26,9 +26,7 @@ const MOTIF = /\{\{\s*([a-z_]+)\s*\}\}/g;
 // Champs {{…}} du modèle absents de la liste — à corriger avant génération.
 export function variablesInconnues(modele: string): string[] {
   const connues = new Set(VARIABLES_CONTRAT.map((v) => v.cle));
-  return [...new Set([...modele.matchAll(MOTIF)].map((m) => m[1]))].filter(
-    (c) => !connues.has(c),
-  );
+  return [...new Set([...modele.matchAll(MOTIF)].map((m) => m[1]))].filter((c) => !connues.has(c));
 }
 
 export function remplirModele(modele: string, valeurs: Record<string, string>): string {

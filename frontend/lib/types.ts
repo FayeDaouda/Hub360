@@ -171,13 +171,7 @@ export const STATUTS_CRM: Record<StatutCrm, string> = {
   perdu: 'Perdu',
 };
 
-export const STATUTS_ORDRE: StatutCrm[] = [
-  'nouveau_projet',
-  'en_validation',
-  'offre_envoyee',
-  'onboard',
-  'perdu',
-];
+export const STATUTS_ORDRE: StatutCrm[] = ['nouveau_projet', 'en_validation', 'offre_envoyee', 'onboard', 'perdu'];
 
 // Une ligne du journal du cycle (de = null : création / reprise de données).
 export type TransitionDossier = {
@@ -355,13 +349,7 @@ export const NIVEAUX_COLLABORATEUR: Record<NiveauCollaborateur, string> = {
   lead: 'Lead',
 };
 
-export const NIVEAUX_ORDRE: NiveauCollaborateur[] = [
-  'stagiaire',
-  'junior',
-  'confirme',
-  'senior',
-  'lead',
-];
+export const NIVEAUX_ORDRE: NiveauCollaborateur[] = ['stagiaire', 'junior', 'confirme', 'senior', 'lead'];
 
 // Statut du compte de connexion — dérivé côté serveur (pas un champ stocké) :
 // sans_compte → invité → actif → désactivé. À relire à chaque chargement de
@@ -447,7 +435,13 @@ export type VueEquipes = {
     absencesEnAttente: number;
   };
   cellules: CelluleEquipe[];
-  salariesAAffecter: { id: string; nom: string; role: string; niveau: NiveauCollaborateur; dateArrivee: string | null }[];
+  salariesAAffecter: {
+    id: string;
+    nom: string;
+    role: string;
+    niveau: NiveauCollaborateur;
+    dateArrivee: string | null;
+  }[];
   projets: { id: string; code: string; programme: string; client: string; cellules: { code: string; nom: string }[] }[];
   tachesEnCours: {
     id: string;
@@ -602,8 +596,7 @@ export type PageMessagesChat = {
 
 // Événements poussés par le flux SSE (réception seule ; l'envoi passe par REST).
 export type EvenementChat =
-  | { type: 'message'; canalId: string; message: MessageChat }
-  | { type: 'non_lus'; canalId: string; nonLus: number };
+  { type: 'message'; canalId: string; message: MessageChat } | { type: 'non_lus'; canalId: string; nonLus: number };
 
 export type EtatFluxChat = 'connexion' | 'ouvert' | 'reconnexion';
 
@@ -776,13 +769,7 @@ export const TYPES_FACTURE: Record<FactureType, string> = {
 export type StatutFacture = 'brouillon' | 'emise' | 'annulee';
 
 // Statut effectif — calculé à la lecture (cumul des paiements + échéance).
-export type StatutFactureEffectif =
-  | 'brouillon'
-  | 'emise'
-  | 'partiellement_payee'
-  | 'payee'
-  | 'en_retard'
-  | 'annulee';
+export type StatutFactureEffectif = 'brouillon' | 'emise' | 'partiellement_payee' | 'payee' | 'en_retard' | 'annulee';
 
 export const STATUTS_FACTURE: Record<StatutFactureEffectif, string> = {
   brouillon: 'Brouillon',
@@ -908,11 +895,7 @@ export type LigneFacture = {
 
 // Règlement d'un bureau d'études refacturé (étape H3, CGV art. 5) — le
 // bureau ne se règle qu'après encaissement du client.
-export type StatutReglementBureau =
-  | 'non_refacture'
-  | 'en_attente_encaissement'
-  | 'a_regler'
-  | 'regle';
+export type StatutReglementBureau = 'non_refacture' | 'en_attente_encaissement' | 'a_regler' | 'regle';
 
 export const STATUTS_REGLEMENT_BUREAU: Record<StatutReglementBureau, string> = {
   non_refacture: 'À refacturer',
@@ -955,10 +938,7 @@ export type Mensualite = {
 
 // GARDE MIROIR du backend domaine/gardes.ts::ventilationTva
 // FCFA sans décimale : TVA arrondie au franc.
-export function ventilationTva(
-  montantHt: number,
-  tauxTva: number,
-): { montantTva: number; montantTtc: number } {
+export function ventilationTva(montantHt: number, tauxTva: number): { montantTva: number; montantTtc: number } {
   const montantTva = Math.round((montantHt * tauxTva) / 100);
   return { montantTva, montantTtc: montantHt + montantTva };
 }
@@ -1067,10 +1047,23 @@ export type DelaiTranche =
   | { etat: 'non_planifiee' };
 
 export type FeuilleTemps = {
-  dossier: { id: string; code: string; statut: StatutCrm; client: { id: string; nom: string }; projet: { id: string; code: string } | null };
+  dossier: {
+    id: string;
+    code: string;
+    statut: StatutCrm;
+    client: { id: string; nom: string };
+    projet: { id: string; code: string } | null;
+  };
   offre: { id: string; reference: string | null; statut: StatutDevis; montantHt: number } | null;
   dernierEvenement: string | null;
-  pipe: { cle: string; libelle: string; date: string | null; ecartJours: number | null; cible: string | null; horsCible: boolean }[];
+  pipe: {
+    cle: string;
+    libelle: string;
+    date: string | null;
+    ecartJours: number | null;
+    cible: string | null;
+    horsCible: boolean;
+  }[];
   indicateurs: {
     cycleCommercialJours: number | null;
     signatureEncaissementJours: number | null;
@@ -1095,7 +1088,16 @@ export type FeuilleTemps = {
     total: number;
     prevues: number | null;
     repartition: { etape: string; heures: number }[];
-    taches: { id: string; etape: string; libelle: string; debut: string | null; assigne: string; heuresStandard: number | null; joursEcoules: number; heures: number }[];
+    taches: {
+      id: string;
+      etape: string;
+      libelle: string;
+      debut: string | null;
+      assigne: string;
+      heuresStandard: number | null;
+      joursEcoules: number;
+      heures: number;
+    }[];
   } | null;
 };
 
@@ -1153,11 +1155,7 @@ export type DevisPublic = {
 // prisma/data/catalogue-grey-concrete.json).
 // tarif_co_surface_planches : reprise majeure TS-MAJ (tarif CO du projet ×
 // surface × planches concernées, CGV art. 8).
-export type ModeCalculProduit =
-  | 'quantite'
-  | 'surface_planches'
-  | 'forfait'
-  | 'tarif_co_surface_planches';
+export type ModeCalculProduit = 'quantite' | 'surface_planches' | 'forfait' | 'tarif_co_surface_planches';
 
 export type ProduitService = {
   id: string;
@@ -1207,7 +1205,14 @@ export type FactureCentrale = {
   joursRetard: number;
   projetId: string | null;
   projet: { id: string; code: string; programme: string } | null;
-  client: { id: string; nom: string; adresse?: string; ninea?: string; email?: string | null; telephone?: string | null } | null;
+  client: {
+    id: string;
+    nom: string;
+    adresse?: string;
+    ninea?: string;
+    email?: string | null;
+    telephone?: string | null;
+  } | null;
   // Pour le document imprimé (lot 6) : nature et lieu du projet, tranche
   // F1 / F2 / F3, offre acceptée qui fonde la facture.
   pourDocument?: {
@@ -1246,7 +1251,12 @@ export type LeadFacturable = {
 
 // MIROIR du backend devis/domaine.ts::refDevis
 // Offre de dossier : « CODE-OFn » (maquette Finances) ; devis libre : DEV-AAAA-NNNN.
-export function refDevis(d: { numero: number | null; dateEnvoi: string | null; codeDossier: string | null; rangDossier: number | null }): string | null {
+export function refDevis(d: {
+  numero: number | null;
+  dateEnvoi: string | null;
+  codeDossier: string | null;
+  rangDossier: number | null;
+}): string | null {
   if (d.codeDossier && d.rangDossier != null) return `${d.codeDossier}-OF${d.rangDossier}`;
   if (d.numero == null) return null;
   const annee = (d.dateEnvoi ? new Date(d.dateEnvoi) : new Date()).getFullYear();
@@ -1530,7 +1540,8 @@ export type SoldeConges = {
   disponible: number;
 };
 
-export type CategorieSoins = 'pharmacie' | 'consultation' | 'analyses_imagerie' | 'hospitalisation' | 'dentaire_optique' | 'autre';
+export type CategorieSoins =
+  'pharmacie' | 'consultation' | 'analyses_imagerie' | 'hospitalisation' | 'dentaire_optique' | 'autre';
 export type StatutRemboursement = 'soumise' | 'transmise' | 'remboursee' | 'rejetee';
 export type DemandeRemboursement = {
   id: string;
@@ -1611,7 +1622,11 @@ export type FeuilleTempsCalculee = {
   // Jour par jour (calcul en direct) ; null pour une feuille figée au contrôle.
   calendrier: JourCalendrierTemps[] | null;
 };
-export type JourCalendrierTemps = { date: string; nature: 'travail' | 'absence' | 'ferie' | 'weekend' | 'hors'; heures: number };
+export type JourCalendrierTemps = {
+  date: string;
+  nature: 'travail' | 'absence' | 'ferie' | 'weekend' | 'hors';
+  heures: number;
+};
 export type FeuilleTempsSalarie = FeuilleTempsCalculee & {
   dossierId: string;
   matricule: string;
@@ -1690,7 +1705,8 @@ export type AttestationTravail = { id: string; demandeLe: string; delivreeLe: st
 // --- RH · Remise et validation des tâches (lot 5c) -----------------------------
 // prolongee : retard qualifié par une prolongation accordée ; bloquee : sa carte attend l'étape précédente
 // (règle commune des projets, la même que Production et Équipes).
-export type StatutTache = 'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'prolongee' | 'bloquee' | 'en_cours' | 'a_venir' | 'a_planifier';
+export type StatutTache =
+  'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'prolongee' | 'bloquee' | 'en_cours' | 'a_venir' | 'a_planifier';
 
 // Tâche du gabarit assignée (TacheProjet), depuis oct. 2026.
 export type TacheMonEspace = {
@@ -1778,8 +1794,7 @@ export type IndicateurPilotage = {
   atteintPropose: boolean; // objectif à fixer, valeur proposée atteinte
   // Objectif chiffré (Réglages) : seuil minimum ou maximum, ou zone.
   objectif?:
-    | { type: 'minimum' | 'maximum'; valeur: number | null }
-    | { type: 'zone'; de: number | null; a: number | null };
+    { type: 'minimum' | 'maximum'; valeur: number | null } | { type: 'zone'; de: number | null; a: number | null };
   // 6 derniers mois (mois courant en dernier) ; null = indicateur cumulé.
   tendance: { mois: string; valeur: number | null }[] | null;
   texteObjectif: string;
@@ -1811,7 +1826,15 @@ export type SuiviReporting = {
   questionsOuvertes: number;
   // Fil des questions : seulement pour le destinataire et l'émetteur (null sinon).
   fil:
-    | { id: string; texte: string; le: string; par: string | null; reponse: string | null; reponduLe: string | null; reponduPar: string | null }[]
+    | {
+        id: string;
+        texte: string;
+        le: string;
+        par: string | null;
+        reponse: string | null;
+        reponduLe: string | null;
+        reponduPar: string | null;
+      }[]
     | null;
   peutLire: boolean;
   peutQuestionner: boolean;
@@ -1857,7 +1880,8 @@ export type DecisionRegistre = {
 // « À votre attention » (accueil du CEO, Pilotage) — backend
 // pilotage/attention.service.ts. null = rubrique hors des droits du compte.
 export type AttentionPilotage = {
-  retards: { projetId: string; code: string; client: string; enRetard: number; prolongees: number; joursMax: number }[] | null;
+  retards:
+    { projetId: string; code: string; client: string; enRetard: number; prolongees: number; joursMax: number }[] | null;
   factures:
     | {
         etat: 'a_emettre' | 'impayee';
@@ -1887,7 +1911,11 @@ export type VuePilotage = {
   saisie: {
     instances: string[];
     responsables: ResponsableDecision[]; // titulaires d'un compte HUB seulement
-    rattachables: { projets: OptionRattachement[]; cellules: OptionRattachement[]; clients: OptionRattachement[] } | null;
+    rattachables: {
+      projets: OptionRattachement[];
+      cellules: OptionRattachement[];
+      clients: OptionRattachement[];
+    } | null;
     peutProposer: boolean; // CTO, COO : « Proposer au CEO »
     peutInscrire: boolean; // CTO, CEO : inscrire directement (le COO propose seulement)
   } | null; // null = pas de saisie

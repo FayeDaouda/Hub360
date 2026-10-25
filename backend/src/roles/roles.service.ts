@@ -1,11 +1,22 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { NiveauPermission } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
 
 const ROLE_CEO = 'CEO (transverse)';
-const LIBELLE_NIVEAU: Record<NiveauPermission, string> = { aucun: 'aucun', lecture: 'lecture', ecriture: 'écriture', validation: 'validation' };
+const LIBELLE_NIVEAU: Record<NiveauPermission, string> = {
+  aucun: 'aucun',
+  lecture: 'lecture',
+  ecriture: 'écriture',
+  validation: 'validation',
+};
 const libelleRole = (nom: string) => nom.replace(/\s*\(transverse\)$/, '');
 
 // Rôles socles : leur accès ne passe pas par la matrice (administration =
@@ -58,9 +69,10 @@ export class RolesService {
         nom: r.nom,
         transverse: r.societeId === null,
         modifiable: motifRefus(r, societeId, acteurRole) === null,
-        permissions: Object.fromEntries(
-          r.permissions.map((p) => [p.module.cle, p.niveau]),
-        ) as Record<string, NiveauPermission>,
+        permissions: Object.fromEntries(r.permissions.map((p) => [p.module.cle, p.niveau])) as Record<
+          string,
+          NiveauPermission
+        >,
       })),
     };
   }
@@ -84,14 +96,26 @@ export class RolesService {
     const module = await this.prisma.module.findUnique({ where: { cle: moduleCle } });
     if (!module) throw new NotFoundException('Module introuvable');
 
-    const actuelle = await this.prisma.rolePermission.findUnique({ where: { roleId_moduleId: { roleId, moduleId: module.id } } });
+    const actuelle = await this.prisma.rolePermission.findUnique({
+      where: { roleId_moduleId: { roleId, moduleId: module.id } },
+    });
     if (actuelle?.niveau === niveau) return { roleId, moduleCle, niveau, enAttente: false };
 
     if (role.nom === ROLE_CIO) {
-      const enCours = await this.prisma.demandeDroit.findFirst({ where: { societeId, roleId, module: moduleCle, statut: 'en_attente' } });
+      const enCours = await this.prisma.demandeDroit.findFirst({
+        where: { societeId, roleId, module: moduleCle, statut: 'en_attente' },
+      });
       if (enCours) throw new ConflictException('Une demande sur cette case attend déjà la validation du CEO.');
       await this.prisma.demandeDroit.create({
-        data: { societeId, roleId, roleNom: role.nom, module: moduleCle, avant: actuelle?.niveau ?? null, apres: niveau, demandeParId: acteurId },
+        data: {
+          societeId,
+          roleId,
+          roleNom: role.nom,
+          module: moduleCle,
+          avant: actuelle?.niveau ?? null,
+          apres: niveau,
+          demandeParId: acteurId,
+        },
       });
       await this.notifications.envoyer({
         societeId,
@@ -119,15 +143,24 @@ export class RolesService {
   ) {
     const cle = { roleId_moduleId: { roleId: role.id, moduleId: module.id } };
     await this.prisma.$transaction([
-      this.prisma.rolePermission.upsert({ where: cle, update: { niveau: apres }, create: { roleId: role.id, moduleId: module.id, niveau: apres } }),
+      this.prisma.rolePermission.upsert({
+        where: cle,
+        update: { niveau: apres },
+        create: { roleId: role.id, moduleId: module.id, niveau: apres },
+      }),
       // Les permissions voyagent dans le jeton (émis à la connexion) : sans
       // cette coupure, chaque titulaire du rôle garderait l'ancien niveau
       // jusqu'à expiration (7 jours). Même mécanisme que le changement de
       // rôle d'un compte (comptes-groupe.service) ; l'auteur de la
       // modification est inclus s'il porte ce rôle, il se reconnecte aussi.
-      this.prisma.utilisateur.updateMany({ where: { roles: { some: { roleId: role.id } } }, data: { sessionsValidesDepuis: new Date() } }),
+      this.prisma.utilisateur.updateMany({
+        where: { roles: { some: { roleId: role.id } } },
+        data: { sessionsValidesDepuis: new Date() },
+      }),
       // Trace pour le journal d'audit (CEO, CIO).
-      this.prisma.journalDroit.create({ data: { societeId, roleNom: role.nom, module: module.cle, avant, apres, parId, valideParId } }),
+      this.prisma.journalDroit.create({
+        data: { societeId, roleNom: role.nom, module: module.cle, avant, apres, parId, valideParId },
+      }),
     ]);
     // Revue CIO : le CEO est prévenu de chaque changement de la matrice
     // (sauf celui qu'il vient lui-même de valider).
@@ -147,8 +180,13 @@ export class RolesService {
     if (acteurRole !== ROLE_CEO && acteurRole !== ROLE_CIO && acteurRole !== 'societe_admin') {
       throw new ForbiddenException('Réservé au CEO et au CIO.');
     }
-    const lignes = await this.prisma.demandeDroit.findMany({ where: { societeId, statut: 'en_attente' }, orderBy: { createdAt: 'asc' } });
-    const modules = new Map((await this.prisma.module.findMany({ select: { cle: true, nom: true } })).map((m) => [m.cle, m.nom]));
+    const lignes = await this.prisma.demandeDroit.findMany({
+      where: { societeId, statut: 'en_attente' },
+      orderBy: { createdAt: 'asc' },
+    });
+    const modules = new Map(
+      (await this.prisma.module.findMany({ select: { cle: true, nom: true } })).map((m) => [m.cle, m.nom]),
+    );
     return Promise.all(
       lignes.map(async (d) => ({
         id: d.id,
@@ -166,7 +204,14 @@ export class RolesService {
 
   // Le CEO accepte (la case est appliquée, tracée « validée par ») ou refuse
   // (motif obligatoire). Le demandeur est prévenu.
-  async decider(societeId: string, acteurRole: string, acteurId: string, id: string, accepter: boolean, motif?: string) {
+  async decider(
+    societeId: string,
+    acteurRole: string,
+    acteurId: string,
+    id: string,
+    accepter: boolean,
+    motif?: string,
+  ) {
     if (acteurRole !== ROLE_CEO) throw new ForbiddenException('Seul le CEO valide les droits du CIO.');
     const d = await this.prisma.demandeDroit.findFirst({ where: { id, societeId } });
     if (!d) throw new NotFoundException('Demande introuvable.');
@@ -181,8 +226,18 @@ export class RolesService {
     const module = await this.prisma.module.findUniqueOrThrow({ where: { cle: d.module } });
     if (accepter) {
       // La case a pu changer depuis la demande : on part de sa valeur réelle.
-      const actuelle = await this.prisma.rolePermission.findUnique({ where: { roleId_moduleId: { roleId: d.roleId, moduleId: module.id } } });
-      await this.appliquer(societeId, { id: d.roleId, nom: d.roleNom }, module, actuelle?.niveau ?? null, d.apres, d.demandeParId, acteurId);
+      const actuelle = await this.prisma.rolePermission.findUnique({
+        where: { roleId_moduleId: { roleId: d.roleId, moduleId: module.id } },
+      });
+      await this.appliquer(
+        societeId,
+        { id: d.roleId, nom: d.roleNom },
+        module,
+        actuelle?.niveau ?? null,
+        d.apres,
+        d.demandeParId,
+        acteurId,
+      );
     }
     await this.notifications.envoyer({
       societeId,

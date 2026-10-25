@@ -35,17 +35,34 @@ export function commissionsAttendues(
 ): CommissionAttendue[] {
   if (mode === 'signature_contrat') {
     if (!dossier.signeHt) return [];
-    return [{ cle: `signature:${dossier.id}`, paiementId: null, baseHt: dossier.signeHt, montant: montantCommission(dossier.signeHt, dossier.taux), exigibleLe: dossier.signeLe }];
+    return [
+      {
+        cle: `signature:${dossier.id}`,
+        paiementId: null,
+        baseHt: dossier.signeHt,
+        montant: montantCommission(dossier.signeHt, dossier.taux),
+        exigibleLe: dossier.signeLe,
+      },
+    ];
   }
   return encaissements
     .map((e) => ({ e, baseHt: partHt(e) }))
     .filter(({ baseHt }) => baseHt > 0)
-    .map(({ e, baseHt }) => ({ cle: `paiement:${e.paiementId}`, paiementId: e.paiementId, baseHt, montant: montantCommission(baseHt, dossier.taux), exigibleLe: e.date }));
+    .map(({ e, baseHt }) => ({
+      cle: `paiement:${e.paiementId}`,
+      paiementId: e.paiementId,
+      baseHt,
+      montant: montantCommission(baseHt, dossier.taux),
+      exigibleLe: e.date,
+    }));
 }
 
 // Mode en vigueur à une date : la dernière version du profil de facturation
 // créée au plus tard ce jour-là ; avant toute version, le mode par défaut.
 export function modeA(versions: { modeCommission: ModeCommission; jour: string }[], jour: string): ModeCommission {
-  const enVigueur = versions.filter((v) => v.jour <= jour).sort((a, b) => a.jour.localeCompare(b.jour)).at(-1);
+  const enVigueur = versions
+    .filter((v) => v.jour <= jour)
+    .sort((a, b) => a.jour.localeCompare(b.jour))
+    .at(-1);
   return enVigueur?.modeCommission ?? 'encaisse_prorata';
 }

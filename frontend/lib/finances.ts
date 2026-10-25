@@ -1,9 +1,4 @@
-import {
-  STATUTS_DEVIS,
-  type Devis,
-  type FactureCentrale,
-  type ProduitService,
-} from './types';
+import { STATUTS_DEVIS, type Devis, type FactureCentrale, type ProduitService } from './types';
 
 // -----------------------------------------------------------------------------
 // Finances · Devis et factures (maquette du boss, oct. 2026) : statuts, filtres,
@@ -40,7 +35,10 @@ export function statutDevis(d: Devis): Etiquette {
     refuse: 'risque',
     expire: 'risque',
   };
-  return { libelle: d.statutEffectif === 'envoye' ? 'Envoyé' : STATUTS_DEVIS[d.statutEffectif], ton: ton[d.statutEffectif] };
+  return {
+    libelle: d.statutEffectif === 'envoye' ? 'Envoyé' : STATUTS_DEVIS[d.statutEffectif],
+    ton: ton[d.statutEffectif],
+  };
 }
 
 // --- Factures ------------------------------------------------------------------
@@ -122,7 +120,8 @@ export function indicateursFinances(devis: Devis[], factures: FactureCentrale[],
   // Encaissé de l'année : paiements datés de l'année, quelle que soit l'année
   // de la facture (une facture de décembre payée en janvier compte en janvier).
   const encaisse = factures.reduce(
-    (s, f) => s + (f.estAvoir ? 0 : f.paiements.filter((p) => p.date.startsWith(annee)).reduce((t, p) => t + p.montant, 0)),
+    (s, f) =>
+      s + (f.estAvoir ? 0 : f.paiements.filter((p) => p.date.startsWith(annee)).reduce((t, p) => t + p.montant, 0)),
     0,
   );
   const ouvertes = factures.filter(estOuverte);
@@ -132,8 +131,16 @@ export function indicateursFinances(devis: Devis[], factures: FactureCentrale[],
   return {
     annee,
     offresEnCours: { montant: enCours.reduce((s, d) => s + d.montantTtc, 0), nombre: enCours.length },
-    transformation: { pct: acceptes + refuses ? Math.round((acceptes / (acceptes + refuses)) * 100) : null, acceptes, refuses },
-    facture: { montant: factureTtc, emises: emises.filter((f) => !f.estAvoir).length, aValider: factures.filter(aValiderCfo).length },
+    transformation: {
+      pct: acceptes + refuses ? Math.round((acceptes / (acceptes + refuses)) * 100) : null,
+      acceptes,
+      refuses,
+    },
+    facture: {
+      montant: factureTtc,
+      emises: emises.filter((f) => !f.estAvoir).length,
+      aValider: factures.filter(aValiderCfo).length,
+    },
     encaisse: { montant: encaisse, pct: factureTtc > 0 ? Math.round((encaisse / factureTtc) * 100) : null },
     resteAEncaisser: {
       montant: montantOuvert,
@@ -196,7 +203,10 @@ export function ventesMensuelles(factures: FactureCentrale[], maintenant = new D
 }
 
 const premiers = (barres: Barre[], n: number) =>
-  barres.filter((b) => b.facture > 0).sort((a, b) => b.facture - a.facture).slice(0, n);
+  barres
+    .filter((b) => b.facture > 0)
+    .sort((a, b) => b.facture - a.facture)
+    .slice(0, n);
 
 // Clients principaux : facturé TTC et part encaissée, 12 derniers mois.
 export function clientsPrincipaux(factures: FactureCentrale[], n = 5, maintenant = new Date()): Barre[] {
@@ -233,11 +243,10 @@ export function produitsPrincipaux(
   // retiré, le code est déjà le libellé.
   const sansCode = (code: string, designation: string) =>
     designation.startsWith(code) ? designation.slice(code.length).replace(/^[\s—–:·-]+/, '') : designation;
-  const designations = new Map(
-    catalogue.filter((p) => p.code).map((p) => [p.code!, sansCode(p.code!, p.designation)]),
-  );
+  const designations = new Map(catalogue.filter((p) => p.code).map((p) => [p.code!, sansCode(p.code!, p.designation)]));
   const parId = new Map(factures.map((f) => [f.id, f]));
-  const libelle = (l: Devis['lignes'][number]) => (l.produitServiceId && codes.get(l.produitServiceId)) || l.designation;
+  const libelle = (l: Devis['lignes'][number]) =>
+    (l.produitServiceId && codes.get(l.produitServiceId)) || l.designation;
   const parProduit = new Map<string, Barre>();
   const ajouter = (cle: string, ht: number, encaisseHt: number) => {
     const b = parProduit.get(cle) ?? { cle, libelle: cle, detail: designations.get(cle), facture: 0, encaisse: 0 };
@@ -268,10 +277,20 @@ export function produitsPrincipaux(
 // Lus dans les mentions légales (« RAISON — NINEA x — COFI y — RCCM z — Capital w »)
 // et les coordonnées (« adresse, ville, pays · téléphone · e-mail ») de la société.
 export function identiteSociete(mentions: string | null | undefined, coordonnees: string | null | undefined) {
-  const parties = (mentions ?? '').split(' — ').map((x) => x.trim()).filter(Boolean);
-  const champ = (prefixe: string) => parties.find((p) => p.toUpperCase().startsWith(prefixe))?.slice(prefixe.length).trim() ?? null;
+  const parties = (mentions ?? '')
+    .split(' — ')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const champ = (prefixe: string) =>
+    parties
+      .find((p) => p.toUpperCase().startsWith(prefixe))
+      ?.slice(prefixe.length)
+      .trim() ?? null;
   const [adresseComplete, ...contacts] = (coordonnees ?? '').split(' · ').map((x) => x.trim());
-  const morceaux = (adresseComplete ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  const morceaux = (adresseComplete ?? '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
   const ville = morceaux.length > 2 ? morceaux.slice(-2).join(', ') : null;
   return {
     raisonSociale: parties[0] && !/^(NINEA|COFI|RCCM|CAPITAL)/i.test(parties[0]) ? parties[0] : null,

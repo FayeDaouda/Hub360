@@ -22,15 +22,25 @@ describe('ouverture d’un projet selon GC-CONCEPTION (maquette Projets)', () =>
   });
 
   it('client personne physique → NINEA non nécessaire, avec le motif de la maquette', () => {
-    expect(tache('documents_client', 'ninea')).toMatchObject({ statut: 'non_necessaire', motif: 'Client personne physique (CRM) : sans objet' });
+    expect(tache('documents_client', 'ninea')).toMatchObject({
+      statut: 'non_necessaire',
+      motif: 'Client personne physique (CRM) : sans objet',
+    });
     const morale = instancier(GABARIT_GC_CONCEPTION, { ...CTX, clientPersonnePhysique: false });
-    expect(morale.find((c) => c.cle === 'documents_client')!.taches.find((t) => t.cle === 'ninea')!.statut).toBe('a_faire');
+    expect(morale.find((c) => c.cle === 'documents_client')!.taches.find((t) => t.cle === 'ninea')!.statut).toBe(
+      'a_faire',
+    );
   });
 
   it('SPC absent de l’offre → autorisation de construire non nécessaire', () => {
-    expect(tache('permis_construire', 'autorisation')).toMatchObject({ statut: 'non_necessaire', motif: 'SPC non commandé au devis' });
+    expect(tache('permis_construire', 'autorisation')).toMatchObject({
+      statut: 'non_necessaire',
+      motif: 'SPC non commandé au devis',
+    });
     const avecSpc = instancier(GABARIT_GC_CONCEPTION, { ...CTX, spcCommande: true });
-    expect(avecSpc.find((c) => c.cle === 'permis_construire')!.taches.find((t) => t.cle === 'autorisation')!.statut).toBe('a_faire');
+    expect(
+      avecSpc.find((c) => c.cle === 'permis_construire')!.taches.find((t) => t.cle === 'autorisation')!.statut,
+    ).toBe('a_faire');
   });
 
   it('temps résolus : charges GC des Réglages, sans temps atelier = null, équipements 24 h / 9', () => {

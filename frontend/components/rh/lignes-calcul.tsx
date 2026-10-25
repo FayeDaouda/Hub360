@@ -34,9 +34,15 @@ export function LignesCalcul({ lignes, variante = 'rh' }: { lignes: LigneCalculT
               <td data-label="Fenêtre">
                 du {jjmm(l.debut)} au {jjmm(l.echeance)}
               </td>
-              <td data-label="Durée std" className="num">{l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}</td>
+              <td data-label="Durée std" className="num">
+                {l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}
+              </td>
               <td data-label="Ce mois" className="num">
-                {l.manque ? <span className="pill pill--attention">{LIBELLE_MANQUE[l.manque]}</span> : formatHeures(l.heures)}
+                {l.manque ? (
+                  <span className="pill pill--attention">{LIBELLE_MANQUE[l.manque]}</span>
+                ) : (
+                  formatHeures(l.heures)
+                )}
               </td>
             </tr>
           ))}
@@ -76,10 +82,18 @@ function LignesSalarie({ lignes }: { lignes: LigneCalculTemps[] }) {
                   du {jjmm(l.debut)} au {jjmm(l.echeance)} · {l.etape ?? (l.section ? LIBELLE_SECTION[l.section] : '')}
                 </span>
               </td>
-              <td data-label="Durée std" className="num">{l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}</td>
-              <td data-label="Jours" className="num">{l.jours ?? '—'}</td>
+              <td data-label="Durée std" className="num">
+                {l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}
+              </td>
+              <td data-label="Jours" className="num">
+                {l.jours ?? '—'}
+              </td>
               <td data-label="Heures" className="num">
-                {l.manque ? <span className="pill pill--attention">{LIBELLE_MANQUE[l.manque]}</span> : formatHeures(l.heures)}
+                {l.manque ? (
+                  <span className="pill pill--attention">{LIBELLE_MANQUE[l.manque]}</span>
+                ) : (
+                  formatHeures(l.heures)
+                )}
               </td>
             </tr>
           ))}

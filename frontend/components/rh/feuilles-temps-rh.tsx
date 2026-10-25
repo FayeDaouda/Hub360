@@ -47,7 +47,12 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
   }, [slug, mois]);
   useEffect(charger, [charger]);
 
-  if (!donnees) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (!donnees)
+    return erreur ? (
+      <p className="field-erreur">{erreur}</p>
+    ) : (
+      <div className="skeleton admin-skeleton-panel" aria-hidden />
+    );
 
   const aControler = donnees.periodes.reduce((n, p) => n + p.aControler, 0);
   const courante = donnees.feuilles.find((f) => f.dossierId === choisi) ?? null;
@@ -88,18 +93,22 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
             <BoutonExport
               desactive={!donnees.feuilles.length}
               onExporter={() =>
-                exporterCsv(`feuilles-temps-${donnees.mois}`, [
-                  { titre: 'Matricule', valeur: (f) => f.matricule },
-                  { titre: 'Salarié', valeur: nomDe },
-                  { titre: 'Poste', valeur: (f) => f.poste },
-                  { titre: 'Cellule', valeur: (f) => f.cellule },
-                  { titre: 'Heures imputées', valeur: (f) => f.heuresImputees },
-                  { titre: 'Heures disponibles', valeur: (f) => f.heuresDisponibles },
-                  { titre: 'Jours d’absence', valeur: (f) => f.joursAbsence },
-                  { titre: 'Occupation (%)', valeur: (f) => f.occupation },
-                  { titre: 'Contrôle RH', valeur: (f) => STATUT_FEUILLE[f.statut].libelle },
-                  { titre: 'Contrôlée le', valeur: (f) => dateExport(f.controleLe) },
-                ], donnees.feuilles)
+                exporterCsv(
+                  `feuilles-temps-${donnees.mois}`,
+                  [
+                    { titre: 'Matricule', valeur: (f) => f.matricule },
+                    { titre: 'Salarié', valeur: nomDe },
+                    { titre: 'Poste', valeur: (f) => f.poste },
+                    { titre: 'Cellule', valeur: (f) => f.cellule },
+                    { titre: 'Heures imputées', valeur: (f) => f.heuresImputees },
+                    { titre: 'Heures disponibles', valeur: (f) => f.heuresDisponibles },
+                    { titre: 'Jours d’absence', valeur: (f) => f.joursAbsence },
+                    { titre: 'Occupation (%)', valeur: (f) => f.occupation },
+                    { titre: 'Contrôle RH', valeur: (f) => STATUT_FEUILLE[f.statut].libelle },
+                    { titre: 'Contrôlée le', valeur: (f) => dateExport(f.controleLe) },
+                  ],
+                  donnees.feuilles,
+                )
               }
             />
           </div>
@@ -124,16 +133,31 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                   {donnees.feuilles.map((f) => (
                     <tr key={f.dossierId} className={f.dossierId === choisi ? 'is-active' : undefined}>
                       <td>
-                        <button type="button" className="rh-nom" aria-pressed={f.dossierId === choisi} onClick={() => choisir(f.dossierId)}>
+                        <button
+                          type="button"
+                          className="rh-nom"
+                          aria-pressed={f.dossierId === choisi}
+                          onClick={() => choisir(f.dossierId)}
+                        >
                           {nomDe(f)}
                         </button>
                         <span className="cell-sub">{f.poste || 'poste à renseigner'}</span>
                       </td>
-                      <td data-label="Cellule" className="tl-cellule">{f.cellule ?? <span className="cell-sub">—</span>}</td>
-                      <td data-label="Imputées" className="num">{formatHeures(f.heuresImputees)}</td>
-                      <td data-label="Disponibles" className="num">{formatHeures(f.heuresDisponibles)}</td>
-                      <td data-label="Absences" className="num">{f.joursAbsence} j</td>
-                      <td data-label="Occupation" className="num">{f.occupation == null ? '—' : `${f.occupation} %`}</td>
+                      <td data-label="Cellule" className="tl-cellule">
+                        {f.cellule ?? <span className="cell-sub">—</span>}
+                      </td>
+                      <td data-label="Imputées" className="num">
+                        {formatHeures(f.heuresImputees)}
+                      </td>
+                      <td data-label="Disponibles" className="num">
+                        {formatHeures(f.heuresDisponibles)}
+                      </td>
+                      <td data-label="Absences" className="num">
+                        {f.joursAbsence} j
+                      </td>
+                      <td data-label="Occupation" className="num">
+                        {f.occupation == null ? '—' : `${f.occupation} %`}
+                      </td>
                       <td data-label="Contrôle RH" className="tl-statut">
                         <span className={`pill ${STATUT_FEUILLE[f.statut].pill}`}>
                           {f.statut === 'controlee' && f.controleLe
@@ -154,7 +178,13 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
           {!courante ? (
             <p className="dmd-note">Sélectionnez un salarié pour voir le détail du calcul et contrôler sa feuille.</p>
           ) : (
-            <DetailFeuille key={`${courante.dossierId}:${courante.mois}`} slug={slug} f={courante} ecriture={ecriture} onControle={charger} />
+            <DetailFeuille
+              key={`${courante.dossierId}:${courante.mois}`}
+              slug={slug}
+              f={courante}
+              ecriture={ecriture}
+              onControle={charger}
+            />
           )}
         </section>
       </div>
@@ -221,7 +251,8 @@ function DetailFeuille({
         )}
         {incompletes > 0 && (
           <p className="dmd-note temps-alerte">
-            {incompletes} bloc(s) sans heure : {[...new Set(f.lignes.flatMap((l) => (l.manque ? [LIBELLE_MANQUE[l.manque]] : [])))].join(', ')}.
+            {incompletes} bloc(s) sans heure :{' '}
+            {[...new Set(f.lignes.flatMap((l) => (l.manque ? [LIBELLE_MANQUE[l.manque]] : [])))].join(', ')}.
           </p>
         )}
         {f.blocsNonPlanifies > 0 && (
@@ -242,8 +273,8 @@ function DetailFeuille({
         </p>
       ) : f.statut === 'cloture' ? (
         <p className="dmd-note">
-          <Clock size={13} aria-hidden /> Mois clos : le contrôle s’ouvre le 3 du mois suivant, le temps que les dernières
-          absences et remises soient saisies.
+          <Clock size={13} aria-hidden /> Mois clos : le contrôle s’ouvre le 3 du mois suivant, le temps que les
+          dernières absences et remises soient saisies.
         </p>
       ) : (
         controlable && (
@@ -273,7 +304,17 @@ function DetailFeuille({
 // Écart signalé par le salarié (revue Salarié 19/10/2026) : la RH corrige la
 // source si besoin (absence, fenêtre de tâche) — le calcul suit — puis
 // répond, ce qui clôt l'écart et rouvre le contrôle du mois.
-function EcartRh({ slug, f, ecriture, onTraite }: { slug: string; f: FeuilleTempsSalarie; ecriture: boolean; onTraite: () => void }) {
+function EcartRh({
+  slug,
+  f,
+  ecriture,
+  onTraite,
+}: {
+  slug: string;
+  f: FeuilleTempsSalarie;
+  ecriture: boolean;
+  onTraite: () => void;
+}) {
   const e = f.ecart!;
   const [reponse, setReponse] = useState('');
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
@@ -292,8 +333,10 @@ function EcartRh({ slug, f, ecriture, onTraite }: { slug: string; f: FeuilleTemp
     <div className="temps-ecart">
       <h3 className="rh-section">Écart signalé par le salarié</h3>
       <p className="dmd-note">
-        <span className={`pill ${e.traiteLe ? 'pill--succes' : 'pill--attention'}`}>{e.traiteLe ? 'Traité' : 'À traiter'}</span> Le{' '}
-        {jjmmaaaa(e.signaleLe)} : « {e.commentaire} »
+        <span className={`pill ${e.traiteLe ? 'pill--succes' : 'pill--attention'}`}>
+          {e.traiteLe ? 'Traité' : 'À traiter'}
+        </span>{' '}
+        Le {jjmmaaaa(e.signaleLe)} : « {e.commentaire} »
       </p>
       {e.traiteLe ? (
         <p className="dmd-note">
@@ -302,16 +345,27 @@ function EcartRh({ slug, f, ecriture, onTraite }: { slug: string; f: FeuilleTemp
       ) : ecriture ? (
         <>
           <p className="dmd-note">
-            Corrigez la source si besoin (absence à enregistrer, dates de la tâche dans Projets) : la feuille se recalcule. Puis répondez au
-            salarié ; le contrôle du mois se rouvre.
+            Corrigez la source si besoin (absence à enregistrer, dates de la tâche dans Projets) : la feuille se
+            recalcule. Puis répondez au salarié ; le contrôle du mois se rouvre.
           </p>
           <label className="field">
             <span className="field-label">Réponse au salarié</span>
-            <textarea className="field-input" rows={2} maxLength={1000} value={reponse} onChange={(ev) => setReponse(ev.target.value)} />
+            <textarea
+              className="field-input"
+              rows={2}
+              maxLength={1000}
+              value={reponse}
+              onChange={(ev) => setReponse(ev.target.value)}
+            />
           </label>
           {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
           <div className="dmd-actions">
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || reponse.trim().length < 3} onClick={repondre}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi || reponse.trim().length < 3}
+              onClick={repondre}
+            >
               Répondre et clore
             </button>
           </div>

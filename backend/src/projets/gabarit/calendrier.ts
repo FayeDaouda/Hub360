@@ -51,7 +51,7 @@ export function joursOuvresApres(de: string, a: string, feries: Feries = AUCUN_F
 // 3 jours ouvrés après un dépôt).
 export function apresJoursOuvres(de: string, n: number, feries: Feries = AUCUN_FERIE): string {
   let d = de;
-  for (let k = 0; k < n; ) {
+  for (let k = 0; k < n;) {
     d = lendemain(d);
     if (estOuvre(d, feries)) k++;
   }

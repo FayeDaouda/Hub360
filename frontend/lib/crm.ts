@@ -81,10 +81,7 @@ export function getClients(slug: string): Promise<Client[]> {
   return apiSociete<Client[]>(slug, '/clients');
 }
 
-export function creerProjet(
-  slug: string,
-  payload: NouveauProjetPayload,
-): Promise<Projet> {
+export function creerProjet(slug: string, payload: NouveauProjetPayload): Promise<Projet> {
   return apiSociete<Projet>(slug, '/dossiers', { method: 'POST', body: payload });
 }
 
@@ -120,11 +117,7 @@ export function getHistorique(slug: string, id: string): Promise<TransitionDossi
 
 // Rattache un dossier antérieur au référentiel à une localité (une seule
 // fois — 409 s'il est déjà rattaché). Ne change ni son code ni son libellé.
-export function rattacherLocalite(
-  slug: string,
-  id: string,
-  localiteId: string,
-): Promise<Projet> {
+export function rattacherLocalite(slug: string, id: string, localiteId: string): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/localite`, {
     method: 'PATCH',
     body: { localiteId },
@@ -153,11 +146,7 @@ export function modifierApporteur(slug: string, id: string, apporteur: Apporteur
   return apiSociete(slug, `/dossiers/${id}/apporteur`, { method: 'PATCH', body: apporteur });
 }
 
-export function changerProprietaire(
-  slug: string,
-  id: string,
-  proprietaireId: string,
-): Promise<Projet> {
+export function changerProprietaire(slug: string, id: string, proprietaireId: string): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/proprietaire`, {
     method: 'PATCH',
     body: { proprietaireId },

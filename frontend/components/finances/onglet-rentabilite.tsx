@@ -25,12 +25,13 @@ import {
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
 const MOIS_DEBUT = '2026-09'; // premières feuilles de temps (rh/regles-temps.ts)
 const jjmm = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
-const libelleMois = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const libelleMois = (m: string) =>
+  new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 // Mois proposés : des premières feuilles au mois en cours.
 function moisDisponibles(aujourdhui: string) {
   const liste: string[] = [];
-  for (let m = MOIS_DEBUT; m <= aujourdhui.slice(0, 7); ) {
+  for (let m = MOIS_DEBUT; m <= aujourdhui.slice(0, 7);) {
     liste.push(m);
     const [a, mm] = m.split('-').map(Number);
     m = mm === 12 ? `${a + 1}-01` : `${a}-${String(mm + 1).padStart(2, '0')}`;
@@ -64,7 +65,13 @@ export function OngletRentabilite({ slug }: { slug: string }) {
     const cle = (l: LigneRentabilite) => {
       // Sans montant (CTO), le tri se fait sur le taux.
       const t = montants ? tri : tri === 'heures' ? 'heures' : 'taux';
-      return t === 'marge' ? (l.marge ?? 0) : t === 'taux' ? (l.taux ?? Infinity) : t === 'cout' ? -(l.cout ?? 0) : -l.heures;
+      return t === 'marge'
+        ? (l.marge ?? 0)
+        : t === 'taux'
+          ? (l.taux ?? Infinity)
+          : t === 'cout'
+            ? -(l.cout ?? 0)
+            : -l.heures;
     };
     // Projets suivis d'abord, triés ; « heures non suivies » à la fin, hors classement.
     const suivis = donnees.lignes.filter((l) => l.etat !== 'heures_non_suivies').sort((a, b) => cle(a) - cle(b));
@@ -84,15 +91,18 @@ export function OngletRentabilite({ slug }: { slug: string }) {
       <div className="rt-bandeau" role="note">
         <Info size={16} aria-hidden />
         <span>
-          <strong>Marge directe provisoire</strong> : montant HT facturé moins le coût salarial des heures imputées et contrôlées.{' '}
-          {charges == null ? 'Charges patronales non comprises' : `Charges patronales au coefficient de ${charges} %`}, dépenses et frais généraux non
-          compris.{parDefaut && ' Paramètres par défaut, non validés par un expert-comptable.'} Calculé le {new Date(donnees.calculeLe).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}.
+          <strong>Marge directe provisoire</strong> : montant HT facturé moins le coût salarial des heures imputées et
+          contrôlées.{' '}
+          {charges == null ? 'Charges patronales non comprises' : `Charges patronales au coefficient de ${charges} %`},
+          dépenses et frais généraux non compris.
+          {parDefaut && ' Paramètres par défaut, non validés par un expert-comptable.'} Calculé le{' '}
+          {new Date(donnees.calculeLe).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}.
           {!donnees.periode &&
             (donnees.arreteAu ? (
               <>
                 {' '}
-                <strong>Cumul arrêté au {finDeMois(donnees.arreteAu)}</strong>, dernier mois entièrement contrôlé : facturé et coût s’arrêtent à cette date, les
-                factures émises depuis entreront au prochain arrêté.
+                <strong>Cumul arrêté au {finDeMois(donnees.arreteAu)}</strong>, dernier mois entièrement contrôlé :
+                facturé et coût s’arrêtent à cette date, les factures émises depuis entreront au prochain arrêté.
               </>
             ) : (
               <strong> Aucun mois n’est encore entièrement contrôlé : le cumul reste vide.</strong>
@@ -116,12 +126,24 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     icone: Banknote,
                     etat: 'marque',
                   },
-                  { cle: 'cout', label: 'Coût salarial direct', montant: donnees.totaux.cout ?? 0, sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`, icone: Users, etat: 'marque' },
+                  {
+                    cle: 'cout',
+                    label: 'Coût salarial direct',
+                    montant: donnees.totaux.cout ?? 0,
+                    sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`,
+                    icone: Users,
+                    etat: 'marque',
+                  },
                   {
                     cle: 'marge',
                     label: 'Marge directe provisoire',
-                    ...(donnees.totaux.marge === null ? { valeur: 'Données insuffisantes' } : { montant: donnees.totaux.marge }),
-                    sousTexte: donnees.totaux.marge === null ? 'aucun projet aux données complètes' : `${formatTaux(donnees.totaux.taux)} · cible ${formatParametre(p.marge_cible)}`,
+                    ...(donnees.totaux.marge === null
+                      ? { valeur: 'Données insuffisantes' }
+                      : { montant: donnees.totaux.marge }),
+                    sousTexte:
+                      donnees.totaux.marge === null
+                        ? 'aucun projet aux données complètes'
+                        : `${formatTaux(donnees.totaux.taux)} · cible ${formatParametre(p.marge_cible)}`,
                     icone: Percent,
                     etat: (donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque',
                   },
@@ -152,17 +174,23 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                   {b.feuilles} feuille{b.feuilles > 1 ? 's' : ''} de temps de {libelleMois(b.mois)} à contrôler
                 </strong>{' '}
                 · bloque{b.feuilles > 1 ? 'nt' : ''} {b.projets} projet{b.projets > 1 ? 's' : ''}
-                <span className="cell-sub">À faire par la RH{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, dans RH › Feuilles de temps.</span>
+                <span className="cell-sub">
+                  À faire par la RH{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, dans RH ›
+                  Feuilles de temps.
+                </span>
               </li>
             ))}
             {donnees.blocages.salaires.salaries > 0 && (
               <li>
                 <strong>
-                  {donnees.blocages.salaires.salaries} salarié{donnees.blocages.salaires.salaries > 1 ? 's' : ''} sans salaire validé
+                  {donnees.blocages.salaires.salaries} salarié{donnees.blocages.salaires.salaries > 1 ? 's' : ''} sans
+                  salaire validé
                 </strong>{' '}
-                · bloque{donnees.blocages.salaires.salaries > 1 ? 'nt' : ''} {donnees.blocages.salaires.projets} projet{donnees.blocages.salaires.projets > 1 ? 's' : ''}
+                · bloque{donnees.blocages.salaires.salaries > 1 ? 'nt' : ''} {donnees.blocages.salaires.projets} projet
+                {donnees.blocages.salaires.projets > 1 ? 's' : ''}
                 <span className="cell-sub">
-                  La RH propose le salaire{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, le CFO le valide
+                  La RH propose le salaire{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, le
+                  CFO le valide
                   {donnees.blocages.cfo.length ? ` (${donnees.blocages.cfo.join(', ')})` : ''}.
                 </span>
               </li>
@@ -197,7 +225,11 @@ export function OngletRentabilite({ slug }: { slug: string }) {
           </label>
           <label className="field">
             <span className="field-label">Trier par</span>
-            <select className="field-input" value={montants ? tri : tri === 'heures' ? 'heures' : 'taux'} onChange={(e) => setTri(e.target.value as Tri)}>
+            <select
+              className="field-input"
+              value={montants ? tri : tri === 'heures' ? 'heures' : 'taux'}
+              onChange={(e) => setTri(e.target.value as Tri)}
+            >
               {montants && <option value="marge">Marge (la plus faible d’abord)</option>}
               <option value="taux">Taux (le plus faible d’abord)</option>
               {montants && <option value="cout">Coût salarial (le plus élevé d’abord)</option>}
@@ -206,7 +238,12 @@ export function OngletRentabilite({ slug }: { slug: string }) {
           </label>
           {montants && <BoutonExport desactive={!lignes.length} onExporter={() => exporter(lignes, donnees.periode)} />}
         </div>
-        {periode && <p className="dmd-note">Un mois isolé peut être très négatif ou très positif selon les dates de facture : le cumul est la vue de référence.</p>}
+        {periode && (
+          <p className="dmd-note">
+            Un mois isolé peut être très négatif ou très positif selon les dates de facture : le cumul est la vue de
+            référence.
+          </p>
+        )}
 
         {lignes.length === 0 ? (
           <p className="dmd-note">Aucun projet pour ce filtre.</p>
@@ -220,7 +257,9 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                   {montants && <th className="num">Coût salarial</th>}
                   {montants && <th className="num">Marge provisoire</th>}
                   <th>Taux · statut</th>
-                  <th title="Prolongations accordées et reprises demandées : les heures standard ne voient pas les dépassements">Dépassements</th>
+                  <th title="Prolongations accordées et reprises demandées : les heures standard ne voient pas les dépassements">
+                    Dépassements
+                  </th>
                   <th className="num">Heures</th>
                   <th>Données</th>
                 </tr>
@@ -245,14 +284,19 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                       </td>
                     )}
                     {montants && (
-                      <td data-label="Marge provisoire" className={`num rt-marge${(l.marge ?? 0) < 0 ? ' rt-negatif' : ''}`}>
+                      <td
+                        data-label="Marge provisoire"
+                        className={`num rt-marge${(l.marge ?? 0) < 0 ? ' rt-negatif' : ''}`}
+                      >
                         <strong>{l.marge === null ? '—' : formatMontant(l.marge)}</strong>
                       </td>
                     )}
                     <td data-label="Taux · statut" className="rt-taux">
                       <span className="rt-taux-ligne">
                         {l.etat === 'complet' ? formatTaux(l.taux) : '—'}
-                        {l.statut && <span className={`pill ${PILL_STATUT[l.statut]}`}>{LIBELLE_STATUT[l.statut]}</span>}
+                        {l.statut && (
+                          <span className={`pill ${PILL_STATUT[l.statut]}`}>{LIBELLE_STATUT[l.statut]}</span>
+                        )}
                       </span>
                     </td>
                     <td data-label="Dépassements" className="rt-signaux">
@@ -266,14 +310,22 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                       </span>
                     </td>
                     <td data-label="Heures" className="num rt-heures">
-                      {l.heures.toLocaleString('fr-FR')} h{l.heuresAttente > 0 && <span className="cell-sub">dont {l.heuresAttente.toLocaleString('fr-FR')} h à contrôler</span>}
+                      {l.heures.toLocaleString('fr-FR')} h
+                      {l.heuresAttente > 0 && (
+                        <span className="cell-sub">dont {l.heuresAttente.toLocaleString('fr-FR')} h à contrôler</span>
+                      )}
                     </td>
                     <td data-label="Données" className="rt-etat">
                       <span className="cell-stack">
-                        <span className={`pill ${l.etat === 'complet' ? 'pill--neutre' : 'pill--attention'}`} title={l.raisons.join(' · ') || undefined}>
+                        <span
+                          className={`pill ${l.etat === 'complet' ? 'pill--neutre' : 'pill--attention'}`}
+                          title={l.raisons.join(' · ') || undefined}
+                        >
                           {LIBELLE_ETAT[l.etat]}
                         </span>
-                        <span className="cell-sub">{l.misAJour ? `à jour du ${jjmm(l.misAJour)}` : 'aucune donnée'}</span>
+                        <span className="cell-sub">
+                          {l.misAJour ? `à jour du ${jjmm(l.misAJour)}` : 'aucune donnée'}
+                        </span>
                       </span>
                     </td>
                   </tr>
@@ -299,18 +351,25 @@ export function OngletRentabilite({ slug }: { slug: string }) {
 }
 
 function exporter(lignes: LigneRentabilite[], periode: string | null) {
-  exporterCsv(`rentabilite-${periode ?? 'cumul'}`, [
-    { titre: 'Projet', valeur: (l) => l.projet.code },
-    { titre: 'Client', valeur: (l) => l.projet.client },
-    { titre: 'Montant HT facturé (FCFA)', valeur: (l) => l.ht },
-    { titre: 'Coût salarial direct (FCFA)', valeur: (l) => l.cout },
-    { titre: 'Marge directe provisoire (FCFA)', valeur: (l) => l.marge },
-    { titre: 'Taux (%)', valeur: (l) => l.taux },
-    { titre: 'Statut', valeur: (l) => (l.statut ? LIBELLE_STATUT[l.statut] : null) },
-    { titre: 'Prolongations', valeur: (l) => l.prolongations },
-    { titre: 'Reprises', valeur: (l) => l.reprises },
-    { titre: 'Heures contrôlées', valeur: (l) => l.heures },
-    { titre: 'Heures à contrôler', valeur: (l) => l.heuresAttente },
-    { titre: 'Données', valeur: (l) => `${LIBELLE_ETAT[l.etat]}${l.raisons.length ? ` (${l.raisons.join(' ; ')})` : ''}` },
-  ], lignes);
+  exporterCsv(
+    `rentabilite-${periode ?? 'cumul'}`,
+    [
+      { titre: 'Projet', valeur: (l) => l.projet.code },
+      { titre: 'Client', valeur: (l) => l.projet.client },
+      { titre: 'Montant HT facturé (FCFA)', valeur: (l) => l.ht },
+      { titre: 'Coût salarial direct (FCFA)', valeur: (l) => l.cout },
+      { titre: 'Marge directe provisoire (FCFA)', valeur: (l) => l.marge },
+      { titre: 'Taux (%)', valeur: (l) => l.taux },
+      { titre: 'Statut', valeur: (l) => (l.statut ? LIBELLE_STATUT[l.statut] : null) },
+      { titre: 'Prolongations', valeur: (l) => l.prolongations },
+      { titre: 'Reprises', valeur: (l) => l.reprises },
+      { titre: 'Heures contrôlées', valeur: (l) => l.heures },
+      { titre: 'Heures à contrôler', valeur: (l) => l.heuresAttente },
+      {
+        titre: 'Données',
+        valeur: (l) => `${LIBELLE_ETAT[l.etat]}${l.raisons.length ? ` (${l.raisons.join(' ; ')})` : ''}`,
+      },
+    ],
+    lignes,
+  );
 }

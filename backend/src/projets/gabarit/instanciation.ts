@@ -60,12 +60,17 @@ export type CarteInstanciee = {
   taches: TacheInstanciee[];
 };
 
-const CHARGE: Record<'notice' | 'cachet' | 'timbre', keyof ChargesGc> = { notice: 'Notice', cachet: 'Cachet', timbre: 'Timbre' };
+const CHARGE: Record<'notice' | 'cachet' | 'timbre', keyof ChargesGc> = {
+  notice: 'Notice',
+  cachet: 'Cachet',
+  timbre: 'Timbre',
+};
 const arrondi = (n: number) => Math.round(n * 10) / 10;
 
 // Retrait décidé à l'ouverture (motif affiché sous la tâche), ou null.
 function motifRetrait(carte: string, tache: string, ctx: ContexteOuverture): string | null {
-  if (carte === 'documents_client' && tache === 'ninea' && ctx.clientPersonnePhysique) return 'Client personne physique (CRM) : sans objet';
+  if (carte === 'documents_client' && tache === 'ninea' && ctx.clientPersonnePhysique)
+    return 'Client personne physique (CRM) : sans objet';
   if (carte === 'permis_construire' && tache === 'autorisation' && !ctx.spcCommande) return 'SPC non commandé au devis';
   return null;
 }
@@ -73,7 +78,12 @@ function motifRetrait(carte: string, tache: string, ctx: ContexteOuverture): str
 export function instancier(contenu: ContenuGabarit, ctx: ContexteOuverture): CarteInstanciee[] {
   const dates = (f?: Fenetre) =>
     f
-      ? { debutJ: f.debut, finJ: f.fin, debutLe: dateDuJour(ctx.j1, f.debut, ctx.feries), finLe: dateDuJour(ctx.j1, f.fin, ctx.feries) }
+      ? {
+          debutJ: f.debut,
+          finJ: f.fin,
+          debutLe: dateDuJour(ctx.j1, f.debut, ctx.feries),
+          finLe: dateDuJour(ctx.j1, f.fin, ctx.feries),
+        }
       : { debutJ: null, finJ: null, debutLe: null, finLe: null };
   let ordreCarte = 0;
 
@@ -108,7 +118,7 @@ export function instancier(contenu: ContenuGabarit, ctx: ContexteOuverture): Car
         temps: carte.temps ?? null,
         client: !!carte.client,
         fichiers: !!carte.fichiers,
-        desactivation: carte.desactivee ? carte.motifDesactivation ?? 'désactivée par défaut' : null,
+        desactivation: carte.desactivee ? (carte.motifDesactivation ?? 'désactivée par défaut') : null,
         ouvreApres: carte.ouvreApres ?? [],
         taches: carte.taches.map((t, i) => ({
           cle: t.cle,

@@ -132,7 +132,11 @@ export function lignesSaisies(
 // Les lignes SU suivent la catégorie CO (le suivi de chantier se déduit, il
 // ne se choisit pas) et TS-MAJ prend le tarif de cette catégorie. `categorieCo`
 // : catégorie connue hors des lignes (dossier, projet).
-export function synchroniserCategorie(ls: LigneForm[], catalogue: ProduitService[], categorieCo: string | null): LigneForm[] {
+export function synchroniserCategorie(
+  ls: LigneForm[],
+  catalogue: ProduitService[],
+  categorieCo: string | null,
+): LigneForm[] {
   const produitDe = (l: LigneForm) => catalogue.find((p) => p.id === l.produitServiceId);
   const cat = ls.map(produitDe).find((p) => p?.modeCalcul === 'surface_planches')?.code ?? categorieCo;
   const su = catalogue.find((p) => p.coAssocie && p.coAssocie === cat);
@@ -198,8 +202,7 @@ export function LignesDevisEditeur({
   const planchesImposeesPour = (p?: ProduitService) =>
     p?.modeCalcul === 'surface_planches' ? planchesImposees : undefined;
   // Tarif de la catégorie CO (TS-MAJ) — lu au catalogue, jamais saisi.
-  const tarifCo = (cat: string | null) =>
-    catalogue.find((c) => c.code === cat)?.prixUnitaire ?? null;
+  const tarifCo = (cat: string | null) => catalogue.find((c) => c.code === cat)?.prixUnitaire ?? null;
 
   // Catégorie CO courante : la ligne CO de ce devis, sinon celle du dossier.
   function categorieDe(ls: LigneForm[]): string | null {
@@ -244,9 +247,7 @@ export function LignesDevisEditeur({
   const quantiteDe = (l: LigneForm): number => {
     const p = produitDe(l);
     if (surfacePlanches(p)) {
-      return (
-        (Number(l.surfaceM2) || 0) * (planchesImposeesPour(p) ?? (Number(l.planches) || 0))
-      );
+      return (Number(l.surfaceM2) || 0) * (planchesImposeesPour(p) ?? (Number(l.planches) || 0));
     }
     return Number(l.quantite) || 0;
   };
@@ -268,9 +269,7 @@ export function LignesDevisEditeur({
   // Lignes renseignées mais sans prix (forfait « à fixer » laissé vide…) —
   // rappel, l'enregistrement reste libre.
   const aZero = lignes.filter(
-    (l) =>
-      (l.produitServiceId || (l.horsCatalogue && l.designation.trim())) &&
-      !(Number(l.prixUnitaire) > 0),
+    (l) => (l.produitServiceId || (l.horsCatalogue && l.designation.trim())) && !(Number(l.prixUnitaire) > 0),
   ).length;
 
   return (
@@ -292,9 +291,7 @@ export function LignesDevisEditeur({
             {lignes.map((l, i) => {
               const p = produitDe(l);
               const figee = !!p && !p.prixModifiable;
-              const autreCo = lignes.some(
-                (x, idx) => idx !== i && produitDe(x)?.modeCalcul === 'surface_planches',
-              );
+              const autreCo = lignes.some((x, idx) => idx !== i && produitDe(x)?.modeCalcul === 'surface_planches');
               const montantHt = Math.round(quantiteDe(l) * (Number(l.prixUnitaire) || 0));
               const { montantTtc } = ventilationTva(montantHt, Number(l.tauxTva) || 0);
               return (
@@ -312,8 +309,7 @@ export function LignesDevisEditeur({
                         {FAMILLES.filter((f) => f.code !== 'TS' || devisProjet).map((f) => {
                           // SU : seul le suivi correspondant à la catégorie CO.
                           const produits = catalogue.filter(
-                            (c) =>
-                              c.famille === f.code && (!c.coAssocie || c.coAssocie === categorie),
+                            (c) => c.famille === f.code && (!c.coAssocie || c.coAssocie === categorie),
                           );
                           if (f.code === 'SU' && produits.length === 0) {
                             return (
@@ -373,16 +369,12 @@ export function LignesDevisEditeur({
                           placeholder="m²"
                           aria-label="Surface (m²)"
                           title={
-                            surfaceParDefaut
-                              ? 'Surface (m²) — surface terrain du dossier par défaut'
-                              : 'Surface (m²)'
+                            surfaceParDefaut ? 'Surface (m²) — surface terrain du dossier par défaut' : 'Surface (m²)'
                           }
                         />
                         <span>m² ×</span>
                         {planchesImposeesPour(p) !== undefined ? (
-                          <span title="Nombre de planches de la fiche du dossier">
-                            {planchesImposeesPour(p)} pl.
-                          </span>
+                          <span title="Nombre de planches de la fiche du dossier">{planchesImposeesPour(p)} pl.</span>
                         ) : (
                           <input
                             type="number"

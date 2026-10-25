@@ -32,9 +32,7 @@ export class SmtpEmailService extends EmailService {
       host: process.env.SMTP_HOST,
       port,
       // 465 = TLS implicite ; 587/25 = STARTTLS. Surchargable via SMTP_SECURE.
-      secure: process.env.SMTP_SECURE
-        ? process.env.SMTP_SECURE === 'true'
-        : port === 465,
+      secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : port === 465,
       auth:
         process.env.SMTP_USER || process.env.SMTP_PASS
           ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
@@ -55,11 +53,7 @@ export class SmtpEmailService extends EmailService {
       this.log.log(`[smtp] ${l.type} envoyé à ${l.email}`);
       return { envoye: true };
     } catch (e) {
-      this.log.error(
-        `[smtp] échec d'envoi ${l.type} à ${l.email} : ${
-          e instanceof Error ? e.message : e
-        }`,
-      );
+      this.log.error(`[smtp] échec d'envoi ${l.type} à ${l.email} : ${e instanceof Error ? e.message : e}`);
       return { envoye: false };
     }
   }
@@ -77,11 +71,7 @@ export class SmtpEmailService extends EmailService {
       this.log.log(`[smtp] devis ${d.reference} envoyé à ${d.email}`);
       return { envoye: true };
     } catch (e) {
-      this.log.error(
-        `[smtp] échec d'envoi devis ${d.reference} à ${d.email} : ${
-          e instanceof Error ? e.message : e
-        }`,
-      );
+      this.log.error(`[smtp] échec d'envoi devis ${d.reference} à ${d.email} : ${e instanceof Error ? e.message : e}`);
       return { envoye: false };
     }
   }
@@ -100,9 +90,7 @@ export class SmtpEmailService extends EmailService {
       return { envoye: true };
     } catch (e) {
       this.log.error(
-        `[smtp] échec d'envoi relance ${r.reference} à ${r.email} : ${
-          e instanceof Error ? e.message : e
-        }`,
+        `[smtp] échec d'envoi relance ${r.reference} à ${r.email} : ${e instanceof Error ? e.message : e}`,
       );
       return { envoye: false };
     }
@@ -122,9 +110,7 @@ export class SmtpEmailService extends EmailService {
       return { envoye: true };
     } catch (e) {
       this.log.error(
-        `[smtp] échec d'envoi relance devis ${r.reference} à ${r.email} : ${
-          e instanceof Error ? e.message : e
-        }`,
+        `[smtp] échec d'envoi relance devis ${r.reference} à ${r.email} : ${e instanceof Error ? e.message : e}`,
       );
       return { envoye: false };
     }
@@ -138,9 +124,7 @@ export class SmtpEmailService extends EmailService {
       return { envoye: true };
     } catch (e) {
       this.log.error(
-        `[smtp] échec d'envoi contrat ${c.codeDossier} à ${c.email} : ${
-          e instanceof Error ? e.message : e
-        }`,
+        `[smtp] échec d'envoi contrat ${c.codeDossier} à ${c.email} : ${e instanceof Error ? e.message : e}`,
       );
       return { envoye: false };
     }

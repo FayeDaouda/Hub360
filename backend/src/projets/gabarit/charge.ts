@@ -22,7 +22,13 @@ export type Charge = {
 // répartie sur la fenêtre de chaque tâche, 8 h par jour ouvré, fériés et
 // absences validées retirés — le même chiffre que l'indicateur « Charge des
 // équipes », vu avant d'assigner.
-export function chargeSurPeriode(p: Periode, autres: Tache[], tache: Tache, absences: Periode[], feries: Feries = AUCUN_FERIE): Charge {
+export function chargeSurPeriode(
+  p: Periode,
+  autres: Tache[],
+  tache: Tache,
+  absences: Periode[],
+  feries: Feries = AUCUN_FERIE,
+): Charge {
   const absents = joursAbsents(absences, feries);
   const ouvres = joursOuvres(p, feries);
   const presents = ouvres.filter((j) => !absents.has(j)).length;

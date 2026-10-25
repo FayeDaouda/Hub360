@@ -1,4 +1,11 @@
-import { chargeDuMois, codeCellule, partATemps, prefixeSociete, tachesEnCours, type TacheEquipe } from './equipes-regles';
+import {
+  chargeDuMois,
+  codeCellule,
+  partATemps,
+  prefixeSociete,
+  tachesEnCours,
+  type TacheEquipe,
+} from './equipes-regles';
 
 // Équipes (maquette du boss) : nomenclature et indicateurs des cellules.
 const tache = (o: Partial<TacheEquipe>): TacheEquipe => ({
@@ -34,7 +41,17 @@ describe('partATemps', () => {
 
 describe('tachesEnCours', () => {
   it('état commun des projets : démarrées, pas faites ; prolongée = retard qualifié, non compté', () => {
-    const r = tachesEnCours(['en_cours', 'en_retard', 'prolongee', 'a_valider', 'a_venir', 'verrouillee', 'validee', 'non_necessaire', 'desactivee']);
+    const r = tachesEnCours([
+      'en_cours',
+      'en_retard',
+      'prolongee',
+      'a_valider',
+      'a_venir',
+      'verrouillee',
+      'validee',
+      'non_necessaire',
+      'desactivee',
+    ]);
     expect(r).toEqual({ enCours: 4, enRetard: 1, pctATemps: 75 });
     expect(tachesEnCours([]).pctATemps).toBeNull();
   });

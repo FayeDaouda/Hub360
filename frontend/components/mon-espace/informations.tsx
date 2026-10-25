@@ -36,7 +36,11 @@ export function MesInformations({
   const [saisies, setSaisies] = useState<Partial<Record<Champ, string>>>({});
   const [mode, setMode] = useState<ModePaiementSalaire>(dossier.paiementDemande?.mode ?? dossier.modePaiement);
   const [coordonnees, setCoordonnees] = useState(dossier.paiementDemande?.coordonnees ?? dossier.coordonneesPaiement);
-  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null; enregistre: boolean }>({ envoi: false, erreur: null, enregistre: false });
+  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null; enregistre: boolean }>({
+    envoi: false,
+    erreur: null,
+    enregistre: false,
+  });
 
   async function enregistrer(champs: ChampsPersonnels) {
     setEtat({ envoi: true, erreur: null, enregistre: false });
@@ -58,7 +62,8 @@ export function MesInformations({
       value: valeur,
       onChange: (e: { target: { value: string } }) => setSaisies((s) => ({ ...s, [champ]: e.target.value })),
       onBlur: () => {
-        if (saisies[champ] !== undefined && saisies[champ]!.trim() !== dossier[champ]) void enregistrer({ [champ]: saisies[champ] });
+        if (saisies[champ] !== undefined && saisies[champ]!.trim() !== dossier[champ])
+          void enregistrer({ [champ]: saisies[champ] });
       },
     };
     return (
@@ -127,7 +132,9 @@ export function MesInformations({
               className="field-input"
               value={dossier.situationFamiliale ?? ''}
               disabled={etat.envoi}
-              onChange={(e) => enregistrer({ situationFamiliale: (e.target.value || null) as SituationFamiliale | null })}
+              onChange={(e) =>
+                enregistrer({ situationFamiliale: (e.target.value || null) as SituationFamiliale | null })
+              }
             >
               <option value="">Non renseignée</option>
               {Object.entries(SITUATIONS).map(([v, l]) => (
@@ -148,7 +155,8 @@ export function MesInformations({
               key={dossier.enfantsACharge}
               onBlur={(e) => {
                 const n = Number(e.target.value);
-                if (Number.isInteger(n) && n >= 0 && n <= 30 && n !== dossier.enfantsACharge) void enregistrer({ enfantsACharge: n });
+                if (Number.isInteger(n) && n >= 0 && n <= 30 && n !== dossier.enfantsACharge)
+                  void enregistrer({ enfantsACharge: n });
               }}
             />
           </label>
@@ -163,7 +171,11 @@ export function MesInformations({
         <div className="rh-grille">
           <label className="field">
             <span className="field-label">Mode</span>
-            <select className="field-input" value={mode} onChange={(e) => setMode(e.target.value as ModePaiementSalaire)}>
+            <select
+              className="field-input"
+              value={mode}
+              onChange={(e) => setMode(e.target.value as ModePaiementSalaire)}
+            >
               {Object.entries(LIBELLE_PAIEMENT_SALAIRE).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
@@ -173,11 +185,21 @@ export function MesInformations({
           </label>
           <label className="field">
             <span className="field-label">Banque et RIB, ou numéro</span>
-            <input className="field-input" maxLength={80} value={coordonnees} onChange={(e) => setCoordonnees(e.target.value)} />
+            <input
+              className="field-input"
+              maxLength={80}
+              value={coordonnees}
+              onChange={(e) => setCoordonnees(e.target.value)}
+            />
           </label>
         </div>
         <div className="me-paiement">
-          <button type="button" className="btn-ghost" disabled={etat.envoi || !paiementModifie || !coordonnees.trim()} onClick={soumettrePaiement}>
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={etat.envoi || !paiementModifie || !coordonnees.trim()}
+            onClick={soumettrePaiement}
+          >
             Soumettre à la RH
           </button>
           {enAttente ? (

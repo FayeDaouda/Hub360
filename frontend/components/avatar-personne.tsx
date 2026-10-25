@@ -20,7 +20,11 @@ export function AvatarPersonne({
 }) {
   const src = srcPhoto(photo);
   return (
-    <span className={`av av--${taille}${className ? ` ${className}` : ''}`} style={src ? undefined : { background: couleurPersonne(cle ?? nom) }} aria-hidden>
+    <span
+      className={`av av--${taille}${className ? ` ${className}` : ''}`}
+      style={src ? undefined : { background: couleurPersonne(cle ?? nom) }}
+      aria-hidden
+    >
       {src ? (
         // Photo déjà réduite à 256 px : pas d'optimisation next/image utile.
         <img src={src} alt="" />

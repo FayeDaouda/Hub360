@@ -17,11 +17,7 @@ import {
   TAUX_TVA_DEFAUT,
   typeFactureDepuisNature,
 } from '../domaine/config';
-import {
-  joursRetardFacture,
-  statutFactureEffectif,
-  ventilationTva,
-} from '../domaine/gardes';
+import { joursRetardFacture, statutFactureEffectif, ventilationTva } from '../domaine/gardes';
 import { FAMILLES_MENSUELLES, lignesOffreDepuisDevis, planFacturationOffre } from '../domaine/facturation-offre';
 import { refDevis } from '../../devis/domaine';
 import { montantRefacture, statutReglementBureau } from '../domaine/refacturation-etudes';
@@ -94,16 +90,10 @@ export class FacturationService {
     return this.formater(projetId);
   }
 
-  async creerEcheancier(
-    societeId: string,
-    projetId: string,
-    dto: CreerEcheancierDto,
-  ) {
+  async creerEcheancier(societeId: string, projetId: string, dto: CreerEcheancierDto) {
     const projet = await chargerProjet(this.prisma, societeId, projetId);
     if (projet.nature !== 'mandat_client') {
-      throw new UnprocessableEntityException(
-        "L'échéancier par jalon ne concerne que les mandats client.",
-      );
+      throw new UnprocessableEntityException("L'échéancier par jalon ne concerne que les mandats client.");
     }
     const dejaUnEcheancier = await this.prisma.facture.count({
       where: { projetId, jalon: { not: null } },
@@ -128,12 +118,7 @@ export class FacturationService {
     return this.formater(projetId);
   }
 
-  async patch(
-    societeId: string,
-    projetId: string,
-    factureId: string,
-    dto: PatchFactureDto,
-  ) {
+  async patch(societeId: string, projetId: string, factureId: string, dto: PatchFactureDto) {
     await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.brouillon(projetId, factureId);
     // Facture à lignes (refacturation d'études) : son montant EST la somme de
@@ -158,9 +143,7 @@ export class FacturationService {
     const projet = await chargerProjet(this.prisma, societeId, projetId);
     const facture = await this.brouillon(projetId, factureId);
     if (facture.montantHt.lte(0)) {
-      throw new UnprocessableEntityException(
-        "Renseignez un montant HT avant d'émettre la facture.",
-      );
+      throw new UnprocessableEntityException("Renseignez un montant HT avant d'émettre la facture.");
     }
     // F1 (acompte à la signature) ouvre le projet selon son gabarit
     // (Réglages · « Ouverture du projet ») : J1 = jour d'émission.
@@ -174,7 +157,13 @@ export class FacturationService {
     await this.avecSequence(societeId, projet.code, async (tx, seq) => {
       const r = await tx.facture.updateMany({
         where: { id: facture.id, statut: 'brouillon' },
-        data: { ...seq, statut: 'emise', emiseLe: new Date(), emiseParId: acteurId, echeanceLe: echeanceALEmission(facture) },
+        data: {
+          ...seq,
+          statut: 'emise',
+          emiseLe: new Date(),
+          emiseParId: acteurId,
+          echeanceLe: echeanceALEmission(facture),
+        },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
       if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
@@ -202,9 +191,7 @@ export class FacturationService {
       throw new ConflictException("Un avoir ne s'annule pas par un autre avoir.");
     }
     if (facture.statut !== 'emise') {
-      throw new ConflictException(
-        'Seule une facture émise peut être annulée par un avoir.',
-      );
+      throw new ConflictException('Seule une facture émise peut être annulée par un avoir.');
     }
 
     await this.avecSequence(societeId, projet.code, async (tx, seq) => {
@@ -344,8 +331,18 @@ export class FacturationService {
       },
       include: {
         paiements: true,
-        projet: { select: { id: true, code: true, programme: true, client: true, dossierCrm: { select: { type: true, localite: { select: { nom: true } } } } } },
-        devisOrigine: { select: { numero: true, client: true, codeDossier: true, rangDossier: true, dateReponse: true } },
+        projet: {
+          select: {
+            id: true,
+            code: true,
+            programme: true,
+            client: true,
+            dossierCrm: { select: { type: true, localite: { select: { nom: true } } } },
+          },
+        },
+        devisOrigine: {
+          select: { numero: true, client: true, codeDossier: true, rangDossier: true, dateReponse: true },
+        },
         devisEcheancier: { select: { numero: true, codeDossier: true, rangDossier: true, dateReponse: true } },
         dossierCrm: { select: { id: true, code: true, client: true, type: true, localite: { select: { nom: true } } } },
         lignes: { orderBy: { ordre: 'asc' } },
@@ -361,8 +358,22 @@ export class FacturationService {
       this.seuilCeo.montantsAffaire(factures),
       // Factures du même projet (ou lead) : première facture, récapitulatif d'échéancier.
       this.prisma.facture.findMany({
-        where: { societeId, estAvoir: false, OR: [{ projetId: { in: projetIds } }, { dossierCrmId: { in: dossierIds } }] },
-        select: { id: true, projetId: true, dossierCrmId: true, emiseLe: true, creeLe: true, statut: true, montantHt: true, devisEcheancierId: true, cleEcheance: true },
+        where: {
+          societeId,
+          estAvoir: false,
+          OR: [{ projetId: { in: projetIds } }, { dossierCrmId: { in: dossierIds } }],
+        },
+        select: {
+          id: true,
+          projetId: true,
+          dossierCrmId: true,
+          emiseLe: true,
+          creeLe: true,
+          statut: true,
+          montantHt: true,
+          devisEcheancierId: true,
+          cleEcheance: true,
+        },
       }),
     ]);
 
@@ -405,19 +416,29 @@ export class FacturationService {
         annuleeLe: f.annuleeLe,
         montantPaye,
         resteAPayer: montantTtc - montantPaye,
-        joursRetard:
-          statutEffectif === 'en_retard' ? joursRetardFacture(f.echeanceLe, aujourdhui) : 0,
+        joursRetard: statutEffectif === 'en_retard' ? joursRetardFacture(f.echeanceLe, aujourdhui) : 0,
         projetId: f.projetId,
         projet: f.projet ? { id: f.projet.id, code: f.projet.code, programme: f.projet.programme } : null,
         // Adresse et contact : le bloc « Facturé à » du document (lot 6).
-        client: client ? { id: client.id, nom: client.nom, adresse: client.adresse, ninea: client.ninea, email: client.email, telephone: client.telephone } : null,
+        client: client
+          ? {
+              id: client.id,
+              nom: client.nom,
+              adresse: client.adresse,
+              ninea: client.ninea,
+              email: client.email,
+              telephone: client.telephone,
+            }
+          : null,
         // Ce que le client reconnaît sur le document (lot 6) : nature et lieu
         // du projet, tranche F1 / F2 / F3, offre acceptée qui fonde la facture.
         pourDocument: (() => {
           const lieu = f.projet?.dossierCrm ?? f.dossierCrm;
           const offre = f.devisEcheancier ?? f.devisOrigine;
           const tranche = /:(F\d)$/.exec(f.cleEcheance ?? '')?.[1] ?? null;
-          const memeProjet = voisines.filter((v) => (f.projetId ? v.projetId === f.projetId : v.dossierCrmId === f.dossierCrmId));
+          const memeProjet = voisines.filter((v) =>
+            f.projetId ? v.projetId === f.projetId : v.dossierCrmId === f.dossierCrmId,
+          );
           return {
             typeBien: lieu?.type ?? null,
             localite: lieu?.localite?.nom ?? null,
@@ -446,7 +467,14 @@ export class FacturationService {
   async leadsFacturables(societeId: string) {
     const dossiers = await this.prisma.dossierCrm.findMany({
       where: { societeId, archiveLe: null },
-      select: { id: true, code: true, statut: true, localisation: true, localite: { select: { nom: true } }, client: { select: { nom: true } } },
+      select: {
+        id: true,
+        code: true,
+        statut: true,
+        localisation: true,
+        localite: { select: { nom: true } },
+        client: { select: { nom: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
     const suivante = await this.prochaineReference(societeId);
@@ -499,7 +527,14 @@ export class FacturationService {
     }
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id: dto.dossierCrmId, societeId },
-      select: { id: true, code: true, nature: true, archiveLe: true, projet: { select: { id: true } }, client: { select: { nom: true } } },
+      select: {
+        id: true,
+        code: true,
+        nature: true,
+        archiveLe: true,
+        projet: { select: { id: true } },
+        client: { select: { nom: true } },
+      },
     });
     if (!dossier) throw new NotFoundException('Lead introuvable');
     if (dossier.archiveLe) throw new ConflictException('Lead archivé : aucune facture ne s’y prépare.');
@@ -542,7 +577,8 @@ export class FacturationService {
       return this.factureCentrale(societeId, factureId);
     }
     if (f.statut !== 'brouillon') throw new ConflictException('Facture déjà émise.');
-    if (f.montantHt.lte(0)) throw new UnprocessableEntityException("Renseignez un montant HT avant d'émettre la facture.");
+    if (f.montantHt.lte(0))
+      throw new UnprocessableEntityException("Renseignez un montant HT avant d'émettre la facture.");
     const dossier = f.dossierCrmId
       ? await this.prisma.dossierCrm.findUnique({ where: { id: f.dossierCrmId }, select: { code: true } })
       : null;
@@ -578,7 +614,14 @@ export class FacturationService {
     if (f.statut !== 'emise') throw new ConflictException('Seule une facture émise reçoit des paiements.');
     await exigerMoisOuvert(this.prisma, societeId, dto.date, 'un paiement daté de ce mois');
     await this.prisma.paiement.create({
-      data: { factureId: f.id, date: dto.date, montant: dto.montant, mode: dto.mode ?? null, reference: dto.reference?.trim() ?? '', creeParId: acteurId },
+      data: {
+        factureId: f.id,
+        date: dto.date,
+        montant: dto.montant,
+        mode: dto.mode ?? null,
+        reference: dto.reference?.trim() ?? '',
+        creeParId: acteurId,
+      },
     });
     await this.signalerSiPayee(f.id, Number(dto.montant), acteurId);
     return this.factureCentrale(societeId, factureId);
@@ -990,17 +1033,16 @@ export class FacturationService {
   // Une mensualité annulée par avoir ne compte plus (le mois peut se
   // refacturer). « À facturer ce mois » : projet en chantier (SU = suivi de
   // chantier, EX = extras de chantier), mois restants, rien ce mois-ci.
-  private etatMensualite(
-    l: Awaited<ReturnType<FacturationService['lignesMensuelles']>>[number],
-    phase: string,
-  ) {
+  private etatMensualite(l: Awaited<ReturnType<FacturationService['lignesMensuelles']>>[number], phase: string) {
     const valides = l.mensualites.filter((f) => f.statut !== 'annulee' && !f.estAvoir);
     const moisCourant = jourCourant().slice(0, 7);
     const moisPrevus = Math.round(l.quantite.toNumber());
     const moisFactures = valides.length;
     const factureCeMois = valides.some((f) => f.creeLe.toISOString().slice(0, 7) === moisCourant);
     return {
-      nom: l.produitService?.code ? `${l.produitService.code} — ${l.designation.replace(/^\S+ — /, '')}` : l.designation,
+      nom: l.produitService?.code
+        ? `${l.produitService.code} — ${l.designation.replace(/^\S+ — /, '')}`
+        : l.designation,
       moisPrevus,
       moisFactures,
       factureCeMois,
@@ -1014,9 +1056,7 @@ export class FacturationService {
     });
     if (!facture) throw new NotFoundException('Facture introuvable');
     if (facture.statut !== 'brouillon') {
-      throw new ConflictException(
-        'Facture émise — non modifiable. Créez un avoir pour la corriger.',
-      );
+      throw new ConflictException('Facture émise — non modifiable. Créez un avoir pour la corriger.');
     }
     return facture;
   }
@@ -1055,8 +1095,7 @@ export class FacturationService {
         });
         return;
       } catch (e) {
-        const collision =
-          e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+        const collision = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
         if (collision && essai < 4) continue;
         throw e;
       }
@@ -1067,7 +1106,11 @@ export class FacturationService {
     const [factures, projet, lignesMensuelles] = await Promise.all([
       this.prisma.facture.findMany({
         where: { projetId },
-        include: { paiements: true, lignes: { orderBy: { ordre: 'asc' } }, demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true, demandeLe: true } } },
+        include: {
+          paiements: true,
+          lignes: { orderBy: { ordre: 'asc' } },
+          demandesAvoir: { where: { statut: 'a_valider' }, select: { id: true, demandeLe: true } },
+        },
       }),
       // En-tête du projet pour la page Facturation (qui n'appelle pas les
       // routes Projets, fermées aux rôles de direction) + phase (mensualités).
@@ -1103,7 +1146,11 @@ export class FacturationService {
       }),
     ]);
     const blocsEtude = [
-      ...cartesEtudes.map((c) => ({ carteId: c.id, libelleCarte: c.libelle, bloc: blocsProjet.find((b) => b.carteProjetId === c.id) ?? null })),
+      ...cartesEtudes.map((c) => ({
+        carteId: c.id,
+        libelleCarte: c.libelle,
+        bloc: blocsProjet.find((b) => b.carteProjetId === c.id) ?? null,
+      })),
       ...blocsProjet
         .filter((b) => !b.carteProjetId && (b.factureMontant != null || b.lignesFacture.length > 0))
         .map((b) => ({ carteId: null, libelleCarte: b.libelle, bloc: b })),
@@ -1152,10 +1199,7 @@ export class FacturationService {
         annuleeLe: f.annuleeLe,
         montantPaye,
         resteAPayer: montantTtc - montantPaye,
-        joursRetard:
-          statutEffectif === 'en_retard'
-            ? joursRetardFacture(f.echeanceLe, aujourdhui)
-            : 0,
+        joursRetard: statutEffectif === 'en_retard' ? joursRetardFacture(f.echeanceLe, aujourdhui) : 0,
         // Montant de l'affaire (TTC) : le CEO valide au-delà du seuil de contresignature.
         affaireTtc: affaires.get(f.id)!,
         lignes: f.lignes.map(versLigneFacture),
@@ -1183,7 +1227,14 @@ export class FacturationService {
     // avoir ; « à régler » dès que cette facture est soldée.
     const parId = new Map(rendues.map((f) => [f.id, f]));
     const etudes = blocsEtude.map(({ carteId, libelleCarte, bloc }) => {
-      const b = bloc ?? { id: null, libelle: libelleCarte, interlocuteur: '', factureMontant: null, bureauRegleLe: null, lignesFacture: [] as { factureId: string; montantHt: Prisma.Decimal }[] };
+      const b = bloc ?? {
+        id: null,
+        libelle: libelleCarte,
+        interlocuteur: '',
+        factureMontant: null,
+        bureauRegleLe: null,
+        lignesFacture: [] as { factureId: string; montantHt: Prisma.Decimal }[],
+      };
       const active = b.lignesFacture
         .map((l) => ({ l, f: parId.get(l.factureId) }))
         .find(({ f }) => f && f.statut !== 'annulee' && !f.estAvoir);
@@ -1206,8 +1257,7 @@ export class FacturationService {
         statutReglement,
         facture: active?.f ? { id: active.f.id, reference: active.f.reference } : null,
         bureauRegleLe: b.bureauRegleLe,
-        refacturable:
-          statutReglement === 'non_refacture' && !!b.interlocuteur.trim() && (montantBureauHt ?? 0) > 0,
+        refacturable: statutReglement === 'non_refacture' && !!b.interlocuteur.trim() && (montantBureauHt ?? 0) > 0,
       };
     });
 
@@ -1260,7 +1310,15 @@ function versLigneFacture(l: {
 
 // Première facture du projet (ou du lead) : aucune autre émise avant elle,
 // même annulée depuis — le client a reçu les CGV complètes avec celle-là.
-type Voisine = { id: string; emiseLe: Date | null; creeLe: Date; statut: string; montantHt: { toNumber(): number }; devisEcheancierId: string | null; cleEcheance: string | null };
+type Voisine = {
+  id: string;
+  emiseLe: Date | null;
+  creeLe: Date;
+  statut: string;
+  montantHt: { toNumber(): number };
+  devisEcheancierId: string | null;
+  cleEcheance: string | null;
+};
 export function premiereDuProjet(f: { id: string; emiseLe: Date | null }, voisines: Voisine[]): boolean {
   return !voisines.some((v) => v.id !== f.id && v.emiseLe && (!f.emiseLe || v.emiseLe < f.emiseLe));
 }
@@ -1272,7 +1330,9 @@ export function premiereDuProjet(f: { id: string; emiseLe: Date | null }, voisin
 export function recapEcheancier(f: Voisine, voisines: Voisine[]) {
   const famille = f.cleEcheance?.split(':')[0];
   if (!f.devisEcheancierId || !famille) return null;
-  const tranches = voisines.filter((v) => v.devisEcheancierId === f.devisEcheancierId && v.cleEcheance?.split(':')[0] === famille);
+  const tranches = voisines.filter(
+    (v) => v.devisEcheancierId === f.devisEcheancierId && v.cleEcheance?.split(':')[0] === famille,
+  );
   // Par tranche : la facture en vigueur (non annulée) si elle existe.
   const parCle = new Map<string, Voisine>();
   for (const v of tranches) {
@@ -1317,4 +1377,3 @@ type Sequence = {
   refAnnee: number;
   refSequence: number;
 };
-

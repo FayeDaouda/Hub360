@@ -116,12 +116,12 @@ export default function FinancesPage(props: Props) {
     searchParams.get('onglet') === 'tresorerie' && droits.tableauDeBord
       ? 'tresorerie'
       : searchParams.get('onglet') === 'rentabilite' && droits.rentabilite
-      ? 'rentabilite'
-      : searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee
-      ? 'factures'
-      : offreDemandee || devisDemande
-        ? 'devis'
-        : null;
+        ? 'rentabilite'
+        : searchParams.get('onglet') === 'factures' || nouvelleDemandee || factureDemandee
+          ? 'factures'
+          : offreDemandee || devisDemande
+            ? 'devis'
+            : null;
   const [onglet, setOnglet] = useState<Onglet>(ongletDemande ?? (droits.tableauDeBord ? 'tableau' : 'devis'));
   useEffect(() => {
     if (ongletDemande) setOnglet(ongletDemande);
@@ -159,7 +159,10 @@ export default function FinancesPage(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devisDemande, devisCharges]);
   useEffect(() => {
-    if ((offre || onglet === 'temps') && !leads) getProjets(params.slug).then(setLeads).catch(() => setLeads([]));
+    if ((offre || onglet === 'temps') && !leads)
+      getProjets(params.slug)
+        .then(setLeads)
+        .catch(() => setLeads([]));
   }, [offre, onglet, leads, params.slug]);
   useEffect(() => {
     if (factureDemandee) setFactureOuverte(factureDemandee);
@@ -186,10 +189,16 @@ export default function FinancesPage(props: Props) {
   function recharger() {
     getDevisListe(params.slug).then(setDevis);
     getFacturesCentrale(params.slug).then(setFactures);
-    if (droits.charges) getBureauxARegler(params.slug).then(setBureaux).catch(() => setBureaux([]));
+    if (droits.charges)
+      getBureauxARegler(params.slug)
+        .then(setBureaux)
+        .catch(() => setBureaux([]));
   }
 
-  const devisFiltres = useMemo(() => (devis ?? []).filter((d) => !projetFiltre || d.projetId === projetFiltre), [devis, projetFiltre]);
+  const devisFiltres = useMemo(
+    () => (devis ?? []).filter((d) => !projetFiltre || d.projetId === projetFiltre),
+    [devis, projetFiltre],
+  );
   const facturesFiltrees = useMemo(
     () => (factures ?? []).filter((f) => dansListeFactures(f) && (!projetFiltre || f.projetId === projetFiltre)),
     [factures, projetFiltre],
@@ -230,7 +239,13 @@ export default function FinancesPage(props: Props) {
     // CGV complètes : sur la 1re facture du projet par défaut, ensuite citées.
     const reglageCgv = paramsFacturation.profil.cgvAnnexe ?? 'premiere_facture';
     const annexeCgv =
-      reglageCgv === 'toujours' ? 'jointe' : reglageCgv === 'jamais' ? 'non_jointe' : f.pourDocument?.premiereDuProjet ? 'jointe' : 'deja_remise';
+      reglageCgv === 'toujours'
+        ? 'jointe'
+        : reglageCgv === 'jamais'
+          ? 'non_jointe'
+          : f.pourDocument?.premiereDuProjet
+            ? 'jointe'
+            : 'deja_remise';
     const recap = f.estAvoir ? null : f.pourDocument?.echeancier;
     const offreRef = doc?.offre?.reference;
     return {
@@ -246,10 +261,20 @@ export default function FinancesPage(props: Props) {
         nom: doc?.typeBien ? [TYPES_BIEN[doc.typeBien], doc.localite].filter(Boolean).join(' — ') : null,
         code: f.dossierCrm?.code ?? f.projet?.code ?? null,
       },
-      tranche: source.tranche ? [doc?.tranche, `${source.tranche.rang} sur ${source.tranche.total}`].filter(Boolean).join(' · ') : (doc?.tranche ?? null),
-      offre: doc?.offre?.reference ? { reference: doc.offre.reference, accepteeLe: doc.offre.accepteeLe ? formatDate(doc.offre.accepteeLe) : null } : null,
+      tranche: source.tranche
+        ? [doc?.tranche, `${source.tranche.rang} sur ${source.tranche.total}`].filter(Boolean).join(' · ')
+        : (doc?.tranche ?? null),
+      offre: doc?.offre?.reference
+        ? { reference: doc.offre.reference, accepteeLe: doc.offre.accepteeLe ? formatDate(doc.offre.accepteeLe) : null }
+        : null,
       objet: f.estAvoir ? null : f.libelle || null, // l'avoir cite déjà la facture annulée
-      client: { nom: f.client?.nom ?? '—', adresse: f.client?.adresse, ninea: f.client?.ninea, email: f.client?.email, telephone: f.client?.telephone },
+      client: {
+        nom: f.client?.nom ?? '—',
+        adresse: f.client?.adresse,
+        ninea: f.client?.ninea,
+        email: f.client?.email,
+        telephone: f.client?.telephone,
+      },
       // Facture à lignes (refacturation d'études) : une ligne par étude,
       // « lignes distinctes de la facture » (CGV art. 5) ; sinon montant unique.
       lignes:
@@ -257,12 +282,25 @@ export default function FinancesPage(props: Props) {
           ? f.lignes.map((l) => ({
               id: l.id,
               designation: l.designation,
-              detail: l.montantBase != null ? `Facture du bureau ${formatMontantCompact(l.montantBase)} HT + 10 % de coordination` : null,
+              detail:
+                l.montantBase != null
+                  ? `Facture du bureau ${formatMontantCompact(l.montantBase)} HT + 10 % de coordination`
+                  : null,
               quantite: 1,
               prixUnitaire: l.montantHt,
               montantHt: l.montantHt,
             }))
-          : [{ id: f.id, designation: (f.estAvoir && origine?.libelle ? `Annulation · ${origine.libelle}` : f.libelle) || (f.estAvoir ? 'Avoir' : 'Prestation'), quantite: 1, prixUnitaire: f.montantHt, montantHt: f.montantHt }],
+          : [
+              {
+                id: f.id,
+                designation:
+                  (f.estAvoir && origine?.libelle ? `Annulation · ${origine.libelle}` : f.libelle) ||
+                  (f.estAvoir ? 'Avoir' : 'Prestation'),
+                quantite: 1,
+                prixUnitaire: f.montantHt,
+                montantHt: f.montantHt,
+              },
+            ],
       montantHt: f.montantHt,
       tauxTva: f.tauxTva,
       montantTva: f.montantTva,
@@ -281,7 +319,6 @@ export default function FinancesPage(props: Props) {
     };
   }
 
-
   const pluriel = (n: number, mot: string) => `${n} ${mot}(s)`;
   const devisPanneau = devisOuvert ? (devis ?? []).find((d) => d.id === devisOuvert) : undefined;
   const facturePanneau = factureOuverte ? (factures ?? []).find((f) => f.id === factureOuverte) : undefined;
@@ -290,20 +327,37 @@ export default function FinancesPage(props: Props) {
     { cle: 'grille', libelle: 'Grille tarifaire', onClick: () => setGrille(true) },
     ...(validateur ? [{ cle: 'clotures', libelle: 'Clôtures', icone: Lock, onClick: () => setClotures(true) }] : []),
     ...(paramsFacturation
-      ? [{ cle: 'parametres', libelle: 'Paramètres de facturation', icone: Settings2, onClick: () => setParametresOuverts(true) }]
+      ? [
+          {
+            cle: 'parametres',
+            libelle: 'Paramètres de facturation',
+            icone: Settings2,
+            onClick: () => setParametresOuverts(true),
+          },
+        ]
       : []),
     ...(validateur
-      ? [{ cle: 'export', libelle: 'Export comptable', icone: FileSpreadsheet, desactive: !factures, onClick: () => setExportComptable(true) }]
+      ? [
+          {
+            cle: 'export',
+            libelle: 'Export comptable',
+            icone: FileSpreadsheet,
+            desactive: !factures,
+            onClick: () => setExportComptable(true),
+          },
+        ]
       : []),
-    ...(droits.catalogue ? [{ cle: 'catalogue', libelle: 'Catalogue', icone: Package, onClick: () => setModalCatalogue(true) }] : []),
+    ...(droits.catalogue
+      ? [{ cle: 'catalogue', libelle: 'Catalogue', icone: Package, onClick: () => setModalCatalogue(true) }]
+      : []),
   ];
 
   return (
     <>
       <div className="fin-entete">
         <p className="fin-sous-titre">
-          Direction {societe?.nom ?? ''} : devis et factures. Chacun y voit et y fait ce que la matrice des droits lui ouvre ;
-          au-delà du seuil de contresignature, le CEO valide. Les équipes ne voient aucun montant.
+          Direction {societe?.nom ?? ''} : devis et factures. Chacun y voit et y fait ce que la matrice des droits lui
+          ouvre ; au-delà du seuil de contresignature, le CEO valide. Les équipes ne voient aucun montant.
         </p>
         <div className="factu-actions-tete">
           {/* Outils : alignés sur desktop, repliés dans « Plus d'actions »
@@ -330,7 +384,11 @@ export default function FinancesPage(props: Props) {
           )}
           {droits.devisEcriture && (
             // Filtré sur un projet : devis complémentaire (TS) ; sinon offre d'un lead.
-            <button type="button" className="btn-primary" onClick={() => (projetFiltre ? setModalDevis(true) : setOffre({}))}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => (projetFiltre ? setModalDevis(true) : setOffre({}))}
+            >
               <Plus size={15} aria-hidden /> Nouveau devis
             </button>
           )}
@@ -487,7 +545,13 @@ export default function FinancesPage(props: Props) {
               Rentabilité
             </button>
           )}
-          <button type="button" role="tab" aria-selected={onglet === 'devis'} className={onglet === 'devis' ? 'is-active' : ''} onClick={() => setOnglet('devis')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={onglet === 'devis'}
+            className={onglet === 'devis' ? 'is-active' : ''}
+            onClick={() => setOnglet('devis')}
+          >
             Devis · {devis ? devisFiltres.length : '…'}
           </button>
           <button
@@ -500,7 +564,13 @@ export default function FinancesPage(props: Props) {
             Factures · {factures ? facturesFiltrees.length : '…'}
           </button>
           {droits.tableauDeBord && (
-            <button type="button" role="tab" aria-selected={onglet === 'temps'} className={onglet === 'temps' ? 'is-active' : ''} onClick={() => setOnglet('temps')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={onglet === 'temps'}
+              className={onglet === 'temps' ? 'is-active' : ''}
+              onClick={() => setOnglet('temps')}
+            >
               Feuille de temps
             </button>
           )}
@@ -518,7 +588,12 @@ export default function FinancesPage(props: Props) {
         !factures ? (
           <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
         ) : (
-          <OngletTresorerie slug={params.slug} factures={factures} peutRelancer={droits.facturesEcriture} onOuvrirFacture={setFactureOuverte} />
+          <OngletTresorerie
+            slug={params.slug}
+            factures={factures}
+            peutRelancer={droits.facturesEcriture}
+            onOuvrirFacture={setFactureOuverte}
+          />
         )
       ) : onglet === 'rentabilite' ? (
         <OngletRentabilite slug={params.slug} />
@@ -538,7 +613,9 @@ export default function FinancesPage(props: Props) {
             projets={nomsProjets}
             // Brouillon d'offre d'un lead encore en « Nouveau projet » : il se retravaille.
             onOuvrir={(d) =>
-              d.statut === 'brouillon' && d.dossierCrm?.statut === 'nouveau_projet' ? setOffre({ devisId: d.id }) : setDevisOuvert(d.id)
+              d.statut === 'brouillon' && d.dossierCrm?.statut === 'nouveau_projet'
+                ? setOffre({ devisId: d.id })
+                : setDevisOuvert(d.id)
             }
           />
         )
@@ -564,10 +641,17 @@ export default function FinancesPage(props: Props) {
         />
       )}
       {modalCatalogue && (
-        <CatalogueProduitsModal slug={params.slug} produits={catalogue} onClose={() => setModalCatalogue(false)} onChange={setCatalogue} />
+        <CatalogueProduitsModal
+          slug={params.slug}
+          produits={catalogue}
+          onClose={() => setModalCatalogue(false)}
+          onChange={setCatalogue}
+        />
       )}
 
-      {grille && societe && <GrilleTarifaire societe={societe} catalogue={catalogue} onClose={() => setGrille(false)} />}
+      {grille && societe && (
+        <GrilleTarifaire societe={societe} catalogue={catalogue} onClose={() => setGrille(false)} />
+      )}
       {nouvelle && (
         <NouvelleFactureDirecte
           slug={params.slug}
@@ -603,7 +687,11 @@ export default function FinancesPage(props: Props) {
           slug={params.slug}
           devis={devisPanneau}
           document={documentDepuisDevis(devisPanneau)}
-          droits={{ ...droits, devisValidation: droits.devisValidation && contresigneAffaire(session, contresignature, devisPanneau.montantTtc) }}
+          droits={{
+            ...droits,
+            devisValidation:
+              droits.devisValidation && contresigneAffaire(session, contresignature, devisPanneau.montantTtc),
+          }}
           onMaj={recharger}
           onClose={() => setDevisOuvert(null)}
           onTelecharger={() => setDocumentAImprimer(documentDepuisDevis(devisPanneau))}
@@ -614,12 +702,16 @@ export default function FinancesPage(props: Props) {
           slug={params.slug}
           facture={facturePanneau}
           document={documentDepuisFacture(facturePanneau)}
-          statut={{ libelle: statutFacture(facturePanneau).libelle, classe: `pill--${statutFacture(facturePanneau).ton}` }}
+          statut={{
+            libelle: statutFacture(facturePanneau).libelle,
+            classe: `pill--${statutFacture(facturePanneau).ton}`,
+          }}
           societeNom={societe?.nom ?? 'la société'}
           droits={{
             ecriture: droits.facturesEcriture,
             validation: droits.facturesValidation && valideAffaire(session, seuilCeo, facturePanneau.affaireTtc),
-            emission: droits.facturesValidation && contresigneAffaire(session, contresignature, facturePanneau.affaireTtc),
+            emission:
+              droits.facturesValidation && contresigneAffaire(session, contresignature, facturePanneau.affaireTtc),
           }}
           onMaj={(maj) => setFactures((l) => (l ?? []).map((x) => (x.id === maj.id ? maj : x)))}
           onSupprimee={() => {

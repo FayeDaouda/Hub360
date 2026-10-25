@@ -9,7 +9,11 @@ import { useSessionCourante } from '@/lib/layout-contexte';
 import { getProduction, jjmm, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
 import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
 
-const STATUT: Record<LigneProduction['statutChantier'], string> = { conception: 'En conception', chantier: 'En chantier', livre: 'Livré' };
+const STATUT: Record<LigneProduction['statutChantier'], string> = {
+  conception: 'En conception',
+  chantier: 'En chantier',
+  livre: 'Livré',
+};
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 // Ce qui attend une décision sur le projet (remises, visas, prolongations, TS).
@@ -24,7 +28,10 @@ function enAttente(a: LigneProduction['attente']): string[] {
 
 // Ton d'une charge : au-dessus de la zone normale = surcharge, en dessous =
 // sous-charge, dedans = normal (zone des Réglages, 70 à 100 % par défaut).
-function tonCharge(pct: number | null, zone: { de: number; a: number } | null): 'risque' | 'succes' | 'info' | 'neutre' {
+function tonCharge(
+  pct: number | null,
+  zone: { de: number; a: number } | null,
+): 'risque' | 'succes' | 'info' | 'neutre' {
   if (pct === null) return 'neutre';
   const z = zone ?? { de: 70, a: 100 };
   return pct > z.a ? 'risque' : pct >= z.de ? 'succes' : 'info';
@@ -75,16 +82,29 @@ export function Production({ slug }: { slug: string }) {
   const c = vue.chiffres;
   const cellules = [...new Set(vue.lignes.map((l) => l.projet.cellule).filter((x): x is string => !!x))].sort();
   const echeances = [
-    ...vue.livraisons.map((l) => ({ cle: `liv-${l.projetId}`, le: l.livraisonLe, texte: `Livraison · ${l.code} · ${l.client}`, projetId: l.projetId })),
-    ...vue.lignes.flatMap((l) => l.echeances.map((e) => ({ cle: `${l.projet.id}-${e.carte}`, le: e.finLe, texte: `${e.carte} · ${l.projet.code}`, projetId: l.projet.id }))),
+    ...vue.livraisons.map((l) => ({
+      cle: `liv-${l.projetId}`,
+      le: l.livraisonLe,
+      texte: `Livraison · ${l.code} · ${l.client}`,
+      projetId: l.projetId,
+    })),
+    ...vue.lignes.flatMap((l) =>
+      l.echeances.map((e) => ({
+        cle: `${l.projet.id}-${e.carte}`,
+        le: e.finLe,
+        texte: `${e.carte} · ${l.projet.code}`,
+        projetId: l.projet.id,
+      })),
+    ),
   ].sort((a, b) => a.le.localeCompare(b.le));
   const ouvrir = (projetId: string) => router.push(`/admin/${slug}/projets?projet=${projetId}`);
 
   return (
     <div className="prod">
       <p className="eq-sous-titre">
-        {vue.perimetre === 'mes_projets' ? 'Les projets dont vous portez le dossier' : 'Tous les projets ouverts'}, du plus à risque au plus
-        tranquille : avancement, calendrier, décisions en attente, prochaine tranche, charge des cellules.
+        {vue.perimetre === 'mes_projets' ? 'Les projets dont vous portez le dossier' : 'Tous les projets ouverts'}, du
+        plus à risque au plus tranquille : avancement, calendrier, décisions en attente, prochaine tranche, charge des
+        cellules.
       </p>
       <KpiStrip
         tuiles={[
@@ -133,7 +153,12 @@ export function Production({ slug }: { slug: string }) {
             {lignes.length !== c.ouverts ? ` sur ${c.ouverts}` : ''}
           </h2>
           {cellules.length > 1 && (
-            <select className="field-input prod-filtre" aria-label="Cellule" value={cellule} onChange={(e) => setCellule(e.target.value)}>
+            <select
+              className="field-input prod-filtre"
+              aria-label="Cellule"
+              value={cellule}
+              onChange={(e) => setCellule(e.target.value)}
+            >
               <option value="">Toutes les cellules</option>
               {cellules.map((x) => (
                 <option key={x} value={x}>
@@ -153,7 +178,12 @@ export function Production({ slug }: { slug: string }) {
               const pct = l.total ? Math.round((l.faites / l.total) * 100) : 0;
               return (
                 <li key={l.projet.id}>
-                  <button type="button" className="prod-ligne" data-risque={l.livraisonDepassee || l.enRetard > 0 ? 'oui' : undefined} onClick={() => ouvrir(l.projet.id)}>
+                  <button
+                    type="button"
+                    className="prod-ligne"
+                    data-risque={l.livraisonDepassee || l.enRetard > 0 ? 'oui' : undefined}
+                    onClick={() => ouvrir(l.projet.id)}
+                  >
                     <span className="prod-projet">
                       <strong className="fin-code">{l.projet.code}</strong>
                       <span className="cell-sub">
@@ -165,11 +195,18 @@ export function Production({ slug }: { slug: string }) {
                     <span className="prod-avancement">
                       <span className="prod-etiquette">Avancement</span>
                       <span>
-                        {l.etape ? `${numeroEtape(l.etape.numero)} · ${l.etape.libelle}${l.etape.terminee ? ' · terminée' : ''}` : 'Pas encore commencé'}
+                        {l.etape
+                          ? `${numeroEtape(l.etape.numero)} · ${l.etape.libelle}${l.etape.terminee ? ' · terminée' : ''}`
+                          : 'Pas encore commencé'}
                       </span>
                       {l.souffrance.length > 0 && (
                         // Une ligne : « 1 tâche en souffrance dans 01 · Onboard », ou le total et les étapes.
-                        <span className="prod-souffrance" title={l.souffrance.map((s) => `${numeroEtape(s.numero)} · ${s.libelle} : ${s.taches}`).join('\n')}>
+                        <span
+                          className="prod-souffrance"
+                          title={l.souffrance
+                            .map((s) => `${numeroEtape(s.numero)} · ${s.libelle} : ${s.taches}`)
+                            .join('\n')}
+                        >
                           {l.souffrance.length === 1
                             ? `${pluriel(l.souffrance[0].taches, 'tâche')} en souffrance dans ${numeroEtape(l.souffrance[0].numero)} · ${l.souffrance[0].libelle}`
                             : `${pluriel(
@@ -196,12 +233,24 @@ export function Production({ slug }: { slug: string }) {
                     </span>
                     <span className="prod-retards">
                       <span className="prod-etiquette">Retards</span>
-                      {l.enRetard ? <span className="pill pill--risque">{pluriel(l.enRetard, 'tâche')}</span> : <span className="cell-sub">aucun</span>}
+                      {l.enRetard ? (
+                        <span className="pill pill--risque">{pluriel(l.enRetard, 'tâche')}</span>
+                      ) : (
+                        <span className="cell-sub">aucun</span>
+                      )}
                       {l.prolongees > 0 && <span className="cell-sub">{l.prolongees} qualifié(s)</span>}
                     </span>
                     <span className="prod-attente">
                       <span className="prod-etiquette">En attente</span>
-                      {attente.length ? attente.map((a) => <span key={a} className="pill pill--attention">{a}</span>) : <span className="cell-sub">rien</span>}
+                      {attente.length ? (
+                        attente.map((a) => (
+                          <span key={a} className="pill pill--attention">
+                            {a}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="cell-sub">rien</span>
+                      )}
                     </span>
                     <span className="prod-tranche">
                       <span className="prod-etiquette">Facturation</span>
@@ -219,7 +268,9 @@ export function Production({ slug }: { slug: string }) {
                       <span className="prod-renta">
                         <span className="prod-etiquette">Marge</span>
                         {r && r.etat === 'complet' && r.taux !== null ? (
-                          <span className={`pill pill--${r.statut === 'vert' ? 'succes' : r.statut === 'rouge' ? 'risque' : r.statut === 'ambre' ? 'attention' : 'neutre'}`}>
+                          <span
+                            className={`pill pill--${r.statut === 'vert' ? 'succes' : r.statut === 'rouge' ? 'risque' : r.statut === 'ambre' ? 'attention' : 'neutre'}`}
+                          >
                             {String(r.taux).replace('.', ',')} %
                           </span>
                         ) : (
@@ -241,7 +292,8 @@ export function Production({ slug }: { slug: string }) {
             Charge des cellules · du {jjmm(vue.charge.periode.debut)} au {jjmm(vue.charge.periode.fin)}
           </h2>
           <p className="dmd-note">
-            Heures prévues des tâches à faire, sur la présence de chacun (absences et fériés retirés), comparées à la zone normale
+            Heures prévues des tâches à faire, sur la présence de chacun (absences et fériés retirés), comparées à la
+            zone normale
             {vue.charge.zone ? ` de ${vue.charge.zone.de} à ${vue.charge.zone.a} %` : ''}.
           </p>
           <div className="prod-cellules">
@@ -249,7 +301,9 @@ export function Production({ slug }: { slug: string }) {
               <div key={ce.code} className="prod-cellule">
                 <div className="prod-cellule-tete">
                   <strong>{ce.nom}</strong>
-                  <span className={`pill pill--${tonCharge(ce.moyenne, vue.charge.zone)}`}>{ce.moyenne === null ? '—' : `${ce.moyenne} %`}</span>
+                  <span className={`pill pill--${tonCharge(ce.moyenne, vue.charge.zone)}`}>
+                    {ce.moyenne === null ? '—' : `${ce.moyenne} %`}
+                  </span>
                 </div>
                 {ce.membres.map((m) => (
                   <div key={m.id} className="prod-membre" data-ton={tonCharge(m.pourcentage, vue.charge.zone)}>

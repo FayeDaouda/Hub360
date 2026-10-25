@@ -26,7 +26,11 @@ export class AdministrationService {
   async aTraiter(societeId: string): Promise<ElementAdministration[]> {
     const maintenant = Date.now();
     const [signalements, demandes, membres, cellules, dossiers] = await Promise.all([
-      this.prisma.signalement.findMany({ where: { societeId, statut: { in: ['a_traiter', 'en_cours'] } }, orderBy: { creeLe: 'asc' }, select: { id: true, description: true, statut: true, role: true, creeLe: true } }),
+      this.prisma.signalement.findMany({
+        where: { societeId, statut: { in: ['a_traiter', 'en_cours'] } },
+        orderBy: { creeLe: 'asc' },
+        select: { id: true, description: true, statut: true, role: true, creeLe: true },
+      }),
       this.prisma.demandeDroit.findMany({ where: { societeId, statut: 'en_attente' }, orderBy: { createdAt: 'asc' } }),
       this.prisma.utilisateurSocieteRole.findMany({
         where: { societeId, utilisateur: { actif: true } },
@@ -40,7 +44,12 @@ export class AdministrationService {
               email: true,
               motDePasseHash: true,
               totpActifLe: true,
-              invitations: { where: { type: 'invitation' }, orderBy: { createdAt: 'desc' }, take: 1, select: { expiresAt: true, usedAt: true, createdAt: true } },
+              invitations: {
+                where: { type: 'invitation' },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+                select: { expiresAt: true, usedAt: true, createdAt: true },
+              },
             },
           },
         },
@@ -50,14 +59,34 @@ export class AdministrationService {
         select: {
           code: true,
           dispatcher: {
-            select: { id: true, prenom: true, nom: true, utilisateurId: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+            select: {
+              id: true,
+              prenom: true,
+              nom: true,
+              utilisateurId: true,
+              utilisateur: { select: { actif: true } },
+              dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } },
+            },
           },
         },
       }),
       this.prisma.dossierPersonnel.findMany({
-        where: { societeId, archiveLe: null, utilisateurId: null, OR: [{ collaborateurId: null }, { collaborateur: { utilisateurId: null } }] },
+        where: {
+          societeId,
+          archiveLe: null,
+          utilisateurId: null,
+          OR: [{ collaborateurId: null }, { collaborateur: { utilisateurId: null } }],
+        },
         orderBy: { dateEntree: 'asc' },
-        select: { id: true, prenom: true, nom: true, poste: true, dateEntree: true, createdAt: true, collaborateurId: true },
+        select: {
+          id: true,
+          prenom: true,
+          nom: true,
+          poste: true,
+          dateEntree: true,
+          createdAt: true,
+          collaborateurId: true,
+        },
       }),
     ]);
 
@@ -74,11 +103,22 @@ export class AdministrationService {
       });
     }
     for (const d of demandes) {
-      elements.push({ type: 'droit_cio', cle: `droit-${d.id}`, titre: `Droits du CIO · ${d.module} → ${d.apres}`, detail: `en attente du CEO depuis ${Math.floor((maintenant - d.createdAt.getTime()) / JOUR)} j (demandée le ${jjmm(d.createdAt)})`, ton: 'info', le: d.createdAt.toISOString() });
+      elements.push({
+        type: 'droit_cio',
+        cle: `droit-${d.id}`,
+        titre: `Droits du CIO · ${d.module} → ${d.apres}`,
+        detail: `en attente du CEO depuis ${Math.floor((maintenant - d.createdAt.getTime()) / JOUR)} j (demandée le ${jjmm(d.createdAt)})`,
+        ton: 'info',
+        le: d.createdAt.toISOString(),
+      });
     }
     // Un compte par personne (un compte peut porter plusieurs rôles).
     const comptes = new Map<string, { u: (typeof membres)[number]['utilisateur']; roles: string[] }>();
-    for (const m of membres) comptes.set(m.utilisateur.id, { u: m.utilisateur, roles: [...(comptes.get(m.utilisateur.id)?.roles ?? []), m.role.nom] });
+    for (const m of membres)
+      comptes.set(m.utilisateur.id, {
+        u: m.utilisateur,
+        roles: [...(comptes.get(m.utilisateur.id)?.roles ?? []), m.role.nom],
+      });
     const chefs = new Set(cellules.map((c) => c.dispatcher?.utilisateurId).filter((x): x is string => !!x));
     const sansDoubleFacteur: string[] = [];
     for (const { u, roles } of comptes.values()) {
@@ -89,14 +129,19 @@ export class AdministrationService {
           type: 'invitation',
           cle: `invitation-${u.id}`,
           titre: `Compte jamais activé · ${nomDe(u)}`,
-          detail: !inv ? `${u.email} · aucune invitation envoyée` : expiree ? `${u.email} · invitation expirée le ${jjmm(inv.expiresAt)}, à renvoyer` : `${u.email} · invitation envoyée le ${jjmm(inv.createdAt)}, valable jusqu’au ${jjmm(inv.expiresAt)}`,
+          detail: !inv
+            ? `${u.email} · aucune invitation envoyée`
+            : expiree
+              ? `${u.email} · invitation expirée le ${jjmm(inv.expiresAt)}, à renvoyer`
+              : `${u.email} · invitation envoyée le ${jjmm(inv.createdAt)}, valable jusqu’au ${jjmm(inv.expiresAt)}`,
           ton: expiree ? 'risque' : 'info',
           le: (inv?.createdAt ?? new Date(0)).toISOString(),
         });
         continue;
       }
       // Règle de production (auth.service) : direction et chefs de cellule.
-      if (!u.totpActifLe && roles.some((r) => doubleFacteurExige(r, { NODE_ENV: 'production' }, chefs.has(u.id)))) sansDoubleFacteur.push(nomDe(u));
+      if (!u.totpActifLe && roles.some((r) => doubleFacteurExige(r, { NODE_ENV: 'production' }, chefs.has(u.id))))
+        sansDoubleFacteur.push(nomDe(u));
     }
     if (sansDoubleFacteur.length) {
       elements.push({
@@ -111,11 +156,22 @@ export class AdministrationService {
     for (const c of cellules) {
       const d = c.dispatcher!;
       if (d.utilisateur?.actif || d.dossierPersonnel?.utilisateur?.actif) continue;
-      elements.push({ type: 'chef_sans_compte', cle: `chef-${c.code}`, titre: `Chef de cellule sans compte HUB · ${nomDe(d)}`, detail: `${c.code} : ses remises et demandes remontent au Dir. GC`, ton: 'attention', le: null });
+      elements.push({
+        type: 'chef_sans_compte',
+        cle: `chef-${c.code}`,
+        titre: `Chef de cellule sans compte HUB · ${nomDe(d)}`,
+        detail: `${c.code} : ses remises et demandes remontent au Dir. GC`,
+        ton: 'attention',
+        le: null,
+      });
     }
     // Salariés sans compte : les arrivées récentes une par une (compte à
     // créer), les autres en une ligne ; les chefs de cellule sont déjà au-dessus.
-    const chefsSansCompte = new Set(cellules.filter((c) => !c.dispatcher?.utilisateur?.actif && !c.dispatcher?.dossierPersonnel?.utilisateur?.actif).map((c) => c.dispatcher!.id));
+    const chefsSansCompte = new Set(
+      cellules
+        .filter((c) => !c.dispatcher?.utilisateur?.actif && !c.dispatcher?.dossierPersonnel?.utilisateur?.actif)
+        .map((c) => c.dispatcher!.id),
+    );
     const depuis = new Date(maintenant - ARRIVEE_RECENTE_JOURS * JOUR).toISOString().slice(0, 10);
     const autres: string[] = [];
     for (const d of dossiers) {

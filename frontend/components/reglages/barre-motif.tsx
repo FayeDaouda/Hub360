@@ -47,7 +47,13 @@ export function BarreMotif({
         <button type="button" className="btn-ghost" disabled={nombre === 0 || etat.envoi} onClick={onAnnuler}>
           Annuler<span className="masque-mobile"> les modifications</span>
         </button>
-        <button type="button" className="btn-primary" disabled={!pret} onClick={enregistrer} title={nombre > 0 && !motif.trim() ? 'Motif obligatoire' : undefined}>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={!pret}
+          onClick={enregistrer}
+          title={nombre > 0 && !motif.trim() ? 'Motif obligatoire' : undefined}
+        >
           {etat.envoi ? (
             'Enregistrement…'
           ) : nombre === 0 ? (

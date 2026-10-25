@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BellRing, Download, Undo2, X } from 'lucide-react';
-import { ajouterPaiementCentrale, emettreFactureCentrale, getFactureCentrale, lienFacturationProjet, relancerFacture, supprimerFactureCentrale } from '@/lib/facturation';
+import {
+  ajouterPaiementCentrale,
+  emettreFactureCentrale,
+  getFactureCentrale,
+  lienFacturationProjet,
+  relancerFacture,
+  supprimerFactureCentrale,
+} from '@/lib/facturation';
 import { DemandeAvoir } from '@/components/finances/demande-avoir';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
@@ -29,7 +36,18 @@ type Props = {
 // Facture en panneau latéral (maquette Finances, oct. 2026) : statut,
 // bandeau « à valider par le CFO » d'une facture directe préparée, document,
 // encaissements. Le CFO (validation) l'émet et enregistre les encaissements.
-export function FacturePanneau({ slug, facture: f, document, statut, societeNom, droits, onMaj, onSupprimee, onTelecharger, onClose }: Props) {
+export function FacturePanneau({
+  slug,
+  facture: f,
+  document,
+  statut,
+  societeNom,
+  droits,
+  onMaj,
+  onSupprimee,
+  onTelecharger,
+  onClose,
+}: Props) {
   const confirmer = useConfirmer();
   const [avoir, setAvoir] = useState(false);
   const [enCours, setEnCours] = useState(false);
@@ -63,7 +81,13 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
 
   return (
     <div className="fiche-crm-fond" onClick={onClose}>
-      <aside className="fiche-crm" role="dialog" aria-modal="true" aria-labelledby="fp-facture" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="fiche-crm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fp-facture"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="fiche-crm-entete">
           <div>
             <p className="fiche-crm-titre">{f.estAvoir ? 'Avoir' : 'Facture'}</p>
@@ -75,7 +99,9 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
               {[
                 f.client?.nom,
                 f.dossierCrm?.code ?? f.projet?.code,
-                f.emiseLe ? `émise le ${jjmmaaaa(f.emiseLe)}` : `préparée le ${jjmmaaaa(f.creeLe)} · référence attribuée à la validation`,
+                f.emiseLe
+                  ? `émise le ${jjmmaaaa(f.emiseLe)}`
+                  : `préparée le ${jjmmaaaa(f.creeLe)} · référence attribuée à la validation`,
                 f.echeanceLe && `échéance ${jjmmaaaa(f.echeanceLe)}`,
               ]
                 .filter(Boolean)
@@ -90,8 +116,8 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
         {directeAValider && (
           <div className="fiche-crm-alerte" role="note">
             <strong>
-              Préparée par {societeNom} · à valider par le CFO avant émission. Elle n’est ni envoyée ni comptée tant qu’elle
-              n’est pas validée.
+              Préparée par {societeNom} · à valider par le CFO avant émission. Elle n’est ni envoyée ni comptée tant
+              qu’elle n’est pas validée.
             </strong>
           </div>
         )}
@@ -134,15 +160,36 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
               </ul>
             )}
             {droits.validation && encaissable && !paiement && (
-              <button type="button" className="btn-ghost fac-bouton" onClick={() => setPaiement({ date: aujourdhui(), montant: String(f.resteAPayer), mode: '' })}>
+              <button
+                type="button"
+                className="btn-ghost fac-bouton"
+                onClick={() => setPaiement({ date: aujourdhui(), montant: String(f.resteAPayer), mode: '' })}
+              >
                 Enregistrer un encaissement
               </button>
             )}
             {paiement && (
               <div className="fac-paiement">
-                <input type="date" className="field-input" aria-label="Date" value={paiement.date} onChange={(e) => setPaiement({ ...paiement, date: e.target.value })} />
-                <input className="field-input" aria-label="Montant" inputMode="numeric" value={paiement.montant} onChange={(e) => setPaiement({ ...paiement, montant: e.target.value })} />
-                <select className="field-input" aria-label="Mode" value={paiement.mode} onChange={(e) => setPaiement({ ...paiement, mode: e.target.value as ModePaiement | '' })}>
+                <input
+                  type="date"
+                  className="field-input"
+                  aria-label="Date"
+                  value={paiement.date}
+                  onChange={(e) => setPaiement({ ...paiement, date: e.target.value })}
+                />
+                <input
+                  className="field-input"
+                  aria-label="Montant"
+                  inputMode="numeric"
+                  value={paiement.montant}
+                  onChange={(e) => setPaiement({ ...paiement, montant: e.target.value })}
+                />
+                <select
+                  className="field-input"
+                  aria-label="Mode"
+                  value={paiement.mode}
+                  onChange={(e) => setPaiement({ ...paiement, mode: e.target.value as ModePaiement | '' })}
+                >
                   <option value="">Mode…</option>
                   {Object.entries(MODES_PAIEMENT).map(([v, l]) => (
                     <option key={v} value={v}>
@@ -160,7 +207,13 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
                     disabled={enCours || !(montantSaisi > 0) || !paiement.date}
                     onClick={() =>
                       agir(async () => {
-                        onMaj(await ajouterPaiementCentrale(slug, f.id, { date: paiement.date, montant: montantSaisi, mode: paiement.mode || undefined }));
+                        onMaj(
+                          await ajouterPaiementCentrale(slug, f.id, {
+                            date: paiement.date,
+                            montant: montantSaisi,
+                            mode: paiement.mode || undefined,
+                          }),
+                        );
                         setPaiement(null);
                       })
                     }
@@ -173,12 +226,21 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
           </section>
         )}
 
-        {relance && <p className="fiche-crm-aide" role="status">{relance}</p>}
+        {relance && (
+          <p className="fiche-crm-aide" role="status">
+            {relance}
+          </p>
+        )}
         {erreur && <p className="field-erreur">{erreur}</p>}
         <div className="fac-actions">
           {/* Émission : exclusive au-delà du seuil de contresignature (revue CEO). */}
           {brouillon && (droits.emission ?? droits.validation) && (
-            <button type="button" className="btn-primary" disabled={enCours} onClick={() => agir(async () => onMaj(await emettreFactureCentrale(slug, f.id)))}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={enCours}
+              onClick={() => agir(async () => onMaj(await emettreFactureCentrale(slug, f.id)))}
+            >
               Valider et émettre
             </button>
           )}
@@ -212,7 +274,11 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
                 agir(async () => {
                   const { envoye } = await relancerFacture(slug, f.id);
                   const client = f.client?.nom ?? 'ce client';
-                  setRelance(envoye ? `Relance envoyée à ${client}.` : `E-mail non envoyé (transport indisponible) : contactez ${client} autrement.`);
+                  setRelance(
+                    envoye
+                      ? `Relance envoyée à ${client}.`
+                      : `E-mail non envoyé (transport indisponible) : contactez ${client} autrement.`,
+                  );
                 })
               }
             >
@@ -227,7 +293,10 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
           )}
           {f.avoirEnAttente && (
             <span className="pill pill--attention">
-              Avoir en attente du CEO{f.avoirEnAttenteDepuis ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j` : ''}
+              Avoir en attente du CEO
+              {f.avoirEnAttenteDepuis
+                ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j`
+                : ''}
             </span>
           )}
           {f.projet && (
@@ -245,7 +314,11 @@ export function FacturePanneau({ slug, facture: f, document, statut, societeNom,
             slug={slug}
             projetId={f.projet.id}
             facture={{ id: f.id, reference: f.reference, montantTtc: f.montantTtc }}
-            onFait={() => getFactureCentrale(slug, f.id).then(onMaj).catch(() => undefined)}
+            onFait={() =>
+              getFactureCentrale(slug, f.id)
+                .then(onMaj)
+                .catch(() => undefined)
+            }
             onClose={() => setAvoir(false)}
           />
         )}

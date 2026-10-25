@@ -6,7 +6,8 @@ import { getCalendrierCellule, LIBELLE_TYPE_ABSENCE, type CalendrierCellule as D
 const JOURS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const jours = (debut: string, fin: string) => {
   const l: string[] = [];
-  for (let d = new Date(`${debut}T00:00:00Z`); d <= new Date(`${fin}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) l.push(d.toISOString().slice(0, 10));
+  for (let d = new Date(`${debut}T00:00:00Z`); d <= new Date(`${fin}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1))
+    l.push(d.toISOString().slice(0, 10));
   return l;
 };
 
@@ -14,7 +15,15 @@ const jours = (debut: string, fin: string) => {
 // congé, la RH et le N+1 voient qui d'autre est absent les mêmes jours —
 // sans ça, on peut valider trois absences le même jour dans une équipe de
 // quatre. Le demandeur en tête ; la période demandée est encadrée.
-export function CalendrierCellule({ slug, demandeId, source }: { slug: string; demandeId: string; source: 'rh' | 'decideur' }) {
+export function CalendrierCellule({
+  slug,
+  demandeId,
+  source,
+}: {
+  slug: string;
+  demandeId: string;
+  source: 'rh' | 'decideur';
+}) {
   const [donnees, setDonnees] = useState<Donnees | null>(null);
   const [erreur, setErreur] = useState(false);
   const defile = useRef<HTMLDivElement>(null);
@@ -31,7 +40,8 @@ export function CalendrierCellule({ slug, demandeId, source }: { slug: string; d
     const el = defile.current;
     const debut = el?.querySelector<HTMLElement>('thead th.is-periode');
     const nom = el?.querySelector<HTMLElement>('thead th.cal-nom');
-    if (el && debut && el.scrollWidth > el.clientWidth) el.scrollLeft = Math.max(0, debut.offsetLeft - (nom?.offsetWidth ?? 0) - 24);
+    if (el && debut && el.scrollWidth > el.clientWidth)
+      el.scrollLeft = Math.max(0, debut.offsetLeft - (nom?.offsetWidth ?? 0) - 24);
   }, [donnees]);
 
   if (erreur) return null;
@@ -41,7 +51,9 @@ export function CalendrierCellule({ slug, demandeId, source }: { slug: string; d
   const liste = jours(donnees.fenetre.debut, donnees.fenetre.fin);
   const dansPeriode = (j: string) => j >= donnees.periode.debut && j <= donnees.periode.fin;
   const autres = donnees.membres.filter((m) => !m.estDemandeur);
-  const absentsPeriode = autres.filter((m) => m.absences.some((a) => a.debut <= donnees.periode.fin && a.fin >= donnees.periode.debut));
+  const absentsPeriode = autres.filter((m) =>
+    m.absences.some((a) => a.debut <= donnees.periode.fin && a.fin >= donnees.periode.debut),
+  );
   const total = donnees.membres.length;
   // Plus de la moitié de la cellule absente en même temps : signal rouge.
   const tendu = total > 0 && (absentsPeriode.length + 1) / total >= 0.5;
@@ -61,7 +73,11 @@ export function CalendrierCellule({ slug, demandeId, source }: { slug: string; d
               {liste.map((j) => {
                 const js = new Date(`${j}T00:00:00Z`).getUTCDay();
                 return (
-                  <th key={j} scope="col" className={`${dansPeriode(j) ? 'is-periode' : ''}${js === 0 || js === 6 ? ' is-weekend' : ''}`}>
+                  <th
+                    key={j}
+                    scope="col"
+                    className={`${dansPeriode(j) ? 'is-periode' : ''}${js === 0 || js === 6 ? ' is-weekend' : ''}`}
+                  >
                     <span>{JOURS[js]}</span>
                     {Number(j.slice(8, 10))}
                   </th>
@@ -83,7 +99,11 @@ export function CalendrierCellule({ slug, demandeId, source }: { slug: string; d
                     <td
                       key={j}
                       className={`${dansPeriode(j) ? 'is-periode' : ''}${js === 0 || js === 6 ? ' is-weekend' : ''}${a ? ` cal-${a.etat}` : ''}`}
-                      title={a ? `${m.nom} · ${a.type ? LIBELLE_TYPE_ABSENCE[a.type] : 'Absent'} · ${a.etat === 'validee' ? 'validée' : a.etat === 'demande' ? 'cette demande' : 'en attente'}` : undefined}
+                      title={
+                        a
+                          ? `${m.nom} · ${a.type ? LIBELLE_TYPE_ABSENCE[a.type] : 'Absent'} · ${a.etat === 'validee' ? 'validée' : a.etat === 'demande' ? 'cette demande' : 'en attente'}`
+                          : undefined
+                      }
                     />
                   );
                 })}
@@ -93,8 +113,8 @@ export function CalendrierCellule({ slug, demandeId, source }: { slug: string; d
         </table>
       </div>
       <p className="cal-legende">
-        <span className="cal-puce cal-demande" /> cette demande <span className="cal-puce cal-validee" /> absence validée{' '}
-        <span className="cal-puce cal-en_attente" /> en attente de décision
+        <span className="cal-puce cal-demande" /> cette demande <span className="cal-puce cal-validee" /> absence
+        validée <span className="cal-puce cal-en_attente" /> en attente de décision
       </p>
     </div>
   );

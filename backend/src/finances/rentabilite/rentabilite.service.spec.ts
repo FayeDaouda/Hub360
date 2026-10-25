@@ -7,7 +7,12 @@ import { coutHoraire, moisArrete, parametreAu, salaireDuMois, statutMarge, tauxM
 import { RentabiliteService } from './rentabilite.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
-const valide = (montant: number, dateEffet: string | null) => ({ montant, dateEffet, statut: 'valide' as const, decideLe: new Date('2026-01-01') });
+const valide = (montant: number, dateEffet: string | null) => ({
+  montant,
+  dateEffet,
+  statut: 'valide' as const,
+  decideLe: new Date('2026-01-01'),
+});
 
 describe('règles de rentabilité (lot 7, phase 1)', () => {
   it('paramètres : défaut 173,33 h, puis la valeur en vigueur à sa date d’effet', () => {
@@ -45,7 +50,9 @@ describe('règles de rentabilité (lot 7, phase 1)', () => {
     expect(moisArrete([m('2026-09', 'a_controler', 'controlee')])).toBeNull();
     expect(moisArrete([m('2026-09', 'controlee', 'sans_heures'), m('2026-10', 'cloture')])).toBe('2026-09');
     // Un mois en retard bloque les suivants, même contrôlés.
-    expect(moisArrete([m('2026-11', 'controlee'), m('2026-09', 'controlee'), m('2026-10', 'a_controler')])).toBe('2026-09');
+    expect(moisArrete([m('2026-11', 'controlee'), m('2026-09', 'controlee'), m('2026-10', 'a_controler')])).toBe(
+      '2026-09',
+    );
     expect(moisArrete([m('2026-09', 'controlee'), m('2026-10', 'controlee')])).toBe('2026-10');
   });
 });
@@ -57,7 +64,16 @@ describe('RentabiliteService', () => {
   const CIO = { userId: 'U-CIO', societeId: 'S1', role: 'CIO (transverse)' };
 
   function svc(o: { parametres?: object[]; salaire?: number | null } = {}) {
-    const projet = (id: string, taches: number) => ({ id, code: id, programme: 'Villa', statut: 'en_cours', phase: 'conception', ouvertLe: '2026-09-01', client: { nom: 'Client' }, _count: { taches } });
+    const projet = (id: string, taches: number) => ({
+      id,
+      code: id,
+      programme: 'Villa',
+      statut: 'en_cours',
+      phase: 'conception',
+      ouvertLe: '2026-09-01',
+      client: { nom: 'Client' },
+      _count: { taches },
+    });
     const prisma = {
       projet: { findMany: jest.fn().mockResolvedValue([projet('P1', 3), projet('P2', 0)]) },
       facture: {
@@ -66,29 +82,72 @@ describe('RentabiliteService', () => {
             where.statut === 'brouillon'
               ? [{ projetId: 'P1', montantHt: dec(4_000_000) }]
               : [
-                  { id: 'F1', projetId: 'P1', numero: 1, emiseLe: new Date('2026-09-10'), estAvoir: false, statut: 'emise', montantHt: dec(10_000_000), libelle: 'F1' },
-                  { id: 'F2', projetId: 'P2', numero: 2, emiseLe: new Date('2026-09-12'), estAvoir: false, statut: 'emise', montantHt: dec(2_000_000), libelle: 'F1' },
+                  {
+                    id: 'F1',
+                    projetId: 'P1',
+                    numero: 1,
+                    emiseLe: new Date('2026-09-10'),
+                    estAvoir: false,
+                    statut: 'emise',
+                    montantHt: dec(10_000_000),
+                    libelle: 'F1',
+                  },
+                  {
+                    id: 'F2',
+                    projetId: 'P2',
+                    numero: 2,
+                    emiseLe: new Date('2026-09-12'),
+                    estAvoir: false,
+                    statut: 'emise',
+                    montantHt: dec(2_000_000),
+                    libelle: 'F1',
+                  },
                 ],
           ),
         ),
       },
       controleFeuilleTemps: {
         findMany: jest.fn().mockResolvedValue([
-          { dossierId: 'D1', mois: '2026-09', controleLe: new Date('2026-10-05'), detail: { lignes: [{ id: 'T1', projetCode: 'P1', heures: 100 }] } },
+          {
+            dossierId: 'D1',
+            mois: '2026-09',
+            controleLe: new Date('2026-10-05'),
+            detail: { lignes: [{ id: 'T1', projetCode: 'P1', heures: 100 }] },
+          },
         ]),
       },
       dossierPersonnel: {
-        findMany: jest.fn().mockResolvedValue([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: o.salaire === null ? [] : [valide(o.salaire ?? 520_000, null)] }]),
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'D1',
+            prenom: 'Awa',
+            nom: 'Diouf',
+            salaires: o.salaire === null ? [] : [valide(o.salaire ?? 520_000, null)],
+          },
+        ]),
       },
       tacheProjet: { findMany: jest.fn().mockResolvedValue([{ id: 'T1', projetId: 'P1' }]) },
       prolongationTache: { findMany: jest.fn().mockResolvedValue([{ tache: { projetId: 'P1' } }]) },
-      evenementTacheProjet: { findMany: jest.fn().mockResolvedValue([{ tache: { projetId: 'P1' } }, { tache: { projetId: 'P1' } }]) },
+      evenementTacheProjet: {
+        findMany: jest.fn().mockResolvedValue([{ tache: { projetId: 'P1' } }, { tache: { projetId: 'P1' } }]),
+      },
       parametreRentabilite: { findMany: jest.fn().mockResolvedValue(o.parametres ?? []), create: jest.fn() },
       journalPaie: { createMany: jest.fn() },
-      utilisateurSocieteRole: { findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) => Promise.resolve([{ utilisateur: where.role.nom === 'RH' ? { prenom: 'Coumba', nom: 'Gaye' } : { prenom: 'Bineta', nom: 'Sarr' } }])) },
+      utilisateurSocieteRole: {
+        findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) =>
+          Promise.resolve([
+            {
+              utilisateur:
+                where.role.nom === 'RH' ? { prenom: 'Coumba', nom: 'Gaye' } : { prenom: 'Bineta', nom: 'Sarr' },
+            },
+          ]),
+        ),
+      },
       utilisateur: { findMany: jest.fn().mockResolvedValue([]) },
     } as unknown as PrismaService;
-    const reglages = { joursFeries: jest.fn().mockResolvedValue(new Map([['S1', new Set<string>()]])) } as unknown as ReglagesService;
+    const reglages = {
+      joursFeries: jest.fn().mockResolvedValue(new Map([['S1', new Set<string>()]])),
+    } as unknown as ReglagesService;
     const temps = { feuilles: jest.fn().mockResolvedValue({ feuilles: [] }) } as unknown as TempsService;
     return { s: new RentabiliteService(prisma, reglages, temps), prisma };
   }
@@ -97,7 +156,18 @@ describe('RentabiliteService', () => {
     const r = await svc().s.portefeuille(CFO);
     const p1 = r.lignes.find((l) => l.projet.id === 'P1')!;
     // 520 000 ÷ (2 080 ÷ 12) = 3 000 FCFA/h × 100 h = 300 000.
-    expect(p1).toMatchObject({ ht: 10_000_000, cout: 300_000, marge: 9_700_000, taux: 97, heures: 100, prolongations: 1, reprises: 2, aFacturer: 4_000_000, etat: 'complet', statut: null });
+    expect(p1).toMatchObject({
+      ht: 10_000_000,
+      cout: 300_000,
+      marge: 9_700_000,
+      taux: 97,
+      heures: 100,
+      prolongations: 1,
+      reprises: 2,
+      aFacturer: 4_000_000,
+      etat: 'complet',
+      statut: null,
+    });
     // Projet sans gabarit : heures non suivies, pas de statut, hors totaux.
     expect(r.lignes.find((l) => l.projet.id === 'P2')).toMatchObject({ etat: 'heures_non_suivies', statut: null });
     expect(r.totaux).toMatchObject({ ht: 10_000_000, cout: 300_000 });
@@ -105,7 +175,9 @@ describe('RentabiliteService', () => {
   });
 
   it('couleur par rapport à la marge cible fixée par le CFO', async () => {
-    const r = await svc({ parametres: [{ cle: 'marge_cible', valeur: 98, dateEffet: '2026-01-01', createdAt: new Date() }] }).s.portefeuille(CEO);
+    const r = await svc({
+      parametres: [{ cle: 'marge_cible', valeur: 98, dateEffet: '2026-01-01', createdAt: new Date() }],
+    }).s.portefeuille(CEO);
     expect(r.lignes.find((l) => l.projet.id === 'P1')!.statut).toBe('ambre');
   });
 
@@ -113,7 +185,13 @@ describe('RentabiliteService', () => {
   // la porte du contrôleur le refuse) ; ici, tout rôle admis hors CFO/CEO voit le taux.
   it('CTO (et tout rôle que la matrice ouvre) : taux et couleur, aucun montant ; administration : refusée', async () => {
     const r = await svc().s.portefeuille(CTO);
-    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ ht: null, cout: null, marge: null, aFacturer: null, taux: 97 });
+    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({
+      ht: null,
+      cout: null,
+      marge: null,
+      aFacturer: null,
+      taux: 97,
+    });
     expect(r.totaux).toMatchObject({ ht: null, cout: null, marge: null });
     expect((await svc().s.portefeuille(CIO)).totaux).toMatchObject({ ht: null, cout: null, marge: null });
     await expect(svc().s.portefeuille({ ...CIO, role: 'societe_admin' })).rejects.toThrow(ForbiddenException);
@@ -123,16 +201,27 @@ describe('RentabiliteService', () => {
   it('salarié sans salaire validé : « données insuffisantes », jamais un coût à zéro', async () => {
     const r = await svc({ salaire: null }).s.portefeuille(CFO);
     // Pas de faux 100 % : ni marge ni taux, et hors des totaux.
-    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', raisons: ['1 salarié(s) sans salaire validé'], marge: null, taux: null, statut: null, ht: 10_000_000 });
+    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({
+      etat: 'insuffisant',
+      raisons: ['1 salarié(s) sans salaire validé'],
+      marge: null,
+      taux: null,
+      statut: null,
+      ht: 10_000_000,
+    });
     expect(r.totaux).toMatchObject({ ht: 0, marge: null, taux: null });
     expect(r.projetsComplets).toBe(0);
   });
 
   it('détail par salarié tracé au journal de la paie, sans montant', async () => {
     const { s, prisma } = svc();
-    (prisma.dossierPersonnel.findMany as jest.Mock).mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: [valide(520_000, null)] }]).mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf' }]);
+    (prisma.dossierPersonnel.findMany as jest.Mock)
+      .mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf', salaires: [valide(520_000, null)] }])
+      .mockResolvedValueOnce([{ id: 'D1', prenom: 'Awa', nom: 'Diouf' }]);
     expect(await s.salaries(CFO, 'P1')).toEqual([{ nom: 'Awa Diouf', heures: 100, cout: 300_000, sansSalaire: false }]);
-    expect(prisma.journalPaie.createMany).toHaveBeenCalledWith({ data: [{ dossierId: 'D1', action: 'cout_consulte', parId: 'U-CFO' }] });
+    expect(prisma.journalPaie.createMany).toHaveBeenCalledWith({
+      data: [{ dossierId: 'D1', action: 'cout_consulte', parId: 'U-CFO' }],
+    });
   });
 
   it('paramètres : le CFO seul, au 1er d’un mois, jamais un mois passé', async () => {
@@ -142,20 +231,34 @@ describe('RentabiliteService', () => {
     await expect(svc().s.modifierParametre(CFO, { ...p, valeur: null })).rejects.toThrow(BadRequestException);
     const { s, prisma } = svc();
     await s.modifierParametre(CFO, p);
-    expect(prisma.parametreRentabilite.create).toHaveBeenCalledWith({ data: expect.objectContaining({ cle: 'heures_annuelles', valeur: 1920, dateEffet: '2099-01-01', parId: 'U-CFO' }) });
+    expect(prisma.parametreRentabilite.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ cle: 'heures_annuelles', valeur: 1920, dateEffet: '2099-01-01', parId: 'U-CFO' }),
+    });
   });
 
   it('cumul arrêté au dernier mois contrôlé : rien tant qu’aucun mois ne l’est, facturé compris', async () => {
     const { s } = svc();
-    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({ feuilles: [{ statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }] });
+    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({
+      feuilles: [{ statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }],
+    });
     const r = await s.portefeuille(CFO);
     expect(r.arreteAu).toBeNull();
     // Ni facturé ni coût : jamais une marge faite de factures sans leurs heures.
-    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', ht: 0, cout: 0, marge: null, taux: null });
+    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({
+      etat: 'insuffisant',
+      ht: 0,
+      cout: 0,
+      marge: null,
+      taux: null,
+    });
     expect(r.lignes.find((l) => l.projet.id === 'P1')!.raisons).toContain('aucun mois entièrement contrôlé');
     // Vue du mois : les heures en attente sont comptées et bloquent.
     const mois = await s.portefeuille(CFO, String(r.blocages.feuilles[0].mois));
-    expect(mois.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ etat: 'insuffisant', heuresAttente: 40, marge: null });
+    expect(mois.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({
+      etat: 'insuffisant',
+      heuresAttente: 40,
+      marge: null,
+    });
     expect(mois.lignes.find((l) => l.projet.id === 'P1')!.raisons).toContain('40 h en attente de contrôle RH');
   });
 
@@ -165,7 +268,18 @@ describe('RentabiliteService', () => {
       Promise.resolve(
         where.statut === 'brouillon'
           ? []
-          : [{ id: 'F0', projetId: 'P1', numero: 1, emiseLe: new Date('2026-04-21'), estAvoir: false, statut: 'emise', montantHt: dec(5_000_000), libelle: 'F1' }],
+          : [
+              {
+                id: 'F0',
+                projetId: 'P1',
+                numero: 1,
+                emiseLe: new Date('2026-04-21'),
+                estAvoir: false,
+                statut: 'emise',
+                montantHt: dec(5_000_000),
+                libelle: 'F1',
+              },
+            ],
       ),
     );
     const r = await s.portefeuille(CFO);
@@ -177,13 +291,37 @@ describe('RentabiliteService', () => {
   it('facture émise après le mois arrêté : hors cumul, signalée sur la fiche', async () => {
     const { s, prisma } = svc();
     const factures = [
-      { id: 'F1', projetId: 'P1', numero: 1, emiseLe: new Date('2026-09-10'), estAvoir: false, statut: 'emise', montantHt: dec(10_000_000), libelle: 'F1' },
-      { id: 'F3', projetId: 'P1', numero: 3, emiseLe: new Date(), estAvoir: false, statut: 'emise', montantHt: dec(5_000_000), libelle: 'F3' },
+      {
+        id: 'F1',
+        projetId: 'P1',
+        numero: 1,
+        emiseLe: new Date('2026-09-10'),
+        estAvoir: false,
+        statut: 'emise',
+        montantHt: dec(10_000_000),
+        libelle: 'F1',
+      },
+      {
+        id: 'F3',
+        projetId: 'P1',
+        numero: 3,
+        emiseLe: new Date(),
+        estAvoir: false,
+        statut: 'emise',
+        montantHt: dec(5_000_000),
+        libelle: 'F3',
+      },
     ];
-    (prisma.facture.findMany as jest.Mock).mockImplementation(({ where }: { where: { statut?: string } }) => Promise.resolve(where.statut === 'brouillon' ? [] : factures));
+    (prisma.facture.findMany as jest.Mock).mockImplementation(({ where }: { where: { statut?: string } }) =>
+      Promise.resolve(where.statut === 'brouillon' ? [] : factures),
+    );
     const r = await s.portefeuille(CFO);
     expect(r.arreteAu).toMatch(/^\d{4}-\d{2}$/);
-    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({ ht: 10_000_000, cout: 300_000, etat: 'complet' });
+    expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({
+      ht: 10_000_000,
+      cout: 300_000,
+      etat: 'complet',
+    });
     const fiche = await s.fiche(CFO, 'P1');
     expect(fiche.factures!.map((f) => [f.id, f.horsCumul])).toEqual([
       ['F1', false],
@@ -193,7 +331,9 @@ describe('RentabiliteService', () => {
 
   it('blocages : feuilles à contrôler par mois, salaires manquants, et qui doit agir', async () => {
     const { s } = svc({ salaire: null });
-    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({ feuilles: [{ dossierId: 'D2', statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }] });
+    (s as unknown as { temps: { feuilles: jest.Mock } }).temps.feuilles.mockResolvedValue({
+      feuilles: [{ dossierId: 'D2', statut: 'a_controler', lignes: [{ id: 'T1', projetCode: 'P1', heures: 40 }] }],
+    });
     const r = await s.portefeuille(CFO);
     expect(r.blocages).toEqual({
       feuilles: [{ mois: expect.stringMatching(/^\d{4}-\d{2}$/), feuilles: 1, projets: 1 }],
@@ -203,4 +343,3 @@ describe('RentabiliteService', () => {
     });
   });
 });
-

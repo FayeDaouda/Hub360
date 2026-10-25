@@ -76,7 +76,10 @@ const aDesHeures = (t?: Temps): t is Extract<Temps, { heures: number }> =>
 // Applique les modifications sur une copie ; lève ErreurGabarit si un champ
 // n'existe pas ou si une valeur est invalide. Ne renvoie que les changements
 // effectifs (valeur différente de l'actuelle).
-export function appliquer(contenu: ContenuGabarit, changements: Changement[]): { contenu: ContenuGabarit; appliques: ChangementApplique[] } {
+export function appliquer(
+  contenu: ContenuGabarit,
+  changements: Changement[],
+): { contenu: ContenuGabarit; appliques: ChangementApplique[] } {
   const copie: ContenuGabarit = structuredClone(contenu);
   const cartes = new Map(copie.etapes.flatMap((e) => e.cartes.map((c) => [c.cle, c] as const)));
   const appliques: ChangementApplique[] = [];
@@ -102,7 +105,8 @@ export function appliquer(contenu: ContenuGabarit, changements: Changement[]): {
 
     if (ch.champ === 'fichier') {
       if (!tache) throw new ErreurGabarit(`${libelle} : le fichier obligatoire se règle sur une tâche.`);
-      if (ch.valeur !== 0 && ch.valeur !== 1) throw new ErreurGabarit(`${libelle} : fichier obligatoire oui (1) ou non (0).`);
+      if (ch.valeur !== 0 && ch.valeur !== 1)
+        throw new ErreurGabarit(`${libelle} : fichier obligatoire oui (1) ou non (0).`);
       const avant = tache.fichierFacultatif ? 0 : 1;
       if (avant !== ch.valeur) {
         appliques.push({ ...ch, libelle, avant });
@@ -138,7 +142,9 @@ export function appliquer(contenu: ContenuGabarit, changements: Changement[]): {
   for (const carte of cartes.values()) {
     for (const cible of [carte, ...carte.taches]) {
       if (cible.fenetre && cible.fenetre.debut > cible.fenetre.fin) {
-        throw new ErreurGabarit(`${cible.libelle} : la fenêtre commence après sa fin (J${cible.fenetre.debut} → J${cible.fenetre.fin}).`);
+        throw new ErreurGabarit(
+          `${cible.libelle} : la fenêtre commence après sa fin (J${cible.fenetre.debut} → J${cible.fenetre.fin}).`,
+        );
       }
     }
   }
@@ -146,8 +152,10 @@ export function appliquer(contenu: ContenuGabarit, changements: Changement[]): {
 }
 
 export function decrire(ch: ChangementApplique): string {
-  if (ch.champ === 'visa') return `${ch.libelle} — visa DPLG : ${ch.avant ? 'oui' : 'non'} → ${ch.valeur ? 'oui' : 'non'}`;
-  if (ch.champ === 'fichier') return `${ch.libelle} — fichier obligatoire : ${ch.avant ? 'oui' : 'non'} → ${ch.valeur ? 'oui' : 'non'}`;
+  if (ch.champ === 'visa')
+    return `${ch.libelle} — visa DPLG : ${ch.avant ? 'oui' : 'non'} → ${ch.valeur ? 'oui' : 'non'}`;
+  if (ch.champ === 'fichier')
+    return `${ch.libelle} — fichier obligatoire : ${ch.avant ? 'oui' : 'non'} → ${ch.valeur ? 'oui' : 'non'}`;
   if (ch.champ === 'heures') return `${ch.libelle} — temps : ${ch.avant} h → ${ch.valeur} h`;
   return `${ch.libelle} — ${ch.champ === 'debut' ? 'début' : 'fin'} : J${ch.avant} → J${ch.valeur}`;
 }

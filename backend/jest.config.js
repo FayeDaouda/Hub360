@@ -15,12 +15,6 @@ module.exports = {
   },
   testEnvironment: 'node',
   clearMocks: true,
-  collectCoverageFrom: [
-    '**/*.ts',
-    '!**/*.module.ts',
-    '!**/*.dto.ts',
-    '!**/dto.ts',
-    '!main.ts',
-  ],
+  collectCoverageFrom: ['**/*.ts', '!**/*.module.ts', '!**/*.dto.ts', '!**/dto.ts', '!main.ts'],
   coverageDirectory: '../coverage',
 };

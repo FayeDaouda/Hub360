@@ -26,7 +26,15 @@ const STATUT: Record<ChangementSalaire['statut'], { libelle: string; pill: strin
 // Salaire du dossier (revue RH validée 20/10/2026) : historique avec date
 // d'effet et motif. Masqué tant qu'on ne l'affiche pas (affichage tracé) ;
 // la RH propose un changement, le CFO (le CEO pour le CFO) le valide.
-export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; dossier: DossierPersonnel; ecriture: boolean }) {
+export function SalaireDossier({
+  slug,
+  dossier,
+  ecriture,
+}: {
+  slug: string;
+  dossier: DossierPersonnel;
+  ecriture: boolean;
+}) {
   const [historique, setHistorique] = useState<HistoriqueSalaire | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -42,7 +50,11 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
     setErreur(null);
     setMontant('');
     setMotif(dossier.salaireRenseigne ? 'augmentation' : 'embauche');
-    setDateEffet(dossier.salaireRenseigne ? new Date().toISOString().slice(0, 10) : (dossier.dateEntree ?? new Date().toISOString().slice(0, 10)));
+    setDateEffet(
+      dossier.salaireRenseigne
+        ? new Date().toISOString().slice(0, 10)
+        : (dossier.dateEntree ?? new Date().toISOString().slice(0, 10)),
+    );
   }, [dossier.id, dossier.salaireRenseigne, dossier.dateEntree]);
 
   async function lancer(action: () => Promise<HistoriqueSalaire>, repli: string) {
@@ -64,7 +76,10 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
   const montantNombre = Number(montant.replace(/\D/g, ''));
 
   async function proposer() {
-    const ok = await lancer(() => proposerSalaire(slug, dossier.id, { montant: montantNombre, dateEffet, motif }), 'Proposition impossible.');
+    const ok = await lancer(
+      () => proposerSalaire(slug, dossier.id, { montant: montantNombre, dateEffet, motif }),
+      'Proposition impossible.',
+    );
     if (ok) setMontant('');
   }
 
@@ -73,10 +88,17 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
       <div className="sal-bloc">
         <span className="rh-salaire-masque">
           <span aria-label="Salaire masqué">{dossier.salaireRenseigne ? '••••••' : 'Aucun salaire validé'}</span>
-          <button type="button" className="btn-ghost btn-ghost--sm" disabled={envoi} onClick={() => lancer(() => getSalaireDossier(slug, dossier.id), 'Salaire indisponible.')}>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm"
+            disabled={envoi}
+            onClick={() => lancer(() => getSalaireDossier(slug, dossier.id), 'Salaire indisponible.')}
+          >
             {dossier.salaireRenseigne ? 'Afficher' : ecriture ? 'Proposer le salaire d’entrée' : 'Historique'}
           </button>
-          {dossier.salaireEnAttente && <span className="pill pill--attention">Changement en attente de validation</span>}
+          {dossier.salaireEnAttente && (
+            <span className="pill pill--attention">Changement en attente de validation</span>
+          )}
         </span>
         <span className="cell-sub">Chaque affichage est inscrit au journal de la paie.</span>
         {erreur && <p className="field-erreur">{erreur}</p>}
@@ -88,18 +110,25 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
     <div className="sal-bloc">
       <p className="sal-vigueur">
         <span className="field-label">En vigueur aujourd’hui</span>
-        <strong>{historique.enVigueur == null ? 'Aucun salaire validé' : `${formatMontant(historique.enVigueur)} / mois`}</strong>
+        <strong>
+          {historique.enVigueur == null ? 'Aucun salaire validé' : `${formatMontant(historique.enVigueur)} / mois`}
+        </strong>
       </p>
 
       {enAttente && (
         <div className="sal-attente" role="status">
           <span>
-            <strong>{formatMontant(enAttente.montant)}</strong> à partir du {jjmmaaaa(enAttente.dateEffet)} · {LIBELLE_MOTIF_SALAIRE[enAttente.motif].toLowerCase()} — en
-            attente de validation du {historique.valideur}
+            <strong>{formatMontant(enAttente.montant)}</strong> à partir du {jjmmaaaa(enAttente.dateEffet)} ·{' '}
+            {LIBELLE_MOTIF_SALAIRE[enAttente.motif].toLowerCase()} — en attente de validation du {historique.valideur}
             {enAttente.proposePar && ` (proposé par ${enAttente.proposePar})`}
           </span>
           {ecriture && (
-            <button type="button" className="btn-ghost btn-ghost--sm" disabled={envoi} onClick={() => lancer(() => retirerSalaire(slug, dossier.id, enAttente.id), 'Retrait impossible.')}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              disabled={envoi}
+              onClick={() => lancer(() => retirerSalaire(slug, dossier.id, enAttente.id), 'Retrait impossible.')}
+            >
               Retirer
             </button>
           )}
@@ -112,7 +141,13 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
           <div className="sal-proposer-champs">
             <label className="field">
               <span className="field-label">Salaire de base (FCFA / mois)</span>
-              <input className="field-input" inputMode="numeric" value={montant} placeholder="Ex. 650 000" onChange={(e) => setMontant(e.target.value)} />
+              <input
+                className="field-input"
+                inputMode="numeric"
+                value={montant}
+                placeholder="Ex. 650 000"
+                onChange={(e) => setMontant(e.target.value)}
+              />
             </label>
             <label className="field">
               <span className="field-label">Date d’effet</span>
@@ -126,8 +161,16 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
             </label>
             <label className="field">
               <span className="field-label">Motif</span>
-              <select className="field-input" value={motif} disabled={!aUnSalaire} onChange={(e) => setMotif(e.target.value as MotifSalaire)}>
-                {(aUnSalaire ? (['augmentation', 'promotion', 'fin_essai', 'correction'] as const) : (['embauche'] as const)).map((m) => (
+              <select
+                className="field-input"
+                value={motif}
+                disabled={!aUnSalaire}
+                onChange={(e) => setMotif(e.target.value as MotifSalaire)}
+              >
+                {(aUnSalaire
+                  ? (['augmentation', 'promotion', 'fin_essai', 'correction'] as const)
+                  : (['embauche'] as const)
+                ).map((m) => (
                   <option key={m} value={m}>
                     {LIBELLE_MOTIF_SALAIRE[m]}
                   </option>
@@ -140,7 +183,12 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
               Validé par le {historique.valideur} avant d’entrer en vigueur.
               {aUnSalaire && ` Date d’effet passée : 3 mois au plus (${jjmmaaaa(dateEffetMin(aujourdhui))}).`}
             </span>
-            <button type="button" className="btn-primary" disabled={envoi || !montantNombre || !dateEffet} onClick={proposer}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={envoi || !montantNombre || !dateEffet}
+              onClick={proposer}
+            >
               Proposer au {historique.valideur}
             </button>
           </div>
@@ -156,7 +204,13 @@ export function SalaireDossier({ slug, dossier, ecriture }: { slug: string; doss
               <span className="sal-motif">
                 {LIBELLE_MOTIF_SALAIRE[c.motif]}
                 <span className="cell-sub">
-                  {c.statut === 'valide' && c.decidePar ? `validé par ${c.decidePar}` : c.statut === 'refuse' ? `refusé${c.decidePar ? ` par ${c.decidePar}` : ''} : ${c.motifRefus}` : c.proposePar ? `proposé par ${c.proposePar}` : 'reprise'}
+                  {c.statut === 'valide' && c.decidePar
+                    ? `validé par ${c.decidePar}`
+                    : c.statut === 'refuse'
+                      ? `refusé${c.decidePar ? ` par ${c.decidePar}` : ''} : ${c.motifRefus}`
+                      : c.proposePar
+                        ? `proposé par ${c.proposePar}`
+                        : 'reprise'}
                 </span>
               </span>
               <span className={`pill ${STATUT[c.statut].pill}`}>{STATUT[c.statut].libelle}</span>

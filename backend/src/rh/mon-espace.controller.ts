@@ -11,7 +11,10 @@ import { GroupScope } from '../tenancy/tenant-scope.decorators';
 class CoordonneesDto {
   @IsOptional() @IsString() @MaxLength(40) telephone?: string;
   @IsOptional() @ValidateIf((_, v) => v !== '') @IsEmail() @MaxLength(120) emailPerso?: string;
-  @IsOptional() @ValidateIf((_, v) => v !== null) @IsEnum(SituationFamiliale) situationFamiliale?: SituationFamiliale | null;
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsEnum(SituationFamiliale)
+  situationFamiliale?: SituationFamiliale | null;
   @IsOptional() @IsInt() @Min(0) @Max(30) enfantsACharge?: number;
   @IsOptional() @IsString() @MaxLength(300) adresse?: string;
   @IsOptional() @IsString() @MaxLength(200) contactUrgence?: string;

@@ -37,12 +37,22 @@ export function NavigationMobile({
     <>
       <nav className="nav-mobile" aria-label="Navigation principale">
         {visibles.map((i) => (
-          <Link key={i.cle} href={i.href} className={`nav-mobile-item${i.cle === active ? ' is-active' : ''}`} aria-current={i.cle === active ? 'page' : undefined}>
+          <Link
+            key={i.cle}
+            href={i.href}
+            className={`nav-mobile-item${i.cle === active ? ' is-active' : ''}`}
+            aria-current={i.cle === active ? 'page' : undefined}
+          >
             <i.icone size={21} strokeWidth={i.cle === active ? 2.2 : 1.5} aria-hidden />
             <span>{i.libelle}</span>
           </Link>
         ))}
-        <button type="button" className={`nav-mobile-item${plusActif ? ' is-active' : ''}`} aria-haspopup="dialog" onClick={() => setPlus(true)}>
+        <button
+          type="button"
+          className={`nav-mobile-item${plusActif ? ' is-active' : ''}`}
+          aria-haspopup="dialog"
+          onClick={() => setPlus(true)}
+        >
           <Menu size={21} strokeWidth={plusActif ? 2.2 : 1.5} aria-hidden />
           <span>Plus</span>
         </button>
@@ -84,7 +94,12 @@ function PanneauPlus({
   }, [onClose]);
 
   const lien = (i: ItemNav) => (
-    <Link key={i.cle} href={i.href} className={`feuille-ligne${i.cle === active ? ' is-active' : ''}`} onClick={onClose}>
+    <Link
+      key={i.cle}
+      href={i.href}
+      className={`feuille-ligne${i.cle === active ? ' is-active' : ''}`}
+      onClick={onClose}
+    >
       <i.icone size={19} aria-hidden />
       <span>{i.libelle}</span>
     </Link>
@@ -145,4 +160,3 @@ function PanneauPlus({
     document.body,
   );
 }
-

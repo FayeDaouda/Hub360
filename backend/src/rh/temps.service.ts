@@ -74,13 +74,21 @@ type Controle = DossierTemps['controlesTemps'][number];
 
 const ROLE_RH = 'RH';
 
-export type EcartFeuille = { id: string; commentaire: string; signaleLe: Date; reponse: string | null; traiteLe: Date | null };
+export type EcartFeuille = {
+  id: string;
+  commentaire: string;
+  signaleLe: Date;
+  reponse: string | null;
+  traiteLe: Date | null;
+};
 
 // Écart du mois affiché : l'ouvert s'il y en a un, sinon le dernier traité.
 function ecartDuMois(ecarts: DossierTemps['ecartsTemps'], mois: string): EcartFeuille | null {
   const duMois = ecarts.filter((e) => e.mois === mois);
   const e = duMois.find((x) => !x.traiteLe) ?? duMois[0];
-  return e ? { id: e.id, commentaire: e.commentaire, signaleLe: e.signaleLe, reponse: e.reponse, traiteLe: e.traiteLe } : null;
+  return e
+    ? { id: e.id, commentaire: e.commentaire, signaleLe: e.signaleLe, reponse: e.reponse, traiteLe: e.traiteLe }
+    : null;
 }
 
 const libelleMois = (mois: string) =>
@@ -171,13 +179,17 @@ export class TempsService {
     moisValide(mois, jour);
     if (mois >= moisDe(jour)) throw new ConflictException('Seul un mois clos peut être contrôlé.');
     const ouverture = controleOuvertLe(mois);
-    if (jour < ouverture) throw new ConflictException(`Contrôle possible à partir du ${ouverture.split('-').reverse().join('/')}.`);
+    if (jour < ouverture)
+      throw new ConflictException(`Contrôle possible à partir du ${ouverture.split('-').reverse().join('/')}.`);
     const d = await this.prisma.dossierPersonnel.findUnique({ where: { id: dossierId }, include: INCLUDE_DOSSIER });
     if (!d) throw new NotFoundException('Dossier introuvable');
-    if (!periodeComptee(mois, salarieDe(d), jour)) throw new ConflictException("Ce salarié n'était pas présent ce mois-là.");
+    if (!periodeComptee(mois, salarieDe(d), jour))
+      throw new ConflictException("Ce salarié n'était pas présent ce mois-là.");
     if (d.controlesTemps.some((c) => c.mois === mois)) throw new ConflictException('Feuille déjà contrôlée.');
     if (d.ecartsTemps.some((e) => e.mois === mois && !e.traiteLe)) {
-      throw new ConflictException('Un écart signalé par le salarié attend votre réponse : traitez-le avant de contrôler.');
+      throw new ConflictException(
+        'Un écart signalé par le salarié attend votre réponse : traitez-le avant de contrôler.',
+      );
     }
 
     const taches = d.collaborateur ? await chargerTachesAssignees(this.prisma, [d.collaborateur.id]) : [];
@@ -212,7 +224,10 @@ export class TempsService {
     const cible = moisValide(mois ?? moisDe(jour), jour);
     // Dossier RH relié au compte (direction comprise) ; à défaut, la fiche
     // d'équipe seule (pas encore de dossier ouvert par la RH).
-    const dossier = await this.prisma.dossierPersonnel.findFirst({ where: ouDossierDuCompte(a.userId), include: INCLUDE_DOSSIER });
+    const dossier = await this.prisma.dossierPersonnel.findFirst({
+      where: ouDossierDuCompte(a.userId),
+      include: INCLUDE_DOSSIER,
+    });
     const fiche = dossier
       ? null
       : await this.prisma.collaborateur.findFirst({
@@ -244,7 +259,10 @@ export class TempsService {
   async signalerEcart(a: Acteur, mois: string, commentaire: string) {
     const jour = aujourdhui();
     moisValide(mois, jour);
-    const d = await this.prisma.dossierPersonnel.findFirst({ where: ouDossierDuCompte(a.userId), include: INCLUDE_DOSSIER });
+    const d = await this.prisma.dossierPersonnel.findFirst({
+      where: ouDossierDuCompte(a.userId),
+      include: INCLUDE_DOSSIER,
+    });
     if (!d) throw new NotFoundException('Aucun dossier du personnel pour ce compte — voir avec la RH.');
     if (d.controlesTemps.some((c) => c.mois === mois)) {
       throw new ConflictException('Feuille déjà contrôlée par la RH : voyez directement avec elle.');
@@ -252,7 +270,9 @@ export class TempsService {
     if (d.ecartsTemps.some((e) => e.mois === mois && !e.traiteLe)) {
       throw new ConflictException('Un écart est déjà signalé pour ce mois : la RH va vous répondre.');
     }
-    await this.prisma.ecartFeuilleTemps.create({ data: { dossierId: d.id, mois, commentaire: commentaire.trim(), signaleParId: a.userId } });
+    await this.prisma.ecartFeuilleTemps.create({
+      data: { dossierId: d.id, mois, commentaire: commentaire.trim(), signaleParId: a.userId },
+    });
     await this.notifications.envoyer({
       societeId: d.societeId,
       type: 'ecart_temps_signale',
@@ -267,7 +287,11 @@ export class TempsService {
   async traiterEcart(userId: string, ecartId: string, reponse: string) {
     const e = await this.prisma.ecartFeuilleTemps.findUnique({
       where: { id: ecartId },
-      include: { dossier: { select: { societeId: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } } },
+      include: {
+        dossier: {
+          select: { societeId: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } },
+        },
+      },
     });
     if (!e) throw new NotFoundException('Écart introuvable');
     if (e.traiteLe) throw new ConflictException('Écart déjà traité.');
@@ -320,7 +344,13 @@ function calculer(
   const duMois = taches.filter((t) => planifiee(t) && t.debut! <= m.fin && t.echeance! >= m.debut);
   const f = feuilleDuMois(mois, salarie, duMois, jour, feries);
   const statut: StatutFeuille =
-    mois >= moisDe(jour) ? 'en_cours' : jour < controleOuvertLe(mois) ? 'cloture' : f.heuresImputees > 0 ? 'a_controler' : 'sans_heures';
+    mois >= moisDe(jour)
+      ? 'en_cours'
+      : jour < controleOuvertLe(mois)
+        ? 'cloture'
+        : f.heuresImputees > 0
+          ? 'a_controler'
+          : 'sans_heures';
   return {
     mois,
     statut,

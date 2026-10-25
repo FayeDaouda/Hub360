@@ -193,7 +193,9 @@ export function DetailDossierModal({
     },
     {
       libelle: 'Localisation',
-      valeur: projet.localite ? `${projet.localite.nom} (${projet.localite.code})` : manquant(`${projet.localisation} · non rattachée`),
+      valeur: projet.localite
+        ? `${projet.localite.nom} (${projet.localite.code})`
+        : manquant(`${projet.localisation} · non rattachée`),
       aide: 'Choisie dans le référentiel des localités',
     },
     { libelle: 'Type de projet', valeur: projet.type ? TYPES_BIEN[projet.type] : manquant(), aide: 'Liste déroulante' },
@@ -202,11 +204,23 @@ export function DetailDossierModal({
       valeur: projet.surfaceTerrain > 0 ? `${formatNombre(projet.surfaceTerrain)} m²` : manquant(),
       aide: 'Fiche Programme · base du calcul de surface vendue',
     },
-    { libelle: 'N° de planches', valeur: projet.nbPlanches > 0 ? projet.nbPlanches : manquant(), aide: 'Une planche = un plan-type, pas un étage' },
+    {
+      libelle: 'N° de planches',
+      valeur: projet.nbPlanches > 0 ? projet.nbPlanches : manquant(),
+      aide: 'Une planche = un plan-type, pas un étage',
+    },
     { libelle: 'Client', valeur: projet.client.nom, aide: TYPES_CLIENT[projet.client.type] },
-    { libelle: 'Standing', valeur: projet.standing ? STANDINGS[projet.standing] : manquant(), aide: 'Ce que le bâtiment offre' },
+    {
+      libelle: 'Standing',
+      valeur: projet.standing ? STANDINGS[projet.standing] : manquant(),
+      aide: 'Ce que le bâtiment offre',
+    },
     { libelle: 'Gamme', valeur: projet.gamme ? GAMMES[projet.gamme] : manquant(), aide: 'Avec quoi on le finit' },
-    { libelle: 'Programme', valeur: projet.programme.trim() || manquant('Fiche Programme à remplir'), aide: 'Résumé de la fiche Programme' },
+    {
+      libelle: 'Programme',
+      valeur: projet.programme.trim() || manquant('Fiche Programme à remplir'),
+      aide: 'Résumé de la fiche Programme',
+    },
   ];
 
   return (
@@ -225,8 +239,8 @@ export function DetailDossierModal({
             </h2>
             <p className="fiche-crm-client">{projet.client.nom}</p>
             <p className="fiche-crm-meta">
-              {estPersonneMorale(projet.client.type) ? 'Personne morale' : 'Personne physique'} · {projet.localite?.nom ?? projet.localisation} · créé
-              le {jjmmaaaa(projet.creeLe)}
+              {estPersonneMorale(projet.client.type) ? 'Personne morale' : 'Personne physique'} ·{' '}
+              {projet.localite?.nom ?? projet.localisation} · créé le {jjmmaaaa(projet.creeLe)}
             </p>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
@@ -271,7 +285,9 @@ export function DetailDossierModal({
               <>
                 <div className="fiche-crm-titre-ligne">
                   <h3 className="fiche-crm-titre">Les 9 champs de la fiche</h3>
-                  {projet.verrouillee && <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>}
+                  {projet.verrouillee && (
+                    <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>
+                  )}
                 </div>
                 <dl className="fiche-crm-champs">
                   {champs.map((c) => (
@@ -285,25 +301,30 @@ export function DetailDossierModal({
                   ))}
                 </dl>
               </>
-          )}
-          {rattachable && (
-            <div className="field-bloc">
-              <label className="field-label" htmlFor="rattacher-localite">
-                Rattacher au référentiel des localités
-              </label>
-              <span className="field-aide">
-                Libellé saisi à la création : « {projet.localisation} ». Le code du dossier ne change pas.
-              </span>
-              <LocaliteSelect localites={localites} valeur={localiteId} onChange={setLocaliteId} idChamp="rattacher-localite" />
-              {erreur && <p className="field-erreur">{erreur}</p>}
-              <div className="modal-actions">
-                <button type="button" className="btn-primary" disabled={enCours || !localiteId} onClick={rattacher}>
-                  {enCours ? 'Rattachement…' : 'Rattacher'}
-                </button>
+            )}
+            {rattachable && (
+              <div className="field-bloc">
+                <label className="field-label" htmlFor="rattacher-localite">
+                  Rattacher au référentiel des localités
+                </label>
+                <span className="field-aide">
+                  Libellé saisi à la création : « {projet.localisation} ». Le code du dossier ne change pas.
+                </span>
+                <LocaliteSelect
+                  localites={localites}
+                  valeur={localiteId}
+                  onChange={setLocaliteId}
+                  idChamp="rattacher-localite"
+                />
+                {erreur && <p className="field-erreur">{erreur}</p>}
+                <div className="modal-actions">
+                  <button type="button" className="btn-primary" disabled={enCours || !localiteId} onClick={rattacher}>
+                    {enCours ? 'Rattachement…' : 'Rattacher'}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
         )}
 
         <FicheApporteurSection
@@ -379,8 +400,8 @@ export function DetailDossierModal({
         {!archive && peutArchiver && projet.statut === 'nouveau_projet' && (
           <div className="fiche-crm-archive">
             <p>
-              Direction GC ou CIO (administrateur du HUB) · un lead incomplet ou mal renseigné s’archive, il ne se supprime
-              jamais. Il reste consultable dans « Archivés » et son code reste réservé.
+              Direction GC ou CIO (administrateur du HUB) · un lead incomplet ou mal renseigné s’archive, il ne se
+              supprime jamais. Il reste consultable dans « Archivés » et son code reste réservé.
             </p>
             {!confirmerArchive ? (
               <button type="button" className="btn-ghost" onClick={() => setConfirmerArchive(true)}>
@@ -391,7 +412,12 @@ export function DetailDossierModal({
                 <strong>Archiver {projet.code} ? C’est définitif : plus aucune action sur ce lead.</strong>
                 {erreurArchive && <p className="field-erreur">{erreurArchive}</p>}
                 <div className="modal-actions">
-                  <button type="button" className="btn-ghost" disabled={archivage} onClick={() => setConfirmerArchive(false)}>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={archivage}
+                    onClick={() => setConfirmerArchive(false)}
+                  >
                     Annuler
                   </button>
                   <button type="button" className="btn-danger" disabled={archivage} onClick={archiver}>

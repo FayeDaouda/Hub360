@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Patch,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
@@ -44,11 +33,7 @@ export class CellulesController {
   // Désigner/retirer le dispatcher de la cellule — écriture sur « équipe »
   // (admin ou Dir. GC), comme tout ce contrôleur.
   @Patch(':id/dispatcher')
-  definirDispatcher(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Body() dto: DefinirDispatcherDto,
-  ) {
+  definirDispatcher(@Req() req: R, @Param('id') id: string, @Body() dto: DefinirDispatcherDto) {
     return this.cellules.definirDispatcher(req.user.societeId, id, dto);
   }
 

@@ -66,7 +66,12 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
   async function publier() {
     if (!texte.trim()) return;
     const ok = await agir(() =>
-      publierCommentaire(slug, projetId, { ...cible, texte: texte.trim(), mentionneId: mention || null, parentId: reponseA?.id }),
+      publierCommentaire(slug, projetId, {
+        ...cible,
+        texte: texte.trim(),
+        mentionneId: mention || null,
+        parentId: reponseA?.id,
+      }),
     );
     if (ok) {
       setTexte('');
@@ -79,7 +84,10 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
     <div className="po-panneau-bloc po-fil">
       <p className="tp-section">
         Discussion{fil && fil.length > 0 ? ` · ${fil.length}` : ''}{' '}
-        <Infobulle>Une @mention notifie la personne. Un commentaire reste ouvert jusqu’à une réponse, ou jusqu’à ce que son auteur le marque résolu.</Infobulle>
+        <Infobulle>
+          Une @mention notifie la personne. Un commentaire reste ouvert jusqu’à une réponse, ou jusqu’à ce que son
+          auteur le marque résolu.
+        </Infobulle>
       </p>
       {!fil ? (
         <p className="po-aide">Chargement…</p>
@@ -103,7 +111,12 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
                     </button>
                   )}
                   {c.ouvert && c.auteur?.id === moiId && (
-                    <button type="button" className="po-lien" disabled={enCours} onClick={() => agir(() => resoudreCommentaire(slug, projetId, c.id))}>
+                    <button
+                      type="button"
+                      className="po-lien"
+                      disabled={enCours}
+                      onClick={() => agir(() => resoudreCommentaire(slug, projetId, c.id))}
+                    >
                       Résoudre
                     </button>
                   )}
@@ -134,7 +147,13 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
             onChange={(e) => setTexte(e.target.value)}
           />
           <div className="po-fil-envoi">
-            <select className="field-input" aria-label="Mentionner" value={mention} disabled={enCours} onChange={(e) => setMention(e.target.value)}>
+            <select
+              className="field-input"
+              aria-label="Mentionner"
+              value={mention}
+              disabled={enCours}
+              onChange={(e) => setMention(e.target.value)}
+            >
               <option value="">Mentionner…</option>
               {mentionnables
                 .filter((p) => p.id !== moiId)

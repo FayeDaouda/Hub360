@@ -26,11 +26,7 @@ async function bootstrap() {
 
   // CORS : liste blanche explicite (jamais « toutes origines » avec credentials).
   // CORS_ORIGINS (séparées par des virgules) sinon FRONT_URL sinon localhost.
-  const origines = (
-    process.env.CORS_ORIGINS ||
-    process.env.FRONT_URL ||
-    'http://localhost:3000'
-  )
+  const origines = (process.env.CORS_ORIGINS || process.env.FRONT_URL || 'http://localhost:3000')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);

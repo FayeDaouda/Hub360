@@ -32,7 +32,10 @@ export async function demarrer(): Promise<INestApplication> {
 }
 
 export async function connecter(app: INestApplication, email: string, motDePasse = MOT_DE_PASSE): Promise<string> {
-  const r = await request(app.getHttpServer()).post('/api/auth/login').send({ email, motDePasse, societeSlug: SLUG }).expect(200);
+  const r = await request(app.getHttpServer())
+    .post('/api/auth/login')
+    .send({ email, motDePasse, societeSlug: SLUG })
+    .expect(200);
   return r.body.access_token;
 }
 
@@ -72,6 +75,9 @@ export async function signerContrat(cfo: ReturnType<typeof api>, dossierId: stri
     await cfo.patch(`/dossiers/${dossierId}/contrat/annexes/${a.id}`, { statut: 'non_necessaire' }).expect(200);
   }
   await cfo
-    .post(`/dossiers/${dossierId}/contrat/signature-papier`, { nom: 'contrat-signe.pdf', url: 'data:application/pdf;base64,JVBERi0xLjQ=' })
+    .post(`/dossiers/${dossierId}/contrat/signature-papier`, {
+      nom: 'contrat-signe.pdf',
+      url: 'data:application/pdf;base64,JVBERi0xLjQ=',
+    })
     .expect(201);
 }

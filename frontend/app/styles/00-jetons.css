@@ -136,8 +136,8 @@
   --glass-ombre: rgba(30, 30, 90, 0.12);
 
   /* --- Typographie : Geist partout, 7 tailles, 3 graisses (400/500/600) - */
-  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    Helvetica, Arial, sans-serif;
+  --font-sans:
+    var(--font-geist-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   /* Titres et gros chiffres : même famille (un seul jeton à changer si une
      police de marque sous licence complète arrive pour le portail). */
   --font-titre: var(--font-sans);

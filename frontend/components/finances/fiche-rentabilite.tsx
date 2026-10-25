@@ -17,13 +17,22 @@ import {
 } from '@/lib/rentabilite';
 
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const libelleMois = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const libelleMois = (m: string) =>
+  new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
 // Fiche de rentabilité d'un projet (lot 7, phase 1), en panneau latéral :
 // synthèse, factures et avoirs, temps par mois, coût par salarié à la
 // demande (CFO, CEO ; affichage tracé), qualité des données.
-export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: string; projetId: string; onClose: () => void }) {
+export function FicheRentabilitePanneau({
+  slug,
+  projetId,
+  onClose,
+}: {
+  slug: string;
+  projetId: string;
+  onClose: () => void;
+}) {
   const [f, setF] = useState<FicheRentabilite | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [salaries, setSalaries] = useState<CoutSalarie[] | null>(null);
@@ -55,7 +64,13 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
 
   return (
     <div className="fiche-crm-fond" onClick={onClose}>
-      <aside className="fiche-crm rtf" role="dialog" aria-modal="true" aria-labelledby="rtf-titre" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="fiche-crm rtf"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rtf-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="fiche-crm-entete">
           <div>
             <p className="fiche-crm-titre">Rentabilité · provisoire</p>
@@ -96,7 +111,9 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
                     <div>
                       <dt>Marge directe provisoire</dt>
                       <dd className={(f.marge ?? 0) < 0 ? 'rt-negatif' : undefined}>
-                        <strong>{f.marge === null ? 'Non calculable : données insuffisantes' : formatMontant(f.marge)}</strong>
+                        <strong>
+                          {f.marge === null ? 'Non calculable : données insuffisantes' : formatMontant(f.marge)}
+                        </strong>
                       </dd>
                     </div>
                   </>
@@ -111,7 +128,8 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
                 <div>
                   <dt>Signaux de dépassement</dt>
                   <dd>
-                    {f.prolongations} prolongation{f.prolongations > 1 ? 's' : ''} · {f.reprises} reprise{f.reprises > 1 ? 's' : ''}
+                    {f.prolongations} prolongation{f.prolongations > 1 ? 's' : ''} · {f.reprises} reprise
+                    {f.reprises > 1 ? 's' : ''}
                   </dd>
                 </div>
                 {montants && f.aFacturer ? (
@@ -187,11 +205,18 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
 
             {montants && (
               <section className="fiche-crm-section">
-                <h3 className="fiche-crm-titre">Coût par salarié · {f.salaries} salarié{f.salaries > 1 ? 's' : ''}</h3>
+                <h3 className="fiche-crm-titre">
+                  Coût par salarié · {f.salaries} salarié{f.salaries > 1 ? 's' : ''}
+                </h3>
                 {salaries === null ? (
                   <>
                     <p className="dmd-note">Masqué par défaut : chaque affichage est inscrit au journal de la paie.</p>
-                    <button type="button" className="btn-ghost btn-ghost--sm" disabled={chargement} onClick={afficherSalaries}>
+                    <button
+                      type="button"
+                      className="btn-ghost btn-ghost--sm"
+                      disabled={chargement}
+                      onClick={afficherSalaries}
+                    >
                       <Eye size={14} aria-hidden /> Afficher le détail
                     </button>
                   </>
@@ -203,7 +228,13 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
                       <li key={s.nom}>
                         <span className="rtf-mois-nom">{s.nom}</span>
                         <span>{s.heures === null ? '—' : `${s.heures.toLocaleString('fr-FR')} h`}</span>
-                        <span>{s.sansSalaire ? <span className="pill pill--attention">sans salaire validé</span> : formatMontant(s.cout ?? 0)}</span>
+                        <span>
+                          {s.sansSalaire ? (
+                            <span className="pill pill--attention">sans salaire validé</span>
+                          ) : (
+                            formatMontant(s.cout ?? 0)
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -213,7 +244,9 @@ export function FicheRentabilitePanneau({ slug, projetId, onClose }: { slug: str
 
             <section className="fiche-crm-section">
               <h3 className="fiche-crm-titre">Dépenses directes</h3>
-              <p className="dmd-note">Phase 2 : bureaux d’études d’abord, puis le modèle de dépenses (D8). Non déduites aujourd’hui.</p>
+              <p className="dmd-note">
+                Phase 2 : bureaux d’études d’abord, puis le modèle de dépenses (D8). Non déduites aujourd’hui.
+              </p>
             </section>
           </>
         )}

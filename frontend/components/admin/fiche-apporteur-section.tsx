@@ -78,7 +78,7 @@ export function FicheApporteurSection({ slug, projet, onModifie }: Props) {
           <dl className="fiche-crm-apporteur">
             <div>
               <dt>Nom et prénom</dt>
-              <dd>{ap.type === 'interne' ? ap.utilisateur?.nom ?? 'Compte supprimé' : ap.nom}</dd>
+              <dd>{ap.type === 'interne' ? (ap.utilisateur?.nom ?? 'Compte supprimé') : ap.nom}</dd>
             </div>
             <div>
               <dt>Relation</dt>

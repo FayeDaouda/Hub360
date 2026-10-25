@@ -1,6 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
 import { currentTenant, runAsSystem, runInCompany, runInGroupScope } from './tenant-context';
-import { companyOf, referencedIds, scopeArgsToCompany, TENANT_MODELS, TENANT_REFERENCES } from './tenant-isolation.extension';
+import {
+  companyOf,
+  referencedIds,
+  scopeArgsToCompany,
+  TENANT_MODELS,
+  TENANT_REFERENCES,
+} from './tenant-isolation.extension';
 
 const A = 'societe-a';
 const B = 'societe-b';
@@ -20,13 +26,22 @@ describe('TENANT_MODELS', () => {
 });
 
 describe('scopeArgsToCompany', () => {
-  it.each(['findMany', 'findFirst', 'count', 'aggregate', 'groupBy', 'updateMany', 'deleteMany'])('%s : la société active est ajoutée au filtre', (operation) => {
-    expect(scopeArgsToCompany(operation, { where: { statut: 'emise' } }, A).where).toEqual({ statut: 'emise', societeId: A });
-  });
+  it.each(['findMany', 'findFirst', 'count', 'aggregate', 'groupBy', 'updateMany', 'deleteMany'])(
+    '%s : la société active est ajoutée au filtre',
+    (operation) => {
+      expect(scopeArgsToCompany(operation, { where: { statut: 'emise' } }, A).where).toEqual({
+        statut: 'emise',
+        societeId: A,
+      });
+    },
+  );
 
-  it.each(['findUnique', 'findUniqueOrThrow', 'update', 'delete'])('%s par id : la société active s’ajoute à côté de l’identifiant', (operation) => {
-    expect(scopeArgsToCompany(operation, { where: { id: 'x' } }, A).where).toEqual({ id: 'x', societeId: A });
-  });
+  it.each(['findUnique', 'findUniqueOrThrow', 'update', 'delete'])(
+    '%s par id : la société active s’ajoute à côté de l’identifiant',
+    (operation) => {
+      expect(scopeArgsToCompany(operation, { where: { id: 'x' } }, A).where).toEqual({ id: 'x', societeId: A });
+    },
+  );
 
   it('un filtre sur une autre société est remplacé par la société active', () => {
     expect(scopeArgsToCompany('findMany', { where: { societeId: B } }, A).where).toEqual({ societeId: A });
@@ -61,26 +76,42 @@ describe('scopeArgsToCompany', () => {
   });
 
   it('upsert : filtré ET contrôlé', () => {
-    expect(scopeArgsToCompany('upsert', { where: { id: 'x' }, create: { societeId: A }, update: {} }, A).where).toEqual({ id: 'x', societeId: A });
+    expect(scopeArgsToCompany('upsert', { where: { id: 'x' }, create: { societeId: A }, update: {} }, A).where).toEqual(
+      { id: 'x', societeId: A },
+    );
   });
 });
 
 describe('TENANT_REFERENCES', () => {
   it('liste les clés étrangères vers un modèle de société, y compris depuis un modèle enfant', () => {
-    expect(TENANT_REFERENCES.get('Devis')).toContainEqual({ foreignKey: 'clientId', relation: 'client', target: 'Client' });
-    expect(TENANT_REFERENCES.get('LigneDevis')).toContainEqual({ foreignKey: 'produitServiceId', relation: 'produitService', target: 'ProduitService' });
+    expect(TENANT_REFERENCES.get('Devis')).toContainEqual({
+      foreignKey: 'clientId',
+      relation: 'client',
+      target: 'Client',
+    });
+    expect(TENANT_REFERENCES.get('LigneDevis')).toContainEqual({
+      foreignKey: 'produitServiceId',
+      relation: 'produitService',
+      target: 'ProduitService',
+    });
   });
 });
 
 describe('referencedIds', () => {
   it('relève les clés étrangères et les connect, par modèle cible', () => {
-    const ids = referencedIds('Devis', 'create', { data: { societeId: A, clientId: 'c1', projet: { connect: { id: 'p1' } } } });
+    const ids = referencedIds('Devis', 'create', {
+      data: { societeId: A, clientId: 'c1', projet: { connect: { id: 'p1' } } },
+    });
     expect(ids.get('Client')).toEqual(new Set(['c1']));
     expect(ids.get('Projet')).toEqual(new Set(['p1']));
   });
 
   it('upsert : la partie création et la partie mise à jour', () => {
-    const ids = referencedIds('Devis', 'upsert', { where: { id: 'd' }, create: { clientId: 'c1' }, update: { clientId: 'c2' } });
+    const ids = referencedIds('Devis', 'upsert', {
+      where: { id: 'd' },
+      create: { clientId: 'c1' },
+      update: { clientId: 'c2' },
+    });
     expect(ids.get('Client')).toEqual(new Set(['c1', 'c2']));
   });
 
@@ -123,6 +154,9 @@ describe('contexte d’exécution', () => {
   });
 
   it('runAsSystem est nommé', async () => {
-    expect(await runAsSystem('tâche de test', () => currentTenant())).toEqual({ scope: 'system', reason: 'tâche de test' });
+    expect(await runAsSystem('tâche de test', () => currentTenant())).toEqual({
+      scope: 'system',
+      reason: 'tâche de test',
+    });
   });
 });

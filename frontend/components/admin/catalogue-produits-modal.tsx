@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
-import {
-  creerProduitService,
-  supprimerProduitService,
-  type NouveauProduitService,
-} from '@/lib/devis';
+import { creerProduitService, supprimerProduitService, type NouveauProduitService } from '@/lib/devis';
 import type { ProduitService } from '@/lib/types';
 import { formatMontantCompact } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';

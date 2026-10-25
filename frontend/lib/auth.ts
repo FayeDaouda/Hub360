@@ -45,11 +45,7 @@ const ORDRE_NIVEAUX: Record<NiveauPermission, number> = {
 
 // Affichage seulement (montrer/masquer, rediriger) : le serveur revérifie
 // chaque requête. Même règle que backend/src/commun/permission.guard.ts.
-export function niveauSuffisant(
-  session: Session | null,
-  module: string,
-  niveau: NiveauPermission,
-): boolean {
+export function niveauSuffisant(session: Session | null, module: string, niveau: NiveauPermission): boolean {
   const actuel = session?.permissions?.[module] ?? 'aucun';
   return ORDRE_NIVEAUX[actuel] >= ORDRE_NIVEAUX[niveau];
 }

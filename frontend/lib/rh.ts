@@ -32,7 +32,14 @@ export const majDossier = (slug: string, id: string, corps: MajDossier) =>
 // Départ : tâches de projet encore ouvertes au nom du salarié, à confier à un
 // collègue de sa société avant l'archivage.
 export type TachesOuvertes = {
-  taches: { id: string; libelle: string; statut: 'a_faire' | 'a_valider' | 'reprise'; finLe: string | null; carte: string; projet: string }[];
+  taches: {
+    id: string;
+    libelle: string;
+    statut: 'a_faire' | 'a_valider' | 'reprise';
+    finLe: string | null;
+    carte: string;
+    projet: string;
+  }[];
   candidats: { id: string; nom: string }[];
 };
 export const getTachesOuvertes = (slug: string, id: string) =>
@@ -42,7 +49,11 @@ export const archiverDossier = (
   id: string,
   archive: boolean,
   reaffectations?: { tacheId: string; collaborateurId: string }[],
-) => apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/archivage`, { method: 'POST', body: { archive, reaffectations } });
+) =>
+  apiSociete<DossierPersonnel>(slug, `/rh/dossiers/${id}/archivage`, {
+    method: 'POST',
+    body: { archive, reaffectations },
+  });
 // Changement de moyen de paiement demandé dans Mon espace : validé (appliqué
 // à la paie) ou refusé.
 export const deciderPaiement = (slug: string, id: string, valide: boolean) =>
@@ -77,10 +88,21 @@ export function finProche(d: DossierPersonnel, aujourdhui = new Date()): boolean
 
 // RH · Intégration des nouveaux arrivants (lot 3) : points J30/J60/J90.
 export const getIntegrations = (slug: string) => apiSociete<IntegrationSalarie[]>(slug, '/rh/integrations');
-export const enregistrerPointIntegration = (slug: string, dossierId: string, jalon: number, corps: { realiseLe: string; compteRendu: string }) =>
-  apiSociete<IntegrationSalarie>(slug, `/rh/integrations/${dossierId}/points/${jalon}`, { method: 'POST', body: corps });
+export const enregistrerPointIntegration = (
+  slug: string,
+  dossierId: string,
+  jalon: number,
+  corps: { realiseLe: string; compteRendu: string },
+) =>
+  apiSociete<IntegrationSalarie>(slug, `/rh/integrations/${dossierId}/points/${jalon}`, {
+    method: 'POST',
+    body: corps,
+  });
 export const confirmerIntegration = (slug: string, dossierId: string) =>
-  apiSociete<{ id: string; confirmeLe: string }>(slug, `/rh/integrations/${dossierId}/confirmation`, { method: 'POST', body: {} });
+  apiSociete<{ id: string; confirmeLe: string }>(slug, `/rh/integrations/${dossierId}/confirmation`, {
+    method: 'POST',
+    body: {},
+  });
 
 // Bulletins de paie (lot 5b) : un par mois (AAAA-MM), remplaçable, retirable.
 export const deposerBulletin = (slug: string, id: string, mois: string, nom: string, url: string) =>
@@ -124,8 +146,23 @@ export type ChangementSalaire = {
   motifRefus: string;
 };
 export type HistoriqueSalaire = { enVigueur: number | null; valideur: 'CFO' | 'CEO'; changements: ChangementSalaire[] };
-export type SalaireAValider = { id: string; dossierId: string; salarie: string; motif: MotifSalaire; dateEffet: string | null; proposePar: string | null; proposeLe: string };
-export type DetailSalaire = { id: string; salarie: string; motif: MotifSalaire; dateEffet: string | null; montant: number; actuel: number | null };
+export type SalaireAValider = {
+  id: string;
+  dossierId: string;
+  salarie: string;
+  motif: MotifSalaire;
+  dateEffet: string | null;
+  proposePar: string | null;
+  proposeLe: string;
+};
+export type DetailSalaire = {
+  id: string;
+  salarie: string;
+  motif: MotifSalaire;
+  dateEffet: string | null;
+  montant: number;
+  actuel: number | null;
+};
 
 // Date d'effet : 3 mois en arrière au plus (sauf salaire d'entrée) — même
 // règle que le serveur (rh/regles-salaire.ts).
@@ -137,9 +174,13 @@ export function dateEffetMin(jour: string): string {
   return cible.toISOString().slice(0, 10);
 }
 
-export const getSalaireDossier = (slug: string, id: string) => apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaire`);
-export const proposerSalaire = (slug: string, id: string, p: { montant: number; dateEffet: string; motif: MotifSalaire }) =>
-  apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaires`, { method: 'POST', body: p });
+export const getSalaireDossier = (slug: string, id: string) =>
+  apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaire`);
+export const proposerSalaire = (
+  slug: string,
+  id: string,
+  p: { montant: number; dateEffet: string; motif: MotifSalaire },
+) => apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaires`, { method: 'POST', body: p });
 export const retirerSalaire = (slug: string, id: string, changementId: string) =>
   apiSociete<HistoriqueSalaire>(slug, `/rh/dossiers/${id}/salaires/${changementId}`, { method: 'DELETE' });
 export const getSalairesAValider = (slug: string) => apiSociete<SalaireAValider[]>(slug, '/rh/salaires/a-valider');

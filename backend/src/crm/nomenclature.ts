@@ -27,7 +27,7 @@
 // aux deux : côté serveur avec les codes pris en base.
 
 function sansAccents(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 // Découpe un nom en mots : sépare sur espaces, tirets, apostrophes et points,
@@ -42,20 +42,20 @@ function mots(s: string): string[] {
 // (liste validée, sept. 2026) — comparés sans accents, en minuscules, point
 // retiré : « M. et Mme Diouf » → Diouf, « Dr Fatou Sarr » → Fatou Sarr.
 const MOTS_IGNORES = new Set([
-  "m",
-  "mme",
-  "mlle",
-  "dr",
-  "me",
-  "pr",
-  "et",
-  "&",
-  "monsieur",
-  "madame",
-  "mademoiselle",
-  "docteur",
-  "maitre",
-  "famille",
+  'm',
+  'mme',
+  'mlle',
+  'dr',
+  'me',
+  'pr',
+  'et',
+  '&',
+  'monsieur',
+  'madame',
+  'mademoiselle',
+  'docteur',
+  'maitre',
+  'famille',
 ]);
 
 // Sigle tel qu'il est stocké et utilisé : majuscules, lettres et chiffres
@@ -63,11 +63,11 @@ const MOTS_IGNORES = new Set([
 export function normaliserSigle(sigle: string): string {
   return sansAccents(sigle)
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+    .replace(/[^A-Z0-9]/g, '');
 }
 
 export function estPersonneMorale(type: string): boolean {
-  return type !== "particulier";
+  return type !== 'particulier';
 }
 
 // Formes juridiques (OHADA et usuelles) et mots de liaison ignorés dans une
@@ -112,10 +112,7 @@ const MOTS_LIAISON = new Set([
 // Un seul mot → ses 3 premières lettres (une initiale seule est trop courte,
 // trop de collisions) ; sinon 1ʳᵉ lettre de chaque mot.
 function initiales(retenus: string[]): string {
-  const segment =
-    retenus.length === 1
-      ? retenus[0].slice(0, 3)
-      : retenus.map((m) => m[0]).join('');
+  const segment = retenus.length === 1 ? retenus[0].slice(0, 3) : retenus.map((m) => m[0]).join('');
   return segment.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
@@ -138,11 +135,7 @@ function segmentRaisonSociale(nom: string): string {
 
 // Segment CLIENT. Chaîne vide si le nom manque — l'appelant décide quoi en
 // faire (l'aperçu de la modale affiche « ??? » à sa place).
-export function segmentClient(client: {
-  nom: string;
-  type: string;
-  sigle?: string | null;
-}): string {
+export function segmentClient(client: { nom: string; type: string; sigle?: string | null }): string {
   if (estPersonneMorale(client.type)) {
     // Client antérieur à la maquette : son sigle reste son segment.
     return normaliserSigle(client.sigle ?? '') || segmentRaisonSociale(client.nom);
@@ -162,7 +155,7 @@ export function genererCodeDossier(
   date: Date = new Date(),
 ): string {
   const segClient = segmentClient(client);
-  if (!segClient || !codeLocalite) return "";
+  if (!segClient || !codeLocalite) return '';
   const aa = String(date.getFullYear()).slice(-2);
   return `${segClient}_${codeLocalite}.${aa}`;
 }

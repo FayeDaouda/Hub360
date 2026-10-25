@@ -24,8 +24,12 @@ describe('Journal d’audit · ordre des événements', () => {
   it('deux événements au même instant sont numérotés dans leur ordre d’insertion', async () => {
     // Insérées à l'inverse de l'ordre alphabétique de leur libellé : seul
     // l'ordre d'insertion peut donner l'ordre attendu plus bas.
-    const premier = await prisma.journalCloture.create({ data: { societeId, mois: '2026-02', action: 'cloture', createdAt: MEME_INSTANT } });
-    const second = await prisma.journalCloture.create({ data: { societeId, mois: '2026-01', action: 'cloture', createdAt: MEME_INSTANT } });
+    const premier = await prisma.journalCloture.create({
+      data: { societeId, mois: '2026-02', action: 'cloture', createdAt: MEME_INSTANT },
+    });
+    const second = await prisma.journalCloture.create({
+      data: { societeId, mois: '2026-01', action: 'cloture', createdAt: MEME_INSTANT },
+    });
     expect(premier.ordreJournal).not.toBeNull();
     expect(second.ordreJournal! > premier.ordreJournal!).toBe(true);
   });
@@ -33,11 +37,15 @@ describe('Journal d’audit · ordre des événements', () => {
   it('une émission est numérotée au moment où elle a lieu, pas à la création de la facture', async () => {
     const brouillon = await prisma.facture.findFirstOrThrow({ where: { societeId, statut: 'brouillon' } });
     expect(brouillon.ordreEmission).toBeNull();
-    const avant = (await prisma.journalCloture.create({ data: { societeId, mois: '2026-03', action: 'cloture' } })).ordreJournal!;
+    const avant = (await prisma.journalCloture.create({ data: { societeId, mois: '2026-03', action: 'cloture' } }))
+      .ordreJournal!;
     const emise = await prisma.facture.update({ where: { id: brouillon.id }, data: { emiseLe: MEME_INSTANT } });
     expect(emise.ordreEmission! > avant).toBe(true);
     // Une autre modification ne renumérote pas l'événement.
-    const modifiee = await prisma.facture.update({ where: { id: brouillon.id }, data: { libelle: `${brouillon.libelle} ` } });
+    const modifiee = await prisma.facture.update({
+      where: { id: brouillon.id },
+      data: { libelle: `${brouillon.libelle} ` },
+    });
     expect(modifiee.ordreEmission).toBe(emise.ordreEmission);
     await prisma.facture.update({ where: { id: brouillon.id }, data: { emiseLe: null, libelle: brouillon.libelle } });
   });

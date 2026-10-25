@@ -18,7 +18,9 @@ describe('profil utilisateur', () => {
     expect(p.type).toBe('image/webp');
     expect(p.octets.toString()).toBe('abc');
     expect(() => lirePhoto('data:image/gif;base64,AAAA')).toThrow(BadRequestException);
-    expect(() => lirePhoto(`data:image/png;base64,${Buffer.alloc(400_001).toString('base64')}`)).toThrow(BadRequestException);
+    expect(() => lirePhoto(`data:image/png;base64,${Buffer.alloc(400_001).toString('base64')}`)).toThrow(
+      BadRequestException,
+    );
     expect(cheminPhoto('abc')).toBe('/photos/abc');
     expect(cheminPhoto(null)).toBeNull();
   });

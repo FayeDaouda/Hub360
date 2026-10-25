@@ -50,9 +50,19 @@ const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string
 // Libellé, icône et destination de chaque chiffre clé (valeurs et état :
 // serveur). Montants en FCFA ; le reste en nombre.
 const TUILES: Record<string, { libelle: string; icone: LucideIcon; montant?: boolean; chemin: string }> = {
-  facture_mois: { libelle: 'Facturé ce mois', icone: ReceiptText, montant: true, chemin: 'facturation?onglet=factures' },
+  facture_mois: {
+    libelle: 'Facturé ce mois',
+    icone: ReceiptText,
+    montant: true,
+    chemin: 'facturation?onglet=factures',
+  },
   encaisse_mois: { libelle: 'Encaissé ce mois', icone: Banknote, montant: true, chemin: 'facturation?onglet=factures' },
-  reste_retard: { libelle: 'En retard de paiement', icone: AlarmClock, montant: true, chemin: 'facturation?onglet=factures&filtre=en_retard' },
+  reste_retard: {
+    libelle: 'En retard de paiement',
+    icone: AlarmClock,
+    montant: true,
+    chemin: 'facturation?onglet=factures&filtre=en_retard',
+  },
   projets_ouverts: { libelle: 'Projets ouverts', icone: FolderKanban, chemin: 'projets' },
   pipeline: { libelle: 'Pipeline actif', icone: FolderOpen, chemin: 'crm' },
   fiches: { libelle: 'Fiches à compléter', icone: FileWarning, chemin: 'crm' },
@@ -109,7 +119,12 @@ export function Pilotage({ slug }: { slug: string }) {
     requestAnimationFrame(() => ongletsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
-  if (!vue) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (!vue)
+    return erreur ? (
+      <p className="field-erreur">{erreur}</p>
+    ) : (
+      <div className="skeleton admin-skeleton-panel" aria-hidden />
+    );
   const t = vue.tuiles;
   // « En retard de paiement » : la carte Factures de « À votre
   // attention » quand elle est affichée (CEO), sinon Finances filtrées.
@@ -119,12 +134,14 @@ export function Pilotage({ slug }: { slug: string }) {
   return (
     <div className="pi">
       <p className="eq-sous-titre">
-        Indicateurs du manuel, reportings mensuels et registre des décisions. Ce qui n’est pas dans le HUB n’existe pas pour la gouvernance
-        (§3.7).
+        Indicateurs du manuel, reportings mensuels et registre des décisions. Ce qui n’est pas dans le HUB n’existe pas
+        pour la gouvernance (§3.7).
       </p>
       {/* Dir. GC et CTO : ce qui attend leur décision d'abord, la supervision ensuite. */}
       {session.role !== ROLE_CEO && <Delegation slug={slug} />}
-      {(session.role === ROLE_DIR_GC || session.role === ROLE_CTO) && <ADecider slug={slug} vue={vue} onOnglet={ouvrir} />}
+      {(session.role === ROLE_DIR_GC || session.role === ROLE_CTO) && (
+        <ADecider slug={slug} vue={vue} onOnglet={ouvrir} />
+      )}
       {vue.chiffres && (
         <KpiStrip
           tuiles={vue.chiffres.tuiles
@@ -155,7 +172,14 @@ export function Pilotage({ slug }: { slug: string }) {
               ...(ROLES_JOURNAL.has(session.role) ? ([['journal', 'Journal']] as const) : []),
             ] as const
           ).map(([cle, libelle]) => (
-            <button key={cle} type="button" role="tab" aria-selected={onglet === cle} className={onglet === cle ? 'is-active' : ''} onClick={() => setOnglet(cle)}>
+            <button
+              key={cle}
+              type="button"
+              role="tab"
+              aria-selected={onglet === cle}
+              className={onglet === cle ? 'is-active' : ''}
+              onClick={() => setOnglet(cle)}
+            >
               {libelle}
             </button>
           ))}

@@ -24,14 +24,7 @@ import { NiveauPermission, StatutCrm } from '@prisma/client';
 //
 // MIROIR (libellés + règles d'affichage) : frontend/lib/cycle-crm.ts.
 
-export const ACTIONS_CRM = [
-  'soumettre',
-  'valider',
-  'renvoyer',
-  'onboarder',
-  'refaire',
-  'perdre',
-] as const;
+export const ACTIONS_CRM = ['soumettre', 'valider', 'renvoyer', 'onboarder', 'refaire', 'perdre'] as const;
 export type ActionCrm = (typeof ACTIONS_CRM)[number];
 
 export type RegleAction = {

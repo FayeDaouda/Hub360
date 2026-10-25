@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 
 // Rôle socle qui a SON propre espace (holding → /groupe) et n'entre jamais
 // dans le back-office société.
@@ -30,7 +25,7 @@ export class BackOfficeGuard implements CanActivate {
     const slug = req.params.slug;
 
     if (!user || user.societeSlug !== slug || !estRoleBackOffice(user.role)) {
-      throw new ForbiddenException("Accès réservé à la direction de cette société");
+      throw new ForbiddenException('Accès réservé à la direction de cette société');
     }
     return true;
   }

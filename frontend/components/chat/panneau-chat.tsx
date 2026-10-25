@@ -3,12 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, Info, Plus, SendHorizonal, X } from 'lucide-react';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
-import type {
-  CanalChat,
-  EtatFluxChat,
-  MembreAnnuaire,
-  MessageChat,
-} from '@/lib/types';
+import type { CanalChat, EtatFluxChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { AvatarPersonne } from '@/components/avatar-personne';
 
 type Props = {
@@ -120,27 +115,13 @@ export function PanneauChat({
     >
       <header className="pchat-tete">
         {canalActif || vueAnnuaire ? (
-          <button
-            type="button"
-            className="pchat-retour"
-            onClick={onRetourListe}
-            aria-label="Retour à la liste"
-          >
+          <button type="button" className="pchat-retour" onClick={onRetourListe} aria-label="Retour à la liste">
             <ChevronLeft size={18} aria-hidden />
           </button>
         ) : null}
         <div className="pchat-tete-txt">
-          <strong>
-            {vueAnnuaire
-              ? 'Nouvelle conversation'
-              : canalActif
-                ? canalActif.nom
-                : 'Messages'}
-          </strong>
-          <span
-            className={`pchat-etat pchat-etat--${etatFlux}`}
-            role="status"
-          >
+          <strong>{vueAnnuaire ? 'Nouvelle conversation' : canalActif ? canalActif.nom : 'Messages'}</strong>
+          <span className={`pchat-etat pchat-etat--${etatFlux}`} role="status">
             {etatFlux === 'ouvert' && <span className="pchat-etat-point" aria-hidden />}
             {LIBELLE_ETAT[etatFlux]}
           </span>
@@ -156,12 +137,7 @@ export function PanneauChat({
             <Plus size={18} />
           </button>
         )}
-        <button
-          type="button"
-          className="pchat-fermer"
-          onClick={onFermer}
-          aria-label="Fermer les messages"
-        >
+        <button type="button" className="pchat-fermer" onClick={onFermer} aria-label="Fermer les messages">
           <X size={18} />
         </button>
       </header>
@@ -175,12 +151,13 @@ export function PanneauChat({
           ) : (
             annuaire.map((m) => (
               <li key={m.utilisateurId} className="pchat-annuaire-ligne">
-                <button
-                  type="button"
-                  className="pchat-canal"
-                  onClick={() => onNouveauDm(m.utilisateurId)}
-                >
-                  <AvatarPersonne nom={m.nomAffiche || `${m.prenom} ${m.nom}`} photo={m.photoUrl} cle={m.utilisateurId} taille="sm" />
+                <button type="button" className="pchat-canal" onClick={() => onNouveauDm(m.utilisateurId)}>
+                  <AvatarPersonne
+                    nom={m.nomAffiche || `${m.prenom} ${m.nom}`}
+                    photo={m.photoUrl}
+                    cle={m.utilisateurId}
+                    taille="sm"
+                  />
                   <span className="pchat-canal-nom pchat-canal-nom--annuaire">
                     <span>{m.nomAffiche || `${m.prenom} ${m.nom}`}</span>
                     <span className="pchat-annuaire-role">
@@ -209,21 +186,13 @@ export function PanneauChat({
           ) : (
             canaux.map((c) => (
               <li key={c.id}>
-                <button
-                  type="button"
-                  className="pchat-canal"
-                  onClick={() => onChoisirCanal(c.id)}
-                >
+                <button type="button" className="pchat-canal" onClick={() => onChoisirCanal(c.id)}>
                   <span className={`pchat-canal-pastille pchat-canal-pastille--${c.type}`} aria-hidden>
                     {c.type === 'direct' ? c.nom.charAt(0) : '#'}
                   </span>
                   <span className="pchat-canal-nom">{c.nom}</span>
-                  {c.dernierMessageLe && (
-                    <span className="pchat-canal-quand">{heure(c.dernierMessageLe)}</span>
-                  )}
-                  {c.nonLus > 0 && (
-                    <span className="pchat-canal-badge">{c.nonLus}</span>
-                  )}
+                  {c.dernierMessageLe && <span className="pchat-canal-quand">{heure(c.dernierMessageLe)}</span>}
+                  {c.nonLus > 0 && <span className="pchat-canal-badge">{c.nonLus}</span>}
                 </button>
               </li>
             ))
@@ -233,12 +202,7 @@ export function PanneauChat({
         <>
           <div className="pchat-fil" ref={filRef} onScroll={surScroll}>
             {curseur && (
-              <button
-                type="button"
-                className="pchat-plus"
-                onClick={onChargerPlus}
-                disabled={chargement}
-              >
+              <button type="button" className="pchat-plus" onClick={onChargerPlus} disabled={chargement}>
                 {chargement ? 'Chargement…' : 'Messages plus anciens'}
               </button>
             )}
@@ -247,22 +211,14 @@ export function PanneauChat({
             ) : (
               messages.map((m, i) => {
                 const prec = messages[i - 1];
-                const nouveauJour =
-                  !prec || jour(prec.envoyeLe) !== jour(m.envoyeLe);
-                const memeAuteur =
-                  prec && prec.auteur.id === m.auteur.id && !nouveauJour;
+                const nouveauJour = !prec || jour(prec.envoyeLe) !== jour(m.envoyeLe);
+                const memeAuteur = prec && prec.auteur.id === m.auteur.id && !nouveauJour;
                 const mien = m.auteur.id === moiId;
                 return (
                   <div key={m.id}>
-                    {nouveauJour && (
-                      <div className="pchat-jour">{jour(m.envoyeLe)}</div>
-                    )}
-                    <div
-                      className={`pchat-msg${mien ? ' pchat-msg--mien' : ''}`}
-                    >
-                      {!memeAuteur && !mien && (
-                        <span className="pchat-msg-auteur">{m.auteur.nom}</span>
-                      )}
+                    {nouveauJour && <div className="pchat-jour">{jour(m.envoyeLe)}</div>}
+                    <div className={`pchat-msg${mien ? ' pchat-msg--mien' : ''}`}>
+                      {!memeAuteur && !mien && <span className="pchat-msg-auteur">{m.auteur.nom}</span>}
                       <span className="pchat-msg-bulle">
                         {m.texte}
                         <span className="pchat-msg-heure">{heure(m.envoyeLe)}</span>

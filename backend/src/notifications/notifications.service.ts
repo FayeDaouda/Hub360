@@ -116,10 +116,7 @@ export class NotificationsService {
         {
           daf,
           proprietaire: d.proprietaireId ? [d.proprietaireId] : dirGc,
-          apporteur:
-            d.apporteurType === 'interne' && d.apporteurUtilisateurId
-              ? [d.apporteurUtilisateurId]
-              : [],
+          apporteur: d.apporteurType === 'interne' && d.apporteurUtilisateurId ? [d.apporteurUtilisateurId] : [],
           createur: d.creeParId ? [d.creeParId] : [],
         },
         params.parId,
@@ -215,11 +212,7 @@ export class NotificationsService {
   // Leads « Nouveau projet » incomplets depuis plus de 72 h dont l'utilisateur
   // pilote la fiche — ou, « à assigner », s'il est titulaire Dir. GC (cf.
   // crm/notifications-crm.ts::relanceFicheIncomplete).
-  private async relancesFiche(
-    societeId: string,
-    utilisateurId: string,
-    maintenant: Date,
-  ): Promise<NotificationItem[]> {
+  private async relancesFiche(societeId: string, utilisateurId: string, maintenant: Date): Promise<NotificationItem[]> {
     const dirGc = await this.titulairesRole(societeId, ROLE_PROPRIETAIRE_DOSSIER);
     const dossiers = await this.prisma.dossierCrm.findMany({
       where: {
@@ -227,10 +220,7 @@ export class NotificationsService {
         statut: 'nouveau_projet',
         archiveLe: null,
         createdAt: { lte: new Date(maintenant.getTime() - DELAI_RELANCE_FICHE_MS) },
-        OR: [
-          { proprietaireId: utilisateurId },
-          ...(dirGc.includes(utilisateurId) ? [{ proprietaireId: null }] : []),
-        ],
+        OR: [{ proprietaireId: utilisateurId }, ...(dirGc.includes(utilisateurId) ? [{ proprietaireId: null }] : [])],
       },
       select: {
         id: true,
@@ -314,7 +304,13 @@ export class NotificationsService {
   // `types` : seulement ces notifications (onglet de Mon espace ouvert).
   async marquerLues(societeId: string, utilisateurId: string, types?: NotificationType[], ids?: string[]) {
     await this.prisma.notification.updateMany({
-      where: { destinataireId: utilisateurId, societeId, luLe: null, ...(types?.length && { type: { in: types } }), ...(ids?.length && { id: { in: ids } }) },
+      where: {
+        destinataireId: utilisateurId,
+        societeId,
+        luLe: null,
+        ...(types?.length && { type: { in: types } }),
+        ...(ids?.length && { id: { in: ids } }),
+      },
       data: { luLe: new Date() },
     });
     return this.flux(societeId, utilisateurId);
@@ -339,5 +335,4 @@ export class NotificationsService {
     });
     return d?.utilisateurId ?? d?.collaborateur?.utilisateurId ?? null;
   }
-
 }

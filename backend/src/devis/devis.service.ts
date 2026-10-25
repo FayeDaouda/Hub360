@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma, StatutDevis } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { versClient } from '../commun/format-contrat';
@@ -55,7 +50,10 @@ const AVEC_DETAIL = {
     },
   },
   // famille : repérer un avenant (lignes TS) ; code + famille : échéancier.
-  lignes: { orderBy: { ordre: 'asc' as const }, include: { produitService: { select: { famille: true, code: true } } } },
+  lignes: {
+    orderBy: { ordre: 'asc' as const },
+    include: { produitService: { select: { famille: true, code: true } } },
+  },
 } satisfies Prisma.DevisInclude;
 
 type DevisAvecDetail = Prisma.DevisGetPayload<{ include: typeof AVEC_DETAIL }>;
@@ -113,10 +111,7 @@ export class DevisService {
     return this.reglages.regle<number>(societeId, 'alerte_avenant_jours');
   }
 
-  async findAll(
-    societeId: string,
-    filtres: { statut?: StatutDevis; projetId?: string; clientId?: string },
-  ) {
+  async findAll(societeId: string, filtres: { statut?: StatutDevis; projetId?: string; clientId?: string }) {
     const devis = await this.prisma.devis.findMany({
       where: {
         societeId,
@@ -138,18 +133,19 @@ export class DevisService {
   async creer(societeId: string, dto: CreerDevisDto) {
     await this.validerReferences(societeId, dto.clientId, dto.projetId, dto.lignes);
     if (dto.dossierCrmId) await this.validerNouvelleOffre(societeId, dto);
-    const lignes = await this.appliquerCatalogue(
-      societeId,
-      dto.lignes,
-      await this.contexteLignes(societeId, dto),
-    );
+    const lignes = await this.appliquerCatalogue(societeId, dto.lignes, await this.contexteLignes(societeId, dto));
     // Offre d'un dossier : référence « CODE-OFn » attribuée dès la création
     // (rang suivant du dossier ; collision concurrente → contrainte unique).
     const dossier = dto.dossierCrmId
       ? await this.prisma.dossierCrm.findUnique({ where: { id: dto.dossierCrmId }, select: { code: true } })
       : null;
     const rang = dossier
-      ? ((await this.prisma.devis.aggregate({ where: { societeId, codeDossier: dossier.code }, _max: { rangDossier: true } }))._max.rangDossier ?? 0) + 1
+      ? ((
+          await this.prisma.devis.aggregate({
+            where: { societeId, codeDossier: dossier.code },
+            _max: { rangDossier: true },
+          })
+        )._max.rangDossier ?? 0) + 1
       : null;
     const devis = await this.prisma.devis.create({
       data: {
@@ -268,9 +264,7 @@ export class DevisService {
   async envoyer(societeId: string, id: string) {
     const devis = await this.brouillon(societeId, id);
     if (devis.dossierCrmId) {
-      throw new ConflictException(
-        'Cette offre de dossier CRM part uniquement par la validation de la DAF.',
-      );
+      throw new ConflictException('Cette offre de dossier CRM part uniquement par la validation de la DAF.');
     }
     return this.emettre(societeId, devis, devis.dateValidite, async () => undefined);
   }
@@ -296,20 +290,15 @@ export class DevisService {
       where: { devisId: offre.id, produitService: { famille: 'CO' } },
       select: { produitService: { select: { code: true } } },
     });
-    return this.emettre(
-      societeId,
-      offre,
-      ajouterJours(jourCourant(), VALIDITE_OFFRE_JOURS),
-      async (tx) => {
-        await dansTransaction(tx);
-        if (ligneCo?.produitService?.code) {
-          await tx.dossierCrm.update({
-            where: { id: dossierCrmId },
-            data: { categorieConception: ligneCo.produitService.code },
-          });
-        }
-      },
-    );
+    return this.emettre(societeId, offre, ajouterJours(jourCourant(), VALIDITE_OFFRE_JOURS), async (tx) => {
+      await dansTransaction(tx);
+      if (ligneCo?.produitService?.code) {
+        await tx.dossierCrm.update({
+          where: { id: dossierCrmId },
+          data: { categorieConception: ligneCo.produitService.code },
+        });
+      }
+    });
   }
 
   // Relance d'un devis en attente de réponse (J+3 / J+6 pour une offre CRM —
@@ -361,9 +350,7 @@ export class DevisService {
     const devis = await this.chargerParToken(token);
     const aujourdhui = jourCourant();
     if (statutDevisEffectif(devis, aujourdhui) === 'expire') {
-      throw new ConflictException(
-        'Ce devis a expiré — contactez-nous pour en obtenir un nouveau.',
-      );
+      throw new ConflictException('Ce devis a expiré — contactez-nous pour en obtenir un nouveau.');
     }
     if (devis.statut !== 'envoye') {
       throw new ConflictException('Ce devis a déjà reçu une réponse.');
@@ -376,12 +363,7 @@ export class DevisService {
   // Validation MANUELLE par l'admin — second canal, à côté du lien public à
   // usage unique (module à venir) : le client a pu répondre par téléphone ou
   // mail direct plutôt que de cliquer le lien.
-  async marquerReponse(
-    societeId: string,
-    id: string,
-    reponse: 'accepte' | 'refuse',
-    parId: string,
-  ) {
+  async marquerReponse(societeId: string, id: string, reponse: 'accepte' | 'refuse', parId: string) {
     const devis = await this.charger(societeId, id);
     if (devis.statut !== 'envoye') {
       throw new ConflictException('Seul un devis envoyé peut recevoir une réponse.');
@@ -414,25 +396,27 @@ export class DevisService {
     // devis peut mélanger des taux par ligne (catalogue ≠ ligne libre) : on
     // reconstitue le taux effectif équivalent plutôt que d'en figer un
     // arbitrairement. Dans le cas courant (un seul taux sur toutes les
-        // lignes), ce taux effectif EST ce taux exact.
+    // lignes), ce taux effectif EST ce taux exact.
     const tauxTvaEffectif = montantHt > 0 ? Math.round((montantTva / montantHt) * 10000) / 100 : 18;
 
-    const projet = devis.projetId
-      ? await chargerProjet(this.prisma, societeId, devis.projetId)
-      : null;
+    const projet = devis.projetId ? await chargerProjet(this.prisma, societeId, devis.projetId) : null;
     // Sans projet, pas de `nature` dont dériver le type (cadrage §2 de
     // Facturation) — un devis « libre » converti est par défaut une
     // prestation de service, jamais la vente d'un bien.
     const type = projet ? typeFactureDepuisNature(projet.nature) : 'honoraires';
 
-    const factureId = await this.facturation.creerDepuisDevis(societeId, {
-      projetId: devis.projetId,
-      type,
-      libelle: `${refDevis(devis)} converti — ${devis.lignes.length} ligne${devis.lignes.length > 1 ? 's' : ''}`,
-      montantHt,
-      tauxTva: tauxTvaEffectif,
-      devisOrigineId: devis.id,
-    }, acteurId);
+    const factureId = await this.facturation.creerDepuisDevis(
+      societeId,
+      {
+        projetId: devis.projetId,
+        type,
+        libelle: `${refDevis(devis)} converti — ${devis.lignes.length} ligne${devis.lignes.length > 1 ? 's' : ''}`,
+        montantHt,
+        tauxTva: tauxTvaEffectif,
+        devisOrigineId: devis.id,
+      },
+      acteurId,
+    );
     await this.prisma.devis.update({
       where: { id: devis.id },
       data: { statut: 'transforme' },
@@ -452,9 +436,7 @@ export class DevisService {
     dansTransaction: (tx: Prisma.TransactionClient) => Promise<void>,
   ) {
     if (devis.lignes.length === 0) {
-      throw new UnprocessableEntityException(
-        'Ajoutez au moins une ligne avant d’envoyer le devis.',
-      );
+      throw new UnprocessableEntityException('Ajoutez au moins une ligne avant d’envoyer le devis.');
     }
     const { clair, hash } = genererJeton();
     await this.avecSequence(societeId, async (tx, numero) => {
@@ -566,9 +548,7 @@ export class DevisService {
     // Fiche incomplète : l'offre se prépare quand même en brouillon (maquette
     // Finances) ; c'est la soumission au CFO qui exige la fiche complète.
     if (dto.clientId !== dossier.clientId || dto.projetId) {
-      throw new UnprocessableEntityException(
-        'Une offre de dossier CRM porte sur le client du dossier, sans projet.',
-      );
+      throw new UnprocessableEntityException('Une offre de dossier CRM porte sur le client du dossier, sans projet.');
     }
     const brouillon = await this.prisma.devis.count({
       where: { dossierCrmId: dto.dossierCrmId, statut: 'brouillon' },
@@ -586,9 +566,7 @@ export class DevisService {
       throw new ConflictException('Lead archivé : aucune offre ne s’y prépare.');
     }
     if (dossier.statut !== 'nouveau_projet') {
-      throw new ConflictException(
-        'L’offre ne se modifie qu’en « Nouveau projet » (la DAF peut renvoyer le dossier).',
-      );
+      throw new ConflictException('L’offre ne se modifie qu’en « Nouveau projet » (la DAF peut renvoyer le dossier).');
     }
   }
 
@@ -604,9 +582,7 @@ export class DevisService {
   private async brouillon(societeId: string, id: string) {
     const devis = await this.charger(societeId, id);
     if (devis.statut !== 'brouillon') {
-      throw new ConflictException(
-        'Devis déjà envoyé — non modifiable (créez-en un nouveau si besoin).',
-      );
+      throw new ConflictException('Devis déjà envoyé — non modifiable (créez-en un nouveau si besoin).');
     }
     return devis;
   }
@@ -663,26 +639,18 @@ export class DevisService {
   //     projet — la facturation attend son acceptation (conversion) ; TS-MAJ
   //     au tarif de la catégorie CO du projet × surface × planches concernées ;
   //   · ligne sans produit : « hors catalogue », telle quelle.
-  private async appliquerCatalogue(
-    societeId: string,
-    lignes: LigneDevisDto[],
-    ctx: ContexteLignes,
-  ) {
+  private async appliquerCatalogue(societeId: string, lignes: LigneDevisDto[], ctx: ContexteLignes) {
     const ids = [...new Set(lignes.map((l) => l.produitServiceId).filter(Boolean))] as string[];
     const produits = new Map(
-      (
-        await this.prisma.produitService.findMany({ where: { id: { in: ids }, societeId } })
-      ).map((p) => [p.id, p]),
+      (await this.prisma.produitService.findMany({ where: { id: { in: ids }, societeId } })).map((p) => [p.id, p]),
     );
-    const produitDe = (l: LigneDevisDto) =>
-      l.produitServiceId ? produits.get(l.produitServiceId) : undefined;
+    const produitDe = (l: LigneDevisDto) => (l.produitServiceId ? produits.get(l.produitServiceId) : undefined);
 
     const lignesCo = lignes.filter((l) => produitDe(l)?.modeCalcul === 'surface_planches');
     if (lignesCo.length > 1) {
       throw new UnprocessableEntityException('Une seule ligne de conception (CO) par devis.');
     }
-    const categorieCo =
-      (lignesCo[0] && produitDe(lignesCo[0])?.code) ?? ctx.categorieCo ?? null;
+    const categorieCo = (lignesCo[0] && produitDe(lignesCo[0])?.code) ?? ctx.categorieCo ?? null;
 
     // Tarif CO de la catégorie (TS-MAJ) — lu au catalogue, jamais saisi.
     const tarifCo = lignes.some((l) => produitDe(l)?.modeCalcul === 'tarif_co_surface_planches')
@@ -756,7 +724,9 @@ export class DevisService {
         if (!planches || !surface) {
           if (ctx.offreDossier) return { ...base, surfaceM2: surface, planches, quantite: 0 };
           throw new UnprocessableEntityException(
-            !planches ? 'Ligne de conception : nombre de planches requis.' : 'Ligne de conception : surface (m²) requise.',
+            !planches
+              ? 'Ligne de conception : nombre de planches requis.'
+              : 'Ligne de conception : surface (m²) requise.',
           );
         }
         base.surfaceM2 = surface;
@@ -815,8 +785,7 @@ export class DevisService {
         });
         return;
       } catch (e) {
-        const collision =
-          e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+        const collision = e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
         if (collision && essai < 4) continue;
         throw e;
       }
@@ -899,7 +868,11 @@ export class DevisService {
       alerteAvenant:
         seuilAvenant == null
           ? null
-          : alerteAvenant({ ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) }, jourCourant(), seuilAvenant),
+          : alerteAvenant(
+              { ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) },
+              jourCourant(),
+              seuilAvenant,
+            ),
       lignes,
       montantHt,
       montantTva,
@@ -935,7 +908,11 @@ export class DevisService {
   // Parts figées à la soumission ; avant, celles en service (Réglages).
   private async echeancier(societeId: string, d: DevisAvecDetail) {
     const parts = (d.partsFactures as PartsFactures | null) ?? (await this.reglages.partsFactures(societeId));
-    return echeancierOffre(lignesOffreDepuisDevis(d.lignes), parts, (d.delaisEcheancier as Record<string, number> | null) ?? {});
+    return echeancierOffre(
+      lignesOffreDepuisDevis(d.lignes),
+      parts,
+      (d.delaisEcheancier as Record<string, number> | null) ?? {},
+    );
   }
 
   // Vue CLIENT (lien public, sans compte) — expose le strict nécessaire pour
@@ -962,18 +939,31 @@ export class DevisService {
       dateValidite: d.dateValidite,
       dateEnvoi: d.dateEnvoi,
       dateReponse: d.dateReponse,
-      lignes: lignes.map(({ id, designation, surfaceM2, planches, quantite, prixUnitaire, tauxTva, montantHt, montantTva, montantTtc }) => ({
-        id,
-        designation,
-        // « 250 m² × 2 planches » : la quantité d'une ligne CO se lit mal seule.
-        detail: surfaceM2 && planches ? `${surfaceM2} m² × ${planches} planche${planches > 1 ? 's' : ''}` : null,
-        quantite,
-        prixUnitaire,
-        tauxTva,
-        montantHt,
-        montantTva,
-        montantTtc,
-      })),
+      lignes: lignes.map(
+        ({
+          id,
+          designation,
+          surfaceM2,
+          planches,
+          quantite,
+          prixUnitaire,
+          tauxTva,
+          montantHt,
+          montantTva,
+          montantTtc,
+        }) => ({
+          id,
+          designation,
+          // « 250 m² × 2 planches » : la quantité d'une ligne CO se lit mal seule.
+          detail: surfaceM2 && planches ? `${surfaceM2} m² × ${planches} planche${planches > 1 ? 's' : ''}` : null,
+          quantite,
+          prixUnitaire,
+          tauxTva,
+          montantHt,
+          montantTva,
+          montantTtc,
+        }),
+      ),
       montantHt,
       montantTva,
       montantTtc,

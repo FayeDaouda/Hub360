@@ -16,9 +16,7 @@ export const FICHIERS_ACCEPTES = {
   contrat: '.pdf,.jpg,.jpeg,.png,.heic,.docx,.xlsx',
 } as const;
 
-export function lireFichier(
-  file: File,
-): Promise<{ nom: string; url: string; taille: number }> {
+export function lireFichier(file: File): Promise<{ nom: string; url: string; taille: number }> {
   return new Promise((resolve, reject) => {
     if (file.size > MAX_OCTETS) {
       reject(new Error(`« ${file.name} » dépasse 15 Mo.`));
@@ -26,8 +24,7 @@ export function lireFichier(
     }
     const lecteur = new FileReader();
     lecteur.onerror = () => reject(new Error(`Lecture de « ${file.name} » impossible.`));
-    lecteur.onload = () =>
-      resolve({ nom: file.name, url: lecteur.result as string, taille: file.size });
+    lecteur.onload = () => resolve({ nom: file.name, url: lecteur.result as string, taille: file.size });
     lecteur.readAsDataURL(file);
   });
 }

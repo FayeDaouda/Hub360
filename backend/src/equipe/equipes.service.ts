@@ -3,7 +3,15 @@ import { ProcessusCellule } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
-import { chargeDuMois, codeCellule, estEnCours, partATemps, prefixeSociete, tachesEnCours, type TacheEquipe } from './equipes-regles';
+import {
+  chargeDuMois,
+  codeCellule,
+  estEnCours,
+  partATemps,
+  prefixeSociete,
+  tachesEnCours,
+  type TacheEquipe,
+} from './equipes-regles';
 import { photoMembre } from '../auth/profil';
 
 const jour = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
@@ -22,16 +30,36 @@ export class EquipesService {
 
   async vue(societeId: string) {
     const aujourdhui = new Date().toISOString().slice(0, 10);
-    const [societe, cellules, sansCellule, collaborateurs, taches, projets, absencesEnAttente, compteurs, feries, etats] = await Promise.all([
+    const [
+      societe,
+      cellules,
+      sansCellule,
+      collaborateurs,
+      taches,
+      projets,
+      absencesEnAttente,
+      compteurs,
+      feries,
+      etats,
+    ] = await Promise.all([
       this.prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } }),
       this.prisma.cellule.findMany({
         where: { societeId },
         orderBy: [{ processus: 'asc' }, { numero: 'asc' }],
         include: {
           dispatcher: {
-            select: { id: true, prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+            select: {
+              id: true,
+              prenom: true,
+              nom: true,
+              utilisateur: { select: { actif: true } },
+              dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } },
+            },
           },
-          postes: { orderBy: { ordre: 'asc' }, include: { titulaire: { select: { id: true, prenom: true, nom: true } } } },
+          postes: {
+            orderBy: { ordre: 'asc' },
+            include: { titulaire: { select: { id: true, prenom: true, nom: true } } },
+          },
           membres: {
             orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
             include: {
@@ -132,34 +160,36 @@ export class EquipesService {
           etat: p.etat,
           titulaire: p.titulaire ? { id: p.titulaire.id, nom: nomDe(p.titulaire) } : null,
         })),
-        membres: [...c.membres].sort((a, b) => rang(a.id) - rang(b.id)).map((m) => {
-          const t = tachesDe(m.id);
-          const charge = chargeDuMois(
-            t,
-            (m.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
-            aujourdhui,
-            ferieSet,
-          );
-          return {
-            id: m.id,
-            nom: nomDe(m),
-            role: m.role,
-            niveau: m.niveau,
-            photoUrl: photoMembre(m),
-            // Absence validée par la RH qui couvre aujourd'hui (pastille de l'avatar).
-            absentJusquau:
-              (m.dossierPersonnel?.absences ?? [])
-                .filter((a) => a.dateDebut <= aujourdhui && aujourdhui <= a.dateFin)
-                .map((a) => a.dateFin)
-                .sort()
-                .pop() ?? null,
-            poste: titulaires.get(m.id) ?? null,
-            estPilote: c.dispatcherId === m.id,
-            taches: charge.taches,
-            heures: charge.heures,
-            pctATemps: partATemps(t),
-          };
-        }),
+        membres: [...c.membres]
+          .sort((a, b) => rang(a.id) - rang(b.id))
+          .map((m) => {
+            const t = tachesDe(m.id);
+            const charge = chargeDuMois(
+              t,
+              (m.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
+              aujourdhui,
+              ferieSet,
+            );
+            return {
+              id: m.id,
+              nom: nomDe(m),
+              role: m.role,
+              niveau: m.niveau,
+              photoUrl: photoMembre(m),
+              // Absence validée par la RH qui couvre aujourd'hui (pastille de l'avatar).
+              absentJusquau:
+                (m.dossierPersonnel?.absences ?? [])
+                  .filter((a) => a.dateDebut <= aujourdhui && aujourdhui <= a.dateFin)
+                  .map((a) => a.dateFin)
+                  .sort()
+                  .pop() ?? null,
+              poste: titulaires.get(m.id) ?? null,
+              estPilote: c.dispatcherId === m.id,
+              taches: charge.taches,
+              heures: charge.heures,
+              pctATemps: partATemps(t),
+            };
+          }),
       };
     });
 
@@ -184,7 +214,13 @@ export class EquipesService {
         absencesEnAttente,
       },
       cellules: vueCellules,
-      salariesAAffecter: sansCellule.map((c) => ({ id: c.id, nom: nomDe(c), role: c.role, niveau: c.niveau, dateArrivee: c.dateArrivee })),
+      salariesAAffecter: sansCellule.map((c) => ({
+        id: c.id,
+        nom: nomDe(c),
+        role: c.role,
+        niveau: c.niveau,
+        dateArrivee: c.dateArrivee,
+      })),
       projets: projets.map((p) => ({
         id: p.id,
         code: p.code,

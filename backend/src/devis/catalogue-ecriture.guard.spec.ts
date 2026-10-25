@@ -16,6 +16,8 @@ describe('CatalogueEcritureGuard', () => {
   });
 
   it('CEO connecté sur une autre société → 403', () => {
-    expect(() => new CatalogueEcritureGuard().canActivate(ctx('CEO (transverse)', 'autre'))).toThrow(ForbiddenException);
+    expect(() => new CatalogueEcritureGuard().canActivate(ctx('CEO (transverse)', 'autre'))).toThrow(
+      ForbiddenException,
+    );
   });
 });

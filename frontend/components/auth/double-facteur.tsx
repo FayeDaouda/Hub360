@@ -47,7 +47,15 @@ function Bouton({ enCours, libelle }: { enCours: boolean; libelle: string }) {
   );
 }
 
-function SaisieCode({ jeton, onSession, onRetour }: { jeton: string; onSession: (s: Session) => void; onRetour: () => void }) {
+function SaisieCode({
+  jeton,
+  onSession,
+  onRetour,
+}: {
+  jeton: string;
+  onSession: (s: Session) => void;
+  onRetour: () => void;
+}) {
   const [code, setCode] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -67,7 +75,9 @@ function SaisieCode({ jeton, onSession, onRetour }: { jeton: string; onSession: 
 
   return (
     <form className="auth-formulaire" onSubmit={valider} aria-busy={enCours}>
-      <p className="auth-df-texte">Ouvrez votre application d’authentification et saisissez le code à 6 chiffres affiché pour HUB 360.</p>
+      <p className="auth-df-texte">
+        Ouvrez votre application d’authentification et saisissez le code à 6 chiffres affiché pour HUB 360.
+      </p>
       <AuthChamp
         icone={KeyRound}
         libelle="Code de vérification"
@@ -91,7 +101,15 @@ function SaisieCode({ jeton, onSession, onRetour }: { jeton: string; onSession: 
   );
 }
 
-function Activation({ jeton, onSession, onRetour }: { jeton: string; onSession: (s: Session) => void; onRetour: () => void }) {
+function Activation({
+  jeton,
+  onSession,
+  onRetour,
+}: {
+  jeton: string;
+  onSession: (s: Session) => void;
+  onRetour: () => void;
+}) {
   const [reglage, setReglage] = useState<{ secret: string; qr: string } | null>(null);
   const [code, setCode] = useState('');
   const [enCours, setEnCours] = useState(false);
@@ -124,15 +142,19 @@ function Activation({ jeton, onSession, onRetour }: { jeton: string; onSession: 
     return (
       <div className="auth-formulaire">
         <p className="auth-df-texte">
-          <strong>Double authentification activée.</strong> Voici vos 8 codes de secours : chacun remplace une fois le code du téléphone si
-          vous le perdez. Ils ne seront plus jamais affichés.
+          <strong>Double authentification activée.</strong> Voici vos 8 codes de secours : chacun remplace une fois le
+          code du téléphone si vous le perdez. Ils ne seront plus jamais affichés.
         </p>
         <ul className="auth-df-codes">
           {fin.codes.map((c) => (
             <li key={c}>{c}</li>
           ))}
         </ul>
-        <button type="button" className="auth-lien" onClick={() => navigator.clipboard?.writeText(fin.codes.join('\n'))}>
+        <button
+          type="button"
+          className="auth-lien"
+          onClick={() => navigator.clipboard?.writeText(fin.codes.join('\n'))}
+        >
           Copier les codes
         </button>
         <label className="auth-case">
@@ -150,8 +172,8 @@ function Activation({ jeton, onSession, onRetour }: { jeton: string; onSession: 
   return (
     <form className="auth-formulaire" onSubmit={activer} aria-busy={enCours}>
       <p className="auth-df-texte">
-        Votre rôle demande une <strong>double authentification</strong> : un code à 6 chiffres, renouvelé toutes les 30 secondes sur votre
-        téléphone, en plus du mot de passe. À faire une seule fois :
+        Votre rôle demande une <strong>double authentification</strong> : un code à 6 chiffres, renouvelé toutes les 30
+        secondes sur votre téléphone, en plus du mot de passe. À faire une seule fois :
       </p>
       <ol className="auth-df-etapes">
         <li>Installez Google Authenticator ou Microsoft Authenticator sur votre téléphone.</li>
@@ -161,7 +183,12 @@ function Activation({ jeton, onSession, onRetour }: { jeton: string; onSession: 
       {reglage ? (
         <div className="auth-df-qr">
           {/* data URI généré par le serveur : pas d'optimisation next/image utile. */}
-          <img src={reglage.qr} alt="QR code à scanner avec l’application d’authentification" width={180} height={180} />
+          <img
+            src={reglage.qr}
+            alt="QR code à scanner avec l’application d’authentification"
+            width={180}
+            height={180}
+          />
           <span className="auth-df-aide">
             Pas de scan possible ? Saisissez la clé : <code>{reglage.secret.match(/.{1,4}/g)?.join(' ')}</code>
           </span>

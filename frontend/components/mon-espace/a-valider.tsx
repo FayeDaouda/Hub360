@@ -59,7 +59,15 @@ export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: numbe
   );
 }
 
-function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; onDecide: (l: TacheAValider[]) => void }) {
+function LigneAValider({
+  slug,
+  t,
+  onDecide,
+}: {
+  slug: string;
+  t: TacheAValider;
+  onDecide: (l: TacheAValider[]) => void;
+}) {
   const base = usePathname().split('/mon-espace')[0];
   const [renvoi, setRenvoi] = useState(false);
   const [motif, setMotif] = useState('');
@@ -85,7 +93,8 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
           <Link className="lien-inline" href={lienProjet(base, t.projetId)}>
             {t.projetCode}
           </Link>{' '}
-          · {t.etape} · remise v{String(t.version).padStart(2, '0')}{t.remisLe && ` le ${jjmmaaaa(t.remisLe)}`}
+          · {t.etape} · remise v{String(t.version).padStart(2, '0')}
+          {t.remisLe && ` le ${jjmmaaaa(t.remisLe)}`}
           {t.echeance && ` · échéance ${jjmmaaaa(t.echeance)}`}
         </span>
         {enRetard && <span className="cell-sub temps-alerte">Remis après l’échéance</span>}
@@ -98,7 +107,9 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
                     type="button"
                     className="po-fichier"
                     onClick={() =>
-                      telechargerPieceRemise(slug, t, f.id).catch(() => setEtat({ envoi: false, erreur: 'Fichier indisponible.' }))
+                      telechargerPieceRemise(slug, t, f.id).catch(() =>
+                        setEtat({ envoi: false, erreur: 'Fichier indisponible.' }),
+                      )
                     }
                   >
                     {f.nom}
@@ -110,7 +121,13 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
         {renvoi && (
           <label className="field">
             <span className="field-label">Motif du renvoi</span>
-            <textarea className="field-input" rows={2} maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
+            <textarea
+              className="field-input"
+              rows={2}
+              maxLength={1000}
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+            />
           </label>
         )}
         {etat.erreur && <span className="field-erreur">{etat.erreur}</span>}
@@ -121,16 +138,31 @@ function LigneAValider({ slug, t, onDecide }: { slug: string; t: TacheAValider; 
             <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setRenvoi(false)}>
               Annuler
             </button>
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || !motif.trim()} onClick={() => decider('renvoyer')}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi || !motif.trim()}
+              onClick={() => decider('renvoyer')}
+            >
               Renvoyer
             </button>
           </>
         ) : (
           <>
-            <button type="button" className="btn-ghost btn-ghost--sm" disabled={etat.envoi} onClick={() => setRenvoi(true)}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              disabled={etat.envoi}
+              onClick={() => setRenvoi(true)}
+            >
               Renvoyer…
             </button>
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi} onClick={() => decider('valider')}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi}
+              onClick={() => decider('valider')}
+            >
               Valider
             </button>
           </>

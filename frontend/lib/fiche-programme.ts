@@ -39,7 +39,10 @@ export const FICHE_VIDE: FicheProgramme = {
 
 export const USAGES: Record<Usage, string> = { residentiel: 'Résidentiel', commercial: 'Commercial', mixte: 'Mixte' };
 export const FORMES: Record<Forme, string> = { villa: 'Villa', immeuble: 'Immeuble' };
-export const GABARITS = Array.from({ length: 16 }, (_, n) => ({ valeur: n, libelle: n === 0 ? 'RDC (plain-pied)' : `R+${n}` }));
+export const GABARITS = Array.from({ length: 16 }, (_, n) => ({
+  valeur: n,
+  libelle: n === 0 ? 'RDC (plain-pied)' : `R+${n}`,
+}));
 export const SOUS_SOLS = [
   { valeur: 0, libelle: 'Aucun' },
   { valeur: 1, libelle: '1 sous-sol' },
@@ -164,7 +167,10 @@ export function controleComposition(f: FicheProgramme): { nonDecrits: number[]; 
   for (const l of f.composition) for (let n = l.de; n <= l.a; n++) compte.set(n, (compte.get(n) ?? 0) + 1);
   return {
     nonDecrits: niveaux(f).filter((n) => !compte.has(n)),
-    enDouble: [...compte.entries()].filter(([, c]) => c > 1).map(([n]) => n).sort((x, y) => x - y),
+    enDouble: [...compte.entries()]
+      .filter(([, c]) => c > 1)
+      .map(([n]) => n)
+      .sort((x, y) => x - y),
   };
 }
 

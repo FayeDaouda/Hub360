@@ -24,6 +24,8 @@ describe('Fichiers joints', () => {
   });
 
   it('un lien externe est refusé de la même façon', async () => {
-    await cfo.post(`/dossiers/${dossierId}/contrat/document`, { nom: 'contrat.pdf', url: 'https://exemple.com/contrat.pdf' }).expect(400);
+    await cfo
+      .post(`/dossiers/${dossierId}/contrat/document`, { nom: 'contrat.pdf', url: 'https://exemple.com/contrat.pdf' })
+      .expect(400);
   });
 });

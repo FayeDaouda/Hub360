@@ -15,17 +15,30 @@ function monter(o: { dossier?: object | null; facture?: object } = {}) {
   const prisma = {
     dossierCrm: {
       findFirst: jest.fn().mockResolvedValue(
-        o.dossier === undefined ? { id: 'D1', code: 'D_ALM.26', nature: 'mandat_client', archiveLe: null, projet: null, client: { nom: 'DAVE' } } : o.dossier,
+        o.dossier === undefined
+          ? {
+              id: 'D1',
+              code: 'D_ALM.26',
+              nature: 'mandat_client',
+              archiveLe: null,
+              projet: null,
+              client: { nom: 'DAVE' },
+            }
+          : o.dossier,
       ),
       findUnique: jest.fn().mockResolvedValue({ code: 'D_ALM.26' }),
     },
     facture: {
-      create: jest.fn().mockResolvedValue({ id: 'F1', montantHt: new Prisma.Decimal(150_000), tauxTva: new Prisma.Decimal(18) }),
+      create: jest
+        .fn()
+        .mockResolvedValue({ id: 'F1', montantHt: new Prisma.Decimal(150_000), tauxTva: new Prisma.Decimal(18) }),
       findFirst: jest.fn().mockResolvedValue(o.facture ?? null),
       // Séquence de la société, puis rang dans le dossier D_ALM.26.
-      aggregate: jest.fn().mockImplementation(({ _max }) =>
-        Promise.resolve(_max.numero ? { _max: { numero: 41 } } : { _max: { rangDossier: 2 } }),
-      ),
+      aggregate: jest
+        .fn()
+        .mockImplementation(({ _max }) =>
+          Promise.resolve(_max.numero ? { _max: { numero: 41 } } : { _max: { rangDossier: 2 } }),
+        ),
       updateMany,
     },
     // Numérotation (lot 6) : format par défaut « GC », séquence vide.
@@ -50,24 +63,61 @@ function monter(o: { dossier?: object | null; facture?: object } = {}) {
 describe('FacturationService · facture directe d’un lead', () => {
   it('préparée en brouillon, rattachée au lead, total des lignes', async () => {
     const { s, prisma, notifications } = monter();
-    await s.creerFactureDirecte('S1', { dossierCrmId: 'D1', lignes: [{ designation: 'CO0 · Diagnostic', montantHt: 100_000 }, { designation: 'Relevé', montantHt: 50_000 }] });
+    await s.creerFactureDirecte('S1', {
+      dossierCrmId: 'D1',
+      lignes: [
+        { designation: 'CO0 · Diagnostic', montantHt: 100_000 },
+        { designation: 'Relevé', montantHt: 50_000 },
+      ],
+    });
     // Le CFO est prévenu qu'elle attend sa validation.
     expect(notifications.notifierFactureAValider).toHaveBeenCalledWith(
-      expect.objectContaining({ societeId: 'S1', factureId: 'F1', dossierCrmId: 'D1', titre: expect.stringContaining('Facture directe à valider · D_ALM.26 · DAVE') }),
+      expect.objectContaining({
+        societeId: 'S1',
+        factureId: 'F1',
+        dossierCrmId: 'D1',
+        titre: expect.stringContaining('Facture directe à valider · D_ALM.26 · DAVE'),
+      }),
     );
     const data = prisma.facture.create.mock.calls[0][0].data;
-    expect(data).toMatchObject({ dossierCrmId: 'D1', projetId: null, type: 'honoraires', montantHt: 150_000, libelle: 'CO0 · Diagnostic' });
+    expect(data).toMatchObject({
+      dossierCrmId: 'D1',
+      projetId: null,
+      type: 'honoraires',
+      montantHt: 150_000,
+      libelle: 'CO0 · Diagnostic',
+    });
     expect(data).not.toHaveProperty('statut'); // brouillon par défaut : ni envoyée ni comptée
     expect(data.lignes.create).toHaveLength(2);
   });
 
   it('lead archivé → 409 ; ligne vide → 400', async () => {
-    await expect(monter({ dossier: { id: 'D1', code: 'D_ALM.26', nature: 'mandat_client', archiveLe: new Date(), projet: null, client: { nom: 'DAVE' } } }).s.creerFactureDirecte('S1', { dossierCrmId: 'D1', lignes: [{ designation: 'x', montantHt: 1 }] })).rejects.toThrow(ConflictException);
-    await expect(monter().s.creerFactureDirecte('S1', { dossierCrmId: 'D1', lignes: [{ designation: ' ', montantHt: 1 }] })).rejects.toThrow(BadRequestException);
+    await expect(
+      monter({
+        dossier: {
+          id: 'D1',
+          code: 'D_ALM.26',
+          nature: 'mandat_client',
+          archiveLe: new Date(),
+          projet: null,
+          client: { nom: 'DAVE' },
+        },
+      }).s.creerFactureDirecte('S1', { dossierCrmId: 'D1', lignes: [{ designation: 'x', montantHt: 1 }] }),
+    ).rejects.toThrow(ConflictException);
+    await expect(
+      monter().s.creerFactureDirecte('S1', { dossierCrmId: 'D1', lignes: [{ designation: ' ', montantHt: 1 }] }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('validation CFO sans projet : numéro de la suite de la société, émise, échéance à 15 jours', async () => {
-    const facture = { id: 'F1', projetId: null, dossierCrmId: 'D1', statut: 'brouillon', montantHt: new Prisma.Decimal(100_000), echeanceLe: null };
+    const facture = {
+      id: 'F1',
+      projetId: null,
+      dossierCrmId: 'D1',
+      statut: 'brouillon',
+      montantHt: new Prisma.Decimal(100_000),
+      echeanceLe: null,
+    };
     const { s, updateMany } = monter({ facture });
     await s.emettreParId('S1', 'F1', 'U1');
     const { data } = updateMany.mock.calls[0][0];
@@ -78,7 +128,16 @@ describe('FacturationService · facture directe d’un lead', () => {
   });
 
   it('déjà émise → 409', async () => {
-    const { s } = monter({ facture: { id: 'F1', projetId: null, dossierCrmId: 'D1', statut: 'emise', montantHt: new Prisma.Decimal(1), echeanceLe: null } });
+    const { s } = monter({
+      facture: {
+        id: 'F1',
+        projetId: null,
+        dossierCrmId: 'D1',
+        statut: 'emise',
+        montantHt: new Prisma.Decimal(1),
+        echeanceLe: null,
+      },
+    });
     await expect(s.emettreParId('S1', 'F1', 'U1')).rejects.toThrow(ConflictException);
   });
 });

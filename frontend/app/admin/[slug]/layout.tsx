@@ -4,10 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getSociete } from '@/lib/api';
 import { clearSession, getSession, remplacerSession } from '@/lib/auth';
-import {
-  premiereSectionAccessible,
-  sectionAccessible,
-} from '@/lib/acces-back-office';
+import { premiereSectionAccessible, sectionAccessible } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { LayoutProvider } from '@/lib/layout-contexte';
 import type { Session, Societe } from '@/lib/types';
@@ -59,8 +56,7 @@ export default function AdminLayout({ children, ...props }: Props) {
   // première section accessible, plutôt qu'une page dont l'API refuserait
   // tous les appels.
   const active = activeAdminDepuisPathname(pathname, params.slug);
-  const sectionRefusee =
-    !!session && !sectionAccessible(session, active);
+  const sectionRefusee = !!session && !sectionAccessible(session, active);
   useEffect(() => {
     if (session && sectionRefusee) {
       const section = premiereSectionAccessible(session) ?? '';
@@ -82,12 +78,7 @@ export default function AdminLayout({ children, ...props }: Props) {
         },
       }}
     >
-      <AdminShell
-        societe={societe}
-        session={session}
-        active={active}
-        titre={titre}
-      >
+      <AdminShell societe={societe} session={session} active={active} titre={titre}>
         {children}
       </AdminShell>
     </LayoutProvider>

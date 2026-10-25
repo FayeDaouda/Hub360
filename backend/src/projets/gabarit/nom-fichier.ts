@@ -18,7 +18,7 @@ export function segmentTache(libelle: string): string {
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return (s.slice(0, LONGUEUR_TACHE).replace(/-+$/, '') || 'TACHE');
+  return s.slice(0, LONGUEUR_TACHE).replace(/-+$/, '') || 'TACHE';
 }
 
 function extension(nom: string): string {

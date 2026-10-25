@@ -1,10 +1,4 @@
-import {
-  BeneficiaireSoins,
-  CategorieSoins,
-  DecisionN1,
-  MotifRefusAbsence,
-  TypeAbsence,
-} from '@prisma/client';
+import { BeneficiaireSoins, CategorieSoins, DecisionN1, MotifRefusAbsence, TypeAbsence } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -52,7 +46,11 @@ class DelegationDto {
 
 export class DecisionN1Dto {
   @IsEnum(DecisionN1) decision: DecisionN1;
-  @IsOptional() @IsArray() @ArrayMaxSize(200) @ValidateNested({ each: true }) @Type(() => DelegationDto)
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => DelegationDto)
   delegations?: DelegationDto[];
   @IsOptional() @IsArray() @ArrayMaxSize(200) @IsString({ each: true }) nonDelegables?: string[];
   @IsOptional() @Matches(DATE) dateDebut?: string;
@@ -71,7 +69,11 @@ export class DeposerRemboursementDto {
   @IsEnum(BeneficiaireSoins) beneficiaire: BeneficiaireSoins;
   @Matches(DATE) dateSoins: string;
   @IsInt() @Min(1) @Max(100_000_000) montant: number;
-  @IsOptional() @IsArray() @ArrayMaxSize(10) @ValidateNested({ each: true }) @Type(() => FichierDto)
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => FichierDto)
   justificatifs?: FichierDto[];
 }
 

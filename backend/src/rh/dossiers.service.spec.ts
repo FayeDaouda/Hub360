@@ -3,9 +3,23 @@ import { PrismaService } from '../prisma/prisma.service';
 import { completude, DossiersPersonnelService, PIECES_DOSSIER } from './dossiers.service';
 
 const VIDE = {
-  poste: '', prenom: '', nom: '', lieuNaissance: '', nationalite: 'Sénégalaise', numeroPiece: '',
-  telephone: '', emailPro: '', contactUrgence: '', coordonneesPaiement: '', numeroIpm: '',
-  dateEntree: null, dateNaissance: null, salaires: [] as { statut: string }[], dateFin: null, typeContrat: 'cdi', pieces: [],
+  poste: '',
+  prenom: '',
+  nom: '',
+  lieuNaissance: '',
+  nationalite: 'Sénégalaise',
+  numeroPiece: '',
+  telephone: '',
+  emailPro: '',
+  contactUrgence: '',
+  coordonneesPaiement: '',
+  numeroIpm: '',
+  dateEntree: null,
+  dateNaissance: null,
+  salaires: [] as { statut: string }[],
+  dateFin: null,
+  typeContrat: 'cdi',
+  pieces: [],
 };
 
 describe('completude', () => {
@@ -15,22 +29,45 @@ describe('completude', () => {
 
   it('tout rempli + 9 pièces : 100 %', () => {
     const plein = {
-      ...VIDE, poste: 'x', prenom: 'x', nom: 'x', lieuNaissance: 'x', numeroPiece: 'x', telephone: 'x',
-      emailPro: 'x', contactUrgence: 'x', coordonneesPaiement: 'x', numeroIpm: 'x',
-      dateEntree: '2026-01-01', dateNaissance: '1990-01-01', salaires: [{ statut: 'valide' }],
+      ...VIDE,
+      poste: 'x',
+      prenom: 'x',
+      nom: 'x',
+      lieuNaissance: 'x',
+      numeroPiece: 'x',
+      telephone: 'x',
+      emailPro: 'x',
+      contactUrgence: 'x',
+      coordonneesPaiement: 'x',
+      numeroIpm: 'x',
+      dateEntree: '2026-01-01',
+      dateNaissance: '1990-01-01',
+      salaires: [{ statut: 'valide' }],
       pieces: PIECES_DOSSIER.map((type) => ({ type })),
     };
     expect(completude(plein as never)).toEqual({ pourcentage: 100, manquants: 0 });
   });
 
   it('la date de fin ne compte que hors CDI', () => {
-    expect(completude({ ...VIDE, typeContrat: 'cdd' } as never).manquants).toBe(completude(VIDE as never).manquants + 1);
+    expect(completude({ ...VIDE, typeContrat: 'cdd' } as never).manquants).toBe(
+      completude(VIDE as never).manquants + 1,
+    );
   });
 });
 
 describe('DossiersPersonnelService', () => {
   function svc(o: { dernier?: unknown; collab?: unknown } = {}) {
-    const create = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...VIDE, ...data, societe: {}, collaborateur: null, pieces: [], bulletins: [], salaires: [] }));
+    const create = jest.fn().mockImplementation(({ data }) =>
+      Promise.resolve({
+        ...VIDE,
+        ...data,
+        societe: {},
+        collaborateur: null,
+        pieces: [],
+        bulletins: [],
+        salaires: [],
+      }),
+    );
     const prisma = {
       dossierPersonnel: { findFirst: jest.fn().mockResolvedValue(o.dernier ?? null), create },
       societe: { findFirst: jest.fn().mockResolvedValue({ id: 'S1' }) },
@@ -72,7 +109,14 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
     const evenement = jest.fn((a: unknown) => a);
     const majTache = jest.fn((a: unknown) => a);
     const notifications = { envoyer: jest.fn(), comptesDe: jest.fn().mockResolvedValue(['U7']) };
-    const majDossier = jest.fn(() => ({ ...VIDE, societe: {}, collaborateur: null, pieces: [], bulletins: [], salaires: [] }));
+    const majDossier = jest.fn(() => ({
+      ...VIDE,
+      societe: {},
+      collaborateur: null,
+      pieces: [],
+      bulletins: [],
+      salaires: [],
+    }));
     const prisma = {
       dossierPersonnel: { findUnique: jest.fn().mockResolvedValue(o.dossier), update: majDossier },
       utilisateur: {
@@ -85,23 +129,31 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
       collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'C7', prenom: 'Awa', nom: 'Diop' }]) },
       $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
     } as unknown as PrismaService;
-    return { s: new DossiersPersonnelService(prisma, notifications as never), majCompte, evenement, majTache, notifications };
+    return {
+      s: new DossiersPersonnelService(prisma, notifications as never),
+      majCompte,
+      evenement,
+      majTache,
+      notifications,
+    };
   }
   const direct = { id: 'D1', utilisateurId: 'U9', collaborateur: null };
   const parFiche = { id: 'D1', utilisateurId: null, collaborateur: { utilisateur: { id: 'U9' } } };
 
-  it.each([['compte direct', direct], ['compte de la fiche d’équipe', parFiche]])(
-    'archiver désactive le compte (%s) et révoque ses sessions',
-    async (_l, dossier) => {
-      const { s, majCompte, evenement } = svc({ dossier });
-      await s.archiver('D1', true, 'RH1');
-      expect(majCompte).toHaveBeenCalledWith({
-        where: { id: 'U9' },
-        data: expect.objectContaining({ actif: false, desactiveParId: 'RH1', sessionsValidesDepuis: expect.any(Date) }),
-      });
-      expect(evenement).toHaveBeenCalledWith({ data: expect.objectContaining({ utilisateurId: 'U9', type: 'compte_desactive' }) });
-    },
-  );
+  it.each([
+    ['compte direct', direct],
+    ['compte de la fiche d’équipe', parFiche],
+  ])('archiver désactive le compte (%s) et révoque ses sessions', async (_l, dossier) => {
+    const { s, majCompte, evenement } = svc({ dossier });
+    await s.archiver('D1', true, 'RH1');
+    expect(majCompte).toHaveBeenCalledWith({
+      where: { id: 'U9' },
+      data: expect.objectContaining({ actif: false, desactiveParId: 'RH1', sessionsValidesDepuis: expect.any(Date) }),
+    });
+    expect(evenement).toHaveBeenCalledWith({
+      data: expect.objectContaining({ utilisateurId: 'U9', type: 'compte_desactive' }),
+    });
+  });
 
   it('dossier sans compte : archive sans toucher aux comptes', async () => {
     const { s, majCompte } = svc({ dossier: { id: 'D1', utilisateurId: null, collaborateur: null } });
@@ -112,7 +164,14 @@ describe('DossiersPersonnelService.archiver — le départ coupe l’accès', ()
   describe('tâches de projet encore ouvertes', () => {
     const dossier = { id: 'D1', utilisateurId: null, collaborateur: { id: 'C1', societeId: 'S1' } };
     const taches = [
-      { id: 'T1', libelle: 'Plan masse', statut: 'a_faire', finLe: '2026-10-20', carte: { libelle: 'Esquisse' }, projet: { id: 'P1', code: 'GC-01', societeId: 'S1' } },
+      {
+        id: 'T1',
+        libelle: 'Plan masse',
+        statut: 'a_faire',
+        finLe: '2026-10-20',
+        carte: { libelle: 'Esquisse' },
+        projet: { id: 'P1', code: 'GC-01', societeId: 'S1' },
+      },
     ];
 
     it('refuse le départ tant qu’une tâche n’est pas réaffectée', async () => {

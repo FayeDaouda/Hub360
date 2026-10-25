@@ -11,7 +11,9 @@ type Acteur = { societeId: string; role: string; permissions?: Record<string, Ni
 // Montants du pipeline (revue COO, lot D) : totaux HT, jamais le détail des
 // offres — module « crm_totaux » de la matrice, ou déjà les offres (finances_devis).
 export const voitMontantsPipeline = (a: Acteur) =>
-  a.role === 'societe_admin' || aLaPermission(a.permissions, 'crm_totaux', 'lecture') || aLaPermission(a.permissions, 'finances_devis', 'lecture');
+  a.role === 'societe_admin' ||
+  aLaPermission(a.permissions, 'crm_totaux', 'lecture') ||
+  aLaPermission(a.permissions, 'finances_devis', 'lecture');
 
 const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -31,8 +33,21 @@ export class CommercialService {
     // Commissions à jour des derniers encaissements avant de les additionner.
     if (montants) await this.commissions.synchroniser(a.societeId);
     const [enCours, delAnnee] = await Promise.all([
-      this.dossiers(a.societeId, { archiveLe: null, statut: { in: ['nouveau_projet', 'en_validation', 'offre_envoyee'] } }, false),
-      this.dossiers(a.societeId, { createdAt: { gte: new Date(`${annee}-01-01T00:00:00Z`), lt: new Date(`${Number(annee) + 1}-01-01T00:00:00Z`) } }, montants),
+      this.dossiers(
+        a.societeId,
+        { archiveLe: null, statut: { in: ['nouveau_projet', 'en_validation', 'offre_envoyee'] } },
+        false,
+      ),
+      this.dossiers(
+        a.societeId,
+        {
+          createdAt: {
+            gte: new Date(`${annee}-01-01T00:00:00Z`),
+            lt: new Date(`${Number(annee) + 1}-01-01T00:00:00Z`),
+          },
+        },
+        montants,
+      ),
     ]);
     return {
       aTraiter: aTraiterCommercial(enCours, jour, maintenant.getTime()),
@@ -72,7 +87,12 @@ export class CommercialService {
         client: { select: { nom: true } },
         offres: {
           orderBy: { creeLe: 'desc' },
-          select: { statut: true, dateEnvoi: true, dateValidite: true, lignes: { select: { quantite: true, prixUnitaire: true } } },
+          select: {
+            statut: true,
+            dateEnvoi: true,
+            dateValidite: true,
+            lignes: { select: { quantite: true, prixUnitaire: true } },
+          },
         },
         transitions: { where: { vers: 'onboard' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
         commissions: { select: { statut: true, montant: true } },
@@ -80,7 +100,8 @@ export class CommercialService {
     });
     return lignes.map((d) => {
       // Signé : l'offre acceptée fait foi ; sinon l'offre en cours.
-      const offreMontant = (d.statut === 'onboard' ? d.offres.find((o) => o.statut === 'accepte') : undefined) ?? d.offres[0];
+      const offreMontant =
+        (d.statut === 'onboard' ? d.offres.find((o) => o.statut === 'accepte') : undefined) ?? d.offres[0];
       return {
         id: d.id,
         code: d.code,
@@ -100,19 +121,39 @@ export class CommercialService {
         proprietaireId: d.proprietaireId,
         apporteur:
           d.apporteurType === 'interne'
-            ? { type: 'interne', id: d.apporteurUtilisateur?.id ?? null, nom: d.apporteurUtilisateur ? `${d.apporteurUtilisateur.prenom} ${d.apporteurUtilisateur.nom}` : 'Apporteur interne' }
+            ? {
+                type: 'interne',
+                id: d.apporteurUtilisateur?.id ?? null,
+                nom: d.apporteurUtilisateur
+                  ? `${d.apporteurUtilisateur.prenom} ${d.apporteurUtilisateur.nom}`
+                  : 'Apporteur interne',
+              }
             : d.apporteurType === 'externe'
-              ? { type: 'externe', nom: d.apporteurNom ?? 'Apporteur', structure: d.apporteurStructure, telephone: d.apporteurTelephone, email: d.apporteurEmail }
+              ? {
+                  type: 'externe',
+                  nom: d.apporteurNom ?? 'Apporteur',
+                  structure: d.apporteurStructure,
+                  telephone: d.apporteurTelephone,
+                  email: d.apporteurEmail,
+                }
               : null,
         commission: d.commissionApporteur === null ? null : Number(d.commissionApporteur),
         offre: d.offres[0]
-          ? { statut: d.offres[0].statut, envoyeeLe: d.offres[0].dateEnvoi ? jourIso(d.offres[0].dateEnvoi) : null, valideJusquau: d.offres[0].dateValidite }
+          ? {
+              statut: d.offres[0].statut,
+              envoyeeLe: d.offres[0].dateEnvoi ? jourIso(d.offres[0].dateEnvoi) : null,
+              valideJusquau: d.offres[0].dateValidite,
+            }
           : null,
         signeLe: d.transitions[0] ? jourIso(d.transitions[0].creeLe) : null,
         montantHt: montants && offreMontant ? montantHtLignes(offreMontant.lignes) : null,
         commissions: {
-          versees: montants ? d.commissions.filter((c) => c.statut === 'payee').reduce((s, c) => s + c.montant.toNumber(), 0) : 0,
-          aPayer: montants ? d.commissions.filter((c) => c.statut === 'a_payer').reduce((s, c) => s + c.montant.toNumber(), 0) : 0,
+          versees: montants
+            ? d.commissions.filter((c) => c.statut === 'payee').reduce((s, c) => s + c.montant.toNumber(), 0)
+            : 0,
+          aPayer: montants
+            ? d.commissions.filter((c) => c.statut === 'a_payer').reduce((s, c) => s + c.montant.toNumber(), 0)
+            : 0,
         },
       };
     });

@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../../commun/permission.guard';
 import { collaborateurDuCompte, commenteSansEcriture, perimetreProjets, ROLE_SALARIE } from './validation';
@@ -73,7 +80,8 @@ export class FilsProjetService {
     });
     if (!c) throw new NotFoundException('Mention introuvable.');
     const maintenant = new Date();
-    if (!c.mentionLueLe) await this.prisma.commentaireProjet.update({ where: { id: c.id }, data: { mentionLueLe: maintenant } });
+    if (!c.mentionLueLe)
+      await this.prisma.commentaireProjet.update({ where: { id: c.id }, data: { mentionLueLe: maintenant } });
     await this.prisma.notification.updateMany({
       where: { destinataireId: userId, societeId, type: 'mention_projet', projetId: c.projetId, luLe: null },
       data: { luLe: maintenant },
@@ -104,22 +112,34 @@ export class FilsProjetService {
   async verifierLecture(societeId: string, acteur: Acteur & { role: string }, projetId: string) {
     if (acteur.role !== ROLE_SALARIE) return;
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
-    const p = await this.prisma.projet.findFirst({ where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) }, select: { id: true } });
+    const p = await this.prisma.projet.findFirst({
+      where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) },
+      select: { id: true },
+    });
     if (!p) throw new NotFoundException('Projet introuvable');
   }
 
   // Écrire dans un fil : écriture sur Projets (matrice), Salarié sur un
   // projet où une tâche lui est assignée (maquette : « remise, prolongation,
   // discussion »), ou CEO (exception ciblée : commentaires seulement).
-  async verifierEcriture(societeId: string, acteur: Acteur & { role: string; permissions?: Record<string, NiveauPermission> }, projetId: string) {
+  async verifierEcriture(
+    societeId: string,
+    acteur: Acteur & { role: string; permissions?: Record<string, NiveauPermission> },
+    projetId: string,
+  ) {
     if (aLaPermission(acteur.permissions, 'projets', 'ecriture')) return;
     if (commenteSansEcriture(acteur.role)) return;
     if (acteur.role === ROLE_SALARIE) {
       const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
-      const p = await this.prisma.projet.findFirst({ where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) }, select: { id: true } });
+      const p = await this.prisma.projet.findFirst({
+        where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) },
+        select: { id: true },
+      });
       if (p) return;
     }
-    throw new ForbiddenException('Écrire dans ce fil demande l’écriture sur Projets, ou une tâche assignée dans ce projet.');
+    throw new ForbiddenException(
+      'Écrire dans ce fil demande l’écriture sur Projets, ou une tâche assignée dans ce projet.',
+    );
   }
 
   async publier(
@@ -147,7 +167,15 @@ export class FilsProjetService {
     if (dto.mentionneId && !mentionne) throw new NotFoundException('Personne mentionnée introuvable.');
 
     const cree = await this.prisma.commentaireProjet.create({
-      data: { projetId, carteId, tacheId, parentId: dto.parentId ?? null, auteurId: acteur.userId, mentionneId: mentionne?.id ?? null, texte },
+      data: {
+        projetId,
+        carteId,
+        tacheId,
+        parentId: dto.parentId ?? null,
+        auteurId: acteur.userId,
+        mentionneId: mentionne?.id ?? null,
+        texte,
+      },
       include: { auteur: PERSONNE },
     });
     // Best-effort : une notification manquée ne fait pas échouer la publication.

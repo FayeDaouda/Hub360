@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ChevronDown, KeyRound, MailWarning, MessageSquareWarning, ShieldAlert, UserX, UsersRound, type LucideIcon } from 'lucide-react';
+import {
+  AlarmClock,
+  ChevronDown,
+  KeyRound,
+  MailWarning,
+  MessageSquareWarning,
+  ShieldAlert,
+  UserX,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react';
 import { getATraiterAdministration, type ElementAdministration } from '@/lib/roles';
 
 const VISIBLES = 6;
@@ -18,7 +28,13 @@ const TYPE: Record<ElementAdministration['type'], { icone: LucideIcon; action: s
 
 // « À traiter aujourd'hui » du CIO (revue CIO, 22/10/2026), en tête de
 // Réglages : comptes, accès et retours des utilisateurs en attente.
-export function ATraiterAdministration({ slug, onSection }: { slug: string; onSection: (s: 'signalements' | 'administration') => void }) {
+export function ATraiterAdministration({
+  slug,
+  onSection,
+}: {
+  slug: string;
+  onSection: (s: 'signalements' | 'administration') => void;
+}) {
   const router = useRouter();
   const [elements, setElements] = useState<ElementAdministration[] | null>(null);
   const [tout, setTout] = useState(false);
@@ -30,11 +46,20 @@ export function ATraiterAdministration({ slug, onSection }: { slug: string; onSe
   }, [slug]);
 
   if (!elements) return null;
-  const tries = [...elements].sort((a, b) => RANG_TON[a.ton] - RANG_TON[b.ton] || TYPE[a.type].rang - TYPE[b.type].rang || (a.le ?? '').localeCompare(b.le ?? ''));
+  const tries = [...elements].sort(
+    (a, b) =>
+      RANG_TON[a.ton] - RANG_TON[b.ton] ||
+      TYPE[a.type].rang - TYPE[b.type].rang ||
+      (a.le ?? '').localeCompare(b.le ?? ''),
+  );
   const urgents = tries.filter((e) => e.ton === 'risque').length;
   const visibles = tout ? tries : tries.slice(0, VISIBLES);
   const ouvrir = (e: ElementAdministration) =>
-    e.type === 'signalement' ? onSection('signalements') : e.type === 'droit_cio' ? onSection('administration') : router.push('/groupe');
+    e.type === 'signalement'
+      ? onSection('signalements')
+      : e.type === 'droit_cio'
+        ? onSection('administration')
+        : router.push('/groupe');
 
   return (
     <section className="panel glass-panel at-rh" aria-label="À traiter aujourd’hui">
@@ -42,7 +67,11 @@ export function ATraiterAdministration({ slug, onSection }: { slug: string; onSe
         <h2 className="dmd-titre">
           <AlarmClock size={17} aria-hidden /> À traiter aujourd’hui · {tries.length}
         </h2>
-        {urgents > 0 && <span className="pill pill--risque">{urgents} urgent{urgents > 1 ? 's' : ''}</span>}
+        {urgents > 0 && (
+          <span className="pill pill--risque">
+            {urgents} urgent{urgents > 1 ? 's' : ''}
+          </span>
+        )}
       </div>
       {tries.length === 0 ? (
         <p className="dmd-note">Rien en attente : comptes, accès et signalements sont à jour.</p>

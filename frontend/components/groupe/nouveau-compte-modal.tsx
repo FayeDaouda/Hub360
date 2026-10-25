@@ -70,8 +70,8 @@ export function NouveauCompteModal({
             <ResultatInvitation {...resultat} onClose={onClose} />
           ) : societe.dossiersSansCompte.length === 0 ? (
             <p className="empty-state">
-              Tous les dossiers RH de {societe.nom} ont déjà un compte. Créez d&rsquo;abord le dossier
-              de la personne dans RH.
+              Tous les dossiers RH de {societe.nom} ont déjà un compte. Créez d&rsquo;abord le dossier de la personne
+              dans RH.
             </p>
           ) : (
             <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
@@ -117,8 +117,8 @@ export function NouveauCompteModal({
               </label>
               {/* Revue Dir. GC (21/10/2026) : la cellule est choisie par le Dir. GC. */}
               <p className="dmd-note">
-                La cellule n’est pas choisie ici : un compte Salarié arrive dans Équipes › Salariés à affecter, et le Dir. GC, qui organise les
-                cellules, est prévenu.
+                La cellule n’est pas choisie ici : un compte Salarié arrive dans Équipes › Salariés à affecter, et le
+                Dir. GC, qui organise les cellules, est prévenu.
               </p>
               {erreur && (
                 <p className="field-erreur" role="alert">
@@ -160,7 +160,13 @@ export function ResultatInvitation({
           : `Compte prêt pour ${nom}, mais l’e-mail n’est pas parti. Transmettez-lui ce lien (valable 72 h) :`}
       </p>
       <div className="field" style={{ display: 'flex', gap: '0.5rem' }}>
-        <input className="field-input" readOnly value={lien} aria-label="Lien d’invitation" onFocus={(e) => e.target.select()} />
+        <input
+          className="field-input"
+          readOnly
+          value={lien}
+          aria-label="Lien d’invitation"
+          onFocus={(e) => e.target.select()}
+        />
         <button
           type="button"
           className="btn-ghost btn-ghost--sm"

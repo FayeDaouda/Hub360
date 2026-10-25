@@ -68,7 +68,12 @@ const PILL_REGLEMENT: Record<StatutReglementBureau, string> = {
 // enregistre les paiements »). Affichage seulement — le serveur revérifie.
 type Droits = { ecriture: boolean; validation: boolean };
 
-function actionsPossibles(f: Facture, droits: Droits, valide: (montantTtc: number) => boolean, contresigne: (montantTtc: number) => boolean) {
+function actionsPossibles(
+  f: Facture,
+  droits: Droits,
+  valide: (montantTtc: number) => boolean,
+  contresigne: (montantTtc: number) => boolean,
+) {
   // CEO : validation des seules affaires au-delà du seuil de contresignature ;
   // émission exclusive au-delà du seuil (le CEO ou son délégataire, revue CEO).
   const d = { ...droits, validation: droits.validation && valide(f.affaireTtc) };
@@ -118,10 +123,7 @@ export default function FacturationPage(props: Props) {
     getFacturation(params.slug, params.projetId).then(setFactu);
   }, [params.slug, params.projetId]);
 
-  const factureEditee = useMemo(
-    () => factu?.factures.find((f) => f.id === editId) ?? null,
-    [factu, editId],
-  );
+  const factureEditee = useMemo(() => factu?.factures.find((f) => f.id === editId) ?? null, [factu, editId]);
   const facturePaiements = useMemo(
     () => factu?.factures.find((f) => f.id === paiementsId) ?? null,
     [factu, paiementsId],
@@ -163,12 +165,8 @@ export default function FacturationPage(props: Props) {
             <div className="projet-entete-titre">
               <span className="projet-entete-sur">
                 <span className="dossier-code">{projet.code}</span>
-                <span className={`pill pill--nature-${projet.nature}`}>
-                  {NATURES_DOSSIER[projet.nature]}
-                </span>
-                <span className={`pill pill--cat-${projet.categorie}`}>
-                  {CATEGORIES[projet.categorie]}
-                </span>
+                <span className={`pill pill--nature-${projet.nature}`}>{NATURES_DOSSIER[projet.nature]}</span>
+                <span className={`pill pill--cat-${projet.categorie}`}>{CATEGORIES[projet.categorie]}</span>
               </span>
               <h2>
                 <span className="module-icone module-icone--facturation" aria-hidden>
@@ -177,8 +175,7 @@ export default function FacturationPage(props: Props) {
                 Facturation client
               </h2>
               <p className="projet-entete-meta">
-                {projet.programme} · {projet.client.nom} · {projet.localisation} ·{' '}
-                {TYPES_BIEN[projet.type]}
+                {projet.programme} · {projet.client.nom} · {projet.localisation} · {TYPES_BIEN[projet.type]}
               </p>
             </div>
           </header>
@@ -191,15 +188,11 @@ export default function FacturationPage(props: Props) {
             <div className="factu-resume">
               <div>
                 <span className="factu-resume-label">Net facturé (TTC)</span>
-                <span className="factu-resume-val">
-                  {formatMontantCompact(factu.resume.totalFactureTtc)}
-                </span>
+                <span className="factu-resume-val">{formatMontantCompact(factu.resume.totalFactureTtc)}</span>
               </div>
               <div>
                 <span className="factu-resume-label">Encaissé</span>
-                <span className="factu-resume-val">
-                  {formatMontantCompact(factu.resume.totalEncaisse)}
-                </span>
+                <span className="factu-resume-val">{formatMontantCompact(factu.resume.totalEncaisse)}</span>
               </div>
               <div>
                 <span className="factu-resume-label">Reste dû</span>
@@ -217,11 +210,7 @@ export default function FacturationPage(props: Props) {
               </div>
               <div>
                 <span className="factu-resume-label">En retard</span>
-                <span
-                  className={`factu-resume-val ${
-                    factu.resume.nbEnRetard > 0 ? 'prebilan-delta--mauvais' : ''
-                  }`}
-                >
+                <span className={`factu-resume-val ${factu.resume.nbEnRetard > 0 ? 'prebilan-delta--mauvais' : ''}`}>
                   {factu.resume.nbEnRetard}
                 </span>
               </div>
@@ -239,20 +228,16 @@ export default function FacturationPage(props: Props) {
                     <span className="mensualites-nom">
                       {m.libelle}
                       <span className="cell-sub">
-                        {formatMontantCompact(m.prixMensuelHt)} HT / mois · {m.moisFactures}/
-                        {m.moisPrevus} mois facturés
+                        {formatMontantCompact(m.prixMensuelHt)} HT / mois · {m.moisFactures}/{m.moisPrevus} mois
+                        facturés
                       </span>
                     </span>
-                    {m.aFacturerCeMois && (
-                      <span className="pill pill--attention">À facturer ce mois</span>
-                    )}
+                    {m.aFacturerCeMois && <span className="pill pill--attention">À facturer ce mois</span>}
                     <button
                       type="button"
                       className={m.aFacturerCeMois ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
                       disabled={busy || !droits.ecriture || m.moisFactures >= m.moisPrevus}
-                      onClick={() =>
-                        action(() => creerMensualite(params.slug, params.projetId, m.ligneDevisId))
-                      }
+                      onClick={() => action(() => creerMensualite(params.slug, params.projetId, m.ligneDevisId))}
                     >
                       Facturer le mois
                     </button>
@@ -335,7 +320,9 @@ export default function FacturationPage(props: Props) {
                                 })
                               }
                             >
-                              {e.montantBureauHt != null ? 'Modifier la facture du bureau' : 'Saisir la facture du bureau'}
+                              {e.montantBureauHt != null
+                                ? 'Modifier la facture du bureau'
+                                : 'Saisir la facture du bureau'}
                             </button>
                           )}
                           {e.statutReglement === 'a_regler' && peutReglerBureau && e.blocId && (
@@ -351,9 +338,7 @@ export default function FacturationPage(props: Props) {
                                     confirmer: 'Confirmer le règlement',
                                   })
                                 ) {
-                                  void action(() =>
-                                    marquerBureauRegle(params.slug, params.projetId, e.blocId!),
-                                  );
+                                  void action(() => marquerBureauRegle(params.slug, params.projetId, e.blocId!));
                                 }
                               }}
                             >
@@ -485,9 +470,7 @@ export default function FacturationPage(props: Props) {
                           : undefined;
                       return (
                         <tr key={f.id} className={cls}>
-                          <td data-label="Réf.">
-                            {f.reference ?? <span className="cell-sub">brouillon</span>}
-                          </td>
+                          <td data-label="Réf.">{f.reference ?? <span className="cell-sub">brouillon</span>}</td>
                           <td data-label="Objet">
                             <span className="cell-stack">
                               <span>{f.libelle || <span className="cell-sub">—</span>}</span>
@@ -508,17 +491,11 @@ export default function FacturationPage(props: Props) {
                             )}
                           </td>
                           <td data-label="TTC">{formatMontantCompact(f.montantTtc)}</td>
-                          <td data-label="Payé">
-                            {f.montantPaye ? formatMontantCompact(f.montantPaye) : '—'}
-                          </td>
+                          <td data-label="Payé">{f.montantPaye ? formatMontantCompact(f.montantPaye) : '—'}</td>
                           <td data-label="Reste">
-                            {f.estAvoir || f.statut === 'annulee'
-                              ? '—'
-                              : formatMontantCompact(f.resteAPayer)}
+                            {f.estAvoir || f.statut === 'annulee' ? '—' : formatMontantCompact(f.resteAPayer)}
                             {f.statutEffectif === 'en_retard' && (
-                              <span className="cell-sub">
-                                {f.joursRetard} j de retard
-                              </span>
+                              <span className="cell-sub">{f.joursRetard} j de retard</span>
                             )}
                           </td>
                           <td data-label="Échéance">{f.echeanceLe ?? '—'}</td>
@@ -548,9 +525,7 @@ export default function FacturationPage(props: Props) {
                                         confirmer: 'Émettre',
                                       })
                                     ) {
-                                      void action(() =>
-                                        emettreFacture(params.slug, params.projetId, f.id),
-                                      );
+                                      void action(() => emettreFacture(params.slug, params.projetId, f.id));
                                     }
                                   }}
                                 >
@@ -571,11 +546,19 @@ export default function FacturationPage(props: Props) {
                               {/* Avoir motivé (contrôle interne) ; au-delà du seuil, en attente du CEO. */}
                               {a.annulable && f.avoirEnAttente && (
                                 <span className="pill pill--attention">
-                                  Avoir en attente du CEO{f.avoirEnAttenteDepuis ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j` : ''}
+                                  Avoir en attente du CEO
+                                  {f.avoirEnAttenteDepuis
+                                    ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j`
+                                    : ''}
                                 </span>
                               )}
                               {a.annulable && !f.avoirEnAttente && (
-                                <button type="button" className="lien-inline" disabled={busy} onClick={() => setAvoirPour(f)}>
+                                <button
+                                  type="button"
+                                  className="lien-inline"
+                                  disabled={busy}
+                                  onClick={() => setAvoirPour(f)}
+                                >
                                   <Undo2 size={12} aria-hidden /> Avoir
                                 </button>
                               )}
@@ -593,9 +576,7 @@ export default function FacturationPage(props: Props) {
                                         danger: true,
                                       })
                                     ) {
-                                      void action(() =>
-                                        supprimerFacture(params.slug, params.projetId, f.id),
-                                      );
+                                      void action(() => supprimerFacture(params.slug, params.projetId, f.id));
                                     }
                                   }}
                                 >
@@ -619,12 +600,8 @@ export default function FacturationPage(props: Props) {
               mandat={mandat}
               echeancierPose={echeancierPose}
               busy={busy}
-              onFacture={(body) =>
-                action(() => creerFacture(params.slug, params.projetId, body))
-              }
-              onEcheancier={(body) =>
-                action(() => creerEcheancier(params.slug, params.projetId, body))
-              }
+              onFacture={(body) => action(() => creerFacture(params.slug, params.projetId, body))}
+              onEcheancier={(body) => action(() => creerEcheancier(params.slug, params.projetId, body))}
             />
           )}
         </>
@@ -636,37 +613,29 @@ export default function FacturationPage(props: Props) {
           busy={busy}
           onClose={() => setEditId(null)}
           onEnregistrer={async (patch) => {
-            const ok = await action(() =>
-              majFacture(params.slug, params.projetId, factureEditee.id, patch),
-            );
+            const ok = await action(() => majFacture(params.slug, params.projetId, factureEditee.id, patch));
             if (ok) setEditId(null);
           }}
         />
       )}
 
       {avoirPour && (
-        <DemandeAvoir slug={params.slug} projetId={params.projetId} facture={avoirPour} onFait={setFactu} onClose={() => setAvoirPour(null)} />
+        <DemandeAvoir
+          slug={params.slug}
+          projetId={params.projetId}
+          facture={avoirPour}
+          onFait={setFactu}
+          onClose={() => setAvoirPour(null)}
+        />
       )}
       {facturePaiements && (
         <ModalePaiements
           facture={facturePaiements}
           busy={busy}
           onClose={() => setPaiementsId(null)}
-          onAjouter={(body) =>
-            action(() =>
-              ajouterPaiement(params.slug, params.projetId, facturePaiements.id, body),
-            )
-          }
+          onAjouter={(body) => action(() => ajouterPaiement(params.slug, params.projetId, facturePaiements.id, body))}
           onSupprimer={(paiementId, motif) =>
-            action(() =>
-              supprimerPaiement(
-                params.slug,
-                params.projetId,
-                facturePaiements.id,
-                paiementId,
-                motif,
-              ),
-            )
+            action(() => supprimerPaiement(params.slug, params.projetId, facturePaiements.id, paiementId, motif))
           }
         />
       )}
@@ -829,12 +798,7 @@ function CreationFacture({
             </label>
           </div>
           <div className="modal-actions">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy || !Number(montant)}
-              onClick={soumettreUnique}
-            >
+            <button type="button" className="btn-primary" disabled={busy || !Number(montant)} onClick={soumettreUnique}>
               <Plus size={15} aria-hidden /> Créer le brouillon
             </button>
           </div>
@@ -899,8 +863,8 @@ function CreationFacture({
             </table>
           </div>
           <p className="field-aide">
-            Les 3 factures sont créées en brouillon. Vous les émettez ensuite une par
-            une, au fur et à mesure que le projet atteint chaque jalon.
+            Les 3 factures sont créées en brouillon. Vous les émettez ensuite une par une, au fur et à mesure que le
+            projet atteint chaque jalon.
           </p>
           <div className="modal-actions">
             <button
@@ -950,12 +914,7 @@ function ModaleModifier({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2>Modifier le brouillon</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
@@ -974,9 +933,7 @@ function ModaleModifier({
                 disabled={aLignes}
                 onChange={(e) => setMontant(e.target.value)}
               />
-              {aLignes && (
-                <span className="field-aide">Somme des lignes de la facture — non modifiable.</span>
-              )}
+              {aLignes && <span className="field-aide">Somme des lignes de la facture — non modifiable.</span>}
             </label>
             <label className="field">
               <span className="field-label">TVA (%)</span>
@@ -1003,11 +960,7 @@ function ModaleModifier({
             </label>
             <label className="field">
               <span className="field-label">Libellé</span>
-              <input
-                className="field-input"
-                value={libelle}
-                onChange={(e) => setLibelle(e.target.value)}
-              />
+              <input className="field-input" value={libelle} onChange={(e) => setLibelle(e.target.value)} />
             </label>
           </div>
           <div className="modal-actions">
@@ -1048,21 +1001,14 @@ function ModalePaiements({
   facture: Facture;
   busy: boolean;
   onClose: () => void;
-  onAjouter: (body: {
-    date: string;
-    montant: number;
-    mode?: ModePaiement;
-    reference?: string;
-  }) => Promise<boolean>;
+  onAjouter: (body: { date: string; montant: number; mode?: ModePaiement; reference?: string }) => Promise<boolean>;
   onSupprimer: (paiementId: string, motif: string) => Promise<boolean>;
 }) {
   const [date, setDate] = useState(AUJOURD_HUI());
   // Suppression = correction tracée : le motif est demandé avant d'envoyer.
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
   const [motif, setMotif] = useState('');
-  const [montant, setMontant] = useState(
-    facture.resteAPayer > 0 ? String(facture.resteAPayer) : '',
-  );
+  const [montant, setMontant] = useState(facture.resteAPayer > 0 ? String(facture.resteAPayer) : '');
   const [mode, setMode] = useState<ModePaiement | ''>('');
   const [reference, setReference] = useState('');
 
@@ -1084,12 +1030,7 @@ function ModalePaiements({
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <header className="modal-header">
           <h2>Paiements — {facture.reference}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
@@ -1098,8 +1039,7 @@ function ModalePaiements({
         </header>
         <div className="modal-body">
           <p className="factu-pai-resume">
-            TTC {formatMontant(facture.montantTtc)} · payé{' '}
-            {formatMontant(facture.montantPaye)} · reste{' '}
+            TTC {formatMontant(facture.montantTtc)} · payé {formatMontant(facture.montantPaye)} · reste{' '}
             <strong>{formatMontant(facture.resteAPayer)}</strong>
           </p>
 
@@ -1176,12 +1116,7 @@ function ModalePaiements({
           <div className="field-row">
             <label className="field">
               <span className="field-label">Date</span>
-              <input
-                type="date"
-                className="field-input"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
+              <input type="date" className="field-input" value={date} onChange={(e) => setDate(e.target.value)} />
             </label>
             <label className="field">
               <span className="field-label">Montant (FCFA)</span>
@@ -1224,12 +1159,7 @@ function ModalePaiements({
             <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
               Fermer
             </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy || !Number(montant)}
-              onClick={ajouter}
-            >
+            <button type="button" className="btn-primary" disabled={busy || !Number(montant)} onClick={ajouter}>
               <Plus size={15} aria-hidden /> Ajouter le versement
             </button>
           </div>

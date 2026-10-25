@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, CalendarX, Clock, Gauge } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatHeures, getMonTemps, HEURES_PAR_JOUR, libelleMois, signalerEcartTemps, STATUT_FEUILLE } from '@/lib/temps';
+import {
+  formatHeures,
+  getMonTemps,
+  HEURES_PAR_JOUR,
+  libelleMois,
+  signalerEcartTemps,
+  STATUT_FEUILLE,
+} from '@/lib/temps';
 import type { JourCalendrierTemps, MonTemps as DonneesMonTemps } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
@@ -49,7 +56,13 @@ export function MonTemps({ slug }: { slug: string }) {
       <div className="admin-periode temps-mois">
         <div className="admin-periode-toggle" role="group" aria-label="Mois">
           {donnees.periodes.map((m) => (
-            <button key={m} type="button" className={m === donnees.mois ? 'is-active' : ''} aria-pressed={m === donnees.mois} onClick={() => setMois(m)}>
+            <button
+              key={m}
+              type="button"
+              className={m === donnees.mois ? 'is-active' : ''}
+              aria-pressed={m === donnees.mois}
+              onClick={() => setMois(m)}
+            >
               {libelleMois(m)}
             </button>
           ))}
@@ -97,8 +110,8 @@ export function MonTemps({ slug }: { slug: string }) {
         <h2 className="dmd-titre">Détail du calcul · {libelleMois(feuille.mois)}</h2>
         <LignesCalcul lignes={feuille.lignes} variante="salarie" />
         <p className="dmd-note">
-          Calcul automatique : durée standard de chaque tâche assignée, répartie sur les jours ouvrés de sa fenêtre, hors
-          absences validées. Vous ne saisissez rien ; la RH contrôle la feuille chaque mois.
+          Calcul automatique : durée standard de chaque tâche assignée, répartie sur les jours ouvrés de sa fenêtre,
+          hors absences validées. Vous ne saisissez rien ; la RH contrôle la feuille chaque mois.
         </p>
       </section>
 
@@ -108,7 +121,15 @@ export function MonTemps({ slug }: { slug: string }) {
 }
 
 // Écart : signalé tant que la RH n'a pas contrôlé le mois ; un seul ouvert.
-function EcartTemps({ slug, donnees, onMaj }: { slug: string; donnees: DonneesMonTemps; onMaj: (d: DonneesMonTemps) => void }) {
+function EcartTemps({
+  slug,
+  donnees,
+  onMaj,
+}: {
+  slug: string;
+  donnees: DonneesMonTemps;
+  onMaj: (d: DonneesMonTemps) => void;
+}) {
   const [saisie, setSaisie] = useState<string | null>(null);
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
   const { ecart, feuille } = donnees;
@@ -133,7 +154,9 @@ function EcartTemps({ slug, donnees, onMaj }: { slug: string; donnees: DonneesMo
       {ecart && (
         <div className="temps-ecart">
           <p className="dmd-note">
-            <span className={`pill ${ouvert ? 'pill--attention' : 'pill--succes'}`}>{ouvert ? 'Signalé · en attente de la RH' : 'Traité'}</span>{' '}
+            <span className={`pill ${ouvert ? 'pill--attention' : 'pill--succes'}`}>
+              {ouvert ? 'Signalé · en attente de la RH' : 'Traité'}
+            </span>{' '}
             Vous avez signalé le {jjmmaaaa(ecart.signaleLe)} : « {ecart.commentaire} »
           </p>
           {ecart.reponse && ecart.traiteLe && (
@@ -146,8 +169,8 @@ function EcartTemps({ slug, donnees, onMaj }: { slug: string; donnees: DonneesMo
       {signalable && saisie === null && (
         <div className="mt-decider">
           <p className="dmd-note">
-            Absence oubliée, tâche mal datée… Si le calcul vous semble faux, signalez-le : la RH vérifie et corrige si besoin. Sans
-            signalement, la feuille est considérée comme juste.
+            Absence oubliée, tâche mal datée… Si le calcul vous semble faux, signalez-le : la RH vérifie et corrige si
+            besoin. Sans signalement, la feuille est considérée comme juste.
           </p>
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setSaisie('')}>
             Signaler un écart
@@ -170,10 +193,20 @@ function EcartTemps({ slug, donnees, onMaj }: { slug: string; donnees: DonneesMo
           </label>
           {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
           <div className="dmd-actions">
-            <button type="button" className="btn-ghost btn-ghost--sm" disabled={etat.envoi} onClick={() => setSaisie(null)}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              disabled={etat.envoi}
+              onClick={() => setSaisie(null)}
+            >
               Annuler
             </button>
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || saisie.trim().length < 5} onClick={envoyer}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi || saisie.trim().length < 5}
+              onClick={envoyer}
+            >
               Envoyer à la RH
             </button>
           </div>
@@ -216,12 +249,22 @@ function CalendrierMois({ jours }: { jours: JourCalendrierTemps[] }) {
             key={j.date}
             role="cell"
             className={`tc-jour tc-jour--${j.nature}${j.date === aujourdhui ? ' is-aujourdhui' : ''}`}
-            style={j.nature === 'travail' ? ({ '--tc-charge': Math.min(1, j.heures / HEURES_PAR_JOUR) } as React.CSSProperties) : undefined}
+            style={
+              j.nature === 'travail'
+                ? ({ '--tc-charge': Math.min(1, j.heures / HEURES_PAR_JOUR) } as React.CSSProperties)
+                : undefined
+            }
             title={`${jjmmaaaa(j.date)} · ${NATURE[j.nature]}${j.heures ? ` · ${formatHeures(j.heures)}` : ''}`}
           >
             <span className="tc-numero">{Number(j.date.slice(8, 10))}</span>
             <span className="tc-valeur">
-              {j.nature === 'travail' ? (j.heures ? formatHeures(j.heures) : '0 h') : j.nature === 'absence' || j.nature === 'ferie' ? NATURE[j.nature] : ''}
+              {j.nature === 'travail'
+                ? j.heures
+                  ? formatHeures(j.heures)
+                  : '0 h'
+                : j.nature === 'absence' || j.nature === 'ferie'
+                  ? NATURE[j.nature]
+                  : ''}
             </span>
           </span>
         ))}

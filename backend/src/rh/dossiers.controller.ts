@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseUUIDPipe, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseEnumPipe,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { TypePieceDossier } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
@@ -57,7 +70,11 @@ export class DossiersPersonnelController {
   }
 
   @Delete(':id/salaires/:changementId')
-  async retirerSalaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('changementId', ParseUUIDPipe) changementId: string) {
+  async retirerSalaire(
+    @Req() req: R,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('changementId', ParseUUIDPipe) changementId: string,
+  ) {
     await this.salaires.retirer(id, changementId);
     return this.salaires.historique(id, req.user.userId);
   }
@@ -113,7 +130,12 @@ export class DossiersPersonnelController {
   }
 
   @Put(':id/bulletins/:mois')
-  deposerBulletin(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string, @Body() dto: PieceDto) {
+  deposerBulletin(
+    @Req() req: R,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('mois') mois: string,
+    @Body() dto: PieceDto,
+  ) {
     return this.dossiers.deposerBulletin(id, mois, dto, req.user.userId);
   }
 

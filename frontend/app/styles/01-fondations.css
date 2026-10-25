@@ -195,7 +195,13 @@ html:has([aria-modal='true']) {
    bord qui a une suite s'estompe (data-bord posé par lib/defilement.ts). */
 [data-bord] {
   --fondu: 1.75rem;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fondu), #000 calc(100% - var(--fondu)), transparent);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 var(--fondu),
+    #000 calc(100% - var(--fondu)),
+    transparent
+  );
   mask-image: linear-gradient(90deg, transparent, #000 var(--fondu), #000 calc(100% - var(--fondu)), transparent);
 }
 [data-bord='debut'] {
@@ -210,7 +216,13 @@ html:has([aria-modal='true']) {
    haut et en bas (data-bord-y). */
 [data-bord-y] {
   --fondu-y: 2.25rem;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-y), #000 calc(100% - var(--fondu-y)), transparent);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent,
+    #000 var(--fondu-y),
+    #000 calc(100% - var(--fondu-y)),
+    transparent
+  );
   mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-y), #000 calc(100% - var(--fondu-y)), transparent);
 }
 [data-bord-y='haut'] {
@@ -404,4 +416,3 @@ button {
   width: 22px;
   height: 22px;
 }
-

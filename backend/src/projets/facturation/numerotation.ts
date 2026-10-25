@@ -5,7 +5,13 @@
 // pré-production : il ne verrouille rien.
 
 export type FormatAnnee = 'AAAA' | 'AA';
-export type FormatNumero = { prefixe: string; formatAnnee: FormatAnnee; separateur: string; chiffres: number; numeroDepart: number };
+export type FormatNumero = {
+  prefixe: string;
+  formatAnnee: FormatAnnee;
+  separateur: string;
+  chiffres: number;
+  numeroDepart: number;
+};
 
 export const PREFIXE_TEST = 'TEST';
 export const SEPARATEURS = ['-', '/', '.', ''] as const;
@@ -37,7 +43,8 @@ export function formaterNumero(f: FormatNumero, annee: number, sequence: number)
 
 // Prochain numéro de la séquence (préfixe, année) : le plus grand + 1, ou le
 // numéro de départ si la séquence n'a encore rien émis.
-export const prochaineSequence = (dernier: number | null, numeroDepart: number) => (dernier === null ? numeroDepart : dernier + 1);
+export const prochaineSequence = (dernier: number | null, numeroDepart: number) =>
+  dernier === null ? numeroDepart : dernier + 1;
 
 // Motif de refus d'un nouveau format, ou null. Une fois une vraie facture
 // (préfixe ≠ TEST) émise dans l'année, le format est figé jusqu'au 1er
@@ -51,6 +58,7 @@ export function refusFormat(f: FormatNumero, vraieFactureCetteAnnee: boolean, an
   if (!Number.isInteger(f.numeroDepart) || f.numeroDepart < 1 || String(f.numeroDepart).length > f.chiffres) {
     return `Numéro de départ : de 1 à ${'9'.repeat(f.chiffres)}.`;
   }
-  if (vraieFactureCetteAnnee) return `Le format est verrouillé pour ${annee} : une vraie facture a déjà été émise. Il pourra changer à partir du 1er janvier.`;
+  if (vraieFactureCetteAnnee)
+    return `Le format est verrouillé pour ${annee} : une vraie facture a déjà été émise. Il pourra changer à partir du 1er janvier.`;
   return null;
 }

@@ -77,7 +77,11 @@ export function controleOuvertLe(mois: string): string {
 export function moisEntre(depuis: string, jusqua: string): string[] {
   const liste: string[] = [];
   const [a0, m0] = depuis.split('-').map(Number);
-  for (let d = new Date(Date.UTC(a0, m0 - 1, 1)); versIso(d).slice(0, 7) <= jusqua; d.setUTCMonth(d.getUTCMonth() + 1)) {
+  for (
+    let d = new Date(Date.UTC(a0, m0 - 1, 1));
+    versIso(d).slice(0, 7) <= jusqua;
+    d.setUTCMonth(d.getUTCMonth() + 1)
+  ) {
     liste.push(versIso(d).slice(0, 7));
   }
   return liste;
@@ -143,7 +147,13 @@ export type LigneFeuille = { id: string; jours: number; heures: number; manque: 
 export type NatureJour = 'travail' | 'absence' | 'ferie' | 'weekend' | 'hors';
 export type JourCalendrier = { date: string; nature: NatureJour; heures: number };
 
-export function calendrierDuMois(mois: string, s: Salarie, taches: Tache[], aujourdhui: string, feries: Feries = AUCUN_FERIE): JourCalendrier[] {
+export function calendrierDuMois(
+  mois: string,
+  s: Salarie,
+  taches: Tache[],
+  aujourdhui: string,
+  feries: Feries = AUCUN_FERIE,
+): JourCalendrier[] {
   const absents = joursAbsents(s.absences, feries);
   const p = periodeComptee(mois, s, aujourdhui);
   const m = bornesMois(mois);
@@ -159,7 +169,15 @@ export function calendrierDuMois(mois: string, s: Salarie, taches: Tache[], aujo
     const date = versIso(d);
     const js = d.getUTCDay();
     const nature: NatureJour =
-      js === 0 || js === 6 ? 'weekend' : feries.has(date) ? 'ferie' : !p || date < p.debut || date > p.fin ? 'hors' : absents.has(date) ? 'absence' : 'travail';
+      js === 0 || js === 6
+        ? 'weekend'
+        : feries.has(date)
+          ? 'ferie'
+          : !p || date < p.debut || date > p.fin
+            ? 'hors'
+            : absents.has(date)
+              ? 'absence'
+              : 'travail';
     const heures = nature === 'travail' ? parts.reduce((n, x) => n + (x.jours.has(date) ? x.parJour : 0), 0) : 0;
     jours.push({ date, nature, heures: arrondi(heures) });
   }
@@ -174,7 +192,13 @@ export type Feuille = {
   lignes: LigneFeuille[];
 };
 
-export function feuilleDuMois(mois: string, s: Salarie, taches: Tache[], aujourdhui: string, feries: Feries = AUCUN_FERIE): Feuille {
+export function feuilleDuMois(
+  mois: string,
+  s: Salarie,
+  taches: Tache[],
+  aujourdhui: string,
+  feries: Feries = AUCUN_FERIE,
+): Feuille {
   const absents = joursAbsents(s.absences, feries);
   const p = periodeComptee(mois, s, aujourdhui);
   const ouvres = p ? joursOuvres(p, feries) : [];
