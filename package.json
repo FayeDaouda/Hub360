@@ -1,0 +1,12 @@
+{
+  "name": "hub",
+  "private": true,
+  "description": "Outils communs au dépôt (formatage). Le front, le back et e2e ont chacun leur package.json.",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}
