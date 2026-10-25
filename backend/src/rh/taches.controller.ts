@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { RemettreTacheDto } from '../projets/gabarit/dto';
 import { TachesService } from './taches.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 class DecisionTacheDto {
   @IsIn(['valider', 'renvoyer']) decision: 'valider' | 'renvoyer';

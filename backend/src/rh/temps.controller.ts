@@ -6,7 +6,7 @@ import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { TempsService } from './temps.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 const MOIS = /^\d{4}-(0[1-9]|1[0-2])$/;
 

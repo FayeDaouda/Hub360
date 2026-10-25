@@ -5,7 +5,7 @@ import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { DecisionSalaireDto } from './dto';
 import { SalairesService } from './salaires.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 type R = { user: { userId: string } };
 

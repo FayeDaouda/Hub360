@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { identifyCompany } from '../tenancy/tenant-context';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -56,6 +57,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
       societeId = societe.id;
     }
+
+    // Société de la requête pour l'isolation (ADR 0001) : dès ici, les gardes
+    // qui suivent lisent déjà dans son seul périmètre.
+    if (societeId) identifyCompany(societeId);
 
     return {
       userId: utilisateur.id,

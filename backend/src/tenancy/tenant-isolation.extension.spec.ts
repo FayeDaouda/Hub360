@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
-import { currentTenant, runInGroupScope, runInTenant } from './tenant-context';
-import { scopeArgsToCompany, TENANT_MODELS } from './tenant-isolation.extension';
+import { currentTenant, runAsSystem, runInCompany, runInGroupScope } from './tenant-context';
+import { companyOf, referencedIds, scopeArgsToCompany, TENANT_MODELS, TENANT_REFERENCES } from './tenant-isolation.extension';
 
 const A = 'societe-a';
 const B = 'societe-b';
@@ -65,20 +65,64 @@ describe('scopeArgsToCompany', () => {
   });
 });
 
-describe('contexte de requête', () => {
-  it('hors requête : aucun contexte (tâches planifiées, scripts, liens publics)', () => {
+describe('TENANT_REFERENCES', () => {
+  it('liste les clés étrangères vers un modèle de société, y compris depuis un modèle enfant', () => {
+    expect(TENANT_REFERENCES.get('Devis')).toContainEqual({ foreignKey: 'clientId', relation: 'client', target: 'Client' });
+    expect(TENANT_REFERENCES.get('LigneDevis')).toContainEqual({ foreignKey: 'produitServiceId', relation: 'produitService', target: 'ProduitService' });
+  });
+});
+
+describe('referencedIds', () => {
+  it('relève les clés étrangères et les connect, par modèle cible', () => {
+    const ids = referencedIds('Devis', 'create', { data: { societeId: A, clientId: 'c1', projet: { connect: { id: 'p1' } } } });
+    expect(ids.get('Client')).toEqual(new Set(['c1']));
+    expect(ids.get('Projet')).toEqual(new Set(['p1']));
+  });
+
+  it('upsert : la partie création et la partie mise à jour', () => {
+    const ids = referencedIds('Devis', 'upsert', { where: { id: 'd' }, create: { clientId: 'c1' }, update: { clientId: 'c2' } });
+    expect(ids.get('Client')).toEqual(new Set(['c1', 'c2']));
+  });
+
+  it('rien quand l’écriture ne référence rien', () => {
+    expect(referencedIds('Devis', 'update', { where: { id: 'd' }, data: { objet: 'x' } }).size).toBe(0);
+  });
+});
+
+describe('companyOf : refus par défaut', () => {
+  it('sans contexte : erreur', () => {
+    expect(() => companyOf(undefined, 'Facture.findMany')).toThrow('hors de tout contexte');
+  });
+
+  it('requête de société pas encore identifiée : erreur', () => {
+    expect(() => companyOf({ scope: 'company' }, 'Facture.findMany')).toThrow('identifiée');
+  });
+
+  it('société identifiée : sa société ; groupe ou système déclarés : aucun filtre', () => {
+    expect(companyOf({ scope: 'company', companyId: A }, 'x')).toBe(A);
+    expect(companyOf({ scope: 'group', companyId: A }, 'x')).toBeNull();
+    expect(companyOf({ scope: 'system', reason: 'test' }, 'x')).toBeNull();
+  });
+});
+
+describe('contexte d’exécution', () => {
+  it('hors requête : aucun contexte (refusé par l’extension)', () => {
     expect(currentTenant()).toBeUndefined();
   });
 
   it('runInGroupScope passe en périmètre groupe, sans changer de société, jusqu’à la fin du travail', async () => {
-    await runInTenant({ companyId: A, scope: 'company' }, async () => {
+    await runInCompany(A, async () => {
       await Promise.resolve();
-      expect(currentTenant()).toEqual({ companyId: A, scope: 'company' });
-      expect(await runInGroupScope(() => currentTenant())).toEqual({ companyId: A, scope: 'group' });
-      expect(currentTenant()).toEqual({ companyId: A, scope: 'company' });
-      // Travail asynchrone : le contexte groupe tient jusqu'à sa résolution.
+      expect(currentTenant()).toEqual({ scope: 'company', companyId: A });
+      expect(await runInGroupScope(() => currentTenant())).toEqual({ scope: 'group', companyId: A });
+      expect(currentTenant()).toEqual({ scope: 'company', companyId: A });
+      // Travail asynchrone : le contexte tient jusqu'à sa résolution.
       const paresseux = { then: (resoudre: (v: unknown) => void) => resoudre(currentTenant()) };
-      expect(await runInGroupScope(() => paresseux)).toEqual({ companyId: A, scope: 'group' });
+      expect(await runInGroupScope(() => paresseux)).toEqual({ scope: 'group', companyId: A });
     });
+  });
+
+  it('runAsSystem est nommé', async () => {
+    expect(await runAsSystem('tâche de test', () => currentTenant())).toEqual({ scope: 'system', reason: 'tâche de test' });
   });
 });

@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { TicketStore, TicketPayload } from './ticket.store';
+import { identifyCompany } from '../tenancy/tenant-context';
 
 // Valide (et consomme — usage unique) le ticket ?token= AVANT que NestJS
 // n'engage la réponse en text/event-stream : un ticket invalide donne alors un
@@ -26,6 +27,7 @@ export class TicketGuard implements CanActivate {
       throw new UnauthorizedException('Ticket de flux invalide ou expiré');
     }
     (req as { ticket?: TicketPayload }).ticket = payload;
+    identifyCompany(payload.societeId);
     return true;
   }
 }

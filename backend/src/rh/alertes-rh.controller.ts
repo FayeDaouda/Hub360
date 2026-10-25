@@ -4,7 +4,7 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { AlertesRhService } from './alertes-rh.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 // Échéances légales des dossiers (module « rh », lecture) : périmètre groupe.
 @GroupScope()

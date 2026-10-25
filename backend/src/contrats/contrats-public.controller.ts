@@ -16,6 +16,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { hacherJeton } from '../auth/jetons';
 import { ContratsService } from './contrats.service';
 import { SignerContratDto } from './dto';
+import { identifyCompany, runAsSystem } from '../tenancy/tenant-context';
 
 // Porte du lien public d'un contrat — même principe que DevisPublicGuard :
 // le jeton EST l'authentification, erreur uniforme (404) s'il ne correspond
@@ -26,13 +27,18 @@ export class ContratPublicGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const token = ctx.switchToHttp().getRequest().params?.token as string | undefined;
+    // Même principe que DevisPublicGuard : recherche du jeton en périmètre
+    // système, puis requête limitée à la société du contrat (ADR 0001).
     const trouve = token
-      ? await this.prisma.contrat.findFirst({
-          where: { tokenPublicHash: hacherJeton(token) },
-          select: { id: true },
-        })
+      ? await runAsSystem('lien public de contrat', () =>
+          this.prisma.contrat.findFirst({
+            where: { tokenPublicHash: hacherJeton(token) },
+            select: { id: true, societeId: true },
+          }),
+        )
       : null;
     if (!trouve) throw new NotFoundException('Contrat introuvable');
+    identifyCompany(trouve.societeId);
     return true;
   }
 }

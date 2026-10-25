@@ -7,7 +7,7 @@ import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { DossiersPersonnelService } from './dossiers.service';
 import { ArchivageDto, DecisionPaiementDto, DossierPersonnelDto, PieceDto, PropositionSalaireDto } from './dto';
 import { SalairesService } from './salaires.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 type R = { user: { userId: string } };
 

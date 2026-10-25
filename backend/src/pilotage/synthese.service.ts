@@ -11,6 +11,7 @@ import { bornesMois } from '../rh/regles-temps';
 import { DECISION_EN_VIGUEUR, statutDecision } from './pilotage-regles';
 import { PilotageService } from './pilotage.service';
 import { ReportingRhService } from './reporting-rh.service';
+import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };
@@ -46,17 +47,23 @@ export class SyntheseService {
   // rouvert puis clôturé de nouveau) est (re)généré.
   @Cron('*/15 * * * *')
   async synchroniser() {
-    const clotures = await this.prisma.journalCloture.findMany({ where: { action: 'cloture' }, orderBy: { createdAt: 'desc' }, select: { societeId: true, mois: true, createdAt: true } });
+    // Tâche planifiée (ADR 0001) : clôtures de toutes les sociétés lues en
+    // périmètre système, puis chaque synthèse générée dans le sien.
+    const clotures = await runAsSystem('synthèses mensuelles · clôtures', () =>
+      this.prisma.journalCloture.findMany({ where: { action: 'cloture' }, orderBy: { createdAt: 'desc' }, select: { societeId: true, mois: true, createdAt: true } }),
+    );
     const vus = new Set<string>();
     for (const c of clotures) {
       const cle = `${c.societeId}:${c.mois}`;
       if (vus.has(cle)) continue; // la clôture la plus récente de ce mois
       vus.add(cle);
       try {
-        if (!(await moisClos(this.prisma, c.societeId)).has(c.mois)) continue;
-        const existante = await this.prisma.syntheseMensuelle.findUnique({ where: { societeId_mois: { societeId: c.societeId, mois: c.mois } }, select: { genereLe: true } });
-        if (existante && existante.genereLe >= c.createdAt) continue;
-        await this.generer(c.societeId, c.mois, !existante);
+        await runInCompany(c.societeId, async () => {
+          if (!(await moisClos(this.prisma, c.societeId)).has(c.mois)) return;
+          const existante = await this.prisma.syntheseMensuelle.findUnique({ where: { societeId_mois: { societeId: c.societeId, mois: c.mois } }, select: { genereLe: true } });
+          if (existante && existante.genereLe >= c.createdAt) return;
+          await this.generer(c.societeId, c.mois, !existante);
+        });
       } catch (e) {
         this.log.error(`Synthèse ${c.mois} non générée (${c.societeId}) : ${e instanceof Error ? e.message : e}`);
       }

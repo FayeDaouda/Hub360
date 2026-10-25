@@ -10,10 +10,14 @@ import {
   MotDePasseOublieDto,
   ReinitialiserMotDePasseDto,
 } from './dto/comptes.dto';
+import { SystemScope } from '../tenancy/tenant-scope.decorators';
 
 // Seul contrôleur exposé sans authentification (login / activation / reset) →
 // seul à porter le rate-limiting. Défaut : 10 requêtes / min / IP ; login et
 // « mot de passe oublié » (sondés avec de vraies valeurs) descendent à 5.
+// Connexion, activation, mot de passe oublié, double authentification : avant
+// toute session de société, sur les comptes et leurs sociétés (ADR 0001).
+@SystemScope('connexion et sécurité des comptes')
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
 @Throttle({ default: { limit: 10, ttl: 60_000 } })

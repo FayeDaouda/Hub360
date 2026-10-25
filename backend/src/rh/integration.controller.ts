@@ -5,7 +5,7 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { IntegrationService } from './integration.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 class PointIntegrationDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/) realiseLe: string;

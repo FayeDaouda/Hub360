@@ -4,7 +4,7 @@ import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, Vali
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { MonEspaceService } from './mon-espace.service';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 // « Mes informations » (maquette) : ce que le salarié modifie lui-même,
 // enregistré immédiatement. Mêmes limites que DossierPersonnelDto.

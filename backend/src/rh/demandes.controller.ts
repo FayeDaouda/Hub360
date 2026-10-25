@@ -15,7 +15,7 @@ import {
   ValidationRhDto,
 } from './demandes.dto';
 import { PieceDto } from './dto';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 type R = { user: { userId: string; societeId: string; role: string } };
 

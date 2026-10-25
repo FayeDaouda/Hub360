@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdministrationHubGuard } from '../commun/administration-hub.guard';
 import { ComptesGroupeService } from './comptes-groupe.service';
 import { ChangerActifDto, ChangerRoleDto, CreerCompteDto } from './dto';
-import { GroupScope } from '../tenancy/group-scope.decorator';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 type R = { user: { userId: string } };
 
