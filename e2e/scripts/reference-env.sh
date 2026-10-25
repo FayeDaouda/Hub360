@@ -42,6 +42,20 @@ wait_for() {
 
 # Same server and credentials as backend/.env, other database. Refuses any
 # URL whose database is not hub_ref before anything destructive runs.
+# Dependencies of the copied revision: an APFS clone of the working tree's
+# node_modules when its lockfile is the same, a clean install otherwise. Each
+# copy owns its node_modules: `prisma generate` then never rewrites the dev
+# server's client, and Turbopack refuses a symlinked node_modules.
+install_dependencies() {
+  local app=$1 work=$2
+  if cmp -s "$work/$app/package-lock.json" "$ROOT/$app/package-lock.json"; then
+    cp -Rc "$ROOT/$app/node_modules" "$work/$app/node_modules" 2>/dev/null || cp -R "$ROOT/$app/node_modules" "$work/$app/node_modules"
+  else
+    echo "  $app: lockfile differs from the working tree, clean install"
+    (cd "$work/$app" && npm ci --no-audit --no-fund >"$STATE/npm-$app.log" 2>&1)
+  fi
+}
+
 reference_database_url() {
   local source
   source=$(sed -nE 's/^DATABASE_URL="?([^"]*)"?$/\1/p' "$ROOT/backend/.env")
@@ -67,11 +81,8 @@ up() {
   else
     git -C "$ROOT" archive "$ref" backend frontend | tar -x -C "$work"
   fi
-  # Backend: APFS clone of node_modules, so `prisma generate` for this revision
-  # never rewrites the client used by the dev server. Frontend: read-only use,
-  # a symlink is enough (fresh folder, never rsync --delete into it).
-  cp -Rc "$ROOT/backend/node_modules" "$work/backend/node_modules" 2>/dev/null || cp -R "$ROOT/backend/node_modules" "$work/backend/node_modules"
-  ln -s "$ROOT/frontend/node_modules" "$work/frontend/node_modules"
+  install_dependencies backend "$work"
+  install_dependencies frontend "$work"
 
   local db_url
   db_url=$(reference_database_url)
