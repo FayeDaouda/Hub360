@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { CalendarCheck, CalendarPlus, Hourglass, Plane } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { ApiError } from '@/lib/client-api';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import {
   deposerAbsence,
   getSuppleants,
@@ -81,6 +81,7 @@ function CaseJointe({
       </span>
       <input
         type="file"
+        accept={FICHIERS_ACCEPTES.rh}
         hidden
         multiple={multiple}
         onChange={(e) =>

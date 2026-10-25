@@ -25,7 +25,7 @@ import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat'
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { ApiError } from '@/lib/client-api';
-import { lireFichier, telechargerFichier } from '@/lib/fichiers';
+import { lireFichier, telechargerFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import {
   archiverDossier,
   deciderPaiement,
@@ -899,7 +899,7 @@ function FicheDossier({
                       <label className="btn-ghost btn-ghost--sm">
                         <Paperclip size={14} aria-hidden />
                         {piece?.nom ? 'Remplacer' : 'Joindre'}
-                        <input type="file" hidden onChange={(e) => joindre(p.type, e.target.files?.[0])} />
+                        <input type="file" accept={FICHIERS_ACCEPTES.rh} hidden onChange={(e) => joindre(p.type, e.target.files?.[0])} />
                       </label>
                     )}
                   </li>
@@ -931,6 +931,7 @@ function FicheDossier({
                     {dossier.bulletins.some((b) => b.mois === moisBulletin) ? 'Remplacer le bulletin' : 'Déposer le bulletin'}
                     <input
                       type="file"
+                      accept={FICHIERS_ACCEPTES.rh}
                       hidden
                       disabled={!moisBulletin}
                       onChange={(e) => {

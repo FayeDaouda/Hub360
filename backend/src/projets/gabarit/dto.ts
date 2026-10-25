@@ -22,7 +22,7 @@ export class PublierCommentaireDto {
 // POST …/taches/:tacheId/remise — fichiers et commentaire facultatifs.
 export class PieceRemiseDto {
   @IsString() @MaxLength(300) nom!: string;
-  @UrlFichierJoint(20_000_000) url!: string;
+  @UrlFichierJoint(20_000_000, 'projet') url!: string;
 }
 export const MAX_PIECES_REMISE = 5;
 export class RemettreTacheDto {

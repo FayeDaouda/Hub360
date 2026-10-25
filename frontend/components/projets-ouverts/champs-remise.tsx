@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowRight, Camera, UploadCloud, X } from 'lucide-react';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { nomFichierDepot } from '@/lib/nom-fichier';
 
 // Nombre de fichiers par remise (même plafond que le serveur).
@@ -82,6 +82,7 @@ export function ChampsRemise({
         <input
           id={`${id}-fichiers`}
           type="file"
+          accept={FICHIERS_ACCEPTES.projet}
           multiple
           className="sr-only"
           disabled={plein}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CircleAlert, CircleCheck, FileUp, LoaderCircle, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { deposerBulletin } from '@/lib/rh';
 import { libelleMois } from '@/lib/temps';
 import type { DossierPersonnel } from '@/lib/types';
@@ -118,7 +118,7 @@ export function DepotBulletins({
             </label>
             <label className={`btn-ghost db-choisir${envoi ? ' is-desactive' : ''}`}>
               <FileUp size={16} aria-hidden /> Choisir les fichiers
-              <input type="file" accept="application/pdf,image/*" multiple className="sr-only" disabled={envoi} onChange={(e) => { ajouter(e.target.files); e.target.value = ''; }} />
+              <input type="file" accept={FICHIERS_ACCEPTES.rh} multiple className="sr-only" disabled={envoi} onChange={(e) => { ajouter(e.target.files); e.target.value = ''; }} />
             </label>
           </div>
           <p className="dmd-note">

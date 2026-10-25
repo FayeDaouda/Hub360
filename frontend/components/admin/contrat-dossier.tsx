@@ -12,7 +12,7 @@ import {
   retirerEnvoiContrat,
   signerContratPapier,
 } from '@/lib/contrats';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { formatDateCourte, formatMontantCompact } from '@/lib/format';
 import {
   MODES_SIGNATURE,
@@ -144,7 +144,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
 
   return (
     <section className="offre-dossier" aria-label="Contrat">
-      <input ref={entreeFichier} type="file" hidden onChange={fichierChoisi} />
+      <input ref={entreeFichier} type="file" accept={FICHIERS_ACCEPTES.projet} hidden onChange={fichierChoisi} />
       <div className="cycle-dossier-tete">
         <span className="field-label">Contrat</span>
         {c && (

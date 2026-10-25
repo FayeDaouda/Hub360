@@ -18,7 +18,7 @@ import {
   saisirFactureBureau,
   supprimerPaiement,
 } from '@/lib/facturation';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { contresigneAffaire, useContresignature, useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
@@ -415,6 +415,7 @@ export default function FacturationPage(props: Props) {
                       <span className="field-label">Facture (PDF, facultatif)</span>
                       <input
                         type="file"
+                        accept={FICHIERS_ACCEPTES.projet}
                         className="field-input"
                         onChange={(ev) => setSaisieBureau({ ...saisieBureau, fichier: ev.target.files?.[0] })}
                       />

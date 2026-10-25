@@ -7,6 +7,14 @@
 // le plafond de corps de requête serveur est à 30 Mo).
 const MAX_OCTETS = 15 * 1024 * 1024;
 
+// Types acceptés par usage (décision du 25/10/2026), pour l'attribut `accept`
+// des champs de fichier. Le serveur fait foi : il reconnaît le type au contenu
+// du fichier (backend/src/commun/fichier-joint.ts, TYPES_PAR_USAGE).
+export const FICHIERS_ACCEPTES = {
+  rh: '.pdf,.jpg,.jpeg,.png,.heic',
+  projet: '.pdf,.jpg,.jpeg,.png,.heic,.webp,.dwg,.dxf,.docx,.xlsx,.pptx',
+} as const;
+
 export function lireFichier(
   file: File,
 ): Promise<{ nom: string; url: string; taille: number }> {

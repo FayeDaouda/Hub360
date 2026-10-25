@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CalendrierCellule } from './calendrier-cellule';
 import { Paperclip } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import {
   delivrerAttestation,
   getDemandesRh,
@@ -221,6 +221,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                         <Paperclip size={14} aria-hidden /> Joindre l’attestation signée
                         <input
                           type="file"
+                          accept={FICHIERS_ACCEPTES.rh}
                           hidden
                           onChange={(e) => {
                             const f = e.target.files?.[0];
