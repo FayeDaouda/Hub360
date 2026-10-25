@@ -4,34 +4,11 @@
 
 const developpement = process.env.NODE_ENV === 'development';
 
-// Même valeur par défaut que lib/client-api.ts. En production, « /api »
-// (relatif, derrière Caddy) est couvert par 'self'.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-const ORIGINE_API = API_URL.startsWith('/') ? null : new URL(API_URL).origin;
-
-// Politique de contenu : tout vient du HUB lui-même. 'unsafe-inline' reste
-// nécessaire pour les scripts d'amorçage de Next et le script de thème
-// (app/layout.tsx), et pour les attributs style de React ; connect-src et
-// img-src empêchent tout de même d'envoyer des données vers un autre site.
-// En développement, Next a besoin d'eval et du websocket de rechargement.
-const CSP = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${developpement ? " 'unsafe-eval'" : ''}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "media-src 'self' data: blob:",
-  ['connect-src', "'self'", ORIGINE_API, developpement && 'ws:'].filter(Boolean).join(' '),
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join('; ');
-
+// La politique de contenu (CSP), qui change à chaque requête (nonce), est posée
+// par proxy.ts.
 // helmet ne couvre que l'API : ces en-têtes protègent les pages elles-mêmes
 // (audit du 24/10/2026, E2).
 const ENTETES_SECURITE = [
-  { key: 'Content-Security-Policy', value: CSP },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   // Les liens publics (devis, contrat) portent leur jeton dans l'adresse : seul
