@@ -118,14 +118,20 @@ up() {
   echo "▶ frontend: production build against :$API_PORT"
   (
     cd "$work/frontend"
-    NEXT_PUBLIC_API_URL="http://localhost:$API_PORT/api" npx next build >"$STATE/frontend-build.log" 2>&1
-    cp -R .next/static .next/standalone/.next/static
-    cp -R public .next/standalone/public
+    # The revision's own build script, as in production. FRONT_BUILD_FLAGS adds
+    # options for a one-off comparison (e.g. --webpack to isolate a bundler effect).
+    NEXT_PUBLIC_API_URL="http://localhost:$API_PORT/api" npm run build -- ${FRONT_BUILD_FLAGS:-} >"$STATE/frontend-build.log" 2>&1
   )
+  # Next 16 nests server.js under the path from the inferred workspace root
+  # (the nearest lockfile above, here e2e/): locate it rather than assume.
+  local server
+  server=$(find "$work/frontend/.next/standalone" -name server.js -not -path '*/node_modules/*' | head -1)
+  cp -R "$work/frontend/.next/static" "$(dirname "$server")/.next/static"
+  cp -R "$work/frontend/public" "$(dirname "$server")/public"
 
   echo "▶ frontend: starting on :$FRONT_PORT"
   (
-    cd "$work/frontend/.next/standalone"
+    cd "$(dirname "$server")"
     PORT=$FRONT_PORT HOSTNAME=localhost API_INTERNE_URL="http://localhost:$API_PORT/api" \
       nohup node server.js >"$STATE/frontend.log" 2>&1 &
     echo $! >"$STATE/frontend.pid"
