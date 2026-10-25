@@ -17,6 +17,7 @@ import { COMPTES_DEMO, creerComptesDemo } from './comptes-demo';
 import { creerFinancesDemo } from './finances-demo';
 import { organiserEquipesDemo } from './equipes-demo';
 import { creerPilotageDemo } from './pilotage-demo';
+import { ouvrirDossiersManquants } from './rh-dossiers-init';
 import { verifierEnvironnementDemo } from './garde-demo';
 import { installerSocle } from './socle';
 
@@ -604,6 +605,10 @@ async function main() {
     },
   });
 
+  // --- Dossiers RH de chaque collaborateur — cf. rh-dossiers-init.ts --------
+  // Sans eux, les écrans RH et Mon espace restent vides.
+  const nbDossiersRh = await ouvrirDossiersManquants(prisma);
+
   console.log('Seed terminé.');
   console.log('  Comptes (mdp : changeme123)');
   console.log('   · admin@hub.group                 holding_admin');
@@ -616,6 +621,7 @@ async function main() {
   const nbCollab = await prisma.collaborateur.count({ where: { societeId: grey.id } });
   console.log(`  Grey Concrete : ${nbD} dossiers CRM, ${nbP} projets`);
   console.log(`  Équipe : ${nbCel} cellules, ${nbCollab} collaborateurs`);
+  console.log(`  RH : ${nbDossiersRh} dossier(s) du personnel ouvert(s)`);
   const nbCanaux = await prisma.canal.count({ where: { societeId: grey.id } });
   const nbMsg = await prisma.message.count({
     where: { canal: { societeId: grey.id } },
