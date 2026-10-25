@@ -13,6 +13,9 @@ set -e
 root=$(git rev-parse --show-toplevel)
 echo "── pre-push : vérifications avant envoi ──"
 
+echo "▶ format — Prettier"
+( cd "$root" && npx prettier --check . >/dev/null ) || { echo "✗ fichiers non formatés : lancer npm run format à la racine"; exit 1; }
+
 echo "▶ backend — build + tests"
 ( cd "$root/backend" && npm run build && npm test )
 

@@ -12,3 +12,4 @@ design/
 
 # SQL des migrations : historique figé, jamais réécrit
 backend/prisma/migrations/
+.git-blame-ignore-revs
