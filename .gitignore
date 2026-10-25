@@ -12,6 +12,10 @@ build/
 .env.local
 .env.*.local
 
+# Généré par Next (next dev, next build, next typegen) : son contenu change
+# selon la commande lancée.
+frontend/next-env.d.ts
+
 # Cache outils
 *.tsbuildinfo
 .eslintcache
