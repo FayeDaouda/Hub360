@@ -71,7 +71,7 @@ export class DecisionPaiementDto {
 
 export class PieceDto {
   @IsString() @MaxLength(300) nom: string;
-  @UrlFichierJoint(20_000_000) url: string;
+  @UrlFichierJoint(20_000_000, 'rh') url: string;
 }
 
 // Historique des salaires (revue RH validée 20/10/2026) : proposition de la RH.

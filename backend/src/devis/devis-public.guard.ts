@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { hacherJeton } from '../auth/jetons';
+import { identifyCompany, runAsSystem } from '../tenancy/tenant-context';
 
 // Porte du lien public (sans compte, cf. cadrage « Devis ») — aucun
 // JwtAuthGuard : le jeton EST l'authentification. Erreur uniforme (404) que
@@ -18,11 +19,16 @@ export class DevisPublicGuard implements CanActivate {
     const req = ctx.switchToHttp().getRequest();
     const token = req.params?.token as string | undefined;
     if (!token) throw new NotFoundException('Devis introuvable');
-    const devis = await this.prisma.devis.findFirst({
-      where: { tokenPublicHash: hacherJeton(token) },
-      select: { id: true },
-    });
+    // Le jeton désigne le devis de n'importe quelle société : recherché en
+    // périmètre système, puis la requête est limitée à sa société (ADR 0001).
+    const devis = await runAsSystem('lien public de devis', () =>
+      this.prisma.devis.findFirst({
+        where: { tokenPublicHash: hacherJeton(token) },
+        select: { id: true, societeId: true },
+      }),
+    );
     if (!devis) throw new NotFoundException('Devis introuvable');
+    identifyCompany(devis.societeId);
     return true;
   }
 }

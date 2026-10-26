@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { RemettreTacheDto } from '../projets/gabarit/dto';
 import { TachesService } from './taches.service';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 class DecisionTacheDto {
   @IsIn(['valider', 'renvoyer']) decision: 'valider' | 'renvoyer';
@@ -14,6 +15,7 @@ class DecisionTacheDto {
 type R = { user: { userId: string; societeId: string; role: string } };
 
 // Le salarié : ses tâches (Mes performances) et leur remise.
+@GroupScope()
 @Controller('societes/:slug/mon-espace/taches')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class MesTachesController {
@@ -45,6 +47,7 @@ export class MesTachesController {
 
 // Le valideur (chef de team, Architecte DPLG, admin) : le service vérifie
 // qu'il l'est bien pour chaque tâche.
+@GroupScope()
 @Controller('societes/:slug/taches')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
 export class ValidationsTachesController {

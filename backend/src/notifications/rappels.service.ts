@@ -13,6 +13,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
+import { runAsSystem } from '../tenancy/tenant-context';
 
 // Heure de la tournée (Dakar = UTC, pas d'heure d'été).
 const HEURE_TOURNEE = 7;
@@ -66,6 +67,12 @@ export class RappelsService implements OnApplicationBootstrap {
 
   @Cron(`0 ${HEURE_TOURNEE} * * *`, { timeZone: 'Africa/Dakar' })
   async tournee(jour = jourCourant()): Promise<number> {
+    // Tournée globale (toutes sociétés en une passe) : périmètre système
+    // déclaré (ADR 0001). La découper par société est un suivi prévu.
+    return runAsSystem('rappels quotidiens', () => this.tourneeToutesSocietes(jour));
+  }
+
+  private async tourneeToutesSocietes(jour: string): Promise<number> {
     if (this.enCours) return 0;
     this.enCours = true;
     try {

@@ -79,7 +79,7 @@ export class AjouterPaiementDto {
 // (montant HT, pièce optionnelle en data URI le temps du stockage S3).
 class PieceFactureBureauDto {
   @IsString() @MinLength(1) @MaxLength(200) nom!: string;
-  @UrlFichierJoint(12_000_000) url!: string;
+  @UrlFichierJoint(12_000_000, 'contrat') url!: string;
 }
 export class FactureBureauDto {
   @IsString() @MinLength(2, { message: 'Indiquez le bureau d’études.' }) @MaxLength(120) bureau!: string;

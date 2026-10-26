@@ -23,7 +23,6 @@ export function AvatarPersonne({
     <span className={`av av--${taille}${className ? ` ${className}` : ''}`} style={src ? undefined : { background: couleurPersonne(cle ?? nom) }} aria-hidden>
       {src ? (
         // Photo déjà réduite à 256 px : pas d'optimisation next/image utile.
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" />
       ) : (
         initialesDe(nom)

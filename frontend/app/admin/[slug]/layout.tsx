@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getSociete } from '@/lib/api';
 import { clearSession, getSession, remplacerSession } from '@/lib/auth';
@@ -15,7 +15,7 @@ import { AdminShell, activeAdminDepuisPathname } from '@/components/admin/admin-
 
 type Props = {
   children: React.ReactNode;
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 // Layout persistant (cf. cadrage « layout persistant », sept. 2026) : session
@@ -23,7 +23,8 @@ type Props = {
 // entre deux pages — avant ce layout, chaque page refaisait sa propre auth et
 // son propre <AdminShell>, provoquant un remontage complet à chaque clic
 // (visible sous forme de clignotement, coûteux en re-fetch société).
-export default function AdminLayout({ children, params }: Props) {
+export default function AdminLayout({ children, ...props }: Props) {
+  const params = use(props.params);
   const router = useRouter();
   const pathname = usePathname();
   const [session, setSession] = useState<Session | null>(null);

@@ -6,6 +6,7 @@ import { refDevis } from '../devis/domaine';
 import { refFacture } from '../projets/domaine/config';
 import { collaborateurDuCompte, perimetreProjets } from '../projets/gabarit/validation';
 import { PrismaService } from '../prisma/prisma.service';
+import { runInGroupScope } from '../tenancy/tenant-context';
 
 export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 export type TypeResultat = 'dossier' | 'projet' | 'devis' | 'facture' | 'salarie' | 'collegue';
@@ -133,14 +134,16 @@ export class RechercheService {
   // Dossiers du personnel : périmètre du module RH = tout le groupe.
   private async salaries(q: string): Promise<Resultat[]> {
     const mots = q.split(/\s+/).filter(Boolean);
-    const l = await this.prisma.dossierPersonnel.findMany({
-      where: {
-        AND: mots.map((m) => ({ OR: [{ prenom: contient(m) }, { nom: contient(m) }, { matricule: contient(m) }, { poste: contient(m) }] })),
-      },
-      select: { id: true, prenom: true, nom: true, matricule: true, poste: true, archiveLe: true, societe: { select: { nom: true } } },
-      orderBy: [{ archiveLe: { sort: 'desc', nulls: 'first' } }, { nom: 'asc' }],
-      take: PAR_TYPE,
-    });
+    const l = await runInGroupScope(() =>
+      this.prisma.dossierPersonnel.findMany({
+        where: {
+          AND: mots.map((m) => ({ OR: [{ prenom: contient(m) }, { nom: contient(m) }, { matricule: contient(m) }, { poste: contient(m) }] })),
+        },
+        select: { id: true, prenom: true, nom: true, matricule: true, poste: true, archiveLe: true, societe: { select: { nom: true } } },
+        orderBy: [{ archiveLe: { sort: 'desc', nulls: 'first' } }, { nom: 'asc' }],
+        take: PAR_TYPE,
+      }),
+    );
     return l.map((d) => ({
       type: 'salarie',
       id: d.id,

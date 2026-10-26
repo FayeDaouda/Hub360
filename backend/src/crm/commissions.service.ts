@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { commissionsAttendues, modeA, type EncaissementHonoraires } from './commissions';
 import { ROLE_DAF } from './cycle';
+import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
@@ -50,14 +51,18 @@ export class CommissionsService {
 
   @Cron('5 7 * * *', { timeZone: 'UTC' })
   async tournee() {
-    const societes = await this.prisma.dossierCrm.findMany({
-      where: { statut: 'onboard', commissionApporteur: { not: null } },
-      distinct: ['societeId'],
-      select: { societeId: true },
-    });
+    // Tâche planifiée (ADR 0001) : découverte des sociétés en périmètre
+    // système, puis chacune traitée dans son seul périmètre.
+    const societes = await runAsSystem('commissions · sociétés concernées', () =>
+      this.prisma.dossierCrm.findMany({
+        where: { statut: 'onboard', commissionApporteur: { not: null } },
+        distinct: ['societeId'],
+        select: { societeId: true },
+      }),
+    );
     for (const { societeId } of societes) {
       try {
-        await this.synchroniser(societeId);
+        await runInCompany(societeId, () => this.synchroniser(societeId));
       } catch (e) {
         this.log.error(`Commissions non synchronisées (${societeId}) : ${e instanceof Error ? e.message : e}`);
       }

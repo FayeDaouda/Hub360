@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Archive,
@@ -25,7 +25,7 @@ import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat'
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { ApiError } from '@/lib/client-api';
-import { lireFichier, telechargerFichier } from '@/lib/fichiers';
+import { lireFichier, telechargerFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import {
   archiverDossier,
   deciderPaiement,
@@ -62,7 +62,7 @@ import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
 
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
 const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—');
 
@@ -87,7 +87,8 @@ const nomCourt = (nom: string) => nom.trim().split(/\s+/).at(-1) ?? nom;
 // RH · Groupe (maquette du boss) : six tuiles et quatre onglets — dossiers du
 // personnel, feuilles de temps, intégration, demandes. Module « rh » de la
 // matrice : RH en écriture, CFO et CEO en lecture. Le serveur revérifie tout.
-export default function RhPage({ params }: Props) {
+export default function RhPage(props: Props) {
+  const params = use(props.params);
   useTitrePage('Ressources humaines · Groupe');
   const session = useSessionCourante();
   const ecriture = session.role === 'societe_admin' || niveauSuffisant(session, 'rh', 'ecriture');
@@ -898,7 +899,7 @@ function FicheDossier({
                       <label className="btn-ghost btn-ghost--sm">
                         <Paperclip size={14} aria-hidden />
                         {piece?.nom ? 'Remplacer' : 'Joindre'}
-                        <input type="file" hidden onChange={(e) => joindre(p.type, e.target.files?.[0])} />
+                        <input type="file" accept={FICHIERS_ACCEPTES.rh} hidden onChange={(e) => joindre(p.type, e.target.files?.[0])} />
                       </label>
                     )}
                   </li>
@@ -930,6 +931,7 @@ function FicheDossier({
                     {dossier.bulletins.some((b) => b.mois === moisBulletin) ? 'Remplacer le bulletin' : 'Déposer le bulletin'}
                     <input
                       type="file"
+                      accept={FICHIERS_ACCEPTES.rh}
                       hidden
                       disabled={!moisBulletin}
                       onChange={(e) => {

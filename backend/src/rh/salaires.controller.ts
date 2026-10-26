@@ -5,12 +5,14 @@ import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { DecisionSalaireDto } from './dto';
 import { SalairesService } from './salaires.service';
+import { GroupScope } from '../tenancy/tenant-scope.decorators';
 
 type R = { user: { userId: string } };
 
 // Validation des changements de salaire (revue RH validée 20/10/2026) : le
 // CFO (le CEO pour le salaire du CFO) — module « rh » en lecture, le droit de
 // décider est vérifié par le service, par titulaire du rôle.
+@GroupScope()
 @Controller('societes/:slug/rh/salaires')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 @RequiertPermission('rh', 'lecture')

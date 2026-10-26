@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
@@ -28,6 +28,8 @@ import { ContactsModule } from './contacts/contacts.module';
 import { ReglagesModule } from './reglages/reglages.module';
 import { PilotageModule } from './pilotage/pilotage.module';
 import { SerialisationInterceptor } from './commun/serialisation.interceptor';
+import { TenantContextMiddleware } from './tenancy/tenant-context.middleware';
+import { TenantScopeGuard } from './tenancy/tenant-scope.guard';
 import { FiltreExceptionsGlobal } from './commun/exception.filter';
 
 @Module({
@@ -68,8 +70,16 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     AuditModule,
   ],
   providers: [
+    // Périmètre d'isolation de la requête d'après sa route (ADR 0001), avant
+    // les gardes des contrôleurs.
+    { provide: APP_GUARD, useClass: TenantScopeGuard },
     { provide: APP_INTERCEPTOR, useClass: SerialisationInterceptor },
     { provide: APP_FILTER, useClass: FiltreExceptionsGlobal },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // Contexte d'isolation ouvert pour toute requête, avant les gardes (ADR 0001).
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TenantContextMiddleware).forRoutes({ path: '*path', method: RequestMethod.ALL });
+  }
+}

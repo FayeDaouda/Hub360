@@ -5,6 +5,7 @@ import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 
 const ROLE_CEO = 'CEO (transverse)';
 const HEURE = 3_600_000;
@@ -33,15 +34,19 @@ export class RelancesCeoService implements OnApplicationBootstrap {
 
   @Cron('10 7 * * *', { timeZone: 'UTC' })
   async tournee(jour = new Date().toISOString().slice(0, 10)): Promise<number> {
-    const societes = await this.prisma.utilisateurSocieteRole.findMany({
-      where: { role: { nom: ROLE_CEO }, utilisateur: { actif: true }, societeId: { not: null } },
-      distinct: ['societeId'],
-      select: { societeId: true },
-    });
+    // Tâche planifiée (ADR 0001) : sociétés ayant un CEO lues en périmètre
+    // système, puis les relances de chacune dans son seul périmètre.
+    const societes = await runAsSystem('relances du CEO · sociétés concernées', () =>
+      this.prisma.utilisateurSocieteRole.findMany({
+        where: { role: { nom: ROLE_CEO }, utilisateur: { actif: true }, societeId: { not: null } },
+        distinct: ['societeId'],
+        select: { societeId: true },
+      }),
+    );
     let envoyes = 0;
     for (const { societeId } of societes) {
       try {
-        envoyes += await this.factures(societeId!, jour);
+        envoyes += await runInCompany(societeId!, () => this.factures(societeId!, jour));
       } catch (e) {
         this.log.error(`Relances du CEO interrompues (${societeId}) : ${e instanceof Error ? e.message : e}`);
       }

@@ -65,6 +65,28 @@ export async function waitForContent(page: Page): Promise<void> {
 const API_ORIGIN = process.env.HUB_E2E_API_URL ?? 'http://localhost:3101';
 const ISO_TIMESTAMP = /"(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z"/g;
 
+// Violations de la politique de contenu (CSP) relevées par le navigateur,
+// et feuille de style des captures : sans transition ni animation, un état
+// intermédiaire ne peut plus être capturé (pastilles, survol, défilement).
+export async function installCaptureGuards(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const violations: string[] = [];
+    (window as unknown as { __cspViolations: string[] }).__cspViolations = violations;
+    document.addEventListener('securitypolicyviolation', (e) => violations.push(`${e.violatedDirective} ${e.blockedURI}`));
+    const figer = () => {
+      const style = document.createElement('style');
+      style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
+      document.head.append(style);
+    };
+    if (document.head) figer();
+    else document.addEventListener('DOMContentLoaded', figer);
+  });
+}
+
+export async function cspViolations(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { __cspViolations?: string[] }).__cspViolations ?? []);
+}
+
 export async function installSeedNoiseFilter(page: Page): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   await page.clock.setFixedTime(new Date(`${today}T12:00:00Z`));

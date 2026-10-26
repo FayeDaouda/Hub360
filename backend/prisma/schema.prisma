@@ -336,17 +336,20 @@ model Signalement {
 // Changements de la matrice des droits (écran Rôles) : qui a changé quel
 // niveau, quand — lu par le journal d'audit (CEO, CIO). Jamais modifié.
 model JournalDroit {
-  id          String            @id @default(uuid())
-  societeId   String            @map("societe_id") // société de l'auteur au moment du changement
-  roleNom     String            @map("role_nom")
-  module      String // clé du module (crm, projets…)
-  avant       NiveauPermission? // null = aucune ligne avant
-  apres       NiveauPermission
-  parId       String?           @map("par_id") // audit, pas de FK
+  id           String            @id @default(uuid())
+  societeId    String            @map("societe_id") // société de l'auteur au moment du changement
+  roleNom      String            @map("role_nom")
+  module       String // clé du module (crm, projets…)
+  avant        NiveauPermission? // null = aucune ligne avant
+  apres        NiveauPermission
+  parId        String?           @map("par_id") // audit, pas de FK
   // Rôle CIO (revue CIO, 22/10/2026) : la modification demandée (parId) n'est
   // appliquée qu'une fois validée par le CEO (valideParId).
-  valideParId String?           @map("valide_par_id")
-  createdAt   DateTime          @default(now()) @map("created_at")
+  valideParId  String?           @map("valide_par_id")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?           @map("ordre_journal")
 
   societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
 
@@ -437,6 +440,9 @@ model EvenementCompte {
   parId         String?             @map("par_id") // qui a déclenché (audit, pas de FK)
   detail        String              @default("")
   createdAt     DateTime            @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal  BigInt?             @map("ordre_journal")
 
   utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
 
@@ -1410,6 +1416,9 @@ model Facture {
   refSequence       Int?          @map("ref_sequence")
   creeLe            DateTime      @default(now()) @map("cree_le")
   emiseLe           DateTime?     @map("emise_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreEmission     BigInt?       @map("ordre_emission")
   emiseParId        String?       @map("emise_par_id") // audit, pas de FK
   annuleeLe         DateTime?     @map("annulee_le")
 
@@ -1464,14 +1473,17 @@ model LigneFacture {
 // déduit du cumul (jamais stocké). Suppression autorisée (correction) — c'est
 // la Facture qui est immuable, pas ses paiements.
 model Paiement {
-  id        String        @id @default(uuid())
-  factureId String        @map("facture_id")
-  date      String // AAAA-MM-JJ — date du versement
-  montant   Decimal       @db.Decimal(14, 0)
-  mode      ModePaiement?
-  reference String        @default("") // n° de virement / chèque, optionnel
-  creeLe    DateTime      @default(now()) @map("cree_le") // ordre d'affichage
-  creeParId String?       @map("cree_par_id") // audit, pas de FK
+  id           String        @id @default(uuid())
+  factureId    String        @map("facture_id")
+  date         String // AAAA-MM-JJ — date du versement
+  montant      Decimal       @db.Decimal(14, 0)
+  mode         ModePaiement?
+  reference    String        @default("") // n° de virement / chèque, optionnel
+  creeLe       DateTime      @default(now()) @map("cree_le") // ordre d'affichage
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?       @map("ordre_journal")
+  creeParId    String?       @map("cree_par_id") // audit, pas de FK
 
   facture Facture @relation(fields: [factureId], references: [id], onDelete: Cascade)
 
@@ -1499,19 +1511,25 @@ enum StatutDemandeAvoir {
 }
 
 model DemandeAvoir {
-  id           String             @id @default(uuid())
-  societeId    String             @map("societe_id")
-  factureId    String             @map("facture_id") // facture à annuler
-  motif        MotifAvoir
-  commentaire  String
-  montantTtc   Decimal            @map("montant_ttc") @db.Decimal(14, 0) // figé à la demande
-  statut       StatutDemandeAvoir @default(a_valider)
-  demandeParId String?            @map("demande_par_id") // audit, pas de FK
-  demandeLe    DateTime           @default(now()) @map("demande_le")
-  decideParId  String?            @map("decide_par_id") // null + validé = sous le seuil
-  decideLe     DateTime?          @map("decide_le")
-  motifRefus   String             @default("") @map("motif_refus")
-  avoirId      String?            @map("avoir_id") // avoir émis (pas de FK)
+  id            String             @id @default(uuid())
+  societeId     String             @map("societe_id")
+  factureId     String             @map("facture_id") // facture à annuler
+  motif         MotifAvoir
+  commentaire   String
+  montantTtc    Decimal            @map("montant_ttc") @db.Decimal(14, 0) // figé à la demande
+  statut        StatutDemandeAvoir @default(a_valider)
+  demandeParId  String?            @map("demande_par_id") // audit, pas de FK
+  demandeLe     DateTime           @default(now()) @map("demande_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreDemande  BigInt?            @map("ordre_demande")
+  decideParId   String?            @map("decide_par_id") // null + validé = sous le seuil
+  decideLe      DateTime?          @map("decide_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreDecision BigInt?            @map("ordre_decision")
+  motifRefus    String             @default("") @map("motif_refus")
+  avoirId       String?            @map("avoir_id") // avoir émis (pas de FK)
 
   facture Facture @relation(fields: [factureId], references: [id], onDelete: Cascade)
 
@@ -1530,13 +1548,16 @@ enum ActionCloture {
 }
 
 model JournalCloture {
-  id        String        @id @default(uuid())
-  societeId String        @map("societe_id")
-  mois      String // AAAA-MM
-  action    ActionCloture
-  motif     String        @default("") // obligatoire à la réouverture
-  parId     String?       @map("par_id") // audit, pas de FK
-  createdAt DateTime      @default(now()) @map("created_at")
+  id           String        @id @default(uuid())
+  societeId    String        @map("societe_id")
+  mois         String // AAAA-MM
+  action       ActionCloture
+  motif        String        @default("") // obligatoire à la réouverture
+  parId        String?       @map("par_id") // audit, pas de FK
+  createdAt    DateTime      @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?       @map("ordre_journal")
 
   @@index([societeId, mois])
   @@map("journal_clotures")
@@ -1548,14 +1569,17 @@ model JournalCloture {
 // passé) : un changement ne réécrit pas les mois déjà calculés. Sans ligne,
 // la valeur par défaut du code (finances/rentabilite/regles-rentabilite.ts).
 model ParametreRentabilite {
-  id        String   @id @default(uuid())
-  societeId String   @map("societe_id")
-  cle       String // heures_reference | coefficient_charges | marge_cible
-  valeur    Float? // null = désactivé / vide
-  dateEffet String   @map("date_effet") // AAAA-MM-01
-  motif     String
-  parId     String?  @map("par_id") // audit, pas de FK
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  cle          String // heures_reference | coefficient_charges | marge_cible
+  valeur       Float? // null = désactivé / vide
+  dateEffet    String   @map("date_effet") // AAAA-MM-01
+  motif        String
+  parId        String?  @map("par_id") // audit, pas de FK
+  createdAt    DateTime @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?  @map("ordre_journal")
 
   @@index([societeId, cle])
   @@map("parametres_rentabilite")
@@ -1576,6 +1600,9 @@ model NumerotationFactures {
   motif        String
   parId        String?  @map("par_id") // audit, pas de FK
   createdAt    DateTime @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?  @map("ordre_journal")
 
   @@index([societeId, createdAt])
   @@map("numerotation_factures")
@@ -1681,6 +1708,9 @@ model ProfilFacturation {
   confirmation       String?
   parId              String?        @map("par_id")
   createdAt          DateTime       @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal       BigInt?        @map("ordre_journal")
 
   @@index([societeId, createdAt])
   @@map("profils_facturation")
@@ -1702,6 +1732,9 @@ model PaiementSupprime {
   creeLe        DateTime      @map("cree_le")
   creeParId     String?       @map("cree_par_id")
   supprimeLe    DateTime      @default(now()) @map("supprime_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal  BigInt?       @map("ordre_journal")
   supprimeParId String        @map("supprime_par_id")
   motif         String        @default("") // obligatoire depuis le 14/10/2026 ("" = trace antérieure)
 
@@ -1959,6 +1992,9 @@ model DossierPersonnel {
   missionKpi                 String               @default("") @map("mission_kpi")
   missionSignalAlerte        String               @default("") @map("mission_signal_alerte")
   archiveLe                  DateTime?            @map("archive_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreArchivage             BigInt?              @map("ordre_archivage")
   archiveParId               String?              @map("archive_par_id") // audit, pas de FK
   // Intégration (lot 3) : fin du suivi J30/J60/J90 — cf. rh/regles-integration.ts.
   confirmeLe                 String?              @map("confirme_le") // AAAA-MM-JJ
@@ -2214,12 +2250,15 @@ enum ActionPaie {
 }
 
 model JournalPaie {
-  id        String     @id @default(uuid())
-  dossierId String     @map("dossier_id")
-  action    ActionPaie
-  mois      String? // bulletin concerné (AAAA-MM)
-  parId     String?    @map("par_id") // audit, pas de FK
-  createdAt DateTime   @default(now()) @map("created_at")
+  id           String     @id @default(uuid())
+  dossierId    String     @map("dossier_id")
+  action       ActionPaie
+  mois         String? // bulletin concerné (AAAA-MM)
+  parId        String?    @map("par_id") // audit, pas de FK
+  createdAt    DateTime   @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?    @map("ordre_journal")
 
   dossier DossierPersonnel @relation(fields: [dossierId], references: [id], onDelete: Cascade)
 
@@ -2479,42 +2518,42 @@ enum StatutTacheProjet {
 }
 
 model TacheProjet {
-  id           String            @id @default(uuid())
-  projetId     String            @map("projet_id")
-  carteId      String            @map("carte_id")
-  cle          String
-  libelle      String
-  ordre        Int
-  descriptif   String?
-  sourceNative Boolean           @default(false) @map("source_native")
-  debutJ       Int?              @map("debut_j") // fenêtre propre ; sinon celle de la carte
-  finJ         Int?              @map("fin_j")
-  debutLe      String?           @map("debut_le")
-  finLe        String?           @map("fin_le") // échéance de référence (délai figé)
-  temps        Json // copie du gabarit
-  heures       Decimal?          @db.Decimal(6, 1) // temps standard résolu ; null = sans temps atelier
-  statut       StatutTacheProjet @default(a_faire)
-  motif        String? // raison de « Non nécessaire »
-  assigneId    String?           @map("assigne_id")
-  version      Int               @default(0) // dernière remise (1 = v01)
-  valideeLe    DateTime?         @map("validee_le")
-  valideeParId String?           @map("validee_par_id")
+  id                 String            @id @default(uuid())
+  projetId           String            @map("projet_id")
+  carteId            String            @map("carte_id")
+  cle                String
+  libelle            String
+  ordre              Int
+  descriptif         String?
+  sourceNative       Boolean           @default(false) @map("source_native")
+  debutJ             Int?              @map("debut_j") // fenêtre propre ; sinon celle de la carte
+  finJ               Int?              @map("fin_j")
+  debutLe            String?           @map("debut_le")
+  finLe              String?           @map("fin_le") // échéance de référence (délai figé)
+  temps              Json // copie du gabarit
+  heures             Decimal?          @db.Decimal(6, 1) // temps standard résolu ; null = sans temps atelier
+  statut             StatutTacheProjet @default(a_faire)
+  motif              String? // raison de « Non nécessaire »
+  assigneId          String?           @map("assigne_id")
+  version            Int               @default(0) // dernière remise (1 = v01)
+  valideeLe          DateTime?         @map("validee_le")
+  valideeParId       String?           @map("validee_par_id")
   // Visa DPLG (revue Dir. GC, 21/10/2026) : la tâche, validée par le chef de
   // team, n'est faite qu'une fois visée par l'architecte DPLG (Dir. GC).
   // Repris du gabarit à l'ouverture du projet.
-  visaRequis   Boolean           @default(false) @map("visa_requis")
+  visaRequis         Boolean           @default(false) @map("visa_requis")
   // Dépôt sans fichier refusé (case du gabarit, cochée par défaut — lot F,
   // 23/10/2026). Les tâches des projets ouverts avant la règle restent
   // facultatives (comme le visa : la version du gabarit est figée au projet).
-  fichierObligatoire Boolean    @default(true) @map("fichier_obligatoire")
-  visaLe       DateTime?         @map("visa_le")
-  visaParId    String?           @map("visa_par_id")
+  fichierObligatoire Boolean           @default(true) @map("fichier_obligatoire")
+  visaLe             DateTime?         @map("visa_le")
+  visaParId          String?           @map("visa_par_id")
   // Validée avant la règle du visa (21/10/2026) : ni bloquée ni réputée visée
   // — affichée « Visa non tracé (antérieur au 21/10/2026) ».
-  visaNonTrace Boolean           @default(false) @map("visa_non_trace")
+  visaNonTrace       Boolean           @default(false) @map("visa_non_trace")
   // Élément ajouté en TS : devis d'avenant qui le facture (ligne ajoutée à
   // l'ajout). Le devis n'est jamais recréé — seules ses lignes le sont.
-  devisTsId    String?           @map("devis_ts_id")
+  devisTsId          String?           @map("devis_ts_id")
 
   projet        Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
   devisTs       Devis?                 @relation(fields: [devisTsId], references: [id], onDelete: SetNull)
@@ -2552,17 +2591,20 @@ model ReglageSociete {
 // les lignes d'un même enregistrement partagent `lot` et le motif. Jamais
 // modifié ni supprimé. Alimente aussi le registre des décisions (Pilotage).
 model JournalReglage {
-  id        String   @id @default(uuid())
-  societeId String   @map("societe_id")
-  lot       String
-  section   String // gabarit | regles | objectifs
-  cle       String
-  libelle   String // pré-rendu : « Livrables · Esquisses — temps : 40 h → 32 h »
-  avant     Json?
-  apres     Json?
-  motif     String
-  parId     String?  @map("par_id") // audit, pas de FK
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  societeId    String   @map("societe_id")
+  lot          String
+  section      String // gabarit | regles | objectifs
+  cle          String
+  libelle      String // pré-rendu : « Livrables · Esquisses — temps : 40 h → 32 h »
+  avant        Json?
+  apres        Json?
+  motif        String
+  parId        String?  @map("par_id") // audit, pas de FK
+  createdAt    DateTime @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?  @map("ordre_journal")
 
   societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
 
@@ -2605,11 +2647,14 @@ model ReportingMensuel {
 // est figé (aucun redépôt) : la lecture porte l'id du dépôt et sa date de
 // dépôt (version lue), pour qu'un redépôt futur ne la rattache pas au neuf.
 model LectureReporting {
-  id          String   @id @default(uuid())
-  reportingId String   @map("reporting_id")
-  lecteurId   String   @map("lecteur_id") // audit, pas de FK
-  version     DateTime // deposeLe du dépôt lu
-  luLe        DateTime @default(now()) @map("lu_le")
+  id           String   @id @default(uuid())
+  reportingId  String   @map("reporting_id")
+  lecteurId    String   @map("lecteur_id") // audit, pas de FK
+  version      DateTime // deposeLe du dépôt lu
+  luLe         DateTime @default(now()) @map("lu_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?  @map("ordre_journal")
 
   reporting ReportingMensuel @relation(fields: [reportingId], references: [id], onDelete: Cascade)
 
@@ -2623,9 +2668,15 @@ model QuestionReporting {
   auteurId     String    @map("auteur_id") // audit, pas de FK
   texte        String
   creeLe       DateTime  @default(now()) @map("cree_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?   @map("ordre_journal")
   reponse      String?
   reponduParId String?   @map("repondu_par_id")
   reponduLe    DateTime? @map("repondu_le")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreReponse BigInt?   @map("ordre_reponse")
 
   reporting ReportingMensuel @relation(fields: [reportingId], references: [id], onDelete: Cascade)
 

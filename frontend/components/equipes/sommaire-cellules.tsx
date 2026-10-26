@@ -20,7 +20,7 @@ export function SommaireCellules({
   cellules: CelluleEquipe[];
   enLecture: string | undefined;
   compact: boolean;
-  barre?: RefObject<HTMLElement>;
+  barre?: RefObject<HTMLElement | null>;
 }) {
   if (compact) {
     return (

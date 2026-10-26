@@ -109,7 +109,6 @@ export function DoubleFacteurCompte() {
       </ol>
       <div className="df-compte-qr">
         {/* data URI généré par le serveur : pas d'optimisation next/image utile. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={reglage.qr} alt="QR code à scanner avec l’application d’authentification" width={160} height={160} />
         <span className="dmd-note">
           Pas de scan possible ? Clé : <code>{reglage.secret.match(/.{1,4}/g)?.join(' ')}</code>

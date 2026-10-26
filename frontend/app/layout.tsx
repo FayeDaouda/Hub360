@@ -1,4 +1,5 @@
 import type { Viewport } from 'next';
+import { headers } from 'next/headers';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { LucideProvider } from 'lucide-react';
@@ -34,11 +35,13 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Nonce de la politique de contenu, posé par proxy.ts pour cette requête.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     // suppressHydrationWarning : data-theme(-pref) est posé par le script ci-dessous
     // avant l'hydratation, donc absent du HTML serveur — écart voulu (un seul
@@ -47,7 +50,7 @@ export default function RootLayout({
       <head>
         {/* Pose data-theme avant l'hydratation — évite un flash clair→sombre
             au chargement (cf. lib/theme.ts). */}
-        <script dangerouslySetInnerHTML={{ __html: SCRIPT_THEME_INITIAL }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SCRIPT_THEME_INITIAL }} />
       </head>
       <body>
         <SynchroTheme />

@@ -161,7 +161,6 @@ function Activation({ jeton, onSession, onRetour }: { jeton: string; onSession: 
       {reglage ? (
         <div className="auth-df-qr">
           {/* data URI généré par le serveur : pas d'optimisation next/image utile. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={reglage.qr} alt="QR code à scanner avec l’application d’authentification" width={180} height={180} />
           <span className="auth-df-aide">
             Pas de scan possible ? Saisissez la clé : <code>{reglage.secret.match(/.{1,4}/g)?.join(' ')}</code>

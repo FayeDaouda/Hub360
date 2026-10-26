@@ -90,6 +90,24 @@ describe('JournalAuditService', () => {
     expect(lignes.find((l) => l.action === 'Profil de facturation modifié')!.detail).toBe('adresse');
     expect(lignes.find((l) => l.action === 'Coordonnées de paiement des factures modifiées')!.detail).toBe('RIB · confirmé par mot de passe');
   });
+  it('à horodatage égal, l’ordre réel des événements (séquence de la base), quel que soit l’ordre de lecture', async () => {
+    const s = svc();
+    const prisma = (s as unknown as { prisma: Record<string, { findMany: jest.Mock }> }).prisma;
+    const meme = new Date('2026-10-11T08:00:00Z');
+    const emise = (id: string, numero: number, ordreEmission: bigint) => ({
+      id, numero, emiseLe: meme, ordreEmission, estAvoir: false, montantHt: dec(100_000), tauxTva: dec(18), emiseParId: null, libelle: 'Acompte',
+    });
+    const ordre = async (factures: unknown[]) => {
+      prisma.facture.findMany = jest.fn().mockResolvedValueOnce(factures).mockResolvedValue([]);
+      // Un événement d'une autre table, au même instant, inséré entre les deux factures.
+      prisma.journalCloture.findMany = jest.fn().mockResolvedValue([{ id: 'C9', mois: '2026-09', action: 'cloture', motif: '', parId: 'U9', createdAt: meme, ordreJournal: 15n }]);
+      const { lignes } = await s.journal({ userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' }, '2026-10-01', '2026-10-14');
+      return lignes.filter((l) => l.le.getTime() === meme.getTime()).map((l) => l.id);
+    };
+    const attendu = ['facture:FB', 'cloture:C9', 'facture:FA']; // la plus récente d'abord
+    expect(await ordre([emise('FA', 14, 14n), emise('FB', 16, 16n)])).toEqual(attendu);
+    expect(await ordre([emise('FB', 16, 16n), emise('FA', 14, 14n)])).toEqual(attendu);
+  });
 });
 
 describe('periode', () => {

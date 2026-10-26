@@ -42,6 +42,20 @@ wait_for() {
 
 # Same server and credentials as backend/.env, other database. Refuses any
 # URL whose database is not hub_ref before anything destructive runs.
+# Dependencies of the copied revision: an APFS clone of the working tree's
+# node_modules when its lockfile is the same, a clean install otherwise. Each
+# copy owns its node_modules: `prisma generate` then never rewrites the dev
+# server's client, and Turbopack refuses a symlinked node_modules.
+install_dependencies() {
+  local app=$1 work=$2
+  if cmp -s "$work/$app/package-lock.json" "$ROOT/$app/package-lock.json"; then
+    cp -Rc "$ROOT/$app/node_modules" "$work/$app/node_modules" 2>/dev/null || cp -R "$ROOT/$app/node_modules" "$work/$app/node_modules"
+  else
+    echo "  $app: lockfile differs from the working tree, clean install"
+    (cd "$work/$app" && npm ci --no-audit --no-fund >"$STATE/npm-$app.log" 2>&1)
+  fi
+}
+
 reference_database_url() {
   local source
   source=$(sed -nE 's/^DATABASE_URL="?([^"]*)"?$/\1/p' "$ROOT/backend/.env")
@@ -67,11 +81,8 @@ up() {
   else
     git -C "$ROOT" archive "$ref" backend frontend | tar -x -C "$work"
   fi
-  # Backend: APFS clone of node_modules, so `prisma generate` for this revision
-  # never rewrites the client used by the dev server. Frontend: read-only use,
-  # a symlink is enough (fresh folder, never rsync --delete into it).
-  cp -Rc "$ROOT/backend/node_modules" "$work/backend/node_modules" 2>/dev/null || cp -R "$ROOT/backend/node_modules" "$work/backend/node_modules"
-  ln -s "$ROOT/frontend/node_modules" "$work/frontend/node_modules"
+  install_dependencies backend "$work"
+  install_dependencies frontend "$work"
 
   local db_url
   db_url=$(reference_database_url)
@@ -107,14 +118,20 @@ up() {
   echo "▶ frontend: production build against :$API_PORT"
   (
     cd "$work/frontend"
-    NEXT_PUBLIC_API_URL="http://localhost:$API_PORT/api" npx next build >"$STATE/frontend-build.log" 2>&1
-    cp -R .next/static .next/standalone/.next/static
-    cp -R public .next/standalone/public
+    # The revision's own build script, as in production. FRONT_BUILD_FLAGS adds
+    # options for a one-off comparison (e.g. --webpack to isolate a bundler effect).
+    NEXT_PUBLIC_API_URL="http://localhost:$API_PORT/api" npm run build -- ${FRONT_BUILD_FLAGS:-} >"$STATE/frontend-build.log" 2>&1
   )
+  # Next 16 nests server.js under the path from the inferred workspace root
+  # (the nearest lockfile above, here e2e/): locate it rather than assume.
+  local server
+  server=$(find "$work/frontend/.next/standalone" -name server.js -not -path '*/node_modules/*' | head -1)
+  cp -R "$work/frontend/.next/static" "$(dirname "$server")/.next/static"
+  cp -R "$work/frontend/public" "$(dirname "$server")/public"
 
   echo "▶ frontend: starting on :$FRONT_PORT"
   (
-    cd "$work/frontend/.next/standalone"
+    cd "$(dirname "$server")"
     PORT=$FRONT_PORT HOSTNAME=localhost API_INTERNE_URL="http://localhost:$API_PORT/api" \
       nohup node server.js >"$STATE/frontend.log" 2>&1 &
     echo $! >"$STATE/frontend.pid"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Banknote, Clock, FileSpreadsheet, FileText, Lock, Package, Plus, Settings2, TrendingUp } from 'lucide-react';
@@ -59,7 +59,7 @@ import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
-type Props = { params: { slug: string } };
+type Props = { params: Promise<{ slug: string }> };
 
 function formatDate(iso: string): string {
   const d = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
@@ -68,7 +68,8 @@ function formatDate(iso: string): string {
 
 // Finances · Devis et factures (maquette du boss, oct. 2026) : direction
 // seulement (matrice finances_*), les équipes ne voient aucun montant.
-export default function FinancesPage({ params }: Props) {
+export default function FinancesPage(props: Props) {
+  const params = use(props.params);
   useTitrePage('Finances · Devis et factures');
   const societe = useSocieteCourante();
   const session = useSessionCourante();

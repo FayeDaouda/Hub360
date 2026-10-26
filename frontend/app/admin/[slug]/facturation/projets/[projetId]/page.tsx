@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import { DemandeAvoir } from '@/components/finances/demande-avoir';
 import Link from 'next/link';
 import { ArrowLeft, Pencil, Plus, ReceiptText, Send, Trash2, Undo2, Wallet } from 'lucide-react';
@@ -18,7 +18,7 @@ import {
   saisirFactureBureau,
   supprimerPaiement,
 } from '@/lib/facturation';
-import { lireFichier } from '@/lib/fichiers';
+import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { contresigneAffaire, useContresignature, useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
@@ -41,7 +41,7 @@ import {
 import { formatMontant, formatMontantCompact } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
 
-type Props = { params: { slug: string; projetId: string } };
+type Props = { params: Promise<{ slug: string; projetId: string }> };
 
 const AUJOURD_HUI = () => new Date().toISOString().slice(0, 10);
 
@@ -80,7 +80,8 @@ function actionsPossibles(f: Facture, droits: Droits, valide: (montantTtc: numbe
   };
 }
 
-export default function FacturationPage({ params }: Props) {
+export default function FacturationPage(props: Props) {
+  const params = use(props.params);
   const confirmer = useConfirmer();
   useTitrePage('Facturation');
   const session = useSessionCourante();
@@ -414,6 +415,7 @@ export default function FacturationPage({ params }: Props) {
                       <span className="field-label">Facture (PDF, facultatif)</span>
                       <input
                         type="file"
+                        accept={FICHIERS_ACCEPTES.contrat}
                         className="field-input"
                         onChange={(ev) => setSaisieBureau({ ...saisieBureau, fichier: ev.target.files?.[0] })}
                       />

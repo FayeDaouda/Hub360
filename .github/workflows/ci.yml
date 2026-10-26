@@ -12,11 +12,23 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend — build + tests
+    name: Backend — build + tests unitaires et e2e
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    # Base des tests e2e d'API (parcours critiques, isolation entre sociétés) :
+    # recréée, migrée et remplie à chaque lancement (test/e2e/base-de-test.ts).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hub
+          POSTGRES_PASSWORD: hub
+          POSTGRES_DB: hub
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +44,9 @@ jobs:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
       - run: npm run build
       - run: npm test
+      - run: npm run test:e2e
+        env:
+          E2E_DATABASE_URL: postgresql://hub:hub@localhost:5432/hub_e2e?schema=public
 
   frontend:
     name: Frontend — lint + types + build

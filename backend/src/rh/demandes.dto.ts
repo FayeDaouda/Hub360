@@ -27,7 +27,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 class FichierDto {
   @IsString() @MaxLength(300) nom: string;
-  @UrlFichierJoint(20_000_000) url: string;
+  @UrlFichierJoint(20_000_000, 'rh') url: string;
 }
 
 export class DeposerAbsenceDto {

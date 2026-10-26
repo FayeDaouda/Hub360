@@ -88,26 +88,26 @@ export class JournalAuditService {
       // Comptes de la société (ou transverses), où qu'ait eu lieu l'action.
       this.prisma.evenementCompte.findMany({
         where: { createdAt: dans, utilisateur: { roles: { some: { OR: [{ societeId: S }, { societeId: null }] } } } },
-        select: { id: true, type: true, detail: true, parId: true, createdAt: true, utilisateur: { select: { prenom: true, nom: true } } },
+        select: { id: true, type: true, detail: true, parId: true, createdAt: true, ordreJournal: true, utilisateur: { select: { prenom: true, nom: true } } },
       }),
       this.prisma.journalDroit.findMany({ where: { societeId: S, createdAt: dans } }),
       this.prisma.facture.findMany({
         where: { societeId: S, emiseLe: dans },
-        select: { id: true, numero: true, reference: true, emiseLe: true, estAvoir: true, montantHt: true, tauxTva: true, emiseParId: true, libelle: true },
+        select: { id: true, numero: true, reference: true, emiseLe: true, ordreEmission: true, estAvoir: true, montantHt: true, tauxTva: true, emiseParId: true, libelle: true },
       }),
       this.prisma.paiement.findMany({
         where: { creeLe: dans, facture: { societeId: S } },
-        select: { id: true, montant: true, date: true, creeLe: true, creeParId: true, facture: { select: { numero: true, reference: true, emiseLe: true, estAvoir: true } } },
+        select: { id: true, montant: true, date: true, creeLe: true, ordreJournal: true, creeParId: true, facture: { select: { numero: true, reference: true, emiseLe: true, estAvoir: true } } },
       }),
       this.prisma.paiementSupprime.findMany({ where: { societeId: S, supprimeLe: dans } }),
       this.prisma.journalReglage.findMany({ where: { societeId: S, createdAt: dans } }),
       this.prisma.dossierPersonnel.findMany({
         where: { societeId: S, archiveLe: dans },
-        select: { id: true, prenom: true, nom: true, poste: true, archiveLe: true, archiveParId: true },
+        select: { id: true, prenom: true, nom: true, poste: true, archiveLe: true, ordreArchivage: true, archiveParId: true },
       }),
       this.prisma.journalPaie.findMany({
         where: { createdAt: dans, dossier: { societeId: S } },
-        select: { id: true, action: true, mois: true, parId: true, createdAt: true, dossier: { select: { prenom: true, nom: true, matricule: true } } },
+        select: { id: true, action: true, mois: true, parId: true, createdAt: true, ordreJournal: true, dossier: { select: { prenom: true, nom: true, matricule: true } } },
       }),
     ]);
     // Contrôle interne (revue CFO 20/10/2026) : demandes d'avoir et clôtures.
@@ -117,7 +117,7 @@ export class JournalAuditService {
       this.prisma.lectureReporting.findMany({ where: { luLe: dans, reporting: { societeId: S } }, include: { reporting: reportingSel } }),
       this.prisma.questionReporting.findMany({
         where: { reporting: { societeId: S }, OR: [{ creeLe: dans }, { reponduLe: dans }] },
-        select: { id: true, auteurId: true, creeLe: true, reponduParId: true, reponduLe: true, reporting: reportingSel },
+        select: { id: true, auteurId: true, creeLe: true, ordreJournal: true, reponduParId: true, reponduLe: true, ordreReponse: true, reporting: reportingSel },
       }),
     ]);
     const nomReporting = (r: { type: 'direction' | 'rh'; mois: string }) => `${titreReporting(r.type)} · ${moisFr(r.mois)}`;
@@ -147,10 +147,10 @@ export class JournalAuditService {
       ).map((f) => [f.id, refFacture(f)]),
     );
 
-    const lignes: (Omit<LigneAudit, 'par'> & { parId: string | null })[] = [
+    const lignes: (Omit<LigneAudit, 'par'> & { parId: string | null; ordre: bigint | null })[] = [
       ...comptes.map((e) => ({
         id: `compte:${e.id}`,
-        le: e.createdAt,
+        le: e.createdAt, ordre: e.ordreJournal,
         categorie: 'comptes' as const,
         action: ACTIONS_COMPTE[e.type],
         detail: [nomDe(e.utilisateur), e.detail].filter(Boolean).join(' · '),
@@ -158,7 +158,7 @@ export class JournalAuditService {
       })),
       ...droits.map((d) => ({
         id: `droit:${d.id}`,
-        le: d.createdAt,
+        le: d.createdAt, ordre: d.ordreJournal,
         categorie: 'droits' as const,
         action: 'Droits modifiés',
         detail: `${d.roleNom} · ${d.module} : ${d.avant ? NIVEAUX[d.avant] : 'aucun'} → ${NIVEAUX[d.apres]}`,
@@ -166,7 +166,7 @@ export class JournalAuditService {
       })),
       ...emises.map((f) => ({
         id: `facture:${f.id}`,
-        le: f.emiseLe!,
+        le: f.emiseLe!, ordre: f.ordreEmission,
         categorie: 'finances' as const,
         action: f.estAvoir ? 'Avoir émis' : 'Facture émise',
         detail: `${refFacture(f) ?? 'sans numéro'} · ${fcfa(ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc)} TTC · ${f.libelle}`,
@@ -174,7 +174,7 @@ export class JournalAuditService {
       })),
       ...paiements.map((p) => ({
         id: `paiement:${p.id}`,
-        le: p.creeLe,
+        le: p.creeLe, ordre: p.ordreJournal,
         categorie: 'finances' as const,
         action: 'Paiement enregistré',
         detail: `${fcfa(p.montant.toNumber())} · ${refFacture(p.facture) ?? 'facture sans numéro'} · versé le ${p.date.split('-').reverse().join('/')}`,
@@ -182,7 +182,7 @@ export class JournalAuditService {
       })),
       ...supprimes.map((p) => ({
         id: `paiement-supprime:${p.id}`,
-        le: p.supprimeLe,
+        le: p.supprimeLe, ordre: p.ordreJournal,
         categorie: 'finances' as const,
         action: 'Paiement supprimé',
         detail: [fcfa(p.montant.toNumber()), facturesSupprimes.get(p.factureId) ?? 'facture', p.motif ? `motif : ${p.motif}` : null].filter(Boolean).join(' · '),
@@ -192,13 +192,13 @@ export class JournalAuditService {
         const quoi = `${refFacture(d.facture) ?? 'facture'} · ${fcfa(d.montantTtc.toNumber())} TTC · ${LIBELLE_MOTIF_AVOIR[d.motif]} : ${d.commentaire}`;
         const lignesDemande = [];
         if (d.demandeLe >= de && d.demandeLe < jusque) {
-          lignesDemande.push({ id: `avoir-demande:${d.id}`, le: d.demandeLe, categorie: 'finances' as const, action: 'Avoir demandé', detail: quoi, parId: d.demandeParId });
+          lignesDemande.push({ id: `avoir-demande:${d.id}`, le: d.demandeLe, ordre: d.ordreDemande, categorie: 'finances' as const, action: 'Avoir demandé', detail: quoi, parId: d.demandeParId });
         }
         // Décision du CEO (au-delà du seuil) ; en deçà, l'avoir émis suffit.
         if (d.decideParId && d.decideLe && d.decideLe >= de && d.decideLe < jusque) {
           lignesDemande.push({
             id: `avoir-decision:${d.id}`,
-            le: d.decideLe,
+            le: d.decideLe, ordre: d.ordreDecision,
             categorie: 'finances' as const,
             action: d.statut === 'valide' ? 'Avoir validé par le CEO' : 'Avoir refusé par le CEO',
             detail: d.statut === 'refuse' ? `${quoi} · refus : ${d.motifRefus}` : quoi,
@@ -209,7 +209,7 @@ export class JournalAuditService {
       }),
       ...lecturesReporting.map((l) => ({
         id: `reporting-lu:${l.id}`,
-        le: l.luLe,
+        le: l.luLe, ordre: l.ordreJournal,
         categorie: 'pilotage' as const,
         action: 'Reporting lu',
         detail: nomReporting(l.reporting),
@@ -217,17 +217,17 @@ export class JournalAuditService {
       })),
       ...questionsReporting.flatMap((q) => [
         ...(q.creeLe >= de && q.creeLe < jusque
-          ? [{ id: `reporting-q:${q.id}`, le: q.creeLe, categorie: 'pilotage' as const, action: 'Question sur un reporting', detail: nomReporting(q.reporting), parId: q.auteurId }]
+          ? [{ id: `reporting-q:${q.id}`, le: q.creeLe, ordre: q.ordreJournal, categorie: 'pilotage' as const, action: 'Question sur un reporting', detail: nomReporting(q.reporting), parId: q.auteurId }]
           : []),
         ...(q.reponduLe && q.reponduLe >= de && q.reponduLe < jusque
-          ? [{ id: `reporting-r:${q.id}`, le: q.reponduLe, categorie: 'pilotage' as const, action: 'Réponse à une question', detail: nomReporting(q.reporting), parId: q.reponduParId }]
+          ? [{ id: `reporting-r:${q.id}`, le: q.reponduLe, ordre: q.ordreReponse, categorie: 'pilotage' as const, action: 'Réponse à une question', detail: nomReporting(q.reporting), parId: q.reponduParId }]
           : []),
       ]),
       ...parametresRentabilite.map((r) => {
         const def = PARAMETRES[r.cle as CleParametre];
         return {
           id: `rentabilite:${r.id}`,
-          le: r.createdAt,
+          le: r.createdAt, ordre: r.ordreJournal,
           categorie: 'finances' as const,
           action: 'Paramètre de rentabilité modifié',
           detail: `${def?.libelle ?? r.cle} : ${r.valeur === null ? 'désactivé' : `${r.valeur} ${def?.unite ?? ''}`.trim()} dès ${moisFr(r.dateEffet.slice(0, 7))} · motif : ${r.motif}`,
@@ -236,7 +236,7 @@ export class JournalAuditService {
       }),
       ...numerotations.map((n) => ({
         id: `numerotation:${n.id}`,
-        le: n.createdAt,
+        le: n.createdAt, ordre: n.ordreJournal,
         categorie: 'finances' as const,
         action: 'Numérotation des factures modifiée',
         detail: `prochain format : ${formaterNumero({ prefixe: n.prefixe, formatAnnee: n.formatAnnee as 'AAAA' | 'AA', separateur: n.separateur, chiffres: n.chiffres, numeroDepart: n.numeroDepart }, n.createdAt.getUTCFullYear(), n.numeroDepart)} · motif : ${n.motif}`,
@@ -251,7 +251,7 @@ export class JournalAuditService {
         return [
           {
             id: `profil-facturation:${p.id}`,
-            le: p.createdAt,
+            le: p.createdAt, ordre: p.ordreJournal,
             categorie: 'finances' as const,
             action: paiement ? 'Coordonnées de paiement des factures modifiées' : 'Profil de facturation modifié',
             detail: [avant ? changes.map(([, l]) => l).join(', ') || 'aucun champ modifié' : 'premier profil', confirme].filter(Boolean).join(' · '),
@@ -261,7 +261,7 @@ export class JournalAuditService {
       }),
       ...clotures.map((c) => ({
         id: `cloture:${c.id}`,
-        le: c.createdAt,
+        le: c.createdAt, ordre: c.ordreJournal,
         categorie: 'finances' as const,
         action: c.action === 'cloture' ? 'Mois clôturé' : 'Mois rouvert',
         detail: [moisFr(c.mois), c.motif && `motif : ${c.motif}`].filter(Boolean).join(' · '),
@@ -269,7 +269,7 @@ export class JournalAuditService {
       })),
       ...reglages.map((r) => ({
         id: `reglage:${r.id}`,
-        le: r.createdAt,
+        le: r.createdAt, ordre: r.ordreJournal,
         categorie: 'reglages' as const,
         action: 'Réglage modifié',
         detail: `${r.libelle} · motif : ${r.motif}`,
@@ -277,7 +277,7 @@ export class JournalAuditService {
       })),
       ...departs.map((d) => ({
         id: `depart:${d.id}`,
-        le: d.archiveLe!,
+        le: d.archiveLe!, ordre: d.ordreArchivage,
         categorie: 'rh' as const,
         action: 'Départ enregistré',
         detail: [`${d.prenom} ${d.nom}`.trim(), d.poste].filter(Boolean).join(' · '),
@@ -285,7 +285,7 @@ export class JournalAuditService {
       })),
       ...paie.map((p) => ({
         id: `paie:${p.id}`,
-        le: p.createdAt,
+        le: p.createdAt, ordre: p.ordreJournal,
         categorie: 'paie' as const,
         action: ACTIONS_PAIE[p.action],
         detail: [`${p.dossier.prenom} ${p.dossier.nom}`.trim(), p.dossier.matricule, p.mois && `bulletin ${p.mois.split('-').reverse().join('/')}`].filter(Boolean).join(' · '),
@@ -305,10 +305,19 @@ export class JournalAuditService {
       debut: de.toISOString().slice(0, 10),
       fin: new Date(jusque.getTime() - 86_400_000).toISOString().slice(0, 10),
       lignes: lignes
-        .map(({ parId, ...l }): LigneAudit => ({ ...l, par: parId ? (auteurs.get(parId) ?? 'compte supprimé') : null }))
-        .sort((x, y) => y.le.getTime() - x.le.getTime()),
+        // Plus récent d'abord ; à horodatage égal, ordre réel des événements
+        // (séquence commune posée par la base, cf. migration ordre_journal).
+        .sort((x, y) => y.le.getTime() - x.le.getTime() || plusRecentDabord(x.ordre, y.ordre))
+        .map(({ parId, ordre: _ordre, ...l }): LigneAudit => ({ ...l, par: parId ? (auteurs.get(parId) ?? 'compte supprimé') : null })),
     };
   }
+}
+
+// Ordre d'insertion décroissant ; un événement sans ordre (antérieur à la
+// numérotation, ou données de test) ne précède jamais un événement numéroté.
+function plusRecentDabord(a: bigint | null | undefined, b: bigint | null | undefined): number {
+  if (a == null || b == null) return a == null ? (b == null ? 0 : 1) : -1;
+  return a === b ? 0 : a > b ? -1 : 1;
 }
 
 // [début 00:00, lendemain de fin 00:00[ ; 30 derniers jours par défaut.
