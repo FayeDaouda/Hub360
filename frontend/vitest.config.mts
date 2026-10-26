@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: { alias: { '@': fileURLToPath(new URL('.', import.meta.url)) } },
   test: {
     exclude: ['node_modules/**', '.next/**'],
+    // Fuseau de l'appareil volontairement loin de Dakar (UTC+14) : un affichage
+    // qui en dépendrait encore ferait échouer son test.
+    env: { TZ: 'Pacific/Kiritimati' },
     setupFiles: ['./vitest.setup.ts'],
     projects: [
       { extends: true, test: { name: 'unit', include: ['**/*.spec.ts'], environment: 'node' } },

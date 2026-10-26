@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { commenterSynthese, getSyntheses, type ListeSyntheses } from '@/lib/pilotage';
-
-const dateHeure = (iso: string) => new Date(iso).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
+import { formatLongDateTime } from '@/lib/dates';
 
 // Synthèse mensuelle (revue CEO, 22/10/2026) : le tableau de bord du mois,
 // assemblé par le HUB à la clôture ; le CFO peut y ajouter un commentaire.
@@ -51,7 +50,8 @@ export function SyntheseMensuelle({ slug }: { slug: string }) {
         <div>
           <h2>Synthèse de {s.libelle}</h2>
           <p className="pi-aide">
-            Générée par le HUB à la clôture du mois, le {dateHeure(s.genereLe)} · aucun chiffre saisi à la main.
+            Générée par le HUB à la clôture du mois, le {formatLongDateTime(s.genereLe)} · aucun chiffre saisi à la
+            main.
           </p>
         </div>
         {liste.syntheses.length > 1 && (
@@ -113,7 +113,7 @@ export function SyntheseMensuelle({ slug }: { slug: string }) {
             <p className="sy-commentaire-texte">{s.commentaire.texte}</p>
             <p className="pi-aide">
               {s.commentaire.par ?? 'CFO'}
-              {s.commentaire.le ? ` · ${dateHeure(s.commentaire.le)}` : ''}
+              {s.commentaire.le ? ` · ${formatLongDateTime(s.commentaire.le)}` : ''}
             </p>
           </>
         ) : (

@@ -1,4 +1,5 @@
 import type { FicheProgramme } from './fiche-programme';
+import { yearOf } from './dates';
 export type Societe = {
   id: string;
   nom: string;
@@ -963,7 +964,7 @@ export function statutFactureEffectif(
 // société, attribuée à l'émission — F (AV pour un avoir) + année + numéro.
 export function refFacture(f: { numero: number | null; emiseLe: string | null; estAvoir: boolean }): string | null {
   if (f.numero == null) return null;
-  const annee = (f.emiseLe ? new Date(f.emiseLe) : new Date()).getFullYear();
+  const annee = yearOf(f.emiseLe ? new Date(f.emiseLe) : undefined);
   return `${f.estAvoir ? 'AV' : 'F'}${annee}-${String(f.numero).padStart(4, '0')}`;
 }
 
@@ -1257,7 +1258,7 @@ export function refDevis(d: {
 }): string | null {
   if (d.codeDossier && d.rangDossier != null) return `${d.codeDossier}-OF${d.rangDossier}`;
   if (d.numero == null) return null;
-  const annee = (d.dateEnvoi ? new Date(d.dateEnvoi) : new Date()).getFullYear();
+  const annee = yearOf(d.dateEnvoi ? new Date(d.dateEnvoi) : undefined);
   return `DEV${annee}-${String(d.numero).padStart(4, '0')}`;
 }
 

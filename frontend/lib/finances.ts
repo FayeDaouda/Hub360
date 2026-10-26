@@ -1,5 +1,5 @@
 import { STATUTS_DEVIS, type Devis, type FactureCentrale, type ProduitService } from './types';
-import { formatDate, formatMonthYear } from './dates';
+import { addMonths, formatMonthYear, todayIso, yearOf } from './dates';
 import { capitalize } from './text';
 
 // -----------------------------------------------------------------------------
@@ -106,7 +106,7 @@ export function parMois<T extends { creeLe: string }>(liste: T[]): { mois: strin
 // à encaisser n'a pas de période : une facture ouverte reste due, quelle que
 // soit sa date ; il se scinde en « en retard » (échu) et « à échoir ».
 export function indicateursFinances(devis: Devis[], factures: FactureCentrale[], maintenant = new Date()) {
-  const annee = String(maintenant.getFullYear());
+  const annee = String(yearOf(maintenant));
   const enCours = devis.filter((d) => filtreDevis(d) === 'en_cours');
   const acceptes = devis.filter((d) => filtreDevis(d) === 'acceptes').length;
   const refuses = devis.filter((d) => d.statutEffectif === 'refuse').length;
@@ -170,10 +170,8 @@ export function facturesOuvertes(factures: FactureCentrale[]) {
 
 // Les 12 derniers mois (AAAA-MM), du plus ancien au mois courant.
 export function douzeDerniersMois(maintenant = new Date()): string[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(maintenant.getFullYear(), maintenant.getMonth() - 11 + i, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  });
+  const courant = todayIso(maintenant).slice(0, 7);
+  return Array.from({ length: 12 }, (_, i) => addMonths(courant, i - 11));
 }
 
 // Documents émis sur les 12 derniers mois (mois d'émission).

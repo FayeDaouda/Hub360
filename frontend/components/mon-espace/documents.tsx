@@ -10,7 +10,7 @@ import {
 } from '@/lib/mon-espace';
 
 import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
-import { formatDate, formatMonthYear } from '@/lib/dates';
+import { formatDate, formatMonthYear, yearOf } from '@/lib/dates';
 
 // Libellés de la maquette (« Contrat de travail », « Fiche de poste »).
 const LIBELLE_DOCUMENT: Partial<Record<TypePieceDossier, string>> = {
@@ -50,7 +50,7 @@ export function MesDocuments({
     }
   }
 
-  const annee = new Date().getFullYear();
+  const annee = yearOf();
   const bulletinsAnnee = dossier.bulletins.filter((b) => b.mois.startsWith(String(annee))).length;
   const documents = dossier.documents.filter((d) => d.ajouteLe);
   const enAttente = dossier.attestations.find((a) => !a.delivreeLe);

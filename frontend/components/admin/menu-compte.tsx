@@ -29,7 +29,7 @@ import { AvatarPersonne } from '@/components/avatar-personne';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { deconnecterPartout, getProfil, nomAffiche, type Profil } from '@/lib/profil';
 import { useConfirmer } from '@/components/confirmation';
-import { formatDayMonth } from '@/lib/dates';
+import { formatDayMonth, formatTime, toIsoDay, todayIso } from '@/lib/dates';
 
 // Menu du compte (avatar, en haut à droite) : qui je suis (nom, e-mail, rôle,
 // société), l'état de ma double authentification, mes accès personnels
@@ -48,13 +48,9 @@ const LIBELLE_ABSENCE: Record<NonNullable<Profil['absence']>['type'], string> = 
 };
 // « le 22/10 à 18 h 40 », « aujourd'hui à 9 h 05 ».
 function quand(iso: string): string {
-  const d = new Date(iso);
-  const heure = `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
-  const jour =
-    d.toDateString() === new Date().toDateString()
-      ? 'aujourd’hui'
-      : `le ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-  return `${jour} à ${heure}`;
+  const [h, m] = formatTime(iso).split(':');
+  const jour = toIsoDay(new Date(iso));
+  return `${jour === todayIso() ? 'aujourd’hui' : `le ${formatDayMonth(jour)}`} à ${Number(h)} h ${m}`;
 }
 
 export function MenuCompte({

@@ -3,15 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { getJournalReglages, type LigneJournal } from '@/lib/reglages';
-
-const dateHeure = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+import { formatDateTime } from '@/lib/dates';
 
 // Réglages · Journal (ISO 9001 §7.5.3) : chaque enregistrement, son motif,
 // son auteur et les valeurs modifiées. Jamais modifié ni supprimé.
@@ -54,7 +46,7 @@ export function JournalPanel({ slug, versionInitiale }: { slug: string; versionI
           {lots.map((lot) => (
             <li key={lot[0].lot} className="reg-lot">
               <span className="cell-sub">
-                {dateHeure(lot[0].createdAt)}
+                {formatDateTime(lot[0].createdAt)}
                 {lot[0].par && ` · ${lot[0].par}`}
               </span>
               <strong>« {lot[0].motif} »</strong>

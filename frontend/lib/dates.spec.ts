@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDays,
+  addMonths,
   daysBetween,
   daysSince,
   formatDate,
+  formatDateTime,
+  formatDayLongMonth,
   formatDayMonth,
   formatDayShortMonth,
   formatLongDate,
+  formatLongDateTime,
   formatMonthYear,
+  formatTime,
   toIsoDay,
   todayIso,
+  yearOf,
 } from './dates';
 
 // Les anciennes copies (32 « jjmmaaaa », 20 « jjmm »…) : chaque fonction doit
@@ -91,8 +97,52 @@ describe('formats longs', () => {
   });
 
   it('« 24 oct. »', () => {
-    expect(formatDayShortMonth('2026-10-24T12:00:00Z')).toBe(
-      new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(new Date('2026-10-24T12:00:00Z')),
-    );
+    expect(formatDayShortMonth('2026-10-24T12:00:00Z')).toBe('24 oct.');
+  });
+});
+
+// Le fuseau de l'appareil est Pacific/Kiritimati (UTC+14, vitest.config.mts) :
+// 2026-10-24T22:30Z y est déjà le 25 à 12 h 30, mais à Dakar le 24 à 22 h 30.
+describe('heure de Dakar, quel que soit le lieu de l’utilisateur', () => {
+  const soir = '2026-10-24T22:30:00Z';
+
+  it('l’appareil est bien loin de Dakar pendant les tests', () => {
+    expect(new Date(soir).getDate()).toBe(25);
+  });
+
+  it('heures, dates et jours', () => {
+    expect(formatTime(soir)).toBe('22:30');
+    expect(formatDateTime(soir)).toBe('24/10/2026 22:30');
+    expect(formatLongDateTime(soir)).toBe('24 octobre 2026 à 22:30');
+    expect(formatDayLongMonth(soir)).toBe('24 octobre');
+    expect(formatDayShortMonth(soir)).toBe('24 oct.');
+    expect(toIsoDay(new Date(soir))).toBe('2026-10-24');
+  });
+
+  it('année courante : celle de Dakar', () => {
+    expect(yearOf(new Date('2026-12-31T22:00:00Z'))).toBe(2026);
+  });
+
+  it('addMonths traverse les années', () => {
+    expect(addMonths('2026-10', -11)).toBe('2025-11');
+    expect(addMonths('2026-01', -1)).toBe('2025-12');
+    expect(addMonths('2026-12', 1)).toBe('2027-01');
+    expect(addMonths('2026-10', 0)).toBe('2026-10');
+  });
+
+  it('addMonths sur un jour : dernier jour du mois si le jour n’existe pas', () => {
+    // Le 31 du mois.
+    expect(addMonths('2026-03-31', -1)).toBe('2026-02-28');
+    expect(addMonths('2026-08-31', 1)).toBe('2026-09-30');
+    expect(addMonths('2026-08-31', 6)).toBe('2027-02-28');
+    expect(addMonths('2026-05-31', 2)).toBe('2026-07-31');
+    // Le 29 février d'une année bissextile.
+    expect(addMonths('2028-01-31', 1)).toBe('2028-02-29');
+    expect(addMonths('2028-02-29', 12)).toBe('2029-02-28');
+    expect(addMonths('2028-02-29', 48)).toBe('2032-02-29');
+    // Le passage d'année, dans les deux sens.
+    expect(addMonths('2026-12-31', 1)).toBe('2027-01-31');
+    expect(addMonths('2026-11-30', 3)).toBe('2027-02-28');
+    expect(addMonths('2027-01-15', -2)).toBe('2026-11-15');
   });
 });

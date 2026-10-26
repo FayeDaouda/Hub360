@@ -12,7 +12,6 @@ import type {
 } from './types';
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
-import { formatDate } from './dates';
 
 // RH · Demandes (lot 2). Salarié : /mon-espace ; N+1 : /absences ; RH : /rh/demandes.
 type Fichier = { nom: string; url: string };

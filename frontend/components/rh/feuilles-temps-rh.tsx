@@ -54,7 +54,6 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
       <div className="skeleton admin-skeleton-panel" aria-hidden />
     );
 
-  const aControler = donnees.periodes.reduce((n, p) => n + p.aControler, 0);
   const courante = donnees.feuilles.find((f) => f.dossierId === choisi) ?? null;
 
   return (
