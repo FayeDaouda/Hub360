@@ -8,7 +8,7 @@ import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite
 import { ParametresRentabilite } from '@/components/finances/parametres-rentabilite';
 import { ApiError } from '@/lib/client-api';
 import { exporterCsv } from '@/lib/export-csv';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import {
   finDeMois,
   formatParametre,
@@ -304,9 +304,9 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                       </span>
                     </td>
                     <td data-label="Heures" className="num rt-heures">
-                      {l.heures.toLocaleString('fr-FR')} h
+                      {formatNumber(l.heures)} h
                       {l.heuresAttente > 0 && (
-                        <span className="cell-sub">dont {l.heuresAttente.toLocaleString('fr-FR')} h à contrôler</span>
+                        <span className="cell-sub">dont {formatNumber(l.heuresAttente)} h à contrôler</span>
                       )}
                     </td>
                     <td data-label="Données" className="rt-etat">

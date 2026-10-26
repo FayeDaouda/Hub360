@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import {
   deciderSalaire,
   getDetailSalaire,
@@ -100,7 +100,7 @@ export function SalairesAValider({ slug }: { slug: string }) {
                     <span className="field-label">Proposé</span>
                     <strong>{formatAmount(ouvert.montant)}</strong>
                     {ecart != null && (
-                      <span className="cell-sub">{`${ecart > 0 ? '+' : ''}${ecart.toLocaleString('fr-FR')} %`}</span>
+                      <span className="cell-sub">{`${ecart > 0 ? '+' : ''}${formatNumber(ecart)} %`}</span>
                     )}
                   </span>
                 </p>

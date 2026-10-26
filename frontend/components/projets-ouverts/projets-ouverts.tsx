@@ -46,6 +46,7 @@ import { CartePanneau } from './carte-panneau';
 import { PanneauLateral } from './panneau-lateral';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural, stripAccents } from '@/lib/text';
+import { formatAmount } from '@/lib/format';
 
 // Panneau latéral : une tâche, ou le fil d'une carte.
 type Selection = { type: 'tache' | 'carte'; id: string } | null;
@@ -746,7 +747,7 @@ function AjoutTs({
         // Au-delà du seuil : rien n'est ajouté tant que le CTO n'a pas validé.
         setMessage({
           ok: true,
-          texte: `TS chiffré à ${t.montantHt.toLocaleString('fr-FR')} FCFA HT, au-delà du seuil de ${t.seuil.toLocaleString('fr-FR')} FCFA : demande envoyée au CTO. Il sera ajouté au projet et à l’avenant dès sa validation.`,
+          texte: `TS chiffré à ${formatAmount(t.montantHt)} HT, au-delà du seuil de ${formatAmount(t.seuil)} : demande envoyée au CTO. Il sera ajouté au projet et à l’avenant dès sa validation.`,
         });
         return;
       }

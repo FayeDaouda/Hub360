@@ -1,4 +1,4 @@
-import { formatAmount } from './format';
+import { formatAmount, formatNumber } from './format';
 import { escapeHtml, plural, stripAccents } from './text';
 
 // Mêmes rendus que les anciennes copies (« fcfa », « formatMontant », « echapper »).
@@ -7,6 +7,12 @@ const ancienFcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA
 describe('montants', () => {
   it.each([0, 1_770_000, 2_643_200.4, 1_500_000.5, -75_600])('%s comme les anciennes copies', (n) => {
     expect(formatAmount(n)).toBe(ancienFcfa(n));
+  });
+});
+
+describe('nombres', () => {
+  it.each([0, 1_770_000, 37.5, 1234.5678])('%s comme toLocaleString', (n) => {
+    expect(formatNumber(n)).toBe(n.toLocaleString('fr-FR'));
   });
 });
 

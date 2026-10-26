@@ -1,5 +1,6 @@
 import { apiSociete } from './client-api';
 import { formatDate } from './dates';
+import { formatNumber } from './format';
 
 // Réglages du HUB (CIO) — maquette du boss, sept. 2026. API NestJS :
 //   GET …/reglages                    gabarits en service, règles, objectifs
@@ -119,8 +120,7 @@ export function afficher(r: Pick<Reglage, 'valeur'>, v: unknown): string {
   if (t.type === 'zone') return `${(v as { de: number }).de} à ${(v as { a: number }).a} %`;
   if (t.type === 'pourcentage') return `${v} %`;
   // Budget atelier : heures et jours ouvrés (8 h), comme la maquette.
-  if (t.type === 'entier' && t.unite === 'h')
-    return `${Number(v).toLocaleString('fr-FR')} h (${Number(v) / 8} jours ouvrés)`;
-  if (t.type === 'entier' && t.unite) return `${Number(v).toLocaleString('fr-FR')} ${t.unite}`;
+  if (t.type === 'entier' && t.unite === 'h') return `${formatNumber(Number(v))} h (${Number(v) / 8} jours ouvrés)`;
+  if (t.type === 'entier' && t.unite) return `${formatNumber(Number(v))} ${t.unite}`;
   return String(v);
 }

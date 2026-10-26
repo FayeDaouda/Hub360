@@ -1,4 +1,4 @@
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { montantEnLettres } from '@/lib/montant-lettres';
 import type { ProfilFacturation } from '@/lib/facturation';
 import type { LigneDocument } from '@/components/document-facturation';
@@ -184,7 +184,7 @@ export function FactureDocument(p: FactureDocumentProps) {
                   {l.designation}
                   {l.detail && <span className="fd-detail">{l.detail}</span>}
                 </td>
-                <td className="num">{l.quantite.toLocaleString('fr-FR')}</td>
+                <td className="num">{formatNumber(l.quantite)}</td>
                 <td>{l.unite ?? 'Forfait'}</td>
                 <td className="num">{montant(l.prixUnitaire)}</td>
                 <td className="num">{montant(l.montantHt)}</td>

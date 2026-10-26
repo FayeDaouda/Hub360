@@ -17,6 +17,7 @@ import type { AjouterTsDto } from '../projets/gabarit/dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
 import { todayIso } from '../shared/dates';
+import { formatAmount } from '../shared/format';
 
 const PRODUIT_TS = { mineure: 'TS-MIN', majeure: 'TS-MAJ' } as const;
 const OBJET_AVENANT = 'Avenant · travaux supplémentaires';
@@ -69,7 +70,7 @@ export class AvenantsTsService {
     await this.notifications.envoyer({
       societeId,
       type: 'ts_a_valider',
-      titre: `TS à valider · ${projet.code} · ${dto.element.trim()} · ${montantHt.toLocaleString('fr-FR')} FCFA HT (au-delà du seuil)`,
+      titre: `TS à valider · ${projet.code} · ${dto.element.trim()} · ${formatAmount(montantHt)} HT (au-delà du seuil)`,
       destinataireIds: ctx.comptesCto.filter((id) => id !== acteur.userId),
       parId: acteur.userId,
       projetId,

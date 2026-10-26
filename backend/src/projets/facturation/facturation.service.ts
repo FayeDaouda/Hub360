@@ -36,6 +36,7 @@ import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
 import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
 import { formatMonthYear, todayIso } from '../../shared/dates';
+import { formatAmount } from '../../shared/format';
 
 // Facturation client — module admin-only (le contrôleur ne marque aucun
 // endpoint @EcritureCollaborateur, donc AccesProjetGuard rejette toute écriture
@@ -553,7 +554,7 @@ export class FacturationService {
       societeId,
       factureId: f.id,
       dossierCrmId: dossier.id,
-      titre: `Facture directe à valider · ${dossier.code} · ${dossier.client.nom} · ${montantTtc.toLocaleString('fr-FR')} FCFA TTC`,
+      titre: `Facture directe à valider · ${dossier.code} · ${dossier.client.nom} · ${formatAmount(montantTtc)} TTC`,
     });
     return this.factureCentrale(societeId, f.id);
   }
@@ -642,7 +643,7 @@ export class FacturationService {
       await this.notifications.envoyer({
         societeId: f.societeId,
         type,
-        titre: `${type === 'facture_emise' ? 'Facture émise' : 'Facture payée'} · ${refFacture(f) ?? 'sans numéro'} · ${Math.round(montantTtc).toLocaleString('fr-FR')} FCFA TTC`,
+        titre: `${type === 'facture_emise' ? 'Facture émise' : 'Facture payée'} · ${refFacture(f) ?? 'sans numéro'} · ${formatAmount(montantTtc)} TTC`,
         destinataireIds: [proprietaire, ...cfo],
         parId,
         projetId: f.projetId,

@@ -40,6 +40,7 @@ import {
   type UsageNiveau,
 } from '@/lib/fiche-programme';
 import { plural } from '@/lib/text';
+import { formatNumber } from '@/lib/format';
 
 type Props = {
   projet: Projet;
@@ -183,7 +184,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
               {!(projet.surfaceTerrain > 0) && !autreSurface && choisir}
               {SURFACES.map((m2) => (
                 <option key={m2} value={m2}>
-                  {m2.toLocaleString('fr-FR')} m²
+                  {formatNumber(m2)} m²
                 </option>
               ))}
               <option value="autre">Autre surface…</option>

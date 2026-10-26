@@ -8,3 +8,8 @@ const number = new Intl.NumberFormat('fr-FR');
 export function formatAmount(value: number): string {
   return `${number.format(Math.round(value))} ${CURRENCY}`;
 }
+
+/** « 1 770 000 » (nombre en français, décimales gardées). */
+export function formatNumber(value: number): string {
+  return number.format(value);
+}

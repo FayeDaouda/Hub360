@@ -1,7 +1,7 @@
 'use client';
 
 import { CGV_PAR_SOCIETE } from '@/lib/cgv';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { TAUX_TVA_DEFAUT, type EcheanceOffre, type Societe } from '@/lib/types';
 
 // Règles reprises dans les conditions particulières (CGV art. 12 à 14) et le
@@ -10,7 +10,7 @@ const VALIDITE_JOURS = 7;
 const MISE_EN_DEMEURE_JOURS = 15;
 const PAIEMENT_JOURS = 15;
 
-const pourcent = (n: number) => `${n.toLocaleString('fr-FR')} %`;
+const pourcent = (n: number) => `${formatNumber(n)} %`;
 
 type Props = {
   societe: Societe;

@@ -6,6 +6,7 @@ import type { PartsFactures } from '../projets/domaine/config';
 import { appliquer, type Changement, type ContenuGabarit, decrire, ErreurGabarit, libelleVersion } from './gabarit';
 import { type DefinitionReglage, GABARITS_PAR_SOCIETE, normaliser, OBJECTIFS, REGLES } from './definitions';
 import { formatDate } from '../shared/dates';
+import { formatNumber } from '../shared/format';
 
 type Section = 'regles' | 'objectifs';
 const DEFINITIONS: Record<Section, DefinitionReglage[]> = { regles: REGLES, objectifs: OBJECTIFS };
@@ -21,7 +22,7 @@ function afficher(def: DefinitionReglage, v: unknown): string {
     return (v as string[]).length ? (v as string[]).map((jour) => formatDate(jour)).join(', ') : 'aucun';
   if (t.type === 'zone') return `${(v as { de: number }).de} à ${(v as { a: number }).a} %`;
   if (t.type === 'pourcentage') return `${v} %`;
-  if (t.type === 'entier' && t.unite) return `${Number(v).toLocaleString('fr-FR')} ${t.unite}`;
+  if (t.type === 'entier' && t.unite) return `${formatNumber(Number(v))} ${t.unite}`;
   return String(v);
 }
 

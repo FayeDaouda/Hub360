@@ -8,7 +8,7 @@ import { salaireAu, type ChangementSource } from '../rh/regles-salaire';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { TempsService } from '../rh/temps.service';
 import { formatDayMonth, toIsoDay } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { formatAmount, formatNumber } from '../shared/format';
 import { plural } from '../shared/text';
 
 // `montant` : chiffre brut figé avec le reporting (masse salariale), relu le
@@ -184,7 +184,7 @@ export class ReportingRhService {
         libelle: 'Demandes',
         valeur:
           `${demandes.traitees} traitée(s)` +
-          (demandes.delaiMoyen == null ? '' : ` en ${demandes.delaiMoyen.toLocaleString('fr-FR')} j en moyenne`) +
+          (demandes.delaiMoyen == null ? '' : ` en ${formatNumber(demandes.delaiMoyen)} j en moyenne`) +
           ` · ${demandes.relances ? `${plural(demandes.relances, 'relance')} envoyée${demandes.relances > 1 ? 's' : ''}` : 'aucune relance'}`,
       },
       {

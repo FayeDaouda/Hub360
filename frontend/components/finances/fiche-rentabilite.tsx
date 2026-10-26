@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import {
   finDeMois,
   formatTaux,
@@ -170,7 +170,7 @@ export function FicheRentabilitePanneau({
                   {f.mois.map((m) => (
                     <li key={m.mois}>
                       <span className="rtf-mois-nom">{formatMonthYear(m.mois)}</span>
-                      <span>{m.heures.toLocaleString('fr-FR')} h</span>
+                      <span>{formatNumber(m.heures)} h</span>
                       {montants && <span>{formatAmount(m.cout ?? 0)} de coût</span>}
                       {montants && <span>{formatAmount(m.ht ?? 0)} facturés</span>}
                     </li>
@@ -224,7 +224,7 @@ export function FicheRentabilitePanneau({
                     {salaries.map((s) => (
                       <li key={s.nom}>
                         <span className="rtf-mois-nom">{s.nom}</span>
-                        <span>{s.heures === null ? '—' : `${s.heures.toLocaleString('fr-FR')} h`}</span>
+                        <span>{s.heures === null ? '—' : `${formatNumber(s.heures)} h`}</span>
                         <span>
                           {s.sansSalaire ? (
                             <span className="pill pill--attention">sans salaire validé</span>

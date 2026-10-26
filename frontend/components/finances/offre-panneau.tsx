@@ -12,6 +12,7 @@ import { lignesDepuisDevis, ligneVide, type LigneForm } from '@/components/admin
 import { OffreLignes, lignesBrouillon } from './offre-lignes';
 import { OffreAnnexes } from './offre-annexes';
 import { formatDate } from '@/lib/dates';
+import { formatNumber } from '@/lib/format';
 
 const ENREGISTREMENT_MS = 700;
 const LIBELLES_COMMODITES = new Map(COMMODITES.flatMap((g) => g.items));
@@ -386,7 +387,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
                   <Champ titre="Catégorie CO" valeur={categorieCo} />
                   <Champ
                     titre="Surface"
-                    valeur={lead.surfaceTerrain > 0 ? `${lead.surfaceTerrain.toLocaleString('fr-FR')} m²` : null}
+                    valeur={lead.surfaceTerrain > 0 ? `${formatNumber(lead.surfaceTerrain)} m²` : null}
                   />
                   <Champ titre="Planches" valeur={lead.nbPlanches > 0 ? String(lead.nbPlanches) : null} />
                   <Champ titre="Standing" valeur={lead.standing ? STANDINGS[lead.standing] : null} />
@@ -395,7 +396,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
                     titre="Surface × planches"
                     valeur={
                       lead.surfaceTerrain > 0 && lead.nbPlanches > 0
-                        ? `${(lead.surfaceTerrain * lead.nbPlanches).toLocaleString('fr-FR')} m²`
+                        ? `${formatNumber(lead.surfaceTerrain * lead.nbPlanches)} m²`
                         : null
                     }
                   />
