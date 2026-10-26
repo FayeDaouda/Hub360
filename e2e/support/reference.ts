@@ -40,42 +40,71 @@ export async function useTheme(page: Page, theme: Theme): Promise<void> {
 
 const LOADING_MARKERS = '.skeleton, .admin-skeleton, .auth-squelette, .auth-carte--squelette';
 
-// Pages fetch on the client: wait for the loading placeholders to go away and
-// for the network to settle (bounded: the notification poll never stops).
+// Attente d'un écran complet avant capture. Les pages chargent côté client ;
+// une seule condition ne suffit pas (une référence a été prise avant la fin
+// du rendu, cause non établie) : toutes doivent tenir.
+//   - aucun état provisoire : squelettes, « … » des tuiles, aria-busy ;
+//   - aucune requête en cours, toutes origines (API, composants serveur,
+//     scripts, images), deux relevés de suite — flux du chat excepté ;
+//   - toutes les images chargées, polices prêtes ;
+//   - hauteur de la page stable pendant 500 ms.
+// Au-delà de 30 s, la capture échoue en disant laquelle ne tient pas.
 export async function waitForContent(page: Page): Promise<void> {
   await page.waitForLoadState('load');
-  await page.waitForFunction((selector) => document.querySelectorAll(selector).length === 0, LOADING_MARKERS, {
-    timeout: 30_000,
-  });
-  // KPI tiles show « … » while their figure loads.
   await page.waitForFunction(
-    () =>
+    (selector) =>
+      document.querySelectorAll(`${selector}, [aria-busy="true"]`).length === 0 &&
       ![...document.querySelectorAll('main *')].some(
         (element) => element.childElementCount === 0 && element.textContent?.trim() === '…',
       ),
-    undefined,
+    LOADING_MARKERS,
     { timeout: 30_000 },
   );
-  if (pendingByPage.has(page)) await waitForApiIdle(page);
+  if (pendingByPage.has(page)) await waitForNetworkIdle(page);
   else await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
+  await page.waitForFunction(() => [...document.images].every((image) => image.complete), undefined, {
+    timeout: 30_000,
+  });
   await page.evaluate(() => document.fonts.ready);
+  await waitForStableHeight(page);
 }
 
-// Requêtes de l'API en cours, par page (filtre de installSeedNoiseFilter).
-// Une section sans indicateur de chargement (cartes d'un projet) se capturait
-// parfois avant sa réponse : on attend qu'il n'en reste aucune, deux relevés
-// de suite. Le flux du chat (SSE) reste ouvert en permanence : non compté.
-const pendingByPage = new WeakMap<Page, Set<string>>();
+// Requêtes en cours, par page, toutes origines (installSeedNoiseFilter). Le
+// flux du chat (SSE) reste ouvert en permanence : non compté.
+const pendingByPage = new WeakMap<Page, Map<Request, string>>();
 const STREAMING = /\/chat\/flux\b/;
 
-async function waitForApiIdle(page: Page): Promise<void> {
+function trackRequests(page: Page) {
+  const pending = new Map<Request, string>();
+  pendingByPage.set(page, pending);
+  page.on('request', (request) => {
+    if (STREAMING.test(request.url()) || ['eventsource', 'websocket'].includes(request.resourceType())) return;
+    pending.set(request, `${request.resourceType()} ${request.method()} ${request.url()}`);
+  });
+  page.on('requestfinished', (request) => pending.delete(request));
+  page.on('requestfailed', (request) => pending.delete(request));
+}
+
+async function waitForNetworkIdle(page: Page): Promise<void> {
   const pending = pendingByPage.get(page)!;
   const deadline = Date.now() + 30_000;
   let quiet = 0;
   while (quiet < 2) {
-    if (Date.now() > deadline) throw new Error(`requêtes de l'API toujours en cours :\n${[...pending].join('\n')}`);
+    if (Date.now() > deadline) throw new Error(`requêtes toujours en cours :\n${[...pending.values()].join('\n')}`);
     quiet = pending.size === 0 ? quiet + 1 : 0;
     await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+}
+
+async function waitForStableHeight(page: Page): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  let last = -1;
+  let stableSince = Date.now();
+  while (Date.now() - stableSince < 500) {
+    if (Date.now() > deadline) throw new Error(`hauteur de la page instable (${last} px)`);
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    if (height !== last) [last, stableSince] = [height, Date.now()];
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 
@@ -161,17 +190,8 @@ export function expectStableApi(page: Page): void {
 export async function installSeedNoiseFilter(page: Page): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   await page.clock.setFixedTime(new Date(`${today}T12:00:00Z`));
-  const pending = new Set<string>();
-  pendingByPage.set(page, pending);
-  await page.route(`${API_ORIGIN}/**`, async (route) => {
-    const key = `${route.request().method()} ${route.request().url()} #${Math.random()}`;
-    if (!STREAMING.test(route.request().url())) pending.add(key);
-    try {
-      await serve(route);
-    } finally {
-      pending.delete(key);
-    }
-  });
+  trackRequests(page);
+  await page.route(`${API_ORIGIN}/**`, serve);
   async function serve(route: Route) {
     // A failed fetch is retried (and recorded, see expectStableApi): aborting
     // it would leave the screen loading until the capture times out. Requests
