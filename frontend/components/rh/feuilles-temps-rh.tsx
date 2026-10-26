@@ -10,7 +10,6 @@ import {
   getFeuillesTemps,
   HEURES_PAR_JOUR,
   LIBELLE_MANQUE,
-  libelleMois,
   STATUT_FEUILLE,
 } from '@/lib/temps';
 import type { FeuilleTempsSalarie, FeuillesTemps } from '@/lib/types';
@@ -18,8 +17,8 @@ import { ConfirmModal } from '@/components/admin/confirm-modal';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
+import { formatDate, formatMonthYear } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Chargement impossible.');
 const nomDe = (f: FeuilleTempsSalarie) => `${f.prenom} ${f.nom}`.trim() || f.matricule;
 
@@ -63,7 +62,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
         <section className="panel glass-panel dmd-section temps-panel">
           <div className="temps-entete">
             <div>
-              <h2 className="dmd-titre">Feuilles de temps · {libelleMois(donnees.mois)}</h2>
+              <h2 className="dmd-titre">Feuilles de temps · {formatMonthYear(donnees.mois)}</h2>
               <p className="dmd-note">
                 Calcul automatique à partir des blocs assignés dans les projets (durée standard répartie du début à
                 l’échéance), hors absences validées. Personne ne saisit ni ne modifie les heures.
@@ -81,7 +80,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                     setMois(p.mois);
                   }}
                 >
-                  {libelleMois(p.mois)}
+                  {formatMonthYear(p.mois)}
                   {p.aControler > 0 && ` · ${p.aControler}`}
                   {p.ecarts > 0 && ` · ${p.ecarts} écart${p.ecarts > 1 ? 's' : ''}`}
                 </button>
@@ -161,7 +160,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                       <td data-label="Contrôle RH" className="tl-statut">
                         <span className={`pill ${STATUT_FEUILLE[f.statut].pill}`}>
                           {f.statut === 'controlee' && f.controleLe
-                            ? `Contrôlée le ${jjmmaaaa(f.controleLe)}`
+                            ? `Contrôlée le ${formatDate(f.controleLe)}`
                             : STATUT_FEUILLE[f.statut].libelle}
                         </span>
                         {f.ecart && !f.ecart.traiteLe && <span className="pill pill--attention">Écart signalé</span>}
@@ -266,7 +265,7 @@ function DetailFeuille({
       {f.ecart && <EcartRh key={f.ecart.id} slug={slug} f={f} ecriture={ecriture} onTraite={onControle} />}
 
       {f.statut === 'controlee' && f.controleLe ? (
-        <p className="dmd-note">Feuille contrôlée le {jjmmaaaa(f.controleLe)} : chiffres figés à cette date.</p>
+        <p className="dmd-note">Feuille contrôlée le {formatDate(f.controleLe)} : chiffres figés à cette date.</p>
       ) : f.statut === 'en_cours' ? (
         <p className="dmd-note">
           <Clock size={13} aria-hidden /> Mois en cours : le contrôle s’ouvre une fois le mois clos.
@@ -289,7 +288,7 @@ function DetailFeuille({
       {confirmation && (
         <ConfirmModal
           titre="Contrôler la feuille de temps"
-          message={`La feuille de ${nomDe(f)} pour ${libelleMois(f.mois)} sera figée telle qu’affichée (${formatHeures(f.heuresImputees)} imputées sur ${formatHeures(f.heuresDisponibles)} disponibles).`}
+          message={`La feuille de ${nomDe(f)} pour ${formatMonthYear(f.mois)} sera figée telle qu’affichée (${formatHeures(f.heuresImputees)} imputées sur ${formatHeures(f.heuresDisponibles)} disponibles).`}
           onConfirm={async () => {
             await controlerFeuilleTemps(slug, f.dossierId, f.mois);
             onControle();
@@ -336,11 +335,11 @@ function EcartRh({
         <span className={`pill ${e.traiteLe ? 'pill--succes' : 'pill--attention'}`}>
           {e.traiteLe ? 'Traité' : 'À traiter'}
         </span>{' '}
-        Le {jjmmaaaa(e.signaleLe)} : « {e.commentaire} »
+        Le {formatDate(e.signaleLe)} : « {e.commentaire} »
       </p>
       {e.traiteLe ? (
         <p className="dmd-note">
-          Réponse du {jjmmaaaa(e.traiteLe)} : « {e.reponse} »
+          Réponse du {formatDate(e.traiteLe)} : « {e.reponse} »
         </p>
       ) : ecriture ? (
         <>

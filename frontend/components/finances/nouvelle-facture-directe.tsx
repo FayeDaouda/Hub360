@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { creerFactureDirecte, getLeadsFacturables } from '@/lib/facturation';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import { STATUTS_CRM, type FactureCentrale, type LeadFacturable } from '@/lib/types';
 
 const TAUX_TVA = 18; // TVA par défaut des factures (backend TAUX_TVA_DEFAUT)
@@ -162,13 +162,13 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
           </button>
           <p className="nfd-totaux">
             <span>
-              HT <strong>{formatMontant(ht)}</strong>
+              HT <strong>{formatAmount(ht)}</strong>
             </span>
             <span>
-              TVA {TAUX_TVA} % <strong>{formatMontant(tva)}</strong>
+              TVA {TAUX_TVA} % <strong>{formatAmount(tva)}</strong>
             </span>
             <span>
-              TTC <strong className="nfd-ttc">{formatMontant(ht + tva)}</strong>
+              TTC <strong className="nfd-ttc">{formatAmount(ht + tva)}</strong>
             </span>
           </p>
           {erreur && <p className="field-erreur">{erreur}</p>}

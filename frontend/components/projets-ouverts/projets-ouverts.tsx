@@ -30,8 +30,6 @@ import {
   getMesMentions,
   getTableauProjets,
   heuresTache,
-  jjmm,
-  jjmmaaaa,
   numeroEtape,
   pastilleCarte,
   pastilleEtape,
@@ -46,6 +44,7 @@ import {
 import { TachePanneau } from './tache-panneau';
 import { CartePanneau } from './carte-panneau';
 import { PanneauLateral } from './panneau-lateral';
+import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 
 // Panneau latéral : une tâche, ou le fil d'une carte.
 type Selection = { type: 'tache' | 'carte'; id: string } | null;
@@ -139,9 +138,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
         setPerso({
           reprises: t.taches.filter((x) => x.statut === 'a_reprendre').length,
           // Même règle que « Mes tâches » : reprises en retard comprises.
-          retards: t.taches.filter(
-            (x) => x.statut !== 'validee' && estEnRetard(x, new Date().toISOString().slice(0, 10)),
-          ).length,
+          retards: t.taches.filter((x) => x.statut !== 'validee' && estEnRetard(x, todayIso())).length,
           attente: t.taches.filter((x) => x.statut === 'remise').length,
           mentions: m.filter((x) => !x.lue).length,
         }),
@@ -552,7 +549,7 @@ function Dossier({
           {salarie ? (
             // Revue Salarié : l'essentiel, sans le vocabulaire de direction.
             <p className="po-aide">
-              J{d.jour} sur {d.horizon} · livraison le {jjmmaaaa(d.livraisonLe)} ·{' '}
+              J{d.jour} sur {d.horizon} · livraison le {formatDate(d.livraisonLe)} ·{' '}
               {d.jeSuisChef ? 'vous pilotez la cellule' : `votre chef de team : ${d.cellule?.chef ?? 'à désigner'}`}
             </p>
           ) : (
@@ -582,7 +579,7 @@ function Dossier({
           {/* Le Salarié a déjà J et livraison dans sa ligne d'en-tête. */}
           {!salarie && (
             <span className="po-aide">
-              J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
+              J1 le {formatDate(d.ouvertLe)} → livraison J{d.horizon} le {formatDate(d.livraisonLe)}
             </span>
           )}
           {d.jour > d.horizon && d.statutChantier !== 'livre' && (
@@ -873,7 +870,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
   const enHeures = c.note?.includes('heures ouvrées') && c.debutJ !== null && c.finJ !== null;
   const fenetre =
     c.debutJ !== null && c.debutLe && c.finLe
-      ? `J${c.debutJ} → J${c.finJ} · ${jjmm(c.debutLe)} → ${jjmm(c.finLe)}${enHeures ? ` · ${(c.finJ! - c.debutJ + 1) * HEURES_PAR_JOUR} h ouvrées` : ''}`
+      ? `J${c.debutJ} → J${c.finJ} · ${formatDayMonth(c.debutLe)} → ${formatDayMonth(c.finLe)}${enHeures ? ` · ${(c.finJ! - c.debutJ + 1) * HEURES_PAR_JOUR} h ouvrées` : ''}`
       : (c.note?.split(' : ')[0] ?? null);
   const etiquettes = [c.etiquette, c.client ? 'CLIENT · hors budget atelier' : null].filter((x): x is string => !!x);
 
@@ -940,7 +937,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
                   <span className="po-tache-assigne">{t.assigne?.nom ?? 'À assigner'}</span>
                   <span className="po-tache-heures">{heuresTache(t)}</span>
                   <span className={`po-tache-echeance${t.etat.code === 'en_retard' ? ' po-retard' : ''}`}>
-                    {t.finLe ? jjmm(t.finLe) : '—'}
+                    {t.finLe ? formatDayMonth(t.finLe) : '—'}
                   </span>
                   <span className="po-tache-etat">
                     <span className={`pill pill--${pt.ton}`}>{pt.libelle}</span>
@@ -1017,7 +1014,7 @@ function DateVisite({ slug, projetId, date, modifiable, onMaj }: NonNullable<Pro
           <input type="date" className="field-input" value={date ?? ''} onChange={(e) => changer(e.target.value)} />
         </label>
       ) : (
-        <p className="po-aide">Visite sur site : {date ? jjmm(date) : 'date non renseignée'}</p>
+        <p className="po-aide">Visite sur site : {date ? formatDayMonth(date) : 'date non renseignée'}</p>
       )}
       {!date && <p className="po-aide">Sans date de visite, ces relevés n’ont pas d’échéance.</p>}
       {erreur && <p className="field-erreur">{erreur}</p>}

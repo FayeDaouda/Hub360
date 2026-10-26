@@ -10,13 +10,7 @@ import {
   modifierParametreRentabilite,
   type Parametres,
 } from '@/lib/rentabilite';
-
-const libelleMois = (iso: string) =>
-  new Date(`${iso.slice(0, 7)}-15T12:00:00Z`).toLocaleDateString('fr-FR', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+import { formatMonthYear } from '@/lib/dates';
 
 // Paramètres de la rentabilité (lot 7) : valeurs par défaut (pas
 // d'expert-comptable), modifiables par le CFO seul, au 1er d'un mois, à
@@ -212,7 +206,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                       <span>
                         {formatParametre({ valeur: h.valeur, unite: p.definitions[h.cle]?.unite ?? '', cle: h.cle })}
                       </span>
-                      <span>dès {libelleMois(h.dateEffet)}</span>
+                      <span>dès {formatMonthYear(h.dateEffet)}</span>
                       <span className="cell-sub">
                         {h.motif}
                         {h.par ? ` · ${h.par}` : ''}

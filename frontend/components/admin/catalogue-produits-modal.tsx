@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { creerProduitService, supprimerProduitService, type NouveauProduitService } from '@/lib/devis';
 import type { ProduitService } from '@/lib/types';
-import { formatMontantCompact } from '@/lib/format';
+import { formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
 
 type Props = {
@@ -106,7 +106,7 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
                     <tr key={p.id}>
                       <td data-label="Désignation">{p.designation}</td>
                       <td data-label="Prix unitaire">
-                        {p.prixUnitaire != null ? formatMontantCompact(p.prixUnitaire) : '—'}
+                        {p.prixUnitaire != null ? formatCompactAmount(p.prixUnitaire) : '—'}
                       </td>
                       <td data-label="TVA">{p.tauxTva} %</td>
                       <td data-label="">

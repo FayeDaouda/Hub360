@@ -6,10 +6,8 @@ import { ApiError } from '@/lib/client-api';
 import { confirmerIntegration, enregistrerPointIntegration, getIntegrations, LIBELLE_CONTRAT } from '@/lib/rh';
 import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 
-const jjmm = (iso: string) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
-const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
 const PILL_POINT: Record<PointIntegration['statut'], string> = {
@@ -22,7 +20,7 @@ const libellePoint = (p: PointIntegration) =>
     ? `J${p.jalon} · fait`
     : p.statut === 'a_faire'
       ? `J${p.jalon} · à faire`
-      : `J${p.jalon} · le ${jjmm(p.datePrevue)}`;
+      : `J${p.jalon} · le ${formatDayMonth(p.datePrevue)}`;
 
 // Onglet « Intégration » de la page RH (lot 3) : nouveaux arrivants jusqu'à
 // leur confirmation, points J30/J60/J90 (compte rendu libre — critères du
@@ -79,7 +77,7 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
                     </span>
                     <span className="cell-sub">
                       {s.poste || 'poste à renseigner'} · {s.societe} · {LIBELLE_CONTRAT[s.typeContrat]} · entré(e) le{' '}
-                      {jjmmaaaa(s.dateEntree)}
+                      {formatDate(s.dateEntree)}
                     </span>
                     <span className="integ-jalons">
                       {s.points.map((p) => (
@@ -144,7 +142,7 @@ function DetailIntegration({
       <div>
         <h2 className="dmd-titre">{`${s.prenom} ${s.nom}`.trim() || s.matricule}</h2>
         <span className="cell-sub">
-          {s.matricule} · {s.poste || 'poste à renseigner'} · {s.societe} · entré(e) le {jjmmaaaa(s.dateEntree)}
+          {s.matricule} · {s.poste || 'poste à renseigner'} · {s.societe} · entré(e) le {formatDate(s.dateEntree)}
         </span>
       </div>
 
@@ -211,7 +209,7 @@ function BlocPoint({
   onMaj: (s: IntegrationSalarie) => void;
 }) {
   const [edition, setEdition] = useState(false);
-  const [date, setDate] = useState(p.realiseLe ?? aujourdhui());
+  const [date, setDate] = useState(p.realiseLe ?? todayIso());
   const [texte, setTexte] = useState(p.compteRendu ?? '');
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
   const formulaire = ecriture && (edition || p.statut !== 'fait');
@@ -231,10 +229,10 @@ function BlocPoint({
     <div className="integ-point">
       <span className="integ-carte-tete">
         <strong>
-          J{p.jalon} · prévu le {jjmmaaaa(p.datePrevue)}
+          J{p.jalon} · prévu le {formatDate(p.datePrevue)}
         </strong>
         <span className={`pill ${PILL_POINT[p.statut]}`}>
-          {p.statut === 'fait' ? `Fait le ${jjmmaaaa(p.realiseLe!)}` : p.statut === 'a_faire' ? 'À faire' : 'À venir'}
+          {p.statut === 'fait' ? `Fait le ${formatDate(p.realiseLe!)}` : p.statut === 'a_faire' ? 'À faire' : 'À venir'}
         </span>
       </span>
       {p.statut === 'fait' && !edition && (
@@ -254,7 +252,7 @@ function BlocPoint({
             <input
               type="date"
               className="field-input"
-              max={aujourdhui()}
+              max={todayIso()}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />

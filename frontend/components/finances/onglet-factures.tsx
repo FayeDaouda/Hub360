@@ -1,19 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  dansFiltreFacture,
-  jjmmaaaa,
-  libelleMois,
-  parMois,
-  payeeLe,
-  statutFacture,
-  type FiltreFacture,
-} from '@/lib/finances';
-import { formatMontant } from '@/lib/format';
+import { dansFiltreFacture, libelleMois, parMois, payeeLe, statutFacture, type FiltreFacture } from '@/lib/finances';
+import { formatAmount } from '@/lib/format';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
 import type { FactureCentrale } from '@/lib/types';
+import { formatDate, todayIso } from '@/lib/dates';
 
 const FILTRES: { cle: FiltreFacture; libelle: string }[] = [
   { cle: 'tout', libelle: 'Tout' },
@@ -21,8 +14,6 @@ const FILTRES: { cle: FiltreFacture; libelle: string }[] = [
   { cle: 'en_retard', libelle: 'En retard' },
   { cle: 'encaissees', libelle: 'Encaissées' },
 ];
-
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 // Finances · Factures (maquette) : filtres, factures groupées par mois de
 // création avec le total TTC du mois, encaissé et barre de progression ; une
@@ -107,7 +98,7 @@ function MoisFactures({
     <>
       <tr className="fin-mois">
         <td colSpan={5}>{libelleMois(mois)}</td>
-        <td className="num">{formatMontant(factures.reduce((s, f) => s + f.montantTtc, 0))}</td>
+        <td className="num">{formatAmount(factures.reduce((s, f) => s + f.montantTtc, 0))}</td>
         <td colSpan={2} />
       </tr>
       {factures.map((f) => {
@@ -143,24 +134,24 @@ function MoisFactures({
               </span>
             </td>
             <td data-label="Créée le" className="fl-date">
-              {jjmmaaaa(f.creeLe)}
+              {formatDate(f.creeLe)}
             </td>
             <td
               data-label="Échéance"
-              className={`fl-echeance${f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < aujourdhui() ? ' fin-retard' : ''}`}
+              className={`fl-echeance${f.statutEffectif === 'en_retard' && f.echeanceLe && f.echeanceLe < todayIso() ? ' fin-retard' : ''}`}
             >
-              {f.echeanceLe ? jjmmaaaa(f.echeanceLe) : '—'}
+              {f.echeanceLe ? formatDate(f.echeanceLe) : '—'}
             </td>
             <td data-label="Payée" className="fl-payee">
-              {payee ? jjmmaaaa(payee) : ''}
+              {payee ? formatDate(payee) : ''}
             </td>
             <td data-label="Total TTC" className="num fl-ttc">
-              <strong>{formatMontant(f.montantTtc)}</strong>
+              <strong>{formatAmount(f.montantTtc)}</strong>
             </td>
             <td data-label="Encaissé" className="fl-encaisse">
               {!f.estAvoir && (
                 <span className="fin-encaisse">
-                  <strong>{formatMontant(f.montantPaye)}</strong>
+                  <strong>{formatAmount(f.montantPaye)}</strong>
                   <span className="fin-barre" aria-hidden>
                     <span style={{ width: `${pct}%` }} />
                   </span>

@@ -9,7 +9,6 @@ import {
   delivrerAttestation,
   getDemandesRh,
   type AttestationRh,
-  jjmm,
   LIBELLE_SOINS,
   LIBELLE_TYPE_ABSENCE,
   marquerRembourse,
@@ -20,8 +19,9 @@ import {
   transmettreRemboursement,
   validerAbsenceRh,
 } from '@/lib/demandes';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { DemandeAbsence, DemandeRemboursement } from '@/lib/types';
+import { formatDate } from '@/lib/dates';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -70,7 +70,6 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
   const remboursements = toutes ? donnees.remboursements : rembATraiter;
   const attestATraiter = donnees.attestations.filter((a) => !a.delivreeLe);
   const attestations = toutes ? donnees.attestations : attestATraiter;
-  const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
   return (
     <>
@@ -93,8 +92,8 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                 <span>
                   <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
                   <span className="cell-sub">
-                    {d.salarie?.matricule} · {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {jjmm(d.dateDebut)} →{' '}
-                    {jjmm(d.dateFin)}
+                    {d.salarie?.matricule} · {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {formatDate(d.dateDebut)} →{' '}
+                    {formatDate(d.dateFin)}
                     {d.commentaireRefus && ` — ${d.commentaireRefus}`}
                   </span>
                 </span>
@@ -167,11 +166,11 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
               <li key={r.id} className="dmd-ligne">
                 <span>
                   <strong>
-                    {r.dossier ? `${r.dossier.prenom} ${r.dossier.nom}` : '—'} · {formatMontant(r.montant)}
+                    {r.dossier ? `${r.dossier.prenom} ${r.dossier.nom}` : '—'} · {formatAmount(r.montant)}
                   </strong>
                   <span className="cell-sub">
-                    {LIBELLE_SOINS[r.categorie]} · soins du {jjmm(r.dateSoins)}
-                    {r.montantRembourse != null && ` · remboursé ${formatMontant(r.montantRembourse)}`}
+                    {LIBELLE_SOINS[r.categorie]} · soins du {formatDate(r.dateSoins)}
+                    {r.montantRembourse != null && ` · remboursé ${formatAmount(r.montantRembourse)}`}
                     {r.motifRejet && ` · ${r.motifRejet}`}
                   </span>
                 </span>
@@ -242,8 +241,8 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                     {a.dossier.prenom} {a.dossier.nom}
                   </strong>
                   <span className="cell-sub">
-                    {a.dossier.matricule} · demandée le {jjmmaaaa(a.demandeLe)}
-                    {a.delivreeLe && ` · délivrée le ${jjmmaaaa(a.delivreeLe)} (${a.nom})`}
+                    {a.dossier.matricule} · demandée le {formatDate(a.demandeLe)}
+                    {a.delivreeLe && ` · délivrée le ${formatDate(a.delivreeLe)} (${a.nom})`}
                   </span>
                 </span>
                 <span className="dmd-actions">

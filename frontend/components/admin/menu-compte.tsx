@@ -29,6 +29,7 @@ import { AvatarPersonne } from '@/components/avatar-personne';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { deconnecterPartout, getProfil, nomAffiche, type Profil } from '@/lib/profil';
 import { useConfirmer } from '@/components/confirmation';
+import { formatDayMonth } from '@/lib/dates';
 
 // Menu du compte (avatar, en haut à droite) : qui je suis (nom, e-mail, rôle,
 // société), l'état de ma double authentification, mes accès personnels
@@ -45,7 +46,6 @@ const LIBELLE_ABSENCE: Record<NonNullable<Profil['absence']>['type'], string> = 
   permission_exceptionnelle: 'permission exceptionnelle',
   autre: 'absence',
 };
-const jjmm = (iso: string) => iso.slice(0, 10).split('-').reverse().slice(0, 2).join('/');
 // « le 22/10 à 18 h 40 », « aujourd'hui à 9 h 05 ».
 function quand(iso: string): string {
   const d = new Date(iso);
@@ -187,7 +187,7 @@ export function MenuCompte({
             <p className="mc-absence">
               <CalendarOff size={16} aria-hidden />
               <span>
-                Absent·e jusqu’au {jjmm(profil.absence.jusquau)}
+                Absent·e jusqu’au {formatDayMonth(profil.absence.jusquau)}
                 <span className="mc-absence-type"> · {LIBELLE_ABSENCE[profil.absence.type]}</span>
               </span>
             </p>

@@ -6,8 +6,9 @@ import { CircleAlert, CircleCheck, FileUp, LoaderCircle, X } from 'lucide-react'
 import { ApiError } from '@/lib/client-api';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { deposerBulletin } from '@/lib/rh';
-import { libelleMois } from '@/lib/temps';
+
 import type { DossierPersonnel } from '@/lib/types';
+import { formatMonthYear } from '@/lib/dates';
 
 // `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
 // ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
@@ -169,7 +170,7 @@ export function DepotBulletins({
             <>
               <p className="db-bilan">
                 {lignes.length} fichier{lignes.length > 1 ? 's' : ''} · {pretes.length} prêt
-                {pretes.length > 1 ? 's' : ''} pour {libelleMois(mois)}
+                {pretes.length > 1 ? 's' : ''} pour {formatMonthYear(mois)}
                 {nonReconnus > 0 && (
                   <span className="db-alerte">
                     {' '}

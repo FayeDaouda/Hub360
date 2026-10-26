@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, Minus, type LucideIcon } from 'lucide-react';
 import type { EtatTuile } from '@/lib/couleurs-etat';
-import { formatMontant, formatMontantCompact } from '@/lib/format';
+import { formatAmount, formatCompactAmount } from '@/lib/format';
 
 // Bandeau de KPI — chiffres dérivés de la liste déjà chargée par la page
 // (aucun endpoint, aucune saisie). Pas de « vs période précédente » comme le
@@ -102,8 +102,8 @@ export function KpiStrip({ tuiles, compact = false }: { tuiles: KpiTuile[]; comp
         }${estFiltreActif ? ' kpi-tuile--actif' : ''}`;
         const arrondi = t.montant != null && Math.abs(t.montant) >= 1_000_000;
         const valeur =
-          t.montant == null ? t.valeur : arrondi ? formatMontantCompact(t.montant) : formatMontant(t.montant);
-        const sousTexte = arrondi ? [formatMontant(t.montant!), t.sousTexte].filter(Boolean).join(' · ') : t.sousTexte;
+          t.montant == null ? t.valeur : arrondi ? formatCompactAmount(t.montant) : formatAmount(t.montant);
+        const sousTexte = arrondi ? [formatAmount(t.montant!), t.sousTexte].filter(Boolean).join(' · ') : t.sousTexte;
         const contenu = (
           <>
             <div className="kpi-tuile-tete">

@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   getFil,
-  jjmmaaaa,
   publierCommentaire,
   resoudreCommentaire,
   type CommentaireFil,
   type MessageFil,
 } from '@/lib/projets-ouverts';
 import { Infobulle } from '@/components/infobulle';
+import { formatDate } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -104,7 +104,7 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
                 ))}
                 <div className="po-fil-actions">
                   {c.ouvert && <span className="pill pill--attention">Ouvert</span>}
-                  {c.resoluLe && <span className="po-aide">Résolu le {jjmmaaaa(c.resoluLe)}</span>}
+                  {c.resoluLe && <span className="po-aide">Résolu le {formatDate(c.resoluLe)}</span>}
                   {mentionnables && c.reponses.length === 0 && !c.resoluLe && (
                     <button type="button" className="po-lien" onClick={() => setReponseA(c)}>
                       Répondre
@@ -178,7 +178,7 @@ function Message({ m }: { m: MessageFil }) {
   return (
     <div className="po-fil-message">
       <p className="po-aide">
-        <strong>{m.auteur?.nom ?? 'Compte supprimé'}</strong> · {jjmmaaaa(m.le)}
+        <strong>{m.auteur?.nom ?? 'Compte supprimé'}</strong> · {formatDate(m.le)}
         {m.mentionne && <span className="po-fil-mention"> @{m.mentionne.nom}</span>}
       </p>
       <p>{m.texte}</p>

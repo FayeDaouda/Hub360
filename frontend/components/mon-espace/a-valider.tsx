@@ -7,8 +7,8 @@ import { ApiError } from '@/lib/client-api';
 import { deciderTache, getTachesAValider, telechargerPieceRemise } from '@/lib/mon-espace';
 import type { TacheAValider } from '@/lib/types';
 import { DemandesEquipe } from './demandes-equipe';
+import { formatDate } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 // Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
 const lienProjet = (base: string, projetId: string) =>
   base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
@@ -94,8 +94,8 @@ function LigneAValider({
             {t.projetCode}
           </Link>{' '}
           · {t.etape} · remise v{String(t.version).padStart(2, '0')}
-          {t.remisLe && ` le ${jjmmaaaa(t.remisLe)}`}
-          {t.echeance && ` · échéance ${jjmmaaaa(t.echeance)}`}
+          {t.remisLe && ` le ${formatDate(t.remisLe)}`}
+          {t.echeance && ` · échéance ${formatDate(t.echeance)}`}
         </span>
         {enRetard && <span className="cell-sub temps-alerte">Remis après l’échéance</span>}
         <span className="cell-sub">

@@ -6,11 +6,11 @@ import { BoutonExport } from '@/components/bouton-export';
 import { ApiError } from '@/lib/client-api';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { relancerFacture } from '@/lib/facturation';
-import { formatMontant, formatMontantCompact } from '@/lib/format';
+import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { balanceAgee, echeancier, TRANCHES, type LigneBalance } from '@/lib/tresorerie';
 import type { FactureCentrale } from '@/lib/types';
+import { formatDayMonth, todayIso } from '@/lib/dates';
 
-const jjmm = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '—');
 const nomFacture = (f: FactureCentrale) =>
   f.reference ?? (f.statut === 'brouillon' ? `${f.libelle || 'tranche'} (prévue)` : 'facture');
 
@@ -28,7 +28,7 @@ export function OngletTresorerie({
   peutRelancer: boolean;
   onOuvrirFacture: (id: string) => void;
 }) {
-  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const aujourdhui = useMemo(() => todayIso(), []);
   const balance = useMemo(() => balanceAgee(factures, aujourdhui), [factures, aujourdhui]);
   const prevision = useMemo(() => echeancier(factures, aujourdhui), [factures, aujourdhui]);
   const [fenetre, setFenetre] = useState<string | null>(null);
@@ -66,8 +66,8 @@ export function OngletTresorerie({
       onClick={() => setFenetre((x) => (x === cle ? null : cle))}
     >
       <span className="tre-carte-titre">{titre}</span>
-      <strong>{formatMontantCompact(sur)}</strong>
-      <span className="cell-sub">{prevu > 0 ? `+ ${formatMontantCompact(prevu)} prévus` : sous}</span>
+      <strong>{formatCompactAmount(sur)}</strong>
+      <span className="cell-sub">{prevu > 0 ? `+ ${formatCompactAmount(prevu)} prévus` : sous}</span>
     </button>
   );
 
@@ -77,11 +77,11 @@ export function OngletTresorerie({
         <div className="tre-tete">
           <h2 className="dmd-titre">Encaissements attendus</h2>
           <p className="dmd-note">
-            D’ici 90 jours : <strong>{formatMontant(cumul.sur)}</strong> facturés à encaisser
+            D’ici 90 jours : <strong>{formatAmount(cumul.sur)}</strong> facturés à encaisser
             {cumul.prevu > 0 && (
               <>
                 {' '}
-                + <strong>{formatMontant(cumul.prevu)}</strong> de tranches prévues, pas encore émises
+                + <strong>{formatAmount(cumul.prevu)}</strong> de tranches prévues, pas encore émises
               </>
             )}
             .
@@ -96,7 +96,7 @@ export function OngletTresorerie({
             `${prevision.enRetard.factures.length} facture(s) à recouvrer`,
             'risque',
           )}
-          {prevision.fenetres.map((w) => carte(w.cle, w.libelle, w.sur, w.prevu, `jusqu’au ${jjmm(w.au)}`))}
+          {prevision.fenetres.map((w) => carte(w.cle, w.libelle, w.sur, w.prevu, `jusqu’au ${formatDayMonth(w.au)}`))}
           {carte(
             'nondate',
             'Sans date',
@@ -112,7 +112,7 @@ export function OngletTresorerie({
             {listeFenetre.map((f) => (
               <li key={f.id}>
                 <button type="button" className="tre-ligne" onClick={() => onOuvrirFacture(f.id)}>
-                  <span className="tre-ligne-date">{jjmm(f.echeanceLe)}</span>
+                  <span className="tre-ligne-date">{formatDayMonth(f.echeanceLe)}</span>
                   <span className="tre-ligne-corps">
                     <strong>{f.client?.nom ?? '—'}</strong>
                     <span className="cell-sub">
@@ -121,7 +121,7 @@ export function OngletTresorerie({
                     </span>
                   </span>
                   <span className="tre-ligne-montant">
-                    {formatMontant(f.statut === 'brouillon' ? f.montantTtc : f.resteAPayer)}
+                    {formatAmount(f.statut === 'brouillon' ? f.montantTtc : f.resteAPayer)}
                     {f.statut === 'brouillon' && <span className="pill pill--neutre">prévue</span>}
                   </span>
                 </button>
@@ -131,7 +131,7 @@ export function OngletTresorerie({
         )}
         {(prevision.auDela.sur > 0 || prevision.auDela.prevu > 0) && (
           <p className="cell-sub">
-            Au-delà de 90 jours : {formatMontant(prevision.auDela.sur + prevision.auDela.prevu)}.
+            Au-delà de 90 jours : {formatAmount(prevision.auDela.sur + prevision.auDela.prevu)}.
           </p>
         )}
       </section>
@@ -192,11 +192,11 @@ export function OngletTresorerie({
                           data-tranche={l.montants[t.cle] > 0 ? t.cle : undefined}
                           data-vide={l.montants[t.cle] > 0 ? undefined : ''}
                         >
-                          {l.montants[t.cle] > 0 ? formatMontant(l.montants[t.cle]) : '—'}
+                          {l.montants[t.cle] > 0 ? formatAmount(l.montants[t.cle]) : '—'}
                         </td>
                       ))}
                       <td data-label="Total dû" className="num tre-total">
-                        {formatMontant(l.montants.total)}
+                        {formatAmount(l.montants.total)}
                       </td>
                     </tr>
                     {ouvert === l.client && (
@@ -206,7 +206,7 @@ export function OngletTresorerie({
                             {l.creances.map(({ facture: f, retard }) => (
                               <li key={f.id} className="tre-creance">
                                 <button type="button" className="tre-ligne" onClick={() => onOuvrirFacture(f.id)}>
-                                  <span className="tre-ligne-date">{jjmm(f.echeanceLe)}</span>
+                                  <span className="tre-ligne-date">{formatDayMonth(f.echeanceLe)}</span>
                                   <span className="tre-ligne-corps">
                                     <strong>{nomFacture(f)}</strong>
                                     <span className="cell-sub">
@@ -214,7 +214,7 @@ export function OngletTresorerie({
                                       {f.projet ? ` · ${f.projet.code}` : ''}
                                     </span>
                                   </span>
-                                  <span className="tre-ligne-montant">{formatMontant(f.resteAPayer)}</span>
+                                  <span className="tre-ligne-montant">{formatAmount(f.resteAPayer)}</span>
                                 </button>
                                 {peutRelancer &&
                                   retard > 0 &&
@@ -248,11 +248,11 @@ export function OngletTresorerie({
                       className="num"
                       data-vide={balance.total[t.cle] > 0 ? undefined : ''}
                     >
-                      {formatMontant(balance.total[t.cle])}
+                      {formatAmount(balance.total[t.cle])}
                     </td>
                   ))}
                   <td data-label="Total dû" className="num tre-total">
-                    {formatMontant(balance.total.total)}
+                    {formatAmount(balance.total.total)}
                   </td>
                 </tr>
               </tfoot>

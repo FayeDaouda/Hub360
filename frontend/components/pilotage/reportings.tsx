@@ -4,14 +4,13 @@ import { useState } from 'react';
 import { deposerReporting } from '@/lib/pilotage';
 import { PastillesSuivi, SuiviReporting } from '@/components/pilotage/suivi-reporting';
 import type { ReportingPilotage, StatutReporting, VuePilotage } from '@/lib/types';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+import { formatDate } from '@/lib/dates';
 
 function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
   const statuts: Record<StatutReporting, { classe: string; libelle: string }> = {
     a_deposer: { classe: 'pill--attention', libelle: r.contenu ? 'À déposer · prérempli' : 'À déposer' },
     en_retard: { classe: 'pill--risque', libelle: 'En retard · alerte CODIR' },
-    depose: { classe: 'pill--succes', libelle: `Déposé le ${jjmmaaaa(r.deposeLe ?? '')}` },
+    depose: { classe: 'pill--succes', libelle: `Déposé le ${formatDate(r.deposeLe ?? '')}` },
     depose_en_retard: { classe: 'pill--risque', libelle: 'Déposé en retard · alerte CODIR' },
   };
   return statuts[r.statut];
@@ -93,7 +92,7 @@ export function Reportings({
                   <span role="cell">
                     {x.emetteur} → {x.destinataire}
                   </span>
-                  <span role="cell">{jjmmaaaa(x.echeance)}</span>
+                  <span role="cell">{formatDate(x.echeance)}</span>
                   <span role="cell" className="pi-pastilles">
                     <span className={`pill ${pill.classe}`}>{pill.libelle}</span>
                     <PastillesSuivi r={x} />
@@ -108,7 +107,7 @@ export function Reportings({
       {r && (
         <section className="panel glass-panel pi-fiche">
           <p className="po-kicker">
-            {r.emetteur} → {r.destinataire} · échéance {jjmmaaaa(r.echeance)}
+            {r.emetteur} → {r.destinataire} · échéance {formatDate(r.echeance)}
           </p>
           <h2>
             {r.titre} · {r.periode}
@@ -132,7 +131,7 @@ export function Reportings({
           {!r.deposeLe && r.contenu && (
             <p className="pi-note">
               Prérempli automatiquement depuis le HUB : l’émetteur relit puis dépose. Sans dépôt au{' '}
-              {jjmmaaaa(r.echeance)}, une alerte est inscrite au registre pour le CODIR.
+              {formatDate(r.echeance)}, une alerte est inscrite au registre pour le CODIR.
             </p>
           )}
           {r.analyse ? (

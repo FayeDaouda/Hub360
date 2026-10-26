@@ -6,15 +6,16 @@ import { getDevisPublic, repondreDevisPublic } from '@/lib/devis';
 import { STATUTS_DEVIS, type DevisPublic, type StatutDevisEffectif } from '@/lib/types';
 import { DocumentFacturation } from '@/components/document-facturation';
 import { useConfirmer } from '@/components/confirmation';
+import { formatLongDate } from '@/lib/dates';
 
 type Props = { params: Promise<{ token: string }> };
 
 const MESSAGE_STATUT: Partial<Record<DevisPublic['statutEffectif'], (d: DevisPublic) => string>> = {
-  accepte: (d) => `Vous avez accepté ce devis${d.dateReponse ? ` le ${formatDate(d.dateReponse)}` : ''}.`,
-  refuse: (d) => `Vous avez refusé ce devis${d.dateReponse ? ` le ${formatDate(d.dateReponse)}` : ''}.`,
+  accepte: (d) => `Vous avez accepté ce devis${d.dateReponse ? ` le ${formatLongDate(d.dateReponse)}` : ''}.`,
+  refuse: (d) => `Vous avez refusé ce devis${d.dateReponse ? ` le ${formatLongDate(d.dateReponse)}` : ''}.`,
   transforme: () => 'Ce devis a été accepté et transformé en facture.',
   expire: (d) =>
-    `Ce devis a expiré${d.dateValidite ? ` le ${formatDate(d.dateValidite)}` : ''} — contactez-nous pour en obtenir un nouveau.`,
+    `Ce devis a expiré${d.dateValidite ? ` le ${formatLongDate(d.dateValidite)}` : ''} — contactez-nous pour en obtenir un nouveau.`,
 };
 
 const PILL_DEVIS: Record<StatutDevisEffectif, string> = {
@@ -25,11 +26,6 @@ const PILL_DEVIS: Record<StatutDevisEffectif, string> = {
   expire: 'pill--risque',
   transforme: 'pill--succes',
 };
-
-function formatDate(iso: string): string {
-  const d = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 export default function DevisPublicPage(props: Props) {
   const params = use(props.params);
@@ -94,8 +90,8 @@ export default function DevisPublicPage(props: Props) {
           reference={devis.reference}
           statutLabel={STATUTS_DEVIS[devis.statutEffectif]}
           statutClasse={PILL_DEVIS[devis.statutEffectif]}
-          dateEmission={devis.dateEnvoi ? formatDate(devis.dateEnvoi) : null}
-          dateValidite={devis.dateValidite ? formatDate(devis.dateValidite) : null}
+          dateEmission={devis.dateEnvoi ? formatLongDate(devis.dateEnvoi) : null}
+          dateValidite={devis.dateValidite ? formatLongDate(devis.dateValidite) : null}
           clientNom={devis.clientNom}
           objet={devis.objet}
           lignes={devis.lignes}

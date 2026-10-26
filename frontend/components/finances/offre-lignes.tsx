@@ -3,7 +3,7 @@
 import { Lock, Plus, X } from 'lucide-react';
 import { ligneVide, synchroniserCategorie, type LigneForm } from '@/components/admin/lignes-devis-editeur';
 import type { LigneDevisSaisie } from '@/lib/devis';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { ProduitService } from '@/lib/types';
 
 // Familles proposées dans une offre de lead, dans l'ordre (les TS ne passent
@@ -172,7 +172,7 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
                 {p && !p.prixModifiable ? (
                   <>
                     <Lock size={12} aria-label="Prix du catalogue figé" />
-                    {formatMontant(Number(l.prixUnitaire) || 0)}
+                    {formatAmount(Number(l.prixUnitaire) || 0)}
                     {p.unite && PAR_UNITE[p.unite] && <small>{PAR_UNITE[p.unite]}</small>}
                   </>
                 ) : (
@@ -189,7 +189,7 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
                 )}
               </span>
               <strong role="cell" data-label="Total HT" className="offre-num">
-                {formatMontant(total)}
+                {formatAmount(total)}
               </strong>
               <span role="cell">
                 <button

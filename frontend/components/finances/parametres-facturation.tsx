@@ -17,12 +17,12 @@ import {
   type ParametresFacturation,
   type ProfilFacturation,
 } from '@/lib/facturation';
+import { formatDate } from '@/lib/dates';
 
 // Coordonnées de paiement : un changement est confirmé, notifié au CEO et tracé.
 const CHAMPS_PAIEMENT: ChampTexte[] = ['banque', 'rib', 'wave', 'orangeMoney'];
 const LOGO_MAX = 600 * 1024;
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
 type ChampTexte = Exclude<keyof ProfilFacturation, 'logoDocument' | 'cgvAnnexe' | 'modeCommission'>;
@@ -282,7 +282,7 @@ export function ParametresFacturationFenetre({
                 {p.historique.map((h) => (
                   <li key={h.le}>
                     <span className="rtf-mois-nom">{h.exemple}</span>
-                    <span>le {jjmmaaaa(h.le)}</span>
+                    <span>le {formatDate(h.le)}</span>
                     <span className="cell-sub">
                       {h.motif}
                       {h.par ? ` · ${h.par}` : ''}

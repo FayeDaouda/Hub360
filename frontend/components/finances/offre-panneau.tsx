@@ -6,11 +6,12 @@ import { X } from 'lucide-react';
 import { agirSurDossier, completudeFiche } from '@/lib/crm';
 import { creerDevis, getDevis, majDevis } from '@/lib/devis';
 import { COMMODITES } from '@/lib/fiche-programme';
-import { identiteSociete, jjmmaaaa } from '@/lib/finances';
+import { identiteSociete } from '@/lib/finances';
 import { CATEGORIES, GAMMES, STANDINGS, type Devis, type ProduitService, type Projet, type Societe } from '@/lib/types';
 import { lignesDepuisDevis, ligneVide, type LigneForm } from '@/components/admin/lignes-devis-editeur';
 import { OffreLignes, lignesBrouillon } from './offre-lignes';
 import { OffreAnnexes } from './offre-annexes';
+import { formatDate } from '@/lib/dates';
 
 const ENREGISTREMENT_MS = 700;
 const LIBELLES_COMMODITES = new Map(COMMODITES.flatMap((g) => g.items));
@@ -218,7 +219,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
             </h2>
             <p className="fiche-crm-meta">
               {devis
-                ? [devis.client.nom, devis.dossierCrm?.code, `créée le ${jjmmaaaa(devis.creeLe)}`]
+                ? [devis.client.nom, devis.dossierCrm?.code, `créée le ${formatDate(devis.creeLe)}`]
                     .filter(Boolean)
                     .join(' · ')
                 : 'Choisir le lead ou créer le client'}
@@ -330,7 +331,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
                   <dt>Numéro</dt>
                   <dd className="fin-code">{devis.reference ?? '—'}</dd>
                   <dt>Date</dt>
-                  <dd>{jjmmaaaa(devis.creeLe)}</dd>
+                  <dd>{formatDate(devis.creeLe)}</dd>
                   <dt>Validité</dt>
                   <dd>7 jours après envoi</dd>
                 </dl>

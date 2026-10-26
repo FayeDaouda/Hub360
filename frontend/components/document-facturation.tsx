@@ -1,5 +1,5 @@
 import { SocieteAvatar } from '@/components/societe-avatar';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 
 // Rendu visuel PARTAGÉ d'un document de facturation (Devis ou Facture) —
 // utilisé tel quel sur la page publique du devis (cf. app/devis/[token]) ET
@@ -144,9 +144,9 @@ export function DocumentFacturation({
                   {l.designation}
                   {detailLigne(l) && <span className="cell-sub">{detailLigne(l)}</span>}
                 </td>
-                <td>{formatMontant(l.prixUnitaire)}</td>
+                <td>{formatAmount(l.prixUnitaire)}</td>
                 <td>{l.quantite}</td>
-                <td>{formatMontant(l.montantHt)}</td>
+                <td>{formatAmount(l.montantHt)}</td>
               </tr>
             ))}
           </tbody>
@@ -155,15 +155,15 @@ export function DocumentFacturation({
         <div className="devis-public-recap">
           <div className="devis-public-recap-ligne">
             <span>Sous-total HT</span>
-            <span>{formatMontant(montantHt)}</span>
+            <span>{formatAmount(montantHt)}</span>
           </div>
           <div className="devis-public-recap-ligne">
             <span>TVA</span>
-            <span>{formatMontant(montantTva)}</span>
+            <span>{formatAmount(montantTva)}</span>
           </div>
           <div className="devis-public-recap-total" style={{ background: gradient }}>
             <span>Total TTC</span>
-            <span>{formatMontant(montantTtc)}</span>
+            <span>{formatAmount(montantTtc)}</span>
           </div>
         </div>
       </div>

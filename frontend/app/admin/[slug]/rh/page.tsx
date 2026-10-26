@@ -48,7 +48,7 @@ import {
   type MajDossier,
   type TachesOuvertes,
 } from '@/lib/rh';
-import { getFeuillesTemps, libelleMois } from '@/lib/temps';
+import { getFeuillesTemps } from '@/lib/temps';
 import { getDemandesRh } from '@/lib/demandes';
 import { LIBELLE_PAIEMENT_SALAIRE } from '@/lib/mon-espace';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
@@ -61,10 +61,9 @@ import { DepotBulletins } from '@/components/rh/depot-bulletins';
 import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
+import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 
 type Props = { params: Promise<{ slug: string }> };
-
-const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—');
 
 // Mois de paie par défaut : le mois précédent (AAAA-MM).
 function moisPrecedent(): string {
@@ -501,7 +500,7 @@ export default function RhPage(props: Props) {
                     </td>
                     <td data-label="Contrat" className="rh-c-contrat">
                       {LIBELLE_CONTRAT[d.typeContrat]}
-                      {d.typeContrat !== 'cdi' && d.dateFin && ` → ${jjmmaaaa(d.dateFin)}`}
+                      {d.typeContrat !== 'cdi' && d.dateFin && ` → ${formatDate(d.dateFin)}`}
                     </td>
                     <td data-label="Dossier" className="rh-c-dossier">
                       <span className="progress">
@@ -515,7 +514,7 @@ export default function RhPage(props: Props) {
                       </span>
                     </td>
                     <td data-label="Entrée" className="rh-c-entree">
-                      {jjmmaaaa(d.dateEntree)}
+                      {formatDate(d.dateEntree)}
                     </td>
                   </tr>
                 ))}
@@ -534,7 +533,7 @@ export default function RhPage(props: Props) {
 const CHAMPS_VIDES: MajDossier = {
   poste: '',
   typeContrat: 'cdi',
-  dateEntree: new Date().toISOString().slice(0, 10),
+  dateEntree: todayIso(),
   dateFin: null,
   finEssai: null,
   visiteMedicale: null,
@@ -668,7 +667,7 @@ function FicheDossier({
     if (!dossier) return;
     if (
       !(await confirmer({
-        titre: `Retirer le bulletin de ${libelleMois(mois)} ?`,
+        titre: `Retirer le bulletin de ${formatMonthYear(mois)} ?`,
         message: 'Le salarié ne le verra plus.',
         confirmer: 'Retirer',
         danger: true,
@@ -1021,8 +1020,8 @@ function FicheDossier({
                     <li key={b.mois} className="rh-piece">
                       <span className="rh-piece-point est-joint" aria-hidden />
                       <span className="rh-piece-libelle">
-                        <strong className="mes-mois">{libelleMois(b.mois)}</strong>
-                        <span className="cell-sub">déposé le {jjmmaaaa(b.deposeLe)}</span>
+                        <strong className="mes-mois">{formatMonthYear(b.mois)}</strong>
+                        <span className="cell-sub">déposé le {formatDate(b.deposeLe)}</span>
                       </span>
                       <button
                         type="button"
@@ -1070,7 +1069,7 @@ function FicheDossier({
                 <label key={t.id} className="field">
                   <span className="field-label">
                     {t.projet} · {t.carte} · {t.libelle}
-                    {t.finLe && ` · échéance ${jjmmaaaa(t.finLe)}`}
+                    {t.finLe && ` · échéance ${formatDate(t.finLe)}`}
                     {t.statut === 'a_valider' && ' · remise en attente de validation'}
                   </span>
                   <select

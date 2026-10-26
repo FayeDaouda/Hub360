@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import {
   finDeMois,
   formatTaux,
@@ -15,10 +15,8 @@ import {
   type CoutSalarie,
   type FicheRentabilite,
 } from '@/lib/rentabilite';
+import { formatDate, formatMonthYear } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const libelleMois = (m: string) =>
-  new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
 // Fiche de rentabilité d'un projet (lot 7, phase 1), en panneau latéral :
@@ -102,17 +100,17 @@ export function FicheRentabilitePanneau({
                   <>
                     <div>
                       <dt>Montant HT facturé</dt>
-                      <dd>{formatMontant(f.ht ?? 0)}</dd>
+                      <dd>{formatAmount(f.ht ?? 0)}</dd>
                     </div>
                     <div>
                       <dt>Coût salarial direct</dt>
-                      <dd>{formatMontant(f.cout ?? 0)}</dd>
+                      <dd>{formatAmount(f.cout ?? 0)}</dd>
                     </div>
                     <div>
                       <dt>Marge directe provisoire</dt>
                       <dd className={(f.marge ?? 0) < 0 ? 'rt-negatif' : undefined}>
                         <strong>
-                          {f.marge === null ? 'Non calculable : données insuffisantes' : formatMontant(f.marge)}
+                          {f.marge === null ? 'Non calculable : données insuffisantes' : formatAmount(f.marge)}
                         </strong>
                       </dd>
                     </div>
@@ -135,14 +133,14 @@ export function FicheRentabilitePanneau({
                 {montants && f.aFacturer ? (
                   <div>
                     <dt>Encore à facturer (hors marge)</dt>
-                    <dd>{formatMontant(f.aFacturer)}</dd>
+                    <dd>{formatAmount(f.aFacturer)}</dd>
                   </div>
                 ) : null}
                 {f.parHeure && (
                   <div>
                     <dt>Par heure contrôlée</dt>
                     <dd>
-                      {formatMontant(f.parHeure.honoraires)} facturés · {formatMontant(f.parHeure.cout)} de coût
+                      {formatAmount(f.parHeure.honoraires)} facturés · {formatAmount(f.parHeure.cout)} de coût
                     </dd>
                   </div>
                 )}
@@ -170,10 +168,10 @@ export function FicheRentabilitePanneau({
                 <ul className="rtf-mois">
                   {f.mois.map((m) => (
                     <li key={m.mois}>
-                      <span className="rtf-mois-nom">{libelleMois(m.mois)}</span>
+                      <span className="rtf-mois-nom">{formatMonthYear(m.mois)}</span>
                       <span>{m.heures.toLocaleString('fr-FR')} h</span>
-                      {montants && <span>{formatMontant(m.cout ?? 0)} de coût</span>}
-                      {montants && <span>{formatMontant(m.ht ?? 0)} facturés</span>}
+                      {montants && <span>{formatAmount(m.cout ?? 0)} de coût</span>}
+                      {montants && <span>{formatAmount(m.ht ?? 0)} facturés</span>}
                     </li>
                   ))}
                 </ul>
@@ -190,8 +188,8 @@ export function FicheRentabilitePanneau({
                     {f.factures.map((x) => (
                       <li key={x.id}>
                         <span className="rtf-mois-nom">{x.reference ?? '—'}</span>
-                        <span>{jjmmaaaa(x.emiseLe)}</span>
-                        <span className={x.ht < 0 ? 'rt-negatif' : undefined}>{formatMontant(x.ht)} HT</span>
+                        <span>{formatDate(x.emiseLe)}</span>
+                        <span className={x.ht < 0 ? 'rt-negatif' : undefined}>{formatAmount(x.ht)} HT</span>
                         <span className="cell-sub">
                           {x.estAvoir ? 'avoir' : x.annulee ? 'annulée par avoir' : x.libelle}
                           {x.horsCumul && ' · hors cumul (émise après l’arrêté)'}
@@ -232,7 +230,7 @@ export function FicheRentabilitePanneau({
                           {s.sansSalaire ? (
                             <span className="pill pill--attention">sans salaire validé</span>
                           ) : (
-                            formatMontant(s.cout ?? 0)
+                            formatAmount(s.cout ?? 0)
                           )}
                         </span>
                       </li>

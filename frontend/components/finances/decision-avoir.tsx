@@ -5,9 +5,8 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { deciderAvoir, LIBELLE_MOTIF_AVOIR, type AvoirAValider } from '@/lib/facturation';
-import { formatMontant } from '@/lib/format';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+import { formatAmount } from '@/lib/format';
+import { formatDate } from '@/lib/dates';
 
 // Avoir au-delà du seuil (contrôle interne, revue CFO 20/10/2026) : le CEO
 // le valide (l'avoir est émis, la facture annulée) ou le refuse avec un motif.
@@ -65,7 +64,7 @@ export function DecisionAvoir({
             <div>
               <dt>Montant annulé</dt>
               <dd>
-                <strong>{formatMontant(avoir.montantTtc)} TTC</strong>
+                <strong>{formatAmount(avoir.montantTtc)} TTC</strong>
               </dd>
             </div>
             <div>
@@ -81,7 +80,7 @@ export function DecisionAvoir({
             <div>
               <dt>Demandé</dt>
               <dd>
-                le {jjmmaaaa(avoir.demandeLe)}
+                le {formatDate(avoir.demandeLe)}
                 {avoir.demandePar ? ` par ${avoir.demandePar}` : ''}
               </dd>
             </div>

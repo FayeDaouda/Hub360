@@ -5,8 +5,8 @@ import { ApiError } from '@/lib/client-api';
 import { demanderPaiement, LIBELLE_PAIEMENT_SALAIRE, majCoordonnees, type ChampsPersonnels } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
 import type { ModePaiementSalaire, ProfilMonEspace, SituationFamiliale } from '@/lib/types';
+import { formatDate } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : '—');
 const ou = (v: string) => v.trim() || '—';
 // Pièce d'identité masquée (maquette : « •••• 2211 »).
 const masquer = (n: string) => (n.trim() ? `•••• ${n.trim().slice(-4)}` : '—');
@@ -95,8 +95,8 @@ export function MesInformations({
     ['Poste', ou(dossier.poste)],
     ['Cellule', dossier.cellule ?? 'sans cellule'],
     ['Contrat', LIBELLE_CONTRAT[dossier.typeContrat]],
-    ['Date d’entrée', jjmmaaaa(dossier.dateEntree)],
-    ['Date de naissance', jjmmaaaa(dossier.dateNaissance)],
+    ['Date d’entrée', formatDate(dossier.dateEntree)],
+    ['Date de naissance', formatDate(dossier.dateNaissance)],
     ['Pièce d’identité', masquer(dossier.numeroPiece)],
     ['N° IPM / assurance', ou(dossier.numeroIpm)],
     ['E-mail professionnel', ou(dossier.emailPro)],
@@ -204,7 +204,7 @@ export function MesInformations({
           </button>
           {enAttente ? (
             <span className="me-attente">
-              En attente de la RH · {LIBELLE_PAIEMENT_SALAIRE[enAttente.mode]} (soumis le {jjmmaaaa(enAttente.le)})
+              En attente de la RH · {LIBELLE_PAIEMENT_SALAIRE[enAttente.mode]} (soumis le {formatDate(enAttente.le)})
             </span>
           ) : (
             <span className="me-ok">À jour · {LIBELLE_PAIEMENT_SALAIRE[dossier.modePaiement]}</span>

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { Lock, X } from 'lucide-react';
 import { TAUX_COORDINATION_ET, identiteSociete } from '@/lib/finances';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import { TAUX_TVA_DEFAUT, type ProduitService, type Societe } from '@/lib/types';
 
 // Ordre de la grille (maquette) : conception, images, suivi, reprises, puis
@@ -94,7 +94,7 @@ export function GrilleTarifaire({ societe, catalogue, onClose }: Props) {
               </span>
               <span className="grille-prix">
                 <Lock size={12} aria-label="Verrouillé" />
-                {formatMontant(p.prixUnitaire!)}
+                {formatAmount(p.prixUnitaire!)}
               </span>
             </li>
           ))}

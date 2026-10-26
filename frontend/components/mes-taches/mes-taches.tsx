@@ -53,6 +53,7 @@ import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { TacheDrawer } from './tache-drawer';
 import { prenomAffiche } from '@/lib/profil';
+import { formatDayMonth, toIsoDay, todayIso } from '@/lib/dates';
 
 type MesTachesApi = { taches: TacheMonEspace[]; stats: StatsPerformances };
 type Filtre = 'reprises' | 'retards' | 'semaine' | 'attente' | 'mentions';
@@ -88,13 +89,12 @@ const VIDE: Record<Filtre, string> = {
 };
 const CLE_VUE = 'hub.mes-taches.vue';
 
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const parEcheance = (a: TacheMonEspace, b: TacheMonEspace) =>
   (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999');
 const decaler = (iso: string, jours: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + jours);
-  return d.toISOString().slice(0, 10);
+  return toIsoDay(d);
 };
 const jourSemaine = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
 // Date qui fait foi pour l'urgence : la nouvelle date accordée si la tâche est
@@ -145,7 +145,7 @@ export function MesTaches({ slug }: { slug: string }) {
   useTitrePage('');
   const { utilisateur } = useSessionCourante();
   const base = `/admin/${slug}`;
-  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const aujourdhui = useMemo(() => todayIso(), []);
   const [donnees, setDonnees] = useState<MesTachesApi | null>(null);
   // Relance du validateur, par tâche (aside « Chez mon N+1 »).
   const [relances, setRelances] = useState<Record<string, 'envoi' | 'ok' | { erreur: string }>>({});
@@ -580,7 +580,7 @@ export function MesTaches({ slug }: { slug: string }) {
                 <span className="mt-filtre-texte">
                   <span className="mt-filtre-libelle">{f.libelle}</span>
                   <span className="mt-filtre-aide">
-                    {n === 0 ? VIDE[f.cle] : f.cle === 'semaine' ? `d’ici le ${jjmm(g.dimanche)}` : f.aide}
+                    {n === 0 ? VIDE[f.cle] : f.cle === 'semaine' ? `d’ici le ${formatDayMonth(g.dimanche)}` : f.aide}
                   </span>
                 </span>
                 <span className="mt-filtre-compte">
@@ -891,17 +891,17 @@ function LigneTache({
     t.statut === 'remise'
       ? {
           rel: 'En validation',
-          date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${jjmm(t.remisLe)}` : ''}`,
+          date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${formatDayMonth(t.remisLe)}` : ''}`,
         }
       : t.statut === 'bloquee'
         ? {
             rel: 'Attend l’étape précédente',
-            date: t.echeance ? `à rendre le ${jjmm(t.echeance)}` : 'pas encore de dates',
+            date: t.echeance ? `à rendre le ${formatDayMonth(t.echeance)}` : 'pas encore de dates',
           }
         : t.statut === 'prolongee' && t.prolongeeJusquau
           ? {
               rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`,
-              date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${jjmm(t.echeance)}` : ''}`,
+              date: `jusqu’au ${formatDayMonth(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${formatDayMonth(t.echeance)}` : ''}`,
             }
           : t.echeance
             ? {
@@ -911,8 +911,8 @@ function LigneTache({
                     : relatif(t.echeance, aujourdhui),
                 date:
                   t.statut === 'a_venir' && t.debut
-                    ? `démarre le ${jjmm(t.debut)} · à rendre le ${jjmm(t.echeance)}`
-                    : `à rendre le ${jjmm(t.echeance)}`,
+                    ? `démarre le ${formatDayMonth(t.debut)} · à rendre le ${formatDayMonth(t.echeance)}`
+                    : `à rendre le ${formatDayMonth(t.echeance)}`,
               }
             : { rel: 'À planifier', date: 'pas encore de dates' };
 
@@ -1186,7 +1186,7 @@ function LigneMention({
         {etat.erreur && <span className="field-erreur">{etat.erreur}</span>}
       </span>
       <span className="mt-echeance">
-        <span className="mt-echeance-rel">le {jjmm(m.creeLe)}</span>
+        <span className="mt-echeance-rel">le {formatDayMonth(m.creeLe)}</span>
         <span className="mt-echeance-date">{m.lue ? 'lue' : 'non lue'}</span>
       </span>
       <span className="mt-action">

@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { getDecisionsRattachees, type DecisionRattachee } from '@/lib/pilotage';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
+import { formatDayMonth } from '@/lib/dates';
 
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const PILL: Record<DecisionRattachee['statut'], string> = {
   proposee: 'pill--attention',
   ouverte: 'pill--azur',
@@ -60,7 +60,7 @@ export function DecisionsFiche({
               {d.texte}
               <small>
                 {d.responsable}
-                {d.echeance ? ` · échéance ${jjmm(d.echeance)}` : ''}
+                {d.echeance ? ` · échéance ${formatDayMonth(d.echeance)}` : ''}
               </small>
             </span>
             <span className={`pill ${PILL[d.statut]}`}>{LIBELLE[d.statut]}</span>

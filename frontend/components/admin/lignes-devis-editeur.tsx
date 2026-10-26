@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { LigneDevisSaisie } from '@/lib/devis';
 import { ventilationTva, type LigneDevis, type ProduitService } from '@/lib/types';
-import { formatMontantCompact } from '@/lib/format';
+import { formatCompactAmount } from '@/lib/format';
 
 // Éditeur des lignes d'un devis — partagé par la modale « Nouveau devis »
 // (Facturation) et l'offre d'un dossier CRM (étape F). Contrôlé : l'état vit
@@ -426,7 +426,7 @@ export function LignesDevisEditeur({
                       onChange={(e) => majLigne(i, { tauxTva: e.target.value })}
                     />
                   </td>
-                  <td data-label="Total TTC">{formatMontantCompact(montantTtc)}</td>
+                  <td data-label="Total TTC">{formatCompactAmount(montantTtc)}</td>
                   <td data-label="">
                     <button
                       type="button"
@@ -467,8 +467,8 @@ export function LignesDevisEditeur({
         </p>
       )}
       <p className="field-aide" style={{ textAlign: 'right' }}>
-        HT {formatMontantCompact(totaux.ht)} · TVA {formatMontantCompact(totaux.tva)} ·{' '}
-        <strong>TTC {formatMontantCompact(totaux.ttc)}</strong>
+        HT {formatCompactAmount(totaux.ht)} · TVA {formatCompactAmount(totaux.tva)} ·{' '}
+        <strong>TTC {formatCompactAmount(totaux.ttc)}</strong>
       </p>
     </>
   );

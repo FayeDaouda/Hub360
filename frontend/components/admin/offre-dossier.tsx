@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Copy } from 'lucide-react';
 import { marquerReponseDevis, relancerDevis } from '@/lib/devis';
 import { completudeFiche, type OffreEmise } from '@/lib/crm';
-import { formatDateCourte, formatMontantCompact } from '@/lib/format';
+import { formatCompactAmount } from '@/lib/format';
+import { daysSince, formatDayShortMonth } from '@/lib/dates';
 import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
 
@@ -29,10 +30,6 @@ const CLASSE_OFFRE: Record<string, string> = {
   expire: 'pill--attention',
   transforme: 'pill--succes',
 };
-
-function joursDepuis(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-}
 
 // Offre en cours d'un dossier CRM (étape F). Absente pour qui n'a pas
 // finances_devis en lecture (clé `offre` omise par le serveur).
@@ -132,18 +129,18 @@ export function OffreDossier({
         <p className="offre-dossier-resume">
           {offre.reference && <strong>{offre.reference} · </strong>}
           {offre.nbLignes} ligne{offre.nbLignes > 1 ? 's' : ''} ·{' '}
-          <strong>{formatMontantCompact(offre.montantTtc)} TTC</strong>
+          <strong>{formatCompactAmount(offre.montantTtc)} TTC</strong>
           {offre.objet && <span className="cell-sub">{offre.objet}</span>}
           {offre.dateEnvoi && (
             <span className="cell-sub">
-              Envoyée le {formatDateCourte(offre.dateEnvoi)} (J+{joursDepuis(offre.dateEnvoi)})
-              {offre.dateValidite && ` · valable jusqu’au ${formatDateCourte(offre.dateValidite)}`}
+              Envoyée le {formatDayShortMonth(offre.dateEnvoi)} (J+{daysSince(offre.dateEnvoi)})
+              {offre.dateValidite && ` · valable jusqu’au ${formatDayShortMonth(offre.dateValidite)}`}
               {offre.relancesEnvoyees > 0 &&
                 ` · ${offre.relancesEnvoyees} relance${offre.relancesEnvoyees > 1 ? 's' : ''}`}
             </span>
           )}
           {offre.dateReponse && (
-            <span className="cell-sub">Réponse du client le {formatDateCourte(offre.dateReponse)}</span>
+            <span className="cell-sub">Réponse du client le {formatDayShortMonth(offre.dateReponse)}</span>
           )}
         </p>
       )}

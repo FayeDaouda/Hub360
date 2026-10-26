@@ -12,13 +12,11 @@ import {
   supprimerFactureCentrale,
 } from '@/lib/facturation';
 import { DemandeAvoir } from '@/components/finances/demande-avoir';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { FactureDocument, type FactureDocumentProps } from '@/components/finances/facture-document';
 import { useConfirmer } from '@/components/confirmation';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+import { formatDate, todayIso } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -100,9 +98,9 @@ export function FacturePanneau({
                 f.client?.nom,
                 f.dossierCrm?.code ?? f.projet?.code,
                 f.emiseLe
-                  ? `émise le ${jjmmaaaa(f.emiseLe)}`
-                  : `préparée le ${jjmmaaaa(f.creeLe)} · référence attribuée à la validation`,
-                f.echeanceLe && `échéance ${jjmmaaaa(f.echeanceLe)}`,
+                  ? `émise le ${formatDate(f.emiseLe)}`
+                  : `préparée le ${formatDate(f.creeLe)} · référence attribuée à la validation`,
+                f.echeanceLe && `échéance ${formatDate(f.echeanceLe)}`,
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -133,7 +131,7 @@ export function FacturePanneau({
             <div className="fiche-crm-titre-ligne">
               <h3 className="fiche-crm-titre">Encaissements</h3>
               <strong>
-                {formatMontant(f.montantPaye)} / {formatMontant(f.montantTtc)}
+                {formatAmount(f.montantPaye)} / {formatAmount(f.montantTtc)}
               </strong>
             </div>
             <div className="po-barre" aria-hidden>
@@ -141,7 +139,7 @@ export function FacturePanneau({
             </div>
             <div className="fiche-crm-titre-ligne">
               <span>Reste dû</span>
-              <strong className="nfd-ttc">{formatMontant(f.resteAPayer)}</strong>
+              <strong className="nfd-ttc">{formatAmount(f.resteAPayer)}</strong>
             </div>
             {f.paiements.length === 0 ? (
               <p className="fiche-crm-aide">Aucun encaissement enregistré.</p>
@@ -149,9 +147,9 @@ export function FacturePanneau({
               <ul className="fiche-crm-historique">
                 {f.paiements.map((p) => (
                   <li key={p.id}>
-                    <time>{jjmmaaaa(p.date)}</time>
+                    <time>{formatDate(p.date)}</time>
                     <span>
-                      {formatMontant(p.montant)}
+                      {formatAmount(p.montant)}
                       {p.mode && ` · ${MODES_PAIEMENT[p.mode]}`}
                       {p.reference && ` · ${p.reference}`}
                     </span>
@@ -163,7 +161,7 @@ export function FacturePanneau({
               <button
                 type="button"
                 className="btn-ghost fac-bouton"
-                onClick={() => setPaiement({ date: aujourdhui(), montant: String(f.resteAPayer), mode: '' })}
+                onClick={() => setPaiement({ date: todayIso(), montant: String(f.resteAPayer), mode: '' })}
               >
                 Enregistrer un encaissement
               </button>

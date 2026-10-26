@@ -9,11 +9,9 @@ import {
   type CommissionApporteur,
   type CoordonneesApporteur,
 } from '@/lib/commissions';
-import { formatMontant, formatNombre } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { MODES_PAIEMENT, type ModePaiement } from '@/lib/types';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+import { formatDate, todayIso } from '@/lib/dates';
 
 // Le CFO règle la commission d'un apporteur (revue COO, 22/10/2026) : date,
 // mode et référence ; les coordonnées saisies par le COO sont rappelées.
@@ -28,7 +26,7 @@ export function PayerCommission({
   onFait: () => void;
   onClose: () => void;
 }) {
-  const [date, setDate] = useState(aujourdhui());
+  const [date, setDate] = useState(todayIso());
   const [mode, setMode] = useState<ModePaiement>('virement');
   const [reference, setReference] = useState('');
   const [envoi, setEnvoi] = useState(false);
@@ -77,13 +75,13 @@ export function PayerCommission({
             <div>
               <dt>Montant</dt>
               <dd>
-                <strong>{formatMontant(c.montant)}</strong>
+                <strong>{formatAmount(c.montant)}</strong>
               </dd>
             </div>
             <div>
               <dt>Calcul</dt>
               <dd>
-                {formatNombre(c.taux)} % de {formatMontant(c.baseHt)} HT{' '}
+                {formatNumber(c.taux)} % de {formatAmount(c.baseHt)} HT{' '}
                 {c.source === 'encaissement' ? 'encaissés' : 'du contrat signé'}
               </dd>
             </div>
@@ -95,7 +93,7 @@ export function PayerCommission({
             </div>
             <div>
               <dt>Exigible</dt>
-              <dd>le {jjmmaaaa(c.exigibleLe)}</dd>
+              <dd>le {formatDate(c.exigibleLe)}</dd>
             </div>
             <div>
               <dt>Coordonnées</dt>
@@ -119,7 +117,7 @@ export function PayerCommission({
                 className="field-input"
                 type="date"
                 value={date}
-                max={aujourdhui()}
+                max={todayIso()}
                 disabled={envoi}
                 onChange={(e) => setDate(e.target.value)}
               />

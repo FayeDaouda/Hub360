@@ -8,8 +8,8 @@ import {
   type Signalement,
   type StatutSignalement,
 } from '@/lib/signalements';
+import { formatDate } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const FILTRES: { cle: StatutSignalement | 'tous'; libelle: string }[] = [
   { cle: 'a_traiter', libelle: 'À traiter' },
   { cle: 'en_cours', libelle: 'En cours' },
@@ -73,7 +73,7 @@ export function SignalementsPanel({
                   {STATUTS_SIGNALEMENT[s.statut].libelle}
                 </span>
                 <span className="cell-sub">
-                  {jjmmaaaa(s.creeLe)} · {s.auteur ?? 'compte supprimé'} · {s.role} · {s.appareil}
+                  {formatDate(s.creeLe)} · {s.auteur ?? 'compte supprimé'} · {s.role} · {s.appareil}
                 </span>
               </span>
               <p className="sig-texte">{s.description}</p>

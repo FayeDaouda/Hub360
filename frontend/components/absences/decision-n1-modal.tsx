@@ -5,14 +5,9 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { CalendrierCellule } from './calendrier-cellule';
-import {
-  deciderAbsence,
-  getPreparationDecision,
-  jjmm,
-  LIBELLE_MOTIF_REFUS,
-  LIBELLE_TYPE_ABSENCE,
-} from '@/lib/demandes';
+import { deciderAbsence, getPreparationDecision, LIBELLE_MOTIF_REFUS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
+import { formatDate } from '@/lib/dates';
 
 const DECISIONS: { cle: DecisionN1; libelle: string; aide: string }[] = [
   {
@@ -141,8 +136,8 @@ export function DecisionN1Formulaire({
         ) : (
           <>
             <p>
-              <strong>{LIBELLE_TYPE_ABSENCE[d!.type]}</strong> · {d!.jours} j ouvrables · du {jjmm(d!.dateDebut)} au{' '}
-              {jjmm(d!.dateFin)}
+              <strong>{LIBELLE_TYPE_ABSENCE[d!.type]}</strong> · {d!.jours} j ouvrables · du {formatDate(d!.dateDebut)}{' '}
+              au {formatDate(d!.dateFin)}
               {d!.commentaire && <span className="cell-sub"> — « {d!.commentaire} »</span>}
             </p>
             {/* Qui d'autre de la cellule est absent ces jours-là (calendrier). */}
@@ -176,7 +171,7 @@ export function DecisionN1Formulaire({
                           {l.projet} · {l.groupe.replace(/_/g, ' ')}
                         </strong>
                         <span className="cell-sub">
-                          {l.source} · échéance {jjmm(l.echeance)}
+                          {l.source} · échéance {formatDate(l.echeance)}
                         </span>
                       </span>
                       {decision === 'sous_conditions' && (

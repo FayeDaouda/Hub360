@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getCalendrierCellule, LIBELLE_TYPE_ABSENCE, type CalendrierCellule as Donnees } from '@/lib/demandes';
+import { toIsoDay } from '@/lib/dates';
 
 const JOURS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const jours = (debut: string, fin: string) => {
   const l: string[] = [];
   for (let d = new Date(`${debut}T00:00:00Z`); d <= new Date(`${fin}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1))
-    l.push(d.toISOString().slice(0, 10));
+    l.push(toIsoDay(d));
   return l;
 };
 

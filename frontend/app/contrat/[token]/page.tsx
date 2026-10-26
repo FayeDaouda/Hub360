@@ -4,15 +4,12 @@ import { useEffect, useState, use } from 'react';
 import { CheckCircle2, Download } from 'lucide-react';
 import { getContratPublic, getFichierContratPublic, signerContrat } from '@/lib/contrats';
 import { telechargerFichier } from '@/lib/fichiers';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { ContratPublic } from '@/lib/types';
 import { SignaturePad } from '@/components/signature-pad';
+import { formatLongDate } from '@/lib/dates';
 
 type Props = { params: Promise<{ token: string }> };
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 // Page CLIENT du contrat (étape G) — sans compte, le jeton du lien EST
 // l'authentification. Consultation du contrat et de ses annexes, puis
@@ -106,8 +103,8 @@ export default function ContratPublicPage(props: Props) {
           <section className="contrat-public-bloc">
             <h2>Offre acceptée</h2>
             <p>
-              {contrat.offre.reference} — {formatMontant(contrat.offre.montantHt)} HT ·{' '}
-              <strong>{formatMontant(contrat.offre.montantTtc)} TTC</strong>
+              {contrat.offre.reference} — {formatAmount(contrat.offre.montantHt)} HT ·{' '}
+              <strong>{formatAmount(contrat.offre.montantTtc)} TTC</strong>
             </p>
           </section>
 
@@ -148,8 +145,8 @@ export default function ContratPublicPage(props: Props) {
           {contrat.statut === 'signe' ? (
             <p className="devis-public-message">
               <CheckCircle2 size={16} aria-hidden /> Contrat signé
-              {contrat.signeLe ? ` le ${formatDate(contrat.signeLe)}` : ''}. Merci — l’équipe revient vers vous pour la
-              suite.
+              {contrat.signeLe ? ` le ${formatLongDate(contrat.signeLe)}` : ''}. Merci — l’équipe revient vers vous pour
+              la suite.
             </p>
           ) : contrat.peutSigner ? (
             <section className="contrat-public-bloc">

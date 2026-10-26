@@ -4,11 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FileSpreadsheet, X } from 'lucide-react';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale } from '@/lib/types';
-
-const libelleMois = (m: string) =>
-  new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+import { formatMonthYear } from '@/lib/dates';
 
 type Vente = { f: FactureCentrale; origine: string | null };
 type Encaissement = { f: FactureCentrale; date: string; montant: number; mode: string | null; reference: string };
@@ -122,10 +120,10 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
           <label className="field">
             <span className="field-label">Mois</span>
             <select className="field-input" value={mois} onChange={(e) => setMois(e.target.value)}>
-              {moisDispo.length === 0 && <option value={mois}>{libelleMois(mois)}</option>}
+              {moisDispo.length === 0 && <option value={mois}>{formatMonthYear(mois)}</option>}
               {moisDispo.map((m) => (
                 <option key={m} value={m}>
-                  {libelleMois(m)}
+                  {formatMonthYear(m)}
                 </option>
               ))}
             </select>
@@ -134,8 +132,8 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
             <div className="exc-journal">
               <p className="field-label">Journal des ventes</p>
               <p className="exc-chiffres">
-                {ventes.length} pièce{ventes.length > 1 ? 's' : ''} · HT {formatMontant(total(ventes, 'montantHt'))} ·
-                TVA {formatMontant(total(ventes, 'montantTva'))} · TTC {formatMontant(total(ventes, 'montantTtc'))}
+                {ventes.length} pièce{ventes.length > 1 ? 's' : ''} · HT {formatAmount(total(ventes, 'montantHt'))} ·
+                TVA {formatAmount(total(ventes, 'montantTva'))} · TTC {formatAmount(total(ventes, 'montantTtc'))}
               </p>
               <button type="button" className="btn-ghost" disabled={!ventes.length} onClick={exporterVentes}>
                 <FileSpreadsheet size={15} aria-hidden /> Télécharger
@@ -144,8 +142,7 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
             <div className="exc-journal">
               <p className="field-label">Journal des encaissements</p>
               <p className="exc-chiffres">
-                {encaissements.length} encaissement{encaissements.length > 1 ? 's' : ''} ·{' '}
-                {formatMontant(totalEncaisse)}
+                {encaissements.length} encaissement{encaissements.length > 1 ? 's' : ''} · {formatAmount(totalEncaisse)}
               </p>
               <button
                 type="button"

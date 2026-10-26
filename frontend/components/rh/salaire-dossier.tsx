@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import {
   dateEffetMin,
   getSalaireDossier,
@@ -14,8 +14,8 @@ import {
   type MotifSalaire,
 } from '@/lib/rh';
 import type { DossierPersonnel } from '@/lib/types';
+import { formatDate, todayIso } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : 'date inconnue');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 const STATUT: Record<ChangementSalaire['statut'], { libelle: string; pill: string }> = {
   a_valider: { libelle: 'En attente', pill: 'pill--attention' },
@@ -38,7 +38,7 @@ export function SalaireDossier({
   const [historique, setHistorique] = useState<HistoriqueSalaire | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
-  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const aujourdhui = todayIso();
   const premier = !dossier.salaireRenseigne;
   const [montant, setMontant] = useState('');
   const [motif, setMotif] = useState<MotifSalaire>(premier ? 'embauche' : 'augmentation');
@@ -50,11 +50,7 @@ export function SalaireDossier({
     setErreur(null);
     setMontant('');
     setMotif(dossier.salaireRenseigne ? 'augmentation' : 'embauche');
-    setDateEffet(
-      dossier.salaireRenseigne
-        ? new Date().toISOString().slice(0, 10)
-        : (dossier.dateEntree ?? new Date().toISOString().slice(0, 10)),
-    );
+    setDateEffet(dossier.salaireRenseigne ? todayIso() : (dossier.dateEntree ?? todayIso()));
   }, [dossier.id, dossier.salaireRenseigne, dossier.dateEntree]);
 
   async function lancer(action: () => Promise<HistoriqueSalaire>, repli: string) {
@@ -111,15 +107,16 @@ export function SalaireDossier({
       <p className="sal-vigueur">
         <span className="field-label">En vigueur aujourd’hui</span>
         <strong>
-          {historique.enVigueur == null ? 'Aucun salaire validé' : `${formatMontant(historique.enVigueur)} / mois`}
+          {historique.enVigueur == null ? 'Aucun salaire validé' : `${formatAmount(historique.enVigueur)} / mois`}
         </strong>
       </p>
 
       {enAttente && (
         <div className="sal-attente" role="status">
           <span>
-            <strong>{formatMontant(enAttente.montant)}</strong> à partir du {jjmmaaaa(enAttente.dateEffet)} ·{' '}
-            {LIBELLE_MOTIF_SALAIRE[enAttente.motif].toLowerCase()} — en attente de validation du {historique.valideur}
+            <strong>{formatAmount(enAttente.montant)}</strong> à partir du{' '}
+            {formatDate(enAttente.dateEffet, 'date inconnue')} · {LIBELLE_MOTIF_SALAIRE[enAttente.motif].toLowerCase()}{' '}
+            — en attente de validation du {historique.valideur}
             {enAttente.proposePar && ` (proposé par ${enAttente.proposePar})`}
           </span>
           {ecriture && (
@@ -181,7 +178,8 @@ export function SalaireDossier({
           <div className="sal-proposer-pied">
             <span className="cell-sub">
               Validé par le {historique.valideur} avant d’entrer en vigueur.
-              {aUnSalaire && ` Date d’effet passée : 3 mois au plus (${jjmmaaaa(dateEffetMin(aujourdhui))}).`}
+              {aUnSalaire &&
+                ` Date d’effet passée : 3 mois au plus (${formatDate(dateEffetMin(aujourdhui), 'date inconnue')}).`}
             </span>
             <button
               type="button"
@@ -199,8 +197,8 @@ export function SalaireDossier({
         <ul className="sal-historique">
           {historique.changements.map((c) => (
             <li key={c.id}>
-              <span className="sal-date">{jjmmaaaa(c.dateEffet)}</span>
-              <span className="sal-montant">{formatMontant(c.montant)}</span>
+              <span className="sal-date">{formatDate(c.dateEffet, 'date inconnue')}</span>
+              <span className="sal-montant">{formatAmount(c.montant)}</span>
               <span className="sal-motif">
                 {LIBELLE_MOTIF_SALAIRE[c.motif]}
                 <span className="cell-sub">

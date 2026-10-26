@@ -8,7 +8,7 @@ import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite
 import { ParametresRentabilite } from '@/components/finances/parametres-rentabilite';
 import { ApiError } from '@/lib/client-api';
 import { exporterCsv } from '@/lib/export-csv';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import {
   finDeMois,
   formatParametre,
@@ -21,12 +21,10 @@ import {
   type LigneRentabilite,
   type Portefeuille,
 } from '@/lib/rentabilite';
+import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
 const MOIS_DEBUT = '2026-09'; // premières feuilles de temps (rh/regles-temps.ts)
-const jjmm = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
-const libelleMois = (m: string) =>
-  new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 // Mois proposés : des premières feuilles au mois en cours.
 function moisDisponibles(aujourdhui: string) {
@@ -42,7 +40,7 @@ function moisDisponibles(aujourdhui: string) {
 // Onglet « Rentabilité » (lot 7, phase 1) : marge directe PROVISOIRE par
 // projet. CFO et CEO voient les montants ; le CTO le taux et la couleur.
 export function OngletRentabilite({ slug }: { slug: string }) {
-  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const aujourdhui = useMemo(() => todayIso(), []);
   const [periode, setPeriode] = useState<string>('');
   const [donnees, setDonnees] = useState<Portefeuille | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -171,7 +169,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
             {donnees.blocages.feuilles.map((b) => (
               <li key={b.mois}>
                 <strong>
-                  {b.feuilles} feuille{b.feuilles > 1 ? 's' : ''} de temps de {libelleMois(b.mois)} à contrôler
+                  {b.feuilles} feuille{b.feuilles > 1 ? 's' : ''} de temps de {formatMonthYear(b.mois)} à contrôler
                 </strong>{' '}
                 · bloque{b.feuilles > 1 ? 'nt' : ''} {b.projets} projet{b.projets > 1 ? 's' : ''}
                 <span className="cell-sub">
@@ -207,7 +205,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
               <option value="">Cumul depuis l’ouverture</option>
               {moisDisponibles(aujourdhui).map((m) => (
                 <option key={m} value={m}>
-                  {libelleMois(m)}
+                  {formatMonthYear(m)}
                 </option>
               ))}
             </select>
@@ -275,12 +273,12 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     </td>
                     {montants && (
                       <td data-label="HT facturé" className="num rt-ht">
-                        {formatMontant(l.ht ?? 0)}
+                        {formatAmount(l.ht ?? 0)}
                       </td>
                     )}
                     {montants && (
                       <td data-label="Coût salarial" className="num rt-cout">
-                        {formatMontant(l.cout ?? 0)}
+                        {formatAmount(l.cout ?? 0)}
                       </td>
                     )}
                     {montants && (
@@ -288,7 +286,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                         data-label="Marge provisoire"
                         className={`num rt-marge${(l.marge ?? 0) < 0 ? ' rt-negatif' : ''}`}
                       >
-                        <strong>{l.marge === null ? '—' : formatMontant(l.marge)}</strong>
+                        <strong>{l.marge === null ? '—' : formatAmount(l.marge)}</strong>
                       </td>
                     )}
                     <td data-label="Taux · statut" className="rt-taux">
@@ -324,7 +322,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                           {LIBELLE_ETAT[l.etat]}
                         </span>
                         <span className="cell-sub">
-                          {l.misAJour ? `à jour du ${jjmm(l.misAJour)}` : 'aucune donnée'}
+                          {l.misAJour ? `à jour du ${formatDate(l.misAJour)}` : 'aucune donnée'}
                         </span>
                       </span>
                     </td>

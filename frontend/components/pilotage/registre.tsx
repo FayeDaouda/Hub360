@@ -5,9 +5,7 @@ import { createPortal } from 'react-dom';
 import { ChampModal } from '@/components/admin/champ-modal';
 import { arbitrerDecision, cloturerDecision, saisirDecision, type ArbitrageDecision } from '@/lib/pilotage';
 import type { DecisionRegistre, ResponsableDecision, StatutDecision, VuePilotage } from '@/lib/types';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+import { formatDate, todayIso } from '@/lib/dates';
 
 const PILL_STATUT: Record<StatutDecision, string> = {
   proposee: 'pill--attention',
@@ -25,7 +23,7 @@ const libelleStatut = (d: DecisionRegistre) =>
         ? 'Ouverte'
         : d.statut === 'echeance_depassee'
           ? 'Échéance dépassée'
-          : `Close le ${jjmmaaaa(d.closeLe ?? '')}`;
+          : `Close le ${formatDate(d.closeLe ?? '')}`;
 
 const valeurResponsable = (r: ResponsableDecision) =>
   'role' in r ? `role:${r.role}` : `collaborateur:${r.collaborateurId}`;
@@ -50,12 +48,12 @@ function traceProposition(d: DecisionRegistre): string | null {
     const jours = Math.max(0, Math.floor((Date.now() - Date.parse(`${d.date}T00:00:00Z`)) / 86_400_000));
     return `Proposée${par} · en attente du CEO depuis ${jours} j`;
   }
-  const arbitre = `${p.arbitreLe ? ` le ${jjmmaaaa(p.arbitreLe)}` : ''}${p.arbitrePar ? ` par ${p.arbitrePar}` : ''}`;
+  const arbitre = `${p.arbitreLe ? ` le ${formatDate(p.arbitreLe)}` : ''}${p.arbitrePar ? ` par ${p.arbitrePar}` : ''}`;
   if (p.etat === 'refusee') return `Proposée${par} · refusée${arbitre}${p.motif ? ` · « ${p.motif} »` : ''}`;
   if (!p.initiale) return `Proposée${par} · acceptée${arbitre}`;
   const i = p.initiale;
   return `Proposée${par} · acceptée avec modifications${arbitre}${p.motif ? ` (« ${p.motif} »)` : ''} · proposition d’origine : « ${i.texte} », ${i.responsable}${
-    i.echeance ? `, échéance ${jjmmaaaa(i.echeance)}` : ''
+    i.echeance ? `, échéance ${formatDate(i.echeance)}` : ''
   }`;
 }
 
@@ -171,7 +169,7 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
                 {d.numero}
               </span>
               <span role="cell" className="pi-date">
-                {jjmmaaaa(d.date)}
+                {formatDate(d.date)}
               </span>
               <span role="cell" className="pi-instance">
                 <strong>{d.instance}</strong>
@@ -195,7 +193,7 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
               </span>
               <span role="cell">{d.responsable}</span>
               <span role="cell" className={d.statut === 'echeance_depassee' ? 'pi-echeance--depassee' : undefined}>
-                {d.echeance ? jjmmaaaa(d.echeance) : '—'}
+                {d.echeance ? formatDate(d.echeance) : '—'}
               </span>
               <span role="cell" className="pi-statut">
                 <span className={`pill ${PILL_STATUT[d.statut]}`}>{libelleStatut(d)}</span>
@@ -366,7 +364,7 @@ function ModifierProposition({
             className="field-input"
             type="date"
             value={echeance}
-            min={aujourdhui()}
+            min={todayIso()}
             onChange={(e) => setEcheance(e.target.value)}
           />
         </label>
@@ -405,7 +403,7 @@ function SaisieDecision({
   onFermer: () => void;
 }) {
   const [instance, setInstance] = useState(saisie.instances[0] ?? '');
-  const [date, setDate] = useState(aujourdhui());
+  const [date, setDate] = useState(todayIso());
   const [texte, setTexte] = useState('');
   const [responsable, setResponsable] = useState('');
   const [echeance, setEcheance] = useState('');
@@ -464,7 +462,7 @@ function SaisieDecision({
             className="field-input"
             type="date"
             value={date}
-            max={aujourdhui()}
+            max={todayIso()}
             onChange={(e) => setDate(e.target.value)}
           />
         </label>

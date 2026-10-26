@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { filtreDevis, jjmmaaaa, libelleMois, parMois, statutDevis, type FiltreDevis } from '@/lib/finances';
-import { formatMontant } from '@/lib/format';
+import { filtreDevis, libelleMois, parMois, statutDevis, type FiltreDevis } from '@/lib/finances';
+import { formatAmount } from '@/lib/format';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
 import type { Devis } from '@/lib/types';
+import { formatDate } from '@/lib/dates';
 
 const FILTRES: { cle: FiltreDevis; libelle: string }[] = [
   { cle: 'tout', libelle: 'Tout' },
@@ -99,7 +100,7 @@ function MoisDevis({
     <>
       <tr className="fin-mois">
         <td colSpan={5}>{libelleMois(mois)}</td>
-        <td className="num">{formatMontant(devis.reduce((s, d) => s + d.montantTtc, 0))}</td>
+        <td className="num">{formatAmount(devis.reduce((s, d) => s + d.montantTtc, 0))}</td>
         <td />
       </tr>
       {devis.map((d) => {
@@ -117,13 +118,13 @@ function MoisDevis({
               {projet ?? '—'}
             </td>
             <td data-label="Créé le" className="fl-date">
-              {jjmmaaaa(d.creeLe)}
+              {formatDate(d.creeLe)}
             </td>
             <td data-label="Total HT" className="num fl-ht">
-              {formatMontant(d.montantHt)}
+              {formatAmount(d.montantHt)}
             </td>
             <td data-label="Total TTC" className="num fl-ttc">
-              <strong>{formatMontant(d.montantTtc)}</strong>
+              <strong>{formatAmount(d.montantTtc)}</strong>
             </td>
             <td data-label="Statut" className="fl-statut">
               <span className={`pill pill--${s.ton}`}>{s.libelle}</span>

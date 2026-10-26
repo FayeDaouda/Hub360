@@ -32,13 +32,14 @@ import {
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
-import { formatNombre } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
+import { daysSince } from '@/lib/dates';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
@@ -71,7 +72,6 @@ const FILTRES_SITUATION: Situation[] = [
   'archive',
 ];
 const LIBELLE_FILTRE: Partial<Record<Situation, string>> = { en_validation: 'En validation', archive: 'Archivés' };
-const joursDepuis = (iso: string) => Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 86_400_000));
 const aCompleter = (p: Projet) =>
   !p.archive && p.statut === 'nouveau_projet' && completudeFiche(p).faits < completudeFiche(p).total;
 const PILL_CATEGORIE: Record<string, string> = {
@@ -203,7 +203,7 @@ export default function CrmPage(props: Props) {
       surfaceVendue: surfaces.reduce((t, x) => t + x, 0),
       detailSurface:
         valides.length === 1
-          ? `${formatNombre(valides[0].surfaceTerrain)} m² × ${valides[0].nbPlanches} pl. · projets validés`
+          ? `${formatNumber(valides[0].surfaceTerrain)} m² × ${valides[0].nbPlanches} pl. · projets validés`
           : `${valides.length} projets validés`,
     };
   }, [duPipeline]);
@@ -443,7 +443,7 @@ export default function CrmPage(props: Props) {
                 {
                   cle: 'surface',
                   label: 'Surface vendue',
-                  valeur: `${formatNombre(kpi.surfaceVendue)} m²`,
+                  valeur: `${formatNumber(kpi.surfaceVendue)} m²`,
                   sousTexte: kpi.detailSurface,
                   icone: Home,
                   etat: 'marque',
@@ -613,7 +613,7 @@ export default function CrmPage(props: Props) {
                                   {ap
                                     ? [
                                         projet.commissionApporteur != null &&
-                                          `${formatNombre(projet.commissionApporteur)} %`,
+                                          `${formatNumber(projet.commissionApporteur)} %`,
                                         ap.type === 'interne' ? 'Interne' : ap.structure || ap.telephone,
                                       ]
                                         .filter(Boolean)
@@ -645,7 +645,7 @@ export default function CrmPage(props: Props) {
                               {/* Revue CEO : au-delà du seuil, le demandeur voit que l'offre attend le CEO. */}
                               {projet.contresignatureCeo && projet.soumisLe && (
                                 <span className="cell-sub">
-                                  En attente du CEO depuis {joursDepuis(projet.soumisLe)} j
+                                  En attente du CEO depuis {Math.max(0, daysSince(projet.soumisLe))} j
                                 </span>
                               )}
                             </td>

@@ -1,7 +1,6 @@
 import { formatHeures, LIBELLE_MANQUE, LIBELLE_SECTION } from '@/lib/temps';
 import type { LigneCalculTemps } from '@/lib/types';
-
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+import { formatDayMonth } from '@/lib/dates';
 
 // Détail du calcul d'une feuille de temps (RH et Mon temps) : un bloc assigné
 // par ligne, sa fenêtre, sa durée standard et la part tombant dans le mois.
@@ -32,7 +31,7 @@ export function LignesCalcul({ lignes, variante = 'rh' }: { lignes: LigneCalculT
                 </span>
               </td>
               <td data-label="Fenêtre">
-                du {jjmm(l.debut)} au {jjmm(l.echeance)}
+                du {formatDayMonth(l.debut)} au {formatDayMonth(l.echeance)}
               </td>
               <td data-label="Durée std" className="num">
                 {l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}
@@ -79,7 +78,8 @@ function LignesSalarie({ lignes }: { lignes: LigneCalculTemps[] }) {
               <td data-label="Tâche">
                 {l.libelle}
                 <span className="cell-sub">
-                  du {jjmm(l.debut)} au {jjmm(l.echeance)} · {l.etape ?? (l.section ? LIBELLE_SECTION[l.section] : '')}
+                  du {formatDayMonth(l.debut)} au {formatDayMonth(l.echeance)} ·{' '}
+                  {l.etape ?? (l.section ? LIBELLE_SECTION[l.section] : '')}
                 </span>
               </td>
               <td data-label="Durée std" className="num">

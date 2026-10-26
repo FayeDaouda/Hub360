@@ -10,11 +10,11 @@ import {
   type CoordonneesApporteur,
   type FicheCoordonnees,
 } from '@/lib/commissions';
-import { formatMontant, formatNombre } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { MODES_PAIEMENT } from '@/lib/types';
+import { formatDate } from '@/lib/dates';
 
 const CHAMPS = Object.keys(LIBELLES_COORDONNEES) as (keyof CoordonneesApporteur)[];
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Paiement de l'apporteur sur la fiche du dossier (revue COO, 22/10/2026) :
 // ses commissions (le COO suit, le CFO paie) et ses coordonnées de paiement,
@@ -69,7 +69,7 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
       {commissions && (
         <div className="pa-apporteur-bloc">
           <p className="pa-apporteur-titre">
-            Commissions · {formatMontant(versees)} versées{aPayer ? ` · ${formatMontant(aPayer)} à payer` : ''}
+            Commissions · {formatAmount(versees)} versées{aPayer ? ` · ${formatAmount(aPayer)} à payer` : ''}
           </p>
           {commissions.length === 0 ? (
             <p className="fiche-crm-aide">
@@ -81,14 +81,14 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
               {commissions.map((c) => (
                 <li key={c.id}>
                   <span>
-                    <strong>{formatMontant(c.montant)}</strong>
+                    <strong>{formatAmount(c.montant)}</strong>
                     <span className="cell-sub">
-                      {formatNombre(c.taux)} % de {formatMontant(c.baseHt)} HT · exigible le {jjmmaaaa(c.exigibleLe)}
+                      {formatNumber(c.taux)} % de {formatAmount(c.baseHt)} HT · exigible le {formatDate(c.exigibleLe)}
                     </span>
                   </span>
                   {c.statut === 'payee' ? (
                     <span className="pill pill--succes" title={c.reference || undefined}>
-                      Payée le {jjmmaaaa(c.payeeLe ?? '')}
+                      Payée le {formatDate(c.payeeLe ?? '')}
                       {c.modePaiement ? ` · ${MODES_PAIEMENT[c.modePaiement]}` : ''}
                     </span>
                   ) : (

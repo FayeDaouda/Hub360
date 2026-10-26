@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { getSession } from '@/lib/auth';
 import { modifierApporteur } from '@/lib/crm';
 import { PaiementApporteur } from '@/components/crm/paiement-apporteur';
-import { formatNombre } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import type { Projet } from '@/lib/types';
 import {
   FicheApporteurChamps,
@@ -12,6 +12,7 @@ import {
   versApporteurSaisi,
   type SaisieApporteur,
 } from './fiche-apporteur-champs';
+import { formatDate } from '@/lib/dates';
 
 // Même rôle que le serveur (CrmService.ROLE_MODIF_APPORTEUR) — affichage
 // seulement, le serveur tranche.
@@ -23,8 +24,6 @@ type Props = {
   // Après une modification : recharge le dossier et son historique.
   onModifie: () => Promise<void>;
 };
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Fiche apporteur d'affaire sur la fiche du dossier : validée et verrouillée
 // dès la création, modifiable par le COO seul (maquette « Nouveau projet »,
@@ -87,7 +86,7 @@ export function FicheApporteurSection({ slug, projet, onModifie }: Props) {
             <div>
               <dt>% attribué</dt>
               <dd className="fiche-crm-pourcent">
-                {projet.commissionApporteur == null ? '—' : `${formatNombre(projet.commissionApporteur)} %`}
+                {projet.commissionApporteur == null ? '—' : `${formatNumber(projet.commissionApporteur)} %`}
               </dd>
             </div>
             {ap.type === 'externe' && (
@@ -104,7 +103,7 @@ export function FicheApporteurSection({ slug, projet, onModifie }: Props) {
             )}
             <div>
               <dt>Validée le</dt>
-              <dd>{jjmmaaaa(projet.creeLe)}</dd>
+              <dd>{formatDate(projet.creeLe)}</dd>
             </div>
           </dl>
         )}

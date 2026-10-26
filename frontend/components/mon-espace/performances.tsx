@@ -8,15 +8,14 @@ import { sectionAccessible } from '@/lib/acces-back-office';
 import { ApiError } from '@/lib/client-api';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getMesTaches, libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
-import { formatHeures, getMonTemps, LIBELLE_MANQUE, libelleMois } from '@/lib/temps';
+import { formatHeures, getMonTemps, LIBELLE_MANQUE } from '@/lib/temps';
 import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { RemiseModal } from './remise-modal';
+import { formatDate, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 // Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
 const lienProjet = (base: string, projetId: string) =>
   base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
@@ -40,7 +39,7 @@ const pct = (n: number, sur: number) => (sur ? Math.round((n / sur) * 100) : nul
 export function MesPerformances({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = pathname.split('/mon-espace')[0];
-  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const aujourdhui = useMemo(() => todayIso(), []);
   const [donnees, setDonnees] = useState<{ taches: TacheMonEspace[]; stats: StatsPerformances } | null>(null);
   const [temps, setTemps] = useState<MonTemps | null>(null);
   const [filtre, setFiltre] = useState<Filtre>('toutes');
@@ -120,7 +119,7 @@ export function MesPerformances({ slug }: { slug: string }) {
           },
           {
             cle: 'temps',
-            label: temps ? `Temps imputé · ${libelleMois(temps.feuille.mois)}` : 'Temps imputé',
+            label: temps ? `Temps imputé · ${formatMonthYear(temps.feuille.mois)}` : 'Temps imputé',
             valeur: temps ? formatHeures(temps.feuille.heuresImputees) : '—',
             sousTexte: `${temps?.feuille.occupation ?? 0} % d’occupation · calcul automatique`,
             icone: Clock,
@@ -150,7 +149,7 @@ export function MesPerformances({ slug }: { slug: string }) {
                 const f = heuresParMois[m];
                 return (
                   <tr key={m}>
-                    <td className="bilan-mois">{libelleMois(m)}</td>
+                    <td className="bilan-mois">{formatMonthYear(m)}</td>
                     <td data-label="Validées" className="num">
                       {du.length}
                     </td>
@@ -196,7 +195,7 @@ export function MesPerformances({ slug }: { slug: string }) {
                       {t.projetCode}
                     </Link>{' '}
                     · {t.etape}
-                    {t.valideLe && ` · validée le ${jjmmaaaa(t.valideLe)}`}
+                    {t.valideLe && ` · validée le ${formatDate(t.valideLe)}`}
                   </span>
                 </span>
                 <span className="dmd-actions">
@@ -292,12 +291,12 @@ export function MesPerformances({ slug }: { slug: string }) {
                       {t.dureeStandard == null ? '—' : formatHeures(t.dureeStandard)}
                     </td>
                     <td data-label="Période">
-                      {t.debut && t.echeance ? `du ${jjmm(t.debut)} au ${jjmm(t.echeance)}` : '—'}
+                      {t.debut && t.echeance ? `du ${formatDayMonth(t.debut)} au ${formatDayMonth(t.echeance)}` : '—'}
                       {t.manque && t.statut !== 'validee' && (
                         <span className="cell-sub temps-alerte">{LIBELLE_MANQUE[t.manque]}</span>
                       )}
                     </td>
-                    <td data-label="Échéance">{t.echeance ? jjmmaaaa(t.echeance) : '—'}</td>
+                    <td data-label="Échéance">{t.echeance ? formatDate(t.echeance) : '—'}</td>
                     <td data-label="Prévu · imputé" className="num">
                       {t.dureeStandard == null
                         ? '—'
