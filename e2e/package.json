@@ -6,9 +6,12 @@
   "scripts": {
     "env:up": "bash scripts/reference-env.sh up",
     "env:down": "bash scripts/reference-env.sh down",
-    "visual:baseline": "playwright test --project=visual-desktop --project=visual-mobile --update-snapshots",
-    "visual": "playwright test --project=visual-desktop --project=visual-mobile",
+    "visual:baseline": "playwright test visual/ --update-snapshots",
+    "visual": "playwright test visual/",
+    "visual:quick": "sh -c 'HUB_CAPTURE_QUICK=\"$0\" playwright test visual/'",
     "smoke": "playwright test --project=smoke",
+    "archive": "bash scripts/archive-reference.sh",
+    "validate": "bash scripts/validate.sh",
     "report": "playwright show-report .state/report"
   },
   "devDependencies": {

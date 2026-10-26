@@ -63,6 +63,15 @@ Décisions structurantes : `docs/adr/`.
   la fermeture. Le composant commun (`components/ui/dialog.tsx`) ne fait ni
   l'un ni l'autre aujourd'hui (tests « état actuel » dans `dialog.spec.tsx`,
   à inverser) ; la confirmation (`ConfirmModal`) le fait déjà.
+- **Référence coupée (onglet « Projets » de la vue Production, mobile)** :
+  une référence a été prise avant la fin du rendu (1 118 px au lieu de
+  3 051). Vérifié : les cartes arrivent avec le dossier, qui a un squelette ;
+  pas d'import dynamique. Non reproduite en 20 passages d'une sonde rejouant
+  l'ancienne attente (26/10/2026) : cause non établie, l'attente robuste des
+  captures est gardée telle quelle (décision du 26/10/2026).
+- **Images sans dimensions** (défaut d'interface) : signature du contrat
+  (`.contrat-signature`) et logo du document de facture (`.fd-logo`), dont la
+  hauteur dépend de l'image chargée ; à corriger, avec captures avant/après.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
@@ -87,11 +96,27 @@ Décisions structurantes : `docs/adr/`.
   dessus, à une position fractionnaire, basculait entre deux lissages d'un
   lancement du navigateur à l'autre (pastille active des sélecteurs de vue,
   dossier d'un projet ouvert). Mise en page, textes et couleurs restent
-  comparés ; le rendu du flou lui-même est à contrôler à l'œil lors de la
-  refonte visuelle.
+  comparés. Le flou, signature de l'application, garde ses propres captures
+  (projet `visual-glass` : barre latérale, en-tête, une modale, le portail,
+  « Dossier projet », en clair et en sombre), avec une tolérance de 1 % de
+  pixels différents au lieu d'une égalité stricte.
 - Avant chaque capture, le harnais attend qu'aucune requête de l'API ne soit
   en cours (le flux du chat excepté) ; au-delà de 30 s, la capture échoue en
   listant les requêtes.
+
+- La référence utilisée pour chaque fusion est archivée
+  (`npm run archive -- <PR> <base> <comparée> <journal>` dans `e2e/`) dans la
+  version GitHub « captures-references », conservée 120 jours.
+
+- **Outillage** (e2e/) : `npm run validate -- <branche>` = la validation d'une
+  fusion (série complète contre la référence de `main`, puis tests de fumée) ;
+  la branche est compilée pendant la capture de la référence, elle-même
+  reprise seulement si `main`, le jour ou le harnais ont changé. Compilations
+  en cache (10 dernières), 4 environnements identiques (bases clonées par
+  `CREATE DATABASE … TEMPLATE`, écrans répartis par clé stable). Pendant le
+  travail : `npm run visual:quick -- <filtre>` (jamais pour une fusion).
+  Mesuré : série 4,8 à 5 min (contre 6 à 10), environnement en cache 40 s
+  (contre ~7 min) ; 8 environnements saturent la machine.
 
 ## Défaut corrigé
 

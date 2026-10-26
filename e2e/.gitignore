@@ -2,3 +2,5 @@
 .state/
 # Visual reference captures: machine-specific rendering, regenerated per phase
 .reference/
+# Compilations de référence en cache (scripts/reference-env.sh, 10 dernières)
+.cache/

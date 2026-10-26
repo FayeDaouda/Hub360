@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
   ADMIN_PATH,
@@ -14,6 +16,15 @@ import {
 // fresh `npm run env:up`.
 
 const fixtures = readFixtures();
+
+// Le scénario de référence vient d'ouvrir plusieurs sessions : la connexion
+// est limitée par minute (429 « Trop de tentatives »). On attend que la
+// fenêtre soit écoulée depuis la fin du scénario (scripts/reference-env.sh).
+test.beforeAll(async () => {
+  const done = Number(readFileSync(join(__dirname, '..', '.state', 'scenario-done'), 'utf8'));
+  const wait = done * 1000 + 61_000 - Date.now();
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+});
 
 test.describe('sign-in', () => {
   test('a CEO picks the company on the portal, signs in and lands on Pilotage', async ({ page }) => {
