@@ -34,7 +34,7 @@ import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
 import { formatAmount } from '@/lib/format';
 import type { AttentionPilotage, VuePilotage } from '@/lib/types';
-import { addDays, formatDayMonth, todayIso } from '@/lib/dates';
+import { addDays, daysBetween, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 
 // Décisions « arrivant à échéance » : ouvertes dont l'échéance tombe dans les
@@ -43,8 +43,6 @@ const FENETRE_DECISIONS_JOURS = 7;
 // Lignes visibles par rubrique avant « Afficher tout ».
 const LIGNES_VISIBLES = 5;
 
-const joursEntre = (de: string, a: string) =>
-  Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${de}T12:00:00Z`).getTime()) / 86_400_000);
 // Alertes de contrôle interne (droits, argent, accès) — lues, pas décidées.
 const TYPES_CONTROLE: ReadonlySet<NotificationType> = new Set<NotificationType>([
   'droits_modifies',
@@ -127,7 +125,7 @@ export function Attention({
     void marquerLuesParId(slug, [id]).catch(() => undefined);
   };
   const aContresigner = offres.filter((o) => valideAffaire(session, seuil, o.offre?.montantTtc ?? 0));
-  const depuisJours = (iso: string) => Math.max(0, joursEntre(iso.slice(0, 10), jour));
+  const depuisJours = (iso: string) => Math.max(0, daysBetween(iso.slice(0, 10), jour));
 
   const decisions = vue.decisions.filter(
     (d) =>
@@ -175,7 +173,7 @@ export function Attention({
       icone: <Gavel size={16} aria-hidden />,
       couleur: 'var(--iris)',
       lignes: proposees.map((d) => {
-        const depuis = joursEntre(d.date, jour);
+        const depuis = daysBetween(d.date, jour);
         return {
           cle: d.id,
           titre: `${d.numero} · ${d.texte}`,
@@ -324,7 +322,7 @@ export function Attention({
       icone: <Scale size={16} aria-hidden />,
       couleur: 'var(--iris)',
       lignes: decisions.map((d) => {
-        const reste = d.echeance ? joursEntre(jour, d.echeance) : 0;
+        const reste = d.echeance ? daysBetween(jour, d.echeance) : 0;
         return {
           cle: d.id,
           titre: `${d.numero} · ${d.texte}`,

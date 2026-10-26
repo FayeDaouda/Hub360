@@ -26,7 +26,7 @@ import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from '.
 import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
-import { formatDate, todayIso } from '@/lib/dates';
+import { daysBetween, formatDate, todayIso } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -192,7 +192,7 @@ export function TachePanneau({
     tache.etat.code === 'en_retard'
       ? tache.etat.jours
       : tache.etat.code === 'reprise' && echeance && echeance < aujourdhui
-        ? Math.round((Date.parse(aujourdhui) - Date.parse(echeance.slice(0, 10))) / 86_400_000)
+        ? daysBetween(echeance, aujourdhui)
         : null;
   const resume: [string, React.ReactNode][] = [];
   if (gestionnaire) resume.push(['Assignée à', tache.assigne?.nom ?? 'À assigner']);

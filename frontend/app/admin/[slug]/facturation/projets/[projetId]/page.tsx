@@ -40,7 +40,7 @@ import {
 } from '@/lib/types';
 import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
-import { todayIso } from '@/lib/dates';
+import { daysSince, todayIso } from '@/lib/dates';
 
 type Props = { params: Promise<{ slug: string; projetId: string }> };
 
@@ -546,7 +546,7 @@ export default function FacturationPage(props: Props) {
                                 <span className="pill pill--attention">
                                   Avoir en attente du CEO
                                   {f.avoirEnAttenteDepuis
-                                    ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j`
+                                    ? ` depuis ${Math.max(0, daysSince(f.avoirEnAttenteDepuis))} j`
                                     : ''}
                                 </span>
                               )}

@@ -35,6 +35,13 @@ export function addDays(isoDay: string, days: number): string {
   return new Date(Date.parse(`${isoDay.slice(0, 10)}T00:00:00Z`) + days * JOUR_MS).toISOString().slice(0, 10);
 }
 
+/** Jours calendaires de `from` à `to` (jours ou instants ISO, heure ignorée). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round(
+    (Date.parse(`${to.slice(0, 10)}T00:00:00Z`) - Date.parse(`${from.slice(0, 10)}T00:00:00Z`)) / JOUR_MS,
+  );
+}
+
 /** Jours entiers écoulés depuis `since` (négatif s'il est à venir). */
 export function daysSince(since: string | Date, now: number = Date.now()): number {
   const debut = typeof since === 'string' ? Date.parse(since) : since.getTime();

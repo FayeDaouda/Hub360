@@ -18,6 +18,7 @@ import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
 import { formatDate, formatMonthYear } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Chargement impossible.');
 const nomDe = (f: FeuilleTempsSalarie) => `${f.prenom} ${f.nom}`.trim() || f.matricule;
@@ -82,7 +83,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                 >
                   {formatMonthYear(p.mois)}
                   {p.aControler > 0 && ` · ${p.aControler}`}
-                  {p.ecarts > 0 && ` · ${p.ecarts} écart${p.ecarts > 1 ? 's' : ''}`}
+                  {p.ecarts > 0 && ` · ${plural(p.ecarts, 'écart')}`}
                 </button>
               ))}
             </div>

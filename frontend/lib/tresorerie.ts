@@ -1,13 +1,9 @@
 import type { FactureCentrale } from './types';
-import { addDays } from './dates';
+import { addDays, daysBetween } from './dates';
 
 // Trésorerie (revue CFO 20/10/2026, lot 3) : balance âgée des créances et
 // échéancier des encaissements attendus, calculés depuis la liste des
 // factures de la société (la même que l'onglet Factures).
-
-const JOUR = 86_400_000;
-const ecartJours = (de: string, a: string) =>
-  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR);
 
 // Tranches d'âge, comptées depuis l'ÉCHÉANCE (décision du 20/10/2026 : la
 // pratique ; une facture sans échéance est réputée non échue).
@@ -22,7 +18,7 @@ export const TRANCHES: { cle: Tranche; libelle: string }[] = [
 
 export function trancheDe(echeanceLe: string | null, aujourdhui: string): Tranche {
   if (!echeanceLe) return 'nonEchu';
-  const retard = ecartJours(echeanceLe.slice(0, 10), aujourdhui);
+  const retard = daysBetween(echeanceLe.slice(0, 10), aujourdhui);
   return retard <= 0 ? 'nonEchu' : retard <= 30 ? 'j30' : retard <= 60 ? 'j60' : retard <= 90 ? 'j90' : 'plus90';
 }
 
@@ -49,7 +45,7 @@ export function balanceAgee(factures: FactureCentrale[], aujourdhui: string) {
     ligne.creances.push({
       facture: f,
       tranche,
-      retard: f.echeanceLe ? Math.max(0, ecartJours(f.echeanceLe.slice(0, 10), aujourdhui)) : 0,
+      retard: f.echeanceLe ? Math.max(0, daysBetween(f.echeanceLe.slice(0, 10), aujourdhui)) : 0,
     });
     parClient.set(client, ligne);
   }

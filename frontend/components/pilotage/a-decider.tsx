@@ -29,7 +29,7 @@ import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getADeciderProjets, type ADeciderProjets, type DemandeTsADecider } from '@/lib/projets-ouverts';
 import { DecisionTs } from './decision-ts';
 import type { DemandeAbsence, Projet, VuePilotage } from '@/lib/types';
-import { daysSince, formatDayMonth, toIsoDay } from '@/lib/dates';
+import { daysBetween, daysSince, formatDayMonth, toIsoDay } from '@/lib/dates';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -116,7 +116,7 @@ export function ADecider({
   }, [slug, dirGc]);
 
   const aujourdhui = toIsoDay(new Date(maintenant));
-  const joursAvant = (jour: string) => Math.round((Date.parse(jour) - Date.parse(aujourdhui)) / JOUR);
+  const joursAvant = (jour: string) => daysBetween(aujourdhui, jour);
   const versTache = (projetId: string, tacheId: string) => () =>
     router.push(`/admin/${slug}/projets?projet=${projetId}&tache=${tacheId}`);
   const versDossier = (id: string) => () => router.push(`/admin/${slug}/crm?dossier=${id}`);

@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/client-api';
 import { cloturerMois, getClotures, rouvrirMois, type MoisCloture } from '@/lib/facturation';
 import { formatAmount } from '@/lib/format';
 import { formatDate } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -86,7 +87,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                   {m.chiffres.factures} facture{m.chiffres.factures > 1 ? 's' : ''} ·{' '}
                   {formatAmount(m.chiffres.factureTtc)} TTC
                   {m.chiffres.avoirs > 0 &&
-                    ` · ${m.chiffres.avoirs} avoir${m.chiffres.avoirs > 1 ? 's' : ''} (${formatAmount(m.chiffres.avoirsTtc)})`}{' '}
+                    ` · ${plural(m.chiffres.avoirs, 'avoir')} (${formatAmount(m.chiffres.avoirsTtc)})`}{' '}
                   · {m.chiffres.paiements} paiement{m.chiffres.paiements > 1 ? 's' : ''} ·{' '}
                   {formatAmount(m.chiffres.encaisse)} encaissés
                 </p>

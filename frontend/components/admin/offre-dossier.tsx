@@ -9,6 +9,7 @@ import { formatCompactAmount } from '@/lib/format';
 import { daysSince, formatDayShortMonth } from '@/lib/dates';
 import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
+import { plural } from '@/lib/text';
 
 type Props = {
   slug: string;
@@ -135,8 +136,7 @@ export function OffreDossier({
             <span className="cell-sub">
               Envoyée le {formatDayShortMonth(offre.dateEnvoi)} (J+{daysSince(offre.dateEnvoi)})
               {offre.dateValidite && ` · valable jusqu’au ${formatDayShortMonth(offre.dateValidite)}`}
-              {offre.relancesEnvoyees > 0 &&
-                ` · ${offre.relancesEnvoyees} relance${offre.relancesEnvoyees > 1 ? 's' : ''}`}
+              {offre.relancesEnvoyees > 0 && ` · ${plural(offre.relancesEnvoyees, 'relance')}`}
             </span>
           )}
           {offre.dateReponse && (

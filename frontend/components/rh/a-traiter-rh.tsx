@@ -32,7 +32,8 @@ import type {
   IntegrationSalarie,
   ReportingADeposer,
 } from '@/lib/types';
-import { formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
+import { daysBetween, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
 export type DonneesRh = {
@@ -57,9 +58,6 @@ type Element = {
   ouvrir: () => void;
 };
 
-const JOUR = 86_400_000;
-const ecart = (de: string, a: string) =>
-  Math.round((Date.parse(`${a.slice(0, 10)}T00:00:00Z`) - Date.parse(`${de.slice(0, 10)}T00:00:00Z`)) / JOUR);
 const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
 // Une demande qui attend depuis plus de 3 jours passe en rouge.
 const ATTENTE_ALERTE_J = 3;
@@ -119,7 +117,7 @@ export function ATraiterRh({
 
   if (!donnees) return null;
   const depuis = (iso: string) => {
-    const n = ecart(iso, aujourdhui);
+    const n = daysBetween(iso, aujourdhui);
     return {
       quand: n <= 0 ? 'aujourd’hui' : n === 1 ? 'depuis hier' : `depuis ${n} j`,
       ton: (n > ATTENTE_ALERTE_J ? 'risque' : 'attention') as Ton,
@@ -201,8 +199,10 @@ export function ATraiterRh({
   }
   // 3. Points d'intégration échus ou de la semaine.
   for (const i of donnees.integrations) {
-    for (const p of i.points.filter((x) => x.statut !== 'fait' && ecart(aujourdhui, x.datePrevue) <= INTEGRATION_J)) {
-      const n = ecart(aujourdhui, p.datePrevue);
+    for (const p of i.points.filter(
+      (x) => x.statut !== 'fait' && daysBetween(aujourdhui, x.datePrevue) <= INTEGRATION_J,
+    )) {
+      const n = daysBetween(aujourdhui, p.datePrevue);
       elements.push({
         cle: `int-${i.id}-${p.jalon}`,
         groupe: 3,
@@ -266,7 +266,7 @@ export function ATraiterRh({
   }
   // Reporting RH du mois clos à déposer (Pilotage, échéance J+5).
   for (const r of donnees.reportings) {
-    const n = ecart(aujourdhui, r.echeance);
+    const n = daysBetween(aujourdhui, r.echeance);
     elements.push({
       cle: `reporting-${r.type}-${r.mois}`,
       groupe: 4,
@@ -313,8 +313,8 @@ export function ATraiterRh({
       tri: p.mois,
       icone: Timer,
       action: 'Contrôler',
-      titre: `${p.aControler} feuille${p.aControler > 1 ? 's' : ''} de temps à contrôler`,
-      detail: `mois clos de ${formatMonthYear(p.mois)}${projets ? ` · bloque${p.aControler > 1 ? 'nt' : ''} le calcul de la rentabilité de ${projets} projet${projets > 1 ? 's' : ''}` : ''}`,
+      titre: `${plural(p.aControler, 'feuille')} de temps à contrôler`,
+      detail: `mois clos de ${formatMonthYear(p.mois)}${projets ? ` · bloque${p.aControler > 1 ? 'nt' : ''} le calcul de la rentabilité de ${plural(projets, 'projet')}` : ''}`,
       quand: 'mois clos',
       ton: 'attention',
       ouvrir: () => onOuvrir('temps'),
@@ -329,7 +329,7 @@ export function ATraiterRh({
       tri: '',
       icone: FileWarning,
       action: 'Voir',
-      titre: `${incomplets} dossier${incomplets > 1 ? 's' : ''} incomplet${incomplets > 1 ? 's' : ''}`,
+      titre: `${plural(incomplets, 'dossier')} incomplet${incomplets > 1 ? 's' : ''}`,
       detail: 'pièces ou champs manquants',
       quand: '',
       ton: 'neutre',

@@ -17,6 +17,7 @@ import { useSectionEnLecture } from '@/lib/defilement';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useMediaQuery } from '@/lib/media';
 import { formatDate } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Liste = 'cellules' | 'affecter' | 'projets' | 'taches' | 'absences';
 
@@ -117,7 +118,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
       libelle: 'Tâches en cours',
       valeur: String(i.taches.enCours),
       aide: `${i.taches.pctATemps ?? 100} % à temps · ${i.taches.enRetard} en retard${
-        i.taches.enRetard ? `, soit ${i.taches.etapesEnRetard} étape${i.taches.etapesEnRetard > 1 ? 's' : ''}` : ''
+        i.taches.enRetard ? `, soit ${plural(i.taches.etapesEnRetard, 'étape')}` : ''
       }`,
       ton: 'risque',
     },

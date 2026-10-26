@@ -40,6 +40,7 @@ import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
 import { daysSince } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
@@ -231,7 +232,7 @@ export default function CrmPage(props: Props) {
       setMessage(
         `Dossier ${dossier.code} — onboard : projet créé dans « Projets », à assigner` +
           (facturesPreparees > 0
-            ? ` ; ${facturesPreparees} facture${facturesPreparees > 1 ? 's' : ''} préparée${facturesPreparees > 1 ? 's' : ''} en brouillon depuis l’offre (échéanciers CGV).`
+            ? ` ; ${plural(facturesPreparees, 'facture')} préparée${facturesPreparees > 1 ? 's' : ''} en brouillon depuis l’offre (échéanciers CGV).`
             : '.'),
       );
     }

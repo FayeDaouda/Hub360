@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { ChampModal } from '@/components/admin/champ-modal';
 import { arbitrerDecision, cloturerDecision, saisirDecision, type ArbitrageDecision } from '@/lib/pilotage';
 import type { DecisionRegistre, ResponsableDecision, StatutDecision, VuePilotage } from '@/lib/types';
-import { formatDate, todayIso } from '@/lib/dates';
+import { daysSince, formatDate, todayIso } from '@/lib/dates';
 
 const PILL_STATUT: Record<StatutDecision, string> = {
   proposee: 'pill--attention',
@@ -45,7 +45,7 @@ function traceProposition(d: DecisionRegistre): string | null {
   if (!p) return null;
   const par = p.par ? ` par ${p.par}` : '';
   if (p.etat === 'proposee') {
-    const jours = Math.max(0, Math.floor((Date.now() - Date.parse(`${d.date}T00:00:00Z`)) / 86_400_000));
+    const jours = Math.max(0, daysSince(d.date));
     return `Proposée${par} · en attente du CEO depuis ${jours} j`;
   }
   const arbitre = `${p.arbitreLe ? ` le ${formatDate(p.arbitreLe)}` : ''}${p.arbitrePar ? ` par ${p.arbitrePar}` : ''}`;

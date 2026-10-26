@@ -13,6 +13,7 @@ import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { RemiseModal } from './remise-modal';
 import { formatDate, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
@@ -95,9 +96,9 @@ export function MesPerformances({ slug }: { slug: string }) {
             valeur: rd.pct == null ? '—' : `${rd.pct} %`,
             // Seules les tâches validées APRÈS une remise datée sont jugées.
             sousTexte: rd.total
-              ? `${rd.aTemps} remise${rd.aTemps > 1 ? 's' : ''} à temps sur ${rd.total} jugée${rd.total > 1 ? 's' : ''}`
+              ? `${plural(rd.aTemps, 'remise')} à temps sur ${plural(rd.total, 'jugée')}`
               : stats.validees
-                ? `${stats.validees} tâche${stats.validees > 1 ? 's' : ''} validée${stats.validees > 1 ? 's' : ''}, aucune remise datée à juger`
+                ? `${plural(stats.validees, 'tâche')} validée${stats.validees > 1 ? 's' : ''}, aucune remise datée à juger`
                 : 'aucune tâche validée pour l’instant',
             icone: CircleCheck,
           },
@@ -106,7 +107,7 @@ export function MesPerformances({ slug }: { slug: string }) {
             label: 'Taux de reprise',
             valeur: tauxReprise == null ? '—' : `${tauxReprise} %`,
             sousTexte: remises.length
-              ? `${avecReprise} tâche${avecReprise > 1 ? 's' : ''} renvoyée${avecReprise > 1 ? 's' : ''} au moins une fois sur ${remises.length}`
+              ? `${plural(avecReprise, 'tâche')} renvoyée${avecReprise > 1 ? 's' : ''} au moins une fois sur ${remises.length}`
               : 'aucune remise validée pour l’instant',
             icone: RotateCcw,
           },

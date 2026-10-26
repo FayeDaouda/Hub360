@@ -2,7 +2,7 @@ import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
 import type { Temps } from './reglages';
 import type { StatutDevisEffectif } from './types';
-import { formatDate, formatDayMonth, todayIso } from './dates';
+import { daysBetween, formatDate, formatDayMonth, todayIso } from './dates';
 
 // -----------------------------------------------------------------------------
 // Projets ouverts selon le gabarit (maquette « Projets » du boss). Branché sur :
@@ -414,7 +414,7 @@ export function pastilleTache(e: EtatTache, echeance?: string | null): { libelle
     case 'reprise': {
       const jour = todayIso();
       if (echeance && echeance < jour) {
-        const jours = Math.round((Date.parse(jour) - Date.parse(echeance.slice(0, 10))) / 86_400_000);
+        const jours = daysBetween(echeance, jour);
         return { libelle: `Reprise · ${jours} j de retard`, ton: 'risque' };
       }
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };

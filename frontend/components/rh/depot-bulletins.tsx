@@ -9,6 +9,7 @@ import { deposerBulletin } from '@/lib/rh';
 
 import type { DossierPersonnel } from '@/lib/types';
 import { formatMonthYear } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 // `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
 // ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
@@ -255,7 +256,7 @@ export function DepotBulletins({
               {termine ? 'Fermer' : 'Annuler'}
             </button>
             <button type="button" className="btn-primary" disabled={envoi || pretes.length === 0} onClick={deposer}>
-              {envoi ? 'Dépôt en cours…' : `Déposer ${pretes.length} bulletin${pretes.length > 1 ? 's' : ''}`}
+              {envoi ? 'Dépôt en cours…' : `Déposer ${plural(pretes.length, 'bulletin')}`}
             </button>
           </div>
         </div>

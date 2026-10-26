@@ -16,7 +16,7 @@ import { formatAmount } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { FactureDocument, type FactureDocumentProps } from '@/components/finances/facture-document';
 import { useConfirmer } from '@/components/confirmation';
-import { formatDate, todayIso } from '@/lib/dates';
+import { daysSince, formatDate, todayIso } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -292,9 +292,7 @@ export function FacturePanneau({
           {f.avoirEnAttente && (
             <span className="pill pill--attention">
               Avoir en attente du CEO
-              {f.avoirEnAttenteDepuis
-                ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j`
-                : ''}
+              {f.avoirEnAttenteDepuis ? ` depuis ${Math.max(0, daysSince(f.avoirEnAttenteDepuis))} j` : ''}
             </span>
           )}
           {f.projet && (

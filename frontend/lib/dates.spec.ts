@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addDays,
+  daysBetween,
   daysSince,
   formatDate,
   formatDayMonth,
@@ -62,6 +63,18 @@ describe('jours', () => {
   it('addDays traverse mois et années', () => {
     expect(addDays('2026-10-30', 3)).toBe('2026-11-02');
     expect(addDays('2026-01-01', -1)).toBe('2025-12-31');
+  });
+
+  it('daysBetween : comme les anciennes copies « joursEntre »', () => {
+    const ancien = (de: string, a: string) =>
+      Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
+    for (const [de, a] of [
+      ['2026-10-01', '2026-10-24'],
+      ['2026-12-30', '2027-01-02'],
+      ['2026-10-24', '2026-10-21'],
+    ])
+      expect(daysBetween(de, a)).toBe(ancien(de, a));
+    expect(daysBetween('2026-10-01T23:00:00Z', '2026-10-02T01:00:00Z')).toBe(1);
   });
 
   it('daysSince : jours entiers, négatif si à venir', () => {

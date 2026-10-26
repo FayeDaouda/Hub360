@@ -37,7 +37,7 @@ import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
-import { formatDayMonth } from '@/lib/dates';
+import { daysSince, formatDayMonth } from '@/lib/dates';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -166,7 +166,7 @@ export function AValiderCfo({
   }
   // 1 bis. Avoirs au-delà du seuil, à valider (CEO).
   for (const a of avoirs) {
-    const jours = Math.floor((maintenant - Date.parse(a.demandeLe)) / JOUR);
+    const jours = daysSince(a.demandeLe, maintenant);
     elements.push({
       cle: `avoir-${a.id}`,
       groupe: 1,
@@ -185,7 +185,7 @@ export function AValiderCfo({
   for (const f of (factures ?? []).filter(
     (x) => aValiderCfo(x) && contresigneAffaire(session, contresignature, x.montantTtc),
   )) {
-    const jours = Math.floor((maintenant - Date.parse(f.creeLe)) / JOUR);
+    const jours = daysSince(f.creeLe, maintenant);
     elements.push({
       cle: `facture-${f.id}`,
       groupe: 2,
@@ -216,7 +216,7 @@ export function AValiderCfo({
   }
   // 3 bis. Commissions des apporteurs exigibles (revue COO, 22/10/2026).
   for (const c of commissions) {
-    const jours = Math.floor((maintenant - Date.parse(`${c.exigibleLe}T00:00:00Z`)) / JOUR);
+    const jours = daysSince(c.exigibleLe, maintenant);
     elements.push({
       cle: `commission-${c.id}`,
       groupe: 3,
@@ -232,7 +232,7 @@ export function AValiderCfo({
   }
   // 4. Salaires proposés par la RH.
   for (const s of salaires) {
-    const jours = Math.floor((maintenant - Date.parse(s.proposeLe)) / JOUR);
+    const jours = daysSince(s.proposeLe, maintenant);
     elements.push({
       cle: `salaire-${s.id}`,
       groupe: 4,
@@ -248,7 +248,7 @@ export function AValiderCfo({
   }
   // 5. Absences dont il est le N+1 (la RH).
   for (const a of absences) {
-    const jours = Math.floor((maintenant - Date.parse(a.createdAt)) / JOUR);
+    const jours = daysSince(a.createdAt, maintenant);
     elements.push({
       cle: `absence-${a.id}`,
       groupe: 5,

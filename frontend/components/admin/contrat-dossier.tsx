@@ -23,6 +23,7 @@ import {
   type StatutAnnexeContrat,
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
+import { plural } from '@/lib/text';
 
 type Props = {
   slug: string;
@@ -130,7 +131,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
         () => signerContratPapier(slug, projet.id, fichier),
         (r) => {
           setMessage(
-            `Contrat signé — dossier en Onboard, ${r.facturesPreparees} facture${r.facturesPreparees > 1 ? 's' : ''} préparée${r.facturesPreparees > 1 ? 's' : ''} en brouillon.`,
+            `Contrat signé — dossier en Onboard, ${plural(r.facturesPreparees, 'facture')} préparée${r.facturesPreparees > 1 ? 's' : ''} en brouillon.`,
           );
           void onMaj();
         },
