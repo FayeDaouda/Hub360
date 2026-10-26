@@ -63,10 +63,15 @@ Décisions structurantes : `docs/adr/`.
   la fermeture. Le composant commun (`components/ui/dialog.tsx`) ne fait ni
   l'un ni l'autre aujourd'hui (tests « état actuel » dans `dialog.spec.tsx`,
   à inverser) ; la confirmation (`ConfirmModal`) le fait déjà.
-- **Squelettes de chargement des cartes de projet** (S0b, en priorité) :
-  certaines sections des cartes d'un projet (documents du client, relevés,
-  tâches) se chargent sans indicateur ; elles auront le squelette commun de
-  `components/ui`.
+- **Référence coupée (onglet « Projets » de la vue Production, mobile)** :
+  une référence a été prise avant la fin du rendu (1 118 px au lieu de
+  3 051). Vérifié : les cartes arrivent avec le dossier, qui a un squelette ;
+  pas d'import dynamique. Cause non établie : reproduction en cours
+  (sonde rejouée), puis correction de la vraie cause. Attente des captures
+  renforcée entre-temps.
+- **Images sans dimensions** (défaut d'interface) : signature du contrat
+  (`.contrat-signature`) et logo du document de facture (`.fd-logo`), dont la
+  hauteur dépend de l'image chargée ; à corriger, avec captures avant/après.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
