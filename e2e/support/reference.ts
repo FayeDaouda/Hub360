@@ -208,33 +208,35 @@ export async function installSeedNoiseFilter(page: Page, envIndex = 0): Promise<
   trackRequests(page);
   await page.route(`${API_ORIGIN}/**`, serve);
   async function serve(route: Route) {
-    // A failed fetch is retried (and recorded, see expectStableApi): aborting
-    // it would leave the screen loading until the capture times out. Requests
-    // still in flight when the test ends (polling) are dropped once the page
-    // is closed.
-    let response: APIResponse | null = null;
+    // Une requête qui échoue — ou dont le corps ne peut pas être lu — est
+    // retentée (et consignée, voir expectStableApi) : l'abandonner laisserait
+    // l'écran en chargement jusqu'au délai de la capture. Les requêtes encore en
+    // vol à la fin du test (sondage) sont abandonnées une fois la page fermée.
+    let served: { response: APIResponse; body?: string } | null = null;
     let error = '';
-    for (let attempt = 0; attempt < MAX_ATTEMPTS && !response && !page.isClosed(); attempt++) {
+    for (let attempt = 0; attempt < MAX_ATTEMPTS && !served && !page.isClosed(); attempt++) {
       if (attempt) {
         recordRetry(page, route.request(), error, false);
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
-      response = await route
-        .fetch({ url: route.request().url().replace(API_ORIGIN, apiOrigin) })
-        .catch((e: unknown) => {
-          error = (e instanceof Error ? e.message : String(e)).split('\n')[0];
-          return null;
-        });
+      try {
+        const response = await route.fetch({ url: route.request().url().replace(API_ORIGIN, apiOrigin) });
+        const isJson = (response.headers()['content-type'] ?? '').includes('application/json');
+        served = {
+          response,
+          body: isJson ? (await response.text()).replace(ISO_TIMESTAMP, '"$1T00:00:00.000Z"') : undefined,
+        };
+      } catch (e) {
+        error = (e instanceof Error ? e.message : String(e)).split('\n')[0];
+      }
     }
-    if (!response) {
+    if (!served) {
       if (!page.isClosed()) recordRetry(page, route.request(), error, true);
       return route.abort().catch(() => undefined);
     }
-    const isJson = (response.headers()['content-type'] ?? '').includes('application/json');
-    if (!isJson) return route.fulfill({ response }).catch(() => undefined);
-    const body = (await response.text()).replace(ISO_TIMESTAMP, '"$1T00:00:00.000Z"');
-    await route.fulfill({ response, body }).catch(() => undefined);
+    await route.fulfill(served).catch(() => undefined);
   }
+
   await page.addInitScript(() => {
     const neutraliseAvatars = (root: ParentNode) => {
       for (const avatar of root.querySelectorAll<HTMLElement>('.av, .eq-avatar')) {

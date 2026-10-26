@@ -108,6 +108,16 @@ Décisions structurantes : `docs/adr/`.
   (`npm run archive -- <PR> <base> <comparée> <journal>` dans `e2e/`) dans la
   version GitHub « captures-references », conservée 120 jours.
 
+- **Outillage** (e2e/) : `npm run validate -- <branche>` = la validation d'une
+  fusion (série complète contre la référence de `main`, puis tests de fumée) ;
+  la branche est compilée pendant la capture de la référence, elle-même
+  reprise seulement si `main`, le jour ou le harnais ont changé. Compilations
+  en cache (10 dernières), 4 environnements identiques (bases clonées par
+  `CREATE DATABASE … TEMPLATE`, écrans répartis par clé stable). Pendant le
+  travail : `npm run visual:quick -- <filtre>` (jamais pour une fusion).
+  Mesuré : série 4,8 à 5 min (contre 6 à 10), environnement en cache 40 s
+  (contre ~7 min) ; 8 environnements saturent la machine.
+
 ## Défaut corrigé
 
 **Émissions de factures simultanées** (corrigé le 26/10/2026, ADR 0003) :
