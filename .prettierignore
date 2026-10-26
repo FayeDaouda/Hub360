@@ -7,6 +7,7 @@ backend/dist/
 coverage/
 e2e/.state/
 e2e/.reference/
+e2e/.cache/
 scratchpad/
 design/
 
