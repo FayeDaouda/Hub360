@@ -13,8 +13,9 @@ import {
   type TacheEquipe,
 } from './equipes-regles';
 import { photoMembre } from '../auth/profil';
+import { toIsoDay, todayIso } from '../shared/dates';
 
-const jour = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+const jour = (d: Date | null) => (d ? toIsoDay(d) : null);
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
 
 // Équipes (maquette du boss, oct. 2026) : la page en une lecture —
@@ -29,7 +30,7 @@ export class EquipesService {
   ) {}
 
   async vue(societeId: string) {
-    const aujourdhui = new Date().toISOString().slice(0, 10);
+    const aujourdhui = todayIso();
     const [
       societe,
       cellules,

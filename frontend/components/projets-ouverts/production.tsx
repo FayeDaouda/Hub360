@@ -6,23 +6,24 @@ import { AlarmClock, CalendarClock, Gauge, TriangleAlert } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { getProduction, jjmm, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
+import { getProduction, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
 import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
+import { addDays, formatDayMonth, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 const STATUT: Record<LigneProduction['statutChantier'], string> = {
   conception: 'En conception',
   chantier: 'En chantier',
   livre: 'Livré',
 };
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 // Ce qui attend une décision sur le projet (remises, visas, prolongations, TS).
 function enAttente(a: LigneProduction['attente']): string[] {
   return [
-    a.remises && pluriel(a.remises, 'remise'),
-    a.visas && `${pluriel(a.visas, 'visa')} DPLG`,
-    a.prolongations && pluriel(a.prolongations, 'prolongation'),
-    a.ts && pluriel(a.ts, 'TS'),
+    a.remises && plural(a.remises, 'remise'),
+    a.visas && `${plural(a.visas, 'visa')} DPLG`,
+    a.prolongations && plural(a.prolongations, 'prolongation'),
+    a.ts && plural(a.ts, 'TS'),
   ].filter((x): x is string => !!x);
 }
 
@@ -64,8 +65,8 @@ export function Production({ slug }: { slug: string }) {
     }
   }, [slug, voitRenta]);
 
-  const aujourdhui = new Date().toISOString().slice(0, 10);
-  const dans15 = new Date(Date.now() + 15 * 86_400_000).toISOString().slice(0, 10);
+  const aujourdhui = todayIso();
+  const dans15 = addDays(todayIso(), 15);
   const lignes = useMemo(
     () =>
       (vue?.lignes ?? []).filter(
@@ -208,8 +209,8 @@ export function Production({ slug }: { slug: string }) {
                             .join('\n')}
                         >
                           {l.souffrance.length === 1
-                            ? `${pluriel(l.souffrance[0].taches, 'tâche')} en souffrance dans ${numeroEtape(l.souffrance[0].numero)} · ${l.souffrance[0].libelle}`
-                            : `${pluriel(
+                            ? `${plural(l.souffrance[0].taches, 'tâche')} en souffrance dans ${numeroEtape(l.souffrance[0].numero)} · ${l.souffrance[0].libelle}`
+                            : `${plural(
                                 l.souffrance.reduce((t, s) => t + s.taches, 0),
                                 'tâche',
                               )} en souffrance : ${l.souffrance.map((s) => `${numeroEtape(s.numero)} (${s.taches})`).join(', ')}`}
@@ -228,13 +229,13 @@ export function Production({ slug }: { slug: string }) {
                         J{l.jour} / {l.horizon}
                       </span>
                       <span className={l.livraisonDepassee ? 'prod-alerte' : 'cell-sub'}>
-                        livraison {l.livraisonDepassee ? 'dépassée, ' : ''}le {jjmm(l.livraisonLe)}
+                        livraison {l.livraisonDepassee ? 'dépassée, ' : ''}le {formatDayMonth(l.livraisonLe)}
                       </span>
                     </span>
                     <span className="prod-retards">
                       <span className="prod-etiquette">Retards</span>
                       {l.enRetard ? (
-                        <span className="pill pill--risque">{pluriel(l.enRetard, 'tâche')}</span>
+                        <span className="pill pill--risque">{plural(l.enRetard, 'tâche')}</span>
                       ) : (
                         <span className="cell-sub">aucun</span>
                       )}
@@ -289,7 +290,8 @@ export function Production({ slug }: { slug: string }) {
       <div className="prod-bas">
         <section className="panel glass-panel prod-section" aria-label="Charge des cellules">
           <h2 className="dmd-titre">
-            Charge des cellules · du {jjmm(vue.charge.periode.debut)} au {jjmm(vue.charge.periode.fin)}
+            Charge des cellules · du {formatDayMonth(vue.charge.periode.debut)} au{' '}
+            {formatDayMonth(vue.charge.periode.fin)}
           </h2>
           <p className="dmd-note">
             Heures prévues des tâches à faire, sur la présence de chacun (absences et fériés retirés), comparées à la
@@ -331,7 +333,7 @@ export function Production({ slug }: { slug: string }) {
               {echeances.map((e) => (
                 <li key={e.cle}>
                   <button type="button" className="prod-echeance" onClick={() => ouvrir(e.projetId)}>
-                    <span className="prod-echeance-date">{jjmm(e.le)}</span>
+                    <span className="prod-echeance-date">{formatDayMonth(e.le)}</span>
                     <span>{e.texte}</span>
                   </button>
                 </li>

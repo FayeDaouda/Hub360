@@ -1,9 +1,10 @@
-import { ajouterJours, enSuivi, statutPoint } from './regles-integration';
+import { enSuivi, statutPoint } from './regles-integration';
+import { addDays } from '../shared/dates';
 
 describe("règles d'intégration", () => {
   it('jalons calendaires : dates de la maquette', () => {
-    expect([30, 60, 90].map((n) => ajouterJours('2026-09-15', n))).toEqual(['2026-10-15', '2026-11-14', '2026-12-14']);
-    expect([30, 60, 90].map((n) => ajouterJours('2026-07-20', n))).toEqual(['2026-08-19', '2026-09-18', '2026-10-18']);
+    expect([30, 60, 90].map((n) => addDays('2026-09-15', n))).toEqual(['2026-10-15', '2026-11-14', '2026-12-14']);
+    expect([30, 60, 90].map((n) => addDays('2026-07-20', n))).toEqual(['2026-08-19', '2026-09-18', '2026-10-18']);
   });
   it('nouvel arrivant : créé avant la fin de ses 90 jours, ni confirmé ni archivé', () => {
     const base = {

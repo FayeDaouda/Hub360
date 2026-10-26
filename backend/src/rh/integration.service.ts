@@ -1,11 +1,10 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ajouterJours, enSuivi, JALONS, type Jalon, statutPoint } from './regles-integration';
+import { enSuivi, JALONS, type Jalon, statutPoint } from './regles-integration';
+import { addDays, todayIso } from '../shared/dates';
 
 type Acteur = { userId: string };
-
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 const INCLUDE = {
   societe: { select: { nom: true } },
@@ -25,7 +24,7 @@ export class IntegrationService {
       include: INCLUDE,
       orderBy: { dateEntree: 'desc' },
     });
-    const jour = aujourdhui();
+    const jour = todayIso();
     return dossiers.filter(enSuivi).map((d) => versIntegration(d, jour));
   }
 
@@ -37,7 +36,7 @@ export class IntegrationService {
   ) {
     if (!(JALONS as readonly number[]).includes(jalon)) throw new BadRequestException('Jalon inconnu (30, 60 ou 90).');
     if (!corps.compteRendu.trim()) throw new BadRequestException('Compte rendu obligatoire.');
-    if (corps.realiseLe > aujourdhui()) throw new BadRequestException('Un point ne peut pas être daté dans le futur.');
+    if (corps.realiseLe > todayIso()) throw new BadRequestException('Un point ne peut pas être daté dans le futur.');
     await this.dossierSuivi(dossierId);
     const data = { realiseLe: corps.realiseLe, compteRendu: corps.compteRendu.trim(), enregistreParId: a.userId };
     await this.prisma.pointIntegration.upsert({
@@ -45,7 +44,7 @@ export class IntegrationService {
       create: { dossierId, jalon, ...data },
       update: data,
     });
-    return versIntegration(await this.dossierSuivi(dossierId), aujourdhui());
+    return versIntegration(await this.dossierSuivi(dossierId), todayIso());
   }
 
   async confirmer(a: Acteur, dossierId: string) {
@@ -55,7 +54,7 @@ export class IntegrationService {
     }
     const maj = await this.prisma.dossierPersonnel.update({
       where: { id: dossierId },
-      data: { confirmeLe: aujourdhui(), confirmeParId: a.userId },
+      data: { confirmeLe: todayIso(), confirmeParId: a.userId },
       select: { id: true, confirmeLe: true },
     });
     return maj;
@@ -72,7 +71,7 @@ export class IntegrationService {
 function versIntegration(d: DossierSuivi, jour: string) {
   const points = JALONS.map((jalon: Jalon) => {
     const p = d.pointsIntegration.find((x) => x.jalon === jalon);
-    const datePrevue = ajouterJours(d.dateEntree!, jalon);
+    const datePrevue = addDays(d.dateEntree!, jalon);
     return {
       jalon,
       datePrevue,

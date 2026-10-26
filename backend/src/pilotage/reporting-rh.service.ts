@@ -7,6 +7,9 @@ import { joursOuvrables } from '../rh/regles-conges';
 import { salaireAu, type ChangementSource } from '../rh/regles-salaire';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { TempsService } from '../rh/temps.service';
+import { formatDayMonth, toIsoDay } from '../shared/dates';
+import { formatAmount, formatNumber } from '../shared/format';
+import { plural } from '../shared/text';
 
 // `montant` : chiffre brut figé avec le reporting (masse salariale), relu le
 // mois suivant pour la comparaison.
@@ -15,14 +18,10 @@ export type Rubrique = { libelle: string; valeur: string; montant?: number };
 const MASSE = 'Masse salariale brute';
 
 const JOUR = 86_400_000;
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
-const dateFr = (iso: string) => iso.slice(5).split('-').reverse().join('/');
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 const moisPrecedent = (mois: string) => {
   const [a, m] = mois.split('-').map(Number);
   return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`;
 };
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 const nomDe = (d: { prenom: string; nom: string }) => `${d.prenom} ${d.nom}`;
 // Cinq noms au plus : le reporting se lit d'un coup d'œil.
 const noms = (ds: { prenom: string; nom: string }[]) =>
@@ -96,7 +95,7 @@ export class ReportingRhService {
         },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       })
-    ).map((d) => ({ ...d, entree: d.dateEntree ?? '', sortie: d.archiveLe ? jourIso(d.archiveLe) : null }));
+    ).map((d) => ({ ...d, entree: d.dateEntree ?? '', sortie: d.archiveLe ? toIsoDay(d.archiveLe) : null }));
     // Présent au soir du dernier jour / à un moment du mois. Sans date
     // d'entrée : présent depuis toujours (comme les feuilles de temps).
     const presentLe = (d: Dossier, jour: string) => d.entree <= jour && (!d.sortie || d.sortie > jour);
@@ -139,7 +138,7 @@ export class ReportingRhService {
         ? `chiffre de ${moisCourt(precedent)} illisible : pas de comparaison`
         : masse === masseFigee
           ? `stable par rapport au reporting de ${moisCourt(precedent)}`
-          : `${masse > masseFigee ? '+' : '−'}${fcfa(Math.abs(masse - masseFigee))} par rapport au reporting de ${moisCourt(precedent)}`;
+          : `${masse > masseFigee ? '+' : '−'}${formatAmount(Math.abs(masse - masseFigee))} par rapport au reporting de ${moisCourt(precedent)}`;
 
     // 4. Temps
     const aControler = feuilles.feuilles.filter((f) => f.statut === 'a_controler' || f.statut === 'controlee');
@@ -154,13 +153,13 @@ export class ReportingRhService {
     return [
       {
         libelle: 'Effectif',
-        valeur: `${pluriel(effectif.length, 'salarié')} au ${dateFr(fin)}${parContrat.length ? ` · ${parContrat.join(', ')}` : ''} · entrées : ${liste(entrees)} · sorties : ${liste(sorties)}`,
+        valeur: `${plural(effectif.length, 'salarié')} au ${formatDayMonth(fin)}${parContrat.length ? ` · ${parContrat.join(', ')}` : ''} · entrées : ${liste(entrees)} · sorties : ${liste(sorties)}`,
       },
       {
         libelle: MASSE,
         valeur:
-          `${fcfa(masse)} / mois · ${comparaison}` +
-          (manquants ? ` · ${pluriel(manquants, 'salaire')} non renseigné${manquants > 1 ? 's' : ''}` : ''),
+          `${formatAmount(masse)} / mois · ${comparaison}` +
+          (manquants ? ` · ${plural(manquants, 'salaire')} non renseigné${manquants > 1 ? 's' : ''}` : ''),
         montant: masse,
       },
       {
@@ -170,7 +169,7 @@ export class ReportingRhService {
             ? absences.jours.map(([t, j]) => `${LIBELLE_ABSENCE[t]} ${j} j`)
             : ['Aucune absence']),
           ...(absences.refusees
-            ? [`${pluriel(absences.refusees, 'demande')} refusée${absences.refusees > 1 ? 's' : ''}`]
+            ? [`${plural(absences.refusees, 'demande')} refusée${absences.refusees > 1 ? 's' : ''}`]
             : []),
         ].join(' · '),
       },
@@ -179,20 +178,20 @@ export class ReportingRhService {
         valeur:
           `${aControler.filter((f) => f.statut === 'controlee').length} / ${aControler.length} feuille(s) contrôlée(s)` +
           (sansHeures ? ` · ${sansHeures} sans heures` : '') +
-          ` · ${ecarts ? `${pluriel(ecarts, 'écart')} ouvert${ecarts > 1 ? 's' : ''}` : 'aucun écart ouvert'}`,
+          ` · ${ecarts ? `${plural(ecarts, 'écart')} ouvert${ecarts > 1 ? 's' : ''}` : 'aucun écart ouvert'}`,
       },
       {
         libelle: 'Demandes',
         valeur:
           `${demandes.traitees} traitée(s)` +
-          (demandes.delaiMoyen == null ? '' : ` en ${demandes.delaiMoyen.toLocaleString('fr-FR')} j en moyenne`) +
-          ` · ${demandes.relances ? `${pluriel(demandes.relances, 'relance')} envoyée${demandes.relances > 1 ? 's' : ''}` : 'aucune relance'}`,
+          (demandes.delaiMoyen == null ? '' : ` en ${formatNumber(demandes.delaiMoyen)} j en moyenne`) +
+          ` · ${demandes.relances ? `${plural(demandes.relances, 'relance')} envoyée${demandes.relances > 1 ? 's' : ''}` : 'aucune relance'}`,
       },
       {
         libelle: 'Échéances légales',
         valeur: echeances.length
           ? echeances
-              .map((a) => `${nomDe(a)} · ${LIBELLE_ALERTE[a.type][a.jours < 0 ? 1 : 0]} ${dateFr(a.date)}`)
+              .map((a) => `${nomDe(a)} · ${LIBELLE_ALERTE[a.type][a.jours < 0 ? 1 : 0]} ${formatDayMonth(a.date)}`)
               .join(' ; ')
           : 'Aucune',
       },

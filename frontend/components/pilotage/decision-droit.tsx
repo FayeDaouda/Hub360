@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { deciderDemandeDroit, type DemandeDroit } from '@/lib/roles';
+import { formatDate } from '@/lib/dates';
 
 const NIVEAU: Record<DemandeDroit['apres'], string> = {
   aucun: 'Aucun',
@@ -11,7 +12,6 @@ const NIVEAU: Record<DemandeDroit['apres'], string> = {
   ecriture: 'Écriture',
   validation: 'Validation',
 };
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Le CEO valide une modification des droits du rôle CIO (revue CIO,
 // 22/10/2026) : acceptée, elle est appliquée et tracée « validée par » ;
@@ -81,7 +81,7 @@ export function DecisionDroit({
             <div>
               <dt>Demandé</dt>
               <dd>
-                le {jjmmaaaa(d.demandeLe)} par {d.demandePar}
+                le {formatDate(d.demandeLe)} par {d.demandePar}
               </dd>
             </div>
           </dl>

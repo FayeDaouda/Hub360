@@ -10,7 +10,6 @@ import {
   getSuppleants,
   deposerRemboursement,
   getMesDemandes,
-  jjmm,
   LIBELLE_MOTIF_REFUS,
   LIBELLE_SOINS,
   LIBELLE_TYPE_ABSENCE,
@@ -20,8 +19,9 @@ import {
   STATUT_REMBOURSEMENT,
   type Suppleant,
 } from '@/lib/demandes';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
+import { formatDate, toIsoDay } from '@/lib/dates';
 
 type Fichier = { nom: string; url: string };
 type MesDemandes = { solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] };
@@ -34,7 +34,7 @@ function versIso(jjmmaaaa: string): string | null {
   if (!m) return null;
   const iso = `${m[3]}-${m[2]}-${m[1]}`;
   const d = new Date(`${iso}T00:00:00Z`);
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === iso ? iso : null;
+  return !Number.isNaN(d.getTime()) && toIsoDay(d) === iso ? iso : null;
 }
 
 // Saisie JJ/MM/AAAA au clavier numérique : les « / » sont posés pendant la
@@ -203,11 +203,11 @@ export function RemboursementsSante({ slug }: { slug: string }) {
               <li key={r.id} className="dmd-ligne">
                 <span>
                   <strong>
-                    {LIBELLE_SOINS[r.categorie]} · {formatMontant(r.montant)}
+                    {LIBELLE_SOINS[r.categorie]} · {formatAmount(r.montant)}
                   </strong>
                   <span className="cell-sub">
-                    Soins du {jjmm(r.dateSoins)}
-                    {r.montantRembourse != null && ` · remboursé ${formatMontant(r.montantRembourse)}`}
+                    Soins du {formatDate(r.dateSoins)}
+                    {r.montantRembourse != null && ` · remboursé ${formatAmount(r.montantRembourse)}`}
                     {r.motifRejet && ` · ${r.motifRejet}`}
                   </span>
                 </span>
@@ -234,7 +234,7 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
           {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j
         </strong>
         <span className="cell-sub">
-          {jjmm(d.dateDebut)} → {jjmm(d.dateFin)}
+          {formatDate(d.dateDebut)} → {formatDate(d.dateFin)}
           {d.statut === 'attente_n1' && d.n1Role && ` · chez ${d.n1Role}`}
           {d.statut === 'accord_n1' && !d.decisionN1 && ' · sans N+1, transmise à la RH'}
           {d.motifRefus && ` · ${LIBELLE_MOTIF_REFUS[d.motifRefus]}`}
@@ -242,7 +242,7 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
         </span>
         {d.statut === 'autres_dates' && d.datesProposeesDebut && (
           <span className="dmd-proposition">
-            Dates proposées : {jjmm(d.datesProposeesDebut)} → {jjmm(d.datesProposeesFin!)}
+            Dates proposées : {formatDate(d.datesProposeesDebut)} → {formatDate(d.datesProposeesFin!)}
           </span>
         )}
         {erreur && <span className="field-erreur">{erreur}</span>}

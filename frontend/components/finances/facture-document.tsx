@@ -1,4 +1,4 @@
-import { formatMontant } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { montantEnLettres } from '@/lib/montant-lettres';
 import type { ProfilFacturation } from '@/lib/facturation';
 import type { LigneDocument } from '@/components/document-facturation';
@@ -62,7 +62,7 @@ const ARTICLES_RAPPELES = [9, 15];
 const ligne = (...parts: (string | null | undefined | false)[]) =>
   parts.filter((p): p is string => !!p && !!p.trim()).join(' · ');
 // Montant d'avoir : imprimé en négatif, comme dans le journal des ventes.
-const montant = (n: number) => formatMontant(n);
+const montant = (n: number) => formatAmount(n);
 
 export function FactureDocument(p: FactureDocumentProps) {
   const e = p.emetteur;
@@ -184,7 +184,7 @@ export function FactureDocument(p: FactureDocumentProps) {
                   {l.designation}
                   {l.detail && <span className="fd-detail">{l.detail}</span>}
                 </td>
-                <td className="num">{l.quantite.toLocaleString('fr-FR')}</td>
+                <td className="num">{formatNumber(l.quantite)}</td>
                 <td>{l.unite ?? 'Forfait'}</td>
                 <td className="num">{montant(l.prixUnitaire)}</td>
                 <td className="num">{montant(l.montantHt)}</td>

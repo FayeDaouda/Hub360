@@ -4,6 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { salaireAu } from './regles-salaire';
 import { DossierPersonnelDto, PieceDto, ReaffectationDto } from './dto';
+import { formatNumericMonth, todayIso } from '../shared/dates';
 
 // Pièces attendues dans tout dossier (ordre d'affichage).
 export const PIECES_DOSSIER: TypePieceDossier[] = [
@@ -131,7 +132,7 @@ export class DossiersPersonnelService {
   // Total des dossiers actifs, salaires en vigueur aujourd'hui : un agrégat,
   // pas la paie d'une personne.
   async masseSalariale() {
-    const jour = new Date().toISOString().slice(0, 10);
+    const jour = todayIso();
     const actifs = await this.prisma.dossierPersonnel.findMany({
       where: { archiveLe: null },
       select: {
@@ -413,7 +414,7 @@ export class DossiersPersonnelService {
     await this.notifications.envoyer({
       societeId: d.societeId,
       type: 'bulletin_depose',
-      titre: `Bulletin de paie disponible · ${mois.split('-').reverse().join('/')}`,
+      titre: `Bulletin de paie disponible · ${formatNumericMonth(mois)}`,
       destinataireIds: [await this.notifications.compteDuDossier(id)],
       parId: acteurId,
     });
@@ -510,11 +511,7 @@ export class DossiersPersonnelService {
 }
 
 // Mois AAAA-MM déjà commencé, et pas avant l'entrée du salarié.
-export function verifierMoisBulletin(
-  mois: string,
-  dateEntree: string | null,
-  aujourdhui = new Date().toISOString().slice(0, 10),
-) {
+export function verifierMoisBulletin(mois: string, dateEntree: string | null, aujourdhui = todayIso()) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new BadRequestException('Mois invalide (AAAA-MM).');
   if (mois > aujourdhui.slice(0, 7)) throw new BadRequestException('Pas de bulletin pour un mois à venir.');
   if (dateEntree && mois < dateEntree.slice(0, 7))

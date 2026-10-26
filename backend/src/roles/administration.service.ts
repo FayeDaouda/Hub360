@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { doubleFacteurExige } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { daysSince, formatDate, formatDayMonth, toIsoDay } from '../shared/dates';
+import { plural } from '../shared/text';
 
 export type ElementAdministration = {
   type: 'signalement' | 'droit_cio' | 'invitation' | 'chef_sans_compte' | 'double_facteur' | 'salarie_sans_compte';
@@ -12,7 +14,6 @@ export type ElementAdministration = {
 };
 
 const nomDe = (p: { prenom: string; nom: string }) => `${p.prenom} ${p.nom}`.trim();
-const jjmm = (d: Date) => d.toISOString().slice(0, 10).split('-').slice(1).reverse().join('/');
 const JOUR = 86_400_000;
 // Arrivée récente : compte HUB à créer en priorité.
 const ARRIVEE_RECENTE_JOURS = 60;
@@ -92,7 +93,7 @@ export class AdministrationService {
 
     const elements: ElementAdministration[] = [];
     for (const s of signalements) {
-      const jours = Math.floor((maintenant - s.creeLe.getTime()) / JOUR);
+      const jours = daysSince(s.creeLe, maintenant);
       elements.push({
         type: 'signalement',
         cle: `signalement-${s.id}`,
@@ -107,7 +108,7 @@ export class AdministrationService {
         type: 'droit_cio',
         cle: `droit-${d.id}`,
         titre: `Droits du CIO · ${d.module} → ${d.apres}`,
-        detail: `en attente du CEO depuis ${Math.floor((maintenant - d.createdAt.getTime()) / JOUR)} j (demandée le ${jjmm(d.createdAt)})`,
+        detail: `en attente du CEO depuis ${daysSince(d.createdAt, maintenant)} j (demandée le ${formatDayMonth(toIsoDay(d.createdAt))})`,
         ton: 'info',
         le: d.createdAt.toISOString(),
       });
@@ -132,8 +133,8 @@ export class AdministrationService {
           detail: !inv
             ? `${u.email} · aucune invitation envoyée`
             : expiree
-              ? `${u.email} · invitation expirée le ${jjmm(inv.expiresAt)}, à renvoyer`
-              : `${u.email} · invitation envoyée le ${jjmm(inv.createdAt)}, valable jusqu’au ${jjmm(inv.expiresAt)}`,
+              ? `${u.email} · invitation expirée le ${formatDayMonth(toIsoDay(inv.expiresAt))}, à renvoyer`
+              : `${u.email} · invitation envoyée le ${formatDayMonth(toIsoDay(inv.createdAt))}, valable jusqu’au ${formatDayMonth(toIsoDay(inv.expiresAt))}`,
           ton: expiree ? 'risque' : 'info',
           le: (inv?.createdAt ?? new Date(0)).toISOString(),
         });
@@ -147,7 +148,7 @@ export class AdministrationService {
       elements.push({
         type: 'double_facteur',
         cle: 'double-facteur',
-        titre: `Double authentification non activée · ${sansDoubleFacteur.length} compte${sansDoubleFacteur.length > 1 ? 's' : ''}`,
+        titre: `Double authentification non activée · ${plural(sansDoubleFacteur.length, 'compte')}`,
         detail: `exigée pour la direction et les chefs de cellule : ${sansDoubleFacteur.join(', ')}`,
         ton: 'risque',
         le: null,
@@ -172,7 +173,7 @@ export class AdministrationService {
         .filter((c) => !c.dispatcher?.utilisateur?.actif && !c.dispatcher?.dossierPersonnel?.utilisateur?.actif)
         .map((c) => c.dispatcher!.id),
     );
-    const depuis = new Date(maintenant - ARRIVEE_RECENTE_JOURS * JOUR).toISOString().slice(0, 10);
+    const depuis = toIsoDay(new Date(maintenant - ARRIVEE_RECENTE_JOURS * JOUR));
     const autres: string[] = [];
     for (const d of dossiers) {
       if (d.collaborateurId && chefsSansCompte.has(d.collaborateurId)) continue;
@@ -184,7 +185,7 @@ export class AdministrationService {
         type: 'salarie_sans_compte',
         cle: `salarie-${d.id}`,
         titre: `Nouvel arrivant sans compte HUB · ${nomDe(d)}`,
-        detail: `${d.poste || 'poste non renseigné'} · entré le ${d.dateEntree.split('-').reverse().join('/')} · dossier RH ouvert, compte à créer`,
+        detail: `${d.poste || 'poste non renseigné'} · entré le ${formatDate(d.dateEntree)} · dossier RH ouvert, compte à créer`,
         ton: 'attention',
         le: d.createdAt.toISOString(),
       });
@@ -193,7 +194,7 @@ export class AdministrationService {
       elements.push({
         type: 'salarie_sans_compte',
         cle: 'salaries-sans-compte',
-        titre: `${autres.length} salarié${autres.length > 1 ? 's' : ''} sans compte HUB`,
+        titre: `${plural(autres.length, 'salarié')} sans compte HUB`,
         detail: autres.join(', '),
         ton: 'info',
         le: null,

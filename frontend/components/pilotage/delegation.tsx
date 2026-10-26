@@ -5,9 +5,7 @@ import { UserCog } from 'lucide-react';
 import { deleguer, getDelegation, revoquerDelegation, type VueDelegation } from '@/lib/pilotage';
 import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
-
-const dateFr = (j: string) => j.split('-').reverse().join('/');
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+import { formatDate, todayIso } from '@/lib/dates';
 
 // Délégation du CEO (revue CEO, 22/10/2026). Le CEO : sa carte (déléguer,
 // révoquer). Le délégataire : un bandeau tant que la délégation court. Les
@@ -46,7 +44,7 @@ export function Delegation({ slug }: { slug: string }) {
     if (!d || vue.peutGerer) return null;
     return (
       <p className="dl-bandeau" role="status">
-        <UserCog size={16} aria-hidden /> Vous remplacez le CEO jusqu’au {dateFr(d.au)} : {d.perimetre.join(', ')}.
+        <UserCog size={16} aria-hidden /> Vous remplacez le CEO jusqu’au {formatDate(d.au)} : {d.perimetre.join(', ')}.
         Jamais : {vue.jamais.join(', ')}.
       </p>
     );
@@ -62,7 +60,7 @@ export function Delegation({ slug }: { slug: string }) {
           <button
             type="button"
             className="btn-ghost btn-ghost--sm"
-            onClick={() => setSaisie({ delegataireId: vue.candidats[0]?.id ?? '', du: aujourdhui(), au: aujourdhui() })}
+            onClick={() => setSaisie({ delegataireId: vue.candidats[0]?.id ?? '', du: todayIso(), au: todayIso() })}
           >
             Déléguer
           </button>
@@ -80,7 +78,7 @@ export function Delegation({ slug }: { slug: string }) {
               <strong>
                 {d.delegataire} ({d.role})
               </strong>{' '}
-              · du {dateFr(d.du)} au {dateFr(d.au)} {d.enCours ? '· en cours' : '· à venir'}
+              · du {formatDate(d.du)} au {formatDate(d.au)} {d.enCours ? '· en cours' : '· à venir'}
             </span>
             <span className="cell-sub">
               Délégué : {d.perimetre.join(', ')}. Jamais : {vue.jamais.join(', ')}.
@@ -119,7 +117,7 @@ export function Delegation({ slug }: { slug: string }) {
             <input
               className="field-input"
               type="date"
-              min={aujourdhui()}
+              min={todayIso()}
               value={saisie.du}
               onChange={(e) => setSaisie({ ...saisie, du: e.target.value })}
             />

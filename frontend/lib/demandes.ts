@@ -12,6 +12,7 @@ import type {
 } from './types';
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
+import { formatDate } from './dates';
 
 // RH · Demandes (lot 2). Salarié : /mon-espace ; N+1 : /absences ; RH : /rh/demandes.
 type Fichier = { nom: string; url: string };
@@ -161,7 +162,6 @@ export const STATUT_REMBOURSEMENT: Record<StatutRemboursement, { libelle: string
   remboursee: { libelle: 'Remboursée', pill: 'pill--succes' },
   rejetee: { libelle: 'Rejetée', pill: 'pill--risque' },
 };
-export const jjmm = (iso: string) => iso.split('-').reverse().join('/');
 
 export async function telechargerJustificatif(slug: string, chemin: string) {
   const f = await getJustificatif(slug, chemin);

@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { IntegrationService } from '../rh/integration.service';
 import { bornesMois, moisDe } from '../rh/regles-temps';
+import { plural } from '../shared/text';
 
 // Tuiles du Pilotage (décision du 12/10/2026, option A) : des chiffres clés
 // au lieu des compteurs déjà présents plus bas. La rangée suit la matrice :
@@ -31,7 +32,6 @@ type Acteur = { societeId: string; role: string; permissions?: Record<string, Ni
 // « offres soumises · délai 48 h »).
 export const DELAI_VALIDATION_CFO_MS = 48 * 3600 * 1000;
 
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 const aTraiter = (n: number): EtatTuile => (n > 0 ? 'attention' : 'succes');
 const enRetard = (n: number): EtatTuile => (n > 0 ? 'risque' : 'succes');
 // Rouge si un délai est dépassé, ambre s'il reste à traiter dans les délais.
@@ -93,21 +93,21 @@ export class ChiffresPilotageService {
         cle: 'facture_mois',
         valeur: facture,
         aide: nbEmises
-          ? `${pluriel(nbEmises, 'facture')} émise${nbEmises > 1 ? 's' : ''} ce mois`
+          ? `${plural(nbEmises, 'facture')} émise${nbEmises > 1 ? 's' : ''} ce mois`
           : 'aucune facture émise ce mois',
         etat: 'marque',
       },
       {
         cle: 'encaisse_mois',
         valeur: encaisse,
-        aide: paiements.length ? `${pluriel(paiements.length, 'paiement')} ce mois` : 'aucun paiement ce mois',
+        aide: paiements.length ? `${plural(paiements.length, 'paiement')} ce mois` : 'aucun paiement ce mois',
         etat: 'marque',
       },
       {
         cle: 'reste_retard',
         valeur: reste,
         aide: restes.length
-          ? `${pluriel(restes.length, 'facture')} échue${restes.length > 1 ? 's' : ''} non soldée${restes.length > 1 ? 's' : ''}`
+          ? `${plural(restes.length, 'facture')} échue${restes.length > 1 ? 's' : ''} non soldée${restes.length > 1 ? 's' : ''}`
           : 'aucune facture échue',
         etat: enRetard(restes.length),
       },
@@ -204,7 +204,7 @@ export class ChiffresPilotageService {
         valeur: points,
         aide: points
           ? `point${points > 1 ? 's' : ''} J+30 / 60 / 90 échu${points > 1 ? 's' : ''}`
-          : `${pluriel(integrations.length, 'nouvel arrivant')} suivi${integrations.length > 1 ? 's' : ''}`,
+          : `${plural(integrations.length, 'nouvel arrivant')} suivi${integrations.length > 1 ? 's' : ''}`,
         etat: enRetard(points),
       },
     ];

@@ -9,8 +9,9 @@ import {
   type Barre,
   type Tranche,
 } from '@/lib/finances';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { Devis, FactureCentrale, ProduitService } from '@/lib/types';
+import { plural } from '@/lib/text';
 
 type Props = { devis: Devis[]; factures: FactureCentrale[]; catalogue: ProduitService[] };
 
@@ -52,11 +53,11 @@ export function TableauDeBordFinances({ devis, factures, catalogue }: Props) {
           <div>
             <h2 className="fin-carte-titre">Ventes</h2>
             <p className="fin-carte-sous-titre">12 derniers mois · facturé TTC</p>
-            <p className="fin-ventes-total">{formatMontant(ventes.reduce((s, m) => s + m.facture, 0))}</p>
+            <p className="fin-ventes-total">{formatAmount(ventes.reduce((s, m) => s + m.facture, 0))}</p>
           </div>
           <div>
             <p className="fin-carte-sous-titre">Ce mois</p>
-            <p className="fin-ventes-mois">{formatMontant(ventes[ventes.length - 1].facture)}</p>
+            <p className="fin-ventes-mois">{formatAmount(ventes[ventes.length - 1].facture)}</p>
           </div>
         </div>
         <Histogramme mois={ventes} />
@@ -82,7 +83,7 @@ function LigneOuverte({ ton, libelle, t }: { ton: string; libelle: string; t: Tr
     <li>
       <span className={`fin-compteur fin-compteur--${ton}`}>{t.nombre}</span>
       <span>{libelle}</span>
-      <strong>{formatMontant(t.montant)}</strong>
+      <strong>{formatAmount(t.montant)}</strong>
     </li>
   );
 }
@@ -118,9 +119,9 @@ function Anneau({ tranches, total }: { tranches: Tranche[]; total: Tranche }) {
       </svg>
       <p>
         <span>
-          {total.nombre} facture{total.nombre > 1 ? 's' : ''} ouverte{total.nombre > 1 ? 's' : ''}
+          {plural(total.nombre, 'facture')} ouverte{total.nombre > 1 ? 's' : ''}
         </span>
-        <strong>{formatMontant(total.montant)}</strong>
+        <strong>{formatAmount(total.montant)}</strong>
       </p>
     </div>
   );
@@ -153,7 +154,7 @@ function BarresCarte({
           {barres.map((b) => (
             <li
               key={b.cle}
-              title={`${b.detail ? `${b.libelle} · ${b.detail}` : b.libelle} · facturé ${formatMontant(b.facture)} · encaissé ${formatMontant(b.encaisse)}`}
+              title={`${b.detail ? `${b.libelle} · ${b.detail}` : b.libelle} · facturé ${formatAmount(b.facture)} · encaissé ${formatAmount(b.encaisse)}`}
             >
               <span className="fin-barres-libelle">
                 {b.libelle}
@@ -163,7 +164,7 @@ function BarresCarte({
                 <span className="fin-jauge-facture" style={{ width: `${(b.facture / max) * 100}%` }} />
                 <span className="fin-jauge-encaisse" style={{ width: `${(Math.max(0, b.encaisse) / max) * 100}%` }} />
               </span>
-              <strong>{formatMontant(b.facture)}</strong>
+              <strong>{formatAmount(b.facture)}</strong>
             </li>
           ))}
         </ul>
@@ -192,7 +193,7 @@ function Histogramme({ mois }: { mois: Barre[] }) {
         </span>
         <ol className="fin-histo-barres">
           {mois.map((m) => {
-            const detail = `${m.libelle} · facturé ${formatMontant(m.facture)} · encaissé ${formatMontant(m.encaisse)}`;
+            const detail = `${m.libelle} · facturé ${formatAmount(m.facture)} · encaissé ${formatAmount(m.encaisse)}`;
             return (
               <li key={m.cle} title={detail}>
                 <span className="sr-only">{detail}</span>

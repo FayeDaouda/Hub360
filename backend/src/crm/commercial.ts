@@ -5,6 +5,7 @@
 
 import { champsManquants, type ChampsFiche } from './fiche';
 import { DELAI_RELANCE_FICHE_MS } from './notifications-crm';
+import { daysBetween, formatDayMonth, toIsoDay } from '../shared/dates';
 
 export type DossierCommercial = ChampsFiche & {
   id: string;
@@ -41,9 +42,6 @@ export type ElementATraiter = {
 };
 
 const JOUR_MS = 86_400_000;
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const joursEntre = (de: string, a: string) =>
-  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR_MS);
 const EN_COURS = new Set(['nouveau_projet', 'en_validation', 'offre_envoyee']);
 
 // Fiche apporteur à compléter : sans % attribué (la commission ne pourrait
@@ -89,18 +87,18 @@ export function aTraiterCommercial(dossiers: DossierCommercial[], jour: string, 
     }
     // 3. Offre chez le client : validité, réponse attendue.
     if (d.statut === 'offre_envoyee' && d.offre?.statut === 'envoye' && d.offre.valideJusquau) {
-      const reste = joursEntre(jour, d.offre.valideJusquau);
-      const depuis = d.offre.envoyeeLe ? joursEntre(d.offre.envoyeeLe, jour) : null;
+      const reste = daysBetween(jour, d.offre.valideJusquau);
+      const depuis = d.offre.envoyeeLe ? daysBetween(d.offre.envoyeeLe, jour) : null;
       elements.push({
         ...base,
         type: 'offre_chez_client',
         ton: reste < 0 ? 'risque' : reste <= 2 ? 'attention' : 'info',
         detail: `${depuis !== null ? `envoyée il y a ${depuis} j, ` : ''}${
           reste < 0
-            ? `expirée le ${jjmm(d.offre.valideJusquau)} sans réponse`
+            ? `expirée le ${formatDayMonth(d.offre.valideJusquau)} sans réponse`
             : reste === 0
               ? 'expire aujourd’hui'
-              : `valable jusqu’au ${jjmm(d.offre.valideJusquau)}`
+              : `valable jusqu’au ${formatDayMonth(d.offre.valideJusquau)}`
         }`,
         tri: d.offre.valideJusquau,
       });
@@ -150,9 +148,7 @@ function apporteurDe(d: DossierCommercial): Pick<LignePerformance, 'cle' | 'libe
 // lead abandonné est un lead non transformé).
 export function performanceCommerciale(dossiers: DossierCommercial[]) {
   const signes = dossiers.filter((d) => d.statut === 'onboard');
-  const delais = signes
-    .filter((d) => d.signeLe)
-    .map((d) => joursEntre(d.creeLe.toISOString().slice(0, 10), d.signeLe!));
+  const delais = signes.filter((d) => d.signeLe).map((d) => daysBetween(toIsoDay(d.creeLe), d.signeLe!));
   const lignes = new Map<string, LignePerformance>();
   for (const d of dossiers) {
     const a = apporteurDe(d);

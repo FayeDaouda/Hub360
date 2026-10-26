@@ -5,13 +5,16 @@ import { montantHtLignes } from '../devis/domaine';
 import { RentabiliteService } from '../finances/rentabilite/rentabilite.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { moisClos, moisFr } from '../projets/facturation/cloture';
+import { moisClos } from '../projets/facturation/cloture';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { bornesMois } from '../rh/regles-temps';
 import { DECISION_EN_VIGUEUR, statutDecision } from './pilotage-regles';
 import { PilotageService } from './pilotage.service';
 import { ReportingRhService } from './reporting-rh.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
+import { addDays, formatDate, formatMonthYear, todayIso } from '../shared/dates';
+import { formatAmount } from '../shared/format';
+import { plural } from '../shared/text';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };
@@ -20,12 +23,6 @@ export type SectionSynthese = { titre: string; lignes: LigneSynthese[] };
 const ROLE_CEO = 'CEO (transverse)';
 const ROLE_CFO = 'CFO';
 const LECTEURS = new Set([ROLE_CEO, ROLE_CFO, 'societe_admin']);
-const JOUR = 86_400_000;
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
-const plus = (jour: string, n: number) => jourIso(new Date(Date.parse(`${jour}T00:00:00Z`) + n * JOUR));
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
-const dateFr = (jour: string) => jour.split('-').reverse().join('/');
 
 // Synthèse mensuelle du CEO (revue CEO, 22/10/2026) : générée par le HUB
 // après la clôture du mois par le CFO, avec ce qu'il sait déjà — facturation,
@@ -78,7 +75,7 @@ export class SyntheseService {
   }
 
   async generer(societeId: string, mois: string, premiere: boolean) {
-    const contenu = await this.calculer(societeId, mois, jourIso(new Date()));
+    const contenu = await this.calculer(societeId, mois, todayIso());
     await this.prisma.syntheseMensuelle.upsert({
       where: { societeId_mois: { societeId, mois } },
       create: { societeId, mois, contenu: contenu as unknown as Prisma.InputJsonValue, genereLe: new Date() },
@@ -91,7 +88,7 @@ export class SyntheseService {
     await this.notifications.envoyer({
       societeId,
       type: 'synthese_mensuelle',
-      titre: `Synthèse de ${moisFr(mois)} ${premiere ? 'disponible' : 'mise à jour (mois clôturé de nouveau)'} · facturation, trésorerie, marge, équipe, production, commercial`,
+      titre: `Synthèse de ${formatMonthYear(mois)} ${premiere ? 'disponible' : 'mise à jour (mois clôturé de nouveau)'} · facturation, trésorerie, marge, équipe, production, commercial`,
       destinataireIds: [...ceo, ...cfo],
     });
   }
@@ -165,20 +162,20 @@ export class SyntheseService {
     const facturees = emises.filter((f) => !f.estAvoir);
     const avoirs = emises.filter((f) => f.estAvoir);
     sections.push({
-      titre: `Facturation · ${moisFr(mois)}`,
+      titre: `Facturation · ${formatMonthYear(mois)}`,
       lignes: [
         {
           libelle: 'Facturé',
-          valeur: `${fcfa(facturees.reduce((t, f) => t + ttc(f), 0))} TTC · ${pluriel(facturees.length, 'facture')}`,
+          valeur: `${formatAmount(facturees.reduce((t, f) => t + ttc(f), 0))} TTC · ${plural(facturees.length, 'facture')}`,
         },
         {
           libelle: 'Encaissé',
-          valeur: `${fcfa(paiements._sum.montant?.toNumber() ?? 0)} · ${pluriel(paiements._count, 'paiement')}`,
+          valeur: `${formatAmount(paiements._sum.montant?.toNumber() ?? 0)} · ${plural(paiements._count, 'paiement')}`,
         },
         {
           libelle: 'Avoirs',
           valeur: avoirs.length
-            ? `${fcfa(avoirs.reduce((t, f) => t + ttc(f), 0))} TTC · ${pluriel(avoirs.length, 'avoir')}`
+            ? `${formatAmount(avoirs.reduce((t, f) => t + ttc(f), 0))} TTC · ${plural(avoirs.length, 'avoir')}`
             : 'aucun',
           ton: avoirs.length ? 'attention' : undefined,
         },
@@ -191,7 +188,7 @@ export class SyntheseService {
     let retard = 0;
     let enRetard = 0;
     let nonDate = 0;
-    const fenetres = [30, 60, 90].map((n) => ({ n, au: plus(jour, n), sur: 0, prevu: 0 }));
+    const fenetres = [30, 60, 90].map((n) => ({ n, au: addDays(jour, n), sur: 0, prevu: 0 }));
     for (const f of factures) {
       const prevu = f.statut === 'brouillon' && !f.dossierCrmId && f.montantHt.toNumber() > 0;
       const reste =
@@ -214,22 +211,27 @@ export class SyntheseService {
       if (w) w[prevu ? 'prevu' : 'sur'] += reste;
     }
     sections.push({
-      titre: `Créances et trésorerie · au ${dateFr(jour)}`,
+      titre: `Créances et trésorerie · au ${formatDate(jour)}`,
       lignes: [
         {
           libelle: 'Créances en retard',
           valeur: enRetard
-            ? `${fcfa(retard)} · ${pluriel(enRetard, 'facture')} échue${enRetard > 1 ? 's' : ''}`
+            ? `${formatAmount(retard)} · ${plural(enRetard, 'facture')} échue${enRetard > 1 ? 's' : ''}`
             : 'aucune',
           ton: enRetard ? 'risque' : 'succes',
         },
         ...fenetres.map((w, i) => ({
           libelle:
             i === 0 ? 'Encaissements attendus · 30 j' : `Encaissements attendus · ${fenetres[i - 1].n + 1} à ${w.n} j`,
-          valeur: `${fcfa(w.sur + w.prevu)} (${fcfa(w.sur)} de factures émises, ${fcfa(w.prevu)} de tranches prévues)`,
+          valeur: `${formatAmount(w.sur + w.prevu)} (${formatAmount(w.sur)} de factures émises, ${formatAmount(w.prevu)} de tranches prévues)`,
         })),
         ...(nonDate
-          ? [{ libelle: 'Attendu sans date', valeur: `${fcfa(nonDate)} · tranches ou factures sans échéance fixée` }]
+          ? [
+              {
+                libelle: 'Attendu sans date',
+                valeur: `${formatAmount(nonDate)} · tranches ou factures sans échéance fixée`,
+              },
+            ]
           : []),
       ],
     });
@@ -243,11 +245,11 @@ export class SyntheseService {
           ? [
               {
                 libelle: 'Marge',
-                valeur: `${fcfa(t.marge)} sur ${fcfa(t.ht)} HT${t.taux !== null ? ` · ${t.taux} %` : ''}`,
+                valeur: `${formatAmount(t.marge)} sur ${formatAmount(t.ht)} HT${t.taux !== null ? ` · ${t.taux} %` : ''}`,
               },
               {
                 libelle: 'Périmètre',
-                valeur: `${pluriel(rentabilite.projetsComplets, 'projet')} aux données complètes · provisoire tant que les mois ne sont pas tous contrôlés`,
+                valeur: `${plural(rentabilite.projetsComplets, 'projet')} aux données complètes · provisoire tant que les mois ne sont pas tous contrôlés`,
               },
             ]
           : [
@@ -289,12 +291,12 @@ export class SyntheseService {
       lignes: [
         {
           libelle: 'Pipeline en cours',
-          valeur: `${pluriel(dossiers.length, 'dossier')} · ${fcfa(dossiers.reduce((s, d) => s + htOffre(d.offres[0]), 0))} HT d’offres`,
+          valeur: `${plural(dossiers.length, 'dossier')} · ${formatAmount(dossiers.reduce((s, d) => s + htOffre(d.offres[0]), 0))} HT d’offres`,
         },
         {
           libelle: 'Signatures du mois',
           valeur: signatures.length
-            ? `${pluriel(signatures.length, 'contrat')} · ${fcfa(signeHt)} HT · ${signatures.map((x) => x.dossier.code).join(', ')}`
+            ? `${plural(signatures.length, 'contrat')} · ${formatAmount(signeHt)} HT · ${signatures.map((x) => x.dossier.code).join(', ')}`
             : 'aucune',
         },
       ],
@@ -335,7 +337,7 @@ export class SyntheseService {
       peutCommenter: a.role === ROLE_CFO,
       syntheses: syntheses.map((s) => ({
         mois: s.mois,
-        libelle: moisFr(s.mois),
+        libelle: formatMonthYear(s.mois),
         genereLe: s.genereLe.toISOString(),
         sections: s.contenu as unknown as SectionSynthese[],
         commentaire: s.commentaire

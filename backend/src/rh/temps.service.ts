@@ -19,10 +19,9 @@ import {
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
 import { chargerTachesAssignees, type TacheAssignee } from './taches-assignees';
+import { formatDate, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
 
 type Acteur = { userId: string; societeId: string };
-
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 // `cloture` : mois clos, contrôle pas encore ouvert (avant le 3 du mois suivant).
 export type StatutFeuille = 'en_cours' | 'cloture' | 'a_controler' | 'sans_heures' | 'controlee';
@@ -91,17 +90,15 @@ function ecartDuMois(ecarts: DossierTemps['ecartsTemps'], mois: string): EcartFe
     : null;
 }
 
-const libelleMois = (mois: string) =>
-  new Date(`${mois}-01T00:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 // « de septembre 2026 », « d’octobre 2026 » (élision devant avril, août, octobre).
 const deMois = (mois: string) => {
-  const l = libelleMois(mois);
+  const l = formatMonthYear(mois);
   return /^[aeiou]/i.test(l) ? `d’${l}` : `de ${l}`;
 };
 
 const salarieDe = (d: DossierTemps): Salarie => ({
   dateEntree: d.dateEntree,
-  dateSortie: d.archiveLe ? d.archiveLe.toISOString().slice(0, 10) : null,
+  dateSortie: d.archiveLe ? toIsoDay(d.archiveLe) : null,
   absences: d.absences.map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
 });
 
@@ -123,7 +120,7 @@ export class TempsService {
   // Périmètre groupe (page RH) ; `societeId` le restreint à une société
   // (Pilotage · feuilles de temps contrôlées).
   async feuilles(mois?: string, societeId?: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const cible = moisValide(mois ?? dernierMoisClos(jour), jour);
     const dossiers = await this.prisma.dossierPersonnel.findMany({
       where: {
@@ -175,12 +172,11 @@ export class TempsService {
 
   // Fige la feuille d'un mois clos telle que calculée à cet instant.
   async controler(userId: string, dossierId: string, mois: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     moisValide(mois, jour);
     if (mois >= moisDe(jour)) throw new ConflictException('Seul un mois clos peut être contrôlé.');
     const ouverture = controleOuvertLe(mois);
-    if (jour < ouverture)
-      throw new ConflictException(`Contrôle possible à partir du ${ouverture.split('-').reverse().join('/')}.`);
+    if (jour < ouverture) throw new ConflictException(`Contrôle possible à partir du ${formatDate(ouverture)}.`);
     const d = await this.prisma.dossierPersonnel.findUnique({ where: { id: dossierId }, include: INCLUDE_DOSSIER });
     if (!d) throw new NotFoundException('Dossier introuvable');
     if (!periodeComptee(mois, salarieDe(d), jour))
@@ -220,7 +216,7 @@ export class TempsService {
   // --- Mon temps (le salarié) ----------------------------------------------
 
   async monTemps(a: Acteur, mois?: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const cible = moisValide(mois ?? moisDe(jour), jour);
     // Dossier RH relié au compte (direction comprise) ; à défaut, la fiche
     // d'équipe seule (pas encore de dossier ouvert par la RH).
@@ -257,7 +253,7 @@ export class TempsService {
   // Il signale un écart tant que la RH n'a pas figé le mois.
 
   async signalerEcart(a: Acteur, mois: string, commentaire: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     moisValide(mois, jour);
     const d = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),

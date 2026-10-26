@@ -7,6 +7,7 @@ import type {
   TypePieceDossier,
 } from './types';
 import { apiSociete } from './client-api';
+import { toIsoDay } from './dates';
 
 // RH · Dossiers du personnel — API NestJS (module « rh » de la matrice) :
 //   GET   …/rh/dossiers                 liste (groupe)
@@ -171,7 +172,7 @@ export function dateEffetMin(jour: string): string {
   const cible = new Date(Date.UTC(a, m - 4, 1));
   const dernier = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
   cible.setUTCDate(Math.min(j, dernier));
-  return cible.toISOString().slice(0, 10);
+  return toIsoDay(cible);
 }
 
 export const getSalaireDossier = (slug: string, id: string) =>

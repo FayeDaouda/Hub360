@@ -1,3 +1,4 @@
+import { addDays } from '../../shared/dates';
 // Facture directe d'un lead (maquette Finances, oct. 2026) : lignes libres,
 // TVA par défaut, préparée « à valider par le CFO avant émission » ; payable à
 // 15 jours (pied de facture de la maquette). Règles pures, testées.
@@ -25,7 +26,5 @@ export function lignesFactureDirecte(lignes: LigneSaisie[]): LigneSaisie[] {
 
 // Échéance d'une facture directe émise le `jour` (AAAA-MM-JJ, jours calendaires).
 export function echeanceDirecte(jour: string): string {
-  const d = new Date(`${jour}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + DELAI_PAIEMENT_DIRECTE_JOURS);
-  return d.toISOString().slice(0, 10);
+  return addDays(jour, DELAI_PAIEMENT_DIRECTE_JOURS);
 }

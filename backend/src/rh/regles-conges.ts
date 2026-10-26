@@ -1,3 +1,4 @@
+import { addDays, toIsoDay } from '../shared/dates';
 // Règles de congés — HYPOTHÈSES DE TRAVAIL (conception d'origine, jamais
 // confirmées par un vrai titulaire RH) : à ajuster ici, en un seul endroit,
 // dès qu'un RH en poste les corrige.
@@ -16,20 +17,17 @@ export const JOURS_ACQUIS_PAR_MOIS = 2;
 export const PART_CELLULE_ABSENTE_ALERTE = 0.5;
 
 const jour = (iso: string) => new Date(`${iso}T00:00:00Z`);
-const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 export function joursOuvrables(debut: string, fin: string, feries: ReadonlySet<string> = new Set()): number {
   let n = 0;
   for (let d = jour(debut); d <= jour(fin); d.setUTCDate(d.getUTCDate() + 1)) {
-    if (d.getUTCDay() !== 0 && !feries.has(iso(d))) n++;
+    if (d.getUTCDay() !== 0 && !feries.has(toIsoDay(d))) n++;
   }
   return n;
 }
 
 export function veille(date: string): string {
-  const d = jour(date);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return iso(d);
+  return addDays(date, -1);
 }
 
 export function chevauche(a: { debut: string; fin: string }, b: { debut: string; fin: string }): boolean {

@@ -1,14 +1,9 @@
 import type { FactureCentrale } from './types';
+import { addDays, daysBetween } from './dates';
 
 // Trésorerie (revue CFO 20/10/2026, lot 3) : balance âgée des créances et
 // échéancier des encaissements attendus, calculés depuis la liste des
 // factures de la société (la même que l'onglet Factures).
-
-const JOUR = 86_400_000;
-const ecartJours = (de: string, a: string) =>
-  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR);
-export const ajouterJours = (iso: string, n: number) =>
-  new Date(Date.parse(`${iso}T00:00:00Z`) + n * JOUR).toISOString().slice(0, 10);
 
 // Tranches d'âge, comptées depuis l'ÉCHÉANCE (décision du 20/10/2026 : la
 // pratique ; une facture sans échéance est réputée non échue).
@@ -23,7 +18,7 @@ export const TRANCHES: { cle: Tranche; libelle: string }[] = [
 
 export function trancheDe(echeanceLe: string | null, aujourdhui: string): Tranche {
   if (!echeanceLe) return 'nonEchu';
-  const retard = ecartJours(echeanceLe.slice(0, 10), aujourdhui);
+  const retard = daysBetween(echeanceLe.slice(0, 10), aujourdhui);
   return retard <= 0 ? 'nonEchu' : retard <= 30 ? 'j30' : retard <= 60 ? 'j60' : retard <= 90 ? 'j90' : 'plus90';
 }
 
@@ -50,7 +45,7 @@ export function balanceAgee(factures: FactureCentrale[], aujourdhui: string) {
     ligne.creances.push({
       facture: f,
       tranche,
-      retard: f.echeanceLe ? Math.max(0, ecartJours(f.echeanceLe.slice(0, 10), aujourdhui)) : 0,
+      retard: f.echeanceLe ? Math.max(0, daysBetween(f.echeanceLe.slice(0, 10), aujourdhui)) : 0,
     });
     parClient.set(client, ligne);
   }
@@ -84,9 +79,9 @@ const estPrevu = (f: FactureCentrale) => f.statut === 'brouillon' && !f.estAvoir
 
 export function echeancier(factures: FactureCentrale[], aujourdhui: string) {
   const fenetres: Fenetre[] = [
-    { cle: 'j30', libelle: '30 prochains jours', du: ajouterJours(aujourdhui, 1), au: ajouterJours(aujourdhui, 30) },
-    { cle: 'j60', libelle: 'De 31 à 60 jours', du: ajouterJours(aujourdhui, 31), au: ajouterJours(aujourdhui, 60) },
-    { cle: 'j90', libelle: 'De 61 à 90 jours', du: ajouterJours(aujourdhui, 61), au: ajouterJours(aujourdhui, 90) },
+    { cle: 'j30', libelle: '30 prochains jours', du: addDays(aujourdhui, 1), au: addDays(aujourdhui, 30) },
+    { cle: 'j60', libelle: 'De 31 à 60 jours', du: addDays(aujourdhui, 31), au: addDays(aujourdhui, 60) },
+    { cle: 'j90', libelle: 'De 61 à 90 jours', du: addDays(aujourdhui, 61), au: addDays(aujourdhui, 90) },
   ].map((f) => ({ ...f, sur: 0, prevu: 0, factures: [] }));
   const enRetard = { montant: 0, factures: [] as FactureCentrale[] };
   const nonDate = { sur: 0, prevu: 0, factures: [] as FactureCentrale[] };

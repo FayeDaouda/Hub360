@@ -8,10 +8,9 @@ import {
   telechargerBulletin,
   telechargerDocument,
 } from '@/lib/mon-espace';
-import { libelleMois } from '@/lib/temps';
-import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
+import { formatDate, formatMonthYear } from '@/lib/dates';
 
 // Libellés de la maquette (« Contrat de travail », « Fiche de poste »).
 const LIBELLE_DOCUMENT: Partial<Record<TypePieceDossier, string>> = {
@@ -70,7 +69,7 @@ export function MesDocuments({
       </span>
       <span className="me-doc-texte">
         <strong>{titre}</strong>
-        <span className="cell-sub">déposé le {jjmmaaaa(depose)}</span>
+        <span className="cell-sub">déposé le {formatDate(depose)}</span>
       </span>
       <button type="button" className="me-doc-lien" onClick={() => telecharger(action)}>
         Télécharger
@@ -106,7 +105,7 @@ export function MesDocuments({
           {dossier.bulletins.length > 0 && (
             <ul className="me-docs">
               {dossier.bulletins.map((b) =>
-                ligne(b.mois, `Bulletin · ${libelleMois(b.mois)}`, b.deposeLe, 'bulletin', () =>
+                ligne(b.mois, `Bulletin · ${formatMonthYear(b.mois)}`, b.deposeLe, 'bulletin', () =>
                   telechargerBulletin(slug, b.mois),
                 ),
               )}
@@ -127,7 +126,7 @@ export function MesDocuments({
             </ul>
           )}
           {enAttente ? (
-            <p className="me-attente">Demandée le {jjmmaaaa(enAttente.demandeLe)} · la RH la prépare.</p>
+            <p className="me-attente">Demandée le {formatDate(enAttente.demandeLe)} · la RH la prépare.</p>
           ) : (
             <button type="button" className="btn-ghost me-envoyer" disabled={envoi} onClick={demander}>
               Demander une attestation de travail

@@ -11,6 +11,7 @@ import type {
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
 import type { CorpsRemise } from './projets-ouverts';
+import { daysBetween, formatDayMonth } from './dates';
 
 // RH · Mon espace (lot 5) — API NestJS, dossier du compte connecté :
 //   GET   …/mon-espace                  { dossier | null }
@@ -107,18 +108,14 @@ export const estEnRetard = (t: TacheMonEspace, aujourdhui: string) =>
   t.statut === 'en_retard' ||
   ((t.statut === 'a_reprendre' || t.statut === 'prolongee') && !!dateEffective(t) && dateEffective(t)! < aujourdhui);
 
-export const ecartJours = (de: string, a: string) =>
-  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
-
 // Libellé du statut, précisé par la fenêtre quand la tâche est ouverte.
 export function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
   if (t.statut === 'en_cours') {
-    const reste = ecartJours(aujourdhui, t.echeance!);
+    const reste = daysBetween(aujourdhui, t.echeance!);
     return reste === 0 ? 'Échéance aujourd’hui' : `Échéance dans ${reste} j`;
   }
-  if (t.statut === 'a_venir') return `À venir · J-${ecartJours(aujourdhui, t.debut!)}`;
-  if (t.statut === 'en_retard') return `En retard · ${ecartJours(t.echeance!, aujourdhui)} j`;
-  if (t.statut === 'prolongee' && t.prolongeeJusquau)
-    return `Prolongée jusqu’au ${t.prolongeeJusquau.slice(8, 10)}/${t.prolongeeJusquau.slice(5, 7)}`;
+  if (t.statut === 'a_venir') return `À venir · J-${daysBetween(aujourdhui, t.debut!)}`;
+  if (t.statut === 'en_retard') return `En retard · ${daysBetween(t.echeance!, aujourdhui)} j`;
+  if (t.statut === 'prolongee' && t.prolongeeJusquau) return `Prolongée jusqu’au ${formatDayMonth(t.prolongeeJusquau)}`;
   return STATUT_TACHE[t.statut].libelle;
 }

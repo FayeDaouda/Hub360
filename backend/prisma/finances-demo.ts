@@ -2,9 +2,10 @@ import { PrismaClient, type Prisma } from '@prisma/client';
 import { planFacturationOffre } from '../src/projets/domaine/facturation-offre';
 import { JALONS_FACTURE, typeFactureDepuisNature, type PartsFactures } from '../src/projets/domaine/config';
 import { REGLES } from '../src/reglages/definitions';
-import { VALIDITE_OFFRE_JOURS, ajouterJours } from '../src/devis/domaine';
+import { VALIDITE_OFFRE_JOURS } from '../src/devis/domaine';
 import { DELAI_PAIEMENT_DIRECTE_JOURS } from '../src/projets/facturation/facture-directe';
 import { verifierEnvironnementDemo } from './garde-demo';
+import { addDays, toIsoDay } from '../src/shared/dates';
 
 // Devis et factures FICTIFS de démonstration (maquette Finances, oct. 2026) —
 // « tarifs et montants fictifs de démonstration ». Les montants viennent du
@@ -19,7 +20,6 @@ import { verifierEnvironnementDemo } from './garde-demo';
 
 const PARTS_DEFAUT = REGLES.find((r) => r.cle === 'parts_factures')!.defaut as PartsFactures;
 
-const jour = (d: Date) => d.toISOString().slice(0, 10);
 const ilYA = (jours: number) => new Date(Date.now() - jours * 86_400_000);
 const plus = (d: Date, jours: number) => new Date(d.getTime() + jours * 86_400_000);
 
@@ -173,7 +173,7 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
         objet: `Offre de conception · ${d.programme || d.code}`,
         creeLe,
         dateEnvoi: envoi,
-        dateValidite: envoi ? ajouterJours(jour(envoi), VALIDITE_OFFRE_JOURS) : null,
+        dateValidite: envoi ? addDays(toIsoDay(envoi), VALIDITE_OFFRE_JOURS) : null,
         dateReponse: statut === 'accepte' || statut === 'refuse' ? plus(envoi!, 4) : null,
         partsFactures: PARTS_DEFAUT,
         delaisEcheancier: statut === 'accepte' ? DELAIS_DEMO : undefined,
@@ -254,7 +254,7 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
       const code = f.data.projetId ? onboard.find((d) => d.projet!.id === f.data.projetId)!.projet!.code : null;
       const rang = code ? (rangs.get(code) ?? 0) + 1 : null;
       if (code) rangs.set(code, rang!);
-      const encaisse = (jours: number) => jour(new Date(Math.min(Date.now(), plus(f.emiseLe!, jours).getTime())));
+      const encaisse = (jours: number) => toIsoDay(new Date(Math.min(Date.now(), plus(f.emiseLe!, jours).getTime())));
       const paiements =
         f.sort === 'payee'
           ? [{ date: encaisse(3 + (f.i % 5)), montant: f.ttc, mode: 'virement' as const }]
@@ -267,7 +267,7 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
         codeDossier: code,
         rangDossier: rang,
         emiseLe: f.emiseLe,
-        echeanceLe: ajouterJours(jour(f.emiseLe), DELAI_PAIEMENT_DIRECTE_JOURS),
+        echeanceLe: addDays(toIsoDay(f.emiseLe), DELAI_PAIEMENT_DIRECTE_JOURS),
         paiements: { create: paiements },
       });
     }

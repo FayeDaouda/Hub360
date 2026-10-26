@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { getAbsencesAValider, jjmm, LIBELLE_TYPE_ABSENCE, STATUT_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
+import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE, STATUT_ABSENCE, validerFinaleCeo } from '@/lib/demandes';
 import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Formulaire } from '@/components/absences/decision-n1-modal';
 import { CalendrierCellule } from '@/components/absences/calendrier-cellule';
+import { formatDate } from '@/lib/dates';
 
 type Filtre = 'a_decider' | 'toutes';
 
@@ -72,7 +73,7 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
                   <span>
                     <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
                     <span className="cell-sub">
-                      {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {jjmm(d.dateDebut)} → {jjmm(d.dateFin)}
+                      {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {formatDate(d.dateDebut)} → {formatDate(d.dateFin)}
                     </span>
                   </span>
                   <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
@@ -113,7 +114,7 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
             </h2>
             <p>
               <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du{' '}
-              {jjmm(demande.dateDebut)} au {jjmm(demande.dateFin)}
+              {formatDate(demande.dateDebut)} au {formatDate(demande.dateFin)}
             </p>
             <p className="dmd-note">
               {STATUT_ABSENCE[demande.statut].libelle} : la demande n’attend plus votre décision.
@@ -147,7 +148,7 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
       <h2 className="dmd-titre">{demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}</h2>
       <p>
         <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du{' '}
-        {jjmm(demande.dateDebut)} au {jjmm(demande.dateFin)}
+        {formatDate(demande.dateDebut)} au {formatDate(demande.dateFin)}
       </p>
       {demande.commentaire && <p className="dmd-note">« {demande.commentaire} »</p>}
       <p className="dmd-note">

@@ -1,3 +1,4 @@
+import { toIsoDay } from '../shared/dates';
 // RH · Remise et validation des tâches (lot 5c). Règles pures, testées.
 //
 // Tirées de la maquette « Mon espace · Mes performances » : une tâche est
@@ -22,8 +23,6 @@ export function statutSelonEtat(statut: StatutTache, etat: { code: string } | un
 
 export type EtatValidation = { remisLe: Date | null; valideLe: Date | null; renvoyeLe: Date | null } | null;
 
-const jour = (d: Date) => d.toISOString().slice(0, 10);
-
 export function statutTache(
   t: { debut: string | null; echeance: string | null },
   v: EtatValidation,
@@ -40,7 +39,7 @@ export function statutTache(
 export function statsPerformances(taches: { statut: StatutTache; echeance: string | null; remisLe: Date | null }[]) {
   const validees = taches.filter((t) => t.statut === 'validee');
   const jugees = validees.filter((t) => t.echeance && t.remisLe);
-  const aTemps = jugees.filter((t) => jour(t.remisLe!) <= t.echeance!).length;
+  const aTemps = jugees.filter((t) => toIsoDay(t.remisLe!) <= t.echeance!).length;
   return {
     total: taches.length,
     validees: validees.length,

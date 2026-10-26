@@ -1,3 +1,4 @@
+import { formatDate, todayIso } from './dates';
 // Export d'une liste vers Excel : CSV au format attendu par Excel en
 // français (séparateur « ; », virgule décimale, BOM UTF-8 pour les accents).
 // Construit côté navigateur à partir des lignes déjà affichées — les filtres
@@ -14,8 +15,7 @@ function cellule(v: string | number | null | undefined): string {
 }
 
 // Date AAAA-MM-JJ (ou ISO) → JJ/MM/AAAA, reconnue comme date par Excel.
-export const dateExport = (iso: string | null | undefined) =>
-  iso ? iso.slice(0, 10).split('-').reverse().join('/') : null;
+export const dateExport = (iso: string | null | undefined) => (iso ? formatDate(iso) : null);
 
 export function exporterCsv<T>(nom: string, colonnes: ColonneExport<T>[], lignes: T[]) {
   const contenu = [
@@ -27,7 +27,7 @@ export function exporterCsv<T>(nom: string, colonnes: ColonneExport<T>[], lignes
   const url = URL.createObjectURL(new Blob([`﻿${contenu}`], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${nom}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `${nom}-${todayIso()}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

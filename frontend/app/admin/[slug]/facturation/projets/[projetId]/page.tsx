@@ -38,12 +38,11 @@ import {
   STATUTS_REGLEMENT_BUREAU,
   type StatutReglementBureau,
 } from '@/lib/types';
-import { formatMontant, formatMontantCompact } from '@/lib/format';
+import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
+import { daysSince, todayIso } from '@/lib/dates';
 
 type Props = { params: Promise<{ slug: string; projetId: string }> };
-
-const AUJOURD_HUI = () => new Date().toISOString().slice(0, 10);
 
 const PILL_FACTURE: Record<StatutFactureEffectif, string> = {
   brouillon: 'pill--neutre',
@@ -188,11 +187,11 @@ export default function FacturationPage(props: Props) {
             <div className="factu-resume">
               <div>
                 <span className="factu-resume-label">Net facturé (TTC)</span>
-                <span className="factu-resume-val">{formatMontantCompact(factu.resume.totalFactureTtc)}</span>
+                <span className="factu-resume-val">{formatCompactAmount(factu.resume.totalFactureTtc)}</span>
               </div>
               <div>
                 <span className="factu-resume-label">Encaissé</span>
-                <span className="factu-resume-val">{formatMontantCompact(factu.resume.totalEncaisse)}</span>
+                <span className="factu-resume-val">{formatCompactAmount(factu.resume.totalEncaisse)}</span>
               </div>
               <div>
                 <span className="factu-resume-label">Reste dû</span>
@@ -205,7 +204,7 @@ export default function FacturationPage(props: Props) {
                         : ''
                   }`}
                 >
-                  {formatMontantCompact(factu.resume.totalDu)}
+                  {formatCompactAmount(factu.resume.totalDu)}
                 </span>
               </div>
               <div>
@@ -228,8 +227,7 @@ export default function FacturationPage(props: Props) {
                     <span className="mensualites-nom">
                       {m.libelle}
                       <span className="cell-sub">
-                        {formatMontantCompact(m.prixMensuelHt)} HT / mois · {m.moisFactures}/{m.moisPrevus} mois
-                        facturés
+                        {formatCompactAmount(m.prixMensuelHt)} HT / mois · {m.moisFactures}/{m.moisPrevus} mois facturés
                       </span>
                     </span>
                     {m.aFacturerCeMois && <span className="pill pill--attention">À facturer ce mois</span>}
@@ -291,10 +289,10 @@ export default function FacturationPage(props: Props) {
                           <span className="cell-sub">{e.bureau || 'Bureau non renseigné'}</span>
                         </td>
                         <td data-label="Facture du bureau (HT)">
-                          {e.montantBureauHt != null ? formatMontantCompact(e.montantBureauHt) : '—'}
+                          {e.montantBureauHt != null ? formatCompactAmount(e.montantBureauHt) : '—'}
                         </td>
                         <td data-label="Refacturé HT (+10 %)">
-                          {e.montantRefactureHt != null ? formatMontantCompact(e.montantRefactureHt) : '—'}
+                          {e.montantRefactureHt != null ? formatCompactAmount(e.montantRefactureHt) : '—'}
                           {e.facture?.reference && <span className="cell-sub">{e.facture.reference}</span>}
                         </td>
                         <td data-label="Statut">
@@ -490,10 +488,10 @@ export default function FacturationPage(props: Props) {
                               </span>
                             )}
                           </td>
-                          <td data-label="TTC">{formatMontantCompact(f.montantTtc)}</td>
-                          <td data-label="Payé">{f.montantPaye ? formatMontantCompact(f.montantPaye) : '—'}</td>
+                          <td data-label="TTC">{formatCompactAmount(f.montantTtc)}</td>
+                          <td data-label="Payé">{f.montantPaye ? formatCompactAmount(f.montantPaye) : '—'}</td>
                           <td data-label="Reste">
-                            {f.estAvoir || f.statut === 'annulee' ? '—' : formatMontantCompact(f.resteAPayer)}
+                            {f.estAvoir || f.statut === 'annulee' ? '—' : formatCompactAmount(f.resteAPayer)}
                             {f.statutEffectif === 'en_retard' && (
                               <span className="cell-sub">{f.joursRetard} j de retard</span>
                             )}
@@ -548,7 +546,7 @@ export default function FacturationPage(props: Props) {
                                 <span className="pill pill--attention">
                                   Avoir en attente du CEO
                                   {f.avoirEnAttenteDepuis
-                                    ? ` depuis ${Math.max(0, Math.floor((Date.now() - Date.parse(f.avoirEnAttenteDepuis)) / 86_400_000))} j`
+                                    ? ` depuis ${Math.max(0, daysSince(f.avoirEnAttenteDepuis))} j`
                                     : ''}
                                 </span>
                               )}
@@ -1004,7 +1002,7 @@ function ModalePaiements({
   onAjouter: (body: { date: string; montant: number; mode?: ModePaiement; reference?: string }) => Promise<boolean>;
   onSupprimer: (paiementId: string, motif: string) => Promise<boolean>;
 }) {
-  const [date, setDate] = useState(AUJOURD_HUI());
+  const [date, setDate] = useState(todayIso());
   // Suppression = correction tracée : le motif est demandé avant d'envoyer.
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
   const [motif, setMotif] = useState('');
@@ -1039,8 +1037,8 @@ function ModalePaiements({
         </header>
         <div className="modal-body">
           <p className="factu-pai-resume">
-            TTC {formatMontant(facture.montantTtc)} · payé {formatMontant(facture.montantPaye)} · reste{' '}
-            <strong>{formatMontant(facture.resteAPayer)}</strong>
+            TTC {formatAmount(facture.montantTtc)} · payé {formatAmount(facture.montantPaye)} · reste{' '}
+            <strong>{formatAmount(facture.resteAPayer)}</strong>
           </p>
 
           {facture.paiements.length > 0 && (
@@ -1058,7 +1056,7 @@ function ModalePaiements({
                 {facture.paiements.map((p) => (
                   <tr key={p.id}>
                     <td data-label="Date">{p.date}</td>
-                    <td data-label="Montant">{formatMontantCompact(p.montant)}</td>
+                    <td data-label="Montant">{formatCompactAmount(p.montant)}</td>
                     <td data-label="Mode">{p.mode ? MODES_PAIEMENT[p.mode] : '—'}</td>
                     <td data-label="Référence">{p.reference || '—'}</td>
                     <td data-label="">

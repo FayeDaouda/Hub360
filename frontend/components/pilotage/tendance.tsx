@@ -1,12 +1,11 @@
 import type { IndicateurPilotage } from '@/lib/types';
+import { formatMonthYear } from '@/lib/dates';
 
 const L = 240; // largeur du tracé (viewBox)
 const H = 64;
 const MARGE = { haut: 8, bas: 16, cote: 6 };
 const moisCourt = (m: string) =>
   new Date(`${m}-01T00:00:00Z`).toLocaleDateString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
-const moisLong = (m: string) =>
-  new Date(`${m}-01T00:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 // Courbe des 6 derniers mois d'un indicateur : une série (pas de légende, le
 // titre de la carte la nomme), objectif en repère discret (ligne ou zone),
@@ -32,7 +31,8 @@ export function Tendance({ indicateur: i, unite }: { indicateur: IndicateurPilot
   const clos = enCours ? definis.slice(0, -1) : definis;
   const resume = points
     .map(
-      (p) => `${moisLong(p.mois)} : ${p.valeur === null ? 'sans donnée' : `${p.valeur}${unite === '%' ? ' %' : ''}`}`,
+      (p) =>
+        `${formatMonthYear(p.mois)} : ${p.valeur === null ? 'sans donnée' : `${p.valeur}${unite === '%' ? ' %' : ''}`}`,
     )
     .join(' ; ');
 
@@ -64,7 +64,7 @@ export function Tendance({ indicateur: i, unite }: { indicateur: IndicateurPilot
         {definis.map((p) => (
           <g key={p.mois}>
             <circle className="pi-tendance-cible" cx={x(p.k)} cy={y(p.valeur)} r={9}>
-              <title>{`${moisLong(p.mois)}${p.k === points.length - 1 ? ' (en cours)' : ''} : ${p.valeur}${unite === '%' ? ' %' : ''}`}</title>
+              <title>{`${formatMonthYear(p.mois)}${p.k === points.length - 1 ? ' (en cours)' : ''} : ${p.valeur}${unite === '%' ? ' %' : ''}`}</title>
             </circle>
             <circle
               className={`pi-tendance-point${p === dernier ? ' is-dernier' : ''}`}

@@ -1,4 +1,6 @@
 import { STATUTS_DEVIS, type Devis, type FactureCentrale, type ProduitService } from './types';
+import { formatDate, formatMonthYear } from './dates';
+import { capitalize } from './text';
 
 // -----------------------------------------------------------------------------
 // Finances · Devis et factures (maquette du boss, oct. 2026) : statuts, filtres,
@@ -85,11 +87,8 @@ export function payeeLe(f: FactureCentrale): string | null {
 }
 
 // --- Regroupement par mois (création) ----------------------------------------------
-const mois = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
-export const libelleMois = (iso: string) => {
-  const t = mois.format(new Date(`${iso.slice(0, 7)}-01T00:00:00`));
-  return t.charAt(0).toUpperCase() + t.slice(1);
-};
+// « Octobre 2026 » : en-tête des groupes de mois, avec une capitale.
+export const libelleMois = (iso: string) => capitalize(formatMonthYear(iso));
 
 export function parMois<T extends { creeLe: string }>(liste: T[]): { mois: string; elements: T[] }[] {
   const groupes = new Map<string, T[]>();
@@ -99,8 +98,6 @@ export function parMois<T extends { creeLe: string }>(liste: T[]): { mois: strin
   }
   return [...groupes.entries()].map(([m, elements]) => ({ mois: m, elements }));
 }
-
-export const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // --- Tuiles ------------------------------------------------------------------------
 // Libellés et périodes harmonisés (23/10/2026, décision du user) : les cumuls

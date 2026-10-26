@@ -31,12 +31,14 @@ import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { PayerCommission } from '@/components/finances/payer-commission';
 import { getCommissions, type CommissionApporteur } from '@/lib/commissions';
 import { aValiderCfo } from '@/lib/finances';
-import { formatMontant, formatMontantCompact } from '@/lib/format';
+import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
+import { daysSince, formatDayMonth } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -57,7 +59,6 @@ const JOUR = 24 * HEURE;
 // Délai de validation d'une offre par le CFO (maquette CRM) : orange à mi-
 // parcours, rouge une fois dépassé — même constante que le serveur (Pilotage).
 const DELAI_OFFRE_H = 48;
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
 const VISIBLES = 6;
 
@@ -151,7 +152,7 @@ export function AValiderCfo({
       tri: o.soumisLe ?? '',
       icone: FileCheck2,
       titre: `Offre · ${o.client.nom} · ${o.code}`,
-      detail: `${o.offre ? `${formatMontant(o.offre.montantTtc)} TTC · ` : ''}soumise${o.soumisLe ? ` le ${jjmm(o.soumisLe)}` : ''}, à valider avant l’envoi au client`,
+      detail: `${o.offre ? `${formatAmount(o.offre.montantTtc)} TTC · ` : ''}soumise${o.soumisLe ? ` le ${formatDayMonth(o.soumisLe)}` : ''}, à valider avant l’envoi au client`,
       // Au-delà d'un jour de dépassement, l'attente se lit en jours.
       quand:
         reste >= 0
@@ -166,14 +167,14 @@ export function AValiderCfo({
   }
   // 1 bis. Avoirs au-delà du seuil, à valider (CEO).
   for (const a of avoirs) {
-    const jours = Math.floor((maintenant - Date.parse(a.demandeLe)) / JOUR);
+    const jours = daysSince(a.demandeLe, maintenant);
     elements.push({
       cle: `avoir-${a.id}`,
       groupe: 1,
       tri: a.demandeLe,
       icone: Undo2,
       titre: `Avoir à valider · ${a.reference ?? 'facture'}${a.client ? ` · ${a.client}` : ''}`,
-      detail: `${formatMontant(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()} · demandé${a.demandePar ? ` par ${a.demandePar}` : ''}`,
+      detail: `${formatAmount(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()} · demandé${a.demandePar ? ` par ${a.demandePar}` : ''}`,
       quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
       ton: jours > 2 ? 'risque' : 'attention',
       action: 'Examiner',
@@ -185,14 +186,14 @@ export function AValiderCfo({
   for (const f of (factures ?? []).filter(
     (x) => aValiderCfo(x) && contresigneAffaire(session, contresignature, x.montantTtc),
   )) {
-    const jours = Math.floor((maintenant - Date.parse(f.creeLe)) / JOUR);
+    const jours = daysSince(f.creeLe, maintenant);
     elements.push({
       cle: `facture-${f.id}`,
       groupe: 2,
       tri: f.creeLe,
       icone: ClipboardList,
       titre: `Facture à émettre · ${f.client?.nom ?? f.dossierCrm?.code ?? 'client'}`,
-      detail: `${formatMontant(f.montantTtc)} TTC · ${f.libelle || 'facture directe'}`,
+      detail: `${formatAmount(f.montantTtc)} TTC · ${f.libelle || 'facture directe'}`,
       quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
       ton: jours > 2 ? 'risque' : 'attention',
       action: 'Émettre',
@@ -207,7 +208,7 @@ export function AValiderCfo({
       tri: b.projet.code,
       icone: HardHat,
       titre: `Bureau d’études à régler · ${b.bureau}`,
-      detail: `${b.libelle} · ${b.projet.code}${b.montantBureauHt != null ? ` · ${formatMontant(b.montantBureauHt)} HT` : ''} · client encaissé`,
+      detail: `${b.libelle} · ${b.projet.code}${b.montantBureauHt != null ? ` · ${formatAmount(b.montantBureauHt)} HT` : ''} · client encaissé`,
       quand: '',
       ton: 'attention',
       action: 'Régler',
@@ -216,14 +217,14 @@ export function AValiderCfo({
   }
   // 3 bis. Commissions des apporteurs exigibles (revue COO, 22/10/2026).
   for (const c of commissions) {
-    const jours = Math.floor((maintenant - Date.parse(`${c.exigibleLe}T00:00:00Z`)) / JOUR);
+    const jours = daysSince(c.exigibleLe, maintenant);
     elements.push({
       cle: `commission-${c.id}`,
       groupe: 3,
       tri: c.exigibleLe,
       icone: HandCoins,
       titre: `Commission à payer · ${c.apporteur} · ${c.code}`,
-      detail: `${formatMontant(c.montant)} · ${c.taux} % de ${formatMontant(c.baseHt)} HT ${c.source === 'encaissement' ? 'encaissés' : 'signés'}`,
+      detail: `${formatAmount(c.montant)} · ${c.taux} % de ${formatAmount(c.baseHt)} HT ${c.source === 'encaissement' ? 'encaissés' : 'signés'}`,
       quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
       ton: jours > 7 ? 'risque' : 'attention',
       action: 'Payer',
@@ -232,14 +233,14 @@ export function AValiderCfo({
   }
   // 4. Salaires proposés par la RH.
   for (const s of salaires) {
-    const jours = Math.floor((maintenant - Date.parse(s.proposeLe)) / JOUR);
+    const jours = daysSince(s.proposeLe, maintenant);
     elements.push({
       cle: `salaire-${s.id}`,
       groupe: 4,
       tri: s.proposeLe,
       icone: BadgeCheck,
       titre: `Salaire · ${s.salarie} · ${LIBELLE_MOTIF_SALAIRE[s.motif]}`,
-      detail: `effet le ${s.dateEffet ? jjmm(s.dateEffet) : 'date inconnue'} · proposé${s.proposePar ? ` par ${s.proposePar}` : ''}`,
+      detail: `effet le ${s.dateEffet ? formatDayMonth(s.dateEffet) : 'date inconnue'} · proposé${s.proposePar ? ` par ${s.proposePar}` : ''}`,
       quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
       ton: jours > 3 ? 'risque' : 'attention',
       action: 'Examiner',
@@ -248,14 +249,14 @@ export function AValiderCfo({
   }
   // 5. Absences dont il est le N+1 (la RH).
   for (const a of absences) {
-    const jours = Math.floor((maintenant - Date.parse(a.createdAt)) / JOUR);
+    const jours = daysSince(a.createdAt, maintenant);
     elements.push({
       cle: `absence-${a.id}`,
       groupe: 5,
       tri: a.createdAt,
       icone: CalendarCheck,
       titre: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${nom(a.salarie)}`,
-      detail: `du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)} · ${a.jours} j · votre décision de N+1`,
+      detail: `du ${formatDayMonth(a.dateDebut)} au ${formatDayMonth(a.dateFin)} · ${a.jours} j · votre décision de N+1`,
       quand: jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`,
       ton: jours > 3 ? 'risque' : 'attention',
       action: 'Décider',
@@ -286,7 +287,7 @@ export function AValiderCfo({
       tri: r.deposeLe,
       icone: ClipboardList,
       titre: `Reporting ${r.type === 'rh' ? 'RH' : 'de la direction'} · ${r.periode}`,
-      detail: `déposé par ${r.emetteur} le ${jjmm(r.deposeLe)}, à lire`,
+      detail: `déposé par ${r.emetteur} le ${formatDayMonth(r.deposeLe)}, à lire`,
       quand: '',
       ton: 'neutre',
       action: 'Lire',
@@ -307,7 +308,7 @@ export function AValiderCfo({
           </span>
           <span>
             <span className="avc-chiffre-libelle">Encaissé ce mois</span>
-            <strong>{factures ? formatMontantCompact(tresorerie.encaisseMois) : '…'}</strong>
+            <strong>{factures ? formatCompactAmount(tresorerie.encaisseMois) : '…'}</strong>
           </span>
         </div>
         <div className="avc-chiffre" data-ton={retard > 0 ? 'risque' : undefined}>
@@ -316,11 +317,9 @@ export function AValiderCfo({
           </span>
           <span>
             <span className="avc-chiffre-libelle">En retard de paiement</span>
-            <strong>{factures ? formatMontantCompact(retard) : '…'}</strong>
+            <strong>{factures ? formatCompactAmount(retard) : '…'}</strong>
             {tresorerie.enRetard.length > 0 && (
-              <span className="cell-sub">
-                {tresorerie.enRetard.length} facture{tresorerie.enRetard.length > 1 ? 's' : ''}
-              </span>
+              <span className="cell-sub">{plural(tresorerie.enRetard.length, 'facture')}</span>
             )}
           </span>
         </div>

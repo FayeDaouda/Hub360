@@ -1,4 +1,5 @@
 import { FactureStatut } from '@prisma/client';
+import { daysBetween } from '../../shared/dates';
 
 // -- Section « Facturation client » ----------------------------------------
 
@@ -42,8 +43,6 @@ export function statutFactureEffectif(
 // dates AAAA-MM-JJ en UTC pour éviter tout décalage de fuseau.
 export function joursRetardFacture(echeanceLe: string | null, aujourdhui: string): number {
   if (!echeanceLe || echeanceLe >= aujourdhui) return 0;
-  const jours = Math.floor(
-    (Date.parse(`${aujourdhui}T00:00:00Z`) - Date.parse(`${echeanceLe}T00:00:00Z`)) / 86_400_000,
-  );
+  const jours = daysBetween(echeanceLe, aujourdhui);
   return jours > 0 ? jours : 0;
 }

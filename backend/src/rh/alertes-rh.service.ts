@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
+import { daysBetween, todayIso } from '../shared/dates';
 
 export type TypeAlerteRh = 'fin_contrat' | 'fin_essai' | 'visite_medicale' | 'piece_identite';
 export type AlerteRh = {
@@ -14,9 +15,6 @@ export type AlerteRh = {
   jours: number; // négatif = dépassée
 };
 
-const JOUR = 86_400_000;
-const ecart = (de: string, a: string) =>
-  Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / JOUR);
 // Une période d'essai passée sans décision n'appelle plus d'action au-delà.
 const ESSAI_PASSE_J = 7;
 
@@ -32,7 +30,7 @@ export class AlertesRhService {
   ) {}
 
   // `societeId` : celles d'une société seulement (reporting RH).
-  async alertes(aujourdhui = new Date().toISOString().slice(0, 10), societeId?: string): Promise<AlerteRh[]> {
+  async alertes(aujourdhui = todayIso(), societeId?: string): Promise<AlerteRh[]> {
     const dossiers = await this.prisma.dossierPersonnel.findMany({
       where: { archiveLe: null, ...(societeId ? { societeId } : {}) },
       select: {
@@ -62,7 +60,7 @@ export class AlertesRhService {
       const s = seuils.get(d.societeId)!;
       const ajouter = (type: TypeAlerteRh, date: string | null, garde: (j: number) => boolean) => {
         if (!date) return;
-        const jours = ecart(aujourdhui, date);
+        const jours = daysBetween(aujourdhui, date);
         if (garde(jours))
           alertes.push({
             type,

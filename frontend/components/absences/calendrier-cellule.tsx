@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getCalendrierCellule, LIBELLE_TYPE_ABSENCE, type CalendrierCellule as Donnees } from '@/lib/demandes';
+import { toIsoDay } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 const JOURS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const jours = (debut: string, fin: string) => {
   const l: string[] = [];
   for (let d = new Date(`${debut}T00:00:00Z`); d <= new Date(`${fin}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1))
-    l.push(d.toISOString().slice(0, 10));
+    l.push(toIsoDay(d));
   return l;
 };
 
@@ -61,8 +63,8 @@ export function CalendrierCellule({
   return (
     <div className="cal-cellule">
       <p className={tendu ? 'field-erreur' : 'dmd-note'}>
-        <strong>{donnees.cellule}</strong> · {absentsPeriode.length} autre{absentsPeriode.length > 1 ? 's' : ''} absent
-        {absentsPeriode.length > 1 ? 's' : ''} sur la période ({total} membre{total > 1 ? 's' : ''})
+        <strong>{donnees.cellule}</strong> · {plural(absentsPeriode.length, 'autre')} absent
+        {absentsPeriode.length > 1 ? 's' : ''} sur la période ({plural(total, 'membre')})
         {tendu && ' — plus de la moitié de l’équipe serait absente'}
       </p>
       <div className="cal-cellule-defile" ref={defile}>

@@ -1,5 +1,6 @@
 import { SocieteAvatar } from '@/components/societe-avatar';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
+import { plural } from '@/lib/text';
 
 // Rendu visuel PARTAGÉ d'un document de facturation (Devis ou Facture) —
 // utilisé tel quel sur la page publique du devis (cf. app/devis/[token]) ET
@@ -26,7 +27,7 @@ export type LigneDocument = {
 function detailLigne(l: LigneDocument): string | null {
   if (l.detail) return l.detail;
   if (l.surfaceM2 && l.planches) {
-    return `${l.surfaceM2} m² × ${l.planches} planche${l.planches > 1 ? 's' : ''}`;
+    return `${l.surfaceM2} m² × ${plural(l.planches, 'planche')}`;
   }
   return null;
 }
@@ -144,9 +145,9 @@ export function DocumentFacturation({
                   {l.designation}
                   {detailLigne(l) && <span className="cell-sub">{detailLigne(l)}</span>}
                 </td>
-                <td>{formatMontant(l.prixUnitaire)}</td>
+                <td>{formatAmount(l.prixUnitaire)}</td>
                 <td>{l.quantite}</td>
-                <td>{formatMontant(l.montantHt)}</td>
+                <td>{formatAmount(l.montantHt)}</td>
               </tr>
             ))}
           </tbody>
@@ -155,15 +156,15 @@ export function DocumentFacturation({
         <div className="devis-public-recap">
           <div className="devis-public-recap-ligne">
             <span>Sous-total HT</span>
-            <span>{formatMontant(montantHt)}</span>
+            <span>{formatAmount(montantHt)}</span>
           </div>
           <div className="devis-public-recap-ligne">
             <span>TVA</span>
-            <span>{formatMontant(montantTva)}</span>
+            <span>{formatAmount(montantTva)}</span>
           </div>
           <div className="devis-public-recap-total" style={{ background: gradient }}>
             <span>Total TTC</span>
-            <span>{formatMontant(montantTtc)}</span>
+            <span>{formatAmount(montantTtc)}</span>
           </div>
         </div>
       </div>

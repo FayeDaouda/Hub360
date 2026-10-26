@@ -13,7 +13,8 @@ import {
   signerContratPapier,
 } from '@/lib/contrats';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
-import { formatDateCourte, formatMontantCompact } from '@/lib/format';
+import { formatCompactAmount } from '@/lib/format';
+import { formatDayShortMonth } from '@/lib/dates';
 import {
   MODES_SIGNATURE,
   STATUTS_CONTRAT,
@@ -22,6 +23,7 @@ import {
   type StatutAnnexeContrat,
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
+import { plural } from '@/lib/text';
 
 type Props = {
   slug: string;
@@ -129,7 +131,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
         () => signerContratPapier(slug, projet.id, fichier),
         (r) => {
           setMessage(
-            `Contrat signé — dossier en Onboard, ${r.facturesPreparees} facture${r.facturesPreparees > 1 ? 's' : ''} préparée${r.facturesPreparees > 1 ? 's' : ''} en brouillon.`,
+            `Contrat signé — dossier en Onboard, ${plural(r.facturesPreparees, 'facture')} préparée${r.facturesPreparees > 1 ? 's' : ''} en brouillon.`,
           );
           void onMaj();
         },
@@ -159,10 +161,10 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
       {!c && (
         <>
           <p className="field-aide">
-            Offre {prep.offreAcceptee?.reference} acceptée ({formatMontantCompact(prep.offreAcceptee?.montantHt ?? 0)}{' '}
+            Offre {prep.offreAcceptee?.reference} acceptée ({formatCompactAmount(prep.offreAcceptee?.montantHt ?? 0)}{' '}
             HT) — contrat{' '}
             {prep.modePrevu === 'sur_mesure'
-              ? `rédigé sur mesure (offre ≥ seuil de ${formatMontantCompact(prep.seuilSurMesureHt ?? 0)} HT)`
+              ? `rédigé sur mesure (offre ≥ seuil de ${formatCompactAmount(prep.seuilSurMesureHt ?? 0)} HT)`
               : 'généré depuis le modèle de la société'}
             . Sa signature fera passer le dossier en Onboard.
           </p>
@@ -177,9 +179,9 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                     : 'l’Architecte DPLG (non renseigné)'}
               </strong>{' '}
               — {prep.signataire.qui === 'ceo' ? 'seul le CEO contresigne' : 'l’Architecte DPLG signe'} : offre de{' '}
-              {formatMontantCompact(prep.offreAcceptee.montantTtc)} TTC,{' '}
+              {formatCompactAmount(prep.offreAcceptee.montantTtc)} TTC,{' '}
               {prep.signataire.qui === 'ceo' ? 'au-delà' : 'en deçà'} du seuil de{' '}
-              {formatMontantCompact(prep.signataire.seuilTtc)}.
+              {formatCompactAmount(prep.signataire.seuilTtc)}.
             </p>
           )}
           {prep.reglagesManquants.length > 0 && (
@@ -266,7 +268,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
 
           {c.statut === 'signe' && (
             <p className="cycle-dossier-note cycle-dossier-note--renvoi" role="note">
-              Signé le {formatDateCourte(c.signeLe!)}
+              Signé le {formatDayShortMonth(c.signeLe!)}
               {c.signeParNom ? ` par ${c.signeParNom}` : ''} — {c.modeSignature ? MODES_SIGNATURE[c.modeSignature] : ''}
               {c.scan ? ` (${c.scan.nom})` : ''}.
             </p>
@@ -275,7 +277,9 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             <img src={c.signatureTrace} alt="Signature du client" className="contrat-signature" />
           )}
           {c.statut === 'envoye' && c.dateEnvoi && (
-            <p className="field-aide">Envoyé au client le {formatDateCourte(c.dateEnvoi)} — en attente de signature.</p>
+            <p className="field-aide">
+              Envoyé au client le {formatDayShortMonth(c.dateEnvoi)} — en attente de signature.
+            </p>
           )}
 
           {lien && (

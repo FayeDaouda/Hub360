@@ -16,7 +16,7 @@ import {
   type StatutCrm,
   type TransitionDossier,
 } from '@/lib/types';
-import { formatNombre } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import type { ActionCrm } from '@/lib/cycle-crm';
 import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } from '@/lib/crm';
 import { CycleDossier } from './cycle-dossier';
@@ -26,6 +26,7 @@ import { LocaliteSelect } from './localite-select';
 import { CaracteristiquesProjet } from './caracteristiques-projet';
 import { FicheApporteurSection } from './fiche-apporteur-section';
 import { estPersonneMorale } from '@/lib/nomenclature';
+import { formatDate } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -49,8 +50,6 @@ type Props = {
   peutFacturer: boolean; // finances_factures ≥ écriture : facture directe du lead
   onModifierFiche: (champs: ModifierFichePayload) => Promise<void>;
 };
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Situation (maquette du boss) : quatre étapes ; « Perdu » les laisse grisées.
 const ETAPES: { statut: StatutCrm; libelle: string }[] = [
@@ -201,7 +200,7 @@ export function DetailDossierModal({
     { libelle: 'Type de projet', valeur: projet.type ? TYPES_BIEN[projet.type] : manquant(), aide: 'Liste déroulante' },
     {
       libelle: 'Surface du terrain',
-      valeur: projet.surfaceTerrain > 0 ? `${formatNombre(projet.surfaceTerrain)} m²` : manquant(),
+      valeur: projet.surfaceTerrain > 0 ? `${formatNumber(projet.surfaceTerrain)} m²` : manquant(),
       aide: 'Fiche Programme · base du calcul de surface vendue',
     },
     {
@@ -240,7 +239,7 @@ export function DetailDossierModal({
             <p className="fiche-crm-client">{projet.client.nom}</p>
             <p className="fiche-crm-meta">
               {estPersonneMorale(projet.client.type) ? 'Personne morale' : 'Personne physique'} ·{' '}
-              {projet.localite?.nom ?? projet.localisation} · créé le {jjmmaaaa(projet.creeLe)}
+              {projet.localite?.nom ?? projet.localisation} · créé le {formatDate(projet.creeLe)}
             </p>
           </div>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
@@ -262,7 +261,7 @@ export function DetailDossierModal({
           {projet.offreExpiree && <p className="fiche-crm-note">Offre expirée sans réponse du client.</p>}
           {archive && (
             <p className="fiche-crm-note">
-              Lead archivé le {jjmmaaaa(archive.le)}
+              Lead archivé le {formatDate(archive.le)}
               {archive.par ? ` par ${archive.par.nom}` : ''} : consultable seulement, son code reste réservé.
             </p>
           )}
@@ -382,14 +381,14 @@ export function DetailDossierModal({
               {historique.flatMap((t) =>
                 libellesTransition(t).map((libelle, i) => (
                   <li key={`${t.id}-${i}`}>
-                    <time>{jjmmaaaa(t.le)}</time>
+                    <time>{formatDate(t.le)}</time>
                     <span>{libelle}</span>
                   </li>
                 )),
               )}
               {archive && (
                 <li>
-                  <time>{jjmmaaaa(archive.le)}</time>
+                  <time>{formatDate(archive.le)}</time>
                   <span>Lead archivé{archive.par ? ` par ${archive.par.nom}` : ''}</span>
                 </li>
               )}

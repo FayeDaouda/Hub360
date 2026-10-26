@@ -31,7 +31,7 @@ import {
   type Projet,
   type ProjetRef,
 } from '@/lib/types';
-import { formatMontantCompact } from '@/lib/format';
+import { formatCompactAmount } from '@/lib/format';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
@@ -57,14 +57,10 @@ import { ParametresFacturationFenetre } from '@/components/finances/parametres-f
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
+import { formatLongDate } from '@/lib/dates';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
 type Props = { params: Promise<{ slug: string }> };
-
-function formatDate(iso: string): string {
-  const d = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 // Finances · Devis et factures (maquette du boss, oct. 2026) : direction
 // seulement (matrice finances_*), les équipes ne voient aucun montant.
@@ -216,8 +212,8 @@ export default function FinancesPage(props: Props) {
       reference: d.reference,
       statutLabel: s.libelle,
       statutClasse: `pill--${s.ton}`,
-      dateEmission: formatDate(d.dateEnvoi ?? d.creeLe),
-      dateValidite: d.dateValidite ? formatDate(d.dateValidite) : null,
+      dateEmission: formatLongDate(d.dateEnvoi ?? d.creeLe),
+      dateValidite: d.dateValidite ? formatLongDate(d.dateValidite) : null,
       clientNom: d.client.nom,
       objet: d.objet,
       lignes: d.lignes,
@@ -252,8 +248,8 @@ export default function FinancesPage(props: Props) {
       estAvoir: f.estAvoir,
       reference: f.reference,
       factureOrigine: origine?.reference ?? null,
-      dateEmission: f.emiseLe ? formatDate(f.emiseLe) : null,
-      dateEcheance: f.echeanceLe ? formatDate(f.echeanceLe) : null,
+      dateEmission: f.emiseLe ? formatLongDate(f.emiseLe) : null,
+      dateEcheance: f.echeanceLe ? formatLongDate(f.echeanceLe) : null,
       // Payable à réception : sans échéance, ou échéance le jour de l'émission.
       aReception: !f.echeanceLe || (!!f.emiseLe && f.echeanceLe.slice(0, 10) === f.emiseLe.slice(0, 10)),
       // Ce que le client reconnaît : « Villa — Yoff », le code en rappel.
@@ -265,7 +261,10 @@ export default function FinancesPage(props: Props) {
         ? [doc?.tranche, `${source.tranche.rang} sur ${source.tranche.total}`].filter(Boolean).join(' · ')
         : (doc?.tranche ?? null),
       offre: doc?.offre?.reference
-        ? { reference: doc.offre.reference, accepteeLe: doc.offre.accepteeLe ? formatDate(doc.offre.accepteeLe) : null }
+        ? {
+            reference: doc.offre.reference,
+            accepteeLe: doc.offre.accepteeLe ? formatLongDate(doc.offre.accepteeLe) : null,
+          }
         : null,
       objet: f.estAvoir ? null : f.libelle || null, // l'avoir cite déjà la facture annulée
       client: {
@@ -284,7 +283,7 @@ export default function FinancesPage(props: Props) {
               designation: l.designation,
               detail:
                 l.montantBase != null
-                  ? `Facture du bureau ${formatMontantCompact(l.montantBase)} HT + 10 % de coordination`
+                  ? `Facture du bureau ${formatCompactAmount(l.montantBase)} HT + 10 % de coordination`
                   : null,
               quantite: 1,
               prixUnitaire: l.montantHt,
@@ -446,7 +445,7 @@ export default function FinancesPage(props: Props) {
                 {i > 0 && ' · '}
                 <Link href={lienFacturationProjet(params.slug, b.projet.id)} className="lien-inline">
                   {b.bureau} — {b.libelle} ({b.projet.code}
-                  {b.montantBureauHt != null && `, ${formatMontantCompact(b.montantBureauHt)} HT`})
+                  {b.montantBureauHt != null && `, ${formatCompactAmount(b.montantBureauHt)} HT`})
                 </Link>
               </span>
             ))}
@@ -501,7 +500,7 @@ export default function FinancesPage(props: Props) {
               cle: 'reste',
               label: 'Reste à encaisser',
               montant: kpi.resteAEncaisser.montant,
-              sousTexte: `dont ${formatMontantCompact(kpi.resteAEncaisser.enRetard.montant)} en retard · ${formatMontantCompact(kpi.resteAEncaisser.aEchoir.montant)} à échoir`,
+              sousTexte: `dont ${formatCompactAmount(kpi.resteAEncaisser.enRetard.montant)} en retard · ${formatCompactAmount(kpi.resteAEncaisser.aEchoir.montant)} à échoir`,
               icone: Clock,
               etat: etatEnRetard(kpi.resteAEncaisser.enRetard.nombre),
             },

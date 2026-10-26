@@ -19,6 +19,8 @@ import { MesInformations } from './informations';
 import { MaCellule } from './ma-cellule';
 import { MonTemps } from './mon-temps';
 import { MesPerformances } from './performances';
+import { formatDate } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 // Deux blocs (revue Salarié 19/10/2026) : le travail au quotidien, puis le
 // dossier personnel — neuf onglets à plat étaient trop chargés.
@@ -50,8 +52,6 @@ const NOUVEAUTES: Partial<Record<Onglet, NotificationType[]>> = {
   remboursements: ['remboursement_traite'],
   documents: ['bulletin_depose', 'attestation_delivree'],
 };
-
-const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
 
 // Rôles qui ne valident rien (maquettes RH et Salarié) : « À valider »
 // n'apparaît pour eux que si quelque chose les attend.
@@ -159,7 +159,7 @@ export function MonEspace({ slug }: { slug: string }) {
                 dossier.poste,
                 dossier.societe,
                 dossier.cellule ?? (SANS_TACHES.has(role) ? null : 'sans cellule'),
-                `${LIBELLE_CONTRAT[dossier.typeContrat]}${dossier.dateEntree ? ` depuis le ${jjmmaaaa(dossier.dateEntree)}` : ''}`,
+                `${LIBELLE_CONTRAT[dossier.typeContrat]}${dossier.dateEntree ? ` depuis le ${formatDate(dossier.dateEntree)}` : ''}`,
               ]
                 .filter(Boolean)
                 .join(' · ')
@@ -268,7 +268,7 @@ function CarteMission({ mission }: { mission: NonNullable<ProfilMonEspace['missi
 
 function Pastille({ n }: { n: number }) {
   return n > 0 ? (
-    <span className="mes-pastille" aria-label={`${n} nouveauté${n > 1 ? 's' : ''}`}>
+    <span className="mes-pastille" aria-label={`${plural(n, 'nouveauté')}`}>
       {n}
     </span>
   ) : null;

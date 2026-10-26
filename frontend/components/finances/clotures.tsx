@@ -5,9 +5,10 @@ import { createPortal } from 'react-dom';
 import { Lock, LockOpen, X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { cloturerMois, getClotures, rouvrirMois, type MoisCloture } from '@/lib/facturation';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
+import { formatDate } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
 // Clôture mensuelle (contrôle interne, revue CFO 20/10/2026) : le CFO fige un
@@ -75,7 +76,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                   <strong className="clo-periode">{m.periode}</strong>
                   {m.clos ? (
                     <span className="pill pill--succes">
-                      <Lock size={11} aria-hidden /> Clôturé{m.le ? ` le ${jjmmaaaa(m.le)}` : ''}
+                      <Lock size={11} aria-hidden /> Clôturé{m.le ? ` le ${formatDate(m.le)}` : ''}
                       {m.par ? ` par ${m.par}` : ''}
                     </span>
                   ) : (
@@ -83,12 +84,10 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                   )}
                 </div>
                 <p className="clo-chiffres">
-                  {m.chiffres.factures} facture{m.chiffres.factures > 1 ? 's' : ''} ·{' '}
-                  {formatMontant(m.chiffres.factureTtc)} TTC
+                  {plural(m.chiffres.factures, 'facture')} · {formatAmount(m.chiffres.factureTtc)} TTC
                   {m.chiffres.avoirs > 0 &&
-                    ` · ${m.chiffres.avoirs} avoir${m.chiffres.avoirs > 1 ? 's' : ''} (${formatMontant(m.chiffres.avoirsTtc)})`}{' '}
-                  · {m.chiffres.paiements} paiement{m.chiffres.paiements > 1 ? 's' : ''} ·{' '}
-                  {formatMontant(m.chiffres.encaisse)} encaissés
+                    ` · ${plural(m.chiffres.avoirs, 'avoir')} (${formatAmount(m.chiffres.avoirsTtc)})`}{' '}
+                  · {plural(m.chiffres.paiements, 'paiement')} · {formatAmount(m.chiffres.encaisse)} encaissés
                 </p>
                 {!m.clos && m.derniereReouverture && (
                   <p className="cell-sub">Motif de la réouverture : {m.derniereReouverture}</p>

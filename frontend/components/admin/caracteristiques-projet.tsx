@@ -39,6 +39,8 @@ import {
   type Usage,
   type UsageNiveau,
 } from '@/lib/fiche-programme';
+import { plural } from '@/lib/text';
+import { formatNumber } from '@/lib/format';
 
 type Props = {
   projet: Projet;
@@ -182,7 +184,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
               {!(projet.surfaceTerrain > 0) && !autreSurface && choisir}
               {SURFACES.map((m2) => (
                 <option key={m2} value={m2}>
-                  {m2.toLocaleString('fr-FR')} m²
+                  {formatNumber(m2)} m²
                 </option>
               ))}
               <option value="autre">Autre surface…</option>
@@ -427,10 +429,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
 
             <div className="fp-commodites-tete">
               <span className="field-label">
-                F · Commodités{' '}
-                <span className="fiche-crm-aide">
-                  ({nbCommodites} cochée{nbCommodites > 1 ? 's' : ''})
-                </span>
+                F · Commodités <span className="fiche-crm-aide">({plural(nbCommodites, 'cochée')})</span>
               </span>
               <span className="fp-commodites-actions">
                 {projet.standing && (

@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import { deciderDemandeTs, type DemandeTsADecider } from '@/lib/projets-ouverts';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+import { formatDate } from '@/lib/dates';
 
 // TS au-delà du seuil (revue Dir. GC, 21/10/2026) : le CTO l'accepte — il est
 // ajouté au projet et à l'avenant — ou le refuse avec un motif, transmis au
@@ -67,7 +66,7 @@ export function DecisionTs({
             <div>
               <dt>Montant de l’avenant</dt>
               <dd>
-                <strong>{formatMontant(demande.montantHt)} HT</strong>
+                <strong>{formatAmount(demande.montantHt)} HT</strong>
               </dd>
             </div>
             <div>
@@ -85,7 +84,7 @@ export function DecisionTs({
             <div>
               <dt>Demandé</dt>
               <dd>
-                le {jjmmaaaa(demande.demandeLe)}
+                le {formatDate(demande.demandeLe)}
                 {demande.demandePar ? ` par ${demande.demandePar}` : ''}
               </dd>
             </div>

@@ -15,7 +15,6 @@ import {
   libelleCharge,
   telechargerPieceRemise,
   type ChargesTache,
-  jjmmaaaa,
   numeroEtape,
   pastilleTache,
   type Assignable,
@@ -27,6 +26,7 @@ import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from '.
 import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
+import { daysBetween, formatDate, todayIso } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -187,12 +187,12 @@ export function TachePanneau({
   // Résumé : ce qu'il faut savoir d'un coup d'œil.
   const echeance = tache.prolongation.accordeeJusquau ?? tache.finLe;
   // Retard affiché : en retard, ou reprise dont l'échéance est passée.
-  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const aujourdhui = todayIso();
   const joursRetard =
     tache.etat.code === 'en_retard'
       ? tache.etat.jours
       : tache.etat.code === 'reprise' && echeance && echeance < aujourdhui
-        ? Math.round((Date.parse(aujourdhui) - Date.parse(echeance.slice(0, 10))) / 86_400_000)
+        ? daysBetween(echeance, aujourdhui)
         : null;
   const resume: [string, React.ReactNode][] = [];
   if (gestionnaire) resume.push(['Assignée à', tache.assigne?.nom ?? 'À assigner']);
@@ -200,7 +200,7 @@ export function TachePanneau({
     'Échéance',
     echeance ? (
       <>
-        {jjmmaaaa(echeance)}
+        {formatDate(echeance)}
         {tache.prolongation.accordeeJusquau && <span className="tp-secondaire"> · délai accordé</span>}
         {joursRetard !== null && <span className="po-retard"> · {joursRetard} j de retard</span>}
       </>
@@ -237,7 +237,7 @@ export function TachePanneau({
   if (tache.valideeLe) {
     resume.push([
       'Validée',
-      `le ${jjmmaaaa(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`,
+      `le ${formatDate(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`,
     ]);
   }
 
@@ -246,14 +246,14 @@ export function TachePanneau({
     [
       'Fenêtre',
       tache.debutJ !== null && tache.debutLe && tache.finLe
-        ? `J${tache.debutJ} → J${tache.finJ} · ${jjmmaaaa(tache.debutLe)} → ${jjmmaaaa(tache.finLe)}`
+        ? `J${tache.debutJ} → J${tache.finJ} · ${formatDate(tache.debutLe)} → ${formatDate(tache.finLe)}`
         : '—',
     ],
     [
       'Échéance de référence',
       tache.finLe ? (
         <>
-          {jjmmaaaa(tache.finLe)}{' '}
+          {formatDate(tache.finLe)}{' '}
           <Infobulle>
             Délai figé à l’ouverture du projet : une prolongation accordée qualifie le retard, elle ne déplace pas cette
             date.
@@ -273,7 +273,7 @@ export function TachePanneau({
     ]);
   }
   if (tache.prolongation.accordeeJusquau) {
-    details.push(['Prolongation', `accordée jusqu’au ${jjmmaaaa(tache.prolongation.accordeeJusquau)}`]);
+    details.push(['Prolongation', `accordée jusqu’au ${formatDate(tache.prolongation.accordeeJusquau)}`]);
   }
 
   const lignes = (l: [string, React.ReactNode][]) => (
@@ -453,7 +453,7 @@ export function TachePanneau({
         <div className="po-panneau-bloc">
           <p className="tp-section">Délai demandé</p>
           <p className="po-aide">
-            Jusqu’au {jjmmaaaa(tache.prolongation.enAttente.jusquau)} : {tache.prolongation.enAttente.motif}
+            Jusqu’au {formatDate(tache.prolongation.enAttente.jusquau)} : {tache.prolongation.enAttente.motif}
           </p>
           {tache.peutDeciderProlongation ? (
             <div className="po-decision">
@@ -492,7 +492,7 @@ export function TachePanneau({
             </p>
           ) : tache.visa.le ? (
             <p className="po-aide">
-              Apposé le {jjmmaaaa(tache.visa.le)}
+              Apposé le {formatDate(tache.visa.le)}
               {tache.visa.par ? ` par ${tache.visa.par}` : ''}.
             </p>
           ) : (
@@ -632,8 +632,8 @@ export function TachePanneau({
           </select>
           {charges?.periode && (
             <p className="po-aide">
-              Charge prévisionnelle du {jjmmaaaa(charges.periode.debut)} au {jjmmaaaa(charges.periode.fin)}, cette tâche
-              comprise
+              Charge prévisionnelle du {formatDate(charges.periode.debut)} au {formatDate(charges.periode.fin)}, cette
+              tâche comprise
               {charges.zone ? ` (zone normale ${charges.zone.de} à ${charges.zone.a} %)` : ''}.
               {tache.assigne && chargeDe(tache.assigne.id) && (
                 <>
@@ -706,7 +706,7 @@ export function TachePanneau({
           <ul className="po-historique">
             {historique.map((e) => (
               <li key={e.id}>
-                {jjmmaaaa(e.le)} · {e.detail}
+                {formatDate(e.le)} · {e.detail}
                 {e.par && ` par ${e.par}`}
               </li>
             ))}

@@ -1,4 +1,5 @@
 import { LienCompte } from './email.service';
+import { escapeHtml } from '../shared/text';
 
 // Contenu des deux emails de compte. Pur (aucune I/O) — partagé par les
 // transports et facile à tester. FR, ton sobre, une seule action.
@@ -22,15 +23,11 @@ export function contenuLienCompte(l: LienCompte): {
   const texte = [`Bonjour ${l.prenom},`, '', intro, '', l.lien, '', pied].join('\n');
 
   const html = [
-    `<p>Bonjour ${echapper(l.prenom)},</p>`,
-    `<p>${echapper(intro)}</p>`,
-    `<p><a href="${echapper(l.lien)}">${invitation ? 'Activer mon compte' : 'Choisir un nouveau mot de passe'}</a></p>`,
-    `<p style="color:#6c6960;font-size:13px">${echapper(pied)}</p>`,
+    `<p>Bonjour ${escapeHtml(l.prenom)},</p>`,
+    `<p>${escapeHtml(intro)}</p>`,
+    `<p><a href="${escapeHtml(l.lien)}">${invitation ? 'Activer mon compte' : 'Choisir un nouveau mot de passe'}</a></p>`,
+    `<p style="color:#6c6960;font-size:13px">${escapeHtml(pied)}</p>`,
   ].join('');
 
   return { sujet, texte, html };
-}
-
-function echapper(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

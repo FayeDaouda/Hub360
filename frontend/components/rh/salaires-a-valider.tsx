@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatMontant } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import {
   deciderSalaire,
   getDetailSalaire,
@@ -12,8 +12,8 @@ import {
   type DetailSalaire,
   type SalaireAValider,
 } from '@/lib/rh';
+import { formatDate } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : 'date inconnue');
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
 // Salaires à valider (revue RH validée 20/10/2026) : en tête de la page RH
@@ -75,8 +75,8 @@ export function SalairesAValider({ slug }: { slug: string }) {
                 {s.salarie} · {LIBELLE_MOTIF_SALAIRE[s.motif]}
               </strong>
               <span className="cell-sub">
-                effet le {jjmmaaaa(s.dateEffet)} · proposé{s.proposePar ? ` par ${s.proposePar}` : ''} le{' '}
-                {jjmmaaaa(s.proposeLe)}
+                effet le {formatDate(s.dateEffet, 'date inconnue')} · proposé
+                {s.proposePar ? ` par ${s.proposePar}` : ''} le {formatDate(s.proposeLe, 'date inconnue')}
               </span>
             </span>
             {ouvert?.id === s.id ? (
@@ -93,14 +93,14 @@ export function SalairesAValider({ slug }: { slug: string }) {
                 <p className="sav-montants">
                   <span>
                     <span className="field-label">Actuel</span>
-                    {ouvert.actuel == null ? 'aucun' : formatMontant(ouvert.actuel)}
+                    {ouvert.actuel == null ? 'aucun' : formatAmount(ouvert.actuel)}
                   </span>
                   <span aria-hidden>→</span>
                   <span>
                     <span className="field-label">Proposé</span>
-                    <strong>{formatMontant(ouvert.montant)}</strong>
+                    <strong>{formatAmount(ouvert.montant)}</strong>
                     {ecart != null && (
-                      <span className="cell-sub">{`${ecart > 0 ? '+' : ''}${ecart.toLocaleString('fr-FR')} %`}</span>
+                      <span className="cell-sub">{`${ecart > 0 ? '+' : ''}${formatNumber(ecart)} %`}</span>
                     )}
                   </span>
                 </p>

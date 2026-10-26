@@ -1,3 +1,4 @@
+import { stripAccents } from './text';
 // Nomenclature du code dossier / projet — règle Grey Concrete v2, validée
 // (étape B de l'intégration CRM, sept. 2026).
 //
@@ -26,14 +27,10 @@
 // identiques (l'aperçu du code côté formulaire). `codeAvecVariante` sert
 // aux deux : côté serveur avec les codes pris en base.
 
-function sansAccents(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
 // Découpe un nom en mots : sépare sur espaces, tirets, apostrophes et points,
 // retire les accents, jette les vides.
 function mots(s: string): string[] {
-  return sansAccents(s)
+  return stripAccents(s)
     .split(/[\s\-'’.]+/)
     .filter(Boolean);
 }
@@ -61,7 +58,7 @@ const MOTS_IGNORES = new Set([
 // Sigle tel qu'il est stocké et utilisé : majuscules, lettres et chiffres
 // seulement (« S.N.F » → SNF, « Téranga » → TERANGA). Chaîne vide si rien.
 export function normaliserSigle(sigle: string): string {
-  return sansAccents(sigle)
+  return stripAccents(sigle)
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '');
 }
@@ -120,7 +117,7 @@ function initiales(retenus: string[]): string {
 // seule forme juridique et non quatre initiales), puis tout ce qui n'est ni
 // lettre, ni chiffre, ni « & » sépare les mots.
 function segmentRaisonSociale(nom: string): string {
-  const tous = sansAccents(nom)
+  const tous = stripAccents(nom)
     .replace(/\./g, '')
     .split(/[^A-Za-z0-9&]+/)
     .filter(Boolean);

@@ -9,7 +9,6 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
   VARIABLES_CONTRAT,
-  formatFcfa,
   modeContrat,
   remplirModele,
   type Signataire,
@@ -17,6 +16,7 @@ import {
   variablesInconnues,
 } from './domaine';
 import { FichierContratDto, ParametresContratDto, SignerContratDto } from './dto';
+import { formatAmount } from '../shared/format';
 
 const AVEC_DETAIL = {
   annexes: { orderBy: { ordre: 'asc' } },
@@ -487,8 +487,8 @@ export class ContratsService {
       programme: x.dossier.programme,
       localisation: x.dossier.localisation,
       reference_offre: refDevis(x.offre) ?? '',
-      montant_offre_ht: formatFcfa(x.montantHt),
-      montant_offre_ttc: formatFcfa(montantTtc),
+      montant_offre_ht: formatAmount(x.montantHt),
+      montant_offre_ttc: formatAmount(montantTtc),
       date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
       signataire_nom: x.signataire.nom,
       signataire_fonction: x.signataire.fonction,

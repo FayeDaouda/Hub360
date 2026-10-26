@@ -49,8 +49,6 @@ export type Session = {
 // Contrat partagé avec le futur endpoint backend
 // `GET /api/societes/:slug/tableau-de-bord` — le front ne fait qu'afficher.
 
-export type FormatValeur = 'montant' | 'montant_compact' | 'pourcent' | 'nombre' | 'surface';
-
 export type PointHistogramme = {
   libelle: string;
   valeur: number;

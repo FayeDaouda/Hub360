@@ -8,12 +8,11 @@ import {
 import { ROLE_CEO, ROLES_DELEGATAIRES } from '../commun/delegation-ceo';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { formatDate, todayIso } from '../shared/dates';
 
 type Acteur = { userId: string; societeId: string; role: string };
 const ROLE_CIO = 'CIO (transverse)';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
-const dateFr = (j: string) => j.split('-').reverse().join('/');
 const libelleRole = (r: string) => r.replace(/\s*\(transverse\)$/, '');
 
 // Ce que le délégataire peut décider, selon sa fonction (ses propres droits
@@ -39,7 +38,7 @@ export class DelegationService {
   ) {}
 
   async lire(a: Acteur) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const delegations = await this.prisma.delegationCeo.findMany({
       where: { societeId: a.societeId, revoqueLe: null, au: { gte: jour } },
       orderBy: { du: 'asc' },
@@ -78,7 +77,7 @@ export class DelegationService {
   async creer(a: Acteur, dto: { delegataireId: string; du: string; au: string }) {
     if (a.role !== ROLE_CEO) throw new ForbiddenException('Seul le CEO délègue ses décisions.');
     if (!DATE.test(dto.du) || !DATE.test(dto.au)) throw new BadRequestException('Dates invalides (AAAA-MM-JJ).');
-    if (dto.du < aujourdhui()) throw new BadRequestException('Une délégation ne commence pas dans le passé.');
+    if (dto.du < todayIso()) throw new BadRequestException('Une délégation ne commence pas dans le passé.');
     if (dto.au < dto.du) throw new BadRequestException('La fin précède le début.');
     if (dto.delegataireId === a.userId) throw new BadRequestException('Le CEO ne se délègue pas à lui-même.');
     const affectation = await this.prisma.utilisateurSocieteRole.findFirst({
@@ -110,7 +109,7 @@ export class DelegationService {
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'delegation_ceo',
-      titre: `Délégation du CEO à ${affectation.utilisateur.prenom} ${affectation.utilisateur.nom} du ${dateFr(dto.du)} au ${dateFr(dto.au)} · ${perimetre} · jamais : ${JAMAIS_DELEGUE.join(', ')}`,
+      titre: `Délégation du CEO à ${affectation.utilisateur.prenom} ${affectation.utilisateur.nom} du ${formatDate(dto.du)} au ${formatDate(dto.au)} · ${perimetre} · jamais : ${JAMAIS_DELEGUE.join(', ')}`,
       destinataireIds: [dto.delegataireId, ...(await this.notifications.titulairesRole(a.societeId, ROLE_CIO))],
       parId: a.userId,
     });
@@ -126,7 +125,7 @@ export class DelegationService {
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'delegation_ceo',
-      titre: `Délégation du CEO révoquée (prévue du ${dateFr(d.du)} au ${dateFr(d.au)}) · les décisions reviennent au CEO`,
+      titre: `Délégation du CEO révoquée (prévue du ${formatDate(d.du)} au ${formatDate(d.au)}) · les décisions reviennent au CEO`,
       destinataireIds: [d.delegataireId, ...(await this.notifications.titulairesRole(a.societeId, ROLE_CIO))],
       parId: a.userId,
     });

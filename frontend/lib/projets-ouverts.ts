@@ -2,6 +2,7 @@ import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
 import type { Temps } from './reglages';
 import type { StatutDevisEffectif } from './types';
+import { daysBetween, formatDate, formatDayMonth, todayIso } from './dates';
 
 // -----------------------------------------------------------------------------
 // Projets ouverts selon le gabarit (maquette « Projets » du boss). Branché sur :
@@ -393,8 +394,6 @@ export function getHistoriqueTache(slug: string, projetId: string, tacheId: stri
 
 // --- Libellés (maquette) ------------------------------------------------------------
 
-export const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-export const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 export const numeroEtape = (n: number) => String(n).padStart(2, '0');
 const v = (n: number) => `v${String(n).padStart(2, '0')}`;
 
@@ -413,9 +412,9 @@ export function pastilleTache(e: EtatTache, echeance?: string | null): { libelle
     case 'a_valider':
       return { libelle: `À valider · ${v(e.version)}`, ton: 'attention' };
     case 'reprise': {
-      const jour = new Date().toISOString().slice(0, 10);
+      const jour = todayIso();
       if (echeance && echeance < jour) {
-        const jours = Math.round((Date.parse(jour) - Date.parse(echeance.slice(0, 10))) / 86_400_000);
+        const jours = daysBetween(echeance, jour);
         return { libelle: `Reprise · ${jours} j de retard`, ton: 'risque' };
       }
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };
@@ -423,7 +422,7 @@ export function pastilleTache(e: EtatTache, echeance?: string | null): { libelle
     case 'en_retard':
       return { libelle: `En retard · ${e.jours} j`, ton: 'risque' };
     case 'prolongee':
-      return { libelle: `Retard qualifié · jusqu’au ${jjmm(e.jusquau)}`, ton: 'attention' };
+      return { libelle: `Retard qualifié · jusqu’au ${formatDayMonth(e.jusquau)}`, ton: 'attention' };
     case 'en_cours':
       return { libelle: 'En cours', ton: 'info' };
     case 'verrouillee':
@@ -446,7 +445,7 @@ export function pastilleCarte(e: EtatCarte): { libelle: string; ton: Ton } {
     case 'verrouillee':
       return { libelle: 'Verrouillée', ton: 'neutre' };
     case 'close':
-      return { libelle: e.le ? `Close le ${jjmm(e.le)}` : 'Close', ton: 'succes' };
+      return { libelle: e.le ? `Close le ${formatDayMonth(e.le)}` : 'Close', ton: 'succes' };
     default:
       return { libelle: 'Ouverte', ton: 'info' };
   }

@@ -3,19 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarClock, CalendarX, Clock, Gauge } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import {
-  formatHeures,
-  getMonTemps,
-  HEURES_PAR_JOUR,
-  libelleMois,
-  signalerEcartTemps,
-  STATUT_FEUILLE,
-} from '@/lib/temps';
+import { formatHeures, getMonTemps, HEURES_PAR_JOUR, signalerEcartTemps, STATUT_FEUILLE } from '@/lib/temps';
 import type { JourCalendrierTemps, MonTemps as DonneesMonTemps } from '@/lib/types';
 import { KpiStrip } from '@/components/admin/kpi-strip';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
+import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Impossible de charger votre temps.');
 
 // « Mon espace » · Mon temps (RH lot 4, maquette du boss) : la feuille du
@@ -48,7 +41,7 @@ export function MonTemps({ slug }: { slug: string }) {
   const { feuille } = donnees;
   const controle =
     feuille.statut === 'controlee' && feuille.controleLe
-      ? `contrôlée le ${jjmmaaaa(feuille.controleLe)}`
+      ? `contrôlée le ${formatDate(feuille.controleLe)}`
       : STATUT_FEUILLE[feuille.statut].libelle.toLowerCase();
 
   return (
@@ -63,7 +56,7 @@ export function MonTemps({ slug }: { slug: string }) {
               aria-pressed={m === donnees.mois}
               onClick={() => setMois(m)}
             >
-              {libelleMois(m)}
+              {formatMonthYear(m)}
             </button>
           ))}
         </div>
@@ -107,7 +100,7 @@ export function MonTemps({ slug }: { slug: string }) {
       {feuille.calendrier && <CalendrierMois jours={feuille.calendrier} />}
 
       <section className="panel glass-panel dmd-section temps-panel">
-        <h2 className="dmd-titre">Détail du calcul · {libelleMois(feuille.mois)}</h2>
+        <h2 className="dmd-titre">Détail du calcul · {formatMonthYear(feuille.mois)}</h2>
         <LignesCalcul lignes={feuille.lignes} variante="salarie" />
         <p className="dmd-note">
           Calcul automatique : durée standard de chaque tâche assignée, répartie sur les jours ouvrés de sa fenêtre,
@@ -157,11 +150,11 @@ function EcartTemps({
             <span className={`pill ${ouvert ? 'pill--attention' : 'pill--succes'}`}>
               {ouvert ? 'Signalé · en attente de la RH' : 'Traité'}
             </span>{' '}
-            Vous avez signalé le {jjmmaaaa(ecart.signaleLe)} : « {ecart.commentaire} »
+            Vous avez signalé le {formatDate(ecart.signaleLe)} : « {ecart.commentaire} »
           </p>
           {ecart.reponse && ecart.traiteLe && (
             <p className="dmd-note">
-              Réponse de la RH le {jjmmaaaa(ecart.traiteLe)} : « {ecart.reponse} »
+              Réponse de la RH le {formatDate(ecart.traiteLe)} : « {ecart.reponse} »
             </p>
           )}
         </div>
@@ -180,7 +173,7 @@ function EcartTemps({
       {saisie !== null && (
         <>
           <label className="field">
-            <span className="field-label">Ce qui ne va pas · {libelleMois(donnees.mois)}</span>
+            <span className="field-label">Ce qui ne va pas · {formatMonthYear(donnees.mois)}</span>
             <textarea
               className="field-input"
               rows={3}
@@ -229,7 +222,7 @@ const NATURE: Record<JourCalendrierTemps['nature'], string> = {
 // écart (absence oubliée, jour vide) se repère tout seul. Intensité de la
 // case = heures du jour sur 8 h.
 function CalendrierMois({ jours }: { jours: JourCalendrierTemps[] }) {
-  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const aujourdhui = todayIso();
   // Cases vides avant le 1er (semaine du lundi).
   const decalage = (new Date(`${jours[0].date}T00:00:00Z`).getUTCDay() + 6) % 7;
   return (
@@ -254,7 +247,7 @@ function CalendrierMois({ jours }: { jours: JourCalendrierTemps[] }) {
                 ? ({ '--tc-charge': Math.min(1, j.heures / HEURES_PAR_JOUR) } as React.CSSProperties)
                 : undefined
             }
-            title={`${jjmmaaaa(j.date)} · ${NATURE[j.nature]}${j.heures ? ` · ${formatHeures(j.heures)}` : ''}`}
+            title={`${formatDate(j.date)} · ${NATURE[j.nature]}${j.heures ? ` · ${formatHeures(j.heures)}` : ''}`}
           >
             <span className="tc-numero">{Number(j.date.slice(8, 10))}</span>
             <span className="tc-valeur">

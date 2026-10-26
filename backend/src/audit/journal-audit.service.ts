@@ -2,12 +2,13 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import type { ActionPaie, EvenementCompteType, NiveauPermission } from '@prisma/client';
 import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
-import { moisFr } from '../projets/facturation/cloture';
 import { formaterNumero } from '../projets/facturation/numerotation';
 import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.service';
 import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
 import { PrismaService } from '../prisma/prisma.service';
+import { formatDate, formatMonthYear, formatNumericMonth, toIsoDay } from '../shared/dates';
+import { formatAmount } from '../shared/format';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';
@@ -57,7 +58,6 @@ const NIVEAUX: Record<NiveauPermission, string> = {
   ecriture: 'écriture',
   validation: 'validation',
 };
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 const nomDe = (u: { prenom: string; nom: string } | null | undefined) => (u ? `${u.prenom} ${u.nom}`.trim() : null);
 
 // Journal d'audit : ce que le HUB enregistre déjà, réuni en une seule liste
@@ -205,7 +205,7 @@ export class JournalAuditService {
       }),
     ]);
     const nomReporting = (r: { type: 'direction' | 'rh'; mois: string }) =>
-      `${titreReporting(r.type)} · ${moisFr(r.mois)}`;
+      `${titreReporting(r.type)} · ${formatMonthYear(r.mois)}`;
     // Paramètres de rentabilité (lot 7) : valeur, date d'effet, motif — jamais un salaire.
     const [parametresRentabilite, numerotations, profils] = await Promise.all([
       this.prisma.parametreRentabilite.findMany({ where: { societeId: S, createdAt: dans } }),
@@ -260,7 +260,7 @@ export class JournalAuditService {
         ordre: f.ordreEmission,
         categorie: 'finances' as const,
         action: f.estAvoir ? 'Avoir émis' : 'Facture émise',
-        detail: `${refFacture(f) ?? 'sans numéro'} · ${fcfa(ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc)} TTC · ${f.libelle}`,
+        detail: `${refFacture(f) ?? 'sans numéro'} · ${formatAmount(ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc)} TTC · ${f.libelle}`,
         parId: f.emiseParId,
       })),
       ...paiements.map((p) => ({
@@ -269,7 +269,7 @@ export class JournalAuditService {
         ordre: p.ordreJournal,
         categorie: 'finances' as const,
         action: 'Paiement enregistré',
-        detail: `${fcfa(p.montant.toNumber())} · ${refFacture(p.facture) ?? 'facture sans numéro'} · versé le ${p.date.split('-').reverse().join('/')}`,
+        detail: `${formatAmount(p.montant.toNumber())} · ${refFacture(p.facture) ?? 'facture sans numéro'} · versé le ${formatDate(p.date)}`,
         parId: p.creeParId,
       })),
       ...supprimes.map((p) => ({
@@ -279,7 +279,7 @@ export class JournalAuditService {
         categorie: 'finances' as const,
         action: 'Paiement supprimé',
         detail: [
-          fcfa(p.montant.toNumber()),
+          formatAmount(p.montant.toNumber()),
           facturesSupprimes.get(p.factureId) ?? 'facture',
           p.motif ? `motif : ${p.motif}` : null,
         ]
@@ -288,7 +288,7 @@ export class JournalAuditService {
         parId: p.supprimeParId,
       })),
       ...demandesAvoir.flatMap((d) => {
-        const quoi = `${refFacture(d.facture) ?? 'facture'} · ${fcfa(d.montantTtc.toNumber())} TTC · ${LIBELLE_MOTIF_AVOIR[d.motif]} : ${d.commentaire}`;
+        const quoi = `${refFacture(d.facture) ?? 'facture'} · ${formatAmount(d.montantTtc.toNumber())} TTC · ${LIBELLE_MOTIF_AVOIR[d.motif]} : ${d.commentaire}`;
         const lignesDemande = [];
         if (d.demandeLe >= de && d.demandeLe < jusque) {
           lignesDemande.push({
@@ -360,7 +360,7 @@ export class JournalAuditService {
           ordre: r.ordreJournal,
           categorie: 'finances' as const,
           action: 'Paramètre de rentabilité modifié',
-          detail: `${def?.libelle ?? r.cle} : ${r.valeur === null ? 'désactivé' : `${r.valeur} ${def?.unite ?? ''}`.trim()} dès ${moisFr(r.dateEffet.slice(0, 7))} · motif : ${r.motif}`,
+          detail: `${def?.libelle ?? r.cle} : ${r.valeur === null ? 'désactivé' : `${r.valeur} ${def?.unite ?? ''}`.trim()} dès ${formatMonthYear(r.dateEffet.slice(0, 7))} · motif : ${r.motif}`,
           parId: r.parId,
         };
       }),
@@ -404,7 +404,7 @@ export class JournalAuditService {
         ordre: c.ordreJournal,
         categorie: 'finances' as const,
         action: c.action === 'cloture' ? 'Mois clôturé' : 'Mois rouvert',
-        detail: [moisFr(c.mois), c.motif && `motif : ${c.motif}`].filter(Boolean).join(' · '),
+        detail: [formatMonthYear(c.mois), c.motif && `motif : ${c.motif}`].filter(Boolean).join(' · '),
         parId: c.parId,
       })),
       ...reglages.map((r) => ({
@@ -434,7 +434,7 @@ export class JournalAuditService {
         detail: [
           `${p.dossier.prenom} ${p.dossier.nom}`.trim(),
           p.dossier.matricule,
-          p.mois && `bulletin ${p.mois.split('-').reverse().join('/')}`,
+          p.mois && `bulletin ${formatNumericMonth(p.mois)}`,
         ]
           .filter(Boolean)
           .join(' · '),
@@ -451,8 +451,8 @@ export class JournalAuditService {
       ).map((u) => [u.id, nomDe(u)]),
     );
     return {
-      debut: de.toISOString().slice(0, 10),
-      fin: new Date(jusque.getTime() - 86_400_000).toISOString().slice(0, 10),
+      debut: toIsoDay(de),
+      fin: toIsoDay(new Date(jusque.getTime() - 86_400_000)),
       lignes: lignes
         // Plus récent d'abord ; à horodatage égal, ordre réel des événements
         // (séquence commune posée par la base, cf. migration ordre_journal).
@@ -476,7 +476,7 @@ function plusRecentDabord(a: bigint | null | undefined, b: bigint | null | undef
 export function periode(debut?: string, fin?: string, maintenant = new Date()) {
   if ((debut && !DATE.test(debut)) || (fin && !DATE.test(fin)))
     throw new BadRequestException('Dates attendues au format AAAA-MM-JJ.');
-  const finJour = fin ?? maintenant.toISOString().slice(0, 10);
+  const finJour = fin ?? toIsoDay(maintenant);
   const a = new Date(`${finJour}T00:00:00Z`);
   a.setUTCDate(a.getUTCDate() + 1);
   const de = debut ? new Date(`${debut}T00:00:00Z`) : new Date(a.getTime() - JOURS_PAR_DEFAUT * 86_400_000);

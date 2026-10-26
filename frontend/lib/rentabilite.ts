@@ -1,4 +1,5 @@
 import { apiSociete } from './client-api';
+import { formatNumber } from './format';
 
 // Rentabilité par projet, phase 1 (lot 7) : marge directe PROVISOIRE —
 // montant HT facturé − coût salarial des heures imputées et contrôlées.
@@ -132,8 +133,8 @@ export const formatParametre = (p: { valeur: number | null; unite: string; cle?:
       ? 'désactivé'
       : 'non fixée'
     : p.cle === 'heures_annuelles'
-      ? `${p.valeur.toLocaleString('fr-FR')} h par an, soit ${(p.valeur / 12).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} h par mois`
-      : `${p.valeur.toLocaleString('fr-FR')} ${p.unite}`;
+      ? `${formatNumber(p.valeur)} h par an, soit ${(p.valeur / 12).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} h par mois`
+      : `${formatNumber(p.valeur)} ${p.unite}`;
 
 // « 30 septembre 2026 » : dernier jour du mois arrêté (AAAA-MM).
 export function finDeMois(mois: string): string {

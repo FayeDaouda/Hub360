@@ -5,10 +5,11 @@ import { refFacture, type PartsFactures } from '../projets/domaine/config';
 import { echeancierOffre, lignesOffreDepuisDevis } from '../projets/domaine/facturation-offre';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { refDevis } from '../devis/domaine';
-import { delaiTranche, jours, prevueLe, tempsImpute, tempsPipe } from './feuille-temps';
+import { delaiTranche, prevueLe, tempsImpute, tempsPipe } from './feuille-temps';
+import { daysBetween, toIsoDay, todayIso } from '../shared/dates';
 
 const jour = (d: Date | string | null | undefined) =>
-  d ? (typeof d === 'string' ? d.slice(0, 10) : d.toISOString().slice(0, 10)) : null;
+  d ? (typeof d === 'string' ? d.slice(0, 10) : toIsoDay(d)) : null;
 const premier = (dates: (string | null)[]) => dates.filter((d): d is string => !!d).sort()[0] ?? null;
 
 // Finances · Feuille de temps d'un dossier (maquette du boss, oct. 2026) :
@@ -44,7 +45,7 @@ export class FeuilleTempsService {
       },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
-    const aujourdhui = new Date().toISOString().slice(0, 10);
+    const aujourdhui = todayIso();
 
     // Offre de référence : l'acceptée, sinon la plus récente.
     const offre =
@@ -120,8 +121,8 @@ export class FeuilleTempsService {
       dernierEvenement: jour(dossier.transitions.at(-1)?.creeLe ?? dossier.createdAt),
       pipe: tempsPipe(dates),
       indicateurs: {
-        cycleCommercialJours: dates.lead && accord ? jours(dates.lead, accord) : null,
-        signatureEncaissementJours: accord && dates.encaissement ? jours(accord, dates.encaissement) : null,
+        cycleCommercialJours: dates.lead && accord ? daysBetween(dates.lead, accord) : null,
+        signatureEncaissementJours: accord && dates.encaissement ? daysBetween(accord, dates.encaissement) : null,
         heuresImputees: temps?.total ?? null,
         heuresPrevues,
         // Honoraires HT signés par heure imputée (rentabilité).

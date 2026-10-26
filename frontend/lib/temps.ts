@@ -52,12 +52,6 @@ export const STATUT_FEUILLE: Record<StatutFeuilleTemps, { libelle: string; pill:
   controlee: { libelle: 'Contrôlée', pill: 'pill--succes' },
 };
 
-// « septembre 2026 »
-export function libelleMois(mois: string): string {
-  const [a, m] = mois.split('-').map(Number);
-  return new Date(a, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-}
-
 export function formatHeures(n: number): string {
   return `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
 }

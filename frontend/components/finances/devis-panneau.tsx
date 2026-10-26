@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { CheckCircle2, Copy, Download, ReceiptText, Send, X, XCircle } from 'lucide-react';
 import { convertirDevis, envoyerDevis, marquerReponseDevis, supprimerDevis } from '@/lib/devis';
 import { lienFacturationProjet } from '@/lib/facturation';
-import { jjmmaaaa, statutDevis } from '@/lib/finances';
+import { statutDevis } from '@/lib/finances';
 import type { Devis } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
 import { useConfirmer } from '@/components/confirmation';
+import { formatDate } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -70,8 +71,8 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               {[
                 d.client.nom,
                 d.dossierCrm?.code,
-                `créé le ${jjmmaaaa(d.creeLe)}`,
-                d.dateValidite && `valable jusqu’au ${jjmmaaaa(d.dateValidite)}`,
+                `créé le ${formatDate(d.creeLe)}`,
+                d.dateValidite && `valable jusqu’au ${formatDate(d.dateValidite)}`,
               ]
                 .filter(Boolean)
                 .join(' · ')}

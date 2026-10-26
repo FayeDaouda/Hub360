@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { getFeuilleTemps } from '@/lib/facturation';
-import { jjmmaaaa } from '@/lib/finances';
-import { formatMontant } from '@/lib/format';
+
+import { formatAmount } from '@/lib/format';
 import { STATUTS_CRM, type DelaiTranche, type FeuilleTemps, type Projet } from '@/lib/types';
+import { formatDate, formatDayMonth } from '@/lib/dates';
 
 const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
-const jjmm = (iso: string) => iso.slice(5, 10).split('-').reverse().join('/');
 // Tableau de facturation : année sur deux chiffres, pour tenir dans la colonne.
-const jjmmaa = (iso: string) => `${jjmm(iso)}/${iso.slice(2, 4)}`;
+const jjmmaa = (iso: string) => `${formatDayMonth(iso)}/${iso.slice(2, 4)}`;
 
 const DELAI: Record<DelaiTranche['etat'], { ton: string; texte: (j: number) => string }> = {
   payee: { ton: 'succes', texte: (j) => `payée en ${j} j` },
@@ -139,12 +139,12 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
           </Tuile>
           <Tuile
             titre="Honoraires HT / heure imputée"
-            valeur={i?.honorairesParHeure != null ? formatMontant(i.honorairesParHeure) : '—'}
+            valeur={i?.honorairesParHeure != null ? formatAmount(i.honorairesParHeure) : '—'}
             accent
           >
             {f?.offre && (
               <>
-                sur {formatMontant(f.offre.montantHt)} HT signés ·{' '}
+                sur {formatAmount(f.offre.montantHt)} HT signés ·{' '}
                 <button type="button" className="lien-inline" onClick={() => onOuvrirOffre(f.offre!.id)}>
                   ouvrir l’offre
                 </button>
@@ -165,14 +165,14 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                 <h2 className="fin-carte-titre">Temps sur le pipe</h2>
                 <span>
                   Statut actuel : {STATUTS_CRM[f.dossier.statut]}
-                  {f.dernierEvenement && ` · dernier événement le ${jjmmaaaa(f.dernierEvenement)}`}
+                  {f.dernierEvenement && ` · dernier événement le ${formatDate(f.dernierEvenement)}`}
                 </span>
               </div>
               <ol className="ft-pipe">
                 {f.pipe.map((e) => (
                   <li key={e.cle} className={e.date ? 'is-atteinte' : undefined}>
                     <strong>{e.libelle}</strong>
-                    <span className="fin-code">{e.date ? jjmmaaaa(e.date) : '—'}</span>
+                    <span className="fin-code">{e.date ? formatDate(e.date) : '—'}</span>
                     <span className={`ft-ecart${e.horsCible ? ' is-hors-cible' : ''}`}>
                       {e.ecartJours != null ? `+${e.ecartJours} j` : e.date ? '—' : ''}
                     </span>
@@ -214,7 +214,7 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                                 </strong>
                                 <span className="cell-sub fin-code">
                                   {t.reference ? `${t.reference} · ` : ''}
-                                  {formatMontant(t.montantTtc)}
+                                  {formatAmount(t.montantTtc)}
                                 </span>
                               </span>
                             </td>
@@ -277,7 +277,7 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                 <ul className="ft-taches">
                   {f.temps.taches.map((t) => (
                     <li key={t.id}>
-                      <span className="fin-code">{t.debut ? jjmm(t.debut) : '—'}</span>
+                      <span className="fin-code">{t.debut ? formatDayMonth(t.debut) : '—'}</span>
                       <span className="ft-qui">
                         <strong>{t.assigne}</strong>
                         <small>{t.libelle}</small>

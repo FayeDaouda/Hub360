@@ -1,4 +1,5 @@
-import { ajouterJours, relanceAFaire } from './domaine';
+import { relanceAFaire } from './domaine';
+import { addDays } from '../shared/dates';
 
 // Relances d'offre J+3 / J+6 — « à faire » dérivé à la lecture (pas de
 // scheduler) : un palier atteint et pas encore relancé.
@@ -7,7 +8,7 @@ describe('relanceAFaire', () => {
   const offre = (relancesEnvoyees: number) => ({
     statut: 'envoye' as const,
     dateEnvoi: envoiLe('2026-09-01'),
-    dateValidite: ajouterJours('2026-09-01', 7),
+    dateValidite: addDays('2026-09-01', 7),
     relancesEnvoyees,
   });
 
@@ -28,12 +29,6 @@ describe('relanceAFaire', () => {
   it('offre expirée (J+8) ou répondue → plus de relance', () => {
     expect(relanceAFaire(offre(1), '2026-09-09')).toBe(false);
     expect(relanceAFaire({ ...offre(0), statut: 'accepte' }, '2026-09-04')).toBe(false);
-  });
-});
-
-describe('ajouterJours', () => {
-  it('franchit les fins de mois', () => {
-    expect(ajouterJours('2026-09-28', 7)).toBe('2026-10-05');
   });
 });
 

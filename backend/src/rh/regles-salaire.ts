@@ -1,4 +1,5 @@
 import type { MotifSalaire, StatutSalaire } from '@prisma/client';
+import { formatDate, toIsoDay } from '../shared/dates';
 
 // Historique des salaires (revue RH validée 20/10/2026) — règles pures.
 
@@ -42,7 +43,7 @@ export function dateEffetMin(jour: string): string {
   const cible = new Date(Date.UTC(a, m - 1 - RETROACTIVITE_MAX_MOIS, 1));
   const dernier = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
   cible.setUTCDate(Math.min(j, dernier));
-  return cible.toISOString().slice(0, 10);
+  return toIsoDay(cible);
 }
 
 // Motif d'erreur, ou null si la proposition est recevable.
@@ -59,7 +60,7 @@ export function refusProposition(
     return "Le salaire d'entrée est déjà fixé : choisissez augmentation, promotion, fin d'essai ou correction.";
   if (p.motif !== 'embauche' && !aDejaUnSalaire) return "Aucun salaire validé : proposez d'abord le salaire d'entrée.";
   if (p.motif !== 'embauche' && p.dateEffet < dateEffetMin(jour)) {
-    return `Date d'effet trop ancienne : ${RETROACTIVITE_MAX_MOIS} mois en arrière au plus (à partir du ${dateEffetMin(jour).split('-').reverse().join('/')}).`;
+    return `Date d'effet trop ancienne : ${RETROACTIVITE_MAX_MOIS} mois en arrière au plus (à partir du ${formatDate(dateEffetMin(jour))}).`;
   }
   return null;
 }

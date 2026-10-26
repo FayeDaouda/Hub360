@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { afficher, enregistrerValeurs, type Reglage, type Reglages } from '@/lib/reglages';
 import { BarreMotif } from './barre-motif';
+import { formatDate } from '@/lib/dates';
 
 // Saisie « formulaire » d'une valeur (chaînes), convertie à l'envoi.
 type Saisie = string | Record<string, string>;
@@ -19,7 +20,7 @@ function versSaisie(r: Reglage): Saisie {
     return Object.fromEntries(t.cles.map((k) => [k, String((v as Record<string, number>)[k])]));
   if (t.type === 'zone')
     return v ? { de: String((v as { de: number }).de), a: String((v as { a: number }).a) } : { de: '', a: '' };
-  if (t.type === 'dates') return (v as string[]).map((d) => d.split('-').reverse().join('/')).join(', ');
+  if (t.type === 'dates') return (v as string[]).map((d) => formatDate(d)).join(', ');
   return v === null || v === undefined ? '' : String(v);
 }
 

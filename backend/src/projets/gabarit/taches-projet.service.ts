@@ -25,14 +25,14 @@ import {
   ROLE_CTO,
   verifierCircuit,
 } from './validation';
-
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+import { formatDate, toIsoDay, todayIso } from '../../shared/dates';
+import { plural } from '../../shared/text';
 
 // Délai de relance : 3 jours ouvrés après le dépôt, puis après chaque relance.
 export const DELAI_RELANCE_JOURS_OUVRES = 3;
 export function relancePossibleLe(remisLe: Date, derniereRelance: Date | null, feries: Set<string>): string {
   const base = [remisLe, derniereRelance].filter((d): d is Date => !!d).reduce((a, b) => (a > b ? a : b));
-  return apresJoursOuvres(base.toISOString().slice(0, 10), DELAI_RELANCE_JOURS_OUVRES, feries);
+  return apresJoursOuvres(toIsoDay(base), DELAI_RELANCE_JOURS_OUVRES, feries);
 }
 
 type Acteur = { userId: string };
@@ -76,7 +76,7 @@ export class TachesProjetService {
     verifierCircuit(acteur.role);
     // Revue CTO (21/10/2026) : assigner, c'est organiser le travail — le Dir.
     // GC et les chefs de cellule ; le CTO seulement en suppléance d'un Dir. GC.
-    if (acteur.role === ROLE_CTO && !(await contexteDecision(this.prisma, societeId, aujourdhui())).ctoSupplee) {
+    if (acteur.role === ROLE_CTO && !(await contexteDecision(this.prisma, societeId, todayIso())).ctoSupplee) {
       throw new ForbiddenException('Le CTO n’assigne les tâches qu’en suppléance d’un Dir. GC absent.');
     }
     const tache = await this.prisma.tacheProjet.findFirst({
@@ -221,7 +221,7 @@ export class TachesProjetService {
     const commentaire = corps.commentaire?.trim();
     const detail = [
       `Remise ${vNN}`,
-      pieces.length ? `${pieces.length} fichier${pieces.length > 1 ? 's' : ''}` : 'sans fichier joint',
+      pieces.length ? `${plural(pieces.length, 'fichier')}` : 'sans fichier joint',
       ...(commentaire ? [`« ${commentaire} »`] : []),
     ].join(' · ');
     await this.prisma.$transaction(async (tx) => {
@@ -254,7 +254,7 @@ export class TachesProjetService {
 
     if (!depot) {
       const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-      const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+      const ctx = await contexteDecision(this.prisma, societeId, todayIso());
       const valideurs = await this.valideurs(ctx, collaborateurId, chefId);
       await this.notifier(
         societeId,
@@ -298,7 +298,7 @@ export class TachesProjetService {
     if (tache.statut !== 'a_valider') throw new ConflictException('Aucune remise en attente sur cette tâche.');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const assigneEstDplg = !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId);
     if (
       !peutDecider(
@@ -442,7 +442,7 @@ export class TachesProjetService {
   // Qui vise : les Dir. GC présents (ou un Dir. GC suppléant). Aucun : le visa
   // attend leur retour et le CTO en est prévenu (il ne vise pas à leur place).
   private async viseurs(societeId: string): Promise<{ comptes: string[]; enAttente: boolean }> {
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const dirGc = ctx.comptesDplg.filter((id) => !ctx.comptesCto.includes(id));
     return dirGc.length ? { comptes: dirGc, enAttente: false } : { comptes: ctx.comptesCto, enAttente: true };
   }
@@ -453,7 +453,7 @@ export class TachesProjetService {
   async ajouterTs(societeId: string, acteur: ActeurRole, projetId: string, carteId: string, element: string) {
     verifierCircuit(acteur.role);
     // Seuil et suppléance vérifiés en amont (AvenantsTsService) ; ici, le rôle.
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     if (
       !agitCommeDplg({ role: acteur.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }) &&
       acteur.role !== ROLE_CTO
@@ -527,7 +527,7 @@ export class TachesProjetService {
       .sort()
       .at(-1);
     if (plancher && jusquau <= plancher)
-      throw new BadRequestException(`La nouvelle date doit dépasser le ${plancher.split('-').reverse().join('/')}.`);
+      throw new BadRequestException(`La nouvelle date doit dépasser le ${formatDate(plancher)}.`);
 
     await this.prisma.$transaction([
       this.prisma.prolongationTache.create({
@@ -538,12 +538,12 @@ export class TachesProjetService {
           tacheId: tache.id,
           type: 'prolongation',
           parId: acteur.userId,
-          detail: `Prolongation demandée jusqu’au ${jusquau.split('-').reverse().join('/')} : ${motif.trim()}`,
+          detail: `Prolongation demandée jusqu’au ${formatDate(jusquau)} : ${motif.trim()}`,
         },
       }),
     ]);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     // Au-delà de la livraison du projet, ou travail d'un Dir. GC : le CTO.
     const repousse = await this.repousseLivraison(societeId, tache.projet, jusquau);
     const escalade = repousse || ctx.dplgCollaborateurs.has(collaborateurId);
@@ -574,7 +574,7 @@ export class TachesProjetService {
     if (!demande) throw new ConflictException('Aucune demande de prolongation en attente.');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const assigneEstDplg = !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId);
     const repousse = await this.repousseLivraison(societeId, tache.projet, demande.jusquau);
     if (
@@ -593,7 +593,7 @@ export class TachesProjetService {
             : 'Le retard est qualifié par le chef de team ou l’Architecte DPLG, jamais sur sa propre tâche.',
       );
     }
-    const date = demande.jusquau.split('-').reverse().join('/');
+    const date = formatDate(demande.jusquau);
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.prolongationTache.updateMany({
         where: { id: demande.id, decision: null },
@@ -711,7 +711,7 @@ export class TachesProjetService {
   ): Promise<Map<string, string | null>> {
     const resultat = new Map<string, string | null>();
     if (!taches.length) return resultat;
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const parTache = await Promise.all(
       taches.map(async (t) => ({ id: t.id, ...(await this.circuit(ctx, t.assigneId, t.chefId)) })),
     );
@@ -761,10 +761,10 @@ export class TachesProjetService {
     if (!remise) throw new ConflictException('Aucun dépôt à relancer.');
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId) ?? new Set<string>();
     const possibleLe = relancePossibleLe(remise.creeLe, relance?.creeLe ?? null, feries);
-    if (aujourdhui() < possibleLe) {
-      throw new ConflictException(`Relance possible à partir du ${possibleLe.split('-').reverse().join('/')}.`);
+    if (todayIso() < possibleLe) {
+      throw new ConflictException(`Relance possible à partir du ${formatDate(possibleLe)}.`);
     }
-    const jours = joursOuvresApres(remise.creeLe.toISOString().slice(0, 10), aujourdhui(), feries);
+    const jours = joursOuvresApres(toIsoDay(remise.creeLe), todayIso(), feries);
     const vNN = `v${String(tache.version).padStart(2, '0')}`;
     await this.prisma.evenementTacheProjet.create({
       data: {
@@ -774,7 +774,7 @@ export class TachesProjetService {
         detail: `Relance du validateur · ${vNN} déposée il y a ${jours} jours ouvrés`,
       },
     });
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const valideurs = await this.valideurs(
       ctx,
       collaborateurId,
@@ -852,7 +852,7 @@ export class TachesProjetService {
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
     if (collaborateurId && tache.assigneId === collaborateurId) return;
-    const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const t = {
       assigneId: tache.assigneId,
       assigneEstDplg: !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId),

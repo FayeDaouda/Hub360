@@ -35,8 +35,8 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
 import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
-
-const jourCourant = () => new Date().toISOString().slice(0, 10);
+import { formatMonthYear, todayIso } from '../../shared/dates';
+import { formatAmount } from '../../shared/format';
 
 // Facturation client — module admin-only (le contrôleur ne marque aucun
 // endpoint @EcritureCollaborateur, donc AccesProjetGuard rejette toute écriture
@@ -148,9 +148,7 @@ export class FacturationService {
     // F1 (acompte à la signature) ouvre le projet selon son gabarit
     // (Réglages · « Ouverture du projet ») : J1 = jour d'émission.
     const ouverture =
-      facture.jalon === 'signature' && !facture.estAvoir
-        ? await this.ouverture.preparer(projetId, new Date().toISOString().slice(0, 10))
-        : null;
+      facture.jalon === 'signature' && !facture.estAvoir ? await this.ouverture.preparer(projetId, todayIso()) : null;
     // Transition conditionnée sur `statut` dans la transaction : deux émissions
     // concurrentes du même brouillon ne peuvent pas consommer deux numéros.
     // Code du projet = code de son dossier (recopié à l'Onboard).
@@ -350,7 +348,7 @@ export class FacturationService {
       },
       orderBy: [{ creeLe: 'desc' }],
     });
-    const aujourdhui = jourCourant();
+    const aujourdhui = todayIso();
     const projetIds = [...new Set(factures.map((f) => f.projetId).filter((x): x is string => !!x))];
     const dossierIds = [...new Set(factures.map((f) => f.dossierCrmId).filter((x): x is string => !!x))];
     const [tranches, affaires, voisines] = await Promise.all([
@@ -556,7 +554,7 @@ export class FacturationService {
       societeId,
       factureId: f.id,
       dossierCrmId: dossier.id,
-      titre: `Facture directe à valider · ${dossier.code} · ${dossier.client.nom} · ${montantTtc.toLocaleString('fr-FR')} FCFA TTC`,
+      titre: `Facture directe à valider · ${dossier.code} · ${dossier.client.nom} · ${formatAmount(montantTtc)} TTC`,
     });
     return this.factureCentrale(societeId, f.id);
   }
@@ -645,7 +643,7 @@ export class FacturationService {
       await this.notifications.envoyer({
         societeId: f.societeId,
         type,
-        titre: `${type === 'facture_emise' ? 'Facture émise' : 'Facture payée'} · ${refFacture(f) ?? 'sans numéro'} · ${Math.round(montantTtc).toLocaleString('fr-FR')} FCFA TTC`,
+        titre: `${type === 'facture_emise' ? 'Facture émise' : 'Facture payée'} · ${refFacture(f) ?? 'sans numéro'} · ${formatAmount(montantTtc)} TTC`,
         destinataireIds: [proprietaire, ...cfo],
         parId,
         projetId: f.projetId,
@@ -698,7 +696,7 @@ export class FacturationService {
     const tauxTva = f.tauxTva.toNumber();
     const { montantTtc } = ventilationTva(montantHt, tauxTva);
     const montantPaye = f.paiements.reduce((s, p) => s + p.montant.toNumber(), 0);
-    const aujourdhui = jourCourant();
+    const aujourdhui = todayIso();
     const statutEffectif = statutFactureEffectif(
       { statut: f.statut, echeanceLe: f.echeanceLe, montantTtc, montantPaye },
       aujourdhui,
@@ -819,7 +817,7 @@ export class FacturationService {
     if (m.factureCeMois) {
       throw new ConflictException('La mensualité de ce mois est déjà facturée.');
     }
-    const mois = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const mois = formatMonthYear(todayIso());
     await this.prisma.facture.create({
       data: {
         societeId,
@@ -964,7 +962,7 @@ export class FacturationService {
         },
       },
     });
-    const aujourdhui = jourCourant();
+    const aujourdhui = todayIso();
     return blocs.flatMap((b) => {
       const ligne = b.lignesFacture[0];
       const f = ligne.facture;
@@ -1035,7 +1033,7 @@ export class FacturationService {
   // chantier, EX = extras de chantier), mois restants, rien ce mois-ci.
   private etatMensualite(l: Awaited<ReturnType<FacturationService['lignesMensuelles']>>[number], phase: string) {
     const valides = l.mensualites.filter((f) => f.statut !== 'annulee' && !f.estAvoir);
-    const moisCourant = jourCourant().slice(0, 7);
+    const moisCourant = todayIso().slice(0, 7);
     const moisPrevus = Math.round(l.quantite.toNumber());
     const moisFactures = valides.length;
     const factureCeMois = valides.some((f) => f.creeLe.toISOString().slice(0, 7) === moisCourant);
@@ -1160,7 +1158,7 @@ export class FacturationService {
         .filter((b) => !b.carteProjetId && (b.factureMontant != null || b.lignesFacture.length > 0))
         .map((b) => ({ carteId: null, libelleCarte: b.libelle, bloc: b })),
     ];
-    const aujourdhui = jourCourant();
+    const aujourdhui = todayIso();
     const affaires = await this.seuilCeo.montantsAffaire(factures);
 
     const ordre = [...factures].sort((a, b) => {
@@ -1366,7 +1364,7 @@ export function recapEcheancier(f: Voisine, voisines: Voisine[]) {
 // Finances) ; sinon payable à réception, soit le jour de l'émission.
 function echeanceALEmission(f: { echeanceLe: string | null; dossierCrmId: string | null }): string {
   if (f.echeanceLe) return f.echeanceLe;
-  const jour = new Date().toISOString().slice(0, 10);
+  const jour = todayIso();
   return f.dossierCrmId ? echeanceDirecte(jour) : jour;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { CGV_PAR_SOCIETE } from '@/lib/cgv';
-import { formatMontant } from '@/lib/format';
+import { formatAmount, formatNumber } from '@/lib/format';
 import { TAUX_TVA_DEFAUT, type EcheanceOffre, type Societe } from '@/lib/types';
 
 // Règles reprises dans les conditions particulières (CGV art. 12 à 14) et le
@@ -10,7 +10,7 @@ const VALIDITE_JOURS = 7;
 const MISE_EN_DEMEURE_JOURS = 15;
 const PAIEMENT_JOURS = 15;
 
-const pourcent = (n: number) => `${n.toLocaleString('fr-FR')} %`;
+const pourcent = (n: number) => `${formatNumber(n)} %`;
 
 type Props = {
   societe: Societe;
@@ -34,15 +34,15 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
       <div className="offre-totaux">
         <p>
           <span>Total HT</span>
-          <strong>{formatMontant(totaux.ht)}</strong>
+          <strong>{formatAmount(totaux.ht)}</strong>
         </p>
         <p>
           <span>TVA {TAUX_TVA_DEFAUT} %</span>
-          <strong>{formatMontant(totaux.tva)}</strong>
+          <strong>{formatAmount(totaux.tva)}</strong>
         </p>
         <p className="offre-totaux-ttc">
           <span>Total TTC</span>
-          <strong>{formatMontant(totaux.ttc)}</strong>
+          <strong>{formatAmount(totaux.ttc)}</strong>
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
         <div className="offre-titre-ligne">
           <h3 className="offre-titre-section">3 · Échéancier de paiement</h3>
           <span className="offre-echeances-total">
-            {echeancier.length} échéance(s) · {formatMontant(totalEcheancier)} TTC
+            {echeancier.length} échéance(s) · {formatAmount(totalEcheancier)} TTC
           </span>
         </div>
         <div className="offre-echeancier" role="table" aria-label="Échéancier de paiement">
@@ -96,7 +96,7 @@ export function OffreAnnexes({ societe, totaux, echeancier, delais, onDelai }: P
                 )}
               </span>
               <strong role="cell" data-label="Montant TTC" className="offre-num">
-                {formatMontant(e.montantTtc)}
+                {formatAmount(e.montantTtc)}
               </strong>
             </div>
           ))}

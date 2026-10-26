@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { creerAvoir, LIBELLE_MOTIF_AVOIR, type MotifAvoir } from '@/lib/facturation';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { Facturation } from '@/lib/types';
 
 // Demande d'avoir (contrôle interne, revue CFO 20/10/2026) : motif choisi et
@@ -84,8 +84,8 @@ export function DemandeAvoir({
           ) : (
             <>
               <p className="dmd-note">
-                L’avoir annule toute la facture ({formatMontant(facture.montantTtc)} TTC). Le motif est obligatoire et
-                le CEO est prévenu ; au-delà du seuil fixé dans Réglages, il valide avant l’émission.
+                L’avoir annule toute la facture ({formatAmount(facture.montantTtc)} TTC). Le motif est obligatoire et le
+                CEO est prévenu ; au-delà du seuil fixé dans Réglages, il valide avant l’émission.
               </p>
               <label className="field">
                 <span className="field-label">Motif</span>

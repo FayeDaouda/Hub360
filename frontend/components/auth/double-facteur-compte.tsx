@@ -2,11 +2,10 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiAuth } from '@/lib/client-api';
+import { formatDate } from '@/lib/dates';
 
 type Etat = { actifLe: string | null; exige: boolean };
 type Reglage = { secret: string; qr: string };
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Double authentification depuis « Mon compte » (revue Salarié 19/10/2026) :
 // facultative pour le Salarié, qui l'active ici ; la direction et les chefs
@@ -85,8 +84,8 @@ export function DoubleFacteurCompte() {
   if (etat.actifLe) {
     return (
       <p className="dmd-note">
-        <span className="pill pill--succes">Activée</span> depuis le {jjmmaaaa(etat.actifLe)}. Téléphone perdu ou changé
-        : demandez au CIO de la réinitialiser.
+        <span className="pill pill--succes">Activée</span> depuis le {formatDate(etat.actifLe)}. Téléphone perdu ou
+        changé : demandez au CIO de la réinitialiser.
       </p>
     );
   }

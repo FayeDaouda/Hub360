@@ -6,8 +6,10 @@ import { CircleAlert, CircleCheck, FileUp, LoaderCircle, X } from 'lucide-react'
 import { ApiError } from '@/lib/client-api';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { deposerBulletin } from '@/lib/rh';
-import { libelleMois } from '@/lib/temps';
+
 import type { DossierPersonnel } from '@/lib/types';
+import { formatMonthYear } from '@/lib/dates';
+import { plural, stripAccents } from '@/lib/text';
 
 // `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
 // ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
@@ -22,9 +24,7 @@ type Ligne = {
 
 // « Kh. SOW » → « kh sow » : comparaison sans accents ni casse.
 const normaliser = (x: string) =>
-  x
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  stripAccents(x)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
@@ -168,8 +168,8 @@ export function DepotBulletins({
           {lignes.length > 0 && (
             <>
               <p className="db-bilan">
-                {lignes.length} fichier{lignes.length > 1 ? 's' : ''} · {pretes.length} prêt
-                {pretes.length > 1 ? 's' : ''} pour {libelleMois(mois)}
+                {plural(lignes.length, 'fichier')} · {pretes.length} prêt
+                {pretes.length > 1 ? 's' : ''} pour {formatMonthYear(mois)}
                 {nonReconnus > 0 && (
                   <span className="db-alerte">
                     {' '}
@@ -254,7 +254,7 @@ export function DepotBulletins({
               {termine ? 'Fermer' : 'Annuler'}
             </button>
             <button type="button" className="btn-primary" disabled={envoi || pretes.length === 0} onClick={deposer}>
-              {envoi ? 'Dépôt en cours…' : `Déposer ${pretes.length} bulletin${pretes.length > 1 ? 's' : ''}`}
+              {envoi ? 'Dépôt en cours…' : `Déposer ${plural(pretes.length, 'bulletin')}`}
             </button>
           </div>
         </div>

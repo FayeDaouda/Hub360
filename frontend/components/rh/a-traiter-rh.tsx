@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import type { AttestationRh } from '@/lib/demandes';
 import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
-import { getFeuillesTemps, libelleMois } from '@/lib/temps';
-import { formatMontant } from '@/lib/format';
+import { getFeuillesTemps } from '@/lib/temps';
+import { formatAmount } from '@/lib/format';
 import type { AlerteRh } from '@/lib/rh';
 import type { QuestionOuverte } from '@/lib/pilotage';
 import type {
@@ -32,6 +32,8 @@ import type {
   IntegrationSalarie,
   ReportingADeposer,
 } from '@/lib/types';
+import { daysBetween, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
 export type DonneesRh = {
@@ -56,10 +58,6 @@ type Element = {
   ouvrir: () => void;
 };
 
-const JOUR = 86_400_000;
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const ecart = (de: string, a: string) =>
-  Math.round((Date.parse(`${a.slice(0, 10)}T00:00:00Z`) - Date.parse(`${de.slice(0, 10)}T00:00:00Z`)) / JOUR);
 const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
 // Une demande qui attend depuis plus de 3 jours passe en rouge.
 const ATTENTE_ALERTE_J = 3;
@@ -80,7 +78,7 @@ export function ATraiterRh({
   dossiers: DossierPersonnel[];
   onOuvrir: (onglet: OngletRh, options?: { filtre?: 'incomplets' | 'fins'; dossier?: DossierPersonnel }) => void;
 }) {
-  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const aujourdhui = useMemo(() => todayIso(), []);
   const [ecarts, setEcarts] = useState<
     { cle: string; nom: string; mois: string; commentaire: string; signaleLe: string }[]
   >([]);
@@ -119,7 +117,7 @@ export function ATraiterRh({
 
   if (!donnees) return null;
   const depuis = (iso: string) => {
-    const n = ecart(iso, aujourdhui);
+    const n = daysBetween(iso, aujourdhui);
     return {
       quand: n <= 0 ? 'aujourd’hui' : n === 1 ? 'depuis hier' : `depuis ${n} j`,
       ton: (n > ATTENTE_ALERTE_J ? 'risque' : 'attention') as Ton,
@@ -138,7 +136,7 @@ export function ATraiterRh({
       ...d,
       action: 'Valider',
       titre: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${nom(a.salarie)}`,
-      detail: `du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)} · ${a.jours} j · accord du N+1, validation finale`,
+      detail: `du ${formatDayMonth(a.dateDebut)} au ${formatDayMonth(a.dateFin)} · ${a.jours} j · accord du N+1, validation finale`,
       ouvrir: () => onOuvrir('demandes'),
     });
   }
@@ -152,7 +150,7 @@ export function ATraiterRh({
       ...d,
       action: 'Traiter',
       titre: `Remboursement · ${nom(r.dossier)}`,
-      detail: `${LIBELLE_SOINS[r.categorie]} · ${formatMontant(r.montant)} · à transmettre à l’assurance`,
+      detail: `${LIBELLE_SOINS[r.categorie]} · ${formatAmount(r.montant)} · à transmettre à l’assurance`,
       ouvrir: () => onOuvrir('demandes'),
     });
   }
@@ -195,14 +193,16 @@ export function ATraiterRh({
       ...d,
       action: 'Répondre',
       titre: `Écart signalé · ${e.nom}`,
-      detail: `feuille de ${libelleMois(e.mois)} · « ${e.commentaire} »`,
+      detail: `feuille de ${formatMonthYear(e.mois)} · « ${e.commentaire} »`,
       ouvrir: () => onOuvrir('temps'),
     });
   }
   // 3. Points d'intégration échus ou de la semaine.
   for (const i of donnees.integrations) {
-    for (const p of i.points.filter((x) => x.statut !== 'fait' && ecart(aujourdhui, x.datePrevue) <= INTEGRATION_J)) {
-      const n = ecart(aujourdhui, p.datePrevue);
+    for (const p of i.points.filter(
+      (x) => x.statut !== 'fait' && daysBetween(aujourdhui, x.datePrevue) <= INTEGRATION_J,
+    )) {
+      const n = daysBetween(aujourdhui, p.datePrevue);
       elements.push({
         cle: `int-${i.id}-${p.jalon}`,
         groupe: 3,
@@ -210,8 +210,8 @@ export function ATraiterRh({
         icone: UserPlus,
         action: 'Préparer',
         titre: `Point J${p.jalon} · ${nom(i)}`,
-        detail: `${i.poste || 'poste à renseigner'} · arrivée le ${jjmm(i.dateEntree)}`,
-        quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `le ${jjmm(p.datePrevue)}`,
+        detail: `${i.poste || 'poste à renseigner'} · arrivée le ${formatDayMonth(i.dateEntree)}`,
+        quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `le ${formatDayMonth(p.datePrevue)}`,
         ton: n < 0 ? 'risque' : 'attention',
         ouvrir: () => onOuvrir('integration'),
       });
@@ -258,7 +258,7 @@ export function ATraiterRh({
       icone: e.icone,
       action: e.action,
       titre: e.titre(al),
-      detail: `${al.poste || 'poste à renseigner'} · ${al.type === 'piece_identite' ? 'expire' : 'le'} ${jjmm(al.date)} · ${e.detail}`,
+      detail: `${al.poste || 'poste à renseigner'} · ${al.type === 'piece_identite' ? 'expire' : 'le'} ${formatDayMonth(al.date)} · ${e.detail}`,
       quand: al.jours < 0 ? `dépassée de ${-al.jours} j` : al.jours === 0 ? 'aujourd’hui' : `dans ${al.jours} j`,
       ton: al.jours <= (al.type === 'fin_essai' ? 7 : 15) ? 'risque' : 'attention',
       ouvrir: () => onOuvrir('personnel', dossier ? { dossier } : undefined),
@@ -266,7 +266,7 @@ export function ATraiterRh({
   }
   // Reporting RH du mois clos à déposer (Pilotage, échéance J+5).
   for (const r of donnees.reportings) {
-    const n = ecart(aujourdhui, r.echeance);
+    const n = daysBetween(aujourdhui, r.echeance);
     elements.push({
       cle: `reporting-${r.type}-${r.mois}`,
       groupe: 4,
@@ -274,7 +274,7 @@ export function ATraiterRh({
       icone: ClipboardList,
       action: 'Déposer',
       titre: `Reporting RH · ${r.periode}`,
-      detail: `prérempli, à relire et commenter · pour le CFO, échéance le ${jjmm(r.echeance)}`,
+      detail: `prérempli, à relire et commenter · pour le CFO, échéance le ${formatDayMonth(r.echeance)}`,
       quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `dans ${n} j`,
       ton: r.statut === 'en_retard' ? 'risque' : 'attention',
       ouvrir: () => router.push(`/admin/${slug}?onglet=reportings`),
@@ -313,8 +313,8 @@ export function ATraiterRh({
       tri: p.mois,
       icone: Timer,
       action: 'Contrôler',
-      titre: `${p.aControler} feuille${p.aControler > 1 ? 's' : ''} de temps à contrôler`,
-      detail: `mois clos de ${libelleMois(p.mois)}${projets ? ` · bloque${p.aControler > 1 ? 'nt' : ''} le calcul de la rentabilité de ${projets} projet${projets > 1 ? 's' : ''}` : ''}`,
+      titre: `${plural(p.aControler, 'feuille')} de temps à contrôler`,
+      detail: `mois clos de ${formatMonthYear(p.mois)}${projets ? ` · bloque${p.aControler > 1 ? 'nt' : ''} le calcul de la rentabilité de ${plural(projets, 'projet')}` : ''}`,
       quand: 'mois clos',
       ton: 'attention',
       ouvrir: () => onOuvrir('temps'),
@@ -329,7 +329,7 @@ export function ATraiterRh({
       tri: '',
       icone: FileWarning,
       action: 'Voir',
-      titre: `${incomplets} dossier${incomplets > 1 ? 's' : ''} incomplet${incomplets > 1 ? 's' : ''}`,
+      titre: `${plural(incomplets, 'dossier')} incomplet${incomplets > 1 ? 's' : ''}`,
       detail: 'pièces ou champs manquants',
       quand: '',
       ton: 'neutre',

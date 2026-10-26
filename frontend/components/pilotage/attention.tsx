@@ -32,8 +32,10 @@ import type { NotificationItem, NotificationType } from '@/lib/types';
 import { DecisionDroit } from './decision-droit';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
-import { formatMontant } from '@/lib/format';
+import { formatAmount } from '@/lib/format';
 import type { AttentionPilotage, VuePilotage } from '@/lib/types';
+import { addDays, daysBetween, formatDayMonth, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 // Décisions « arrivant à échéance » : ouvertes dont l'échéance tombe dans les
 // 7 jours (fenêtre d'affichage), ou déjà dépassée.
@@ -41,15 +43,6 @@ const FENETRE_DECISIONS_JOURS = 7;
 // Lignes visibles par rubrique avant « Afficher tout ».
 const LIGNES_VISIBLES = 5;
 
-const jjmm = (iso: string) => iso.slice(5, 10).split('-').reverse().join('/');
-const ajouterJours = (iso: string, n: number) => {
-  const d = new Date(`${iso}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const joursEntre = (de: string, a: string) =>
-  Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${de}T12:00:00Z`).getTime()) / 86_400_000);
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 // Alertes de contrôle interne (droits, argent, accès) — lues, pas décidées.
 const TYPES_CONTROLE: ReadonlySet<NotificationType> = new Set<NotificationType>([
   'droits_modifies',
@@ -89,7 +82,7 @@ export function Attention({
   vue: VuePilotage;
   onOnglet: (o: 'registre' | 'reportings') => void;
 }) {
-  const jour = new Date().toISOString().slice(0, 10);
+  const jour = todayIso();
   const base = `/admin/${slug}`;
   // Droits du CIO à valider (revue CIO, 22/10/2026) : le CEO seul tranche.
   const [droits, setDroits] = useState<DemandeDroit[]>([]);
@@ -132,12 +125,12 @@ export function Attention({
     void marquerLuesParId(slug, [id]).catch(() => undefined);
   };
   const aContresigner = offres.filter((o) => valideAffaire(session, seuil, o.offre?.montantTtc ?? 0));
-  const depuisJours = (iso: string) => Math.max(0, joursEntre(iso.slice(0, 10), jour));
+  const depuisJours = (iso: string) => Math.max(0, daysBetween(iso.slice(0, 10), jour));
 
   const decisions = vue.decisions.filter(
     (d) =>
       d.statut === 'echeance_depassee' ||
-      (d.statut === 'ouverte' && !!d.echeance && d.echeance <= ajouterJours(jour, FENETRE_DECISIONS_JOURS)),
+      (d.statut === 'ouverte' && !!d.echeance && d.echeance <= addDays(jour, FENETRE_DECISIONS_JOURS)),
   );
   const reportings = vue.reportings.filter((r) => r.statut === 'en_retard');
   // Revues CTO et COO (22/10/2026) : ils ne reportent plus au CEO, ils lui proposent des décisions.
@@ -180,11 +173,11 @@ export function Attention({
       icone: <Gavel size={16} aria-hidden />,
       couleur: 'var(--iris)',
       lignes: proposees.map((d) => {
-        const depuis = joursEntre(d.date, jour);
+        const depuis = daysBetween(d.date, jour);
         return {
           cle: d.id,
           titre: `${d.numero} · ${d.texte}`,
-          detail: `${d.proposition?.par ? `${d.proposition.par} · ` : ''}${d.responsable}${d.echeance ? ` · échéance proposée le ${jjmm(d.echeance)}` : ''}`,
+          detail: `${d.proposition?.par ? `${d.proposition.par} · ` : ''}${d.responsable}${d.echeance ? ` · échéance proposée le ${formatDayMonth(d.echeance)}` : ''}`,
           pill: { libelle: depuis > 2 ? `Depuis ${depuis} j` : 'À arbitrer', ton: depuis > 2 ? 'risque' : 'attention' },
           onClick: () => onOnglet('registre'),
         };
@@ -199,9 +192,9 @@ export function Attention({
         cle: p.projetId,
         titre: `${p.code} · ${p.client}`,
         detail: [
-          p.enRetard ? `${pluriel(p.enRetard, 'tâche')} en retard (jusqu’à ${p.joursMax} j)` : null,
+          p.enRetard ? `${plural(p.enRetard, 'tâche')} en retard (jusqu’à ${p.joursMax} j)` : null,
           p.prolongees
-            ? `${pluriel(p.prolongees, 'retard')} qualifié${p.prolongees > 1 ? 's' : ''} par prolongation`
+            ? `${plural(p.prolongees, 'retard')} qualifié${p.prolongees > 1 ? 's' : ''} par prolongation`
             : null,
         ]
           .filter(Boolean)
@@ -219,7 +212,7 @@ export function Attention({
       lignes: aContresigner.map((o) => ({
         cle: o.id,
         titre: `${o.code} · ${o.client.nom}`,
-        detail: `${o.offre ? `${formatMontant(o.offre.montantTtc)} TTC · ` : ''}au-delà du seuil · validité de 7 jours une fois envoyée`,
+        detail: `${o.offre ? `${formatAmount(o.offre.montantTtc)} TTC · ` : ''}au-delà du seuil · validité de 7 jours une fois envoyée`,
         pill: { libelle: o.soumisLe ? `Depuis ${depuisJours(o.soumisLe)} j` : 'À valider', ton: 'attention' as const },
         href: `${base}/crm?dossier=${o.id}`,
       })),
@@ -233,7 +226,7 @@ export function Attention({
       lignes: avoirs.map((a) => ({
         cle: a.id,
         titre: `${a.reference ?? 'Facture'}${a.client ? ` · ${a.client}` : ''}`,
-        detail: `${formatMontant(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()}${a.demandePar ? ` · demandé par ${a.demandePar}` : ''}`,
+        detail: `${formatAmount(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()}${a.demandePar ? ` · demandé par ${a.demandePar}` : ''}`,
         pill: {
           libelle: `Depuis ${depuisJours(a.demandeLe)} j`,
           ton: depuisJours(a.demandeLe) > 2 ? ('risque' as const) : ('attention' as const),
@@ -252,7 +245,7 @@ export function Attention({
         .map((f) => ({
           cle: `parvous:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
           titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
-          detail: `Au-delà du seuil${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`,
+          detail: `Au-delà du seuil${f.montantTtc != null ? ` · ${formatAmount(f.montantTtc)} TTC` : ''}`,
           pill: { libelle: 'À valider par vous', ton: 'attention' as const },
           href: f.factureId
             ? `${base}/facturation?facture=${f.factureId}`
@@ -286,7 +279,7 @@ export function Attention({
         .map((f) => ({
           cle: `${f.etat}:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
           titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
-          detail: `Prête à émettre${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`,
+          detail: `Prête à émettre${f.montantTtc != null ? ` · ${formatAmount(f.montantTtc)} TTC` : ''}`,
           pill: { libelle: 'Le CFO émet', ton: 'neutre' as const },
           href: f.factureId
             ? `${base}/facturation?facture=${f.factureId}`
@@ -305,7 +298,7 @@ export function Attention({
         .map((f) => ({
           cle: `${f.etat}:${f.factureId ?? `${f.projetId}:${f.tranche}`}`,
           titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
-          detail: `${f.reference ?? 'Facture'} · échue depuis ${f.joursRetard} j · reste ${formatMontant(f.montantTtc ?? 0)}`,
+          detail: `${f.reference ?? 'Facture'} · échue depuis ${f.joursRetard} j · reste ${formatAmount(f.montantTtc ?? 0)}`,
           pill: { libelle: 'En retard', ton: 'risque' as const },
           href: f.factureId ? `${base}/facturation?facture=${f.factureId}` : `${base}/facturation`,
         })),
@@ -329,11 +322,11 @@ export function Attention({
       icone: <Scale size={16} aria-hidden />,
       couleur: 'var(--iris)',
       lignes: decisions.map((d) => {
-        const reste = d.echeance ? joursEntre(jour, d.echeance) : 0;
+        const reste = d.echeance ? daysBetween(jour, d.echeance) : 0;
         return {
           cle: d.id,
           titre: `${d.numero} · ${d.texte}`,
-          detail: `${d.responsable}${d.echeance ? ` · échéance le ${jjmm(d.echeance)}` : ''}`,
+          detail: `${d.responsable}${d.echeance ? ` · échéance le ${formatDayMonth(d.echeance)}` : ''}`,
           pill:
             d.statut === 'echeance_depassee'
               ? { libelle: 'Dépassée', ton: 'risque' }
@@ -350,7 +343,7 @@ export function Attention({
       lignes: reportings.map((r) => ({
         cle: `${r.type}:${r.mois}`,
         titre: `${r.titre} · ${r.periode}`,
-        detail: `${r.emetteur} → ${r.destinataire} · dû le ${jjmm(r.echeance)}`,
+        detail: `${r.emetteur} → ${r.destinataire} · dû le ${formatDayMonth(r.echeance)}`,
         pill: { libelle: 'En retard', ton: 'risque' },
         onClick: () => onOnglet('reportings'),
       })),
@@ -364,7 +357,7 @@ export function Attention({
       lignes: attention.absences.map((a) => ({
         cle: a.id,
         titre: a.salarie,
-        detail: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${pluriel(a.jours, 'jour')} · du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)}`,
+        detail: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${plural(a.jours, 'jour')} · du ${formatDayMonth(a.dateDebut)} au ${formatDayMonth(a.dateFin)}`,
         pill: { libelle: 'Vous êtes N+1', ton: 'attention' },
         href: `${base}/mon-espace?onglet=a-valider`,
       })),
@@ -382,7 +375,7 @@ export function Attention({
         <h2 id="pa-titre">À votre attention</h2>
         <span className="pa-compte">
           {nbDecisions
-            ? `${pluriel(nbDecisions, 'décision')} à prendre`
+            ? `${plural(nbDecisions, 'décision')} à prendre`
             : total
               ? 'Aucune décision en attente'
               : 'Rien en attente'}

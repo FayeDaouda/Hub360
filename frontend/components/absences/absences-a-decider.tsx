@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getAbsencesAValider, jjmm, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
+import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Modal } from './decision-n1-modal';
+import { formatDate } from '@/lib/dates';
 
 // File des absences dont la personne connectée est le N+1 (chef de cellule
 // côté collab, Dir. GC côté back-office). Rien à afficher = rien rendu.
@@ -30,7 +31,7 @@ export function AbsencesADecider({ slug, onCompte }: { slug: string; onCompte?: 
             <span>
               <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
               <span className="cell-sub">
-                {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {jjmm(d.dateDebut)} → {jjmm(d.dateFin)}
+                {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {formatDate(d.dateDebut)} → {formatDate(d.dateFin)}
               </span>
             </span>
             <button type="button" className="btn-primary btn-primary--sm" onClick={() => setOuverte(d.id)}>

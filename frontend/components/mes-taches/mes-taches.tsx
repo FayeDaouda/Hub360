@@ -35,7 +35,6 @@ import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
 import {
   dateEffective,
-  ecartJours,
   estEnRetard,
   getMesTaches,
   getTachesAValider,
@@ -53,6 +52,8 @@ import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { TacheDrawer } from './tache-drawer';
 import { prenomAffiche } from '@/lib/profil';
+import { daysBetween, formatDayMonth, toIsoDay, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type MesTachesApi = { taches: TacheMonEspace[]; stats: StatsPerformances };
 type Filtre = 'reprises' | 'retards' | 'semaine' | 'attente' | 'mentions';
@@ -88,13 +89,12 @@ const VIDE: Record<Filtre, string> = {
 };
 const CLE_VUE = 'hub.mes-taches.vue';
 
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const parEcheance = (a: TacheMonEspace, b: TacheMonEspace) =>
   (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999');
 const decaler = (iso: string, jours: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + jours);
-  return d.toISOString().slice(0, 10);
+  return toIsoDay(d);
 };
 const jourSemaine = (iso: string) => new Date(`${iso}T00:00:00Z`).getUTCDay();
 // Date qui fait foi pour l'urgence : la nouvelle date accordée si la tâche est
@@ -104,7 +104,7 @@ const parDateEffective = (a: TacheMonEspace, b: TacheMonEspace) =>
 
 // Échéance lue d'un coup d'œil : « 14 j de retard », « Aujourd’hui », « Dans 3 j ».
 function relatif(echeance: string, aujourdhui: string): string {
-  const n = ecartJours(aujourdhui, echeance);
+  const n = daysBetween(aujourdhui, echeance);
   if (n < 0) return `${-n} j de retard`;
   if (n === 0) return 'Aujourd’hui';
   if (n === 1) return 'Demain';
@@ -117,7 +117,7 @@ function relatif(echeance: string, aujourdhui: string): string {
 // place la plus urgente.
 // « déposée il y a 4 j » : depuis quand le N+1 a la tâche entre les mains.
 function attenteDepuis(remisLe: string, aujourdhui: string): string {
-  const n = ecartJours(remisLe.slice(0, 10), aujourdhui);
+  const n = daysBetween(remisLe.slice(0, 10), aujourdhui);
   if (n <= 0) return 'déposée aujourd’hui';
   if (n === 1) return 'déposée hier';
   return `déposée il y a ${n} j`;
@@ -145,7 +145,7 @@ export function MesTaches({ slug }: { slug: string }) {
   useTitrePage('');
   const { utilisateur } = useSessionCourante();
   const base = `/admin/${slug}`;
-  const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const aujourdhui = useMemo(() => todayIso(), []);
   const [donnees, setDonnees] = useState<MesTachesApi | null>(null);
   // Relance du validateur, par tâche (aside « Chez mon N+1 »).
   const [relances, setRelances] = useState<Record<string, 'envoi' | 'ok' | { erreur: string }>>({});
@@ -538,7 +538,7 @@ export function MesTaches({ slug }: { slug: string }) {
             {urgences === 0
               ? 'rien d’urgent aujourd’hui'
               : `${urgences} tâche${urgences > 1 ? 's demandent' : ' demande'} votre attention`}
-            {nonLues > 0 && `, ${nonLues} mention${nonLues > 1 ? 's' : ''} à lire`}
+            {nonLues > 0 && `, ${plural(nonLues, 'mention')} à lire`}
           </p>
         </div>
         <div className="vue-toggle" role="group" aria-label="Présentation">
@@ -580,7 +580,7 @@ export function MesTaches({ slug }: { slug: string }) {
                 <span className="mt-filtre-texte">
                   <span className="mt-filtre-libelle">{f.libelle}</span>
                   <span className="mt-filtre-aide">
-                    {n === 0 ? VIDE[f.cle] : f.cle === 'semaine' ? `d’ici le ${jjmm(g.dimanche)}` : f.aide}
+                    {n === 0 ? VIDE[f.cle] : f.cle === 'semaine' ? `d’ici le ${formatDayMonth(g.dimanche)}` : f.aide}
                   </span>
                 </span>
                 <span className="mt-filtre-compte">
@@ -599,9 +599,8 @@ export function MesTaches({ slug }: { slug: string }) {
           <p>
             <strong>Vous êtes N+1.</strong>{' '}
             {[
-              aDecider.taches &&
-                `${aDecider.taches} tâche${aDecider.taches > 1 ? 's' : ''} remise${aDecider.taches > 1 ? 's' : ''}`,
-              aDecider.absences && `${aDecider.absences} demande${aDecider.absences > 1 ? 's' : ''} d’absence`,
+              aDecider.taches && `${plural(aDecider.taches, 'tâche')} remise${aDecider.taches > 1 ? 's' : ''}`,
+              aDecider.absences && `${plural(aDecider.absences, 'demande')} d’absence`,
             ]
               .filter(Boolean)
               .join(' et ')}{' '}
@@ -651,8 +650,7 @@ export function MesTaches({ slug }: { slug: string }) {
                 // retard » : la section le dit, pour que le compteur de
                 // la carte (qui la compte aussi) se comprenne.
                 const ailleurs = filtre ? 0 : g[f].length - g.sections[f].length;
-                const note =
-                  ailleurs > 0 ? `et ${ailleurs} autre${ailleurs > 1 ? 's' : ''} en retard, plus haut` : undefined;
+                const note = ailleurs > 0 ? `et ${plural(ailleurs, 'autre')} en retard, plus haut` : undefined;
                 return (
                   <Groupe
                     key={f}
@@ -891,17 +889,17 @@ function LigneTache({
     t.statut === 'remise'
       ? {
           rel: 'En validation',
-          date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${jjmm(t.remisLe)}` : ''}`,
+          date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${formatDayMonth(t.remisLe)}` : ''}`,
         }
       : t.statut === 'bloquee'
         ? {
             rel: 'Attend l’étape précédente',
-            date: t.echeance ? `à rendre le ${jjmm(t.echeance)}` : 'pas encore de dates',
+            date: t.echeance ? `à rendre le ${formatDayMonth(t.echeance)}` : 'pas encore de dates',
           }
         : t.statut === 'prolongee' && t.prolongeeJusquau
           ? {
               rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`,
-              date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${jjmm(t.echeance)}` : ''}`,
+              date: `jusqu’au ${formatDayMonth(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${formatDayMonth(t.echeance)}` : ''}`,
             }
           : t.echeance
             ? {
@@ -911,8 +909,8 @@ function LigneTache({
                     : relatif(t.echeance, aujourdhui),
                 date:
                   t.statut === 'a_venir' && t.debut
-                    ? `démarre le ${jjmm(t.debut)} · à rendre le ${jjmm(t.echeance)}`
-                    : `à rendre le ${jjmm(t.echeance)}`,
+                    ? `démarre le ${formatDayMonth(t.debut)} · à rendre le ${formatDayMonth(t.echeance)}`
+                    : `à rendre le ${formatDayMonth(t.echeance)}`,
               }
             : { rel: 'À planifier', date: 'pas encore de dates' };
 
@@ -1186,7 +1184,7 @@ function LigneMention({
         {etat.erreur && <span className="field-erreur">{etat.erreur}</span>}
       </span>
       <span className="mt-echeance">
-        <span className="mt-echeance-rel">le {jjmm(m.creeLe)}</span>
+        <span className="mt-echeance-rel">le {formatDayMonth(m.creeLe)}</span>
         <span className="mt-echeance-date">{m.lue ? 'lue' : 'non lue'}</span>
       </span>
       <span className="mt-action">

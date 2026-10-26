@@ -16,10 +16,10 @@ import { SommaireCellules, ancreCellule } from './sommaire-cellules';
 import { useSectionEnLecture } from '@/lib/defilement';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useMediaQuery } from '@/lib/media';
+import { formatDate } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Liste = 'cellules' | 'affecter' | 'projets' | 'taches' | 'absences';
-
-const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Équipes (maquette du boss, oct. 2026) : cinq indicateurs, chacun ouvre sa
 // liste pour agir directement ; « Cellules » par défaut, avec la création et
@@ -118,7 +118,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
       libelle: 'Tâches en cours',
       valeur: String(i.taches.enCours),
       aide: `${i.taches.pctATemps ?? 100} % à temps · ${i.taches.enRetard} en retard${
-        i.taches.enRetard ? `, soit ${i.taches.etapesEnRetard} étape${i.taches.etapesEnRetard > 1 ? 's' : ''}` : ''
+        i.taches.enRetard ? `, soit ${plural(i.taches.etapesEnRetard, 'étape')}` : ''
       }`,
       ton: 'risque',
     },
@@ -203,7 +203,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
                     <strong>{s.nom}</strong>
                     <small>
                       {s.role} · {NIVEAUX_COLLABORATEUR[s.niveau]}
-                      {s.dateArrivee && ` · arrivé le ${jjmmaaaa(s.dateArrivee)}`}
+                      {s.dateArrivee && ` · arrivé le ${formatDate(s.dateArrivee)}`}
                     </small>
                   </span>
                   <select
@@ -277,10 +277,10 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
                 </span>
                 <span className="eq-charge">{t.assigne ?? 'à assigner'}</span>
                 {t.prolongeeJusquau ? (
-                  <span className="pill pill--attention">prolongée jusqu’au {jjmmaaaa(t.prolongeeJusquau)}</span>
+                  <span className="pill pill--attention">prolongée jusqu’au {formatDate(t.prolongeeJusquau)}</span>
                 ) : (
                   <span className={`pill ${t.enRetard ? 'pill--risque' : 'pill--neutre'}`}>
-                    {t.echeance ? `${t.enRetard ? 'échue le' : 'échéance'} ${jjmmaaaa(t.echeance)}` : 'sans échéance'}
+                    {t.echeance ? `${t.enRetard ? 'échue le' : 'échéance'} ${formatDate(t.echeance)}` : 'sans échéance'}
                   </span>
                 )}
               </li>
