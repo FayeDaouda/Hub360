@@ -8,6 +8,8 @@ import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -38,12 +40,7 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
   }, [slug]);
   useEffect(charger, [charger]);
 
-  if (!liste)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!liste) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
 
   const courant = liste.find((s) => s.id === choisi) ?? null;
   const remplacer = (s: IntegrationSalarie) => setListe((l) => (l ?? []).map((x) => (x.id === s.id ? s : x)));
@@ -58,7 +55,7 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
             mission.
           </p>
           {liste.length === 0 ? (
-            <p className="empty-state">Aucun nouvel arrivant en période d’intégration.</p>
+            <EmptyState>Aucun nouvel arrivant en période d’intégration.</EmptyState>
           ) : (
             <ul className="dmd-liste">
               {liste.map((s) => (
@@ -247,8 +244,7 @@ function BlocPoint({
       )}
       {formulaire && (
         <div className="integ-form">
-          <label className="field">
-            <span className="field-label">Réalisé le</span>
+          <Field label="Réalisé le">
             <input
               type="date"
               className="field-input"
@@ -256,12 +252,11 @@ function BlocPoint({
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Compte rendu</span>
+          </Field>
+          <Field label="Compte rendu">
             <textarea className="field-input" rows={3} value={texte} onChange={(e) => setTexte(e.target.value)} />
-          </label>
-          {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+          </Field>
+          {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
           <span className="dmd-actions">
             {edition && (
               <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setEdition(false)}>

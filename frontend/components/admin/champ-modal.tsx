@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = {
   titre: string;
@@ -60,8 +61,7 @@ export function ChampModal({
           lancer();
         }}
       >
-        <label className="field">
-          <span className="field-label">{label}</span>
+        <Field label={label}>
           <input
             ref={ref}
             className="field-input"
@@ -72,8 +72,8 @@ export function ChampModal({
               setErreur(null);
             }}
           />
-        </label>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        </Field>
+        {erreur && <FieldError>{erreur}</FieldError>}
         <div className="modal-actions">
           <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
             Annuler

@@ -6,6 +6,8 @@ import { ApiError } from '@/lib/client-api';
 import { getFicheContact, type FicheContact } from '@/lib/contacts';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 // Fiche contact d'un collègue (revue Salarié 19/10/2026) : ouverte depuis la
 // recherche (Ctrl+K) et l'annuaire du chat — remplace la page Équipes comme
@@ -33,8 +35,8 @@ export function FicheContactModal({
     <Modal onClose={onClose} portal className="modal--sm" labelledBy="fiche-contact-titre">
       <ModalHeader title={nom} titleId="fiche-contact-titre" onClose={onClose} />
       <div className="modal-body">
-        {erreur && <p className="field-erreur">{erreur}</p>}
-        {!fiche && !erreur && <div className="skeleton admin-skeleton-panel" aria-hidden />}
+        {erreur && <FieldError>{erreur}</FieldError>}
+        {!fiche && !erreur && <Skeleton />}
         {fiche && (
           <dl className="fc-liste">
             <dt>Poste</dt>

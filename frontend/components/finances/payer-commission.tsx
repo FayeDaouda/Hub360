@@ -11,6 +11,7 @@ import { formatAmount, formatNumber } from '@/lib/format';
 import { MODES_PAIEMENT, type ModePaiement } from '@/lib/types';
 import { formatDate, todayIso } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Le CFO règle la commission d'un apporteur (revue COO, 22/10/2026) : date,
 // mode et référence ; les coordonnées saisies par le COO sont rappelées.
@@ -95,8 +96,7 @@ export function PayerCommission({
           </div>
         </dl>
         <div className="pc-champs">
-          <label className="field">
-            <span className="field-label">Payée le</span>
+          <Field label="Payée le">
             <input
               className="field-input"
               type="date"
@@ -105,9 +105,8 @@ export function PayerCommission({
               disabled={envoi}
               onChange={(e) => setDate(e.target.value)}
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Mode</span>
+          </Field>
+          <Field label="Mode">
             <select
               className="field-input"
               value={mode}
@@ -120,9 +119,8 @@ export function PayerCommission({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Référence (facultatif)</span>
+          </Field>
+          <Field label="Référence (facultatif)">
             <input
               className="field-input"
               maxLength={120}
@@ -130,9 +128,9 @@ export function PayerCommission({
               disabled={envoi}
               onChange={(e) => setReference(e.target.value)}
             />
-          </label>
+          </Field>
         </div>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         <div className="modal-actions">
           <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
             Annuler

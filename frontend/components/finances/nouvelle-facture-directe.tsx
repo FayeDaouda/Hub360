@@ -6,6 +6,7 @@ import { creerFactureDirecte, getLeadsFacturables } from '@/lib/facturation';
 import { formatAmount } from '@/lib/format';
 import { STATUTS_CRM, type FactureCentrale, type LeadFacturable } from '@/lib/types';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { FieldError } from '@/components/ui/field';
 
 const TAUX_TVA = 18; // TVA par défaut des factures (backend TAUX_TVA_DEFAUT)
 
@@ -157,7 +158,7 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
             TTC <strong className="nfd-ttc">{formatAmount(ht + tva)}</strong>
           </span>
         </p>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         {pret ? (
           <button type="button" className="btn-primary nfd-preparer" disabled={envoi} onClick={preparer}>
             {envoi ? 'Préparation…' : 'Préparer la facture · à valider par le CFO'}

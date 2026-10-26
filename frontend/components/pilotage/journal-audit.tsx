@@ -5,6 +5,8 @@ import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { getJournalAudit, type CategorieAudit, type JournalAudit as Journal, type LigneAudit } from '@/lib/pilotage';
 import { formatDateTime, formatTime } from '@/lib/dates';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 const CATEGORIES: Record<CategorieAudit, string> = {
   comptes: 'Comptes',
@@ -34,12 +36,7 @@ export function JournalAudit({ slug }: { slug: string }) {
   }, [slug, periode]);
   useEffect(charger, [charger]);
 
-  if (!journal)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!journal) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
 
   const auteurs = [...new Set(journal.lignes.map((l) => l.par).filter((x): x is string => !!x))].sort();
   const visibles = journal.lignes.filter(
@@ -54,26 +51,23 @@ export function JournalAudit({ slug }: { slug: string }) {
         Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.
       </p>
       <div className="pi-journal-outils">
-        <label className="field">
-          <span className="field-label">Du</span>
+        <Field label="Du">
           <input
             className="field-input"
             type="date"
             value={periode.debut ?? journal.debut}
             onChange={(e) => setPeriode((p) => ({ ...p, debut: e.target.value }))}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">Au</span>
+        </Field>
+        <Field label="Au">
           <input
             className="field-input"
             type="date"
             value={periode.fin ?? journal.fin}
             onChange={(e) => setPeriode((p) => ({ ...p, fin: e.target.value }))}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">Par</span>
+        </Field>
+        <Field label="Par">
           <select className="field-input" value={personne} onChange={(e) => setPersonne(e.target.value)}>
             <option value="">Tout le monde</option>
             {auteurs.map((a) => (
@@ -82,7 +76,7 @@ export function JournalAudit({ slug }: { slug: string }) {
               </option>
             ))}
           </select>
-        </label>
+        </Field>
       </div>
       <div className="fin-filtres" role="group" aria-label="Filtrer le journal">
         <button
@@ -106,9 +100,9 @@ export function JournalAudit({ slug }: { slug: string }) {
         ))}
         <BoutonExport desactive={!visibles.length} onExporter={() => exporter(visibles, journal)} />
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       {visibles.length === 0 ? (
-        <p className="empty-state">Aucune trace sur cette période et ce filtre.</p>
+        <EmptyState>Aucune trace sur cette période et ce filtre.</EmptyState>
       ) : (
         <div className="admin-table-wrap">
           <table className="admin-table pi-journal-table">

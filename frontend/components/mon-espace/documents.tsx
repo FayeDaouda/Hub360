@@ -11,6 +11,7 @@ import {
 
 import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
 import { formatDate, formatMonthYear, yearOf } from '@/lib/dates';
+import { FieldError } from '@/components/ui/field';
 
 // Libellés de la maquette (« Contrat de travail », « Fiche de poste »).
 const LIBELLE_DOCUMENT: Partial<Record<TypePieceDossier, string>> = {
@@ -79,7 +80,7 @@ export function MesDocuments({
 
   return (
     <>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="me-documents">
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Contrat et poste</h2>

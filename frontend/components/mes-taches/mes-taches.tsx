@@ -54,6 +54,8 @@ import { TacheDrawer } from './tache-drawer';
 import { prenomAffiche } from '@/lib/profil';
 import { daysBetween, formatDayMonth, toIsoDay, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type MesTachesApi = { taches: TacheMonEspace[]; stats: StatsPerformances };
 type Filtre = 'reprises' | 'retards' | 'semaine' | 'attente' | 'mentions';
@@ -375,10 +377,10 @@ export function MesTaches({ slug }: { slug: string }) {
 
   if (!donnees) {
     return erreur ? (
-      <p className="empty-state">{erreur}</p>
+      <EmptyState>{erreur}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -593,7 +595,7 @@ export function MesTaches({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       {nbADecider > 0 && !filtre && (
         <div className="mt-bandeau">

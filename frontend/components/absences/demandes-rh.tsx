@@ -23,6 +23,8 @@ import { formatAmount } from '@/lib/format';
 import type { DemandeAbsence, DemandeRemboursement } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -57,12 +59,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
     }
   }
 
-  if (!donnees)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!donnees) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
 
   // Une demande de la RH attend le CEO : elle n'est pas « à traiter » ici.
   const absencesATraiter = donnees.absences.filter((d) => d.statut === 'accord_n1' && d.valideurFinal !== 'ceo');
@@ -80,12 +77,12 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
           Afficher l’historique complet
         </label>
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       <section className="panel glass-panel dmd-section">
         <h2 className="dmd-titre">Absences</h2>
         {absences.length === 0 ? (
-          <p className="empty-state">Rien à valider.</p>
+          <EmptyState>Rien à valider.</EmptyState>
         ) : (
           <ul className="dmd-liste">
             {absences.map((d) => (
@@ -160,7 +157,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
       <section className="panel glass-panel dmd-section">
         <h2 className="dmd-titre">Remboursements santé</h2>
         {remboursements.length === 0 ? (
-          <p className="empty-state">Aucun remboursement en cours.</p>
+          <EmptyState>Aucun remboursement en cours.</EmptyState>
         ) : (
           <ul className="dmd-liste">
             {remboursements.map((r) => (
@@ -230,7 +227,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
       <section className="panel glass-panel dmd-section">
         <h2 className="dmd-titre">Attestations de travail</h2>
         {attestations.length === 0 ? (
-          <p className="empty-state">Aucune attestation à délivrer.</p>
+          <EmptyState>Aucune attestation à délivrer.</EmptyState>
         ) : (
           <ul className="dmd-liste">
             {attestations.map((a) => (

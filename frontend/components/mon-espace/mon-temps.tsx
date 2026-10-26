@@ -9,6 +9,8 @@ import { KpiStrip } from '@/components/ui/kpi';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
 import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Impossible de charger votre temps.');
 
@@ -32,10 +34,10 @@ export function MonTemps({ slug }: { slug: string }) {
 
   if (!donnees) {
     return erreur ? (
-      <p className="empty-state">{erreur}</p>
+      <EmptyState>{erreur}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -63,7 +65,7 @@ export function MonTemps({ slug }: { slug: string }) {
         </div>
         <span className="me-pastille">Contrôle RH : {controle}</span>
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       <KpiStrip
         tiles={[
@@ -173,8 +175,7 @@ function EcartTemps({
       )}
       {saisie !== null && (
         <>
-          <label className="field">
-            <span className="field-label">Ce qui ne va pas · {formatMonthYear(donnees.mois)}</span>
+          <Field label={<>Ce qui ne va pas · {formatMonthYear(donnees.mois)}</>}>
             <textarea
               className="field-input"
               rows={3}
@@ -184,8 +185,8 @@ function EcartTemps({
               onChange={(e) => setSaisie(e.target.value)}
               autoFocus
             />
-          </label>
-          {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+          </Field>
+          {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
           <div className="dmd-actions">
             <button
               type="button"

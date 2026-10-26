@@ -14,6 +14,7 @@ import { formatAmount, formatNumber } from '@/lib/format';
 import { MODES_PAIEMENT } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 const CHAMPS = Object.keys(LIBELLES_COORDONNEES) as (keyof CoordonneesApporteur)[];
 
@@ -126,12 +127,13 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
                     {changes.map((c) => LIBELLES_COORDONNEES[c]).join(', ')}). Le CFO paiera sur ces coordonnées ; le
                     CFO et le CEO seront prévenus. Vérifiez chaque chiffre.
                   </p>
-                  <label className="field">
-                    <span className="field-label">
-                      {fiche.confirmation === 'code'
+                  <Field
+                    label={
+                      fiche.confirmation === 'code'
                         ? 'Code de votre application de double authentification'
-                        : 'Votre mot de passe, pour confirmer'}
-                    </span>
+                        : 'Votre mot de passe, pour confirmer'
+                    }
+                  >
                     <input
                       className="field-input"
                       type={fiche.confirmation === 'code' ? 'text' : 'password'}
@@ -142,10 +144,10 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
                       autoFocus
                       onChange={(e) => setPreuve(e.target.value)}
                     />
-                  </label>
+                  </Field>
                 </div>
               )}
-              {erreur && <p className="field-erreur">{erreur}</p>}
+              {erreur && <FieldError>{erreur}</FieldError>}
               <div className="modal-actions">
                 <button
                   type="button"

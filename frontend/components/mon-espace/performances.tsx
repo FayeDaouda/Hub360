@@ -15,6 +15,8 @@ import { RemiseModal } from './remise-modal';
 import { formatDate, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
@@ -70,10 +72,10 @@ export function MesPerformances({ slug }: { slug: string }) {
 
   if (!donnees) {
     return erreur ? (
-      <p className="empty-state">{erreur}</p>
+      <EmptyState>{erreur}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -252,7 +254,7 @@ export function MesPerformances({ slug }: { slug: string }) {
               ))}
             </div>
           </div>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <div className="admin-table-wrap">
             <table className="admin-table temps-table">
               <thead>

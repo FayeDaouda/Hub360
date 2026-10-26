@@ -11,6 +11,7 @@ import {
   type ZoneLocalite,
 } from '@/lib/types';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = {
   localites: Localite[]; // référentiel complet — contrôle d'unicité en direct
@@ -95,8 +96,7 @@ export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onC
 
       <form className="modal-body" onSubmit={soumettre}>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Onglet</span>
+          <Field label="Onglet">
             <select
               className="field-input"
               value={zone}
@@ -112,9 +112,8 @@ export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onC
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Nom</span>
+          </Field>
+          <Field label="Nom">
             <input
               ref={premierChamp}
               className="field-input"
@@ -123,12 +122,11 @@ export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onC
               placeholder="ex : Point E"
               maxLength={120}
             />
-          </label>
+          </Field>
         </div>
 
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">{LIBELLE_REGION_LOCALITE[zone]}</span>
+          <Field label={LIBELLE_REGION_LOCALITE[zone]}>
             <input
               className="field-input"
               value={region}
@@ -141,24 +139,22 @@ export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onC
                 <option key={r} value={r} />
               ))}
             </datalist>
-          </label>
+          </Field>
           {zone === 'dakar' ? (
-            <label className="field">
-              <span className="field-label">Arrondissement (facultatif)</span>
+            <Field label="Arrondissement (facultatif)">
               <input
                 className="field-input"
                 value={arrondissement}
                 onChange={(e) => setArrondissement(e.target.value)}
                 maxLength={120}
               />
-            </label>
+            </Field>
           ) : (
             <span aria-hidden />
           )}
         </div>
 
-        <label className="field">
-          <span className="field-label">Commune de rattachement (facultatif)</span>
+        <Field label="Commune de rattachement (facultatif)">
           <input
             className="field-input"
             value={commune}
@@ -167,10 +163,9 @@ export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onC
             maxLength={120}
           />
           <span className="field-aide">Pour un quartier d’usage qui fait partie d’une commune administrative.</span>
-        </label>
+        </Field>
 
-        <label className="field">
-          <span className="field-label">Code (3 lettres)</span>
+        <Field label="Code (3 lettres)">
           <input
             className="field-input localite-code-input"
             value={code}
@@ -197,9 +192,9 @@ export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onC
               {code && formatOk ? `${code} est libre.` : 'Proposé à partir des 3 premières lettres du nom, modifiable.'}
             </span>
           )}
-        </label>
+        </Field>
 
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
 
         <div className="modal-actions">
           <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>

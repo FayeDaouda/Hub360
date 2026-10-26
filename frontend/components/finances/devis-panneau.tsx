@@ -12,6 +12,7 @@ import { useConfirmer } from '@/components/confirmation';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -103,7 +104,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
         </div>
       )}
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="fac-actions">
         {!d.dossierCrm && d.statut === 'brouillon' && droits.devisValidation && (
           <button

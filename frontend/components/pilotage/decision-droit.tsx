@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { deciderDemandeDroit, type DemandeDroit } from '@/lib/roles';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 const NIVEAU: Record<DemandeDroit['apres'], string> = {
   aucun: 'Aucun',
@@ -74,8 +75,7 @@ export function DecisionDroit({
           est appliqué et gardé au journal des droits.
         </p>
         {refus !== null && (
-          <label className="field">
-            <span className="field-label">Motif du refus (transmis au demandeur)</span>
+          <Field label="Motif du refus (transmis au demandeur)">
             <textarea
               className="field-input"
               rows={2}
@@ -83,9 +83,9 @@ export function DecisionDroit({
               value={refus}
               onChange={(e) => setRefus(e.target.value)}
             />
-          </label>
+          </Field>
         )}
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         <div className="modal-actions">
           {refus === null ? (
             <>

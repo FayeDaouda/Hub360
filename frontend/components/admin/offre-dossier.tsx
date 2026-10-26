@@ -11,6 +11,7 @@ import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/ty
 import { useConfirmer } from '@/components/confirmation';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -232,7 +233,7 @@ export function OffreDossier({
           )}
         </div>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </section>
   );
 }

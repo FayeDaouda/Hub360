@@ -19,6 +19,8 @@ import { formatDate, formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -76,8 +78,8 @@ export function FicheRentabilitePanneau({
         <CloseButton onClick={onClose} />
       </header>
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
-      {!f && !erreur && <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />}
+      {erreur && <FieldError>{erreur}</FieldError>}
+      {!f && !erreur && <Skeleton size="sm" />}
       {f && (
         <>
           <section className="fiche-crm-section">

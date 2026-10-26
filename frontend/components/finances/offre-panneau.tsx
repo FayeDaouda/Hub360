@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/dates';
 import { formatNumber } from '@/lib/format';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 const ENREGISTREMENT_MS = 700;
 const LIBELLES_COMMODITES = new Map(COMMODITES.flatMap((g) => g.items));
@@ -425,7 +426,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
           </div>
         </>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </Drawer>
   );
 }

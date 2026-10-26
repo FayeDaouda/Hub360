@@ -6,6 +6,7 @@ import { lireReporting, poserQuestionReporting, repondreQuestionReporting } from
 import type { ReportingPilotage, VuePilotage } from '@/lib/types';
 import { formatDate, formatDayMonth, formatTime, toIsoDay } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 const dateHeure = (iso: string) => `${formatDate(toIsoDay(new Date(iso)))} à ${formatTime(iso)}`;
 const message = (e: unknown, repli: string) => (e instanceof Error && e.message ? e.message : repli);
@@ -90,8 +91,7 @@ export function SuiviReporting({
 
       {s.peutQuestionner && question !== null && (
         <div className="sr-formulaire">
-          <label className="field">
-            <span className="field-label">Votre question à {r.emetteur}</span>
+          <Field label={<>Votre question à {r.emetteur}</>}>
             <textarea
               className="field-input"
               rows={3}
@@ -101,7 +101,7 @@ export function SuiviReporting({
               onChange={(e) => setQuestion(e.target.value)}
               autoFocus
             />
-          </label>
+          </Field>
           <div className="sr-boutons">
             <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => setQuestion(null)}>
               Annuler
@@ -147,8 +147,7 @@ export function SuiviReporting({
               ) : (
                 s.peutRepondre && (
                   <div className="sr-formulaire">
-                    <label className="field">
-                      <span className="field-label">Votre réponse</span>
+                    <Field label="Votre réponse">
                       <textarea
                         className="field-input"
                         rows={3}
@@ -157,7 +156,7 @@ export function SuiviReporting({
                         disabled={!!envoi}
                         onChange={(e) => setReponses((x) => ({ ...x, [q.id]: e.target.value }))}
                       />
-                    </label>
+                    </Field>
                     <div className="sr-boutons">
                       <button
                         type="button"
@@ -179,7 +178,7 @@ export function SuiviReporting({
           ))}
         </ol>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </div>
   );
 }

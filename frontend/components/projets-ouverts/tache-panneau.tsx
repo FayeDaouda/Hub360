@@ -28,6 +28,7 @@ import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
 import { daysBetween, formatDate, todayIso } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -423,7 +424,7 @@ export function TachePanneau({
           </div>
         </div>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       {lignes(resume)}
 

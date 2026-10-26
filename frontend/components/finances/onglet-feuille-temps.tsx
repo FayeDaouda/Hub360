@@ -8,6 +8,8 @@ import { formatAmount } from '@/lib/format';
 import { STATUTS_CRM, type DelaiTranche, type FeuilleTemps, type Projet } from '@/lib/types';
 import { formatDate, formatDayMonth } from '@/lib/dates';
 import { Pill, type PillTone } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
 // Tableau de facturation : année sur deux chiffres, pour tenir dans la colonne.
@@ -155,9 +157,9 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
         </div>
       </section>
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       {!f ? (
-        !erreur && <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        !erreur && <Skeleton size="sm" />
       ) : (
         <div className="ft-colonnes">
           <div className="ft-gauche">

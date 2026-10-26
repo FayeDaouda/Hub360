@@ -12,6 +12,7 @@ import {
   type ZoneLocalite,
 } from '@/lib/types';
 import { LocaliteModal } from './localite-modal';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // Référentiel des localités — partagé par toutes les sociétés du HUB, géré
 // par la direction (societe_admin ou CIO). Un onglet par zone du fichier
@@ -93,7 +94,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
   if (!localites) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -138,7 +139,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
         un dossier est figé <Lock size={11} aria-label="(verrou)" /> : seul le nom reste modifiable.
       </p>
 
-      {groupes.length === 0 && <p className="empty-state">Aucune localité ne correspond à cette recherche.</p>}
+      {groupes.length === 0 && <EmptyState>Aucune localité ne correspond à cette recherche.</EmptyState>}
 
       {groupes.map(([region, ls]) => (
         <section className="panel glass-panel localites-groupe" key={region}>

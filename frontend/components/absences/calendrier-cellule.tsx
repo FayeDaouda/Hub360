@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getCalendrierCellule, LIBELLE_TYPE_ABSENCE, type CalendrierCellule as Donnees } from '@/lib/demandes';
 import { toIsoDay } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Skeleton } from '@/components/ui/feedback';
 
 const JOURS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const jours = (debut: string, fin: string) => {
@@ -47,7 +48,7 @@ export function CalendrierCellule({
   }, [donnees]);
 
   if (erreur) return null;
-  if (!donnees) return <div className="skeleton cal-cellule-squelette" aria-hidden />;
+  if (!donnees) return <Skeleton className="cal-cellule-squelette" />;
   if (!donnees.cellule) return <p className="dmd-note">Pas de cellule : aucun collègue d’équipe à comparer.</p>;
 
   const liste = jours(donnees.fenetre.debut, donnees.fenetre.fin);

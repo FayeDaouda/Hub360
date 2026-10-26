@@ -24,6 +24,8 @@ import {
 import { formatDate, formatDateTime, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
 const MOIS_DEBUT = '2026-09'; // premières feuilles de temps (rh/regles-temps.ts)
@@ -79,8 +81,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
     return [...suivis, ...autres].filter((l) => !etat || l.etat === etat);
   }, [donnees, tri, etat, montants]);
 
-  if (erreur) return <p className="field-erreur">{erreur}</p>;
-  if (!donnees) return <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />;
+  if (erreur) return <FieldError>{erreur}</FieldError>;
+  if (!donnees) return <Skeleton size="sm" />;
 
   const p = Object.fromEntries(donnees.parametres.map((x) => [x.cle, x]));
   const charges = p.coefficient_charges?.valeur;
@@ -198,8 +200,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
 
       <section className="panel glass-panel rt-liste">
         <div className="rt-outils">
-          <label className="field">
-            <span className="field-label">Période</span>
+          <Field label="Période">
             <select className="field-input" value={periode} onChange={(e) => setPeriode(e.target.value)}>
               <option value="">Cumul depuis l’ouverture</option>
               {moisDisponibles(aujourdhui).map((m) => (
@@ -208,9 +209,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Données</span>
+          </Field>
+          <Field label="Données">
             <select className="field-input" value={etat} onChange={(e) => setEtat(e.target.value as EtatDonnees | '')}>
               <option value="">Tous les projets</option>
               {(Object.keys(LIBELLE_ETAT) as EtatDonnees[]).map((k) => (
@@ -219,9 +219,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Trier par</span>
+          </Field>
+          <Field label="Trier par">
             <select
               className="field-input"
               value={montants ? tri : tri === 'heures' ? 'heures' : 'taux'}
@@ -232,7 +231,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
               {montants && <option value="cout">Coût salarial (le plus élevé d’abord)</option>}
               <option value="heures">Heures (le plus d’abord)</option>
             </select>
-          </label>
+          </Field>
           {montants && <BoutonExport desactive={!lignes.length} onExporter={() => exporter(lignes, donnees.periode)} />}
         </div>
         {periode && (

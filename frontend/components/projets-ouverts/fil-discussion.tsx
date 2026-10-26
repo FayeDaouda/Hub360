@@ -11,6 +11,7 @@ import {
 import { Infobulle } from '@/components/infobulle';
 import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -168,7 +169,7 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
               Publier
             </button>
           </div>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
         </>
       )}
     </div>

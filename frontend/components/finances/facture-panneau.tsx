@@ -19,6 +19,7 @@ import { useConfirmer } from '@/components/confirmation';
 import { daysSince, formatDate, todayIso } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -216,7 +217,7 @@ export function FacturePanneau({
           {relance}
         </p>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="fac-actions">
         {/* Émission : exclusive au-delà du seuil de contresignature (revue CEO). */}
         {brouillon && (droits.emission ?? droits.validation) && (

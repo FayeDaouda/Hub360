@@ -11,6 +11,8 @@ import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
 import { addDays, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const STATUT: Record<LigneProduction['statutChantier'], string> = {
   conception: 'En conception',
@@ -79,8 +81,8 @@ export function Production({ slug }: { slug: string }) {
     [vue, cellule, retard, livraison, aujourdhui, dans15],
   );
 
-  if (erreur) return <p className="field-erreur">{erreur}</p>;
-  if (!vue) return <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (erreur) return <FieldError>{erreur}</FieldError>;
+  if (!vue) return <Skeleton />;
   const c = vue.chiffres;
   const cellules = [...new Set(vue.lignes.map((l) => l.projet.cellule).filter((x): x is string => !!x))].sort();
   const echeances = [

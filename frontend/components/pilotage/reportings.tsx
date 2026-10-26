@@ -6,6 +6,7 @@ import { PastillesSuivi, SuiviReporting } from '@/components/pilotage/suivi-repo
 import type { ReportingPilotage, StatutReporting, VuePilotage } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
   const statuts: Record<StatutReporting, { classe: string; libelle: string }> = {
@@ -155,7 +156,7 @@ export function Reportings({
               </label>
             )
           )}
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <SuiviReporting key={cle(r)} slug={slug} r={r} onVue={onVue} />
           {r.peutDeposer && (
             <button

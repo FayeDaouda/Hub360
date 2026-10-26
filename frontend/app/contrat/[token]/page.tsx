@@ -8,6 +8,7 @@ import { formatAmount } from '@/lib/format';
 import type { ContratPublic } from '@/lib/types';
 import { SignaturePad } from '@/components/signature-pad';
 import { formatLongDate } from '@/lib/dates';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = { params: Promise<{ token: string }> };
 
@@ -151,8 +152,7 @@ export default function ContratPublicPage(props: Props) {
           ) : contrat.peutSigner ? (
             <section className="contrat-public-bloc">
               <h2>Signature</h2>
-              <label className="field">
-                <span className="field-label">Vos nom et prénom</span>
+              <Field label="Vos nom et prénom">
                 <input
                   className="field-input"
                   value={nom}
@@ -163,7 +163,7 @@ export default function ContratPublicPage(props: Props) {
                   maxLength={120}
                   autoComplete="name"
                 />
-              </label>
+              </Field>
               <div className="admin-periode-toggle" role="group" aria-label="Mode de signature">
                 <button
                   type="button"
@@ -201,7 +201,7 @@ export default function ContratPublicPage(props: Props) {
                 />
                 <span>J’ai lu le contrat et ses annexes, et je les accepte.</span>
               </label>
-              {erreur && <p className="field-erreur">{erreur}</p>}
+              {erreur && <FieldError>{erreur}</FieldError>}
               <button type="button" className="btn-primary" disabled={busy} onClick={signer}>
                 {busy ? 'Signature…' : 'Signer le contrat'}
               </button>
@@ -212,7 +212,7 @@ export default function ContratPublicPage(props: Props) {
               Ce contrat n’est plus disponible à la signature. Contactez {contrat.societe}.
             </p>
           )}
-          {contrat.statut !== 'signe' && !contrat.peutSigner && erreur && <p className="field-erreur">{erreur}</p>}
+          {contrat.statut !== 'signe' && !contrat.peutSigner && erreur && <FieldError>{erreur}</FieldError>}
         </article>
       </div>
     </main>

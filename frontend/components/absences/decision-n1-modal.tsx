@@ -7,6 +7,7 @@ import { deciderAbsence, getPreparationDecision, LIBELLE_MOTIF_REFUS, LIBELLE_TY
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 const DECISIONS: { cle: DecisionN1; libelle: string; aide: string }[] = [
   {
@@ -200,30 +201,27 @@ export function DecisionN1Formulaire({
 
             {decision === 'autres_dates' && (
               <div className="rh-grille">
-                <label className="field">
-                  <span className="field-label">Nouveau début</span>
+                <Field label="Nouveau début">
                   <input
                     type="date"
                     className="field-input"
                     value={dates.debut}
                     onChange={(e) => setDates((x) => ({ ...x, debut: e.target.value }))}
                   />
-                </label>
-                <label className="field">
-                  <span className="field-label">Nouvelle fin</span>
+                </Field>
+                <Field label="Nouvelle fin">
                   <input
                     type="date"
                     className="field-input"
                     value={dates.fin}
                     onChange={(e) => setDates((x) => ({ ...x, fin: e.target.value }))}
                   />
-                </label>
+                </Field>
               </div>
             )}
 
             {decision === 'refuser' && (
-              <label className="field">
-                <span className="field-label">Motif</span>
+              <Field label="Motif">
                 <select
                   className="field-input"
                   value={motif}
@@ -236,23 +234,20 @@ export function DecisionN1Formulaire({
                     </option>
                   ))}
                 </select>
-              </label>
+              </Field>
             )}
             {(decision === 'refuser' || decision === 'autres_dates') && (
-              <label className="field">
-                <span className="field-label">
-                  Commentaire{decision === 'refuser' && motif === 'autre' ? ' (obligatoire)' : ''}
-                </span>
+              <Field label={<>Commentaire{decision === 'refuser' && motif === 'autre' ? ' (obligatoire)' : ''}</>}>
                 <textarea
                   className="field-input"
                   rows={2}
                   value={commentaire}
                   onChange={(e) => setCommentaire(e.target.value)}
                 />
-              </label>
+              </Field>
             )}
 
-            {erreur && <p className="field-erreur">{erreur}</p>}
+            {erreur && <FieldError>{erreur}</FieldError>}
             <div className="modal-actions">
               {onAnnuler && (
                 <button type="button" className="btn-ghost" onClick={onAnnuler}>

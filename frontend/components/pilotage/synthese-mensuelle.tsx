@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { commenterSynthese, getSyntheses, type ListeSyntheses } from '@/lib/pilotage';
 import { formatLongDateTime } from '@/lib/dates';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 // Synthèse mensuelle (revue CEO, 22/10/2026) : le tableau de bord du mois,
 // assemblé par le HUB à la clôture ; le CFO peut y ajouter un commentaire.
@@ -19,8 +21,8 @@ export function SyntheseMensuelle({ slug }: { slug: string }) {
       .catch((e) => setErreur(e instanceof Error ? e.message : 'Synthèses indisponibles.'));
   }, [slug]);
 
-  if (erreur && !liste) return <p className="field-erreur">{erreur}</p>;
-  if (!liste) return <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (erreur && !liste) return <FieldError>{erreur}</FieldError>;
+  if (!liste) return <Skeleton />;
   if (!liste.syntheses.length) {
     return (
       <section className="panel glass-panel pi-liste">
@@ -98,7 +100,7 @@ export function SyntheseMensuelle({ slug }: { slug: string }) {
               disabled={envoi}
               onChange={(e) => setSaisie(e.target.value)}
             />
-            {erreur && <p className="field-erreur">{erreur}</p>}
+            {erreur && <FieldError>{erreur}</FieldError>}
             <div className="pi-saisie-actions">
               <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setSaisie(null)}>
                 Annuler

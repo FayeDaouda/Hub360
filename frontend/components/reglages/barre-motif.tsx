@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
+import { FieldError } from '@/components/ui/field';
 
 // Pied de section des Réglages : aucune modification sans motif (maquette du
 // boss). Le motif entre au journal avec chaque valeur modifiée. Tant qu'il y
@@ -34,7 +35,7 @@ export function BarreMotif({
 
   return (
     <div className={`reg-motif${nombre > 0 ? ' reg-motif--actif' : ''}`}>
-      {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+      {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
       <div className="reg-motif-ligne">
         <input
           className="field-input"

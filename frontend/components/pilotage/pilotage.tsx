@@ -33,6 +33,8 @@ import { Registre } from './registre';
 import { JournalAudit } from './journal-audit';
 import { Progression, Tendance } from './tendance';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type Onglet = 'indicateurs' | 'reportings' | 'registre' | 'journal' | 'synthese';
 
@@ -120,12 +122,7 @@ export function Pilotage({ slug }: { slug: string }) {
     requestAnimationFrame(() => ongletsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
-  if (!vue)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!vue) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
   const t = vue.tuiles;
   // « En retard de paiement » : la carte Factures de « À votre
   // attention » quand elle est affichée (CEO), sinon Finances filtrées.

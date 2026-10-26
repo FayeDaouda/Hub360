@@ -5,6 +5,7 @@ import { creerDevis } from '@/lib/devis';
 import type { Client, ProduitService, ProjetRef } from '@/lib/types';
 import { LignesDevisEditeur, ligneVide, lignesSaisies, type LigneForm } from './lignes-devis-editeur';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -70,8 +71,7 @@ export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPre
 
       <form className="modal-body" onSubmit={soumettre}>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Client</span>
+          <Field label="Client">
             <select
               ref={premierChamp}
               className="field-input"
@@ -85,9 +85,8 @@ export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPre
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Projet (facultatif)</span>
+          </Field>
+          <Field label="Projet (facultatif)">
             <select className="field-input" value={projetId} onChange={(e) => setProjetId(e.target.value)}>
               <option value="">Aucun — devis libre</option>
               {projets.map((p) => (
@@ -96,28 +95,26 @@ export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPre
                 </option>
               ))}
             </select>
-          </label>
+          </Field>
         </div>
 
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Objet (facultatif)</span>
+          <Field label="Objet (facultatif)">
             <input
               className="field-input"
               value={objet}
               onChange={(e) => setObjet(e.target.value)}
               placeholder="ex : Honoraires de conception — Villa Cap Ouest"
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Valable jusqu’au (facultatif)</span>
+          </Field>
+          <Field label="Valable jusqu’au (facultatif)">
             <input
               type="date"
               className="field-input"
               value={dateValidite}
               onChange={(e) => setDateValidite(e.target.value)}
             />
-          </label>
+          </Field>
         </div>
 
         {/* Rattaché à un projet = devis complémentaire : seul lieu des
@@ -136,7 +133,7 @@ export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPre
           </p>
         )}
 
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
 
         <div className="modal-actions">
           <button type="button" className="btn-ghost" onClick={onClose}>

@@ -42,6 +42,7 @@ import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-eta
 import { daysSince, yearOf } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
@@ -307,7 +308,7 @@ export default function CrmPage(props: Props) {
             Clients <span>{clients.length}</span>
           </h2>
           {clients.length === 0 ? (
-            <p className="empty-state">Aucun client pour le moment.</p>
+            <EmptyState>Aucun client pour le moment.</EmptyState>
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -498,16 +499,16 @@ export default function CrmPage(props: Props) {
             </div>
             {!projets ? (
               <div className="admin-skeleton" aria-hidden>
-                <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" />
+                <Skeleton size="sm" />
               </div>
             ) : filtres.length === 0 ? (
-              <p className="empty-state">
+              <EmptyState>
                 {recherche || situation !== 'tous'
                   ? 'Aucun projet ne correspond à ce filtre.'
                   : peutEcrire
                     ? 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'
                     : 'Aucun projet pour le moment.'}
-              </p>
+              </EmptyState>
             ) : (
               <>
                 {/* Mobile : liste condensée (tap → fiche). */}

@@ -6,6 +6,7 @@ import { deleguer, getDelegation, revoquerDelegation, type VueDelegation } from 
 import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { formatDate, todayIso } from '@/lib/dates';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Délégation du CEO (revue CEO, 22/10/2026). Le CEO : sa carte (déléguer,
 // révoquer). Le délégataire : un bandeau tant que la délégation court. Les
@@ -98,8 +99,7 @@ export function Delegation({ slug }: { slug: string }) {
       ))}
       {saisie && (
         <div className="dl-form">
-          <label className="field">
-            <span className="field-label">Délégataire</span>
+          <Field label="Délégataire">
             <select
               className="field-input"
               value={saisie.delegataireId}
@@ -111,9 +111,8 @@ export function Delegation({ slug }: { slug: string }) {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Du</span>
+          </Field>
+          <Field label="Du">
             <input
               className="field-input"
               type="date"
@@ -121,9 +120,8 @@ export function Delegation({ slug }: { slug: string }) {
               value={saisie.du}
               onChange={(e) => setSaisie({ ...saisie, du: e.target.value })}
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Au (inclus)</span>
+          </Field>
+          <Field label="Au (inclus)">
             <input
               className="field-input"
               type="date"
@@ -131,12 +129,12 @@ export function Delegation({ slug }: { slug: string }) {
               value={saisie.au}
               onChange={(e) => setSaisie({ ...saisie, au: e.target.value })}
             />
-          </label>
+          </Field>
           <p className="dmd-note dl-note">
             Jamais délégués : {vue.jamais.join(', ')}. Le délégataire ne décide que dans la limite de ses propres
             droits.
           </p>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <div className="pi-saisie-actions dl-actions">
             <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setSaisie(null)}>
               Annuler
@@ -152,7 +150,7 @@ export function Delegation({ slug }: { slug: string }) {
           </div>
         </div>
       )}
-      {!saisie && erreur && <p className="field-erreur">{erreur}</p>}
+      {!saisie && erreur && <FieldError>{erreur}</FieldError>}
     </section>
   );
 }

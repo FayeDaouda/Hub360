@@ -6,6 +6,7 @@ import { formatAmount } from '@/lib/format';
 import { deciderDemandeTs, type DemandeTsADecider } from '@/lib/projets-ouverts';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 // TS au-delà du seuil (revue Dir. GC, 21/10/2026) : le CTO l'accepte — il est
 // ajouté au projet et à l'avenant — ou le refuse avec un motif, transmis au
@@ -77,8 +78,7 @@ export function DecisionTs({
           Accepté, il devient une tâche du projet et une ligne de l’avenant à envoyer au client.
         </p>
         {refus !== null && (
-          <label className="field">
-            <span className="field-label">Motif du refus (transmis au Dir. GC)</span>
+          <Field label="Motif du refus (transmis au Dir. GC)">
             <textarea
               className="field-input"
               rows={2}
@@ -86,9 +86,9 @@ export function DecisionTs({
               value={refus}
               onChange={(e) => setRefus(e.target.value)}
             />
-          </label>
+          </Field>
         )}
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         <div className="modal-actions">
           {refus === null ? (
             <>

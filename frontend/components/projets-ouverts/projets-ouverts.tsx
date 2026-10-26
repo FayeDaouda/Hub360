@@ -48,6 +48,8 @@ import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural, stripAccents } from '@/lib/text';
 import { formatAmount } from '@/lib/format';
 import { Pill, type PillTone } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 // Panneau latéral : une tâche, ou le fil d'une carte.
 type Selection = { type: 'tache' | 'carte'; id: string } | null;
@@ -228,7 +230,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       <div className="po-kpi">
         <KpiStrip
@@ -278,7 +280,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
             <section className="panel glass-panel po-liste" aria-label="Projets ouverts">
               <h2 className="po-liste-titre">Projets ouverts</h2>
               {!tableau ? (
-                <div className="skeleton admin-skeleton-panel" aria-hidden />
+                <Skeleton />
               ) : (
                 <ul>
                   {tableau.projets.map((p) => (
@@ -316,7 +318,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
 
           <section className="panel glass-panel po-dossier" aria-label="Dossier projet">
             {!dossier ? (
-              <div className="skeleton admin-skeleton-panel" aria-hidden />
+              <Skeleton />
             ) : (
               // Zone qui défile (desktop) ; key : un autre projet repart du haut.
               <div className="po-dossier-defile" key={dossier.id}>
@@ -1014,7 +1016,7 @@ function DateVisite({ slug, projetId, date, modifiable, onMaj }: NonNullable<Pro
         <p className="po-aide">Visite sur site : {date ? formatDayMonth(date) : 'date non renseignée'}</p>
       )}
       {!date && <p className="po-aide">Sans date de visite, ces relevés n’ont pas d’échéance.</p>}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </div>
   );
 }

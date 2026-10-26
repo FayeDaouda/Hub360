@@ -59,6 +59,7 @@ import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 import { formatLongDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
 type Props = { params: Promise<{ slug: string }> };
@@ -582,13 +583,13 @@ export default function FinancesPage(props: Props) {
 
       {onglet === 'tableau' ? (
         !devis || !factures ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : (
           <TableauDeBordFinances devis={devisFiltres} factures={facturesFiltrees} catalogue={catalogue} />
         )
       ) : onglet === 'tresorerie' ? (
         !factures ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : (
           <OngletTresorerie
             slug={params.slug}
@@ -608,7 +609,7 @@ export default function FinancesPage(props: Props) {
         />
       ) : onglet === 'devis' ? (
         !devis ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : (
           <OngletDevis
             devis={devisFiltres}
@@ -622,7 +623,7 @@ export default function FinancesPage(props: Props) {
           />
         )
       ) : !factures ? (
-        <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        <Skeleton size="sm" />
       ) : (
         <OngletFactures
           factures={facturesFiltrees}

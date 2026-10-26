@@ -23,6 +23,7 @@ import type {
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 const LIBELLE_STATUT: Record<StatutCompteGroupe, string> = {
   actif: 'Actif',
@@ -95,7 +96,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
   if (!donnees) {
     return (
       <section className="groupe-panel glass-panel" aria-busy="true" aria-label="Chargement des comptes">
-        <div className="skeleton groupe-squelette-titre" />
+        <Skeleton className="groupe-squelette-titre" />
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="skeleton groupe-squelette-ligne" />
         ))}
@@ -145,7 +146,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
       )}
 
       {!societe ? (
-        <p className="empty-state">Aucune société active.</p>
+        <EmptyState>Aucune société active.</EmptyState>
       ) : (
         <TableComptes
           societe={societe}
@@ -220,7 +221,7 @@ function TableComptes({
       </label>
 
       {comptes.length === 0 ? (
-        <p className="empty-state">Aucun compte ne correspond à cette recherche.</p>
+        <EmptyState>Aucun compte ne correspond à cette recherche.</EmptyState>
       ) : (
         <table className="groupe-table">
           <thead>

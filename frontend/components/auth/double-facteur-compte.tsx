@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { apiAuth } from '@/lib/client-api';
 import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Etat = { actifLe: string | null; exige: boolean };
 type Reglage = { secret: string; qr: string };
@@ -99,7 +100,7 @@ export function DoubleFacteurCompte() {
             ? 'Obligatoire pour votre rôle : elle vous sera demandée à la prochaine connexion. Vous pouvez l’activer dès maintenant.'
             : 'Facultative, recommandée si vous ouvrez le HUB hors du bureau : un code à 6 chiffres de votre téléphone, en plus du mot de passe.'}
         </p>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         <button type="button" className="btn-ghost btn-ghost--sm" disabled={busy} onClick={commencer}>
           Activer la double authentification
         </button>
@@ -121,8 +122,7 @@ export function DoubleFacteurCompte() {
           Pas de scan possible ? Clé : <code>{reglage.secret.match(/.{1,4}/g)?.join(' ')}</code>
         </span>
       </div>
-      <label className="field">
-        <span className="field-label">Code de l’application</span>
+      <Field label="Code de l’application">
         <input
           className="field-input"
           name="code"
@@ -134,8 +134,8 @@ export function DoubleFacteurCompte() {
           onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
           required
         />
-      </label>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      </Field>
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="modal-actions">
         <button type="submit" className="btn-primary" disabled={busy || code.length !== 6}>
           {busy ? 'Vérification…' : 'Activer'}

@@ -11,6 +11,7 @@ import { formatMonthYear } from '@/lib/dates';
 import { plural, stripAccents } from '@/lib/text';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { Field } from '@/components/ui/field';
 
 // `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
 // ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
@@ -117,8 +118,7 @@ export function DepotBulletins({
       <ModalHeader title="Bulletins du mois" titleId="db-titre" onClose={onClose} closeDisabled={envoi} />
       <div className="modal-body db-corps">
         <div className="db-outils">
-          <label className="field">
-            <span className="field-label">Mois de paie</span>
+          <Field label="Mois de paie">
             <input
               className="field-input"
               type="month"
@@ -126,7 +126,7 @@ export function DepotBulletins({
               disabled={envoi}
               onChange={(e) => setMois(e.target.value)}
             />
-          </label>
+          </Field>
           <label className={`btn-ghost db-choisir${envoi ? ' is-desactive' : ''}`}>
             <FileUp size={16} aria-hidden /> Choisir les fichiers
             <input

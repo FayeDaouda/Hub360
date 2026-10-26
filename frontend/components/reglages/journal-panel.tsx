@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { getJournalReglages, type LigneJournal } from '@/lib/reglages';
 import { formatDateTime } from '@/lib/dates';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 // Réglages · Journal (ISO 9001 §7.5.3) : chaque enregistrement, son motif,
 // son auteur et les valeurs modifiées. Jamais modifié ni supprimé.
@@ -33,9 +35,9 @@ export function JournalPanel({ slug, versionInitiale }: { slug: string; versionI
         Pilotage.
       </p>
       {erreur ? (
-        <p className="field-erreur">{erreur}</p>
+        <FieldError>{erreur}</FieldError>
       ) : !lignes ? (
-        <div className="skeleton admin-skeleton-panel" aria-hidden />
+        <Skeleton />
       ) : lots.length === 0 ? (
         <p className="dmd-note">
           Aucune modification depuis la mise en service : le HUB applique les valeurs par défaut du gabarit{' '}

@@ -6,6 +6,7 @@ import { useMajSession, useSessionCourante } from '@/lib/layout-contexte';
 import { majNomAffiche, majPhoto, nomAffiche, preparerPhoto, retirerPhoto, type Profil } from '@/lib/profil';
 import { PersonAvatar } from '@/components/ui/avatar';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { FieldError } from '@/components/ui/field';
 
 // « Mon profil » (menu du compte, Réglages) : photo et nom affiché. La photo
 // s'enregistre dès qu'elle est choisie ; le nom, au bouton. Le nom officiel
@@ -149,7 +150,7 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
             officiel ({nomOfficiel}), qui reste sur les validations et les documents ; pour le corriger, voyez avec la
             RH.
           </p>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           {fait && (
             <p className="profil-fait" role="status">
               {fait}

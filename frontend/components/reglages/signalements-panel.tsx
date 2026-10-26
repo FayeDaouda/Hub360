@@ -10,6 +10,8 @@ import {
 } from '@/lib/signalements';
 import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const FILTRES: { cle: StatutSignalement | 'tous'; libelle: string }[] = [
   { cle: 'a_traiter', libelle: 'À traiter' },
@@ -62,9 +64,9 @@ export function SignalementsPanel({
           </button>
         ))}
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       {visibles.length === 0 ? (
-        <p className="empty-state">Aucun signalement dans ce filtre.</p>
+        <EmptyState>Aucun signalement dans ce filtre.</EmptyState>
       ) : (
         <ul className="sig-liste">
           {visibles.map((s) => (

@@ -5,6 +5,8 @@ import { Copy } from 'lucide-react';
 import { comparerRoles, creerCompte, libelleRole } from '@/lib/groupe';
 import type { InvitationCompte, SocieteComptes } from '@/lib/types';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/feedback';
+import { Field } from '@/components/ui/field';
 
 // Parcours unique de création d'un compte (phase 1, 14/10/2026) : dossier RH
 // → compte → rôle → cellule. Le dossier RH porte l'identité ; sans cellule,
@@ -60,14 +62,13 @@ export function NouveauCompteModal({
         {resultat ? (
           <ResultatInvitation {...resultat} onClose={onClose} />
         ) : societe.dossiersSansCompte.length === 0 ? (
-          <p className="empty-state">
+          <EmptyState>
             Tous les dossiers RH de {societe.nom} ont déjà un compte. Créez d&rsquo;abord le dossier de la personne dans
             RH.
-          </p>
+          </EmptyState>
         ) : (
           <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
-            <label className="field">
-              <span className="field-label">Dossier RH</span>
+            <Field label="Dossier RH">
               <select
                 className="field-input"
                 value={dossierId}
@@ -82,9 +83,8 @@ export function NouveauCompteModal({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="field">
-              <span className="field-label">E-mail de connexion</span>
+            </Field>
+            <Field label="E-mail de connexion">
               <input
                 type="email"
                 className="field-input"
@@ -93,9 +93,8 @@ export function NouveauCompteModal({
                 autoComplete="off"
                 required
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Rôle</span>
+            </Field>
+            <Field label="Rôle">
               <select className="field-input" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
                 <option value="">Choisir un rôle…</option>
                 {roles.map((r) => (
@@ -105,7 +104,7 @@ export function NouveauCompteModal({
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
             {/* Revue Dir. GC (21/10/2026) : la cellule est choisie par le Dir. GC. */}
             <p className="dmd-note">
               La cellule n’est pas choisie ici : un compte Salarié arrive dans Équipes › Salariés à affecter, et le Dir.

@@ -19,6 +19,7 @@ import {
 import { formatDate } from '@/lib/dates';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Coordonnées de paiement : un changement est confirmé, notifié au CEO et tracé.
 const CHAMPS_PAIEMENT: ChampTexte[] = ['banque', 'rib', 'wave', 'orangeMoney'];
@@ -149,8 +150,7 @@ export function ParametresFacturationFenetre({
             </p>
           )}
           <div className="pf-format">
-            <label className="field">
-              <span className="field-label">Préfixe</span>
+            <Field label="Préfixe">
               <input
                 className="field-input"
                 list="pf-prefixes"
@@ -166,9 +166,8 @@ export function ParametresFacturationFenetre({
                   <option key={x} value={x} />
                 ))}
               </datalist>
-            </label>
-            <label className="field">
-              <span className="field-label">Année</span>
+            </Field>
+            <Field label="Année">
               <select
                 className="field-input"
                 value={format.formatAnnee}
@@ -178,9 +177,8 @@ export function ParametresFacturationFenetre({
                 <option value="AAAA">{p.annee}</option>
                 <option value="AA">{String(p.annee % 100).padStart(2, '0')}</option>
               </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Séparateur</span>
+            </Field>
+            <Field label="Séparateur">
               <select
                 className="field-input"
                 value={format.separateur}
@@ -192,9 +190,8 @@ export function ParametresFacturationFenetre({
                 <option value=".">point (.)</option>
                 <option value="">aucun</option>
               </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Chiffres</span>
+            </Field>
+            <Field label="Chiffres">
               <select
                 className="field-input"
                 value={format.chiffres}
@@ -207,9 +204,8 @@ export function ParametresFacturationFenetre({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Numéro de départ</span>
+            </Field>
+            <Field label="Numéro de départ">
               <input
                 className="field-input"
                 inputMode="numeric"
@@ -217,7 +213,7 @@ export function ParametresFacturationFenetre({
                 disabled={formatFige}
                 onChange={(e) => setFormat({ ...format, numeroDepart: Number(e.target.value.replace(/\D/g, '')) || 1 })}
               />
-            </label>
+            </Field>
           </div>
           {!formatFige && (
             <>
@@ -228,8 +224,7 @@ export function ParametresFacturationFenetre({
                   (si ce préfixe a déjà servi cette année, la suite continue au numéro suivant)
                 </span>
               </p>
-              <label className="field">
-                <span className="field-label">Motif (obligatoire)</span>
+              <Field label="Motif (obligatoire)">
                 <input
                   className="field-input"
                   maxLength={300}
@@ -237,7 +232,7 @@ export function ParametresFacturationFenetre({
                   disabled={!!envoi}
                   onChange={(e) => setMotif(e.target.value)}
                 />
-              </label>
+              </Field>
               <div className="modal-actions">
                 <button
                   type="button"
@@ -341,8 +336,7 @@ export function ParametresFacturationFenetre({
               </label>
             ))}
           </div>
-          <label className="field">
-            <span className="field-label">CGV complètes en annexe</span>
+          <Field label="CGV complètes en annexe">
             <select
               className="field-input"
               value={profil.cgvAnnexe ?? 'premiere_facture'}
@@ -358,9 +352,8 @@ export function ParametresFacturationFenetre({
             <span className="cell-sub">
               La page 1 de chaque facture cite toujours les CGV, l’offre acceptée et les articles clés.
             </span>
-          </label>
-          <label className="field">
-            <span className="field-label">Commissions des apporteurs</span>
+          </Field>
+          <Field label="Commissions des apporteurs">
             <select
               className="field-input"
               value={profil.modeCommission ?? 'encaisse_prorata'}
@@ -377,7 +370,7 @@ export function ParametresFacturationFenetre({
               Le % est celui de la fiche apporteur. Le mode s’applique aux dossiers signés à partir de son changement ;
               le COO suit, le CFO paie.
             </span>
-          </label>
+          </Field>
           {!lecture && confirmerPaiement && (
             <div className="pf-alerte" role="alert">
               <p>
@@ -385,12 +378,13 @@ export function ParametresFacturationFenetre({
                 seront imprimées sur toutes les prochaines factures ; le CEO sera prévenu et le changement gardé dans le
                 journal d’audit. Vérifiez chaque chiffre.
               </p>
-              <label className="field">
-                <span className="field-label">
-                  {p.confirmation === 'code'
+              <Field
+                label={
+                  p.confirmation === 'code'
                     ? 'Code de votre application de double authentification'
-                    : 'Votre mot de passe, pour confirmer'}
-                </span>
+                    : 'Votre mot de passe, pour confirmer'
+                }
+              >
                 <input
                   className="field-input"
                   type={p.confirmation === 'code' ? 'text' : 'password'}
@@ -401,7 +395,7 @@ export function ParametresFacturationFenetre({
                   autoFocus
                   onChange={(e) => setPreuve(e.target.value)}
                 />
-              </label>
+              </Field>
             </div>
           )}
           {!lecture && (
@@ -432,7 +426,7 @@ export function ParametresFacturationFenetre({
           )}
         </section>
         {ok && <p className="pf-ok">{ok}</p>}
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
       </div>
     </Modal>
   );

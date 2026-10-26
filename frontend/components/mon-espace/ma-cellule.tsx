@@ -11,6 +11,7 @@ import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { Avatar } from './avatar';
 import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // « Mon espace » · Ma cellule (maquette du boss) : projets pilotés, tâches en
 // cours, en retard et remises à temps de toute la cellule ; ses membres et son
@@ -27,11 +28,11 @@ export function MaCellule({ slug }: { slug: string }) {
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre cellule.'));
   }, [slug]);
 
-  if (erreur) return <p className="empty-state">{erreur}</p>;
+  if (erreur) return <EmptyState>{erreur}</EmptyState>;
   if (!donnees) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }

@@ -7,6 +7,7 @@ import { arbitrerDecision, cloturerDecision, saisirDecision, type ArbitrageDecis
 import type { DecisionRegistre, ResponsableDecision, StatutDecision, VuePilotage } from '@/lib/types';
 import { daysSince, formatDate, todayIso } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 const PILL_STATUT: Record<StatutDecision, string> = {
   proposee: 'pill--attention',
@@ -149,7 +150,7 @@ export function Registre({ slug, vue, onVue }: { slug: string; vue: VuePilotage;
           onFermer={() => setAModifier(null)}
         />
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       {liste.length === 0 ? (
         <p className="pi-aide">{filtre === 'ouvertes' ? 'Aucune décision ouverte.' : 'Le registre est vide.'}</p>
@@ -374,7 +375,7 @@ function ModifierProposition({
           <input className="field-input" maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
         </label>
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="pi-saisie-actions">
         <button type="button" className="btn-ghost" onClick={onFermer}>
           Annuler
@@ -521,7 +522,7 @@ function SaisieDecision({
           ou refuser) avant d’entrer en vigueur.
         </p>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="pi-saisie-actions">
         <button type="button" className="btn-ghost" onClick={onFermer}>
           Annuler

@@ -19,6 +19,8 @@ import { useMediaQuery } from '@/lib/media';
 import { formatDate } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type Liste = 'cellules' | 'affecter' | 'projets' | 'taches' | 'absences';
 
@@ -85,12 +87,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
     etroit ? barreRaccourcis : undefined,
   );
 
-  if (!vue)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!vue) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
   const i = vue.indicateurs;
   const tuiles: { cle: Liste; libelle: string; valeur: string; aide: string; ton?: string }[] = [
     {
@@ -153,7 +150,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
           </button>
         ))}
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       {liste === 'cellules' && sansCompte.length > 0 && (
         <p className="eq-alerte" role="note">

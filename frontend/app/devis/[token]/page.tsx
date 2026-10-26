@@ -7,6 +7,7 @@ import { STATUTS_DEVIS, type DevisPublic, type StatutDevisEffectif } from '@/lib
 import { DocumentFacturation } from '@/components/document-facturation';
 import { useConfirmer } from '@/components/confirmation';
 import { formatLongDate } from '@/lib/dates';
+import { FieldError } from '@/components/ui/field';
 
 type Props = { params: Promise<{ token: string }> };
 
@@ -101,7 +102,7 @@ export default function DevisPublicPage(props: Props) {
         />
 
         <div className="devis-public-page-actions">
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
 
           {devis.peutRepondre ? (
             <div className="devis-public-actions">

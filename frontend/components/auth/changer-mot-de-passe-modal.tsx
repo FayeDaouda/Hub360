@@ -6,6 +6,7 @@ import { apiAuth } from '@/lib/client-api';
 import type { Session } from '@/lib/types';
 import { DoubleFacteurCompte } from './double-facteur-compte';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Field } from '@/components/ui/field';
 
 // « Mon compte » (initiales de la barre du haut) : changement du mot de
 // passe (phase 0, 13/10/2026) et double authentification (19/10/2026).
@@ -56,8 +57,7 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
-            <label className="field">
-              <span className="field-label">Mot de passe actuel</span>
+            <Field label="Mot de passe actuel">
               <input
                 type="password"
                 className="field-input"
@@ -67,9 +67,8 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
                 autoFocus
                 required
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Nouveau mot de passe</span>
+            </Field>
+            <Field label="Nouveau mot de passe">
               <input
                 type="password"
                 className="field-input"
@@ -81,9 +80,8 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setNouveau(e.target.value)}
                 required
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Confirmer le nouveau mot de passe</span>
+            </Field>
+            <Field label="Confirmer le nouveau mot de passe">
               <input
                 type="password"
                 className="field-input"
@@ -93,7 +91,7 @@ export function ChangerMotDePasseModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setConfirme(e.target.value)}
                 required
               />
-            </label>
+            </Field>
             {erreur && (
               <p className="field-erreur" role="alert">
                 {erreur}

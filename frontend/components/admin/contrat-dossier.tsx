@@ -25,6 +25,7 @@ import {
 import { useConfirmer } from '@/components/confirmation';
 import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -387,7 +388,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
           )}
         </>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </section>
   );
 }
