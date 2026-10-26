@@ -34,7 +34,7 @@ import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
 import { formatAmount } from '@/lib/format';
 import type { AttentionPilotage, VuePilotage } from '@/lib/types';
-import { addDays, daysBetween, formatDayMonth, todayIso } from '@/lib/dates';
+import { addDays, daysBetween, formatDateTime, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 
 // Décisions « arrivant à échéance » : ouvertes dont l'échéance tombe dans les
@@ -161,7 +161,7 @@ export function Attention({
         titre: n.titre,
         // La ligne entière marque l'alerte comme vue : l'action est dite par
         // la pastille (« Vu » seul se lisait comme un état déjà acquis).
-        detail: new Date(n.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }),
+        detail: formatDateTime(n.date),
         pill: { libelle: 'Marquer vu', ton: 'neutre' as const },
         onClick: () => vu(n.id),
       })),

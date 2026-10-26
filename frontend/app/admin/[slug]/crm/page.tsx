@@ -39,7 +39,7 @@ import { KpiStrip } from '@/components/admin/kpi-strip';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
-import { daysSince } from '@/lib/dates';
+import { daysSince, yearOf } from '@/lib/dates';
 import { plural } from '@/lib/text';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
@@ -101,7 +101,7 @@ export default function CrmPage(props: Props) {
   const [recherche, setRecherche] = useState('');
   const [onglet, setOnglet] = useState<'registre' | 'clients'>('registre');
   const [situation, setSituation] = useState<Situation | 'tous' | 'a_completer'>('tous');
-  const [annee, setAnnee] = useState<string>(String(new Date().getFullYear()));
+  const [annee, setAnnee] = useState<string>(String(yearOf()));
   const [modalOuvert, setModalOuvert] = useState(false);
   const [nouveauId, setNouveauId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -147,10 +147,7 @@ export default function CrmPage(props: Props) {
 
   // Dossiers de l'année du pipeline choisie (création), puis situation et recherche.
   const annees = useMemo(
-    () =>
-      [...new Set([String(new Date().getFullYear()), ...(projets ?? []).map((p) => p.creeLe.slice(0, 4))])]
-        .sort()
-        .reverse(),
+    () => [...new Set([String(yearOf()), ...(projets ?? []).map((p) => p.creeLe.slice(0, 4))])].sort().reverse(),
     [projets],
   );
   const duPipeline = useMemo(() => (projets ?? []).filter((p) => p.creeLe.startsWith(annee)), [projets, annee]);

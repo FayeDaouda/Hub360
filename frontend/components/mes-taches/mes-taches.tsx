@@ -523,6 +523,7 @@ export function MesTaches({ slug }: { slug: string }) {
       <div className="mt-accueil">
         <div>
           <h1 className="mt-accueil-titre">
+            {/* Heure de l'appareil, exception voulue au fuseau de Dakar (glossaire). */}
             {new Date().getHours() >= 18 ? 'Bonsoir' : 'Bonjour'} {prenomAffiche(utilisateur)}
           </h1>
           <p className="mt-accueil-sous">

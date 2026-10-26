@@ -63,17 +63,12 @@ Décisions structurantes : `docs/adr/`.
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
 
-## Écart constaté, correction à valider
+## Défaut constaté, correction à valider
 
-- **Fuseau horaire** : la règle (glossaire) est l'affichage au fuseau de
-  Dakar partout. Une vingtaine d'affichages suivent encore le fuseau de
-  l'appareil : heures du chat, du journal d'audit, du journal des réglages,
-  du suivi des reportings et de la synthèse mensuelle, « calculé le » de la
-  rentabilité, dernière connexion du menu compte, « Bonjour » / « Bonsoir »,
-  année courante (codes projet, filtres, numéros), mois des graphiques,
-  `formatDayShortMonth`. Aucun écart pour un utilisateur à Dakar ; ailleurs,
-  heures et dates décalées. La correction change le comportement hors de
-  Dakar : PR à part, après accord.
+- **Calcul « mois précédent » / « dans 6 mois »** (`moisPrecedent` de la page
+  RH, `finProche` de `lib/rh.ts`) : `setMonth` déborde en fin de mois. Le 31
+  mars, « le mois précédent » rend mars ; le 31 août, « dans 6 mois » rend le
+  3 mars au lieu du 28 février. Correction : `addMonths` de `lib/dates.ts`.
 
 ## En attente d'une décision extérieure
 

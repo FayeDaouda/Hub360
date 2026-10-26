@@ -14,6 +14,7 @@ import {
 } from './fiche-apporteur-champs';
 import { segmentClient } from '@/lib/nomenclature';
 import type { Client, Localite, NouveauProjetPayload, Personne, Projet, TypeClient } from '@/lib/types';
+import { yearOf } from '@/lib/dates';
 
 const NOUVEAU_CLIENT = '__nouveau__';
 
@@ -57,7 +58,7 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
     : clientExistant
       ? segmentClient(clientExistant)
       : '';
-  const code = `${segment || '???'}_${localite?.code ?? '???'}.${String(new Date().getFullYear()).slice(-2)}`;
+  const code = `${segment || '???'}_${localite?.code ?? '???'}.${String(yearOf()).slice(-2)}`;
 
   const apporteurSaisi = versApporteurSaisi(apporteur);
   const clientSaisi = clientNouveau ? !!nom.trim() : !!clientExistant;

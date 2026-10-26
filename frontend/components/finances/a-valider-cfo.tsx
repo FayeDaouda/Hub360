@@ -37,7 +37,7 @@ import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
-import { daysSince, formatDayMonth } from '@/lib/dates';
+import { daysSince, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
@@ -55,7 +55,6 @@ type Element = {
 };
 
 const HEURE = 3_600_000;
-const JOUR = 24 * HEURE;
 // Délai de validation d'une offre par le CFO (maquette CRM) : orange à mi-
 // parcours, rouge une fois dépassé — même constante que le serveur (Pilotage).
 const DELAI_OFFRE_H = 48;
@@ -265,7 +264,7 @@ export function AValiderCfo({
   }
   // 5 bis. Clôture du mois terminé (relance par défaut à partir du 5).
   if (moisTermine && !moisTermine.clos && session.role !== 'CEO (transverse)') {
-    const jour = new Date().getDate();
+    const jour = Number(todayIso().slice(8, 10));
     elements.push({
       cle: `cloture-${moisTermine.mois}`,
       groupe: 5,

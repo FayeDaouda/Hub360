@@ -1,6 +1,8 @@
 // Dates du HUB : jours au format ISO « AAAA-MM-JJ », affichage en français, au
-// fuseau de Dakar (UTC+0 toute l'année, sans heure d'été). Seul endroit où
-// les dates sont calculées et formatées côté front.
+// fuseau de Dakar (UTC+0 toute l'année, sans heure d'été), quel que soit le
+// lieu de l'utilisateur (glossaire). Seul endroit où les dates sont calculées
+// et formatées côté front. Exception : la salutation « Bonjour / Bonsoir »
+// suit l'heure de l'appareil (moment de l'utilisateur, pas une donnée).
 
 const FUSEAU = 'Africa/Dakar';
 const JOUR_MS = 86_400_000;
@@ -18,7 +20,11 @@ const dateLongue = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 });
 const moisAnnee = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', month: 'long', year: 'numeric' });
-const jourMoisCourt = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' });
+const jourMoisCourt = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, day: '2-digit', month: 'short' });
+const jourMoisLong = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, day: 'numeric', month: 'long' });
+const heureMinute = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' });
+const dateHeure = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'short', timeStyle: 'short' });
+const dateHeureLongue = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, dateStyle: 'long', timeStyle: 'short' });
 
 /** Jour ISO (AAAA-MM-JJ) d'un instant, à Dakar. */
 export function toIsoDay(date: Date): string {
@@ -28,6 +34,17 @@ export function toIsoDay(date: Date): string {
 /** Jour ISO (AAAA-MM-JJ) d'aujourd'hui, à Dakar. */
 export function todayIso(now: Date = new Date()): string {
   return toIsoDay(now);
+}
+
+/** Année d'un instant, à Dakar (année courante par défaut). */
+export function yearOf(date: Date = new Date()): number {
+  return Number(toIsoDay(date).slice(0, 4));
+}
+
+/** Mois (AAAA-MM) décalé de `months` mois (négatif pour reculer). */
+export function addMonths(month: string, months: number): string {
+  const index = Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1 + months;
+  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
 }
 
 /** Jour ISO décalé de `days` jours (négatif pour reculer). */
@@ -68,7 +85,27 @@ export function formatMonthYear(monthOrDay: string): string {
   return moisAnnee.format(new Date(`${monthOrDay.slice(0, 7)}-15T12:00:00Z`));
 }
 
-/** « 24 oct. », au fuseau de l'appareil (affichage d'un instant). */
+/** « 24 oct. ». */
 export function formatDayShortMonth(iso: string): string {
   return jourMoisCourt.format(new Date(iso));
+}
+
+/** « 24 octobre ». */
+export function formatDayLongMonth(iso: string): string {
+  return jourMoisLong.format(new Date(iso));
+}
+
+/** « 18:40 ». */
+export function formatTime(iso: string): string {
+  return heureMinute.format(new Date(iso));
+}
+
+/** « 22/10/2026 18:40 ». */
+export function formatDateTime(iso: string): string {
+  return dateHeure.format(new Date(iso));
+}
+
+/** « 22 octobre 2026 à 18:40 ». */
+export function formatLongDateTime(iso: string): string {
+  return dateHeureLongue.format(new Date(iso));
 }

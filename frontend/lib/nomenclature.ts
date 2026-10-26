@@ -1,4 +1,5 @@
 import { stripAccents } from './text';
+import { yearOf } from './dates';
 // Nomenclature du code dossier / projet — règle Grey Concrete v2, validée
 // (étape B de l'intégration CRM, sept. 2026).
 //
@@ -153,7 +154,7 @@ export function genererCodeDossier(
 ): string {
   const segClient = segmentClient(client);
   if (!segClient || !codeLocalite) return '';
-  const aa = String(date.getFullYear()).slice(-2);
+  const aa = String(yearOf(date)).slice(-2);
   return `${segClient}_${codeLocalite}.${aa}`;
 }
 

@@ -10,8 +10,11 @@ affiché et, quand il existe, son nom dans le code.
   Dakar (`Africa/Dakar`, UTC+0 toute l'année, sans heure d'été), quel que
   soit le lieu de l'utilisateur. Une échéance, une heure de message ou un
   « aujourd'hui » sont les mêmes pour tous. Code : `frontend/lib/dates.ts`,
-  `backend/src/shared/dates.ts` (puis le paquet partagé, S0c). Écart en
-  cours : voir `docs/feuille-de-route.md`, « Écart constaté ».
+  `backend/src/shared/dates.ts` (puis le paquet partagé, S0c). Vérifié par
+  les tests du front, exécutés avec un appareil réglé à UTC+14.
+  **Exception** : la salutation « Bonjour » / « Bonsoir » suit l'heure de
+  l'appareil, car elle parle du moment de l'utilisateur, pas d'une donnée de
+  travail.
 - **Jour** — une date sans heure s'échange au format ISO « AAAA-MM-JJ » et
   s'affiche « JJ/MM/AAAA » (`formatDate`) ou « JJ/MM » (`formatDayMonth`).
 - **Montant** — en francs CFA, sans centimes : « 1 770 000 FCFA »

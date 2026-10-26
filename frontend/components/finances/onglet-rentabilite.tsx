@@ -21,7 +21,7 @@ import {
   type LigneRentabilite,
   type Portefeuille,
 } from '@/lib/rentabilite';
-import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { formatDate, formatDateTime, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
@@ -95,7 +95,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
           {charges == null ? 'Charges patronales non comprises' : `Charges patronales au coefficient de ${charges} %`},
           dépenses et frais généraux non compris.
           {parDefaut && ' Paramètres par défaut, non validés par un expert-comptable.'} Calculé le{' '}
-          {new Date(donnees.calculeLe).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}.
+          {formatDateTime(donnees.calculeLe)}.
           {!donnees.periode &&
             (donnees.arreteAu ? (
               <>

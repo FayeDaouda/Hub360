@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { getJournalAudit, type CategorieAudit, type JournalAudit as Journal, type LigneAudit } from '@/lib/pilotage';
+import { formatDateTime, formatTime } from '@/lib/dates';
 
 const CATEGORIES: Record<CategorieAudit, string> = {
   comptes: 'Comptes',
@@ -15,14 +16,6 @@ const CATEGORIES: Record<CategorieAudit, string> = {
   paie: 'Paie',
   pilotage: 'Reportings',
 };
-const horodatage = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 
 // Pilotage › Journal (CEO, CIO) : qui a fait quoi et quand — comptes, droits,
 // factures et paiements, réglages, départs. Lecture seule.
@@ -130,7 +123,7 @@ export function JournalAudit({ slug }: { slug: string }) {
             <tbody>
               {visibles.map((l) => (
                 <tr key={l.id}>
-                  <td data-label="Date">{horodatage(l.le)}</td>
+                  <td data-label="Date">{formatDateTime(l.le)}</td>
                   <td data-label="Action">
                     <span className="cell-stack">
                       <strong>{l.action}</strong>
@@ -158,7 +151,7 @@ function exporter(lignes: LigneAudit[], j: Journal) {
       { titre: 'Date', valeur: (l) => dateExport(l.le) },
       {
         titre: 'Heure',
-        valeur: (l) => new Date(l.le).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        valeur: (l) => formatTime(l.le),
       },
       { titre: 'Catégorie', valeur: (l) => CATEGORIES[l.categorie] },
       { titre: 'Action', valeur: (l) => l.action },

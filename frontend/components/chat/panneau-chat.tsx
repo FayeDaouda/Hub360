@@ -5,6 +5,7 @@ import { ChevronLeft, Info, Plus, SendHorizonal, X } from 'lucide-react';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import type { CanalChat, EtatFluxChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { AvatarPersonne } from '@/components/avatar-personne';
+import { addDays, formatDayLongMonth, formatTime, toIsoDay, todayIso } from '@/lib/dates';
 
 type Props = {
   slug: string;
@@ -28,21 +29,14 @@ type Props = {
   onNouveauDm: (utilisateurId: string) => void;
 };
 
-function heure(iso: string): string {
-  return new Date(iso).toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+const heure = formatTime;
 
 function jour(iso: string): string {
-  const d = new Date(iso);
-  const auj = new Date();
-  const hier = new Date();
-  hier.setDate(auj.getDate() - 1);
-  if (d.toDateString() === auj.toDateString()) return "Aujourd'hui";
-  if (d.toDateString() === hier.toDateString()) return 'Hier';
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  const d = toIsoDay(new Date(iso));
+  const auj = todayIso();
+  if (d === auj) return "Aujourd'hui";
+  if (d === addDays(auj, -1)) return 'Hier';
+  return formatDayLongMonth(iso);
 }
 
 const LIBELLE_ETAT: Record<EtatFluxChat, string> = {

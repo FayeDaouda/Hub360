@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { CheckCheck, MessageCircleQuestion } from 'lucide-react';
 import { lireReporting, poserQuestionReporting, repondreQuestionReporting } from '@/lib/pilotage';
 import type { ReportingPilotage, VuePilotage } from '@/lib/types';
+import { formatDate, formatDayMonth, formatTime, toIsoDay } from '@/lib/dates';
 
-const dateHeure = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-};
+const dateHeure = (iso: string) => `${formatDate(toIsoDay(new Date(iso)))} à ${formatTime(iso)}`;
 const message = (e: unknown, repli: string) => (e instanceof Error && e.message ? e.message : repli);
 
 // Pastilles de suivi d'un reporting déposé (liste et fiche) : « Lu le » et
@@ -18,9 +16,7 @@ export function PastillesSuivi({ r }: { r: ReportingPilotage }) {
   return (
     <>
       {r.suivi.lecture && (
-        <span className="pill pill--succes">
-          Lu le {new Date(r.suivi.lecture.le).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
-        </span>
+        <span className="pill pill--succes">Lu le {formatDayMonth(toIsoDay(new Date(r.suivi.lecture.le)))}</span>
       )}
       {r.suivi.questionsOuvertes > 0 && <span className="pill pill--attention">Question en cours</span>}
     </>
