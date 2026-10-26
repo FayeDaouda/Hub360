@@ -12,11 +12,11 @@ Décisions structurantes : `docs/adr/`.
 | 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                              |
 | 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                              |
 | Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                              |
-| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | en cours (S0a)                            |
+| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a fait (PR #7) ; S0b en cours           |
 | Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | juste après S0 : conditionne le lancement |
 | Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                   |
 | Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés   |
-| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | à venir                                   |
+| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                        |
 
 ## Règles de la structuration
 
@@ -39,6 +39,10 @@ Décisions structurantes : `docs/adr/`.
 - **Types partagés** (S0c) : OpenAPI généré depuis le back, client typé pour
   le front ; `packages/domain` limité aux schémas de formulaires, au formatage
   et aux constantes, les règles métier restant calculées au back.
+  **Critère de fin de S0c** : les fonctions de dates, de montants et de texte
+  n'existent plus qu'en une version, dans le paquet partagé ; les copies de
+  `frontend/lib/` (`dates.ts`, `format.ts`, `text.ts`) et de
+  `backend/src/shared/` sont supprimées.
 
 ## Suites décidées, pas encore faites
 
@@ -52,7 +56,24 @@ Décisions structurantes : `docs/adr/`.
   pendant la structuration, puis remis en erreur.
 - **Tournée des rappels** : la découper par société (aujourd'hui en périmètre
   système, ADR 0001).
-- **Capture instable** : pastille « Projets » en mobile (lissage du texte).
+- **Captures instables** (S0b) : pastille « Projets » en mobile (lissage du
+  texte) ; filtre de routes du harnais qui abandonne une requête au lieu de la
+  retenter quand `route.fetch` échoue.
+- **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
+  nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
+  Changement de texte visible : lot à part, après la structuration.
+
+## Écart constaté, correction à valider
+
+- **Fuseau horaire** : la règle (glossaire) est l'affichage au fuseau de
+  Dakar partout. Une vingtaine d'affichages suivent encore le fuseau de
+  l'appareil : heures du chat, du journal d'audit, du journal des réglages,
+  du suivi des reportings et de la synthèse mensuelle, « calculé le » de la
+  rentabilité, dernière connexion du menu compte, « Bonjour » / « Bonsoir »,
+  année courante (codes projet, filtres, numéros), mois des graphiques,
+  `formatDayShortMonth`. Aucun écart pour un utilisateur à Dakar ; ailleurs,
+  heures et dates décalées. La correction change le comportement hors de
+  Dakar : PR à part, après accord.
 
 ## En attente d'une décision extérieure
 
