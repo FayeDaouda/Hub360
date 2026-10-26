@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { CircleAlert, CircleCheck, FileUp, LoaderCircle, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { CircleAlert, CircleCheck, FileUp, LoaderCircle } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { deposerBulletin } from '@/lib/rh';
@@ -10,6 +9,7 @@ import { deposerBulletin } from '@/lib/rh';
 import type { DossierPersonnel } from '@/lib/types';
 import { formatMonthYear } from '@/lib/dates';
 import { plural, stripAccents } from '@/lib/text';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 // `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
 // ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
@@ -74,12 +74,6 @@ export function DepotBulletins({
     [dossiers],
   );
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !envoi && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, envoi]);
-
   function ajouter(fichiers: FileList | null) {
     if (!fichiers) return;
     setLignes((l) => [
@@ -117,149 +111,135 @@ export function DepotBulletins({
     onFait();
   }
 
-  return createPortal(
-    <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div
-        className="modal db-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="db-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="db-titre">Bulletins du mois</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
-        <div className="modal-body db-corps">
-          <div className="db-outils">
-            <label className="field">
-              <span className="field-label">Mois de paie</span>
-              <input
-                className="field-input"
-                type="month"
-                value={mois}
-                disabled={envoi}
-                onChange={(e) => setMois(e.target.value)}
-              />
-            </label>
-            <label className={`btn-ghost db-choisir${envoi ? ' is-desactive' : ''}`}>
-              <FileUp size={16} aria-hidden /> Choisir les fichiers
-              <input
-                type="file"
-                accept={FICHIERS_ACCEPTES.rh}
-                multiple
-                className="sr-only"
-                disabled={envoi}
-                onChange={(e) => {
-                  ajouter(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-            </label>
-          </div>
-          <p className="dmd-note">
-            Nommez chaque fichier avec le matricule (ex. « GH-0005_{mois}.pdf ») : il est rattaché tout seul. Un fichier
-            reconnu par le prénom et le nom est « à confirmer » : vérifiez le salarié puis confirmez-le. Chaque salarié
-            est prévenu au dépôt.
-          </p>
+  return (
+    <Modal onClose={onClose} busy={envoi} portal className="db-modal" labelledBy="db-titre">
+      <ModalHeader title="Bulletins du mois" titleId="db-titre" onClose={onClose} closeDisabled={envoi} />
+      <div className="modal-body db-corps">
+        <div className="db-outils">
+          <label className="field">
+            <span className="field-label">Mois de paie</span>
+            <input
+              className="field-input"
+              type="month"
+              value={mois}
+              disabled={envoi}
+              onChange={(e) => setMois(e.target.value)}
+            />
+          </label>
+          <label className={`btn-ghost db-choisir${envoi ? ' is-desactive' : ''}`}>
+            <FileUp size={16} aria-hidden /> Choisir les fichiers
+            <input
+              type="file"
+              accept={FICHIERS_ACCEPTES.rh}
+              multiple
+              className="sr-only"
+              disabled={envoi}
+              onChange={(e) => {
+                ajouter(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </div>
+        <p className="dmd-note">
+          Nommez chaque fichier avec le matricule (ex. « GH-0005_{mois}.pdf ») : il est rattaché tout seul. Un fichier
+          reconnu par le prénom et le nom est « à confirmer » : vérifiez le salarié puis confirmez-le. Chaque salarié
+          est prévenu au dépôt.
+        </p>
 
-          {lignes.length > 0 && (
-            <>
-              <p className="db-bilan">
-                {plural(lignes.length, 'fichier')} · {pretes.length} prêt
-                {pretes.length > 1 ? 's' : ''} pour {formatMonthYear(mois)}
-                {nonReconnus > 0 && (
-                  <span className="db-alerte">
-                    {' '}
-                    · {nonReconnus} non reconnu{nonReconnus > 1 ? 's' : ''}
+        {lignes.length > 0 && (
+          <>
+            <p className="db-bilan">
+              {plural(lignes.length, 'fichier')} · {pretes.length} prêt
+              {pretes.length > 1 ? 's' : ''} pour {formatMonthYear(mois)}
+              {nonReconnus > 0 && (
+                <span className="db-alerte">
+                  {' '}
+                  · {nonReconnus} non reconnu{nonReconnus > 1 ? 's' : ''}
+                </span>
+              )}
+              {nbAConfirmer > 0 && <span className="db-alerte"> · {nbAConfirmer} à confirmer</span>}
+            </p>
+            <ul className="db-liste">
+              {lignes.map((l, i) => (
+                <li
+                  key={`${l.fichier.name}-${i}`}
+                  className="db-ligne"
+                  data-etat={!l.dossierId || doublon(l) || aConfirmer(l) ? 'alerte' : l.etat}
+                >
+                  <span className="db-fichier" title={l.fichier.name}>
+                    {l.fichier.name}
                   </span>
-                )}
-                {nbAConfirmer > 0 && <span className="db-alerte"> · {nbAConfirmer} à confirmer</span>}
-              </p>
-              <ul className="db-liste">
-                {lignes.map((l, i) => (
-                  <li
-                    key={`${l.fichier.name}-${i}`}
-                    className="db-ligne"
-                    data-etat={!l.dossierId || doublon(l) || aConfirmer(l) ? 'alerte' : l.etat}
+                  <select
+                    className="field-input db-salarie"
+                    value={l.dossierId ?? ''}
+                    disabled={envoi || l.etat === 'fait'}
+                    onChange={(e) =>
+                      setLignes((x) =>
+                        x.map((y, j) =>
+                          j === i ? { ...y, dossierId: e.target.value || null, par: 'manuel', confirme: true } : y,
+                        ),
+                      )
+                    }
+                    aria-label={`Salarié du fichier ${l.fichier.name}`}
                   >
-                    <span className="db-fichier" title={l.fichier.name}>
-                      {l.fichier.name}
-                    </span>
-                    <select
-                      className="field-input db-salarie"
-                      value={l.dossierId ?? ''}
-                      disabled={envoi || l.etat === 'fait'}
-                      onChange={(e) =>
-                        setLignes((x) =>
-                          x.map((y, j) =>
-                            j === i ? { ...y, dossierId: e.target.value || null, par: 'manuel', confirme: true } : y,
-                          ),
-                        )
-                      }
-                      aria-label={`Salarié du fichier ${l.fichier.name}`}
-                    >
-                      <option value="">— à rattacher —</option>
-                      {actifs.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.matricule} · {d.prenom} {d.nom}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="db-etat">
-                      {l.etat === 'envoi' ? (
-                        <LoaderCircle size={15} className="groupe-etat-roue" aria-label="Dépôt en cours" />
-                      ) : l.etat === 'fait' ? (
-                        <span className="pill pill--succes">
-                          <CircleCheck size={12} aria-hidden /> déposé
-                        </span>
-                      ) : l.etat === 'erreur' ? (
-                        <span className="pill pill--risque" title={l.message}>
-                          {l.message}
-                        </span>
-                      ) : !l.dossierId ? (
-                        <span className="pill pill--attention">non reconnu</span>
-                      ) : doublon(l) ? (
-                        <span className="pill pill--risque">
-                          <CircleAlert size={12} aria-hidden /> doublon
-                        </span>
-                      ) : aConfirmer(l) ? (
-                        <button
-                          type="button"
-                          className="btn-ghost btn-ghost--sm"
-                          disabled={envoi}
-                          onClick={() => confirmer(i)}
-                          title="Rattaché par le nom : vérifiez le salarié choisi"
-                        >
-                          Confirmer
-                        </button>
-                      ) : remplace(l) ? (
-                        <span className="pill pill--attention">remplace le bulletin déposé</span>
-                      ) : (
-                        <span className="pill pill--info">
-                          {l.par === 'matricule' ? 'par matricule' : l.par === 'nom' ? 'par nom' : 'choisi'}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+                    <option value="">— à rattacher —</option>
+                    {actifs.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.matricule} · {d.prenom} {d.nom}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="db-etat">
+                    {l.etat === 'envoi' ? (
+                      <LoaderCircle size={15} className="groupe-etat-roue" aria-label="Dépôt en cours" />
+                    ) : l.etat === 'fait' ? (
+                      <span className="pill pill--succes">
+                        <CircleCheck size={12} aria-hidden /> déposé
+                      </span>
+                    ) : l.etat === 'erreur' ? (
+                      <span className="pill pill--risque" title={l.message}>
+                        {l.message}
+                      </span>
+                    ) : !l.dossierId ? (
+                      <span className="pill pill--attention">non reconnu</span>
+                    ) : doublon(l) ? (
+                      <span className="pill pill--risque">
+                        <CircleAlert size={12} aria-hidden /> doublon
+                      </span>
+                    ) : aConfirmer(l) ? (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-ghost--sm"
+                        disabled={envoi}
+                        onClick={() => confirmer(i)}
+                        title="Rattaché par le nom : vérifiez le salarié choisi"
+                      >
+                        Confirmer
+                      </button>
+                    ) : remplace(l) ? (
+                      <span className="pill pill--attention">remplace le bulletin déposé</span>
+                    ) : (
+                      <span className="pill pill--info">
+                        {l.par === 'matricule' ? 'par matricule' : l.par === 'nom' ? 'par nom' : 'choisi'}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
 
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
-              {termine ? 'Fermer' : 'Annuler'}
-            </button>
-            <button type="button" className="btn-primary" disabled={envoi || pretes.length === 0} onClick={deposer}>
-              {envoi ? 'Dépôt en cours…' : `Déposer ${plural(pretes.length, 'bulletin')}`}
-            </button>
-          </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
+            {termine ? 'Fermer' : 'Annuler'}
+          </button>
+          <button type="button" className="btn-primary" disabled={envoi || pretes.length === 0} onClick={deposer}>
+            {envoi ? 'Dépôt en cours…' : `Déposer ${plural(pretes.length, 'bulletin')}`}
+          </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

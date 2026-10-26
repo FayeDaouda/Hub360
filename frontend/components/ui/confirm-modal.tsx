@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { Modal, ModalHeader } from './dialog';
 
 type Props = {
-  titre: string;
+  title: string;
   message: ReactNode;
-  confirmer?: string;
-  annuler?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
   danger?: boolean;
   // Rejeter la promesse (ou throw) garde la modale ouverte et affiche le
   // message d'erreur en ligne — utile pour un 409 serveur.
@@ -15,24 +15,24 @@ type Props = {
   onClose: () => void;
   // Au-dessus de tout (tiroirs, panneaux, autres modales) : confirmation
   // demandée depuis l'intérieur d'un panneau déjà ouvert.
-  auPremierPlan?: boolean;
+  onTop?: boolean;
   // Action impossible tant que le formulaire du message est incomplet.
-  confirmerDesactive?: boolean;
+  confirmDisabled?: boolean;
 };
 
 const FOCUSABLES =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function ConfirmModal({
-  titre,
+  title,
   message,
-  confirmer = 'Confirmer',
-  annuler = 'Annuler',
+  confirmLabel = 'Confirmer',
+  cancelLabel = 'Annuler',
   danger = false,
   onConfirm,
   onClose,
-  auPremierPlan = false,
-  confirmerDesactive = false,
+  onTop = false,
+  confirmDisabled = false,
 }: Props) {
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -49,6 +49,8 @@ export function ConfirmModal({
     return () => origine?.focus?.();
   }, [danger]);
 
+  // Échap à la capture, sans propagation : une confirmation ouverte depuis un
+  // tiroir ne ferme pas le tiroir avec elle.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && !enCours) {
@@ -87,46 +89,38 @@ export function ConfirmModal({
   }
 
   return (
-    <div
-      className={`modal-backdrop${auPremierPlan ? ' modal-backdrop--premier-plan' : ''}`}
-      onClick={() => !enCours && onClose()}
+    <Modal
+      onClose={onClose}
+      busy={enCours}
+      closeOnEscape={false}
+      backdropClassName={onTop ? 'modal-backdrop--premier-plan' : undefined}
+      className="modal--sm"
+      role="alertdialog"
+      labelledBy="confirm-titre"
+      describedBy="confirm-message"
+      boxRef={boite}
     >
-      <div
-        ref={boite}
-        className="modal modal--sm"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-titre"
-        aria-describedby="confirm-message"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="confirm-titre">{titre}</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose} disabled={enCours}>
-            <X size={18} />
+      <ModalHeader title={title} titleId="confirm-titre" onClose={onClose} closeDisabled={enCours} />
+      <div className="modal-body">
+        <p id="confirm-message" className="modal-message">
+          {message}
+        </p>
+        {erreur && <p className="field-erreur">{erreur}</p>}
+        <div className="modal-actions">
+          <button ref={boutonAnnuler} type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
+            {cancelLabel}
           </button>
-        </header>
-        <div className="modal-body">
-          <p id="confirm-message" className="modal-message">
-            {message}
-          </p>
-          {erreur && <p className="field-erreur">{erreur}</p>}
-          <div className="modal-actions">
-            <button ref={boutonAnnuler} type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
-              {annuler}
-            </button>
-            <button
-              ref={boutonConfirmer}
-              type="button"
-              className={danger ? 'btn-danger' : 'btn-primary'}
-              onClick={lancer}
-              disabled={enCours || confirmerDesactive}
-            >
-              {enCours ? '…' : confirmer}
-            </button>
-          </div>
+          <button
+            ref={boutonConfirmer}
+            type="button"
+            className={danger ? 'btn-danger' : 'btn-primary'}
+            onClick={lancer}
+            disabled={enCours || confirmDisabled}
+          >
+            {enCours ? '…' : confirmLabel}
+          </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

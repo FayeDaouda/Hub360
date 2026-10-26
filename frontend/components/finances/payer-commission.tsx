@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { useState } from 'react';
 import {
   LIBELLES_COORDONNEES,
   payerCommission,
@@ -12,6 +10,7 @@ import {
 import { formatAmount, formatNumber } from '@/lib/format';
 import { MODES_PAIEMENT, type ModePaiement } from '@/lib/types';
 import { formatDate, todayIso } from '@/lib/dates';
+import { CloseButton, Modal } from '@/components/ui/dialog';
 
 // Le CFO règle la commission d'un apporteur (revue COO, 22/10/2026) : date,
 // mode et référence ; les coordonnées saisies par le COO sont rappelées.
@@ -32,12 +31,6 @@ export function PayerCommission({
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  useEffect(() => {
-    const echap = (e: KeyboardEvent) => e.key === 'Escape' && !envoi && onClose();
-    window.addEventListener('keydown', echap);
-    return () => window.removeEventListener('keydown', echap);
-  }, [onClose, envoi]);
-
   async function payer() {
     setEnvoi(true);
     setErreur(null);
@@ -55,111 +48,100 @@ export function PayerCommission({
     ? (Object.keys(LIBELLES_COORDONNEES) as (keyof CoordonneesApporteur)[]).filter((k) => c.coordonnees![k])
     : [];
 
-  return createPortal(
-    <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pc-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="pc-titre">Commission · {c.apporteur}</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
-            <X size={18} />
+  return (
+    <Modal onClose={onClose} busy={envoi} portal labelledBy="pc-titre">
+      <header className="modal-header">
+        <h2 id="pc-titre">Commission · {c.apporteur}</h2>
+        <CloseButton onClick={onClose} disabled={envoi} />
+      </header>
+      <div className="modal-body da-corps">
+        <dl className="da-resume">
+          <div>
+            <dt>Montant</dt>
+            <dd>
+              <strong>{formatAmount(c.montant)}</strong>
+            </dd>
+          </div>
+          <div>
+            <dt>Calcul</dt>
+            <dd>
+              {formatNumber(c.taux)} % de {formatAmount(c.baseHt)} HT{' '}
+              {c.source === 'encaissement' ? 'encaissés' : 'du contrat signé'}
+            </dd>
+          </div>
+          <div>
+            <dt>Dossier</dt>
+            <dd>
+              {c.code} · {c.client}
+            </dd>
+          </div>
+          <div>
+            <dt>Exigible</dt>
+            <dd>le {formatDate(c.exigibleLe)}</dd>
+          </div>
+          <div>
+            <dt>Coordonnées</dt>
+            <dd>
+              {coordonnees.length ? (
+                coordonnees.map((k) => (
+                  <span key={k} className="pc-coordonnee">
+                    {LIBELLES_COORDONNEES[k]} : {c.coordonnees![k]}
+                  </span>
+                ))
+              ) : (
+                <span className="cell-sub">non renseignées par le COO</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+        <div className="pc-champs">
+          <label className="field">
+            <span className="field-label">Payée le</span>
+            <input
+              className="field-input"
+              type="date"
+              value={date}
+              max={todayIso()}
+              disabled={envoi}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">Mode</span>
+            <select
+              className="field-input"
+              value={mode}
+              disabled={envoi}
+              onChange={(e) => setMode(e.target.value as ModePaiement)}
+            >
+              {(Object.keys(MODES_PAIEMENT) as ModePaiement[]).map((m) => (
+                <option key={m} value={m}>
+                  {MODES_PAIEMENT[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">Référence (facultatif)</span>
+            <input
+              className="field-input"
+              maxLength={120}
+              value={reference}
+              disabled={envoi}
+              onChange={(e) => setReference(e.target.value)}
+            />
+          </label>
+        </div>
+        {erreur && <p className="field-erreur">{erreur}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
+            Annuler
           </button>
-        </header>
-        <div className="modal-body da-corps">
-          <dl className="da-resume">
-            <div>
-              <dt>Montant</dt>
-              <dd>
-                <strong>{formatAmount(c.montant)}</strong>
-              </dd>
-            </div>
-            <div>
-              <dt>Calcul</dt>
-              <dd>
-                {formatNumber(c.taux)} % de {formatAmount(c.baseHt)} HT{' '}
-                {c.source === 'encaissement' ? 'encaissés' : 'du contrat signé'}
-              </dd>
-            </div>
-            <div>
-              <dt>Dossier</dt>
-              <dd>
-                {c.code} · {c.client}
-              </dd>
-            </div>
-            <div>
-              <dt>Exigible</dt>
-              <dd>le {formatDate(c.exigibleLe)}</dd>
-            </div>
-            <div>
-              <dt>Coordonnées</dt>
-              <dd>
-                {coordonnees.length ? (
-                  coordonnees.map((k) => (
-                    <span key={k} className="pc-coordonnee">
-                      {LIBELLES_COORDONNEES[k]} : {c.coordonnees![k]}
-                    </span>
-                  ))
-                ) : (
-                  <span className="cell-sub">non renseignées par le COO</span>
-                )}
-              </dd>
-            </div>
-          </dl>
-          <div className="pc-champs">
-            <label className="field">
-              <span className="field-label">Payée le</span>
-              <input
-                className="field-input"
-                type="date"
-                value={date}
-                max={todayIso()}
-                disabled={envoi}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">Mode</span>
-              <select
-                className="field-input"
-                value={mode}
-                disabled={envoi}
-                onChange={(e) => setMode(e.target.value as ModePaiement)}
-              >
-                {(Object.keys(MODES_PAIEMENT) as ModePaiement[]).map((m) => (
-                  <option key={m} value={m}>
-                    {MODES_PAIEMENT[m]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Référence (facultatif)</span>
-              <input
-                className="field-input"
-                maxLength={120}
-                value={reference}
-                disabled={envoi}
-                onChange={(e) => setReference(e.target.value)}
-              />
-            </label>
-          </div>
-          {erreur && <p className="field-erreur">{erreur}</p>}
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
-              Annuler
-            </button>
-            <button type="button" className="btn-primary" disabled={envoi || !date} onClick={payer}>
-              {envoi ? 'Enregistrement…' : 'Marquer payée'}
-            </button>
-          </div>
+          <button type="button" className="btn-primary" disabled={envoi || !date} onClick={payer}>
+            {envoi ? 'Enregistrement…' : 'Marquer payée'}
+          </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

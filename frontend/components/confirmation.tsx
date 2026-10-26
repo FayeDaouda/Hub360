@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 
 // Confirmation avant une action irréversible, dans la modale de l'app (plus
 // de window.confirm du navigateur : non stylée, sans titre, bloquante, et
@@ -45,12 +45,12 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
       {children}
       {enCours && (
         <ConfirmModal
-          titre={enCours.titre}
+          title={enCours.titre}
           message={enCours.message}
-          confirmer={enCours.confirmer}
-          annuler={enCours.annuler}
+          confirmLabel={enCours.confirmer}
+          cancelLabel={enCours.annuler}
           danger={enCours.danger}
-          auPremierPlan
+          onTop
           onConfirm={() => repondre(true)}
           onClose={() => repondre(false)}
         />

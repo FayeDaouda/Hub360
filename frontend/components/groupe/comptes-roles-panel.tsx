@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck, X } from 'lucide-react';
+import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { NouveauCompteModal, ResultatInvitation } from '@/components/groupe/nouveau-compte-modal';
 import {
@@ -23,6 +22,7 @@ import type {
   StatutCompteGroupe,
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 const LIBELLE_STATUT: Record<StatutCompteGroupe, string> = {
   actif: 'Actif',
@@ -381,34 +381,25 @@ function ActionsCompte({
         </button>
       )}
       {erreur && <span className="field-erreur">{erreur}</span>}
-      {invitation &&
-        createPortal(
-          <div className="modal-backdrop" onClick={() => setInvitation(null)}>
-            <div
-              className="modal modal--sm"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Invitation"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <header className="modal-header">
-                <h2>Invitation renvoyée</h2>
-                <button type="button" className="modal-close" aria-label="Fermer" onClick={() => setInvitation(null)}>
-                  <X size={18} />
-                </button>
-              </header>
-              <div className="modal-body">
-                <ResultatInvitation
-                  {...invitation}
-                  nom={`${compte.prenom} ${compte.nom}`}
-                  email={compte.email}
-                  onClose={() => setInvitation(null)}
-                />
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {invitation && (
+        <Modal
+          onClose={() => setInvitation(null)}
+          closeOnEscape={false}
+          portal
+          className="modal--sm"
+          label="Invitation"
+        >
+          <ModalHeader title="Invitation renvoyée" onClose={() => setInvitation(null)} />
+          <div className="modal-body">
+            <ResultatInvitation
+              {...invitation}
+              nom={`${compte.prenom} ${compte.nom}`}
+              email={compte.email}
+              onClose={() => setInvitation(null)}
+            />
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

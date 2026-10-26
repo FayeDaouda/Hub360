@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { FileSpreadsheet, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { FileSpreadsheet } from 'lucide-react';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { formatAmount } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale } from '@/lib/types';
 import { formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 type Vente = { f: FactureCentrale; origine: string | null };
 type Encaissement = { f: FactureCentrale; date: string; montant: number; mode: string | null; reference: string };
@@ -27,12 +27,6 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
     return [...m].sort().reverse();
   }, [factures]);
   const [mois, setMois] = useState(moisDispo[0] ?? new Date().toISOString().slice(0, 7));
-
-  useEffect(() => {
-    const echap = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', echap);
-    return () => window.removeEventListener('keydown', echap);
-  }, [onClose]);
 
   const { ventes, encaissements } = useMemo(() => {
     const parId = new Map(factures.map((f) => [f.id, f]));
@@ -98,70 +92,56 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
     );
   }
 
-  return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal exc-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="exc-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="exc-titre">Export comptable</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
-        <div className="modal-body exc-corps">
-          <p className="dmd-note">
-            Journaux du mois au format Excel, sans plan de comptes : à remettre à la personne qui prépare les comptes
-            annuels. Le format s’adaptera à son logiciel quand il sera connu.
-          </p>
-          <label className="field">
-            <span className="field-label">Mois</span>
-            <select className="field-input" value={mois} onChange={(e) => setMois(e.target.value)}>
-              {moisDispo.length === 0 && <option value={mois}>{formatMonthYear(mois)}</option>}
-              {moisDispo.map((m) => (
-                <option key={m} value={m}>
-                  {formatMonthYear(m)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="exc-journaux">
-            <div className="exc-journal">
-              <p className="field-label">Journal des ventes</p>
-              <p className="exc-chiffres">
-                {plural(ventes.length, 'pièce')} · HT {formatAmount(total(ventes, 'montantHt'))} · TVA{' '}
-                {formatAmount(total(ventes, 'montantTva'))} · TTC {formatAmount(total(ventes, 'montantTtc'))}
-              </p>
-              <button type="button" className="btn-ghost" disabled={!ventes.length} onClick={exporterVentes}>
-                <FileSpreadsheet size={15} aria-hidden /> Télécharger
-              </button>
-            </div>
-            <div className="exc-journal">
-              <p className="field-label">Journal des encaissements</p>
-              <p className="exc-chiffres">
-                {plural(encaissements.length, 'encaissement')} · {formatAmount(totalEncaisse)}
-              </p>
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={!encaissements.length}
-                onClick={exporterEncaissements}
-              >
-                <FileSpreadsheet size={15} aria-hidden /> Télécharger
-              </button>
-            </div>
+  return (
+    <Modal onClose={onClose} portal className="exc-modal" labelledBy="exc-titre">
+      <ModalHeader title="Export comptable" titleId="exc-titre" onClose={onClose} />
+      <div className="modal-body exc-corps">
+        <p className="dmd-note">
+          Journaux du mois au format Excel, sans plan de comptes : à remettre à la personne qui prépare les comptes
+          annuels. Le format s’adaptera à son logiciel quand il sera connu.
+        </p>
+        <label className="field">
+          <span className="field-label">Mois</span>
+          <select className="field-input" value={mois} onChange={(e) => setMois(e.target.value)}>
+            {moisDispo.length === 0 && <option value={mois}>{formatMonthYear(mois)}</option>}
+            {moisDispo.map((m) => (
+              <option key={m} value={m}>
+                {formatMonthYear(m)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="exc-journaux">
+          <div className="exc-journal">
+            <p className="field-label">Journal des ventes</p>
+            <p className="exc-chiffres">
+              {plural(ventes.length, 'pièce')} · HT {formatAmount(total(ventes, 'montantHt'))} · TVA{' '}
+              {formatAmount(total(ventes, 'montantTva'))} · TTC {formatAmount(total(ventes, 'montantTtc'))}
+            </p>
+            <button type="button" className="btn-ghost" disabled={!ventes.length} onClick={exporterVentes}>
+              <FileSpreadsheet size={15} aria-hidden /> Télécharger
+            </button>
           </div>
-          <p className="dmd-note">
-            TVA collectée ici = TVA des factures émises dans le mois. Si elle est due à l’encaissement, le journal des
-            encaissements donne la base.
-          </p>
+          <div className="exc-journal">
+            <p className="field-label">Journal des encaissements</p>
+            <p className="exc-chiffres">
+              {plural(encaissements.length, 'encaissement')} · {formatAmount(totalEncaisse)}
+            </p>
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={!encaissements.length}
+              onClick={exporterEncaissements}
+            >
+              <FileSpreadsheet size={15} aria-hidden /> Télécharger
+            </button>
+          </div>
         </div>
+        <p className="dmd-note">
+          TVA collectée ici = TVA des factures émises dans le mois. Si elle est due à l’encaissement, le journal des
+          encaissements donne la base.
+        </p>
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

@@ -15,7 +15,6 @@ import {
   UserPlus,
   Users,
   Wallet,
-  X,
   type LucideIcon,
 } from 'lucide-react';
 import { KpiStrip } from '@/components/admin/kpi-strip';
@@ -63,6 +62,7 @@ import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
 import { addMonths, formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { CloseButton, Modal } from '@/components/ui/dialog';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -756,374 +756,363 @@ function FicheDossier({
   );
 
   return (
-    <div className="modal-backdrop rh-tiroir" onClick={onClose}>
-      <div
-        className="modal rh-fiche"
-        role="dialog"
-        aria-modal="true"
-        aria-label={titre}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <div>
-            <span className="po-kicker">Dossier du personnel{dossier ? ` · ${dossier.matricule}` : ''}</span>
-            <h2>{titre}</h2>
-            <span className="cell-sub">{sousTitre}</span>
-          </div>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
+    <Modal onClose={onClose} closeOnEscape={false} backdropClassName="rh-tiroir" className="rh-fiche" label={titre}>
+      <header className="modal-header">
+        <div>
+          <span className="po-kicker">Dossier du personnel{dossier ? ` · ${dossier.matricule}` : ''}</span>
+          <h2>{titre}</h2>
+          <span className="cell-sub">{sousTitre}</span>
+        </div>
+        <CloseButton onClick={onClose} />
+      </header>
 
-        <div className="modal-body">
-          {dossier && (
-            <div className="rh-completude">
-              <span>Complétude du dossier</span>
-              <span className="progress">
-                <span className="progress-track rh-completude-piste">
-                  <span
-                    className={`progress-fill progress-fill--${dossier.completude.pourcentage === 100 ? 'succes' : 'attention'}`}
-                    style={{ width: `${dossier.completude.pourcentage}%` }}
-                  />
-                </span>
-                {dossier.completude.pourcentage} %
+      <div className="modal-body">
+        {dossier && (
+          <div className="rh-completude">
+            <span>Complétude du dossier</span>
+            <span className="progress">
+              <span className="progress-track rh-completude-piste">
+                <span
+                  className={`progress-fill progress-fill--${dossier.completude.pourcentage === 100 ? 'succes' : 'attention'}`}
+                  style={{ width: `${dossier.completude.pourcentage}%` }}
+                />
               </span>
-              {dossier.archiveLe && <span className="pill pill--neutre">Archivé</span>}
+              {dossier.completude.pourcentage} %
+            </span>
+            {dossier.archiveLe && <span className="pill pill--neutre">Archivé</span>}
+          </div>
+        )}
+        <p className="rh-note">
+          Nouvel arrivant : la carte de mission doit être validée (budget CFO, décision d’embauche) avant l’affectation
+          à une cellule (manuel §3.3).
+        </p>
+
+        <fieldset disabled={!ecriture} className="fieldset-nu">
+          <h3 className="rh-section">Affectation et contrat</h3>
+          <div className="rh-grille">
+            <label className="field">
+              <span className="field-label">Société</span>
+              <select className="field-input" value={form.societeId ?? ''} onChange={maj('societeId')}>
+                <option value="">À choisir</option>
+                {options.societes.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nom}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {champ('poste', 'Poste', { placeholder: 'ex. Architecte' })}
+            <label className="field">
+              <span className="field-label">Type de contrat</span>
+              <select className="field-input" value={form.typeContrat} onChange={maj('typeContrat')}>
+                {Object.entries(LIBELLE_CONTRAT).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {champ('dateEntree', 'Date d’entrée', { type: 'date' })}
+            {form.typeContrat !== 'cdi' && champ('dateFin', 'Fin (CDD, stage)', { type: 'date' })}
+            {champ('finEssai', 'Fin de la période d’essai', { type: 'date' })}
+            <label className="field">
+              <span className="field-label">Fiche d’équipe liée</span>
+              <select className="field-input" value={form.collaborateurId ?? ''} onChange={maj('collaborateurId')}>
+                <option value="">Aucune (à affecter par la direction)</option>
+                {dossier?.collaborateurId && (
+                  <option value={dossier.collaborateurId}>{dossier.cellule ?? 'Fiche actuelle'}</option>
+                )}
+                {collabs.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.libelle}
+                    {c.cellule ? ` · ${c.cellule}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Compte HUB (Mon espace)</span>
+              {form.collaborateurId ? (
+                <input
+                  className="field-input"
+                  disabled
+                  value={
+                    dossier?.compte?.viaFiche && dossier.collaborateurId === form.collaborateurId
+                      ? `${dossier.compte.libelle} · via la fiche d’équipe`
+                      : 'Celui de la fiche d’équipe'
+                  }
+                />
+              ) : (
+                <select className="field-input" value={form.utilisateurId ?? ''} onChange={maj('utilisateurId')}>
+                  <option value="">Aucun</option>
+                  {dossier?.compte && !dossier.compte.viaFiche && (
+                    <option value={dossier.compte.id}>
+                      {dossier.compte.libelle} · {dossier.compte.email}
+                    </option>
+                  )}
+                  {options.comptesSansDossier.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.libelle} · {c.email}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+          </div>
+
+          <h3 className="rh-section">Salaire</h3>
+          {dossier ? (
+            <SalaireDossier slug={slug} dossier={dossier} ecriture={ecriture} />
+          ) : (
+            <p className="rh-note">
+              Le salaire d’entrée se propose une fois le dossier créé ; il entre en vigueur après validation du CFO.
+            </p>
+          )}
+
+          <h3 className="rh-section">Identité</h3>
+          <div className="rh-grille">
+            {champ('prenom', 'Prénom(s)')}
+            {champ('nom', 'Nom')}
+            {champ('dateNaissance', 'Date de naissance', { type: 'date' })}
+            {champ('lieuNaissance', 'Lieu de naissance')}
+            {champ('nationalite', 'Nationalité')}
+            {champ('numeroPiece', 'N° CNI ou passeport')}
+            {champ('expirationPiece', 'Expiration de la pièce', { type: 'date' })}
+          </div>
+
+          <h3 className="rh-section">Contact, paie, prévoyance</h3>
+          {dossier?.paiementDemandeMode && (
+            <div className="rh-paiement-demande" role="status">
+              <span>
+                <strong>Changement de moyen de paiement demandé</strong> le {formatDate(dossier.paiementDemandeLe, '')}{' '}
+                : {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]} · {dossier.paiementDemandeCoordonnees}
+              </span>
+              {ecriture && (
+                <span className="dmd-actions">
+                  <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => decider(false)}>
+                    Refuser
+                  </button>
+                  <button type="button" className="btn-primary btn-primary--sm" onClick={() => decider(true)}>
+                    Valider pour la paie
+                  </button>
+                </span>
+              )}
             </div>
           )}
-          <p className="rh-note">
-            Nouvel arrivant : la carte de mission doit être validée (budget CFO, décision d’embauche) avant
-            l’affectation à une cellule (manuel §3.3).
-          </p>
+          <div className="rh-grille">
+            {champ('telephone', 'Téléphone', { type: 'tel' })}
+            {champ('emailPro', 'E-mail professionnel', { type: 'email', placeholder: 'prenom.nom@…' })}
+            {champ('contactUrgence', 'Contact d’urgence')}
+            <label className="field">
+              <span className="field-label">Paiement du salaire</span>
+              <select className="field-input" value={form.modePaiement} onChange={maj('modePaiement')}>
+                <option value="virement">Virement</option>
+                <option value="wave">Wave</option>
+                <option value="orange_money">Orange Money</option>
+              </select>
+            </label>
+            {champ('coordonneesPaiement', 'RIB ou numéro')}
+            {champ('numeroIpm', 'N° adhérent IPM / assurance')}
+            {champ('visiteMedicale', 'Prochaine visite médicale', { type: 'date' })}
+          </div>
 
-          <fieldset disabled={!ecriture} className="fieldset-nu">
-            <h3 className="rh-section">Affectation et contrat</h3>
-            <div className="rh-grille">
-              <label className="field">
-                <span className="field-label">Société</span>
-                <select className="field-input" value={form.societeId ?? ''} onChange={maj('societeId')}>
-                  <option value="">À choisir</option>
-                  {options.societes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nom}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {champ('poste', 'Poste', { placeholder: 'ex. Architecte' })}
-              <label className="field">
-                <span className="field-label">Type de contrat</span>
-                <select className="field-input" value={form.typeContrat} onChange={maj('typeContrat')}>
-                  {Object.entries(LIBELLE_CONTRAT).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {champ('dateEntree', 'Date d’entrée', { type: 'date' })}
-              {form.typeContrat !== 'cdi' && champ('dateFin', 'Fin (CDD, stage)', { type: 'date' })}
-              {champ('finEssai', 'Fin de la période d’essai', { type: 'date' })}
-              <label className="field">
-                <span className="field-label">Fiche d’équipe liée</span>
-                <select className="field-input" value={form.collaborateurId ?? ''} onChange={maj('collaborateurId')}>
-                  <option value="">Aucune (à affecter par la direction)</option>
-                  {dossier?.collaborateurId && (
-                    <option value={dossier.collaborateurId}>{dossier.cellule ?? 'Fiche actuelle'}</option>
-                  )}
-                  {collabs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.libelle}
-                      {c.cellule ? ` · ${c.cellule}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span className="field-label">Compte HUB (Mon espace)</span>
-                {form.collaborateurId ? (
-                  <input
-                    className="field-input"
-                    disabled
-                    value={
-                      dossier?.compte?.viaFiche && dossier.collaborateurId === form.collaborateurId
-                        ? `${dossier.compte.libelle} · via la fiche d’équipe`
-                        : 'Celui de la fiche d’équipe'
-                    }
-                  />
-                ) : (
-                  <select className="field-input" value={form.utilisateurId ?? ''} onChange={maj('utilisateurId')}>
-                    <option value="">Aucun</option>
-                    {dossier?.compte && !dossier.compte.viaFiche && (
-                      <option value={dossier.compte.id}>
-                        {dossier.compte.libelle} · {dossier.compte.email}
-                      </option>
-                    )}
-                    {options.comptesSansDossier.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.libelle} · {c.email}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </label>
-            </div>
+          <h3 className="rh-section">Carte de mission · nouvel arrivant</h3>
+          <div className="rh-grille rh-grille--2">
+            {zone('missionResultat', 'Résultat attendu')}
+            {zone('missionLivrables', 'Livrables')}
+            {zone('missionKpi', 'KPI')}
+            {zone('missionSignalAlerte', 'Signal d’alerte')}
+          </div>
+        </fieldset>
 
-            <h3 className="rh-section">Salaire</h3>
-            {dossier ? (
-              <SalaireDossier slug={slug} dossier={dossier} ecriture={ecriture} />
-            ) : (
-              <p className="rh-note">
-                Le salaire d’entrée se propose une fois le dossier créé ; il entre en vigueur après validation du CFO.
-              </p>
-            )}
-
-            <h3 className="rh-section">Identité</h3>
-            <div className="rh-grille">
-              {champ('prenom', 'Prénom(s)')}
-              {champ('nom', 'Nom')}
-              {champ('dateNaissance', 'Date de naissance', { type: 'date' })}
-              {champ('lieuNaissance', 'Lieu de naissance')}
-              {champ('nationalite', 'Nationalité')}
-              {champ('numeroPiece', 'N° CNI ou passeport')}
-              {champ('expirationPiece', 'Expiration de la pièce', { type: 'date' })}
-            </div>
-
-            <h3 className="rh-section">Contact, paie, prévoyance</h3>
-            {dossier?.paiementDemandeMode && (
-              <div className="rh-paiement-demande" role="status">
-                <span>
-                  <strong>Changement de moyen de paiement demandé</strong> le{' '}
-                  {formatDate(dossier.paiementDemandeLe, '')} : {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]}{' '}
-                  · {dossier.paiementDemandeCoordonnees}
-                </span>
-                {ecriture && (
-                  <span className="dmd-actions">
-                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => decider(false)}>
-                      Refuser
-                    </button>
-                    <button type="button" className="btn-primary btn-primary--sm" onClick={() => decider(true)}>
-                      Valider pour la paie
-                    </button>
+        <h3 className="rh-section">Pièces jointes</h3>
+        {!dossier ? (
+          <p className="cell-sub">Enregistrez le dossier pour joindre les pièces.</p>
+        ) : (
+          <ul className="rh-pieces">
+            {PIECES.map((p) => {
+              const piece = dossier.pieces.find((x) => x.type === p.type);
+              return (
+                <li key={p.type} className="rh-piece">
+                  <span className={`rh-piece-point${piece?.nom ? ' est-joint' : ''}`} aria-hidden />
+                  <span className="rh-piece-libelle">
+                    <strong>{p.libelle}</strong>
+                    {p.aide && <span className="cell-sub">{p.aide}</span>}
                   </span>
-                )}
+                  {piece?.nom ? (
+                    <button type="button" className="lien-inline" onClick={() => ouvrirPiece(p.type)}>
+                      {piece.nom}
+                    </button>
+                  ) : (
+                    <span className="rh-manquant">manquant</span>
+                  )}
+                  {ecriture && (
+                    <label className="btn-ghost btn-ghost--sm">
+                      <Paperclip size={14} aria-hidden />
+                      {piece?.nom ? 'Remplacer' : 'Joindre'}
+                      <input
+                        type="file"
+                        accept={FICHIERS_ACCEPTES.rh}
+                        hidden
+                        onChange={(e) => joindre(p.type, e.target.files?.[0])}
+                      />
+                    </label>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <h3 className="rh-section">Bulletins de paie</h3>
+        {!dossier ? (
+          <p className="cell-sub">Enregistrez le dossier pour déposer les bulletins.</p>
+        ) : (
+          <>
+            {ecriture && (
+              <div className="rh-bulletin-depot">
+                <label className="field">
+                  <span className="field-label">Mois de paie</span>
+                  <input
+                    type="month"
+                    className="field-input"
+                    placeholder="AAAA-MM"
+                    max={new Date().toISOString().slice(0, 7)}
+                    value={moisBulletin}
+                    onChange={(e) => setMoisBulletin(e.target.value)}
+                  />
+                </label>
+                <label className={`btn-ghost btn-ghost--sm${moisBulletin ? '' : ' is-disabled'}`}>
+                  <Paperclip size={14} aria-hidden />
+                  {dossier.bulletins.some((b) => b.mois === moisBulletin)
+                    ? 'Remplacer le bulletin'
+                    : 'Déposer le bulletin'}
+                  <input
+                    type="file"
+                    accept={FICHIERS_ACCEPTES.rh}
+                    hidden
+                    disabled={!moisBulletin}
+                    onChange={(e) => {
+                      deposer(e.target.files?.[0]);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
               </div>
             )}
-            <div className="rh-grille">
-              {champ('telephone', 'Téléphone', { type: 'tel' })}
-              {champ('emailPro', 'E-mail professionnel', { type: 'email', placeholder: 'prenom.nom@…' })}
-              {champ('contactUrgence', 'Contact d’urgence')}
-              <label className="field">
-                <span className="field-label">Paiement du salaire</span>
-                <select className="field-input" value={form.modePaiement} onChange={maj('modePaiement')}>
-                  <option value="virement">Virement</option>
-                  <option value="wave">Wave</option>
-                  <option value="orange_money">Orange Money</option>
-                </select>
-              </label>
-              {champ('coordonneesPaiement', 'RIB ou numéro')}
-              {champ('numeroIpm', 'N° adhérent IPM / assurance')}
-              {champ('visiteMedicale', 'Prochaine visite médicale', { type: 'date' })}
-            </div>
-
-            <h3 className="rh-section">Carte de mission · nouvel arrivant</h3>
-            <div className="rh-grille rh-grille--2">
-              {zone('missionResultat', 'Résultat attendu')}
-              {zone('missionLivrables', 'Livrables')}
-              {zone('missionKpi', 'KPI')}
-              {zone('missionSignalAlerte', 'Signal d’alerte')}
-            </div>
-          </fieldset>
-
-          <h3 className="rh-section">Pièces jointes</h3>
-          {!dossier ? (
-            <p className="cell-sub">Enregistrez le dossier pour joindre les pièces.</p>
-          ) : (
-            <ul className="rh-pieces">
-              {PIECES.map((p) => {
-                const piece = dossier.pieces.find((x) => x.type === p.type);
-                return (
-                  <li key={p.type} className="rh-piece">
-                    <span className={`rh-piece-point${piece?.nom ? ' est-joint' : ''}`} aria-hidden />
+            {dossier.bulletins.length === 0 ? (
+              <p className="cell-sub">Aucun bulletin déposé.</p>
+            ) : (
+              <ul className="rh-pieces">
+                {dossier.bulletins.map((b) => (
+                  <li key={b.mois} className="rh-piece">
+                    <span className="rh-piece-point est-joint" aria-hidden />
                     <span className="rh-piece-libelle">
-                      <strong>{p.libelle}</strong>
-                      {p.aide && <span className="cell-sub">{p.aide}</span>}
+                      <strong className="mes-mois">{formatMonthYear(b.mois)}</strong>
+                      <span className="cell-sub">déposé le {formatDate(b.deposeLe)}</span>
                     </span>
-                    {piece?.nom ? (
-                      <button type="button" className="lien-inline" onClick={() => ouvrirPiece(p.type)}>
-                        {piece.nom}
-                      </button>
-                    ) : (
-                      <span className="rh-manquant">manquant</span>
-                    )}
+                    <button
+                      type="button"
+                      className="lien-inline"
+                      onClick={() =>
+                        getBulletin(slug, dossier.id, b.mois)
+                          .then(telechargerFichier)
+                          .catch((e) => setErreur(messageErreur(e, 'Téléchargement impossible.')))
+                      }
+                    >
+                      {b.nom}
+                    </button>
                     {ecriture && (
-                      <label className="btn-ghost btn-ghost--sm">
-                        <Paperclip size={14} aria-hidden />
-                        {piece?.nom ? 'Remplacer' : 'Joindre'}
-                        <input
-                          type="file"
-                          accept={FICHIERS_ACCEPTES.rh}
-                          hidden
-                          onChange={(e) => joindre(p.type, e.target.files?.[0])}
-                        />
-                      </label>
+                      <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => retirer(b.mois)}>
+                        Retirer
+                      </button>
                     )}
                   </li>
-                );
-              })}
-            </ul>
-          )}
+                ))}
+              </ul>
+            )}
+            <p className="cell-sub">
+              Le salarié retrouve ses bulletins dans Mon espace · Mes documents. Un nouveau dépôt sur le même mois
+              remplace le précédent.
+            </p>
+          </>
+        )}
+        <p className="cell-sub">Un dossier n’est jamais supprimé : en cas de départ, il est archivé.</p>
 
-          <h3 className="rh-section">Bulletins de paie</h3>
-          {!dossier ? (
-            <p className="cell-sub">Enregistrez le dossier pour déposer les bulletins.</p>
-          ) : (
-            <>
-              {ecriture && (
-                <div className="rh-bulletin-depot">
-                  <label className="field">
-                    <span className="field-label">Mois de paie</span>
-                    <input
-                      type="month"
-                      className="field-input"
-                      placeholder="AAAA-MM"
-                      max={new Date().toISOString().slice(0, 7)}
-                      value={moisBulletin}
-                      onChange={(e) => setMoisBulletin(e.target.value)}
-                    />
-                  </label>
-                  <label className={`btn-ghost btn-ghost--sm${moisBulletin ? '' : ' is-disabled'}`}>
-                    <Paperclip size={14} aria-hidden />
-                    {dossier.bulletins.some((b) => b.mois === moisBulletin)
-                      ? 'Remplacer le bulletin'
-                      : 'Déposer le bulletin'}
-                    <input
-                      type="file"
-                      accept={FICHIERS_ACCEPTES.rh}
-                      hidden
-                      disabled={!moisBulletin}
-                      onChange={(e) => {
-                        deposer(e.target.files?.[0]);
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                </div>
-              )}
-              {dossier.bulletins.length === 0 ? (
-                <p className="cell-sub">Aucun bulletin déposé.</p>
-              ) : (
-                <ul className="rh-pieces">
-                  {dossier.bulletins.map((b) => (
-                    <li key={b.mois} className="rh-piece">
-                      <span className="rh-piece-point est-joint" aria-hidden />
-                      <span className="rh-piece-libelle">
-                        <strong className="mes-mois">{formatMonthYear(b.mois)}</strong>
-                        <span className="cell-sub">déposé le {formatDate(b.deposeLe)}</span>
-                      </span>
-                      <button
-                        type="button"
-                        className="lien-inline"
-                        onClick={() =>
-                          getBulletin(slug, dossier.id, b.mois)
-                            .then(telechargerFichier)
-                            .catch((e) => setErreur(messageErreur(e, 'Téléchargement impossible.')))
-                        }
-                      >
-                        {b.nom}
-                      </button>
-                      {ecriture && (
-                        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => retirer(b.mois)}>
-                          Retirer
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="cell-sub">
-                Le salarié retrouve ses bulletins dans Mon espace · Mes documents. Un nouveau dépôt sur le même mois
-                remplace le précédent.
+        {depart && (
+          <>
+            <h3 className="rh-section">Départ · {plural(depart.taches.length, 'tâche')} de projet à confier</h3>
+            <p className="rh-note">
+              Le départ n’est enregistré qu’une fois chaque tâche confiée à un collègue de la société. Chaque nouveau
+              titulaire est prévenu ; les échéances ne bougent pas.
+            </p>
+            {depart.candidats.length === 0 && (
+              <p className="field-erreur">
+                Aucun collègue en poste dans cette société : créez d’abord la fiche du remplaçant.
               </p>
-            </>
-          )}
-          <p className="cell-sub">Un dossier n’est jamais supprimé : en cas de départ, il est archivé.</p>
-
-          {depart && (
-            <>
-              <h3 className="rh-section">Départ · {plural(depart.taches.length, 'tâche')} de projet à confier</h3>
-              <p className="rh-note">
-                Le départ n’est enregistré qu’une fois chaque tâche confiée à un collègue de la société. Chaque nouveau
-                titulaire est prévenu ; les échéances ne bougent pas.
-              </p>
-              {depart.candidats.length === 0 && (
-                <p className="field-erreur">
-                  Aucun collègue en poste dans cette société : créez d’abord la fiche du remplaçant.
-                </p>
-              )}
-              {depart.taches.map((t) => (
-                <label key={t.id} className="field">
-                  <span className="field-label">
-                    {t.projet} · {t.carte} · {t.libelle}
-                    {t.finLe && ` · échéance ${formatDate(t.finLe)}`}
-                    {t.statut === 'a_valider' && ' · remise en attente de validation'}
-                  </span>
-                  <select
-                    className="field-input"
-                    value={confies[t.id] ?? ''}
-                    onChange={(e) => setConfies((c) => ({ ...c, [t.id]: e.target.value }))}
-                  >
-                    <option value="">Confier à…</option>
-                    {depart.candidats.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nom}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost" onClick={() => setDepart(null)}>
-                  Annuler le départ
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={confirmerDepart}
-                  disabled={depart.taches.some((t) => !confies[t.id])}
+            )}
+            {depart.taches.map((t) => (
+              <label key={t.id} className="field">
+                <span className="field-label">
+                  {t.projet} · {t.carte} · {t.libelle}
+                  {t.finLe && ` · échéance ${formatDate(t.finLe)}`}
+                  {t.statut === 'a_valider' && ' · remise en attente de validation'}
+                </span>
+                <select
+                  className="field-input"
+                  value={confies[t.id] ?? ''}
+                  onChange={(e) => setConfies((c) => ({ ...c, [t.id]: e.target.value }))}
                 >
-                  Confirmer le départ
-                </button>
-              </div>
-            </>
-          )}
+                  <option value="">Confier à…</option>
+                  {depart.candidats.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nom}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+            <div className="modal-actions">
+              <button type="button" className="btn-ghost" onClick={() => setDepart(null)}>
+                Annuler le départ
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={confirmerDepart}
+                disabled={depart.taches.some((t) => !confies[t.id])}
+              >
+                Confirmer le départ
+              </button>
+            </div>
+          </>
+        )}
 
-          {erreur && <p className="field-erreur">{erreur}</p>}
-          <div className="modal-actions">
-            {ecriture && dossier && !depart && (
-              <button type="button" className="btn-ghost" onClick={archiver}>
-                {dossier.archiveLe ? (
-                  <>
-                    <ArchiveRestore size={14} aria-hidden /> Réactiver
-                  </>
-                ) : (
-                  <>
-                    <Archive size={14} aria-hidden /> Archiver (départ)
-                  </>
-                )}
-              </button>
-            )}
-            <button type="button" className="btn-ghost" onClick={onClose}>
-              Fermer
+        {erreur && <p className="field-erreur">{erreur}</p>}
+        <div className="modal-actions">
+          {ecriture && dossier && !depart && (
+            <button type="button" className="btn-ghost" onClick={archiver}>
+              {dossier.archiveLe ? (
+                <>
+                  <ArchiveRestore size={14} aria-hidden /> Réactiver
+                </>
+              ) : (
+                <>
+                  <Archive size={14} aria-hidden /> Archiver (départ)
+                </>
+              )}
             </button>
-            {ecriture && (
-              <button type="button" className="btn-primary" onClick={enregistrer} disabled={envoi}>
-                {envoi ? 'Enregistrement…' : enregistre ? 'Enregistré' : dossier ? 'Enregistrer' : 'Créer le dossier'}
-              </button>
-            )}
-          </div>
+          )}
+          <button type="button" className="btn-ghost" onClick={onClose}>
+            Fermer
+          </button>
+          {ecriture && (
+            <button type="button" className="btn-primary" onClick={enregistrer} disabled={envoi}>
+              {envoi ? 'Enregistrement…' : enregistre ? 'Enregistré' : dossier ? 'Enregistrer' : 'Créer le dossier'}
+            </button>
+          )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

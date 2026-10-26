@@ -5,7 +5,7 @@ import { UserCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { confirmerIntegration, enregistrerPointIntegration, getIntegrations, LIBELLE_CONTRAT } from '@/lib/rh';
 import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
-import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
@@ -181,7 +181,7 @@ function DetailIntegration({
 
       {confirmation && (
         <ConfirmModal
-          titre="Confirmer l’intégration"
+          title="Confirmer l’intégration"
           message={`${s.prenom} ${s.nom} sort du suivi des nouveaux arrivants. Les comptes rendus restent dans son dossier.`}
           onConfirm={async () => {
             await confirmerIntegration(slug, s.id);

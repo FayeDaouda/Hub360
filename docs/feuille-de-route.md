@@ -56,9 +56,13 @@ Décisions structurantes : `docs/adr/`.
   pendant la structuration, puis remis en erreur.
 - **Tournée des rappels** : la découper par société (aujourd'hui en périmètre
   système, ADR 0001).
-- **Captures instables** (S0b) : pastille « Projets » en mobile (lissage du
-  texte) ; filtre de routes du harnais qui abandonne une requête au lieu de la
-  retenter quand `route.fetch` échoue.
+- **Lot accessibilité des fenêtres** : une règle unique, toutes les fenêtres
+  se ferment avec Échap, sauf pendant un envoi (8 ne le font pas :
+  `closeOnEscape={false}` les repère) ; le focus du clavier reste dans la
+  fenêtre tant qu'elle est ouverte et revient sur le bouton qui l'a ouverte à
+  la fermeture. Le composant commun (`components/ui/dialog.tsx`) ne fait ni
+  l'un ni l'autre aujourd'hui (tests « état actuel » dans `dialog.spec.tsx`,
+  à inverser) ; la confirmation (`ConfirmModal`) le fait déjà.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
@@ -72,6 +76,22 @@ Décisions structurantes : `docs/adr/`.
   contrat actif jusqu'à la signature puis lecture seule limitée, révocation et
   régénération.
 - **Formats BIM** (équipe) : Revit, ArchiCAD, SketchUp pour les livrables.
+
+## Captures : règles du harnais
+
+- Une requête de l'API qui échoue est retentée (3 essais). Chaque nouvelle
+  tentative est consignée dans le rapport (annotation « nouvelle tentative ») ;
+  le test échoue au-delà de 2 par test, ou si une requête échoue encore après
+  son dernier essai : un échec qui se répète peut révéler un défaut du back.
+- Le flou d'arrière-plan (verre) est retiré des captures : le texte posé
+  dessus, à une position fractionnaire, basculait entre deux lissages d'un
+  lancement du navigateur à l'autre (pastille active des sélecteurs de vue,
+  dossier d'un projet ouvert). Mise en page, textes et couleurs restent
+  comparés ; le rendu du flou lui-même est à contrôler à l'œil lors de la
+  refonte visuelle.
+- Avant chaque capture, le harnais attend qu'aucune requête de l'API ne soit
+  en cours (le flux du chat excepté) ; au-delà de 30 s, la capture échoue en
+  listant les requêtes.
 
 ## Défaut corrigé
 
