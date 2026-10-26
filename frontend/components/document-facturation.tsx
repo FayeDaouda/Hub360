@@ -1,6 +1,7 @@
-import { SocieteAvatar } from '@/components/societe-avatar';
+import { CompanyAvatar } from '@/components/ui/avatar';
 import { formatAmount } from '@/lib/format';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 // Rendu visuel PARTAGÉ d'un document de facturation (Devis ou Facture) —
 // utilisé tel quel sur la page publique du devis (cf. app/devis/[token]) ET
@@ -86,7 +87,7 @@ export function DocumentFacturation({
     <div className="devis-public-doc">
       <header className="devis-public-banniere" style={{ background: gradient }}>
         <div className="devis-public-banniere-marque">
-          <SocieteAvatar societe={societe} size="lg" theme="glass" />
+          <CompanyAvatar company={societe} size="lg" theme="glass" />
           <span>{societe.nom}</span>
         </div>
         <div className="devis-public-banniere-bas">
@@ -124,7 +125,7 @@ export function DocumentFacturation({
       <div className="devis-public-corps">
         <div className="devis-public-corps-tete">
           {objet && <p className="devis-public-objet">{objet}</p>}
-          <span className={`pill ${statutClasse}`}>{statutLabel}</span>
+          <Pill className={statutClasse}>{statutLabel}</Pill>
         </div>
 
         <table className="devis-public-table">

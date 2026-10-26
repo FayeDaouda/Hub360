@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Banknote, Info, OctagonAlert, Percent, Settings2, Users } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite';
 import { ParametresRentabilite } from '@/components/finances/parametres-rentabilite';
@@ -23,6 +23,9 @@ import {
 } from '@/lib/rentabilite';
 import { formatDate, formatDateTime, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
 const MOIS_DEBUT = '2026-09'; // premières feuilles de temps (rh/regles-temps.ts)
@@ -78,8 +81,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
     return [...suivis, ...autres].filter((l) => !etat || l.etat === etat);
   }, [donnees, tri, etat, montants]);
 
-  if (erreur) return <p className="field-erreur">{erreur}</p>;
-  if (!donnees) return <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />;
+  if (erreur) return <FieldError>{erreur}</FieldError>;
+  if (!donnees) return <Skeleton size="sm" />;
 
   const p = Object.fromEntries(donnees.parametres.map((x) => [x.cle, x]));
   const charges = p.coefficient_charges?.valeur;
@@ -114,47 +117,47 @@ export function OngletRentabilite({ slug }: { slug: string }) {
 
       <div className="fin-kpi rt-kpi">
         <KpiStrip
-          tuiles={
+          tiles={
             montants
               ? [
                   {
-                    cle: 'ht',
+                    id: 'ht',
                     label: 'Montant HT facturé',
-                    montant: donnees.totaux.ht ?? 0,
-                    sousTexte: `${donnees.projetsComplets} projet(s) aux données complètes, avoirs déduits`,
-                    icone: Banknote,
-                    etat: 'marque',
+                    amount: donnees.totaux.ht ?? 0,
+                    hint: `${donnees.projetsComplets} projet(s) aux données complètes, avoirs déduits`,
+                    icon: Banknote,
+                    state: 'marque',
                   },
                   {
-                    cle: 'cout',
+                    id: 'cout',
                     label: 'Coût salarial direct',
-                    montant: donnees.totaux.cout ?? 0,
-                    sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`,
-                    icone: Users,
-                    etat: 'marque',
+                    amount: donnees.totaux.cout ?? 0,
+                    hint: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`,
+                    icon: Users,
+                    state: 'marque',
                   },
                   {
-                    cle: 'marge',
+                    id: 'marge',
                     label: 'Marge directe provisoire',
                     ...(donnees.totaux.marge === null
-                      ? { valeur: 'Données insuffisantes' }
-                      : { montant: donnees.totaux.marge }),
-                    sousTexte:
+                      ? { value: 'Données insuffisantes' }
+                      : { amount: donnees.totaux.marge }),
+                    hint:
                       donnees.totaux.marge === null
                         ? 'aucun projet aux données complètes'
                         : `${formatTaux(donnees.totaux.taux)} · cible ${formatParametre(p.marge_cible)}`,
-                    icone: Percent,
-                    etat: (donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque',
+                    icon: Percent,
+                    state: (donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque',
                   },
                 ]
               : [
                   {
-                    cle: 'taux',
+                    id: 'taux',
                     label: 'Taux de marge directe provisoire',
-                    valeur: donnees.projetsComplets ? formatTaux(donnees.totaux.taux) : 'Données insuffisantes',
-                    sousTexte: `${donnees.projetsComplets} projet(s) aux données complètes · cible ${formatParametre(p.marge_cible)}`,
-                    icone: Percent,
-                    etat: 'marque',
+                    value: donnees.projetsComplets ? formatTaux(donnees.totaux.taux) : 'Données insuffisantes',
+                    hint: `${donnees.projetsComplets} projet(s) aux données complètes · cible ${formatParametre(p.marge_cible)}`,
+                    icon: Percent,
+                    state: 'marque',
                   },
                 ]
           }
@@ -197,8 +200,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
 
       <section className="panel glass-panel rt-liste">
         <div className="rt-outils">
-          <label className="field">
-            <span className="field-label">Période</span>
+          <Field label="Période">
             <select className="field-input" value={periode} onChange={(e) => setPeriode(e.target.value)}>
               <option value="">Cumul depuis l’ouverture</option>
               {moisDisponibles(aujourdhui).map((m) => (
@@ -207,9 +209,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Données</span>
+          </Field>
+          <Field label="Données">
             <select className="field-input" value={etat} onChange={(e) => setEtat(e.target.value as EtatDonnees | '')}>
               <option value="">Tous les projets</option>
               {(Object.keys(LIBELLE_ETAT) as EtatDonnees[]).map((k) => (
@@ -218,9 +219,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Trier par</span>
+          </Field>
+          <Field label="Trier par">
             <select
               className="field-input"
               value={montants ? tri : tri === 'heures' ? 'heures' : 'taux'}
@@ -231,7 +231,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
               {montants && <option value="cout">Coût salarial (le plus élevé d’abord)</option>}
               <option value="heures">Heures (le plus d’abord)</option>
             </select>
-          </label>
+          </Field>
           {montants && <BoutonExport desactive={!lignes.length} onExporter={() => exporter(lignes, donnees.periode)} />}
         </div>
         {periode && (
@@ -290,9 +290,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     <td data-label="Taux · statut" className="rt-taux">
                       <span className="rt-taux-ligne">
                         {l.etat === 'complet' ? formatTaux(l.taux) : '—'}
-                        {l.statut && (
-                          <span className={`pill ${PILL_STATUT[l.statut]}`}>{LIBELLE_STATUT[l.statut]}</span>
-                        )}
+                        {l.statut && <Pill className={PILL_STATUT[l.statut]}>{LIBELLE_STATUT[l.statut]}</Pill>}
                       </span>
                     </td>
                     <td data-label="Dépassements" className="rt-signaux">
@@ -311,12 +309,12 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     </td>
                     <td data-label="Données" className="rt-etat">
                       <span className="cell-stack">
-                        <span
-                          className={`pill ${l.etat === 'complet' ? 'pill--neutre' : 'pill--attention'}`}
+                        <Pill
+                          className={l.etat === 'complet' ? 'pill--neutre' : 'pill--attention'}
                           title={l.raisons.join(' · ') || undefined}
                         >
                           {LIBELLE_ETAT[l.etat]}
-                        </span>
+                        </Pill>
                         <span className="cell-sub">
                           {l.misAJour ? `à jour du ${formatDate(l.misAJour)}` : 'aucune donnée'}
                         </span>

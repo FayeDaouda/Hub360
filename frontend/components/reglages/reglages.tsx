@@ -14,6 +14,8 @@ import { GabaritPanel } from './gabarit-panel';
 import { JournalPanel } from './journal-panel';
 import { SignalementsPanel } from './signalements-panel';
 import { ValeursPanel } from './valeurs-panel';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const SECTIONS = ['gabarit', 'regles', 'objectifs', 'journal', 'signalements', 'administration'] as const;
 type Section = (typeof SECTIONS)[number];
@@ -41,11 +43,11 @@ export function Reglages({ slug }: { slug: string }) {
   }, [slug]);
   useEffect(charger, [charger]);
 
-  if (erreur) return <p className="field-erreur">{erreur}</p>;
+  if (erreur) return <FieldError>{erreur}</FieldError>;
   if (!donnees) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -83,9 +85,9 @@ export function Reglages({ slug }: { slug: string }) {
     return (
       <>
         {entete}
-        <p className="empty-state">
+        <EmptyState>
           Pas encore de gabarit ni de règles définis pour cette société : seule l’administration est disponible.
-        </p>
+        </EmptyState>
         <Administration slug={slug} />
       </>
     );

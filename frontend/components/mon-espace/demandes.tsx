@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { CalendarCheck, CalendarPlus, Hourglass, Plane } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import {
@@ -22,6 +22,9 @@ import {
 import { formatAmount } from '@/lib/format';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
 import { formatDate, toIsoDay } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Fichier = { nom: string; url: string };
 type MesDemandes = { solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] };
@@ -113,7 +116,7 @@ function useMesDemandes(slug: string) {
 function Chargement() {
   return (
     <div className="admin-skeleton" aria-hidden>
-      <div className="skeleton admin-skeleton-panel" />
+      <Skeleton />
     </div>
   );
 }
@@ -123,43 +126,43 @@ function Chargement() {
 // Règles de solde : regles-conges.ts (2 j/mois, report plafonné — 19/10/2026).
 export function CongesAbsences({ slug }: { slug: string }) {
   const { donnees, erreur, charger } = useMesDemandes(slug);
-  if (erreur) return <p className="empty-state">{erreur}</p>;
+  if (erreur) return <EmptyState>{erreur}</EmptyState>;
   if (!donnees) return <Chargement />;
   const { solde, absences } = donnees;
 
   return (
     <>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'restant',
+            id: 'restant',
             label: 'Restant',
-            valeur: `${solde.disponible} j`,
-            sousTexte: solde.enAttente
+            value: `${solde.disponible} j`,
+            hint: solde.enAttente
               ? `dont ${solde.enAttente} j réservés par vos demandes en attente`
               : 'à poser cette année',
-            icone: Plane,
+            icon: Plane,
           },
           {
-            cle: 'acquis',
+            id: 'acquis',
             label: `Acquis ${solde.annee}`,
-            valeur: `${solde.acquis} j`,
-            sousTexte: '2 jours ouvrables par mois de service',
-            icone: CalendarPlus,
+            value: `${solde.acquis} j`,
+            hint: '2 jours ouvrables par mois de service',
+            icon: CalendarPlus,
           },
           {
-            cle: 'report',
+            id: 'report',
             label: `Report de ${solde.annee - 1}`,
-            valeur: `${solde.report} j`,
-            sousTexte: solde.plafondReport ? `plafonné à ${solde.plafondReport} j` : 'aucun report',
-            icone: Hourglass,
+            value: `${solde.report} j`,
+            hint: solde.plafondReport ? `plafonné à ${solde.plafondReport} j` : 'aucun report',
+            icon: Hourglass,
           },
           {
-            cle: 'pris',
+            id: 'pris',
             label: 'Pris',
-            valeur: `${solde.pris} j`,
-            sousTexte: 'congés payés validés',
-            icone: CalendarCheck,
+            value: `${solde.pris} j`,
+            hint: 'congés payés validés',
+            icon: CalendarCheck,
           },
         ]}
       />
@@ -186,7 +189,7 @@ export function CongesAbsences({ slug }: { slug: string }) {
 // soumise → transmise → remboursée / rejetée, sans aucune donnée médicale.
 export function RemboursementsSante({ slug }: { slug: string }) {
   const { donnees, erreur, charger } = useMesDemandes(slug);
-  if (erreur) return <p className="empty-state">{erreur}</p>;
+  if (erreur) return <EmptyState>{erreur}</EmptyState>;
   if (!donnees) return <Chargement />;
   const { remboursements } = donnees;
 
@@ -211,9 +214,7 @@ export function RemboursementsSante({ slug }: { slug: string }) {
                     {r.motifRejet && ` · ${r.motifRejet}`}
                   </span>
                 </span>
-                <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>
-                  {STATUT_REMBOURSEMENT[r.statut].libelle}
-                </span>
+                <Pill className={STATUT_REMBOURSEMENT[r.statut].pill}>{STATUT_REMBOURSEMENT[r.statut].libelle}</Pill>
               </li>
             ))}
           </ul>
@@ -248,7 +249,7 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
         {erreur && <span className="field-erreur">{erreur}</span>}
       </span>
       <span className="dmd-actions">
-        <span className={`pill ${statut.pill}`}>{statut.libelle}</span>
+        <Pill className={statut.pill}>{statut.libelle}</Pill>
         {d.statut === 'autres_dates' && (
           <>
             <button
@@ -329,8 +330,7 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
         {solde.enAttente > 0 && ` (dont ${solde.enAttente} j en attente de décision, réservés)`}. Décompte hors
         dimanches et jours fériés des Réglages.
       </p>
-      <label className="field">
-        <span className="field-label">Type</span>
+      <Field label="Type">
         <select className="field-input" value={type} onChange={(e) => setType(e.target.value as TypeAbsence)}>
           {Object.entries(LIBELLE_TYPE_ABSENCE).map(([k, v]) => (
             <option key={k} value={k}>
@@ -338,10 +338,9 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
             </option>
           ))}
         </select>
-      </label>
+      </Field>
       <div className="rh-grille">
-        <label className="field">
-          <span className="field-label">Du</span>
+        <Field label="Du">
           <input
             className="field-input"
             inputMode="numeric"
@@ -349,9 +348,8 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
             value={debut}
             onChange={(e) => setDebut(formaterDate(e.target.value))}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">Au (inclus)</span>
+        </Field>
+        <Field label="Au (inclus)">
           <input
             className="field-input"
             inputMode="numeric"
@@ -359,10 +357,9 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
             value={fin}
             onChange={(e) => setFin(formaterDate(e.target.value))}
           />
-        </label>
+        </Field>
       </div>
-      <label className="field">
-        <span className="field-label">Motif</span>
+      <Field label="Motif">
         <textarea
           className="field-input"
           rows={2}
@@ -371,7 +368,7 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
           value={motif}
           onChange={(e) => setMotif(e.target.value)}
         />
-      </label>
+      </Field>
       <CaseJointe
         libelle="Justificatif joint"
         fichiers={fichiers}
@@ -379,8 +376,7 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
         onErreur={(m) => setEtat({ envoi: false, erreur: m })}
       />
       {suppleants.length > 0 && (
-        <label className="field">
-          <span className="field-label">Suppléant pendant votre absence</span>
+        <Field label="Suppléant pendant votre absence">
           <select className="field-input" value={suppleantId} onChange={(e) => setSuppleantId(e.target.value)}>
             <option value="">Le CTO (par défaut)</option>
             {suppleants.map((s) => (
@@ -393,13 +389,13 @@ function FormAbsence({ slug, solde, onFait }: { slug: string; solde: SoldeConges
             Remises, prolongations et TS lui reviennent tant que votre absence validée dure ; il est prévenu dès
             l’envoi.
           </span>
-        </label>
+        </Field>
       )}
       {/* Seulement une date complète mais invalide (pas avant toute saisie). */}
       {((debut.length === 10 && !isoDebut) || (fin.length === 10 && !isoFin)) && (
         <p className="me-consigne">Date invalide : JJ/MM/AAAA.</p>
       )}
-      {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+      {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
       <button type="submit" className="btn-primary me-envoyer" disabled={etat.envoi || !pret}>
         {etat.envoi ? 'Envoi…' : 'Envoyer à mon N+1'}
       </button>
@@ -451,8 +447,7 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
         diagnostic n’est demandé ; la demande n’est visible que par vous et la RH.
       </p>
       <div className="rh-grille">
-        <label className="field">
-          <span className="field-label">Date des soins</span>
+        <Field label="Date des soins">
           <input
             className="field-input"
             inputMode="numeric"
@@ -460,17 +455,15 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
             value={dateSoins}
             onChange={(e) => setDateSoins(formaterDate(e.target.value))}
           />
-        </label>
-        <label className="field">
-          <span className="field-label">Bénéficiaire</span>
+        </Field>
+        <Field label="Bénéficiaire">
           <select className="field-input" value={beneficiaire} onChange={(e) => setBeneficiaire(e.target.value)}>
             <option value="moi">Moi</option>
             <option value="conjoint">Conjoint(e)</option>
             <option value="enfant">Enfant</option>
           </select>
-        </label>
-        <label className="field">
-          <span className="field-label">Nature des frais</span>
+        </Field>
+        <Field label="Nature des frais">
           <select
             className="field-input"
             value={categorie}
@@ -482,9 +475,8 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
               </option>
             ))}
           </select>
-        </label>
-        <label className="field">
-          <span className="field-label">Montant payé (FCFA)</span>
+        </Field>
+        <Field label="Montant payé (FCFA)">
           <input
             className="field-input"
             inputMode="numeric"
@@ -492,7 +484,7 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
             value={montant}
             onChange={(e) => setMontant(e.target.value)}
           />
-        </label>
+        </Field>
       </div>
       <CaseJointe
         libelle="Facture et ordonnance jointes (obligatoire)"
@@ -501,7 +493,7 @@ function FormRemboursement({ slug, onFait }: { slug: string; onFait: () => void 
         onChange={setFichiers}
         onErreur={(m) => setEtat({ envoi: false, erreur: m })}
       />
-      {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+      {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
       <button type="submit" className="btn-primary me-envoyer" disabled={etat.envoi || !pret}>
         {etat.envoi ? 'Envoi…' : 'Envoyer à la RH'}
       </button>

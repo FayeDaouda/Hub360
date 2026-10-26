@@ -32,7 +32,7 @@ import {
   type ProjetRef,
 } from '@/lib/types';
 import { formatCompactAmount } from '@/lib/format';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
 import { CatalogueProduitsModal } from '@/components/admin/catalogue-produits-modal';
@@ -58,6 +58,8 @@ import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 import { formatLongDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
 type Props = { params: Promise<{ slug: string }> };
@@ -463,46 +465,46 @@ export default function FinancesPage(props: Props) {
 
       <div className="fin-kpi">
         <KpiStrip
-          tuiles={[
+          tiles={[
             {
-              cle: 'offres',
+              id: 'offres',
               label: 'Offres en cours',
-              montant: kpi.offresEnCours.montant,
-              sousTexte: `${pluriel(kpi.offresEnCours.nombre, 'offre')} en validation ou chez le client`,
-              icone: FileText,
-              etat: 'marque',
+              amount: kpi.offresEnCours.montant,
+              hint: `${pluriel(kpi.offresEnCours.nombre, 'offre')} en validation ou chez le client`,
+              icon: FileText,
+              state: 'marque',
             },
             {
-              cle: 'transformation',
+              id: 'transformation',
               label: 'Taux de transformation',
-              valeur: kpi.transformation.pct == null ? '—' : `${kpi.transformation.pct} %`,
-              sousTexte: `${pluriel(kpi.transformation.acceptes, 'acceptée')} · ${pluriel(kpi.transformation.refuses, 'refusée')}`,
-              icone: TrendingUp,
-              etat: 'marque',
+              value: kpi.transformation.pct == null ? '—' : `${kpi.transformation.pct} %`,
+              hint: `${pluriel(kpi.transformation.acceptes, 'acceptée')} · ${pluriel(kpi.transformation.refuses, 'refusée')}`,
+              icon: TrendingUp,
+              state: 'marque',
             },
             {
-              cle: 'facture',
+              id: 'facture',
               label: `Facturé en ${kpi.annee}`,
-              montant: kpi.facture.montant,
-              sousTexte: `TTC · ${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
-              icone: FileText,
-              etat: 'marque',
+              amount: kpi.facture.montant,
+              hint: `TTC · ${pluriel(kpi.facture.emises, 'facture')} émise(s)${kpi.facture.aValider ? ` · ${kpi.facture.aValider} à valider CFO` : ''}`,
+              icon: FileText,
+              state: 'marque',
             },
             {
-              cle: 'encaisse',
+              id: 'encaisse',
               label: `Encaissé en ${kpi.annee}`,
-              montant: kpi.encaisse.montant,
-              sousTexte: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
-              icone: Banknote,
-              etat: 'marque',
+              amount: kpi.encaisse.montant,
+              hint: kpi.encaisse.pct == null ? undefined : `${kpi.encaisse.pct} % du facturé`,
+              icon: Banknote,
+              state: 'marque',
             },
             {
-              cle: 'reste',
+              id: 'reste',
               label: 'Reste à encaisser',
-              montant: kpi.resteAEncaisser.montant,
-              sousTexte: `dont ${formatCompactAmount(kpi.resteAEncaisser.enRetard.montant)} en retard · ${formatCompactAmount(kpi.resteAEncaisser.aEchoir.montant)} à échoir`,
-              icone: Clock,
-              etat: etatEnRetard(kpi.resteAEncaisser.enRetard.nombre),
+              amount: kpi.resteAEncaisser.montant,
+              hint: `dont ${formatCompactAmount(kpi.resteAEncaisser.enRetard.montant)} en retard · ${formatCompactAmount(kpi.resteAEncaisser.aEchoir.montant)} à échoir`,
+              icon: Clock,
+              state: etatEnRetard(kpi.resteAEncaisser.enRetard.nombre),
             },
           ]}
         />
@@ -574,18 +576,20 @@ export default function FinancesPage(props: Props) {
             </button>
           )}
         </div>
-        <span className="pill pill--neutre fin-devise">Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %</span>
+        <Pill tone="neutre" className="fin-devise">
+          Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %
+        </Pill>
       </div>
 
       {onglet === 'tableau' ? (
         !devis || !factures ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : (
           <TableauDeBordFinances devis={devisFiltres} factures={facturesFiltrees} catalogue={catalogue} />
         )
       ) : onglet === 'tresorerie' ? (
         !factures ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : (
           <OngletTresorerie
             slug={params.slug}
@@ -605,7 +609,7 @@ export default function FinancesPage(props: Props) {
         />
       ) : onglet === 'devis' ? (
         !devis ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : (
           <OngletDevis
             devis={devisFiltres}
@@ -619,7 +623,7 @@ export default function FinancesPage(props: Props) {
           />
         )
       ) : !factures ? (
-        <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        <Skeleton size="sm" />
       ) : (
         <OngletFactures
           factures={facturesFiltrees}

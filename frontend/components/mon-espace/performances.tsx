@@ -10,10 +10,13 @@ import { useSessionCourante } from '@/lib/layout-contexte';
 import { getMesTaches, libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
 import { formatHeures, getMonTemps, LIBELLE_MANQUE } from '@/lib/temps';
 import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { RemiseModal } from './remise-modal';
 import { formatDate, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
@@ -69,10 +72,10 @@ export function MesPerformances({ slug }: { slug: string }) {
 
   if (!donnees) {
     return erreur ? (
-      <p className="empty-state">{erreur}</p>
+      <EmptyState>{erreur}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -89,41 +92,41 @@ export function MesPerformances({ slug }: { slug: string }) {
   return (
     <>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'delais',
+            id: 'delais',
             label: 'Respect des délais',
-            valeur: rd.pct == null ? '—' : `${rd.pct} %`,
+            value: rd.pct == null ? '—' : `${rd.pct} %`,
             // Seules les tâches validées APRÈS une remise datée sont jugées.
-            sousTexte: rd.total
+            hint: rd.total
               ? `${plural(rd.aTemps, 'remise')} à temps sur ${plural(rd.total, 'jugée')}`
               : stats.validees
                 ? `${plural(stats.validees, 'tâche')} validée${stats.validees > 1 ? 's' : ''}, aucune remise datée à juger`
                 : 'aucune tâche validée pour l’instant',
-            icone: CircleCheck,
+            icon: CircleCheck,
           },
           {
-            cle: 'reprises',
+            id: 'reprises',
             label: 'Taux de reprise',
-            valeur: tauxReprise == null ? '—' : `${tauxReprise} %`,
-            sousTexte: remises.length
+            value: tauxReprise == null ? '—' : `${tauxReprise} %`,
+            hint: remises.length
               ? `${plural(avecReprise, 'tâche')} renvoyée${avecReprise > 1 ? 's' : ''} au moins une fois sur ${remises.length}`
               : 'aucune remise validée pour l’instant',
-            icone: RotateCcw,
+            icon: RotateCcw,
           },
           {
-            cle: 'validees',
+            id: 'validees',
             label: 'Tâches validées',
-            valeur: stats.validees,
-            sousTexte: `${stats.enCours} encore en cours`,
-            icone: ListChecks,
+            value: stats.validees,
+            hint: `${stats.enCours} encore en cours`,
+            icon: ListChecks,
           },
           {
-            cle: 'temps',
+            id: 'temps',
             label: temps ? `Temps imputé · ${formatMonthYear(temps.feuille.mois)}` : 'Temps imputé',
-            valeur: temps ? formatHeures(temps.feuille.heuresImputees) : '—',
-            sousTexte: `${temps?.feuille.occupation ?? 0} % d’occupation · calcul automatique`,
-            icone: Clock,
+            value: temps ? formatHeures(temps.feuille.heuresImputees) : '—',
+            hint: `${temps?.feuille.occupation ?? 0} % d’occupation · calcul automatique`,
+            icon: Clock,
           },
         ]}
       />
@@ -201,16 +204,16 @@ export function MesPerformances({ slug }: { slug: string }) {
                 </span>
                 <span className="dmd-actions">
                   {t.version > 1 && (
-                    <span className="pill pill--attention">
+                    <Pill tone="attention">
                       {t.version - 1} reprise{t.version > 2 ? 's' : ''}
-                    </span>
+                    </Pill>
                   )}
                   {!jugee(t) ? (
-                    <span className="pill pill--neutre">sans remise datée</span>
+                    <Pill tone="neutre">sans remise datée</Pill>
                   ) : aTemps(t) ? (
-                    <span className="pill pill--succes">à temps</span>
+                    <Pill tone="succes">à temps</Pill>
                   ) : (
-                    <span className="pill pill--risque">remise après l’échéance</span>
+                    <Pill tone="risque">remise après l’échéance</Pill>
                   )}
                 </span>
               </li>
@@ -251,7 +254,7 @@ export function MesPerformances({ slug }: { slug: string }) {
               ))}
             </div>
           </div>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <div className="admin-table-wrap">
             <table className="admin-table temps-table">
               <thead>
@@ -305,7 +308,7 @@ export function MesPerformances({ slug }: { slug: string }) {
                     </td>
                     <td data-label="Statut">
                       <span className="perf-statut">
-                        <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
+                        <Pill className={STATUT_TACHE[t.statut].pill}>{libelleStatut(t, aujourdhui)}</Pill>
                         {t.statut !== 'validee' && t.statut !== 'remise' && (
                           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setARemettre(t)}>
                             Déposer

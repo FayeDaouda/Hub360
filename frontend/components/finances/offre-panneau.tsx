@@ -13,6 +13,8 @@ import { OffreAnnexes } from './offre-annexes';
 import { formatDate } from '@/lib/dates';
 import { formatNumber } from '@/lib/format';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 const ENREGISTREMENT_MS = 700;
 const LIBELLES_COMMODITES = new Map(COMMODITES.flatMap((g) => g.items));
@@ -203,7 +205,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
           <p className="fiche-crm-titre">Offre commerciale</p>
           <h2 id="offre-titre" className="fiche-crm-code fac-titre">
             {devis?.reference ?? 'Nouvelle offre'}
-            <span className="pill pill--neutre">Brouillon</span>
+            <Pill tone="neutre">Brouillon</Pill>
           </h2>
           <p className="fiche-crm-meta">
             {devis
@@ -334,9 +336,9 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
             <section className="offre-carte">
               <div className="offre-titre-ligne">
                 <h3 className="offre-titre-section">Lead CRM lié</h3>
-                <span className={`pill ${fiche.faits === fiche.total ? 'pill--succes' : 'pill--attention'}`}>
+                <Pill className={fiche.faits === fiche.total ? 'pill--succes' : 'pill--attention'}>
                   Fiche {fiche.faits}/{fiche.total}
-                </span>
+                </Pill>
               </div>
               <p className="offre-lead">
                 {lead.client.nom} · {lead.localite?.nom ?? (lead.localisation || 'localisation à choisir')} ·{' '}
@@ -424,7 +426,7 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
           </div>
         </>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </Drawer>
   );
 }

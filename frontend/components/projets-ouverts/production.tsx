@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlarmClock, CalendarClock, Gauge, TriangleAlert } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getProduction, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
 import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
 import { addDays, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const STATUT: Record<LigneProduction['statutChantier'], string> = {
   conception: 'En conception',
@@ -78,8 +81,8 @@ export function Production({ slug }: { slug: string }) {
     [vue, cellule, retard, livraison, aujourdhui, dans15],
   );
 
-  if (erreur) return <p className="field-erreur">{erreur}</p>;
-  if (!vue) return <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (erreur) return <FieldError>{erreur}</FieldError>;
+  if (!vue) return <Skeleton />;
   const c = vue.chiffres;
   const cellules = [...new Set(vue.lignes.map((l) => l.projet.cellule).filter((x): x is string => !!x))].sort();
   const echeances = [
@@ -108,41 +111,41 @@ export function Production({ slug }: { slug: string }) {
         cellules.
       </p>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'retard',
+            id: 'retard',
             label: 'En retard',
-            valeur: c.enRetard,
-            sousTexte: retard ? 'filtre actif' : 'tâches en retard ou livraison dépassée',
-            icone: TriangleAlert,
-            etat: c.enRetard ? 'risque' : 'succes',
-            action: { type: 'filtre', actif: retard, onClick: () => setRetard((x) => !x) },
+            value: c.enRetard,
+            hint: retard ? 'filtre actif' : 'tâches en retard ou livraison dépassée',
+            icon: TriangleAlert,
+            state: c.enRetard ? 'risque' : 'succes',
+            action: { type: 'filter', active: retard, onClick: () => setRetard((x) => !x) },
           },
           {
-            cle: 'livraisons',
+            id: 'livraisons',
             label: 'Livraisons sous 15 jours',
-            valeur: c.livraisons15,
-            sousTexte: livraison ? 'filtre actif' : undefined,
-            icone: CalendarClock,
-            etat: c.livraisons15 ? 'attention' : 'succes',
-            action: { type: 'filtre', actif: livraison, onClick: () => setLivraison((x) => !x) },
+            value: c.livraisons15,
+            hint: livraison ? 'filtre actif' : undefined,
+            icon: CalendarClock,
+            state: c.livraisons15 ? 'attention' : 'succes',
+            action: { type: 'filter', active: livraison, onClick: () => setLivraison((x) => !x) },
           },
           {
-            cle: 'attente',
+            id: 'attente',
             label: 'En attente de décision',
-            valeur: c.enAttente,
-            sousTexte: 'remises, visas, prolongations, TS',
-            icone: AlarmClock,
-            etat: c.enAttente ? 'attention' : 'succes',
-            action: { type: 'lien', href: `/admin/${slug}` },
+            value: c.enAttente,
+            hint: 'remises, visas, prolongations, TS',
+            icon: AlarmClock,
+            state: c.enAttente ? 'attention' : 'succes',
+            action: { type: 'link', href: `/admin/${slug}` },
           },
           {
-            cle: 'charge',
+            id: 'charge',
             label: 'Charge moyenne · 2 semaines',
-            valeur: c.chargeMoyenne === null ? '—' : `${c.chargeMoyenne} %`,
-            sousTexte: vue.charge.zone ? `zone normale ${vue.charge.zone.de} à ${vue.charge.zone.a} %` : undefined,
-            icone: Gauge,
-            etat: tonCharge(c.chargeMoyenne, vue.charge.zone) === 'succes' ? 'succes' : 'attention',
+            value: c.chargeMoyenne === null ? '—' : `${c.chargeMoyenne} %`,
+            hint: vue.charge.zone ? `zone normale ${vue.charge.zone.de} à ${vue.charge.zone.a} %` : undefined,
+            icon: Gauge,
+            state: tonCharge(c.chargeMoyenne, vue.charge.zone) === 'succes' ? 'succes' : 'attention',
           },
         ]}
       />
@@ -191,7 +194,7 @@ export function Production({ slug }: { slug: string }) {
                         {l.projet.client}
                         {l.projet.cellule ? ` · ${l.projet.cellule}` : ''}
                       </span>
-                      <span className="pill pill--neutre">{STATUT[l.statutChantier]}</span>
+                      <Pill tone="neutre">{STATUT[l.statutChantier]}</Pill>
                     </span>
                     <span className="prod-avancement">
                       <span className="prod-etiquette">Avancement</span>
@@ -235,7 +238,7 @@ export function Production({ slug }: { slug: string }) {
                     <span className="prod-retards">
                       <span className="prod-etiquette">Retards</span>
                       {l.enRetard ? (
-                        <span className="pill pill--risque">{plural(l.enRetard, 'tâche')}</span>
+                        <Pill tone="risque">{plural(l.enRetard, 'tâche')}</Pill>
                       ) : (
                         <span className="cell-sub">aucun</span>
                       )}
@@ -245,9 +248,9 @@ export function Production({ slug }: { slug: string }) {
                       <span className="prod-etiquette">En attente</span>
                       {attente.length ? (
                         attente.map((a) => (
-                          <span key={a} className="pill pill--attention">
+                          <Pill key={a} tone="attention">
                             {a}
-                          </span>
+                          </Pill>
                         ))
                       ) : (
                         <span className="cell-sub">rien</span>
@@ -258,7 +261,7 @@ export function Production({ slug }: { slug: string }) {
                       {!l.tranche ? (
                         <span className="cell-sub">tranches émises</span>
                       ) : l.tranche.attend.length === 0 ? (
-                        <span className="pill pill--succes">{l.tranche.code} prête</span>
+                        <Pill tone="succes">{l.tranche.code} prête</Pill>
                       ) : (
                         <span className="cell-sub">
                           {l.tranche.code} attend {l.tranche.attend.join(', ')}
@@ -269,11 +272,11 @@ export function Production({ slug }: { slug: string }) {
                       <span className="prod-renta">
                         <span className="prod-etiquette">Marge</span>
                         {r && r.etat === 'complet' && r.taux !== null ? (
-                          <span
-                            className={`pill pill--${r.statut === 'vert' ? 'succes' : r.statut === 'rouge' ? 'risque' : r.statut === 'ambre' ? 'attention' : 'neutre'}`}
+                          <Pill
+                            className={`pill--${r.statut === 'vert' ? 'succes' : r.statut === 'rouge' ? 'risque' : r.statut === 'ambre' ? 'attention' : 'neutre'}`}
                           >
                             {String(r.taux).replace('.', ',')} %
-                          </span>
+                          </Pill>
                         ) : (
                           <span className="cell-sub">données insuffisantes</span>
                         )}
@@ -303,9 +306,9 @@ export function Production({ slug }: { slug: string }) {
               <div key={ce.code} className="prod-cellule">
                 <div className="prod-cellule-tete">
                   <strong>{ce.nom}</strong>
-                  <span className={`pill pill--${tonCharge(ce.moyenne, vue.charge.zone)}`}>
+                  <Pill className={`pill--${tonCharge(ce.moyenne, vue.charge.zone)}`}>
                     {ce.moyenne === null ? '—' : `${ce.moyenne} %`}
-                  </span>
+                  </Pill>
                 </div>
                 {ce.membres.map((m) => (
                   <div key={m.id} className="prod-membre" data-ton={tonCharge(m.pourcentage, vue.charge.zone)}>

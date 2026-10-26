@@ -8,6 +8,8 @@ import { deciderTache, getTachesAValider, telechargerPieceRemise } from '@/lib/m
 import type { TacheAValider } from '@/lib/types';
 import { DemandesEquipe } from './demandes-equipe';
 import { formatDate } from '@/lib/dates';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
 const lienProjet = (base: string, projetId: string) =>
@@ -33,10 +35,10 @@ export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: numbe
 
   if (!taches) {
     return erreur ? (
-      <p className="empty-state">{erreur}</p>
+      <EmptyState>{erreur}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -44,7 +46,7 @@ export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: numbe
   return (
     <>
       <DemandesEquipe slug={slug} onCompte={setAbsences} />
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       {taches.length > 0 && (
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Tâches remises à valider · {taches.length}</h2>
@@ -119,8 +121,7 @@ function LigneAValider({
             : 'Sans fichier joint'}
         </span>
         {renvoi && (
-          <label className="field">
-            <span className="field-label">Motif du renvoi</span>
+          <Field label="Motif du renvoi">
             <textarea
               className="field-input"
               rows={2}
@@ -128,7 +129,7 @@ function LigneAValider({
               value={motif}
               onChange={(e) => setMotif(e.target.value)}
             />
-          </label>
+          </Field>
         )}
         {etat.erreur && <span className="field-erreur">{etat.erreur}</span>}
       </span>

@@ -8,6 +8,8 @@ import { formatAmount } from '@/lib/format';
 import { formatDate } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -58,12 +60,12 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
               <div className="clo-tete">
                 <strong className="clo-periode">{m.periode}</strong>
                 {m.clos ? (
-                  <span className="pill pill--succes">
+                  <Pill tone="succes">
                     <Lock size={11} aria-hidden /> Clôturé{m.le ? ` le ${formatDate(m.le)}` : ''}
                     {m.par ? ` par ${m.par}` : ''}
-                  </span>
+                  </Pill>
                 ) : (
-                  <span className="pill pill--attention">{m.derniereReouverture ? 'Rouvert' : 'À clôturer'}</span>
+                  <Pill tone="attention">{m.derniereReouverture ? 'Rouvert' : 'À clôturer'}</Pill>
                 )}
               </div>
               <p className="clo-chiffres">
@@ -119,8 +121,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
               )}
               {rouvrir?.mois === m.mois && (
                 <div className="clo-confirmer">
-                  <label className="field">
-                    <span className="field-label">Motif de la réouverture (transmis au CFO)</span>
+                  <Field label="Motif de la réouverture (transmis au CFO)">
                     <textarea
                       className="field-input"
                       rows={2}
@@ -128,7 +129,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                       value={rouvrir.motif}
                       onChange={(e) => setRouvrir({ mois: m.mois, motif: e.target.value })}
                     />
-                  </label>
+                  </Field>
                   <span className="clo-boutons">
                     <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setRouvrir(null)}>
                       Annuler
@@ -147,7 +148,7 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
             </li>
           ))}
         </ul>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
       </div>
     </Modal>
   );

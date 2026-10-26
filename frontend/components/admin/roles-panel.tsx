@@ -5,6 +5,8 @@ import { RefreshCw } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMatriceRoles, majPermissionRole } from '@/lib/roles';
 import type { MatriceRoles, NiveauPermission } from '@/lib/types';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
 
 const NIVEAUX: { cle: NiveauPermission; libelle: string }[] = [
   { cle: 'aucun', libelle: 'Aucun' },
@@ -103,7 +105,7 @@ export function RolesPanel({ slug }: { slug: string }) {
   if (!matrice) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -136,9 +138,9 @@ export function RolesPanel({ slug }: { slug: string }) {
                 <td data-label="Rôle">
                   {role.nom}
                   {role.transverse && (
-                    <span className="pill pill--neutre" style={{ marginLeft: '0.5rem' }}>
+                    <Pill tone="neutre" style={{ marginLeft: '0.5rem' }}>
                       Transverse
-                    </span>
+                    </Pill>
                   )}
                 </td>
                 {matrice.modules.map((m) => {
@@ -146,7 +148,7 @@ export function RolesPanel({ slug }: { slug: string }) {
                   if (!role.modifiable) {
                     return (
                       <td data-label={m.nom} key={m.cle}>
-                        <span className={`pill pill--${niveau}`}>{NIVEAUX.find((n) => n.cle === niveau)?.libelle}</span>
+                        <Pill tone={niveau}>{NIVEAUX.find((n) => n.cle === niveau)?.libelle}</Pill>
                       </td>
                     );
                   }

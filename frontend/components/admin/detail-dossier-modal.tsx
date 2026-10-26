@@ -28,6 +28,8 @@ import { FicheApporteurSection } from './fiche-apporteur-section';
 import { estPersonneMorale } from '@/lib/nomenclature';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -299,7 +301,7 @@ export function DetailDossierModal({
                 onChange={setLocaliteId}
                 idChamp="rattacher-localite"
               />
-              {erreur && <p className="field-erreur">{erreur}</p>}
+              {erreur && <FieldError>{erreur}</FieldError>}
               <div className="modal-actions">
                 <button type="button" className="btn-primary" disabled={enCours || !localiteId} onClick={rattacher}>
                   {enCours ? 'Rattachement…' : 'Rattacher'}
@@ -351,13 +353,13 @@ export function DetailDossierModal({
             <span className="fiche-crm-aide">pilote la fiche jusqu’au contrat</span>
           </div>
         </div>
-        {erreurProprio && <p className="field-erreur">{erreurProprio}</p>}
+        {erreurProprio && <FieldError>{erreurProprio}</FieldError>}
       </section>
 
       <section className="fiche-crm-section">
         <h3 className="fiche-crm-titre">Historique</h3>
         {!historique ? (
-          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+          <Skeleton size="sm" />
         ) : historique.length === 0 ? (
           <p className="fiche-crm-aide">Aucun événement enregistré.</p>
         ) : (
@@ -393,7 +395,7 @@ export function DetailDossierModal({
           ) : (
             <div className="fiche-crm-archive-confirmer" role="group" aria-label="Confirmer l’archivage">
               <strong>Archiver {projet.code} ? C’est définitif : plus aucune action sur ce lead.</strong>
-              {erreurArchive && <p className="field-erreur">{erreurArchive}</p>}
+              {erreurArchive && <FieldError>{erreurArchive}</FieldError>}
               <div className="modal-actions">
                 <button
                   type="button"

@@ -5,6 +5,8 @@ import { deposerReporting } from '@/lib/pilotage';
 import { PastillesSuivi, SuiviReporting } from '@/components/pilotage/suivi-reporting';
 import type { ReportingPilotage, StatutReporting, VuePilotage } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
   const statuts: Record<StatutReporting, { classe: string; libelle: string }> = {
@@ -94,7 +96,7 @@ export function Reportings({
                   </span>
                   <span role="cell">{formatDate(x.echeance)}</span>
                   <span role="cell" className="pi-pastilles">
-                    <span className={`pill ${pill.classe}`}>{pill.libelle}</span>
+                    <Pill className={pill.classe}>{pill.libelle}</Pill>
                     <PastillesSuivi r={x} />
                   </span>
                 </button>
@@ -113,7 +115,7 @@ export function Reportings({
             {r.titre} · {r.periode}
           </h2>
           <span className="pi-pastilles pi-fiche-statut">
-            <span className={`pill ${pillStatut(r).classe}`}>{pillStatut(r).libelle}</span>
+            <Pill className={pillStatut(r).classe}>{pillStatut(r).libelle}</Pill>
             <PastillesSuivi r={r} />
           </span>
           {r.contenu ? (
@@ -154,7 +156,7 @@ export function Reportings({
               </label>
             )
           )}
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <SuiviReporting key={cle(r)} slug={slug} r={r} onVue={onVue} />
           {r.peutDeposer && (
             <button

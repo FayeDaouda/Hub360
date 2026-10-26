@@ -6,6 +6,7 @@ import { estImage, lireImageRedimensionnee } from '@/lib/image-fichier';
 import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur } from '@/lib/types';
 import { couleurPersonne, srcPhoto } from '@/lib/profil';
 import { ancreCellule } from './sommaire-cellules';
+import { Pill } from '@/components/ui/pill';
 
 type Props = {
   slug: string;
@@ -55,10 +56,10 @@ export function CelluleCarte({
           <span className="eq-code">{c.code}</span> {c.nom}
         </h2>
         <span className="eq-badges">
-          <span className={`pill pill--${statut.ton}`}>{statut.libelle}</span>
-          <span className={`pill ${c.pctATemps == null ? 'pill--neutre' : 'pill--succes'}`}>
+          <Pill tone={statut.ton}>{statut.libelle}</Pill>
+          <Pill className={c.pctATemps == null ? 'pill--neutre' : 'pill--succes'}>
             {c.pctATemps == null ? 'pas encore d’étape livrée' : `${c.pctATemps} % à temps`}
-          </span>
+          </Pill>
         </span>
       </header>
       <p className="eq-cellule-sous">
@@ -85,7 +86,11 @@ export function CelluleCarte({
         · {CLIENTELES[c.clientele]} · {PROCESSUS[c.processus].iso}
       </p>
       {/* Détail (remontée au Dir. GC) : un seul bandeau en tête de la liste. */}
-      {c.pilote?.sansCompte && <span className="pill pill--attention eq-sans-compte">Pilote sans compte HUB</span>}
+      {c.pilote?.sansCompte && (
+        <Pill tone="attention" className="eq-sans-compte">
+          Pilote sans compte HUB
+        </Pill>
+      )}
       <DecisionsFiche slug={slug} cible={{ cellule: c.id }} />
       {ecriture && (
         <div className="eq-cellule-actions">

@@ -18,6 +18,9 @@ import {
 import { formatDate, formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -75,8 +78,8 @@ export function FicheRentabilitePanneau({
         <CloseButton onClick={onClose} />
       </header>
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
-      {!f && !erreur && <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />}
+      {erreur && <FieldError>{erreur}</FieldError>}
+      {!f && !erreur && <Skeleton size="sm" />}
       {f && (
         <>
           <section className="fiche-crm-section">
@@ -108,7 +111,7 @@ export function FicheRentabilitePanneau({
                 <dt>Taux</dt>
                 <dd className="rt-taux-ligne">
                   {f.etat === 'complet' ? formatTaux(f.taux) : 'Non calculable'}
-                  {f.statut && <span className={`pill ${PILL_STATUT[f.statut]}`}>{LIBELLE_STATUT[f.statut]}</span>}
+                  {f.statut && <Pill className={PILL_STATUT[f.statut]}>{LIBELLE_STATUT[f.statut]}</Pill>}
                 </dd>
               </div>
               <div>
@@ -213,11 +216,7 @@ export function FicheRentabilitePanneau({
                       <span className="rtf-mois-nom">{s.nom}</span>
                       <span>{s.heures === null ? '—' : `${formatNumber(s.heures)} h`}</span>
                       <span>
-                        {s.sansSalaire ? (
-                          <span className="pill pill--attention">sans salaire validé</span>
-                        ) : (
-                          formatAmount(s.cout ?? 0)
-                        )}
+                        {s.sansSalaire ? <Pill tone="attention">sans salaire validé</Pill> : formatAmount(s.cout ?? 0)}
                       </span>
                     </li>
                   ))}

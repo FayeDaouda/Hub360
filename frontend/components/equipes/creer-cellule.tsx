@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { creerCellule } from '@/lib/equipe';
 import { CLIENTELES, PROCESSUS, PROCESSUS_CREATION, STATUTS_CELLULE } from '@/lib/equipes';
 import type { ClienteleCellule, ProcessusCellule, StatutCellule, VueEquipes } from '@/lib/types';
+import { FieldError } from '@/components/ui/field';
 
 type Props = { slug: string; vue: VueEquipes; onCreee: () => void };
 
@@ -103,7 +104,7 @@ export function CreerCellule({ slug, vue, onCreee }: Props) {
         </label>
       </div>
       {piloteId && <p className="eq-aide">Le pilote rejoint la nouvelle cellule ; son poste actuel se libère.</p>}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <button type="button" className="btn-primary eq-creer-bouton" disabled={!nom.trim() || envoi} onClick={creer}>
         {envoi ? 'Création…' : 'Créer la cellule'}
       </button>

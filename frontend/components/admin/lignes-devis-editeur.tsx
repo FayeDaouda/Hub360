@@ -5,6 +5,7 @@ import type { LigneDevisSaisie } from '@/lib/devis';
 import { ventilationTva, type LigneDevis, type ProduitService } from '@/lib/types';
 import { formatCompactAmount } from '@/lib/format';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 // Éditeur des lignes d'un devis — partagé par la modale « Nouveau devis »
 // (Facturation) et l'offre d'un dossier CRM (étape F). Contrôlé : l'état vit
@@ -299,7 +300,7 @@ export function LignesDevisEditeur({
                 <tr key={i}>
                   <td data-label="Prestation">
                     {l.horsCatalogue ? (
-                      <span className="pill pill--neutre">Hors catalogue</span>
+                      <Pill tone="neutre">Hors catalogue</Pill>
                     ) : (
                       <select
                         className="field-input"
@@ -461,8 +462,7 @@ export function LignesDevisEditeur({
 
       {aZero > 0 && (
         <p className="field-aide" style={{ textAlign: 'right' }} role="note">
-          <span className="pill pill--attention">{plural(aZero, 'ligne')} à 0 FCFA</span> vérifie{' '}
-          {aZero > 1 ? 'leur' : 'son'} prix.
+          <Pill tone="attention">{plural(aZero, 'ligne')} à 0 FCFA</Pill> vérifie {aZero > 1 ? 'leur' : 'son'} prix.
         </p>
       )}
       <p className="field-aide" style={{ textAlign: 'right' }}>

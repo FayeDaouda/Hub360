@@ -25,7 +25,7 @@ import {
 import { clearSession, niveauSuffisant } from '@/lib/auth';
 import { estAdministrateurHub, sectionAccessible, sectionArrivee } from '@/lib/acces-back-office';
 import type { Session, Societe } from '@/lib/types';
-import { SocieteAvatar } from '@/components/societe-avatar';
+import { CompanyAvatar } from '@/components/ui/avatar';
 import { MenuCompte } from '@/components/admin/menu-compte';
 import { ChatWidget } from '@/components/chat/chat-widget';
 import { ClocheNotifications } from '@/components/admin/cloche-notifications';
@@ -195,7 +195,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
         <div className="admin-sidebar-scroll">
           <div className="admin-brand">
             {societe ? (
-              <SocieteAvatar societe={societe} size="md" theme="glass" />
+              <CompanyAvatar company={societe} size="md" theme="glass" />
             ) : (
               <span className="admin-brand-fallback">{session.societe.nom.charAt(0)}</span>
             )}
@@ -376,7 +376,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             {/* Téléphone : la marque de la société à la place du menu (navigation en bas). */}
             <span className="admin-topbar-marque" aria-hidden>
               {societe ? (
-                <SocieteAvatar societe={societe} size="md" theme="glass" />
+                <CompanyAvatar company={societe} size="md" theme="glass" />
               ) : (
                 <span className="admin-brand-fallback">{session.societe.nom.charAt(0)}</span>
               )}

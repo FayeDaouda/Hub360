@@ -6,6 +6,8 @@ import { ApiError } from '@/lib/client-api';
 import { ajouterAnnexeGabarit, getParametresContrat, majParametresContrat, retirerAnnexeGabarit } from '@/lib/contrats';
 import type { ParametresContrat } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
+import { Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Réglages des contrats de la société (étape G) — societe_admin ou CIO.
 // Tout est vide au départ : le texte du contrat et le signataire viennent de
@@ -80,7 +82,7 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
   if (!p) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -119,8 +121,7 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
           (Réglages › Règles et délais) : au-delà, seul le CEO contresigne ; en deçà, l’Architecte DPLG.
         </p>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Signataire jusqu’au seuil (Architecte DPLG)</span>
+          <Field label="Signataire jusqu’au seuil (Architecte DPLG)">
             <input
               className="field-input"
               value={nom}
@@ -128,9 +129,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
               maxLength={120}
               placeholder="Nom et prénom"
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Fonction</span>
+          </Field>
+          <Field label="Fonction">
             <input
               className="field-input"
               value={fonction}
@@ -138,11 +138,10 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
               maxLength={120}
               placeholder="ex : Architecte DPLG"
             />
-          </label>
+          </Field>
         </div>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Signataire au-delà du seuil (CEO)</span>
+          <Field label="Signataire au-delà du seuil (CEO)">
             <input
               className="field-input"
               value={ceoNom}
@@ -150,9 +149,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
               maxLength={120}
               placeholder="Nom et prénom"
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Fonction</span>
+          </Field>
+          <Field label="Fonction">
             <input
               className="field-input"
               value={ceoFonction}
@@ -160,10 +158,9 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
               maxLength={120}
               placeholder="ex : Directeur général"
             />
-          </label>
+          </Field>
         </div>
-        <label className="field">
-          <span className="field-label">Contrat sur mesure à partir de (offre HT, FCFA)</span>
+        <Field label="Contrat sur mesure à partir de (offre HT, FCFA)">
           <input
             className="field-input"
             type="number"
@@ -172,8 +169,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
             onChange={(e) => setSeuil(e.target.value)}
             placeholder="Vide = toujours depuis le modèle"
           />
-        </label>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        </Field>
+        {erreur && <FieldError>{erreur}</FieldError>}
         {enregistre && <p className="field-aide">Réglages enregistrés.</p>}
         <div className="modal-actions">
           <button

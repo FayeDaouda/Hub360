@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { SocieteAvatar } from '@/components/societe-avatar';
+import { CompanyAvatar } from '@/components/ui/avatar';
 import { getSociete } from '@/lib/api';
 import { LoginForm } from './login-form';
 
@@ -32,7 +32,7 @@ export default async function LoginPage(props: Props) {
       <header className="auth-carte-entete auth-carte-entete--societe">
         <span className="auth-carte-societe" style={tuile}>
           {/* alt vide : le nom est écrit juste à côté. */}
-          <SocieteAvatar societe={societe} theme="glass" alt="" />
+          <CompanyAvatar company={societe} theme="glass" alt="" />
         </span>
         <div>
           <h1 id="connexion-titre" className="auth-carte-titre">

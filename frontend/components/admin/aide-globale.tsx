@@ -9,6 +9,7 @@ import { lireFichier } from '@/lib/fichiers';
 import { creerSignalement } from '@/lib/signalements';
 import type { NiveauPermission, Session } from '@/lib/types';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Onglet = 'guide' | 'signaler';
 
@@ -199,8 +200,7 @@ function Signaler({ session, onClose }: { session: Session; onClose: () => void 
         Décrivez ce qui ne va pas, ce que vous attendiez ou votre idée. La page où vous êtes, votre rôle et votre
         appareil sont joints automatiquement.
       </p>
-      <label className="field">
-        <span className="field-label">Le problème</span>
+      <Field label="Le problème">
         <textarea
           className="field-input"
           rows={5}
@@ -209,13 +209,12 @@ function Signaler({ session, onClose }: { session: Session; onClose: () => void 
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-      </label>
-      <label className="field">
-        <span className="field-label">Capture d’écran (facultatif)</span>
+      </Field>
+      <Field label="Capture d’écran (facultatif)">
         <input className="field-input" type="file" accept="image/*" onChange={(e) => joindre(e.target.files?.[0])} />
-      </label>
+      </Field>
       {capture && <span className="cell-sub">Jointe : {capture.nom}</span>}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="modal-actions">
         <button type="button" className="btn-ghost" onClick={onClose} disabled={envoi}>
           Annuler

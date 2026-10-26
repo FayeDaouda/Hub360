@@ -5,6 +5,8 @@ import { CheckCheck, MessageCircleQuestion } from 'lucide-react';
 import { lireReporting, poserQuestionReporting, repondreQuestionReporting } from '@/lib/pilotage';
 import type { ReportingPilotage, VuePilotage } from '@/lib/types';
 import { formatDate, formatDayMonth, formatTime, toIsoDay } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 const dateHeure = (iso: string) => `${formatDate(toIsoDay(new Date(iso)))} à ${formatTime(iso)}`;
 const message = (e: unknown, repli: string) => (e instanceof Error && e.message ? e.message : repli);
@@ -15,10 +17,8 @@ export function PastillesSuivi({ r }: { r: ReportingPilotage }) {
   if (!r.suivi) return null;
   return (
     <>
-      {r.suivi.lecture && (
-        <span className="pill pill--succes">Lu le {formatDayMonth(toIsoDay(new Date(r.suivi.lecture.le)))}</span>
-      )}
-      {r.suivi.questionsOuvertes > 0 && <span className="pill pill--attention">Question en cours</span>}
+      {r.suivi.lecture && <Pill tone="succes">Lu le {formatDayMonth(toIsoDay(new Date(r.suivi.lecture.le)))}</Pill>}
+      {r.suivi.questionsOuvertes > 0 && <Pill tone="attention">Question en cours</Pill>}
     </>
   );
 }
@@ -91,8 +91,7 @@ export function SuiviReporting({
 
       {s.peutQuestionner && question !== null && (
         <div className="sr-formulaire">
-          <label className="field">
-            <span className="field-label">Votre question à {r.emetteur}</span>
+          <Field label={<>Votre question à {r.emetteur}</>}>
             <textarea
               className="field-input"
               rows={3}
@@ -102,7 +101,7 @@ export function SuiviReporting({
               onChange={(e) => setQuestion(e.target.value)}
               autoFocus
             />
-          </label>
+          </Field>
           <div className="sr-boutons">
             <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => setQuestion(null)}>
               Annuler
@@ -132,9 +131,9 @@ export function SuiviReporting({
               <div className="sr-message">
                 <p className="sr-auteur">
                   <strong>{q.par ?? 'Destinataire'}</strong> · {dateHeure(q.le)}
-                  <span className={`pill ${q.reponse ? 'pill--succes' : 'pill--attention'}`}>
+                  <Pill className={q.reponse ? 'pill--succes' : 'pill--attention'}>
                     {q.reponse ? 'Répondue' : 'Ouverte'}
-                  </span>
+                  </Pill>
                 </p>
                 <p className="sr-texte">{q.texte}</p>
               </div>
@@ -148,8 +147,7 @@ export function SuiviReporting({
               ) : (
                 s.peutRepondre && (
                   <div className="sr-formulaire">
-                    <label className="field">
-                      <span className="field-label">Votre réponse</span>
+                    <Field label="Votre réponse">
                       <textarea
                         className="field-input"
                         rows={3}
@@ -158,7 +156,7 @@ export function SuiviReporting({
                         disabled={!!envoi}
                         onChange={(e) => setReponses((x) => ({ ...x, [q.id]: e.target.value }))}
                       />
-                    </label>
+                    </Field>
                     <div className="sr-boutons">
                       <button
                         type="button"
@@ -180,7 +178,7 @@ export function SuiviReporting({
           ))}
         </ol>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </div>
   );
 }

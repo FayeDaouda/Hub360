@@ -27,6 +27,8 @@ import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
 import { daysBetween, formatDate, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -295,8 +297,8 @@ export function TachePanneau({
         </p>
         <h2 className="po-panneau-titre">{tache.libelle}</h2>
         <div className="po-pastilles">
-          <span className={`pill pill--${pastille.ton}`}>{pastille.libelle}</span>
-          {tache.sourceNative && <span className="pill pill--neutre">source native exigée</span>}
+          <Pill tone={pastille.ton}>{pastille.libelle}</Pill>
+          {tache.sourceNative && <Pill tone="neutre">source native exigée</Pill>}
         </div>
       </header>
 
@@ -422,7 +424,7 @@ export function TachePanneau({
           </div>
         </div>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       {lignes(resume)}
 

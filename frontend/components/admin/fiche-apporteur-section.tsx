@@ -13,6 +13,7 @@ import {
   type SaisieApporteur,
 } from './fiche-apporteur-champs';
 import { formatDate } from '@/lib/dates';
+import { FieldError } from '@/components/ui/field';
 
 // Même rôle que le serveur (CrmService.ROLE_MODIF_APPORTEUR) — affichage
 // seulement, le serveur tranche.
@@ -61,7 +62,7 @@ export function FicheApporteurSection({ slug, projet, onModifie }: Props) {
         {saisie ? (
           <div className="fiche-apporteur-edition" role="group" aria-label="Modifier la fiche apporteur">
             <FicheApporteurChamps saisie={saisie} onChange={setSaisie} idPrefixe="fiche-apporteur" desactive={envoi} />
-            {erreur && <p className="field-erreur">{erreur}</p>}
+            {erreur && <FieldError>{erreur}</FieldError>}
             <div className="modal-actions">
               <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setSaisie(null)}>
                 Annuler

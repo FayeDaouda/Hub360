@@ -19,6 +19,9 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
 import { formatDate, formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Chargement impossible.');
 const nomDe = (f: FeuilleTempsSalarie) => `${f.prenom} ${f.nom}`.trim() || f.matricule;
@@ -47,12 +50,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
   }, [slug, mois]);
   useEffect(charger, [charger]);
 
-  if (!donnees)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!donnees) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
 
   const courante = donnees.feuilles.find((f) => f.dossierId === choisi) ?? null;
 
@@ -87,7 +85,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
               ))}
             </div>
           </div>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <div className="temps-export">
             <BoutonExport
               desactive={!donnees.feuilles.length}
@@ -113,7 +111,7 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
           </div>
 
           {donnees.feuilles.length === 0 ? (
-            <p className="empty-state">Aucun salarié présent ce mois-là.</p>
+            <EmptyState>Aucun salarié présent ce mois-là.</EmptyState>
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table temps-table temps-liste">
@@ -158,12 +156,12 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                         {f.occupation == null ? '—' : `${f.occupation} %`}
                       </td>
                       <td data-label="Contrôle RH" className="tl-statut">
-                        <span className={`pill ${STATUT_FEUILLE[f.statut].pill}`}>
+                        <Pill className={STATUT_FEUILLE[f.statut].pill}>
                           {f.statut === 'controlee' && f.controleLe
                             ? `Contrôlée le ${formatDate(f.controleLe)}`
                             : STATUT_FEUILLE[f.statut].libelle}
-                        </span>
-                        {f.ecart && !f.ecart.traiteLe && <span className="pill pill--attention">Écart signalé</span>}
+                        </Pill>
+                        {f.ecart && !f.ecart.traiteLe && <Pill tone="attention">Écart signalé</Pill>}
                       </td>
                     </tr>
                   ))}
@@ -332,9 +330,7 @@ function EcartRh({
     <div className="temps-ecart">
       <h3 className="rh-section">Écart signalé par le salarié</h3>
       <p className="dmd-note">
-        <span className={`pill ${e.traiteLe ? 'pill--succes' : 'pill--attention'}`}>
-          {e.traiteLe ? 'Traité' : 'À traiter'}
-        </span>{' '}
+        <Pill className={e.traiteLe ? 'pill--succes' : 'pill--attention'}>{e.traiteLe ? 'Traité' : 'À traiter'}</Pill>{' '}
         Le {formatDate(e.signaleLe)} : « {e.commentaire} »
       </p>
       {e.traiteLe ? (
@@ -347,8 +343,7 @@ function EcartRh({
             Corrigez la source si besoin (absence à enregistrer, dates de la tâche dans Projets) : la feuille se
             recalcule. Puis répondez au salarié ; le contrôle du mois se rouvre.
           </p>
-          <label className="field">
-            <span className="field-label">Réponse au salarié</span>
+          <Field label="Réponse au salarié">
             <textarea
               className="field-input"
               rows={2}
@@ -356,8 +351,8 @@ function EcartRh({
               value={reponse}
               onChange={(ev) => setReponse(ev.target.value)}
             />
-          </label>
-          {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+          </Field>
+          {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
           <div className="dmd-actions">
             <button
               type="button"

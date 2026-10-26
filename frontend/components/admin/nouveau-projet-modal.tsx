@@ -15,6 +15,7 @@ import { segmentClient } from '@/lib/nomenclature';
 import type { Client, Localite, NouveauProjetPayload, Personne, Projet, TypeClient } from '@/lib/types';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { yearOf } from '@/lib/dates';
+import { FieldError } from '@/components/ui/field';
 
 const NOUVEAU_CLIENT = '__nouveau__';
 
@@ -228,7 +229,7 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
           par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
         </p>
 
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
 
         <button
           type="submit"

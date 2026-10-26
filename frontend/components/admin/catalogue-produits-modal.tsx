@@ -7,6 +7,7 @@ import type { ProduitService } from '@/lib/types';
 import { formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -119,17 +120,15 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
         <h4 className="exec-sous-titre">Ajouter une entrée</h4>
         <form onSubmit={ajouter}>
           <div className="field-row">
-            <label className="field">
-              <span className="field-label">Désignation</span>
+            <Field label="Désignation">
               <input
                 className="field-input"
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
                 placeholder="ex : Honoraires de conception"
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Prix unitaire (facultatif)</span>
+            </Field>
+            <Field label="Prix unitaire (facultatif)">
               <input
                 type="number"
                 min="0"
@@ -138,9 +137,8 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
                 onChange={(e) => setPrixUnitaire(e.target.value)}
                 placeholder="variable selon le projet"
               />
-            </label>
-            <label className="field" style={{ maxWidth: 120 }}>
-              <span className="field-label">TVA %</span>
+            </Field>
+            <Field label="TVA %" style={{ maxWidth: 120 }}>
               <input
                 type="number"
                 min="0"
@@ -150,9 +148,9 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
                 value={tauxTva}
                 onChange={(e) => setTauxTva(e.target.value)}
               />
-            </label>
+            </Field>
           </div>
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <div className="modal-actions">
             <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
               Fermer

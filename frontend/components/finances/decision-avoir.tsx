@@ -6,6 +6,7 @@ import { deciderAvoir, LIBELLE_MOTIF_AVOIR, type AvoirAValider } from '@/lib/fac
 import { formatAmount } from '@/lib/format';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Avoir au-delà du seuil (contrôle interne, revue CFO 20/10/2026) : le CEO
 // le valide (l'avoir est émis, la facture annulée) ou le refuse avec un motif.
@@ -73,8 +74,7 @@ export function DecisionAvoir({
           <p className="dmd-note">Vous avez fait cette demande : elle doit être validée par un autre CEO.</p>
         )}
         {refus !== null && (
-          <label className="field">
-            <span className="field-label">Motif du refus (transmis au demandeur)</span>
+          <Field label="Motif du refus (transmis au demandeur)">
             <textarea
               className="field-input"
               rows={2}
@@ -82,9 +82,9 @@ export function DecisionAvoir({
               value={refus}
               onChange={(e) => setRefus(e.target.value)}
             />
-          </label>
+          </Field>
         )}
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         {avoir.peutDecider && (
           <div className="modal-actions">
             {refus === null ? (

@@ -6,6 +6,7 @@ import { creerAvoir, LIBELLE_MOTIF_AVOIR, type MotifAvoir } from '@/lib/facturat
 import { formatAmount } from '@/lib/format';
 import type { Facturation } from '@/lib/types';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Demande d'avoir (contrôle interne, revue CFO 20/10/2026) : motif choisi et
 // précisé, CEO prévenu ; au-delà du seuil (Réglages), le CEO valide avant
@@ -71,8 +72,7 @@ export function DemandeAvoir({
               L’avoir annule toute la facture ({formatAmount(facture.montantTtc)} TTC). Le motif est obligatoire et le
               CEO est prévenu ; au-delà du seuil fixé dans Réglages, il valide avant l’émission.
             </p>
-            <label className="field">
-              <span className="field-label">Motif</span>
+            <Field label="Motif">
               <select
                 className="field-input"
                 value={motif}
@@ -86,9 +86,8 @@ export function DemandeAvoir({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Précisez (transmis au CEO)</span>
+            </Field>
+            <Field label="Précisez (transmis au CEO)">
               <textarea
                 className="field-input"
                 rows={3}
@@ -98,8 +97,8 @@ export function DemandeAvoir({
                 placeholder="Ex. taux de TVA erroné, à refacturer à 18 %"
                 onChange={(e) => setCommentaire(e.target.value)}
               />
-            </label>
-            {erreur && <p className="field-erreur">{erreur}</p>}
+            </Field>
+            {erreur && <FieldError>{erreur}</FieldError>}
             <div className="modal-actions">
               <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
                 Annuler

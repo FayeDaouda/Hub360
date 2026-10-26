@@ -30,6 +30,7 @@ import { getADeciderProjets, type ADeciderProjets, type DemandeTsADecider } from
 import { DecisionTs } from './decision-ts';
 import type { DemandeAbsence, Projet, VuePilotage } from '@/lib/types';
 import { daysBetween, daysSince, formatDayMonth, toIsoDay } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -333,7 +334,7 @@ export function ADecider({
         <h2 className="dmd-titre">
           <AlarmClock size={17} aria-hidden /> À décider aujourd’hui · {elements.length}
         </h2>
-        {urgents > 0 && <span className="pill pill--risque">{urgents} en retard</span>}
+        {urgents > 0 && <Pill tone="risque">{urgents} en retard</Pill>}
       </div>
       {elements.length === 0 ? (
         <p className="dmd-note">

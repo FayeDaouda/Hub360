@@ -10,6 +10,8 @@ import { daysSince, formatDayShortMonth } from '@/lib/dates';
 import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -108,15 +110,15 @@ export function OffreDossier({
       <div className="cycle-dossier-tete">
         <span className="field-label">Offre</span>
         {offre && (
-          <span className={`pill ${CLASSE_OFFRE[offre.statutEffectif] ?? 'pill--neutre'}`}>
+          <Pill className={CLASSE_OFFRE[offre.statutEffectif] ?? 'pill--neutre'}>
             {STATUTS_DEVIS[offre.statutEffectif]}
-          </span>
+          </Pill>
         )}
-        {offre?.relanceAFaire && <span className="pill pill--attention">Relance à faire</span>}
+        {offre?.relanceAFaire && <Pill tone="attention">Relance à faire</Pill>}
         {!!offre?.lignesAZero && (
-          <span className="pill pill--attention" title="Un forfait « prix à fixer » laissé vide ?">
+          <Pill tone="attention" title="Un forfait « prix à fixer » laissé vide ?">
             {plural(offre.lignesAZero, 'ligne')} à 0 FCFA
-          </span>
+          </Pill>
         )}
       </div>
 
@@ -231,7 +233,7 @@ export function OffreDossier({
           )}
         </div>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </section>
   );
 }

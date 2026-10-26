@@ -18,6 +18,9 @@ import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useMediaQuery } from '@/lib/media';
 import { formatDate } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 type Liste = 'cellules' | 'affecter' | 'projets' | 'taches' | 'absences';
 
@@ -84,12 +87,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
     etroit ? barreRaccourcis : undefined,
   );
 
-  if (!vue)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!vue) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
   const i = vue.indicateurs;
   const tuiles: { cle: Liste; libelle: string; valeur: string; aide: string; ton?: string }[] = [
     {
@@ -152,7 +150,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
           </button>
         ))}
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       {liste === 'cellules' && sansCompte.length > 0 && (
         <p className="eq-alerte" role="note">
@@ -243,12 +241,12 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
                 <span className="eq-badges">
                   {p.cellules.length ? (
                     p.cellules.map((c) => (
-                      <span key={c.code} className="pill pill--info" title={c.nom}>
+                      <Pill key={c.code} tone="info" title={c.nom}>
                         {c.code}
-                      </span>
+                      </Pill>
                     ))
                   ) : (
-                    <span className="pill pill--attention">à affecter</span>
+                    <Pill tone="attention">à affecter</Pill>
                   )}
                 </span>
                 <Link className="lien-inline" href={`/admin/${slug}/projets?projet=${p.id}`}>
@@ -264,7 +262,7 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
         <section className="panel glass-panel eq-liste">
           <h2>
             Tâches en cours · {vue.tachesEnCours.length}
-            {i.taches.enRetard > 0 && <span className="pill pill--risque">{i.taches.enRetard} en retard</span>}
+            {i.taches.enRetard > 0 && <Pill tone="risque">{i.taches.enRetard} en retard</Pill>}
           </h2>
           <ul className="eq-lignes">
             {vue.tachesEnCours.map((t) => (
@@ -277,11 +275,11 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
                 </span>
                 <span className="eq-charge">{t.assigne ?? 'à assigner'}</span>
                 {t.prolongeeJusquau ? (
-                  <span className="pill pill--attention">prolongée jusqu’au {formatDate(t.prolongeeJusquau)}</span>
+                  <Pill tone="attention">prolongée jusqu’au {formatDate(t.prolongeeJusquau)}</Pill>
                 ) : (
-                  <span className={`pill ${t.enRetard ? 'pill--risque' : 'pill--neutre'}`}>
+                  <Pill className={t.enRetard ? 'pill--risque' : 'pill--neutre'}>
                     {t.echeance ? `${t.enRetard ? 'échue le' : 'échéance'} ${formatDate(t.echeance)}` : 'sans échéance'}
-                  </span>
+                  </Pill>
                 )}
               </li>
             ))}

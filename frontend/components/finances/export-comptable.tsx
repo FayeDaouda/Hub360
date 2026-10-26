@@ -8,6 +8,7 @@ import { MODES_PAIEMENT, type FactureCentrale } from '@/lib/types';
 import { formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Field } from '@/components/ui/field';
 
 type Vente = { f: FactureCentrale; origine: string | null };
 type Encaissement = { f: FactureCentrale; date: string; montant: number; mode: string | null; reference: string };
@@ -100,8 +101,7 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
           Journaux du mois au format Excel, sans plan de comptes : à remettre à la personne qui prépare les comptes
           annuels. Le format s’adaptera à son logiciel quand il sera connu.
         </p>
-        <label className="field">
-          <span className="field-label">Mois</span>
+        <Field label="Mois">
           <select className="field-input" value={mois} onChange={(e) => setMois(e.target.value)}>
             {moisDispo.length === 0 && <option value={mois}>{formatMonthYear(mois)}</option>}
             {moisDispo.map((m) => (
@@ -110,7 +110,7 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
               </option>
             ))}
           </select>
-        </label>
+        </Field>
         <div className="exc-journaux">
           <div className="exc-journal">
             <p className="field-label">Journal des ventes</p>

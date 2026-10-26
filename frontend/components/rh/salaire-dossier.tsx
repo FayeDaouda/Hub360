@@ -15,6 +15,8 @@ import {
 } from '@/lib/rh';
 import type { DossierPersonnel } from '@/lib/types';
 import { formatDate, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 const STATUT: Record<ChangementSalaire['statut'], { libelle: string; pill: string }> = {
@@ -92,12 +94,10 @@ export function SalaireDossier({
           >
             {dossier.salaireRenseigne ? 'Afficher' : ecriture ? 'Proposer le salaire d’entrée' : 'Historique'}
           </button>
-          {dossier.salaireEnAttente && (
-            <span className="pill pill--attention">Changement en attente de validation</span>
-          )}
+          {dossier.salaireEnAttente && <Pill tone="attention">Changement en attente de validation</Pill>}
         </span>
         <span className="cell-sub">Chaque affichage est inscrit au journal de la paie.</span>
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
       </div>
     );
   }
@@ -136,8 +136,7 @@ export function SalaireDossier({
         <div className="sal-proposer">
           <p className="field-label">{aUnSalaire ? 'Proposer un changement' : 'Proposer le salaire d’entrée'}</p>
           <div className="sal-proposer-champs">
-            <label className="field">
-              <span className="field-label">Salaire de base (FCFA / mois)</span>
+            <Field label="Salaire de base (FCFA / mois)">
               <input
                 className="field-input"
                 inputMode="numeric"
@@ -145,9 +144,8 @@ export function SalaireDossier({
                 placeholder="Ex. 650 000"
                 onChange={(e) => setMontant(e.target.value)}
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Date d’effet</span>
+            </Field>
+            <Field label="Date d’effet">
               <input
                 className="field-input"
                 type="date"
@@ -155,9 +153,8 @@ export function SalaireDossier({
                 min={aUnSalaire ? dateEffetMin(aujourdhui) : undefined}
                 onChange={(e) => setDateEffet(e.target.value)}
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Motif</span>
+            </Field>
+            <Field label="Motif">
               <select
                 className="field-input"
                 value={motif}
@@ -173,7 +170,7 @@ export function SalaireDossier({
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
           </div>
           <div className="sal-proposer-pied">
             <span className="cell-sub">
@@ -211,12 +208,12 @@ export function SalaireDossier({
                         : 'reprise'}
                 </span>
               </span>
-              <span className={`pill ${STATUT[c.statut].pill}`}>{STATUT[c.statut].libelle}</span>
+              <Pill className={STATUT[c.statut].pill}>{STATUT[c.statut].libelle}</Pill>
             </li>
           ))}
         </ul>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </div>
   );
 }

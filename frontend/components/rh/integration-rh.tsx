@@ -7,6 +7,9 @@ import { confirmerIntegration, enregistrerPointIntegration, getIntegrations, LIB
 import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -37,12 +40,7 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
   }, [slug]);
   useEffect(charger, [charger]);
 
-  if (!liste)
-    return erreur ? (
-      <p className="field-erreur">{erreur}</p>
-    ) : (
-      <div className="skeleton admin-skeleton-panel" aria-hidden />
-    );
+  if (!liste) return erreur ? <FieldError>{erreur}</FieldError> : <Skeleton />;
 
   const courant = liste.find((s) => s.id === choisi) ?? null;
   const remplacer = (s: IntegrationSalarie) => setListe((l) => (l ?? []).map((x) => (x.id === s.id ? s : x)));
@@ -57,7 +55,7 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
             mission.
           </p>
           {liste.length === 0 ? (
-            <p className="empty-state">Aucun nouvel arrivant en période d’intégration.</p>
+            <EmptyState>Aucun nouvel arrivant en période d’intégration.</EmptyState>
           ) : (
             <ul className="dmd-liste">
               {liste.map((s) => (
@@ -70,9 +68,9 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
                   >
                     <span className="integ-carte-tete">
                       <strong>{`${s.prenom} ${s.nom}`.trim() || s.matricule}</strong>
-                      <span className={`pill ${s.aTraiter > 0 ? 'pill--attention' : 'pill--info'}`}>
+                      <Pill className={s.aTraiter > 0 ? 'pill--attention' : 'pill--info'}>
                         {s.aTraiter > 0 ? 'Point à enregistrer' : 'En intégration'}
-                      </span>
+                      </Pill>
                     </span>
                     <span className="cell-sub">
                       {s.poste || 'poste à renseigner'} · {s.societe} · {LIBELLE_CONTRAT[s.typeContrat]} · entré(e) le{' '}
@@ -80,9 +78,9 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
                     </span>
                     <span className="integ-jalons">
                       {s.points.map((p) => (
-                        <span key={p.jalon} className={`pill ${PILL_POINT[p.statut]}`}>
+                        <Pill key={p.jalon} className={PILL_POINT[p.statut]}>
                           {libellePoint(p)}
-                        </span>
+                        </Pill>
                       ))}
                     </span>
                   </button>
@@ -230,9 +228,9 @@ function BlocPoint({
         <strong>
           J{p.jalon} · prévu le {formatDate(p.datePrevue)}
         </strong>
-        <span className={`pill ${PILL_POINT[p.statut]}`}>
+        <Pill className={PILL_POINT[p.statut]}>
           {p.statut === 'fait' ? `Fait le ${formatDate(p.realiseLe!)}` : p.statut === 'a_faire' ? 'À faire' : 'À venir'}
-        </span>
+        </Pill>
       </span>
       {p.statut === 'fait' && !edition && (
         <>
@@ -246,8 +244,7 @@ function BlocPoint({
       )}
       {formulaire && (
         <div className="integ-form">
-          <label className="field">
-            <span className="field-label">Réalisé le</span>
+          <Field label="Réalisé le">
             <input
               type="date"
               className="field-input"
@@ -255,12 +252,11 @@ function BlocPoint({
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Compte rendu</span>
+          </Field>
+          <Field label="Compte rendu">
             <textarea className="field-input" rows={3} value={texte} onChange={(e) => setTexte(e.target.value)} />
-          </label>
-          {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+          </Field>
+          {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
           <span className="dmd-actions">
             {edition && (
               <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setEdition(false)}>

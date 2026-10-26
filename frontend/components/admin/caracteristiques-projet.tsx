@@ -41,6 +41,7 @@ import {
 } from '@/lib/fiche-programme';
 import { plural } from '@/lib/text';
 import { formatNumber } from '@/lib/format';
+import { Field } from '@/components/ui/field';
 
 type Props = {
   projet: Projet;
@@ -163,14 +164,13 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
         </div>
         <p className="fiche-crm-sous-titre">0 · Terrain et positionnement</p>
         <div className="fiche-crm-form">
-          <div className="field">
-            <span className="field-label">Localisation</span>
+          <Field label="Localisation" as="div">
             <span className={`${classe(!projet.localite)} fiche-crm-lecture`}>
               {projet.localite?.nom ?? projet.localisation}
               {projet.localite && <span className="fiche-crm-code-loc">{projet.localite.code}</span>}
             </span>
             <span className="field-aide">Reprise du référentiel à la création ; elle compose le code projet.</span>
-          </div>
+          </Field>
           <div className="field">
             <label className="field-label" htmlFor="fiche-surface">
               Surface du terrain (m²)
@@ -357,8 +357,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                     <span>Suite parentale</span>
                   </label>
                 </div>
-                <div className="field">
-                  <span className="field-label">Pièces annexes</span>
+                <Field label="Pièces annexes" as="div">
                   <div className="fp-cases fp-cases--ligne">
                     {(Object.entries(ANNEXES) as [Annexe, string][]).map(([v, l]) => (
                       <label key={v} className="fp-case">
@@ -371,7 +370,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                       </label>
                     ))}
                   </div>
-                </div>
+                </Field>
               </>
             ) : (
               <div className="field">

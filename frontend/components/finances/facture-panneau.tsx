@@ -18,6 +18,8 @@ import { FactureDocument, type FactureDocumentProps } from '@/components/finance
 import { useConfirmer } from '@/components/confirmation';
 import { daysSince, formatDate, todayIso } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -79,7 +81,7 @@ export function FacturePanneau({
           <p className="fiche-crm-titre">{f.estAvoir ? 'Avoir' : 'Facture'}</p>
           <h2 id="fp-facture" className="fiche-crm-code fac-titre">
             {f.reference ?? 'Brouillon'}
-            <span className={`pill ${statut.classe}`}>{statut.libelle}</span>
+            <Pill className={statut.classe}>{statut.libelle}</Pill>
           </h2>
           <p className="fiche-crm-meta">
             {[
@@ -215,7 +217,7 @@ export function FacturePanneau({
           {relance}
         </p>
       )}
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="fac-actions">
         {/* Émission : exclusive au-delà du seuil de contresignature (revue CEO). */}
         {brouillon && (droits.emission ?? droits.validation) && (
@@ -276,10 +278,10 @@ export function FacturePanneau({
           </button>
         )}
         {f.avoirEnAttente && (
-          <span className="pill pill--attention">
+          <Pill tone="attention">
             Avoir en attente du CEO
             {f.avoirEnAttenteDepuis ? ` depuis ${Math.max(0, daysSince(f.avoirEnAttenteDepuis))} j` : ''}
-          </span>
+          </Pill>
         )}
         {f.projet && (
           <Link className="btn-ghost" href={lienFacturationProjet(slug, f.projet.id)}>

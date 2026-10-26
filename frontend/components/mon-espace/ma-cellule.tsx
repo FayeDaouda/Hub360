@@ -7,9 +7,11 @@ import { AlarmClock, CircleCheck, FolderKanban, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMaCellule } from '@/lib/mon-espace';
 import { NIVEAUX_COLLABORATEUR, PHASES, type MaCellule as DonneesCellule, type StatsPerformances } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { Avatar } from './avatar';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // « Mon espace » · Ma cellule (maquette du boss) : projets pilotés, tâches en
 // cours, en retard et remises à temps de toute la cellule ; ses membres et son
@@ -26,11 +28,11 @@ export function MaCellule({ slug }: { slug: string }) {
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre cellule.'));
   }, [slug]);
 
-  if (erreur) return <p className="empty-state">{erreur}</p>;
+  if (erreur) return <EmptyState>{erreur}</EmptyState>;
   if (!donnees) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -41,35 +43,35 @@ export function MaCellule({ slug }: { slug: string }) {
   return (
     <>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'projets',
+            id: 'projets',
             label: 'Projets pilotés',
-            valeur: projets.length,
-            sousTexte: 'projets signés de la cellule',
-            icone: FolderKanban,
+            value: projets.length,
+            hint: 'projets signés de la cellule',
+            icon: FolderKanban,
           },
           {
-            cle: 'en-cours',
+            id: 'en-cours',
             label: 'Tâches en cours',
-            valeur: stats.enCours,
-            sousTexte: 'toute la cellule',
-            icone: ListTodo,
+            value: stats.enCours,
+            hint: 'toute la cellule',
+            icon: ListTodo,
           },
           {
-            cle: 'retard',
+            id: 'retard',
             label: 'En retard',
-            valeur: stats.enRetard,
-            sousTexte: 'tâches hors délai',
-            icone: AlarmClock,
-            etat: stats.enRetard > 0 ? 'risque' : 'succes',
+            value: stats.enRetard,
+            hint: 'tâches hors délai',
+            icon: AlarmClock,
+            state: stats.enRetard > 0 ? 'risque' : 'succes',
           },
           {
-            cle: 'a-temps',
+            id: 'a-temps',
             label: 'Tâches remises à temps',
-            valeur: rd.pct == null ? '—' : `${rd.pct} %`,
-            sousTexte: `${stats.validees} validées dans la cellule`,
-            icone: CircleCheck,
+            value: rd.pct == null ? '—' : `${rd.pct} %`,
+            hint: `${stats.validees} validées dans la cellule`,
+            icon: CircleCheck,
           },
         ]}
       />
@@ -100,8 +102,8 @@ export function MaCellule({ slug }: { slug: string }) {
                     </span>
                   </button>
                   <span className="dmd-actions">
-                    {m.estChef && <span className="pill pill--info">Pilote</span>}
-                    {m.estMoi && <span className="pill pill--neutre">Vous</span>}
+                    {m.estChef && <Pill tone="info">Pilote</Pill>}
+                    {m.estMoi && <Pill tone="neutre">Vous</Pill>}
                   </span>
                 </li>
               ))}
@@ -126,7 +128,7 @@ export function MaCellule({ slug }: { slug: string }) {
                     </Link>
                     <span className="cell-sub">{p.programme}</span>
                   </span>
-                  <span className="pill pill--neutre">{PHASES[p.phase]}</span>
+                  <Pill tone="neutre">{PHASES[p.phase]}</Pill>
                 </li>
               ))}
             </ul>

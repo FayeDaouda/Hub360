@@ -1,6 +1,7 @@
 import { formatHeures, LIBELLE_MANQUE, LIBELLE_SECTION } from '@/lib/temps';
 import type { LigneCalculTemps } from '@/lib/types';
 import { formatDayMonth } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 // Détail du calcul d'une feuille de temps (RH et Mon temps) : un bloc assigné
 // par ligne, sa fenêtre, sa durée standard et la part tombant dans le mois.
@@ -37,11 +38,7 @@ export function LignesCalcul({ lignes, variante = 'rh' }: { lignes: LigneCalculT
                 {l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}
               </td>
               <td data-label="Ce mois" className="num">
-                {l.manque ? (
-                  <span className="pill pill--attention">{LIBELLE_MANQUE[l.manque]}</span>
-                ) : (
-                  formatHeures(l.heures)
-                )}
+                {l.manque ? <Pill tone="attention">{LIBELLE_MANQUE[l.manque]}</Pill> : formatHeures(l.heures)}
               </td>
             </tr>
           ))}
@@ -89,11 +86,7 @@ function LignesSalarie({ lignes }: { lignes: LigneCalculTemps[] }) {
                 {l.jours ?? '—'}
               </td>
               <td data-label="Heures" className="num">
-                {l.manque ? (
-                  <span className="pill pill--attention">{LIBELLE_MANQUE[l.manque]}</span>
-                ) : (
-                  formatHeures(l.heures)
-                )}
+                {l.manque ? <Pill tone="attention">{LIBELLE_MANQUE[l.manque]}</Pill> : formatHeures(l.heures)}
               </td>
             </tr>
           ))}

@@ -36,6 +36,7 @@ import { formatAmount } from '@/lib/format';
 import type { AttentionPilotage, VuePilotage } from '@/lib/types';
 import { addDays, daysBetween, formatDateTime, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 // Décisions « arrivant à échéance » : ouvertes dont l'échéance tombe dans les
 // 7 jours (fenêtre d'affichage), ou déjà dépassée.
@@ -489,7 +490,7 @@ function RubriqueAttention({ rubrique: r, repliable = false }: { rubrique: Rubri
                     <strong>{l.titre}</strong>
                     <span className="cell-sub">{l.detail}</span>
                   </span>
-                  {l.pill && <span className={`pill pill--${l.pill.ton}`}>{l.pill.libelle}</span>}
+                  {l.pill && <Pill tone={l.pill.ton}>{l.pill.libelle}</Pill>}
                   <ChevronRight size={16} className="pa-chevron" aria-hidden />
                 </>
               );

@@ -6,6 +6,7 @@ import { demanderPaiement, LIBELLE_PAIEMENT_SALAIRE, majCoordonnees, type Champs
 import { LIBELLE_CONTRAT } from '@/lib/rh';
 import type { ModePaiementSalaire, ProfilMonEspace, SituationFamiliale } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
+import { Field, FieldError } from '@/components/ui/field';
 
 const ou = (v: string) => v.trim() || '—';
 // Pièce d'identité masquée (maquette : « •••• 2211 »).
@@ -67,10 +68,9 @@ export function MesInformations({
       },
     };
     return (
-      <label className="field" htmlFor={props.id}>
-        <span className="field-label">{libelle}</span>
+      <Field label={libelle} htmlFor={props.id}>
         {o.long ? <textarea {...props} rows={2} maxLength={300} /> : <input {...props} type={o.type ?? 'text'} />}
-      </label>
+      </Field>
     );
   };
 
@@ -126,8 +126,7 @@ export function MesInformations({
         <div className="rh-grille">
           {texte('telephone', 'Téléphone', { type: 'tel' })}
           {texte('emailPerso', 'E-mail personnel', { type: 'email' })}
-          <label className="field">
-            <span className="field-label">Situation familiale</span>
+          <Field label="Situation familiale">
             <select
               className="field-input"
               value={dossier.situationFamiliale ?? ''}
@@ -143,9 +142,8 @@ export function MesInformations({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Enfants à charge</span>
+          </Field>
+          <Field label="Enfants à charge">
             <input
               className="field-input"
               type="number"
@@ -159,7 +157,7 @@ export function MesInformations({
                   void enregistrer({ enfantsACharge: n });
               }}
             />
-          </label>
+          </Field>
         </div>
         {texte('adresse', 'Adresse', { long: true })}
         <div className="rh-grille">
@@ -169,8 +167,7 @@ export function MesInformations({
 
         <p className="me-intertitre">Moyen de paiement du salaire</p>
         <div className="rh-grille">
-          <label className="field">
-            <span className="field-label">Mode</span>
+          <Field label="Mode">
             <select
               className="field-input"
               value={mode}
@@ -182,16 +179,15 @@ export function MesInformations({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Banque et RIB, ou numéro</span>
+          </Field>
+          <Field label="Banque et RIB, ou numéro">
             <input
               className="field-input"
               maxLength={80}
               value={coordonnees}
               onChange={(e) => setCoordonnees(e.target.value)}
             />
-          </label>
+          </Field>
         </div>
         <div className="me-paiement">
           <button
@@ -210,7 +206,7 @@ export function MesInformations({
             <span className="me-ok">À jour · {LIBELLE_PAIEMENT_SALAIRE[dossier.modePaiement]}</span>
           )}
         </div>
-        {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+        {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
       </section>
     </div>
   );

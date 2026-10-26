@@ -13,6 +13,7 @@ import {
   type SalaireAValider,
 } from '@/lib/rh';
 import { formatDate } from '@/lib/dates';
+import { Field, FieldError } from '@/components/ui/field';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -105,8 +106,7 @@ export function SalairesAValider({ slug }: { slug: string }) {
                   </span>
                 </p>
                 {refus !== null && (
-                  <label className="field">
-                    <span className="field-label">Motif du refus (transmis à la RH)</span>
+                  <Field label="Motif du refus (transmis à la RH)">
                     <textarea
                       className="field-input"
                       rows={2}
@@ -114,7 +114,7 @@ export function SalairesAValider({ slug }: { slug: string }) {
                       value={refus}
                       onChange={(e) => setRefus(e.target.value)}
                     />
-                  </label>
+                  </Field>
                 )}
                 <div className="sav-actions">
                   {refus === null ? (
@@ -147,7 +147,7 @@ export function SalairesAValider({ slug }: { slug: string }) {
           </li>
         ))}
       </ul>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
     </section>
   );
 }

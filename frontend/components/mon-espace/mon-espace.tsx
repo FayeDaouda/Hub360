@@ -21,6 +21,7 @@ import { MonTemps } from './mon-temps';
 import { MesPerformances } from './performances';
 import { formatDate } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // Deux blocs (revue Salarié 19/10/2026) : le travail au quotidien, puis le
 // dossier personnel — neuf onglets à plat étaient trop chargés.
@@ -119,11 +120,11 @@ export function MonEspace({ slug }: { slug: string }) {
       ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [demandeOnglet, dossier]);
 
-  if (erreur) return <p className="empty-state">{erreur}</p>;
+  if (erreur) return <EmptyState>{erreur}</EmptyState>;
   if (dossier === undefined) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -213,10 +214,10 @@ export function MonEspace({ slug }: { slug: string }) {
       )}
 
       {courant.dossierRequis && !dossier ? (
-        <p className="empty-state">
+        <EmptyState>
           Aucun dossier du personnel n’est relié à votre compte : la RH doit l’ouvrir (ou le relier) avant que cette
           rubrique soit disponible.
-        </p>
+        </EmptyState>
       ) : onglet === 'performances' ? (
         <MesPerformances slug={slug} />
       ) : onglet === 'mission' ? (

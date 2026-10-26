@@ -35,12 +35,14 @@ import {
 import { formatNumber } from '@/lib/format';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
 import { daysSince, yearOf } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
@@ -306,7 +308,7 @@ export default function CrmPage(props: Props) {
             Clients <span>{clients.length}</span>
           </h2>
           {clients.length === 0 ? (
-            <p className="empty-state">Aucun client pour le moment.</p>
+            <EmptyState>Aucun client pour le moment.</EmptyState>
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -387,65 +389,63 @@ export default function CrmPage(props: Props) {
 
           <div className="crm-kpi">
             <KpiStrip
-              tuiles={[
+              tiles={[
                 {
-                  cle: 'actif',
+                  id: 'actif',
                   label: 'Pipeline actif',
-                  valeur: kpi.actifs,
-                  sousTexte: 'projets hors Perdu et Expirée',
-                  icone: FolderOpen,
-                  etat: 'marque',
-                  action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') },
+                  value: kpi.actifs,
+                  hint: 'projets hors Perdu et Expirée',
+                  icon: FolderOpen,
+                  state: 'marque',
+                  action: { type: 'filter', active: situation === 'tous', onClick: () => setSituation('tous') },
                 },
                 {
-                  cle: 'fiches',
+                  id: 'fiches',
                   label: 'Fiches à compléter',
-                  valeur: kpi.aCompleter,
-                  sousTexte: kpi.fichesEchues
-                    ? `dont ${kpi.fichesEchues} au-delà de 72 h`
-                    : 'fiche incomplète · délai 72 h',
-                  icone: FileWarning,
-                  etat: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues),
+                  value: kpi.aCompleter,
+                  hint: kpi.fichesEchues ? `dont ${kpi.fichesEchues} au-delà de 72 h` : 'fiche incomplète · délai 72 h',
+                  icon: FileWarning,
+                  state: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues),
                   action: {
-                    type: 'filtre',
-                    actif: situation === 'a_completer',
+                    type: 'filter',
+                    active: situation === 'a_completer',
                     onClick: () => basculer('a_completer'),
                   },
                 },
                 {
-                  cle: 'cfo',
+                  id: 'cfo',
                   label: 'En attente CFO',
-                  valeur: kpi.par('en_validation'),
-                  sousTexte: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h',
-                  icone: Clock3,
-                  etat: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues),
+                  value: kpi.par('en_validation'),
+                  hint: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h',
+                  icon: Clock3,
+                  state: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues),
                   action: {
-                    type: 'filtre',
-                    actif: situation === 'en_validation',
+                    type: 'filter',
+                    active: situation === 'en_validation',
                     onClick: () => basculer('en_validation'),
                   },
                 },
                 {
-                  cle: 'client',
+                  id: 'client',
                   label: 'Chez le client',
-                  valeur: kpi.par('offre_envoyee'),
-                  sousTexte: 'offres envoyées · validité 7 jours',
-                  icone: Send,
-                  etat: 'marque',
+                  value: kpi.par('offre_envoyee'),
+                  hint: 'offres envoyées · validité 7 jours',
+                  icon: Send,
+                  state: 'marque',
                   action: {
-                    type: 'filtre',
-                    actif: situation === 'offre_envoyee',
+                    type: 'filter',
+                    active: situation === 'offre_envoyee',
                     onClick: () => basculer('offre_envoyee'),
                   },
                 },
                 {
-                  cle: 'surface',
+                  id: 'surface',
                   label: 'Surface vendue',
-                  valeur: `${formatNumber(kpi.surfaceVendue)} m²`,
-                  sousTexte: kpi.detailSurface,
-                  icone: Home,
-                  etat: 'marque',
-                  action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') },
+                  value: `${formatNumber(kpi.surfaceVendue)} m²`,
+                  hint: kpi.detailSurface,
+                  icon: Home,
+                  state: 'marque',
+                  action: { type: 'filter', active: situation === 'onboard', onClick: () => basculer('onboard') },
                 },
               ]}
             />
@@ -499,16 +499,16 @@ export default function CrmPage(props: Props) {
             </div>
             {!projets ? (
               <div className="admin-skeleton" aria-hidden>
-                <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" />
+                <Skeleton size="sm" />
               </div>
             ) : filtres.length === 0 ? (
-              <p className="empty-state">
+              <EmptyState>
                 {recherche || situation !== 'tous'
                   ? 'Aucun projet ne correspond à ce filtre.'
                   : peutEcrire
                     ? 'Aucun projet pour le moment. Crée le premier avec « Nouveau projet ».'
                     : 'Aucun projet pour le moment.'}
-              </p>
+              </EmptyState>
             ) : (
               <>
                 {/* Mobile : liste condensée (tap → fiche). */}
@@ -526,9 +526,9 @@ export default function CrmPage(props: Props) {
                             <span className="crm-ligne-code">{projet.code}</span>
                             <span className="crm-ligne-nom">{projet.client.nom}</span>
                           </span>
-                          <span className={`pill crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>
+                          <Pill className={`crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>
                             {LIBELLE_SITUATION[situationDe(projet)]}
-                          </span>
+                          </Pill>
                         </button>
                       </li>
                     ))}
@@ -575,9 +575,9 @@ export default function CrmPage(props: Props) {
                             </td>
                             <td data-label="Catégorie">
                               {libelleCategorie(projet) ? (
-                                <span className={`pill ${pillCategorie(projet)}`}>{libelleCategorie(projet)}</span>
+                                <Pill className={pillCategorie(projet)}>{libelleCategorie(projet)}</Pill>
                               ) : (
-                                <span className="pill crm-a-choisir">À choisir</span>
+                                <Pill className="crm-a-choisir">À choisir</Pill>
                               )}
                             </td>
                             <td data-label="Client" className="crm-c-client">
@@ -639,7 +639,7 @@ export default function CrmPage(props: Props) {
                               </span>
                             </td>
                             <td data-label="Situation">
-                              <span className={`pill ${PILL_SITUATION[s]}`}>{LIBELLE_SITUATION[s]}</span>
+                              <Pill className={PILL_SITUATION[s]}>{LIBELLE_SITUATION[s]}</Pill>
                               {/* Revue CEO : au-delà du seuil, le demandeur voit que l'offre attend le CEO. */}
                               {projet.contresignatureCeo && projet.soumisLe && (
                                 <span className="cell-sub">

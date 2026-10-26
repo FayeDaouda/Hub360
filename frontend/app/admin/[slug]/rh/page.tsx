@@ -17,7 +17,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
@@ -63,6 +63,9 @@ import { useConfirmer } from '@/components/confirmation';
 import { addMonths, formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -185,11 +188,11 @@ export default function RhPage(props: Props) {
     setOuvert(d);
   }
 
-  if (erreur) return <p className="field-erreur">{erreur}</p>;
+  if (erreur) return <FieldError>{erreur}</FieldError>;
   if (!dossiers || !options) {
     return (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -329,15 +332,15 @@ export default function RhPage(props: Props) {
       )}
       <div className="rh-kpi">
         <KpiStrip
-          tuiles={tuiles.map((t) => ({
-            cle: t.cle,
+          tiles={tuiles.map((t) => ({
+            id: t.cle,
             label: t.libelle,
-            valeur: t.valeur ?? '…',
-            montant: t.montant,
-            sousTexte: t.aide,
-            icone: t.icone,
-            etat: t.etat,
-            action: { type: 'filtre' as const, actif: t.actif, onClick: t.onClick },
+            value: t.valeur ?? '…',
+            amount: t.montant,
+            hint: t.aide,
+            icon: t.icone,
+            state: t.etat,
+            action: { type: 'filter' as const, active: t.actif, onClick: t.onClick },
           }))}
         />
       </div>
@@ -460,7 +463,7 @@ export default function RhPage(props: Props) {
         </div>
 
         {visibles.length === 0 ? (
-          <p className="empty-state">Aucun dossier.</p>
+          <EmptyState>Aucun dossier.</EmptyState>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table rh-table">
@@ -484,9 +487,7 @@ export default function RhPage(props: Props) {
                         {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
                       </button>
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
-                      {d.paiementDemandeMode && (
-                        <span className="pill pill--attention">Moyen de paiement à valider</span>
-                      )}
+                      {d.paiementDemandeMode && <Pill tone="attention">Moyen de paiement à valider</Pill>}
                     </td>
                     {colonneSociete && (
                       <td data-label="Société" className="rh-c-societe">
@@ -743,16 +744,14 @@ function FicheDossier({
   const societeNom = options.societes.find((s) => s.id === form.societeId)?.nom;
   const sousTitre = `${form.poste?.trim() || 'poste à renseigner'} · ${societeNom ?? 'société à renseigner'}`;
   const champ = (cle: keyof MajDossier, libelle: string, props: Record<string, unknown> = {}) => (
-    <label className="field">
-      <span className="field-label">{libelle}</span>
+    <Field label={libelle}>
       <input className="field-input" value={(form[cle] as string | null) ?? ''} onChange={maj(cle)} {...props} />
-    </label>
+    </Field>
   );
   const zone = (cle: keyof MajDossier, libelle: string) => (
-    <label className="field">
-      <span className="field-label">{libelle}</span>
+    <Field label={libelle}>
       <textarea className="field-input" rows={2} value={(form[cle] as string) ?? ''} onChange={maj(cle)} />
-    </label>
+    </Field>
   );
 
   return (
@@ -779,7 +778,7 @@ function FicheDossier({
               </span>
               {dossier.completude.pourcentage} %
             </span>
-            {dossier.archiveLe && <span className="pill pill--neutre">Archivé</span>}
+            {dossier.archiveLe && <Pill tone="neutre">Archivé</Pill>}
           </div>
         )}
         <p className="rh-note">
@@ -790,8 +789,7 @@ function FicheDossier({
         <fieldset disabled={!ecriture} className="fieldset-nu">
           <h3 className="rh-section">Affectation et contrat</h3>
           <div className="rh-grille">
-            <label className="field">
-              <span className="field-label">Société</span>
+            <Field label="Société">
               <select className="field-input" value={form.societeId ?? ''} onChange={maj('societeId')}>
                 <option value="">À choisir</option>
                 {options.societes.map((s) => (
@@ -800,10 +798,9 @@ function FicheDossier({
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
             {champ('poste', 'Poste', { placeholder: 'ex. Architecte' })}
-            <label className="field">
-              <span className="field-label">Type de contrat</span>
+            <Field label="Type de contrat">
               <select className="field-input" value={form.typeContrat} onChange={maj('typeContrat')}>
                 {Object.entries(LIBELLE_CONTRAT).map(([v, l]) => (
                   <option key={v} value={v}>
@@ -811,12 +808,11 @@ function FicheDossier({
                   </option>
                 ))}
               </select>
-            </label>
+            </Field>
             {champ('dateEntree', 'Date d’entrée', { type: 'date' })}
             {form.typeContrat !== 'cdi' && champ('dateFin', 'Fin (CDD, stage)', { type: 'date' })}
             {champ('finEssai', 'Fin de la période d’essai', { type: 'date' })}
-            <label className="field">
-              <span className="field-label">Fiche d’équipe liée</span>
+            <Field label="Fiche d’équipe liée">
               <select className="field-input" value={form.collaborateurId ?? ''} onChange={maj('collaborateurId')}>
                 <option value="">Aucune (à affecter par la direction)</option>
                 {dossier?.collaborateurId && (
@@ -829,9 +825,8 @@ function FicheDossier({
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Compte HUB (Mon espace)</span>
+            </Field>
+            <Field label="Compte HUB (Mon espace)">
               {form.collaborateurId ? (
                 <input
                   className="field-input"
@@ -857,7 +852,7 @@ function FicheDossier({
                   ))}
                 </select>
               )}
-            </label>
+            </Field>
           </div>
 
           <h3 className="rh-section">Salaire</h3>
@@ -903,14 +898,13 @@ function FicheDossier({
             {champ('telephone', 'Téléphone', { type: 'tel' })}
             {champ('emailPro', 'E-mail professionnel', { type: 'email', placeholder: 'prenom.nom@…' })}
             {champ('contactUrgence', 'Contact d’urgence')}
-            <label className="field">
-              <span className="field-label">Paiement du salaire</span>
+            <Field label="Paiement du salaire">
               <select className="field-input" value={form.modePaiement} onChange={maj('modePaiement')}>
                 <option value="virement">Virement</option>
                 <option value="wave">Wave</option>
                 <option value="orange_money">Orange Money</option>
               </select>
-            </label>
+            </Field>
             {champ('coordonneesPaiement', 'RIB ou numéro')}
             {champ('numeroIpm', 'N° adhérent IPM / assurance')}
             {champ('visiteMedicale', 'Prochaine visite médicale', { type: 'date' })}
@@ -971,8 +965,7 @@ function FicheDossier({
           <>
             {ecriture && (
               <div className="rh-bulletin-depot">
-                <label className="field">
-                  <span className="field-label">Mois de paie</span>
+                <Field label="Mois de paie">
                   <input
                     type="month"
                     className="field-input"
@@ -981,7 +974,7 @@ function FicheDossier({
                     value={moisBulletin}
                     onChange={(e) => setMoisBulletin(e.target.value)}
                   />
-                </label>
+                </Field>
                 <label className={`btn-ghost btn-ghost--sm${moisBulletin ? '' : ' is-disabled'}`}>
                   <Paperclip size={14} aria-hidden />
                   {dossier.bulletins.some((b) => b.mois === moisBulletin)
@@ -1047,9 +1040,9 @@ function FicheDossier({
               titulaire est prévenu ; les échéances ne bougent pas.
             </p>
             {depart.candidats.length === 0 && (
-              <p className="field-erreur">
+              <FieldError>
                 Aucun collègue en poste dans cette société : créez d’abord la fiche du remplaçant.
-              </p>
+              </FieldError>
             )}
             {depart.taches.map((t) => (
               <label key={t.id} className="field">
@@ -1088,7 +1081,7 @@ function FicheDossier({
           </>
         )}
 
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
         <div className="modal-actions">
           {ecriture && dossier && !depart && (
             <button type="button" className="btn-ghost" onClick={archiver}>

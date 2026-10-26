@@ -7,6 +7,8 @@ import { ACTIONS_CRM, CLASSE_STATUT, actionsPossibles, raisonBlocage, type Actio
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import { STATUTS_CRM, type Projet, type TransitionDossier } from '@/lib/types';
+import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -91,7 +93,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
     <section className="cycle-dossier" aria-label="Cycle commercial">
       <div className="cycle-dossier-tete">
         <span className="field-label">Statut</span>
-        <span className={`pill statut-select--${CLASSE_STATUT[projet.statut]}`}>{STATUTS_CRM[projet.statut]}</span>
+        <Pill className={`statut-select--${CLASSE_STATUT[projet.statut]}`}>{STATUTS_CRM[projet.statut]}</Pill>
         {projet.verrouillee && (
           <span className="cycle-dossier-verrou" title="Contenu figé depuis la soumission à la DAF">
             <Lock size={12} aria-hidden />
@@ -142,8 +144,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
           <strong className="cycle-dossier-confirm-titre">{def.libelle}</strong>
           <span className="field-aide">{def.consequence}</span>
           {def.texte && (
-            <label className="field">
-              <span className="field-label">{def.texte.label}</span>
+            <Field label={def.texte.label}>
               <textarea
                 className="field-input"
                 rows={3}
@@ -153,9 +154,9 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
                 placeholder={def.texte.placeholder}
                 autoFocus
               />
-            </label>
+            </Field>
           )}
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
           <div className="modal-actions">
             <button type="button" className="btn-ghost" onClick={() => setAction(null)} disabled={enCours}>
               Annuler

@@ -5,9 +5,12 @@ import { CalendarClock, CalendarX, Clock, Gauge } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { formatHeures, getMonTemps, HEURES_PAR_JOUR, signalerEcartTemps, STATUT_FEUILLE } from '@/lib/temps';
 import type { JourCalendrierTemps, MonTemps as DonneesMonTemps } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
 import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Impossible de charger votre temps.');
 
@@ -31,10 +34,10 @@ export function MonTemps({ slug }: { slug: string }) {
 
   if (!donnees) {
     return erreur ? (
-      <p className="empty-state">{erreur}</p>
+      <EmptyState>{erreur}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
-        <div className="skeleton admin-skeleton-panel" />
+        <Skeleton />
       </div>
     );
   }
@@ -62,37 +65,37 @@ export function MonTemps({ slug }: { slug: string }) {
         </div>
         <span className="me-pastille">Contrôle RH : {controle}</span>
       </div>
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
 
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'imputees',
+            id: 'imputees',
             label: 'Heures imputées',
-            valeur: formatHeures(feuille.heuresImputees),
-            sousTexte: `${feuille.lignes.length} assignation(s)`,
-            icone: Clock,
+            value: formatHeures(feuille.heuresImputees),
+            hint: `${feuille.lignes.length} assignation(s)`,
+            icon: Clock,
           },
           {
-            cle: 'disponibles',
+            id: 'disponibles',
             label: 'Heures disponibles',
-            valeur: formatHeures(feuille.heuresDisponibles),
-            sousTexte: `jours ouvrés écoulés × ${HEURES_PAR_JOUR} h`,
-            icone: CalendarClock,
+            value: formatHeures(feuille.heuresDisponibles),
+            hint: `jours ouvrés écoulés × ${HEURES_PAR_JOUR} h`,
+            icon: CalendarClock,
           },
           {
-            cle: 'absences',
+            id: 'absences',
             label: 'Absences',
-            valeur: `${feuille.joursAbsence} j`,
-            sousTexte: 'congés et absences validés',
-            icone: CalendarX,
+            value: `${feuille.joursAbsence} j`,
+            hint: 'congés et absences validés',
+            icon: CalendarX,
           },
           {
-            cle: 'occupation',
+            id: 'occupation',
             label: 'Taux d’occupation',
-            valeur: `${feuille.occupation ?? 0} %`,
-            sousTexte: 'imputé / disponible',
-            icone: Gauge,
+            value: `${feuille.occupation ?? 0} %`,
+            hint: 'imputé / disponible',
+            icon: Gauge,
           },
         ]}
       />
@@ -147,9 +150,9 @@ function EcartTemps({
       {ecart && (
         <div className="temps-ecart">
           <p className="dmd-note">
-            <span className={`pill ${ouvert ? 'pill--attention' : 'pill--succes'}`}>
+            <Pill className={ouvert ? 'pill--attention' : 'pill--succes'}>
               {ouvert ? 'Signalé · en attente de la RH' : 'Traité'}
-            </span>{' '}
+            </Pill>{' '}
             Vous avez signalé le {formatDate(ecart.signaleLe)} : « {ecart.commentaire} »
           </p>
           {ecart.reponse && ecart.traiteLe && (
@@ -172,8 +175,7 @@ function EcartTemps({
       )}
       {saisie !== null && (
         <>
-          <label className="field">
-            <span className="field-label">Ce qui ne va pas · {formatMonthYear(donnees.mois)}</span>
+          <Field label={<>Ce qui ne va pas · {formatMonthYear(donnees.mois)}</>}>
             <textarea
               className="field-input"
               rows={3}
@@ -183,8 +185,8 @@ function EcartTemps({
               onChange={(e) => setSaisie(e.target.value)}
               autoFocus
             />
-          </label>
-          {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+          </Field>
+          {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
           <div className="dmd-actions">
             <button
               type="button"

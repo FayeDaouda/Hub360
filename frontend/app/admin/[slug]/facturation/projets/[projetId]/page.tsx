@@ -42,6 +42,9 @@ import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
 import { daysSince, todayIso } from '@/lib/dates';
 import { Modal } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { Skeleton } from '@/components/ui/feedback';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Props = { params: Promise<{ slug: string; projetId: string }> };
 
@@ -158,15 +161,15 @@ export default function FacturationPage(props: Props) {
       </Link>
 
       {!factu || !projet ? (
-        <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        <Skeleton size="sm" />
       ) : (
         <>
           <header className="projet-entete">
             <div className="projet-entete-titre">
               <span className="projet-entete-sur">
                 <span className="dossier-code">{projet.code}</span>
-                <span className={`pill pill--nature-${projet.nature}`}>{NATURES_DOSSIER[projet.nature]}</span>
-                <span className={`pill pill--cat-${projet.categorie}`}>{CATEGORIES[projet.categorie]}</span>
+                <Pill className={`pill--nature-${projet.nature}`}>{NATURES_DOSSIER[projet.nature]}</Pill>
+                <Pill className={`pill--cat-${projet.categorie}`}>{CATEGORIES[projet.categorie]}</Pill>
               </span>
               <h2>
                 <span className="module-icone module-icone--facturation" aria-hidden>
@@ -180,7 +183,7 @@ export default function FacturationPage(props: Props) {
             </div>
           </header>
 
-          {erreur && <p className="field-erreur">{erreur}</p>}
+          {erreur && <FieldError>{erreur}</FieldError>}
 
           {/* Résumé */}
           <section className="panel">
@@ -231,7 +234,7 @@ export default function FacturationPage(props: Props) {
                         {formatCompactAmount(m.prixMensuelHt)} HT / mois · {m.moisFactures}/{m.moisPrevus} mois facturés
                       </span>
                     </span>
-                    {m.aFacturerCeMois && <span className="pill pill--attention">À facturer ce mois</span>}
+                    {m.aFacturerCeMois && <Pill tone="attention">À facturer ce mois</Pill>}
                     <button
                       type="button"
                       className={m.aFacturerCeMois ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
@@ -297,9 +300,9 @@ export default function FacturationPage(props: Props) {
                           {e.facture?.reference && <span className="cell-sub">{e.facture.reference}</span>}
                         </td>
                         <td data-label="Statut">
-                          <span className={`pill ${PILL_REGLEMENT[e.statutReglement]}`}>
+                          <Pill className={PILL_REGLEMENT[e.statutReglement]}>
                             {STATUTS_REGLEMENT_BUREAU[e.statutReglement]}
-                          </span>
+                          </Pill>
                           {e.statutReglement === 'non_refacture' && !e.refacturable && (
                             <span className="cell-sub">Facture du bureau à saisir</span>
                           )}
@@ -374,8 +377,7 @@ export default function FacturationPage(props: Props) {
                 >
                   <h4 className="exec-sous-titre">Facture du bureau · {saisieBureau.libelle}</h4>
                   <div className="field-row">
-                    <label className="field">
-                      <span className="field-label">Bureau d’études</span>
+                    <Field label="Bureau d’études">
                       <input
                         className="field-input"
                         value={saisieBureau.bureau}
@@ -383,9 +385,8 @@ export default function FacturationPage(props: Props) {
                         onChange={(ev) => setSaisieBureau({ ...saisieBureau, bureau: ev.target.value })}
                         required
                       />
-                    </label>
-                    <label className="field">
-                      <span className="field-label">Montant HT (FCFA)</span>
+                    </Field>
+                    <Field label="Montant HT (FCFA)">
                       <input
                         type="number"
                         min="1"
@@ -394,16 +395,15 @@ export default function FacturationPage(props: Props) {
                         onChange={(ev) => setSaisieBureau({ ...saisieBureau, montant: ev.target.value })}
                         required
                       />
-                    </label>
-                    <label className="field">
-                      <span className="field-label">Facture (PDF, facultatif)</span>
+                    </Field>
+                    <Field label="Facture (PDF, facultatif)">
                       <input
                         type="file"
                         accept={FICHIERS_ACCEPTES.contrat}
                         className="field-input"
                         onChange={(ev) => setSaisieBureau({ ...saisieBureau, fichier: ev.target.files?.[0] })}
                       />
-                    </label>
+                    </Field>
                   </div>
                   <div className="modal-actions">
                     <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setSaisieBureau(null)}>
@@ -482,11 +482,11 @@ export default function FacturationPage(props: Props) {
                           </td>
                           <td data-label="Statut">
                             {f.estAvoir ? (
-                              <span className="pill pill--neutre">Avoir</span>
+                              <Pill tone="neutre">Avoir</Pill>
                             ) : (
-                              <span className={`pill ${PILL_FACTURE[f.statutEffectif]}`}>
+                              <Pill className={PILL_FACTURE[f.statutEffectif]}>
                                 {STATUTS_FACTURE[f.statutEffectif]}
-                              </span>
+                              </Pill>
                             )}
                           </td>
                           <td data-label="TTC">{formatCompactAmount(f.montantTtc)}</td>
@@ -544,12 +544,12 @@ export default function FacturationPage(props: Props) {
                               )}
                               {/* Avoir motivé (contrôle interne) ; au-delà du seuil, en attente du CEO. */}
                               {a.annulable && f.avoirEnAttente && (
-                                <span className="pill pill--attention">
+                                <Pill tone="attention">
                                   Avoir en attente du CEO
                                   {f.avoirEnAttenteDepuis
                                     ? ` depuis ${Math.max(0, daysSince(f.avoirEnAttenteDepuis))} j`
                                     : ''}
-                                </span>
+                                </Pill>
                               )}
                               {a.annulable && !f.avoirEnAttente && (
                                 <button
@@ -753,8 +753,7 @@ function CreationFacture({
       {modeActif === 'unique' ? (
         <>
           <div className="field-row">
-            <label className="field">
-              <span className="field-label">Montant HT (FCFA)</span>
+            <Field label="Montant HT (FCFA)">
               <input
                 type="number"
                 min="0"
@@ -762,9 +761,8 @@ function CreationFacture({
                 value={montant}
                 onChange={(e) => setMontant(e.target.value)}
               />
-            </label>
-            <label className="field">
-              <span className="field-label">TVA (%)</span>
+            </Field>
+            <Field label="TVA (%)">
               <input
                 type="number"
                 min="0"
@@ -774,27 +772,25 @@ function CreationFacture({
                 value={taux}
                 onChange={(e) => setTaux(e.target.value)}
               />
-            </label>
+            </Field>
           </div>
           <div className="field-row">
-            <label className="field">
-              <span className="field-label">Échéance</span>
+            <Field label="Échéance">
               <input
                 type="date"
                 className="field-input"
                 value={echeance}
                 onChange={(e) => setEcheance(e.target.value)}
               />
-            </label>
-            <label className="field">
-              <span className="field-label">Libellé</span>
+            </Field>
+            <Field label="Libellé">
               <input
                 className="field-input"
                 value={libelle}
                 onChange={(e) => setLibelle(e.target.value)}
                 placeholder="ex : Honoraires de conception — phase APS"
               />
-            </label>
+            </Field>
           </div>
           <div className="modal-actions">
             <button type="button" className="btn-primary" disabled={busy || !Number(montant)} onClick={soumettreUnique}>
@@ -804,8 +800,7 @@ function CreationFacture({
         </>
       ) : (
         <>
-          <label className="field" style={{ maxWidth: 200 }}>
-            <span className="field-label">TVA (%) — appliquée aux 3 jalons</span>
+          <Field label="TVA (%) — appliquée aux 3 jalons" style={{ maxWidth: 200 }}>
             <input
               type="number"
               min="0"
@@ -815,7 +810,7 @@ function CreationFacture({
               value={taux}
               onChange={(e) => setTaux(e.target.value)}
             />
-          </label>
+          </Field>
           <div className="admin-table-wrap" style={{ marginTop: '1rem' }}>
             <table className="admin-table">
               <thead>
@@ -921,8 +916,7 @@ function ModaleModifier({
       </header>
       <div className="modal-body">
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Montant HT (FCFA)</span>
+          <Field label="Montant HT (FCFA)">
             <input
               type="number"
               min="0"
@@ -932,9 +926,8 @@ function ModaleModifier({
               onChange={(e) => setMontant(e.target.value)}
             />
             {aLignes && <span className="field-aide">Somme des lignes de la facture — non modifiable.</span>}
-          </label>
-          <label className="field">
-            <span className="field-label">TVA (%)</span>
+          </Field>
+          <Field label="TVA (%)">
             <input
               type="number"
               min="0"
@@ -944,17 +937,15 @@ function ModaleModifier({
               value={taux}
               onChange={(e) => setTaux(e.target.value)}
             />
-          </label>
+          </Field>
         </div>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Échéance</span>
+          <Field label="Échéance">
             <input type="date" className="field-input" value={echeance} onChange={(e) => setEcheance(e.target.value)} />
-          </label>
-          <label className="field">
-            <span className="field-label">Libellé</span>
+          </Field>
+          <Field label="Libellé">
             <input className="field-input" value={libelle} onChange={(e) => setLibelle(e.target.value)} />
-          </label>
+          </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
@@ -1074,8 +1065,7 @@ function ModalePaiements({
 
         {aSupprimer && (
           <div className="field" style={{ display: 'grid', gap: '0.5rem' }}>
-            <label className="field">
-              <span className="field-label">Motif de la suppression</span>
+            <Field label="Motif de la suppression">
               <input
                 className="field-input"
                 value={motif}
@@ -1084,7 +1074,7 @@ function ModalePaiements({
                 autoFocus
                 onChange={(e) => setMotif(e.target.value)}
               />
-            </label>
+            </Field>
             <div className="modal-actions">
               <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setASupprimer(null)}>
                 Annuler
@@ -1105,12 +1095,10 @@ function ModalePaiements({
 
         <h4 className="exec-sous-titre">Enregistrer un versement</h4>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Date</span>
+          <Field label="Date">
             <input type="date" className="field-input" value={date} onChange={(e) => setDate(e.target.value)} />
-          </label>
-          <label className="field">
-            <span className="field-label">Montant (FCFA)</span>
+          </Field>
+          <Field label="Montant (FCFA)">
             <input
               type="number"
               min="1"
@@ -1118,11 +1106,10 @@ function ModalePaiements({
               value={montant}
               onChange={(e) => setMontant(e.target.value)}
             />
-          </label>
+          </Field>
         </div>
         <div className="field-row">
-          <label className="field">
-            <span className="field-label">Mode</span>
+          <Field label="Mode">
             <select className="field-input" value={mode} onChange={(e) => setMode(e.target.value as ModePaiement | '')}>
               <option value="">—</option>
               {(Object.keys(MODES_PAIEMENT) as ModePaiement[]).map((m) => (
@@ -1131,16 +1118,15 @@ function ModalePaiements({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span className="field-label">Référence</span>
+          </Field>
+          <Field label="Référence">
             <input
               className="field-input"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder="n° de virement / chèque"
             />
-          </label>
+          </Field>
         </div>
         <div className="modal-actions">
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>

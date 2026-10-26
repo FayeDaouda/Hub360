@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getDossierProjet, getMentionnables, type DossierProjetOuvert } from '@/lib/projets-ouverts';
 import { PanneauLateral } from '@/components/projets-ouverts/panneau-lateral';
 import { TachePanneau } from '@/components/projets-ouverts/tache-panneau';
+import { Skeleton } from '@/components/ui/feedback';
+import { FieldError } from '@/components/ui/field';
 
 // Tâche ouverte en panneau latéral depuis « Mes tâches » (revue Salarié
 // 19/10/2026) : le panneau de Projets tel quel — descriptif, remise,
@@ -92,8 +94,8 @@ export function TacheDrawer({
         </p>
       }
     >
-      {erreur && <p className="field-erreur">{erreur}</p>}
-      {!dossier && !erreur && <div className="skeleton admin-skeleton-panel" aria-hidden />}
+      {erreur && <FieldError>{erreur}</FieldError>}
+      {!dossier && !erreur && <Skeleton />}
       {dossier && carte && tache ? (
         <TachePanneau
           slug={slug}

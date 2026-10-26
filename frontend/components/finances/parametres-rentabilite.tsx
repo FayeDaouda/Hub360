@@ -10,6 +10,8 @@ import {
 } from '@/lib/rentabilite';
 import { formatMonthYear } from '@/lib/dates';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 // Paramètres de la rentabilité (lot 7) : valeurs par défaut (pas
 // d'expert-comptable), modifiables par le CFO seul, au 1er d'un mois, à
@@ -83,7 +85,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                   <dt>{x.libelle}</dt>
                   <dd>
                     {formatParametre(x)}
-                    {x.parDefaut && <span className="pill pill--neutre">par défaut</span>}
+                    {x.parDefaut && <Pill tone="neutre">par défaut</Pill>}
                   </dd>
                 </div>
               ))}
@@ -93,8 +95,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
               <div className="rtp-form">
                 <p className="field-label">Nouvelle valeur</p>
                 <div className="rtp-champs">
-                  <label className="field">
-                    <span className="field-label">Paramètre</span>
+                  <Field label="Paramètre">
                     <select
                       className="field-input"
                       value={cle}
@@ -110,11 +111,14 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                         </option>
                       ))}
                     </select>
-                  </label>
-                  <label className="field">
-                    <span className="field-label">
-                      Valeur ({def.unite}, de {def.min} à {def.max})
-                    </span>
+                  </Field>
+                  <Field
+                    label={
+                      <>
+                        Valeur ({def.unite}, de {def.min} à {def.max})
+                      </>
+                    }
+                  >
                     <input
                       className="field-input"
                       inputMode="decimal"
@@ -122,9 +126,8 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                       disabled={envoi || desactive}
                       onChange={(e) => setValeur(e.target.value)}
                     />
-                  </label>
-                  <label className="field">
-                    <span className="field-label">À partir de</span>
+                  </Field>
+                  <Field label="À partir de">
                     <input
                       className="field-input"
                       type="month"
@@ -133,7 +136,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                       disabled={envoi}
                       onChange={(e) => setMois(e.target.value)}
                     />
-                  </label>
+                  </Field>
                 </div>
                 {def.videPermis && (
                   <label className="rtp-vide">
@@ -148,8 +151,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                       : 'Vider (pas de couleur de statut)'}
                   </label>
                 )}
-                <label className="field">
-                  <span className="field-label">Motif (obligatoire)</span>
+                <Field label="Motif (obligatoire)">
                   <input
                     className="field-input"
                     value={motif}
@@ -157,7 +159,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                     disabled={envoi}
                     onChange={(e) => setMotif(e.target.value)}
                   />
-                </label>
+                </Field>
                 <div className="modal-actions">
                   <button
                     type="button"
@@ -195,7 +197,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
             )}
           </>
         )}
-        {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <FieldError>{erreur}</FieldError>}
       </div>
     </Modal>
   );

@@ -11,6 +11,8 @@ import { DocumentFacturation, type DocumentFacturationProps } from '@/components
 import { useConfirmer } from '@/components/confirmation';
 import { formatDate } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
+import { FieldError } from '@/components/ui/field';
 
 type Props = {
   slug: string;
@@ -53,7 +55,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
           <p className="fiche-crm-titre">{d.dossierCrm ? 'Offre commerciale' : 'Devis'}</p>
           <h2 id="fp-devis" className="fiche-crm-code fac-titre">
             {d.reference ?? 'Brouillon'}
-            <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
+            <Pill tone={s.ton}>{s.libelle}</Pill>
           </h2>
           <p className="fiche-crm-meta">
             {[
@@ -102,7 +104,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
         </div>
       )}
 
-      {erreur && <p className="field-erreur">{erreur}</p>}
+      {erreur && <FieldError>{erreur}</FieldError>}
       <div className="fac-actions">
         {!d.dossierCrm && d.statut === 'brouillon' && droits.devisValidation && (
           <button

@@ -7,6 +7,8 @@ import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Formulaire } from '@/components/absences/decision-n1-modal';
 import { CalendrierCellule } from '@/components/absences/calendrier-cellule';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
+import { Field, FieldError } from '@/components/ui/field';
 
 type Filtre = 'a_decider' | 'toutes';
 
@@ -76,7 +78,7 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
                       {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {formatDate(d.dateDebut)} → {formatDate(d.dateFin)}
                     </span>
                   </span>
-                  <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
+                  <Pill className={STATUT_ABSENCE[d.statut].pill}>{STATUT_ABSENCE[d.statut].libelle}</Pill>
                 </button>
               </li>
             ))}
@@ -157,8 +159,7 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
       </p>
       <CalendrierCellule slug={slug} demandeId={demande.id} source="decideur" />
       {refus && (
-        <label className="field">
-          <span className="field-label">Motif du refus</span>
+        <Field label="Motif du refus">
           <textarea
             className="field-input"
             rows={2}
@@ -166,9 +167,9 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
             value={motif}
             onChange={(e) => setMotif(e.target.value)}
           />
-        </label>
+        </Field>
       )}
-      {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
+      {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
       <div className="dmd-actions">
         {refus ? (
           <>

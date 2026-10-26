@@ -7,6 +7,7 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
 import type { FactureCentrale } from '@/lib/types';
 import { formatDate, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const FILTRES: { cle: FiltreFacture; libelle: string }[] = [
   { cle: 'tout', libelle: 'Tout' },
@@ -159,7 +160,7 @@ function MoisFactures({
               )}
             </td>
             <td data-label="Statut" className="fl-statut">
-              <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
+              <Pill tone={s.ton}>{s.libelle}</Pill>
             </td>
           </tr>
         );

@@ -25,7 +25,7 @@ import { usePreferenceTheme } from '@/lib/theme';
 import { OPTIONS_THEME } from '@/components/selecteur-theme';
 import { ouvrirAide } from '@/components/admin/aide-globale';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
-import { AvatarPersonne } from '@/components/avatar-personne';
+import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { deconnecterPartout, getProfil, nomAffiche, type Profil } from '@/lib/profil';
 import { useConfirmer } from '@/components/confirmation';
@@ -162,13 +162,13 @@ export function MenuCompte({
         aria-controls={id}
         onClick={() => setOuvert((o) => !o)}
       >
-        <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="md" absent={!!profil?.absence} />
+        <PersonAvatar name={affiche} photo={u.photoUrl} colorKey={u.id} size="md" absent={!!profil?.absence} />
       </button>
 
       {ouvert && (
         <div id={id} ref={liste} className="mc-menu" role="dialog" aria-label="Mon compte" onKeyDown={naviguer}>
           <div className="mc-identite">
-            <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="lg" />
+            <PersonAvatar name={affiche} photo={u.photoUrl} colorKey={u.id} size="lg" />
             <span className="mc-qui">
               <strong>{affiche}</strong>
               <span className="mc-email">{u.email}</span>
