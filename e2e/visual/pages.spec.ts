@@ -4,6 +4,7 @@ import {
   COMPANY_SLUG,
   cspViolations,
   installCaptureGuards,
+  expectStableApi,
   installSeedNoiseFilter,
   readFixtures,
   resetHorizontalScroll,
@@ -112,6 +113,8 @@ async function captureScreenAndTabs(page: Page, baseName: string, hasTabs = fals
     if (!(await tab.isVisible()) || (await tab.getAttribute('aria-selected')) === 'true') continue;
     const label = slugOf((await tab.innerText()).trim());
     await tab.click();
+    // La vue de l'onglet doit être montée avant d'attendre son contenu.
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
     // The pointer would stay on the clicked tab: its hover and press
     // transitions would then be captured at a random point.
     await page.mouse.move(0, 0);
@@ -121,6 +124,7 @@ async function captureScreenAndTabs(page: Page, baseName: string, hasTabs = fals
     const [name, theme] = splitTheme(baseName);
     await expectFullPageScreenshot(page, `${name}--tab${index}-${label}--${theme}.png`);
   }
+  expectStableApi(page);
 }
 
 const splitTheme = (baseName: string): [string, string] => {
