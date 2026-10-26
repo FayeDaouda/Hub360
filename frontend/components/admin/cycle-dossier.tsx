@@ -7,6 +7,7 @@ import { ACTIONS_CRM, CLASSE_STATUT, actionsPossibles, raisonBlocage, type Actio
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import { STATUTS_CRM, type Projet, type TransitionDossier } from '@/lib/types';
+import { Pill } from '@/components/ui/pill';
 
 type Props = {
   slug: string;
@@ -91,7 +92,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
     <section className="cycle-dossier" aria-label="Cycle commercial">
       <div className="cycle-dossier-tete">
         <span className="field-label">Statut</span>
-        <span className={`pill statut-select--${CLASSE_STATUT[projet.statut]}`}>{STATUTS_CRM[projet.statut]}</span>
+        <Pill className={`statut-select--${CLASSE_STATUT[projet.statut]}`}>{STATUTS_CRM[projet.statut]}</Pill>
         {projet.verrouillee && (
           <span className="cycle-dossier-verrou" title="Contenu figé depuis la soumission à la DAF">
             <Lock size={12} aria-hidden />

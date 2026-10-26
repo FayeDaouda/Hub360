@@ -1537,7 +1537,7 @@ button:focus-visible .repli-icone {
   }
 }
 
-/* --- Avatar d'une personne (components/avatar-personne.tsx) -------------- */
+/* --- Avatar d'une personne (components/ui/avatar.tsx) -------------- */
 .av {
   position: relative;
   display: inline-grid;

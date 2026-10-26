@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiAuth } from '@/lib/client-api';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 type Etat = { actifLe: string | null; exige: boolean };
 type Reglage = { secret: string; qr: string };
@@ -84,8 +85,8 @@ export function DoubleFacteurCompte() {
   if (etat.actifLe) {
     return (
       <p className="dmd-note">
-        <span className="pill pill--succes">Activée</span> depuis le {formatDate(etat.actifLe)}. Téléphone perdu ou
-        changé : demandez au CIO de la réinitialiser.
+        <Pill tone="succes">Activée</Pill> depuis le {formatDate(etat.actifLe)}. Téléphone perdu ou changé : demandez au
+        CIO de la réinitialiser.
       </p>
     );
   }

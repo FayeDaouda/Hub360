@@ -18,6 +18,7 @@ import {
 } from '@/lib/facturation';
 import { formatDate } from '@/lib/dates';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 // Coordonnées de paiement : un changement est confirmé, notifié au CEO et tracé.
 const CHAMPS_PAIEMENT: ChampTexte[] = ['banque', 'rib', 'wave', 'orangeMoney'];
@@ -138,10 +139,8 @@ export function ParametresFacturationFenetre({
           <div className="pf-apercu">
             <span className="field-label">Prochain numéro</span>
             <strong>{p.prochain}</strong>
-            {p.format.prefixe.toUpperCase() === PREFIXE_TEST && (
-              <span className="pill pill--attention">factures d’essai</span>
-            )}
-            {p.parDefaut && <span className="pill pill--neutre">format par défaut</span>}
+            {p.format.prefixe.toUpperCase() === PREFIXE_TEST && <Pill tone="attention">factures d’essai</Pill>}
+            {p.parDefaut && <Pill tone="neutre">format par défaut</Pill>}
           </div>
           {p.verrouille && (
             <p className="pf-verrou">

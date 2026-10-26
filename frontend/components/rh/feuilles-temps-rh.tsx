@@ -19,6 +19,7 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
 import { formatDate, formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Chargement impossible.');
 const nomDe = (f: FeuilleTempsSalarie) => `${f.prenom} ${f.nom}`.trim() || f.matricule;
@@ -158,12 +159,12 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                         {f.occupation == null ? '—' : `${f.occupation} %`}
                       </td>
                       <td data-label="Contrôle RH" className="tl-statut">
-                        <span className={`pill ${STATUT_FEUILLE[f.statut].pill}`}>
+                        <Pill className={STATUT_FEUILLE[f.statut].pill}>
                           {f.statut === 'controlee' && f.controleLe
                             ? `Contrôlée le ${formatDate(f.controleLe)}`
                             : STATUT_FEUILLE[f.statut].libelle}
-                        </span>
-                        {f.ecart && !f.ecart.traiteLe && <span className="pill pill--attention">Écart signalé</span>}
+                        </Pill>
+                        {f.ecart && !f.ecart.traiteLe && <Pill tone="attention">Écart signalé</Pill>}
                       </td>
                     </tr>
                   ))}
@@ -332,9 +333,7 @@ function EcartRh({
     <div className="temps-ecart">
       <h3 className="rh-section">Écart signalé par le salarié</h3>
       <p className="dmd-note">
-        <span className={`pill ${e.traiteLe ? 'pill--succes' : 'pill--attention'}`}>
-          {e.traiteLe ? 'Traité' : 'À traiter'}
-        </span>{' '}
+        <Pill className={e.traiteLe ? 'pill--succes' : 'pill--attention'}>{e.traiteLe ? 'Traité' : 'À traiter'}</Pill>{' '}
         Le {formatDate(e.signaleLe)} : « {e.commentaire} »
       </p>
       {e.traiteLe ? (

@@ -10,6 +10,7 @@ import {
 } from '@/lib/rentabilite';
 import { formatMonthYear } from '@/lib/dates';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 // Paramètres de la rentabilité (lot 7) : valeurs par défaut (pas
 // d'expert-comptable), modifiables par le CFO seul, au 1er d'un mois, à
@@ -83,7 +84,7 @@ export function ParametresRentabilite({ slug, onClose }: { slug: string; onClose
                   <dt>{x.libelle}</dt>
                   <dd>
                     {formatParametre(x)}
-                    {x.parDefaut && <span className="pill pill--neutre">par défaut</span>}
+                    {x.parDefaut && <Pill tone="neutre">par défaut</Pill>}
                   </dd>
                 </div>
               ))}

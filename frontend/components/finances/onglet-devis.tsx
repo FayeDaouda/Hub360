@@ -7,6 +7,7 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
 import type { Devis } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const FILTRES: { cle: FiltreDevis; libelle: string }[] = [
   { cle: 'tout', libelle: 'Tout' },
@@ -127,9 +128,11 @@ function MoisDevis({
               <strong>{formatAmount(d.montantTtc)}</strong>
             </td>
             <td data-label="Statut" className="fl-statut">
-              <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
+              <Pill tone={s.ton}>{s.libelle}</Pill>
               {d.alerteAvenant && (
-                <span className="pill pill--risque fin-alerte">Avenant non accepté · {d.alerteAvenant.jours} j</span>
+                <Pill tone="risque" className="fin-alerte">
+                  Avenant non accepté · {d.alerteAvenant.jours} j
+                </Pill>
               )}
             </td>
           </tr>

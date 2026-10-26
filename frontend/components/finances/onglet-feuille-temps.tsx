@@ -7,12 +7,13 @@ import { getFeuilleTemps } from '@/lib/facturation';
 import { formatAmount } from '@/lib/format';
 import { STATUTS_CRM, type DelaiTranche, type FeuilleTemps, type Projet } from '@/lib/types';
 import { formatDate, formatDayMonth } from '@/lib/dates';
+import { Pill, type PillTone } from '@/components/ui/pill';
 
 const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
 // Tableau de facturation : année sur deux chiffres, pour tenir dans la colonne.
 const jjmmaa = (iso: string) => `${formatDayMonth(iso)}/${iso.slice(2, 4)}`;
 
-const DELAI: Record<DelaiTranche['etat'], { ton: string; texte: (j: number) => string }> = {
+const DELAI: Record<DelaiTranche['etat'], { ton: PillTone; texte: (j: number) => string }> = {
   payee: { ton: 'succes', texte: (j) => `payée en ${j} j` },
   a_echoir: { ton: 'info', texte: (j) => `échéance dans ${j} j` },
   en_retard: { ton: 'risque', texte: (j) => `en retard de ${j} j` },
@@ -223,9 +224,7 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                             <td data-label="Échéance">{t.echeance ? jjmmaa(t.echeance) : '—'}</td>
                             <td data-label="Payée">{t.payee ? jjmmaa(t.payee) : '—'}</td>
                             <td data-label="Délai">
-                              <span className={`pill pill--${d.ton}`}>
-                                {d.texte('jours' in t.delai ? t.delai.jours : 0)}
-                              </span>
+                              <Pill tone={d.ton}>{d.texte('jours' in t.delai ? t.delai.jours : 0)}</Pill>
                             </td>
                           </tr>
                         );

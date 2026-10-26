@@ -32,6 +32,7 @@ import { Reportings } from './reportings';
 import { Registre } from './registre';
 import { JournalAudit } from './journal-audit';
 import { Progression, Tendance } from './tendance';
+import { Pill } from '@/components/ui/pill';
 
 type Onglet = 'indicateurs' | 'reportings' | 'registre' | 'journal' | 'synthese';
 
@@ -222,7 +223,7 @@ function IndicateurCarte({ indicateur: i }: { indicateur: IndicateurPilotage }) 
           )}
         </h2>
         <span className="pi-indicateur-etat">
-          {pill && <span className={`pill ${pill.classe}`}>{pill.libelle}</span>}
+          {pill && <Pill className={pill.classe}>{pill.libelle}</Pill>}
           {mobile && <ChevronDown size={16} className={`pi-chevron${ouvert ? ' is-ouvert' : ''}`} aria-hidden />}
         </span>
       </header>

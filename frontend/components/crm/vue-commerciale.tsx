@@ -14,6 +14,7 @@ import {
 import { getVueCommerciale, type ElementCommercial, type EtapePipeline, type VueCommerciale } from '@/lib/crm';
 import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { plural } from '@/lib/text';
+import { Pill, type PillTone } from '@/components/ui/pill';
 
 const VISIBLES = 6;
 const RANG_TON: Record<ElementCommercial['ton'], number> = { risque: 0, attention: 1, info: 2 };
@@ -23,7 +24,7 @@ const GROUPE: Record<ElementCommercial['type'], { icone: LucideIcon; titre: stri
   offre_chez_client: { icone: Send, titre: 'Offre chez le client', action: 'Ouvrir', rang: 2 },
   apporteur_incomplet: { icone: Handshake, titre: 'Fiche apporteur à compléter', action: 'Compléter', rang: 3 },
 };
-const ETAPE: Record<EtapePipeline, { libelle: string; ton: string }> = {
+const ETAPE: Record<EtapePipeline, { libelle: string; ton: PillTone }> = {
   preparation: { libelle: 'En préparation', ton: 'neutre' },
   en_validation: { libelle: 'En validation CFO', ton: 'attention' },
   chez_client: { libelle: 'Chez le client', ton: 'info' },
@@ -68,7 +69,7 @@ export function VueCommercialeCoo({
           <h2 className="dmd-titre">
             <AlarmClock size={17} aria-hidden /> À traiter aujourd’hui · {elements.length}
           </h2>
-          {urgents > 0 && <span className="pill pill--risque">{urgents} en retard</span>}
+          {urgents > 0 && <Pill tone="risque">{urgents} en retard</Pill>}
         </div>
         {elements.length === 0 ? (
           <p className="dmd-note">Rien en attente : fiches, propriétaires, offres et apporteurs sont à jour.</p>
@@ -131,7 +132,7 @@ export function VueCommercialeCoo({
                   key={t.etape}
                   title={`${plural(t.dossiers, 'dossier')}, ${t.avecOffre} avec offre · ${formatAmount(t.totalHt)} HT`}
                 >
-                  <span className={`pill pill--${ETAPE[t.etape].ton}`}>{ETAPE[t.etape].libelle}</span>
+                  <Pill tone={ETAPE[t.etape].ton}>{ETAPE[t.etape].libelle}</Pill>
                   <strong>{formatCompactAmount(t.totalHt)}</strong>
                   <span className="cell-sub">{plural(t.dossiers, 'dossier')}</span>
                 </li>

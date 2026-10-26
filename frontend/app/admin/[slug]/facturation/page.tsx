@@ -58,6 +58,7 @@ import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
 import { formatLongDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
 type Props = { params: Promise<{ slug: string }> };
@@ -574,7 +575,9 @@ export default function FinancesPage(props: Props) {
             </button>
           )}
         </div>
-        <span className="pill pill--neutre fin-devise">Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %</span>
+        <Pill tone="neutre" className="fin-devise">
+          Montants en FCFA · TVA {TAUX_TVA_DEFAUT} %
+        </Pill>
       </div>
 
       {onglet === 'tableau' ? (

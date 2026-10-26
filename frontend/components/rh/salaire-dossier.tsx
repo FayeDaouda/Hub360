@@ -15,6 +15,7 @@ import {
 } from '@/lib/rh';
 import type { DossierPersonnel } from '@/lib/types';
 import { formatDate, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 const STATUT: Record<ChangementSalaire['statut'], { libelle: string; pill: string }> = {
@@ -92,9 +93,7 @@ export function SalaireDossier({
           >
             {dossier.salaireRenseigne ? 'Afficher' : ecriture ? 'Proposer le salaire d’entrée' : 'Historique'}
           </button>
-          {dossier.salaireEnAttente && (
-            <span className="pill pill--attention">Changement en attente de validation</span>
-          )}
+          {dossier.salaireEnAttente && <Pill tone="attention">Changement en attente de validation</Pill>}
         </span>
         <span className="cell-sub">Chaque affichage est inscrit au journal de la paie.</span>
         {erreur && <p className="field-erreur">{erreur}</p>}
@@ -211,7 +210,7 @@ export function SalaireDossier({
                         : 'reprise'}
                 </span>
               </span>
-              <span className={`pill ${STATUT[c.statut].pill}`}>{STATUT[c.statut].libelle}</span>
+              <Pill className={STATUT[c.statut].pill}>{STATUT[c.statut].libelle}</Pill>
             </li>
           ))}
         </ul>

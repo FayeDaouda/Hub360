@@ -22,6 +22,7 @@ import {
 import { formatAmount } from '@/lib/format';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
 import { formatDate, toIsoDay } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 type Fichier = { nom: string; url: string };
 type MesDemandes = { solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] };
@@ -211,9 +212,7 @@ export function RemboursementsSante({ slug }: { slug: string }) {
                     {r.motifRejet && ` · ${r.motifRejet}`}
                   </span>
                 </span>
-                <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>
-                  {STATUT_REMBOURSEMENT[r.statut].libelle}
-                </span>
+                <Pill className={STATUT_REMBOURSEMENT[r.statut].pill}>{STATUT_REMBOURSEMENT[r.statut].libelle}</Pill>
               </li>
             ))}
           </ul>
@@ -248,7 +247,7 @@ function LigneAbsence({ slug, d, onFait }: { slug: string; d: DemandeAbsence; on
         {erreur && <span className="field-erreur">{erreur}</span>}
       </span>
       <span className="dmd-actions">
-        <span className={`pill ${statut.pill}`}>{statut.libelle}</span>
+        <Pill className={statut.pill}>{statut.libelle}</Pill>
         {d.statut === 'autres_dates' && (
           <>
             <button

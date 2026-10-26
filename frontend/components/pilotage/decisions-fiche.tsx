@@ -6,6 +6,7 @@ import { getDecisionsRattachees, type DecisionRattachee } from '@/lib/pilotage';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { formatDayMonth } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const PILL: Record<DecisionRattachee['statut'], string> = {
   proposee: 'pill--attention',
@@ -63,7 +64,7 @@ export function DecisionsFiche({
                 {d.echeance ? ` · échéance ${formatDayMonth(d.echeance)}` : ''}
               </small>
             </span>
-            <span className={`pill ${PILL[d.statut]}`}>{LIBELLE[d.statut]}</span>
+            <Pill className={PILL[d.statut]}>{LIBELLE[d.statut]}</Pill>
           </li>
         ))}
       </ul>

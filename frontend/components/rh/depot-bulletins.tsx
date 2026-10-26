@@ -10,6 +10,7 @@ import type { DossierPersonnel } from '@/lib/types';
 import { formatMonthYear } from '@/lib/dates';
 import { plural, stripAccents } from '@/lib/text';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 // `confirme` : un rattachement par le nom (homonymes, fautes) est à confirmer
 // ligne par ligne par la RH avant tout dépôt (revue RH validée, 20/10/2026).
@@ -194,19 +195,19 @@ export function DepotBulletins({
                     {l.etat === 'envoi' ? (
                       <LoaderCircle size={15} className="groupe-etat-roue" aria-label="Dépôt en cours" />
                     ) : l.etat === 'fait' ? (
-                      <span className="pill pill--succes">
+                      <Pill tone="succes">
                         <CircleCheck size={12} aria-hidden /> déposé
-                      </span>
+                      </Pill>
                     ) : l.etat === 'erreur' ? (
-                      <span className="pill pill--risque" title={l.message}>
+                      <Pill tone="risque" title={l.message}>
                         {l.message}
-                      </span>
+                      </Pill>
                     ) : !l.dossierId ? (
-                      <span className="pill pill--attention">non reconnu</span>
+                      <Pill tone="attention">non reconnu</Pill>
                     ) : doublon(l) ? (
-                      <span className="pill pill--risque">
+                      <Pill tone="risque">
                         <CircleAlert size={12} aria-hidden /> doublon
-                      </span>
+                      </Pill>
                     ) : aConfirmer(l) ? (
                       <button
                         type="button"
@@ -218,11 +219,11 @@ export function DepotBulletins({
                         Confirmer
                       </button>
                     ) : remplace(l) ? (
-                      <span className="pill pill--attention">remplace le bulletin déposé</span>
+                      <Pill tone="attention">remplace le bulletin déposé</Pill>
                     ) : (
-                      <span className="pill pill--info">
+                      <Pill tone="info">
                         {l.par === 'matricule' ? 'par matricule' : l.par === 'nom' ? 'par nom' : 'choisi'}
-                      </span>
+                      </Pill>
                     )}
                   </span>
                 </li>

@@ -34,6 +34,7 @@ import type {
 } from '@/lib/types';
 import { daysBetween, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
 export type DonneesRh = {
@@ -347,7 +348,7 @@ export function ATraiterRh({
         <h2 className="dmd-titre">
           <AlarmClock size={17} aria-hidden /> À traiter aujourd’hui · {elements.length}
         </h2>
-        {urgents > 0 && <span className="pill pill--risque">{urgents} en retard</span>}
+        {urgents > 0 && <Pill tone="risque">{urgents} en retard</Pill>}
       </div>
       {elements.length === 0 ? (
         <p className="dmd-note">Rien en attente : demandes, écarts, intégrations et contrats sont à jour.</p>

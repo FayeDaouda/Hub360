@@ -63,6 +63,7 @@ import { useConfirmer } from '@/components/confirmation';
 import { addMonths, formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { CloseButton, Modal } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -484,9 +485,7 @@ export default function RhPage(props: Props) {
                         {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
                       </button>
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
-                      {d.paiementDemandeMode && (
-                        <span className="pill pill--attention">Moyen de paiement à valider</span>
-                      )}
+                      {d.paiementDemandeMode && <Pill tone="attention">Moyen de paiement à valider</Pill>}
                     </td>
                     {colonneSociete && (
                       <td data-label="Société" className="rh-c-societe">
@@ -779,7 +778,7 @@ function FicheDossier({
               </span>
               {dossier.completude.pourcentage} %
             </span>
-            {dossier.archiveLe && <span className="pill pill--neutre">Archivé</span>}
+            {dossier.archiveLe && <Pill tone="neutre">Archivé</Pill>}
           </div>
         )}
         <p className="rh-note">

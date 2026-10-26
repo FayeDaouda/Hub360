@@ -18,6 +18,7 @@ import {
 import { formatDate, formatMonthYear } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -108,7 +109,7 @@ export function FicheRentabilitePanneau({
                 <dt>Taux</dt>
                 <dd className="rt-taux-ligne">
                   {f.etat === 'complet' ? formatTaux(f.taux) : 'Non calculable'}
-                  {f.statut && <span className={`pill ${PILL_STATUT[f.statut]}`}>{LIBELLE_STATUT[f.statut]}</span>}
+                  {f.statut && <Pill className={PILL_STATUT[f.statut]}>{LIBELLE_STATUT[f.statut]}</Pill>}
                 </dd>
               </div>
               <div>
@@ -213,11 +214,7 @@ export function FicheRentabilitePanneau({
                       <span className="rtf-mois-nom">{s.nom}</span>
                       <span>{s.heures === null ? '—' : `${formatNumber(s.heures)} h`}</span>
                       <span>
-                        {s.sansSalaire ? (
-                          <span className="pill pill--attention">sans salaire validé</span>
-                        ) : (
-                          formatAmount(s.cout ?? 0)
-                        )}
+                        {s.sansSalaire ? <Pill tone="attention">sans salaire validé</Pill> : formatAmount(s.cout ?? 0)}
                       </span>
                     </li>
                   ))}

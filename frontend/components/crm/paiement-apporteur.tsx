@@ -13,6 +13,7 @@ import {
 import { formatAmount, formatNumber } from '@/lib/format';
 import { MODES_PAIEMENT } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const CHAMPS = Object.keys(LIBELLES_COORDONNEES) as (keyof CoordonneesApporteur)[];
 
@@ -87,12 +88,12 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
                     </span>
                   </span>
                   {c.statut === 'payee' ? (
-                    <span className="pill pill--succes" title={c.reference || undefined}>
+                    <Pill tone="succes" title={c.reference || undefined}>
                       Payée le {formatDate(c.payeeLe ?? '')}
                       {c.modePaiement ? ` · ${MODES_PAIEMENT[c.modePaiement]}` : ''}
-                    </span>
+                    </Pill>
                   ) : (
-                    <span className="pill pill--attention">À payer</span>
+                    <Pill tone="attention">À payer</Pill>
                   )}
                 </li>
               ))}

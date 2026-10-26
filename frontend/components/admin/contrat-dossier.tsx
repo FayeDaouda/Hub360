@@ -24,6 +24,7 @@ import {
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 type Props = {
   slug: string;
@@ -148,11 +149,11 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
       <div className="cycle-dossier-tete">
         <span className="field-label">Contrat</span>
         {c && (
-          <span
-            className={`pill ${c.statut === 'signe' ? 'pill--succes' : c.statut === 'envoye' ? 'pill--info' : 'pill--neutre'}`}
+          <Pill
+            className={c.statut === 'signe' ? 'pill--succes' : c.statut === 'envoye' ? 'pill--info' : 'pill--neutre'}
           >
             {STATUTS_CONTRAT[c.statut]}
-          </span>
+          </Pill>
         )}
         {c && <span className="cell-sub">{c.mode === 'modele' ? 'Généré depuis le modèle' : 'Rédigé sur mesure'}</span>}
       </div>
@@ -228,9 +229,9 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                   {a.libelle}
                   {a.fichierNom && <span className="cell-sub">{a.fichierNom}</span>}
                 </span>
-                <span className={`pill ${CLASSE_ANNEXE[a.statut]}`}>
+                <Pill className={CLASSE_ANNEXE[a.statut]}>
                   {a.automatique ? 'Jointe d’office' : LIBELLE_ANNEXE[a.statut]}
-                </span>
+                </Pill>
                 {modifiable && !a.automatique && (
                   <span className="factu-actions">
                     <button

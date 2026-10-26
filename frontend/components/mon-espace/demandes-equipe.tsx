@@ -7,6 +7,7 @@ import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Formulaire } from '@/components/absences/decision-n1-modal';
 import { CalendrierCellule } from '@/components/absences/calendrier-cellule';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 type Filtre = 'a_decider' | 'toutes';
 
@@ -76,7 +77,7 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
                       {LIBELLE_TYPE_ABSENCE[d.type]} · {d.jours} j · {formatDate(d.dateDebut)} → {formatDate(d.dateFin)}
                     </span>
                   </span>
-                  <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
+                  <Pill className={STATUT_ABSENCE[d.statut].pill}>{STATUT_ABSENCE[d.statut].libelle}</Pill>
                 </button>
               </li>
             ))}

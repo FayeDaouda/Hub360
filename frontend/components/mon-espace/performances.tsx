@@ -14,6 +14,7 @@ import { KpiStrip } from '@/components/ui/kpi';
 import { RemiseModal } from './remise-modal';
 import { formatDate, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 
@@ -201,16 +202,16 @@ export function MesPerformances({ slug }: { slug: string }) {
                 </span>
                 <span className="dmd-actions">
                   {t.version > 1 && (
-                    <span className="pill pill--attention">
+                    <Pill tone="attention">
                       {t.version - 1} reprise{t.version > 2 ? 's' : ''}
-                    </span>
+                    </Pill>
                   )}
                   {!jugee(t) ? (
-                    <span className="pill pill--neutre">sans remise datée</span>
+                    <Pill tone="neutre">sans remise datée</Pill>
                   ) : aTemps(t) ? (
-                    <span className="pill pill--succes">à temps</span>
+                    <Pill tone="succes">à temps</Pill>
                   ) : (
-                    <span className="pill pill--risque">remise après l’échéance</span>
+                    <Pill tone="risque">remise après l’échéance</Pill>
                   )}
                 </span>
               </li>
@@ -305,7 +306,7 @@ export function MesPerformances({ slug }: { slug: string }) {
                     </td>
                     <td data-label="Statut">
                       <span className="perf-statut">
-                        <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
+                        <Pill className={STATUT_TACHE[t.statut].pill}>{libelleStatut(t, aujourdhui)}</Pill>
                         {t.statut !== 'validee' && t.statut !== 'remise' && (
                           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setARemettre(t)}>
                             Déposer

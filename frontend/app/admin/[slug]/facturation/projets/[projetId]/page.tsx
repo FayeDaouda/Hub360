@@ -42,6 +42,7 @@ import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
 import { daysSince, todayIso } from '@/lib/dates';
 import { Modal } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 type Props = { params: Promise<{ slug: string; projetId: string }> };
 
@@ -165,8 +166,8 @@ export default function FacturationPage(props: Props) {
             <div className="projet-entete-titre">
               <span className="projet-entete-sur">
                 <span className="dossier-code">{projet.code}</span>
-                <span className={`pill pill--nature-${projet.nature}`}>{NATURES_DOSSIER[projet.nature]}</span>
-                <span className={`pill pill--cat-${projet.categorie}`}>{CATEGORIES[projet.categorie]}</span>
+                <Pill className={`pill--nature-${projet.nature}`}>{NATURES_DOSSIER[projet.nature]}</Pill>
+                <Pill className={`pill--cat-${projet.categorie}`}>{CATEGORIES[projet.categorie]}</Pill>
               </span>
               <h2>
                 <span className="module-icone module-icone--facturation" aria-hidden>
@@ -231,7 +232,7 @@ export default function FacturationPage(props: Props) {
                         {formatCompactAmount(m.prixMensuelHt)} HT / mois · {m.moisFactures}/{m.moisPrevus} mois facturés
                       </span>
                     </span>
-                    {m.aFacturerCeMois && <span className="pill pill--attention">À facturer ce mois</span>}
+                    {m.aFacturerCeMois && <Pill tone="attention">À facturer ce mois</Pill>}
                     <button
                       type="button"
                       className={m.aFacturerCeMois ? 'btn-primary' : 'btn-ghost btn-ghost--sm'}
@@ -297,9 +298,9 @@ export default function FacturationPage(props: Props) {
                           {e.facture?.reference && <span className="cell-sub">{e.facture.reference}</span>}
                         </td>
                         <td data-label="Statut">
-                          <span className={`pill ${PILL_REGLEMENT[e.statutReglement]}`}>
+                          <Pill className={PILL_REGLEMENT[e.statutReglement]}>
                             {STATUTS_REGLEMENT_BUREAU[e.statutReglement]}
-                          </span>
+                          </Pill>
                           {e.statutReglement === 'non_refacture' && !e.refacturable && (
                             <span className="cell-sub">Facture du bureau à saisir</span>
                           )}
@@ -482,11 +483,11 @@ export default function FacturationPage(props: Props) {
                           </td>
                           <td data-label="Statut">
                             {f.estAvoir ? (
-                              <span className="pill pill--neutre">Avoir</span>
+                              <Pill tone="neutre">Avoir</Pill>
                             ) : (
-                              <span className={`pill ${PILL_FACTURE[f.statutEffectif]}`}>
+                              <Pill className={PILL_FACTURE[f.statutEffectif]}>
                                 {STATUTS_FACTURE[f.statutEffectif]}
-                              </span>
+                              </Pill>
                             )}
                           </td>
                           <td data-label="TTC">{formatCompactAmount(f.montantTtc)}</td>
@@ -544,12 +545,12 @@ export default function FacturationPage(props: Props) {
                               )}
                               {/* Avoir motivé (contrôle interne) ; au-delà du seuil, en attente du CEO. */}
                               {a.annulable && f.avoirEnAttente && (
-                                <span className="pill pill--attention">
+                                <Pill tone="attention">
                                   Avoir en attente du CEO
                                   {f.avoirEnAttenteDepuis
                                     ? ` depuis ${Math.max(0, daysSince(f.avoirEnAttenteDepuis))} j`
                                     : ''}
-                                </span>
+                                </Pill>
                               )}
                               {a.annulable && !f.avoirEnAttente && (
                                 <button

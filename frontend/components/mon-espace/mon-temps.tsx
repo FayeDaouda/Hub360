@@ -8,6 +8,7 @@ import type { JourCalendrierTemps, MonTemps as DonneesMonTemps } from '@/lib/typ
 import { KpiStrip } from '@/components/ui/kpi';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
 import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Impossible de charger votre temps.');
 
@@ -147,9 +148,9 @@ function EcartTemps({
       {ecart && (
         <div className="temps-ecart">
           <p className="dmd-note">
-            <span className={`pill ${ouvert ? 'pill--attention' : 'pill--succes'}`}>
+            <Pill className={ouvert ? 'pill--attention' : 'pill--succes'}>
               {ouvert ? 'Signalé · en attente de la RH' : 'Traité'}
-            </span>{' '}
+            </Pill>{' '}
             Vous avez signalé le {formatDate(ecart.signaleLe)} : « {ecart.commentaire} »
           </p>
           {ecart.reponse && ecart.traiteLe && (

@@ -11,6 +11,7 @@ import { balanceAgee, echeancier, TRANCHES, type LigneBalance } from '@/lib/tres
 import type { FactureCentrale } from '@/lib/types';
 import { formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 const nomFacture = (f: FactureCentrale) =>
   f.reference ?? (f.statut === 'brouillon' ? `${f.libelle || 'tranche'} (prévue)` : 'facture');
@@ -123,7 +124,7 @@ export function OngletTresorerie({
                   </span>
                   <span className="tre-ligne-montant">
                     {formatAmount(f.statut === 'brouillon' ? f.montantTtc : f.resteAPayer)}
-                    {f.statut === 'brouillon' && <span className="pill pill--neutre">prévue</span>}
+                    {f.statut === 'brouillon' && <Pill tone="neutre">prévue</Pill>}
                   </span>
                 </button>
               </li>

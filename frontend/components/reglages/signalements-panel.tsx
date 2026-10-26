@@ -9,6 +9,7 @@ import {
   type StatutSignalement,
 } from '@/lib/signalements';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const FILTRES: { cle: StatutSignalement | 'tous'; libelle: string }[] = [
   { cle: 'a_traiter', libelle: 'À traiter' },
@@ -69,9 +70,7 @@ export function SignalementsPanel({
           {visibles.map((s) => (
             <li key={s.id} className="sig-ligne">
               <span className="sig-tete">
-                <span className={`pill pill--${STATUTS_SIGNALEMENT[s.statut].ton}`}>
-                  {STATUTS_SIGNALEMENT[s.statut].libelle}
-                </span>
+                <Pill tone={STATUTS_SIGNALEMENT[s.statut].ton}>{STATUTS_SIGNALEMENT[s.statut].libelle}</Pill>
                 <span className="cell-sub">
                   {formatDate(s.creeLe)} · {s.auteur ?? 'compte supprimé'} · {s.role} · {s.appareil}
                 </span>

@@ -47,6 +47,7 @@ import { PanneauLateral } from './panneau-lateral';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural, stripAccents } from '@/lib/text';
 import { formatAmount } from '@/lib/format';
+import { Pill, type PillTone } from '@/components/ui/pill';
 
 // Panneau latéral : une tâche, ou le fil d'une carte.
 type Selection = { type: 'tache' | 'carte'; id: string } | null;
@@ -263,13 +264,13 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                 >
                   <span className="po-code">{p.code}</span>
                   <span className="po-projet-client">{p.client}</span>
-                  <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
+                  <Pill className={`pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
                     {p.livraisonDepassee
                       ? 'Livraison dépassée'
                       : p.enRetard
                         ? `${p.enRetard} en retard`
                         : 'Dans les délais'}
-                  </span>
+                  </Pill>
                 </button>
               ))}
             </div>
@@ -290,13 +291,13 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                       >
                         <span className="po-projet-tete">
                           <span className="po-code">{p.code}</span>
-                          <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
+                          <Pill className={`pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
                             {p.livraisonDepassee
                               ? 'Livraison dépassée'
                               : p.enRetard
                                 ? `${p.enRetard} en retard`
                                 : 'Dans les délais'}
-                          </span>
+                          </Pill>
                         </span>
                         <span className="po-projet-client">{p.client}</span>
                         <span className="po-barre" aria-hidden>
@@ -566,9 +567,9 @@ function Dossier({
               </p>
               <div className="po-pastilles">
                 {factures.map((f) => (
-                  <span key={f.libelle} className={`pill pill--${f.ton}`}>
+                  <Pill key={f.libelle} tone={f.ton}>
                     {f.libelle}
-                  </span>
+                  </Pill>
                 ))}
               </div>
             </>
@@ -584,9 +585,7 @@ function Dossier({
               J1 le {formatDate(d.ouvertLe)} → livraison J{d.horizon} le {formatDate(d.livraisonLe)}
             </span>
           )}
-          {d.jour > d.horizon && d.statutChantier !== 'livre' && (
-            <span className="pill pill--risque">Livraison dépassée</span>
-          )}
+          {d.jour > d.horizon && d.statutChantier !== 'livre' && <Pill tone="risque">Livraison dépassée</Pill>}
           {d.budgetHeures !== null && !salarie && (
             <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>
           )}
@@ -618,7 +617,7 @@ function Dossier({
               </span>
               <strong>{e.libelle}</strong>
               <span className="po-etape-pied">
-                <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
+                <Pill tone={p.ton}>{p.libelle}</Pill>
                 {mesOuvertes(e.numero) > 0 && (
                   <span className="po-etape-moi" title="Vos tâches en cours dans cette étape">
                     {mesOuvertes(e.numero)} à moi
@@ -859,7 +858,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
           </span>
           <span className="po-carte-repliee-droite">
             <span className="po-aide">{plural(c.taches.length, 'tâche')}</span>
-            <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
+            <Pill tone={p.ton}>{p.libelle}</Pill>
           </span>
         </button>
       </article>
@@ -893,12 +892,12 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
               <ChevronDown size={16} aria-hidden />
             </button>
           )}
-          <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
+          <Pill tone={p.ton}>{p.libelle}</Pill>
           {fenetre && <span className="po-aide">{fenetre}</span>}
           {etiquettes.map((e) => (
-            <span key={e} className="pill pill--neutre">
+            <Pill key={e} tone="neutre">
               {e}
-            </span>
+            </Pill>
           ))}
         </div>
       </header>
@@ -940,7 +939,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
                     {t.finLe ? formatDayMonth(t.finLe) : '—'}
                   </span>
                   <span className="po-tache-etat">
-                    <span className={`pill pill--${pt.ton}`}>{pt.libelle}</span>
+                    <Pill tone={pt.ton}>{pt.libelle}</Pill>
                     {t.fil > 0 && (
                       <span className="po-tache-fil" aria-label={`${t.fil} message(s)`}>
                         <MessageCircle size={13} aria-hidden /> {t.fil}
@@ -975,7 +974,7 @@ const memeLibelle = (cle: string, libelle: string) => normaliser(cle) === normal
 
 // « F1 émise · projet ouvert », « F2 attend 02, 03, récépissé 04 »… La
 // première facture en attente est mise en avant (maquette).
-function pastillesFactures(d: DossierProjetOuvert) {
+function pastillesFactures(d: DossierProjetOuvert): { libelle: string; ton: PillTone }[] {
   let premiere = true;
   return (['F1', 'F2', 'F3'] as const).map((f) => {
     if (d.factures[f] === 'emise')
@@ -1036,7 +1035,12 @@ function StatutProjet({
   onMaj: () => Promise<void>;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
-  if (!modifiable) return <span className="pill pill--neutre po-statut-chantier">{STATUTS_CHANTIER[statut]}</span>;
+  if (!modifiable)
+    return (
+      <Pill tone="neutre" className="po-statut-chantier">
+        {STATUTS_CHANTIER[statut]}
+      </Pill>
+    );
   return (
     <label className="po-statut-chantier">
       <span className="po-aide">Statut</span>

@@ -7,6 +7,7 @@ import { confirmerIntegration, enregistrerPointIntegration, getIntegrations, LIB
 import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -70,9 +71,9 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
                   >
                     <span className="integ-carte-tete">
                       <strong>{`${s.prenom} ${s.nom}`.trim() || s.matricule}</strong>
-                      <span className={`pill ${s.aTraiter > 0 ? 'pill--attention' : 'pill--info'}`}>
+                      <Pill className={s.aTraiter > 0 ? 'pill--attention' : 'pill--info'}>
                         {s.aTraiter > 0 ? 'Point à enregistrer' : 'En intégration'}
-                      </span>
+                      </Pill>
                     </span>
                     <span className="cell-sub">
                       {s.poste || 'poste à renseigner'} · {s.societe} · {LIBELLE_CONTRAT[s.typeContrat]} · entré(e) le{' '}
@@ -80,9 +81,9 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
                     </span>
                     <span className="integ-jalons">
                       {s.points.map((p) => (
-                        <span key={p.jalon} className={`pill ${PILL_POINT[p.statut]}`}>
+                        <Pill key={p.jalon} className={PILL_POINT[p.statut]}>
                           {libellePoint(p)}
-                        </span>
+                        </Pill>
                       ))}
                     </span>
                   </button>
@@ -230,9 +231,9 @@ function BlocPoint({
         <strong>
           J{p.jalon} · prévu le {formatDate(p.datePrevue)}
         </strong>
-        <span className={`pill ${PILL_POINT[p.statut]}`}>
+        <Pill className={PILL_POINT[p.statut]}>
           {p.statut === 'fait' ? `Fait le ${formatDate(p.realiseLe!)}` : p.statut === 'a_faire' ? 'À faire' : 'À venir'}
-        </span>
+        </Pill>
       </span>
       {p.statut === 'fait' && !edition && (
         <>

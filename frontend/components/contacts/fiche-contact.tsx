@@ -5,6 +5,7 @@ import { Mail, Phone } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getFicheContact, type FicheContact } from '@/lib/contacts';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 // Fiche contact d'un collègue (revue Salarié 19/10/2026) : ouverte depuis la
 // recherche (Ctrl+K) et l'annuaire du chat — remplace la page Équipes comme
@@ -41,7 +42,11 @@ export function FicheContactModal({
             <dt>Cellule</dt>
             <dd>
               {fiche.cellule ?? 'Sans cellule'}
-              {fiche.estChef && <span className="pill pill--info fc-chef">Chef de team</span>}
+              {fiche.estChef && (
+                <Pill tone="info" className="fc-chef">
+                  Chef de team
+                </Pill>
+              )}
             </dd>
             {fiche.chef && (
               <>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { colonnesPortail } from '@/lib/portail';
 import { SocietePortail } from '@/lib/types';
-import { SocieteAvatar } from './societe-avatar';
+import { CompanyAvatar } from '@/components/ui/avatar';
 
 // Doit matcher la transition de sortie de .societe-carte en CSS — on laisse
 // l'animation jouer avant de naviguer réellement.
@@ -62,7 +62,7 @@ export function SocieteGrid({ societes }: { societes: SocietePortail[] }) {
             <span className="societe-carte-logo">
               {/* alt vide : le nom est juste à côté, sinon le lien serait
                   annoncé « Grey Concrete Grey Concrete ». */}
-              <SocieteAvatar societe={societe} theme="glass" alt="" />
+              <CompanyAvatar company={societe} theme="glass" alt="" />
             </span>
             <span className="societe-carte-corps">
               <h2 className="societe-carte-nom">{societe.nom}</h2>

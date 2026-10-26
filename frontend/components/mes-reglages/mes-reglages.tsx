@@ -9,7 +9,7 @@ import { ouvrirAide } from '@/components/admin/aide-globale';
 import { ChangerMotDePasseModal } from '@/components/auth/changer-mot-de-passe-modal';
 import { DoubleFacteurCompte } from '@/components/auth/double-facteur-compte';
 import { OPTIONS_THEME } from '@/components/selecteur-theme';
-import { AvatarPersonne } from '@/components/avatar-personne';
+import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { nomAffiche } from '@/lib/profil';
 
@@ -33,11 +33,11 @@ export function MesReglages() {
     <div className="rg-page">
       <Bloc icone={UserRound} titre="Mon compte">
         <div className="rg-profil">
-          <AvatarPersonne
-            nom={nomAffiche(session.utilisateur)}
+          <PersonAvatar
+            name={nomAffiche(session.utilisateur)}
             photo={session.utilisateur.photoUrl}
-            cle={session.utilisateur.id}
-            taille="lg"
+            colorKey={session.utilisateur.id}
+            size="lg"
           />
           <span className="rg-profil-texte">
             <strong>{nomAffiche(session.utilisateur)}</strong>

@@ -1,5 +1,6 @@
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
+import type { PillTone } from '@/components/ui/pill';
 
 // « Signaler un problème » (aide de la barre du haut) et leur suivi par le
 // CIO (Réglages › Signalements).
@@ -17,7 +18,7 @@ export type Signalement = {
   aCapture: boolean;
 };
 
-export const STATUTS_SIGNALEMENT: Record<StatutSignalement, { libelle: string; ton: string }> = {
+export const STATUTS_SIGNALEMENT: Record<StatutSignalement, { libelle: string; ton: PillTone }> = {
   a_traiter: { libelle: 'À traiter', ton: 'attention' },
   en_cours: { libelle: 'En cours', ton: 'info' },
   corrige: { libelle: 'Corrigé', ton: 'succes' },

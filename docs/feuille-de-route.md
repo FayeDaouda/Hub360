@@ -72,6 +72,9 @@ Décisions structurantes : `docs/adr/`.
 - **Images sans dimensions** (défaut d'interface) : signature du contrat
   (`.contrat-signature`) et logo du document de facture (`.fd-logo`), dont la
   hauteur dépend de l'image chargée ; à corriger, avec captures avant/après.
+- **Avatar des cellules (Équipes, S1)** : `eq-avatar` de `cellule-carte.tsx`
+  est un contrôle d'envoi de photo (label, image de fond), distinct de
+  `PersonAvatar` ; l'unifier change le rendu : à faire avec le module Équipes.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.

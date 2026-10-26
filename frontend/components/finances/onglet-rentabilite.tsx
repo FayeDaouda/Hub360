@@ -23,6 +23,7 @@ import {
 } from '@/lib/rentabilite';
 import { formatDate, formatDateTime, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
 const MOIS_DEBUT = '2026-09'; // premières feuilles de temps (rh/regles-temps.ts)
@@ -290,9 +291,7 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     <td data-label="Taux · statut" className="rt-taux">
                       <span className="rt-taux-ligne">
                         {l.etat === 'complet' ? formatTaux(l.taux) : '—'}
-                        {l.statut && (
-                          <span className={`pill ${PILL_STATUT[l.statut]}`}>{LIBELLE_STATUT[l.statut]}</span>
-                        )}
+                        {l.statut && <Pill className={PILL_STATUT[l.statut]}>{LIBELLE_STATUT[l.statut]}</Pill>}
                       </span>
                     </td>
                     <td data-label="Dépassements" className="rt-signaux">
@@ -311,12 +310,12 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     </td>
                     <td data-label="Données" className="rt-etat">
                       <span className="cell-stack">
-                        <span
-                          className={`pill ${l.etat === 'complet' ? 'pill--neutre' : 'pill--attention'}`}
+                        <Pill
+                          className={l.etat === 'complet' ? 'pill--neutre' : 'pill--attention'}
                           title={l.raisons.join(' · ') || undefined}
                         >
                           {LIBELLE_ETAT[l.etat]}
-                        </span>
+                        </Pill>
                         <span className="cell-sub">
                           {l.misAJour ? `à jour du ${formatDate(l.misAJour)}` : 'aucune donnée'}
                         </span>

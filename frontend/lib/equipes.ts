@@ -1,4 +1,5 @@
 import type { ClienteleCellule, EtatPosteCellule, ProcessusCellule, StatutCellule } from './types';
+import type { PillTone } from '@/components/ui/pill';
 
 // Équipes (maquette du boss, oct. 2026) : nomenclature des cellules selon
 // ISO 9001 — format SOCIÉTÉ-PROCESSUS-NN.
@@ -22,7 +23,7 @@ export const CLIENTELES: Record<ClienteleCellule, string> = {
   sans_objet: 'Sans objet',
 };
 
-export const STATUTS_CELLULE: Record<StatutCellule, { libelle: string; ton: string }> = {
+export const STATUTS_CELLULE: Record<StatutCellule, { libelle: string; ton: PillTone }> = {
   active: { libelle: 'Active', ton: 'succes' },
   a_constituer: { libelle: 'À constituer', ton: 'attention' },
   reportee: { libelle: 'Reportée', ton: 'neutre' },

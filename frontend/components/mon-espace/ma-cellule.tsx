@@ -10,6 +10,7 @@ import { NIVEAUX_COLLABORATEUR, PHASES, type MaCellule as DonneesCellule, type S
 import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { Avatar } from './avatar';
+import { Pill } from '@/components/ui/pill';
 
 // « Mon espace » · Ma cellule (maquette du boss) : projets pilotés, tâches en
 // cours, en retard et remises à temps de toute la cellule ; ses membres et son
@@ -100,8 +101,8 @@ export function MaCellule({ slug }: { slug: string }) {
                     </span>
                   </button>
                   <span className="dmd-actions">
-                    {m.estChef && <span className="pill pill--info">Pilote</span>}
-                    {m.estMoi && <span className="pill pill--neutre">Vous</span>}
+                    {m.estChef && <Pill tone="info">Pilote</Pill>}
+                    {m.estMoi && <Pill tone="neutre">Vous</Pill>}
                   </span>
                 </li>
               ))}
@@ -126,7 +127,7 @@ export function MaCellule({ slug }: { slug: string }) {
                     </Link>
                     <span className="cell-sub">{p.programme}</span>
                   </span>
-                  <span className="pill pill--neutre">{PHASES[p.phase]}</span>
+                  <Pill tone="neutre">{PHASES[p.phase]}</Pill>
                 </li>
               ))}
             </ul>

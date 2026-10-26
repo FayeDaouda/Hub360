@@ -41,6 +41,7 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
 import { daysSince, yearOf } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 // Registre des projets (maquette du boss) : une couleur vive par tuile.
 
@@ -524,9 +525,9 @@ export default function CrmPage(props: Props) {
                             <span className="crm-ligne-code">{projet.code}</span>
                             <span className="crm-ligne-nom">{projet.client.nom}</span>
                           </span>
-                          <span className={`pill crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>
+                          <Pill className={`crm-ligne-statut ${PILL_SITUATION[situationDe(projet)]}`}>
                             {LIBELLE_SITUATION[situationDe(projet)]}
-                          </span>
+                          </Pill>
                         </button>
                       </li>
                     ))}
@@ -573,9 +574,9 @@ export default function CrmPage(props: Props) {
                             </td>
                             <td data-label="Catégorie">
                               {libelleCategorie(projet) ? (
-                                <span className={`pill ${pillCategorie(projet)}`}>{libelleCategorie(projet)}</span>
+                                <Pill className={pillCategorie(projet)}>{libelleCategorie(projet)}</Pill>
                               ) : (
-                                <span className="pill crm-a-choisir">À choisir</span>
+                                <Pill className="crm-a-choisir">À choisir</Pill>
                               )}
                             </td>
                             <td data-label="Client" className="crm-c-client">
@@ -637,7 +638,7 @@ export default function CrmPage(props: Props) {
                               </span>
                             </td>
                             <td data-label="Situation">
-                              <span className={`pill ${PILL_SITUATION[s]}`}>{LIBELLE_SITUATION[s]}</span>
+                              <Pill className={PILL_SITUATION[s]}>{LIBELLE_SITUATION[s]}</Pill>
                               {/* Revue CEO : au-delà du seuil, le demandeur voit que l'offre attend le CEO. */}
                               {projet.contresignatureCeo && projet.soumisLe && (
                                 <span className="cell-sub">

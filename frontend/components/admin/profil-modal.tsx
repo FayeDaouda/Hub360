@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Camera, Trash2 } from 'lucide-react';
 import { useMajSession, useSessionCourante } from '@/lib/layout-contexte';
 import { majNomAffiche, majPhoto, nomAffiche, preparerPhoto, retirerPhoto, type Profil } from '@/lib/profil';
-import { AvatarPersonne } from '@/components/avatar-personne';
+import { PersonAvatar } from '@/components/ui/avatar';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 // « Mon profil » (menu du compte, Réglages) : photo et nom affiché. La photo
@@ -85,7 +85,7 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
       <div className="modal-body profil-corps">
         <div className="profil-photo">
           <label className={`profil-photo-cible${enCours === 'photo' ? ' is-en-cours' : ''}`} title="Choisir une photo">
-            <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="xl" />
+            <PersonAvatar name={affiche} photo={u.photoUrl} colorKey={u.id} size="xl" />
             <span className="profil-photo-voile" aria-hidden>
               <Camera size={20} />
             </span>

@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronLeft, Info, Plus, SendHorizonal, X } from 'lucide-react';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import type { CanalChat, EtatFluxChat, MembreAnnuaire, MessageChat } from '@/lib/types';
-import { AvatarPersonne } from '@/components/avatar-personne';
+import { PersonAvatar } from '@/components/ui/avatar';
 import { addDays, formatDayLongMonth, formatTime, toIsoDay, todayIso } from '@/lib/dates';
 
 type Props = {
@@ -146,11 +146,11 @@ export function PanneauChat({
             annuaire.map((m) => (
               <li key={m.utilisateurId} className="pchat-annuaire-ligne">
                 <button type="button" className="pchat-canal" onClick={() => onNouveauDm(m.utilisateurId)}>
-                  <AvatarPersonne
-                    nom={m.nomAffiche || `${m.prenom} ${m.nom}`}
+                  <PersonAvatar
+                    name={m.nomAffiche || `${m.prenom} ${m.nom}`}
                     photo={m.photoUrl}
-                    cle={m.utilisateurId}
-                    taille="sm"
+                    colorKey={m.utilisateurId}
+                    size="sm"
                   />
                   <span className="pchat-canal-nom pchat-canal-nom--annuaire">
                     <span>{m.nomAffiche || `${m.prenom} ${m.nom}`}</span>

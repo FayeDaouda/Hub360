@@ -10,6 +10,7 @@ import { getProduction, numeroEtape, type LigneProduction, type VueProduction } 
 import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
 import { addDays, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 const STATUT: Record<LigneProduction['statutChantier'], string> = {
   conception: 'En conception',
@@ -191,7 +192,7 @@ export function Production({ slug }: { slug: string }) {
                         {l.projet.client}
                         {l.projet.cellule ? ` · ${l.projet.cellule}` : ''}
                       </span>
-                      <span className="pill pill--neutre">{STATUT[l.statutChantier]}</span>
+                      <Pill tone="neutre">{STATUT[l.statutChantier]}</Pill>
                     </span>
                     <span className="prod-avancement">
                       <span className="prod-etiquette">Avancement</span>
@@ -235,7 +236,7 @@ export function Production({ slug }: { slug: string }) {
                     <span className="prod-retards">
                       <span className="prod-etiquette">Retards</span>
                       {l.enRetard ? (
-                        <span className="pill pill--risque">{plural(l.enRetard, 'tâche')}</span>
+                        <Pill tone="risque">{plural(l.enRetard, 'tâche')}</Pill>
                       ) : (
                         <span className="cell-sub">aucun</span>
                       )}
@@ -245,9 +246,9 @@ export function Production({ slug }: { slug: string }) {
                       <span className="prod-etiquette">En attente</span>
                       {attente.length ? (
                         attente.map((a) => (
-                          <span key={a} className="pill pill--attention">
+                          <Pill key={a} tone="attention">
                             {a}
-                          </span>
+                          </Pill>
                         ))
                       ) : (
                         <span className="cell-sub">rien</span>
@@ -258,7 +259,7 @@ export function Production({ slug }: { slug: string }) {
                       {!l.tranche ? (
                         <span className="cell-sub">tranches émises</span>
                       ) : l.tranche.attend.length === 0 ? (
-                        <span className="pill pill--succes">{l.tranche.code} prête</span>
+                        <Pill tone="succes">{l.tranche.code} prête</Pill>
                       ) : (
                         <span className="cell-sub">
                           {l.tranche.code} attend {l.tranche.attend.join(', ')}
@@ -269,11 +270,11 @@ export function Production({ slug }: { slug: string }) {
                       <span className="prod-renta">
                         <span className="prod-etiquette">Marge</span>
                         {r && r.etat === 'complet' && r.taux !== null ? (
-                          <span
-                            className={`pill pill--${r.statut === 'vert' ? 'succes' : r.statut === 'rouge' ? 'risque' : r.statut === 'ambre' ? 'attention' : 'neutre'}`}
+                          <Pill
+                            className={`pill--${r.statut === 'vert' ? 'succes' : r.statut === 'rouge' ? 'risque' : r.statut === 'ambre' ? 'attention' : 'neutre'}`}
                           >
                             {String(r.taux).replace('.', ',')} %
-                          </span>
+                          </Pill>
                         ) : (
                           <span className="cell-sub">données insuffisantes</span>
                         )}
@@ -303,9 +304,9 @@ export function Production({ slug }: { slug: string }) {
               <div key={ce.code} className="prod-cellule">
                 <div className="prod-cellule-tete">
                   <strong>{ce.nom}</strong>
-                  <span className={`pill pill--${tonCharge(ce.moyenne, vue.charge.zone)}`}>
+                  <Pill className={`pill--${tonCharge(ce.moyenne, vue.charge.zone)}`}>
                     {ce.moyenne === null ? '—' : `${ce.moyenne} %`}
-                  </span>
+                  </Pill>
                 </div>
                 {ce.membres.map((m) => (
                   <div key={m.id} className="prod-membre" data-ton={tonCharge(m.pourcentage, vue.charge.zone)}>

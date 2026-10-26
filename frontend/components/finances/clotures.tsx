@@ -8,6 +8,7 @@ import { formatAmount } from '@/lib/format';
 import { formatDate } from '@/lib/dates';
 import { plural } from '@/lib/text';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { Pill } from '@/components/ui/pill';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -58,12 +59,12 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
               <div className="clo-tete">
                 <strong className="clo-periode">{m.periode}</strong>
                 {m.clos ? (
-                  <span className="pill pill--succes">
+                  <Pill tone="succes">
                     <Lock size={11} aria-hidden /> Clôturé{m.le ? ` le ${formatDate(m.le)}` : ''}
                     {m.par ? ` par ${m.par}` : ''}
-                  </span>
+                  </Pill>
                 ) : (
-                  <span className="pill pill--attention">{m.derniereReouverture ? 'Rouvert' : 'À clôturer'}</span>
+                  <Pill tone="attention">{m.derniereReouverture ? 'Rouvert' : 'À clôturer'}</Pill>
                 )}
               </div>
               <p className="clo-chiffres">

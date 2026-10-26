@@ -39,6 +39,7 @@ import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
 import { daysSince, formatDayMonth, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
+import { Pill } from '@/components/ui/pill';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -328,7 +329,7 @@ export function AValiderCfo({
         <h2 className="dmd-titre">
           <AlarmClock size={17} aria-hidden /> À valider aujourd’hui · {elements.length}
         </h2>
-        {urgents > 0 && <span className="pill pill--risque">{urgents} en retard</span>}
+        {urgents > 0 && <Pill tone="risque">{urgents} en retard</Pill>}
       </div>
       {elements.length === 0 ? (
         <p className="dmd-note">Rien en attente : offres, factures, règlements, salaires et absences sont à jour.</p>

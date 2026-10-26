@@ -22,6 +22,7 @@ import {
 import { formatAmount } from '@/lib/format';
 import type { DemandeAbsence, DemandeRemboursement } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
+import { Pill } from '@/components/ui/pill';
 
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Action impossible.');
 
@@ -109,7 +110,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                       <Paperclip size={14} aria-hidden /> Justificatif
                     </button>
                   )}
-                  <span className={`pill ${STATUT_ABSENCE[d.statut].pill}`}>{STATUT_ABSENCE[d.statut].libelle}</span>
+                  <Pill className={STATUT_ABSENCE[d.statut].pill}>{STATUT_ABSENCE[d.statut].libelle}</Pill>
                   {d.statut === 'accord_n1' && d.valideurFinal === 'ceo' && (
                     <span className="cell-sub">validation finale : CEO</span>
                   )}
@@ -185,9 +186,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                       <Paperclip size={14} aria-hidden /> {j.nom}
                     </button>
                   ))}
-                  <span className={`pill ${STATUT_REMBOURSEMENT[r.statut].pill}`}>
-                    {STATUT_REMBOURSEMENT[r.statut].libelle}
-                  </span>
+                  <Pill className={STATUT_REMBOURSEMENT[r.statut].pill}>{STATUT_REMBOURSEMENT[r.statut].libelle}</Pill>
                   {ecriture && r.statut === 'soumise' && (
                     <button
                       type="button"
@@ -247,7 +246,7 @@ export function DemandesRh({ slug, ecriture }: { slug: string; ecriture: boolean
                 </span>
                 <span className="dmd-actions">
                   {a.delivreeLe ? (
-                    <span className="pill pill--succes">Délivrée</span>
+                    <Pill tone="succes">Délivrée</Pill>
                   ) : (
                     ecriture && (
                       <label className="btn-primary btn-primary--sm">
