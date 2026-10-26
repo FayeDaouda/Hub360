@@ -3,7 +3,21 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent as KeyboardEventReact } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarOff, CircleHelp, Clock, IdCard, KeyRound, LogOut, MonitorSmartphone, PenLine, MessageSquareWarning, Settings, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react';
+import {
+  CalendarOff,
+  CircleHelp,
+  Clock,
+  IdCard,
+  KeyRound,
+  LogOut,
+  MonitorSmartphone,
+  PenLine,
+  MessageSquareWarning,
+  Settings,
+  ShieldAlert,
+  ShieldCheck,
+  UserRound,
+} from 'lucide-react';
 import type { Session } from '@/lib/types';
 import { apiAuth } from '@/lib/client-api';
 import { libelleRole } from '@/lib/groupe';
@@ -36,11 +50,22 @@ const jjmm = (iso: string) => iso.slice(0, 10).split('-').reverse().slice(0, 2).
 function quand(iso: string): string {
   const d = new Date(iso);
   const heure = `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
-  const jour = d.toDateString() === new Date().toDateString() ? 'aujourd’hui' : `le ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const jour =
+    d.toDateString() === new Date().toDateString()
+      ? 'aujourd’hui'
+      : `le ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
   return `${jour} à ${heure}`;
 }
 
-export function MenuCompte({ session, base, onDeconnexion }: { session: Session; base: string; onDeconnexion: () => void }) {
+export function MenuCompte({
+  session,
+  base,
+  onDeconnexion,
+}: {
+  session: Session;
+  base: string;
+  onDeconnexion: () => void;
+}) {
   const [ouvert, setOuvert] = useState(false);
   const [mdp, setMdp] = useState(false);
   const [edition, setEdition] = useState(false);
@@ -81,7 +106,8 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
     fermer();
     const ok = await confirmer({
       titre: 'Se déconnecter de tous les appareils ?',
-      message: 'Toutes vos sessions sont coupées, celle-ci comprise (ordinateurs, téléphone…). Il faudra vous reconnecter partout.',
+      message:
+        'Toutes vos sessions sont coupées, celle-ci comprise (ordinateurs, téléphone…). Il faudra vous reconnecter partout.',
       confirmer: 'Tout déconnecter',
       danger: true,
     });
@@ -178,7 +204,9 @@ export function MenuCompte({ session, base, onDeconnexion }: { session: Session;
               {securise ? <ShieldCheck size={16} aria-hidden /> : <ShieldAlert size={16} aria-hidden />}
               <span>
                 {securise ? 'Double authentification activée' : 'Double authentification à activer'}
-                {!securise && doubleFacteur.exige && <span className="mc-securite-exigee"> · exigée pour votre rôle</span>}
+                {!securise && doubleFacteur.exige && (
+                  <span className="mc-securite-exigee"> · exigée pour votre rôle</span>
+                )}
               </span>
             </Link>
           )}

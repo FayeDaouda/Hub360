@@ -64,7 +64,10 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
     setErreur(null);
     setFait(null);
     try {
-      appliquer(await majNomAffiche(nom.trim() || null), nom.trim() ? 'Nom affiché enregistré.' : 'Nom officiel rétabli.');
+      appliquer(
+        await majNomAffiche(nom.trim() || null),
+        nom.trim() ? 'Nom affiché enregistré.' : 'Nom officiel rétabli.',
+      );
     } catch (err) {
       setErreur(err instanceof Error ? err.message : 'Nom non enregistré.');
     } finally {
@@ -77,7 +80,13 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop modal-backdrop--premier-plan" onClick={() => !enCours && onClose()}>
-      <div className="modal modal--sm profil" role="dialog" aria-modal="true" aria-labelledby="profil-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal modal--sm profil"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profil-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="profil-titre">Mon profil</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose} disabled={!!enCours}>
@@ -86,7 +95,10 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
         </header>
         <div className="modal-body profil-corps">
           <div className="profil-photo">
-            <label className={`profil-photo-cible${enCours === 'photo' ? ' is-en-cours' : ''}`} title="Choisir une photo">
+            <label
+              className={`profil-photo-cible${enCours === 'photo' ? ' is-en-cours' : ''}`}
+              title="Choisir une photo"
+            >
               <AvatarPersonne nom={affiche} photo={u.photoUrl} cle={u.id} taille="xl" />
               <span className="profil-photo-voile" aria-hidden>
                 <Camera size={20} />
@@ -121,7 +133,12 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
                   />
                 </label>
                 {u.photoUrl && (
-                  <button type="button" className="btn-ghost btn-ghost--sm" disabled={!!enCours} onClick={() => void enleverPhoto()}>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-ghost--sm"
+                    disabled={!!enCours}
+                    onClick={() => void enleverPhoto()}
+                  >
                     <Trash2 size={14} aria-hidden /> Retirer
                   </button>
                 )}
@@ -142,8 +159,9 @@ export function ProfilModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setNom(e.target.value)}
             />
             <p className="po-aide">
-              Votre nom dans la messagerie, les fils de discussion et les mentions. Laissez vide pour utiliser votre nom officiel (
-              {nomOfficiel}), qui reste sur les validations et les documents ; pour le corriger, voyez avec la RH.
+              Votre nom dans la messagerie, les fils de discussion et les mentions. Laissez vide pour utiliser votre nom
+              officiel ({nomOfficiel}), qui reste sur les validations et les documents ; pour le corriger, voyez avec la
+              RH.
             </p>
             {erreur && <p className="field-erreur">{erreur}</p>}
             {fait && (

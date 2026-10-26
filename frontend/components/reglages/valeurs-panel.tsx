@@ -15,8 +15,10 @@ const iso = (jjmmaaaa: string) => {
 function versSaisie(r: Reglage): Saisie {
   const v = r.enService;
   const t = r.valeur;
-  if (t.type === 'parts' || t.type === 'heures') return Object.fromEntries(t.cles.map((k) => [k, String((v as Record<string, number>)[k])]));
-  if (t.type === 'zone') return v ? { de: String((v as { de: number }).de), a: String((v as { a: number }).a) } : { de: '', a: '' };
+  if (t.type === 'parts' || t.type === 'heures')
+    return Object.fromEntries(t.cles.map((k) => [k, String((v as Record<string, number>)[k])]));
+  if (t.type === 'zone')
+    return v ? { de: String((v as { de: number }).de), a: String((v as { a: number }).a) } : { de: '', a: '' };
   if (t.type === 'dates') return (v as string[]).map((d) => d.split('-').reverse().join('/')).join(', ');
   return v === null || v === undefined ? '' : String(v);
 }
@@ -29,17 +31,22 @@ function versValeur(r: Reglage, s: Saisie): { valeur: unknown } | { erreur: stri
     case 'parts':
     case 'heures': {
       const o = s as Record<string, string>;
-      if (t.cles.some((k) => o[k].trim() === '' || !Number.isFinite(n(o[k])))) return { erreur: 'nombre attendu dans chaque case' };
+      if (t.cles.some((k) => o[k].trim() === '' || !Number.isFinite(n(o[k]))))
+        return { erreur: 'nombre attendu dans chaque case' };
       return { valeur: Object.fromEntries(t.cles.map((k) => [k, n(o[k])])) };
     }
     case 'zone': {
       const o = s as Record<string, string>;
       if (!o.de.trim() && !o.a.trim()) return { valeur: null };
-      if (!Number.isFinite(n(o.de)) || !Number.isFinite(n(o.a)) || !o.de.trim() || !o.a.trim()) return { erreur: 'renseigner « de » et « à »' };
+      if (!Number.isFinite(n(o.de)) || !Number.isFinite(n(o.a)) || !o.de.trim() || !o.a.trim())
+        return { erreur: 'renseigner « de » et « à »' };
       return { valeur: { de: n(o.de), a: n(o.a) } };
     }
     case 'dates': {
-      const brut = (s as string).split(',').map((x) => x.trim()).filter(Boolean);
+      const brut = (s as string)
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
       const dates = brut.map(iso);
       if (dates.some((d) => !d)) return { erreur: 'dates au format JJ/MM/AAAA, séparées par des virgules' };
       return { valeur: [...new Set(dates as string[])].sort() };
@@ -48,7 +55,9 @@ function versValeur(r: Reglage, s: Saisie): { valeur: unknown } | { erreur: stri
       if (!(s as string).trim()) return { valeur: null };
       return Number.isFinite(n(s as string)) ? { valeur: n(s as string) } : { erreur: 'nombre attendu' };
     case 'entier':
-      return (s as string).trim() && Number.isFinite(n(s as string)) ? { valeur: n(s as string) } : { erreur: 'nombre entier attendu' };
+      return (s as string).trim() && Number.isFinite(n(s as string))
+        ? { valeur: n(s as string) }
+        : { erreur: 'nombre entier attendu' };
     default:
       return { valeur: (s as string).trim() };
   }
@@ -85,7 +94,13 @@ export function ValeursPanel({
   const champ = (r: Reglage) => {
     const s = saisieDe(r);
     const t = r.valeur;
-    const texte = (props: { valeur: string; onChange: (v: string) => void; placeholder?: string; large?: boolean; label: string }) => (
+    const texte = (props: {
+      valeur: string;
+      onChange: (v: string) => void;
+      placeholder?: string;
+      large?: boolean;
+      label: string;
+    }) => (
       <input
         className={`field-input reg-num${props.large ? ' reg-num--large' : ''}`}
         aria-label={props.label}
@@ -114,18 +129,33 @@ export function ValeursPanel({
         <span className="reg-multi">
           <label>
             <span>de</span>
-            {texte({ valeur: o.de, placeholder: de, onChange: (v) => majSaisie(r, { ...o, de: v }), label: `${r.libelle} · de` })}
+            {texte({
+              valeur: o.de,
+              placeholder: de,
+              onChange: (v) => majSaisie(r, { ...o, de: v }),
+              label: `${r.libelle} · de`,
+            })}
           </label>
           <label>
             <span>à</span>
-            {texte({ valeur: o.a, placeholder: a, onChange: (v) => majSaisie(r, { ...o, a: v }), label: `${r.libelle} · à` })}
+            {texte({
+              valeur: o.a,
+              placeholder: a,
+              onChange: (v) => majSaisie(r, { ...o, a: v }),
+              label: `${r.libelle} · à`,
+            })}
           </label>
         </span>
       );
     }
     if (t.type === 'choix') {
       return (
-        <select className="field-input reg-choix" aria-label={r.libelle} value={s as string} onChange={(e) => majSaisie(r, e.target.value)}>
+        <select
+          className="field-input reg-choix"
+          aria-label={r.libelle}
+          value={s as string}
+          onChange={(e) => majSaisie(r, e.target.value)}
+        >
           {t.options.map((o) => (
             <option key={o.valeur} value={o.valeur}>
               {o.libelle}
@@ -139,7 +169,14 @@ export function ValeursPanel({
       onChange: (v) => majSaisie(r, v),
       label: r.libelle,
       large: t.type === 'dates' || t.type === 'texte' || (t.type === 'entier' && t.max > 99_999),
-      placeholder: t.type === 'dates' ? 'JJ/MM/AAAA, JJ/MM/AAAA' : t.type === 'pourcentage' ? (r.propose ? `proposé ${r.propose}` : 'à fixer') : undefined,
+      placeholder:
+        t.type === 'dates'
+          ? 'JJ/MM/AAAA, JJ/MM/AAAA'
+          : t.type === 'pourcentage'
+            ? r.propose
+              ? `proposé ${r.propose}`
+              : 'à fixer'
+            : undefined,
     });
   };
 

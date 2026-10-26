@@ -50,6 +50,8 @@ describe('problemesEnvironnement', () => {
     ['JWT_EXPIRES_IN', 'une semaine'],
     ['NODE_ENV', 'staging'],
   ])('REFUSÉ : %s = %s', (variable, valeur) => {
-    expect(problemesEnvironnement({ ...BASE, [variable]: valeur })).toEqual(expect.arrayContaining([expect.stringContaining(variable)]));
+    expect(problemesEnvironnement({ ...BASE, [variable]: valeur })).toEqual(
+      expect.arrayContaining([expect.stringContaining(variable)]),
+    );
   });
 });

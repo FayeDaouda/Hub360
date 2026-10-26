@@ -1,0 +1,15 @@
+# Généré ou externe
+**/node_modules/
+**/package-lock.json
+frontend/.next/
+frontend/next-env.d.ts
+backend/dist/
+coverage/
+e2e/.state/
+e2e/.reference/
+scratchpad/
+design/
+
+# SQL des migrations : historique figé, jamais réécrit
+backend/prisma/migrations/
+.git-blame-ignore-revs

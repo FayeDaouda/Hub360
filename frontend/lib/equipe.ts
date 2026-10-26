@@ -53,11 +53,7 @@ export function getVueEquipes(slug: string): Promise<VueEquipes> {
   return apiSociete<VueEquipes>(slug, '/equipes');
 }
 
-export function renommerCellule(
-  slug: string,
-  id: string,
-  nom: string,
-): Promise<Cellule> {
+export function renommerCellule(slug: string, id: string, nom: string): Promise<Cellule> {
   return apiSociete<Cellule>(slug, `/cellules/${id}`, {
     method: 'PATCH',
     body: { nom },
@@ -73,11 +69,7 @@ export function supprimerCellule(slug: string, id: string): Promise<void> {
 
 // Désigne (ou retire, dispatcherId=null) le dispatcher de la cellule — admin
 // uniquement, doit être membre de cette cellule (décision boss, sept. 2026).
-export function definirDispatcher(
-  slug: string,
-  celluleId: string,
-  dispatcherId: string | null,
-): Promise<Cellule> {
+export function definirDispatcher(slug: string, celluleId: string, dispatcherId: string | null): Promise<Cellule> {
   return apiSociete<Cellule>(slug, `/cellules/${celluleId}/dispatcher`, {
     method: 'PATCH',
     body: { dispatcherId },
@@ -94,14 +86,9 @@ type ChampsCollaborateur = {
   dateArrivee?: string | null; // AAAA-MM-JJ ; null = effacer
 };
 
-export function majCollaborateur(
-  slug: string,
-  id: string,
-  data: Partial<ChampsCollaborateur>,
-): Promise<Collaborateur> {
+export function majCollaborateur(slug: string, id: string, data: Partial<ChampsCollaborateur>): Promise<Collaborateur> {
   return apiSociete<Collaborateur>(slug, `/collaborateurs/${id}`, {
     method: 'PATCH',
     body: data,
   });
 }
-

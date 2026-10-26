@@ -35,11 +35,7 @@ export const metadata = {
   },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Nonce de la politique de contenu, posé par proxy.ts pour cette requête.
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (

@@ -25,19 +25,31 @@ export const getMaCellule = (slug: string) =>
 export const getMonEspace = (slug: string) => apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace');
 // « Mes informations » : enregistrées immédiatement, champ par champ.
 export type ChampsPersonnels = Partial<
-  Pick<ProfilMonEspace, 'telephone' | 'emailPerso' | 'situationFamiliale' | 'enfantsACharge' | 'adresse' | 'contactUrgence' | 'telephoneUrgence'>
+  Pick<
+    ProfilMonEspace,
+    | 'telephone'
+    | 'emailPerso'
+    | 'situationFamiliale'
+    | 'enfantsACharge'
+    | 'adresse'
+    | 'contactUrgence'
+    | 'telephoneUrgence'
+  >
 >;
 export const majCoordonnees = (slug: string, corps: ChampsPersonnels) =>
   apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/coordonnees', { method: 'PATCH', body: corps });
 // Changement de moyen de paiement : soumis à la RH, appliqué après sa validation.
-export const demanderPaiement = (slug: string, corps: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string }) =>
-  apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/paiement', { method: 'POST', body: corps });
+export const demanderPaiement = (
+  slug: string,
+  corps: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string },
+) => apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace/paiement', { method: 'POST', body: corps });
 
 async function telecharger(slug: string, chemin: string) {
   const f = await apiSociete<{ nom: string; url: string }>(slug, chemin);
   telechargerFichier(f);
 }
-export const telechargerDocument = (slug: string, type: TypePieceDossier) => telecharger(slug, `/mon-espace/documents/${type}`);
+export const telechargerDocument = (slug: string, type: TypePieceDossier) =>
+  telecharger(slug, `/mon-espace/documents/${type}`);
 export const telechargerBulletin = (slug: string, mois: string) => telecharger(slug, `/mon-espace/bulletins/${mois}`);
 export const telechargerAttestation = (slug: string, id: string) => telecharger(slug, `/mon-espace/attestations/${id}`);
 export const demanderAttestation = (slug: string) =>
@@ -68,7 +80,10 @@ export const telechargerPieceRemise = (slug: string, t: TacheAValider, pieceId: 
   telecharger(slug, `/taches/${t.projetId}/${t.id}/pieces/${pieceId}`);
 export const getTachesAValider = (slug: string) => apiSociete<TacheAValider[]>(slug, '/taches/a-valider');
 export const deciderTache = (slug: string, t: TacheAValider, decision: 'valider' | 'renvoyer', motif?: string) =>
-  apiSociete<TacheAValider[]>(slug, `/taches/${t.projetId}/${t.id}/decision`, { method: 'POST', body: { decision, ...(motif ? { motif } : {}) } });
+  apiSociete<TacheAValider[]>(slug, `/taches/${t.projetId}/${t.id}/decision`, {
+    method: 'POST',
+    body: { decision, ...(motif ? { motif } : {}) },
+  });
 
 export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }> = {
   validee: { libelle: 'Validée', pill: 'pill--succes' },
@@ -86,7 +101,8 @@ export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }
 // catégorie) : échéance passée — la date accordée pour une prolongée —,
 // reprises comprises. Une tâche « bloquée » attend l'étape précédente : son
 // retard ne lui est pas imputable. Partagée par « Mes tâches » et « Projets ».
-export const dateEffective = (t: TacheMonEspace) => (t.statut === 'prolongee' && t.prolongeeJusquau ? t.prolongeeJusquau : t.echeance);
+export const dateEffective = (t: TacheMonEspace) =>
+  t.statut === 'prolongee' && t.prolongeeJusquau ? t.prolongeeJusquau : t.echeance;
 export const estEnRetard = (t: TacheMonEspace, aujourdhui: string) =>
   t.statut === 'en_retard' ||
   ((t.statut === 'a_reprendre' || t.statut === 'prolongee') && !!dateEffective(t) && dateEffective(t)! < aujourdhui);
@@ -102,6 +118,7 @@ export function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
   }
   if (t.statut === 'a_venir') return `À venir · J-${ecartJours(aujourdhui, t.debut!)}`;
   if (t.statut === 'en_retard') return `En retard · ${ecartJours(t.echeance!, aujourdhui)} j`;
-  if (t.statut === 'prolongee' && t.prolongeeJusquau) return `Prolongée jusqu’au ${t.prolongeeJusquau.slice(8, 10)}/${t.prolongeeJusquau.slice(5, 7)}`;
+  if (t.statut === 'prolongee' && t.prolongeeJusquau)
+    return `Prolongée jusqu’au ${t.prolongeeJusquau.slice(8, 10)}/${t.prolongeeJusquau.slice(5, 7)}`;
   return STATUT_TACHE[t.statut].libelle;
 }

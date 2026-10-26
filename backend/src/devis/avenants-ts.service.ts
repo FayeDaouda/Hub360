@@ -1,4 +1,12 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
@@ -40,7 +48,10 @@ export class AvenantsTsService {
     if (!droit) throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     if (droit === 'ajouter') return this.creer(societeId, acteur, projetId, dto);
 
-    const projet = await this.prisma.projet.findFirstOrThrow({ where: { id: projetId, societeId }, select: { code: true } });
+    const projet = await this.prisma.projet.findFirstOrThrow({
+      where: { id: projetId, societeId },
+      select: { code: true },
+    });
     const demande = await this.prisma.demandeTs.create({
       data: {
         societeId,
@@ -67,14 +78,30 @@ export class AvenantsTsService {
 
   // Décision du CTO sur un TS au-delà du seuil : accepté, il est ajouté (tâche
   // + avenant) ; refusé, avec un motif. Le demandeur est prévenu.
-  async deciderDemande(societeId: string, acteur: { userId: string; role: string }, projetId: string, demandeId: string, accepter: boolean, motif?: string) {
-    if (acteur.role !== ROLE_CTO && acteur.role !== 'societe_admin') throw new ForbiddenException('Un TS au-delà du seuil est validé par le CTO.');
-    const d = await this.prisma.demandeTs.findFirst({ where: { id: demandeId, projetId, societeId }, include: { projet: { select: { code: true } } } });
+  async deciderDemande(
+    societeId: string,
+    acteur: { userId: string; role: string },
+    projetId: string,
+    demandeId: string,
+    accepter: boolean,
+    motif?: string,
+  ) {
+    if (acteur.role !== ROLE_CTO && acteur.role !== 'societe_admin')
+      throw new ForbiddenException('Un TS au-delà du seuil est validé par le CTO.');
+    const d = await this.prisma.demandeTs.findFirst({
+      where: { id: demandeId, projetId, societeId },
+      include: { projet: { select: { code: true } } },
+    });
     if (!d) throw new NotFoundException('Demande introuvable');
     if (!accepter && !motif?.trim()) throw new BadRequestException('Le motif du refus est obligatoire.');
     const { count } = await this.prisma.demandeTs.updateMany({
       where: { id: d.id, statut: 'a_valider' },
-      data: { statut: accepter ? 'acceptee' : 'refusee', decideParId: acteur.userId, decideLe: new Date(), motifRefus: accepter ? '' : motif!.trim() },
+      data: {
+        statut: accepter ? 'acceptee' : 'refusee',
+        decideParId: acteur.userId,
+        decideLe: new Date(),
+        motifRefus: accepter ? '' : motif!.trim(),
+      },
     });
     if (!count) throw new ConflictException('Cette demande a déjà été tranchée.');
     let tacheId: string | null = null;
@@ -89,7 +116,10 @@ export class AvenantsTsService {
         tacheId = (await this.creer(societeId, acteur, projetId, dto)).id;
       } catch (e) {
         // L'ajout a échoué (carte désactivée entre-temps…) : la demande reste à trancher.
-        await this.prisma.demandeTs.update({ where: { id: d.id }, data: { statut: 'a_valider', decideParId: null, decideLe: null } });
+        await this.prisma.demandeTs.update({
+          where: { id: d.id },
+          data: { statut: 'a_valider', decideParId: null, decideLe: null },
+        });
         throw e;
       }
       await this.prisma.demandeTs.update({ where: { id: d.id }, data: { tacheId } });
@@ -113,8 +143,14 @@ export class AvenantsTsService {
   // surface × planches) : vérifiée avant toute écriture.
   private async chiffrer(societeId: string, projetId: string, dto: AjouterTsDto) {
     const code = PRODUIT_TS[dto.reprise];
-    const produit = await this.prisma.produitService.findFirst({ where: { societeId, code, supprime: false }, select: { id: true } });
-    if (!produit) throw new UnprocessableEntityException(`Produit ${code} absent du catalogue : l’avenant ne peut pas être chiffré.`);
+    const produit = await this.prisma.produitService.findFirst({
+      where: { societeId, code, supprime: false },
+      select: { id: true },
+    });
+    if (!produit)
+      throw new UnprocessableEntityException(
+        `Produit ${code} absent du catalogue : l’avenant ne peut pas être chiffré.`,
+      );
     const ligne: LigneDevisDto = {
       produitServiceId: produit.id,
       designation: 'TS',
@@ -126,7 +162,12 @@ export class AvenantsTsService {
     return { ligneDto: ligne, ligne: { quantite: chiffree?.quantite ?? 1, prixUnitaire: chiffree?.prixUnitaire ?? 0 } };
   }
 
-  private async creer(societeId: string, acteur: { userId: string; role: string }, projetId: string, dto: AjouterTsDto) {
+  private async creer(
+    societeId: string,
+    acteur: { userId: string; role: string },
+    projetId: string,
+    dto: AjouterTsDto,
+  ) {
     const projet = await this.prisma.projet.findFirst({
       where: { id: projetId, societeId, ouvertLe: { not: null } },
       select: { code: true, clientId: true, dossierCrm: { select: { proprietaireId: true } } },
@@ -138,7 +179,13 @@ export class AvenantsTsService {
     ligne.designation = tache.libelle;
 
     const enCours = await this.prisma.devis.findFirst({
-      where: { societeId, projetId, dossierCrmId: null, statut: 'brouillon', lignes: { some: { produitService: { famille: 'TS' } } } },
+      where: {
+        societeId,
+        projetId,
+        dossierCrmId: null,
+        statut: 'brouillon',
+        lignes: { some: { produitService: { famille: 'TS' } } },
+      },
       orderBy: { creeLe: 'desc' },
       select: { id: true, lignes: { orderBy: { ordre: 'asc' } } },
     });
@@ -157,14 +204,22 @@ export class AvenantsTsService {
             ligne,
           ],
         })
-      : await this.devis.creer(societeId, { clientId: projet.clientId, projetId, objet: OBJET_AVENANT, lignes: [ligne] });
+      : await this.devis.creer(societeId, {
+          clientId: projet.clientId,
+          projetId,
+          objet: OBJET_AVENANT,
+          lignes: [ligne],
+        });
     await this.prisma.tacheProjet.update({ where: { id: tache.id }, data: { devisTsId: avenant.id } });
 
     await this.notifications.envoyer({
       societeId,
       type: 'avenant_ts',
       titre: `Avenant à envoyer au client · ${projet.code} · ${tache.libelle}`,
-      destinataireIds: [projet.dossierCrm.proprietaireId, ...(await this.notifications.titulairesRole(societeId, ROLE_CFO))],
+      destinataireIds: [
+        projet.dossierCrm.proprietaireId,
+        ...(await this.notifications.titulairesRole(societeId, ROLE_CFO)),
+      ],
       parId: acteur.userId,
       projetId,
     });

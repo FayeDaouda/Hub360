@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { LIBELLES_COORDONNEES, payerCommission, type CommissionApporteur, type CoordonneesApporteur } from '@/lib/commissions';
+import {
+  LIBELLES_COORDONNEES,
+  payerCommission,
+  type CommissionApporteur,
+  type CoordonneesApporteur,
+} from '@/lib/commissions';
 import { formatMontant, formatNombre } from '@/lib/format';
 import { MODES_PAIEMENT, type ModePaiement } from '@/lib/types';
 
@@ -12,7 +17,17 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 // Le CFO règle la commission d'un apporteur (revue COO, 22/10/2026) : date,
 // mode et référence ; les coordonnées saisies par le COO sont rappelées.
-export function PayerCommission({ slug, commission: c, onFait, onClose }: { slug: string; commission: CommissionApporteur; onFait: () => void; onClose: () => void }) {
+export function PayerCommission({
+  slug,
+  commission: c,
+  onFait,
+  onClose,
+}: {
+  slug: string;
+  commission: CommissionApporteur;
+  onFait: () => void;
+  onClose: () => void;
+}) {
   const [date, setDate] = useState(aujourdhui());
   const [mode, setMode] = useState<ModePaiement>('virement');
   const [reference, setReference] = useState('');
@@ -38,11 +53,19 @@ export function PayerCommission({ slug, commission: c, onFait, onClose }: { slug
     }
   }
 
-  const coordonnees = c.coordonnees ? (Object.keys(LIBELLES_COORDONNEES) as (keyof CoordonneesApporteur)[]).filter((k) => c.coordonnees![k]) : [];
+  const coordonnees = c.coordonnees
+    ? (Object.keys(LIBELLES_COORDONNEES) as (keyof CoordonneesApporteur)[]).filter((k) => c.coordonnees![k])
+    : [];
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="pc-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pc-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="pc-titre">Commission · {c.apporteur}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
@@ -60,7 +83,8 @@ export function PayerCommission({ slug, commission: c, onFait, onClose }: { slug
             <div>
               <dt>Calcul</dt>
               <dd>
-                {formatNombre(c.taux)} % de {formatMontant(c.baseHt)} HT {c.source === 'encaissement' ? 'encaissés' : 'du contrat signé'}
+                {formatNombre(c.taux)} % de {formatMontant(c.baseHt)} HT{' '}
+                {c.source === 'encaissement' ? 'encaissés' : 'du contrat signé'}
               </dd>
             </div>
             <div>
@@ -91,11 +115,23 @@ export function PayerCommission({ slug, commission: c, onFait, onClose }: { slug
           <div className="pc-champs">
             <label className="field">
               <span className="field-label">Payée le</span>
-              <input className="field-input" type="date" value={date} max={aujourdhui()} disabled={envoi} onChange={(e) => setDate(e.target.value)} />
+              <input
+                className="field-input"
+                type="date"
+                value={date}
+                max={aujourdhui()}
+                disabled={envoi}
+                onChange={(e) => setDate(e.target.value)}
+              />
             </label>
             <label className="field">
               <span className="field-label">Mode</span>
-              <select className="field-input" value={mode} disabled={envoi} onChange={(e) => setMode(e.target.value as ModePaiement)}>
+              <select
+                className="field-input"
+                value={mode}
+                disabled={envoi}
+                onChange={(e) => setMode(e.target.value as ModePaiement)}
+              >
                 {(Object.keys(MODES_PAIEMENT) as ModePaiement[]).map((m) => (
                   <option key={m} value={m}>
                     {MODES_PAIEMENT[m]}
@@ -105,7 +141,13 @@ export function PayerCommission({ slug, commission: c, onFait, onClose }: { slug
             </label>
             <label className="field">
               <span className="field-label">Référence (facultatif)</span>
-              <input className="field-input" maxLength={120} value={reference} disabled={envoi} onChange={(e) => setReference(e.target.value)} />
+              <input
+                className="field-input"
+                maxLength={120}
+                value={reference}
+                disabled={envoi}
+                onChange={(e) => setReference(e.target.value)}
+              />
             </label>
           </div>
           {erreur && <p className="field-erreur">{erreur}</p>}

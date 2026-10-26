@@ -50,7 +50,18 @@ type Props = {
 // validation, durée) ; décisions du valideur (remise, prolongation, visa) et
 // assignation ; discussion ; « Détails » repliés (fenêtre, échéance figée,
 // écart) ; fichiers et historique. Les règles du système sont dans des « ? ».
-export function TachePanneau({ slug, projetId, code, carte, tache, assignables, moiId, mentionnables, onMaj, prolongationOuverte = false }: Props) {
+export function TachePanneau({
+  slug,
+  projetId,
+  code,
+  carte,
+  tache,
+  assignables,
+  moiId,
+  mentionnables,
+  onMaj,
+  prolongationOuverte = false,
+}: Props) {
   const [aLaCarte, setALaCarte] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -167,7 +178,10 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
   const v = tache.validation;
   const gestionnaire = assignables !== null;
   const assignable =
-    assignables !== null && carte.etat.code !== 'desactivee' && tache.statut !== 'validee' && tache.statut !== 'non_necessaire';
+    assignables !== null &&
+    carte.etat.code !== 'desactivee' &&
+    tache.statut !== 'validee' &&
+    tache.statut !== 'non_necessaire';
   const basculer = (a: 'deposer' | 'delai') => setAction((x) => (x === a ? null : a));
 
   // Résumé : ce qu'il faut savoir d'un coup d'œil.
@@ -199,7 +213,9 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     v.mode === 'depot' ? (
       <>
         le dépôt vaut validation{' '}
-        <Infobulle>Tâche sans temps atelier : déposer le justificatif suffit (exception écrite au principe 4).</Infobulle>
+        <Infobulle>
+          Tâche sans temps atelier : déposer le justificatif suffit (exception écrite au principe 4).
+        </Infobulle>
       </>
     ) : (
       <>
@@ -213,11 +229,16 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
     'Durée prévue',
     <>
       {dureeStandard(tache)}{' '}
-      {tache.heures !== null && <Infobulle>Temps calculé à partir de la durée standard de la tâche : rien à saisir.</Infobulle>}
+      {tache.heures !== null && (
+        <Infobulle>Temps calculé à partir de la durée standard de la tâche : rien à saisir.</Infobulle>
+      )}
     </>,
   ]);
   if (tache.valideeLe) {
-    resume.push(['Validée', `le ${jjmmaaaa(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`]);
+    resume.push([
+      'Validée',
+      `le ${jjmmaaaa(tache.valideeLe)}${tache.valideePar ? ` par ${tache.valideePar}` : ''}${v.mode === 'depot' ? ' (dépôt)' : ''}`,
+    ]);
   }
 
   // Détails repliés : les règles de calendrier.
@@ -233,7 +254,10 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       tache.finLe ? (
         <>
           {jjmmaaaa(tache.finLe)}{' '}
-          <Infobulle>Délai figé à l’ouverture du projet : une prolongation accordée qualifie le retard, elle ne déplace pas cette date.</Infobulle>
+          <Infobulle>
+            Délai figé à l’ouverture du projet : une prolongation accordée qualifie le retard, elle ne déplace pas cette
+            date.
+          </Infobulle>
         </>
       ) : (
         '—'
@@ -281,12 +305,26 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           {tache.peutRemettre && (
             // Formulaire ouvert : son propre bouton « Déposer » est l'action
             // principale ; celui de la barre passe en contour (un seul plein).
-            <button type="button" className={action === 'deposer' ? 'btn-ghost' : 'btn-primary'} aria-expanded={action === 'deposer'} onClick={() => basculer('deposer')}>
-              {v.mode === 'depot' ? 'Déposer le justificatif' : tache.statut === 'reprise' ? 'Déposer la reprise' : 'Déposer'}
+            <button
+              type="button"
+              className={action === 'deposer' ? 'btn-ghost' : 'btn-primary'}
+              aria-expanded={action === 'deposer'}
+              onClick={() => basculer('deposer')}
+            >
+              {v.mode === 'depot'
+                ? 'Déposer le justificatif'
+                : tache.statut === 'reprise'
+                  ? 'Déposer la reprise'
+                  : 'Déposer'}
             </button>
           )}
           {tache.peutDemanderProlongation && (
-            <button type="button" className="btn-ghost" aria-expanded={action === 'delai'} onClick={() => basculer('delai')}>
+            <button
+              type="button"
+              className="btn-ghost"
+              aria-expanded={action === 'delai'}
+              onClick={() => basculer('delai')}
+            >
               Demander un délai
             </button>
           )}
@@ -316,10 +354,14 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               className="btn-primary"
               disabled={enCours || !depotPret(saisie, tache.fichierObligatoire)}
               onClick={() =>
-                agir(() => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)), 'La remise a échoué.', () => {
-                  setSaisie(SAISIE_REMISE_VIDE);
-                  setAction(null);
-                })
+                agir(
+                  () => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)),
+                  'La remise a échoué.',
+                  () => {
+                    setSaisie(SAISIE_REMISE_VIDE);
+                    setAction(null);
+                  },
+                )
               }
             >
               {enCours ? '…' : v.mode === 'depot' ? 'Déposer le justificatif' : 'Déposer'}
@@ -333,13 +375,21 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           <p className="tp-section">
             Demander un délai{' '}
             <Infobulle>
-              Votre N+1 accorde ou refuse. Accordé, le retard est qualifié jusqu’à la nouvelle date ; l’échéance de référence ne change pas.
+              Votre N+1 accorde ou refuse. Accordé, le retard est qualifié jusqu’à la nouvelle date ; l’échéance de
+              référence ne change pas.
             </Infobulle>
           </p>
           <label className="po-panneau-label" htmlFor="po-jusquau">
             Nouvelle date
           </label>
-          <input id="po-jusquau" className="field-input" type="date" value={jusquau} min={tache.finLe ?? undefined} onChange={(e) => setJusquau(e.target.value)} />
+          <input
+            id="po-jusquau"
+            className="field-input"
+            type="date"
+            value={jusquau}
+            min={tache.finLe ?? undefined}
+            onChange={(e) => setJusquau(e.target.value)}
+          />
           <label className="po-panneau-label" htmlFor="po-motif-prolongation">
             Motif
           </label>
@@ -360,7 +410,11 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               className="btn-primary"
               disabled={enCours || !jusquau || motifProlongation.trim().length < 3}
               onClick={() =>
-                agir(() => demanderProlongation(slug, projetId, tache.id, jusquau, motifProlongation.trim()), 'La demande a échoué.', () => setAction(null))
+                agir(
+                  () => demanderProlongation(slug, projetId, tache.id, jusquau, motifProlongation.trim()),
+                  'La demande a échoué.',
+                  () => setAction(null),
+                )
               }
             >
               Envoyer la demande
@@ -382,7 +436,9 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           {tache.avenant.statut === 'brouillon' && ' : à envoyer au client'}
         </p>
       )}
-      {tache.etat.code === 'non_necessaire' && tache.motif && <p className="po-panneau-note">Non nécessaire : {tache.motif}.</p>}
+      {tache.etat.code === 'non_necessaire' && tache.motif && (
+        <p className="po-panneau-note">Non nécessaire : {tache.motif}.</p>
+      )}
       {carte.etat.code === 'desactivee' && (
         <p className="po-panneau-note">Carte désactivée : {carte.etat.motif}. Son temps n’est pas compté.</p>
       )}
@@ -405,7 +461,9 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
                 type="button"
                 className="btn-ghost"
                 disabled={enCours}
-                onClick={() => agir(() => deciderProlongation(slug, projetId, tache.id, false), 'La décision a échoué.')}
+                onClick={() =>
+                  agir(() => deciderProlongation(slug, projetId, tache.id, false), 'La décision a échoué.')
+                }
               >
                 Refuser
               </button>
@@ -429,14 +487,18 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
         <div className="po-panneau-bloc">
           <p className="tp-section">Visa DPLG</p>
           {tache.visa.nonTrace ? (
-            <p className="po-aide">Visa non tracé (antérieur au 21/10/2026) : la tâche a été validée avant la règle du visa.</p>
+            <p className="po-aide">
+              Visa non tracé (antérieur au 21/10/2026) : la tâche a été validée avant la règle du visa.
+            </p>
           ) : tache.visa.le ? (
             <p className="po-aide">
               Apposé le {jjmmaaaa(tache.visa.le)}
               {tache.visa.par ? ` par ${tache.visa.par}` : ''}.
             </p>
           ) : (
-            <p className="po-aide">Validée par le chef de team : le visa de l’architecte DPLG est attendu avant la suite.</p>
+            <p className="po-aide">
+              Validée par le chef de team : le visa de l’architecte DPLG est attendu avant la suite.
+            </p>
           )}
           {tache.peutViser &&
             (refusVisa !== null ? (
@@ -460,7 +522,13 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
                     type="button"
                     className="btn-primary"
                     disabled={enCours || refusVisa.trim().length < 3}
-                    onClick={() => agir(() => viserTache(slug, projetId, tache.id, false, refusVisa.trim()), 'Le refus a échoué.', () => setRefusVisa(null))}
+                    onClick={() =>
+                      agir(
+                        () => viserTache(slug, projetId, tache.id, false, refusVisa.trim()),
+                        'Le refus a échoué.',
+                        () => setRefusVisa(null),
+                      )
+                    }
                   >
                     Refuser le visa
                   </button>
@@ -471,7 +539,12 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
                 <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setRefusVisa('')}>
                   Refuser le visa
                 </button>
-                <button type="button" className="btn-primary" disabled={enCours} onClick={() => agir(() => viserTache(slug, projetId, tache.id, true), 'Le visa a échoué.')}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={enCours}
+                  onClick={() => agir(() => viserTache(slug, projetId, tache.id, true), 'Le visa a échoué.')}
+                >
                   Apposer le visa DPLG
                 </button>
               </div>
@@ -499,12 +572,24 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
               <label className="po-panneau-label" htmlFor="po-motif">
                 Motif de la reprise
               </label>
-              <textarea id="po-motif" className="field-input" rows={2} maxLength={500} value={motif} onChange={(e) => setMotif(e.target.value)} />
+              <textarea
+                id="po-motif"
+                className="field-input"
+                rows={2}
+                maxLength={500}
+                value={motif}
+                onChange={(e) => setMotif(e.target.value)}
+              />
               <div className="po-decision">
                 <button type="button" className="btn-ghost" disabled={enCours} onClick={() => setRenvoi(false)}>
                   Annuler
                 </button>
-                <button type="button" className="btn-primary" disabled={enCours || motif.trim().length < 3} onClick={() => decider('renvoyer')}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={enCours || motif.trim().length < 3}
+                  onClick={() => decider('renvoyer')}
+                >
                   Renvoyer en reprise
                 </button>
               </div>
@@ -547,28 +632,44 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
           </select>
           {charges?.periode && (
             <p className="po-aide">
-              Charge prévisionnelle du {jjmmaaaa(charges.periode.debut)} au {jjmmaaaa(charges.periode.fin)}, cette tâche comprise
+              Charge prévisionnelle du {jjmmaaaa(charges.periode.debut)} au {jjmmaaaa(charges.periode.fin)}, cette tâche
+              comprise
               {charges.zone ? ` (zone normale ${charges.zone.de} à ${charges.zone.a} %)` : ''}.
               {tache.assigne && chargeDe(tache.assigne.id) && (
                 <>
                   {' '}
-                  {tache.assigne.nom} : {chargeDe(tache.assigne.id)!.assignees} h déjà prévues sur {chargeDe(tache.assigne.id)!.disponibles} h
-                  disponibles
-                  {chargeDe(tache.assigne.id)!.joursAbsence ? `, ${chargeDe(tache.assigne.id)!.joursAbsence} j d’absence` : ''}.
+                  {tache.assigne.nom} : {chargeDe(tache.assigne.id)!.assignees} h déjà prévues sur{' '}
+                  {chargeDe(tache.assigne.id)!.disponibles} h disponibles
+                  {chargeDe(tache.assigne.id)!.joursAbsence
+                    ? `, ${chargeDe(tache.assigne.id)!.joursAbsence} j d’absence`
+                    : ''}
+                  .
                 </>
               )}
             </p>
           )}
           {carte.taches.length > 1 && (
             <label className="po-case">
-              <input type="checkbox" checked={aLaCarte} disabled={enCours} onChange={(e) => setALaCarte(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={aLaCarte}
+                disabled={enCours}
+                onChange={(e) => setALaCarte(e.target.checked)}
+              />
               <span>Toute la carte « {carte.libelle} » (ses tâches encore ouvertes)</span>
             </label>
           )}
         </div>
       )}
 
-      <FilDiscussion slug={slug} projetId={projetId} tacheId={tache.id} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
+      <FilDiscussion
+        slug={slug}
+        projetId={projetId}
+        tacheId={tache.id}
+        moiId={moiId}
+        mentionnables={mentionnables}
+        onMaj={onMaj}
+      />
 
       <details className="tp-details">
         <summary className="tp-section">Détails</summary>
@@ -578,9 +679,7 @@ export function TachePanneau({ slug, projetId, code, carte, tache, assignables, 
       <div className="po-panneau-bloc">
         <p className="tp-section">
           Fichiers déposés{' '}
-          <Infobulle>
-            Une version par dépôt (v01, v02…). Convention de nommage : {code}_ÉTAPE_LIVRABLE_vNN.
-          </Infobulle>
+          <Infobulle>Une version par dépôt (v01, v02…). Convention de nommage : {code}_ÉTAPE_LIVRABLE_vNN.</Infobulle>
         </p>
         {tache.pieces.length ? (
           <ul className="po-historique">

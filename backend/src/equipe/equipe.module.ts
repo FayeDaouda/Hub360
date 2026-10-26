@@ -12,10 +12,6 @@ import { CollaborateursController } from './collaborateurs.controller';
 @Module({
   imports: [AuthModule, ReglagesModule, ProjetsModule], // ComptesService (invitations) ; jours fériés (charge du mois) ; état commun des tâches
   providers: [CellulesService, CollaborateursService, EquipesService],
-  controllers: [
-    CellulesController,
-    EquipesController,
-    CollaborateursController,
-  ],
+  controllers: [CellulesController, EquipesController, CollaborateursController],
 })
 export class EquipeModule {}

@@ -12,14 +12,19 @@ describe('ProjetsOuvertsService.production · périmètre', () => {
       demandeTs: { groupBy: jest.fn().mockResolvedValue([]) },
       cellule: { findMany: jest.fn().mockResolvedValue([]) },
     };
-    const reglages = { joursFeries: jest.fn().mockResolvedValue(new Map()), regle: jest.fn().mockResolvedValue({ de: 70, a: 100 }) } as unknown as ReglagesService;
+    const reglages = {
+      joursFeries: jest.fn().mockResolvedValue(new Map()),
+      regle: jest.fn().mockResolvedValue({ de: 70, a: 100 }),
+    } as unknown as ReglagesService;
     return { s: new ProjetsOuvertsService(prisma as unknown as PrismaService, reglages), prisma };
   }
 
   it('Dir. GC : ses dossiers seulement', async () => {
     const { s, prisma } = svc();
     const r = await s.production('S1', { userId: 'DG', role: 'Dir. GC' });
-    expect(prisma.projet.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ dossierCrm: { proprietaireId: 'DG' } }) }));
+    expect(prisma.projet.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ dossierCrm: { proprietaireId: 'DG' } }) }),
+    );
     expect(r).toMatchObject({ perimetre: 'mes_projets', chiffres: { ouverts: 0, chargeMoyenne: null }, lignes: [] });
   });
 

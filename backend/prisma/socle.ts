@@ -125,10 +125,7 @@ export async function installerSocle(prisma: PrismaClient) {
   // Rôles) ; la reporter ici pour qu'un re-seed ne l'écrase pas.
   // `transverse: true` = rôle socle holding-wide (Role.societeId null,
   // attribution transverse) ; sinon rôle propre à Grey Concrete.
-  const MATRICE_GREY: Record<
-    string,
-    { transverse: boolean; permissions: Record<string, NiveauPermission> }
-  > = {
+  const MATRICE_GREY: Record<string, { transverse: boolean; permissions: Record<string, NiveauPermission> }> = {
     'Dir. GC': {
       transverse: false,
       permissions: {
@@ -353,9 +350,7 @@ export async function installerSocle(prisma: PrismaClient) {
   await importerCatalogue(
     prisma,
     grey.id,
-    JSON.parse(
-      readFileSync(join(__dirname, 'data', 'catalogue-grey-concrete.json'), 'utf8'),
-    ) as CatalogueSource,
+    JSON.parse(readFileSync(join(__dirname, 'data', 'catalogue-grey-concrete.json'), 'utf8')) as CatalogueSource,
   );
 
   return { grey, modules, roleAdmin };

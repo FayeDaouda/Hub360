@@ -36,7 +36,8 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
   },
   crm: {
     titre: 'CRM',
-    resume: 'Registre des projets de l’année, de la prise de contact à la signature : fiche programme, offre, validation CFO, envoi au client.',
+    resume:
+      'Registre des projets de l’année, de la prise de contact à la signature : fiche programme, offre, validation CFO, envoi au client.',
     actions: {
       lecture: 'Consulter le registre et la fiche de chaque dossier.',
       ecriture: 'Créer un nouveau projet, compléter sa fiche sous 72 h, préparer l’offre et la soumettre au CFO.',
@@ -64,7 +65,8 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
   },
   rh: {
     titre: 'RH',
-    resume: 'Dossiers du personnel, demandes (absences, remboursements, attestations), intégration des arrivants, feuilles de temps.',
+    resume:
+      'Dossiers du personnel, demandes (absences, remboursements, attestations), intégration des arrivants, feuilles de temps.',
     actions: {
       lecture: 'Consulter les dossiers et les feuilles de temps.',
       ecriture:

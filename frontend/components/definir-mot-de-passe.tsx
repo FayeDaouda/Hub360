@@ -57,8 +57,7 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
             Lien invalide
           </h1>
           <p className="auth-carte-sous-titre">
-            Ce lien est incomplet ou a expiré. Demande une nouvelle invitation à ton
-            administrateur.
+            Ce lien est incomplet ou a expiré. Demande une nouvelle invitation à ton administrateur.
           </p>
         </header>
         <p className="auth-carte-pied">
@@ -77,9 +76,7 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
           <h1 id="mdp-titre" className="auth-carte-titre">
             {mode === 'activation' ? 'Compte activé' : 'Mot de passe changé'}
           </h1>
-          <p className="auth-carte-sous-titre">
-            Tu peux maintenant te connecter avec ton mot de passe.
-          </p>
+          <p className="auth-carte-sous-titre">Tu peux maintenant te connecter avec ton mot de passe.</p>
         </header>
         <Link href="/" className="auth-bouton">
           Aller à la connexion
@@ -94,9 +91,7 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
         <h1 id="mdp-titre" className="auth-carte-titre">
           {TITRE[mode]}
         </h1>
-        <p className="auth-carte-sous-titre">
-          Choisis un mot de passe d&rsquo;au moins 10 caractères.
-        </p>
+        <p className="auth-carte-sous-titre">Choisis un mot de passe d&rsquo;au moins 10 caractères.</p>
       </header>
       <form className="auth-formulaire" onSubmit={soumettre} aria-busy={enCours}>
         <AuthChamp
@@ -133,9 +128,7 @@ export function DefinirMotDePasse({ mode }: { mode: Mode }) {
           </p>
         )}
         <button type="submit" className="auth-bouton" disabled={enCours}>
-          {enCours && (
-            <LoaderCircle className="auth-bouton-roue" size={18} strokeWidth={2.2} aria-hidden />
-          )}
+          {enCours && <LoaderCircle className="auth-bouton-roue" size={18} strokeWidth={2.2} aria-hidden />}
           {enCours ? 'Enregistrement…' : CTA[mode]}
         </button>
       </form>

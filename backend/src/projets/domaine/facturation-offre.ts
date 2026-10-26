@@ -32,7 +32,13 @@ export type LigneOffre = {
 // arrondi au franc (même calcul que le devis).
 type Nombre = { toNumber(): number };
 export function lignesOffreDepuisDevis(
-  lignes: { designation: string; quantite: Nombre; prixUnitaire: Nombre; tauxTva: Nombre; produitService: { code: string | null; famille: string | null } | null }[],
+  lignes: {
+    designation: string;
+    quantite: Nombre;
+    prixUnitaire: Nombre;
+    tauxTva: Nombre;
+    produitService: { code: string | null; famille: string | null } | null;
+  }[],
 ): LigneOffre[] {
   return lignes.map((l) => ({
     code: l.produitService?.code ?? null,
@@ -137,9 +143,7 @@ export function planFacturationOffre(lignes: LigneOffre[], parts: PartsFactures)
     [
       'AUTRES',
       'Autres prestations de l’offre',
-      lignes.filter(
-        (l) => !['CO', 'PC', 'IM', ...FAMILLES_MENSUELLES].includes(l.famille ?? ''),
-      ),
+      lignes.filter((l) => !['CO', 'PC', 'IM', ...FAMILLES_MENSUELLES].includes(l.famille ?? '')),
     ],
   ];
   for (const [cle, titre, ls] of groupes) {

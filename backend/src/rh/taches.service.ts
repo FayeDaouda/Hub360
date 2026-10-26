@@ -41,13 +41,20 @@ export class TachesService {
     const jour = aujourdhui();
     const dossier = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),
-      select: { collaborateurId: true, societeId: true, absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } },
+      select: {
+        collaborateurId: true,
+        societeId: true,
+        absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } },
+      },
     });
     const collabId = dossier?.collaborateurId ?? (await collaborateurDuCompte(this.prisma, a.societeId, a.userId));
     const taches = collabId ? await chargerTachesAssignees(this.prisma, [collabId]) : [];
     const societeId = dossier?.societeId ?? a.societeId;
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
-    const absents = joursAbsents((dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })), feries);
+    const absents = joursAbsents(
+      (dossier?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })),
+      feries,
+    );
     const etats = taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
     // Qui valide (mêmes personnes que celles prévenues au dépôt) : dès qu'une
     // tâche est à déposer (message du dépôt) ou en validation (« Chez mon
@@ -89,7 +96,8 @@ export class TachesService {
           etapeNumero: t.etapeNumero,
           fichierObligatoire: t.fichierObligatoire,
           parDepot: t.parDepot,
-          relancePossibleLe: t.statut === 'a_valider' && t.remisLe ? relancePossibleLe(t.remisLe, t.derniereRelance, feries) : null,
+          relancePossibleLe:
+            t.statut === 'a_valider' && t.remisLe ? relancePossibleLe(t.remisLe, t.derniereRelance, feries) : null,
         };
       })
       .sort((x, y) => (x.echeance ?? '9999').localeCompare(y.echeance ?? '9999'));
@@ -104,7 +112,11 @@ export class TachesService {
     const taches = await chargerTachesAssignees(this.prisma, collaborateurIds);
     const etats = societeId && taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
     return statsPerformances(
-      taches.map((t) => ({ statut: statutSelonEtat(statutTache(t, etatValidationGabarit(t), jour), etats.get(t.id)), echeance: t.echeance, remisLe: t.remisLe })),
+      taches.map((t) => ({
+        statut: statutSelonEtat(statutTache(t, etatValidationGabarit(t), jour), etats.get(t.id)),
+        echeance: t.echeance,
+        remisLe: t.remisLe,
+      })),
     );
   }
 
@@ -133,7 +145,14 @@ export class TachesService {
         assigneId: true,
         assigne: { select: { prenom: true, nom: true } },
         carte: { select: { etapeNumero: true, etapeLibelle: true } },
-        projet: { select: { id: true, code: true, programme: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: {
+          select: {
+            id: true,
+            code: true,
+            programme: true,
+            cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } },
+          },
+        },
         evenements: { where: { type: 'remise' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
         pieces: { orderBy: { createdAt: 'asc' }, select: { id: true, nom: true, version: true } },
       },
@@ -171,7 +190,12 @@ export class TachesService {
     return this.tachesProjet.piece(a.societeId, projetId, tacheId, pieceId);
   }
 
-  async decider(a: Acteur, projetId: string, tacheId: string, corps: { decision: 'valider' | 'renvoyer'; motif?: string }) {
+  async decider(
+    a: Acteur,
+    projetId: string,
+    tacheId: string,
+    corps: { decision: 'valider' | 'renvoyer'; motif?: string },
+  ) {
     await this.tachesProjet.decider(a.societeId, a, projetId, tacheId, corps.decision, corps.motif);
     return this.aValider(a);
   }

@@ -1,13 +1,4 @@
-import {
-  Briefcase,
-  Building2,
-  Code,
-  Factory,
-  Landmark,
-  Network,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react';
+import { Briefcase, Building2, Code, Factory, Landmark, Network, Wallet, type LucideIcon } from 'lucide-react';
 
 // Liste blanche volontairement restreinte : une nouvelle société choisit une
 // de ces clés en base (colonne `icone`) — ajouter une icône ici suffit à la

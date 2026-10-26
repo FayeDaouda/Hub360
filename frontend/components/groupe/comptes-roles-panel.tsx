@@ -68,14 +68,13 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
 
   // Remplace un compte après une modification réussie (réponse serveur).
   function majCompte(maj: Partial<CompteGroupe> & { id: string }) {
-    setDonnees((d) =>
-      d && {
-        societes: d.societes.map((s) =>
-          s.id !== societeId
-            ? s
-            : { ...s, comptes: s.comptes.map((c) => (c.id === maj.id ? { ...c, ...maj } : c)) },
-        ),
-      },
+    setDonnees(
+      (d) =>
+        d && {
+          societes: d.societes.map((s) =>
+            s.id !== societeId ? s : { ...s, comptes: s.comptes.map((c) => (c.id === maj.id ? { ...c, ...maj } : c)) },
+          ),
+        },
     );
   }
 
@@ -110,11 +109,16 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
         <div>
           <h2 id="groupe-comptes-titre">Comptes &amp; rôles</h2>
           <p>
-            Créez les comptes depuis les dossiers RH et attribuez à chacun son rôle dans la société. Le
-            salaire se renseigne dans le dossier RH.
+            Créez les comptes depuis les dossiers RH et attribuez à chacun son rôle dans la société. Le salaire se
+            renseigne dans le dossier RH.
           </p>
           {societe && (
-            <button type="button" className="btn-primary" style={{ marginTop: '0.75rem' }} onClick={() => setNouveau(true)}>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ marginTop: '0.75rem' }}
+              onClick={() => setNouveau(true)}
+            >
               <Plus size={15} aria-hidden /> Nouveau compte
             </button>
           )}
@@ -158,8 +162,7 @@ export function ComptesRolesPanel({ moiId }: { moiId: string }) {
 
       <p className="groupe-note">
         <ShieldCheck size={15} aria-hidden />
-        Changer un rôle déconnecte la personne : ses nouveaux droits s’appliquent dès sa
-        prochaine connexion.
+        Changer un rôle déconnecte la personne : ses nouveaux droits s’appliquent dès sa prochaine connexion.
       </p>
     </section>
   );
@@ -194,10 +197,7 @@ function TableComptes({
   onRecherche: (v: string) => void;
   onMaj: (maj: Partial<CompteGroupe> & { id: string }) => void;
 }) {
-  const roles = useMemo(
-    () => [...societe.rolesAttribuables].sort(comparerRoles),
-    [societe.rolesAttribuables],
-  );
+  const roles = useMemo(() => [...societe.rolesAttribuables].sort(comparerRoles), [societe.rolesAttribuables]);
   const terme = recherche.trim().toLowerCase();
   const comptes = terme
     ? societe.comptes.filter((c) =>
@@ -279,9 +279,7 @@ function LigneCompte({
         </div>
       </td>
       <td data-libelle="Statut">
-        <span className={`groupe-statut groupe-statut--${compte.statut}`}>
-          {LIBELLE_STATUT[compte.statut]}
-        </span>
+        <span className={`groupe-statut groupe-statut--${compte.statut}`}>{LIBELLE_STATUT[compte.statut]}</span>
         {!compte.administration && !estMoi && <ActionsCompte compte={compte} onMaj={onMaj} />}
       </td>
       <td data-libelle="Rôle">
@@ -373,7 +371,12 @@ function ActionsCompte({
         {busy ? '…' : libelle}
       </button>
       {compte.doubleFacteur && (
-        <button type="button" className="btn-ghost btn-ghost--sm groupe-action-compte" onClick={reinitialiser2fa} disabled={busy}>
+        <button
+          type="button"
+          className="btn-ghost btn-ghost--sm groupe-action-compte"
+          onClick={reinitialiser2fa}
+          disabled={busy}
+        >
           Réinitialiser la double authentification
         </button>
       )}
@@ -381,7 +384,13 @@ function ActionsCompte({
       {invitation &&
         createPortal(
           <div className="modal-backdrop" onClick={() => setInvitation(null)}>
-            <div className="modal modal--sm" role="dialog" aria-modal="true" aria-label="Invitation" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="modal modal--sm"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Invitation"
+              onClick={(e) => e.stopPropagation()}
+            >
               <header className="modal-header">
                 <h2>Invitation renvoyée</h2>
                 <button type="button" className="modal-close" aria-label="Fermer" onClick={() => setInvitation(null)}>

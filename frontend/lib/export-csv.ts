@@ -14,10 +14,14 @@ function cellule(v: string | number | null | undefined): string {
 }
 
 // Date AAAA-MM-JJ (ou ISO) → JJ/MM/AAAA, reconnue comme date par Excel.
-export const dateExport = (iso: string | null | undefined) => (iso ? iso.slice(0, 10).split('-').reverse().join('/') : null);
+export const dateExport = (iso: string | null | undefined) =>
+  iso ? iso.slice(0, 10).split('-').reverse().join('/') : null;
 
 export function exporterCsv<T>(nom: string, colonnes: ColonneExport<T>[], lignes: T[]) {
-  const contenu = [colonnes.map((c) => cellule(c.titre)), ...lignes.map((l) => colonnes.map((c) => cellule(c.valeur(l))))]
+  const contenu = [
+    colonnes.map((c) => cellule(c.titre)),
+    ...lignes.map((l) => colonnes.map((c) => cellule(c.valeur(l)))),
+  ]
     .map((ligne) => ligne.join(';'))
     .join('\r\n');
   const url = URL.createObjectURL(new Blob([`﻿${contenu}`], { type: 'text/csv;charset=utf-8' }));

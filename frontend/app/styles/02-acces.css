@@ -163,12 +163,12 @@
     radial-gradient(38% 24% at 62% 84%, color-mix(in srgb, var(--c2) 70%, #fff 10%), transparent 100%),
     /* corps : clair côté lumière, dense vers le bord opposé */
     radial-gradient(
-      95% 95% at 34% 28%,
-      var(--c-clair) 0%,
-      var(--c) 36%,
-      color-mix(in srgb, var(--c-fonce) 90%, transparent) 78%,
-      color-mix(in srgb, var(--c-fonce) 82%, transparent) 100%
-    );
+        95% 95% at 34% 28%,
+        var(--c-clair) 0%,
+        var(--c) 36%,
+        color-mix(in srgb, var(--c-fonce) 90%, transparent) 78%,
+        color-mix(in srgb, var(--c-fonce) 82%, transparent) 100%
+      );
   /* Ombres internes seulement : découpées à la forme, sans artefact. */
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--c-lisere) 70%, transparent),
@@ -327,14 +327,49 @@
   opacity: var(--fl-eclat-op);
   animation: fl-scintille 3.6s ease-in-out infinite alternate;
 }
-.fl-eclat:nth-child(1) { left: 44%; top: 8%; }
-.fl-eclat:nth-child(2) { left: 50%; top: 96%; --c: #ffab5c; animation-delay: -1.2s; }
-.fl-eclat:nth-child(3) { left: 4%; top: 55%; animation-delay: -2.1s; }
-.fl-eclat:nth-child(4) { left: 71%; top: 7%; --c: #ffd36b; animation-delay: -0.6s; }
-.fl-eclat:nth-child(5) { left: 88%; top: 66%; animation-delay: -2.8s; }
-.fl-eclat:nth-child(6) { left: 58%; top: 90%; --c: #ffab5c; animation-delay: -1.7s; }
-.fl-eclat:nth-child(7) { left: 28%; top: 97%; animation-delay: -3.1s; }
-.fl-eclat:nth-child(8) { left: 93%; top: 22%; --c: #7fe3ff; animation-delay: -0.9s; }
+.fl-eclat:nth-child(1) {
+  left: 44%;
+  top: 8%;
+}
+.fl-eclat:nth-child(2) {
+  left: 50%;
+  top: 96%;
+  --c: #ffab5c;
+  animation-delay: -1.2s;
+}
+.fl-eclat:nth-child(3) {
+  left: 4%;
+  top: 55%;
+  animation-delay: -2.1s;
+}
+.fl-eclat:nth-child(4) {
+  left: 71%;
+  top: 7%;
+  --c: #ffd36b;
+  animation-delay: -0.6s;
+}
+.fl-eclat:nth-child(5) {
+  left: 88%;
+  top: 66%;
+  animation-delay: -2.8s;
+}
+.fl-eclat:nth-child(6) {
+  left: 58%;
+  top: 90%;
+  --c: #ffab5c;
+  animation-delay: -1.7s;
+}
+.fl-eclat:nth-child(7) {
+  left: 28%;
+  top: 97%;
+  animation-delay: -3.1s;
+}
+.fl-eclat:nth-child(8) {
+  left: 93%;
+  top: 22%;
+  --c: #7fe3ff;
+  animation-delay: -0.9s;
+}
 
 @keyframes fl-derive {
   0% {
@@ -1277,9 +1312,7 @@
   --portail-gouttiere: clamp(0.9rem, 2vw, 1.25rem);
   list-style: none;
   width: 100%;
-  max-width: calc(
-    var(--colonnes) * var(--carte-max) + (var(--colonnes) - 1) * var(--portail-gouttiere)
-  );
+  max-width: calc(var(--colonnes) * var(--carte-max) + (var(--colonnes) - 1) * var(--portail-gouttiere));
   margin: 0;
   padding: 0;
   /* flex-wrap plutôt que grid : une carte seule sur la dernière ligne reste
@@ -1579,13 +1612,27 @@
 .portail-vide {
   animation: auth-apparition 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
-.portail-entete { animation-delay: 0.05s; }
-.portail-vide { animation-delay: 0.12s; }
-.auth-presentation > :nth-child(2) { animation-delay: 0.05s; }
-.auth-presentation > :nth-child(3) { animation-delay: 0.1s; }
-.auth-presentation > :nth-child(4) { animation-delay: 0.15s; }
-.auth-presentation > :nth-child(5) { animation-delay: 0.2s; }
-.auth-carte { animation-delay: 0.08s; }
+.portail-entete {
+  animation-delay: 0.05s;
+}
+.portail-vide {
+  animation-delay: 0.12s;
+}
+.auth-presentation > :nth-child(2) {
+  animation-delay: 0.05s;
+}
+.auth-presentation > :nth-child(3) {
+  animation-delay: 0.1s;
+}
+.auth-presentation > :nth-child(4) {
+  animation-delay: 0.15s;
+}
+.auth-presentation > :nth-child(5) {
+  animation-delay: 0.2s;
+}
+.auth-carte {
+  animation-delay: 0.08s;
+}
 
 @keyframes auth-apparition {
   from {
@@ -1598,10 +1645,23 @@
   }
 }
 @keyframes auth-secousse {
-  10%, 90% { transform: translateX(-1px); }
-  20%, 80% { transform: translateX(2px); }
-  30%, 50%, 70% { transform: translateX(-3px); }
-  40%, 60% { transform: translateX(3px); }
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-3px);
+  }
+  40%,
+  60% {
+    transform: translateX(3px);
+  }
 }
 @keyframes auth-rotation {
   to {
@@ -1678,7 +1738,7 @@
     .auth-shell-contenu {
       padding-top: 4.5rem;
     }
-}
+  }
   .selecteur-theme {
     --st-case: 36px;
     --st-hauteur: 30px;
@@ -1862,4 +1922,3 @@
   color: var(--text-muted);
   font-size: 0.9rem;
 }
-

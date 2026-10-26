@@ -8,7 +8,12 @@ import { collaborateurDuCompte, perimetreProjets } from '../projets/gabarit/vali
 import { PrismaService } from '../prisma/prisma.service';
 import { runInGroupScope } from '../tenancy/tenant-context';
 
-export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
+export type Acteur = {
+  userId: string;
+  societeId: string;
+  role: string;
+  permissions?: Record<string, NiveauPermission>;
+};
 export type TypeResultat = 'dossier' | 'projet' | 'devis' | 'facture' | 'salarie' | 'collegue';
 export type Resultat = { type: TypeResultat; id: string; titre: string; detail: string };
 
@@ -53,7 +58,12 @@ export class RechercheService {
       orderBy: { createdAt: 'desc' },
       take: PAR_TYPE,
     });
-    return l.map((d) => ({ type: 'dossier', id: d.id, titre: d.code, detail: `${d.client.nom}${d.archiveLe ? ' · archivé' : ''}` }));
+    return l.map((d) => ({
+      type: 'dossier',
+      id: d.id,
+      titre: d.code,
+      detail: `${d.client.nom}${d.archiveLe ? ' · archivé' : ''}`,
+    }));
   }
 
   private async projets(a: Acteur, q: string): Promise<Resultat[]> {
@@ -63,26 +73,51 @@ export class RechercheService {
         societeId: a.societeId,
         ouvertLe: { not: null },
         // AND : le périmètre du Salarié est lui-même un OR — ne pas l'écraser.
-        AND: [perimetreProjets(a.role, collaborateurId), { OR: [{ code: contient(q) }, { client: { nom: contient(q) } }, { programme: contient(q) }] }],
+        AND: [
+          perimetreProjets(a.role, collaborateurId),
+          { OR: [{ code: contient(q) }, { client: { nom: contient(q) } }, { programme: contient(q) }] },
+        ],
       },
       select: { id: true, code: true, programme: true, client: { select: { nom: true } } },
       orderBy: { ouvertLe: 'desc' },
       take: PAR_TYPE,
     });
-    return l.map((p) => ({ type: 'projet', id: p.id, titre: p.code, detail: [p.client.nom, p.programme].filter(Boolean).join(' · ') }));
+    return l.map((p) => ({
+      type: 'projet',
+      id: p.id,
+      titre: p.code,
+      detail: [p.client.nom, p.programme].filter(Boolean).join(' · '),
+    }));
   }
 
   private async devis(societeId: string, q: string): Promise<Resultat[]> {
     const numero = numeroDe(q);
-    const ou: Prisma.DevisWhereInput[] = [{ codeDossier: contient(q) }, { client: { nom: contient(q) } }, { objet: contient(q) }];
+    const ou: Prisma.DevisWhereInput[] = [
+      { codeDossier: contient(q) },
+      { client: { nom: contient(q) } },
+      { objet: contient(q) },
+    ];
     if (numero !== null) ou.push({ numero });
     const l = await this.prisma.devis.findMany({
       where: { societeId, OR: ou },
-      select: { id: true, numero: true, dateEnvoi: true, codeDossier: true, rangDossier: true, objet: true, client: { select: { nom: true } } },
+      select: {
+        id: true,
+        numero: true,
+        dateEnvoi: true,
+        codeDossier: true,
+        rangDossier: true,
+        objet: true,
+        client: { select: { nom: true } },
+      },
       orderBy: { creeLe: 'desc' },
       take: PAR_TYPE,
     });
-    return l.map((d) => ({ type: 'devis', id: d.id, titre: refDevis(d) ?? 'Devis en préparation', detail: [d.client.nom, d.objet].filter(Boolean).join(' · ') }));
+    return l.map((d) => ({
+      type: 'devis',
+      id: d.id,
+      titre: refDevis(d) ?? 'Devis en préparation',
+      detail: [d.client.nom, d.objet].filter(Boolean).join(' · '),
+    }));
   }
 
   private async factures(societeId: string, q: string): Promise<Resultat[]> {
@@ -137,9 +172,19 @@ export class RechercheService {
     const l = await runInGroupScope(() =>
       this.prisma.dossierPersonnel.findMany({
         where: {
-          AND: mots.map((m) => ({ OR: [{ prenom: contient(m) }, { nom: contient(m) }, { matricule: contient(m) }, { poste: contient(m) }] })),
+          AND: mots.map((m) => ({
+            OR: [{ prenom: contient(m) }, { nom: contient(m) }, { matricule: contient(m) }, { poste: contient(m) }],
+          })),
         },
-        select: { id: true, prenom: true, nom: true, matricule: true, poste: true, archiveLe: true, societe: { select: { nom: true } } },
+        select: {
+          id: true,
+          prenom: true,
+          nom: true,
+          matricule: true,
+          poste: true,
+          archiveLe: true,
+          societe: { select: { nom: true } },
+        },
         orderBy: [{ archiveLe: { sort: 'desc', nulls: 'first' } }, { nom: 'asc' }],
         take: PAR_TYPE,
       }),

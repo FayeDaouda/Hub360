@@ -38,7 +38,8 @@ function etude(cle: string, libelle: string, f: number[], commande: Temps, verif
   };
 }
 
-const sousLot = (cle: string, libelle: string) => t(cle, `Sous-lot ${libelle} · visa BC et validation`, SANS, J(33, 35));
+const sousLot = (cle: string, libelle: string) =>
+  t(cle, `Sous-lot ${libelle} · visa BC et validation`, SANS, J(33, 35));
 
 export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
   etapes: [
@@ -66,7 +67,8 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           cle: 'releves_existants',
           libelle: 'Relevés existants',
           note: '24 h calendaires après la visite : réglé par le prompt (R1)',
-          descriptif: 'Visite du site : chaque relevé est renseigné dans les 24 h calendaires qui suivent la visite, week-end compris.',
+          descriptif:
+            'Visite du site : chaque relevé est renseigné dans les 24 h calendaires qui suivent la visite, week-end compris.',
           taches: [
             t('assainissement', 'Assainissement', SANS),
             t('eau', 'Eau', SANS),
@@ -92,7 +94,8 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
         {
           cle: 'livrables',
           libelle: 'Livrables',
-          descriptif: "Détails façade et Mood board à rendre au plus tard à J13 : la carte Façades s'ouvre à J14 (arbitrage du 23/09).",
+          descriptif:
+            "Détails façade et Mood board à rendre au plus tard à J13 : la carte Façades s'ouvre à J14 (arbitrage du 23/09).",
           fenetre: J(2, 15),
           taches: [
             t('esquisses', 'Esquisses', h(40)),
@@ -117,7 +120,8 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           cle: 'sources_avp',
           libelle: 'Sources',
           fichiers: true,
-          descriptif: 'Fichiers natifs rangés par rubrique : Plans (AutoCAD, ArchiCAD, Revit) · Modélisation (SketchUp) · Rendus (B-render, Corona).',
+          descriptif:
+            'Fichiers natifs rangés par rubrique : Plans (AutoCAD, ArchiCAD, Revit) · Modélisation (SketchUp) · Rendus (B-render, Corona).',
           taches: [],
         },
       ],
@@ -146,7 +150,8 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           cle: 'interieurs',
           libelle: 'Intérieurs',
           etiquette: 'IM par pièce',
-          descriptif: "Hauteur d'œil ; matériaux et ambiance du mood board et de la gamme ; lumière naturelle cohérente avec l'orientation réelle.",
+          descriptif:
+            "Hauteur d'œil ; matériaux et ambiance du mood board et de la gamme ; lumière naturelle cohérente avec l'orientation réelle.",
           ouvreApres: ['livrables.details_cuisines', 'livrables.details_sdb'],
           fenetre: J(16, 22),
           temps: { type: 'par_unite', heures: 8, unite: 'pièce' },
@@ -236,7 +241,10 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           descriptif: 'Mission unique pour toutes les études, y compris celles fournies par le client.',
           fenetre: J(13, 16),
           taches: [
-            { ...t('offre', 'Offre du bureau de contrôle', SANS, J(13, 16)), descriptif: 'Mission unique pour toutes les études, y compris celles fournies par le client.' },
+            {
+              ...t('offre', 'Offre du bureau de contrôle', SANS, J(13, 16)),
+              descriptif: 'Mission unique pour toutes les études, y compris celles fournies par le client.',
+            },
             t('commande', 'Commande au bureau de contrôle', PARTAGE, J(16, 16)),
           ],
         },
@@ -256,17 +264,40 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
               ...t('pe_architecture', "Plans d'exécution architecture", h(80)),
               sourceNative: true,
               visaDplg: true,
-              descriptif: contenu('Niveaux au 1/50', "Coupes d'exécution", "Façades d'exécution", 'Toiture', 'Repérage', 'Réservations'),
+              descriptif: contenu(
+                'Niveaux au 1/50',
+                "Coupes d'exécution",
+                "Façades d'exécution",
+                'Toiture',
+                'Repérage',
+                'Réservations',
+              ),
             },
           ],
         },
-        { cle: 'schemas_principe', libelle: 'Schémas de principe', fenetre: J(27, 31), taches: [t('schemas_principe', 'Schémas de principe', h(40))] },
-        { cle: 'cahier_menuiserie', libelle: 'Cahier de menuiserie', fenetre: J(32, 34), taches: [t('cahier_menuiserie', 'Cahier de menuiserie', h(24))] },
-        { cle: 'revetements', libelle: 'Revêtements', fenetre: J(32, 34), taches: [t('revetements', 'Revêtements', h(24))] },
+        {
+          cle: 'schemas_principe',
+          libelle: 'Schémas de principe',
+          fenetre: J(27, 31),
+          taches: [t('schemas_principe', 'Schémas de principe', h(40))],
+        },
+        {
+          cle: 'cahier_menuiserie',
+          libelle: 'Cahier de menuiserie',
+          fenetre: J(32, 34),
+          taches: [t('cahier_menuiserie', 'Cahier de menuiserie', h(24))],
+        },
+        {
+          cle: 'revetements',
+          libelle: 'Revêtements',
+          fenetre: J(32, 34),
+          taches: [t('revetements', 'Revêtements', h(24))],
+        },
         {
           cle: 'equipements',
           libelle: 'Équipements',
-          descriptif: 'Générés depuis le programme et le standing : ce qui est absent du programme passe en Non nécessaire.',
+          descriptif:
+            'Générés depuis le programme et le standing : ce qui est absent du programme passe en Non nécessaire.',
           fenetre: J(35, 37),
           temps: { type: 'total', heures: 24 },
           taches: [
@@ -290,12 +321,27 @@ export const GABARIT_GC_CONCEPTION: ContenuGabarit = {
           fenetre: J(35, 36),
           taches: [{ ...t('amenagements', 'Aménagements', h(16)), descriptif: contenu('Paysage', 'Mobilier') }],
         },
-        { cle: 'sources_pe', libelle: 'Sources', fichiers: true, descriptif: "Fichiers natifs de l'étape, par rubrique.", taches: [] },
+        {
+          cle: 'sources_pe',
+          libelle: 'Sources',
+          fichiers: true,
+          descriptif: "Fichiers natifs de l'étape, par rubrique.",
+          taches: [],
+        },
         {
           cle: 'tache_finale',
           libelle: 'Tâche finale',
           fenetre: J(38, 40),
-          taches: [{ ...t('integration_livraison', 'Intégration des études visées, mises à jour, contrôle DPLG, livraison', h(24)), visaDplg: true }],
+          taches: [
+            {
+              ...t(
+                'integration_livraison',
+                'Intégration des études visées, mises à jour, contrôle DPLG, livraison',
+                h(24),
+              ),
+              visaDplg: true,
+            },
+          ],
         },
       ],
     },

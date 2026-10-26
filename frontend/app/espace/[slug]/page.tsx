@@ -53,8 +53,7 @@ export default function EspacePage(props: Props) {
           Connecté en tant que <strong>{session!.role}</strong> sur {session!.societe.nom}.
         </p>
         <p className="espace-note">
-          Les modules (Projets, Finances, Documents, Communication) arrivent dans une
-          prochaine étape.
+          Les modules (Projets, Finances, Documents, Communication) arrivent dans une prochaine étape.
         </p>
       </div>
     </main>

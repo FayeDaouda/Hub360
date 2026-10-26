@@ -5,25 +5,59 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { CalendrierCellule } from './calendrier-cellule';
-import { deciderAbsence, getPreparationDecision, jjmm, LIBELLE_MOTIF_REFUS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
+import {
+  deciderAbsence,
+  getPreparationDecision,
+  jjmm,
+  LIBELLE_MOTIF_REFUS,
+  LIBELLE_TYPE_ABSENCE,
+} from '@/lib/demandes';
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
 
 const DECISIONS: { cle: DecisionN1; libelle: string; aide: string }[] = [
-  { cle: 'valider', libelle: 'Valider', aide: 'Chaque tâche de projet due pendant l’absence est confiée à quelqu’un d’autre.' },
-  { cle: 'sous_conditions', libelle: 'Sous conditions', aide: 'Les tâches cochées comme non délégables restent au salarié, à terminer avant son départ.' },
-  { cle: 'autres_dates', libelle: 'Autres dates', aide: 'Le salarié accepte les nouvelles dates ou retire sa demande.' },
+  {
+    cle: 'valider',
+    libelle: 'Valider',
+    aide: 'Chaque tâche de projet due pendant l’absence est confiée à quelqu’un d’autre.',
+  },
+  {
+    cle: 'sous_conditions',
+    libelle: 'Sous conditions',
+    aide: 'Les tâches cochées comme non délégables restent au salarié, à terminer avant son départ.',
+  },
+  {
+    cle: 'autres_dates',
+    libelle: 'Autres dates',
+    aide: 'Le salarié accepte les nouvelles dates ou retire sa demande.',
+  },
   { cle: 'refuser', libelle: 'Refuser', aide: 'Motif obligatoire (commentaire si « Autre »).' },
 ];
 
 // Décision du N+1 sur une demande d'absence — partagée entre l'espace
 // collaborateur (chef de cellule) et le back-office (Dir. GC) : en modale
 // (Équipe), ou dans le panneau de « Mon espace › À valider ».
-export function DecisionN1Modal({ slug, id, onFait, onClose }: { slug: string; id: string; onFait: () => void; onClose: () => void }) {
+export function DecisionN1Modal({
+  slug,
+  id,
+  onFait,
+  onClose,
+}: {
+  slug: string;
+  id: string;
+  onFait: () => void;
+  onClose: () => void;
+}) {
   // Portail : ouverte depuis un panneau « glass » (backdrop-filter), la modale
   // serait sinon contenue — et rognée — par ce panneau.
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal rh-fiche" role="dialog" aria-modal="true" aria-label="Décision N+1" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal rh-fiche"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Décision N+1"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DecisionN1Formulaire slug={slug} id={id} onFait={onFait} onAnnuler={onClose} />
       </div>
     </div>,
@@ -33,7 +67,17 @@ export function DecisionN1Modal({ slug, id, onFait, onClose }: { slug: string; i
 
 // Signaux (cellule, livrables dus) et décision. `onAnnuler` : bouton de
 // fermeture (modale) ; absent dans un panneau.
-export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: string; id: string; onFait: () => void; onAnnuler?: () => void }) {
+export function DecisionN1Formulaire({
+  slug,
+  id,
+  onFait,
+  onAnnuler,
+}: {
+  slug: string;
+  id: string;
+  onFait: () => void;
+  onAnnuler?: () => void;
+}) {
   const [prep, setPrep] = useState<PreparationDecision | null>(null);
   const [decision, setDecision] = useState<DecisionN1>('valider');
   const [delegations, setDelegations] = useState<Record<string, string>>({});
@@ -97,7 +141,8 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
         ) : (
           <>
             <p>
-              <strong>{LIBELLE_TYPE_ABSENCE[d!.type]}</strong> · {d!.jours} j ouvrables · du {jjmm(d!.dateDebut)} au {jjmm(d!.dateFin)}
+              <strong>{LIBELLE_TYPE_ABSENCE[d!.type]}</strong> · {d!.jours} j ouvrables · du {jjmm(d!.dateDebut)} au{' '}
+              {jjmm(d!.dateFin)}
               {d!.commentaire && <span className="cell-sub"> — « {d!.commentaire} »</span>}
             </p>
             {/* Qui d'autre de la cellule est absent ces jours-là (calendrier). */}
@@ -105,7 +150,14 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
 
             <div className="vue-toggle rh-decisions" role="radiogroup" aria-label="Décision">
               {DECISIONS.map((x) => (
-                <button key={x.cle} type="button" role="radio" aria-checked={decision === x.cle} className={decision === x.cle ? 'is-active' : ''} onClick={() => setDecision(x.cle)}>
+                <button
+                  key={x.cle}
+                  type="button"
+                  role="radio"
+                  aria-checked={decision === x.cle}
+                  className={decision === x.cle ? 'is-active' : ''}
+                  onClick={() => setDecision(x.cle)}
+                >
                   {x.libelle}
                 </button>
               ))}
@@ -120,8 +172,12 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
                   {prep.livrables.map((l) => (
                     <li key={l.cle} className="rh-piece rh-livrable">
                       <span className="rh-piece-libelle">
-                        <strong>{l.projet} · {l.groupe.replace(/_/g, ' ')}</strong>
-                        <span className="cell-sub">{l.source} · échéance {jjmm(l.echeance)}</span>
+                        <strong>
+                          {l.projet} · {l.groupe.replace(/_/g, ' ')}
+                        </strong>
+                        <span className="cell-sub">
+                          {l.source} · échéance {jjmm(l.echeance)}
+                        </span>
                       </span>
                       {decision === 'sous_conditions' && (
                         <label className="rh-archives">
@@ -141,7 +197,12 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
                         </label>
                       )}
                       {!nonDelegables.has(l.cle) && (
-                        <select className="field-input" value={delegations[l.cle] ?? ''} onChange={(e) => setDelegations((x) => ({ ...x, [l.cle]: e.target.value }))} aria-label="Confier à">
+                        <select
+                          className="field-input"
+                          value={delegations[l.cle] ?? ''}
+                          onChange={(e) => setDelegations((x) => ({ ...x, [l.cle]: e.target.value }))}
+                          aria-label="Confier à"
+                        >
                           <option value="">Confier à…</option>
                           {prep.candidats.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -160,11 +221,21 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
               <div className="rh-grille">
                 <label className="field">
                   <span className="field-label">Nouveau début</span>
-                  <input type="date" className="field-input" value={dates.debut} onChange={(e) => setDates((x) => ({ ...x, debut: e.target.value }))} />
+                  <input
+                    type="date"
+                    className="field-input"
+                    value={dates.debut}
+                    onChange={(e) => setDates((x) => ({ ...x, debut: e.target.value }))}
+                  />
                 </label>
                 <label className="field">
                   <span className="field-label">Nouvelle fin</span>
-                  <input type="date" className="field-input" value={dates.fin} onChange={(e) => setDates((x) => ({ ...x, fin: e.target.value }))} />
+                  <input
+                    type="date"
+                    className="field-input"
+                    value={dates.fin}
+                    onChange={(e) => setDates((x) => ({ ...x, fin: e.target.value }))}
+                  />
                 </label>
               </div>
             )}
@@ -172,7 +243,11 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
             {decision === 'refuser' && (
               <label className="field">
                 <span className="field-label">Motif</span>
-                <select className="field-input" value={motif} onChange={(e) => setMotif(e.target.value as MotifRefusAbsence)}>
+                <select
+                  className="field-input"
+                  value={motif}
+                  onChange={(e) => setMotif(e.target.value as MotifRefusAbsence)}
+                >
                   <option value="">À choisir</option>
                   {Object.entries(LIBELLE_MOTIF_REFUS).map(([k, v]) => (
                     <option key={k} value={k}>
@@ -184,8 +259,15 @@ export function DecisionN1Formulaire({ slug, id, onFait, onAnnuler }: { slug: st
             )}
             {(decision === 'refuser' || decision === 'autres_dates') && (
               <label className="field">
-                <span className="field-label">Commentaire{decision === 'refuser' && motif === 'autre' ? ' (obligatoire)' : ''}</span>
-                <textarea className="field-input" rows={2} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
+                <span className="field-label">
+                  Commentaire{decision === 'refuser' && motif === 'autre' ? ' (obligatoire)' : ''}
+                </span>
+                <textarea
+                  className="field-input"
+                  rows={2}
+                  value={commentaire}
+                  onChange={(e) => setCommentaire(e.target.value)}
+                />
               </label>
             )}
 

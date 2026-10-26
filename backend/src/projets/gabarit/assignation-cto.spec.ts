@@ -10,9 +10,17 @@ describe('TachesProjetService.assigner · CTO', () => {
   function svc(dirGcAbsent: boolean) {
     const prisma = {
       utilisateurSocieteRole: {
-        findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) => Promise.resolve(where.role.nom === 'Dir. GC' ? [{ utilisateurId: 'DG' }] : [{ utilisateurId: 'CTO' }])),
+        findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) =>
+          Promise.resolve(where.role.nom === 'Dir. GC' ? [{ utilisateurId: 'DG' }] : [{ utilisateurId: 'CTO' }]),
+        ),
       },
-      demandeAbsence: { findMany: jest.fn().mockResolvedValue(dirGcAbsent ? [{ suppleantId: null, dossier: { utilisateurId: 'DG', collaborateurId: null } }] : []) },
+      demandeAbsence: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue(
+            dirGcAbsent ? [{ suppleantId: null, dossier: { utilisateurId: 'DG', collaborateurId: null } }] : [],
+          ),
+      },
       collaborateur: { findMany: jest.fn().mockResolvedValue([]) },
       tacheProjet: { findFirst: jest.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;

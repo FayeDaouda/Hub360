@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { getHistorique } from '@/lib/crm';
-import {
-  ACTIONS_CRM,
-  CLASSE_STATUT,
-  actionsPossibles,
-  raisonBlocage,
-  type ActionCrm,
-} from '@/lib/cycle-crm';
+import { ACTIONS_CRM, CLASSE_STATUT, actionsPossibles, raisonBlocage, type ActionCrm } from '@/lib/cycle-crm';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import { STATUTS_CRM, type Projet, type TransitionDossier } from '@/lib/types';
@@ -64,8 +58,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
 
   // Dernier renvoi de la DAF, affiché tant que le dossier n'est pas resoumis.
   const dernier = historique?.[historique.length - 1];
-  const renvoi =
-    projet.statut === 'nouveau_projet' && dernier?.de === 'en_validation' ? dernier : null;
+  const renvoi = projet.statut === 'nouveau_projet' && dernier?.de === 'en_validation' ? dernier : null;
   // Motif de perte : la ligne qui a fait passer le dossier en « perdu ».
   const perte = projet.statut === 'perdu' ? dernier : null;
 
@@ -98,9 +91,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
     <section className="cycle-dossier" aria-label="Cycle commercial">
       <div className="cycle-dossier-tete">
         <span className="field-label">Statut</span>
-        <span className={`pill statut-select--${CLASSE_STATUT[projet.statut]}`}>
-          {STATUTS_CRM[projet.statut]}
-        </span>
+        <span className={`pill statut-select--${CLASSE_STATUT[projet.statut]}`}>{STATUTS_CRM[projet.statut]}</span>
         {projet.verrouillee && (
           <span className="cycle-dossier-verrou" title="Contenu figé depuis la soumission à la DAF">
             <Lock size={12} aria-hidden />
@@ -166,12 +157,7 @@ export function CycleDossier({ slug, projet, onAgir }: Props) {
           )}
           {erreur && <p className="field-erreur">{erreur}</p>}
           <div className="modal-actions">
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => setAction(null)}
-              disabled={enCours}
-            >
+            <button type="button" className="btn-ghost" onClick={() => setAction(null)} disabled={enCours}>
               Annuler
             </button>
             <button

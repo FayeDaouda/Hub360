@@ -80,7 +80,10 @@ export class MonEspaceService {
 
   async attestation(a: Acteur, attestationId: string) {
     const id = await this.idDossier(a);
-    const at = await this.prisma.demandeAttestation.findFirst({ where: { id: attestationId, dossierId: id }, select: { nom: true, cle: true } });
+    const at = await this.prisma.demandeAttestation.findFirst({
+      where: { id: attestationId, dossierId: id },
+      select: { nom: true, cle: true },
+    });
     if (!at?.cle) throw new NotFoundException('Attestation pas encore délivrée par la RH.');
     return { nom: at.nom ?? 'attestation-de-travail', url: at.cle };
   }
@@ -90,7 +93,10 @@ export class MonEspaceService {
   // précédente. Identique à celui en service : rien à valider.
   async demanderPaiement(a: Acteur, corps: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string }) {
     const id = await this.idDossier(a);
-    const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({ where: { id }, select: { modePaiement: true, coordonneesPaiement: true } });
+    const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({
+      where: { id },
+      select: { modePaiement: true, coordonneesPaiement: true },
+    });
     const coordonnees = corps.coordonneesPaiement.trim();
     if (!coordonnees) throw new BadRequestException('Indiquez la banque et le RIB, ou le numéro.');
     if (d.modePaiement === corps.modePaiement && d.coordonneesPaiement === coordonnees) {
@@ -98,11 +104,14 @@ export class MonEspaceService {
     }
     await this.prisma.dossierPersonnel.update({
       where: { id },
-      data: { paiementDemandeMode: corps.modePaiement, paiementDemandeCoordonnees: coordonnees, paiementDemandeLe: new Date() },
+      data: {
+        paiementDemandeMode: corps.modePaiement,
+        paiementDemandeCoordonnees: coordonnees,
+        paiementDemandeLe: new Date(),
+      },
     });
     return this.profil(a);
   }
-
 
   async document(a: Acteur, type: string) {
     if (!(DOCUMENTS_SALARIE as string[]).includes(type)) throw new NotFoundException('Document inconnu.');
@@ -167,7 +176,10 @@ export class MonEspaceService {
       },
     });
     return {
-      stats: await this.taches.statsEquipe(c.membres.map((m) => m.id), c.societeId),
+      stats: await this.taches.statsEquipe(
+        c.membres.map((m) => m.id),
+        c.societeId,
+      ),
       cellule: {
         nom: c.nom,
         pilote: c.dispatcher ? `${c.dispatcher.prenom} ${c.dispatcher.nom}`.trim() : null,
@@ -188,7 +200,10 @@ export class MonEspaceService {
   }
 
   private async idDossier(a: Acteur): Promise<string> {
-    const d = await this.prisma.dossierPersonnel.findFirst({ where: ouDossierDuCompte(a.userId), select: { id: true } });
+    const d = await this.prisma.dossierPersonnel.findFirst({
+      where: ouDossierDuCompte(a.userId),
+      select: { id: true },
+    });
     if (!d) throw new NotFoundException('Aucun dossier du personnel pour ce compte — voir avec la RH.');
     return d.id;
   }

@@ -39,7 +39,13 @@ describe('ajouterJours', () => {
 
 describe('alerteAvenant (délai d’acceptation réglé)', () => {
   const { alerteAvenant } = jest.requireActual('./domaine');
-  const avenant = { projetId: 'P1', statut: 'envoye', dateValidite: '2026-10-07', dateEnvoi: new Date('2026-09-20T10:00:00Z'), familles: ['TS'] };
+  const avenant = {
+    projetId: 'P1',
+    statut: 'envoye',
+    dateValidite: '2026-10-07',
+    dateEnvoi: new Date('2026-09-20T10:00:00Z'),
+    familles: ['TS'],
+  };
   it('au-delà du délai sans acceptation : alerte avec le nombre de jours', () => {
     expect(alerteAvenant(avenant, '2026-09-28', 7)).toEqual({ jours: 8, seuil: 7 });
     expect(alerteAvenant(avenant, '2026-09-27', 7)).toBeNull(); // pile 7 jours : pas encore

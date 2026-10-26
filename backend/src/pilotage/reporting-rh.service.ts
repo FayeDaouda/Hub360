@@ -27,7 +27,8 @@ const nomDe = (d: { prenom: string; nom: string }) => `${d.prenom} ${d.nom}`;
 // Cinq noms au plus : le reporting se lit d'un coup d'œil.
 const noms = (ds: { prenom: string; nom: string }[]) =>
   ds.length > 5 ? `${ds.slice(0, 4).map(nomDe).join(', ')} et ${ds.length - 4} autres` : ds.map(nomDe).join(', ');
-const moisCourt = (mois: string) => new Date(`${mois}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
+const moisCourt = (mois: string) =>
+  new Date(`${mois}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', timeZone: 'UTC' });
 
 const LIBELLE_ABSENCE: Record<TypeAbsence, string> = {
   conge_paye: 'Congés payés',
@@ -53,7 +54,15 @@ function masseDuReporting(contenu: unknown): number | null {
   return m ? Number(m[1].replace(/\D/g, '')) : null;
 }
 
-type Dossier = { id: string; prenom: string; nom: string; typeContrat: string; salaires: ChangementSource[]; entree: string; sortie: string | null };
+type Dossier = {
+  id: string;
+  prenom: string;
+  nom: string;
+  typeContrat: string;
+  salaires: ChangementSource[];
+  entree: string;
+  sortie: string | null;
+};
 
 // Reporting RH → CFO prérempli depuis le HUB (revue RH 20/10/2026, rubriques
 // D18 validées par le user) : effectif, masse salariale, absences, temps,
@@ -74,8 +83,16 @@ export class ReportingRhService {
       await this.prisma.dossierPersonnel.findMany({
         where: { societeId },
         select: {
-          id: true, prenom: true, nom: true, typeContrat: true, dateEntree: true, archiveLe: true,
-          salaires: { where: { statut: 'valide' }, select: { montant: true, dateEffet: true, statut: true, decideLe: true } },
+          id: true,
+          prenom: true,
+          nom: true,
+          typeContrat: true,
+          dateEntree: true,
+          archiveLe: true,
+          salaires: {
+            where: { statut: 'valide' },
+            select: { montant: true, dateEffet: true, statut: true, decideLe: true },
+          },
         },
         orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
       })
@@ -83,7 +100,8 @@ export class ReportingRhService {
     // Présent au soir du dernier jour / à un moment du mois. Sans date
     // d'entrée : présent depuis toujours (comme les feuilles de temps).
     const presentLe = (d: Dossier, jour: string) => d.entree <= jour && (!d.sortie || d.sortie > jour);
-    const presentDans = (d: Dossier, m: { debut: string; fin: string }) => d.entree <= m.fin && (!d.sortie || d.sortie >= m.debut);
+    const presentDans = (d: Dossier, m: { debut: string; fin: string }) =>
+      d.entree <= m.fin && (!d.sortie || d.sortie >= m.debut);
     const effectif = dossiers.filter((d) => presentLe(d, fin));
 
     const precedent = moisPrecedent(mois);
@@ -93,7 +111,10 @@ export class ReportingRhService {
       this.temps.feuilles(mois, societeId),
       this.alertes.alertes(fin, societeId),
       this.prisma.bulletinPaie.findMany({ where: { mois, dossier: { societeId } }, select: { dossierId: true } }),
-      this.prisma.reportingMensuel.findUnique({ where: { societeId_type_mois: { societeId, type: 'rh', mois: precedent } }, select: { contenu: true } }),
+      this.prisma.reportingMensuel.findUnique({
+        where: { societeId_type_mois: { societeId, type: 'rh', mois: precedent } },
+        select: { contenu: true },
+      }),
     ]);
 
     // 1. Effectif
@@ -137,16 +158,21 @@ export class ReportingRhService {
       },
       {
         libelle: MASSE,
-        valeur: `${fcfa(masse)} / mois · ${comparaison}` + (manquants ? ` · ${pluriel(manquants, 'salaire')} non renseigné${manquants > 1 ? 's' : ''}` : ''),
+        valeur:
+          `${fcfa(masse)} / mois · ${comparaison}` +
+          (manquants ? ` · ${pluriel(manquants, 'salaire')} non renseigné${manquants > 1 ? 's' : ''}` : ''),
         montant: masse,
       },
       {
         libelle: 'Absences',
-        valeur:
-          [
-            ...(absences.jours.length ? absences.jours.map(([t, j]) => `${LIBELLE_ABSENCE[t]} ${j} j`) : ['Aucune absence']),
-            ...(absences.refusees ? [`${pluriel(absences.refusees, 'demande')} refusée${absences.refusees > 1 ? 's' : ''}`] : []),
-          ].join(' · '),
+        valeur: [
+          ...(absences.jours.length
+            ? absences.jours.map(([t, j]) => `${LIBELLE_ABSENCE[t]} ${j} j`)
+            : ['Aucune absence']),
+          ...(absences.refusees
+            ? [`${pluriel(absences.refusees, 'demande')} refusée${absences.refusees > 1 ? 's' : ''}`]
+            : []),
+        ].join(' · '),
       },
       {
         libelle: 'Temps',
@@ -165,7 +191,9 @@ export class ReportingRhService {
       {
         libelle: 'Échéances légales',
         valeur: echeances.length
-          ? echeances.map((a) => `${nomDe(a)} · ${LIBELLE_ALERTE[a.type][a.jours < 0 ? 1 : 0]} ${dateFr(a.date)}`).join(' ; ')
+          ? echeances
+              .map((a) => `${nomDe(a)} · ${LIBELLE_ALERTE[a.type][a.jours < 0 ? 1 : 0]} ${dateFr(a.date)}`)
+              .join(' ; ')
           : 'Aucune',
       },
       {
@@ -187,7 +215,11 @@ export class ReportingRhService {
         select: { type: true, dateDebut: true, dateFin: true },
       }),
       this.prisma.demandeAbsence.count({
-        where: { statut: 'refusee', updatedAt: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) }, dossier: { societeId } },
+        where: {
+          statut: 'refusee',
+          updatedAt: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) },
+          dossier: { societeId },
+        },
       }),
       this.reglages.joursFeries([societeId]),
     ]);
@@ -209,15 +241,27 @@ export class ReportingRhService {
     const dossier = { societeId };
     const [absences, remboursements, attestations, rappels] = await Promise.all([
       this.prisma.demandeAbsence.findMany({
-        where: { dossier, OR: [{ statut: 'validee', valideRhLe: dans }, { statut: 'refusee', updatedAt: dans }] },
+        where: {
+          dossier,
+          OR: [
+            { statut: 'validee', valideRhLe: dans },
+            { statut: 'refusee', updatedAt: dans },
+          ],
+        },
         select: { createdAt: true, valideRhLe: true, decisionN1Le: true, updatedAt: true },
       }),
       this.prisma.demandeRemboursement.findMany({
         where: { dossier, OR: [{ transmiseLe: dans }, { transmiseLe: null, statut: 'rejetee', traiteLe: dans }] },
         select: { createdAt: true, transmiseLe: true, traiteLe: true },
       }),
-      this.prisma.demandeAttestation.findMany({ where: { dossier, delivreeLe: dans }, select: { demandeLe: true, delivreeLe: true } }),
-      this.prisma.rappelEnvoye.findMany({ where: { cle: { startsWith: 'demande:' }, createdAt: dans }, select: { cle: true } }),
+      this.prisma.demandeAttestation.findMany({
+        where: { dossier, delivreeLe: dans },
+        select: { demandeLe: true, delivreeLe: true },
+      }),
+      this.prisma.rappelEnvoye.findMany({
+        where: { cle: { startsWith: 'demande:' }, createdAt: dans },
+        select: { cle: true },
+      }),
     ]);
     const delais = [
       ...absences.map((a) => [a.createdAt, a.valideRhLe ?? a.decisionN1Le ?? a.updatedAt] as const),
@@ -236,9 +280,15 @@ export class ReportingRhService {
     });
     const enSociete = (ensemble: Set<string>) => ({ id: { in: [...ensemble] }, dossier });
     const [a, r, t] = await Promise.all([
-      ids.absence.size ? this.prisma.demandeAbsence.findMany({ where: enSociete(ids.absence), select: { id: true } }) : [],
-      ids.remboursement.size ? this.prisma.demandeRemboursement.findMany({ where: enSociete(ids.remboursement), select: { id: true } }) : [],
-      ids.attestation.size ? this.prisma.demandeAttestation.findMany({ where: enSociete(ids.attestation), select: { id: true } }) : [],
+      ids.absence.size
+        ? this.prisma.demandeAbsence.findMany({ where: enSociete(ids.absence), select: { id: true } })
+        : [],
+      ids.remboursement.size
+        ? this.prisma.demandeRemboursement.findMany({ where: enSociete(ids.remboursement), select: { id: true } })
+        : [],
+      ids.attestation.size
+        ? this.prisma.demandeAttestation.findMany({ where: enSociete(ids.attestation), select: { id: true } })
+        : [],
     ]);
     const siens = new Set([...a, ...r, ...t].map((x) => x.id));
     return { traitees: delais.length, delaiMoyen, relances: parRappel.filter((x) => siens.has(x.id)).length };

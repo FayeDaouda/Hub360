@@ -34,14 +34,20 @@ export const horsCircuit = (role: string) => ROLES_HORS_CIRCUIT.has(role);
 export const commenteSansEcriture = (role: string) => ROLES_COMMENTAIRE_FIL.has(role);
 
 export function verifierCircuit(role: string) {
-  if (horsCircuit(role)) throw new ForbiddenException('Votre rôle consulte et commente les projets ; il n’agit pas sur le circuit des tâches.');
+  if (horsCircuit(role))
+    throw new ForbiddenException(
+      'Votre rôle consulte et commente les projets ; il n’agit pas sur le circuit des tâches.',
+    );
 }
 
 export function perimetreProjets(role: string, collaborateurId: string | null): Prisma.ProjetWhereInput {
   if (role !== ROLE_SALARIE) return {};
   const id = collaborateurId ?? '__aucun__';
   return {
-    OR: [{ cartes: { some: { taches: { some: { assigneId: id } } } } }, { cellules: { some: { cellule: { dispatcherId: id } } } }],
+    OR: [
+      { cartes: { some: { taches: { some: { assigneId: id } } } } },
+      { cellules: { some: { cellule: { dispatcherId: id } } } },
+    ],
   };
 }
 
@@ -51,10 +57,12 @@ export type Decideur = { role: string; collaborateurId: string | null; ctoSupple
 export type TacheRegle = { assigneId: string | null; assigneEstDplg?: boolean };
 
 // Pouvoirs de l'Architecte DPLG : le Dir. GC, l'admin société, le CTO en suppléance.
-export const agitCommeDplg = (d: Decideur) => d.role === ROLE_DPLG || d.role === 'societe_admin' || (d.role === ROLE_CTO && !!d.ctoSupplee);
+export const agitCommeDplg = (d: Decideur) =>
+  d.role === ROLE_DPLG || d.role === 'societe_admin' || (d.role === ROLE_CTO && !!d.ctoSupplee);
 // Ce qui remonte au CTO (et à l'admin société).
 const niveauCto = (d: Decideur) => d.role === ROLE_CTO || d.role === 'societe_admin';
-const estChefDe = (d: Decideur, assigneId: string | null, chefId: string | null) => !!chefId && d.collaborateurId === chefId && assigneId !== chefId;
+const estChefDe = (d: Decideur, assigneId: string | null, chefId: string | null) =>
+  !!chefId && d.collaborateurId === chefId && assigneId !== chefId;
 
 export function peutDecider(d: Decideur, t: TacheRegle & { statut: string }, chefId: string | null): boolean {
   if (t.statut !== 'a_valider' || horsCircuit(d.role)) return false;
@@ -89,7 +97,11 @@ export function droitTs(d: Decideur, montantHt: number, seuil: number): DroitTs 
 }
 
 // Fiche d'équipe du compte connecté (directe, ou via son dossier RH).
-export async function collaborateurDuCompte(prisma: PrismaService, societeId: string, userId: string): Promise<string | null> {
+export async function collaborateurDuCompte(
+  prisma: PrismaService,
+  societeId: string,
+  userId: string,
+): Promise<string | null> {
   const c = await prisma.collaborateur.findFirst({
     where: { societeId, OR: [{ utilisateurId: userId }, { dossierPersonnel: { utilisateurId: userId } }] },
     select: { id: true },

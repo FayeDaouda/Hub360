@@ -20,9 +20,7 @@ describe('DevisPublicGuard', () => {
   it('AUTORISÉ : jeton valide, le where interroge par le HASH du jeton (jamais le clair)', async () => {
     const clair = 'un-jeton-clair-de-test';
     const { svc, findFirst } = prisma({ id: 'D1' });
-    await expect(
-      new DevisPublicGuard(svc).canActivate(ctxOf({ params: { token: clair } })),
-    ).resolves.toBe(true);
+    await expect(new DevisPublicGuard(svc).canActivate(ctxOf({ params: { token: clair } }))).resolves.toBe(true);
     expect(findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tokenPublicHash: hacherJeton(clair) },
@@ -36,16 +34,14 @@ describe('DevisPublicGuard', () => {
 
   it('token absent des params → 404, sans requête base', async () => {
     const { svc, findFirst } = prisma(null);
-    await expect(
-      new DevisPublicGuard(svc).canActivate(ctxOf({ params: {} })),
-    ).rejects.toThrow(NotFoundException);
+    await expect(new DevisPublicGuard(svc).canActivate(ctxOf({ params: {} }))).rejects.toThrow(NotFoundException);
     expect(findFirst).not.toHaveBeenCalled();
   });
 
   it('token sans correspondance en base → 404 (même erreur que « absent »)', async () => {
     const { svc } = prisma(null);
-    await expect(
-      new DevisPublicGuard(svc).canActivate(ctxOf({ params: { token: 'inconnu' } })),
-    ).rejects.toThrow(NotFoundException);
+    await expect(new DevisPublicGuard(svc).canActivate(ctxOf({ params: { token: 'inconnu' } }))).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

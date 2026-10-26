@@ -64,11 +64,7 @@ export type DocumentOffre = {
   adresseClient?: string;
 };
 
-export function majDevis(
-  slug: string,
-  id: string,
-  patch: Partial<NouveauDevis> & DocumentOffre,
-): Promise<Devis> {
+export function majDevis(slug: string, id: string, patch: Partial<NouveauDevis> & DocumentOffre): Promise<Devis> {
   return apiSociete<Devis>(slug, `/devis/${id}`, { method: 'PATCH', body: patch });
 }
 
@@ -80,11 +76,7 @@ export function envoyerDevis(slug: string, id: string): Promise<DevisEnvoye> {
   return apiSociete<DevisEnvoye>(slug, `/devis/${id}/envoi`, { method: 'POST' });
 }
 
-export function marquerReponseDevis(
-  slug: string,
-  id: string,
-  reponse: 'accepte' | 'refuse',
-): Promise<Devis> {
+export function marquerReponseDevis(slug: string, id: string, reponse: 'accepte' | 'refuse'): Promise<Devis> {
   return apiSociete<Devis>(slug, `/devis/${id}/reponse`, { method: 'POST', body: { reponse } });
 }
 
@@ -94,10 +86,7 @@ export function relancerDevis(slug: string, id: string): Promise<DevisEnvoye> {
   return apiSociete<DevisEnvoye>(slug, `/devis/${id}/relance`, { method: 'POST' });
 }
 
-export function convertirDevis(
-  slug: string,
-  id: string,
-): Promise<{ devis: Devis; factureId: string }> {
+export function convertirDevis(slug: string, id: string): Promise<{ devis: Devis; factureId: string }> {
   return apiSociete<{ devis: Devis; factureId: string }>(slug, `/devis/${id}/conversion`, {
     method: 'POST',
   });
@@ -112,10 +101,7 @@ export function getDevisPublic(token: string): Promise<DevisPublic> {
   return apiPublic<DevisPublic>(`/devis-public/${token}`);
 }
 
-export function repondreDevisPublic(
-  token: string,
-  reponse: 'accepte' | 'refuse',
-): Promise<DevisPublic> {
+export function repondreDevisPublic(token: string, reponse: 'accepte' | 'refuse'): Promise<DevisPublic> {
   return apiPublic<DevisPublic>(`/devis-public/${token}/reponse`, {
     method: 'POST',
     body: { reponse },
@@ -141,10 +127,7 @@ export function getProduitsServices(slug: string): Promise<ProduitService[]> {
   return apiSociete<ProduitService[]>(slug, '/produits-services');
 }
 
-export function creerProduitService(
-  slug: string,
-  body: NouveauProduitService,
-): Promise<ProduitService> {
+export function creerProduitService(slug: string, body: NouveauProduitService): Promise<ProduitService> {
   return apiSociete<ProduitService>(slug, '/produits-services', { method: 'POST', body });
 }
 

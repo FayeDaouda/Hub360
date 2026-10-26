@@ -91,9 +91,7 @@ export class LocalitesService {
   private async verifierCodeLibre(code: string) {
     const existante = await this.prisma.localite.findUnique({ where: { code } });
     if (existante) {
-      throw new ConflictException(
-        `Le code ${code} est déjà pris par « ${existante.nom} » (${ZONES[existante.zone]}).`,
-      );
+      throw new ConflictException(`Le code ${code} est déjà pris par « ${existante.nom} » (${ZONES[existante.zone]}).`);
     }
   }
 

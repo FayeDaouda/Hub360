@@ -52,7 +52,9 @@ describe('Offre → contrat → facture payée', () => {
 
   it('la facture d’échéancier est émise, numérotée, puis payée', async () => {
     const factures: Facture[] = (await cfo.get('/factures').expect(200)).body;
-    const brouillon = factures.find((f) => f.statut === 'brouillon' && (f.dossierCrm?.code === DOSSIER || f.projet?.code === DOSSIER));
+    const brouillon = factures.find(
+      (f) => f.statut === 'brouillon' && (f.dossierCrm?.code === DOSSIER || f.projet?.code === DOSSIER),
+    );
     expect(brouillon).toBeDefined();
 
     const emise: Facture = (await cfo.post(`/factures/${brouillon!.id}/emission`).expect(201)).body;
@@ -62,14 +64,18 @@ describe('Offre → contrat → facture payée', () => {
     reference = emise.reference!;
 
     const payee: Facture = (
-      await cfo.post(`/factures/${brouillon!.id}/paiements`, { date: AUJOURDHUI, montant: emise.montantTtc, mode: 'virement' }).expect(201)
+      await cfo
+        .post(`/factures/${brouillon!.id}/paiements`, { date: AUJOURDHUI, montant: emise.montantTtc, mode: 'virement' })
+        .expect(201)
     ).body;
     expect(payee.statutEffectif).toBe('payee');
   });
 
   it('le journal d’audit du CEO garde l’émission et le paiement', async () => {
     const ceo = api(app, await connecter(app, COMPTES.ceo));
-    const { lignes } = (await ceo.get('/journal-audit').expect(200)).body as { lignes: { action: string; detail: string }[] };
+    const { lignes } = (await ceo.get('/journal-audit').expect(200)).body as {
+      lignes: { action: string; detail: string }[];
+    };
     const deCetteFacture = lignes.filter((l) => l.detail.includes(reference)).map((l) => l.action);
     expect(deCetteFacture).toEqual(expect.arrayContaining(['Facture émise', 'Paiement enregistré']));
   });

@@ -47,7 +47,13 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div className="modal clo-modal" role="dialog" aria-modal="true" aria-labelledby="clo-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal clo-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clo-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="clo-titre">Clôtures mensuelles</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
@@ -56,8 +62,9 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
         </header>
         <div className="modal-body clo-corps">
           <p className="dmd-note">
-            Un mois clôturé est figé : aucun paiement daté de ce mois ne peut plus être ajouté ni supprimé. Toute correction passe par un avoir ou
-            une écriture datée du mois en cours. Seul le CEO rouvre un mois, avec un motif.
+            Un mois clôturé est figé : aucun paiement daté de ce mois ne peut plus être ajouté ni supprimé. Toute
+            correction passe par un avoir ou une écriture datée du mois en cours. Seul le CEO rouvre un mois, avec un
+            motif.
           </p>
           {mois === null && !erreur && <p className="dmd-note">Chargement…</p>}
           {mois?.length === 0 && <p className="dmd-note">Aucun mois terminé avec des factures ou des paiements.</p>}
@@ -76,25 +83,42 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                   )}
                 </div>
                 <p className="clo-chiffres">
-                  {m.chiffres.factures} facture{m.chiffres.factures > 1 ? 's' : ''} · {formatMontant(m.chiffres.factureTtc)} TTC
-                  {m.chiffres.avoirs > 0 && ` · ${m.chiffres.avoirs} avoir${m.chiffres.avoirs > 1 ? 's' : ''} (${formatMontant(m.chiffres.avoirsTtc)})`} ·{' '}
-                  {m.chiffres.paiements} paiement{m.chiffres.paiements > 1 ? 's' : ''} · {formatMontant(m.chiffres.encaisse)} encaissés
+                  {m.chiffres.factures} facture{m.chiffres.factures > 1 ? 's' : ''} ·{' '}
+                  {formatMontant(m.chiffres.factureTtc)} TTC
+                  {m.chiffres.avoirs > 0 &&
+                    ` · ${m.chiffres.avoirs} avoir${m.chiffres.avoirs > 1 ? 's' : ''} (${formatMontant(m.chiffres.avoirsTtc)})`}{' '}
+                  · {m.chiffres.paiements} paiement{m.chiffres.paiements > 1 ? 's' : ''} ·{' '}
+                  {formatMontant(m.chiffres.encaisse)} encaissés
                 </p>
-                {!m.clos && m.derniereReouverture && <p className="cell-sub">Motif de la réouverture : {m.derniereReouverture}</p>}
+                {!m.clos && m.derniereReouverture && (
+                  <p className="cell-sub">Motif de la réouverture : {m.derniereReouverture}</p>
+                )}
 
                 {!m.clos && !estCeo && confirmer !== m.mois && (
-                  <button type="button" className="btn-ghost btn-ghost--sm" disabled={envoi} onClick={() => setConfirmer(m.mois)}>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-ghost--sm"
+                    disabled={envoi}
+                    onClick={() => setConfirmer(m.mois)}
+                  >
                     <Lock size={13} aria-hidden /> Clôturer {m.periode}
                   </button>
                 )}
                 {confirmer === m.mois && (
                   <div className="clo-confirmer">
-                    <span>Les chiffres ci-dessus sont justes ? Après la clôture, seul le CEO peut rouvrir {m.periode}.</span>
+                    <span>
+                      Les chiffres ci-dessus sont justes ? Après la clôture, seul le CEO peut rouvrir {m.periode}.
+                    </span>
                     <span className="clo-boutons">
                       <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setConfirmer(null)}>
                         Annuler
                       </button>
-                      <button type="button" className="btn-primary" disabled={envoi} onClick={() => lancer(() => cloturerMois(slug, m.mois))}>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        disabled={envoi}
+                        onClick={() => lancer(() => cloturerMois(slug, m.mois))}
+                      >
                         Clôturer
                       </button>
                     </span>
@@ -102,7 +126,12 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                 )}
 
                 {m.clos && estCeo && rouvrir?.mois !== m.mois && (
-                  <button type="button" className="btn-ghost btn-ghost--sm" disabled={envoi} onClick={() => setRouvrir({ mois: m.mois, motif: '' })}>
+                  <button
+                    type="button"
+                    className="btn-ghost btn-ghost--sm"
+                    disabled={envoi}
+                    onClick={() => setRouvrir({ mois: m.mois, motif: '' })}
+                  >
                     <LockOpen size={13} aria-hidden /> Rouvrir
                   </button>
                 )}

@@ -607,7 +607,6 @@
   }
 }
 
-
 /* --- Panneau de tâche réorganisé (lot E de Mes tâches, 23/10/2026) -------- */
 .tp-fil {
   margin: 0;
@@ -770,7 +769,9 @@
   color: var(--text-muted);
   text-align: center;
   cursor: pointer;
-  transition: border-color var(--duree-court) var(--courbe), background var(--duree-court) var(--courbe);
+  transition:
+    border-color var(--duree-court) var(--courbe),
+    background var(--duree-court) var(--courbe);
 }
 .depot-zone:hover,
 .depot-zone:focus-within,

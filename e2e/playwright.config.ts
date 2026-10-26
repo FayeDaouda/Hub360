@@ -32,6 +32,12 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 },
     },
     // Smoke tests change the reference data: one worker, in file order.
-    { name: 'smoke', testDir: './smoke', outputDir: '.state/test-results-smoke', fullyParallel: false, use: { viewport: { width: 1440, height: 900 } } },
+    {
+      name: 'smoke',
+      testDir: './smoke',
+      outputDir: '.state/test-results-smoke',
+      fullyParallel: false,
+      use: { viewport: { width: 1440, height: 900 } },
+    },
   ],
 });

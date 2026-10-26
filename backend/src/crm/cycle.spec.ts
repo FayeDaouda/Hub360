@@ -56,9 +56,7 @@ function monter(
     dossierCrm: {
       findFirst: jest.fn().mockResolvedValue({ ...DOSSIER, statut, projet: opts.projet ?? null }),
       updateMany: jest.fn().mockResolvedValue({ count: opts.basculees ?? 1 }),
-      findUniqueOrThrow: jest.fn().mockImplementation(() =>
-        Promise.resolve({ ...DOSSIER, statut: 'X' }),
-      ),
+      findUniqueOrThrow: jest.fn().mockImplementation(() => Promise.resolve({ ...DOSSIER, statut: 'X' })),
     },
     dossierCrmTransition: { create: jest.fn().mockResolvedValue({}) },
     devis: {
@@ -167,7 +165,13 @@ describe('CrmService.agir', () => {
 
   it('soumettre une fiche incomplète → 409, rien ne bascule (elle se verrouillerait incomplète)', async () => {
     const { svc, prisma } = monter('nouveau_projet');
-    prisma.dossierCrm.findFirst.mockResolvedValue({ ...DOSSIER, statut: 'nouveau_projet', gamme: null, nbPlanches: 0, projet: null });
+    prisma.dossierCrm.findFirst.mockResolvedValue({
+      ...DOSSIER,
+      statut: 'nouveau_projet',
+      gamme: null,
+      nbPlanches: 0,
+      projet: null,
+    });
     await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
       'Fiche 8/10 : il manque n° de planches, gamme',
     );
@@ -179,7 +183,9 @@ describe('CrmService.agir', () => {
     const r = await svc.agir('S1', CFO as never, 'D1', 'valider', undefined);
     expect(devis.emettreOffre).toHaveBeenCalledTimes(1);
     // Offre partie chez le client : le propriétaire est prévenu (14/10/2026).
-    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith(expect.objectContaining({ evenement: 'offre_envoyee' }));
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith(
+      expect.objectContaining({ evenement: 'offre_envoyee' }),
+    );
     expect(prisma.dossierCrm.updateMany.mock.calls[0][0].data).toEqual({
       statut: 'offre_envoyee',
     });
@@ -188,24 +194,18 @@ describe('CrmService.agir', () => {
 
   it('valider : Dir. GC (finances_devis écriture seulement) → 403, rien écrit', async () => {
     const { svc, prisma } = monter('en_validation');
-    await expect(svc.agir('S1', DIR_GC as never, 'D1', 'valider', undefined)).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(svc.agir('S1', DIR_GC as never, 'D1', 'valider', undefined)).rejects.toThrow(ForbiddenException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('soumettre : la CFO (crm lecture) → 403', async () => {
     const { svc } = monter('nouveau_projet');
-    await expect(svc.agir('S1', CFO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
-      ForbiddenException,
-    );
+    await expect(svc.agir('S1', CFO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(ForbiddenException);
   });
 
   it('renvoyer sans commentaire → 400 ; avec → retour à nouveau_projet', async () => {
     const vide = monter('en_validation');
-    await expect(vide.svc.agir('S1', CFO as never, 'D1', 'renvoyer', '   ')).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(vide.svc.agir('S1', CFO as never, 'D1', 'renvoyer', '   ')).rejects.toThrow(BadRequestException);
     const ok = monter('en_validation');
     await ok.svc.agir('S1', CFO as never, 'D1', 'renvoyer', ' Chiffrage à revoir ');
     expect(ok.prisma.dossierCrmTransition.create.mock.calls[0][0].data).toMatchObject({
@@ -220,27 +220,19 @@ describe('CrmService.agir', () => {
 
   it('perdre sans motif → 400 ; depuis onboard → 409 (définitif)', async () => {
     const { svc } = monter('offre_envoyee');
-    await expect(svc.agir('S1', COO as never, 'D1', 'perdre', undefined)).rejects.toThrow(
-      'motif est obligatoire',
-    );
+    await expect(svc.agir('S1', COO as never, 'D1', 'perdre', undefined)).rejects.toThrow('motif est obligatoire');
     const fini = monter('onboard');
-    await expect(fini.svc.agir('S1', COO as never, 'D1', 'perdre', 'x')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(fini.svc.agir('S1', COO as never, 'D1', 'perdre', 'x')).rejects.toThrow(ConflictException);
   });
 
   it('étape sautée (onboarder depuis nouveau_projet) → 409', async () => {
     const { svc } = monter('nouveau_projet');
-    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow(ConflictException);
   });
 
   it('statut changé entre-temps (concurrence) → 409, pas de journal', async () => {
     const { svc, prisma } = monter('nouveau_projet', { basculees: 0 });
-    await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
-      'vient de changer',
-    );
+    await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow('vient de changer');
     expect(prisma.dossierCrmTransition.create).not.toHaveBeenCalled();
   });
 
@@ -248,9 +240,7 @@ describe('CrmService.agir', () => {
     const { svc, prisma } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'accepte', dateValidite: '2026-01-10' }],
     });
-    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow(
-      'signature du contrat',
-    );
+    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow('signature du contrat');
     expect(prisma.projet.create).not.toHaveBeenCalled();
   });
 
@@ -269,7 +259,10 @@ describe('CrmService.agir', () => {
     });
     expect(prisma.projet.create).toHaveBeenCalledTimes(1);
     // Factures directes du lead (sans offre) rattachées au projet ouvert.
-    expect(prisma.facture.updateMany).toHaveBeenCalledWith({ where: { dossierCrmId: 'D1', projetId: null }, data: { projetId: 'P1' } });
+    expect(prisma.facture.updateMany).toHaveBeenCalledWith({
+      where: { dossierCrmId: 'D1', projetId: null },
+      data: { projetId: 'P1' },
+    });
     expect(prisma.devis.update).toHaveBeenCalledWith({
       where: { id: 'O1' },
       data: { projetId: 'P1', statut: 'transforme' },
@@ -309,7 +302,12 @@ describe('CrmService.agir — offre', () => {
   });
 
   it('soumettre avec une ligne pas encore chiffrée (brouillon tolérant) → 409', async () => {
-    const { svc, prisma } = monter('nouveau_projet', { lignesBrouillon: [[1, 100_000], [0, 5_000]] });
+    const { svc, prisma } = monter('nouveau_projet', {
+      lignesBrouillon: [
+        [1, 100_000],
+        [0, 5_000],
+      ],
+    });
     await expect(svc.agir('S1', COO as never, 'D1', 'soumettre', undefined)).rejects.toThrow(
       'une ligne n’est pas chiffrée',
     );
@@ -320,9 +318,7 @@ describe('CrmService.agir — offre', () => {
     const { svc, prisma } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'envoye', dateValidite: demain }],
     });
-    await expect(svc.onboarderParContrat('S1', 'D1', null, jest.fn())).rejects.toThrow(
-      'offre acceptée',
-    );
+    await expect(svc.onboarderParContrat('S1', 'D1', null, jest.fn())).rejects.toThrow('offre acceptée');
     expect(prisma.projet.create).not.toHaveBeenCalled();
   });
 
@@ -330,18 +326,14 @@ describe('CrmService.agir — offre', () => {
     const { svc } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'envoye', dateValidite: demain }],
     });
-    await expect(svc.agir('S1', COO as never, 'D1', 'refaire', undefined)).rejects.toThrow(
-      'attend encore la réponse',
-    );
+    await expect(svc.agir('S1', COO as never, 'D1', 'refaire', undefined)).rejects.toThrow('attend encore la réponse');
   });
 
   it('refaire une offre acceptée → 409 (passer en Onboard)', async () => {
     const { svc } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'accepte', dateValidite: demain }],
     });
-    await expect(svc.agir('S1', COO as never, 'D1', 'refaire', undefined)).rejects.toThrow(
-      'acceptée',
-    );
+    await expect(svc.agir('S1', COO as never, 'D1', 'refaire', undefined)).rejects.toThrow('acceptée');
   });
 
   it('refaire une offre expirée → retour en nouveau_projet', async () => {

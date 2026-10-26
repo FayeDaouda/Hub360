@@ -11,15 +11,7 @@ export function contenuDevis(d: DevisEmail): { sujet: string; texte: string; htm
   const intro = `${d.societeNom} vous a transmis un devis (${montant} TTC). Consultez-le et répondez directement en ligne — vous pouvez l'accepter ou le refuser depuis la page, sans créer de compte.`;
   const pied = `Ce lien est personnel — ne le transmettez pas. Généré via ${marque}.`;
 
-  const texte = [
-    `Bonjour ${d.clientNom},`,
-    '',
-    intro,
-    '',
-    d.lien,
-    '',
-    pied,
-  ].join('\n');
+  const texte = [`Bonjour ${d.clientNom},`, '', intro, '', d.lien, '', pied].join('\n');
 
   const html = [
     `<p>Bonjour ${echapper(d.clientNom)},</p>`,
@@ -36,9 +28,5 @@ function formatMontant(valeur: number): string {
 }
 
 function echapper(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

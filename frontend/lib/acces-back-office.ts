@@ -24,7 +24,16 @@ const SECTIONS_DIRECTION: Record<string, string> = {
 export const moduleDeSection = (cle: string): string | undefined => SECTIONS_DIRECTION[cle];
 
 // Ordre de préférence pour la page d'arrivée (= ordre de la sidebar).
-export const ORDRE_SECTIONS = ['mes-taches', 'tableau-de-bord', 'crm', 'projets', 'facturation', 'rh', 'equipe', 'mon-espace'];
+export const ORDRE_SECTIONS = [
+  'mes-taches',
+  'tableau-de-bord',
+  'crm',
+  'projets',
+  'facturation',
+  'rh',
+  'equipe',
+  'mon-espace',
+];
 const CHEMINS: Record<string, string> = {
   'mes-taches': 'mes-taches',
   'mes-reglages': 'mes-reglages',
@@ -115,7 +124,13 @@ export function premiereSectionAccessible(session: Session): string | null {
 // Le COO arrive sur le CRM, « À traiter aujourd'hui » et sa performance
 // commerciale en tête (revue COO, 22/10/2026).
 // Le CIO arrive sur Réglages, « À traiter aujourd'hui » en tête (revue CIO, 22/10/2026).
-const ARRIVEE_PAR_ROLE: Record<string, string> = { RH: 'rh', CFO: 'facturation', [ROLE_CTO]: 'projets', [ROLE_COO]: 'crm', [ROLE_CIO]: 'parametres' };
+const ARRIVEE_PAR_ROLE: Record<string, string> = {
+  RH: 'rh',
+  CFO: 'facturation',
+  [ROLE_CTO]: 'projets',
+  [ROLE_COO]: 'crm',
+  [ROLE_CIO]: 'parametres',
+};
 const CHEMIN_ARRIVEE: Record<string, string> = { [ROLE_CTO]: 'projets?vue=production' };
 
 // Section d'arrivée propre au rôle, si accessible (null sinon) : sur

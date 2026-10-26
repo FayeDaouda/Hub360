@@ -57,7 +57,8 @@
   /* Easing qui ralentit en fin de course plutôt qu'un ease linéaire — posé
      seulement sur les tuiles réellement cliquables : le hover annonce une
      vraie interaction, pas un décor sur une tuile statique. */
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+  transition:
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.15s ease,
     box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -400,4 +401,3 @@ a.notif-item:hover {
     max-width: 60vw;
   }
 }
-

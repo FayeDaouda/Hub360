@@ -47,7 +47,9 @@ export class SeuilCeoService {
   // Montant de l'affaire (TTC) de chaque facture, par id — en deux requêtes
   // quel que soit le nombre de factures.
   async montantsAffaire(factures: FactureAffaire[]): Promise<Map<string, number>> {
-    const sansDossier = factures.filter((f) => !f.devisEcheancierId && !f.devisOrigineId && !f.dossierCrmId && f.projetId);
+    const sansDossier = factures.filter(
+      (f) => !f.devisEcheancierId && !f.devisOrigineId && !f.dossierCrmId && f.projetId,
+    );
     const projets = sansDossier.length
       ? await this.prisma.projet.findMany({
           where: { id: { in: [...new Set(sansDossier.map((f) => f.projetId!))] } },
@@ -56,10 +58,18 @@ export class SeuilCeoService {
       : [];
     const dossierDuProjet = new Map(projets.map((p) => [p.id, p.dossierCrmId]));
     const devisDe = (f: FactureAffaire) => f.devisEcheancierId ?? f.devisOrigineId;
-    const dossierDe = (f: FactureAffaire) => f.dossierCrmId ?? (f.projetId ? dossierDuProjet.get(f.projetId) ?? null : null);
+    const dossierDe = (f: FactureAffaire) =>
+      f.dossierCrmId ?? (f.projetId ? (dossierDuProjet.get(f.projetId) ?? null) : null);
 
     const devisIds = [...new Set(factures.map(devisDe).filter((x): x is string => !!x))];
-    const dossierIds = [...new Set(factures.filter((f) => !devisDe(f)).map(dossierDe).filter((x): x is string => !!x))];
+    const dossierIds = [
+      ...new Set(
+        factures
+          .filter((f) => !devisDe(f))
+          .map(dossierDe)
+          .filter((x): x is string => !!x),
+      ),
+    ];
     const offres =
       devisIds.length || dossierIds.length
         ? await this.prisma.devis.findMany({
@@ -69,7 +79,9 @@ export class SeuilCeoService {
         : [];
     const ttcDevis = new Map(offres.map((o) => [o.id, montantTtcLignes(o.lignes)]));
     const ttcDossier = new Map(
-      offres.filter((o) => o.statut === 'accepte' && o.dossierCrmId).map((o) => [o.dossierCrmId!, montantTtcLignes(o.lignes)]),
+      offres
+        .filter((o) => o.statut === 'accepte' && o.dossierCrmId)
+        .map((o) => [o.dossierCrmId!, montantTtcLignes(o.lignes)]),
     );
 
     return new Map(
@@ -92,7 +104,10 @@ export class SeuilCeoService {
 
   async verifierDevis(acteur: ActeurSeuil, societeId: string, devisId: string, exclusif = false) {
     if (acteur.role !== ROLE_CEO && !exclusif) return;
-    const devis = await this.prisma.devis.findFirst({ where: { id: devisId, societeId }, select: { lignes: LIGNES_TTC } });
+    const devis = await this.prisma.devis.findFirst({
+      where: { id: devisId, societeId },
+      select: { lignes: LIGNES_TTC },
+    });
     if (!devis) throw new NotFoundException('Devis introuvable');
     await this.controler(acteur, societeId, montantTtcLignes(devis.lignes), exclusif);
   }
@@ -125,7 +140,15 @@ export class SeuilCeoService {
     if (acteur.role !== ROLE_CEO && !exclusif) return;
     const f = await this.prisma.facture.findFirst({
       where: { id: factureId, societeId },
-      select: { id: true, montantHt: true, tauxTva: true, devisEcheancierId: true, devisOrigineId: true, dossierCrmId: true, projetId: true },
+      select: {
+        id: true,
+        montantHt: true,
+        tauxTva: true,
+        devisEcheancierId: true,
+        devisOrigineId: true,
+        dossierCrmId: true,
+        projetId: true,
+      },
     });
     if (!f) throw new NotFoundException('Facture introuvable');
     await this.controler(acteur, societeId, (await this.montantsAffaire([f])).get(f.id)!, exclusif);

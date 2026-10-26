@@ -277,7 +277,9 @@ a.admin-nav-item:hover {
   color: var(--sidebar-text-muted);
   cursor: pointer;
   box-shadow: var(--shadow-md);
-  transition: background 150ms ease, color 150ms ease;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
 }
 
 .admin-sidebar-toggle:hover {
@@ -290,7 +292,10 @@ a.admin-nav-item:hover {
 @media (hover: hover) and (pointer: fine) {
   .admin:not(.admin--repliee) .admin-sidebar-toggle {
     opacity: 0;
-    transition: opacity var(--duree-moyen) var(--courbe), background 150ms ease, color 150ms ease;
+    transition:
+      opacity var(--duree-moyen) var(--courbe),
+      background 150ms ease,
+      color 150ms ease;
   }
   .admin:not(.admin--repliee) .admin-sidebar:hover .admin-sidebar-toggle,
   .admin:not(.admin--repliee) .admin-sidebar:focus-within .admin-sidebar-toggle {
@@ -838,7 +843,9 @@ button.admin-user {
   border-radius: 50%;
   background: var(--surface);
   border: 1.5px solid var(--border-hover);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 button:hover .repli-badge,
@@ -850,7 +857,9 @@ button:focus-visible .repli-badge {
 .repli-icone {
   flex: none;
   color: var(--text-muted);
-  transition: transform 0.18s ease, color 0.15s ease;
+  transition:
+    transform 0.18s ease,
+    color 0.15s ease;
 }
 
 button:hover .repli-icone,
@@ -1022,10 +1031,8 @@ button:focus-visible .repli-icone {
        sans débordement, ils masquent l'ombre en fin de course. */
     linear-gradient(to right, var(--surface-donnees) 30%, transparent) 0 0 / 28px 100% no-repeat,
     linear-gradient(to left, var(--surface-donnees) 30%, transparent) 100% 0 / 28px 100% no-repeat,
-    radial-gradient(farthest-side at 0 50%, var(--ombre-defilement), transparent) 0 0 / 14px 100%
-      no-repeat,
-    radial-gradient(farthest-side at 100% 50%, var(--ombre-defilement), transparent) 100% 0 /
-      14px 100% no-repeat;
+    radial-gradient(farthest-side at 0 50%, var(--ombre-defilement), transparent) 0 0 / 14px 100% no-repeat,
+    radial-gradient(farthest-side at 100% 50%, var(--ombre-defilement), transparent) 100% 0 / 14px 100% no-repeat;
   background-attachment: local, local, scroll, scroll;
 }
 
@@ -1264,7 +1271,6 @@ button:focus-visible .repli-icone {
 }
 
 @media (max-width: 640px) {
-
   .admin-search input {
     width: 100px;
   }
@@ -1293,7 +1299,6 @@ button:focus-visible .repli-icone {
     transition: none;
   }
 }
-
 
 /* Menu « Plus d'actions » (components/menu-actions.tsx) : liste dépliée
    sous son bouton, cibles tactiles de 44 px. */
@@ -1374,7 +1379,9 @@ button:focus-visible .repli-icone {
   border: 1px solid var(--border);
   border-radius: var(--r-20);
   background: var(--surface);
-  box-shadow: inset 0 1px 0 var(--glass-sheen-faible), var(--ombre-3);
+  box-shadow:
+    inset 0 1px 0 var(--glass-sheen-faible),
+    var(--ombre-3);
   animation: mc-entree var(--duree-moyen) var(--courbe);
   transform-origin: top right;
 }
@@ -1501,7 +1508,9 @@ button:focus-visible .repli-icone {
 .mc-theme button.is-actif {
   background: var(--surface);
   color: var(--text);
-  box-shadow: var(--ombre-1), inset 0 0 0 1px var(--border);
+  box-shadow:
+    var(--ombre-1),
+    inset 0 0 0 1px var(--border);
 }
 .mc-theme button:focus-visible {
   outline: 2px solid var(--focus);
@@ -1547,11 +1556,31 @@ button:focus-visible .repli-icone {
   border-radius: inherit;
   object-fit: cover;
 }
-.av--xs { width: 24px; height: 24px; font-size: 10px; }
-.av--sm { width: 32px; height: 32px; font-size: var(--t-12); }
-.av--md { width: 38px; height: 38px; font-size: var(--t-13); }
-.av--lg { width: 48px; height: 48px; font-size: var(--t-16); }
-.av--xl { width: 96px; height: 96px; font-size: var(--t-32); }
+.av--xs {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+.av--sm {
+  width: 32px;
+  height: 32px;
+  font-size: var(--t-12);
+}
+.av--md {
+  width: 38px;
+  height: 38px;
+  font-size: var(--t-13);
+}
+.av--lg {
+  width: 48px;
+  height: 48px;
+  font-size: var(--t-16);
+}
+.av--xl {
+  width: 96px;
+  height: 96px;
+  font-size: var(--t-32);
+}
 /* Absence validée qui couvre aujourd'hui : pastille ambre au bord. */
 .av-absent {
   position: absolute;

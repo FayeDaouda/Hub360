@@ -15,7 +15,9 @@ const REQUIS = { module: 'finances_factures', niveau: 'lecture' };
 
 describe('AccesProjetGuard', () => {
   it('jeton d’une autre société → 403', () => {
-    expect(() => new AccesProjetGuard(reflector(REQUIS)).canActivate(ctxOf('CFO', 'autre'))).toThrow(ForbiddenException);
+    expect(() => new AccesProjetGuard(reflector(REQUIS)).canActivate(ctxOf('CFO', 'autre'))).toThrow(
+      ForbiddenException,
+    );
   });
   it('compte de secours (societe_admin) → autorisé', () => {
     expect(new AccesProjetGuard(reflector(undefined)).canActivate(ctxOf('societe_admin'))).toBe(true);

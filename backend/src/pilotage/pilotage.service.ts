@@ -1,5 +1,11 @@
 import { NotificationsService } from '../notifications/notifications.service';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, type NiveauPermission, type TypeReporting } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
@@ -28,7 +34,12 @@ import type { ArbitrerDecisionDto, SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 
-export type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
+export type Acteur = {
+  userId: string;
+  societeId: string;
+  role: string;
+  permissions?: Record<string, NiveauPermission>;
+};
 
 // Rôles qui saisissent et clôturent les décisions des instances (choix du
 // 05/10/2026 : « par fonction », la matrice reste en lecture).
@@ -44,7 +55,8 @@ const ARBITRES = new Set([ROLE_CEO, 'societe_admin']);
 const ROLES_RESPONSABLES = ['Dir. GC', 'COO', 'CFO', 'CEO (transverse)', 'CTO (transverse)', 'CIO (transverse)', 'RH'];
 
 // « CTO (transverse) » → « CTO », « Dir. GC » → « Direction GC » (maquette).
-export const libelleRole = (role: string) => (role === 'Dir. GC' ? 'Direction GC' : role.replace(/\s*\(transverse\)$/, ''));
+export const libelleRole = (role: string) =>
+  role === 'Dir. GC' ? 'Direction GC' : role.replace(/\s*\(transverse\)$/, '');
 
 const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 const aujourdhui = () => jourIso(new Date());
@@ -102,7 +114,8 @@ export class PilotageService {
         horsObjectif: indicateurs.filter((i) => i.evaluation === 'hors_objectif').length,
         suivis: suivis.length,
         reportingsADeposer: reportings.filter((r) => r.statut === 'a_deposer' || r.statut === 'en_retard').length,
-        decisionsOuvertes: registre.decisions.filter((d) => d.statut === 'ouverte' || d.statut === 'echeance_depassee').length,
+        decisionsOuvertes: registre.decisions.filter((d) => d.statut === 'ouverte' || d.statut === 'echeance_depassee')
+          .length,
       },
       // Chiffres clés en tête de page, selon la matrice (chiffres.service.ts).
       chiffres,
@@ -120,19 +133,35 @@ export class PilotageService {
     const mois = derniersMois(moisDe(jour));
     const debut = new Date(`${mois[0]}-01T00:00:00Z`);
     const [leads, taches, charges] = await Promise.all([
-      this.prisma.dossierCrm.findMany({ where: { societeId, categorie: 'conception', createdAt: { gte: debut } }, select: { createdAt: true } }),
+      this.prisma.dossierCrm.findMany({
+        where: { societeId, categorie: 'conception', createdAt: { gte: debut } },
+        select: { createdAt: true },
+      }),
       this.prisma.tacheProjet.findMany({
         where: { projet: { societeId }, statut: 'validee', valideeLe: { gte: debut } },
-        select: { statut: true, valideeLe: true, finLe: true, evenements: { where: { type: 'reprise' }, select: { id: true }, take: 1 } },
+        select: {
+          statut: true,
+          valideeLe: true,
+          finLe: true,
+          evenements: { where: { type: 'reprise' }, select: { id: true }, take: 1 },
+        },
       }),
       Promise.all(mois.map((m) => this.chargeEquipes(societeId, m, jour))),
     ]);
     const { aTemps, reprises } = seriesTaches(
       mois,
-      taches.map((t) => ({ statut: t.statut, valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null, echeance: t.finLe, reprise: t.evenements.length > 0 })),
+      taches.map((t) => ({
+        statut: t.statut,
+        valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null,
+        echeance: t.finLe,
+        reprise: t.evenements.length > 0,
+      })),
     );
     return {
-      nouveaux_projets: serieNouveaux(mois, leads.map((l) => jourIso(l.createdAt))),
+      nouveaux_projets: serieNouveaux(
+        mois,
+        leads.map((l) => jourIso(l.createdAt)),
+      ),
       taches_a_temps: aTemps,
       taux_reprises: reprises,
       // Pas de charge calculable avant la mise en service des feuilles de temps.
@@ -143,30 +172,64 @@ export class PilotageService {
   private async indicateurs(societeId: string, jour: string, feuilles: { total: number; controlees: number }) {
     const mois = moisDe(jour);
     const { debut, fin } = bornesMois(mois);
-    const [objNouveaux, objConversion, objATemps, objCharge, objReprises, nouveaux, offres, taches, charge, reportings, decisions] =
-      await Promise.all([
-        this.reglages.regle<number | null>(societeId, 'objectif_nouveaux_projets'),
-        this.reglages.regle<number | null>(societeId, 'objectif_conversion_chantier'),
-        this.reglages.regle<number | null>(societeId, 'objectif_taches_a_temps'),
-        this.reglages.regle<{ de: number; a: number } | null>(societeId, 'objectif_charge_equipes'),
-        this.reglages.regle<number | null>(societeId, 'objectif_taux_reprises'),
-        this.prisma.dossierCrm.count({
-          where: { societeId, categorie: 'conception', createdAt: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) } },
-        }),
-        this.conversion(societeId),
-        this.prisma.tacheProjet.findMany({
-          where: { projet: { societeId } },
-          select: { statut: true, finLe: true, debutLe: true, heures: true, valideeLe: true, evenements: { where: { type: 'reprise' }, select: { id: true }, take: 1 } },
-        }),
-        this.chargeEquipes(societeId, mois, jour),
-        this.prisma.reportingMensuel.findMany({ where: { societeId }, select: { type: true, mois: true, deposeLe: true } }),
-        this.prisma.decisionRegistre.findMany({ where: { societeId, closeLe: null, ...DECISION_EN_VIGUEUR }, select: { echeance: true, closeLe: true } }),
-      ]);
+    const [
+      objNouveaux,
+      objConversion,
+      objATemps,
+      objCharge,
+      objReprises,
+      nouveaux,
+      offres,
+      taches,
+      charge,
+      reportings,
+      decisions,
+    ] = await Promise.all([
+      this.reglages.regle<number | null>(societeId, 'objectif_nouveaux_projets'),
+      this.reglages.regle<number | null>(societeId, 'objectif_conversion_chantier'),
+      this.reglages.regle<number | null>(societeId, 'objectif_taches_a_temps'),
+      this.reglages.regle<{ de: number; a: number } | null>(societeId, 'objectif_charge_equipes'),
+      this.reglages.regle<number | null>(societeId, 'objectif_taux_reprises'),
+      this.prisma.dossierCrm.count({
+        where: {
+          societeId,
+          categorie: 'conception',
+          createdAt: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) },
+        },
+      }),
+      this.conversion(societeId),
+      this.prisma.tacheProjet.findMany({
+        where: { projet: { societeId } },
+        select: {
+          statut: true,
+          finLe: true,
+          debutLe: true,
+          heures: true,
+          valideeLe: true,
+          evenements: { where: { type: 'reprise' }, select: { id: true }, take: 1 },
+        },
+      }),
+      this.chargeEquipes(societeId, mois, jour),
+      this.prisma.reportingMensuel.findMany({
+        where: { societeId },
+        select: { type: true, mois: true, deposeLe: true },
+      }),
+      this.prisma.decisionRegistre.findMany({
+        where: { societeId, closeLe: null, ...DECISION_EN_VIGUEUR },
+        select: { echeance: true, closeLe: true },
+      }),
+    ]);
 
     const { signees, avecSuivi } = offres;
     const validees = taches.filter((t) => t.statut === 'validee');
     const aTemps = partATemps(
-      taches.map((t) => ({ debut: t.debutLe, echeance: t.finLe, heures: t.heures == null ? null : Number(t.heures), statut: t.statut, valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null })),
+      taches.map((t) => ({
+        debut: t.debutLe,
+        echeance: t.finLe,
+        heures: t.heures == null ? null : Number(t.heures),
+        statut: t.statut,
+        valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null,
+      })),
     );
     // Reportings dus : déposés, ou dont l'échéance (J+5) est passée — un
     // reporting non déposé à temps compte comme manqué (0 / 2 si aucun).
@@ -179,7 +242,9 @@ export class PilotageService {
       }),
     );
     const aLHeureReportings = dus.filter((r) => r.aLHeure).length;
-    const depassees = decisions.filter((d) => statutDecision({ echeance: d.echeance, closeLe: null }, jour) === 'echeance_depassee').length;
+    const depassees = decisions.filter(
+      (d) => statutDecision({ echeance: d.echeance, closeLe: null }, jour) === 'echeance_depassee',
+    ).length;
 
     const indicateur = (
       cle: string,
@@ -222,7 +287,9 @@ export class PilotageService {
         reprises,
         pct(reprises),
         { type: 'maximum', valeur: objReprises },
-        objReprises == null ? 'Indicateur qualité (manuel §2.1) · seuil à fixer dans Réglages' : `Seuil maximum : ${objReprises} % (manuel §2.1)`,
+        objReprises == null
+          ? 'Indicateur qualité (manuel §2.1) · seuil à fixer dans Réglages'
+          : `Seuil maximum : ${objReprises} % (manuel §2.1)`,
         'Projets · tâches validées ayant eu au moins une reprise',
       ),
       indicateur(
@@ -240,7 +307,9 @@ export class PilotageService {
         charge,
         pct(charge),
         { type: 'zone', de: objCharge?.de ?? null, a: objCharge?.a ?? null, propose: { de: 70, a: 100 } },
-        objCharge == null ? 'Zone proposée : 70 à 100 % · à fixer dans Réglages' : `Zone : ${objCharge.de} à ${objCharge.a} %`,
+        objCharge == null
+          ? 'Zone proposée : 70 à 100 % · à fixer dans Réglages'
+          : `Zone : ${objCharge.de} à ${objCharge.a} %`,
         'Durées standard des tâches assignées, réparties sur leur fenêtre',
       ),
       indicateur(
@@ -259,7 +328,9 @@ export class PilotageService {
         pct(controle),
         { type: 'minimum', valeur: 100 },
         'Objectif : 100 % des mois clos',
-        feuilles.total ? `${feuilles.controlees} / ${feuilles.total} feuilles des mois clos` : 'Aucune feuille à contrôler',
+        feuilles.total
+          ? `${feuilles.controlees} / ${feuilles.total} feuilles des mois clos`
+          : 'Aucune feuille à contrôler',
       ),
       {
         cle: 'decisions_ouvertes',
@@ -281,7 +352,10 @@ export class PilotageService {
       where: { societeId, dossierCrmId: { not: null }, statut: { in: ['accepte', 'transforme'] } },
       select: { lignes: { select: { produitService: { select: { code: true } } } } },
     });
-    return { signees: offres.length, avecSuivi: offres.filter((o) => o.lignes.some((l) => SU.includes(l.produitService?.code ?? ''))).length };
+    return {
+      signees: offres.length,
+      avecSuivi: offres.filter((o) => o.lignes.some((l) => SU.includes(l.produitService?.code ?? ''))).length,
+    };
   }
 
   // Charge du mois : heures standard des tâches assignées (gabarit), réparties
@@ -292,9 +366,16 @@ export class PilotageService {
       this.prisma.collaborateur.findMany({
         where: { societeId, celluleId: { not: null } },
         select: {
-          tachesProjet: { where: { statut: { not: 'non_necessaire' } }, select: { id: true, debutLe: true, finLe: true, heures: true } },
+          tachesProjet: {
+            where: { statut: { not: 'non_necessaire' } },
+            select: { id: true, debutLe: true, finLe: true, heures: true },
+          },
           dossierPersonnel: {
-            select: { dateEntree: true, archiveLe: true, absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } } },
+            select: {
+              dateEntree: true,
+              archiveLe: true,
+              absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } },
+            },
           },
         },
       }),
@@ -310,7 +391,12 @@ export class PilotageService {
         dateSortie: d?.archiveLe ? jourIso(d.archiveLe) : null,
         absences: (d?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })),
       };
-      const taches = m.tachesProjet.map((t) => ({ id: t.id, debut: t.debutLe, echeance: t.finLe, heures: t.heures == null ? null : Number(t.heures) }));
+      const taches = m.tachesProjet.map((t) => ({
+        id: t.id,
+        debut: t.debutLe,
+        echeance: t.finLe,
+        heures: t.heures == null ? null : Number(t.heures),
+      }));
       const f = feuilleDuMois(mois, salarie, taches, jour, ferieSet);
       imputees += f.heuresImputees;
       disponibles += f.heuresDisponibles;
@@ -322,7 +408,9 @@ export class PilotageService {
   private async feuillesControlees(societeId: string, jour: string) {
     const clos = moisEntre(MOIS_DEBUT_FEUILLES, moisDe(jour)).filter((m) => m < moisDe(jour));
     const parMois = await Promise.all(clos.map((m) => this.temps.feuilles(m, societeId)));
-    const feuilles = parMois.flatMap((p) => p.feuilles).filter((f) => f.statut === 'a_controler' || f.statut === 'controlee');
+    const feuilles = parMois
+      .flatMap((p) => p.feuilles)
+      .filter((f) => f.statut === 'a_controler' || f.statut === 'controlee');
     return { total: feuilles.length, controlees: feuilles.filter((f) => f.statut === 'controlee').length };
   }
 
@@ -340,18 +428,27 @@ export class PilotageService {
     const [projets, remises, conversion, objectifConversion, charge] = await Promise.all([
       this.etapesProjets(societeId, jour),
       this.prisma.evenementTacheProjet.count({
-        where: { type: 'remise', tache: { projet: { societeId } }, creeLe: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) } },
+        where: {
+          type: 'remise',
+          tache: { projet: { societeId } },
+          creeLe: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) },
+        },
       }),
       this.conversion(societeId),
       this.reglages.regle<number | null>(societeId, 'objectif_conversion_chantier'),
       this.chargeEquipes(societeId, mois, jour),
     ]);
     const enCours = projets.filter((p) => p.etapes.some((e) => e.etat !== 'terminee'));
-    const closes = projets.flatMap((p) => p.etapes.filter((e) => e.closeLe && moisDe(e.closeLe) === mois).map((e) => `${p.code} · ${e.libelle}`));
+    const closes = projets.flatMap((p) =>
+      p.etapes.filter((e) => e.closeLe && moisDe(e.closeLe) === mois).map((e) => `${p.code} · ${e.libelle}`),
+    );
     const enRetard = projets.reduce((n, p) => n + p.etapes.filter((e) => e.etat === 'en_retard').length, 0);
     const tauxConversion = pourcentage(conversion.avecSuivi, conversion.signees);
     return [
-      { libelle: 'Projets en cours', valeur: enCours.length ? `${enCours.length} · ${enCours.map((p) => p.code).join(', ')}` : '0' },
+      {
+        libelle: 'Projets en cours',
+        valeur: enCours.length ? `${enCours.length} · ${enCours.map((p) => p.code).join(', ')}` : '0',
+      },
       { libelle: 'Livrables émis', valeur: `${remises} document(s) déposé(s) dans le mois` },
       { libelle: 'Étapes closes', valeur: closes.length ? closes.join(' ; ') : 'Aucune' },
       { libelle: 'Étapes en retard', valeur: `${enRetard} en retard` },
@@ -366,7 +463,9 @@ export class PilotageService {
   // --- Reportings ----------------------------------------------------------
 
   private contenuDe(type: TypeReporting, societeId: string, mois: string, jour: string) {
-    return type === 'direction' ? this.contenuDirection(societeId, mois, jour) : this.reportingRh.contenu(societeId, mois);
+    return type === 'direction'
+      ? this.contenuDirection(societeId, mois, jour)
+      : this.reportingRh.contenu(societeId, mois);
   }
 
   private async reportings(a: Acteur, jour: string) {
@@ -376,9 +475,11 @@ export class PilotageService {
     ]);
     const types: TypeReporting[] = ['direction', 'rh'];
     // Le plus récent en premier ; le reporting de la société avant le RH.
-    const lignes = [...moisAReporter(jour)].reverse().flatMap((mois) =>
-      types.map((type) => ({ mois, type, depot: deposes.find((d) => d.type === type && d.mois === mois) ?? null })),
-    );
+    const lignes = [...moisAReporter(jour)]
+      .reverse()
+      .flatMap((mois) =>
+        types.map((type) => ({ mois, type, depot: deposes.find((d) => d.type === type && d.mois === mois) ?? null })),
+      );
     // Suivi des dépôts (lu, questions) : une requête pour tous.
     const suivis = await this.suivi.suivi(
       a,
@@ -390,7 +491,9 @@ export class PilotageService {
         const statut = statutReporting(mois, deposeLe, jour);
         const { emetteur, destinataire } = REPORTINGS[type];
         // Prérempli tant qu'il n'est pas déposé ; figé ensuite.
-        const contenu = depot ? ((depot.contenu as { libelle: string; valeur: string }[] | null) ?? null) : await this.contenuDe(type, a.societeId, mois, jour);
+        const contenu = depot
+          ? ((depot.contenu as { libelle: string; valeur: string }[] | null) ?? null)
+          : await this.contenuDe(type, a.societeId, mois, jour);
         return {
           type,
           mois,
@@ -416,11 +519,20 @@ export class PilotageService {
     const jour = aujourdhui();
     const types = (Object.keys(REPORTINGS) as TypeReporting[]).filter((t) => REPORTINGS[t].emetteur === a.role);
     if (!types.length) return [];
-    const deposes = await this.prisma.reportingMensuel.findMany({ where: { societeId: a.societeId, type: { in: types } }, select: { type: true, mois: true } });
+    const deposes = await this.prisma.reportingMensuel.findMany({
+      where: { societeId: a.societeId, type: { in: types } },
+      select: { type: true, mois: true },
+    });
     return moisAReporter(jour).flatMap((mois) =>
       types
         .filter((type) => !deposes.some((d) => d.type === type && d.mois === mois))
-        .map((type) => ({ type, mois, periode: moisLong(mois), echeance: echeanceReporting(mois), statut: statutReporting(mois, null, jour) })),
+        .map((type) => ({
+          type,
+          mois,
+          periode: moisLong(mois),
+          echeance: echeanceReporting(mois),
+          statut: statutReporting(mois, null, jour),
+        })),
     );
   }
 
@@ -432,7 +544,12 @@ export class PilotageService {
     if (!types.length || !mois) return [];
     const deposes = await this.prisma.reportingMensuel.findMany({
       where: { societeId: a.societeId, type: { in: types }, mois },
-      select: { type: true, mois: true, deposeLe: true, lectures: { where: { lecteurId: a.userId }, select: { id: true } } },
+      select: {
+        type: true,
+        mois: true,
+        deposeLe: true,
+        lectures: { where: { lecteurId: a.userId }, select: { id: true } },
+      },
     });
     return deposes.map((d) => ({
       type: d.type,
@@ -450,26 +567,34 @@ export class PilotageService {
     if (a.role !== REPORTINGS[type].emetteur) {
       throw new ForbiddenException(`Seul l’émetteur (${libelleRole(REPORTINGS[type].emetteur)}) dépose ce reporting.`);
     }
-    if (!moisAReporter(jour).includes(mois)) throw new BadRequestException('Seul le reporting d’un mois clos se dépose.');
+    if (!moisAReporter(jour).includes(mois))
+      throw new BadRequestException('Seul le reporting d’un mois clos se dépose.');
     // Validée côté DTO, mais des espaces seuls ne font pas une analyse.
-    if (analyse.trim().length < 10) throw new BadRequestException('L’analyse est obligatoire (10 caractères au moins).');
+    if (analyse.trim().length < 10)
+      throw new BadRequestException('L’analyse est obligatoire (10 caractères au moins).');
     const contenu = await this.contenuDe(type, a.societeId, mois, jour);
     try {
       await this.prisma.reportingMensuel.create({
         data: { societeId: a.societeId, type, mois, deposeParId: a.userId, contenu, analyse: analyse.trim() },
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException('Reporting déjà déposé.');
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')
+        throw new ConflictException('Reporting déjà déposé.');
       throw e;
     }
     // Le destinataire est prévenu du dépôt (revue Dir. GC, 21/10/2026, lot 3).
-    const auteur = await this.prisma.utilisateur.findUnique({ where: { id: a.userId }, select: { prenom: true, nom: true } });
+    const auteur = await this.prisma.utilisateur.findUnique({
+      where: { id: a.userId },
+      select: { prenom: true, nom: true },
+    });
     const [an, mm] = mois.split('-');
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'reporting_depose',
       titre: `${type === 'rh' ? 'Reporting RH' : 'Reporting de la direction'} de ${new Date(Date.UTC(Number(an), Number(mm) - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' })} déposé${auteur ? ` par ${auteur.prenom} ${auteur.nom}` : ''} · à lire`,
-      destinataireIds: (await this.notifications.titulairesRole(a.societeId, REPORTINGS[type].destinataire)).filter((id) => id !== a.userId),
+      destinataireIds: (await this.notifications.titulairesRole(a.societeId, REPORTINGS[type].destinataire)).filter(
+        (id) => id !== a.userId,
+      ),
       parId: a.userId,
     });
     return this.vue(a);
@@ -483,12 +608,20 @@ export class PilotageService {
       this.prisma.decisionRegistre.findMany({
         where: { societeId: a.societeId },
         orderBy: { numero: 'desc' },
-        include: { projet: { select: { code: true } }, cellule: { select: { nom: true } }, client: { select: { nom: true } } },
+        include: {
+          projet: { select: { code: true } },
+          cellule: { select: { nom: true } },
+          client: { select: { nom: true } },
+        },
       }),
       this.collaborateurDuCompte(a),
       // Responsable : toujours quelqu'un qui a un compte HUB (revue CTO) — un
       // rôle pourvu, ou une personne dont le compte est actif.
-      Promise.all(ROLES_RESPONSABLES.map(async (r) => ((await this.notifications.titulairesRole(a.societeId, r)).length ? r : null))),
+      Promise.all(
+        ROLES_RESPONSABLES.map(async (r) =>
+          (await this.notifications.titulairesRole(a.societeId, r)).length ? r : null,
+        ),
+      ),
       this.prisma.collaborateur.findMany({
         where: {
           societeId: a.societeId,
@@ -499,7 +632,9 @@ export class PilotageService {
       }),
       saisir ? this.rattachables(a.societeId) : null,
     ]);
-    const auteurs = await this.nomsComptes(decisions.filter((d) => d.proposition).flatMap((d) => [d.creeParId, d.arbitreParId]));
+    const auteurs = await this.nomsComptes(
+      decisions.filter((d) => d.proposition).flatMap((d) => [d.creeParId, d.arbitreParId]),
+    );
     // Délégataire du CEO en fonction (revue CEO) : il arbitre, sauf ses propres propositions.
     const delegue = !ARBITRES.has(a.role) && (await agitPourCeo(this.prisma, a));
     return {
@@ -512,7 +647,10 @@ export class PilotageService {
         texte: d.texte,
         responsable: d.responsable,
         echeance: d.echeance,
-        statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition }, jour),
+        statut: statutDecision(
+          { echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition },
+          jour,
+        ),
         rattachement: rattachementDe(d),
         closeLe: d.closeLe ? jourIso(d.closeLe) : null,
         peutCloturer: d.origine === 'saisie' && !d.closeLe && enVigueur(d) && this.peutCloturer(a, d, collaborateurId),
@@ -524,7 +662,8 @@ export class PilotageService {
               arbitreLe: d.arbitreLe ? jourIso(d.arbitreLe) : null,
               arbitrePar: (d.arbitreParId && auteurs.get(d.arbitreParId)) ?? null,
               motif: d.motifArbitrage,
-              initiale: (d.proposeeInitiale as { texte: string; responsable: string; echeance: string | null } | null) ?? null,
+              initiale:
+                (d.proposeeInitiale as { texte: string; responsable: string; echeance: string | null } | null) ?? null,
             }
           : null,
         peutArbitrer: d.proposition === 'proposee' && (ARBITRES.has(a.role) || (delegue && d.creeParId !== a.userId)),
@@ -549,11 +688,18 @@ export class PilotageService {
   private async nomsComptes(ids: (string | null)[]): Promise<Map<string, string>> {
     const uniques = [...new Set(ids.filter((x): x is string => !!x))];
     if (!uniques.length) return new Map();
-    const comptes = await this.prisma.utilisateur.findMany({ where: { id: { in: uniques } }, select: { id: true, prenom: true, nom: true } });
+    const comptes = await this.prisma.utilisateur.findMany({
+      where: { id: { in: uniques } },
+      select: { id: true, prenom: true, nom: true },
+    });
     return new Map(comptes.map((u) => [u.id, nomDe(u)]));
   }
 
-  private peutCloturer(a: Acteur, d: { responsableRole: string | null; responsableCollaborateurId: string | null }, collaborateurId: string | null) {
+  private peutCloturer(
+    a: Acteur,
+    d: { responsableRole: string | null; responsableCollaborateurId: string | null },
+    collaborateurId: string | null,
+  ) {
     if (ROLES_REGISTRE.has(a.role)) return true;
     if (d.responsableRole && d.responsableRole === a.role) return true;
     return !!collaborateurId && d.responsableCollaborateurId === collaborateurId;
@@ -562,17 +708,23 @@ export class PilotageService {
   // Fiche d'équipe du compte connecté (directe, ou via son dossier RH).
   private async collaborateurDuCompte(a: Acteur): Promise<string | null> {
     const c = await this.prisma.collaborateur.findFirst({
-      where: { societeId: a.societeId, OR: [{ utilisateurId: a.userId }, { dossierPersonnel: { utilisateurId: a.userId } }] },
+      where: {
+        societeId: a.societeId,
+        OR: [{ utilisateurId: a.userId }, { dossierPersonnel: { utilisateurId: a.userId } }],
+      },
       select: { id: true },
     });
     return c?.id ?? null;
   }
 
   async saisir(a: Acteur, dto: SaisirDecisionDto) {
-    if (dto.proposer && !PROPOSANTS.has(a.role)) throw new ForbiddenException('Proposer une décision au CEO est réservé au CTO et au COO.');
+    if (dto.proposer && !PROPOSANTS.has(a.role))
+      throw new ForbiddenException('Proposer une décision au CEO est réservé au CTO et au COO.');
     if (!dto.proposer && !ROLES_REGISTRE.has(a.role)) {
       throw new ForbiddenException(
-        PROPOSANTS.has(a.role) ? 'Vos décisions passent par le CEO : proposez-la-lui.' : 'Saisir une décision est réservé au CTO et au CEO.',
+        PROPOSANTS.has(a.role)
+          ? 'Vos décisions passent par le CEO : proposez-la-lui.'
+          : 'Saisir une décision est réservé au CTO et au CEO.',
       );
     }
     const jour = aujourdhui();
@@ -582,7 +734,10 @@ export class PilotageService {
     const responsable = await this.responsable(a.societeId, dto);
     const rattachement = await this.rattachementSaisi(a.societeId, dto);
     const arbitres = dto.proposer ? await this.notifications.titulairesRole(a.societeId, ROLE_CEO) : [];
-    if (dto.proposer && !arbitres.length) throw new BadRequestException('Aucun compte HUB actif ne porte le rôle CEO : la proposition ne serait jamais reçue.');
+    if (dto.proposer && !arbitres.length)
+      throw new BadRequestException(
+        'Aucun compte HUB actif ne porte le rôle CEO : la proposition ne serait jamais reçue.',
+      );
     const creee = await this.creerNumerotee(a.societeId, (numero) => ({
       ...rattachement,
       societeId: a.societeId,
@@ -633,11 +788,13 @@ export class PilotageService {
   // Refusée, elle reste au registre avec son motif. Le CTO est prévenu.
   async arbitrer(a: Acteur, id: string, dto: ArbitrerDecisionDto) {
     const delegue = !ARBITRES.has(a.role) && (await agitPourCeo(this.prisma, a));
-    if (!ARBITRES.has(a.role) && !delegue) throw new ForbiddenException('Seul le CEO accepte, modifie ou refuse une décision proposée.');
+    if (!ARBITRES.has(a.role) && !delegue)
+      throw new ForbiddenException('Seul le CEO accepte, modifie ou refuse une décision proposée.');
     const d = await this.prisma.decisionRegistre.findFirst({ where: { id, societeId: a.societeId } });
     if (!d) throw new NotFoundException('Décision introuvable.');
     // Délégataire du CEO : jamais sa propre proposition.
-    if (delegue && d.creeParId === a.userId) throw new ForbiddenException('Vous ne pouvez pas arbitrer votre propre proposition : elle attend le CEO.');
+    if (delegue && d.creeParId === a.userId)
+      throw new ForbiddenException('Vous ne pouvez pas arbitrer votre propre proposition : elle attend le CEO.');
     if (d.proposition !== 'proposee') throw new ConflictException('Cette décision n’attend pas d’arbitrage.');
     const jour = aujourdhui();
     const numero = numeroDecision(d.numero);
@@ -657,10 +814,16 @@ export class PilotageService {
       const responsable =
         modifiee && (dto.responsableRole || dto.responsableCollaborateurId)
           ? await this.responsable(a.societeId, dto)
-          : { responsable: d.responsable, responsableRole: d.responsableRole, responsableCollaborateurId: d.responsableCollaborateurId };
-      if (echeance < jour) throw new BadRequestException('L’échéance proposée est passée : modifiez-la avant d’accepter.');
+          : {
+              responsable: d.responsable,
+              responsableRole: d.responsableRole,
+              responsableCollaborateurId: d.responsableCollaborateurId,
+            };
+      if (echeance < jour)
+        throw new BadRequestException('L’échéance proposée est passée : modifiez-la avant d’accepter.');
       const change = texte !== d.texte || echeance !== d.echeance || responsable.responsable !== d.responsable;
-      if (modifiee && !change) throw new BadRequestException('Rien n’a été modifié : acceptez la décision telle quelle.');
+      if (modifiee && !change)
+        throw new BadRequestException('Rien n’a été modifié : acceptez la décision telle quelle.');
       await this.prisma.decisionRegistre.update({
         where: { id },
         data: {
@@ -672,28 +835,57 @@ export class PilotageService {
           texte,
           echeance,
           ...responsable,
-          proposeeInitiale: change ? { texte: d.texte, responsable: d.responsable, echeance: d.echeance } : Prisma.DbNull,
+          proposeeInitiale: change
+            ? { texte: d.texte, responsable: d.responsable, echeance: d.echeance }
+            : Prisma.DbNull,
         },
       });
-      await this.prevenirResponsable(a, { texte, echeance, responsableRole: responsable.responsableRole, responsableCollaborateurId: responsable.responsableCollaborateurId });
+      await this.prevenirResponsable(a, {
+        texte,
+        echeance,
+        responsableRole: responsable.responsableRole,
+        responsableCollaborateurId: responsable.responsableCollaborateurId,
+      });
       titre = `Décision ${numero} ${change ? 'acceptée avec modifications' : 'acceptée'} par le CEO · ${court(texte)}`;
     }
-    await this.notifications.envoyer({ societeId: a.societeId, type: 'decision_arbitree', titre, destinataireIds: [d.creeParId], parId: a.userId });
+    await this.notifications.envoyer({
+      societeId: a.societeId,
+      type: 'decision_arbitree',
+      titre,
+      destinataireIds: [d.creeParId],
+      parId: a.userId,
+    });
     return this.vue(a);
   }
 
-  private async responsable(societeId: string, dto: Pick<SaisirDecisionDto, 'responsableRole' | 'responsableCollaborateurId'>) {
-    if (!!dto.responsableRole === !!dto.responsableCollaborateurId) throw new BadRequestException('Un responsable, rôle ou collaborateur, est requis.');
+  private async responsable(
+    societeId: string,
+    dto: Pick<SaisirDecisionDto, 'responsableRole' | 'responsableCollaborateurId'>,
+  ) {
+    if (!!dto.responsableRole === !!dto.responsableCollaborateurId)
+      throw new BadRequestException('Un responsable, rôle ou collaborateur, est requis.');
     if (dto.responsableRole) {
       if (!ROLES_RESPONSABLES.includes(dto.responsableRole)) throw new BadRequestException('Rôle responsable inconnu.');
       if (!(await this.notifications.titulairesRole(societeId, dto.responsableRole)).length) {
-        throw new BadRequestException(`Aucun compte HUB actif ne porte le rôle ${libelleRole(dto.responsableRole)} : il ne serait jamais prévenu.`);
+        throw new BadRequestException(
+          `Aucun compte HUB actif ne porte le rôle ${libelleRole(dto.responsableRole)} : il ne serait jamais prévenu.`,
+        );
       }
-      return { responsable: libelleRole(dto.responsableRole), responsableRole: dto.responsableRole, responsableCollaborateurId: null };
+      return {
+        responsable: libelleRole(dto.responsableRole),
+        responsableRole: dto.responsableRole,
+        responsableCollaborateurId: null,
+      };
     }
     const c = await this.prisma.collaborateur.findFirst({
       where: { id: dto.responsableCollaborateurId, societeId },
-      select: { id: true, prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+      select: {
+        id: true,
+        prenom: true,
+        nom: true,
+        utilisateur: { select: { actif: true } },
+        dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } },
+      },
     });
     if (!c) throw new BadRequestException('Collaborateur responsable introuvable.');
     // Revue CTO : un responsable sans compte HUB ne serait jamais relancé.
@@ -706,7 +898,11 @@ export class PilotageService {
   // Projets, cellules et clients proposés au rattachement d'une décision.
   private async rattachables(societeId: string) {
     const [projets, cellules, clients] = await Promise.all([
-      this.prisma.projet.findMany({ where: { societeId, ouvertLe: { not: null } }, orderBy: { code: 'asc' }, select: { id: true, code: true } }),
+      this.prisma.projet.findMany({
+        where: { societeId, ouvertLe: { not: null } },
+        orderBy: { code: 'asc' },
+        select: { id: true, code: true },
+      }),
       this.prisma.cellule.findMany({ where: { societeId }, orderBy: { code: 'asc' }, select: { id: true, nom: true } }),
       this.prisma.client.findMany({ where: { societeId }, orderBy: { nom: 'asc' }, select: { id: true, nom: true } }),
     ]);
@@ -720,7 +916,8 @@ export class PilotageService {
   // Rattachement d'une décision saisie : un seul, de la société.
   private async rattachementSaisi(societeId: string, dto: SaisirDecisionDto) {
     const choisis = [dto.projetId, dto.celluleId, dto.clientId].filter(Boolean);
-    if (choisis.length > 1) throw new BadRequestException('Une décision se rattache à un seul élément : projet, cellule ou client.');
+    if (choisis.length > 1)
+      throw new BadRequestException('Une décision se rattache à un seul élément : projet, cellule ou client.');
     const existe = async (n: number) => {
       if (!n) throw new BadRequestException('Élément de rattachement introuvable dans la société.');
     };
@@ -732,12 +929,17 @@ export class PilotageService {
 
   // Décisions rattachées à un projet, une cellule ou un client (fiche concernée).
   async decisionsRattachees(a: Acteur, cible: { projetId?: string; celluleId?: string; clientId?: string }) {
-    if (!cible.projetId && !cible.celluleId && !cible.clientId) throw new BadRequestException('Projet, cellule ou client requis.');
+    if (!cible.projetId && !cible.celluleId && !cible.clientId)
+      throw new BadRequestException('Projet, cellule ou client requis.');
     const jour = aujourdhui();
     const decisions = await this.prisma.decisionRegistre.findMany({
       where: {
         societeId: a.societeId,
-        ...(cible.projetId ? { projetId: cible.projetId } : cible.celluleId ? { celluleId: cible.celluleId } : { clientId: cible.clientId }),
+        ...(cible.projetId
+          ? { projetId: cible.projetId }
+          : cible.celluleId
+            ? { celluleId: cible.celluleId }
+            : { clientId: cible.clientId }),
         // Une proposition refusée n'a jamais été une décision : pas sur la fiche.
         OR: [{ proposition: null }, { proposition: { in: ['proposee', 'acceptee'] } }],
       },
@@ -751,7 +953,10 @@ export class PilotageService {
       texte: d.texte,
       responsable: d.responsable,
       echeance: d.echeance,
-      statut: statutDecision({ echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition }, jour),
+      statut: statutDecision(
+        { echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition },
+        jour,
+      ),
     }));
   }
 
@@ -760,7 +965,8 @@ export class PilotageService {
     if (!d) throw new NotFoundException('Décision introuvable.');
     if (d.origine !== 'saisie') throw new ConflictException('Une décision inscrite par le HUB se clôt d’elle-même.');
     if (d.closeLe) throw new ConflictException('Décision déjà close.');
-    if (!enVigueur(d)) throw new ConflictException('Une décision proposée ou refusée ne se clôt pas : elle n’est pas en vigueur.');
+    if (!enVigueur(d))
+      throw new ConflictException('Une décision proposée ou refusée ne se clôt pas : elle n’est pas en vigueur.');
     if (!this.peutCloturer(a, d, await this.collaborateurDuCompte(a))) {
       throw new ForbiddenException('Seuls le responsable, le CTO et le CEO clôturent une décision.');
     }
@@ -770,7 +976,10 @@ export class PilotageService {
 
   // Numéro D-NNN suivant, jamais réutilisé ; une collision (deux créations
   // simultanées) est rejouée.
-  private async creerNumerotee(societeId: string, data: (numero: number) => Prisma.DecisionRegistreUncheckedCreateInput) {
+  private async creerNumerotee(
+    societeId: string,
+    data: (numero: number) => Prisma.DecisionRegistreUncheckedCreateInput,
+  ) {
     for (let essai = 0; essai < 3; essai++) {
       const max = await this.prisma.decisionRegistre.aggregate({ where: { societeId }, _max: { numero: true } });
       try {
@@ -778,7 +987,13 @@ export class PilotageService {
       } catch (e) {
         if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
         const cle = data(0).cleOrigine;
-        if (cle && (await this.prisma.decisionRegistre.findUnique({ where: { societeId_cleOrigine: { societeId, cleOrigine: cle } } }))) return null;
+        if (
+          cle &&
+          (await this.prisma.decisionRegistre.findUnique({
+            where: { societeId_cleOrigine: { societeId, cleOrigine: cle } },
+          }))
+        )
+          return null;
       }
     }
     throw new ConflictException('Numérotation du registre indisponible, réessayez.');
@@ -788,9 +1003,18 @@ export class PilotageService {
   // avenants envoyés, permissions exceptionnelles accordées, reportings non
   // déposés à l'échéance, changements de Réglages. Idempotent (cleOrigine).
   private async synchroniserRegistre(societeId: string, jour: string) {
-    const sources = (await Promise.all([this.decisionsAvenants(societeId, jour), this.decisionsPermissions(societeId, jour), this.decisionsReportings(societeId, jour), this.decisionsReglages(societeId)])).flat();
+    const sources = (
+      await Promise.all([
+        this.decisionsAvenants(societeId, jour),
+        this.decisionsPermissions(societeId, jour),
+        this.decisionsReportings(societeId, jour),
+        this.decisionsReglages(societeId),
+      ])
+    ).flat();
     const existantes = new Map(
-      (await this.prisma.decisionRegistre.findMany({ where: { societeId, origine: 'hub' } })).map((d) => [d.cleOrigine!, d] as const),
+      (await this.prisma.decisionRegistre.findMany({ where: { societeId, origine: 'hub' } })).map(
+        (d) => [d.cleOrigine!, d] as const,
+      ),
     );
     const champs = (s: DecisionHub) => ({
       date: s.date,
@@ -805,7 +1029,13 @@ export class PilotageService {
     for (const s of sources.sort((x, y) => x.date.localeCompare(y.date))) {
       const d = existantes.get(s.cle);
       if (!d) {
-        await this.creerNumerotee(societeId, (numero) => ({ societeId, numero, origine: 'hub', cleOrigine: s.cle, ...champs(s) }));
+        await this.creerNumerotee(societeId, (numero) => ({
+          societeId,
+          numero,
+          origine: 'hub',
+          cleOrigine: s.cle,
+          ...champs(s),
+        }));
         continue;
       }
       const change =
@@ -823,15 +1053,32 @@ export class PilotageService {
     const [seuil, devis] = await Promise.all([
       this.reglages.regle<number>(societeId, 'alerte_avenant_jours'),
       this.prisma.devis.findMany({
-        where: { societeId, projetId: { not: null }, dateEnvoi: { not: null }, lignes: { some: { produitService: { famille: 'TS' } } } },
+        where: {
+          societeId,
+          projetId: { not: null },
+          dateEnvoi: { not: null },
+          lignes: { some: { produitService: { famille: 'TS' } } },
+        },
         select: {
           id: true,
           statut: true,
           dateValidite: true,
           dateEnvoi: true,
           dateReponse: true,
-          lignes: { orderBy: { ordre: 'asc' }, where: { produitService: { famille: 'TS' } }, select: { designation: true } },
-          projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcher: { select: { id: true, prenom: true, nom: true } } } } } } } },
+          lignes: {
+            orderBy: { ordre: 'asc' },
+            where: { produitService: { famille: 'TS' } },
+            select: { designation: true },
+          },
+          projet: {
+            select: {
+              code: true,
+              cellules: {
+                take: 1,
+                select: { cellule: { select: { dispatcher: { select: { id: true, prenom: true, nom: true } } } } },
+              },
+            },
+          },
         },
       }),
     ]);
@@ -856,8 +1103,21 @@ export class PilotageService {
   // Permission exceptionnelle accordée par le N+1 : close une fois l'absence passée.
   private async decisionsPermissions(societeId: string, jour: string): Promise<DecisionHub[]> {
     const demandes = await this.prisma.demandeAbsence.findMany({
-      where: { type: 'permission_exceptionnelle', statut: { in: ['accord_n1', 'validee'] }, decisionN1Le: { not: null }, dossier: { societeId } },
-      select: { id: true, dateDebut: true, dateFin: true, decisionN1Le: true, n1Role: true, n1CollaborateurId: true, dossier: { select: { prenom: true, nom: true } } },
+      where: {
+        type: 'permission_exceptionnelle',
+        statut: { in: ['accord_n1', 'validee'] },
+        decisionN1Le: { not: null },
+        dossier: { societeId },
+      },
+      select: {
+        id: true,
+        dateDebut: true,
+        dateFin: true,
+        decisionN1Le: true,
+        n1Role: true,
+        n1CollaborateurId: true,
+        dossier: { select: { prenom: true, nom: true } },
+      },
     });
     const n1 = await this.prisma.collaborateur.findMany({
       where: { id: { in: demandes.flatMap((d) => (d.n1CollaborateurId ? [d.n1CollaborateurId] : [])) } },
@@ -884,7 +1144,10 @@ export class PilotageService {
   private async decisionsReportings(societeId: string, jour: string): Promise<DecisionHub[]> {
     const [societe, deposes] = await Promise.all([
       this.prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } }),
-      this.prisma.reportingMensuel.findMany({ where: { societeId }, select: { type: true, mois: true, deposeLe: true } }),
+      this.prisma.reportingMensuel.findMany({
+        where: { societeId },
+        select: { type: true, mois: true, deposeLe: true },
+      }),
     ]);
     const types: TypeReporting[] = ['direction', 'rh'];
     return moisAReporter(jour).flatMap((mois) =>
@@ -914,7 +1177,10 @@ export class PilotageService {
   // Changement de Réglages (motif obligatoire, journal) : décision prise et
   // appliquée, inscrite close.
   private async decisionsReglages(societeId: string): Promise<DecisionHub[]> {
-    const journal = await this.prisma.journalReglage.findMany({ where: { societeId }, select: { id: true, libelle: true, motif: true, createdAt: true } });
+    const journal = await this.prisma.journalReglage.findMany({
+      where: { societeId },
+      select: { id: true, libelle: true, motif: true, createdAt: true },
+    });
     return journal.map((j) => ({
       cle: `reglage:${j.id}`,
       date: jourIso(j.createdAt),
@@ -934,7 +1200,11 @@ const enVigueur = (d: { proposition: string | null }) => d.proposition === null 
 const court = (texte: string, n = 80) => (texte.length > n ? `${texte.slice(0, n - 1)}…` : texte);
 
 // Libellé du rattachement d'une décision (« Projet FS_POI.26 »…), null sans.
-function rattachementDe(d: { projet: { code: string } | null; cellule: { nom: string } | null; client: { nom: string } | null }) {
+function rattachementDe(d: {
+  projet: { code: string } | null;
+  cellule: { nom: string } | null;
+  client: { nom: string } | null;
+}) {
   if (d.projet) return { type: 'projet' as const, libelle: d.projet.code };
   if (d.cellule) return { type: 'cellule' as const, libelle: d.cellule.nom };
   if (d.client) return { type: 'client' as const, libelle: d.client.nom };

@@ -1,5 +1,19 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+  MinLength,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
 import { UrlFichierJoint } from '../../commun/fichier-joint';
 
 // PATCH …/projets-ouverts/:id/taches/:tacheId/assignation — null = retirer.
@@ -26,7 +40,11 @@ export class PieceRemiseDto {
 }
 export const MAX_PIECES_REMISE = 5;
 export class RemettreTacheDto {
-  @IsOptional() @IsArray() @ArrayMaxSize(MAX_PIECES_REMISE) @ValidateNested({ each: true }) @Type(() => PieceRemiseDto)
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_PIECES_REMISE)
+  @ValidateNested({ each: true })
+  @Type(() => PieceRemiseDto)
   pieces?: PieceRemiseDto[];
   @IsOptional() @IsString() @MaxLength(500) commentaire?: string;
 }

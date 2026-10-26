@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AccesProjetGuard } from '../acces-projet.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
@@ -64,44 +53,27 @@ export class FacturationController {
 
   @Post('echeancier')
   @RequiertPermission('finances_factures', 'ecriture')
-  creerEcheancier(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Body() dto: CreerEcheancierDto,
-  ) {
+  creerEcheancier(@Req() req: R, @Param('id') id: string, @Body() dto: CreerEcheancierDto) {
     return this.facturation.creerEcheancier(req.user.societeId, id, dto);
   }
 
   @Patch(':factureId')
   @RequiertPermission('finances_factures', 'ecriture')
-  patch(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('factureId') factureId: string,
-    @Body() dto: PatchFactureDto,
-  ) {
+  patch(@Req() req: R, @Param('id') id: string, @Param('factureId') factureId: string, @Body() dto: PatchFactureDto) {
     return this.facturation.patch(req.user.societeId, id, factureId, dto);
   }
 
   // Facture de la mensualité du mois pour une ligne SU / EX de l'offre.
   @Post('mensualites')
   @RequiertPermission('finances_factures', 'ecriture')
-  creerMensualite(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Body() dto: CreerMensualiteDto,
-  ) {
+  creerMensualite(@Req() req: R, @Param('id') id: string, @Body() dto: CreerMensualiteDto) {
     return this.facturation.creerMensualite(req.user.societeId, id, dto.ligneDevisId);
   }
 
   // Refacturation des études techniques : écriture sur les factures.
   @Post('refacturation-etudes')
   @RequiertPermission('finances_factures', 'ecriture')
-  refacturerEtudes(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Body() dto: RefacturerEtudesDto,
-  ) {
+  refacturerEtudes(@Req() req: R, @Param('id') id: string, @Body() dto: RefacturerEtudesDto) {
     return this.facturation.refacturerEtudes(req.user.societeId, id, dto.blocIds);
   }
 
@@ -122,32 +94,20 @@ export class FacturationController {
   // finances_factures (décision H3).
   @Post('etudes/:blocId/reglement')
   @RequiertPermission('finances_charges', 'validation')
-  marquerBureauRegle(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('blocId') blocId: string,
-  ) {
+  marquerBureauRegle(@Req() req: R, @Param('id') id: string, @Param('blocId') blocId: string) {
     return this.facturation.marquerBureauRegle(req.user.societeId, id, blocId, req.user.userId);
   }
 
   @Post(':factureId/emission')
   @RequiertPermission('finances_factures', 'validation')
   @ValidationCeoAuDelaDuSeuil('facture', 'factureId', { exclusif: true })
-  emettre(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('factureId') factureId: string,
-  ) {
+  emettre(@Req() req: R, @Param('id') id: string, @Param('factureId') factureId: string) {
     return this.facturation.emettre(req.user.societeId, id, factureId, req.user.userId);
   }
 
   @Delete(':factureId')
   @RequiertPermission('finances_factures', 'ecriture')
-  supprimer(
-    @Req() req: R,
-    @Param('id') id: string,
-    @Param('factureId') factureId: string,
-  ) {
+  supprimer(@Req() req: R, @Param('id') id: string, @Param('factureId') factureId: string) {
     return this.facturation.supprimer(req.user.societeId, id, factureId);
   }
 

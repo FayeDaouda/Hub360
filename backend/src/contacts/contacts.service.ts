@@ -18,7 +18,9 @@ export type FicheContact = {
 // (rôle de la société ou transverse, hors holding_admin). Comptes actifs ou
 // invitation en attente ; un compte désactivé (départ) n'apparaît plus.
 const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
-  roles: { some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: 'holding_admin' }, supprimeLe: null } } },
+  roles: {
+    some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: 'holding_admin' }, supprimeLe: null } },
+  },
   OR: [{ actif: true }, { motDePasseHash: null }],
 });
 
@@ -30,7 +32,11 @@ const selectContact = (societeId: string) =>
     prenom: true,
     nom: true,
     email: true,
-    roles: { where: { OR: [{ societeId }, { societeId: null }] }, select: { role: { select: { nom: true } } }, take: 1 },
+    roles: {
+      where: { OR: [{ societeId }, { societeId: null }] },
+      select: { role: { select: { nom: true } } },
+      take: 1,
+    },
     dossierPersonnel: DOSSIER,
     collaborations: {
       where: { societeId },

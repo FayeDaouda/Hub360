@@ -44,10 +44,15 @@ const LOADING_MARKERS = '.skeleton, .admin-skeleton, .auth-squelette, .auth-cart
 // for the network to settle (bounded: the notification poll never stops).
 export async function waitForContent(page: Page): Promise<void> {
   await page.waitForLoadState('load');
-  await page.waitForFunction((selector) => document.querySelectorAll(selector).length === 0, LOADING_MARKERS, { timeout: 30_000 });
+  await page.waitForFunction((selector) => document.querySelectorAll(selector).length === 0, LOADING_MARKERS, {
+    timeout: 30_000,
+  });
   // KPI tiles show « … » while their figure loads.
   await page.waitForFunction(
-    () => ![...document.querySelectorAll('main *')].some((element) => element.childElementCount === 0 && element.textContent?.trim() === '…'),
+    () =>
+      ![...document.querySelectorAll('main *')].some(
+        (element) => element.childElementCount === 0 && element.textContent?.trim() === '…',
+      ),
     undefined,
     { timeout: 30_000 },
   );
@@ -72,10 +77,13 @@ export async function installCaptureGuards(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const violations: string[] = [];
     (window as unknown as { __cspViolations: string[] }).__cspViolations = violations;
-    document.addEventListener('securitypolicyviolation', (e) => violations.push(`${e.violatedDirective} ${e.blockedURI}`));
+    document.addEventListener('securitypolicyviolation', (e) =>
+      violations.push(`${e.violatedDirective} ${e.blockedURI}`),
+    );
     const figer = () => {
       const style = document.createElement('style');
-      style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
+      style.textContent =
+        '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
       document.head.append(style);
     };
     if (document.head) figer();
@@ -103,7 +111,8 @@ export async function installSeedNoiseFilter(page: Page): Promise<void> {
     const neutraliseAvatars = (root: ParentNode) => {
       for (const avatar of root.querySelectorAll<HTMLElement>('.av, .eq-avatar')) {
         // Guarded: re-setting the same style would notify the observer again.
-        if (avatar.style.backgroundColor && avatar.style.backgroundColor !== 'rgb(128, 128, 128)') avatar.style.background = '#808080';
+        if (avatar.style.backgroundColor && avatar.style.backgroundColor !== 'rgb(128, 128, 128)')
+          avatar.style.background = '#808080';
       }
     };
     const start = () => {

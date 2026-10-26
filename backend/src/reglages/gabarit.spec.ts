@@ -40,9 +40,13 @@ describe('appliquer', () => {
   it('refuse champ absent, valeur invalide, fenêtre inversée', () => {
     const essai = (ch: Parameters<typeof appliquer>[1]) => () => appliquer(GABARIT_GC_CONCEPTION, ch);
     expect(essai([{ carte: 'inconnue', champ: 'fin', valeur: 3 }])).toThrow(ErreurGabarit);
-    expect(essai([{ carte: 'documents_client', tache: 'ninea', champ: 'heures', valeur: 2 }])).toThrow('pas de temps standard');
+    expect(essai([{ carte: 'documents_client', tache: 'ninea', champ: 'heures', valeur: 2 }])).toThrow(
+      'pas de temps standard',
+    );
     expect(essai([{ carte: 'releves_existants', champ: 'debut', valeur: 2 }])).toThrow('pas de fenêtre');
-    expect(essai([{ carte: 'livrables', tache: 'esquisses', champ: 'heures', valeur: 1.25 }])).toThrow('temps invalide');
+    expect(essai([{ carte: 'livrables', tache: 'esquisses', champ: 'heures', valeur: 1.25 }])).toThrow(
+      'temps invalide',
+    );
     expect(essai([{ carte: 'livrables', champ: 'debut', valeur: 16 }])).toThrow('commence après sa fin');
   });
   it('libellé de version', () => {
@@ -56,7 +60,10 @@ describe('normaliser', () => {
     expect(() => normaliser(def('parts_factures'), { F1: 40, F2: 40, F3: 10 })).toThrow('100 %');
   });
   it('jours fériés : dates valides, dédoublonnées et triées', () => {
-    expect(normaliser(def('jours_feries'), ['2026-12-25', '2026-04-04', '2026-12-25'])).toEqual(['2026-04-04', '2026-12-25']);
+    expect(normaliser(def('jours_feries'), ['2026-12-25', '2026-04-04', '2026-12-25'])).toEqual([
+      '2026-04-04',
+      '2026-12-25',
+    ]);
     expect(() => normaliser(def('jours_feries'), ['25/12/2026'])).toThrow('AAAA-MM-JJ');
   });
   it('objectifs : vide = à fixer, zone ordonnée', () => {
@@ -73,19 +80,40 @@ describe('normaliser', () => {
 
 // Visa DPLG (revue Dir. GC, 21/10/2026) : réglé par tâche dans le gabarit.
 describe('gabarit · visa DPLG', () => {
-  const visees = GABARIT_GC_CONCEPTION.etapes.flatMap((e) => e.cartes.flatMap((c) => c.taches.filter((t) => t.visaDplg).map((t) => `${c.cle}.${t.cle}`)));
+  const visees = GABARIT_GC_CONCEPTION.etapes.flatMap((e) =>
+    e.cartes.flatMap((c) => c.taches.filter((t) => t.visaDplg).map((t) => `${c.cle}.${t.cle}`)),
+  );
 
   it('par défaut : plans du permis, plans d’exécution, intégration et livraison', () => {
-    expect(visees).toEqual(['permis_construire.plans_autorisation', 'pe_architecture.pe_architecture', 'tache_finale.integration_livraison']);
+    expect(visees).toEqual([
+      'permis_construire.plans_autorisation',
+      'pe_architecture.pe_architecture',
+      'tache_finale.integration_livraison',
+    ]);
   });
 
   it('se coche et se décoche par tâche, jamais sur une carte ; décrit au journal', () => {
-    const { contenu, appliques } = appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', tache: 'fiches_techniques', champ: 'visa', valeur: 1 }]);
-    expect(contenu.etapes.flatMap((e) => e.cartes).find((c) => c.cle === 'permis_construire')!.taches.find((t) => t.cle === 'fiches_techniques')!.visaDplg).toBe(true);
+    const { contenu, appliques } = appliquer(GABARIT_GC_CONCEPTION, [
+      { carte: 'permis_construire', tache: 'fiches_techniques', champ: 'visa', valeur: 1 },
+    ]);
+    expect(
+      contenu.etapes
+        .flatMap((e) => e.cartes)
+        .find((c) => c.cle === 'permis_construire')!
+        .taches.find((t) => t.cle === 'fiches_techniques')!.visaDplg,
+    ).toBe(true);
     expect(decrire(appliques[0])).toBe('Permis de construire · Fiches techniques — visa DPLG : non → oui');
-    expect(() => appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', champ: 'visa', valeur: 1 }])).toThrow(ErreurGabarit);
-    expect(() => appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', tache: 'depot', champ: 'visa', valeur: 2 }])).toThrow(ErreurGabarit);
+    expect(() => appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', champ: 'visa', valeur: 1 }])).toThrow(
+      ErreurGabarit,
+    );
+    expect(() =>
+      appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'permis_construire', tache: 'depot', champ: 'visa', valeur: 2 }]),
+    ).toThrow(ErreurGabarit);
     // Déjà coché : rien à appliquer.
-    expect(appliquer(GABARIT_GC_CONCEPTION, [{ carte: 'pe_architecture', tache: 'pe_architecture', champ: 'visa', valeur: 1 }]).appliques).toEqual([]);
+    expect(
+      appliquer(GABARIT_GC_CONCEPTION, [
+        { carte: 'pe_architecture', tache: 'pe_architecture', champ: 'visa', valeur: 1 },
+      ]).appliques,
+    ).toEqual([]);
   });
 });

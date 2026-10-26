@@ -44,7 +44,14 @@ function svc(affectations: unknown[]) {
   const sign = jest.fn().mockReturnValue('jeton');
   const jwt = { sign } as unknown as JwtService;
   const notifications = { envoyer: jest.fn() };
-  return { svc: new AuthService(prisma, jwt, notifications as never), findMany, update, sign, notifications, evenement: (prisma as unknown as { evenementCompte: { create: jest.Mock } }).evenementCompte.create };
+  return {
+    svc: new AuthService(prisma, jwt, notifications as never),
+    findMany,
+    update,
+    sign,
+    notifications,
+    evenement: (prisma as unknown as { evenementCompte: { create: jest.Mock } }).evenementCompte.create,
+  };
 }
 
 const DTO = { email: 'a@b.c', motDePasse: 'x', societeSlug: 'grey-concrete' };
@@ -82,13 +89,17 @@ describe('AuthService.changerMotDePasse', () => {
   it('mot de passe actuel incorrect → 400, rien n’est modifié', async () => {
     (verifierMotDePasse as jest.Mock).mockResolvedValueOnce(false);
     const { svc: s, update } = svc([affectation('S1', 'Salarié')]);
-    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'faux', 'nouveau-mdp-1')).rejects.toThrow(BadRequestException);
+    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'faux', 'nouveau-mdp-1')).rejects.toThrow(
+      BadRequestException,
+    );
     expect(update).not.toHaveBeenCalled();
   });
 
   it('nouveau identique à l’actuel → 400', async () => {
     const { svc: s } = svc([affectation('S1', 'Salarié')]);
-    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'meme-mdp-123', 'meme-mdp-123')).rejects.toThrow(BadRequestException);
+    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'meme-mdp-123', 'meme-mdp-123')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it('change le hash, coupe les autres sessions et rend une session valide (iat ≥ coupure)', async () => {
@@ -117,7 +128,13 @@ describe('dateEmission', () => {
 
 describe('Double authentification', () => {
   const SECRET = base32(Buffer.from('12345678901234567890'));
-  const AVEC_2FA = { ...UTILISATEUR, totpActifLe: new Date(), totpSecret: chiffrerSecret(SECRET), totpDernierPas: null, totpCodesSecours: [hacherCodeSecours('ABCD-EFGH')] };
+  const AVEC_2FA = {
+    ...UTILISATEUR,
+    totpActifLe: new Date(),
+    totpSecret: chiffrerSecret(SECRET),
+    totpDernierPas: null,
+    totpCodesSecours: [hacherCodeSecours('ABCD-EFGH')],
+  };
 
   function svc2(u: unknown = AVEC_2FA) {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
@@ -146,7 +163,13 @@ describe('Double authentification', () => {
     // Revue CIO (22/10/2026) : « desactive » n'est accepté en production que
     // sur un serveur de démonstration ; jamais sur un HUB réel.
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(true);
-    expect(doubleFacteurExige('CIO (transverse)', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive', HUB_DONNEES_DEMO: 'autorise' })).toBe(false);
+    expect(
+      doubleFacteurExige('CIO (transverse)', {
+        NODE_ENV: 'production',
+        HUB_DOUBLE_FACTEUR: 'desactive',
+        HUB_DONNEES_DEMO: 'autorise',
+      }),
+    ).toBe(false);
     expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
     expect(doubleFacteurExige('societe_admin', { NODE_ENV: 'production' })).toBe(true);
   });
@@ -170,7 +193,13 @@ describe('Double authentification', () => {
   });
 
   it('activation : premier code juste → 8 codes de secours et session', async () => {
-    const enCours = { ...UTILISATEUR, totpActifLe: null, totpSecret: chiffrerSecret(SECRET), totpDernierPas: null, totpCodesSecours: [] };
+    const enCours = {
+      ...UTILISATEUR,
+      totpActifLe: null,
+      totpSecret: chiffrerSecret(SECRET),
+      totpDernierPas: null,
+      totpCodesSecours: [],
+    };
     const res = await svc2(enCours).s.activerDoubleFacteur('jeton', codeAuPas(SECRET, pasCourant()));
     expect(res.codesSecours).toHaveLength(8);
     expect(res.role).toBe('CFO');
@@ -183,8 +212,12 @@ describe('AuthService · compte de secours', () => {
   it('connexion d’un compte technique : trace et alerte ; compte ordinaire : rien', async () => {
     const secours = svc([affectation('S1', 'societe_admin')]);
     await secours.svc.login(DTO);
-    expect(secours.evenement).toHaveBeenCalledWith({ data: expect.objectContaining({ type: 'connexion_secours', utilisateurId: 'U1' }) });
-    expect(secours.notifications.envoyer).toHaveBeenCalledWith(expect.objectContaining({ type: 'connexion_secours', titre: expect.stringContaining('compte de secours a@b.c') }));
+    expect(secours.evenement).toHaveBeenCalledWith({
+      data: expect.objectContaining({ type: 'connexion_secours', utilisateurId: 'U1' }),
+    });
+    expect(secours.notifications.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'connexion_secours', titre: expect.stringContaining('compte de secours a@b.c') }),
+    );
     const ordinaire = svc([affectation('S1', 'CFO')]);
     await ordinaire.svc.login(DTO);
     expect(ordinaire.notifications.envoyer).not.toHaveBeenCalled();

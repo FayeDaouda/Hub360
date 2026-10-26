@@ -13,14 +13,28 @@ describe('Tendances des indicateurs', () => {
   });
 
   it('à temps et reprises : tâches validées dans le mois, rien = pas de valeur', () => {
-    const t = (valideeLe: string, echeance: string, reprise = false) => ({ statut: 'validee' as const, valideeLe, echeance, reprise });
-    const { aTemps, reprises } = seriesTaches(['2026-09', '2026-10'], [
-      t('2026-10-02', '2026-10-05'),
-      t('2026-10-09', '2026-10-05', true),
-      t('2026-10-10', '2026-10-12'),
-      t('2026-10-11', '2026-10-20', true),
+    const t = (valideeLe: string, echeance: string, reprise = false) => ({
+      statut: 'validee' as const,
+      valideeLe,
+      echeance,
+      reprise,
+    });
+    const { aTemps, reprises } = seriesTaches(
+      ['2026-09', '2026-10'],
+      [
+        t('2026-10-02', '2026-10-05'),
+        t('2026-10-09', '2026-10-05', true),
+        t('2026-10-10', '2026-10-12'),
+        t('2026-10-11', '2026-10-20', true),
+      ],
+    );
+    expect(aTemps).toEqual([
+      { mois: '2026-09', valeur: null },
+      { mois: '2026-10', valeur: 75 },
     ]);
-    expect(aTemps).toEqual([{ mois: '2026-09', valeur: null }, { mois: '2026-10', valeur: 75 }]);
-    expect(reprises).toEqual([{ mois: '2026-09', valeur: null }, { mois: '2026-10', valeur: 50 }]);
+    expect(reprises).toEqual([
+      { mois: '2026-09', valeur: null },
+      { mois: '2026-10', valeur: 50 },
+    ]);
   });
 });

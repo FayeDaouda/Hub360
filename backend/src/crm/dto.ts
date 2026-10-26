@@ -17,15 +17,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ACTIONS_CRM, ActionCrm } from './cycle';
-import {
-  Categorie,
-  Gamme,
-  ModePaiement,
-  NatureDossier,
-  Standing,
-  TypeBien,
-  TypeClient,
-} from '@prisma/client';
+import { Categorie, Gamme, ModePaiement, NatureDossier, Standing, TypeBien, TypeClient } from '@prisma/client';
 
 // Plus de sigle à la création (maquette « Nouveau projet », oct. 2026) : le
 // segment CLIENT d'une personne morale se tire de sa raison sociale.

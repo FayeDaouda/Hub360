@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
@@ -30,11 +21,7 @@ export class CollaborateursController {
   // `?cellule=A` (une équipe) ou `?cellule=A&cellule=B` (plusieurs — Nest
   // renvoie alors un tableau) : cf. CollaborateursService.findAll.
   @Get()
-  findAll(
-    @Req() req: R,
-    @Query('q') q?: string,
-    @Query('cellule') cellule?: string | string[],
-  ) {
+  findAll(@Req() req: R, @Query('q') q?: string, @Query('cellule') cellule?: string | string[]) {
     return this.collaborateurs.findAll(req.user.societeId, q, cellule);
   }
 

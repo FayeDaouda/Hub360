@@ -18,7 +18,11 @@ const PILL_POINT: Record<PointIntegration['statut'], string> = {
   a_venir: 'pill--neutre',
 };
 const libellePoint = (p: PointIntegration) =>
-  p.statut === 'fait' ? `J${p.jalon} · fait` : p.statut === 'a_faire' ? `J${p.jalon} · à faire` : `J${p.jalon} · le ${jjmm(p.datePrevue)}`;
+  p.statut === 'fait'
+    ? `J${p.jalon} · fait`
+    : p.statut === 'a_faire'
+      ? `J${p.jalon} · à faire`
+      : `J${p.jalon} · le ${jjmm(p.datePrevue)}`;
 
 // Onglet « Intégration » de la page RH (lot 3) : nouveaux arrivants jusqu'à
 // leur confirmation, points J30/J60/J90 (compte rendu libre — critères du
@@ -35,7 +39,12 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
   }, [slug]);
   useEffect(charger, [charger]);
 
-  if (!liste) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (!liste)
+    return erreur ? (
+      <p className="field-erreur">{erreur}</p>
+    ) : (
+      <div className="skeleton admin-skeleton-panel" aria-hidden />
+    );
 
   const aTraiter = liste.reduce((n, s) => n + s.aTraiter, 0);
   const courant = liste.find((s) => s.id === choisi) ?? null;
@@ -47,7 +56,8 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Intégration des nouveaux · cap des 90 jours</h2>
           <p className="dmd-note">
-            Uniquement les nouveaux arrivants, jusqu’à leur confirmation. Un CDI ou un CDD confirmé n’a plus de carte de mission.
+            Uniquement les nouveaux arrivants, jusqu’à leur confirmation. Un CDI ou un CDD confirmé n’a plus de carte de
+            mission.
           </p>
           {liste.length === 0 ? (
             <p className="empty-state">Aucun nouvel arrivant en période d’intégration.</p>
@@ -68,7 +78,8 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
                       </span>
                     </span>
                     <span className="cell-sub">
-                      {s.poste || 'poste à renseigner'} · {s.societe} · {LIBELLE_CONTRAT[s.typeContrat]} · entré(e) le {jjmmaaaa(s.dateEntree)}
+                      {s.poste || 'poste à renseigner'} · {s.societe} · {LIBELLE_CONTRAT[s.typeContrat]} · entré(e) le{' '}
+                      {jjmmaaaa(s.dateEntree)}
                     </span>
                     <span className="integ-jalons">
                       {s.points.map((p) => (
@@ -88,7 +99,17 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
           {!courant ? (
             <p className="dmd-note">Sélectionnez un nouvel arrivant.</p>
           ) : (
-            <DetailIntegration key={courant.id} slug={slug} s={courant} ecriture={ecriture} onMaj={remplacer} onConfirme={() => { setChoisi(null); charger(); }} />
+            <DetailIntegration
+              key={courant.id}
+              slug={slug}
+              s={courant}
+              ecriture={ecriture}
+              onMaj={remplacer}
+              onConfirme={() => {
+                setChoisi(null);
+                charger();
+              }}
+            />
           )}
         </section>
       </div>
@@ -230,7 +251,13 @@ function BlocPoint({
         <div className="integ-form">
           <label className="field">
             <span className="field-label">Réalisé le</span>
-            <input type="date" className="field-input" max={aujourdhui()} value={date} onChange={(e) => setDate(e.target.value)} />
+            <input
+              type="date"
+              className="field-input"
+              max={aujourdhui()}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </label>
           <label className="field">
             <span className="field-label">Compte rendu</span>
@@ -243,7 +270,12 @@ function BlocPoint({
                 Annuler
               </button>
             )}
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || !texte.trim() || !date} onClick={enregistrer}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi || !texte.trim() || !date}
+              onClick={enregistrer}
+            >
               {etat.envoi ? 'Enregistrement…' : 'Enregistrer le point'}
             </button>
           </span>

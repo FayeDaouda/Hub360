@@ -38,8 +38,12 @@ const SCENARIO: Record<string, { emises: number; derniere: Sort }> = {
 // Délais prévisionnels de démonstration (jours après le bon pour accord).
 const DELAIS_DEMO: Record<string, number> = { 'CO:F1': 0, 'CO:F2': 60, 'CO:F3': 150, 'IM:18': 90 };
 
-export async function creerFinancesDemo(prisma: PrismaClient, societeId: string): Promise<{ devis: number; factures: number }> {
-  const deja = (await prisma.devis.count({ where: { societeId } })) + (await prisma.facture.count({ where: { societeId } }));
+export async function creerFinancesDemo(
+  prisma: PrismaClient,
+  societeId: string,
+): Promise<{ devis: number; factures: number }> {
+  const deja =
+    (await prisma.devis.count({ where: { societeId } })) + (await prisma.facture.count({ where: { societeId } }));
   if (deja > 0) return { devis: 0, factures: 0 };
   const r = await creer(prisma, societeId);
   await alignerChronologie(prisma, societeId);
@@ -67,17 +71,21 @@ export async function alignerChronologie(prisma: PrismaClient, societeId: string
     await prisma.dossierCrm.update({ where: { id: dossierId }, data: { createdAt: plus(o.creeLe, -3) } });
     for (const [vers, le] of dates) {
       if (!le) continue;
-      const maj = await prisma.dossierCrmTransition.updateMany({ where: { dossierId, vers: vers as never }, data: { creeLe: le } });
+      const maj = await prisma.dossierCrmTransition.updateMany({
+        where: { dossierId, vers: vers as never },
+        data: { creeLe: le },
+      });
       // Offre soumise par la démo (lead « En validation ») : sa transition.
       if (maj.count === 0 && vers === 'en_validation' && o.statut === 'brouillon') {
-        await prisma.dossierCrmTransition.create({ data: { dossierId, de: 'nouveau_projet', vers: 'en_validation', creeLe: le } });
+        await prisma.dossierCrmTransition.create({
+          data: { dossierId, de: 'nouveau_projet', vers: 'en_validation', creeLe: le },
+        });
       }
     }
   }
 }
 
 async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: number; factures: number }> {
-
   const catalogue = new Map(
     (await prisma.produitService.findMany({ where: { societeId, supprime: false } })).map((p) => [p.code ?? '', p]),
   );
@@ -109,7 +117,14 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
     ];
     const im = catalogue.get('IM2');
     if (im && i % 2 === 0) {
-      lignes.push({ produitService: { connect: { id: im.id } }, designation: im.designation, quantite: 2, prixUnitaire: im.prixUnitaire!, tauxTva: im.tauxTva, ordre: 1 });
+      lignes.push({
+        produitService: { connect: { id: im.id } },
+        designation: im.designation,
+        quantite: 2,
+        prixUnitaire: im.prixUnitaire!,
+        tauxTva: im.tauxTva,
+        ordre: 1,
+      });
     }
     return lignes;
   }
@@ -124,13 +139,25 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
   const enValidation = autres.find((d) => d.statut === 'nouveau_projet' && d.nbPlanches > 0 && d.surfaceTerrain > 0);
   const specs: { d: Dossier; i: number; statut: StatutOffre; creeLe: Date }[] = [
     ...onboard.map((d, i) => ({ d, i, statut: 'accepte' as const, creeLe: ilYA(285 - i * 38) })),
-    ...autres.filter((d) => d.statut === 'offre_envoyee').slice(0, 1).map((d) => ({ d, i: 1, statut: 'envoye' as const, creeLe: ilYA(5) })),
-    ...autres.filter((d) => d.statut === 'perdu').slice(0, 1).map((d) => ({ d, i: 2, statut: 'refuse' as const, creeLe: ilYA(64) })),
+    ...autres
+      .filter((d) => d.statut === 'offre_envoyee')
+      .slice(0, 1)
+      .map((d) => ({ d, i: 1, statut: 'envoye' as const, creeLe: ilYA(5) })),
+    ...autres
+      .filter((d) => d.statut === 'perdu')
+      .slice(0, 1)
+      .map((d) => ({ d, i: 2, statut: 'refuse' as const, creeLe: ilYA(64) })),
     ...(enValidation ? [{ d: enValidation, i: 0, statut: 'brouillon' as const, creeLe: ilYA(2) }] : []),
   ].sort((a, b) => a.creeLe.getTime() - b.creeLe.getTime());
 
   let numeroDevis = 0;
-  const acceptees: { d: Dossier; i: number; debut: Date; offreId: string; plan: ReturnType<typeof planFacturationOffre> }[] = [];
+  const acceptees: {
+    d: Dossier;
+    i: number;
+    debut: Date;
+    offreId: string;
+    plan: ReturnType<typeof planFacturationOffre>;
+  }[] = [];
   for (const { d, i, statut, creeLe } of specs) {
     const envoi = statut === 'brouillon' ? null : plus(creeLe, 2);
     const o = await prisma.devis.create({
@@ -168,12 +195,19 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
       acceptees.push({ d, i, debut: creeLe, offreId: o.id, plan });
     }
   }
-  if (enValidation) await prisma.dossierCrm.update({ where: { id: enValidation.id }, data: { statut: 'en_validation' } });
+  if (enValidation)
+    await prisma.dossierCrm.update({ where: { id: enValidation.id }, data: { statut: 'en_validation' } });
 
   // 2. Factures du plan de chaque offre acceptée (comme à l'Onboard), émises et
   //    encaissées selon la phase du projet ; numéros de société et rangs du
   //    dossier attribués dans l'ordre chronologique d'émission.
-  const factures: { data: Prisma.FactureUncheckedCreateInput; emiseLe: Date | null; ttc: number; sort: Sort | null; i: number }[] = [];
+  const factures: {
+    data: Prisma.FactureUncheckedCreateInput;
+    emiseLe: Date | null;
+    ttc: number;
+    sort: Sort | null;
+    i: number;
+  }[] = [];
   for (const { d, i, debut, offreId, plan } of acceptees) {
     const projet = d.projet!;
     const scenario = SCENARIO[projet.phase] ?? { emises: 1, derniere: 'a_echoir' as Sort };
@@ -185,7 +219,13 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
       const sort: Sort | null = !emise ? null : rangJalon === scenario.emises - 1 ? scenario.derniere : 'payee';
       const prevue = plus(debut, 8 + Math.max(rangJalon, 0) * pas);
       // « À échoir » : émise il y a quelques jours ; « en retard » : échéance passée.
-      const emiseLe = !emise ? null : sort === 'a_echoir' ? ilYA(4) : sort === 'retard' && prevue > ilYA(20) ? ilYA(20) : prevue;
+      const emiseLe = !emise
+        ? null
+        : sort === 'a_echoir'
+          ? ilYA(4)
+          : sort === 'retard' && prevue > ilYA(20)
+            ? ilYA(20)
+            : prevue;
       factures.push({
         data: {
           societeId,
@@ -245,7 +285,9 @@ async function creer(prisma: PrismaClient, societeId: string): Promise<{ devis: 
         libelle: 'Relevé topographique et diagnostic du terrain',
         montantHt: 250_000,
         creeLe: ilYA(1),
-        lignes: { create: [{ designation: 'Relevé topographique et diagnostic du terrain', montantHt: 250_000, ordre: 0 }] },
+        lignes: {
+          create: [{ designation: 'Relevé topographique et diagnostic du terrain', montantHt: 250_000, ordre: 0 }],
+        },
       },
     });
   }

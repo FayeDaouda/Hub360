@@ -17,15 +17,20 @@ import { MonEspaceController } from './mon-espace.controller';
 import { MonEspaceService } from './mon-espace.service';
 import { MesTachesController, ValidationsTachesController } from './taches.controller';
 import { TachesService } from './taches.service';
-import {
-  DemandesRhController,
-  MesDemandesController,
-  ValidationsAbsencesController,
-} from './demandes.controller';
+import { DemandesRhController, MesDemandesController, ValidationsAbsencesController } from './demandes.controller';
 
 @Module({
   imports: [NotificationsModule, ReglagesModule, ProjetsModule], // ProjetsModule : remise / validation des tâches du gabarit
-  providers: [AlertesRhService, DossiersPersonnelService, SalairesService, DemandesService, IntegrationService, TempsService, MonEspaceService, TachesService],
+  providers: [
+    AlertesRhService,
+    DossiersPersonnelService,
+    SalairesService,
+    DemandesService,
+    IntegrationService,
+    TempsService,
+    MonEspaceService,
+    TachesService,
+  ],
   controllers: [
     SalairesController,
     AlertesRhController,

@@ -7,7 +7,14 @@ import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
 import { ValidationCeoAuDelaDuSeuil } from '../../finances/seuil-ceo.guard';
 import { FacturationService } from './facturation.service';
-import { AjouterPaiementDto, CreerFactureDirecteDto, DecisionAvoirDto, FormatNumerotationDto, ProfilFacturationDto, ReouvertureDto } from './dto';
+import {
+  AjouterPaiementDto,
+  CreerFactureDirecteDto,
+  DecisionAvoirDto,
+  FormatNumerotationDto,
+  ProfilFacturationDto,
+  ReouvertureDto,
+} from './dto';
 import { ParametresFacturationService } from './parametres-facturation.service';
 import { ControleInterneService } from './controle-interne.service';
 

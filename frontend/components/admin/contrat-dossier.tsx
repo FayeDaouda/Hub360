@@ -55,9 +55,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
   const cibleFichier = useRef<{ type: 'document' | 'scan' | 'annexe'; annexeId?: string } | null>(null);
   const entreeFichier = useRef<HTMLInputElement>(null);
 
-  const visible =
-    'offre' in projet &&
-    (projet.offre?.statutEffectif === 'accepte' || projet.statut === 'onboard');
+  const visible = 'offre' in projet && (projet.offre?.statutEffectif === 'accepte' || projet.statut === 'onboard');
 
   useEffect(() => {
     if (!visible) return;
@@ -154,19 +152,15 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             {STATUTS_CONTRAT[c.statut]}
           </span>
         )}
-        {c && (
-          <span className="cell-sub">
-            {c.mode === 'modele' ? 'Généré depuis le modèle' : 'Rédigé sur mesure'}
-          </span>
-        )}
+        {c && <span className="cell-sub">{c.mode === 'modele' ? 'Généré depuis le modèle' : 'Rédigé sur mesure'}</span>}
       </div>
 
       {/* Pas encore préparé */}
       {!c && (
         <>
           <p className="field-aide">
-            Offre {prep.offreAcceptee?.reference} acceptée (
-            {formatMontantCompact(prep.offreAcceptee?.montantHt ?? 0)} HT) — contrat{' '}
+            Offre {prep.offreAcceptee?.reference} acceptée ({formatMontantCompact(prep.offreAcceptee?.montantHt ?? 0)}{' '}
+            HT) — contrat{' '}
             {prep.modePrevu === 'sur_mesure'
               ? `rédigé sur mesure (offre ≥ seuil de ${formatMontantCompact(prep.seuilSurMesureHt ?? 0)} HT)`
               : 'généré depuis le modèle de la société'}
@@ -273,8 +267,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
           {c.statut === 'signe' && (
             <p className="cycle-dossier-note cycle-dossier-note--renvoi" role="note">
               Signé le {formatDateCourte(c.signeLe!)}
-              {c.signeParNom ? ` par ${c.signeParNom}` : ''} —{' '}
-              {c.modeSignature ? MODES_SIGNATURE[c.modeSignature] : ''}
+              {c.signeParNom ? ` par ${c.signeParNom}` : ''} — {c.modeSignature ? MODES_SIGNATURE[c.modeSignature] : ''}
               {c.scan ? ` (${c.scan.nom})` : ''}.
             </p>
           )}
@@ -327,8 +320,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                   disabled={enCours}
                   onClick={() => choisirFichier('document')}
                 >
-                  <Paperclip size={12} aria-hidden />{' '}
-                  {c.document ? 'Remplacer le contrat' : 'Déposer le contrat'}
+                  <Paperclip size={12} aria-hidden /> {c.document ? 'Remplacer le contrat' : 'Déposer le contrat'}
                 </button>
               )}
               {c.statut === 'brouillon' && (

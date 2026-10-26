@@ -12,11 +12,7 @@ export function getComptesGroupe(): Promise<ComptesGroupe> {
   return apiAuth<ComptesGroupe>('/groupe/comptes');
 }
 
-export function changerRoleCompte(
-  utilisateurId: string,
-  societeId: string,
-  roleId: string,
-): Promise<CompteGroupe> {
+export function changerRoleCompte(utilisateurId: string, societeId: string, roleId: string): Promise<CompteGroupe> {
   return apiAuth<CompteGroupe>(`/groupe/comptes/${utilisateurId}/societes/${societeId}/role`, {
     method: 'PUT',
     body: { roleId },

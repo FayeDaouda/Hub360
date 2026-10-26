@@ -61,9 +61,14 @@ class EcheancesJalonsDto {
 // jalon (cadrage §10 : saisie manuelle par jalon).
 export class CreerEcheancierDto {
   @IsOptional() @IsNumber() @Min(0) @Max(100) tauxTva?: number;
-  @IsObject() @ValidateNested() @Type(() => MontantsJalonsDto)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => MontantsJalonsDto)
   montants!: MontantsJalonsDto;
-  @IsOptional() @IsObject() @ValidateNested() @Type(() => EcheancesJalonsDto)
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => EcheancesJalonsDto)
   echeances?: EcheancesJalonsDto;
 }
 
@@ -90,7 +95,8 @@ export class FactureBureauDto {
 // DELETE …/factures/:id/paiements/:paiementId — correction tracée : le motif
 // est obligatoire (décision du 14/10/2026) et gardé avec la trace.
 export class SupprimerPaiementDto {
-  @IsString() @MinLength(3, { message: 'Indiquez le motif de la suppression (3 caractères au moins).' })
+  @IsString()
+  @MinLength(3, { message: 'Indiquez le motif de la suppression (3 caractères au moins).' })
   @MaxLength(300)
   motif!: string;
 }
@@ -127,7 +133,10 @@ export class CreerFactureDirecteDto {
 // Contrôle interne (revue CFO validée 20/10/2026) : tout avoir est motivé.
 export class DemandeAvoirDto {
   @IsEnum(MotifAvoir, { message: 'Le motif de l’avoir est obligatoire.' }) motif!: MotifAvoir;
-  @IsString() @MinLength(5, { message: 'Précisez le motif de l’avoir (5 caractères au moins).' }) @MaxLength(500) commentaire!: string;
+  @IsString()
+  @MinLength(5, { message: 'Précisez le motif de l’avoir (5 caractères au moins).' })
+  @MaxLength(500)
+  commentaire!: string;
 }
 
 export class DecisionAvoirDto {
@@ -136,7 +145,10 @@ export class DecisionAvoirDto {
 }
 
 export class ReouvertureDto {
-  @IsString() @MinLength(5, { message: 'Le motif de la réouverture est obligatoire (5 caractères au moins).' }) @MaxLength(300) motif!: string;
+  @IsString()
+  @MinLength(5, { message: 'Le motif de la réouverture est obligatoire (5 caractères au moins).' })
+  @MaxLength(300)
+  motif!: string;
 }
 
 // Paramètres de facturation (lot 6) : numérotation à la manière de Zervant,
@@ -173,4 +185,3 @@ export class ProfilFacturationDto {
   // coordonnées de paiement changent (vérifié par le service, jamais stocké).
   @IsOptional() @IsString() @MaxLength(200) confirmation?: string;
 }
-

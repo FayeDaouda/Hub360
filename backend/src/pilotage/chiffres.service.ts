@@ -44,9 +44,14 @@ export class ChiffresPilotageService {
     private integration: IntegrationService,
   ) {}
 
-  async tuiles(a: Acteur, jour: string, feuilles: { total: number; controlees: number }): Promise<{ jeu: JeuTuiles; tuiles: TuileChiffre[] } | null> {
+  async tuiles(
+    a: Acteur,
+    jour: string,
+    feuilles: { total: number; controlees: number },
+  ): Promise<{ jeu: JeuTuiles; tuiles: TuileChiffre[] } | null> {
     const voit = (module: string) => a.role === 'societe_admin' || aLaPermission(a.permissions, module, 'lecture');
-    if (voit('finances_factures') && voit('projets')) return { jeu: 'finances', tuiles: await this.finances(a.societeId, jour) };
+    if (voit('finances_factures') && voit('projets'))
+      return { jeu: 'finances', tuiles: await this.finances(a.societeId, jour) };
     if (voit('crm')) return { jeu: 'crm', tuiles: await this.crm(a.societeId, jour) };
     if (voit('rh')) return { jeu: 'rh', tuiles: await this.rh(jour, feuilles) };
     return null;
@@ -57,10 +62,17 @@ export class ChiffresPilotageService {
     const [emises, paiements, echues, projets] = await Promise.all([
       // Émises dans le mois, avoirs compris (montant négatif) : net facturé.
       this.prisma.facture.findMany({
-        where: { societeId, statut: { not: 'brouillon' }, emiseLe: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) } },
+        where: {
+          societeId,
+          statut: { not: 'brouillon' },
+          emiseLe: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) },
+        },
         select: { montantHt: true, tauxTva: true, estAvoir: true },
       }),
-      this.prisma.paiement.findMany({ where: { facture: { societeId }, date: { gte: debut, lte: fin } }, select: { montant: true } }),
+      this.prisma.paiement.findMany({
+        where: { facture: { societeId }, date: { gte: debut, lte: fin } },
+        select: { montant: true },
+      }),
       this.prisma.facture.findMany({
         where: { societeId, statut: 'emise', estAvoir: false, echeanceLe: { lt: jour } },
         select: { montantHt: true, tauxTva: true, paiements: { select: { montant: true } } },
@@ -72,12 +84,33 @@ export class ChiffresPilotageService {
     const facture = emises.reduce((s, f) => s + ttc(f), 0);
     const nbEmises = emises.filter((f) => !f.estAvoir).length;
     const encaisse = paiements.reduce((s, p) => s + p.montant.toNumber(), 0);
-    const restes = echues.map((f) => ttc(f) - f.paiements.reduce((s, p) => s + p.montant.toNumber(), 0)).filter((r) => r > 0);
+    const restes = echues
+      .map((f) => ttc(f) - f.paiements.reduce((s, p) => s + p.montant.toNumber(), 0))
+      .filter((r) => r > 0);
     const reste = restes.reduce((s, r) => s + r, 0);
     return [
-      { cle: 'facture_mois', valeur: facture, aide: nbEmises ? `${pluriel(nbEmises, 'facture')} émise${nbEmises > 1 ? 's' : ''} ce mois` : 'aucune facture émise ce mois', etat: 'marque' },
-      { cle: 'encaisse_mois', valeur: encaisse, aide: paiements.length ? `${pluriel(paiements.length, 'paiement')} ce mois` : 'aucun paiement ce mois', etat: 'marque' },
-      { cle: 'reste_retard', valeur: reste, aide: restes.length ? `${pluriel(restes.length, 'facture')} échue${restes.length > 1 ? 's' : ''} non soldée${restes.length > 1 ? 's' : ''}` : 'aucune facture échue', etat: enRetard(restes.length) },
+      {
+        cle: 'facture_mois',
+        valeur: facture,
+        aide: nbEmises
+          ? `${pluriel(nbEmises, 'facture')} émise${nbEmises > 1 ? 's' : ''} ce mois`
+          : 'aucune facture émise ce mois',
+        etat: 'marque',
+      },
+      {
+        cle: 'encaisse_mois',
+        valeur: encaisse,
+        aide: paiements.length ? `${pluriel(paiements.length, 'paiement')} ce mois` : 'aucun paiement ce mois',
+        etat: 'marque',
+      },
+      {
+        cle: 'reste_retard',
+        valeur: reste,
+        aide: restes.length
+          ? `${pluriel(restes.length, 'facture')} échue${restes.length > 1 ? 's' : ''} non soldée${restes.length > 1 ? 's' : ''}`
+          : 'aucune facture échue',
+        etat: enRetard(restes.length),
+      },
       { cle: 'projets_ouverts', valeur: projets, aide: 'ouverts à l’émission de F1', etat: 'marque' },
     ];
   }
@@ -87,7 +120,11 @@ export class ChiffresPilotageService {
     const annee = jour.slice(0, 4);
     const maintenant = Date.now();
     const dossiers = await this.prisma.dossierCrm.findMany({
-      where: { societeId, archiveLe: null, createdAt: { gte: new Date(`${annee}-01-01T00:00:00Z`), lt: new Date(`${Number(annee) + 1}-01-01T00:00:00Z`) } },
+      where: {
+        societeId,
+        archiveLe: null,
+        createdAt: { gte: new Date(`${annee}-01-01T00:00:00Z`), lt: new Date(`${Number(annee) + 1}-01-01T00:00:00Z`) },
+      },
       select: {
         code: true,
         categorie: true,
@@ -102,7 +139,12 @@ export class ChiffresPilotageService {
         statut: true,
         createdAt: true,
         offres: { orderBy: { creeLe: 'desc' }, take: 1, select: { statut: true, dateValidite: true } },
-        transitions: { where: { vers: 'en_validation' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
+        transitions: {
+          where: { vers: 'en_validation' },
+          orderBy: { creeLe: 'desc' },
+          take: 1,
+          select: { creeLe: true },
+        },
       },
     });
     const expiree = (d: (typeof dossiers)[number]) =>
@@ -111,12 +153,24 @@ export class ChiffresPilotageService {
     const fiches = dossiers.filter((d) => d.statut === 'nouveau_projet' && champsManquants(d).length > 0);
     const fichesEchues = fiches.filter((d) => maintenant - d.createdAt.getTime() > DELAI_RELANCE_FICHE_MS);
     const cfo = dossiers.filter((d) => d.statut === 'en_validation');
-    const cfoEchues = cfo.filter((d) => d.transitions[0] && maintenant - d.transitions[0].creeLe.getTime() > DELAI_VALIDATION_CFO_MS);
+    const cfoEchues = cfo.filter(
+      (d) => d.transitions[0] && maintenant - d.transitions[0].creeLe.getTime() > DELAI_VALIDATION_CFO_MS,
+    );
     const client = dossiers.filter((d) => d.statut === 'offre_envoyee' && !expiree(d));
     return [
       { cle: 'pipeline', valeur: actifs.length, aide: 'projets hors Perdu et Expirée', etat: 'marque' },
-      { cle: 'fiches', valeur: fiches.length, aide: fichesEchues.length ? `dont ${fichesEchues.length} au-delà de 72 h` : 'fiche incomplète · délai 72 h', etat: selonDelai(fiches.length, fichesEchues.length) },
-      { cle: 'cfo', valeur: cfo.length, aide: cfoEchues.length ? `dont ${cfoEchues.length} au-delà de 48 h` : 'offres soumises · délai 48 h', etat: selonDelai(cfo.length, cfoEchues.length) },
+      {
+        cle: 'fiches',
+        valeur: fiches.length,
+        aide: fichesEchues.length ? `dont ${fichesEchues.length} au-delà de 72 h` : 'fiche incomplète · délai 72 h',
+        etat: selonDelai(fiches.length, fichesEchues.length),
+      },
+      {
+        cle: 'cfo',
+        valeur: cfo.length,
+        aide: cfoEchues.length ? `dont ${cfoEchues.length} au-delà de 48 h` : 'offres soumises · délai 48 h',
+        etat: selonDelai(cfo.length, cfoEchues.length),
+      },
       { cle: 'client', valeur: client.length, aide: 'offres envoyées · validité 7 jours', etat: 'marque' },
     ];
   }
@@ -133,9 +187,26 @@ export class ChiffresPilotageService {
     const points = integrations.reduce((s, i) => s + i.aTraiter, 0);
     return [
       { cle: 'absences', valeur: absences, aide: 'accord du N+1, validation RH', etat: aTraiter(absences) },
-      { cle: 'remboursements', valeur: remboursements, aide: 'soumis ou transmis à l’assurance', etat: aTraiter(remboursements) },
-      { cle: 'feuilles', valeur: aControler, aide: `mois clos · ${feuilles.controlees} / ${feuilles.total} contrôlées`, etat: enRetard(aControler) },
-      { cle: 'integration', valeur: points, aide: points ? `point${points > 1 ? 's' : ''} J+30 / 60 / 90 échu${points > 1 ? 's' : ''}` : `${pluriel(integrations.length, 'nouvel arrivant')} suivi${integrations.length > 1 ? 's' : ''}`, etat: enRetard(points) },
+      {
+        cle: 'remboursements',
+        valeur: remboursements,
+        aide: 'soumis ou transmis à l’assurance',
+        etat: aTraiter(remboursements),
+      },
+      {
+        cle: 'feuilles',
+        valeur: aControler,
+        aide: `mois clos · ${feuilles.controlees} / ${feuilles.total} contrôlées`,
+        etat: enRetard(aControler),
+      },
+      {
+        cle: 'integration',
+        valeur: points,
+        aide: points
+          ? `point${points > 1 ? 's' : ''} J+30 / 60 / 90 échu${points > 1 ? 's' : ''}`
+          : `${pluriel(integrations.length, 'nouvel arrivant')} suivi${integrations.length > 1 ? 's' : ''}`,
+        etat: enRetard(points),
+      },
     ];
   }
 }

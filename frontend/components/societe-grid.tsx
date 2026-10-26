@@ -29,9 +29,7 @@ export function SocieteGrid({ societes }: { societes: SocietePortail[] }) {
   // Précharge les écrans de connexion (une poignée de sociétés) : une fois l'animation
   // de sortie jouée, la navigation est instantanée (prod — sans effet en dev).
   useEffect(() => {
-    societes
-      .filter((societe) => societe.accesOuvert)
-      .forEach((societe) => router.prefetch(`/login/${societe.slug}`));
+    societes.filter((societe) => societe.accesOuvert).forEach((societe) => router.prefetch(`/login/${societe.slug}`));
   }, [router, societes]);
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>, slug: string) {

@@ -105,7 +105,10 @@ export type TacheOuverte = {
   peutRemettre: boolean; // la personne connectée est l'assignée, tâche ouverte
   // Prolongation : l'échéance de référence reste figée ; accordée, elle
   // qualifie le retard jusqu'à `accordeeJusquau`.
-  prolongation: { enAttente: { jusquau: string; motif: string; le: string | null } | null; accordeeJusquau: string | null };
+  prolongation: {
+    enAttente: { jusquau: string; motif: string; le: string | null } | null;
+    accordeeJusquau: string | null;
+  };
   peutDemanderProlongation: boolean;
   peutDeciderProlongation: boolean;
   fil: number; // messages du fil de la tâche
@@ -180,7 +183,13 @@ export function getDossierProjet(slug: string, id: string): Promise<DossierProje
 }
 
 export type Assignable = { id: string; nom: string; cellule: string | null };
-export type EvenementTache = { id: string; type: 'assignation' | 'remise' | 'validation' | 'reprise'; detail: string; par: string | null; le: string };
+export type EvenementTache = {
+  id: string;
+  type: 'assignation' | 'remise' | 'validation' | 'reprise';
+  detail: string;
+  par: string | null;
+  le: string;
+};
 
 export function getAssignables(slug: string): Promise<Assignable[]> {
   return apiSociete(slug, '/projets-ouverts/assignables');
@@ -202,24 +211,38 @@ export function assignerTache(
 
 // Remise par la personne assignée (sans temps atelier : le dépôt vaut validation).
 export function remettreTache(slug: string, projetId: string, tacheId: string, corps: CorpsRemise = {}) {
-  return apiSociete<{ statut: string; version: number }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/remise`, { method: 'POST', body: corps });
+  return apiSociete<{ statut: string; version: number }>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/remise`,
+    { method: 'POST', body: corps },
+  );
 }
 
 export async function telechargerPieceRemise(slug: string, projetId: string, tacheId: string, pieceId: string) {
-  const f = await apiSociete<{ nom: string; url: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/pieces/${pieceId}`);
+  const f = await apiSociete<{ nom: string; url: string }>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/pieces/${pieceId}`,
+  );
   telechargerFichier(f);
 }
 
 // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG.
 export function demanderProlongation(slug: string, projetId: string, tacheId: string, jusquau: string, motif: string) {
-  return apiSociete<{ ok: true }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation`, { method: 'POST', body: { jusquau, motif } });
+  return apiSociete<{ ok: true }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation`, {
+    method: 'POST',
+    body: { jusquau, motif },
+  });
 }
 
 export function deciderProlongation(slug: string, projetId: string, tacheId: string, accorder: boolean) {
-  return apiSociete<{ decision: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation/decision`, {
-    method: 'POST',
-    body: { accorder },
-  });
+  return apiSociete<{ decision: string }>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation/decision`,
+    {
+      method: 'POST',
+      body: { accorder },
+    },
+  );
 }
 
 // Remise : valider, ou renvoyer en reprise avec un motif.
@@ -231,7 +254,13 @@ export function viserTache(slug: string, projetId: string, tacheId: string, appo
   });
 }
 
-export function deciderTache(slug: string, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
+export function deciderTache(
+  slug: string,
+  projetId: string,
+  tacheId: string,
+  decision: 'valider' | 'renvoyer',
+  motif?: string,
+) {
   return apiSociete<{ statut: string }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/decision`, {
     method: 'POST',
     body: { decision, ...(motif ? { motif } : {}) },
@@ -247,13 +276,19 @@ export const STATUTS_CHANTIER: Record<StatutChantier, string> = {
   livre: 'Livré',
 };
 export function definirStatutChantier(slug: string, projetId: string, statut: StatutChantier) {
-  return apiSociete<{ statutChantier: StatutChantier }>(slug, `/projets-ouverts/${projetId}/chantier`, { method: 'PATCH', body: { statut } });
+  return apiSociete<{ statutChantier: StatutChantier }>(slug, `/projets-ouverts/${projetId}/chantier`, {
+    method: 'PATCH',
+    body: { statut },
+  });
 }
 
 // Date de visite sur site : les relevés de l'existant reçoivent leur
 // échéance (lendemain de la visite) ; null = effacer.
 export function definirDateVisite(slug: string, projetId: string, date: string | null) {
-  return apiSociete<{ dateVisiteSite: string | null }>(slug, `/projets-ouverts/${projetId}/visite`, { method: 'PATCH', body: { date } });
+  return apiSociete<{ dateVisiteSite: string | null }>(slug, `/projets-ouverts/${projetId}/visite`, {
+    method: 'PATCH',
+    body: { date },
+  });
 }
 
 // Élément demandé par le client, ajouté en TS à une carte « par unité ».
@@ -262,7 +297,9 @@ export function definirDateVisite(slug: string, projetId: string, date: string |
 export type RepriseTs = { reprise: 'mineure' } | { reprise: 'majeure'; surfaceM2: number; planches: number };
 // Au-delà du seuil des Réglages (500 000 FCFA HT par défaut), le Dir. GC ne
 // l'ajoute pas : la demande part au CTO (revue Dir. GC, 21/10/2026).
-export type ResultatTs = { id: string; libelle: string; devisId: string } | { enAttente: true; demandeId: string; montantHt: number; seuil: number };
+export type ResultatTs =
+  | { id: string; libelle: string; devisId: string }
+  | { enAttente: true; demandeId: string; montantHt: number; seuil: number };
 export function ajouterTs(slug: string, projetId: string, carteId: string, element: string, reprise: RepriseTs) {
   return apiSociete<ResultatTs>(slug, `/projets-ouverts/${projetId}/ts`, {
     method: 'POST',
@@ -272,7 +309,14 @@ export function ajouterTs(slug: string, projetId: string, carteId: string, eleme
 
 // Fil de discussion d'une carte ou d'une tâche (un niveau de réponse).
 export type Personne = { id: string; nom: string | null };
-export type MessageFil = { id: string; texte: string; le: string; resoluLe: string | null; auteur: Personne | null; mentionne: Personne | null };
+export type MessageFil = {
+  id: string;
+  texte: string;
+  le: string;
+  resoluLe: string | null;
+  auteur: Personne | null;
+  mentionne: Personne | null;
+};
 export type CommentaireFil = MessageFil & { ouvert: boolean; reponses: MessageFil[] };
 export type CibleFil = { carteId: string } | { tacheId: string };
 
@@ -325,7 +369,11 @@ export type ChargePersonne = {
   joursAbsence: number;
   pourcentage: number | null; // avec cette tâche ; null = absent toute la fenêtre
 };
-export type ChargesTache = { periode: { debut: string; fin: string } | null; zone: { de: number; a: number } | null; charges: ChargePersonne[] };
+export type ChargesTache = {
+  periode: { debut: string; fin: string } | null;
+  zone: { de: number; a: number } | null;
+  charges: ChargePersonne[];
+};
 
 export function getChargesTache(slug: string, projetId: string, tacheId: string): Promise<ChargesTache> {
   return apiSociete(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/charges`);
@@ -425,11 +473,25 @@ export function heuresTache(t: TacheOuverte): string {
 
 // « À décider » (revue Dir. GC, 21/10/2026) : remises et prolongations que la
 // personne connectée peut trancher, sur tous ses projets.
-type LigneADecider = { projetId: string; code: string; client: string; tacheId: string; tache: string; carte: string; assigne: string | null };
+type LigneADecider = {
+  projetId: string;
+  code: string;
+  client: string;
+  tacheId: string;
+  tache: string;
+  carte: string;
+  assigne: string | null;
+};
 export type ADeciderProjets = {
   remises: (LigneADecider & { version: number; remiseLe: string | null })[];
   // repousseLivraison : date de livraison dépassée (escalade au CTO) ; null sinon.
-  prolongations: (LigneADecider & { jusquau: string; motif: string; demandeLe: string; finPrevue: string | null; repousseLivraison: string | null })[];
+  prolongations: (LigneADecider & {
+    jusquau: string;
+    motif: string;
+    demandeLe: string;
+    finPrevue: string | null;
+    repousseLivraison: string | null;
+  })[];
   // Visas DPLG à apposer (Dir. GC).
   visas: (LigneADecider & { valideeLe: string | null })[];
   // TS au-delà du seuil, à trancher par le CTO.
@@ -446,11 +508,21 @@ export type DemandeTsADecider = {
   demandeLe: string;
   demandePar: string | null;
 };
-export const deciderDemandeTs = (slug: string, projetId: string, demandeId: string, accepter: boolean, motif?: string) =>
-  apiSociete<{ statut: 'acceptee' | 'refusee'; tacheId: string | null }>(slug, `/projets-ouverts/${projetId}/ts/demandes/${demandeId}/decision`, {
-    method: 'POST',
-    body: { accepter, ...(motif ? { motif } : {}) },
-  });
+export const deciderDemandeTs = (
+  slug: string,
+  projetId: string,
+  demandeId: string,
+  accepter: boolean,
+  motif?: string,
+) =>
+  apiSociete<{ statut: 'acceptee' | 'refusee'; tacheId: string | null }>(
+    slug,
+    `/projets-ouverts/${projetId}/ts/demandes/${demandeId}/decision`,
+    {
+      method: 'POST',
+      body: { accepter, ...(motif ? { motif } : {}) },
+    },
+  );
 export const getADeciderProjets = (slug: string) => apiSociete<ADeciderProjets>(slug, '/projets-ouverts/a-decider');
 
 // Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : Dir. GC (ses
@@ -474,10 +546,23 @@ export type LigneProduction = {
   tranche: { code: 'F2' | 'F3'; statut: 'brouillon' | 'absente'; attend: string[] } | null;
   echeances: { carte: string; finLe: string }[];
 };
-export type ChargeMembre = { id: string; nom: string; heures: number; disponibles: number; pourcentage: number | null; joursAbsence: number };
+export type ChargeMembre = {
+  id: string;
+  nom: string;
+  heures: number;
+  disponibles: number;
+  pourcentage: number | null;
+  joursAbsence: number;
+};
 export type VueProduction = {
   perimetre: 'mes_projets' | 'tous';
-  chiffres: { ouverts: number; enRetard: number; livraisons15: number; enAttente: number; chargeMoyenne: number | null };
+  chiffres: {
+    ouverts: number;
+    enRetard: number;
+    livraisons15: number;
+    enAttente: number;
+    chargeMoyenne: number | null;
+  };
   lignes: LigneProduction[];
   charge: {
     periode: { debut: string; fin: string };

@@ -2,7 +2,22 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BadgeCheck, CalendarClock, ShieldCheck, ChevronDown, ChevronRight, FileCheck2, FileWarning, Gavel, Hourglass, KeyRound, ReceiptText, Scale, Undo2, UserCheck } from 'lucide-react';
+import {
+  BadgeCheck,
+  CalendarClock,
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  FileCheck2,
+  FileWarning,
+  Gavel,
+  Hourglass,
+  KeyRound,
+  ReceiptText,
+  Scale,
+  Undo2,
+  UserCheck,
+} from 'lucide-react';
 import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { getProjets } from '@/lib/crm';
 import { getAvoirsAValider, LIBELLE_MOTIF_AVOIR, type AvoirAValider } from '@/lib/facturation';
@@ -43,7 +58,12 @@ const TYPES_CONTROLE: ReadonlySet<NotificationType> = new Set<NotificationType>(
   'connexion_secours',
   'reglage_gouvernance_modifie',
 ]);
-const NIVEAU_DROIT: Record<DemandeDroit['apres'], string> = { aucun: 'aucun', lecture: 'lecture', ecriture: 'écriture', validation: 'validation' };
+const NIVEAU_DROIT: Record<DemandeDroit['apres'], string> = {
+  aucun: 'aucun',
+  lecture: 'lecture',
+  ecriture: 'écriture',
+  validation: 'validation',
+};
 
 type Ligne = {
   cle: string;
@@ -102,7 +122,9 @@ export function Attention({
   useEffect(() => {
     const depuis = Date.now() - 7 * 86_400_000;
     getNotifications(slug)
-      .then((f) => setControles(f.elements.filter((n) => TYPES_CONTROLE.has(n.type) && !n.lu && Date.parse(n.date) >= depuis)))
+      .then((f) =>
+        setControles(f.elements.filter((n) => TYPES_CONTROLE.has(n.type) && !n.lu && Date.parse(n.date) >= depuis)),
+      )
       .catch(() => setControles([]));
   }, [slug]);
   const vu = (id: string) => {
@@ -178,7 +200,9 @@ export function Attention({
         titre: `${p.code} · ${p.client}`,
         detail: [
           p.enRetard ? `${pluriel(p.enRetard, 'tâche')} en retard (jusqu’à ${p.joursMax} j)` : null,
-          p.prolongees ? `${pluriel(p.prolongees, 'retard')} qualifié${p.prolongees > 1 ? 's' : ''} par prolongation` : null,
+          p.prolongees
+            ? `${pluriel(p.prolongees, 'retard')} qualifié${p.prolongees > 1 ? 's' : ''} par prolongation`
+            : null,
         ]
           .filter(Boolean)
           .join(' · '),
@@ -210,7 +234,10 @@ export function Attention({
         cle: a.id,
         titre: `${a.reference ?? 'Facture'}${a.client ? ` · ${a.client}` : ''}`,
         detail: `${formatMontant(a.montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[a.motif].toLowerCase()}${a.demandePar ? ` · demandé par ${a.demandePar}` : ''}`,
-        pill: { libelle: `Depuis ${depuisJours(a.demandeLe)} j`, ton: depuisJours(a.demandeLe) > 2 ? ('risque' as const) : ('attention' as const) },
+        pill: {
+          libelle: `Depuis ${depuisJours(a.demandeLe)} j`,
+          ton: depuisJours(a.demandeLe) > 2 ? ('risque' as const) : ('attention' as const),
+        },
         onClick: () => setAvoirOuvert(a),
       })),
     },
@@ -227,7 +254,11 @@ export function Attention({
           titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
           detail: `Au-delà du seuil${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`,
           pill: { libelle: 'À valider par vous', ton: 'attention' as const },
-          href: f.factureId ? `${base}/facturation?facture=${f.factureId}` : f.projetId ? lienFacturationProjet(slug, f.projetId) : `${base}/facturation`,
+          href: f.factureId
+            ? `${base}/facturation?facture=${f.factureId}`
+            : f.projetId
+              ? lienFacturationProjet(slug, f.projetId)
+              : `${base}/facturation`,
         })),
     },
     {
@@ -257,7 +288,11 @@ export function Attention({
           titre: `${f.tranche ?? 'Facture'} · ${f.code} · ${f.client}`,
           detail: `Prête à émettre${f.montantTtc != null ? ` · ${formatMontant(f.montantTtc)} TTC` : ''}`,
           pill: { libelle: 'Le CFO émet', ton: 'neutre' as const },
-          href: f.factureId ? `${base}/facturation?facture=${f.factureId}` : f.projetId ? lienFacturationProjet(slug, f.projetId) : `${base}/facturation`,
+          href: f.factureId
+            ? `${base}/facturation?facture=${f.factureId}`
+            : f.projetId
+              ? lienFacturationProjet(slug, f.projetId)
+              : `${base}/facturation`,
         })),
     },
     {
@@ -345,10 +380,18 @@ export function Attention({
     <section className="pa" aria-labelledby="pa-titre">
       <header className="pa-entete">
         <h2 id="pa-titre">À votre attention</h2>
-        <span className="pa-compte">{nbDecisions ? `${pluriel(nbDecisions, 'décision')} à prendre` : total ? 'Aucune décision en attente' : 'Rien en attente'}</span>
+        <span className="pa-compte">
+          {nbDecisions
+            ? `${pluriel(nbDecisions, 'décision')} à prendre`
+            : total
+              ? 'Aucune décision en attente'
+              : 'Rien en attente'}
+        </span>
       </header>
       {total === 0 ? (
-        <p className="panel glass-panel pa-vide">Aucun retard, aucune facture ni décision en attente : tout est à jour.</p>
+        <p className="panel glass-panel pa-vide">
+          Aucun retard, aucune facture ni décision en attente : tout est à jour.
+        </p>
       ) : (
         <>
           {/* Revue CEO : d'abord ce que lui seul décide, puis ce qu'il suit. */}
@@ -374,8 +417,17 @@ export function Attention({
           )}
         </>
       )}
-      {avoirOuvert && <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />}
-      {droitOuvert && <DecisionDroit slug={slug} demande={droitOuvert} onFait={(l) => setDroits(l.filter((d) => d.peutDecider))} onClose={() => setDroitOuvert(null)} />}
+      {avoirOuvert && (
+        <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />
+      )}
+      {droitOuvert && (
+        <DecisionDroit
+          slug={slug}
+          demande={droitOuvert}
+          onFait={(l) => setDroits(l.filter((d) => d.peutDecider))}
+          onClose={() => setDroitOuvert(null)}
+        />
+      )}
     </section>
   );
 }
@@ -413,10 +465,20 @@ function RubriqueAttention({ rubrique: r, repliable = false }: { rubrique: Rubri
     </>
   );
   return (
-    <section id={`pa-${r.cle}`} className="panel glass-panel pa-rubrique" style={{ ['--pa-couleur' as string]: r.couleur }}>
+    <section
+      id={`pa-${r.cle}`}
+      className="panel glass-panel pa-rubrique"
+      style={{ ['--pa-couleur' as string]: r.couleur }}
+    >
       <h3 className="pa-rubrique-titre">
         {bascule ? (
-          <button type="button" className="pa-bascule" aria-expanded={ouvert} aria-controls={`pa-${r.cle}-liste`} onClick={() => setOuvert((o) => !o)}>
+          <button
+            type="button"
+            className="pa-bascule"
+            aria-expanded={ouvert}
+            aria-controls={`pa-${r.cle}-liste`}
+            onClick={() => setOuvert((o) => !o)}
+          >
             {titre}
             <ChevronDown size={16} className="pa-bascule-chevron" aria-hidden />
           </button>

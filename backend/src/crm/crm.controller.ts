@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
@@ -74,11 +64,7 @@ export class CrmController {
 
   @Patch(':id/localite')
   @RequiertPermission('crm', 'ecriture')
-  rattacherLocalite(
-    @Req() req: Req,
-    @Param('id') id: string,
-    @Body() dto: RattacherLocaliteDto,
-  ) {
+  rattacherLocalite(@Req() req: Req, @Param('id') id: string, @Body() dto: RattacherLocaliteDto) {
     return this.crm.rattacherLocalite(req.user.societeId, req.user, id, dto.localiteId);
   }
 
@@ -87,17 +73,8 @@ export class CrmController {
   // titulaires Dir. GC, societe_admin et le CIO (cf. changerProprietaire).
   @Patch(':id/proprietaire')
   @RequiertPermission('crm', 'lecture')
-  changerProprietaire(
-    @Req() req: Req,
-    @Param('id') id: string,
-    @Body() dto: ChangerProprietaireDto,
-  ) {
-    return this.crm.changerProprietaire(
-      req.user.societeId,
-      req.user,
-      id,
-      dto.proprietaireId,
-    );
+  changerProprietaire(@Req() req: Req, @Param('id') id: string, @Body() dto: ChangerProprietaireDto) {
+    return this.crm.changerProprietaire(req.user.societeId, req.user, id, dto.proprietaireId);
   }
 
   // Fiche apporteur verrouillée depuis la création : le service n'autorise

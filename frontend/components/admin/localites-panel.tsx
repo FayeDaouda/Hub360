@@ -3,12 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Lock, Pencil, Plus, RefreshCw, Search } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import {
-  creerLocalite,
-  getLocalites,
-  modifierLocalite,
-  normaliserRecherche,
-} from '@/lib/localites';
+import { creerLocalite, getLocalites, modifierLocalite, normaliserRecherche } from '@/lib/localites';
 import {
   LIBELLE_REGION_LOCALITE,
   ZONES_LOCALITE,
@@ -55,7 +50,9 @@ export function LocalitesPanel({ slug }: { slug: string }) {
       if (l.zone !== zone) continue;
       if (
         terme &&
-        !normaliserRecherche([l.nom, l.code, l.region, l.arrondissement ?? '', l.commune ?? ''].join(' ')).includes(terme)
+        !normaliserRecherche([l.nom, l.code, l.region, l.arrondissement ?? '', l.commune ?? ''].join(' ')).includes(
+          terme,
+        )
       ) {
         continue;
       }
@@ -86,11 +83,7 @@ export function LocalitesPanel({ slug }: { slug: string }) {
     return (
       <div className="dash-erreur" role="alert">
         <p>{erreur}</p>
-        <button
-          type="button"
-          className="btn-ghost btn-ghost--sm"
-          onClick={() => setEssai((n) => n + 1)}
-        >
+        <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setEssai((n) => n + 1)}>
           <RefreshCw size={15} aria-hidden />
           <span>Réessayer</span>
         </button>
@@ -141,29 +134,23 @@ export function LocalitesPanel({ slug }: { slug: string }) {
       </div>
 
       <p className="localites-intro">
-        Partagé par toutes les sociétés du HUB. Chaque code est unique sur les trois onglets ; un
-        code déjà utilisé par un dossier est figé{' '}
-        <Lock size={11} aria-label="(verrou)" /> : seul le nom reste modifiable.
+        Partagé par toutes les sociétés du HUB. Chaque code est unique sur les trois onglets ; un code déjà utilisé par
+        un dossier est figé <Lock size={11} aria-label="(verrou)" /> : seul le nom reste modifiable.
       </p>
 
-      {groupes.length === 0 && (
-        <p className="empty-state">Aucune localité ne correspond à cette recherche.</p>
-      )}
+      {groupes.length === 0 && <p className="empty-state">Aucune localité ne correspond à cette recherche.</p>}
 
       {groupes.map(([region, ls]) => (
         <section className="panel glass-panel localites-groupe" key={region}>
           <h3 className="panel-title">
-            <span className="localites-groupe-niveau">{LIBELLE_REGION_LOCALITE[zone]}</span>{' '}
-            {region}
+            <span className="localites-groupe-niveau">{LIBELLE_REGION_LOCALITE[zone]}</span> {region}
           </h3>
           <ul className="localites-liste">
             {ls.map((l) => (
               <li key={l.id} className="localites-ligne">
                 <span className="localites-code">
                   {l.code}
-                  {l.codeVerrouille && (
-                    <Lock size={11} aria-label="code figé (déjà utilisé)" />
-                  )}
+                  {l.codeVerrouille && <Lock size={11} aria-label="code figé (déjà utilisé)" />}
                 </span>
                 <span className="localites-nom">
                   {l.nom}

@@ -446,7 +446,11 @@ tr.is-demandeur .cal-nom {
   background: var(--pill-risque) !important;
 }
 .cal-en_attente {
-  background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--pill-attention) 80%, transparent) 0 3px, transparent 3px 6px) !important;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--pill-attention) 80%, transparent) 0 3px,
+    transparent 3px 6px
+  ) !important;
 }
 .cal-legende {
   display: flex;
@@ -1772,4 +1776,3 @@ tr.is-demandeur .cal-nom {
 .dmd-a-decider {
   margin: 0 0 1rem;
 }
-

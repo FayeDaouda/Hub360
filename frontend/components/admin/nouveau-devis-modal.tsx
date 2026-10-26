@@ -4,12 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { creerDevis } from '@/lib/devis';
 import type { Client, ProduitService, ProjetRef } from '@/lib/types';
-import {
-  LignesDevisEditeur,
-  ligneVide,
-  lignesSaisies,
-  type LigneForm,
-} from './lignes-devis-editeur';
+import { LignesDevisEditeur, ligneVide, lignesSaisies, type LigneForm } from './lignes-devis-editeur';
 
 type Props = {
   slug: string;
@@ -21,15 +16,7 @@ type Props = {
   onCree: () => void;
 };
 
-export function NouveauDevisModal({
-  slug,
-  clients,
-  projets,
-  catalogue,
-  projetPresel,
-  onClose,
-  onCree,
-}: Props) {
+export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPresel, onClose, onCree }: Props) {
   const [clientId, setClientId] = useState('');
   const [projetId, setProjetId] = useState(projetPresel ?? '');
   const [objet, setObjet] = useState('');
@@ -118,11 +105,7 @@ export function NouveauDevisModal({
             </label>
             <label className="field">
               <span className="field-label">Projet (facultatif)</span>
-              <select
-                className="field-input"
-                value={projetId}
-                onChange={(e) => setProjetId(e.target.value)}
-              >
+              <select className="field-input" value={projetId} onChange={(e) => setProjetId(e.target.value)}>
                 <option value="">Aucun — devis libre</option>
                 {projets.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -165,8 +148,8 @@ export function NouveauDevisModal({
           />
           {projetId && (
             <p className="field-aide">
-              Devis complémentaire du projet : tout travail supplémentaire doit être accepté par écrit
-              par le client avant exécution (CGV art. 8) — il ne se facture qu’une fois accepté.
+              Devis complémentaire du projet : tout travail supplémentaire doit être accepté par écrit par le client
+              avant exécution (CGV art. 8) — il ne se facture qu’une fois accepté.
             </p>
           )}
 

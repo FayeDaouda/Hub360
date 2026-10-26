@@ -30,10 +30,18 @@ export type TacheAssignee = Tache & {
 
 const numeroEtape = (n: number) => String(n).padStart(2, '0');
 
-export async function chargerTachesAssignees(prisma: PrismaService, collaborateurIds: string[]): Promise<TacheAssignee[]> {
+export async function chargerTachesAssignees(
+  prisma: PrismaService,
+  collaborateurIds: string[],
+): Promise<TacheAssignee[]> {
   if (collaborateurIds.length === 0) return [];
   const taches = await prisma.tacheProjet.findMany({
-    where: { assigneId: { in: collaborateurIds }, statut: { not: 'non_necessaire' }, carte: { desactivation: null }, projet: { ouvertLe: { not: null } } },
+    where: {
+      assigneId: { in: collaborateurIds },
+      statut: { not: 'non_necessaire' },
+      carte: { desactivation: null },
+      projet: { ouvertLe: { not: null } },
+    },
     select: {
       id: true,
       assigneId: true,
@@ -48,9 +56,19 @@ export async function chargerTachesAssignees(prisma: PrismaService, collaborateu
       fichierObligatoire: true,
       carte: { select: { libelle: true, etapeNumero: true, etapeLibelle: true } },
       projet: {
-        select: { id: true, code: true, programme: true, client: { select: { nom: true } }, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } },
+        select: {
+          id: true,
+          code: true,
+          programme: true,
+          client: { select: { nom: true } },
+          cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } },
+        },
       },
-      evenements: { where: { type: { in: ['remise', 'reprise', 'relance'] } }, orderBy: { creeLe: 'desc' }, select: { type: true, detail: true, creeLe: true } },
+      evenements: {
+        where: { type: { in: ['remise', 'reprise', 'relance'] } },
+        orderBy: { creeLe: 'desc' },
+        select: { type: true, detail: true, creeLe: true },
+      },
     },
   });
   return taches.map((t) => {

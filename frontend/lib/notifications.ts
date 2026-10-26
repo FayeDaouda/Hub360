@@ -54,22 +54,34 @@ export function lienNotificationAdmin(
   // Salarié : ses tâches s'ouvrent dans « Mes tâches » (sa page d'arrivée),
   // les remises de son équipe dans « À valider » (chef de cellule).
   if (session && sectionAccessible(session, 'mes-taches')) {
-    if (['tache_assignee', 'tache_renvoyee', 'tache_validee', 'rappel_tache'].includes(n.type)) return `${base}/mes-taches`;
+    if (['tache_assignee', 'tache_renvoyee', 'tache_validee', 'rappel_tache'].includes(n.type))
+      return `${base}/mes-taches`;
     if (n.type === 'tache_remise') return `${base}/mon-espace?onglet=a-valider`;
   }
   // Demandes RH : la RH traite dans RH › Demandes ; le N+1 décide dans Mon
   // espace › À valider ; le salarié suit ses demandes dans Mon espace.
   if (n.type === 'absence_a_decider') {
-    return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
+    return niveauSuffisant(session, 'rh', 'ecriture')
+      ? `${base}/rh?onglet=demandes`
+      : `${base}/mon-espace?onglet=a-valider`;
   }
   if (n.type === 'remboursement_a_traiter') return `${base}/rh?onglet=demandes`;
   // Salaire : le CFO décide en tête de la page RH, la RH retrouve le dossier.
   if (n.type === 'salaire_a_valider') return `${base}/rh`;
   if (n.type === 'salaire_decide') return `${base}/rh?onglet=personnel`;
   // Contrôle interne : avoirs et clôture se traitent en tête de Finances.
-  if (['avoir_emis', 'avoir_a_valider', 'avoir_decide', 'cloture_a_faire'].includes(n.type)) return `${base}/facturation`;
+  if (['avoir_emis', 'avoir_a_valider', 'avoir_decide', 'cloture_a_faire'].includes(n.type))
+    return `${base}/facturation`;
   // Suivi des reportings : le fil est sous le reporting, dans Pilotage.
-  if (['reporting_question', 'reporting_reponse', 'reporting_a_deposer', 'reporting_en_retard', 'reporting_depose'].includes(n.type)) {
+  if (
+    [
+      'reporting_question',
+      'reporting_reponse',
+      'reporting_a_deposer',
+      'reporting_en_retard',
+      'reporting_depose',
+    ].includes(n.type)
+  ) {
     return `${base}?onglet=reportings`;
   }
   // TS au-delà du seuil : le CTO décide dans « À décider aujourd'hui » ; le
@@ -79,17 +91,25 @@ export function lienNotificationAdmin(
   if (n.type === 'arrivant_a_affecter') return `${base}/equipe?liste=affecter`;
   if (n.type === 'ts_decide' && n.projetId) return `${base}/projets?projet=${n.projetId}`;
   // Seuil ou coordonnées de paiement changés : le journal d'audit (CEO).
-  if (n.type === 'reglage_gouvernance_modifie' || n.type === 'coordonnees_paiement_modifiees') return `${base}?onglet=journal`;
+  if (n.type === 'reglage_gouvernance_modifie' || n.type === 'coordonnees_paiement_modifiees')
+    return `${base}?onglet=journal`;
   // Relance : la RH traite dans RH › Demandes ; le N+1 (ou le CEO) dans « À valider ».
   if (n.type === 'rappel_demande') {
-    return niveauSuffisant(session, 'rh', 'ecriture') ? `${base}/rh?onglet=demandes` : `${base}/mon-espace?onglet=a-valider`;
+    return niveauSuffisant(session, 'rh', 'ecriture')
+      ? `${base}/rh?onglet=demandes`
+      : `${base}/mon-espace?onglet=a-valider`;
   }
   if (n.type === 'ecart_temps_signale') return `${base}/rh?onglet=temps`;
   if (n.type === 'ecart_temps_traite') return `${base}/mon-espace?onglet=temps`;
   if (n.type === 'bulletin_depose' || n.type === 'attestation_delivree') return `${base}/mon-espace?onglet=documents`;
   if (n.type === 'absence_decidee') return `${base}/mon-espace?onglet=conges`;
   if (n.type === 'remboursement_traite') return `${base}/mon-espace?onglet=remboursements`;
-  if (['decision_assignee', 'rappel_decision', 'decision_en_retard', 'decision_proposee', 'decision_arbitree'].includes(n.type)) return `${base}?onglet=registre`;
+  if (
+    ['decision_assignee', 'rappel_decision', 'decision_en_retard', 'decision_proposee', 'decision_arbitree'].includes(
+      n.type,
+    )
+  )
+    return `${base}?onglet=registre`;
   if ((n.type === 'facture_emise' || n.type === 'facture_payee' || n.type === 'rappel_facture') && n.factureId) {
     return `${base}/facturation?facture=${n.factureId}`;
   }
@@ -104,7 +124,9 @@ export function lienNotificationAdmin(
   if (n.type === 'avenant_ts' && n.projetId) return `${base}/facturation?projetId=${n.projetId}`;
   // Facture directe à valider : la facture ouverte dans Facturation (CFO).
   if (n.type === 'facture_a_valider') {
-    return n.factureId ? `/admin/${slug}/facturation?facture=${n.factureId}` : `/admin/${slug}/facturation?onglet=factures`;
+    return n.factureId
+      ? `/admin/${slug}/facturation?facture=${n.factureId}`
+      : `/admin/${slug}/facturation?onglet=factures`;
   }
   // Relance du CEO (revue CEO) : la facture, le dossier, sinon son panneau.
   if (n.type === 'attente_ceo' && n.factureId) return `${base}/facturation?facture=${n.factureId}`;

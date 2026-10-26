@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 
 // Nom du rôle transverse CIO (holding, cf. seed.ts) — comparaison directe
 // comme le reste du projet le fait pour les rôles socles (`'societe_admin'`
@@ -35,8 +30,6 @@ export class SocieteAdminOuCioGuard implements CanActivate {
     const bonneSociete = user.societeSlug === slug;
     if (bonneSociete && (user.role === ROLE_CIO || user.role === 'societe_admin')) return true;
 
-    throw new ForbiddenException(
-      'Réservé à l’administration de la société ou au CIO.',
-    );
+    throw new ForbiddenException('Réservé à l’administration de la société ou au CIO.');
   }
 }

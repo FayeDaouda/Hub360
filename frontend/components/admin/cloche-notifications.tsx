@@ -71,9 +71,7 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
         className="admin-cloche"
         aria-haspopup="menu"
         aria-expanded={ouvert}
-        aria-label={
-          nonLues > 0 ? `Notifications, ${nonLues} non lue${nonLues > 1 ? 's' : ''}` : 'Notifications'
-        }
+        aria-label={nonLues > 0 ? `Notifications, ${nonLues} non lue${nonLues > 1 ? 's' : ''}` : 'Notifications'}
         onClick={basculer}
       >
         <Bell size={18} aria-hidden />
@@ -97,11 +95,7 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
                   definirSonActive(suivant);
                 }}
               >
-                {son ? (
-                  <Volume2 size={15} aria-hidden />
-                ) : (
-                  <VolumeX size={15} aria-hidden />
-                )}
+                {son ? <Volume2 size={15} aria-hidden /> : <VolumeX size={15} aria-hidden />}
               </button>
               {nonLues > 0 && (
                 <button type="button" className="notif-tout-lu" onClick={toutLire}>
@@ -118,7 +112,14 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
                 ['informations', 'Informations', informations],
               ] as const
             ).map(([cle, libelle, liste]) => (
-              <button key={cle} type="button" role="tab" aria-selected={onglet === cle} className={onglet === cle ? 'is-active' : ''} onClick={() => setOnglet(cle)}>
+              <button
+                key={cle}
+                type="button"
+                role="tab"
+                aria-selected={onglet === cle}
+                className={onglet === cle ? 'is-active' : ''}
+                onClick={() => setOnglet(cle)}
+              >
                 {libelle}
                 {nonLu(liste) > 0 && <span className="notif-onglet-compte">{nonLu(liste)}</span>}
               </button>
@@ -126,18 +127,22 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
           </div>
 
           {elements.length === 0 ? (
-            <p className="notif-vide">{onglet === 'decisions' ? 'Aucune décision ne vous attend.' : 'Rien à signaler.'}</p>
+            <p className="notif-vide">
+              {onglet === 'decisions' ? 'Aucune décision ne vous attend.' : 'Rien à signaler.'}
+            </p>
           ) : (
             <ul className="notif-liste">
               {elements.map((n) => {
                 const corps = (
                   <>
-                    <span className="notif-point" data-etat={n.derivee ? 'echeance' : n.lu ? 'lu' : 'nonlu'} aria-hidden />
+                    <span
+                      className="notif-point"
+                      data-etat={n.derivee ? 'echeance' : n.lu ? 'lu' : 'nonlu'}
+                      aria-hidden
+                    />
                     <span className="notif-txt">
                       <span className="notif-titre">{n.titre}</span>
-                      <span className="notif-meta">
-                        {n.derivee ? libelleAlerteDerivee(n) : ilYa(n.date)}
-                      </span>
+                      <span className="notif-meta">{n.derivee ? libelleAlerteDerivee(n) : ilYa(n.date)}</span>
                     </span>
                   </>
                 );
@@ -145,11 +150,7 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
                 return (
                   <li key={n.id}>
                     {href ? (
-                      <Link
-                        href={href}
-                        className="notif-item"
-                        onClick={() => setOuvert(false)}
-                      >
+                      <Link href={href} className="notif-item" onClick={() => setOuvert(false)}>
                         {corps}
                       </Link>
                     ) : (
@@ -164,11 +165,7 @@ export function ClocheNotifications({ slug, session }: { slug: string; session: 
       )}
 
       {toast && (
-        <NotifToast
-          notification={toast}
-          href={lienNotificationAdmin(slug, toast, session)}
-          onFermer={fermerToast}
-        />
+        <NotifToast notification={toast} href={lienNotificationAdmin(slug, toast, session)} onFermer={fermerToast} />
       )}
     </div>
   );

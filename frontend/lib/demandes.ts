@@ -17,21 +17,38 @@ import { telechargerFichier } from './fichiers';
 type Fichier = { nom: string; url: string };
 
 export const getMesDemandes = (slug: string) =>
-  apiSociete<{ solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] }>(slug, '/mon-espace/demandes');
+  apiSociete<{ solde: SoldeConges; absences: DemandeAbsence[]; remboursements: DemandeRemboursement[] }>(
+    slug,
+    '/mon-espace/demandes',
+  );
 // Dir. GC : suppléants possibles pendant son absence (autre Dir. GC, CTO).
 export type Suppleant = { id: string; nom: string; role: string };
 export const getSuppleants = (slug: string) => apiSociete<Suppleant[]>(slug, '/mon-espace/suppleants');
 export const deposerAbsence = (
   slug: string,
-  corps: { type: TypeAbsence; dateDebut: string; dateFin: string; commentaire?: string; justificatif?: Fichier; suppleantId?: string },
-) =>
-  apiSociete<DemandeAbsence>(slug, '/mon-espace/absences', { method: 'POST', body: corps });
+  corps: {
+    type: TypeAbsence;
+    dateDebut: string;
+    dateFin: string;
+    commentaire?: string;
+    justificatif?: Fichier;
+    suppleantId?: string;
+  },
+) => apiSociete<DemandeAbsence>(slug, '/mon-espace/absences', { method: 'POST', body: corps });
 export const repondreAutresDates = (slug: string, id: string, accepte: boolean) =>
   apiSociete<DemandeAbsence>(slug, `/mon-espace/absences/${id}/reponse`, { method: 'POST', body: { accepte } });
 export const retirerAbsence = (slug: string, id: string) =>
   apiSociete<DemandeAbsence>(slug, `/mon-espace/absences/${id}/retrait`, { method: 'POST', body: {} });
-export const deposerRemboursement = (slug: string, corps: { categorie: CategorieSoins; beneficiaire: string; dateSoins: string; montant: number; justificatifs?: Fichier[] }) =>
-  apiSociete<DemandeRemboursement>(slug, '/mon-espace/remboursements', { method: 'POST', body: corps });
+export const deposerRemboursement = (
+  slug: string,
+  corps: {
+    categorie: CategorieSoins;
+    beneficiaire: string;
+    dateSoins: string;
+    montant: number;
+    justificatifs?: Fichier[];
+  },
+) => apiSociete<DemandeRemboursement>(slug, '/mon-espace/remboursements', { method: 'POST', body: corps });
 
 // Demandes dont je suis le N+1 : en attente de ma décision, ou toutes (`toutes`).
 export const getAbsencesAValider = (slug: string, toutes = false) =>
@@ -41,7 +58,15 @@ export const getPreparationDecision = (slug: string, id: string) =>
 export const deciderAbsence = (
   slug: string,
   id: string,
-  corps: { decision: DecisionN1; delegations?: { livrable: string; collaborateurId: string }[]; nonDelegables?: string[]; dateDebut?: string; dateFin?: string; motif?: MotifRefusAbsence; commentaire?: string },
+  corps: {
+    decision: DecisionN1;
+    delegations?: { livrable: string; collaborateurId: string }[];
+    nonDelegables?: string[];
+    dateDebut?: string;
+    dateFin?: string;
+    motif?: MotifRefusAbsence;
+    commentaire?: string;
+  },
 ) => apiSociete<DemandeAbsence>(slug, `/absences/${id}/decision`, { method: 'POST', body: corps });
 
 // Attestation de travail demandée par un salarié (Mon espace), délivrée par la RH.
@@ -53,20 +78,35 @@ export type AttestationRh = {
   dossier: { id: string; prenom: string; nom: string; matricule: string };
 };
 export const getDemandesRh = (slug: string) =>
-  apiSociete<{ absences: DemandeAbsence[]; remboursements: DemandeRemboursement[]; attestations: AttestationRh[] }>(slug, '/rh/demandes');
+  apiSociete<{ absences: DemandeAbsence[]; remboursements: DemandeRemboursement[]; attestations: AttestationRh[] }>(
+    slug,
+    '/rh/demandes',
+  );
 export const delivrerAttestation = (slug: string, id: string, fichier: { nom: string; url: string }) =>
   apiSociete<{ ok: true }>(slug, `/rh/demandes/attestations/${id}/delivrance`, { method: 'POST', body: fichier });
 // Validation finale d'une demande de la RH, par le CEO (« À valider »).
 export const validerFinaleCeo = (slug: string, id: string, valide: boolean, motif?: string) =>
   apiSociete<DemandeAbsence>(slug, `/absences/${id}/validation-finale`, { method: 'POST', body: { valide, motif } });
 export const validerAbsenceRh = (slug: string, id: string, valide: boolean, motif?: string) =>
-  apiSociete<DemandeAbsence>(slug, `/rh/demandes/absences/${id}/validation`, { method: 'POST', body: { valide, motif } });
+  apiSociete<DemandeAbsence>(slug, `/rh/demandes/absences/${id}/validation`, {
+    method: 'POST',
+    body: { valide, motif },
+  });
 export const transmettreRemboursement = (slug: string, id: string) =>
-  apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/transmission`, { method: 'POST', body: {} });
+  apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/transmission`, {
+    method: 'POST',
+    body: {},
+  });
 export const marquerRembourse = (slug: string, id: string, montantRembourse: number) =>
-  apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/remboursement`, { method: 'POST', body: { montantRembourse } });
+  apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/remboursement`, {
+    method: 'POST',
+    body: { montantRembourse },
+  });
 export const rejeterRemboursement = (slug: string, id: string, motif: string) =>
-  apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/rejet`, { method: 'POST', body: { motif } });
+  apiSociete<DemandeRemboursement>(slug, `/rh/demandes/remboursements/${id}/rejet`, {
+    method: 'POST',
+    body: { motif },
+  });
 export const getJustificatif = (slug: string, chemin: string) => apiSociete<{ nom: string; url: string }>(slug, chemin);
 
 // Calendrier de la cellule autour d'une demande (revue RH 20/10/2026).
@@ -74,11 +114,18 @@ export type CalendrierCellule = {
   cellule: string | null;
   periode: { debut: string; fin: string };
   fenetre: { debut: string; fin: string };
-  membres: { nom: string; estDemandeur: boolean; absences: { debut: string; fin: string; type: TypeAbsence | null; etat: 'demande' | 'validee' | 'en_attente' }[] }[];
+  membres: {
+    nom: string;
+    estDemandeur: boolean;
+    absences: { debut: string; fin: string; type: TypeAbsence | null; etat: 'demande' | 'validee' | 'en_attente' }[];
+  }[];
 };
 // « rh » : page RH ; « decideur » : N+1 ou CEO en validation finale.
 export const getCalendrierCellule = (slug: string, id: string, source: 'rh' | 'decideur') =>
-  apiSociete<CalendrierCellule>(slug, source === 'rh' ? `/rh/demandes/absences/${id}/calendrier` : `/absences/${id}/calendrier`);
+  apiSociete<CalendrierCellule>(
+    slug,
+    source === 'rh' ? `/rh/demandes/absences/${id}/calendrier` : `/absences/${id}/calendrier`,
+  );
 
 export const LIBELLE_TYPE_ABSENCE: Record<TypeAbsence, string> = {
   conge_paye: 'Congé payé',

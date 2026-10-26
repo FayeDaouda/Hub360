@@ -30,11 +30,7 @@ import { FacturationCentraleController } from './facturation/facturation-central
     TachesProjetService,
     FilsProjetService,
   ],
-  controllers: [
-    ProjetsOuvertsController,
-    FacturationController,
-    FacturationCentraleController,
-  ],
+  controllers: [ProjetsOuvertsController, FacturationController, FacturationCentraleController],
   // FacturationService exporté pour DevisModule (conversion d'un devis
   // accepté en facture, cf. FacturationService.creerDepuisDevis) ;
   // TachesProjetService pour Mon espace (RhModule : remise, validation).

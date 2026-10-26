@@ -44,31 +44,16 @@ export function FondLiquide() {
           </linearGradient>
         </defs>
         {/* Nappes translucides (bas-gauche, haut-droite) */}
-        <path
-          className="fond-liquide-nappe"
-          d="M-40 690C160 610 330 640 470 720S760 900 900 940L-40 940Z"
-        />
-        <path
-          className="fond-liquide-nappe"
-          d="M760 -40C900 90 1080 150 1260 120S1480 60 1500 40L1500 -40Z"
-        />
+        <path className="fond-liquide-nappe" d="M-40 690C160 610 330 640 470 720S760 900 900 940L-40 940Z" />
+        <path className="fond-liquide-nappe" d="M760 -40C900 90 1080 150 1260 120S1480 60 1500 40L1500 -40Z" />
         {/* Filets lumineux */}
-        <path
-          className="fond-liquide-filet"
-          d="M-60 640C180 560 360 610 520 700S840 880 1060 860"
-        />
+        <path className="fond-liquide-filet" d="M-60 640C180 560 360 610 520 700S840 880 1060 860" />
         <path
           className="fond-liquide-filet fond-liquide-filet--doux"
           d="M-60 420C220 360 380 520 640 560S1080 470 1500 580"
         />
-        <path
-          className="fond-liquide-filet"
-          d="M700 -20C860 110 1040 190 1240 160S1440 90 1520 70"
-        />
-        <path
-          className="fond-liquide-filet fond-liquide-filet--doux"
-          d="M980 940C1100 820 1240 760 1500 780"
-        />
+        <path className="fond-liquide-filet" d="M700 -20C860 110 1040 190 1240 160S1440 90 1520 70" />
+        <path className="fond-liquide-filet fond-liquide-filet--doux" d="M980 940C1100 820 1240 760 1500 780" />
       </svg>
 
       {/* Enveloppe (position, mouvement, halo) + corps (verre) : le halo est

@@ -62,9 +62,7 @@ export function versDossierCrm(
     categorie: d.categorie,
     localisation: d.localisation,
     // null = dossier antérieur au référentiel, pas encore rattaché.
-    localite: d.localite
-      ? { id: d.localite.id, code: d.localite.code, nom: d.localite.nom }
-      : null,
+    localite: d.localite ? { id: d.localite.id, code: d.localite.code, nom: d.localite.nom } : null,
     type: d.type,
     nbPlanches: d.nbPlanches,
     surfaceTerrain: d.surfaceTerrain,
@@ -95,8 +93,7 @@ export function versDossierCrm(
           : null,
     // % attribué — partie de la fiche apporteur, lue par les rôles CRM
     // (maquette « Nouveau projet », oct. 2026). null = aucun.
-    commissionApporteur:
-      d.commissionApporteur === null ? null : Number(d.commissionApporteur),
+    commissionApporteur: d.commissionApporteur === null ? null : Number(d.commissionApporteur),
     // null = « à assigner ».
     proprietaire: versPersonne(d.proprietaire),
     // null = lead actif ; sinon figé, consultable dans « Archivés ».
@@ -145,9 +142,7 @@ function versResumeOffre(o: Devis & { lignes: LigneDevis[] }) {
 }
 
 // Projet d'exécution (frontend/lib/types.ts::ProjetExecution).
-export function versProjetExecution(
-  p: Projet & { client: Client; cellules: ProjetCellule[] },
-) {
+export function versProjetExecution(p: Projet & { client: Client; cellules: ProjetCellule[] }) {
   return {
     id: p.id,
     code: p.code,
@@ -204,9 +199,7 @@ export function versCollaborateur(c: Collaborateur & { compte?: CompteMini }) {
 }
 
 // Cellule (frontend/lib/types.ts::Cellule) avec ses membres.
-export function versCellule(
-  cel: Cellule & { membres: (Collaborateur & { compte?: CompteMini })[] },
-) {
+export function versCellule(cel: Cellule & { membres: (Collaborateur & { compte?: CompteMini })[] }) {
   return {
     id: cel.id,
     nom: cel.nom,
@@ -220,4 +213,3 @@ export function versCellule(
     collaborateurs: cel.membres.map(versCollaborateur),
   };
 }
-

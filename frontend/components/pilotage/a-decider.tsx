@@ -66,7 +66,15 @@ const VIDE: ADeciderProjets = { remises: [], prolongations: [], visas: [], ts: [
 //     Dir. GC absent, les absences du Dir. GC, le reporting reçu à lire.
 // Hors de Pilotage (page Production du CTO) : sans `vue`, pas de reporting à
 // déposer ; sans `onOnglet`, « Lire » mène à l'onglet Reportings de Pilotage.
-export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilotage | null; onOnglet?: (onglet: 'reportings') => void }) {
+export function ADecider({
+  slug,
+  vue,
+  onOnglet,
+}: {
+  slug: string;
+  vue?: VuePilotage | null;
+  onOnglet?: (onglet: 'reportings') => void;
+}) {
   const router = useRouter();
   const versReportings = () => (onOnglet ? onOnglet('reportings') : router.push(`/admin/${slug}?onglet=reportings`));
   const session = useSessionCourante();
@@ -75,7 +83,9 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilot
   const [absences, setAbsences] = useState<DemandeAbsence[]>([]);
   const [dossiers, setDossiers] = useState<Projet[]>([]);
   const [recus, setRecus] = useState<ReportingRecu[]>([]);
-  const [arrivants, setArrivants] = useState<{ id: string; nom: string; role: string; dateArrivee: string | null }[]>([]);
+  const [arrivants, setArrivants] = useState<{ id: string; nom: string; role: string; dateArrivee: string | null }[]>(
+    [],
+  );
   const [tsOuvert, setTsOuvert] = useState<DemandeTsADecider | null>(null);
   const [version, setVersion] = useState(0);
   const [tout, setTout] = useState(false);
@@ -108,7 +118,8 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilot
   const joursDepuis = (iso: string) => Math.floor((maintenant - Date.parse(iso)) / JOUR);
   const aujourdhui = new Date(maintenant).toISOString().slice(0, 10);
   const joursAvant = (jour: string) => Math.round((Date.parse(jour) - Date.parse(aujourdhui)) / JOUR);
-  const versTache = (projetId: string, tacheId: string) => () => router.push(`/admin/${slug}/projets?projet=${projetId}&tache=${tacheId}`);
+  const versTache = (projetId: string, tacheId: string) => () =>
+    router.push(`/admin/${slug}/projets?projet=${projetId}&tache=${tacheId}`);
   const versDossier = (id: string) => () => router.push(`/admin/${slug}/crm?dossier=${id}`);
   const miens = dossiers.filter((d) => d.proprietaire?.id === session.utilisateur.id);
 
@@ -262,7 +273,9 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilot
     });
   }
   // 6. Reporting de direction à déposer au CTO (dû le 5 du mois suivant).
-  for (const r of (vue?.reportings ?? []).filter((x) => x.peutDeposer && (x.statut === 'a_deposer' || x.statut === 'en_retard'))) {
+  for (const r of (vue?.reportings ?? []).filter(
+    (x) => x.peutDeposer && (x.statut === 'a_deposer' || x.statut === 'en_retard'),
+  )) {
     const reste = joursAvant(r.echeance);
     elements.push({
       cle: `reporting-${r.type}-${r.mois}`,
@@ -271,7 +284,8 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilot
       icone: r.statut === 'en_retard' ? FileInput : ClipboardList,
       titre: `${r.titre} · ${r.periode}`,
       detail: `prérempli par le HUB, à compléter et déposer au ${r.destinataire}`,
-      quand: r.statut === 'en_retard' ? `en retard depuis le ${jjmm(r.echeance)}` : `à déposer avant le ${jjmm(r.echeance)}`,
+      quand:
+        r.statut === 'en_retard' ? `en retard depuis le ${jjmm(r.echeance)}` : `à déposer avant le ${jjmm(r.echeance)}`,
       ton: r.statut === 'en_retard' ? 'risque' : reste <= 2 ? 'attention' : 'info',
       action: 'Déposer',
       ouvrir: versReportings,
@@ -344,7 +358,14 @@ export function ADecider({ slug, vue, onOnglet }: { slug: string; vue?: VuePilot
           ))}
         </ul>
       )}
-      {tsOuvert && <DecisionTs slug={slug} demande={tsOuvert} onFait={() => setVersion((v) => v + 1)} onClose={() => setTsOuvert(null)} />}
+      {tsOuvert && (
+        <DecisionTs
+          slug={slug}
+          demande={tsOuvert}
+          onFait={() => setVersion((v) => v + 1)}
+          onClose={() => setTsOuvert(null)}
+        />
+      )}
       {elements.length > VISIBLES && (
         <button type="button" className="at-rh-plus" aria-expanded={tout} onClick={() => setTout((x) => !x)}>
           <ChevronDown size={15} aria-hidden className={tout ? 'is-ouvert' : undefined} />

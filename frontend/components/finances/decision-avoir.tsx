@@ -11,7 +11,17 @@ const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/'
 
 // Avoir au-delà du seuil (contrôle interne, revue CFO 20/10/2026) : le CEO
 // le valide (l'avoir est émis, la facture annulée) ou le refuse avec un motif.
-export function DecisionAvoir({ slug, avoir, onFait, onClose }: { slug: string; avoir: AvoirAValider; onFait: (l: AvoirAValider[]) => void; onClose: () => void }) {
+export function DecisionAvoir({
+  slug,
+  avoir,
+  onFait,
+  onClose,
+}: {
+  slug: string;
+  avoir: AvoirAValider;
+  onFait: (l: AvoirAValider[]) => void;
+  onClose: () => void;
+}) {
   const [refus, setRefus] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -37,7 +47,13 @@ export function DecisionAvoir({ slug, avoir, onFait, onClose }: { slug: string; 
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="dav-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dav-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="dav-titre">Avoir sur {avoir.reference ?? 'la facture'}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
@@ -70,11 +86,19 @@ export function DecisionAvoir({ slug, avoir, onFait, onClose }: { slug: string; 
               </dd>
             </div>
           </dl>
-          {!avoir.peutDecider && <p className="dmd-note">Vous avez fait cette demande : elle doit être validée par un autre CEO.</p>}
+          {!avoir.peutDecider && (
+            <p className="dmd-note">Vous avez fait cette demande : elle doit être validée par un autre CEO.</p>
+          )}
           {refus !== null && (
             <label className="field">
               <span className="field-label">Motif du refus (transmis au demandeur)</span>
-              <textarea className="field-input" rows={2} maxLength={300} value={refus} onChange={(e) => setRefus(e.target.value)} />
+              <textarea
+                className="field-input"
+                rows={2}
+                maxLength={300}
+                value={refus}
+                onChange={(e) => setRefus(e.target.value)}
+              />
             </label>
           )}
           {erreur && <p className="field-erreur">{erreur}</p>}
@@ -94,7 +118,12 @@ export function DecisionAvoir({ slug, avoir, onFait, onClose }: { slug: string; 
                   <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setRefus(null)}>
                     Annuler
                   </button>
-                  <button type="button" className="btn-primary" disabled={envoi || !refus.trim()} onClick={() => decider(false)}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={envoi || !refus.trim()}
+                    onClick={() => decider(false)}
+                  >
                     Confirmer le refus
                   </button>
                 </>

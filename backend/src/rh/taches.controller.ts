@@ -40,7 +40,11 @@ export class MesTachesController {
   // Relancer son validateur : 3 jours ouvrés après le dépôt (puis après la
   // relance précédente) — le service vérifie l'assigné et le délai.
   @Post(':projetId/:tacheId/relance')
-  relancer(@Req() req: R, @Param('projetId', ParseUUIDPipe) projetId: string, @Param('tacheId', ParseUUIDPipe) tacheId: string) {
+  relancer(
+    @Req() req: R,
+    @Param('projetId', ParseUUIDPipe) projetId: string,
+    @Param('tacheId', ParseUUIDPipe) tacheId: string,
+  ) {
     return this.taches.relancer(req.user, projetId, tacheId);
   }
 }

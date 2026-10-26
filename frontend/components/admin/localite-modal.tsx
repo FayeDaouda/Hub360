@@ -27,13 +27,7 @@ const FORMAT_CODE = /^[A-Z]{3}$/;
 // proposé à partir du nom tant que la direction n'y a pas touché ; toute
 // collision est signalée en direct, jamais corrigée d'office — c'est à la
 // direction de choisir un autre code (règle validée, sept. 2026).
-export function LocaliteModal({
-  localites,
-  localite,
-  zoneInitiale,
-  onSubmit,
-  onClose,
-}: Props) {
+export function LocaliteModal({ localites, localite, zoneInitiale, onSubmit, onClose }: Props) {
   const edition = !!localite;
   const [zone, setZone] = useState<ZoneLocalite>(localite?.zone ?? zoneInitiale);
   const [nom, setNom] = useState(localite?.nom ?? '');
@@ -50,9 +44,7 @@ export function LocaliteModal({
   const codeFige = !!localite?.codeVerrouille;
   const detenteur = localites.find((l) => l.code === code && l.id !== localite?.id);
   const formatOk = FORMAT_CODE.test(code);
-  const regionsConnues = [
-    ...new Set(localites.filter((l) => l.zone === zone).map((l) => l.region)),
-  ];
+  const regionsConnues = [...new Set(localites.filter((l) => l.zone === zone).map((l) => l.region))];
 
   useEffect(() => {
     premierChamp.current?.focus();
@@ -105,9 +97,7 @@ export function LocaliteModal({
         onClick={(e) => e.stopPropagation()}
       >
         <header className="modal-header">
-          <h2 id="localite-modal-titre">
-            {edition ? `Modifier ${localite.nom}` : 'Nouvelle localité'}
-          </h2>
+          <h2 id="localite-modal-titre">{edition ? `Modifier ${localite.nom}` : 'Nouvelle localité'}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
             <X size={18} />
           </button>
@@ -186,9 +176,7 @@ export function LocaliteModal({
               placeholder="ex : Fann-Point E-Amitié"
               maxLength={120}
             />
-            <span className="field-aide">
-              Pour un quartier d’usage qui fait partie d’une commune administrative.
-            </span>
+            <span className="field-aide">Pour un quartier d’usage qui fait partie d’une commune administrative.</span>
           </label>
 
           <label className="field">
@@ -212,8 +200,7 @@ export function LocaliteModal({
               </span>
             ) : detenteur ? (
               <span className="field-erreur">
-                Déjà pris par « {detenteur.nom} » ({ZONES_LOCALITE[detenteur.zone]}) — choisis un
-                autre code.
+                Déjà pris par « {detenteur.nom} » ({ZONES_LOCALITE[detenteur.zone]}) — choisis un autre code.
               </span>
             ) : (
               <span className="field-aide">

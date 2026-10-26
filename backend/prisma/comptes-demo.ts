@@ -17,14 +17,62 @@ export const MOT_DE_PASSE_DEMO = 'changeme123';
 
 // IDs figés (même raison que dans seed.ts : un reseed les recrée à l'identique).
 export const COMPTES_DEMO = [
-  { role: 'Dir. GC', id: '00000000-0000-4000-8000-000000000004', email: 'dirgc.greyconcrete@hub.group', prenom: 'Cheikh', nom: 'Fall' },
-  { role: 'COO', id: '00000000-0000-4000-8000-000000000006', email: 'coo.greyconcrete@hub.group', prenom: 'Mariama', nom: 'Seck' },
-  { role: 'CFO', id: '00000000-0000-4000-8000-000000000005', email: 'cfo.greyconcrete@hub.group', prenom: 'Bineta', nom: 'Sarr' },
-  { role: 'RH', id: '00000000-0000-4000-8000-000000000007', email: 'rh.greyconcrete@hub.group', prenom: 'Coumba', nom: 'Gaye' },
-  { role: 'Salarié', id: '00000000-0000-4000-8000-000000000008', email: 'salarie.greyconcrete@hub.group', prenom: 'Pape', nom: 'Sy' },
-  { role: 'CEO (transverse)', id: '00000000-0000-4000-8000-000000000009', email: 'ceo.greyconcrete@hub.group', prenom: 'Abdoulaye', nom: 'Mbaye' },
-  { role: 'CTO (transverse)', id: '00000000-0000-4000-8000-000000000010', email: 'cto.greyconcrete@hub.group', prenom: 'Khadija', nom: 'Cissé' },
-  { role: 'CIO (transverse)', id: '00000000-0000-4000-8000-000000000011', email: 'cio.greyconcrete@hub.group', prenom: 'Ousseynou', nom: 'Camara' },
+  {
+    role: 'Dir. GC',
+    id: '00000000-0000-4000-8000-000000000004',
+    email: 'dirgc.greyconcrete@hub.group',
+    prenom: 'Cheikh',
+    nom: 'Fall',
+  },
+  {
+    role: 'COO',
+    id: '00000000-0000-4000-8000-000000000006',
+    email: 'coo.greyconcrete@hub.group',
+    prenom: 'Mariama',
+    nom: 'Seck',
+  },
+  {
+    role: 'CFO',
+    id: '00000000-0000-4000-8000-000000000005',
+    email: 'cfo.greyconcrete@hub.group',
+    prenom: 'Bineta',
+    nom: 'Sarr',
+  },
+  {
+    role: 'RH',
+    id: '00000000-0000-4000-8000-000000000007',
+    email: 'rh.greyconcrete@hub.group',
+    prenom: 'Coumba',
+    nom: 'Gaye',
+  },
+  {
+    role: 'Salarié',
+    id: '00000000-0000-4000-8000-000000000008',
+    email: 'salarie.greyconcrete@hub.group',
+    prenom: 'Pape',
+    nom: 'Sy',
+  },
+  {
+    role: 'CEO (transverse)',
+    id: '00000000-0000-4000-8000-000000000009',
+    email: 'ceo.greyconcrete@hub.group',
+    prenom: 'Abdoulaye',
+    nom: 'Mbaye',
+  },
+  {
+    role: 'CTO (transverse)',
+    id: '00000000-0000-4000-8000-000000000010',
+    email: 'cto.greyconcrete@hub.group',
+    prenom: 'Khadija',
+    nom: 'Cissé',
+  },
+  {
+    role: 'CIO (transverse)',
+    id: '00000000-0000-4000-8000-000000000011',
+    email: 'cio.greyconcrete@hub.group',
+    prenom: 'Ousseynou',
+    nom: 'Camara',
+  },
 ] as const;
 
 export type RoleDemo = (typeof COMPTES_DEMO)[number]['role'];

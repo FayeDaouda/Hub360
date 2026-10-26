@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, TypeCanal } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { estRoleBackOffice } from '../commun/back-office.guard';
@@ -95,9 +90,7 @@ export class ChatService {
           societeId,
           OR: [
             { type: TypeCanal.general },
-            ...(celluleId
-              ? [{ type: TypeCanal.cellule, celluleId } as Prisma.CanalWhereInput]
-              : []),
+            ...(celluleId ? [{ type: TypeCanal.cellule, celluleId } as Prisma.CanalWhereInput] : []),
             { type: TypeCanal.direct, participant1Id: userId },
             { type: TypeCanal.direct, participant2Id: userId },
           ],
@@ -267,7 +260,15 @@ export class ChatService {
 
     const parId = new Map<
       string,
-      { utilisateurId: string; prenom: string; nom: string; nomAffiche: string | null; photoUrl: string | null; role: string; cellule: string | null }
+      {
+        utilisateurId: string;
+        prenom: string;
+        nom: string;
+        nomAffiche: string | null;
+        photoUrl: string | null;
+        role: string;
+        cellule: string | null;
+      }
     >();
     for (const c of collabs) {
       if (c.utilisateurId && c.utilisateurId !== acteur.userId) {
@@ -296,9 +297,7 @@ export class ChatService {
         });
       }
     }
-    return [...parId.values()].sort((x, y) =>
-      `${x.nom} ${x.prenom}`.localeCompare(`${y.nom} ${y.prenom}`),
-    );
+    return [...parId.values()].sort((x, y) => `${x.nom} ${x.prenom}`.localeCompare(`${y.nom} ${y.prenom}`));
   }
 
   // -- Ouvrir / récupérer un DM ------------------------------------
@@ -366,9 +365,7 @@ export class ChatService {
         data: { societeId, type: TypeCanal.general },
       });
     } catch (e) {
-      if (
-        !(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')
-      ) {
+      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')) {
         throw e;
       }
     }

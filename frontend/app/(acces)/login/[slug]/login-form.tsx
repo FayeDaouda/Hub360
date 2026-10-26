@@ -108,11 +108,7 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
 
       <div className="auth-options">
         <label className="auth-case">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-          />
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           Se souvenir de moi
         </label>
         <Link href="/mot-de-passe-oublie" className="auth-lien">

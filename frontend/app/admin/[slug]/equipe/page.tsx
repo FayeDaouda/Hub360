@@ -1,5 +1,5 @@
 'use client';
-import { use } from "react";
+import { use } from 'react';
 
 import { Equipes } from '@/components/equipes/equipes';
 import { niveauSuffisant } from '@/lib/auth';

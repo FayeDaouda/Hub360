@@ -21,7 +21,14 @@ export function CartePanneau({ slug, projetId, carte, moiId, mentionnables, onMa
         {numeroEtape(carte.etapeNumero)} {carte.etapeLibelle} · Fil de la carte
       </p>
       <h3 className="po-panneau-titre">{carte.libelle}</h3>
-      <FilDiscussion slug={slug} projetId={projetId} carteId={carte.id} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
+      <FilDiscussion
+        slug={slug}
+        projetId={projetId}
+        carteId={carte.id}
+        moiId={moiId}
+        mentionnables={mentionnables}
+        onMaj={onMaj}
+      />
     </aside>
   );
 }

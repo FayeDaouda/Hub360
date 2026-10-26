@@ -1,4 +1,14 @@
-import { echeanceReporting, evaluer, moisAReporter, moisSuivant, numeroDecision, rappelsReporting, relanceDecision, statutDecision, statutReporting } from './pilotage-regles';
+import {
+  echeanceReporting,
+  evaluer,
+  moisAReporter,
+  moisSuivant,
+  numeroDecision,
+  rappelsReporting,
+  relanceDecision,
+  statutDecision,
+  statutReporting,
+} from './pilotage-regles';
 
 // Pilotage (maquettes du boss) : reportings J+5, registre, objectifs.
 describe('reportings mensuels', () => {
@@ -33,9 +43,15 @@ describe('registre des décisions', () => {
     expect(statutDecision({ echeance: '2026-10-05', closeLe: null }, '2026-10-05')).toBe('ouverte');
     expect(statutDecision({ echeance: '2026-09-22', closeLe: null }, '2026-10-05')).toBe('echeance_depassee');
     expect(statutDecision({ echeance: '2026-09-22', closeLe: '2026-10-01' }, '2026-10-05')).toBe('close');
-    expect(statutDecision({ echeance: '2026-09-22', closeLe: null, proposition: 'proposee' }, '2026-10-05')).toBe('proposee');
-    expect(statutDecision({ echeance: '2026-11-22', closeLe: null, proposition: 'refusee' }, '2026-10-05')).toBe('refusee');
-    expect(statutDecision({ echeance: '2026-09-22', closeLe: null, proposition: 'acceptee' }, '2026-10-05')).toBe('echeance_depassee');
+    expect(statutDecision({ echeance: '2026-09-22', closeLe: null, proposition: 'proposee' }, '2026-10-05')).toBe(
+      'proposee',
+    );
+    expect(statutDecision({ echeance: '2026-11-22', closeLe: null, proposition: 'refusee' }, '2026-10-05')).toBe(
+      'refusee',
+    );
+    expect(statutDecision({ echeance: '2026-09-22', closeLe: null, proposition: 'acceptee' }, '2026-10-05')).toBe(
+      'echeance_depassee',
+    );
   });
 });
 
@@ -49,8 +65,14 @@ describe('évaluation des indicateurs', () => {
   });
 
   it('objectif à fixer : jamais « hors objectif », la proposition ne colore que si atteinte', () => {
-    expect(evaluer(94, { type: 'minimum', valeur: null, propose: 90 })).toEqual({ evaluation: 'a_fixer', atteintPropose: true });
-    expect(evaluer(67, { type: 'zone', de: null, a: null, propose: { de: 70, a: 100 } })).toEqual({ evaluation: 'a_fixer', atteintPropose: false });
+    expect(evaluer(94, { type: 'minimum', valeur: null, propose: 90 })).toEqual({
+      evaluation: 'a_fixer',
+      atteintPropose: true,
+    });
+    expect(evaluer(67, { type: 'zone', de: null, a: null, propose: { de: 70, a: 100 } })).toEqual({
+      evaluation: 'a_fixer',
+      atteintPropose: false,
+    });
     expect(evaluer(1, { type: 'maximum', valeur: null })).toEqual({ evaluation: 'a_fixer', atteintPropose: false });
   });
 
@@ -61,7 +83,8 @@ describe('évaluation des indicateurs', () => {
 
 // Revue Dir. GC (21/10/2026, lot 3) : rappel avant le 5, relances en retard.
 describe('rappels d’un reporting', () => {
-  const cles = (jour: string, depose = false) => rappelsReporting('2026-09', depose, jour, 3).map((r) => `${r.cible}:${r.cle}`);
+  const cles = (jour: string, depose = false) =>
+    rappelsReporting('2026-09', depose, jour, 3).map((r) => `${r.cible}:${r.cle}`);
 
   it('rien avant la fenêtre de rappel ni une fois déposé', () => {
     expect(cles('2026-10-01')).toEqual([]);

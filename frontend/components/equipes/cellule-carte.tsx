@@ -45,7 +45,11 @@ export function CelluleCarte({
   }
 
   return (
-    <section id={ancreCellule(c.id)} className={`panel glass-panel eq-cellule eq-cellule--${c.statut}`} aria-labelledby={`eq-${c.id}`}>
+    <section
+      id={ancreCellule(c.id)}
+      className={`panel glass-panel eq-cellule eq-cellule--${c.statut}`}
+      aria-labelledby={`eq-${c.id}`}
+    >
       <header className="eq-cellule-tete">
         <h2 id={`eq-${c.id}`}>
           <span className="eq-code">{c.code}</span> {c.nom}
@@ -116,9 +120,18 @@ export function CelluleCarte({
             <li key={m.id}>
               <label
                 className={`eq-avatar${ecriture ? ' eq-avatar--modifiable' : ''}`}
-                style={m.photoUrl ? { backgroundImage: `url(${srcPhoto(m.photoUrl)})` } : { background: couleurPersonne(m.id) }}
+                style={
+                  m.photoUrl
+                    ? { backgroundImage: `url(${srcPhoto(m.photoUrl)})` }
+                    : { background: couleurPersonne(m.id) }
+                }
                 title={
-                  [m.absentJusquau ? `Absent·e jusqu’au ${m.absentJusquau.split('-').reverse().slice(0, 2).join('/')}` : null, ecriture ? `Changer la photo de ${m.nom}` : null]
+                  [
+                    m.absentJusquau
+                      ? `Absent·e jusqu’au ${m.absentJusquau.split('-').reverse().slice(0, 2).join('/')}`
+                      : null,
+                    ecriture ? `Changer la photo de ${m.nom}` : null,
+                  ]
                     .filter(Boolean)
                     .join(' · ') || undefined
                 }

@@ -1,5 +1,5 @@
 'use client';
-import { use } from "react";
+import { use } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ADecider } from '@/components/pilotage/a-decider';
@@ -29,7 +29,13 @@ export default function ProjetsPage(props: Props) {
   return (
     <>
       <div className="vue-toggle prod-onglets" role="tablist" aria-label="Projets">
-        <button type="button" role="tab" aria-selected={!production} className={production ? '' : 'is-active'} onClick={() => router.replace(chemin)}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!production}
+          className={production ? '' : 'is-active'}
+          onClick={() => router.replace(chemin)}
+        >
           Projets
         </button>
         <button

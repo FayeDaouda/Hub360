@@ -49,12 +49,7 @@ type Props = {
 // Grand écran : présentation à gauche, carte à droite (--duo) ou colonne
 // centrée (--centre). Sous 1024px : toujours une colonne, présentation
 // réduite au logo + accroche.
-export function ContenuAcces({
-  children,
-  presentation = false,
-  logoVersPortail = true,
-  className,
-}: Props) {
+export function ContenuAcces({ children, presentation = false, logoVersPortail = true, className }: Props) {
   const logo = logoVersPortail ? (
     <Link href="/" className="auth-logo" aria-label="hub360° — retour au portail">
       <HubLogo />
@@ -84,8 +79,8 @@ export function ContenuAcces({
             au même endroit.
           </p>
           <p className="auth-intro">
-            Gérez vos projets, vos tâches, vos documents, votre équipe et bien plus encore.
-            Une seule plateforme, une infinité de possibilités.
+            Gérez vos projets, vos tâches, vos documents, votre équipe et bien plus encore. Une seule plateforme, une
+            infinité de possibilités.
           </p>
           <ul className="auth-atouts">
             {ATOUTS.map(({ Icone, titre, texte }) => (

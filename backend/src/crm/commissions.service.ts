@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ModePaiement, Prisma, type NiveauPermission } from '@prisma/client';
 import { ConfirmationIdentiteService } from '../auth/confirmation-identite.service';
@@ -17,13 +24,24 @@ const ROLE_COO = 'COO';
 const ROLE_CEO = 'CEO (transverse)';
 const CHAMPS_COORDONNEES = ['banque', 'rib', 'wave', 'orangeMoney'] as const;
 type Coordonnees = Record<(typeof CHAMPS_COORDONNEES)[number], string>;
-const LIBELLE_COORDONNEE: Record<keyof Coordonnees, string> = { banque: 'banque', rib: 'RIB', wave: 'Wave', orangeMoney: 'Orange Money' };
+const LIBELLE_COORDONNEE: Record<keyof Coordonnees, string> = {
+  banque: 'banque',
+  rib: 'RIB',
+  wave: 'Wave',
+  orangeMoney: 'Orange Money',
+};
 
 const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const apporteurDe = (d: { apporteurType: string | null; apporteurNom: string | null; apporteurUtilisateur: { prenom: string; nom: string } | null }) =>
-  d.apporteurType === 'interne' && d.apporteurUtilisateur ? `${d.apporteurUtilisateur.prenom} ${d.apporteurUtilisateur.nom}` : (d.apporteurNom ?? 'Apporteur');
+const apporteurDe = (d: {
+  apporteurType: string | null;
+  apporteurNom: string | null;
+  apporteurUtilisateur: { prenom: string; nom: string } | null;
+}) =>
+  d.apporteurType === 'interne' && d.apporteurUtilisateur
+    ? `${d.apporteurUtilisateur.prenom} ${d.apporteurUtilisateur.nom}`
+    : (d.apporteurNom ?? 'Apporteur');
 
 // Commissions des apporteurs (revue COO, 22/10/2026) : le HUB calcule les
 // lignes à partir des encaissements d'honoraires (ou de la signature), le
@@ -42,7 +60,12 @@ export class CommissionsService {
   // Qui voit les commissions : le COO (il suit), le CFO (il paie), le CEO
   // et l'administration (finances_charges en lecture).
   voit(a: Acteur) {
-    return a.role === ROLE_COO || a.role === ROLE_DAF || a.role === 'societe_admin' || aLaPermission(a.permissions, 'finances_charges', 'lecture');
+    return (
+      a.role === ROLE_COO ||
+      a.role === ROLE_DAF ||
+      a.role === 'societe_admin' ||
+      aLaPermission(a.permissions, 'finances_charges', 'lecture')
+    );
   }
   // Les coordonnées de paiement : celui qui les saisit et celui qui paie.
   private voitCoordonnees(a: Acteur) {
@@ -80,7 +103,12 @@ export class CommissionsService {
         apporteurNom: true,
         apporteurUtilisateur: { select: { prenom: true, nom: true } },
         transitions: { where: { vers: 'onboard' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
-        offres: { where: { statut: 'accepte' }, orderBy: { creeLe: 'desc' }, take: 1, select: { lignes: { select: { quantite: true, prixUnitaire: true } } } },
+        offres: {
+          where: { statut: 'accepte' },
+          orderBy: { creeLe: 'desc' },
+          take: 1,
+          select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+        },
       },
     });
     if (!dossiers.length) return;
@@ -88,17 +116,38 @@ export class CommissionsService {
     const [paiements, versions, existantes] = await Promise.all([
       this.prisma.paiement.findMany({
         where: {
-          facture: { societeId, type: 'honoraires', estAvoir: false, OR: [{ dossierCrmId: { in: ids } }, { projet: { dossierCrmId: { in: ids } } }] },
+          facture: {
+            societeId,
+            type: 'honoraires',
+            estAvoir: false,
+            OR: [{ dossierCrmId: { in: ids } }, { projet: { dossierCrmId: { in: ids } } }],
+          },
         },
-        select: { id: true, date: true, montant: true, facture: { select: { montantHt: true, tauxTva: true, dossierCrmId: true, projet: { select: { dossierCrmId: true } } } } },
+        select: {
+          id: true,
+          date: true,
+          montant: true,
+          facture: {
+            select: { montantHt: true, tauxTva: true, dossierCrmId: true, projet: { select: { dossierCrmId: true } } },
+          },
+        },
       }),
-      this.prisma.profilFacturation.findMany({ where: { societeId }, select: { modeCommission: true, createdAt: true } }),
+      this.prisma.profilFacturation.findMany({
+        where: { societeId },
+        select: { modeCommission: true, createdAt: true },
+      }),
       this.prisma.commissionApporteur.findMany({ where: { societeId } }),
     ]);
     const modes = versions.map((v) => ({ modeCommission: v.modeCommission, jour: jourIso(v.createdAt) }));
     const parCle = new Map(existantes.map((c) => [c.cle, c]));
     const attendues = new Set<string>();
-    const nouvelles: { dossier: (typeof dossiers)[number]; montant: number; baseHt: number; exigibleLe: string; taux: number }[] = [];
+    const nouvelles: {
+      dossier: (typeof dossiers)[number];
+      montant: number;
+      baseHt: number;
+      exigibleLe: string;
+      taux: number;
+    }[] = [];
 
     for (const d of dossiers) {
       const signeLe = d.transitions[0] ? jourIso(d.transitions[0].creeLe) : null;
@@ -108,16 +157,28 @@ export class CommissionsService {
         .filter((p) => (p.facture.dossierCrmId ?? p.facture.projet?.dossierCrmId) === d.id)
         .map((p) => {
           const ht = p.facture.montantHt.toNumber();
-          return { paiementId: p.id, date: p.date, montantTtc: p.montant.toNumber(), factureHt: ht, factureTtc: ventilationTva(ht, p.facture.tauxTva.toNumber()).montantTtc };
+          return {
+            paiementId: p.id,
+            date: p.date,
+            montantTtc: p.montant.toNumber(),
+            factureHt: ht,
+            factureTtc: ventilationTva(ht, p.facture.tauxTva.toNumber()).montantTtc,
+          };
         });
       const signeHt = d.offres[0] ? montantHtLignes(d.offres[0].lignes) : null;
-      for (const c of commissionsAttendues({ id: d.id, taux, signeLe, signeHt }, modeA(modes, signeLe), encaissements)) {
+      for (const c of commissionsAttendues(
+        { id: d.id, taux, signeLe, signeHt },
+        modeA(modes, signeLe),
+        encaissements,
+      )) {
         attendues.add(c.cle);
         const ligne = { baseHt: c.baseHt, taux, montant: c.montant, exigibleLe: c.exigibleLe };
         const existante = parCle.get(c.cle);
         if (!existante) {
           try {
-            await this.prisma.commissionApporteur.create({ data: { societeId, dossierCrmId: d.id, cle: c.cle, paiementId: c.paiementId, ...ligne } });
+            await this.prisma.commissionApporteur.create({
+              data: { societeId, dossierCrmId: d.id, cle: c.cle, paiementId: c.paiementId, ...ligne },
+            });
             nouvelles.push({ dossier: d, ...ligne });
           } catch (e) {
             // Créée entre-temps par une autre synchronisation : rien à faire.
@@ -125,7 +186,9 @@ export class CommissionsService {
           }
         } else if (
           existante.statut === 'a_payer' &&
-          (existante.montant.toNumber() !== c.montant || existante.taux.toNumber() !== taux || existante.exigibleLe !== c.exigibleLe)
+          (existante.montant.toNumber() !== c.montant ||
+            existante.taux.toNumber() !== taux ||
+            existante.exigibleLe !== c.exigibleLe)
         ) {
           // % modifié par le COO, encaissement corrigé : une ligne à payer suit.
           await this.prisma.commissionApporteur.update({ where: { id: existante.id }, data: ligne });
@@ -152,7 +215,8 @@ export class CommissionsService {
   }
 
   async liste(a: Acteur) {
-    if (!this.voit(a)) throw new ForbiddenException('Les commissions des apporteurs sont réservées au COO, au CFO et au CEO.');
+    if (!this.voit(a))
+      throw new ForbiddenException('Les commissions des apporteurs sont réservées au COO, au CFO et au CEO.');
     await this.synchroniser(a.societeId);
     const lignes = await this.prisma.commissionApporteur.findMany({
       where: { societeId: a.societeId },
@@ -171,7 +235,9 @@ export class CommissionsService {
         },
       },
     });
-    const coordonnees = this.voitCoordonnees(a) ? await this.coordonneesActuelles([...new Set(lignes.map((l) => l.dossierCrmId))]) : new Map<string, Coordonnees>();
+    const coordonnees = this.voitCoordonnees(a)
+      ? await this.coordonneesActuelles([...new Set(lignes.map((l) => l.dossierCrmId))])
+      : new Map<string, Coordonnees>();
     const payeurs = await this.prisma.utilisateur.findMany({
       where: { id: { in: lignes.map((l) => l.payeeParId).filter((x): x is string => !!x) } },
       select: { id: true, prenom: true, nom: true },
@@ -204,17 +270,34 @@ export class CommissionsService {
 
   // Le CFO règle une commission : date, mode, référence. Le COO est prévenu.
   async payer(a: Acteur, id: string, dto: { date: string; mode: ModePaiement; reference?: string }) {
-    if (a.role !== ROLE_DAF && a.role !== 'societe_admin') throw new ForbiddenException('Seul le CFO paie les commissions des apporteurs.');
+    if (a.role !== ROLE_DAF && a.role !== 'societe_admin')
+      throw new ForbiddenException('Seul le CFO paie les commissions des apporteurs.');
     const c = await this.prisma.commissionApporteur.findFirst({
       where: { id, societeId: a.societeId },
-      include: { dossier: { select: { code: true, apporteurType: true, apporteurNom: true, apporteurUtilisateur: { select: { prenom: true, nom: true } } } } },
+      include: {
+        dossier: {
+          select: {
+            code: true,
+            apporteurType: true,
+            apporteurNom: true,
+            apporteurUtilisateur: { select: { prenom: true, nom: true } },
+          },
+        },
+      },
     });
     if (!c) throw new NotFoundException('Commission introuvable.');
     if (c.statut === 'payee') throw new ConflictException('Commission déjà payée.');
-    if (dto.date > jourIso(new Date())) throw new BadRequestException('La date de paiement ne peut pas être dans le futur.');
+    if (dto.date > jourIso(new Date()))
+      throw new BadRequestException('La date de paiement ne peut pas être dans le futur.');
     const { count } = await this.prisma.commissionApporteur.updateMany({
       where: { id, statut: 'a_payer' },
-      data: { statut: 'payee', payeeLe: dto.date, payeeParId: a.userId, modePaiement: dto.mode, reference: dto.reference?.trim() ?? '' },
+      data: {
+        statut: 'payee',
+        payeeLe: dto.date,
+        payeeParId: a.userId,
+        modePaiement: dto.mode,
+        reference: dto.reference?.trim() ?? '',
+      },
     });
     if (!count) throw new ConflictException('Commission déjà payée.');
     await this.notifications.envoyer({
@@ -235,21 +318,34 @@ export class CommissionsService {
     if (!this.voitCoordonnees(a)) throw new ForbiddenException('Coordonnées de paiement réservées au COO et au CFO.');
     await this.exigerDossier(a.societeId, dossierId);
     return {
-      coordonnees: (await this.coordonneesActuelles([dossierId])).get(dossierId) ?? { banque: '', rib: '', wave: '', orangeMoney: '' },
+      coordonnees: (await this.coordonneesActuelles([dossierId])).get(dossierId) ?? {
+        banque: '',
+        rib: '',
+        wave: '',
+        orangeMoney: '',
+      },
       confirmation: await this.confirmation.mode(a.userId),
       peutModifier: a.role === ROLE_COO,
     };
   }
 
   async modifierCoordonnees(a: Acteur, dossierId: string, dto: Partial<Coordonnees> & { confirmation?: string }) {
-    if (a.role !== ROLE_COO) throw new ForbiddenException('Seul le COO saisit les coordonnées de paiement d’un apporteur.');
+    if (a.role !== ROLE_COO)
+      throw new ForbiddenException('Seul le COO saisit les coordonnées de paiement d’un apporteur.');
     const d = await this.exigerDossier(a.societeId, dossierId);
-    const avant = (await this.coordonneesActuelles([dossierId])).get(dossierId) ?? { banque: '', rib: '', wave: '', orangeMoney: '' };
+    const avant = (await this.coordonneesActuelles([dossierId])).get(dossierId) ?? {
+      banque: '',
+      rib: '',
+      wave: '',
+      orangeMoney: '',
+    };
     const valeurs = Object.fromEntries(CHAMPS_COORDONNEES.map((c) => [c, (dto[c] ?? '').trim()])) as Coordonnees;
     const changes = CHAMPS_COORDONNEES.filter((c) => avant[c] !== valeurs[c]);
     if (!changes.length) return this.lireCoordonnees(a, dossierId);
     const confirmePar = await this.confirmation.verifier(a.userId, dto.confirmation);
-    await this.prisma.coordonneesApporteur.create({ data: { dossierCrmId: dossierId, ...valeurs, confirmation: confirmePar, parId: a.userId } });
+    await this.prisma.coordonneesApporteur.create({
+      data: { dossierCrmId: dossierId, ...valeurs, confirmation: confirmePar, parId: a.userId },
+    });
     const destinataires = [
       ...(await this.notifications.titulairesRole(a.societeId, ROLE_DAF)),
       ...(await this.notifications.titulairesRole(a.societeId, ROLE_CEO)),
@@ -270,7 +366,13 @@ export class CommissionsService {
   private async exigerDossier(societeId: string, id: string) {
     const d = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
-      select: { id: true, code: true, apporteurType: true, apporteurNom: true, apporteurUtilisateur: { select: { prenom: true, nom: true } } },
+      select: {
+        id: true,
+        code: true,
+        apporteurType: true,
+        apporteurNom: true,
+        apporteurUtilisateur: { select: { prenom: true, nom: true } },
+      },
     });
     if (!d) throw new NotFoundException('Dossier introuvable.');
     if (!d.apporteurType) throw new BadRequestException('Affaire directe : pas d’apporteur à payer.');
@@ -279,10 +381,14 @@ export class CommissionsService {
 
   private async coordonneesActuelles(dossierIds: string[]): Promise<Map<string, Coordonnees>> {
     if (!dossierIds.length) return new Map();
-    const versions = await this.prisma.coordonneesApporteur.findMany({ where: { dossierCrmId: { in: dossierIds } }, orderBy: { createdAt: 'desc' } });
+    const versions = await this.prisma.coordonneesApporteur.findMany({
+      where: { dossierCrmId: { in: dossierIds } },
+      orderBy: { createdAt: 'desc' },
+    });
     const res = new Map<string, Coordonnees>();
     for (const v of versions) {
-      if (!res.has(v.dossierCrmId)) res.set(v.dossierCrmId, { banque: v.banque, rib: v.rib, wave: v.wave, orangeMoney: v.orangeMoney });
+      if (!res.has(v.dossierCrmId))
+        res.set(v.dossierCrmId, { banque: v.banque, rib: v.rib, wave: v.wave, orangeMoney: v.orangeMoney });
     }
     return res;
   }

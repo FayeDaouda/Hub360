@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { EmailService } from '../../email/email.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
@@ -11,8 +16,15 @@ import { NotificationsService } from '../../notifications/notifications.service'
 // Notification « facture à valider » : sans objet ici.
 const NOTIFS = { notifierFactureAValider: jest.fn() } as unknown as NotificationsService;
 // Montant de l'affaire : la facture elle-même (sans offre), suffisant ici.
-const SEUIL_CEO = { montantsAffaire: jest.fn().mockImplementation((fs: { id: string }[]) => Promise.resolve(new Map(fs.map((f) => [f.id, 0])))) } as unknown as SeuilCeoService;
-const OUVERTURE = { preparer: jest.fn().mockResolvedValue(null), enregistrer: jest.fn() } as unknown as OuvertureProjetService;
+const SEUIL_CEO = {
+  montantsAffaire: jest
+    .fn()
+    .mockImplementation((fs: { id: string }[]) => Promise.resolve(new Map(fs.map((f) => [f.id, 0])))),
+} as unknown as SeuilCeoService;
+const OUVERTURE = {
+  preparer: jest.fn().mockResolvedValue(null),
+  enregistrer: jest.fn(),
+} as unknown as OuvertureProjetService;
 
 // FacturationService.relancer() — relance MANUELLE d'une facture en retard
 // (cf. cadrage « Devis » §Zervant : pas de scheduler dans ce backend, donc
@@ -31,10 +43,7 @@ const dec = (n: number) => ({
 const HIER = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 const DEMAIN = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
 
-function factureRow(opts: {
-  echeanceLe: string | null;
-  clientEmail: string | null;
-}) {
+function factureRow(opts: { echeanceLe: string | null; clientEmail: string | null }) {
   return {
     id: 'F1',
     societeId: 'S1',
@@ -57,7 +66,14 @@ function setup(row: ReturnType<typeof factureRow> | null) {
   const prisma = { facture: { findFirst } } as unknown as PrismaService;
   const envoyerRelanceFacture = jest.fn().mockResolvedValue({ envoye: true });
   const email = { envoyerRelanceFacture } as unknown as EmailService;
-  const service = new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService, OUVERTURE, NOTIFS, SEUIL_CEO);
+  const service = new FacturationService(
+    prisma,
+    email,
+    { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService,
+    OUVERTURE,
+    NOTIFS,
+    SEUIL_CEO,
+  );
   return { service, envoyerRelanceFacture, findFirst };
 }
 
@@ -76,9 +92,7 @@ describe('FacturationService.relancer', () => {
   });
 
   it('client sans email → 422 (donnée manquante, pas un échec de transport)', async () => {
-    const { service, envoyerRelanceFacture } = setup(
-      factureRow({ echeanceLe: HIER, clientEmail: null }),
-    );
+    const { service, envoyerRelanceFacture } = setup(factureRow({ echeanceLe: HIER, clientEmail: null }));
     await expect(service.relancer('S1', 'F1')).rejects.toThrow(UnprocessableEntityException);
     expect(envoyerRelanceFacture).not.toHaveBeenCalled();
   });
@@ -170,7 +184,14 @@ function mockPrisma() {
 
 function service(prisma: PrismaService) {
   const email = {} as unknown as EmailService;
-  return new FacturationService(prisma, email, { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService, OUVERTURE, NOTIFS, SEUIL_CEO);
+  return new FacturationService(
+    prisma,
+    email,
+    { partsFactures: jest.fn().mockResolvedValue({ F1: 40, F2: 40, F3: 20 }) } as unknown as ReglagesService,
+    OUVERTURE,
+    NOTIFS,
+    SEUIL_CEO,
+  );
 }
 
 describe('FacturationService.creerEcheancier', () => {
@@ -248,12 +269,19 @@ describe('FacturationService.emettre', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', montantHt: dec(1000) });
     // Séquence globale 7, séquence « GC » de l'année : 41 déjà émises.
-    facture.aggregate.mockImplementation(({ _max }: { _max: Record<string, boolean> }) => Promise.resolve(_max.refSequence ? { _max: { refSequence: 41 } } : { _max: { numero: 7 } }));
+    facture.aggregate.mockImplementation(({ _max }: { _max: Record<string, boolean> }) =>
+      Promise.resolve(_max.refSequence ? { _max: { refSequence: 41 } } : { _max: { numero: 7 } }),
+    );
     await service(prisma).emettre('S1', 'P1', 'F1', 'U1');
     const annee = new Date().getUTCFullYear();
     expect(facture.updateMany).toHaveBeenCalledWith({
       where: { id: 'F1', statut: 'brouillon' },
-      data: expect.objectContaining({ reference: `GC-${annee}-0042`, refPrefixe: 'GC', refAnnee: annee, refSequence: 42 }),
+      data: expect.objectContaining({
+        reference: `GC-${annee}-0042`,
+        refPrefixe: 'GC',
+        refAnnee: annee,
+        refSequence: 42,
+      }),
     });
   });
 });
@@ -340,33 +368,29 @@ describe('FacturationService.ajouterPaiement', () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue(null);
     const svc = service(prisma);
-    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(NotFoundException);
   });
 
   it('HORS PÉRIMÈTRE : un avoir ne reçoit pas de paiement → 409', async () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'emise', estAvoir: true });
     const svc = service(prisma);
-    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(ConflictException);
   });
 
   it('facture encore brouillon → 409, pas de paiement possible avant émission', async () => {
     const { prisma, facture } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', estAvoir: false });
     const svc = service(prisma);
-    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(svc.ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(ConflictException);
   });
 
   it('REFUSÉ : paiement daté d’un mois clôturé (contrôle interne)', async () => {
     const { prisma, facture, paiement } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'emise', estAvoir: false });
-    (prisma.journalCloture.findMany as jest.Mock).mockResolvedValue([{ mois: PAIEMENT.date.slice(0, 7), action: 'cloture' }]);
+    (prisma.journalCloture.findMany as jest.Mock).mockResolvedValue([
+      { mois: PAIEMENT.date.slice(0, 7), action: 'cloture' },
+    ]);
     await expect(service(prisma).ajouterPaiement('S1', 'P1', 'F1', PAIEMENT, 'U1')).rejects.toThrow(/clôturé/);
     expect(paiement.create).not.toHaveBeenCalled();
     // Rouvert ensuite par le CEO : de nouveau possible.
@@ -398,13 +422,26 @@ describe('FacturationService.ajouterPaiement', () => {
     facture.findFirst.mockResolvedValue({ id: 'F1' });
     const creeLe = new Date('2026-10-01');
     paiement.findFirst.mockResolvedValue({
-      id: 'PA1', factureId: 'F1', date: '2026-10-01', montant: 50_000, mode: 'virement',
-      reference: 'VIR-9', creeLe, creeParId: 'U7',
+      id: 'PA1',
+      factureId: 'F1',
+      date: '2026-10-01',
+      montant: 50_000,
+      mode: 'virement',
+      reference: 'VIR-9',
+      creeLe,
+      creeParId: 'U7',
     });
     await service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1', 'Saisi deux fois');
     expect(paiementSupprime.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        paiementId: 'PA1', factureId: 'F1', societeId: 'S1', montant: 50_000, creeLe, creeParId: 'U7', supprimeParId: 'U1', motif: 'Saisi deux fois',
+        paiementId: 'PA1',
+        factureId: 'F1',
+        societeId: 'S1',
+        montant: 50_000,
+        creeLe,
+        creeParId: 'U7',
+        supprimeParId: 'U1',
+        motif: 'Saisi deux fois',
       }),
     });
     expect(paiement.delete).toHaveBeenCalledWith({ where: { id: 'PA1' } });
@@ -413,7 +450,9 @@ describe('FacturationService.ajouterPaiement', () => {
   it('suppression sans motif (ou motif vide) → 400, rien n’est supprimé', async () => {
     const { prisma, facture, paiement, paiementSupprime } = mockPrisma();
     facture.findFirst.mockResolvedValue({ id: 'F1' });
-    await expect(service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1', '  ')).rejects.toThrow(BadRequestException);
+    await expect(service(prisma).supprimerPaiement('S1', 'P1', 'F1', 'PA1', 'U1', '  ')).rejects.toThrow(
+      BadRequestException,
+    );
     expect(paiementSupprime.create).not.toHaveBeenCalled();
     expect(paiement.delete).not.toHaveBeenCalled();
   });
@@ -482,7 +521,6 @@ describe('FacturationService.get (résumé calculé par formater())', () => {
     expect(res.resume.totalFactureTtc).toBe(0); // 118 000 + (−118 000)
     expect(res.factures).toHaveLength(3);
   });
-
 });
 
 describe('FacturationService.findAllPourSociete', () => {
@@ -522,7 +560,9 @@ describe('FacturationService.findAllPourSociete', () => {
 describe('refFacture · numérotation unique de la société', () => {
   it('une seule suite par société, dossier ou non (décision du 14/10/2026)', () => {
     const { refFacture } = jest.requireActual('../domaine/config');
-    expect(refFacture({ numero: 42, emiseLe: '2026-09-23', estAvoir: false, codeDossier: 'D_ALM.26', rangDossier: 1 })).toBe('F2026-0042');
+    expect(
+      refFacture({ numero: 42, emiseLe: '2026-09-23', estAvoir: false, codeDossier: 'D_ALM.26', rangDossier: 1 }),
+    ).toBe('F2026-0042');
     expect(refFacture({ numero: 7, emiseLe: '2026-09-23', estAvoir: true })).toBe('AV2026-0007');
     expect(refFacture({ numero: null, emiseLe: null, estAvoir: false })).toBeNull();
   });
@@ -569,13 +609,9 @@ describe('FacturationService.creerMensualite', () => {
 
   it('toutes les mensualités prévues facturées → 409 (une annulée ne compte pas)', async () => {
     const six = Array.from({ length: 6 }, (_, i) => facturee(new Date(2025, i, 10)));
-    await expect(monter('chantier', six).svc.creerMensualite('S1', 'P1', 'L-SU')).rejects.toThrow(
-      'déjà facturées',
-    );
+    await expect(monter('chantier', six).svc.creerMensualite('S1', 'P1', 'L-SU')).rejects.toThrow('déjà facturées');
     const avecAnnulee = [...six.slice(0, 5), facturee(new Date(2025, 5, 10), 'annulee')];
-    await expect(
-      monter('chantier', avecAnnulee).svc.creerMensualite('S1', 'P1', 'L-SU'),
-    ).resolves.toBeDefined();
+    await expect(monter('chantier', avecAnnulee).svc.creerMensualite('S1', 'P1', 'L-SU')).resolves.toBeDefined();
   });
 
   it('rappel « à facturer ce mois » : seulement en chantier et sans mensualité ce mois-ci', async () => {
@@ -608,24 +644,32 @@ describe('FacturationService — refacturation des études', () => {
     const data = m.facture.create.mock.calls[0][0].data;
     expect(data).toMatchObject({ montantHt: 1_650_000, tauxTva: 18 });
     expect(data.lignes.create).toEqual([
-      { designation: 'Étude de sol — Géotech SARL', montantBase: 1_000_000, montantHt: 1_100_000, blocEtudeId: 'B1', ordre: 0 },
-      { designation: 'Étude béton armé — Structura', montantBase: 500_000, montantHt: 550_000, blocEtudeId: 'B2', ordre: 1 },
+      {
+        designation: 'Étude de sol — Géotech SARL',
+        montantBase: 1_000_000,
+        montantHt: 1_100_000,
+        blocEtudeId: 'B1',
+        ordre: 0,
+      },
+      {
+        designation: 'Étude béton armé — Structura',
+        montantBase: 500_000,
+        montantHt: 550_000,
+        blocEtudeId: 'B2',
+        ordre: 1,
+      },
     ]);
   });
 
   it('étude sans bureau ou sans montant → 422 ; déjà refacturée (facture active) → 409', async () => {
     const m = mockPrisma();
     m.blocEtude.findMany.mockResolvedValueOnce([bloc({ interlocuteur: ' ' })]);
-    await expect(service(m.prisma).refacturerEtudes('S1', 'P1', ['B1'])).rejects.toThrow(
-      UnprocessableEntityException,
-    );
+    await expect(service(m.prisma).refacturerEtudes('S1', 'P1', ['B1'])).rejects.toThrow(UnprocessableEntityException);
     const m2 = mockPrisma();
     m2.blocEtude.findMany.mockResolvedValueOnce([
       bloc({ lignesFacture: [{ facture: { statut: 'emise', estAvoir: false } }] }),
     ]);
-    await expect(service(m2.prisma).refacturerEtudes('S1', 'P1', ['B1'])).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(service(m2.prisma).refacturerEtudes('S1', 'P1', ['B1'])).rejects.toThrow(ConflictException);
   });
 
   it('refacturation annulée par avoir → l’étude redevient refacturable', async () => {
@@ -640,9 +684,7 @@ describe('FacturationService — refacturation des études', () => {
     const m = mockPrisma();
     m.facture.findFirst.mockResolvedValue({ id: 'F1', projetId: 'P1', statut: 'brouillon' });
     m.ligneFacture.count.mockResolvedValue(2);
-    await expect(
-      service(m.prisma).patch('S1', 'P1', 'F1', { montantHt: 1 }),
-    ).rejects.toThrow('somme de ses lignes');
+    await expect(service(m.prisma).patch('S1', 'P1', 'F1', { montantHt: 1 })).rejects.toThrow('somme de ses lignes');
   });
 
   it('régler le bureau avant l’encaissement complet du client → 409', async () => {
@@ -650,14 +692,26 @@ describe('FacturationService — refacturation des études', () => {
     m.blocEtude.findFirst.mockResolvedValue({ id: 'B1', bureauRegleLe: null });
     // Facture de refacturation émise, rien payé → en attente d'encaissement.
     m.facture.findMany.mockResolvedValue([
-      { id: 'F9', numero: 3, statut: 'emise', estAvoir: false, montantHt: dec(1_100_000), tauxTva: dec(18), echeanceLe: null, emiseLe: new Date(), creeLe: new Date(), paiements: [], lignes: [] },
+      {
+        id: 'F9',
+        numero: 3,
+        statut: 'emise',
+        estAvoir: false,
+        montantHt: dec(1_100_000),
+        tauxTva: dec(18),
+        echeanceLe: null,
+        emiseLe: new Date(),
+        creeLe: new Date(),
+        paiements: [],
+        lignes: [],
+      },
     ]);
     m.blocEtude.findMany.mockResolvedValue([
       { ...bloc(), lignesFacture: [{ factureId: 'F9', montantHt: dec(1_100_000) }] },
     ]);
-    await expect(
-      service(m.prisma).marquerBureauRegle('S1', 'P1', 'B1', 'U-CFO'),
-    ).rejects.toThrow('après l’encaissement complet');
+    await expect(service(m.prisma).marquerBureauRegle('S1', 'P1', 'B1', 'U-CFO')).rejects.toThrow(
+      'après l’encaissement complet',
+    );
     expect(m.blocEtude.update).not.toHaveBeenCalled();
   });
 
@@ -666,9 +720,19 @@ describe('FacturationService — refacturation des études', () => {
     m.blocEtude.findFirst.mockResolvedValue({ id: 'B1', bureauRegleLe: null });
     m.facture.findMany.mockResolvedValue([
       {
-        id: 'F9', numero: 3, statut: 'emise', estAvoir: false, montantHt: dec(1_100_000), tauxTva: dec(18),
-        echeanceLe: null, emiseLe: new Date(), creeLe: new Date(), lignes: [],
-        paiements: [{ id: 'PA', date: '2026-09-27', montant: dec(1_298_000), mode: 'wave', reference: '', creeLe: new Date() }],
+        id: 'F9',
+        numero: 3,
+        statut: 'emise',
+        estAvoir: false,
+        montantHt: dec(1_100_000),
+        tauxTva: dec(18),
+        echeanceLe: null,
+        emiseLe: new Date(),
+        creeLe: new Date(),
+        lignes: [],
+        paiements: [
+          { id: 'PA', date: '2026-09-27', montant: dec(1_298_000), mode: 'wave', reference: '', creeLe: new Date() },
+        ],
       },
     ]);
     m.blocEtude.findMany.mockResolvedValue([
@@ -682,7 +746,9 @@ describe('FacturationService — refacturation des études', () => {
 });
 
 describe('FacturationService · parts F1 / F2 / F3 (Réglages)', () => {
-  const reglages = { partsFactures: jest.fn().mockResolvedValue({ F1: 30, F2: 50, F3: 20 }) } as unknown as ReglagesService;
+  const reglages = {
+    partsFactures: jest.fn().mockResolvedValue({ F1: 30, F2: 50, F3: 20 }),
+  } as unknown as ReglagesService;
   const service = new FacturationService({} as PrismaService, {} as never, reglages, OUVERTURE, NOTIFS, SEUIL_CEO);
   it('soumission à la DAF : fige le réglage en service sur les offres brouillon pas encore figées', async () => {
     const tx = { devis: { updateMany: jest.fn() } };
@@ -694,7 +760,17 @@ describe('FacturationService · parts F1 / F2 / F3 (Réglages)', () => {
   });
   it('Onboard : les parts figées de l’offre priment sur le réglage courant', async () => {
     const tx = {
-      ligneDevis: { findMany: jest.fn().mockResolvedValue([{ designation: 'CO2', quantite: { toNumber: () => 1 }, prixUnitaire: { toNumber: () => 1_000_000 }, tauxTva: { toNumber: () => 18 }, produitService: { code: 'CO2', famille: 'CO' } }]) },
+      ligneDevis: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            designation: 'CO2',
+            quantite: { toNumber: () => 1 },
+            prixUnitaire: { toNumber: () => 1_000_000 },
+            tauxTva: { toNumber: () => 18 },
+            produitService: { code: 'CO2', famille: 'CO' },
+          },
+        ]),
+      },
       devis: { findUnique: jest.fn().mockResolvedValue({ partsFactures: { F1: 40, F2: 40, F3: 20 } }) },
       facture: { createMany: jest.fn() },
     };
@@ -711,7 +787,13 @@ describe('FacturationService — études de l’étape 05 (facture du bureau dan
     carteProjet.findMany.mockResolvedValue([{ id: 'CA1', libelle: 'Étude de sol (ETS)' }]);
     const res = await service(prisma).get('S1', 'P1');
     expect(res.etudes).toEqual([
-      expect.objectContaining({ blocId: null, carteId: 'CA1', libelle: 'Étude de sol (ETS)', montantBureauHt: null, refacturable: false }),
+      expect.objectContaining({
+        blocId: null,
+        carteId: 'CA1',
+        libelle: 'Étude de sol (ETS)',
+        montantBureauHt: null,
+        refacturable: false,
+      }),
     ]);
   });
 
@@ -722,7 +804,13 @@ describe('FacturationService — études de l’étape 05 (facture du bureau dan
     expect(blocEtude.upsert).toHaveBeenCalledWith({
       where: { projetId_carteProjetId: { projetId: 'P1', carteProjetId: 'CA1' } },
       update: { interlocuteur: 'Géotec', factureMontant: 1_000_000 },
-      create: { projetId: 'P1', carteProjetId: 'CA1', libelle: 'Étude de sol (ETS)', interlocuteur: 'Géotec', factureMontant: 1_000_000 },
+      create: {
+        projetId: 'P1',
+        carteProjetId: 'CA1',
+        libelle: 'Étude de sol (ETS)',
+        interlocuteur: 'Géotec',
+        factureMontant: 1_000_000,
+      },
     });
   });
 
@@ -730,13 +818,17 @@ describe('FacturationService — études de l’étape 05 (facture du bureau dan
     const { prisma, carteProjet, blocEtude } = mockPrisma();
     carteProjet.findFirst.mockResolvedValue({ id: 'CA1', libelle: 'ETS' });
     blocEtude.findUnique.mockResolvedValue({ lignesFacture: [{ facture: { statut: 'emise', estAvoir: false } }] });
-    await expect(service(prisma).saisirFactureBureau('S1', 'P1', 'CA1', { bureau: 'X', montantHt: 1 })).rejects.toThrow(ConflictException);
+    await expect(service(prisma).saisirFactureBureau('S1', 'P1', 'CA1', { bureau: 'X', montantHt: 1 })).rejects.toThrow(
+      ConflictException,
+    );
     expect(blocEtude.upsert).not.toHaveBeenCalled();
   });
 
   it('carte qui n’est pas une étude de ce projet → 404', async () => {
     const { prisma, carteProjet } = mockPrisma();
     carteProjet.findFirst.mockResolvedValue(null);
-    await expect(service(prisma).saisirFactureBureau('S1', 'P1', 'CX', { bureau: 'X', montantHt: 1 })).rejects.toThrow(NotFoundException);
+    await expect(service(prisma).saisirFactureBureau('S1', 'P1', 'CX', { bureau: 'X', montantHt: 1 })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });

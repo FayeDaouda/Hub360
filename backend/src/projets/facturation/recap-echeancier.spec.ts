@@ -1,7 +1,13 @@
 import { premiereDuProjet, recapEcheancier } from './facturation.service';
 
 const ht = (n: number) => ({ toNumber: () => n });
-const f = (id: string, cle: string | null, montant: number, emiseLe: string | null, statut = emiseLe ? 'emise' : 'brouillon') => ({
+const f = (
+  id: string,
+  cle: string | null,
+  montant: number,
+  emiseLe: string | null,
+  statut = emiseLe ? 'emise' : 'brouillon',
+) => ({
   id,
   cleEcheance: cle,
   devisEcheancierId: cle ? 'D1' : null,
@@ -30,9 +36,17 @@ describe('document de facture : récapitulatif et première facture (revue CFO)'
     const f2Annulee = f('F2a', 'CO:F2', 2_240_000, '2026-10-01', 'annulee');
     const r = recapEcheancier(f3, [f1, f2Annulee, f3]);
     // F2 annulée et pas encore refacturée : à facturer.
-    expect(r).toMatchObject({ total: 5_600_000, deja: { tranches: ['F1'] }, reste: { tranches: ['F2'], ht: 2_240_000 } });
+    expect(r).toMatchObject({
+      total: 5_600_000,
+      deja: { tranches: ['F1'] },
+      reste: { tranches: ['F2'], ht: 2_240_000 },
+    });
     const r2 = recapEcheancier(f3, [f1, f2Annulee, f2, f3]);
-    expect(r2).toMatchObject({ total: 5_600_000, deja: { tranches: ['F1', 'F2'], ht: 4_480_000 }, reste: { tranches: [], ht: 0 } });
+    expect(r2).toMatchObject({
+      total: 5_600_000,
+      deja: { tranches: ['F1', 'F2'], ht: 4_480_000 },
+      reste: { tranches: [], ht: 0 },
+    });
   });
 
   it('hors échéancier : pas de récapitulatif', () => {

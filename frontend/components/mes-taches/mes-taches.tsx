@@ -1,18 +1,54 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+  type ReactNode,
+} from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlarmClock, AtSign, BellRing, CalendarClock, Check, CheckCircle2, ChevronDown, Ellipsis, Hourglass, RotateCcw, X, type LucideIcon } from 'lucide-react';
+import {
+  AlarmClock,
+  AtSign,
+  BellRing,
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Ellipsis,
+  Hourglass,
+  RotateCcw,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
-import { dateEffective, ecartJours, estEnRetard, getMesTaches, getTachesAValider, relancerTache, remettreTache } from '@/lib/mon-espace';
-import { getMesMentions, marquerMentionLue, publierCommentaire, type CorpsRemise, type MentionRecue } from '@/lib/projets-ouverts';
+import {
+  dateEffective,
+  ecartJours,
+  estEnRetard,
+  getMesTaches,
+  getTachesAValider,
+  relancerTache,
+  remettreTache,
+} from '@/lib/mon-espace';
+import {
+  getMesMentions,
+  marquerMentionLue,
+  publierCommentaire,
+  type CorpsRemise,
+  type MentionRecue,
+} from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { TacheDrawer } from './tache-drawer';
@@ -53,7 +89,8 @@ const VIDE: Record<Filtre, string> = {
 const CLE_VUE = 'hub.mes-taches.vue';
 
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const parEcheance = (a: TacheMonEspace, b: TacheMonEspace) => (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999');
+const parEcheance = (a: TacheMonEspace, b: TacheMonEspace) =>
+  (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999');
 const decaler = (iso: string, jours: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + jours);
@@ -116,7 +153,9 @@ export function MesTaches({ slug }: { slug: string }) {
   const [aDecider, setADecider] = useState({ taches: 0, absences: 0 });
   // ?filtre= : lien d'une tuile de Projets (« Mes tâches en retard »…).
   const demande = useSearchParams().get('filtre');
-  const [filtreChoisi, setFiltre] = useState<Filtre | null>(FILTRES.some((f) => f.cle === demande) ? (demande as Filtre) : null);
+  const [filtreChoisi, setFiltre] = useState<Filtre | null>(
+    FILTRES.some((f) => f.cle === demande) ? (demande as Filtre) : null,
+  );
   const [vue, setVue] = useState<Vue>('urgence');
   const [tiroir, setTiroir] = useState<{ projetId: string; tacheId: string; prolongation: boolean } | null>(null);
   const [aRemettre, setARemettre] = useState<{ tache: TacheMonEspace; pieces?: Pieces } | null>(null);
@@ -178,7 +217,9 @@ export function MesTaches({ slug }: { slug: string }) {
   const g = useMemo(() => {
     // Dépôt en attente d'envoi : déjà « en validation » à l'écran.
     const vues = (donnees?.taches ?? []).map((t) =>
-      enEnvoi.includes(t.id) ? { ...t, statut: 'remise' as const, version: t.version + 1, remisLe: aujourdhui, renvoiMotif: null } : t,
+      enEnvoi.includes(t.id)
+        ? { ...t, statut: 'remise' as const, version: t.version + 1, remisLe: aujourdhui, renvoiMotif: null }
+        : t,
     );
     const ouvertes = vues.filter((t) => t.statut !== 'validee').sort(parEcheance);
     const lundi = decaler(aujourdhui, -((jourSemaine(aujourdhui) + 6) % 7));
@@ -209,7 +250,13 @@ export function MesTaches({ slug }: { slug: string }) {
     const ensuite = ouvertes.filter((t) => !classees.has(t));
     // Ton d'une tâche, quelle que soit la vue : la bande de sa ligne.
     const tonDe = (t: TacheMonEspace): Ton =>
-      enRetard.has(t) || t.statut === 'a_reprendre' ? 'risque' : semaine.includes(t) ? 'attention' : attente.includes(t) ? 'info' : 'neutre';
+      enRetard.has(t) || t.statut === 'a_reprendre'
+        ? 'risque'
+        : semaine.includes(t)
+          ? 'attention'
+          : attente.includes(t)
+            ? 'info'
+            : 'neutre';
     // Ordre d'urgence (vue par projet) : retard, reprise, semaine, validation, le reste.
     const rang = (t: TacheMonEspace) => {
       const i = SECTIONS.findIndex((cle) => sections[cle].includes(t));
@@ -217,7 +264,20 @@ export function MesTaches({ slug }: { slug: string }) {
     };
     // Tâches qui demandent une action (sans double compte).
     const urgences = new Set([...retards, ...reprises, ...semaine]).size;
-    return { ouvertes, retards, reprises, semaine, attente, sections, ensuite, dimanche, enRetard, tonDe, rang, urgences };
+    return {
+      ouvertes,
+      retards,
+      reprises,
+      semaine,
+      attente,
+      sections,
+      ensuite,
+      dimanche,
+      enRetard,
+      tonDe,
+      rang,
+      urgences,
+    };
   }, [donnees, aujourdhui, enEnvoi]);
 
   // Fichier glissé au-dessus de la fenêtre (compteur : dragenter/dragleave
@@ -404,9 +464,10 @@ export function MesTaches({ slug }: { slug: string }) {
   // Lignes réellement affichées (« Plus tard » est replié) : une mention non
   // lue s'y accroche ; les autres restent dans la section Mentions.
   const affichees = new Set(
-    (vue === 'projet' || filtre ? selection : SECTIONS.filter((cle) => !(avecCote && cle === 'attente')).flatMap((cle) => g.sections[cle])).map(
-      (t) => t.id,
-    ),
+    (vue === 'projet' || filtre
+      ? selection
+      : SECTIONS.filter((cle) => !(avecCote && cle === 'attente')).flatMap((cle) => g.sections[cle])
+    ).map((t) => t.id),
   );
   const mentionsDe = new Map<string, MentionRecue[]>();
   if (filtre !== 'mentions') {
@@ -431,7 +492,9 @@ export function MesTaches({ slug }: { slug: string }) {
       key={m.id}
       slug={slug}
       m={m}
-      onOuvrir={() => (m.tacheId ? setTiroir({ projetId: m.projetId, tacheId: m.tacheId, prolongation: false }) : undefined)}
+      onOuvrir={() =>
+        m.tacheId ? setTiroir({ projetId: m.projetId, tacheId: m.tacheId, prolongation: false }) : undefined
+      }
       base={base}
       onMaj={() => void chargerMentions()}
     />
@@ -464,7 +527,12 @@ export function MesTaches({ slug }: { slug: string }) {
           </h1>
           <p className="mt-accueil-sous">
             <span className="mt-accueil-date">
-              {new Date(`${aujourdhui}T12:00:00Z`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
+              {new Date(`${aujourdhui}T12:00:00Z`).toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                timeZone: 'UTC',
+              })}
               {' · '}
             </span>
             {urgences === 0
@@ -475,7 +543,13 @@ export function MesTaches({ slug }: { slug: string }) {
         </div>
         <div className="vue-toggle" role="group" aria-label="Présentation">
           {(['urgence', 'projet'] as const).map((v) => (
-            <button key={v} type="button" className={vue === v ? 'is-active' : ''} aria-pressed={vue === v} onClick={() => choisirVue(v)}>
+            <button
+              key={v}
+              type="button"
+              className={vue === v ? 'is-active' : ''}
+              aria-pressed={vue === v}
+              onClick={() => choisirVue(v)}
+            >
               <span className="mt-long">{v === 'urgence' ? 'Par urgence' : 'Par projet'}</span>
               <span className="mt-court" aria-hidden>
                 {v === 'urgence' ? 'Urgence' : 'Projet'}
@@ -509,7 +583,9 @@ export function MesTaches({ slug }: { slug: string }) {
                     {n === 0 ? VIDE[f.cle] : f.cle === 'semaine' ? `d’ici le ${jjmm(g.dimanche)}` : f.aide}
                   </span>
                 </span>
-                <span className="mt-filtre-compte">{n === 0 ? <Check size={20} strokeWidth={2.5} aria-label="0" /> : n}</span>
+                <span className="mt-filtre-compte">
+                  {n === 0 ? <Check size={20} strokeWidth={2.5} aria-label="0" /> : n}
+                </span>
               </button>
             );
           })}
@@ -523,7 +599,8 @@ export function MesTaches({ slug }: { slug: string }) {
           <p>
             <strong>Vous êtes N+1.</strong>{' '}
             {[
-              aDecider.taches && `${aDecider.taches} tâche${aDecider.taches > 1 ? 's' : ''} remise${aDecider.taches > 1 ? 's' : ''}`,
+              aDecider.taches &&
+                `${aDecider.taches} tâche${aDecider.taches > 1 ? 's' : ''} remise${aDecider.taches > 1 ? 's' : ''}`,
               aDecider.absences && `${aDecider.absences} demande${aDecider.absences > 1 ? 's' : ''} d’absence`,
             ]
               .filter(Boolean)
@@ -557,44 +634,59 @@ export function MesTaches({ slug }: { slug: string }) {
             </div>
           )}
 
-          {vue === 'projet' && filtre !== 'mentions'
-            ? parProjet.map((p) => (
-                <Groupe key={p.projetId} titre={`${p.code} · ${p.client}`} ton="neutre" n={p.taches.length} projet>
-                  {p.taches.map((t) => ligne(t, true))}
-                </Groupe>
-              ))
-            : (
-                  <>
-                    {/* Sans filtre : sections sans compteur (déjà sur les cartes,
+          {vue === 'projet' && filtre !== 'mentions' ? (
+            parProjet.map((p) => (
+              <Groupe key={p.projetId} titre={`${p.code} · ${p.client}`} ton="neutre" n={p.taches.length} projet>
+                {p.taches.map((t) => ligne(t, true))}
+              </Groupe>
+            ))
+          ) : (
+            <>
+              {/* Sans filtre : sections sans compteur (déjà sur les cartes,
                         et une reprise en retard n'est listée qu'une fois). Avec
                         un filtre : sa liste complète. */}
-                    {SECTIONS.filter((f) => (filtre === null || filtre === f) && !(avecCote && f === 'attente')).map((f) => {
-                      const liste = filtre ? g[f] : g.sections[f];
-                      // Une reprise en retard est listée une fois, sous « En
-                      // retard » : la section le dit, pour que le compteur de
-                      // la carte (qui la compte aussi) se comprenne.
-                      const ailleurs = filtre ? 0 : g[f].length - g.sections[f].length;
-                      const note = ailleurs > 0 ? `et ${ailleurs} autre${ailleurs > 1 ? 's' : ''} en retard, plus haut` : undefined;
-                      return (
-                        <Groupe key={f} titre={TITRES[f]} ton={FILTRES.find((x) => x.cle === f)!.ton} n={liste.length} masquerTitre={!!filtre} sansCompte note={note}>
-                          {liste.map((t) => ligne(t))}
-                        </Groupe>
-                      );
-                    })}
-                    {filtre === null && g.ensuite.length > 0 && (
-                      <details className="mt-plus-tard">
-                        <summary>
-                          <ChevronDown size={16} aria-hidden className="mt-plus-tard-chevron" />
-                          Plus tard · {g.ensuite.length}
-                        </summary>
-                        <ul className="mt-lignes">{g.ensuite.map((t) => ligne(t))}</ul>
-                      </details>
-                    )}
-                  </>
-                )}
+              {SECTIONS.filter((f) => (filtre === null || filtre === f) && !(avecCote && f === 'attente')).map((f) => {
+                const liste = filtre ? g[f] : g.sections[f];
+                // Une reprise en retard est listée une fois, sous « En
+                // retard » : la section le dit, pour que le compteur de
+                // la carte (qui la compte aussi) se comprenne.
+                const ailleurs = filtre ? 0 : g[f].length - g.sections[f].length;
+                const note =
+                  ailleurs > 0 ? `et ${ailleurs} autre${ailleurs > 1 ? 's' : ''} en retard, plus haut` : undefined;
+                return (
+                  <Groupe
+                    key={f}
+                    titre={TITRES[f]}
+                    ton={FILTRES.find((x) => x.cle === f)!.ton}
+                    n={liste.length}
+                    masquerTitre={!!filtre}
+                    sansCompte
+                    note={note}
+                  >
+                    {liste.map((t) => ligne(t))}
+                  </Groupe>
+                );
+              })}
+              {filtre === null && g.ensuite.length > 0 && (
+                <details className="mt-plus-tard">
+                  <summary>
+                    <ChevronDown size={16} aria-hidden className="mt-plus-tard-chevron" />
+                    Plus tard · {g.ensuite.length}
+                  </summary>
+                  <ul className="mt-lignes">{g.ensuite.map((t) => ligne(t))}</ul>
+                </details>
+              )}
+            </>
+          )}
 
           {(filtre === null || filtre === 'mentions') && !avecCote && (
-            <Groupe titre="Mentions" ton="iris" n={mentionsSeules.length} masquerTitre={filtre === 'mentions'} sansCompte>
+            <Groupe
+              titre="Mentions"
+              ton="iris"
+              n={mentionsSeules.length}
+              masquerTitre={filtre === 'mentions'}
+              sansCompte
+            >
               {mentionsSeules.map(ligneMention)}
             </Groupe>
           )}
@@ -623,7 +715,8 @@ export function MesTaches({ slug }: { slug: string }) {
                         >
                           <span className="mt-cote-titre">{t.libelle}</span>
                           <span className="mt-cote-meta">
-                            v{String(t.version).padStart(2, '0')} · {t.remisLe ? attenteDepuis(t.remisLe, aujourdhui) : 'en validation'}
+                            v{String(t.version).padStart(2, '0')} ·{' '}
+                            {t.remisLe ? attenteDepuis(t.remisLe, aujourdhui) : 'en validation'}
                           </span>
                           <span className="mt-cote-meta">chez {t.validateur ?? 'un validateur à désigner'}</span>
                         </button>
@@ -643,7 +736,9 @@ export function MesTaches({ slug }: { slug: string }) {
                             </button>
                           )
                         )}
-                        {relance && typeof relance === 'object' && <span className="field-erreur">{relance.erreur}</span>}
+                        {relance && typeof relance === 'object' && (
+                          <span className="field-erreur">{relance.erreur}</span>
+                        )}
                       </li>
                     );
                   })}
@@ -695,7 +790,9 @@ export function MesTaches({ slug }: { slug: string }) {
           onClose={() => setTiroir(null)}
           onVoisine={(sens) => {
             // Ordre affiché dans la liste (sections, vue, filtre) : celui de J / K.
-            const ids = [...document.querySelectorAll<HTMLElement>('.mt-liste .mt-ligne[data-tache]')].map((el) => el.dataset.tache!);
+            const ids = [...document.querySelectorAll<HTMLElement>('.mt-liste .mt-ligne[data-tache]')].map(
+              (el) => el.dataset.tache!,
+            );
             const suivant = ids[ids.indexOf(tiroir.tacheId) + sens];
             const t = suivant && donnees?.taches.find((x) => x.id === suivant);
             if (t) setTiroir({ projetId: t.projetId, tacheId: t.id, prolongation: false });
@@ -792,15 +889,30 @@ function LigneTache({
   const [survol, setSurvol] = useState(false);
   const echeance =
     t.statut === 'remise'
-      ? { rel: 'En validation', date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${jjmm(t.remisLe)}` : ''}` }
+      ? {
+          rel: 'En validation',
+          date: `v${String(t.version).padStart(2, '0')}${t.remisLe ? ` · déposée le ${jjmm(t.remisLe)}` : ''}`,
+        }
       : t.statut === 'bloquee'
-        ? { rel: 'Attend l’étape précédente', date: t.echeance ? `à rendre le ${jjmm(t.echeance)}` : 'pas encore de dates' }
+        ? {
+            rel: 'Attend l’étape précédente',
+            date: t.echeance ? `à rendre le ${jjmm(t.echeance)}` : 'pas encore de dates',
+          }
         : t.statut === 'prolongee' && t.prolongeeJusquau
-          ? { rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`, date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${jjmm(t.echeance)}` : ''}` }
+          ? {
+              rel: `Prolongée · ${relatif(t.prolongeeJusquau, aujourdhui).toLowerCase()}`,
+              date: `jusqu’au ${jjmm(t.prolongeeJusquau)}${t.echeance ? ` · prévue le ${jjmm(t.echeance)}` : ''}`,
+            }
           : t.echeance
             ? {
-                rel: t.statut === 'a_reprendre' ? `Reprise · ${relatif(t.echeance, aujourdhui).toLowerCase()}` : relatif(t.echeance, aujourdhui),
-                date: t.statut === 'a_venir' && t.debut ? `démarre le ${jjmm(t.debut)} · à rendre le ${jjmm(t.echeance)}` : `à rendre le ${jjmm(t.echeance)}`,
+                rel:
+                  t.statut === 'a_reprendre'
+                    ? `Reprise · ${relatif(t.echeance, aujourdhui).toLowerCase()}`
+                    : relatif(t.echeance, aujourdhui),
+                date:
+                  t.statut === 'a_venir' && t.debut
+                    ? `démarre le ${jjmm(t.debut)} · à rendre le ${jjmm(t.echeance)}`
+                    : `à rendre le ${jjmm(t.echeance)}`,
               }
             : { rel: 'À planifier', date: 'pas encore de dates' };
 
@@ -858,7 +970,12 @@ function LigneTache({
           </span>
         )}
         {mentions && mentions.length > 0 && (
-          <button type="button" className="mt-pastille-mention" title={`« ${mentions[0].texte} »`} onClick={() => onMentions(mentions)}>
+          <button
+            type="button"
+            className="mt-pastille-mention"
+            title={`« ${mentions[0].texte} »`}
+            onClick={() => onMentions(mentions)}
+          >
             <AtSign size={13} aria-hidden />
             {mentions.length === 1
               ? `${mentions[0].auteur ?? 'Quelqu’un'} vous mentionne`
@@ -908,9 +1025,7 @@ function ToastDepot({ libelle, onAnnuler }: { libelle: string; onAnnuler: () => 
   return createPortal(
     <div className="mt-toast" role="status" style={{ '--mt-toast-duree': `${DELAI_ANNULATION_MS}ms` } as CSSProperties}>
       <CheckCircle2 size={17} aria-hidden />
-      <span className="mt-toast-texte">
-        « {libelle} » déposée
-      </span>
+      <span className="mt-toast-texte">« {libelle} » déposée</span>
       <button type="button" className="mt-toast-annuler" onClick={onAnnuler}>
         Annuler
       </button>
@@ -976,7 +1091,19 @@ function MenuPlus({ actions }: { actions: { libelle: string; faire: () => void }
 
 // Mention : lire, répondre dans le fil (l'auteur est mentionné en retour),
 // marquer comme lue, ouvrir la tâche.
-function LigneMention({ slug, m, base, onOuvrir, onMaj }: { slug: string; m: MentionRecue; base: string; onOuvrir: () => void; onMaj: () => void }) {
+function LigneMention({
+  slug,
+  m,
+  base,
+  onOuvrir,
+  onMaj,
+}: {
+  slug: string;
+  m: MentionRecue;
+  base: string;
+  onOuvrir: () => void;
+  onMaj: () => void;
+}) {
   const [reponse, setReponse] = useState<string | null>(null);
   const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
 
@@ -1037,10 +1164,20 @@ function LigneMention({ slug, m, base, onOuvrir, onMaj }: { slug: string; m: Men
               autoFocus
             />
             <span className="dmd-actions">
-              <button type="button" className="btn-ghost btn-ghost--sm" disabled={etat.envoi} onClick={() => setReponse(null)}>
+              <button
+                type="button"
+                className="btn-ghost btn-ghost--sm"
+                disabled={etat.envoi}
+                onClick={() => setReponse(null)}
+              >
                 Annuler
               </button>
-              <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || !reponse.trim()} onClick={repondre}>
+              <button
+                type="button"
+                className="btn-primary btn-primary--sm"
+                disabled={etat.envoi || !reponse.trim()}
+                onClick={repondre}
+              >
                 Envoyer
               </button>
             </span>
@@ -1059,7 +1196,12 @@ function LigneMention({ slug, m, base, onOuvrir, onMaj }: { slug: string; m: Men
           </button>
         )}
         {!m.lue && reponse === null && (
-          <button type="button" className="btn-ghost btn-ghost--sm" disabled={etat.envoi} onClick={() => agir(() => marquerMentionLue(slug, m.id))}>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm"
+            disabled={etat.envoi}
+            onClick={() => agir(() => marquerMentionLue(slug, m.id))}
+          >
             Marquer lu
           </button>
         )}

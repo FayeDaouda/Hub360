@@ -173,15 +173,13 @@ export function DocumentFacturation({
       <footer className="document-pied">
         {typeDocument === 'Devis' && dateValidite && (
           <p>
-            Offre valable jusqu’au {dateValidite}. Passé ce délai, les prix et conditions sont
-            susceptibles de révision.
+            Offre valable jusqu’au {dateValidite}. Passé ce délai, les prix et conditions sont susceptibles de révision.
           </p>
         )}
         {typeDocument === 'Facture' && !estAvoir && societe.penaliteRetardMensuelle != null && (
           <p>
             Tout retard de paiement au-delà de l’échéance entraîne des pénalités de{' '}
-            {String(societe.penaliteRetardMensuelle).replace('.', ',')} % par mois sur les sommes
-            dues.
+            {String(societe.penaliteRetardMensuelle).replace('.', ',')} % par mois sur les sommes dues.
           </p>
         )}
         {societe.mentionsLegales && <p className="document-pied-legal">{societe.mentionsLegales}</p>}

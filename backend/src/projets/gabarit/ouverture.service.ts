@@ -32,7 +32,10 @@ export class OuvertureProjetService {
         categorie: true,
         ouvertLe: true,
         client: { select: { type: true } },
-        devis: { where: { statut: 'transforme' }, select: { lignes: { select: { produitService: { select: { code: true } } } } } },
+        devis: {
+          where: { statut: 'transforme' },
+          select: { lignes: { select: { produitService: { select: { code: true } } } } },
+        },
       },
     });
     const code = projet && !projet.ouvertLe ? GABARIT_PAR_CATEGORIE[projet.categorie] : undefined;

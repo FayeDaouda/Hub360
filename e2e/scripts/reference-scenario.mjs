@@ -12,7 +12,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [apiUrl, frontUrl, stateDir] = process.argv.slice(2);
-if (!apiUrl || !frontUrl || !stateDir) throw new Error('usage: reference-scenario.mjs <api-url> <front-url> <state-dir>');
+if (!apiUrl || !frontUrl || !stateDir)
+  throw new Error('usage: reference-scenario.mjs <api-url> <front-url> <state-dir>');
 
 const SLUG = 'grey-concrete';
 const DEMO_PASSWORD = 'changeme123';
@@ -88,14 +89,20 @@ async function main() {
 
   const dossiers = await cfo('GET', '/dossiers');
   const dossierByCode = (code) => dossiers.find((d) => d.code === code);
-  const offerOf = async (dossierId, statut) => (await cfo('GET', '/devis')).find((d) => d.dossierCrm?.id === dossierId && d.statut === statut);
+  const offerOf = async (dossierId, statut) =>
+    (await cfo('GET', '/devis')).find((d) => d.dossierCrm?.id === dossierId && d.statut === statut);
 
   // Opened project: offer accepted, paper-signed contract (Onboard), F1 issued.
   const opened = dossierByCode(OPENED_DOSSIER);
   await cfo('POST', `/devis/${(await offerOf(opened.id, 'envoye')).id}/reponse`, { reponse: 'accepte' });
   await signContract(cfo, opened.id);
-  await cfo('POST', `/dossiers/${opened.id}/contrat/signature-papier`, { nom: 'contrat-signe.pdf', url: 'data:application/pdf;base64,JVBERi0xLjQ=' });
-  const firstInvoice = (await cfo('GET', '/factures')).find((f) => f.statut === 'brouillon' && f.jalon === 'signature' && f.projet?.code === OPENED_DOSSIER);
+  await cfo('POST', `/dossiers/${opened.id}/contrat/signature-papier`, {
+    nom: 'contrat-signe.pdf',
+    url: 'data:application/pdf;base64,JVBERi0xLjQ=',
+  });
+  const firstInvoice = (await cfo('GET', '/factures')).find(
+    (f) => f.statut === 'brouillon' && f.jalon === 'signature' && f.projet?.code === OPENED_DOSSIER,
+  );
   await cfo('POST', `/factures/${firstInvoice.id}/emission`);
 
   const { projets } = await dirgc('GET', '/projets-ouverts');
@@ -108,7 +115,9 @@ async function main() {
     .filter((t) => t.statut === 'a_faire' && t.heures)
     .slice(0, TASKS_FOR_SALARIE);
   for (const task of tasks) {
-    await dirgc('PATCH', `/projets-ouverts/${project.id}/taches/${task.id}/assignation`, { collaborateurId: assignable.id });
+    await dirgc('PATCH', `/projets-ouverts/${project.id}/taches/${task.id}/assignation`, {
+      collaborateurId: assignable.id,
+    });
   }
 
   // Contract sent to the client, left unsigned.

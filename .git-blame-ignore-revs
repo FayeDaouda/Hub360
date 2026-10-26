@@ -1,0 +1,6 @@
+# Commits de formatage seul, ignorés par git blame :
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub les ignore automatiquement dans sa vue « Blame ».)
+
+# style: format the whole repository with Prettier
+d23b0d85783d1b217c532348323920bbf7ee2898

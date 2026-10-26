@@ -72,8 +72,7 @@ export class AuthController {
   async motDePasseOublie(@Body() dto: MotDePasseOublieDto) {
     await this.comptes.motDePasseOublie(dto.email);
     return {
-      message:
-        'Si un compte existe pour cette adresse, un lien de réinitialisation a été envoyé.',
+      message: 'Si un compte existe pour cette adresse, un lien de réinitialisation a été envoyé.',
     };
   }
 
@@ -114,10 +113,7 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  changerMotDePasse(
-    @Req() req: { user: { userId: string; societeSlug: string } },
-    @Body() dto: ChangerMotDePasseDto,
-  ) {
+  changerMotDePasse(@Req() req: { user: { userId: string; societeSlug: string } }, @Body() dto: ChangerMotDePasseDto) {
     return this.authService.changerMotDePasse(req.user.userId, req.user.societeSlug, dto.actuel, dto.nouveau);
   }
 }

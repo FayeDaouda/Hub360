@@ -7,9 +7,15 @@ describe('numérotation des factures (lot 6, à la manière de Zervant)', () => 
   });
 
   it('préfixe TEST, année sur 2 chiffres, séparateur, sans préfixe', () => {
-    expect(formaterNumero({ prefixe: 'TEST', formatAnnee: 'AAAA', separateur: '-', chiffres: 4, numeroDepart: 1 }, 2026, 12)).toBe('TEST-2026-0012');
-    expect(formaterNumero({ prefixe: 'GC', formatAnnee: 'AA', separateur: '/', chiffres: 3, numeroDepart: 1 }, 2027, 5)).toBe('GC/27/005');
-    expect(formaterNumero({ prefixe: '', formatAnnee: 'AAAA', separateur: '-', chiffres: 4, numeroDepart: 1 }, 2026, 7)).toBe('2026-0007');
+    expect(
+      formaterNumero({ prefixe: 'TEST', formatAnnee: 'AAAA', separateur: '-', chiffres: 4, numeroDepart: 1 }, 2026, 12),
+    ).toBe('TEST-2026-0012');
+    expect(
+      formaterNumero({ prefixe: 'GC', formatAnnee: 'AA', separateur: '/', chiffres: 3, numeroDepart: 1 }, 2027, 5),
+    ).toBe('GC/27/005');
+    expect(
+      formaterNumero({ prefixe: '', formatAnnee: 'AAAA', separateur: '-', chiffres: 4, numeroDepart: 1 }, 2026, 7),
+    ).toBe('2026-0007');
   });
 
   it('séquence : départ si rien d’émis, sinon le plus grand + 1 (remise à zéro par année via la clé)', () => {

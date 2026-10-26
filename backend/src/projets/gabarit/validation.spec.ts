@@ -1,5 +1,16 @@
 import { ForbiddenException } from '@nestjs/common';
-import { commenteSansEcriture, droitTs, horsCircuit, peutDecider, peutQualifier, ROLE_CEO, ROLE_CFO, ROLE_CTO, ROLE_DPLG, verifierCircuit } from './validation';
+import {
+  commenteSansEcriture,
+  droitTs,
+  horsCircuit,
+  peutDecider,
+  peutQualifier,
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_CTO,
+  ROLE_DPLG,
+  verifierCircuit,
+} from './validation';
 
 // CEO et CFO (étape 1) : lecture + commentaires, aucune action de circuit.
 describe('validation · rôle hors circuit (CEO)', () => {

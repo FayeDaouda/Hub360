@@ -18,10 +18,15 @@
   color: color-mix(in srgb, var(--pill-fond, var(--pill-neutre)), var(--pill-encre));
   cursor: pointer;
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: right 0.72rem center, right 0.5rem center;
-  background-size: 4px 4px, 4px 4px;
+  background-position:
+    right 0.72rem center,
+    right 0.5rem center;
+  background-size:
+    4px 4px,
+    4px 4px;
   background-repeat: no-repeat;
 }
 
@@ -341,4 +346,3 @@
 .projet-entete-sur {
   margin-bottom: 0.1rem;
 }
-

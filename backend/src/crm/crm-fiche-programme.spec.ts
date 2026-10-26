@@ -14,7 +14,13 @@ function svc(dossier: object = { statut: 'nouveau_projet', archiveLe: null, nbPl
     dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), update },
     devis: { count: jest.fn().mockResolvedValue(0) },
   };
-  const s = new CrmService(prisma as unknown as PrismaService, {} as DevisService, {} as FacturationService, {} as NotificationsService, {} as SeuilCeoService);
+  const s = new CrmService(
+    prisma as unknown as PrismaService,
+    {} as DevisService,
+    {} as FacturationService,
+    {} as NotificationsService,
+    {} as SeuilCeoService,
+  );
   return { s, update };
 }
 const acteur = { userId: 'U', role: 'CIO (transverse)', permissions: {} };
@@ -25,7 +31,14 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
     await s
       .modifierFiche('S1', acteur, 'D1', {
         nbPlanches: 9, // ignoré : les planches se calculent
-        ficheProgramme: { usage: 'residentiel', forme: 'villa', gabarit: 1, sousSols: 1, typologieVilla: 'F5', suiteParentale: true },
+        ficheProgramme: {
+          usage: 'residentiel',
+          forme: 'villa',
+          gabarit: 1,
+          sousSols: 1,
+          typologieVilla: 'F5',
+          suiteParentale: true,
+        },
       })
       .catch(() => undefined);
     const data = update.mock.calls[0][0].data;
@@ -36,7 +49,12 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
 
   it('immeuble incomplet : programme vide, planches saisies acceptées', async () => {
     const { s, update } = svc();
-    await s.modifierFiche('S1', acteur, 'D1', { nbPlanches: 4, ficheProgramme: { usage: 'mixte', forme: 'immeuble', gabarit: 3 } }).catch(() => undefined);
+    await s
+      .modifierFiche('S1', acteur, 'D1', {
+        nbPlanches: 4,
+        ficheProgramme: { usage: 'mixte', forme: 'immeuble', gabarit: 3 },
+      })
+      .catch(() => undefined);
     const data = update.mock.calls[0][0].data;
     expect(data.programme).toBe('');
     expect(data.nbPlanches).toBe(4);
@@ -44,7 +62,9 @@ describe('CrmService.modifierFiche · Fiche Programme', () => {
 
   it('valeur inconnue dans la fiche → 400, rien écrit', async () => {
     const { s, update } = svc();
-    await expect(s.modifierFiche('S1', acteur, 'D1', { ficheProgramme: { forme: 'chateau' } })).rejects.toThrow(BadRequestException);
+    await expect(s.modifierFiche('S1', acteur, 'D1', { ficheProgramme: { forme: 'chateau' } })).rejects.toThrow(
+      BadRequestException,
+    );
     expect(update).not.toHaveBeenCalled();
   });
 });

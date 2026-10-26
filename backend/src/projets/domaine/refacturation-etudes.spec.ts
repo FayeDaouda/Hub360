@@ -14,9 +14,7 @@ describe('statutReglementBureau — le bureau se règle après encaissement du c
   it.each(['brouillon', 'emise', 'partiellement_payee', 'en_retard'])(
     'facture %s → en attente d’encaissement (un acompte ne suffit pas)',
     (s) => {
-      expect(statutReglementBureau({ bureauRegleLe: null, factureActive: s })).toBe(
-        'en_attente_encaissement',
-      );
+      expect(statutReglementBureau({ bureauRegleLe: null, factureActive: s })).toBe('en_attente_encaissement');
     },
   );
   it('facture soldée → à régler', () => {

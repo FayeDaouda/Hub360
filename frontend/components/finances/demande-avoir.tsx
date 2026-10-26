@@ -55,7 +55,13 @@ export function DemandeAvoir({
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="da-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="da-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="da-titre">Avoir sur {facture.reference ?? 'la facture'}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
@@ -66,8 +72,8 @@ export function DemandeAvoir({
           {enAttente ? (
             <>
               <p className="dmd-note">
-                Demande envoyée au CEO : au-delà du seuil, il valide l’avoir avant son émission. La facture reste émise d’ici là ; vous serez
-                prévenu de sa décision.
+                Demande envoyée au CEO : au-delà du seuil, il valide l’avoir avant son émission. La facture reste émise
+                d’ici là ; vous serez prévenu de sa décision.
               </p>
               <div className="modal-actions">
                 <button type="button" className="btn-primary" onClick={onClose}>
@@ -78,12 +84,17 @@ export function DemandeAvoir({
           ) : (
             <>
               <p className="dmd-note">
-                L’avoir annule toute la facture ({formatMontant(facture.montantTtc)} TTC). Le motif est obligatoire et le CEO est prévenu ; au-delà
-                du seuil fixé dans Réglages, il valide avant l’émission.
+                L’avoir annule toute la facture ({formatMontant(facture.montantTtc)} TTC). Le motif est obligatoire et
+                le CEO est prévenu ; au-delà du seuil fixé dans Réglages, il valide avant l’émission.
               </p>
               <label className="field">
                 <span className="field-label">Motif</span>
-                <select className="field-input" value={motif} disabled={envoi} onChange={(e) => setMotif(e.target.value as MotifAvoir)}>
+                <select
+                  className="field-input"
+                  value={motif}
+                  disabled={envoi}
+                  onChange={(e) => setMotif(e.target.value as MotifAvoir)}
+                >
                   <option value="">— choisir —</option>
                   {(Object.keys(LIBELLE_MOTIF_AVOIR) as MotifAvoir[]).map((m) => (
                     <option key={m} value={m}>
@@ -109,7 +120,12 @@ export function DemandeAvoir({
                 <button type="button" className="btn-ghost" disabled={envoi} onClick={onClose}>
                   Annuler
                 </button>
-                <button type="button" className="btn-primary" disabled={envoi || !motif || commentaire.trim().length < 5} onClick={envoyer}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={envoi || !motif || commentaire.trim().length < 5}
+                  onClick={envoyer}
+                >
                   {envoi ? 'Envoi…' : 'Demander l’avoir'}
                 </button>
               </div>

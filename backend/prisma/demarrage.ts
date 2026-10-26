@@ -51,7 +51,9 @@ async function main() {
       where: { utilisateurId: compte.id, societeId: grey.id, roleId: role.id },
     });
     if (!attribue) {
-      await prisma.utilisateurSocieteRole.create({ data: { utilisateurId: compte.id, societeId: grey.id, roleId: role.id } });
+      await prisma.utilisateurSocieteRole.create({
+        data: { utilisateurId: compte.id, societeId: grey.id, roleId: role.id },
+      });
     }
 
     console.log('Démarrage terminé : socle réel en place (rôles, matrice, société, catalogue).');

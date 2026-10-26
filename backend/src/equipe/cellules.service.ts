@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { versCellule } from '../commun/format-contrat';
@@ -109,9 +104,7 @@ export class CellulesService {
         where: { id: dto.dispatcherId, societeId, celluleId: id },
       });
       if (!membre) {
-        throw new UnprocessableEntityException(
-          'Le dispatcher doit être membre de cette cellule.',
-        );
+        throw new UnprocessableEntityException('Le dispatcher doit être membre de cette cellule.');
       }
       await this.exigerCompteActif(dto.dispatcherId);
     }
@@ -128,7 +121,12 @@ export class CellulesService {
   private async exigerCompteActif(collaborateurId: string) {
     const c = await this.prisma.collaborateur.findUniqueOrThrow({
       where: { id: collaborateurId },
-      select: { prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+      select: {
+        prenom: true,
+        nom: true,
+        utilisateur: { select: { actif: true } },
+        dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } },
+      },
     });
     if (!c.utilisateur?.actif && !c.dossierPersonnel?.utilisateur?.actif) {
       throw new UnprocessableEntityException(
@@ -163,5 +161,8 @@ export async function quitterCellule(tx: Prisma.TransactionClient, collaborateur
     where: { celluleId, titulaireId: collaborateurId },
     data: { titulaireId: null, etat: 'ouvert' },
   });
-  await tx.cellule.updateMany({ where: { id: celluleId, dispatcherId: collaborateurId }, data: { dispatcherId: null } });
+  await tx.cellule.updateMany({
+    where: { id: celluleId, dispatcherId: collaborateurId },
+    data: { dispatcherId: null },
+  });
 }

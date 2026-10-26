@@ -2,14 +2,36 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, CalendarClock, ChevronDown, ClipboardList, FileWarning, MessageCircleQuestion, IdCard, Inbox, Scale, Stethoscope, Timer, UserCheck, UserPlus, type LucideIcon } from 'lucide-react';
+import {
+  AlarmClock,
+  CalendarClock,
+  ChevronDown,
+  ClipboardList,
+  FileWarning,
+  MessageCircleQuestion,
+  IdCard,
+  Inbox,
+  Scale,
+  Stethoscope,
+  Timer,
+  UserCheck,
+  UserPlus,
+  type LucideIcon,
+} from 'lucide-react';
 import type { AttestationRh } from '@/lib/demandes';
 import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { getFeuillesTemps, libelleMois } from '@/lib/temps';
 import { formatMontant } from '@/lib/format';
 import type { AlerteRh } from '@/lib/rh';
 import type { QuestionOuverte } from '@/lib/pilotage';
-import type { DemandeAbsence, DemandeRemboursement, DossierPersonnel, FeuillesTemps, IntegrationSalarie, ReportingADeposer } from '@/lib/types';
+import type {
+  DemandeAbsence,
+  DemandeRemboursement,
+  DossierPersonnel,
+  FeuillesTemps,
+  IntegrationSalarie,
+  ReportingADeposer,
+} from '@/lib/types';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';
 export type DonneesRh = {
@@ -36,7 +58,8 @@ type Element = {
 
 const JOUR = 86_400_000;
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const ecart = (de: string, a: string) => Math.round((Date.parse(`${a.slice(0, 10)}T00:00:00Z`) - Date.parse(`${de.slice(0, 10)}T00:00:00Z`)) / JOUR);
+const ecart = (de: string, a: string) =>
+  Math.round((Date.parse(`${a.slice(0, 10)}T00:00:00Z`) - Date.parse(`${de.slice(0, 10)}T00:00:00Z`)) / JOUR);
 const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
 // Une demande qui attend depuis plus de 3 jours passe en rouge.
 const ATTENTE_ALERTE_J = 3;
@@ -58,12 +81,18 @@ export function ATraiterRh({
   onOuvrir: (onglet: OngletRh, options?: { filtre?: 'incomplets' | 'fins'; dossier?: DossierPersonnel }) => void;
 }) {
   const aujourdhui = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [ecarts, setEcarts] = useState<{ cle: string; nom: string; mois: string; commentaire: string; signaleLe: string }[]>([]);
+  const [ecarts, setEcarts] = useState<
+    { cle: string; nom: string; mois: string; commentaire: string; signaleLe: string }[]
+  >([]);
   const [tout, setTout] = useState(false);
   const router = useRouter();
 
   // Écarts ouverts : le détail (qui, quel mois) vient des feuilles des mois concernés.
-  const moisEcarts = donnees?.feuilles.periodes.filter((p) => p.ecarts > 0).map((p) => p.mois).join(',') ?? '';
+  const moisEcarts =
+    donnees?.feuilles.periodes
+      .filter((p) => p.ecarts > 0)
+      .map((p) => p.mois)
+      .join(',') ?? '';
   useEffect(() => {
     if (!moisEcarts) {
       setEcarts([]);
@@ -75,7 +104,13 @@ export function ATraiterRh({
           l.flatMap((f) =>
             f.feuilles
               .filter((x) => x.ecart && !x.ecart.traiteLe)
-              .map((x) => ({ cle: x.ecart!.id, nom: `${x.prenom} ${x.nom}`.trim(), mois: f.mois, commentaire: x.ecart!.commentaire, signaleLe: x.ecart!.signaleLe })),
+              .map((x) => ({
+                cle: x.ecart!.id,
+                nom: `${x.prenom} ${x.nom}`.trim(),
+                mois: f.mois,
+                commentaire: x.ecart!.commentaire,
+                signaleLe: x.ecart!.signaleLe,
+              })),
           ),
         ),
       )
@@ -85,7 +120,10 @@ export function ATraiterRh({
   if (!donnees) return null;
   const depuis = (iso: string) => {
     const n = ecart(iso, aujourdhui);
-    return { quand: n <= 0 ? 'aujourd’hui' : n === 1 ? 'depuis hier' : `depuis ${n} j`, ton: (n > ATTENTE_ALERTE_J ? 'risque' : 'attention') as Ton };
+    return {
+      quand: n <= 0 ? 'aujourd’hui' : n === 1 ? 'depuis hier' : `depuis ${n} j`,
+      ton: (n > ATTENTE_ALERTE_J ? 'risque' : 'attention') as Ton,
+    };
   };
   const elements: Element[] = [];
 
@@ -93,7 +131,12 @@ export function ATraiterRh({
   for (const a of donnees.demandes.absences.filter((x) => x.statut === 'accord_n1' && x.valideurFinal !== 'ceo')) {
     const d = depuis(a.createdAt);
     elements.push({
-      cle: `abs-${a.id}`, groupe: 1, tri: a.createdAt, icone: Inbox, ...d, action: 'Valider',
+      cle: `abs-${a.id}`,
+      groupe: 1,
+      tri: a.createdAt,
+      icone: Inbox,
+      ...d,
+      action: 'Valider',
       titre: `${LIBELLE_TYPE_ABSENCE[a.type]} · ${nom(a.salarie)}`,
       detail: `du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)} · ${a.jours} j · accord du N+1, validation finale`,
       ouvrir: () => onOuvrir('demandes'),
@@ -102,7 +145,12 @@ export function ATraiterRh({
   for (const r of donnees.demandes.remboursements.filter((x) => x.statut === 'soumise')) {
     const d = depuis(r.createdAt);
     elements.push({
-      cle: `rbt-${r.id}`, groupe: 1, tri: r.createdAt, icone: Inbox, ...d, action: 'Traiter',
+      cle: `rbt-${r.id}`,
+      groupe: 1,
+      tri: r.createdAt,
+      icone: Inbox,
+      ...d,
+      action: 'Traiter',
       titre: `Remboursement · ${nom(r.dossier)}`,
       detail: `${LIBELLE_SOINS[r.categorie]} · ${formatMontant(r.montant)} · à transmettre à l’assurance`,
       ouvrir: () => onOuvrir('demandes'),
@@ -111,7 +159,12 @@ export function ATraiterRh({
   for (const t of donnees.demandes.attestations.filter((x) => !x.delivreeLe)) {
     const d = depuis(t.demandeLe);
     elements.push({
-      cle: `att-${t.id}`, groupe: 1, tri: t.demandeLe, icone: Inbox, ...d, action: 'Délivrer',
+      cle: `att-${t.id}`,
+      groupe: 1,
+      tri: t.demandeLe,
+      icone: Inbox,
+      ...d,
+      action: 'Délivrer',
       titre: `Attestation de travail · ${nom(t.dossier)}`,
       detail: 'document signé à déposer',
       ouvrir: () => onOuvrir('demandes'),
@@ -120,7 +173,12 @@ export function ATraiterRh({
   for (const p of dossiers.filter((x) => x.paiementDemandeMode && x.paiementDemandeLe)) {
     const d = depuis(p.paiementDemandeLe!);
     elements.push({
-      cle: `pai-${p.id}`, groupe: 1, tri: p.paiementDemandeLe!, icone: Inbox, ...d, action: 'Ouvrir',
+      cle: `pai-${p.id}`,
+      groupe: 1,
+      tri: p.paiementDemandeLe!,
+      icone: Inbox,
+      ...d,
+      action: 'Ouvrir',
       titre: `Moyen de paiement · ${nom(p)}`,
       detail: 'changement demandé, à valider avant la paie',
       ouvrir: () => onOuvrir('personnel', { dossier: p }),
@@ -130,7 +188,12 @@ export function ATraiterRh({
   for (const e of ecarts) {
     const d = depuis(e.signaleLe);
     elements.push({
-      cle: `ecart-${e.cle}`, groupe: 2, tri: e.signaleLe, icone: Scale, ...d, action: 'Répondre',
+      cle: `ecart-${e.cle}`,
+      groupe: 2,
+      tri: e.signaleLe,
+      icone: Scale,
+      ...d,
+      action: 'Répondre',
       titre: `Écart signalé · ${e.nom}`,
       detail: `feuille de ${libelleMois(e.mois)} · « ${e.commentaire} »`,
       ouvrir: () => onOuvrir('temps'),
@@ -141,7 +204,11 @@ export function ATraiterRh({
     for (const p of i.points.filter((x) => x.statut !== 'fait' && ecart(aujourdhui, x.datePrevue) <= INTEGRATION_J)) {
       const n = ecart(aujourdhui, p.datePrevue);
       elements.push({
-        cle: `int-${i.id}-${p.jalon}`, groupe: 3, tri: p.datePrevue, icone: UserPlus, action: 'Préparer',
+        cle: `int-${i.id}-${p.jalon}`,
+        groupe: 3,
+        tri: p.datePrevue,
+        icone: UserPlus,
+        action: 'Préparer',
         titre: `Point J${p.jalon} · ${nom(i)}`,
         detail: `${i.poste || 'poste à renseigner'} · arrivée le ${jjmm(i.dateEntree)}`,
         quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `le ${jjmm(p.datePrevue)}`,
@@ -152,17 +219,44 @@ export function ATraiterRh({
   }
   // 4. Échéances légales (délais des Réglages, calculées par le serveur) :
   // fins de CDD/stage, fins d'essai, visites médicales, pièces d'identité.
-  const ECHEANCES: Record<AlerteRh['type'], { icone: LucideIcon; titre: (al: AlerteRh) => string; detail: string; action: string }> = {
-    fin_contrat: { icone: CalendarClock, titre: (al) => `Fin de ${al.typeContrat.toUpperCase()} · ${nom(al)}`, detail: 'renouveler, transformer ou préparer la sortie', action: 'Ouvrir' },
-    fin_essai: { icone: UserCheck, titre: (al) => `Fin de période d’essai · ${nom(al)}`, detail: 'confirmer ou rompre à temps', action: 'Ouvrir' },
-    visite_medicale: { icone: Stethoscope, titre: (al) => `Visite médicale · ${nom(al)}`, detail: 'à programmer', action: 'Ouvrir' },
-    piece_identite: { icone: IdCard, titre: (al) => `Pièce d’identité · ${nom(al)}`, detail: 'nouvelle pièce à demander', action: 'Ouvrir' },
+  const ECHEANCES: Record<
+    AlerteRh['type'],
+    { icone: LucideIcon; titre: (al: AlerteRh) => string; detail: string; action: string }
+  > = {
+    fin_contrat: {
+      icone: CalendarClock,
+      titre: (al) => `Fin de ${al.typeContrat.toUpperCase()} · ${nom(al)}`,
+      detail: 'renouveler, transformer ou préparer la sortie',
+      action: 'Ouvrir',
+    },
+    fin_essai: {
+      icone: UserCheck,
+      titre: (al) => `Fin de période d’essai · ${nom(al)}`,
+      detail: 'confirmer ou rompre à temps',
+      action: 'Ouvrir',
+    },
+    visite_medicale: {
+      icone: Stethoscope,
+      titre: (al) => `Visite médicale · ${nom(al)}`,
+      detail: 'à programmer',
+      action: 'Ouvrir',
+    },
+    piece_identite: {
+      icone: IdCard,
+      titre: (al) => `Pièce d’identité · ${nom(al)}`,
+      detail: 'nouvelle pièce à demander',
+      action: 'Ouvrir',
+    },
   };
   for (const al of donnees.alertes) {
     const e = ECHEANCES[al.type];
     const dossier = dossiers.find((x) => x.id === al.dossierId);
     elements.push({
-      cle: `${al.type}-${al.dossierId}`, groupe: 4, tri: al.date, icone: e.icone, action: e.action,
+      cle: `${al.type}-${al.dossierId}`,
+      groupe: 4,
+      tri: al.date,
+      icone: e.icone,
+      action: e.action,
       titre: e.titre(al),
       detail: `${al.poste || 'poste à renseigner'} · ${al.type === 'piece_identite' ? 'expire' : 'le'} ${jjmm(al.date)} · ${e.detail}`,
       quand: al.jours < 0 ? `dépassée de ${-al.jours} j` : al.jours === 0 ? 'aujourd’hui' : `dans ${al.jours} j`,
@@ -174,7 +268,11 @@ export function ATraiterRh({
   for (const r of donnees.reportings) {
     const n = ecart(aujourdhui, r.echeance);
     elements.push({
-      cle: `reporting-${r.type}-${r.mois}`, groupe: 4, tri: r.echeance, icone: ClipboardList, action: 'Déposer',
+      cle: `reporting-${r.type}-${r.mois}`,
+      groupe: 4,
+      tri: r.echeance,
+      icone: ClipboardList,
+      action: 'Déposer',
       titre: `Reporting RH · ${r.periode}`,
       detail: `prérempli, à relire et commenter · pour le CFO, échéance le ${jjmm(r.echeance)}`,
       quand: n < 0 ? `en retard de ${-n} j` : n === 0 ? 'aujourd’hui' : `dans ${n} j`,
@@ -186,7 +284,12 @@ export function ATraiterRh({
   for (const q of donnees.questions) {
     const d = depuis(q.le);
     elements.push({
-      cle: `question-${q.id}`, groupe: 1, tri: q.le, icone: MessageCircleQuestion, ...d, action: 'Répondre',
+      cle: `question-${q.id}`,
+      groupe: 1,
+      tri: q.le,
+      icone: MessageCircleQuestion,
+      ...d,
+      action: 'Répondre',
       titre: `Question${q.par ? ` de ${q.par}` : ''} · ${q.titre} · ${q.periode}`,
       detail: 'à répondre dans le reporting (Pilotage)',
       ouvrir: () => router.push(`/admin/${slug}?onglet=reportings`),
@@ -198,13 +301,22 @@ export function ATraiterRh({
     // mois chargé) : le CFO ne voit aucune marge tant qu'elles ne sont pas contrôlées.
     const projets =
       donnees.feuilles.mois === p.mois
-        ? new Set(donnees.feuilles.feuilles.filter((f) => f.statut === 'a_controler').flatMap((f) => f.lignes.filter((l) => l.heures > 0).map((l) => l.projetCode))).size
+        ? new Set(
+            donnees.feuilles.feuilles
+              .filter((f) => f.statut === 'a_controler')
+              .flatMap((f) => f.lignes.filter((l) => l.heures > 0).map((l) => l.projetCode)),
+          ).size
         : 0;
     elements.push({
-      cle: `feuilles-${p.mois}`, groupe: 5, tri: p.mois, icone: Timer, action: 'Contrôler',
+      cle: `feuilles-${p.mois}`,
+      groupe: 5,
+      tri: p.mois,
+      icone: Timer,
+      action: 'Contrôler',
       titre: `${p.aControler} feuille${p.aControler > 1 ? 's' : ''} de temps à contrôler`,
       detail: `mois clos de ${libelleMois(p.mois)}${projets ? ` · bloque${p.aControler > 1 ? 'nt' : ''} le calcul de la rentabilité de ${projets} projet${projets > 1 ? 's' : ''}` : ''}`,
-      quand: 'mois clos', ton: 'attention',
+      quand: 'mois clos',
+      ton: 'attention',
       ouvrir: () => onOuvrir('temps'),
     });
   }
@@ -212,10 +324,15 @@ export function ATraiterRh({
   const incomplets = dossiers.filter((x) => x.completude.pourcentage < 100).length;
   if (incomplets) {
     elements.push({
-      cle: 'incomplets', groupe: 6, tri: '', icone: FileWarning, action: 'Voir',
+      cle: 'incomplets',
+      groupe: 6,
+      tri: '',
+      icone: FileWarning,
+      action: 'Voir',
       titre: `${incomplets} dossier${incomplets > 1 ? 's' : ''} incomplet${incomplets > 1 ? 's' : ''}`,
       detail: 'pièces ou champs manquants',
-      quand: '', ton: 'neutre',
+      quand: '',
+      ton: 'neutre',
       ouvrir: () => onOuvrir('personnel', { filtre: 'incomplets' }),
     });
   }

@@ -107,7 +107,9 @@ export default function RhPage(props: Props) {
   const ongletDemande = parametres.get('onglet');
   const dossierDemande = parametres.get('dossier');
   const [onglet, setOnglet] = useState<Onglet>(
-    ongletDemande === 'temps' || ongletDemande === 'integration' || ongletDemande === 'demandes' ? ongletDemande : 'personnel',
+    ongletDemande === 'temps' || ongletDemande === 'integration' || ongletDemande === 'demandes'
+      ? ongletDemande
+      : 'personnel',
   );
   const [compteurs, setCompteurs] = useState<Compteurs | null>(null);
   // Données brutes des onglets : tuiles et « À traiter aujourd'hui ».
@@ -207,7 +209,17 @@ export default function RhPage(props: Props) {
   };
   // Couleur = sens (lib/couleurs-etat.ts) : ambre à traiter, rouge en
   // retard / hors objectif, vert rien en attente, iris sans objectif.
-  const tuiles: { cle: string; libelle: string; valeur: number | string | null; montant?: number; aide: string; actif: boolean; onClick: () => void; icone: LucideIcon; etat: EtatTuile }[] = [
+  const tuiles: {
+    cle: string;
+    libelle: string;
+    valeur: number | string | null;
+    montant?: number;
+    aide: string;
+    actif: boolean;
+    onClick: () => void;
+    icone: LucideIcon;
+    etat: EtatTuile;
+  }[] = [
     {
       cle: 'effectif',
       libelle: 'Effectif du groupe',
@@ -289,7 +301,9 @@ export default function RhPage(props: Props) {
   const entete = (
     <>
       <div className="rh-entete">
-        <p className="rh-sous-titre">Dossiers du personnel des sociétés du groupe. Accès : RH, CFO et CEO (manuel §3.7, League Admin).</p>
+        <p className="rh-sous-titre">
+          Dossiers du personnel des sociétés du groupe. Accès : RH, CFO et CEO (manuel §3.7, League Admin).
+        </p>
         {ecriture && (
           <span className="rh-entete-actions">
             {/* Tous les bulletins du mois en une fois (revue RH 20/10/2026). */}
@@ -340,7 +354,14 @@ export default function RhPage(props: Props) {
               ['demandes', `Demandes${compte(compteurs ? compteurs.demandes + paiementsAValider : null)}`],
             ] as const
           ).map(([o, libelle]) => (
-            <button key={o} type="button" role="tab" aria-selected={onglet === o} className={onglet === o ? 'is-active' : ''} onClick={() => ouvrir(o)}>
+            <button
+              key={o}
+              type="button"
+              role="tab"
+              aria-selected={onglet === o}
+              className={onglet === o ? 'is-active' : ''}
+              onClick={() => ouvrir(o)}
+            >
               {libelle}
             </button>
           ))}
@@ -354,7 +375,11 @@ export default function RhPage(props: Props) {
       dossiers={dossiers}
       moisParDefaut={moisPrecedent()}
       // Bulletins déposés : la liste (et les fiches) relues.
-      onFait={() => getDossiers(params.slug).then(setDossiers).catch(() => undefined)}
+      onFait={() =>
+        getDossiers(params.slug)
+          .then(setDossiers)
+          .catch(() => undefined)
+      }
       onClose={() => setDepotBulletins(false)}
     />
   );
@@ -414,21 +439,25 @@ export default function RhPage(props: Props) {
           <BoutonExport
             desactive={!visibles.length}
             onExporter={() =>
-              exporterCsv(archives ? 'dossiers-personnel-archives' : 'dossiers-personnel', [
-                { titre: 'Matricule', valeur: (d) => d.matricule },
-                { titre: 'Prénom', valeur: (d) => d.prenom },
-                { titre: 'Nom', valeur: (d) => d.nom },
-                { titre: 'Poste', valeur: (d) => d.poste },
-                { titre: 'Société', valeur: (d) => d.societe.nom },
-                { titre: 'Équipe', valeur: (d) => d.cellule },
-                { titre: 'Contrat', valeur: (d) => LIBELLE_CONTRAT[d.typeContrat] },
-                { titre: 'Fin de contrat', valeur: (d) => (d.typeContrat !== 'cdi' ? dateExport(d.dateFin) : null) },
-                { titre: 'Entrée', valeur: (d) => dateExport(d.dateEntree) },
-                { titre: 'Téléphone', valeur: (d) => d.telephone },
-                { titre: 'E-mail pro', valeur: (d) => d.emailPro },
-                { titre: 'Dossier complet (%)', valeur: (d) => d.completude.pourcentage },
-                { titre: 'Archivé le', valeur: (d) => dateExport(d.archiveLe) },
-              ], visibles)
+              exporterCsv(
+                archives ? 'dossiers-personnel-archives' : 'dossiers-personnel',
+                [
+                  { titre: 'Matricule', valeur: (d) => d.matricule },
+                  { titre: 'Prénom', valeur: (d) => d.prenom },
+                  { titre: 'Nom', valeur: (d) => d.nom },
+                  { titre: 'Poste', valeur: (d) => d.poste },
+                  { titre: 'Société', valeur: (d) => d.societe.nom },
+                  { titre: 'Équipe', valeur: (d) => d.cellule },
+                  { titre: 'Contrat', valeur: (d) => LIBELLE_CONTRAT[d.typeContrat] },
+                  { titre: 'Fin de contrat', valeur: (d) => (d.typeContrat !== 'cdi' ? dateExport(d.dateFin) : null) },
+                  { titre: 'Entrée', valeur: (d) => dateExport(d.dateEntree) },
+                  { titre: 'Téléphone', valeur: (d) => d.telephone },
+                  { titre: 'E-mail pro', valeur: (d) => d.emailPro },
+                  { titre: 'Dossier complet (%)', valeur: (d) => d.completude.pourcentage },
+                  { titre: 'Archivé le', valeur: (d) => dateExport(d.archiveLe) },
+                ],
+                visibles,
+              )
             }
           />
         </div>
@@ -458,10 +487,18 @@ export default function RhPage(props: Props) {
                         {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
                       </button>
                       <span className="cell-sub">{d.poste || 'poste à renseigner'}</span>
-                      {d.paiementDemandeMode && <span className="pill pill--attention">Moyen de paiement à valider</span>}
+                      {d.paiementDemandeMode && (
+                        <span className="pill pill--attention">Moyen de paiement à valider</span>
+                      )}
                     </td>
-                    {colonneSociete && <td data-label="Société" className="rh-c-societe">{d.societe.nom}</td>}
-                    <td data-label="Équipe" className="rh-c-equipe">{d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}</td>
+                    {colonneSociete && (
+                      <td data-label="Société" className="rh-c-societe">
+                        {d.societe.nom}
+                      </td>
+                    )}
+                    <td data-label="Équipe" className="rh-c-equipe">
+                      {d.cellule ?? <span className="cell-sub">à affecter par la direction</span>}
+                    </td>
                     <td data-label="Contrat" className="rh-c-contrat">
                       {LIBELLE_CONTRAT[d.typeContrat]}
                       {d.typeContrat !== 'cdi' && d.dateFin && ` → ${jjmmaaaa(d.dateFin)}`}
@@ -477,7 +514,9 @@ export default function RhPage(props: Props) {
                         {d.completude.pourcentage} %
                       </span>
                     </td>
-                    <td data-label="Entrée" className="rh-c-entree">{jjmmaaaa(d.dateEntree)}</td>
+                    <td data-label="Entrée" className="rh-c-entree">
+                      {jjmmaaaa(d.dateEntree)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -559,15 +598,29 @@ function FicheDossier({
     setForm(versFormulaire(dossier));
   }, [dossier]);
 
-  const maj = (cle: keyof MajDossier) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const v = e.target.value;
-    const valeur = ['dateEntree', 'dateFin', 'finEssai', 'visiteMedicale', 'expirationPiece', 'dateNaissance', 'collaborateurId', 'utilisateurId'].includes(cle)
-      ? v || null
-      : v;
-    // Une fiche d'équipe porte son propre compte : relier une fiche retire le compte direct.
-    setForm((f) => ({ ...f, [cle]: valeur, ...(cle === 'collaborateurId' && valeur ? { utilisateurId: null } : {}) }));
-    setEnregistre(false);
-  };
+  const maj =
+    (cle: keyof MajDossier) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      const v = e.target.value;
+      const valeur = [
+        'dateEntree',
+        'dateFin',
+        'finEssai',
+        'visiteMedicale',
+        'expirationPiece',
+        'dateNaissance',
+        'collaborateurId',
+        'utilisateurId',
+      ].includes(cle)
+        ? v || null
+        : v;
+      // Une fiche d'équipe porte son propre compte : relier une fiche retire le compte direct.
+      setForm((f) => ({
+        ...f,
+        [cle]: valeur,
+        ...(cle === 'collaborateurId' && valeur ? { utilisateurId: null } : {}),
+      }));
+      setEnregistre(false);
+    };
 
   async function enregistrer() {
     setEnvoi(true);
@@ -707,7 +760,13 @@ function FicheDossier({
 
   return (
     <div className="modal-backdrop rh-tiroir" onClick={onClose}>
-      <div className="modal rh-fiche" role="dialog" aria-modal="true" aria-label={titre} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal rh-fiche"
+        role="dialog"
+        aria-modal="true"
+        aria-label={titre}
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <div>
             <span className="po-kicker">Dossier du personnel{dossier ? ` · ${dossier.matricule}` : ''}</span>
@@ -736,8 +795,8 @@ function FicheDossier({
             </div>
           )}
           <p className="rh-note">
-            Nouvel arrivant : la carte de mission doit être validée (budget CFO, décision d’embauche) avant l’affectation à une cellule
-            (manuel §3.3).
+            Nouvel arrivant : la carte de mission doit être validée (budget CFO, décision d’embauche) avant
+            l’affectation à une cellule (manuel §3.3).
           </p>
 
           <fieldset disabled={!ecriture} className="fieldset-nu">
@@ -772,7 +831,9 @@ function FicheDossier({
                 <span className="field-label">Fiche d’équipe liée</span>
                 <select className="field-input" value={form.collaborateurId ?? ''} onChange={maj('collaborateurId')}>
                   <option value="">Aucune (à affecter par la direction)</option>
-                  {dossier?.collaborateurId && <option value={dossier.collaborateurId}>{dossier.cellule ?? 'Fiche actuelle'}</option>}
+                  {dossier?.collaborateurId && (
+                    <option value={dossier.collaborateurId}>{dossier.cellule ?? 'Fiche actuelle'}</option>
+                  )}
                   {collabs.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.libelle}
@@ -815,7 +876,9 @@ function FicheDossier({
             {dossier ? (
               <SalaireDossier slug={slug} dossier={dossier} ecriture={ecriture} />
             ) : (
-              <p className="rh-note">Le salaire d’entrée se propose une fois le dossier créé ; il entre en vigueur après validation du CFO.</p>
+              <p className="rh-note">
+                Le salaire d’entrée se propose une fois le dossier créé ; il entre en vigueur après validation du CFO.
+              </p>
             )}
 
             <h3 className="rh-section">Identité</h3>
@@ -833,7 +896,8 @@ function FicheDossier({
             {dossier?.paiementDemandeMode && (
               <div className="rh-paiement-demande" role="status">
                 <span>
-                  <strong>Changement de moyen de paiement demandé</strong> le {dossier.paiementDemandeLe?.slice(0, 10).split('-').reverse().join('/')} :{' '}
+                  <strong>Changement de moyen de paiement demandé</strong> le{' '}
+                  {dossier.paiementDemandeLe?.slice(0, 10).split('-').reverse().join('/')} :{' '}
                   {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]} · {dossier.paiementDemandeCoordonnees}
                 </span>
                 {ecriture && (
@@ -899,7 +963,12 @@ function FicheDossier({
                       <label className="btn-ghost btn-ghost--sm">
                         <Paperclip size={14} aria-hidden />
                         {piece?.nom ? 'Remplacer' : 'Joindre'}
-                        <input type="file" accept={FICHIERS_ACCEPTES.rh} hidden onChange={(e) => joindre(p.type, e.target.files?.[0])} />
+                        <input
+                          type="file"
+                          accept={FICHIERS_ACCEPTES.rh}
+                          hidden
+                          onChange={(e) => joindre(p.type, e.target.files?.[0])}
+                        />
                       </label>
                     )}
                   </li>
@@ -928,7 +997,9 @@ function FicheDossier({
                   </label>
                   <label className={`btn-ghost btn-ghost--sm${moisBulletin ? '' : ' is-disabled'}`}>
                     <Paperclip size={14} aria-hidden />
-                    {dossier.bulletins.some((b) => b.mois === moisBulletin) ? 'Remplacer le bulletin' : 'Déposer le bulletin'}
+                    {dossier.bulletins.some((b) => b.mois === moisBulletin)
+                      ? 'Remplacer le bulletin'
+                      : 'Déposer le bulletin'}
                     <input
                       type="file"
                       accept={FICHIERS_ACCEPTES.rh}
@@ -974,8 +1045,8 @@ function FicheDossier({
                 </ul>
               )}
               <p className="cell-sub">
-                Le salarié retrouve ses bulletins dans Mon espace · Mes documents. Un nouveau dépôt sur le même mois remplace
-                le précédent.
+                Le salarié retrouve ses bulletins dans Mon espace · Mes documents. Un nouveau dépôt sur le même mois
+                remplace le précédent.
               </p>
             </>
           )}
@@ -991,7 +1062,9 @@ function FicheDossier({
                 titulaire est prévenu ; les échéances ne bougent pas.
               </p>
               {depart.candidats.length === 0 && (
-                <p className="field-erreur">Aucun collègue en poste dans cette société : créez d’abord la fiche du remplaçant.</p>
+                <p className="field-erreur">
+                  Aucun collègue en poste dans cette société : créez d’abord la fiche du remplaçant.
+                </p>
               )}
               {depart.taches.map((t) => (
                 <label key={t.id} className="field">

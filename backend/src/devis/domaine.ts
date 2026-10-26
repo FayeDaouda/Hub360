@@ -53,9 +53,7 @@ export function ajouterJours(jour: string, n: number): string {
 
 // Jours pleins écoulés entre deux dates agenda (AAAA-MM-JJ).
 export function joursEntre(debut: string, fin: string): number {
-  return Math.round(
-    (Date.parse(`${fin}T00:00:00Z`) - Date.parse(`${debut}T00:00:00Z`)) / 86_400_000,
-  );
+  return Math.round((Date.parse(`${fin}T00:00:00Z`) - Date.parse(`${debut}T00:00:00Z`)) / 86_400_000);
 }
 
 // Une relance est due quand le palier J+3 (puis J+6) est atteint et qu'on
@@ -91,10 +89,7 @@ export function montantTtcLignes(
 export function montantHtLignes(
   lignes: { quantite: { toNumber(): number }; prixUnitaire: { toNumber(): number } }[],
 ): number {
-  return lignes.reduce(
-    (s, l) => s + Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()),
-    0,
-  );
+  return lignes.reduce((s, l) => s + Math.round(l.quantite.toNumber() * l.prixUnitaire.toNumber()), 0);
 }
 
 // -- Avenant non accepté (Réglages · Règles et délais) -----------------------
@@ -103,7 +98,13 @@ export function montantHtLignes(
 // expiré) au-delà du délai réglé : alerte (et, avec le Pilotage, échéance
 // dépassée au registre des décisions).
 export function alerteAvenant(
-  d: { projetId: string | null; statut: StatutDevis; dateValidite: string | null; dateEnvoi: Date | null; familles: (string | null)[] },
+  d: {
+    projetId: string | null;
+    statut: StatutDevis;
+    dateValidite: string | null;
+    dateEnvoi: Date | null;
+    familles: (string | null)[];
+  },
   aujourdhui: string,
   seuilJours: number,
 ): { jours: number; seuil: number } | null {

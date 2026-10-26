@@ -29,7 +29,12 @@ export class ProfilService {
     // Absence validée par la RH qui couvre aujourd'hui (la plus longue) — sur
     // le dossier du compte, rattaché directement ou par la fiche d'équipe.
     const absence = await this.prisma.demandeAbsence.findFirst({
-      where: { statut: 'validee', dateDebut: { lte: jour }, dateFin: { gte: jour }, dossier: ouDossierDuCompte(utilisateurId) },
+      where: {
+        statut: 'validee',
+        dateDebut: { lte: jour },
+        dateFin: { gte: jour },
+        dossier: ouDossierDuCompte(utilisateurId),
+      },
       orderBy: { dateFin: 'desc' },
       select: { dateFin: true, type: true },
     });
@@ -44,7 +49,10 @@ export class ProfilService {
   }
 
   async changerNomAffiche(utilisateurId: string, saisie: string | null) {
-    await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { nomAffiche: normaliserNomAffiche(saisie) } });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateurId },
+      data: { nomAffiche: normaliserNomAffiche(saisie) },
+    });
     return this.lire(utilisateurId);
   }
 
@@ -60,7 +68,10 @@ export class ProfilService {
   }
 
   async retirerPhoto(utilisateurId: string) {
-    await this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { photo: null, photoType: null, photoCle: null } });
+    await this.prisma.utilisateur.update({
+      where: { id: utilisateurId },
+      data: { photo: null, photoType: null, photoCle: null },
+    });
     return this.lire(utilisateurId);
   }
 
@@ -70,7 +81,12 @@ export class ProfilService {
     await this.prisma.$transaction([
       this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { sessionsValidesDepuis: new Date() } }),
       this.prisma.evenementCompte.create({
-        data: { utilisateurId, type: 'deconnexion_partout', parId: utilisateurId, detail: 'Toutes les sessions coupées par le titulaire' },
+        data: {
+          utilisateurId,
+          type: 'deconnexion_partout',
+          parId: utilisateurId,
+          detail: 'Toutes les sessions coupées par le titulaire',
+        },
       }),
     ]);
     return { ok: true };
@@ -78,7 +94,10 @@ export class ProfilService {
 
   // Photo publique par sa clé (non devinable) — balise <img>, sans jeton.
   async photo(cle: string) {
-    const u = await this.prisma.utilisateur.findUnique({ where: { photoCle: cle }, select: { photo: true, photoType: true } });
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { photoCle: cle },
+      select: { photo: true, photoType: true },
+    });
     if (!u?.photo || !u.photoType) throw new NotFoundException('Photo introuvable');
     return { type: u.photoType, octets: Buffer.from(u.photo) };
   }

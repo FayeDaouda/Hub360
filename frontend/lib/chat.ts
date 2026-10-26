@@ -1,11 +1,4 @@
-import type {
-  CanalChat,
-  EtatFluxChat,
-  EvenementChat,
-  MembreAnnuaire,
-  MessageChat,
-  PageMessagesChat,
-} from './types';
+import type { CanalChat, EtatFluxChat, EvenementChat, MembreAnnuaire, MessageChat, PageMessagesChat } from './types';
 import { apiSociete } from './client-api';
 
 // Chat multi-canaux (lot 3). API NestJS (src/chat) :
@@ -22,30 +15,19 @@ export function getCanaux(slug: string): Promise<CanalChat[]> {
   return apiSociete<CanalChat[]>(slug, '/canaux');
 }
 
-export function getMessages(
-  slug: string,
-  canalId: string,
-  curseur?: string,
-): Promise<PageMessagesChat> {
+export function getMessages(slug: string, canalId: string, curseur?: string): Promise<PageMessagesChat> {
   const qs = curseur ? `?curseur=${encodeURIComponent(curseur)}` : '';
   return apiSociete<PageMessagesChat>(slug, `/canaux/${canalId}/messages${qs}`);
 }
 
-export function envoyerMessage(
-  slug: string,
-  canalId: string,
-  texte: string,
-): Promise<MessageChat> {
+export function envoyerMessage(slug: string, canalId: string, texte: string): Promise<MessageChat> {
   return apiSociete<MessageChat>(slug, `/canaux/${canalId}/messages`, {
     method: 'POST',
     body: { texte },
   });
 }
 
-export function marquerCanalLu(
-  slug: string,
-  canalId: string,
-): Promise<{ nonLus: number }> {
+export function marquerCanalLu(slug: string, canalId: string): Promise<{ nonLus: number }> {
   return apiSociete<{ nonLus: number }>(slug, `/canaux/${canalId}/lecture`, {
     method: 'PATCH',
   });
@@ -55,10 +37,7 @@ export function getAnnuaireChat(slug: string): Promise<MembreAnnuaire[]> {
   return apiSociete<MembreAnnuaire[]>(slug, '/annuaire');
 }
 
-export function ouvrirDirect(
-  slug: string,
-  avecUtilisateurId: string,
-): Promise<CanalChat> {
+export function ouvrirDirect(slug: string, avecUtilisateurId: string): Promise<CanalChat> {
   return apiSociete<CanalChat>(slug, '/canaux/direct', {
     method: 'POST',
     body: { avecUtilisateurId },
@@ -103,9 +82,7 @@ export function connecterFluxChat(opts: OptionsFlux): () => void {
     }
     if (ferme) return;
 
-    const source = new EventSource(
-      `${API_URL}/societes/${opts.slug}/chat/flux?token=${encodeURIComponent(token)}`,
-    );
+    const source = new EventSource(`${API_URL}/societes/${opts.slug}/chat/flux?token=${encodeURIComponent(token)}`);
     es = source;
 
     source.addEventListener('open', () => {
@@ -114,14 +91,13 @@ export function connecterFluxChat(opts: OptionsFlux): () => void {
       opts.onEtat('ouvert');
     });
 
-    const relais =
-      (type: 'message' | 'non_lus') => (ev: MessageEvent<string>) => {
-        try {
-          opts.onEvenement({ type, ...JSON.parse(ev.data) } as EvenementChat);
-        } catch {
-          /* trame illisible — ignorée */
-        }
-      };
+    const relais = (type: 'message' | 'non_lus') => (ev: MessageEvent<string>) => {
+      try {
+        opts.onEvenement({ type, ...JSON.parse(ev.data) } as EvenementChat);
+      } catch {
+        /* trame illisible — ignorée */
+      }
+    };
     source.addEventListener('message', relais('message'));
     source.addEventListener('non_lus', relais('non_lus'));
     // 'ping' : battement serveur, rien à faire.

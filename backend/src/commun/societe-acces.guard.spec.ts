@@ -23,23 +23,17 @@ describe('SocieteAccesGuard', () => {
 
   it('REFUSÉ DANS LE PÉRIMÈTRE : collaborateur du bon slug → 403 (rôle insuffisant)', () => {
     expect(() =>
-      new SocieteAccesGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'grey', role: 'collaborateur' } })),
-      ),
+      new SocieteAccesGuard().canActivate(ctxOf(req({ user: { societeSlug: 'grey', role: 'collaborateur' } }))),
     ).toThrow(ForbiddenException);
   });
 
   it('HORS PÉRIMÈTRE : societe_admin d’une autre société → 403', () => {
     expect(() =>
-      new SocieteAccesGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'autre', role: 'societe_admin' } })),
-      ),
+      new SocieteAccesGuard().canActivate(ctxOf(req({ user: { societeSlug: 'autre', role: 'societe_admin' } }))),
     ).toThrow(ForbiddenException);
   });
 
   it('token absent → 403', () => {
-    expect(() =>
-      new SocieteAccesGuard().canActivate(ctxOf(req({ user: undefined }))),
-    ).toThrow(ForbiddenException);
+    expect(() => new SocieteAccesGuard().canActivate(ctxOf(req({ user: undefined })))).toThrow(ForbiddenException);
   });
 });

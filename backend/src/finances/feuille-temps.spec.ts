@@ -31,12 +31,28 @@ describe('temps sur la facturation', () => {
     expect(prevueLe(null, 30)).toBeNull();
   });
   it('payée en N j, échéance, retard, à facturer', () => {
-    expect(delaiTranche({ prevue: null, facturee: '2026-09-10', echeance: '2026-09-25', payee: '2026-09-12' }, auj)).toEqual({ etat: 'payee', jours: 2 });
-    expect(delaiTranche({ prevue: null, facturee: '2026-09-10', echeance: '2026-09-25', payee: null }, auj)).toEqual({ etat: 'a_echoir', jours: 5 });
-    expect(delaiTranche({ prevue: null, facturee: '2026-09-01', echeance: '2026-09-16', payee: null }, auj)).toEqual({ etat: 'en_retard', jours: 4 });
-    expect(delaiTranche({ prevue: '2026-10-06', facturee: null, echeance: null, payee: null }, auj)).toEqual({ etat: 'a_facturer', jours: 16 });
-    expect(delaiTranche({ prevue: '2026-09-18', facturee: null, echeance: null, payee: null }, auj)).toEqual({ etat: 'facturation_en_retard', jours: 2 });
-    expect(delaiTranche({ prevue: null, facturee: null, echeance: null, payee: null }, auj)).toEqual({ etat: 'non_planifiee' });
+    expect(
+      delaiTranche({ prevue: null, facturee: '2026-09-10', echeance: '2026-09-25', payee: '2026-09-12' }, auj),
+    ).toEqual({ etat: 'payee', jours: 2 });
+    expect(delaiTranche({ prevue: null, facturee: '2026-09-10', echeance: '2026-09-25', payee: null }, auj)).toEqual({
+      etat: 'a_echoir',
+      jours: 5,
+    });
+    expect(delaiTranche({ prevue: null, facturee: '2026-09-01', echeance: '2026-09-16', payee: null }, auj)).toEqual({
+      etat: 'en_retard',
+      jours: 4,
+    });
+    expect(delaiTranche({ prevue: '2026-10-06', facturee: null, echeance: null, payee: null }, auj)).toEqual({
+      etat: 'a_facturer',
+      jours: 16,
+    });
+    expect(delaiTranche({ prevue: '2026-09-18', facturee: null, echeance: null, payee: null }, auj)).toEqual({
+      etat: 'facturation_en_retard',
+      jours: 2,
+    });
+    expect(delaiTranche({ prevue: null, facturee: null, echeance: null, payee: null }, auj)).toEqual({
+      etat: 'non_planifiee',
+    });
   });
 });
 
@@ -58,7 +74,11 @@ describe('tempsImpute', () => {
     expect(r.total).toBe(6);
   });
   it('absence validée : la charge se reporte sur les jours de présence', () => {
-    const r = tempsImpute([tache({ assigne: { nom: 'Awa Ndiaye', absences: [{ debut: '2026-09-17', fin: '2026-09-18' }] } })], '2026-09-18', new Set());
+    const r = tempsImpute(
+      [tache({ assigne: { nom: 'Awa Ndiaye', absences: [{ debut: '2026-09-17', fin: '2026-09-18' }] } })],
+      '2026-09-18',
+      new Set(),
+    );
     expect(r.taches[0].heures).toBe(10); // 3 jours présents portent les 10 h
   });
   it('fenêtre future ou sans durée : 0 h ; répartition par étape dans l’ordre', () => {

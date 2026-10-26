@@ -3,10 +3,22 @@ import { PrismaService } from '../prisma/prisma.service';
 import { IntegrationService } from './integration.service';
 
 const DOSSIER = {
-  id: 'D1', matricule: 'GH-0100', prenom: 'Awa', nom: 'Sarr', poste: 'CAD L3', typeContrat: 'stage',
-  dateEntree: '2026-09-15', createdAt: new Date('2026-09-15T08:00:00Z'), confirmeLe: null, archiveLe: null,
-  missionResultat: '', missionLivrables: '', missionKpi: '', missionSignalAlerte: '',
-  societe: { nom: 'Grey Concrete' }, pointsIntegration: [] as { jalon: number; realiseLe: string; compteRendu: string }[],
+  id: 'D1',
+  matricule: 'GH-0100',
+  prenom: 'Awa',
+  nom: 'Sarr',
+  poste: 'CAD L3',
+  typeContrat: 'stage',
+  dateEntree: '2026-09-15',
+  createdAt: new Date('2026-09-15T08:00:00Z'),
+  confirmeLe: null,
+  archiveLe: null,
+  missionResultat: '',
+  missionLivrables: '',
+  missionKpi: '',
+  missionSignalAlerte: '',
+  societe: { nom: 'Grey Concrete' },
+  pointsIntegration: [] as { jalon: number; realiseLe: string; compteRendu: string }[],
 };
 
 function svc(dossier: object = {}) {
@@ -24,19 +36,30 @@ function svc(dossier: object = {}) {
 const RH = { userId: 'U' };
 
 describe('IntegrationService', () => {
-  it("liste : seulement les nouveaux arrivants, avec les dates J30/J60/J90", async () => {
+  it('liste : seulement les nouveaux arrivants, avec les dates J30/J60/J90', async () => {
     const l = await svc().s.liste();
     expect(l.map((x) => x.id)).toEqual(['D1']);
     expect(l[0].points.map((p) => p.datePrevue)).toEqual(['2026-10-15', '2026-11-14', '2026-12-14']);
   });
   it('point : jalon inconnu, compte rendu vide ou date future refusés', async () => {
     const { s } = svc();
-    await expect(s.enregistrerPoint(RH, 'D1', 45, { realiseLe: '2026-09-20', compteRendu: 'ok' })).rejects.toThrow(BadRequestException);
-    await expect(s.enregistrerPoint(RH, 'D1', 30, { realiseLe: '2026-09-20', compteRendu: '  ' })).rejects.toThrow(BadRequestException);
-    await expect(s.enregistrerPoint(RH, 'D1', 30, { realiseLe: '2999-01-01', compteRendu: 'ok' })).rejects.toThrow(BadRequestException);
+    await expect(s.enregistrerPoint(RH, 'D1', 45, { realiseLe: '2026-09-20', compteRendu: 'ok' })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(s.enregistrerPoint(RH, 'D1', 30, { realiseLe: '2026-09-20', compteRendu: '  ' })).rejects.toThrow(
+      BadRequestException,
+    );
+    await expect(s.enregistrerPoint(RH, 'D1', 30, { realiseLe: '2999-01-01', compteRendu: 'ok' })).rejects.toThrow(
+      BadRequestException,
+    );
   });
   it("point sur un salarié hors période d'intégration → 409", async () => {
-    await expect(svc({ confirmeLe: '2026-01-01' }).s.enregistrerPoint(RH, 'D1', 30, { realiseLe: '2026-09-20', compteRendu: 'ok' })).rejects.toThrow(ConflictException);
+    await expect(
+      svc({ confirmeLe: '2026-01-01' }).s.enregistrerPoint(RH, 'D1', 30, {
+        realiseLe: '2026-09-20',
+        compteRendu: 'ok',
+      }),
+    ).rejects.toThrow(ConflictException);
   });
   it('confirmation : exige le point J90', async () => {
     await expect(svc().s.confirmer(RH, 'D1')).rejects.toThrow(ConflictException);

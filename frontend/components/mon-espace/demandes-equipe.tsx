@@ -30,7 +30,7 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
     if (toutes) onCompte(aDecider.length);
   }, [toutes, aDecider.length, onCompte]);
 
-  const visibles = filtre === 'a_decider' ? aDecider : toutes ?? [];
+  const visibles = filtre === 'a_decider' ? aDecider : (toutes ?? []);
   const demande = (toutes ?? []).find((d) => d.id === choisie) ?? null;
 
   return (
@@ -44,7 +44,13 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
               ['toutes', 'Toutes', toutes?.length ?? 0],
             ] as const
           ).map(([cle, libelle, n]) => (
-            <button key={cle} type="button" className={filtre === cle ? 'is-active' : ''} aria-pressed={filtre === cle} onClick={() => setFiltre(cle)}>
+            <button
+              key={cle}
+              type="button"
+              className={filtre === cle ? 'is-active' : ''}
+              aria-pressed={filtre === cle}
+              onClick={() => setFiltre(cle)}
+            >
               {libelle} · {n}
             </button>
           ))}
@@ -102,10 +108,12 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
           />
         ) : (
           <>
-            <h2 className="dmd-titre">{demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}</h2>
+            <h2 className="dmd-titre">
+              {demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}
+            </h2>
             <p>
-              <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du {jjmm(demande.dateDebut)} au{' '}
-              {jjmm(demande.dateFin)}
+              <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du{' '}
+              {jjmm(demande.dateDebut)} au {jjmm(demande.dateFin)}
             </p>
             <p className="dmd-note">
               {STATUT_ABSENCE[demande.statut].libelle} : la demande n’attend plus votre décision.
@@ -138,36 +146,64 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
     <>
       <h2 className="dmd-titre">{demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}</h2>
       <p>
-        <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du {jjmm(demande.dateDebut)} au {jjmm(demande.dateFin)}
+        <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du{' '}
+        {jjmm(demande.dateDebut)} au {jjmm(demande.dateFin)}
       </p>
       {demande.commentaire && <p className="dmd-note">« {demande.commentaire} »</p>}
       <p className="dmd-note">
-        Demande de la RH, accord de son N+1 (CFO) donné : la validation finale vous revient — la RH ne valide jamais sa propre demande.
+        Demande de la RH, accord de son N+1 (CFO) donné : la validation finale vous revient — la RH ne valide jamais sa
+        propre demande.
       </p>
       <CalendrierCellule slug={slug} demandeId={demande.id} source="decideur" />
       {refus && (
         <label className="field">
           <span className="field-label">Motif du refus</span>
-          <textarea className="field-input" rows={2} maxLength={1000} value={motif} onChange={(e) => setMotif(e.target.value)} />
+          <textarea
+            className="field-input"
+            rows={2}
+            maxLength={1000}
+            value={motif}
+            onChange={(e) => setMotif(e.target.value)}
+          />
         </label>
       )}
       {etat.erreur && <p className="field-erreur">{etat.erreur}</p>}
       <div className="dmd-actions">
         {refus ? (
           <>
-            <button type="button" className="btn-ghost btn-ghost--sm" disabled={etat.envoi} onClick={() => setRefus(false)}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              disabled={etat.envoi}
+              onClick={() => setRefus(false)}
+            >
               Annuler
             </button>
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi || !motif.trim()} onClick={() => trancher(false)}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi || !motif.trim()}
+              onClick={() => trancher(false)}
+            >
               Refuser
             </button>
           </>
         ) : (
           <>
-            <button type="button" className="btn-ghost btn-ghost--sm" disabled={etat.envoi} onClick={() => setRefus(true)}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              disabled={etat.envoi}
+              onClick={() => setRefus(true)}
+            >
               Refuser…
             </button>
-            <button type="button" className="btn-primary btn-primary--sm" disabled={etat.envoi} onClick={() => trancher(true)}>
+            <button
+              type="button"
+              className="btn-primary btn-primary--sm"
+              disabled={etat.envoi}
+              onClick={() => trancher(true)}
+            >
               Valider
             </button>
           </>

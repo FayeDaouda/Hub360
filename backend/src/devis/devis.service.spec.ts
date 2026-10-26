@@ -59,7 +59,13 @@ function setup(clientEmail: string | null) {
   const email = { envoyerDevis } as unknown as EmailService;
   const facturation = {} as unknown as FacturationService;
 
-  const service = new DevisService(prisma, facturation, email, {} as NotificationsService, { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService);
+  const service = new DevisService(
+    prisma,
+    facturation,
+    email,
+    {} as NotificationsService,
+    { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
+  );
   return { service, envoyerDevis, findFirst };
 }
 
@@ -184,7 +190,13 @@ describe('DevisService — catalogue réel', () => {
     produit({ id: 'SU2', code: 'SU2', famille: 'SU', coAssocie: 'CO2', prixUnitaire: dec(500000) }),
     produit({ id: 'DPC', code: 'DPC', famille: 'PC', modeCalcul: 'forfait', prixModifiable: true, prixUnitaire: null }),
     produit({ id: 'TS-MIN', code: 'TS-MIN', famille: 'TS', prixUnitaire: dec(100000) }),
-    produit({ id: 'TS-MAJ', code: 'TS-MAJ', famille: 'TS', modeCalcul: 'tarif_co_surface_planches', prixUnitaire: null }),
+    produit({
+      id: 'TS-MAJ',
+      code: 'TS-MAJ',
+      famille: 'TS',
+      modeCalcul: 'tarif_co_surface_planches',
+      prixUnitaire: null,
+    }),
   ];
   const service = new DevisService(
     {
@@ -227,7 +239,11 @@ describe('DevisService — catalogue réel', () => {
     await expect(
       service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1', surfaceM2: 100 })], LIBRE),
     ).rejects.toThrow('nombre de planches requis');
-    const [brouillon] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'CO1', surfaceM2: 100 })], OFFRE);
+    const [brouillon] = await service.appliquerCatalogue(
+      'S1',
+      [ligne({ produitServiceId: 'CO1', surfaceM2: 100 })],
+      OFFRE,
+    );
     expect(brouillon).toMatchObject({ prixUnitaire: 5000, surfaceM2: 100, planches: null, quantite: 0 });
   });
 
@@ -260,24 +276,30 @@ describe('DevisService — catalogue réel', () => {
     ).rejects.toThrow('ne correspond pas à la catégorie CO1');
     const [, su] = await service.appliquerCatalogue(
       'S1',
-      [ligne({ produitServiceId: 'CO1', surfaceM2: 1 }), ligne({ produitServiceId: 'SU1', quantite: 3, prixUnitaire: 1 })],
+      [
+        ligne({ produitServiceId: 'CO1', surfaceM2: 1 }),
+        ligne({ produitServiceId: 'SU1', quantite: 3, prixUnitaire: 1 }),
+      ],
       OFFRE,
     );
     expect(su).toMatchObject({ prixUnitaire: 300000, quantite: 3 });
   });
 
   it('SU sans ligne CO : catégorie figée du dossier, sinon 422', async () => {
-    const [su] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU2', quantite: 2 })], { ...OFFRE, categorieCo: 'CO2' });
+    const [su] = await service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU2', quantite: 2 })], {
+      ...OFFRE,
+      categorieCo: 'CO2',
+    });
     expect(su.prixUnitaire).toBe(500000);
-    await expect(
-      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU1' })], LIBRE),
-    ).rejects.toThrow('ajoute d’abord la ligne CO');
+    await expect(service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'SU1' })], LIBRE)).rejects.toThrow(
+      'ajoute d’abord la ligne CO',
+    );
   });
 
   it('TS hors devis de projet (offre CRM, devis libre) → 422', async () => {
-    await expect(
-      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'TS-MIN' })], LIBRE),
-    ).rejects.toThrow('devis complémentaire rattaché au projet');
+    await expect(service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'TS-MIN' })], LIBRE)).rejects.toThrow(
+      'devis complémentaire rattaché au projet',
+    );
   });
 
   it('TS-MIN : forfait figé 100 000 × nombre de reprises', async () => {
@@ -300,11 +322,10 @@ describe('DevisService — catalogue réel', () => {
 
   it('TS-MAJ sans catégorie CO connue, ou sans surface / planches → 422', async () => {
     await expect(
-      service.appliquerCatalogue(
-        'S1',
-        [ligne({ produitServiceId: 'TS-MAJ', surfaceM2: 80, planches: 1 })],
-        { ...PROJET_CO2, categorieCo: null },
-      ),
+      service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'TS-MAJ', surfaceM2: 80, planches: 1 })], {
+        ...PROJET_CO2,
+        categorieCo: null,
+      }),
     ).rejects.toThrow('catégorie de conception');
     await expect(
       service.appliquerCatalogue('S1', [ligne({ produitServiceId: 'TS-MAJ', surfaceM2: 80 })], PROJET_CO2),

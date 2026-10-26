@@ -45,10 +45,7 @@ export class PermissionGuard implements CanActivate {
     const permissions = req.user?.permissions as Record<string, NiveauPermission> | undefined;
 
     // Règle explicite d'une route (ex. finances) : prioritaire, sans exemption.
-    const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(
-      PERMISSION_REQUISE,
-      cibles,
-    );
+    const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(PERMISSION_REQUISE, cibles);
     if (requis) {
       verifier(permissions, requis.module, requis.niveau);
       return true;
@@ -76,8 +73,6 @@ function verifier(
   niveau: NiveauPermission,
 ): void {
   if (!aLaPermission(permissions, module, niveau)) {
-    throw new ForbiddenException(
-      `Accès insuffisant sur le module « ${module} » (niveau requis : ${niveau}).`,
-    );
+    throw new ForbiddenException(`Accès insuffisant sur le module « ${module} » (niveau requis : ${niveau}).`);
   }
 }

@@ -46,7 +46,8 @@ export function Delegation({ slug }: { slug: string }) {
     if (!d || vue.peutGerer) return null;
     return (
       <p className="dl-bandeau" role="status">
-        <UserCog size={16} aria-hidden /> Vous remplacez le CEO jusqu’au {dateFr(d.au)} : {d.perimetre.join(', ')}. Jamais : {vue.jamais.join(', ')}.
+        <UserCog size={16} aria-hidden /> Vous remplacez le CEO jusqu’au {dateFr(d.au)} : {d.perimetre.join(', ')}.
+        Jamais : {vue.jamais.join(', ')}.
       </p>
     );
   }
@@ -58,12 +59,20 @@ export function Delegation({ slug }: { slug: string }) {
           <UserCog size={17} aria-hidden /> Délégation pendant une absence
         </h2>
         {!saisie && vue.peutGerer && (
-          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setSaisie({ delegataireId: vue.candidats[0]?.id ?? '', du: aujourdhui(), au: aujourdhui() })}>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm"
+            onClick={() => setSaisie({ delegataireId: vue.candidats[0]?.id ?? '', du: aujourdhui(), au: aujourdhui() })}
+          >
             Déléguer
           </button>
         )}
       </div>
-      {vue.delegations.length === 0 && !saisie && <p className="dmd-note">Aucune délégation : tout ce qui vous attend reste à vous, y compris depuis votre téléphone.</p>}
+      {vue.delegations.length === 0 && !saisie && (
+        <p className="dmd-note">
+          Aucune délégation : tout ce qui vous attend reste à vous, y compris depuis votre téléphone.
+        </p>
+      )}
       {vue.delegations.map((d) => (
         <div key={d.id} className="dl-ligne">
           <span>
@@ -73,10 +82,17 @@ export function Delegation({ slug }: { slug: string }) {
               </strong>{' '}
               · du {dateFr(d.du)} au {dateFr(d.au)} {d.enCours ? '· en cours' : '· à venir'}
             </span>
-            <span className="cell-sub">Délégué : {d.perimetre.join(', ')}. Jamais : {vue.jamais.join(', ')}.</span>
+            <span className="cell-sub">
+              Délégué : {d.perimetre.join(', ')}. Jamais : {vue.jamais.join(', ')}.
+            </span>
           </span>
           {vue.peutGerer && (
-            <button type="button" className="btn-ghost btn-ghost--sm" disabled={envoi} onClick={() => agir(() => revoquerDelegation(slug, d.id))}>
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              disabled={envoi}
+              onClick={() => agir(() => revoquerDelegation(slug, d.id))}
+            >
               Révoquer
             </button>
           )}
@@ -86,7 +102,11 @@ export function Delegation({ slug }: { slug: string }) {
         <div className="dl-form">
           <label className="field">
             <span className="field-label">Délégataire</span>
-            <select className="field-input" value={saisie.delegataireId} onChange={(e) => setSaisie({ ...saisie, delegataireId: e.target.value })}>
+            <select
+              className="field-input"
+              value={saisie.delegataireId}
+              onChange={(e) => setSaisie({ ...saisie, delegataireId: e.target.value })}
+            >
               {vue.candidats.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nom} ({c.role})
@@ -96,19 +116,39 @@ export function Delegation({ slug }: { slug: string }) {
           </label>
           <label className="field">
             <span className="field-label">Du</span>
-            <input className="field-input" type="date" min={aujourdhui()} value={saisie.du} onChange={(e) => setSaisie({ ...saisie, du: e.target.value })} />
+            <input
+              className="field-input"
+              type="date"
+              min={aujourdhui()}
+              value={saisie.du}
+              onChange={(e) => setSaisie({ ...saisie, du: e.target.value })}
+            />
           </label>
           <label className="field">
             <span className="field-label">Au (inclus)</span>
-            <input className="field-input" type="date" min={saisie.du} value={saisie.au} onChange={(e) => setSaisie({ ...saisie, au: e.target.value })} />
+            <input
+              className="field-input"
+              type="date"
+              min={saisie.du}
+              value={saisie.au}
+              onChange={(e) => setSaisie({ ...saisie, au: e.target.value })}
+            />
           </label>
-          <p className="dmd-note dl-note">Jamais délégués : {vue.jamais.join(', ')}. Le délégataire ne décide que dans la limite de ses propres droits.</p>
+          <p className="dmd-note dl-note">
+            Jamais délégués : {vue.jamais.join(', ')}. Le délégataire ne décide que dans la limite de ses propres
+            droits.
+          </p>
           {erreur && <p className="field-erreur">{erreur}</p>}
           <div className="pi-saisie-actions dl-actions">
             <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setSaisie(null)}>
               Annuler
             </button>
-            <button type="button" className="btn-primary" disabled={envoi || !saisie.delegataireId} onClick={() => agir(() => deleguer(slug, saisie))}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={envoi || !saisie.delegataireId}
+              onClick={() => agir(() => deleguer(slug, saisie))}
+            >
               {envoi ? 'Enregistrement…' : 'Déléguer'}
             </button>
           </div>

@@ -48,8 +48,12 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
   const valides = lignes.filter((l) => l.designation.trim() && montantDe(l) > 0);
   const ht = valides.reduce((t, l) => t + montantDe(l), 0);
   const tva = Math.round((ht * TAUX_TVA) / 100);
-  const pret = !!lead && valides.length > 0 && valides.length === lignes.filter((l) => l.designation.trim() || l.montant.trim()).length;
-  const majLigne = (i: number, maj: Partial<Ligne>) => setLignes((ls) => ls.map((l, j) => (j === i ? { ...l, ...maj } : l)));
+  const pret =
+    !!lead &&
+    valides.length > 0 &&
+    valides.length === lignes.filter((l) => l.designation.trim() || l.montant.trim()).length;
+  const majLigne = (i: number, maj: Partial<Ligne>) =>
+    setLignes((ls) => ls.map((l, j) => (j === i ? { ...l, ...maj } : l)));
 
   async function preparer() {
     if (!lead) return;
@@ -70,7 +74,13 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
 
   return (
     <div className="fiche-crm-fond" onClick={onClose}>
-      <aside className="fiche-crm" role="dialog" aria-modal="true" aria-labelledby="nfd-titre" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="fiche-crm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nfd-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="fiche-crm-entete">
           <div>
             <p className="fiche-crm-titre">Nouvelle facture</p>
@@ -87,7 +97,13 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
           <label className="field-label" htmlFor="nfd-lead">
             Lead à facturer
           </label>
-          <select id="nfd-lead" className="field-input" value={dossierId} onChange={(e) => setDossierId(e.target.value)} disabled={!leads}>
+          <select
+            id="nfd-lead"
+            className="field-input"
+            value={dossierId}
+            onChange={(e) => setDossierId(e.target.value)}
+            disabled={!leads}
+          >
             <option value="">— Choisir un lead du CRM —</option>
             {(leads ?? []).map((l) => (
               <option key={l.id} value={l.id}>
@@ -104,7 +120,9 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
 
         <section className="fiche-crm-carte nfd-bloc">
           <h3 className="fiche-crm-titre">Facture directe (sans offre)</h3>
-          <p className="fiche-crm-aide">Pour une prestation facturée directement depuis le lead, par exemple un diagnostic CO0 au forfait.</p>
+          <p className="fiche-crm-aide">
+            Pour une prestation facturée directement depuis le lead, par exemple un diagnostic CO0 au forfait.
+          </p>
           {lignes.map((l, i) => (
             <div key={i} className="nfd-ligne">
               <input
@@ -134,7 +152,12 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
               </button>
             </div>
           ))}
-          <button type="button" className="fp-ajouter" disabled={lignes.length >= 20} onClick={() => setLignes((ls) => [...ls, { ...LIGNE_VIDE }])}>
+          <button
+            type="button"
+            className="fp-ajouter"
+            disabled={lignes.length >= 20}
+            onClick={() => setLignes((ls) => [...ls, { ...LIGNE_VIDE }])}
+          >
             + Ajouter une ligne
           </button>
           <p className="nfd-totaux">

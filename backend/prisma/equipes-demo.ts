@@ -1,4 +1,10 @@
-import { PrismaClient, type ClienteleCellule, type EtatPosteCellule, type ProcessusCellule, type StatutCellule } from '@prisma/client';
+import {
+  PrismaClient,
+  type ClienteleCellule,
+  type EtatPosteCellule,
+  type ProcessusCellule,
+  type StatutCellule,
+} from '@prisma/client';
 import { codeCellule, prefixeSociete } from '../src/equipe/equipes-regles';
 import { verifierEnvironnementDemo } from './garde-demo';
 
@@ -26,7 +32,11 @@ export type CelluleDemo = {
   autresMembres?: string[]; // membres sans poste
 };
 
-const CAD = (n: number, titulaire?: string, etat: EtatPosteCellule = titulaire ? 'occupe' : 'ouvert'): Poste => [`CAD L${n}`, etat, titulaire];
+const CAD = (n: number, titulaire?: string, etat: EtatPosteCellule = titulaire ? 'occupe' : 'ouvert'): Poste => [
+  `CAD L${n}`,
+  etat,
+  titulaire,
+];
 
 export const CELLULES_DEMO: CelluleDemo[] = [
   {
@@ -126,7 +136,10 @@ export const CELLULES_DEMO: CelluleDemo[] = [
 export async function organiserEquipesDemo(prisma: PrismaClient, societeId: string): Promise<Record<string, string>> {
   const societe = await prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } });
   const prefixe = prefixeSociete(societe.nom);
-  const collaborateurs = await prisma.collaborateur.findMany({ where: { societeId }, select: { id: true, prenom: true, nom: true } });
+  const collaborateurs = await prisma.collaborateur.findMany({
+    where: { societeId },
+    select: { id: true, prenom: true, nom: true },
+  });
   const idDe = (nom: string) => {
     const c = collaborateurs.find((x) => `${x.prenom} ${x.nom}` === nom);
     if (!c) throw new Error(`Collaborateur de démonstration introuvable : ${nom}`);
@@ -143,7 +156,9 @@ export async function organiserEquipesDemo(prisma: PrismaClient, societeId: stri
       update: champs,
     });
     // Le compteur ne redescend jamais : un code n'est pas réutilisé.
-    const compteur = await prisma.compteurCellule.findUnique({ where: { societeId_processus: { societeId, processus: d.processus } } });
+    const compteur = await prisma.compteurCellule.findUnique({
+      where: { societeId_processus: { societeId, processus: d.processus } },
+    });
     if (!compteur || compteur.dernier < d.numero) {
       await prisma.compteurCellule.upsert({
         where: { societeId_processus: { societeId, processus: d.processus } },
@@ -153,13 +168,25 @@ export async function organiserEquipesDemo(prisma: PrismaClient, societeId: stri
     }
 
     const membres = [...d.postes.flatMap(([, , t]) => (t ? [idDe(t)] : [])), ...(d.autresMembres ?? []).map(idDe)];
-    await prisma.collaborateur.updateMany({ where: { celluleId: cellule.id, id: { notIn: membres } }, data: { celluleId: null } });
+    await prisma.collaborateur.updateMany({
+      where: { celluleId: cellule.id, id: { notIn: membres } },
+      data: { celluleId: null },
+    });
     await prisma.collaborateur.updateMany({ where: { id: { in: membres } }, data: { celluleId: cellule.id } });
     await prisma.posteCellule.deleteMany({ where: { celluleId: cellule.id } });
     await prisma.posteCellule.createMany({
-      data: d.postes.map(([libelle, etat, titulaire], ordre) => ({ celluleId: cellule.id, libelle, etat, ordre, titulaireId: titulaire ? idDe(titulaire) : null })),
+      data: d.postes.map(([libelle, etat, titulaire], ordre) => ({
+        celluleId: cellule.id,
+        libelle,
+        etat,
+        ordre,
+        titulaireId: titulaire ? idDe(titulaire) : null,
+      })),
     });
-    await prisma.cellule.update({ where: { id: cellule.id }, data: { dispatcherId: d.pilote ? idDe(d.pilote) : null } });
+    await prisma.cellule.update({
+      where: { id: cellule.id },
+      data: { dispatcherId: d.pilote ? idDe(d.pilote) : null },
+    });
     ids[d.cle] = cellule.id;
   }
   return ids;

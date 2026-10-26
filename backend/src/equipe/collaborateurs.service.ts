@@ -21,9 +21,7 @@ function compteMini(c: AvecUtilisateur): CompteMini {
 
 @Injectable()
 export class CollaborateursService {
-  constructor(
-    private prisma: PrismaService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   // `cellule` : un id (une équipe), plusieurs (tableau — ex. équipes d'un
   // projet multi-cellules depuis sept. 2026), ou le sentinel 'sans' (orphelins).
@@ -40,11 +38,7 @@ export class CollaborateursService {
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     });
     const terme = q?.trim().toLowerCase();
-    const filtres = terme
-      ? liste.filter((c) =>
-          `${c.prenom} ${c.nom} ${c.role}`.toLowerCase().includes(terme),
-        )
-      : liste;
+    const filtres = terme ? liste.filter((c) => `${c.prenom} ${c.nom} ${c.role}`.toLowerCase().includes(terme)) : liste;
     return filtres.map((c) => versCollaborateur({ ...c, compte: compteMini(c) }));
   }
 
@@ -60,9 +54,7 @@ export class CollaborateursService {
     if (dto.photo !== undefined) data.photoCle = dto.photo;
     if (dto.dateArrivee !== undefined) data.dateArrivee = dto.dateArrivee;
     if (dto.celluleId !== undefined) {
-      data.cellule = dto.celluleId
-        ? { connect: { id: dto.celluleId } }
-        : { disconnect: true };
+      data.cellule = dto.celluleId ? { connect: { id: dto.celluleId } } : { disconnect: true };
     }
 
     // Changement de cellule : le poste occupé dans l'ancienne se libère et

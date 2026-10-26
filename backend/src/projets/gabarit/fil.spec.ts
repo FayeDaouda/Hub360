@@ -1,6 +1,8 @@
 import { estOuvert, motifRefusResolution } from './fil';
 
-const c = (o: Partial<{ mentionneId: string | null; resoluLe: Date | null; reponses: number; auteurId: string | null }> = {}) => ({
+const c = (
+  o: Partial<{ mentionneId: string | null; resoluLe: Date | null; reponses: number; auteurId: string | null }> = {},
+) => ({
   mentionneId: 'U2',
   resoluLe: null,
   reponses: 0,

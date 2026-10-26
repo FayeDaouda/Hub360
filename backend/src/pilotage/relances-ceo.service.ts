@@ -57,16 +57,33 @@ export class RelancesCeoService implements OnApplicationBootstrap {
   async factures(societeId: string, jour: string): Promise<number> {
     const [{ tranches }, directes] = await Promise.all([
       this.projetsOuverts.alertes(societeId),
-      this.prisma.facture.findMany({ where: { societeId, statut: 'brouillon', estAvoir: false, dossierCrmId: { not: null }, projetId: null }, select: { id: true } }),
+      this.prisma.facture.findMany({
+        where: { societeId, statut: 'brouillon', estAvoir: false, dossierCrmId: { not: null }, projetId: null },
+        select: { id: true },
+      }),
     ]);
-    const libelles = new Map<string, string>(tranches.filter((t) => t.factureId).map((t) => [t.factureId!, `${t.tranche} · ${t.code} · ${t.client}`]));
+    const libelles = new Map<string, string>(
+      tranches.filter((t) => t.factureId).map((t) => [t.factureId!, `${t.tranche} · ${t.code} · ${t.client}`]),
+    );
     const ids = [...libelles.keys(), ...directes.map((f) => f.id)];
     if (!ids.length) return 0;
     const brouillons = await this.prisma.facture.findMany({
       where: { id: { in: ids }, statut: 'brouillon' },
-      select: { id: true, montantHt: true, tauxTva: true, devisEcheancierId: true, devisOrigineId: true, dossierCrmId: true, projetId: true },
+      select: {
+        id: true,
+        montantHt: true,
+        tauxTva: true,
+        devisEcheancierId: true,
+        devisOrigineId: true,
+        dossierCrmId: true,
+        projetId: true,
+      },
     });
-    const [affaires, seuil, ceo] = await Promise.all([this.seuilCeo.montantsAffaire(brouillons), this.seuilCeo.seuil(societeId), this.notifications.titulairesRole(societeId, ROLE_CEO)]);
+    const [affaires, seuil, ceo] = await Promise.all([
+      this.seuilCeo.montantsAffaire(brouillons),
+      this.seuilCeo.seuil(societeId),
+      this.notifications.titulairesRole(societeId, ROLE_CEO),
+    ]);
     let envoyes = 0;
     for (const f of brouillons) {
       const affaire = affaires.get(f.id) ?? 0;
@@ -77,7 +94,10 @@ export class RelancesCeoService implements OnApplicationBootstrap {
       const depuis = (await this.prisma.rappelEnvoye.findUnique({ where: { cle: vue } }))!.createdAt;
       const heures = (Date.now() - depuis.getTime()) / HEURE;
       if (heures < 24) continue;
-      const { count } = await this.prisma.rappelEnvoye.createMany({ data: [{ cle: `ceo:facture:${f.id}:${jour}` }], skipDuplicates: true });
+      const { count } = await this.prisma.rappelEnvoye.createMany({
+        data: [{ cle: `ceo:facture:${f.id}:${jour}` }],
+        skipDuplicates: true,
+      });
       if (!count) continue;
       const ecrites = await this.notifications.envoyer({
         societeId,

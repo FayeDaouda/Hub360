@@ -63,7 +63,9 @@ export function Reglages({ slug }: { slug: string }) {
         Administration du HUB. Chaque modification exige un motif, entre au journal et au registre des décisions. Le
         gabarit est versionné : un projet garde la version avec laquelle il a été ouvert.
       </p>
-      <span className="reg-badge">{session.role === ROLE_CIO ? 'CIO : modification des réglages' : 'Administration de la société'}</span>
+      <span className="reg-badge">
+        {session.role === ROLE_CIO ? 'CIO : modification des réglages' : 'Administration de la société'}
+      </span>
     </div>
   );
 
@@ -81,7 +83,9 @@ export function Reglages({ slug }: { slug: string }) {
     return (
       <>
         {entete}
-        <p className="empty-state">Pas encore de gabarit ni de règles définis pour cette société : seule l’administration est disponible.</p>
+        <p className="empty-state">
+          Pas encore de gabarit ni de règles définis pour cette société : seule l’administration est disponible.
+        </p>
         <Administration slug={slug} />
       </>
     );
@@ -102,7 +106,13 @@ export function Reglages({ slug }: { slug: string }) {
       <ATraiterAdministration slug={slug} onSection={choisir} />
       <div className="reg-tuiles" role="tablist" aria-label="Sections des réglages">
         {[
-          { s: 'gabarit' as const, icone: ClipboardList, label: 'Gabarit Conception', valeur: gabarit.libelle, sous: `${gabarit.projets} projet(s) en ${gabarit.libelle}` },
+          {
+            s: 'gabarit' as const,
+            icone: ClipboardList,
+            label: 'Gabarit Conception',
+            valeur: gabarit.libelle,
+            sous: `${gabarit.projets} projet(s) en ${gabarit.libelle}`,
+          },
           {
             s: 'regles' as const,
             icone: Scale,
@@ -110,13 +120,22 @@ export function Reglages({ slug }: { slug: string }) {
             valeur: `F1 ${p.F1} · F2 ${p.F2} · F3 ${p.F3}`,
             sous: `ouverture ${afficher(ouverture, ouverture.enService)} · contresignature CEO au-delà de ${(Number(ceo.enService) / 1_000_000).toLocaleString('fr-FR')} M FCFA`,
           },
-          { s: 'objectifs' as const, icone: Target, label: 'Objectifs à fixer', valeur: String(aFixer), sous: 'indicateur(s) sans objectif dans Pilotage', alerte: aFixer > 0 },
+          {
+            s: 'objectifs' as const,
+            icone: Target,
+            label: 'Objectifs à fixer',
+            valeur: String(aFixer),
+            sous: 'indicateur(s) sans objectif dans Pilotage',
+            alerte: aFixer > 0,
+          },
           {
             s: 'journal' as const,
             icone: FileClock,
             label: 'Modifications tracées',
             valeur: String(donnees.modifications),
-            sous: donnees.modifications ? 'voir le journal des réglages' : 'aucune modification depuis la mise en service',
+            sous: donnees.modifications
+              ? 'voir le journal des réglages'
+              : 'aucune modification depuis la mise en service',
           },
           {
             s: 'signalements' as const,
@@ -144,7 +163,9 @@ export function Reglages({ slug }: { slug: string }) {
           </button>
         ))}
       </div>
-      {section === 'gabarit' && <GabaritPanel key={gabarit.numero} slug={slug} gabarit={gabarit} onEnregistre={setDonnees} />}
+      {section === 'gabarit' && (
+        <GabaritPanel key={gabarit.numero} slug={slug} gabarit={gabarit} onEnregistre={setDonnees} />
+      )}
       {section === 'regles' && (
         <ValeursPanel
           slug={slug}
@@ -166,8 +187,12 @@ export function Reglages({ slug }: { slug: string }) {
           onEnregistre={setDonnees}
         />
       )}
-      {section === 'journal' && <JournalPanel key={donnees.modifications} slug={slug} versionInitiale={libelleVersion(0)} />}
-      {section === 'signalements' && <SignalementsPanel slug={slug} signalements={signalements} onMaj={setSignalements} />}
+      {section === 'journal' && (
+        <JournalPanel key={donnees.modifications} slug={slug} versionInitiale={libelleVersion(0)} />
+      )}
+      {section === 'signalements' && (
+        <SignalementsPanel slug={slug} signalements={signalements} onMaj={setSignalements} />
+      )}
       {section === 'administration' && <Administration slug={slug} />}
       {lienAdministration}
     </>

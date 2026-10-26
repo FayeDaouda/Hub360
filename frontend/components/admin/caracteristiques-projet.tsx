@@ -56,7 +56,9 @@ const STANDING_COURT: Record<Standing, string> = { economique: 'Économique', mo
 // ils se calculent, les planches. Un champ attendu est cerné d'ambre.
 export function CaracteristiquesProjet({ projet, onModifier }: Props) {
   const [fiche, setFiche] = useState<FicheProgramme>(() => ({ ...FICHE_VIDE, ...(projet.ficheProgramme ?? {}) }));
-  const [autreSurface, setAutreSurface] = useState(() => projet.surfaceTerrain > 0 && !SURFACES.includes(projet.surfaceTerrain));
+  const [autreSurface, setAutreSurface] = useState(
+    () => projet.surfaceTerrain > 0 && !SURFACES.includes(projet.surfaceTerrain),
+  );
   const [surfaceSaisie, setSurfaceSaisie] = useState(projet.surfaceTerrain > 0 ? String(projet.surfaceTerrain) : '');
   const [enCours, setEnCours] = useState(0);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -80,7 +82,8 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
   }
   const majLigne = (i: number, maj: Partial<LigneComposition>) =>
     majFiche({ composition: fiche.composition.map((l, j) => (j === i ? { ...l, ...maj } : l)) });
-  const basculer = <T extends string>(liste: T[], v: T) => (liste.includes(v) ? liste.filter((x) => x !== v) : [...liste, v]);
+  const basculer = <T extends string>(liste: T[], v: T) =>
+    liste.includes(v) ? liste.filter((x) => x !== v) : [...liste, v];
 
   const classe = (manquant: boolean) => `field-input${manquant ? ' is-manquant' : ''}`;
   const choisir = (
@@ -134,7 +137,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
           <label className="field-label" htmlFor="fiche-type">
             Type de projet
           </label>
-          <select id="fiche-type" className={classe(!projet.type)} value={projet.type ?? ''} onChange={(e) => enregistrer({ type: e.target.value as TypeBien })}>
+          <select
+            id="fiche-type"
+            className={classe(!projet.type)}
+            value={projet.type ?? ''}
+            onChange={(e) => enregistrer({ type: e.target.value as TypeBien })}
+          >
             {!projet.type && choisir}
             {Object.entries(TYPES_BIEN).map(([v, l]) => (
               <option key={v} value={v}>
@@ -197,7 +205,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
             <label className="field-label" htmlFor="fiche-standing">
               Standing
             </label>
-            <select id="fiche-standing" className={classe(!projet.standing)} value={projet.standing ?? ''} onChange={(e) => enregistrer({ standing: e.target.value as Standing })}>
+            <select
+              id="fiche-standing"
+              className={classe(!projet.standing)}
+              value={projet.standing ?? ''}
+              onChange={(e) => enregistrer({ standing: e.target.value as Standing })}
+            >
               {!projet.standing && choisir}
               {Object.entries(STANDINGS).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -211,7 +224,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
             <label className="field-label" htmlFor="fiche-gamme">
               Gamme
             </label>
-            <select id="fiche-gamme" className={classe(!projet.gamme)} value={projet.gamme ?? ''} onChange={(e) => enregistrer({ gamme: e.target.value as Gamme })}>
+            <select
+              id="fiche-gamme"
+              className={classe(!projet.gamme)}
+              value={projet.gamme ?? ''}
+              onChange={(e) => enregistrer({ gamme: e.target.value as Gamme })}
+            >
               {!projet.gamme && choisir}
               {Object.entries(GAMMES).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -225,7 +243,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
             <label className="field-label" htmlFor="fiche-usage">
               A · Usage
             </label>
-            <select id="fiche-usage" className={classe(!fiche.usage)} value={fiche.usage ?? ''} onChange={(e) => majFiche({ usage: e.target.value as Usage })}>
+            <select
+              id="fiche-usage"
+              className={classe(!fiche.usage)}
+              value={fiche.usage ?? ''}
+              onChange={(e) => majFiche({ usage: e.target.value as Usage })}
+            >
               {!fiche.usage && choisir}
               {Object.entries(USAGES).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -238,7 +261,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
             <label className="field-label" htmlFor="fiche-forme">
               A · Forme bâtie
             </label>
-            <select id="fiche-forme" className={classe(!fiche.forme)} value={fiche.forme ?? ''} onChange={(e) => majFiche({ forme: e.target.value as Forme })}>
+            <select
+              id="fiche-forme"
+              className={classe(!fiche.forme)}
+              value={fiche.forme ?? ''}
+              onChange={(e) => majFiche({ forme: e.target.value as Forme })}
+            >
               {!fiche.forme && choisir}
               {Object.entries(FORMES).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -256,7 +284,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                 <label className="field-label" htmlFor="fiche-gabarit">
                   B · Gabarit
                 </label>
-                <select id="fiche-gabarit" className="field-input" value={fiche.gabarit} onChange={(e) => majFiche({ gabarit: Number(e.target.value) })}>
+                <select
+                  id="fiche-gabarit"
+                  className="field-input"
+                  value={fiche.gabarit}
+                  onChange={(e) => majFiche({ gabarit: Number(e.target.value) })}
+                >
                   {GABARITS.map((g) => (
                     <option key={g.valeur} value={g.valeur}>
                       {g.libelle}
@@ -268,7 +301,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                 <label className="field-label" htmlFor="fiche-sous-sols">
                   B · Sous-sol(s)
                 </label>
-                <select id="fiche-sous-sols" className="field-input" value={fiche.sousSols} onChange={(e) => majFiche({ sousSols: Number(e.target.value) })}>
+                <select
+                  id="fiche-sous-sols"
+                  className="field-input"
+                  value={fiche.sousSols}
+                  onChange={(e) => majFiche({ sousSols: Number(e.target.value) })}
+                >
                   {SOUS_SOLS.map((s) => (
                     <option key={s.valeur} value={s.valeur}>
                       {s.libelle}
@@ -277,7 +315,11 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                 </select>
               </div>
               <label className="fp-case fp-case--seule">
-                <input type="checkbox" checked={fiche.toitureTerrasse} onChange={(e) => majFiche({ toitureTerrasse: e.target.checked })} />
+                <input
+                  type="checkbox"
+                  checked={fiche.toitureTerrasse}
+                  onChange={(e) => majFiche({ toitureTerrasse: e.target.checked })}
+                />
                 <span>Toiture-terrasse accessible</span>
               </label>
             </div>
@@ -305,7 +347,11 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                     </select>
                   </div>
                   <label className="fp-case fp-case--seule">
-                    <input type="checkbox" checked={fiche.suiteParentale} onChange={(e) => majFiche({ suiteParentale: e.target.checked })} />
+                    <input
+                      type="checkbox"
+                      checked={fiche.suiteParentale}
+                      onChange={(e) => majFiche({ suiteParentale: e.target.checked })}
+                    />
                     <span>Suite parentale</span>
                   </label>
                 </div>
@@ -314,7 +360,11 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                   <div className="fp-cases fp-cases--ligne">
                     {(Object.entries(ANNEXES) as [Annexe, string][]).map(([v, l]) => (
                       <label key={v} className="fp-case">
-                        <input type="checkbox" checked={fiche.annexes.includes(v)} onChange={() => majFiche({ annexes: basculer(fiche.annexes, v) })} />
+                        <input
+                          type="checkbox"
+                          checked={fiche.annexes.includes(v)}
+                          onChange={() => majFiche({ annexes: basculer(fiche.annexes, v) })}
+                        />
                         <span>{l}</span>
                       </label>
                     ))}
@@ -350,7 +400,9 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                   className="fp-ajouter"
                   onClick={() => {
                     const libre = controle.nonDecrits[0] ?? 0;
-                    majFiche({ composition: [...fiche.composition, { de: libre, a: libre, usage: null, typologie: '', nb: 1 }] });
+                    majFiche({
+                      composition: [...fiche.composition, { de: libre, a: libre, usage: null, typologie: '', nb: 1 }],
+                    });
                   }}
                 >
                   <Plus size={15} aria-hidden /> Ajouter une ligne
@@ -361,17 +413,24 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                     : 'Les totaux par typologie se calculent dès que la composition est remplie.'}
                 </p>
                 {controle.nonDecrits.length > 0 && (
-                  <p className="fp-alerte">Niveaux pas encore décrits : {controle.nonDecrits.map(libelleNiveau).join(', ')}</p>
+                  <p className="fp-alerte">
+                    Niveaux pas encore décrits : {controle.nonDecrits.map(libelleNiveau).join(', ')}
+                  </p>
                 )}
                 {controle.enDouble.length > 0 && (
-                  <p className="fp-alerte">Niveaux décrits deux fois : {controle.enDouble.map(libelleNiveau).join(', ')}</p>
+                  <p className="fp-alerte">
+                    Niveaux décrits deux fois : {controle.enDouble.map(libelleNiveau).join(', ')}
+                  </p>
                 )}
               </div>
             )}
 
             <div className="fp-commodites-tete">
               <span className="field-label">
-                F · Commodités <span className="fiche-crm-aide">({nbCommodites} cochée{nbCommodites > 1 ? 's' : ''})</span>
+                F · Commodités{' '}
+                <span className="fiche-crm-aide">
+                  ({nbCommodites} cochée{nbCommodites > 1 ? 's' : ''})
+                </span>
               </span>
               <span className="fp-commodites-actions">
                 {projet.standing && (
@@ -384,7 +443,12 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                     {STANDING_COURT[projet.standing]} standing : sélection type
                   </button>
                 )}
-                <button type="button" className="fp-bouton" disabled={!nbCommodites} onClick={() => majFiche({ commodites: [] })}>
+                <button
+                  type="button"
+                  className="fp-bouton"
+                  disabled={!nbCommodites}
+                  onClick={() => majFiche({ commodites: [] })}
+                >
                   Tout décocher
                 </button>
               </span>
@@ -397,7 +461,11 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
                 <div className="fp-cases">
                   {g.items.map(([cle, libelle]) => (
                     <label key={cle} className="fp-case">
-                      <input type="checkbox" checked={fiche.commodites.includes(cle)} onChange={() => majFiche({ commodites: basculer(fiche.commodites, cle) })} />
+                      <input
+                        type="checkbox"
+                        checked={fiche.commodites.includes(cle)}
+                        onChange={() => majFiche({ commodites: basculer(fiche.commodites, cle) })}
+                      />
                       <span>{libelle}</span>
                     </label>
                   ))}
@@ -468,10 +536,20 @@ function LigneCompo({
   ));
   return (
     <>
-      <select className="field-input" aria-label="De" value={ligne.de} onChange={(e) => onChange({ de: Number(e.target.value), a: Math.max(Number(e.target.value), ligne.a) })}>
+      <select
+        className="field-input"
+        aria-label="De"
+        value={ligne.de}
+        onChange={(e) => onChange({ de: Number(e.target.value), a: Math.max(Number(e.target.value), ligne.a) })}
+      >
         {options}
       </select>
-      <select className="field-input" aria-label="À" value={ligne.a} onChange={(e) => onChange({ a: Number(e.target.value), de: Math.min(Number(e.target.value), ligne.de) })}>
+      <select
+        className="field-input"
+        aria-label="À"
+        value={ligne.a}
+        onChange={(e) => onChange({ a: Number(e.target.value), de: Math.min(Number(e.target.value), ligne.de) })}
+      >
         {options}
       </select>
       <select

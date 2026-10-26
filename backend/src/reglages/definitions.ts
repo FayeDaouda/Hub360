@@ -51,7 +51,10 @@ export const REGLES: DefinitionReglage[] = [
   {
     cle: 'ouverture_projet',
     libelle: 'Ouverture du projet',
-    valeur: { type: 'choix', options: [{ valeur: 'emission_f1', libelle: "À l'émission de F1 (défaut)", enService: "à l'émission de F1" }] },
+    valeur: {
+      type: 'choix',
+      options: [{ valeur: 'emission_f1', libelle: "À l'émission de F1 (défaut)", enService: "à l'émission de F1" }],
+    },
     defaut: 'emission_f1',
     aide: "Déclenche l'instanciation du gabarit (J1). Les projets déjà ouverts ne changent pas.",
     appliquee: false,
@@ -71,7 +74,11 @@ export const REGLES: DefinitionReglage[] = [
     valeur: {
       type: 'choix',
       options: [
-        { valeur: 'architecte_dplg', libelle: 'Architecte DPLG (défaut)', enService: 'Architecte DPLG (Head of Engineering à recruter)' },
+        {
+          valeur: 'architecte_dplg',
+          libelle: 'Architecte DPLG (défaut)',
+          enService: 'Architecte DPLG (Head of Engineering à recruter)',
+        },
         { valeur: 'head_of_engineering', libelle: 'Head of Engineering (à recruter)' },
       ],
     },
@@ -156,7 +163,7 @@ export const REGLES: DefinitionReglage[] = [
     libelle: 'Relance des demandes en attente (jours ouvrés)',
     valeur: { type: 'entier', min: 1, max: 30, unite: 'j' },
     defaut: 3,
-    aide: "Absence, remboursement ou attestation sans décision : relance à 7 h au N+1 ou à la RH après ce nombre de jours ouvrés, puis à chaque nouveau palier (décision du 20/10/2026).",
+    aide: 'Absence, remboursement ou attestation sans décision : relance à 7 h au N+1 ou à la RH après ce nombre de jours ouvrés, puis à chaque nouveau palier (décision du 20/10/2026).',
     appliquee: true,
   },
   {
@@ -164,7 +171,7 @@ export const REGLES: DefinitionReglage[] = [
     libelle: "Seuil de validation d'un avoir par le CEO (FCFA TTC)",
     valeur: { type: 'entier', min: 0, max: 100_000_000_000, unite: 'FCFA' },
     defaut: 1_000_000,
-    aide: "Tout avoir exige un motif et prévient le CEO ; au-delà de ce montant TTC, le CEO le valide avant émission (revue CFO, 20/10/2026).",
+    aide: 'Tout avoir exige un motif et prévient le CEO ; au-delà de ce montant TTC, le CEO le valide avant émission (revue CFO, 20/10/2026).',
     appliquee: true,
     gouvernance: true,
   },
@@ -262,39 +269,55 @@ export function normaliser(def: DefinitionReglage, v: unknown): unknown {
   };
   switch (t.type) {
     case 'entier':
-      if (!nombre(v) || !Number.isInteger(v) || (v as number) < t.min || (v as number) > t.max) refus(`entier de ${t.min} à ${t.max} attendu.`);
+      if (!nombre(v) || !Number.isInteger(v) || (v as number) < t.min || (v as number) > t.max)
+        refus(`entier de ${t.min} à ${t.max} attendu.`);
       return v;
     case 'parts': {
       const o = (v ?? {}) as Record<string, unknown>;
-      if (!t.cles.every((k) => nombre(o[k]) && Number.isInteger(o[k]) && (o[k] as number) >= 0)) refus('parts entières positives attendues.');
+      if (!t.cles.every((k) => nombre(o[k]) && Number.isInteger(o[k]) && (o[k] as number) >= 0))
+        refus('parts entières positives attendues.');
       if (t.cles.reduce((s, k) => s + (o[k] as number), 0) !== 100) refus('la somme des parts doit faire 100 %.');
       return Object.fromEntries(t.cles.map((k) => [k, o[k]]));
     }
     case 'heures': {
       const o = (v ?? {}) as Record<string, unknown>;
-      if (!t.cles.every((k) => nombre(o[k]) && (o[k] as number) >= 0 && (o[k] as number) <= 999)) refus('durées en heures attendues.');
+      if (!t.cles.every((k) => nombre(o[k]) && (o[k] as number) >= 0 && (o[k] as number) <= 999))
+        refus('durées en heures attendues.');
       return Object.fromEntries(t.cles.map((k) => [k, o[k]]));
     }
     case 'choix':
       if (!t.options.some((o) => o.valeur === v)) refus('choix inconnu.');
       return v;
     case 'texte':
-      if (typeof v !== 'string' || !v.trim() || v.trim().length > t.max) refus(`texte de 1 à ${t.max} caractères attendu.`);
+      if (typeof v !== 'string' || !v.trim() || v.trim().length > t.max)
+        refus(`texte de 1 à ${t.max} caractères attendu.`);
       return (v as string).trim();
     case 'dates': {
-      if (!Array.isArray(v) || !v.every((d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)))) {
+      if (
+        !Array.isArray(v) ||
+        !v.every(
+          (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`)),
+        )
+      ) {
         refus('dates AAAA-MM-JJ attendues.');
       }
       return [...new Set(v as string[])].sort();
     }
     case 'pourcentage':
       if (v === null) return null;
-      if (!nombre(v) || (v as number) < 0 || (v as number) > 100) refus('pourcentage de 0 à 100 attendu (vide = à fixer).');
+      if (!nombre(v) || (v as number) < 0 || (v as number) > 100)
+        refus('pourcentage de 0 à 100 attendu (vide = à fixer).');
       return v;
     case 'zone': {
       if (v === null) return null;
       const z = v as { de?: unknown; a?: unknown };
-      if (!nombre(z?.de) || !nombre(z?.a) || (z.de as number) < 0 || (z.a as number) > 200 || (z.de as number) > (z.a as number)) {
+      if (
+        !nombre(z?.de) ||
+        !nombre(z?.a) ||
+        (z.de as number) < 0 ||
+        (z.a as number) > 200 ||
+        (z.de as number) > (z.a as number)
+      ) {
         refus('zone « de … à … » en % attendue (vide = à fixer).');
       }
       return { de: z.de, a: z.a };

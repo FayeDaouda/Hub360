@@ -5,7 +5,12 @@ import { remettreTache } from '@/lib/mon-espace';
 import type { CorpsRemise } from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { ConfirmModal } from '@/components/admin/confirm-modal';
-import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from '@/components/projets-ouverts/champs-remise';
+import {
+  corpsRemise,
+  depotPret,
+  SAISIE_REMISE_VIDE,
+  type SaisieRemise,
+} from '@/components/projets-ouverts/champs-remise';
 import { FormulaireDepot } from '@/components/projets-ouverts/formulaire-depot';
 
 type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
@@ -42,7 +47,12 @@ export function RemiseModal({
           </span>
           <FormulaireDepot
             id={`remise-${tache.id}`}
-            nommage={{ code: tache.projetCode, etapeNumero: tache.etapeNumero, tache: tache.libelle, version: tache.version + 1 }}
+            nommage={{
+              code: tache.projetCode,
+              etapeNumero: tache.etapeNumero,
+              tache: tache.libelle,
+              version: tache.version + 1,
+            }}
             validateur={tache.validateur}
             parDepot={tache.parDepot}
             obligatoire={tache.fichierObligatoire}

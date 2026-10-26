@@ -8,7 +8,18 @@ import { PHASES_PAR_CATEGORIE } from '../domaine/config';
 import { dateDuJour, rangOuvre } from './calendrier';
 import { estOuvert } from './fil';
 import { contexteDecision, dateLivraison, horizonProjet, type ContexteDecision } from './suppleance';
-import { agitCommeDplg, collaborateurDuCompte, horsCircuit, perimetreProjets, peutDecider, peutQualifier, peutViser, ROLE_CTO, ROLE_DPLG, type Decideur } from './validation';
+import {
+  agitCommeDplg,
+  collaborateurDuCompte,
+  horsCircuit,
+  perimetreProjets,
+  peutDecider,
+  peutQualifier,
+  peutViser,
+  ROLE_CTO,
+  ROLE_DPLG,
+  type Decideur,
+} from './validation';
 import { UNITE_TS } from './taches-projet.service';
 import { chargeSurPeriode } from './charge';
 import {
@@ -41,8 +52,21 @@ const AVEC_TACHES = {
           assigne: { select: { id: true, prenom: true, nom: true, cellule: { select: { nom: true } } } },
           valideePar: { select: { prenom: true, nom: true } },
           prolongations: { orderBy: { demandeLe: 'desc' } },
-          pieces: { orderBy: [{ version: 'asc' }, { createdAt: 'asc' }], select: { id: true, nom: true, version: true } },
-          devisTs: { select: { id: true, statut: true, dateValidite: true, dateEnvoi: true, numero: true, codeDossier: true, rangDossier: true } },
+          pieces: {
+            orderBy: [{ version: 'asc' }, { createdAt: 'asc' }],
+            select: { id: true, nom: true, version: true },
+          },
+          devisTs: {
+            select: {
+              id: true,
+              statut: true,
+              dateValidite: true,
+              dateEnvoi: true,
+              numero: true,
+              codeDossier: true,
+              rangDossier: true,
+            },
+          },
         },
       },
     },
@@ -67,7 +91,11 @@ const jourPlus = (jour: string, n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
-const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = { F1: 'signature', F2: 'avant_projet', F3: 'livraison' };
+const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = {
+  F1: 'signature',
+  F2: 'avant_projet',
+  F3: 'livraison',
+};
 
 export type StatutChantier = 'conception' | 'chantier' | 'livre';
 export function statutChantier(phase: Phase): StatutChantier {
@@ -142,7 +170,11 @@ export class ProjetsOuvertsService {
         tachesEnRetard: resumes.reduce((s, r) => s + r.enRetard, 0),
         // Demandes de prolongation en attente de décision (projets visibles).
         prolongations: taches.filter((t) => prolongationEnAttente(t.prolongations)).length,
-        tsNonAcceptes: await this.tsNonAcceptes(societeId, projets.map((p) => p.id), jour),
+        tsNonAcceptes: await this.tsNonAcceptes(
+          societeId,
+          projets.map((p) => p.id),
+          jour,
+        ),
         mentions: await this.mentionsOuvertes(projets.map((p) => p.id)),
       },
     };
@@ -156,7 +188,11 @@ export class ProjetsOuvertsService {
     const feries = await this.feries(societeId);
     const projets = await this.prisma.projet.findMany({
       where: { societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
-      include: { ...AVEC_TACHES, client: { select: { nom: true } }, cellules: { include: { cellule: { select: { dispatcherId: true } } } } },
+      include: {
+        ...AVEC_TACHES,
+        client: { select: { nom: true } },
+        cellules: { include: { cellule: { select: { dispatcherId: true } } } },
+      },
     });
     const lignes = projets.flatMap((p) => {
       const chefId = p.cellules[0]?.cellule.dispatcherId ?? null;
@@ -169,9 +205,13 @@ export class ProjetsOuvertsService {
         const livraison = dateLivraison(l.p, feries);
         return { ...l, demande, repousse: !!demande && !!livraison && demande.jusquau > livraison, livraison };
       })
-      .filter(({ t, chefId, demande, repousse }) => demande && peutQualifier(decideur, this.regle(ctx, t), chefId, repousse));
+      .filter(
+        ({ t, chefId, demande, repousse }) => demande && peutQualifier(decideur, this.regle(ctx, t), chefId, repousse),
+      );
     // Visas DPLG à apposer (l'architecte DPLG seul).
-    const visas = peutViser(acteur.role) ? lignes.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace) : [];
+    const visas = peutViser(acteur.role)
+      ? lignes.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace)
+      : [];
     // Date de la dernière remise de chaque tâche à valider.
     const evenements = await this.prisma.evenementTacheProjet.findMany({
       where: { type: 'remise', tacheId: { in: remises.map((r) => r.t.id) } },
@@ -202,7 +242,11 @@ export class ProjetsOuvertsService {
       })),
       visas: visas.map((l) => ({ ...commun(l), valideeLe: l.t.valideeLe })),
       // TS au-delà du seuil, demandés par le Dir. GC : au CTO de trancher.
-      ts: await this.demandesTsADecider(societeId, decideur, projets.map((p) => p.id)),
+      ts: await this.demandesTsADecider(
+        societeId,
+        decideur,
+        projets.map((p) => p.id),
+      ),
     };
   }
 
@@ -243,7 +287,12 @@ export class ProjetsOuvertsService {
   async dossier(societeId: string, projetId: string, acteur: Acteur) {
     const { decideur, ctx } = await this.decideur(societeId, acteur);
     const p = await this.prisma.projet.findFirst({
-      where: { id: projetId, societeId, ouvertLe: { not: null }, ...perimetreProjets(acteur.role, decideur.collaborateurId) },
+      where: {
+        id: projetId,
+        societeId,
+        ouvertLe: { not: null },
+        ...perimetreProjets(acteur.role, decideur.collaborateurId),
+      },
       include: {
         ...AVEC_TACHES,
         client: { select: { nom: true, type: true } },
@@ -252,7 +301,13 @@ export class ProjetsOuvertsService {
             cellule: {
               include: {
                 dispatcher: {
-                  select: { id: true, prenom: true, nom: true, utilisateur: { select: { actif: true } }, dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } } },
+                  select: {
+                    id: true,
+                    prenom: true,
+                    nom: true,
+                    utilisateur: { select: { actif: true } },
+                    dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } },
+                  },
                 },
               },
             },
@@ -260,7 +315,11 @@ export class ProjetsOuvertsService {
         },
         gabaritVersion: { select: { code: true, libelle: true } },
         factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { jalon: true, statut: true } },
-        devis: { where: { statut: 'transforme' }, select: { numero: true, dateEnvoi: true, codeDossier: true, rangDossier: true }, take: 1 },
+        devis: {
+          where: { statut: 'transforme' },
+          select: { numero: true, dateEnvoi: true, codeDossier: true, rangDossier: true },
+          take: 1,
+        },
         societe: { select: { contratSignataireNom: true } },
       },
     });
@@ -279,12 +338,18 @@ export class ProjetsOuvertsService {
     const pilote = await this.reglages.regle<string>(societeId, 'pilote_etudes');
     const horizon = this.horizon(p.budgetHeures);
     // Nombre de messages par fil (« Fil de la carte · N », bulle d'une tâche).
-    const fils = await this.prisma.commentaireProjet.groupBy({ by: ['carteId', 'tacheId'], where: { projetId: p.id }, _count: true });
+    const fils = await this.prisma.commentaireProjet.groupBy({
+      by: ['carteId', 'tacheId'],
+      where: { projetId: p.id },
+      _count: true,
+    });
     // Auteurs des visas DPLG apposés (nom affiché sous la tâche).
     const viseurs = new Map(
       (
         await this.prisma.utilisateur.findMany({
-          where: { id: { in: p.cartes.flatMap((c) => c.taches.map((t) => t.visaParId)).filter((x): x is string => !!x) } },
+          where: {
+            id: { in: p.cartes.flatMap((c) => c.taches.map((t) => t.visaParId)).filter((x): x is string => !!x) },
+          },
           select: { id: true, prenom: true, nom: true },
         })
       ).map((u) => [u.id, nom(u)]),
@@ -304,7 +369,10 @@ export class ProjetsOuvertsService {
         ? { mode: 'depot' as const }
         : assigneId && ctx.dplgCollaborateurs.has(assigneId)
           ? { mode: 'personne' as const, nom: nomsCto, role: 'CTO', motif: 'travail du Dir. GC' }
-          : chef && assigneId !== chef.id && (ctx.collaborateursAbsents.has(chef.id) || (!chef.utilisateur?.actif && !chef.dossierPersonnel?.utilisateur?.actif))
+          : chef &&
+              assigneId !== chef.id &&
+              (ctx.collaborateursAbsents.has(chef.id) ||
+                (!chef.utilisateur?.actif && !chef.dossierPersonnel?.utilisateur?.actif))
             ? // Chef sans compte HUB ou absent : la remise remonte à l'Architecte DPLG.
               {
                 mode: 'personne' as const,
@@ -313,8 +381,8 @@ export class ProjetsOuvertsService {
                 motif: `${nom(chef)} ${ctx.collaborateursAbsents.has(chef.id) ? 'absent' : 'sans compte HUB'}`,
               }
             : chef && assigneId === chef.id
-          ? { mode: 'personne' as const, nom: nomsDplg, role: 'Architecte DPLG', motif: 'tâche du chef de team' }
-          : { mode: 'personne' as const, nom: nom(chef), role: 'chef de team' };
+              ? { mode: 'personne' as const, nom: nomsDplg, role: 'Architecte DPLG', motif: 'tâche du chef de team' }
+              : { mode: 'personne' as const, nom: nom(chef), role: 'chef de team' };
 
     const facture = (f: 'F1' | 'F2' | 'F3') => {
       const fs = p.factures.filter((x) => x.jalon === JALON_PAR_FACTURE[f]);
@@ -328,7 +396,7 @@ export class ProjetsOuvertsService {
       cellule: cellule ? { nom: cellule.nom, chef: nom(chef) } : null,
       // La personne connectée pilote la cellule du projet (elle valide).
       jeSuisChef: !!chef && !!decideur.collaborateurId && chef.id === decideur.collaborateurId,
-      pilote: pilote === 'head_of_engineering' ? 'Head of Engineering (à recruter)' : dplg ?? 'Architecte DPLG',
+      pilote: pilote === 'head_of_engineering' ? 'Head of Engineering (à recruter)' : (dplg ?? 'Architecte DPLG'),
       version: p.gabaritVersion,
       offre: p.devis[0] ? refDevis(p.devis[0]) : null,
       ouvertLe: p.ouvertLe,
@@ -345,7 +413,9 @@ export class ProjetsOuvertsService {
       optionsTs: dplgConnecte
         ? p.cartes.flatMap((c) => {
             const t = c.temps as Temps | null;
-            return t?.type === 'par_unite' && !c.desactivation ? [{ carteId: c.id, libelle: UNITE_TS[t.unite], heures: t.heures }] : [];
+            return t?.type === 'par_unite' && !c.desactivation
+              ? [{ carteId: c.id, libelle: UNITE_TS[t.unite], heures: t.heures }]
+              : [];
           })
         : [],
       attentes: attentesFactures(etapes, this.sources(p)),
@@ -390,17 +460,25 @@ export class ProjetsOuvertsService {
           // Fichiers de chaque remise (v01, v02…), sans leur contenu.
           pieces: t.pieces,
           // Élément TS : devis d'avenant qui le facture et son état.
-          avenant: t.devisTs ? { devisId: t.devisTs.id, reference: refDevis(t.devisTs), statut: statutDevisEffectif(t.devisTs, jour) } : null,
+          avenant: t.devisTs
+            ? { devisId: t.devisTs.id, reference: refDevis(t.devisTs), statut: statutDevisEffectif(t.devisTs, jour) }
+            : null,
           valideeLe: iso(t.valideeLe),
           valideePar: nom(t.valideePar),
           // Visa DPLG exigé : apposé le… par… (null tant qu'il ne l'est pas).
           visa: t.visaRequis
-            ? { le: iso(t.visaLe), par: t.visaParId ? (viseurs.get(t.visaParId) ?? null) : null, nonTrace: t.visaNonTrace }
+            ? {
+                le: iso(t.visaLe),
+                par: t.visaParId ? (viseurs.get(t.visaParId) ?? null) : null,
+                nonTrace: t.visaNonTrace,
+              }
             : null,
           // L'architecte DPLG (Dir. GC, ou un autre Dir. GC en suppléance —
           // jamais le CTO : le visa engage la signature de l'architecte).
           peutViser: peutViser(acteur.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
-          assigne: t.assigne ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null } : null,
+          assigne: t.assigne
+            ? { id: t.assigne.id, nom: nom(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null }
+            : null,
           // Assignée à la personne connectée (« Seulement mes tâches »).
           aMoi: !!decideur.collaborateurId && t.assigneId === decideur.collaborateurId,
           validation: validation(t.temps as Temps, t.assigneId),
@@ -423,7 +501,10 @@ export class ProjetsOuvertsService {
             !prolongationEnAttente(t.prolongations),
           peutDeciderProlongation: (() => {
             const d = prolongationEnAttente(t.prolongations);
-            return !!d && peutQualifier(decideur, this.regle(ctx, t), chef?.id ?? null, !!livraisonLe && d.jusquau > livraisonLe);
+            return (
+              !!d &&
+              peutQualifier(decideur, this.regle(ctx, t), chef?.id ?? null, !!livraisonLe && d.jusquau > livraisonLe)
+            );
           })(),
           // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
           peutRemettre:
@@ -452,17 +533,28 @@ export class ProjetsOuvertsService {
         include: {
           ...AVEC_TACHES,
           client: { select: { nom: true } },
-          factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { id: true, jalon: true, statut: true } },
+          factures: {
+            where: { estAvoir: false, statut: { not: 'annulee' } },
+            select: { id: true, jalon: true, statut: true },
+          },
         },
       }),
       // F1 émise = projet ouvert : un projet signé dont F1 attend encore.
       this.prisma.projet.findMany({
-        where: { societeId, ouvertLe: null, factures: { some: { jalon: 'signature', statut: 'brouillon', estAvoir: false } } },
+        where: {
+          societeId,
+          ouvertLe: null,
+          factures: { some: { jalon: 'signature', statut: 'brouillon', estAvoir: false } },
+        },
         select: {
           id: true,
           code: true,
           client: { select: { nom: true } },
-          factures: { where: { jalon: 'signature', statut: 'brouillon', estAvoir: false }, select: { id: true }, take: 1 },
+          factures: {
+            where: { jalon: 'signature', statut: 'brouillon', estAvoir: false },
+            select: { id: true },
+            take: 1,
+          },
         },
       }),
       this.feries(societeId),
@@ -476,12 +568,28 @@ export class ProjetsOuvertsService {
         statut: true,
         dateValidite: true,
         dateEnvoi: true,
-        lignes: { orderBy: { ordre: 'asc' }, select: { designation: true, produitService: { select: { famille: true } } } },
+        lignes: {
+          orderBy: { ordre: 'asc' },
+          select: { designation: true, produitService: { select: { famille: true } } },
+        },
       },
     });
 
-    const retards: { projetId: string; code: string; client: string; enRetard: number; prolongees: number; joursMax: number }[] = [];
-    const tranches: { projetId: string; code: string; client: string; tranche: 'F1' | 'F2' | 'F3'; factureId: string | null }[] = nonOuverts.map((p) => ({
+    const retards: {
+      projetId: string;
+      code: string;
+      client: string;
+      enRetard: number;
+      prolongees: number;
+      joursMax: number;
+    }[] = [];
+    const tranches: {
+      projetId: string;
+      code: string;
+      client: string;
+      tranche: 'F1' | 'F2' | 'F3';
+      factureId: string | null;
+    }[] = nonOuverts.map((p) => ({
       projetId: p.id,
       code: p.code,
       client: p.client.nom,
@@ -506,10 +614,23 @@ export class ProjetsOuvertsService {
     }
     const codeDe = new Map(projets.map((p) => [p.id, p.code]));
     const ts = devisTs.flatMap((d) => {
-      const alerte = alerteAvenant({ ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) }, jour, seuilTs);
+      const alerte = alerteAvenant(
+        { ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) },
+        jour,
+        seuilTs,
+      );
       if (!alerte) return [];
       const designations = d.lignes.filter((l) => l.produitService?.famille === 'TS').map((l) => l.designation);
-      return [{ devisId: d.id, projetId: d.projetId!, code: codeDe.get(d.projetId!) ?? '—', objet: designations.join(' · '), jours: alerte.jours, seuil: alerte.seuil }];
+      return [
+        {
+          devisId: d.id,
+          projetId: d.projetId!,
+          code: codeDe.get(d.projetId!) ?? '—',
+          objet: designations.join(' · '),
+          jours: alerte.jours,
+          seuil: alerte.seuil,
+        },
+      ];
     });
     return { retards, tranches, ts };
   }
@@ -537,17 +658,32 @@ export class ProjetsOuvertsService {
           id: true,
           // Tâches encore à faire qui touchent la fenêtre (les validées sont livrées).
           tachesProjet: {
-            where: { id: { not: tacheId }, statut: { in: ['a_faire', 'a_valider', 'reprise'] }, debutLe: { lte: p.fin }, finLe: { gte: p.debut } },
+            where: {
+              id: { not: tacheId },
+              statut: { in: ['a_faire', 'a_valider', 'reprise'] },
+              debutLe: { lte: p.fin },
+              finLe: { gte: p.debut },
+            },
             select: { id: true, debutLe: true, finLe: true, heures: true },
           },
           dossierPersonnel: {
-            select: { absences: { where: { statut: 'validee', dateDebut: { lte: p.fin }, dateFin: { gte: p.debut } }, select: { dateDebut: true, dateFin: true } } },
+            select: {
+              absences: {
+                where: { statut: 'validee', dateDebut: { lte: p.fin }, dateFin: { gte: p.debut } },
+                select: { dateDebut: true, dateFin: true },
+              },
+            },
           },
         },
       }),
       this.feries(societeId),
     ]);
-    const versTache = (t: { id: string; debutLe: string | null; finLe: string | null; heures: Prisma.Decimal | null }) => ({
+    const versTache = (t: {
+      id: string;
+      debutLe: string | null;
+      finLe: string | null;
+      heures: Prisma.Decimal | null;
+    }) => ({
       id: t.id,
       debut: t.debutLe,
       echeance: t.finLe,
@@ -580,7 +716,11 @@ export class ProjetsOuvertsService {
     const jour = aujourdhui();
     const feries = await this.feries(societeId);
     const projets = await this.prisma.projet.findMany({
-      where: { societeId, ouvertLe: { not: null }, ...(acteur.role === ROLE_DPLG ? { dossierCrm: { proprietaireId: acteur.userId } } : {}) },
+      where: {
+        societeId,
+        ouvertLe: { not: null },
+        ...(acteur.role === ROLE_DPLG ? { dossierCrm: { proprietaireId: acteur.userId } } : {}),
+      },
       orderBy: { ouvertLe: 'asc' },
       include: {
         ...AVEC_TACHES,
@@ -589,7 +729,11 @@ export class ProjetsOuvertsService {
         factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { jalon: true, statut: true } },
       },
     });
-    const ts = await this.prisma.demandeTs.groupBy({ by: ['projetId'], where: { societeId, statut: 'a_valider', projetId: { in: projets.map((p) => p.id) } }, _count: true });
+    const ts = await this.prisma.demandeTs.groupBy({
+      by: ['projetId'],
+      where: { societeId, statut: 'a_valider', projetId: { in: projets.map((p) => p.id) } },
+      _count: true,
+    });
     const tsParProjet = new Map(ts.map((t) => [t.projetId, t._count]));
     const dans = (n: number) => jourPlus(jour, n);
 
@@ -628,7 +772,9 @@ export class ProjetsOuvertsService {
       return {
         projet: { id: p.id, code: p.code, client: p.client.nom, cellule: p.cellules[0]?.cellule.nom ?? null },
         statutChantier: statut,
-        etape: enCours ? { numero: enCours.numero, libelle: libelleEtape(enCours.numero), terminee: enCours.etat === 'terminee' } : null,
+        etape: enCours
+          ? { numero: enCours.numero, libelle: libelleEtape(enCours.numero), terminee: enCours.etat === 'terminee' }
+          : null,
         souffrance,
         faites: etapes.reduce((s, e) => s + e.faites, 0),
         total: etapes.reduce((s, e) => s + e.total, 0),
@@ -643,7 +789,14 @@ export class ProjetsOuvertsService {
         tranche: prochaine ? { code: prochaine, statut: statutFacture(prochaine), attend: attentes[prochaine] } : null,
         // Cartes clés dont la fenêtre se termine dans les 14 jours, pas encore closes.
         echeances: p.cartes
-          .filter((c) => CARTES_CLES.includes(c.cle) && c.finLe && c.finLe >= jour && c.finLe <= dans(14) && !['close', 'desactivee'].includes(etatsCartes.get(c.id)!.code))
+          .filter(
+            (c) =>
+              CARTES_CLES.includes(c.cle) &&
+              c.finLe &&
+              c.finLe >= jour &&
+              c.finLe <= dans(14) &&
+              !['close', 'desactivee'].includes(etatsCartes.get(c.id)!.code),
+          )
           .map((c) => ({ carte: c.libelle, finLe: c.finLe! })),
         // Tri : livraison dépassée, retards, décisions en attente.
         risque: (livraisonDepassee ? 1000 : 0) + enRetard * 10 + Object.values(attente).reduce((s, n) => s + n, 0),
@@ -658,7 +811,9 @@ export class ProjetsOuvertsService {
       chiffres: {
         ouverts: lignes.length,
         enRetard: lignes.filter((l) => l.enRetard > 0 || l.livraisonDepassee).length,
-        livraisons15: lignes.filter((l) => l.statutChantier !== 'livre' && l.livraisonLe >= jour && l.livraisonLe <= dans(15)).length,
+        livraisons15: lignes.filter(
+          (l) => l.statutChantier !== 'livre' && l.livraisonLe >= jour && l.livraisonLe <= dans(15),
+        ).length,
         enAttente: lignes.reduce((s, l) => s + Object.values(l.attente).reduce((t, n) => t + n, 0), 0),
         chargeMoyenne: moyennes.length ? Math.round(moyennes.reduce((s, x) => s + x, 0) / moyennes.length) : null,
       },
@@ -667,7 +822,12 @@ export class ProjetsOuvertsService {
       // Livraisons dans les 14 jours (projets non livrés).
       livraisons: lignes
         .filter((l) => l.statutChantier !== 'livre' && l.livraisonLe >= jour && l.livraisonLe <= dans(14))
-        .map((l) => ({ projetId: l.projet.id, code: l.projet.code, client: l.projet.client, livraisonLe: l.livraisonLe })),
+        .map((l) => ({
+          projetId: l.projet.id,
+          code: l.projet.code,
+          client: l.projet.client,
+          livraisonLe: l.livraisonLe,
+        })),
     };
   }
 
@@ -688,11 +848,20 @@ export class ProjetsOuvertsService {
               prenom: true,
               nom: true,
               tachesProjet: {
-                where: { statut: { in: ['a_faire', 'a_valider', 'reprise'] }, debutLe: { lte: p.fin }, finLe: { gte: p.debut } },
+                where: {
+                  statut: { in: ['a_faire', 'a_valider', 'reprise'] },
+                  debutLe: { lte: p.fin },
+                  finLe: { gte: p.debut },
+                },
                 select: { id: true, debutLe: true, finLe: true, heures: true },
               },
               dossierPersonnel: {
-                select: { absences: { where: { statut: 'validee', dateDebut: { lte: p.fin }, dateFin: { gte: p.debut } }, select: { dateDebut: true, dateFin: true } } },
+                select: {
+                  absences: {
+                    where: { statut: 'validee', dateDebut: { lte: p.fin }, dateFin: { gte: p.debut } },
+                    select: { dateDebut: true, dateFin: true },
+                  },
+                },
               },
             },
           },
@@ -710,15 +879,32 @@ export class ProjetsOuvertsService {
           const membres = c.membres.map((m) => {
             const ch = chargeSurPeriode(
               p,
-              m.tachesProjet.map((t) => ({ id: t.id, debut: t.debutLe, echeance: t.finLe, heures: t.heures == null ? null : Number(t.heures) })),
+              m.tachesProjet.map((t) => ({
+                id: t.id,
+                debut: t.debutLe,
+                echeance: t.finLe,
+                heures: t.heures == null ? null : Number(t.heures),
+              })),
               vide,
               (m.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
               feries,
             );
-            return { id: m.id, nom: nom(m)!, heures: ch.assignees, disponibles: ch.disponibles, pourcentage: ch.pourcentage, joursAbsence: ch.joursAbsence };
+            return {
+              id: m.id,
+              nom: nom(m)!,
+              heures: ch.assignees,
+              disponibles: ch.disponibles,
+              pourcentage: ch.pourcentage,
+              joursAbsence: ch.joursAbsence,
+            };
           });
           const pcts = membres.map((m) => m.pourcentage).filter((x): x is number => x !== null);
-          return { code: c.code, nom: c.nom, membres, moyenne: pcts.length ? Math.round(pcts.reduce((s, x) => s + x, 0) / pcts.length) : null };
+          return {
+            code: c.code,
+            nom: c.nom,
+            membres,
+            moyenne: pcts.length ? Math.round(pcts.reduce((s, x) => s + x, 0) / pcts.length) : null,
+          };
         }),
     };
   }
@@ -727,7 +913,10 @@ export class ProjetsOuvertsService {
   // « Prénom Nom » des comptes actifs (« A ou B »), null s'il n'y en a aucun.
   private async nomsComptes(ids: string[]): Promise<string | null> {
     if (!ids.length) return null;
-    const u = await this.prisma.utilisateur.findMany({ where: { id: { in: ids }, actif: true }, select: { prenom: true, nom: true } });
+    const u = await this.prisma.utilisateur.findMany({
+      where: { id: { in: ids }, actif: true },
+      select: { prenom: true, nom: true },
+    });
     const noms = u.map((x) => `${x.prenom} ${x.nom}`.trim()).filter(Boolean);
     return noms.length ? noms.join(' ou ') : null;
   }
@@ -803,7 +992,11 @@ export class ProjetsOuvertsService {
   // et le reporting de la direction partagent (revue CTO, 22/10/2026).
   async etatsSociete(societeId: string, jour: string) {
     const [projets, feries] = await Promise.all([
-      this.prisma.projet.findMany({ where: { societeId, ouvertLe: { not: null } }, orderBy: { ouvertLe: 'asc' }, include: AVEC_TACHES }),
+      this.prisma.projet.findMany({
+        where: { societeId, ouvertLe: { not: null } },
+        orderBy: { ouvertLe: 'asc' },
+        include: AVEC_TACHES,
+      }),
       this.feries(societeId),
     ]);
     return projets.map((p) => {
@@ -814,8 +1007,15 @@ export class ProjetsOuvertsService {
         etatsTaches,
         etapes: etapes.map((e) => {
           const cartes = p.cartes.filter((c) => c.etapeNumero === e.numero);
-          const validees = cartes.flatMap((c) => c.taches.map((t) => iso(t.valideeLe))).filter((d): d is string => !!d).sort();
-          return { ...e, libelle: cartes[0]?.etapeLibelle ?? '', closeLe: e.etat === 'terminee' ? (validees.at(-1) ?? null) : null };
+          const validees = cartes
+            .flatMap((c) => c.taches.map((t) => iso(t.valideeLe)))
+            .filter((d): d is string => !!d)
+            .sort();
+          return {
+            ...e,
+            libelle: cartes[0]?.etapeLibelle ?? '',
+            closeLe: e.etat === 'terminee' ? (validees.at(-1) ?? null) : null,
+          };
         }),
       };
     });
@@ -829,7 +1029,13 @@ export class ProjetsOuvertsService {
     const parEtape = new Map<number, { tache: (typeof sources)[number]['taches'][number]; etat: EtatTache }[]>();
     p.cartes.forEach((c, i) => {
       c.taches.forEach((t, j) => {
-        const etat = etatTache(sources[i].taches[j], etatsCartes.get(c.id)!, jour, feries, attendVisa(sources[i].taches[j], sources[i]));
+        const etat = etatTache(
+          sources[i].taches[j],
+          etatsCartes.get(c.id)!,
+          jour,
+          feries,
+          attendVisa(sources[i].taches[j], sources[i]),
+        );
         etatsTaches.set(t.id, etat);
         parEtape.set(c.etapeNumero, [...(parEtape.get(c.etapeNumero) ?? []), { tache: sources[i].taches[j], etat }]);
       });
@@ -845,7 +1051,13 @@ export class ProjetsOuvertsService {
     if (!projetIds.length) return 0;
     const racines = await this.prisma.commentaireProjet.findMany({
       where: { projetId: { in: projetIds }, parentId: null, mentionneId: { not: null }, resoluLe: null },
-      select: { carteId: true, tacheId: true, mentionneId: true, resoluLe: true, _count: { select: { reponses: true } } },
+      select: {
+        carteId: true,
+        tacheId: true,
+        mentionneId: true,
+        resoluLe: true,
+        _count: { select: { reponses: true } },
+      },
     });
     const ouvertes = racines.filter((r) => estOuvert({ ...r, reponses: r._count.reponses }));
     return new Set(ouvertes.map((r) => r.tacheId ?? r.carteId)).size;
@@ -858,9 +1070,17 @@ export class ProjetsOuvertsService {
       this.reglages.regle<number>(societeId, 'alerte_avenant_jours'),
       this.prisma.devis.findMany({
         where: { societeId, projetId: { in: projetIds }, statut: 'envoye' },
-        select: { projetId: true, statut: true, dateValidite: true, dateEnvoi: true, lignes: { select: { produitService: { select: { famille: true } } } } },
+        select: {
+          projetId: true,
+          statut: true,
+          dateValidite: true,
+          dateEnvoi: true,
+          lignes: { select: { produitService: { select: { famille: true } } } },
+        },
       }),
     ]);
-    return devis.filter((d) => alerteAvenant({ ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) }, jour, seuil)).length;
+    return devis.filter((d) =>
+      alerteAvenant({ ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) }, jour, seuil),
+    ).length;
   }
 }

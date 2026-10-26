@@ -6,8 +6,8 @@ export function Nomenclature({ prefixe }: { prefixe: string }) {
     <section className="panel glass-panel eq-nomenclature" aria-labelledby="eq-nomenclature-titre">
       <h2 id="eq-nomenclature-titre">Nomenclature des cellules · ISO 9001</h2>
       <p>
-        Format <strong className="eq-format">SOCIÉTÉ-PROCESSUS-NN</strong>. Le code est stable et jamais réutilisé ; le nom
-        d’usage et la clientèle peuvent évoluer.
+        Format <strong className="eq-format">SOCIÉTÉ-PROCESSUS-NN</strong>. Le code est stable et jamais réutilisé ; le
+        nom d’usage et la clientèle peuvent évoluer.
       </p>
       <dl>
         {PROCESSUS_NOMENCLATURE.map((p) => (

@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -132,9 +127,7 @@ export class ComptesGroupeService {
             .filter((r) => r.societeId === null || r.societeId === societe.id)
             .map((r) => ({ id: r.id, nom: r.nom, transverse: r.societeId === null })),
           comptes,
-          dossiersSansCompte: dossiers
-            .filter((d) => d.societeId === societe.id)
-            .map(({ societeId: _s, ...d }) => d),
+          dossiersSansCompte: dossiers.filter((d) => d.societeId === societe.id).map(({ societeId: _s, ...d }) => d),
           cellules: cellules.filter((c) => c.societeId === societe.id).map(({ id, nom }) => ({ id, nom })),
         };
       }),
@@ -156,9 +149,7 @@ export class ComptesGroupeService {
     if (!role) throw new NotFoundException('Rôle introuvable.');
     if (!societe) throw new NotFoundException('Société introuvable.');
     if (ROLES_ADMINISTRATION.has(role.nom)) {
-      throw new BadRequestException(
-        "Les rôles d'administration ne s'attribuent pas depuis cet écran.",
-      );
+      throw new BadRequestException("Les rôles d'administration ne s'attribuent pas depuis cet écran.");
     }
     if (role.societeId !== null && role.societeId !== societeId) {
       throw new BadRequestException('Ce rôle appartient à une autre société.');
@@ -167,9 +158,7 @@ export class ComptesGroupeService {
       throw new NotFoundException("Ce compte n'est pas rattaché à cette société.");
     }
     if (affectations.some((a) => ROLES_ADMINISTRATION.has(a.role.nom))) {
-      throw new ConflictException(
-        "Compte d'administration : son rôle ne se modifie pas depuis cet écran.",
-      );
+      throw new ConflictException("Compte d'administration : son rôle ne se modifie pas depuis cet écran.");
     }
 
     const inchange = affectations.length === 1 && affectations[0].roleId === roleId;
@@ -324,14 +313,24 @@ export class ComptesGroupeService {
   // Téléphone perdu ou changé : la double authentification est retirée et
   // les sessions coupées ; la personne la réactive à sa prochaine connexion.
   async reinitialiserDoubleFacteur(utilisateurId: string, acteurId: string) {
-    const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpSecret: true, totpActifLe: true } });
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { totpSecret: true, totpActifLe: true },
+    });
     if (!u) throw new NotFoundException('Compte introuvable.');
-    if (!u.totpActifLe && !u.totpSecret) throw new ConflictException('Double authentification non activée sur ce compte.');
+    if (!u.totpActifLe && !u.totpSecret)
+      throw new ConflictException('Double authentification non activée sur ce compte.');
     const maintenant = new Date();
     await this.prisma.$transaction([
       this.prisma.utilisateur.update({
         where: { id: utilisateurId },
-        data: { totpSecret: null, totpActifLe: null, totpDernierPas: null, totpCodesSecours: [], sessionsValidesDepuis: maintenant },
+        data: {
+          totpSecret: null,
+          totpActifLe: null,
+          totpDernierPas: null,
+          totpCodesSecours: [],
+          sessionsValidesDepuis: maintenant,
+        },
       }),
       this.prisma.evenementCompte.create({
         data: { utilisateurId, type: 'double_facteur_reinitialise', parId: acteurId, detail: 'Administration du HUB' },

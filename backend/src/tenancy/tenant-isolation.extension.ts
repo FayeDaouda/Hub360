@@ -47,7 +47,13 @@ const FILTERED_OPERATIONS = new Set([
 const CREATE_OPERATIONS = new Set(['create', 'createMany', 'createManyAndReturn', 'upsert']);
 const WRITE_OPERATIONS = new Set(['create', 'createMany', 'createManyAndReturn', 'update', 'updateMany', 'upsert']);
 
-type Args = { where?: Record<string, unknown>; data?: unknown; create?: unknown; update?: unknown; [key: string]: unknown };
+type Args = {
+  where?: Record<string, unknown>;
+  data?: unknown;
+  create?: unknown;
+  update?: unknown;
+  [key: string]: unknown;
+};
 type Row = Record<string, unknown> | undefined;
 
 function targetCompanyOf(row: unknown): unknown {
@@ -96,7 +102,9 @@ export function referencedIds(model: string, operation: string, args: Args): Map
 // défaut : pas de contexte, ou requête de société pas encore identifiée.
 export function companyOf(tenant: TenantContext | undefined, what: string): string | null {
   if (!tenant) {
-    throw new Error(`${what} hors de tout contexte d'isolation : déclarer runInCompany, runInGroupScope ou runAsSystem (ADR 0001).`);
+    throw new Error(
+      `${what} hors de tout contexte d'isolation : déclarer runInCompany, runInGroupScope ou runAsSystem (ADR 0001).`,
+    );
   }
   if (tenant.scope !== 'company') return null;
   if (!tenant.companyId) throw new Error(`${what} avant que la société de la requête soit identifiée (ADR 0001).`);
@@ -121,7 +129,9 @@ export const tenantIsolation = Prisma.defineExtension((client) =>
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           const isTenantModel = TENANT_MODELS.has(model);
-          const references = WRITE_OPERATIONS.has(operation) ? referencedIds(model, operation, args as Args) : new Map<string, Set<string>>();
+          const references = WRITE_OPERATIONS.has(operation)
+            ? referencedIds(model, operation, args as Args)
+            : new Map<string, Set<string>>();
           if (!isTenantModel && references.size === 0) return query(args);
 
           const companyId = companyOf(currentTenant(), `${model}.${operation}`);
@@ -133,7 +143,9 @@ export const tenantIsolation = Prisma.defineExtension((client) =>
           // n'est pas encore visible depuis une autre connexion, alors que les
           // données des autres sociétés, elles, sont validées et visibles.
           for (const [target, ids] of references) {
-            const delegate = (client as unknown as Record<string, { count(a: object): Promise<number> }>)[delegateOf(target)];
+            const delegate = (client as unknown as Record<string, { count(a: object): Promise<number> }>)[
+              delegateOf(target)
+            ];
             const etrangeres = await delegate.count({ where: { id: { in: [...ids] }, societeId: { not: companyId } } });
             if (etrangeres > 0) {
               throw new ForbiddenException('Écriture refusée : elle référence une donnée d’une autre société.');

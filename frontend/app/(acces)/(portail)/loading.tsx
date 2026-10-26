@@ -20,10 +20,7 @@ export default function PortailLoading() {
             <div className="auth-squelette societe-carte-logo" />
             <div className="societe-carte-corps">
               <div className="auth-squelette" style={{ width: '70%', height: '1rem' }} />
-              <div
-                className="auth-squelette"
-                style={{ width: '50%', height: '0.8rem', marginTop: '0.55rem' }}
-              />
+              <div className="auth-squelette" style={{ width: '50%', height: '0.8rem', marginTop: '0.55rem' }} />
             </div>
           </div>
         </li>

@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { ActionPaie, MotifSalaire } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -43,7 +49,14 @@ export class SalairesService {
   private async dossier(id: string) {
     const d = await this.prisma.dossierPersonnel.findUnique({
       where: { id },
-      select: { id: true, societeId: true, prenom: true, nom: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } },
+      select: {
+        id: true,
+        societeId: true,
+        prenom: true,
+        nom: true,
+        utilisateurId: true,
+        collaborateur: { select: { utilisateurId: true } },
+      },
     });
     if (!d) throw new NotFoundException('Dossier introuvable');
     return { ...d, compteId: d.utilisateurId ?? d.collaborateur?.utilisateurId ?? null };
@@ -53,7 +66,8 @@ export class SalairesService {
   // société, ou les CEO si le salarié est lui-même CFO ; jamais l'intéressé.
   private async valideurs(d: { societeId: string; compteId: string | null }) {
     const cfo = await this.notifications.titulairesRole(d.societeId, ROLE_CFO);
-    const ids = d.compteId && cfo.includes(d.compteId) ? await this.notifications.titulairesRole(d.societeId, ROLE_CEO) : cfo;
+    const ids =
+      d.compteId && cfo.includes(d.compteId) ? await this.notifications.titulairesRole(d.societeId, ROLE_CEO) : cfo;
     return { ids: ids.filter((x) => x !== d.compteId), role: d.compteId && cfo.includes(d.compteId) ? 'CEO' : 'CFO' };
   }
 
@@ -84,10 +98,15 @@ export class SalairesService {
     if (existants.some((c) => c.statut === 'a_valider')) {
       throw new ConflictException('Un changement attend déjà sa validation : retirez-le ou attendez la décision.');
     }
-    const refus = refusProposition(p, existants.some((c) => c.statut === 'valide'), aujourdhui());
+    const refus = refusProposition(
+      p,
+      existants.some((c) => c.statut === 'valide'),
+      aujourdhui(),
+    );
     if (refus) throw new BadRequestException(refus);
     const { ids, role } = await this.valideurs(d);
-    if (!ids.filter((x) => x !== acteurId).length) throw new ConflictException(`Aucun ${role} pour valider ce salaire : attribuez d'abord le rôle.`);
+    if (!ids.filter((x) => x !== acteurId).length)
+      throw new ConflictException(`Aucun ${role} pour valider ce salaire : attribuez d'abord le rôle.`);
     await this.prisma.changementSalaire.create({ data: { dossierId, ...p, proposeParId: acteurId } });
     await this.tracer(dossierId, 'salaire_propose', acteurId);
     await this.notifications.envoyer({
@@ -120,18 +139,39 @@ export class SalairesService {
     for (const c of enAttente) {
       const d = await this.dossier(c.dossierId);
       if (c.proposeParId === acteurId || !(await this.valideurs(d)).ids.includes(acteurId)) continue;
-      lignes.push({ id: c.id, dossierId: d.id, salarie: nomDe(d), motif: c.motif, dateEffet: c.dateEffet, proposeParId: c.proposeParId, proposeLe: c.proposeLe });
+      lignes.push({
+        id: c.id,
+        dossierId: d.id,
+        salarie: nomDe(d),
+        motif: c.motif,
+        dateEffet: c.dateEffet,
+        proposeParId: c.proposeParId,
+        proposeLe: c.proposeLe,
+      });
     }
     const noms = await this.noms(lignes.map((l) => l.proposeParId));
-    return lignes.map(({ proposeParId, ...l }) => ({ ...l, proposePar: proposeParId ? (noms.get(proposeParId) ?? null) : null }));
+    return lignes.map(({ proposeParId, ...l }) => ({
+      ...l,
+      proposePar: proposeParId ? (noms.get(proposeParId) ?? null) : null,
+    }));
   }
 
   // Montants (en vigueur → proposé) d'un changement à décider : affichage tracé.
   async detail(changementId: string, acteurId: string) {
     const { c, d } = await this.decidable(changementId, acteurId);
-    const valides = await this.prisma.changementSalaire.findMany({ where: { dossierId: d.id, statut: 'valide' }, select: SELECT_CHANGEMENT });
+    const valides = await this.prisma.changementSalaire.findMany({
+      where: { dossierId: d.id, statut: 'valide' },
+      select: SELECT_CHANGEMENT,
+    });
     await this.tracer(d.id, 'salaire_consulte', acteurId);
-    return { id: c.id, salarie: nomDe(d), motif: c.motif, dateEffet: c.dateEffet, montant: c.montant, actuel: salaireAu(valides, c.dateEffet ?? aujourdhui()) };
+    return {
+      id: c.id,
+      salarie: nomDe(d),
+      motif: c.motif,
+      dateEffet: c.dateEffet,
+      montant: c.montant,
+      actuel: salaireAu(valides, c.dateEffet ?? aujourdhui()),
+    };
   }
 
   async decider(changementId: string, acteurId: string, valide: boolean, motifRefus?: string) {
@@ -139,7 +179,12 @@ export class SalairesService {
     if (!valide && !motifRefus?.trim()) throw new BadRequestException('Le motif du refus est obligatoire.');
     const maj = await this.prisma.changementSalaire.updateMany({
       where: { id: c.id, statut: 'a_valider' },
-      data: { statut: valide ? 'valide' : 'refuse', decideParId: acteurId, decideLe: new Date(), motifRefus: valide ? '' : motifRefus!.trim() },
+      data: {
+        statut: valide ? 'valide' : 'refuse',
+        decideParId: acteurId,
+        decideLe: new Date(),
+        motifRefus: valide ? '' : motifRefus!.trim(),
+      },
     });
     if (!maj.count) throw new ConflictException('Ce changement a déjà été décidé.');
     await this.tracer(d.id, valide ? 'salaire_modifie' : 'salaire_refuse', acteurId);
@@ -156,12 +201,16 @@ export class SalairesService {
   }
 
   private async decidable(changementId: string, acteurId: string) {
-    const c = await this.prisma.changementSalaire.findUnique({ where: { id: changementId }, select: { ...SELECT_CHANGEMENT, dossierId: true } });
+    const c = await this.prisma.changementSalaire.findUnique({
+      where: { id: changementId },
+      select: { ...SELECT_CHANGEMENT, dossierId: true },
+    });
     if (!c) throw new NotFoundException('Changement introuvable');
     if (c.statut !== 'a_valider') throw new ConflictException('Ce changement a déjà été décidé.');
     const d = await this.dossier(c.dossierId);
     if (d.compteId === acteurId) throw new ForbiddenException('Vous ne pouvez pas décider de votre propre salaire.');
-    if (c.proposeParId === acteurId) throw new ForbiddenException('Vous ne pouvez pas valider votre propre proposition.');
+    if (c.proposeParId === acteurId)
+      throw new ForbiddenException('Vous ne pouvez pas valider votre propre proposition.');
     const { ids, role } = await this.valideurs(d);
     if (!ids.includes(acteurId)) throw new ForbiddenException(`Ce salaire est validé par le ${role}.`);
     return { c, d };
@@ -169,7 +218,12 @@ export class SalairesService {
 
   private async noms(ids: (string | null)[]) {
     const uniques = [...new Set(ids.filter((x): x is string => !!x))];
-    const u = uniques.length ? await this.prisma.utilisateur.findMany({ where: { id: { in: uniques } }, select: { id: true, prenom: true, nom: true } }) : [];
+    const u = uniques.length
+      ? await this.prisma.utilisateur.findMany({
+          where: { id: { in: uniques } },
+          select: { id: true, prenom: true, nom: true },
+        })
+      : [];
     return new Map(u.map((x) => [x.id, nomDe(x)]));
   }
 }

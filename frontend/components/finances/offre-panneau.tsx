@@ -67,7 +67,10 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
   const proposables = useMemo(
     () =>
       (leads ?? []).filter(
-        (p) => p.statut === 'nouveau_projet' && !p.archive && !(p.offre && ['brouillon', 'envoye'].includes(p.offre.statutEffectif)),
+        (p) =>
+          p.statut === 'nouveau_projet' &&
+          !p.archive &&
+          !(p.offre && ['brouillon', 'envoye'].includes(p.offre.statutEffectif)),
       ),
     [leads],
   );
@@ -81,7 +84,9 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
       setErreur(null);
       try {
         if (lead.offre?.statutEffectif === 'brouillon') return ouvrir(await getDevis(slug, lead.offre.id));
-        const co = catalogue.find((p) => p.code === lead.categorieConception) ?? catalogue.find((p) => p.modeCalcul === 'surface_planches');
+        const co =
+          catalogue.find((p) => p.code === lead.categorieConception) ??
+          catalogue.find((p) => p.modeCalcul === 'surface_planches');
         const d = await creerDevis(slug, {
           clientId: lead.client.id,
           dossierCrmId: lead.id,
@@ -155,11 +160,13 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
     const t = window.setTimeout(() => void sauver(), ENREGISTREMENT_MS);
     return () => window.clearTimeout(t);
   }, [etat, sauver]);
-  const modifier = <T,>(fixer: (v: T) => void) => (v: T) => {
-    fixer(v);
-    revision.current++;
-    setEtat('modifie');
-  };
+  const modifier =
+    <T,>(fixer: (v: T) => void) =>
+    (v: T) => {
+      fixer(v);
+      revision.current++;
+      setEtat('modifie');
+    };
 
   async function soumettre() {
     if (!devis?.dossierCrm) return;
@@ -188,11 +195,20 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
       : fiche && fiche.faits < fiche.total
         ? 'Compléter la fiche CRM pour soumettre au CFO'
         : null;
-  const categorieCo = lignes.map((l) => catalogue.find((p) => p.id === l.produitServiceId)).find((p) => p?.modeCalcul === 'surface_planches')?.code ?? null;
+  const categorieCo =
+    lignes
+      .map((l) => catalogue.find((p) => p.id === l.produitServiceId))
+      .find((p) => p?.modeCalcul === 'surface_planches')?.code ?? null;
 
   return (
     <div className="fiche-crm-fond" onClick={onClose}>
-      <aside className="fiche-crm offre" role="dialog" aria-modal="true" aria-labelledby="offre-titre" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="fiche-crm offre"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="offre-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="fiche-crm-entete">
           <div>
             <p className="fiche-crm-titre">Offre commerciale</p>
@@ -202,7 +218,9 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
             </h2>
             <p className="fiche-crm-meta">
               {devis
-                ? [devis.client.nom, devis.dossierCrm?.code, `créée le ${jjmmaaaa(devis.creeLe)}`].filter(Boolean).join(' · ')
+                ? [devis.client.nom, devis.dossierCrm?.code, `créée le ${jjmmaaaa(devis.creeLe)}`]
+                    .filter(Boolean)
+                    .join(' · ')
                 : 'Choisir le lead ou créer le client'}
             </p>
           </div>
@@ -215,10 +233,22 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
           <section className="offre-carte">
             <h3 className="offre-titre-section">1 · Pour qui est cette offre ?</h3>
             <div className="offre-bascule" role="tablist">
-              <button type="button" role="tab" aria-selected={mode === 'lead'} className={mode === 'lead' ? 'is-active' : ''} onClick={() => setMode('lead')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'lead'}
+                className={mode === 'lead' ? 'is-active' : ''}
+                onClick={() => setMode('lead')}
+              >
                 Lead existant du CRM
               </button>
-              <button type="button" role="tab" aria-selected={mode === 'nouveau'} className={mode === 'nouveau' ? 'is-active' : ''} onClick={() => setMode('nouveau')}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'nouveau'}
+                className={mode === 'nouveau' ? 'is-active' : ''}
+                onClick={() => setMode('nouveau')}
+              >
                 Nouveau client
               </button>
             </div>
@@ -248,11 +278,14 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
               <div className="offre-nouveau">
                 <strong>Nouveau projet : d’abord la fiche du lead, ensuite le devis.</strong>
                 <p>
-                  Le HUB ouvre la création du lead dans le CRM (client, localisation, fiche apporteur). Une fois la fiche créée
-                  puis complétée (catégorie, type, fiche Programme), le bouton « Continuer vers le devis » ramène ici avec
-                  l’offre pré-remplie.
+                  Le HUB ouvre la création du lead dans le CRM (client, localisation, fiche apporteur). Une fois la
+                  fiche créée puis complétée (catégorie, type, fiche Programme), le bouton « Continuer vers le devis »
+                  ramène ici avec l’offre pré-remplie.
                 </p>
-                <Link className="btn-primary offre-nouveau-bouton" href={`/admin/${slug}/crm?nouveau=1&depuis=finances`}>
+                <Link
+                  className="btn-primary offre-nouveau-bouton"
+                  href={`/admin/${slug}/crm?nouveau=1&depuis=finances`}
+                >
                   Remplir la fiche du lead dans le CRM
                 </Link>
               </div>
@@ -344,16 +377,26 @@ export function OffrePanneau({ slug, societe, catalogue, leads, devisId, dossier
                   <span className="offre-badge">Annexe 1 · Fiche Programme jointe</span>
                 </div>
                 <dl className="offre-programme">
-                  <Champ titre="Localisation" valeur={lead.localite ? `${lead.localite.nom} (${lead.localite.code})` : lead.localisation || null} />
+                  <Champ
+                    titre="Localisation"
+                    valeur={lead.localite ? `${lead.localite.nom} (${lead.localite.code})` : lead.localisation || null}
+                  />
                   <Champ titre="Catégorie" valeur={lead.categorie ? CATEGORIES[lead.categorie] : null} />
                   <Champ titre="Catégorie CO" valeur={categorieCo} />
-                  <Champ titre="Surface" valeur={lead.surfaceTerrain > 0 ? `${lead.surfaceTerrain.toLocaleString('fr-FR')} m²` : null} />
+                  <Champ
+                    titre="Surface"
+                    valeur={lead.surfaceTerrain > 0 ? `${lead.surfaceTerrain.toLocaleString('fr-FR')} m²` : null}
+                  />
                   <Champ titre="Planches" valeur={lead.nbPlanches > 0 ? String(lead.nbPlanches) : null} />
                   <Champ titre="Standing" valeur={lead.standing ? STANDINGS[lead.standing] : null} />
                   <Champ titre="Gamme" valeur={lead.gamme ? GAMMES[lead.gamme] : null} />
                   <Champ
                     titre="Surface × planches"
-                    valeur={lead.surfaceTerrain > 0 && lead.nbPlanches > 0 ? `${(lead.surfaceTerrain * lead.nbPlanches).toLocaleString('fr-FR')} m²` : null}
+                    valeur={
+                      lead.surfaceTerrain > 0 && lead.nbPlanches > 0
+                        ? `${(lead.surfaceTerrain * lead.nbPlanches).toLocaleString('fr-FR')} m²`
+                        : null
+                    }
                   />
                 </dl>
                 <p className="offre-programme-resume">{lead.programme || 'Fiche Programme à remplir'}</p>

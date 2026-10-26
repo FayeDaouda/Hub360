@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ActionPaie, Prisma, TypePieceDossier } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -69,7 +64,17 @@ export function completude(d: DossierLu): { pourcentage: number; manquants: numb
 }
 
 function versDossier(d: DossierLu) {
-  const { societe, collaborateur, utilisateur, pieces, bulletins, salaires, archiveParId: _a, creeParId: _c, ...champs } = d;
+  const {
+    societe,
+    collaborateur,
+    utilisateur,
+    pieces,
+    bulletins,
+    salaires,
+    archiveParId: _a,
+    creeParId: _c,
+    ...champs
+  } = d;
   // Compte qui ouvre « Mon espace » : celui de la fiche d'équipe s'il y en a
   // une, sinon le compte relié directement au dossier.
   const compte = collaborateur?.utilisateur ?? utilisateur;
@@ -78,7 +83,12 @@ function versDossier(d: DossierLu) {
     societe,
     cellule: collaborateur?.cellule?.nom ?? null,
     compte: compte
-      ? { id: compte.id, libelle: `${compte.prenom} ${compte.nom}`.trim(), email: compte.email, viaFiche: !!collaborateur?.utilisateur }
+      ? {
+          id: compte.id,
+          libelle: `${compte.prenom} ${compte.nom}`.trim(),
+          email: compte.email,
+          viaFiche: !!collaborateur?.utilisateur,
+        }
       : null,
     pieces: PIECES_DOSSIER.map((type) => {
       const p = pieces.find((x) => x.type === type);
@@ -124,7 +134,12 @@ export class DossiersPersonnelService {
     const jour = new Date().toISOString().slice(0, 10);
     const actifs = await this.prisma.dossierPersonnel.findMany({
       where: { archiveLe: null },
-      select: { salaires: { where: { statut: 'valide' }, select: { montant: true, dateEffet: true, statut: true, decideLe: true } } },
+      select: {
+        salaires: {
+          where: { statut: 'valide' },
+          select: { montant: true, dateEffet: true, statut: true, decideLe: true },
+        },
+      },
     });
     const salaires = actifs.map((d) => salaireAu(d.salaires, jour)).filter((s): s is number => s !== null);
     return { masse: salaires.reduce((t, s) => t + s, 0), renseignes: salaires.length, total: actifs.length };
@@ -238,14 +253,26 @@ export class DossiersPersonnelService {
       const cibles = new Map(reaffectations.map((r) => [r.tacheId, r.collaborateurId]));
       for (const t of taches) {
         const cible = cibles.get(t.id);
-        if (!cible || !noms.has(cible)) throw new BadRequestException(`Tâche à réaffecter : ${t.projet} · ${t.carte} · ${t.libelle}.`);
+        if (!cible || !noms.has(cible))
+          throw new BadRequestException(`Tâche à réaffecter : ${t.projet} · ${t.carte} · ${t.libelle}.`);
         ops.push(
           this.prisma.tacheProjet.update({ where: { id: t.id }, data: { assigneId: cible } }),
           this.prisma.evenementTacheProjet.create({
-            data: { tacheId: t.id, type: 'assignation', parId: acteurId, detail: `Confiée à ${noms.get(cible)} (départ)` },
+            data: {
+              tacheId: t.id,
+              type: 'assignation',
+              parId: acteurId,
+              detail: `Confiée à ${noms.get(cible)} (départ)`,
+            },
           }),
         );
-        confiees.push({ tacheId: t.id, projetId: t.projetId, societeId: t.societeId, titre: `${t.projet} · ${t.carte} · ${t.libelle}`, cible });
+        confiees.push({
+          tacheId: t.id,
+          projetId: t.projetId,
+          societeId: t.societeId,
+          titre: `${t.projet} · ${t.carte} · ${t.libelle}`,
+          cible,
+        });
       }
     }
 
@@ -258,7 +285,12 @@ export class DossiersPersonnelService {
         ops.push(
           this.prisma.utilisateur.update({
             where: { id: utilisateurId },
-            data: { actif: false, desactiveLe: maintenant, desactiveParId: acteurId, sessionsValidesDepuis: maintenant },
+            data: {
+              actif: false,
+              desactiveLe: maintenant,
+              desactiveParId: acteurId,
+              sessionsValidesDepuis: maintenant,
+            },
           }),
           this.prisma.evenementCompte.create({
             data: { utilisateurId, type: 'compte_desactive', parId: acteurId, detail: MOTIF_ARCHIVAGE },
@@ -453,7 +485,8 @@ export class DossiersPersonnelService {
       if (collaborateurId !== null) data.utilisateurId = null;
     }
     if (utilisateurId !== undefined && utilisateurId !== null) {
-      const ficheCible = collaborateurId !== undefined ? collaborateurId : id ? (await this.charger(id)).collaborateurId : null;
+      const ficheCible =
+        collaborateurId !== undefined ? collaborateurId : id ? (await this.charger(id)).collaborateurId : null;
       if (ficheCible) {
         throw new BadRequestException("Ce dossier est relié à une fiche d'équipe : le compte vient de la fiche.");
       }
@@ -477,8 +510,13 @@ export class DossiersPersonnelService {
 }
 
 // Mois AAAA-MM déjà commencé, et pas avant l'entrée du salarié.
-export function verifierMoisBulletin(mois: string, dateEntree: string | null, aujourdhui = new Date().toISOString().slice(0, 10)) {
+export function verifierMoisBulletin(
+  mois: string,
+  dateEntree: string | null,
+  aujourdhui = new Date().toISOString().slice(0, 10),
+) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mois)) throw new BadRequestException('Mois invalide (AAAA-MM).');
   if (mois > aujourdhui.slice(0, 7)) throw new BadRequestException('Pas de bulletin pour un mois à venir.');
-  if (dateEntree && mois < dateEntree.slice(0, 7)) throw new BadRequestException("Mois antérieur à l'entrée du salarié.");
+  if (dateEntree && mois < dateEntree.slice(0, 7))
+    throw new BadRequestException("Mois antérieur à l'entrée du salarié.");
 }

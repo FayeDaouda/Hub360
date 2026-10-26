@@ -19,7 +19,14 @@ import {
 } from 'lucide-react';
 import { getProjets } from '@/lib/crm';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
-import { getAvoirsAValider, getClotures, LIBELLE_MOTIF_AVOIR, lienFacturationProjet, type AvoirAValider, type MoisCloture } from '@/lib/facturation';
+import {
+  getAvoirsAValider,
+  getClotures,
+  LIBELLE_MOTIF_AVOIR,
+  lienFacturationProjet,
+  type AvoirAValider,
+  type MoisCloture,
+} from '@/lib/facturation';
 import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { PayerCommission } from '@/components/finances/payer-commission';
 import { getCommissions, type CommissionApporteur } from '@/lib/commissions';
@@ -125,7 +132,10 @@ export function AValiderCfo({
     const mois = new Date().toISOString().slice(0, 7);
     const liste = factures ?? [];
     return {
-      encaisseMois: liste.reduce((t, f) => t + f.paiements.filter((p) => p.date.startsWith(mois)).reduce((s, p) => s + p.montant, 0), 0),
+      encaisseMois: liste.reduce(
+        (t, f) => t + f.paiements.filter((p) => p.date.startsWith(mois)).reduce((s, p) => s + p.montant, 0),
+        0,
+      ),
       enRetard: liste.filter((f) => f.statutEffectif === 'en_retard'),
     };
   }, [factures]);
@@ -143,7 +153,12 @@ export function AValiderCfo({
       titre: `Offre · ${o.client.nom} · ${o.code}`,
       detail: `${o.offre ? `${formatMontant(o.offre.montantTtc)} TTC · ` : ''}soumise${o.soumisLe ? ` le ${jjmm(o.soumisLe)}` : ''}, à valider avant l’envoi au client`,
       // Au-delà d'un jour de dépassement, l'attente se lit en jours.
-      quand: reste >= 0 ? `reste ${reste} h` : ecoule >= DELAI_OFFRE_H + 24 ? `en attente depuis ${Math.floor(ecoule / 24)} j` : `48 h dépassées de ${-reste} h`,
+      quand:
+        reste >= 0
+          ? `reste ${reste} h`
+          : ecoule >= DELAI_OFFRE_H + 24
+            ? `en attente depuis ${Math.floor(ecoule / 24)} j`
+            : `48 h dépassées de ${-reste} h`,
       ton: reste < 0 ? 'risque' : ecoule >= DELAI_OFFRE_H / 2 ? 'attention' : 'info',
       action: 'Examiner',
       ouvrir: () => router.push(`/admin/${slug}/crm?dossier=${o.id}`),
@@ -167,7 +182,9 @@ export function AValiderCfo({
   }
   // 2. Factures directes préparées, à émettre.
   // Le CEO ne voit que celles au-delà du seuil : en deçà, c'est au CFO (revue CEO).
-  for (const f of (factures ?? []).filter((x) => aValiderCfo(x) && contresigneAffaire(session, contresignature, x.montantTtc))) {
+  for (const f of (factures ?? []).filter(
+    (x) => aValiderCfo(x) && contresigneAffaire(session, contresignature, x.montantTtc),
+  )) {
     const jours = Math.floor((maintenant - Date.parse(f.creeLe)) / JOUR);
     elements.push({
       cle: `facture-${f.id}`,
@@ -336,9 +353,16 @@ export function AValiderCfo({
           ))}
         </ul>
       )}
-      {avoirOuvert && <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />}
+      {avoirOuvert && (
+        <DecisionAvoir slug={slug} avoir={avoirOuvert} onFait={setAvoirs} onClose={() => setAvoirOuvert(null)} />
+      )}
       {commissionOuverte && (
-        <PayerCommission slug={slug} commission={commissionOuverte} onFait={() => setVersionCommissions((v) => v + 1)} onClose={() => setCommissionOuverte(null)} />
+        <PayerCommission
+          slug={slug}
+          commission={commissionOuverte}
+          onFait={() => setVersionCommissions((v) => v + 1)}
+          onClose={() => setCommissionOuverte(null)}
+        />
       )}
       {elements.length > VISIBLES && (
         <button type="button" className="at-rh-plus" aria-expanded={tout} onClick={() => setTout((x) => !x)}>

@@ -52,7 +52,8 @@ export function ChampsRemise({
   return (
     <span className="po-remise-champs">
       <span className="po-panneau-label">
-        Fichiers <span className={obligatoire ? 'depot-requis' : undefined}>({obligatoire ? 'obligatoire' : 'facultatif'})</span>
+        Fichiers{' '}
+        <span className={obligatoire ? 'depot-requis' : undefined}>({obligatoire ? 'obligatoire' : 'facultatif'})</span>
       </span>
       {/* Zone du HUB plutôt que le champ natif (« Choose Files » selon la
           langue du navigateur). */}
@@ -72,7 +73,9 @@ export function ChampsRemise({
       >
         <UploadCloud size={20} aria-hidden />
         <span className="depot-zone-texte">
-          {plein ? `${MAX_PIECES} fichiers au plus` : (
+          {plein ? (
+            `${MAX_PIECES} fichiers au plus`
+          ) : (
             <>
               Glissez vos fichiers ici ou <span className="depot-zone-lien">cliquez pour parcourir</span>
             </>

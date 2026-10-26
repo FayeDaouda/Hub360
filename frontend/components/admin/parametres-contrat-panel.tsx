@@ -3,12 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import {
-  ajouterAnnexeGabarit,
-  getParametresContrat,
-  majParametresContrat,
-  retirerAnnexeGabarit,
-} from '@/lib/contrats';
+import { ajouterAnnexeGabarit, getParametresContrat, majParametresContrat, retirerAnnexeGabarit } from '@/lib/contrats';
 import type { ParametresContrat } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
 
@@ -95,9 +90,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
       <section className="panel glass-panel foncier-groupe">
         <h3 className="panel-title">Modèle de contrat</h3>
         <p className="field-aide">
-          Texte fourni par la société. Les champs entre doubles accolades sont remplis à la
-          génération ; un champ inconnu est refusé. Au-dessus du seuil ci-dessous, le contrat est
-          rédigé sur mesure et déposé à la place.
+          Texte fourni par la société. Les champs entre doubles accolades sont remplis à la génération ; un champ
+          inconnu est refusé. Au-dessus du seuil ci-dessous, le contrat est rédigé sur mesure et déposé à la place.
         </p>
         <textarea
           className="field-input contrat-modele-saisie"
@@ -127,21 +121,45 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
         <div className="field-row">
           <label className="field">
             <span className="field-label">Signataire jusqu’au seuil (Architecte DPLG)</span>
-            <input className="field-input" value={nom} onChange={(e) => setNom(e.target.value)} maxLength={120} placeholder="Nom et prénom" />
+            <input
+              className="field-input"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              maxLength={120}
+              placeholder="Nom et prénom"
+            />
           </label>
           <label className="field">
             <span className="field-label">Fonction</span>
-            <input className="field-input" value={fonction} onChange={(e) => setFonction(e.target.value)} maxLength={120} placeholder="ex : Architecte DPLG" />
+            <input
+              className="field-input"
+              value={fonction}
+              onChange={(e) => setFonction(e.target.value)}
+              maxLength={120}
+              placeholder="ex : Architecte DPLG"
+            />
           </label>
         </div>
         <div className="field-row">
           <label className="field">
             <span className="field-label">Signataire au-delà du seuil (CEO)</span>
-            <input className="field-input" value={ceoNom} onChange={(e) => setCeoNom(e.target.value)} maxLength={120} placeholder="Nom et prénom" />
+            <input
+              className="field-input"
+              value={ceoNom}
+              onChange={(e) => setCeoNom(e.target.value)}
+              maxLength={120}
+              placeholder="Nom et prénom"
+            />
           </label>
           <label className="field">
             <span className="field-label">Fonction</span>
-            <input className="field-input" value={ceoFonction} onChange={(e) => setCeoFonction(e.target.value)} maxLength={120} placeholder="ex : Directeur général" />
+            <input
+              className="field-input"
+              value={ceoFonction}
+              onChange={(e) => setCeoFonction(e.target.value)}
+              maxLength={120}
+              placeholder="ex : Directeur général"
+            />
           </label>
         </div>
         <label className="field">
@@ -185,8 +203,8 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
       <section className="panel glass-panel foncier-groupe">
         <h3 className="panel-title">Annexes du contrat</h3>
         <p className="field-aide">
-          Proposées à chaque contrat : jointes (fichier) ou marquées « non nécessaire ». L’offre
-          acceptée est toujours jointe d’office.
+          Proposées à chaque contrat : jointes (fichier) ou marquées « non nécessaire ». L’offre acceptée est toujours
+          jointe d’office.
         </p>
         <ul className="foncier-liste">
           {p.annexes.map((a) => (

@@ -7,7 +7,8 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { formatMontant } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale } from '@/lib/types';
 
-const libelleMois = (m: string) => new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+const libelleMois = (m: string) =>
+  new Date(`${m}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 type Vente = { f: FactureCentrale; origine: string | null };
 type Encaissement = { f: FactureCentrale; date: string; montant: number; mode: string | null; reference: string };
@@ -41,7 +42,17 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
       .sort((a, b) => (a.emiseLe ?? '').localeCompare(b.emiseLe ?? '') || (a.numero ?? 0) - (b.numero ?? 0))
       .map((f) => ({ f, origine: f.factureOrigineId ? (parId.get(f.factureOrigineId)?.reference ?? null) : null }));
     const encaissements: Encaissement[] = factures
-      .flatMap((f) => f.paiements.filter((p) => p.date.startsWith(mois)).map((p) => ({ f, date: p.date, montant: p.montant, mode: p.mode ? MODES_PAIEMENT[p.mode] : null, reference: p.reference })))
+      .flatMap((f) =>
+        f.paiements
+          .filter((p) => p.date.startsWith(mois))
+          .map((p) => ({
+            f,
+            date: p.date,
+            montant: p.montant,
+            mode: p.mode ? MODES_PAIEMENT[p.mode] : null,
+            reference: p.reference,
+          })),
+      )
       .sort((a, b) => a.date.localeCompare(b.date));
     return { ventes, encaissements };
   }, [factures, mois]);
@@ -51,38 +62,52 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
 
   function exporterVentes() {
     const lignes: (Vente | null)[] = [...ventes, null]; // dernière ligne : total
-    exporterCsv(`journal-ventes-${mois}`, [
-      { titre: 'Date d’émission', valeur: (v) => (v ? dateExport(v.f.emiseLe) : 'TOTAL') },
-      { titre: 'N° de pièce', valeur: (v) => v?.f.reference },
-      { titre: 'Type', valeur: (v) => (v ? (v.f.estAvoir ? 'Avoir' : 'Facture') : null) },
-      { titre: 'Facture d’origine', valeur: (v) => v?.origine },
-      { titre: 'Client', valeur: (v) => v?.f.client?.nom },
-      { titre: 'Projet / dossier', valeur: (v) => v?.f.projet?.code ?? v?.f.dossierCrm?.code },
-      { titre: 'Libellé', valeur: (v) => v?.f.libelle },
-      { titre: 'Montant HT (FCFA)', valeur: (v) => (v ? v.f.montantHt : total(ventes, 'montantHt')) },
-      { titre: 'Taux TVA (%)', valeur: (v) => v?.f.tauxTva },
-      { titre: 'TVA collectée (FCFA)', valeur: (v) => (v ? v.f.montantTva : total(ventes, 'montantTva')) },
-      { titre: 'Montant TTC (FCFA)', valeur: (v) => (v ? v.f.montantTtc : total(ventes, 'montantTtc')) },
-      { titre: 'Échéance', valeur: (v) => (v ? dateExport(v.f.echeanceLe) : null) },
-    ], lignes);
+    exporterCsv(
+      `journal-ventes-${mois}`,
+      [
+        { titre: 'Date d’émission', valeur: (v) => (v ? dateExport(v.f.emiseLe) : 'TOTAL') },
+        { titre: 'N° de pièce', valeur: (v) => v?.f.reference },
+        { titre: 'Type', valeur: (v) => (v ? (v.f.estAvoir ? 'Avoir' : 'Facture') : null) },
+        { titre: 'Facture d’origine', valeur: (v) => v?.origine },
+        { titre: 'Client', valeur: (v) => v?.f.client?.nom },
+        { titre: 'Projet / dossier', valeur: (v) => v?.f.projet?.code ?? v?.f.dossierCrm?.code },
+        { titre: 'Libellé', valeur: (v) => v?.f.libelle },
+        { titre: 'Montant HT (FCFA)', valeur: (v) => (v ? v.f.montantHt : total(ventes, 'montantHt')) },
+        { titre: 'Taux TVA (%)', valeur: (v) => v?.f.tauxTva },
+        { titre: 'TVA collectée (FCFA)', valeur: (v) => (v ? v.f.montantTva : total(ventes, 'montantTva')) },
+        { titre: 'Montant TTC (FCFA)', valeur: (v) => (v ? v.f.montantTtc : total(ventes, 'montantTtc')) },
+        { titre: 'Échéance', valeur: (v) => (v ? dateExport(v.f.echeanceLe) : null) },
+      ],
+      lignes,
+    );
   }
 
   function exporterEncaissements() {
     const lignes: (Encaissement | null)[] = [...encaissements, null];
-    exporterCsv(`journal-encaissements-${mois}`, [
-      { titre: 'Date d’encaissement', valeur: (e) => (e ? dateExport(e.date) : 'TOTAL') },
-      { titre: 'Facture', valeur: (e) => e?.f.reference },
-      { titre: 'Client', valeur: (e) => e?.f.client?.nom },
-      { titre: 'Projet / dossier', valeur: (e) => e?.f.projet?.code ?? e?.f.dossierCrm?.code },
-      { titre: 'Mode de paiement', valeur: (e) => e?.mode },
-      { titre: 'Référence du versement', valeur: (e) => e?.reference },
-      { titre: 'Montant encaissé (FCFA)', valeur: (e) => (e ? e.montant : totalEncaisse) },
-    ], lignes);
+    exporterCsv(
+      `journal-encaissements-${mois}`,
+      [
+        { titre: 'Date d’encaissement', valeur: (e) => (e ? dateExport(e.date) : 'TOTAL') },
+        { titre: 'Facture', valeur: (e) => e?.f.reference },
+        { titre: 'Client', valeur: (e) => e?.f.client?.nom },
+        { titre: 'Projet / dossier', valeur: (e) => e?.f.projet?.code ?? e?.f.dossierCrm?.code },
+        { titre: 'Mode de paiement', valeur: (e) => e?.mode },
+        { titre: 'Référence du versement', valeur: (e) => e?.reference },
+        { titre: 'Montant encaissé (FCFA)', valeur: (e) => (e ? e.montant : totalEncaisse) },
+      ],
+      lignes,
+    );
   }
 
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal exc-modal" role="dialog" aria-modal="true" aria-labelledby="exc-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal exc-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exc-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="exc-titre">Export comptable</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
@@ -91,8 +116,8 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
         </header>
         <div className="modal-body exc-corps">
           <p className="dmd-note">
-            Journaux du mois au format Excel, sans plan de comptes : à remettre à la personne qui prépare les comptes annuels. Le format
-            s’adaptera à son logiciel quand il sera connu.
+            Journaux du mois au format Excel, sans plan de comptes : à remettre à la personne qui prépare les comptes
+            annuels. Le format s’adaptera à son logiciel quand il sera connu.
           </p>
           <label className="field">
             <span className="field-label">Mois</span>
@@ -109,8 +134,8 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
             <div className="exc-journal">
               <p className="field-label">Journal des ventes</p>
               <p className="exc-chiffres">
-                {ventes.length} pièce{ventes.length > 1 ? 's' : ''} · HT {formatMontant(total(ventes, 'montantHt'))} · TVA {formatMontant(total(ventes, 'montantTva'))} · TTC{' '}
-                {formatMontant(total(ventes, 'montantTtc'))}
+                {ventes.length} pièce{ventes.length > 1 ? 's' : ''} · HT {formatMontant(total(ventes, 'montantHt'))} ·
+                TVA {formatMontant(total(ventes, 'montantTva'))} · TTC {formatMontant(total(ventes, 'montantTtc'))}
               </p>
               <button type="button" className="btn-ghost" disabled={!ventes.length} onClick={exporterVentes}>
                 <FileSpreadsheet size={15} aria-hidden /> Télécharger
@@ -119,15 +144,22 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
             <div className="exc-journal">
               <p className="field-label">Journal des encaissements</p>
               <p className="exc-chiffres">
-                {encaissements.length} encaissement{encaissements.length > 1 ? 's' : ''} · {formatMontant(totalEncaisse)}
+                {encaissements.length} encaissement{encaissements.length > 1 ? 's' : ''} ·{' '}
+                {formatMontant(totalEncaisse)}
               </p>
-              <button type="button" className="btn-ghost" disabled={!encaissements.length} onClick={exporterEncaissements}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={!encaissements.length}
+                onClick={exporterEncaissements}
+              >
                 <FileSpreadsheet size={15} aria-hidden /> Télécharger
               </button>
             </div>
           </div>
           <p className="dmd-note">
-            TVA collectée ici = TVA des factures émises dans le mois. Si elle est due à l’encaissement, le journal des encaissements donne la base.
+            TVA collectée ici = TVA des factures émises dans le mois. Si elle est due à l’encaissement, le journal des
+            encaissements donne la base.
           </p>
         </div>
       </div>

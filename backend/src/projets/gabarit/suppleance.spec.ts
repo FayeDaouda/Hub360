@@ -7,10 +7,17 @@ describe('contexteDecision', () => {
     const roles: Record<string, string[]> = { 'Dir. GC': ['DG1', 'DG2'], 'CTO (transverse)': ['CTO'] };
     return {
       utilisateurSocieteRole: {
-        findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) => Promise.resolve((roles[where.role.nom] ?? []).map((utilisateurId) => ({ utilisateurId })))),
+        findMany: jest.fn(({ where }: { where: { role: { nom: string } } }) =>
+          Promise.resolve((roles[where.role.nom] ?? []).map((utilisateurId) => ({ utilisateurId }))),
+        ),
       },
       demandeAbsence: {
-        findMany: jest.fn().mockResolvedValue(absences.map((a) => ({ suppleantId: a.suppleantId, dossier: { utilisateurId: a.utilisateurId, collaborateurId: a.collaborateurId } }))),
+        findMany: jest.fn().mockResolvedValue(
+          absences.map((a) => ({
+            suppleantId: a.suppleantId,
+            dossier: { utilisateurId: a.utilisateurId, collaborateurId: a.collaborateurId },
+          })),
+        ),
       },
       collaborateur: { findMany: jest.fn().mockResolvedValue([{ id: 'F-DG1' }]) },
     } as unknown as PrismaService;
@@ -23,19 +30,31 @@ describe('contexteDecision', () => {
   });
 
   it('Dir. GC absent sans suppléant : le CTO tient sa place et reçoit ses décisions', async () => {
-    const c = await contexteDecision(prisma([{ utilisateurId: 'DG1', collaborateurId: 'F-DG1', suppleantId: null }]), 'S1', '2026-11-17');
+    const c = await contexteDecision(
+      prisma([{ utilisateurId: 'DG1', collaborateurId: 'F-DG1', suppleantId: null }]),
+      'S1',
+      '2026-11-17',
+    );
     expect(c.ctoSupplee).toBe(true);
     expect(c.comptesDplg.sort()).toEqual(['CTO', 'DG2']);
     expect(c.collaborateursAbsents.has('F-DG1')).toBe(true);
   });
 
   it('suppléance confiée à un autre Dir. GC : le CTO n’intervient pas', async () => {
-    const c = await contexteDecision(prisma([{ utilisateurId: 'DG1', collaborateurId: null, suppleantId: 'DG2' }]), 'S1', '2026-11-17');
+    const c = await contexteDecision(
+      prisma([{ utilisateurId: 'DG1', collaborateurId: null, suppleantId: 'DG2' }]),
+      'S1',
+      '2026-11-17',
+    );
     expect(c).toMatchObject({ ctoSupplee: false, comptesDplg: ['DG2'] });
   });
 
   it('suppléance confiée au CTO : le CTO tient sa place', async () => {
-    const c = await contexteDecision(prisma([{ utilisateurId: 'DG1', collaborateurId: null, suppleantId: 'CTO' }]), 'S1', '2026-11-17');
+    const c = await contexteDecision(
+      prisma([{ utilisateurId: 'DG1', collaborateurId: null, suppleantId: 'CTO' }]),
+      'S1',
+      '2026-11-17',
+    );
     expect(c.ctoSupplee).toBe(true);
   });
 });

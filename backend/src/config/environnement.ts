@@ -16,13 +16,18 @@ const LONGUEUR_MIN_SECRET_PRODUCTION = 32;
 
 class VariablesEnvironnement {
   @IsOptional() @IsIn(['development', 'production', 'test']) NODE_ENV?: string;
-  @Matches(/^postgres(ql)?:\/\//, { message: 'DATABASE_URL doit être une URL PostgreSQL (postgresql://…).' }) DATABASE_URL!: string;
+  @Matches(/^postgres(ql)?:\/\//, { message: 'DATABASE_URL doit être une URL PostgreSQL (postgresql://…).' })
+  DATABASE_URL!: string;
   @IsOptional() @IsString() JWT_SECRET?: string;
-  @IsOptional() @Matches(/^\d+[smhd]?$/, { message: 'JWT_EXPIRES_IN doit être une durée (ex. 7d, 12h).' }) JWT_EXPIRES_IN?: string;
+  @IsOptional()
+  @Matches(/^\d+[smhd]?$/, { message: 'JWT_EXPIRES_IN doit être une durée (ex. 7d, 12h).' })
+  JWT_EXPIRES_IN?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(65_535) PORT?: number;
   @IsOptional() @IsUrl({ require_tld: false }) FRONT_URL?: string;
   @IsOptional() @IsString() CORS_ORIGINS?: string;
-  @IsOptional() @Matches(/^(log|smtp)$/i, { message: 'EMAIL_TRANSPORT vaut « log » ou « smtp ».' }) EMAIL_TRANSPORT?: string;
+  @IsOptional()
+  @Matches(/^(log|smtp)$/i, { message: 'EMAIL_TRANSPORT vaut « log » ou « smtp ».' })
+  EMAIL_TRANSPORT?: string;
   @IsOptional() @IsString() SMTP_HOST?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(65_535) SMTP_PORT?: number;
   @IsOptional() @IsIn(['true', 'false']) SMTP_SECURE?: string;
@@ -36,7 +41,9 @@ class VariablesEnvironnement {
 // Problèmes de configuration, en clair ; liste vide si tout est bon. Une
 // variable vide (`SMTP_HOST=""` dans .env.example) vaut une variable absente.
 export function problemesEnvironnement(env: NodeJS.ProcessEnv): string[] {
-  const renseignees = Object.fromEntries(Object.entries(env).filter(([, valeur]) => valeur !== undefined && valeur !== ''));
+  const renseignees = Object.fromEntries(
+    Object.entries(env).filter(([, valeur]) => valeur !== undefined && valeur !== ''),
+  );
   const variables = plainToInstance(VariablesEnvironnement, renseignees);
   const problemes = validateSync(variables).flatMap((erreur) => Object.values(erreur.constraints ?? {}));
 
@@ -44,7 +51,9 @@ export function problemesEnvironnement(env: NodeJS.ProcessEnv): string[] {
   if (env.NODE_ENV === 'production') {
     const secret = env.JWT_SECRET ?? '';
     if (secret === SECRET_JWT_PAR_DEFAUT || secret.length < LONGUEUR_MIN_SECRET_PRODUCTION) {
-      problemes.push(`JWT_SECRET doit être une valeur aléatoire d’au moins ${LONGUEUR_MIN_SECRET_PRODUCTION} caractères en production.`);
+      problemes.push(
+        `JWT_SECRET doit être une valeur aléatoire d’au moins ${LONGUEUR_MIN_SECRET_PRODUCTION} caractères en production.`,
+      );
     }
   }
   return problemes;

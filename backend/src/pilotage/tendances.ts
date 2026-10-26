@@ -30,7 +30,15 @@ export function seriesTaches(mois: string[], taches: TacheValidee[]): { aTemps: 
   return {
     aTemps: mois.map((m) => ({
       mois: m,
-      valeur: partATemps(duMois(m).map((t) => ({ statut: t.statut, valideeLe: t.valideeLe, echeance: t.echeance, debut: null, heures: null }))),
+      valeur: partATemps(
+        duMois(m).map((t) => ({
+          statut: t.statut,
+          valideeLe: t.valideeLe,
+          echeance: t.echeance,
+          debut: null,
+          heures: null,
+        })),
+      ),
     })),
     reprises: mois.map((m) => {
       const v = duMois(m);

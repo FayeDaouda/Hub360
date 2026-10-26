@@ -19,11 +19,13 @@ import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 //   l'horizontale) et `data-bord-y` (haut / milieu / bas) pour le fondu des
 //   bords qui annonce la suite (01-fondations.css).
 
-const BANDEAUX = '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes, .eq-raccourcis-liste, .fin-filtres';
+const BANDEAUX =
+  '.vue-toggle, .mt-filtres, .po-etapes, .po-liste > ul, .reg-etapes, .eq-raccourcis-liste, .fin-filtres';
 const ZONES = '.po-dossier-defile, .eq-cote';
 const OUTILS = '.liste-collee-outils';
 const TABLEAUX = '.liste-collee .admin-table-wrap, .liste-collee .admin-table';
-const ACTIF = '.is-active, .is-actif, [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"]';
+const ACTIF =
+  '.is-active, .is-actif, [aria-selected="true"], [aria-pressed="true"], [aria-checked="true"], [aria-current="page"]';
 
 function bord(position: number, max: number, debut: string, fin: string): string | undefined {
   if (max <= 1) return undefined;
@@ -56,7 +58,10 @@ function ramener(bandeau: HTMLElement, actif: HTMLElement, doux: boolean) {
   const a = actif.getBoundingClientRect();
   // À l'horizontale : centré. À la verticale (liste) : juste rendu visible.
   if (bandeau.scrollWidth > bandeau.clientWidth) {
-    bandeau.scrollTo({ left: bandeau.scrollLeft + a.left - b.left - (bandeau.clientWidth - actif.offsetWidth) / 2, behavior });
+    bandeau.scrollTo({
+      left: bandeau.scrollLeft + a.left - b.left - (bandeau.clientWidth - actif.offsetWidth) / 2,
+      behavior,
+    });
   } else if (bandeau.scrollHeight > bandeau.clientHeight && (a.top < b.top || a.bottom > b.bottom)) {
     bandeau.scrollTo({ top: bandeau.scrollTop + a.top - b.top - 8, behavior });
   }
@@ -102,7 +107,8 @@ export function useDefilementCoque() {
     const redim = new ResizeObserver((entrees) =>
       entrees.forEach(({ target }) => {
         const el = target as HTMLElement;
-        if (el.matches(OUTILS)) el.closest<HTMLElement>('.liste-collee')?.style.setProperty('--outils-h', `${el.offsetHeight}px`);
+        if (el.matches(OUTILS))
+          el.closest<HTMLElement>('.liste-collee')?.style.setProperty('--outils-h', `${el.offsetHeight}px`);
         else if (el.matches(TABLEAUX)) ajusterEntete(el.closest<HTMLElement>('.liste-collee'));
         else marquerBord(el);
       }),
@@ -177,7 +183,9 @@ export function useSectionEnLecture(ids: string[], repere?: RefObject<HTMLElemen
       attente = requestAnimationFrame(() => {
         const haut = (repere?.current ?? document.querySelector('.admin-topbar'))?.getBoundingClientRect().bottom ?? 0;
         const enBas = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-        const passees = liste.filter((id) => (document.getElementById(id)?.getBoundingClientRect().top ?? Infinity) <= haut + 24);
+        const passees = liste.filter(
+          (id) => (document.getElementById(id)?.getBoundingClientRect().top ?? Infinity) <= haut + 24,
+        );
         setEnLecture(enBas && window.scrollY > 0 ? liste[liste.length - 1] : (passees.pop() ?? liste[0]));
       });
     };

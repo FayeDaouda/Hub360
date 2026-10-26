@@ -17,7 +17,11 @@ export function PastillesSuivi({ r }: { r: ReportingPilotage }) {
   if (!r.suivi) return null;
   return (
     <>
-      {r.suivi.lecture && <span className="pill pill--succes">Lu le {new Date(r.suivi.lecture.le).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>}
+      {r.suivi.lecture && (
+        <span className="pill pill--succes">
+          Lu le {new Date(r.suivi.lecture.le).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+        </span>
+      )}
       {r.suivi.questionsOuvertes > 0 && <span className="pill pill--attention">Question en cours</span>}
     </>
   );
@@ -26,7 +30,15 @@ export function PastillesSuivi({ r }: { r: ReportingPilotage }) {
 // Suivi d'un reporting déposé (revue CFO 20/10/2026, lot 5) : le destinataire
 // accuse réception ou pose une question ; l'émetteur répond dans le même fil.
 // Le serveur ne remet le fil qu'aux deux parties et revérifie chaque action.
-export function SuiviReporting({ slug, r, onVue }: { slug: string; r: ReportingPilotage; onVue: (v: VuePilotage) => void }) {
+export function SuiviReporting({
+  slug,
+  r,
+  onVue,
+}: {
+  slug: string;
+  r: ReportingPilotage;
+  onVue: (v: VuePilotage) => void;
+}) {
   const [question, setQuestion] = useState<string | null>(null); // null = formulaire fermé
   const [reponses, setReponses] = useState<Record<string, string>>({});
   const [envoi, setEnvoi] = useState<string | null>(null); // action en cours (anti double clic)
@@ -63,7 +75,12 @@ export function SuiviReporting({ slug, r, onVue }: { slug: string; r: ReportingP
         {(s.peutLire || s.peutQuestionner) && (
           <div className="sr-actions">
             {s.peutLire && !s.luParMoi && (
-              <button type="button" className="btn-primary" disabled={!!envoi} onClick={() => lancer('lu', () => lireReporting(slug, r.type, r.mois))}>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={!!envoi}
+                onClick={() => lancer('lu', () => lireReporting(slug, r.type, r.mois))}
+              >
                 <CheckCheck size={15} aria-hidden /> {envoi === 'lu' ? 'Enregistrement…' : 'Marquer comme lu'}
               </button>
             )}
@@ -80,7 +97,15 @@ export function SuiviReporting({ slug, r, onVue }: { slug: string; r: ReportingP
         <div className="sr-formulaire">
           <label className="field">
             <span className="field-label">Votre question à {r.emetteur}</span>
-            <textarea className="field-input" rows={3} maxLength={2000} value={question} disabled={!!envoi} onChange={(e) => setQuestion(e.target.value)} autoFocus />
+            <textarea
+              className="field-input"
+              rows={3}
+              maxLength={2000}
+              value={question}
+              disabled={!!envoi}
+              onChange={(e) => setQuestion(e.target.value)}
+              autoFocus
+            />
           </label>
           <div className="sr-boutons">
             <button type="button" className="btn-ghost" disabled={!!envoi} onClick={() => setQuestion(null)}>
@@ -90,7 +115,13 @@ export function SuiviReporting({ slug, r, onVue }: { slug: string; r: ReportingP
               type="button"
               className="btn-primary"
               disabled={!!envoi || question.trim().length < 3}
-              onClick={() => lancer('question', () => poserQuestionReporting(slug, r.type, r.mois, question.trim()), () => setQuestion(null))}
+              onClick={() =>
+                lancer(
+                  'question',
+                  () => poserQuestionReporting(slug, r.type, r.mois, question.trim()),
+                  () => setQuestion(null),
+                )
+              }
             >
               {envoi === 'question' ? 'Envoi…' : 'Envoyer la question'}
             </button>
@@ -105,7 +136,9 @@ export function SuiviReporting({ slug, r, onVue }: { slug: string; r: ReportingP
               <div className="sr-message">
                 <p className="sr-auteur">
                   <strong>{q.par ?? 'Destinataire'}</strong> · {dateHeure(q.le)}
-                  <span className={`pill ${q.reponse ? 'pill--succes' : 'pill--attention'}`}>{q.reponse ? 'Répondue' : 'Ouverte'}</span>
+                  <span className={`pill ${q.reponse ? 'pill--succes' : 'pill--attention'}`}>
+                    {q.reponse ? 'Répondue' : 'Ouverte'}
+                  </span>
                 </p>
                 <p className="sr-texte">{q.texte}</p>
               </div>
@@ -135,7 +168,11 @@ export function SuiviReporting({ slug, r, onVue }: { slug: string; r: ReportingP
                         type="button"
                         className="btn-primary"
                         disabled={!!envoi || (reponses[q.id] ?? '').trim().length < 3}
-                        onClick={() => lancer(q.id, () => repondreQuestionReporting(slug, r.type, r.mois, q.id, (reponses[q.id] ?? '').trim()))}
+                        onClick={() =>
+                          lancer(q.id, () =>
+                            repondreQuestionReporting(slug, r.type, r.mois, q.id, (reponses[q.id] ?? '').trim()),
+                          )
+                        }
                       >
                         {envoi === q.id ? 'Envoi…' : 'Répondre'}
                       </button>

@@ -11,7 +11,8 @@ import { balanceAgee, echeancier, TRANCHES, type LigneBalance } from '@/lib/tres
 import type { FactureCentrale } from '@/lib/types';
 
 const jjmm = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '—');
-const nomFacture = (f: FactureCentrale) => f.reference ?? (f.statut === 'brouillon' ? `${f.libelle || 'tranche'} (prévue)` : 'facture');
+const nomFacture = (f: FactureCentrale) =>
+  f.reference ?? (f.statut === 'brouillon' ? `${f.libelle || 'tranche'} (prévue)` : 'facture');
 
 // Onglet « Trésorerie » de Finances (revue CFO 20/10/2026, lot 3) :
 // encaissements attendus à 30 / 60 / 90 jours, puis balance âgée des
@@ -34,7 +35,10 @@ export function OngletTresorerie({
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [relances, setRelances] = useState<Record<string, string>>({});
 
-  const cumul = prevision.fenetres.reduce((t, w) => ({ sur: t.sur + w.sur, prevu: t.prevu + w.prevu }), { sur: 0, prevu: 0 });
+  const cumul = prevision.fenetres.reduce((t, w) => ({ sur: t.sur + w.sur, prevu: t.prevu + w.prevu }), {
+    sur: 0,
+    prevu: 0,
+  });
   const listeFenetre =
     fenetre === 'retard'
       ? prevision.enRetard.factures
@@ -84,9 +88,23 @@ export function OngletTresorerie({
           </p>
         </div>
         <div className="tre-cartes">
-          {carte('retard', 'Déjà en retard', prevision.enRetard.montant, 0, `${prevision.enRetard.factures.length} facture(s) à recouvrer`, 'risque')}
+          {carte(
+            'retard',
+            'Déjà en retard',
+            prevision.enRetard.montant,
+            0,
+            `${prevision.enRetard.factures.length} facture(s) à recouvrer`,
+            'risque',
+          )}
           {prevision.fenetres.map((w) => carte(w.cle, w.libelle, w.sur, w.prevu, `jusqu’au ${jjmm(w.au)}`))}
-          {carte('nondate', 'Sans date', prevision.nonDate.sur, prevision.nonDate.prevu, 'jalon de projet à dater', 'neutre')}
+          {carte(
+            'nondate',
+            'Sans date',
+            prevision.nonDate.sur,
+            prevision.nonDate.prevu,
+            'jalon de projet à dater',
+            'neutre',
+          )}
         </div>
         {fenetre && (
           <ul className="tre-liste">
@@ -112,7 +130,9 @@ export function OngletTresorerie({
           </ul>
         )}
         {(prevision.auDela.sur > 0 || prevision.auDela.prevu > 0) && (
-          <p className="cell-sub">Au-delà de 90 jours : {formatMontant(prevision.auDela.sur + prevision.auDela.prevu)}.</p>
+          <p className="cell-sub">
+            Au-delà de 90 jours : {formatMontant(prevision.auDela.sur + prevision.auDela.prevu)}.
+          </p>
         )}
       </section>
 
@@ -120,7 +140,9 @@ export function OngletTresorerie({
         <div className="tre-tete tre-tete--ligne">
           <div>
             <h2 className="dmd-titre">Balance âgée des créances</h2>
-            <p className="dmd-note">Ce que chaque client doit, par ancienneté du retard depuis l’échéance de la facture.</p>
+            <p className="dmd-note">
+              Ce que chaque client doit, par ancienneté du retard depuis l’échéance de la facture.
+            </p>
           </div>
           <BoutonExport desactive={!balance.lignes.length} onExporter={() => exporterBalance(balance.lignes)} />
         </div>
@@ -145,8 +167,17 @@ export function OngletTresorerie({
                   <Fragment key={l.client}>
                     <tr className={ouvert === l.client ? 'is-active' : undefined}>
                       <td>
-                        <button type="button" className="rh-nom tre-client" aria-expanded={ouvert === l.client} onClick={() => setOuvert((x) => (x === l.client ? null : l.client))}>
-                          <ChevronDown size={14} aria-hidden className={ouvert === l.client ? 'is-ouvert' : undefined} />
+                        <button
+                          type="button"
+                          className="rh-nom tre-client"
+                          aria-expanded={ouvert === l.client}
+                          onClick={() => setOuvert((x) => (x === l.client ? null : l.client))}
+                        >
+                          <ChevronDown
+                            size={14}
+                            aria-hidden
+                            className={ouvert === l.client ? 'is-ouvert' : undefined}
+                          />
                           {l.client}
                         </button>
                         <span className="cell-sub">
@@ -185,11 +216,16 @@ export function OngletTresorerie({
                                   </span>
                                   <span className="tre-ligne-montant">{formatMontant(f.resteAPayer)}</span>
                                 </button>
-                                {peutRelancer && retard > 0 &&
+                                {peutRelancer &&
+                                  retard > 0 &&
                                   (relances[f.id] ? (
                                     <span className="cell-sub">{relances[f.id]}</span>
                                   ) : (
-                                    <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => relancer(f)}>
+                                    <button
+                                      type="button"
+                                      className="btn-ghost btn-ghost--sm"
+                                      onClick={() => relancer(f)}
+                                    >
                                       <BellRing size={13} aria-hidden /> Relancer
                                     </button>
                                   ))}
@@ -206,7 +242,12 @@ export function OngletTresorerie({
                 <tr className="tre-pied">
                   <td>Total</td>
                   {TRANCHES.map((t) => (
-                    <td key={t.cle} data-label={t.libelle} className="num" data-vide={balance.total[t.cle] > 0 ? undefined : ''}>
+                    <td
+                      key={t.cle}
+                      data-label={t.libelle}
+                      className="num"
+                      data-vide={balance.total[t.cle] > 0 ? undefined : ''}
+                    >
                       {formatMontant(balance.total[t.cle])}
                     </td>
                   ))}
@@ -225,15 +266,19 @@ export function OngletTresorerie({
 
 function exporterBalance(lignes: LigneBalance[]) {
   const detail = lignes.flatMap((l) => l.creances.map((c) => ({ client: l.client, ...c })));
-  exporterCsv('balance-agee', [
-    { titre: 'Client', valeur: (x) => x.client },
-    { titre: 'Facture', valeur: (x) => x.facture.reference },
-    { titre: 'Projet', valeur: (x) => x.facture.projet?.code },
-    { titre: 'Émise le', valeur: (x) => dateExport(x.facture.emiseLe) },
-    { titre: 'Échéance', valeur: (x) => dateExport(x.facture.echeanceLe) },
-    { titre: 'Jours de retard', valeur: (x) => x.retard },
-    { titre: 'Tranche', valeur: (x) => TRANCHES.find((t) => t.cle === x.tranche)?.libelle },
-    { titre: 'Montant TTC (FCFA)', valeur: (x) => x.facture.montantTtc },
-    { titre: 'Reste dû (FCFA)', valeur: (x) => x.facture.resteAPayer },
-  ], detail);
+  exporterCsv(
+    'balance-agee',
+    [
+      { titre: 'Client', valeur: (x) => x.client },
+      { titre: 'Facture', valeur: (x) => x.facture.reference },
+      { titre: 'Projet', valeur: (x) => x.facture.projet?.code },
+      { titre: 'Émise le', valeur: (x) => dateExport(x.facture.emiseLe) },
+      { titre: 'Échéance', valeur: (x) => dateExport(x.facture.echeanceLe) },
+      { titre: 'Jours de retard', valeur: (x) => x.retard },
+      { titre: 'Tranche', valeur: (x) => TRANCHES.find((t) => t.cle === x.tranche)?.libelle },
+      { titre: 'Montant TTC (FCFA)', valeur: (x) => x.facture.montantTtc },
+      { titre: 'Reste dû (FCFA)', valeur: (x) => x.facture.resteAPayer },
+    ],
+    detail,
+  );
 }

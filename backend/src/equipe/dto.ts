@@ -1,11 +1,4 @@
-import {
-  IsEnum,
-  IsOptional,
-  IsString,
-  Matches,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { ClienteleCellule, NiveauCollaborateur, ProcessusCellule, StatutCellule } from '@prisma/client';
 
 // Date « agenda » AAAA-MM-JJ (même convention que les dates d'avant-projet /

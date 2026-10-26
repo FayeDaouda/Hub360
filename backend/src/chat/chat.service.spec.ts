@@ -11,11 +11,13 @@ import { ChatService } from './chat.service';
 // Et l'annuaire des DM doit montrer ces rôles de direction, sinon personne ne
 // peut les joindre.
 
-function svc(opts: {
-  collab?: { celluleId: string | null } | null;
-  collabs?: unknown[];
-  titulaires?: unknown[];
-} = {}) {
+function svc(
+  opts: {
+    collab?: { celluleId: string | null } | null;
+    collabs?: unknown[];
+    titulaires?: unknown[];
+  } = {},
+) {
   const canalFindMany = jest.fn().mockResolvedValue([]);
   const collabFindFirst = jest.fn().mockResolvedValue(opts.collab ?? null);
   const usrFindMany = jest.fn().mockResolvedValue(opts.titulaires ?? []);
@@ -97,7 +99,15 @@ describe('ChatService.annuaire', () => {
     });
     const res = await s.annuaire(acteur('Dir. GC'));
     expect(res).toEqual([
-      { utilisateurId: 'U3', prenom: 'Bineta', nom: 'Sarr', nomAffiche: null, photoUrl: null, role: 'Architecte', cellule: 'Cellule Archi 1' },
+      {
+        utilisateurId: 'U3',
+        prenom: 'Bineta',
+        nom: 'Sarr',
+        nomAffiche: null,
+        photoUrl: null,
+        role: 'Architecte',
+        cellule: 'Cellule Archi 1',
+      },
     ]);
   });
 

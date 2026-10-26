@@ -12,17 +12,25 @@ describe('règles de congés (hypothèses de travail)', () => {
     expect(moisComplets(null, '2026-09-15')).toBe(0);
   });
   it('solde : 2 j/mois, congés payés validés et en attente déduits, maladie non', () => {
-    const s = soldeConges('2026-01-01', [
-      { type: 'conge_paye', statut: 'validee', jours: 5, dateDebut: '2026-03-02' },
-      { type: 'conge_paye', statut: 'attente_n1', jours: 2, dateDebut: '2026-10-05' },
-      { type: 'conge_paye', statut: 'refusee', jours: 9, dateDebut: '2026-04-01' },
-      { type: 'maladie', statut: 'validee', jours: 3, dateDebut: '2026-05-04' },
-    ], '2026-09-01');
+    const s = soldeConges(
+      '2026-01-01',
+      [
+        { type: 'conge_paye', statut: 'validee', jours: 5, dateDebut: '2026-03-02' },
+        { type: 'conge_paye', statut: 'attente_n1', jours: 2, dateDebut: '2026-10-05' },
+        { type: 'conge_paye', statut: 'refusee', jours: 9, dateDebut: '2026-04-01' },
+        { type: 'maladie', statut: 'validee', jours: 3, dateDebut: '2026-05-04' },
+      ],
+      '2026-09-01',
+    );
     expect(s).toEqual({ annee: 2026, report: 0, plafondReport: 0, acquis: 16, pris: 5, enAttente: 2, disponible: 9 });
   });
 
   it('année civile (maquette : « Acquis 2026 ») : entrée en 2023, au 30/09 → 16 j, report 0', () => {
-    const s = soldeConges('2023-02-01', [{ type: 'conge_paye', statut: 'validee', jours: 10, dateDebut: '2025-08-04' }], '2026-09-30');
+    const s = soldeConges(
+      '2023-02-01',
+      [{ type: 'conge_paye', statut: 'validee', jours: 10, dateDebut: '2025-08-04' }],
+      '2026-09-30',
+    );
     expect(s).toEqual({ annee: 2026, report: 0, plafondReport: 0, acquis: 16, pris: 0, enAttente: 0, disponible: 16 });
   });
 

@@ -52,7 +52,13 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
 
   return (
     <div className="fiche-crm-fond" onClick={onClose}>
-      <aside className="fiche-crm" role="dialog" aria-modal="true" aria-labelledby="fp-devis" onClick={(e) => e.stopPropagation()}>
+      <aside
+        className="fiche-crm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fp-devis"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="fiche-crm-entete">
           <div>
             <p className="fiche-crm-titre">{d.dossierCrm ? 'Offre commerciale' : 'Devis'}</p>
@@ -61,7 +67,12 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
               <span className={`pill pill--${s.ton}`}>{s.libelle}</span>
             </h2>
             <p className="fiche-crm-meta">
-              {[d.client.nom, d.dossierCrm?.code, `créé le ${jjmmaaaa(d.creeLe)}`, d.dateValidite && `valable jusqu’au ${jjmmaaaa(d.dateValidite)}`]
+              {[
+                d.client.nom,
+                d.dossierCrm?.code,
+                `créé le ${jjmmaaaa(d.creeLe)}`,
+                d.dateValidite && `valable jusqu’au ${jjmmaaaa(d.dateValidite)}`,
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
@@ -87,7 +98,10 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
         {lien && (
           <div className="crm-banner" role="status">
             <span>
-              {lien.emailEnvoye ? 'Devis envoyé par e-mail au client.' : 'E-mail non envoyé : transmettez le lien au client.'} <code>{lien.url}</code>
+              {lien.emailEnvoye
+                ? 'Devis envoyé par e-mail au client.'
+                : 'E-mail non envoyé : transmettez le lien au client.'}{' '}
+              <code>{lien.url}</code>
             </span>
             <button type="button" className="lien-inline" onClick={() => navigator.clipboard?.writeText(lien.url)}>
               <Copy size={12} aria-hidden /> Copier
@@ -120,10 +134,20 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
           )}
           {d.statut === 'envoye' && droits.devisEcriture && (
             <>
-              <button type="button" className="btn-ghost" disabled={enCours} onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'accepte'))}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={enCours}
+                onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'accepte'))}
+              >
                 <CheckCircle2 size={14} aria-hidden /> Accepté
               </button>
-              <button type="button" className="btn-ghost" disabled={enCours} onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'refuse'))}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={enCours}
+                onClick={() => agir(() => marquerReponseDevis(slug, d.id, 'refuse'))}
+              >
                 <XCircle size={14} aria-hidden /> Refusé
               </button>
             </>
@@ -138,8 +162,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
                   titre: 'Convertir ce devis en facture ?',
                   message: 'La facture est émise tout de suite, avec un numéro définitif.',
                   confirmer: 'Convertir',
-                })) &&
-                agir(() => convertirDevis(slug, d.id), onClose)
+                })) && agir(() => convertirDevis(slug, d.id), onClose)
               }
             >
               <ReceiptText size={14} aria-hidden /> Convertir en facture
@@ -156,8 +179,7 @@ export function DevisPanneau({ slug, devis: d, document, droits, onMaj, onClose,
                   message: 'Le brouillon de devis sera supprimé.',
                   confirmer: 'Supprimer',
                   danger: true,
-                })) &&
-                agir(() => supprimerDevis(slug, d.id), onClose)
+                })) && agir(() => supprimerDevis(slug, d.id), onClose)
               }
             >
               Supprimer le brouillon

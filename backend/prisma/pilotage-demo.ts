@@ -39,15 +39,20 @@ const DECISIONS_DEMO: DecisionDemo[] = [
 
 export async function creerPilotageDemo(prisma: PrismaClient, societeId: string) {
   for (const d of DECISIONS_DEMO) {
-    if (await prisma.decisionRegistre.findUnique({ where: { societeId_cleOrigine: { societeId, cleOrigine: d.cle } } })) continue;
+    if (await prisma.decisionRegistre.findUnique({ where: { societeId_cleOrigine: { societeId, cleOrigine: d.cle } } }))
+      continue;
     let responsable: { responsable: string; responsableRole: string | null; responsableCollaborateurId: string | null };
     if ('role' in d.responsable) {
-      responsable = { responsable: d.responsable.libelle, responsableRole: d.responsable.role, responsableCollaborateurId: null };
+      responsable = {
+        responsable: d.responsable.libelle,
+        responsableRole: d.responsable.role,
+        responsableCollaborateurId: null,
+      };
     } else {
       const nom = d.responsable.collaborateur;
-      const c = (await prisma.collaborateur.findMany({ where: { societeId }, select: { id: true, prenom: true, nom: true } })).find(
-        (x) => `${x.prenom} ${x.nom}` === nom,
-      );
+      const c = (
+        await prisma.collaborateur.findMany({ where: { societeId }, select: { id: true, prenom: true, nom: true } })
+      ).find((x) => `${x.prenom} ${x.nom}` === nom);
       if (!c) throw new Error(`Collaborateur de démonstration introuvable : ${nom}`);
       responsable = { responsable: nom, responsableRole: null, responsableCollaborateurId: c.id };
     }

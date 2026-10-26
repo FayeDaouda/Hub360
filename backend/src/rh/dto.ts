@@ -59,7 +59,10 @@ export class ReaffectationDto {
 export class ArchivageDto {
   @IsBoolean() archive: boolean;
   // Départ : nouveau titulaire de chaque tâche de projet encore ouverte.
-  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ReaffectationDto)
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReaffectationDto)
   reaffectations?: ReaffectationDto[];
 }
 

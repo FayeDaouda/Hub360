@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_PATH, COMPANY_SLUG, DEMO_PASSWORD, readFixtures, storageStateOf, waitForContent } from '../support/reference';
+import {
+  ADMIN_PATH,
+  COMPANY_SLUG,
+  DEMO_PASSWORD,
+  readFixtures,
+  storageStateOf,
+  waitForContent,
+} from '../support/reference';
 
 // Smoke tests of the critical paths, through the UI, on the reference data
 // prepared by scripts/reference-scenario.mjs. They change that data (deposit,

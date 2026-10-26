@@ -28,7 +28,6 @@ const FILTRES: { cle: Filtre; libelle: string; garde: (t: TacheMonEspace) => boo
   { cle: 'validees', libelle: 'Validées', garde: (t) => t.statut === 'validee' },
 ];
 
-
 // Remise jugée « à temps » : dernière remise au plus tard le jour de l'échéance.
 const jugee = (t: TacheMonEspace) => !!t.remisLe && !!t.echeance;
 const aTemps = (t: TacheMonEspace) => jugee(t) && t.remisLe!.slice(0, 10) <= t.echeance!;
@@ -229,95 +228,102 @@ export function MesPerformances({ slug }: { slug: string }) {
           .
         </p>
       ) : (
-      <section className="panel glass-panel dmd-section temps-panel">
-        <div className="temps-entete">
-          <div>
-            <h2 className="dmd-titre">Mes tâches assignées</h2>
-            <p className="dmd-note">
-              Seul ce qui vous est assigné compte. Le temps est calculé automatiquement (durée standard de chaque tâche,
-              répartie sur sa fenêtre), hors absences ; il n’est pas modifiable.
-            </p>
-          </div>
-          <div className="vue-toggle" role="group" aria-label="Filtrer les tâches">
-            {FILTRES.map((f) => (
-              <button key={f.cle} type="button" className={filtre === f.cle ? 'is-active' : ''} aria-pressed={filtre === f.cle} onClick={() => setFiltre(f.cle)}>
-                {f.libelle} · {taches.filter(f.garde).length}
-              </button>
-            ))}
-          </div>
-        </div>
-        {erreur && <p className="field-erreur">{erreur}</p>}
-        <div className="admin-table-wrap">
-          <table className="admin-table temps-table">
-            <thead>
-              <tr>
-                <th>Projet</th>
-                <th>Tâche</th>
-                <th className="num">Durée std</th>
-                <th>Période</th>
-                <th>Échéance</th>
-                <th className="num">Temps prévu · imputé</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibles.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="me-vide">
-                    Rien dans cette liste.
-                  </td>
-                </tr>
-              )}
-              {visibles.map((t) => (
-                <tr key={t.id}>
-                  <td className="rh-matricule">
-                    <Link className="lien-inline" href={lienProjet(base, t.projetId)}>
-                      {t.projetCode}
-                    </Link>
-                  </td>
-                  <td data-label="Tâche">
-                    {t.libelle}
-                    <span className="cell-sub">
-                      {t.projetClient} · {t.etape}
-                    </span>
-                    {/* Motif sous la tâche : dans la colonne Statut, il poussait « Remettre » hors de l'écran. */}
-                    {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
-                  </td>
-                  <td data-label="Durée std" className="num">
-                    {t.dureeStandard == null ? '—' : formatHeures(t.dureeStandard)}
-                  </td>
-                  <td data-label="Période">
-                    {t.debut && t.echeance ? `du ${jjmm(t.debut)} au ${jjmm(t.echeance)}` : '—'}
-                    {t.manque && t.statut !== 'validee' && <span className="cell-sub temps-alerte">{LIBELLE_MANQUE[t.manque]}</span>}
-                  </td>
-                  <td data-label="Échéance">{t.echeance ? jjmmaaaa(t.echeance) : '—'}</td>
-                  <td data-label="Prévu · imputé" className="num">
-                    {t.dureeStandard == null ? '—' : `${formatHeures(t.dureeStandard)} · ${formatHeures(t.heuresImputees)}`}
-                  </td>
-                  <td data-label="Statut">
-                    <span className="perf-statut">
-                      <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
-                      {t.statut !== 'validee' && t.statut !== 'remise' && (
-                        <button
-                          type="button"
-                          className="btn-ghost btn-ghost--sm"
-                          onClick={() => setARemettre(t)}
-                        >
-                          Déposer
-                        </button>
-                      )}
-                    </span>
-                  </td>
-                </tr>
+        <section className="panel glass-panel dmd-section temps-panel">
+          <div className="temps-entete">
+            <div>
+              <h2 className="dmd-titre">Mes tâches assignées</h2>
+              <p className="dmd-note">
+                Seul ce qui vous est assigné compte. Le temps est calculé automatiquement (durée standard de chaque
+                tâche, répartie sur sa fenêtre), hors absences ; il n’est pas modifiable.
+              </p>
+            </div>
+            <div className="vue-toggle" role="group" aria-label="Filtrer les tâches">
+              {FILTRES.map((f) => (
+                <button
+                  key={f.cle}
+                  type="button"
+                  className={filtre === f.cle ? 'is-active' : ''}
+                  aria-pressed={filtre === f.cle}
+                  onClick={() => setFiltre(f.cle)}
+                >
+                  {f.libelle} · {taches.filter(f.garde).length}
+                </button>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
+            </div>
+          </div>
+          {erreur && <p className="field-erreur">{erreur}</p>}
+          <div className="admin-table-wrap">
+            <table className="admin-table temps-table">
+              <thead>
+                <tr>
+                  <th>Projet</th>
+                  <th>Tâche</th>
+                  <th className="num">Durée std</th>
+                  <th>Période</th>
+                  <th>Échéance</th>
+                  <th className="num">Temps prévu · imputé</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="me-vide">
+                      Rien dans cette liste.
+                    </td>
+                  </tr>
+                )}
+                {visibles.map((t) => (
+                  <tr key={t.id}>
+                    <td className="rh-matricule">
+                      <Link className="lien-inline" href={lienProjet(base, t.projetId)}>
+                        {t.projetCode}
+                      </Link>
+                    </td>
+                    <td data-label="Tâche">
+                      {t.libelle}
+                      <span className="cell-sub">
+                        {t.projetClient} · {t.etape}
+                      </span>
+                      {/* Motif sous la tâche : dans la colonne Statut, il poussait « Remettre » hors de l'écran. */}
+                      {t.renvoiMotif && <span className="cell-sub temps-alerte">« {t.renvoiMotif} »</span>}
+                    </td>
+                    <td data-label="Durée std" className="num">
+                      {t.dureeStandard == null ? '—' : formatHeures(t.dureeStandard)}
+                    </td>
+                    <td data-label="Période">
+                      {t.debut && t.echeance ? `du ${jjmm(t.debut)} au ${jjmm(t.echeance)}` : '—'}
+                      {t.manque && t.statut !== 'validee' && (
+                        <span className="cell-sub temps-alerte">{LIBELLE_MANQUE[t.manque]}</span>
+                      )}
+                    </td>
+                    <td data-label="Échéance">{t.echeance ? jjmmaaaa(t.echeance) : '—'}</td>
+                    <td data-label="Prévu · imputé" className="num">
+                      {t.dureeStandard == null
+                        ? '—'
+                        : `${formatHeures(t.dureeStandard)} · ${formatHeures(t.heuresImputees)}`}
+                    </td>
+                    <td data-label="Statut">
+                      <span className="perf-statut">
+                        <span className={`pill ${STATUT_TACHE[t.statut].pill}`}>{libelleStatut(t, aujourdhui)}</span>
+                        {t.statut !== 'validee' && t.statut !== 'remise' && (
+                          <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setARemettre(t)}>
+                            Déposer
+                          </button>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
-      {aRemettre && <RemiseModal slug={slug} tache={aRemettre} onRemise={setDonnees} onClose={() => setARemettre(null)} />}
+      {aRemettre && (
+        <RemiseModal slug={slug} tache={aRemettre} onRemise={setDonnees} onClose={() => setARemettre(null)} />
+      )}
     </>
   );
 }

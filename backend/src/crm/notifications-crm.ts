@@ -74,11 +74,7 @@ function extrait(texte: string): string {
   return t.length > LONGUEUR_MAX_COMMENTAIRE ? `${t.slice(0, LONGUEUR_MAX_COMMENTAIRE - 1)}…` : t;
 }
 
-export function titreNotificationCrm(
-  evenement: EvenementCrm,
-  cible: CibleCrm,
-  ctx: ContexteNotificationCrm,
-): string {
+export function titreNotificationCrm(evenement: EvenementCrm, cible: CibleCrm, ctx: ContexteNotificationCrm): string {
   const dossier = `${ctx.code} · ${ctx.programme}`;
   switch (evenement) {
     case 'dossier_soumis':
@@ -103,7 +99,9 @@ export function titreNotificationCrm(
       return `${dossier} — contrat signé, projet lancé`;
     }
     case 'dossier_perdu':
-      return ctx.commentaire ? `${dossier} — dossier déclaré perdu : « ${extrait(ctx.commentaire)} »` : `${dossier} — dossier déclaré perdu`;
+      return ctx.commentaire
+        ? `${dossier} — dossier déclaré perdu : « ${extrait(ctx.commentaire)} »`
+        : `${dossier} — dossier déclaré perdu`;
     case 'offre_expiree':
       return cible === 'proprietaire'
         ? `${dossier} — offre expirée sans réponse du client, à refaire ou à déclarer perdue`
@@ -152,4 +150,3 @@ export function relanceFicheIncomplete(
     date: echue,
   };
 }
-

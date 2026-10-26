@@ -72,7 +72,10 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
             Commissions · {formatMontant(versees)} versées{aPayer ? ` · ${formatMontant(aPayer)} à payer` : ''}
           </p>
           {commissions.length === 0 ? (
-            <p className="fiche-crm-aide">Aucune commission pour l’instant : elles naissent des encaissements d’honoraires (ou de la signature, selon le réglage du CFO).</p>
+            <p className="fiche-crm-aide">
+              Aucune commission pour l’instant : elles naissent des encaissements d’honoraires (ou de la signature,
+              selon le réglage du CFO).
+            </p>
           ) : (
             <ul className="pa-apporteur-liste">
               {commissions.map((c) => (
@@ -118,11 +121,16 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
               {confirmer && (
                 <div className="pf-alerte" role="alert">
                   <p>
-                    Vous modifiez les coordonnées de paiement de l’apporteur ({changes.map((c) => LIBELLES_COORDONNEES[c]).join(', ')}). Le CFO paiera sur ces
-                    coordonnées ; le CFO et le CEO seront prévenus. Vérifiez chaque chiffre.
+                    Vous modifiez les coordonnées de paiement de l’apporteur (
+                    {changes.map((c) => LIBELLES_COORDONNEES[c]).join(', ')}). Le CFO paiera sur ces coordonnées ; le
+                    CFO et le CEO seront prévenus. Vérifiez chaque chiffre.
                   </p>
                   <label className="field">
-                    <span className="field-label">{fiche.confirmation === 'code' ? 'Code de votre application de double authentification' : 'Votre mot de passe, pour confirmer'}</span>
+                    <span className="field-label">
+                      {fiche.confirmation === 'code'
+                        ? 'Code de votre application de double authentification'
+                        : 'Votre mot de passe, pour confirmer'}
+                    </span>
                     <input
                       className="field-input"
                       type={fiche.confirmation === 'code' ? 'text' : 'password'}
@@ -138,10 +146,20 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
               )}
               {erreur && <p className="field-erreur">{erreur}</p>}
               <div className="modal-actions">
-                <button type="button" className="btn-ghost" disabled={envoi} onClick={() => (setSaisie(null), setConfirmer(false), setPreuve(''), setErreur(null))}>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={envoi}
+                  onClick={() => (setSaisie(null), setConfirmer(false), setPreuve(''), setErreur(null))}
+                >
                   Annuler
                 </button>
-                <button type="button" className="btn-primary" disabled={envoi || !changes.length || (confirmer && !preuve.trim())} onClick={enregistrer}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={envoi || !changes.length || (confirmer && !preuve.trim())}
+                  onClick={enregistrer}
+                >
                   {envoi ? 'Enregistrement…' : confirmer ? 'Confirmer' : 'Enregistrer'}
                 </button>
               </div>
@@ -157,7 +175,11 @@ export function PaiementApporteur({ slug, dossierId }: { slug: string; dossierId
                 ))}
               </dl>
               {fiche.peutModifier && (
-                <button type="button" className="btn-ghost fiche-apporteur-modifier" onClick={() => setSaisie({ ...fiche.coordonnees })}>
+                <button
+                  type="button"
+                  className="btn-ghost fiche-apporteur-modifier"
+                  onClick={() => setSaisie({ ...fiche.coordonnees })}
+                >
                   Modifier les coordonnées
                 </button>
               )}

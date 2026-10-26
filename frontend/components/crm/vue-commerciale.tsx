@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlarmClock, ChevronDown, FileWarning, Handshake, Send, TrendingUp, UserX, type LucideIcon } from 'lucide-react';
+import {
+  AlarmClock,
+  ChevronDown,
+  FileWarning,
+  Handshake,
+  Send,
+  TrendingUp,
+  UserX,
+  type LucideIcon,
+} from 'lucide-react';
 import { getVueCommerciale, type ElementCommercial, type EtapePipeline, type VueCommerciale } from '@/lib/crm';
 import { formatMontant, formatMontantCompact } from '@/lib/format';
 
@@ -25,7 +34,15 @@ const ETAPE: Record<EtapePipeline, { libelle: string; ton: string }> = {
 
 // Vue commerciale du COO (revue COO, 22/10/2026), en tête du CRM : ce qui
 // attend une action, puis la performance de l'année du pipeline choisi.
-export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; annee: string; onOuvrir: (dossierId: string) => void }) {
+export function VueCommercialeCoo({
+  slug,
+  annee,
+  onOuvrir,
+}: {
+  slug: string;
+  annee: string;
+  onOuvrir: (dossierId: string) => void;
+}) {
   const [vue, setVue] = useState<VueCommerciale | null>(null);
   const [tout, setTout] = useState(false);
 
@@ -36,7 +53,10 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
   }, [slug, annee]);
 
   if (!vue) return null;
-  const elements = [...vue.aTraiter].sort((a, b) => RANG_TON[a.ton] - RANG_TON[b.ton] || GROUPE[a.type].rang - GROUPE[b.type].rang || a.tri.localeCompare(b.tri));
+  const elements = [...vue.aTraiter].sort(
+    (a, b) =>
+      RANG_TON[a.ton] - RANG_TON[b.ton] || GROUPE[a.type].rang - GROUPE[b.type].rang || a.tri.localeCompare(b.tri),
+  );
   const urgents = elements.filter((e) => e.ton === 'risque').length;
   const visibles = tout ? elements : elements.slice(0, VISIBLES);
   const p = vue.performance;
@@ -107,7 +127,10 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
             <p className="crm-perf-sous-titre">Pipeline en FCFA HT · offres de l’année</p>
             <ul>
               {vue.pipelineHt.map((t) => (
-                <li key={t.etape} title={`${pluriel(t.dossiers, 'dossier')}, ${t.avecOffre} avec offre · ${formatMontant(t.totalHt)} HT`}>
+                <li
+                  key={t.etape}
+                  title={`${pluriel(t.dossiers, 'dossier')}, ${t.avecOffre} avec offre · ${formatMontant(t.totalHt)} HT`}
+                >
                   <span className={`pill pill--${ETAPE[t.etape].ton}`}>{ETAPE[t.etape].libelle}</span>
                   <strong>{formatMontantCompact(t.totalHt)}</strong>
                   <span className="cell-sub">{pluriel(t.dossiers, 'dossier')}</span>
@@ -133,7 +156,9 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
                 <tr key={a.cle}>
                   <td>
                     {a.libelle}
-                    {a.type !== 'direct' && <span className="cell-sub">{a.type === 'interne' ? 'interne' : 'externe'}</span>}
+                    {a.type !== 'direct' && (
+                      <span className="cell-sub">{a.type === 'interne' ? 'interne' : 'externe'}</span>
+                    )}
                   </td>
                   <td>{a.leads}</td>
                   <td>{a.signes}</td>
@@ -142,7 +167,9 @@ export function VueCommercialeCoo({ slug, annee, onOuvrir }: { slug: string; ann
                   {p.montants && (
                     <td>
                       {a.type === 'direct' ? '—' : formatMontantCompact(a.commissionsVersees)}
-                      {a.commissionsAPayer > 0 && <span className="cell-sub">{formatMontantCompact(a.commissionsAPayer)} à payer</span>}
+                      {a.commissionsAPayer > 0 && (
+                        <span className="cell-sub">{formatMontantCompact(a.commissionsAPayer)} à payer</span>
+                      )}
                     </td>
                   )}
                 </tr>

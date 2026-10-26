@@ -148,8 +148,8 @@ export default function ContratPublicPage(props: Props) {
           {contrat.statut === 'signe' ? (
             <p className="devis-public-message">
               <CheckCircle2 size={16} aria-hidden /> Contrat signé
-              {contrat.signeLe ? ` le ${formatDate(contrat.signeLe)}` : ''}. Merci — l’équipe revient
-              vers vous pour la suite.
+              {contrat.signeLe ? ` le ${formatDate(contrat.signeLe)}` : ''}. Merci — l’équipe revient vers vous pour la
+              suite.
             </p>
           ) : contrat.peutSigner ? (
             <section className="contrat-public-bloc">
@@ -208,18 +208,14 @@ export default function ContratPublicPage(props: Props) {
               <button type="button" className="btn-primary" disabled={busy} onClick={signer}>
                 {busy ? 'Signature…' : 'Signer le contrat'}
               </button>
-              <p className="field-aide">
-                Votre signature est horodatée et enregistrée avec votre nom.
-              </p>
+              <p className="field-aide">Votre signature est horodatée et enregistrée avec votre nom.</p>
             </section>
           ) : (
             <p className="devis-public-message">
               Ce contrat n’est plus disponible à la signature. Contactez {contrat.societe}.
             </p>
           )}
-          {contrat.statut !== 'signe' && !contrat.peutSigner && erreur && (
-            <p className="field-erreur">{erreur}</p>
-          )}
+          {contrat.statut !== 'signe' && !contrat.peutSigner && erreur && <p className="field-erreur">{erreur}</p>}
         </article>
       </div>
     </main>

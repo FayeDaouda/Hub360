@@ -10,18 +10,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ouDossierDuCompte } from './mon-compte';
-import {
-  DecisionN1Dto,
-  DeposerAbsenceDto,
-  DeposerRemboursementDto,
-} from './demandes.dto';
+import { DecisionN1Dto, DeposerAbsenceDto, DeposerRemboursementDto } from './demandes.dto';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
-import {
-  chevauche,
-  joursOuvrables,
-  PART_CELLULE_ABSENTE_ALERTE,
-  soldeConges,
-} from './regles-conges';
+import { chevauche, joursOuvrables, PART_CELLULE_ABSENTE_ALERTE, soldeConges } from './regles-conges';
 
 // RH · Demandes (lot 2) — absences (N+1 puis RH) et remboursements santé
 // (soumise → transmise → remboursée/rejetée). Hypothèses de travail : cf.
@@ -55,13 +46,23 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 // Travail dû pendant l'absence (phase 1, 14/10/2026) : tâches de projet du
 // gabarit assignées au salarié — avant, blocs des anciennes checklists.
-type Livrable = { cle: string; tacheId: string; projetId: string; source: string; projet: string; groupe: string; echeance: string };
+type Livrable = {
+  cle: string;
+  tacheId: string;
+  projetId: string;
+  source: string;
+  projet: string;
+  groupe: string;
+  echeance: string;
+};
 
 const ROLE_RH = 'RH';
 const FENETRE_CALENDRIER_J = 7; // jours montrés avant et après la demande
 // Dossier dont le compte (direct ou via la fiche d'équipe) tient le rôle RH.
 const RH_ROLE = { roles: { some: { role: { nom: ROLE_RH } } } };
-const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = { OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }] };
+const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = {
+  OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }],
+};
 const COMPTE_DOSSIER = { utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } as const;
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const montant = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
@@ -147,7 +148,12 @@ export class DemandesService {
         ...n1,
       },
     });
-    await this.signalerAbsence(d, a.userId, d.statut === 'accord_n1' ? 'rh' : 'n1', d.statut === 'accord_n1' ? 'Absence à valider' : 'Demande d’absence à décider');
+    await this.signalerAbsence(
+      d,
+      a.userId,
+      d.statut === 'accord_n1' ? 'rh' : 'n1',
+      d.statut === 'accord_n1' ? 'Absence à valider' : 'Demande d’absence à décider',
+    );
     if (suppleantId) {
       const date = (x: string) => x.split('-').reverse().slice(0, 2).join('/');
       await this.notifications.envoyer({
@@ -169,20 +175,30 @@ export class DemandesService {
       where: {
         societeId: a.societeId,
         utilisateurId: { not: a.userId },
-        role: { nom: { in: [ROLE_N1_DIRECTION, 'CTO (transverse)'] }, supprimeLe: null, OR: [{ societeId: a.societeId }, { societeId: null }] },
+        role: {
+          nom: { in: [ROLE_N1_DIRECTION, 'CTO (transverse)'] },
+          supprimeLe: null,
+          OR: [{ societeId: a.societeId }, { societeId: null }],
+        },
         utilisateur: { actif: true },
       },
       select: { role: { select: { nom: true } }, utilisateur: { select: { id: true, prenom: true, nom: true } } },
     });
-    return lignes.map((l) => ({ id: l.utilisateur.id, nom: `${l.utilisateur.prenom} ${l.utilisateur.nom}`.trim(), role: l.role.nom }));
+    return lignes.map((l) => ({
+      id: l.utilisateur.id,
+      nom: `${l.utilisateur.prenom} ${l.utilisateur.nom}`.trim(),
+      role: l.role.nom,
+    }));
   }
 
   // Seul un Dir. GC désigne un suppléant, choisi parmi les suppléants possibles.
   private async suppleantValide(a: Acteur, suppleantId?: string): Promise<string | null> {
     if (!suppleantId) return null;
-    if (a.role !== ROLE_N1_DIRECTION) throw new BadRequestException('Seul le Dir. GC désigne un suppléant pour son absence.');
+    if (a.role !== ROLE_N1_DIRECTION)
+      throw new BadRequestException('Seul le Dir. GC désigne un suppléant pour son absence.');
     const possibles = await this.suppleantsPossibles(a);
-    if (!possibles.some((p) => p.id === suppleantId)) throw new BadRequestException('Suppléant : un autre Dir. GC ou le CTO.');
+    if (!possibles.some((p) => p.id === suppleantId))
+      throw new BadRequestException('Suppléant : un autre Dir. GC ou le CTO.');
     return suppleantId;
   }
 
@@ -200,7 +216,13 @@ export class DemandesService {
     const fin = d.datesProposeesFin!;
     const maj = await this.prisma.demandeAbsence.update({
       where: { id },
-      data: { dateDebut: debut, dateFin: fin, jours: joursOuvrables(debut, fin, await this.feries(dossier.societeId)), statut: 'attente_n1', decisionN1: null },
+      data: {
+        dateDebut: debut,
+        dateFin: fin,
+        jours: joursOuvrables(debut, fin, await this.feries(dossier.societeId)),
+        statut: 'attente_n1',
+        decisionN1: null,
+      },
     });
     await this.signalerAbsence(maj, a.userId, 'n1', 'Nouvelles dates acceptées, demande à décider');
     return versAbsence(maj);
@@ -305,16 +327,18 @@ export class DemandesService {
       orderBy: toutes ? { createdAt: 'desc' } : { dateDebut: 'asc' },
     });
     const rhIds = a.role === ROLE_CEO ? await this.dossiersRh(demandes.map((d) => d.dossierId)) : new Set<string>();
-    return demandes
-      // Jamais sa propre demande dans sa file (un N+1 qui serait aussi le demandeur).
-      .filter((d) => (d.dossier.utilisateurId ?? d.dossier.collaborateur?.utilisateurId) !== a.userId)
-      // File « à décider » du CEO : un accord_n1 n'y figure que s'il attend sa validation finale.
-      .filter((d) => toutes || d.statut !== 'accord_n1' || rhIds.has(d.dossierId))
-      .map((d) => ({
-        ...versAbsence(d),
-        salarie: { prenom: d.dossier.prenom, nom: d.dossier.nom, poste: d.dossier.poste },
-        validationFinale: rhIds.has(d.dossierId) && d.statut === 'accord_n1',
-      }));
+    return (
+      demandes
+        // Jamais sa propre demande dans sa file (un N+1 qui serait aussi le demandeur).
+        .filter((d) => (d.dossier.utilisateurId ?? d.dossier.collaborateur?.utilisateurId) !== a.userId)
+        // File « à décider » du CEO : un accord_n1 n'y figure que s'il attend sa validation finale.
+        .filter((d) => toutes || d.statut !== 'accord_n1' || rhIds.has(d.dossierId))
+        .map((d) => ({
+          ...versAbsence(d),
+          salarie: { prenom: d.dossier.prenom, nom: d.dossier.nom, poste: d.dossier.poste },
+          validationFinale: rhIds.has(d.dossierId) && d.statut === 'accord_n1',
+        }))
+    );
   }
 
   // Livrables dus pendant l'absence + personnes à qui les confier + alerte
@@ -337,13 +361,26 @@ export class DemandesService {
     if (collab?.celluleId) {
       const membres = await this.prisma.collaborateur.findMany({
         where: { celluleId: collab.celluleId },
-        select: { dossierPersonnel: { select: { absences: { where: { statut: { in: ['accord_n1', 'validee'] } }, select: { dateDebut: true, dateFin: true } } } } },
+        select: {
+          dossierPersonnel: {
+            select: {
+              absences: {
+                where: { statut: { in: ['accord_n1', 'validee'] } },
+                select: { dateDebut: true, dateFin: true },
+              },
+            },
+          },
+        },
       });
       const periode = { debut: d.dateDebut, fin: d.dateFin };
       const absents = membres.filter((m) =>
         (m.dossierPersonnel?.absences ?? []).some((x) => chevauche(periode, { debut: x.dateDebut, fin: x.dateFin })),
       ).length;
-      alerteCellule = { absents, membres: membres.length, preselection: (absents + 1) / membres.length >= PART_CELLULE_ABSENTE_ALERTE };
+      alerteCellule = {
+        absents,
+        membres: membres.length,
+        preselection: (absents + 1) / membres.length >= PART_CELLULE_ABSENTE_ALERTE,
+      };
     }
     return {
       demande: { ...versAbsence(d), salarie },
@@ -379,7 +416,13 @@ export class DemandesService {
       }
       const proposee = await this.prisma.demandeAbsence.update({
         where: { id },
-        data: { ...base, statut: 'autres_dates', datesProposeesDebut: dto.dateDebut, datesProposeesFin: dto.dateFin, commentaireRefus: dto.commentaire ?? '' },
+        data: {
+          ...base,
+          statut: 'autres_dates',
+          datesProposeesDebut: dto.dateDebut,
+          datesProposeesFin: dto.dateFin,
+          commentaireRefus: dto.commentaire ?? '',
+        },
       });
       await this.signalerAbsence(proposee, a.userId, 'salarie', 'votre N+1 propose d’autres dates');
       return versAbsence(proposee);
@@ -390,12 +433,15 @@ export class DemandesService {
     // terminer avant son départ — sa date ne bouge pas (délais figés).
     const collab = await this.collaborateurDe(d.dossierId);
     const livrables = collab ? await this.livrables(collab.id, d.dateDebut, d.dateFin) : [];
-    const nonDelegables = new Set(dto.decision === 'sous_conditions' ? dto.nonDelegables ?? [] : []);
+    const nonDelegables = new Set(dto.decision === 'sous_conditions' ? (dto.nonDelegables ?? []) : []);
     const delegations = new Map((dto.delegations ?? []).map((x) => [x.livrable, x.collaborateurId]));
     const autorises = new Map(
-      (await this.prisma.collaborateur.findMany({ where: { societeId: a.societeId }, select: { id: true, prenom: true, nom: true } })).map(
-        (c) => [c.id, `${c.prenom} ${c.nom}`],
-      ),
+      (
+        await this.prisma.collaborateur.findMany({
+          where: { societeId: a.societeId },
+          select: { id: true, prenom: true, nom: true },
+        })
+      ).map((c) => [c.id, `${c.prenom} ${c.nom}`]),
     );
     const ops: Prisma.PrismaPromise<unknown>[] = [];
     const journal: { livrable: string; action: 'confie' | 'conserve'; a?: string }[] = [];
@@ -411,15 +457,22 @@ export class DemandesService {
       ops.push(
         this.prisma.tacheProjet.update({ where: { id: l.tacheId }, data: { assigneId: cible } }),
         this.prisma.evenementTacheProjet.create({
-          data: { tacheId: l.tacheId, type: 'assignation', parId: a.userId, detail: `Confiée à ${autorises.get(cible)} (absence)` },
+          data: {
+            tacheId: l.tacheId,
+            type: 'assignation',
+            parId: a.userId,
+            detail: `Confiée à ${autorises.get(cible)} (absence)`,
+          },
         }),
       );
       journal.push({ livrable: l.cle, action: 'confie', a: cible });
     }
-    ops.push(this.prisma.demandeAbsence.update({
-      where: { id },
-      data: { ...base, statut: 'accord_n1', traitementLivrables: journal },
-    }));
+    ops.push(
+      this.prisma.demandeAbsence.update({
+        where: { id },
+        data: { ...base, statut: 'accord_n1', traitementLivrables: journal },
+      }),
+    );
     const res = await this.prisma.$transaction(ops);
     const accord = res[res.length - 1] as DemandeAbsence;
     await this.signalerAbsence(accord, a.userId, 'salarie', 'accord de votre N+1, en attente de la RH');
@@ -466,7 +519,11 @@ export class DemandesService {
     ]);
     const rhIds = await this.dossiersRh(absences.map((d) => d.dossierId));
     return {
-      absences: absences.map((d) => ({ ...versAbsence(d), salarie: d.dossier, valideurFinal: rhIds.has(d.dossierId) ? 'ceo' : 'rh' })),
+      absences: absences.map((d) => ({
+        ...versAbsence(d),
+        salarie: d.dossier,
+        valideurFinal: rhIds.has(d.dossierId) ? 'ceo' : 'rh',
+      })),
       remboursements,
       attestations,
     };
@@ -480,7 +537,10 @@ export class DemandesService {
       data: { delivreeLe: new Date(), delivreeParId: a.userId, nom: fichier.nom, cle: fichier.url },
     });
     if (count === 0) throw new ConflictException('Attestation introuvable ou déjà délivrée.');
-    const att = await this.prisma.demandeAttestation.findUniqueOrThrow({ where: { id }, select: { dossierId: true, dossier: { select: { societeId: true } } } });
+    const att = await this.prisma.demandeAttestation.findUniqueOrThrow({
+      where: { id },
+      select: { dossierId: true, dossier: { select: { societeId: true } } },
+    });
     await this.notifications.envoyer({
       societeId: att.dossier.societeId,
       type: 'attestation_delivree',
@@ -503,14 +563,23 @@ export class DemandesService {
   async validationFinaleCeo(a: Acteur, id: string, valide: boolean, motif?: string) {
     if (a.role !== ROLE_CEO) throw new ForbiddenException('Réservé au CEO.');
     const d = await this.absence(id);
-    const dossier = await this.prisma.dossierPersonnel.findUnique({ where: { id: d.dossierId }, select: { societeId: true } });
+    const dossier = await this.prisma.dossierPersonnel.findUnique({
+      where: { id: d.dossierId },
+      select: { societeId: true },
+    });
     if (dossier?.societeId !== a.societeId || (await this.valideurFinal(d.dossierId)) !== 'ceo') {
       throw new ForbiddenException('Cette demande ne relève pas de votre validation finale.');
     }
     return this.trancherFinal(a, d, valide, motif, 'CEO');
   }
 
-  private async trancherFinal(a: Acteur, d: DemandeAbsence, valide: boolean, motif: string | undefined, par: 'RH' | 'CEO') {
+  private async trancherFinal(
+    a: Acteur,
+    d: DemandeAbsence,
+    valide: boolean,
+    motif: string | undefined,
+    par: 'RH' | 'CEO',
+  ) {
     const id = d.id;
     await this.interdireSaPropreDemande(a, d);
     if (d.statut !== 'accord_n1') throw new ConflictException("Pas d'accord du N+1 à valider.");
@@ -521,7 +590,12 @@ export class DemandesService {
         ? { statut: 'validee', valideRhParId: a.userId, valideRhLe: new Date() }
         : { statut: 'refusee', valideRhParId: a.userId, valideRhLe: new Date(), commentaireRefus: motif ?? '' },
     });
-    await this.signalerAbsence(tranchee, a.userId, 'salarie', valide ? `validée par ${par === 'RH' ? 'la RH' : 'le CEO'}` : `refusée par ${par === 'RH' ? 'la RH' : 'le CEO'}`);
+    await this.signalerAbsence(
+      tranchee,
+      a.userId,
+      'salarie',
+      valide ? `validée par ${par === 'RH' ? 'la RH' : 'le CEO'}` : `refusée par ${par === 'RH' ? 'la RH' : 'le CEO'}`,
+    );
     return versAbsence(tranchee);
   }
 
@@ -533,18 +607,28 @@ export class DemandesService {
   ) {
     const r = await this.prisma.demandeRemboursement.findUnique({ where: { id } });
     if (!r) throw new NotFoundException('Demande introuvable');
-    const attendu = action === 'transmettre' ? ['soumise'] : action === 'rembourser' ? ['transmise'] : ['soumise', 'transmise'];
+    const attendu =
+      action === 'transmettre' ? ['soumise'] : action === 'rembourser' ? ['transmise'] : ['soumise', 'transmise'];
     if (!attendu.includes(r.statut)) throw new ConflictException('Étape déjà franchie.');
     const data: Prisma.DemandeRemboursementUpdateInput =
       action === 'transmettre'
         ? { statut: 'transmise', transmiseLe: new Date(), traiteParId: a.userId }
         : action === 'rembourser'
-          ? { statut: 'remboursee', montantRembourse: valeur?.montantRembourse ?? r.montant, traiteLe: new Date(), traiteParId: a.userId }
+          ? {
+              statut: 'remboursee',
+              montantRembourse: valeur?.montantRembourse ?? r.montant,
+              traiteLe: new Date(),
+              traiteParId: a.userId,
+            }
           : { statut: 'rejetee', motifRejet: valeur?.motif ?? '', traiteLe: new Date(), traiteParId: a.userId };
     const maj = await this.prisma.demandeRemboursement.update({ where: { id }, data });
     const s = await this.salarieDe(r.dossierId);
     const etat =
-      action === 'transmettre' ? 'transmis pour remboursement' : action === 'rembourser' ? `remboursé (${montant(Number(maj.montantRembourse ?? r.montant))})` : 'rejeté';
+      action === 'transmettre'
+        ? 'transmis pour remboursement'
+        : action === 'rembourser'
+          ? `remboursé (${montant(Number(maj.montantRembourse ?? r.montant))})`
+          : 'rejeté';
     await this.notifications.envoyer({
       societeId: s.societeId,
       type: 'remboursement_traite',
@@ -557,7 +641,10 @@ export class DemandesService {
 
   private async dossiersRh(ids: string[]): Promise<Set<string>> {
     if (!ids.length) return new Set();
-    const l = await this.prisma.dossierPersonnel.findMany({ where: { id: { in: [...new Set(ids)] }, ...DEMANDEUR_RH }, select: { id: true } });
+    const l = await this.prisma.dossierPersonnel.findMany({
+      where: { id: { in: [...new Set(ids)] }, ...DEMANDEUR_RH },
+      select: { id: true },
+    });
     return new Set(l.map((x) => x.id));
   }
 
@@ -565,9 +652,19 @@ export class DemandesService {
   private async salarieDe(dossierId: string) {
     const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({
       where: { id: dossierId },
-      select: { societeId: true, prenom: true, nom: true, utilisateurId: true, collaborateur: { select: { utilisateurId: true } } },
+      select: {
+        societeId: true,
+        prenom: true,
+        nom: true,
+        utilisateurId: true,
+        collaborateur: { select: { utilisateurId: true } },
+      },
     });
-    return { societeId: d.societeId, nom: `${d.prenom} ${d.nom}`.trim(), compte: d.utilisateurId ?? d.collaborateur?.utilisateurId ?? null };
+    return {
+      societeId: d.societeId,
+      nom: `${d.prenom} ${d.nom}`.trim(),
+      compte: d.utilisateurId ?? d.collaborateur?.utilisateurId ?? null,
+    };
   }
 
   // N+1 (fiche d'équipe ou rôle), RH, ou le salarié lui-même.
@@ -617,7 +714,10 @@ export class DemandesService {
       x.setUTCDate(x.getUTCDate() + n);
       return x.toISOString().slice(0, 10);
     };
-    const fenetre = { debut: decaler(d.dateDebut, -FENETRE_CALENDRIER_J), fin: decaler(d.dateFin, FENETRE_CALENDRIER_J) };
+    const fenetre = {
+      debut: decaler(d.dateDebut, -FENETRE_CALENDRIER_J),
+      fin: decaler(d.dateFin, FENETRE_CALENDRIER_J),
+    };
     const periode = { debut: d.dateDebut, fin: d.dateFin };
     const collab = await this.collaborateurDe(d.dossierId);
     if (!collab?.celluleId) return { cellule: null, periode, fenetre, membres: [] };
@@ -662,7 +762,12 @@ export class DemandesService {
             fin: x.dateFin,
             type: avecMotif ? x.type : null,
             // La demande en cours de décision, une absence acquise, ou en attente.
-            etat: x.id === d.id ? ('demande' as const) : x.statut === 'validee' ? ('validee' as const) : ('en_attente' as const),
+            etat:
+              x.id === d.id
+                ? ('demande' as const)
+                : x.statut === 'validee'
+                  ? ('validee' as const)
+                  : ('en_attente' as const),
           })),
         })),
     };
@@ -672,7 +777,8 @@ export class DemandesService {
   async calendrierPourDecideur(a: Acteur, id: string) {
     const d = await this.absence(id);
     const finalCeo = a.role === ROLE_CEO && (await this.valideurFinal(d.dossierId)) === 'ceo';
-    if (!finalCeo && !(await this.estN1(a, d))) throw new ForbiddenException("Vous n'êtes pas le N+1 de cette demande.");
+    if (!finalCeo && !(await this.estN1(a, d)))
+      throw new ForbiddenException("Vous n'êtes pas le N+1 de cette demande.");
     return this.calendrierCellule(id, false);
   }
 
@@ -695,7 +801,13 @@ export class DemandesService {
   private async livrables(collaborateurId: string, debut: string, fin: string): Promise<Livrable[]> {
     const taches = await this.prisma.tacheProjet.findMany({
       where: { assigneId: collaborateurId, statut: { in: ['a_faire', 'reprise'] }, finLe: { gte: debut, lte: fin } },
-      select: { id: true, libelle: true, finLe: true, carte: { select: { libelle: true } }, projet: { select: { id: true, code: true } } },
+      select: {
+        id: true,
+        libelle: true,
+        finLe: true,
+        carte: { select: { libelle: true } },
+        projet: { select: { id: true, code: true } },
+      },
       orderBy: { finLe: 'asc' },
     });
     return taches.map((t) => ({
@@ -714,4 +826,3 @@ function versAbsence(d: DemandeAbsence) {
   const { justificatifCle, ...reste } = d;
   return { ...reste, aJustificatif: !!justificatifCle };
 }
-

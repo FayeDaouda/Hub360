@@ -8,9 +8,18 @@ import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { DemandesService } from '../rh/demandes.service';
 
-export type ActeurAttention = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
+export type ActeurAttention = {
+  userId: string;
+  societeId: string;
+  role: string;
+  permissions?: Record<string, NiveauPermission>;
+};
 
-const TRANCHE_PAR_JALON: Partial<Record<JalonFacture, 'F1' | 'F2' | 'F3'>> = { signature: 'F1', avant_projet: 'F2', livraison: 'F3' };
+const TRANCHE_PAR_JALON: Partial<Record<JalonFacture, 'F1' | 'F2' | 'F3'>> = {
+  signature: 'F1',
+  avant_projet: 'F2',
+  livraison: 'F3',
+};
 const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 
 // « À votre attention » (accueil du CEO, Pilotage) : ce qui attend une
@@ -40,7 +49,9 @@ export class AttentionService {
     ]);
     return {
       retards: projets ? alertes!.retards : null,
-      factures: factures ? [...(await this.tranchesAEmettre(a, alertes!.tranches, voit('finances_factures', 'validation'))), ...impayees] : null,
+      factures: factures
+        ? [...(await this.tranchesAEmettre(a, alertes!.tranches, voit('finances_factures', 'validation'))), ...impayees]
+        : null,
       ts: ts ? alertes!.ts : null,
       absences: absences.map((d) => ({
         id: d.id,
@@ -66,13 +77,23 @@ export class AttentionService {
       ids.length
         ? this.prisma.facture.findMany({
             where: { id: { in: ids } },
-            select: { id: true, montantHt: true, tauxTva: true, devisEcheancierId: true, devisOrigineId: true, dossierCrmId: true, projetId: true },
+            select: {
+              id: true,
+              montantHt: true,
+              tauxTva: true,
+              devisEcheancierId: true,
+              devisOrigineId: true,
+              dossierCrmId: true,
+              projetId: true,
+            },
           })
         : [],
       a.role === ROLE_CEO ? this.seuilCeo.seuil(a.societeId) : null,
     ]);
     const affaires = await this.seuilCeo.montantsAffaire(brouillons);
-    const ttc = new Map(brouillons.map((f) => [f.id, ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc]));
+    const ttc = new Map(
+      brouillons.map((f) => [f.id, ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc]),
+    );
     return tranches.map((t) => ({
       etat: 'a_emettre' as const,
       factureId: t.factureId,

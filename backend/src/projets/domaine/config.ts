@@ -1,10 +1,4 @@
-import {
-  Categorie,
-  FactureType,
-  JalonFacture,
-  NatureDossier,
-  Phase,
-} from '@prisma/client';
+import { Categorie, FactureType, JalonFacture, NatureDossier, Phase } from '@prisma/client';
 
 // Phase initiale d'un projet selon sa catégorie (première de la séquence),
 // posée par le CRM à l'ouverture. « Développement » suit la conception
@@ -37,9 +31,19 @@ export type CodeFacture = 'F1' | 'F2' | 'F3';
 export type PartsFactures = Record<CodeFacture, number>; // %, somme 100
 // `tranche` : ce que lit le client sur la facture (revue CFO, 21/10/2026).
 export const JALONS_FACTURE: { cle: JalonFacture; code: CodeFacture; libelle: string; tranche: string }[] = [
-  { cle: 'signature', code: 'F1', libelle: 'Acompte à la signature du contrat', tranche: '1ʳᵉ tranche : acompte à la signature du contrat' },
+  {
+    cle: 'signature',
+    code: 'F1',
+    libelle: 'Acompte à la signature du contrat',
+    tranche: '1ʳᵉ tranche : acompte à la signature du contrat',
+  },
   { cle: 'avant_projet', code: 'F2', libelle: "Fin de l'APD", tranche: '2ᵉ tranche : fin de l’APD' },
-  { cle: 'livraison', code: 'F3', libelle: "Livraison des plans d'exécution", tranche: '3ᵉ tranche : livraison des plans d’exécution' },
+  {
+    cle: 'livraison',
+    code: 'F3',
+    libelle: "Livraison des plans d'exécution",
+    tranche: '3ᵉ tranche : livraison des plans d’exécution',
+  },
 ];
 
 // Référence d'une facture : une seule suite par société, sans trou ni

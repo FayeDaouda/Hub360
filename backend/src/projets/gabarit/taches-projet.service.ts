@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -9,7 +16,15 @@ import { ReglagesService } from '../../reglages/reglages.service';
 import { contexteDecision, dateLivraison, type ContexteDecision } from './suppleance';
 import { apresJoursOuvres, joursOuvresApres } from './calendrier';
 import { nomFichierDepot } from './nom-fichier';
-import { agitCommeDplg, collaborateurDuCompte, peutDecider, peutQualifier, peutViser, ROLE_CTO, verifierCircuit } from './validation';
+import {
+  agitCommeDplg,
+  collaborateurDuCompte,
+  peutDecider,
+  peutQualifier,
+  peutViser,
+  ROLE_CTO,
+  verifierCircuit,
+} from './validation';
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
@@ -76,7 +91,10 @@ export class TachesProjetService {
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
     const collaborateur = collaborateurId
-      ? await this.prisma.collaborateur.findFirst({ where: { id: collaborateurId, societeId }, select: { prenom: true, nom: true } })
+      ? await this.prisma.collaborateur.findFirst({
+          where: { id: collaborateurId, societeId },
+          select: { prenom: true, nom: true },
+        })
       : null;
     if (collaborateurId && !collaborateur) throw new NotFoundException('Collaborateur introuvable');
 
@@ -123,7 +141,13 @@ export class TachesProjetService {
   // ouverte (carte non verrouillée), à faire ou en reprise. Sans temps
   // atelier, le dépôt vaut validation (exception écrite au principe 4) ;
   // sinon la remise vNN attend le chef de team (ou le DPLG pour la tâche du chef).
-  async remettre(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, corps: RemettreTacheDto = {}) {
+  async remettre(
+    societeId: string,
+    acteur: ActeurRole,
+    projetId: string,
+    tacheId: string,
+    corps: RemettreTacheDto = {},
+  ) {
     verifierCircuit(acteur.role);
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
@@ -141,28 +165,43 @@ export class TachesProjetService {
             desactivation: true,
             ouvreApres: true,
             etapeNumero: true,
-            taches: { where: { visaRequis: true, statut: 'validee', visaLe: null, visaNonTrace: false }, select: { libelle: true } },
+            taches: {
+              where: { visaRequis: true, statut: 'validee', visaLe: null, visaNonTrace: false },
+              select: { libelle: true },
+            },
           },
         },
-        projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: {
+          select: {
+            code: true,
+            ouvertLe: true,
+            budgetHeures: true,
+            cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } },
+          },
+        },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
-    if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée remet sa tâche.');
-    if (tache.statut !== 'a_faire' && tache.statut !== 'reprise') throw new ConflictException('Cette tâche n’attend pas de remise.');
+    if (!collaborateurId || collaborateurId !== tache.assigneId)
+      throw new ForbiddenException('Seule la personne assignée remet sa tâche.');
+    if (tache.statut !== 'a_faire' && tache.statut !== 'reprise')
+      throw new ConflictException('Cette tâche n’attend pas de remise.');
     if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : rien à déposer.');
     if (await this.carteVerrouillee(projetId, tache.carte.ouvreApres)) {
       throw new ConflictException('La carte s’ouvre quand les tâches dont elle dépend sont validées.');
     }
     // Le dépôt du permis attend les plans visés par l'architecte DPLG.
     if (tache.cle === 'depot' && tache.carte.taches.length) {
-      throw new ConflictException(`Dépôt impossible : visa DPLG attendu sur ${tache.carte.taches.map((t) => `« ${t.libelle} »`).join(', ')}.`);
+      throw new ConflictException(
+        `Dépôt impossible : visa DPLG attendu sur ${tache.carte.taches.map((t) => `« ${t.libelle} »`).join(', ')}.`,
+      );
     }
 
     const recues = corps.pieces ?? [];
     if (recues.some((f) => !f.url.startsWith('data:'))) throw new BadRequestException('Fichier invalide.');
-    if (tache.fichierObligatoire && recues.length === 0) throw new BadRequestException('Joignez au moins un fichier : il est obligatoire pour cette tâche.');
+    if (tache.fichierObligatoire && recues.length === 0)
+      throw new BadRequestException('Joignez au moins un fichier : il est obligatoire pour cette tâche.');
     const version = tache.version + 1;
     const vNN = `v${String(version).padStart(2, '0')}`;
     // Renommés selon la règle du HUB (CODE_ÉTAPE_TÂCHE_vNN) : personne n'a à la retenir.
@@ -203,7 +242,12 @@ export class TachesProjetService {
       }
       if (depot) {
         await tx.evenementTacheProjet.create({
-          data: { tacheId: tache.id, type: 'validation', parId: acteur.userId, detail: 'Dépôt du justificatif : vaut validation' },
+          data: {
+            tacheId: tache.id,
+            type: 'validation',
+            parId: acteur.userId,
+            detail: 'Dépôt du justificatif : vaut validation',
+          },
         });
       }
     });
@@ -212,14 +256,29 @@ export class TachesProjetService {
       const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
       const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
       const valideurs = await this.valideurs(ctx, collaborateurId, chefId);
-      await this.notifier(societeId, projetId, tache.projet.code, 'tache_remise', `Remise ${vNN} à valider · ${tache.projet.code} · ${tache.libelle}`, acteur.userId, valideurs);
+      await this.notifier(
+        societeId,
+        projetId,
+        tache.projet.code,
+        'tache_remise',
+        `Remise ${vNN} à valider · ${tache.projet.code} · ${tache.libelle}`,
+        acteur.userId,
+        valideurs,
+      );
     }
     return { statut: depot ? 'validee' : 'a_valider', version };
   }
 
   // Valider une remise, ou la renvoyer en reprise (motif) — chef de team,
   // Architecte DPLG (tâches du chef, suppléance) ; jamais sa propre tâche.
-  async decider(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, decision: 'valider' | 'renvoyer', motif?: string) {
+  async decider(
+    societeId: string,
+    acteur: ActeurRole,
+    projetId: string,
+    tacheId: string,
+    decision: 'valider' | 'renvoyer',
+    motif?: string,
+  ) {
     verifierCircuit(acteur.role);
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
@@ -230,7 +289,9 @@ export class TachesProjetService {
         libelle: true,
         assigneId: true,
         visaRequis: true,
-        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: {
+          select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } },
+        },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
@@ -239,7 +300,13 @@ export class TachesProjetService {
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
     const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
     const assigneEstDplg = !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId);
-    if (!peutDecider({ role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, { ...tache, assigneEstDplg }, chefId)) {
+    if (
+      !peutDecider(
+        { role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee },
+        { ...tache, assigneEstDplg },
+        chefId,
+      )
+    ) {
       throw new ForbiddenException(
         collaborateurId && collaborateurId === tache.assigneId
           ? 'On ne valide jamais sa propre tâche.'
@@ -263,7 +330,12 @@ export class TachesProjetService {
         data:
           decision === 'valider'
             ? { tacheId: tache.id, type: 'validation', parId: acteur.userId, detail: `Remise ${vNN} validée` }
-            : { tacheId: tache.id, type: 'reprise', parId: acteur.userId, detail: `Remise ${vNN} renvoyée en reprise : ${motif!.trim()}` },
+            : {
+                tacheId: tache.id,
+                type: 'reprise',
+                parId: acteur.userId,
+                detail: `Remise ${vNN} renvoyée en reprise : ${motif!.trim()}`,
+              },
       });
     });
     if (tache.assigneId) {
@@ -300,23 +372,44 @@ export class TachesProjetService {
   // Visa DPLG (revue Dir. GC, 21/10/2026) : sur une tâche validée qui l'exige,
   // l'architecte DPLG appose son visa (daté, tracé) ou le refuse avec un
   // motif — la tâche repart alors en reprise chez la personne assignée.
-  async viser(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, apposer: boolean, motif?: string) {
+  async viser(
+    societeId: string,
+    acteur: ActeurRole,
+    projetId: string,
+    tacheId: string,
+    apposer: boolean,
+    motif?: string,
+  ) {
     verifierCircuit(acteur.role);
-    if (!peutViser(acteur.role)) throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');
+    if (!peutViser(acteur.role))
+      throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId, ouvertLe: { not: null } } },
-      select: { id: true, libelle: true, statut: true, version: true, visaRequis: true, visaLe: true, visaNonTrace: true, assigneId: true, projet: { select: { code: true } } },
+      select: {
+        id: true,
+        libelle: true,
+        statut: true,
+        version: true,
+        visaRequis: true,
+        visaLe: true,
+        visaNonTrace: true,
+        assigneId: true,
+        projet: { select: { code: true } },
+      },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
     if (!tache.visaRequis) throw new ConflictException('Cette tâche n’exige pas de visa DPLG.');
-    if (tache.statut !== 'validee' || tache.visaLe || tache.visaNonTrace) throw new ConflictException('Aucun visa en attente sur cette tâche.');
+    if (tache.statut !== 'validee' || tache.visaLe || tache.visaNonTrace)
+      throw new ConflictException('Aucun visa en attente sur cette tâche.');
     if (!apposer && !motif?.trim()) throw new BadRequestException('Le motif du refus de visa est obligatoire.');
     const vNN = `v${String(tache.version).padStart(2, '0')}`;
     await this.prisma.$transaction(async (tx) => {
       // Garde en base : le visa n'a pas été tranché entre-temps.
       const { count } = await tx.tacheProjet.updateMany({
         where: { id: tache.id, statut: 'validee', visaLe: null },
-        data: apposer ? { visaLe: new Date(), visaParId: acteur.userId } : { statut: 'reprise', valideeLe: null, valideeParId: null },
+        data: apposer
+          ? { visaLe: new Date(), visaParId: acteur.userId }
+          : { statut: 'reprise', valideeLe: null, valideeParId: null },
       });
       if (!count) throw new ConflictException('Le visa a déjà été tranché.');
       await tx.evenementTacheProjet.create({
@@ -324,7 +417,9 @@ export class TachesProjetService {
           tacheId: tache.id,
           type: 'visa',
           parId: acteur.userId,
-          detail: apposer ? `Visa DPLG apposé sur la remise ${vNN}` : `Visa DPLG refusé, remise ${vNN} renvoyée en reprise : ${motif!.trim()}`,
+          detail: apposer
+            ? `Visa DPLG apposé sur la remise ${vNN}`
+            : `Visa DPLG refusé, remise ${vNN} renvoyée en reprise : ${motif!.trim()}`,
         },
       });
     });
@@ -334,7 +429,9 @@ export class TachesProjetService {
         projetId,
         tache.projet.code,
         apposer ? 'tache_validee' : 'tache_renvoyee',
-        apposer ? `Visa DPLG apposé · ${tache.projet.code} · ${tache.libelle}` : `Visa DPLG refusé, reprise · ${tache.projet.code} · ${tache.libelle}`,
+        apposer
+          ? `Visa DPLG apposé · ${tache.projet.code} · ${tache.libelle}`
+          : `Visa DPLG refusé, reprise · ${tache.projet.code} · ${tache.libelle}`,
         acteur.userId,
         await this.comptesDe([tache.assigneId]),
       );
@@ -357,16 +454,29 @@ export class TachesProjetService {
     verifierCircuit(acteur.role);
     // Seuil et suppléance vérifiés en amont (AvenantsTsService) ; ici, le rôle.
     const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
-    if (!agitCommeDplg({ role: acteur.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }) && acteur.role !== ROLE_CTO) {
+    if (
+      !agitCommeDplg({ role: acteur.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }) &&
+      acteur.role !== ROLE_CTO
+    ) {
       throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     }
     const carte = await this.prisma.carteProjet.findFirst({
       where: { id: carteId, projetId, projet: { societeId, ouvertLe: { not: null } } },
-      select: { id: true, debutJ: true, finJ: true, debutLe: true, finLe: true, temps: true, desactivation: true, taches: { select: { ordre: true } } },
+      select: {
+        id: true,
+        debutJ: true,
+        finJ: true,
+        debutLe: true,
+        finLe: true,
+        temps: true,
+        desactivation: true,
+        taches: { select: { ordre: true } },
+      },
     });
     if (!carte) throw new NotFoundException('Carte introuvable');
     const temps = carte.temps as Temps | null;
-    if (carte.desactivation || temps?.type !== 'par_unite') throw new ConflictException('Cette carte ne reçoit pas d’élément en TS.');
+    if (carte.desactivation || temps?.type !== 'par_unite')
+      throw new ConflictException('Cette carte ne reçoit pas d’élément en TS.');
 
     return this.prisma.$transaction(async (tx) => {
       const rang = (await tx.tacheProjet.count({ where: { projetId, cle: { startsWith: 'ts_' } } })) + 1;
@@ -394,21 +504,42 @@ export class TachesProjetService {
   // Demande de prolongation (assigné) : nouvelle date + motif. L'échéance de
   // référence reste figée (choix du 06/10/2026) : accordée, la prolongation
   // qualifie le retard jusqu'à cette date.
-  async demanderProlongation(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, jusquau: string, motif: string) {
+  async demanderProlongation(
+    societeId: string,
+    acteur: ActeurRole,
+    projetId: string,
+    tacheId: string,
+    jusquau: string,
+    motif: string,
+  ) {
     verifierCircuit(acteur.role);
     const tache = await this.chargerPourProlongation(societeId, projetId, tacheId);
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
-    if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée demande une prolongation.');
-    if (tache.statut === 'validee' || tache.statut === 'non_necessaire') throw new ConflictException('Tâche close : pas de prolongation.');
+    if (!collaborateurId || collaborateurId !== tache.assigneId)
+      throw new ForbiddenException('Seule la personne assignée demande une prolongation.');
+    if (tache.statut === 'validee' || tache.statut === 'non_necessaire')
+      throw new ConflictException('Tâche close : pas de prolongation.');
     if (tache.carte.desactivation) throw new ConflictException('Carte désactivée : pas de prolongation.');
-    if (tache.prolongations.some((p) => p.decision === null)) throw new ConflictException('Une demande de prolongation attend déjà une décision.');
-    const plancher = [tache.finLe, tache.prolongations.find((p) => p.decision === 'accordee')?.jusquau].filter((d): d is string => !!d).sort().at(-1);
-    if (plancher && jusquau <= plancher) throw new BadRequestException(`La nouvelle date doit dépasser le ${plancher.split('-').reverse().join('/')}.`);
+    if (tache.prolongations.some((p) => p.decision === null))
+      throw new ConflictException('Une demande de prolongation attend déjà une décision.');
+    const plancher = [tache.finLe, tache.prolongations.find((p) => p.decision === 'accordee')?.jusquau]
+      .filter((d): d is string => !!d)
+      .sort()
+      .at(-1);
+    if (plancher && jusquau <= plancher)
+      throw new BadRequestException(`La nouvelle date doit dépasser le ${plancher.split('-').reverse().join('/')}.`);
 
     await this.prisma.$transaction([
-      this.prisma.prolongationTache.create({ data: { tacheId: tache.id, jusquau, motif: motif.trim(), demandeParId: acteur.userId } }),
+      this.prisma.prolongationTache.create({
+        data: { tacheId: tache.id, jusquau, motif: motif.trim(), demandeParId: acteur.userId },
+      }),
       this.prisma.evenementTacheProjet.create({
-        data: { tacheId: tache.id, type: 'prolongation', parId: acteur.userId, detail: `Prolongation demandée jusqu’au ${jusquau.split('-').reverse().join('/')} : ${motif.trim()}` },
+        data: {
+          tacheId: tache.id,
+          type: 'prolongation',
+          parId: acteur.userId,
+          detail: `Prolongation demandée jusqu’au ${jusquau.split('-').reverse().join('/')} : ${motif.trim()}`,
+        },
       }),
     ]);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
@@ -430,7 +561,13 @@ export class TachesProjetService {
   }
 
   // Décision (chef de team, sauf sa propre tâche ; Architecte DPLG partout).
-  async deciderProlongation(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string, accorder: boolean) {
+  async deciderProlongation(
+    societeId: string,
+    acteur: ActeurRole,
+    projetId: string,
+    tacheId: string,
+    accorder: boolean,
+  ) {
     verifierCircuit(acteur.role);
     const tache = await this.chargerPourProlongation(societeId, projetId, tacheId);
     const demande = tache.prolongations.find((p) => p.decision === null);
@@ -440,7 +577,14 @@ export class TachesProjetService {
     const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
     const assigneEstDplg = !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId);
     const repousse = await this.repousseLivraison(societeId, tache.projet, demande.jusquau);
-    if (!peutQualifier({ role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, { assigneId: tache.assigneId, assigneEstDplg }, chefId, repousse)) {
+    if (
+      !peutQualifier(
+        { role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee },
+        { assigneId: tache.assigneId, assigneEstDplg },
+        chefId,
+        repousse,
+      )
+    ) {
       throw new ForbiddenException(
         repousse
           ? 'Cette prolongation repousse la livraison du projet : elle est décidée par le CTO.'
@@ -457,7 +601,14 @@ export class TachesProjetService {
       });
       if (!count) throw new ConflictException('La demande a déjà été tranchée.');
       await tx.evenementTacheProjet.create({
-        data: { tacheId: tache.id, type: 'prolongation', parId: acteur.userId, detail: accorder ? `Prolongation accordée jusqu’au ${date} (retard qualifié)` : `Prolongation jusqu’au ${date} refusée` },
+        data: {
+          tacheId: tache.id,
+          type: 'prolongation',
+          parId: acteur.userId,
+          detail: accorder
+            ? `Prolongation accordée jusqu’au ${date} (retard qualifié)`
+            : `Prolongation jusqu’au ${date} refusée`,
+        },
       });
     });
     if (tache.assigneId) {
@@ -485,7 +636,14 @@ export class TachesProjetService {
         assigneId: true,
         carte: { select: { desactivation: true } },
         prolongations: { orderBy: { demandeLe: 'desc' }, select: { id: true, jusquau: true, decision: true } },
-        projet: { select: { code: true, ouvertLe: true, budgetHeures: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+        projet: {
+          select: {
+            code: true,
+            ouvertLe: true,
+            budgetHeures: true,
+            cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } },
+          },
+        },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
@@ -496,9 +654,16 @@ export class TachesProjetService {
   private async carteVerrouillee(projetId: string, refs: string[]): Promise<boolean> {
     for (const ref of refs) {
       const [carte, cle] = ref.split('.');
-      const t = await this.prisma.tacheProjet.findFirst({ where: { projetId, cle, carte: { cle: carte } }, select: { statut: true, visaRequis: true, visaLe: true, visaNonTrace: true } });
+      const t = await this.prisma.tacheProjet.findFirst({
+        where: { projetId, cle, carte: { cle: carte } },
+        select: { statut: true, visaRequis: true, visaLe: true, visaNonTrace: true },
+      });
       // Faite : non nécessaire, ou validée (et visée si le visa DPLG est exigé).
-      if (t && !(t.statut === 'non_necessaire' || (t.statut === 'validee' && (!t.visaRequis || t.visaLe || t.visaNonTrace)))) return true;
+      if (
+        t &&
+        !(t.statut === 'non_necessaire' || (t.statut === 'validee' && (!t.visaRequis || t.visaLe || t.visaNonTrace)))
+      )
+        return true;
     }
     return false;
   }
@@ -509,7 +674,11 @@ export class TachesProjetService {
       where: { id: { in: collaborateurIds } },
       select: { utilisateurId: true, dossierPersonnel: { select: { utilisateurId: true } } },
     });
-    return [...new Set(c.flatMap((x) => [x.utilisateurId, x.dossierPersonnel?.utilisateurId].filter((id): id is string => !!id)))];
+    return [
+      ...new Set(
+        c.flatMap((x) => [x.utilisateurId, x.dossierPersonnel?.utilisateurId].filter((id): id is string => !!id)),
+      ),
+    ];
   }
 
   // Qui prévenir d'une remise ou d'une prolongation : le chef de team s'il a
@@ -520,7 +689,11 @@ export class TachesProjetService {
   }
 
   // Le même circuit, avec le rôle de la personne qui valide (affiché à l'assigné).
-  private async circuit(ctx: ContexteDecision, assigneId: string | null, chefId: string | null): Promise<{ ids: string[]; role: string }> {
+  private async circuit(
+    ctx: ContexteDecision,
+    assigneId: string | null,
+    chefId: string | null,
+  ): Promise<{ ids: string[]; role: string }> {
     if (assigneId && ctx.dplgCollaborateurs.has(assigneId)) return { ids: ctx.comptesCto, role: 'CTO' };
     if (chefId && chefId !== assigneId && !ctx.collaborateursAbsents.has(chefId)) {
       const chef = await this.comptesDe([chefId]);
@@ -532,7 +705,10 @@ export class TachesProjetService {
   // Qui valide, en clair, pour l'assigné (Mes tâches, panneau) : les MÊMES
   // personnes que celles prévenues au dépôt (circuit plus haut), et non le
   // nom du signataire des contrats, souvent vide. null : personne à prévenir.
-  async nomsValideurs(societeId: string, taches: { id: string; assigneId: string | null; chefId: string | null }[]): Promise<Map<string, string | null>> {
+  async nomsValideurs(
+    societeId: string,
+    taches: { id: string; assigneId: string | null; chefId: string | null }[],
+  ): Promise<Map<string, string | null>> {
     const resultat = new Map<string, string | null>();
     if (!taches.length) return resultat;
     const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
@@ -565,13 +741,20 @@ export class TachesProjetService {
         statut: true,
         version: true,
         assigneId: true,
-        projet: { select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
-        evenements: { where: { type: { in: ['remise', 'relance'] } }, orderBy: { creeLe: 'desc' }, select: { type: true, creeLe: true } },
+        projet: {
+          select: { code: true, cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } },
+        },
+        evenements: {
+          where: { type: { in: ['remise', 'relance'] } },
+          orderBy: { creeLe: 'desc' },
+          select: { type: true, creeLe: true },
+        },
       },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
-    if (!collaborateurId || collaborateurId !== tache.assigneId) throw new ForbiddenException('Seule la personne assignée relance son validateur.');
+    if (!collaborateurId || collaborateurId !== tache.assigneId)
+      throw new ForbiddenException('Seule la personne assignée relance son validateur.');
     if (tache.statut !== 'a_valider') throw new ConflictException('Cette tâche n’attend pas de validation.');
     const remise = tache.evenements.find((e) => e.type === 'remise');
     const relance = tache.evenements.find((e) => e.type === 'relance');
@@ -584,10 +767,19 @@ export class TachesProjetService {
     const jours = joursOuvresApres(remise.creeLe.toISOString().slice(0, 10), aujourdhui(), feries);
     const vNN = `v${String(tache.version).padStart(2, '0')}`;
     await this.prisma.evenementTacheProjet.create({
-      data: { tacheId: tache.id, type: 'relance', parId: acteur.userId, detail: `Relance du validateur · ${vNN} déposée il y a ${jours} jours ouvrés` },
+      data: {
+        tacheId: tache.id,
+        type: 'relance',
+        parId: acteur.userId,
+        detail: `Relance du validateur · ${vNN} déposée il y a ${jours} jours ouvrés`,
+      },
     });
     const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
-    const valideurs = await this.valideurs(ctx, collaborateurId, tache.projet.cellules[0]?.cellule.dispatcherId ?? null);
+    const valideurs = await this.valideurs(
+      ctx,
+      collaborateurId,
+      tache.projet.cellules[0]?.cellule.dispatcherId ?? null,
+    );
     await this.notifier(
       societeId,
       projetId,
@@ -600,18 +792,37 @@ export class TachesProjetService {
   }
 
   // La nouvelle date dépasse-t-elle la livraison du projet (jour J de son horizon) ?
-  private async repousseLivraison(societeId: string, projet: { ouvertLe: string | null; budgetHeures: number | null }, jusquau: string): Promise<boolean> {
+  private async repousseLivraison(
+    societeId: string,
+    projet: { ouvertLe: string | null; budgetHeures: number | null },
+    jusquau: string,
+  ): Promise<boolean> {
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId) ?? new Set<string>();
     const livraison = dateLivraison(projet, feries);
     return !!livraison && jusquau > livraison;
   }
 
   // Best-effort : une notification manquée ne fait pas échouer l'action.
-  private async notifier(societeId: string, projetId: string, code: string, type: NotificationType, titre: string, parId: string, destinataireIds: string[]) {
+  private async notifier(
+    societeId: string,
+    projetId: string,
+    code: string,
+    type: NotificationType,
+    titre: string,
+    parId: string,
+    destinataireIds: string[],
+  ) {
     const cibles = destinataireIds.filter((id) => id !== parId);
     if (!cibles.length) return;
     try {
-      await this.notifications.pousser({ societeId, projet: { id: projetId, code, celluleIds: [] }, type, titre, parId, destinataireIds: cibles });
+      await this.notifications.pousser({
+        societeId,
+        projet: { id: projetId, code, celluleIds: [] },
+        type,
+        titre,
+        parId,
+        destinataireIds: cibles,
+      });
     } catch (e) {
       this.log.error(`Notification ${type} non envoyée : ${e instanceof Error ? e.message : e}`);
     }
@@ -632,14 +843,20 @@ export class TachesProjetService {
   async verifierAccesPiece(societeId: string, acteur: ActeurRole, projetId: string, tacheId: string) {
     const tache = await this.prisma.tacheProjet.findFirst({
       where: { id: tacheId, projetId, projet: { societeId } },
-      select: { assigneId: true, projet: { select: { cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } } },
+      select: {
+        assigneId: true,
+        projet: { select: { cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } } } },
+      },
     });
     if (!tache) throw new NotFoundException('Tâche introuvable');
     const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
     const chefId = tache.projet.cellules[0]?.cellule.dispatcherId ?? null;
     if (collaborateurId && tache.assigneId === collaborateurId) return;
     const ctx = await contexteDecision(this.prisma, societeId, aujourdhui());
-    const t = { assigneId: tache.assigneId, assigneEstDplg: !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId) };
+    const t = {
+      assigneId: tache.assigneId,
+      assigneEstDplg: !!tache.assigneId && ctx.dplgCollaborateurs.has(tache.assigneId),
+    };
     if (peutQualifier({ role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, t, chefId)) return;
     throw new ForbiddenException('Fichier réservé à l’assigné et à son valideur.');
   }

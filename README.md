@@ -10,11 +10,11 @@ clients.
 
 ## Stack
 
-| | |
-|---|---|
-| Backend | NestJS 10 · Prisma 5 · PostgreSQL 16 · JWT (Passport) |
-| Frontend | Next.js 14 (App Router) · React 18 · TypeScript |
-| Tests | Jest (backend) |
+|                   |                                                           |
+| ----------------- | --------------------------------------------------------- |
+| Backend           | NestJS 10 · Prisma 5 · PostgreSQL 16 · JWT (Passport)     |
+| Frontend          | Next.js 14 (App Router) · React 18 · TypeScript           |
+| Tests             | Jest (backend)                                            |
 | Hébergement prévu | Hetzner Cloud (VPS + Object Storage), domaine `hub.group` |
 
 ## Structure
@@ -86,28 +86,28 @@ une vraie protection de branche demandera un dépôt public ou GitHub Pro.
 
 ## Comptes de démonstration (après seed)
 
-| Rôle | Identifiant | Accès |
-|---|---|---|
-| Admin holding | `admin@hub.group` | portail groupe |
-| Admin société | `admin.greyconcrete@hub.group` | `/admin/grey-concrete` |
+| Rôle          | Identifiant                      | Accès                   |
+| ------------- | -------------------------------- | ----------------------- |
+| Admin holding | `admin@hub.group`                | portail groupe          |
+| Admin société | `admin.greyconcrete@hub.group`   | `/admin/grey-concrete`  |
 | Collaborateur | `rokhaya.ndoye@greyconcrete.hub` | `/collab/grey-concrete` |
 
 Mot de passe commun : `changeme123` — à changer avant toute mise en production.
 
 ## Scripts
 
-| Backend | |
-|---|---|
-| `npm run start:dev` | API en watch |
-| `npm run build` | compilation (`nest build`) |
-| `npm test` · `test:watch` · `test:cov` | tests unitaires Jest |
-| `npm run prisma:migrate` · `prisma:seed` · `prisma:studio` | base |
+| Backend                                                    |                            |
+| ---------------------------------------------------------- | -------------------------- |
+| `npm run start:dev`                                        | API en watch               |
+| `npm run build`                                            | compilation (`nest build`) |
+| `npm test` · `test:watch` · `test:cov`                     | tests unitaires Jest       |
+| `npm run prisma:migrate` · `prisma:seed` · `prisma:studio` | base                       |
 
-| Frontend | |
-|---|---|
-| `npm run dev` · `build` · `start` | Next.js |
-| `npm run lint` | ESLint (`next lint`) |
-| `npm run typecheck` | `tsc --noEmit` |
+| Frontend                          |                      |
+| --------------------------------- | -------------------- |
+| `npm run dev` · `build` · `start` | Next.js              |
+| `npm run lint`                    | ESLint (`next lint`) |
+| `npm run typecheck`               | `tsc --noEmit`       |
 
 ## Conventions (non négociables)
 

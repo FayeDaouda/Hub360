@@ -70,11 +70,7 @@ export function LocaliteSelect({ localites, valeur, onChange, idChamp, filtre: a
         disabled={!localites}
       >
         <option value="">
-          {!localites
-            ? 'Chargement…'
-            : nbResultats === 0
-              ? 'Aucune localité ne correspond'
-              : 'Choisir une localité…'}
+          {!localites ? 'Chargement…' : nbResultats === 0 ? 'Aucune localité ne correspond' : 'Choisir une localité…'}
         </option>
         {groupes.map(([groupe, ls]) => (
           <optgroup key={groupe} label={groupe}>

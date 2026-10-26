@@ -5,13 +5,28 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { deciderDemandeDroit, type DemandeDroit } from '@/lib/roles';
 
-const NIVEAU: Record<DemandeDroit['apres'], string> = { aucun: 'Aucun', lecture: 'Lecture', ecriture: 'Écriture', validation: 'Validation' };
+const NIVEAU: Record<DemandeDroit['apres'], string> = {
+  aucun: 'Aucun',
+  lecture: 'Lecture',
+  ecriture: 'Écriture',
+  validation: 'Validation',
+};
 const jjmmaaaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 // Le CEO valide une modification des droits du rôle CIO (revue CIO,
 // 22/10/2026) : acceptée, elle est appliquée et tracée « validée par » ;
 // refusée, le motif part au demandeur.
-export function DecisionDroit({ slug, demande: d, onFait, onClose }: { slug: string; demande: DemandeDroit; onFait: (restantes: DemandeDroit[]) => void; onClose: () => void }) {
+export function DecisionDroit({
+  slug,
+  demande: d,
+  onFait,
+  onClose,
+}: {
+  slug: string;
+  demande: DemandeDroit;
+  onFait: (restantes: DemandeDroit[]) => void;
+  onClose: () => void;
+}) {
   const [refus, setRefus] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -36,7 +51,13 @@ export function DecisionDroit({ slug, demande: d, onFait, onClose }: { slug: str
 
   return createPortal(
     <div className="modal-backdrop" onClick={() => !envoi && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="dd-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dd-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="dd-titre">Droits du {d.role} à valider</h2>
           <button type="button" className="modal-close" aria-label="Fermer" disabled={envoi} onClick={onClose}>
@@ -64,11 +85,20 @@ export function DecisionDroit({ slug, demande: d, onFait, onClose }: { slug: str
               </dd>
             </div>
           </dl>
-          <p className="dmd-note">Le CIO ne modifie pas les droits de son propre rôle : rien ne change sans votre accord. Accepté, le changement est appliqué et gardé au journal des droits.</p>
+          <p className="dmd-note">
+            Le CIO ne modifie pas les droits de son propre rôle : rien ne change sans votre accord. Accepté, le
+            changement est appliqué et gardé au journal des droits.
+          </p>
           {refus !== null && (
             <label className="field">
               <span className="field-label">Motif du refus (transmis au demandeur)</span>
-              <textarea className="field-input" rows={2} maxLength={500} value={refus} onChange={(e) => setRefus(e.target.value)} />
+              <textarea
+                className="field-input"
+                rows={2}
+                maxLength={500}
+                value={refus}
+                onChange={(e) => setRefus(e.target.value)}
+              />
             </label>
           )}
           {erreur && <p className="field-erreur">{erreur}</p>}
@@ -87,7 +117,12 @@ export function DecisionDroit({ slug, demande: d, onFait, onClose }: { slug: str
                 <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setRefus(null)}>
                   Annuler
                 </button>
-                <button type="button" className="btn-primary" disabled={envoi || refus.trim().length < 3} onClick={() => decider(false)}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={envoi || refus.trim().length < 3}
+                  onClick={() => decider(false)}
+                >
                   {envoi ? 'Envoi…' : 'Refuser la demande'}
                 </button>
               </>

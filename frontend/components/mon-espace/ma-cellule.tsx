@@ -42,9 +42,28 @@ export function MaCellule({ slug }: { slug: string }) {
     <>
       <KpiStrip
         tuiles={[
-          { cle: 'projets', label: 'Projets pilotés', valeur: projets.length, sousTexte: 'projets signés de la cellule', icone: FolderKanban },
-          { cle: 'en-cours', label: 'Tâches en cours', valeur: stats.enCours, sousTexte: 'toute la cellule', icone: ListTodo },
-          { cle: 'retard', label: 'En retard', valeur: stats.enRetard, sousTexte: 'tâches hors délai', icone: AlarmClock, etat: stats.enRetard > 0 ? 'risque' : 'succes' },
+          {
+            cle: 'projets',
+            label: 'Projets pilotés',
+            valeur: projets.length,
+            sousTexte: 'projets signés de la cellule',
+            icone: FolderKanban,
+          },
+          {
+            cle: 'en-cours',
+            label: 'Tâches en cours',
+            valeur: stats.enCours,
+            sousTexte: 'toute la cellule',
+            icone: ListTodo,
+          },
+          {
+            cle: 'retard',
+            label: 'En retard',
+            valeur: stats.enRetard,
+            sousTexte: 'tâches hors délai',
+            icone: AlarmClock,
+            etat: stats.enRetard > 0 ? 'risque' : 'succes',
+          },
           {
             cle: 'a-temps',
             label: 'Tâches remises à temps',
@@ -88,7 +107,9 @@ export function MaCellule({ slug }: { slug: string }) {
               ))}
             </ul>
           )}
-          <p className="dmd-note me-pied">L’équipe est évaluée sur ses projets. Aucun montant n’est affiché aux équipes.</p>
+          <p className="dmd-note me-pied">
+            L’équipe est évaluée sur ses projets. Aucun montant n’est affiché aux équipes.
+          </p>
           {contact && <FicheContactModal slug={slug} utilisateurId={contact} onClose={() => setContact(null)} />}
         </section>
         <section className="panel glass-panel dmd-section">

@@ -43,7 +43,7 @@ describe('PermissionGuard', () => {
     expect(() => guard.canActivate(ctxOf(req({ crm: 'lecture' })))).toThrow(ForbiddenException);
   });
 
-  it("REFUSÉ : aucune entrée pour le module (fail closed) → 403", () => {
+  it('REFUSÉ : aucune entrée pour le module (fail closed) → 403', () => {
     const guard = new PermissionGuard(reflector({ module: 'rh', niveau: 'lecture' }));
     expect(() => guard.canActivate(ctxOf(req({ crm: 'validation' })))).toThrow(ForbiddenException);
   });
@@ -68,7 +68,9 @@ describe('PermissionGuard — règle selon la méthode', () => {
   const g = (valeurs: Record<string, unknown>) => new PermissionGuard(parCle(valeurs));
 
   it('GET avec projets:lecture → autorisé', () => {
-    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'COO', { projets: 'lecture' })))).toBe(true);
+    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('GET', 'COO', { projets: 'lecture' })))).toBe(
+      true,
+    );
   });
 
   it.each([['POST'], ['PATCH'], ['PUT'], ['DELETE']])('%s avec projets:lecture seulement → 403', (m) => {
@@ -78,8 +80,14 @@ describe('PermissionGuard — règle selon la méthode', () => {
   });
 
   it('PATCH avec projets:ecriture → autorisé ; validation couvre écriture', () => {
-    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'Dir. GC', { projets: 'ecriture' })))).toBe(true);
-    expect(g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'CTO (transverse)', { projets: 'validation' })))).toBe(true);
+    expect(
+      g({ permissionSelonMethode: SELON }).canActivate(ctxOf(requete('PATCH', 'Dir. GC', { projets: 'ecriture' }))),
+    ).toBe(true);
+    expect(
+      g({ permissionSelonMethode: SELON }).canActivate(
+        ctxOf(requete('PATCH', 'CTO (transverse)', { projets: 'validation' })),
+      ),
+    ).toBe(true);
   });
 
   it('GET sans aucune ligne projets (RH, CIO) → 403', () => {
@@ -110,13 +118,19 @@ describe('PermissionGuard — règle selon la méthode', () => {
   it('@CompteCommeLecture : un POST/PATCH « de lecture » (chat lu, ticket) passe avec la seule lecture', () => {
     const chat = { module: 'communication', roleHorsMatrice: 'collaborateur' };
     expect(
-      g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(ctxOf(requete('PATCH', 'CEO (transverse)', { communication: 'lecture' }))),
+      g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(
+        ctxOf(requete('PATCH', 'CEO (transverse)', { communication: 'lecture' })),
+      ),
     ).toBe(true);
     expect(() =>
-      g({ permissionSelonMethode: chat }).canActivate(ctxOf(requete('POST', 'CEO (transverse)', { communication: 'lecture' }))),
+      g({ permissionSelonMethode: chat }).canActivate(
+        ctxOf(requete('POST', 'CEO (transverse)', { communication: 'lecture' })),
+      ),
     ).toThrow(ForbiddenException);
     expect(() =>
-      g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(ctxOf(requete('PATCH', 'CIO (transverse)', { communication: 'aucun' }))),
+      g({ permissionSelonMethode: chat, compteCommeLecture: true }).canActivate(
+        ctxOf(requete('PATCH', 'CIO (transverse)', { communication: 'aucun' })),
+      ),
     ).toThrow(ForbiddenException);
   });
 });

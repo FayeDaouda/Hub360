@@ -4,7 +4,16 @@ import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { AlarmClock, AtSign, CalendarPlus, CheckCheck, ChevronDown, Hourglass, MessageCircle, RotateCcw } from 'lucide-react';
+import {
+  AlarmClock,
+  AtSign,
+  CalendarPlus,
+  CheckCheck,
+  ChevronDown,
+  Hourglass,
+  MessageCircle,
+  RotateCcw,
+} from 'lucide-react';
 import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
 import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
@@ -81,7 +90,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   // pour le Salarié, proposé à quiconque a une tâche dans le projet.
   const [miennes, setMiennes] = useState(salarie);
   // Tuiles du Salarié : SES tâches (pas le total du projet), ses mentions.
-  const [perso, setPerso] = useState<{ reprises: number; retards: number; attente: number; mentions: number } | null>(null);
+  const [perso, setPerso] = useState<{ reprises: number; retards: number; attente: number; mentions: number } | null>(
+    null,
+  );
   // CEO, CFO : lecture, et les fils en écriture (exception ciblée, revérifiée
   // par le serveur) ; aucune action de circuit.
   const consultation = consultationEtCommentaires(session);
@@ -128,7 +139,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
         setPerso({
           reprises: t.taches.filter((x) => x.statut === 'a_reprendre').length,
           // Même règle que « Mes tâches » : reprises en retard comprises.
-          retards: t.taches.filter((x) => x.statut !== 'validee' && estEnRetard(x, new Date().toISOString().slice(0, 10))).length,
+          retards: t.taches.filter(
+            (x) => x.statut !== 'validee' && estEnRetard(x, new Date().toISOString().slice(0, 10)),
+          ).length,
           attente: t.taches.filter((x) => x.statut === 'remise').length,
           mentions: m.filter((x) => !x.lue).length,
         }),
@@ -199,7 +212,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
           ) : (
             <>
               Étapes → cartes → tâches générées depuis le devis signé à l’émission de F1
-              {horizon !== null && ` · ${horizon} jours ouvrés (${tableau!.budgetHeures} h)`}, délais figés, validation par le chef de team.
+              {horizon !== null && ` · ${horizon} jours ouvrés (${tableau!.budgetHeures} h)`}, délais figés, validation
+              par le chef de team.
             </>
           )}
         </p>
@@ -220,7 +234,9 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
         <KpiStrip
           compact
           tuiles={
-            salarie ? tuilesSalarie(perso, tableau, slug, ouvrirRemiseAValider) : tuilesProjets(tableau, dplg, false, ouvrirRemiseAValider)
+            salarie
+              ? tuilesSalarie(perso, tableau, slug, ouvrirRemiseAValider)
+              : tuilesProjets(tableau, dplg, false, ouvrirRemiseAValider)
           }
         />
       </div>
@@ -229,8 +245,8 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
         <section className="panel glass-panel po-vide">
           <h2>Aucun projet ouvert</h2>
           <p className="po-aide">
-            Un projet s’ouvre à l’émission de sa facture F1 (Réglages · Ouverture du projet) : ses étapes, cartes et tâches sont alors
-            générées depuis le gabarit, délais figés.
+            Un projet s’ouvre à l’émission de sa facture F1 (Réglages · Ouverture du projet) : ses étapes, cartes et
+            tâches sont alors générées depuis le gabarit, délais figés.
           </p>
         </section>
       ) : (
@@ -249,7 +265,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                   <span className="po-code">{p.code}</span>
                   <span className="po-projet-client">{p.client}</span>
                   <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
-                    {p.livraisonDepassee ? 'Livraison dépassée' : p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
+                    {p.livraisonDepassee
+                      ? 'Livraison dépassée'
+                      : p.enRetard
+                        ? `${p.enRetard} en retard`
+                        : 'Dans les délais'}
                   </span>
                 </button>
               ))}
@@ -272,7 +292,11 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
                         <span className="po-projet-tete">
                           <span className="po-code">{p.code}</span>
                           <span className={`pill pill--${p.livraisonDepassee || p.enRetard ? 'risque' : 'succes'}`}>
-                            {p.livraisonDepassee ? 'Livraison dépassée' : p.enRetard ? `${p.enRetard} en retard` : 'Dans les délais'}
+                            {p.livraisonDepassee
+                              ? 'Livraison dépassée'
+                              : p.enRetard
+                                ? `${p.enRetard} en retard`
+                                : 'Dans les délais'}
                           </span>
                         </span>
                         <span className="po-projet-client">{p.client}</span>
@@ -444,7 +468,10 @@ function tuilesProjets(
       cle: 'signalements',
       label: 'Signalements et mentions',
       valeur: n(signalements),
-      sousTexte: salarie || !k ? 'mises à jour à reporter, @mentions' : `${k.tsNonAcceptes} TS non accepté(s) · ${k.mentions} tâche(s)`,
+      sousTexte:
+        salarie || !k
+          ? 'mises à jour à reporter, @mentions'
+          : `${k.tsNonAcceptes} TS non accepté(s) · ${k.mentions} tâche(s)`,
       icone: AtSign,
       // TS au-delà du délai réglé = en retard ; mention ouverte = à traiter.
       etat: !k ? 'marque' : !salarie && k.tsNonAcceptes > 0 ? 'risque' : etatATraiter(k.mentions),
@@ -470,7 +497,21 @@ type PropsDossier = {
 
 const ouverte = (statut: string) => statut !== 'validee' && statut !== 'non_necessaire';
 
-function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, assignables, moiId, mentionnables, onMaj, salarie, miennes, onMiennes }: PropsDossier) {
+function Dossier({
+  slug,
+  dossier: d,
+  etape,
+  onEtape,
+  selection,
+  onSelection,
+  assignables,
+  moiId,
+  mentionnables,
+  onMaj,
+  salarie,
+  miennes,
+  onMiennes,
+}: PropsDossier) {
   // « Seulement mes tâches » : proposé dès qu'une tâche du projet est à moi.
   const aDesMiennes = d.cartes.some((c) => c.taches.some((t) => t.aMoi));
   const filtrer = miennes && aDesMiennes;
@@ -479,11 +520,14 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
     .map((c) => (filtrer ? { ...c, taches: c.taches.filter((t) => t.aMoi) } : c))
     .filter((c) => !filtrer || c.taches.length > 0);
   const mesOuvertes = (numero: number) =>
-    d.cartes.filter((c) => c.etapeNumero === numero).reduce((n, c) => n + c.taches.filter((t) => t.aMoi && ouverte(t.statut)).length, 0);
+    d.cartes
+      .filter((c) => c.etapeNumero === numero)
+      .reduce((n, c) => n + c.taches.filter((t) => t.aMoi && ouverte(t.statut)).length, 0);
   const ecriture = niveauSuffisant(useSessionCourante(), 'projets', 'ecriture');
   const tacheId = selection?.type === 'tache' ? selection.id : null;
-  const choisie = d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
-  const carteFil = selection?.type === 'carte' ? d.cartes.find((c) => c.id === selection.id) ?? null : null;
+  const choisie =
+    d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === tacheId) ?? null;
+  const carteFil = selection?.type === 'carte' ? (d.cartes.find((c) => c.id === selection.id) ?? null) : null;
   const factures = pastillesFactures(d);
   // Changer d'étape (desktop, où le dossier défile seul) : si on était
   // descendu, les cartes repartent juste sous les étapes collées.
@@ -514,7 +558,9 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
           ) : (
             <>
               <p className="po-aide">
-                {d.cellule ? `${libelleCellule(d.cellule.nom)} · chef de team ${d.cellule.chef ?? 'à désigner'}` : 'Cellule à assigner'}
+                {d.cellule
+                  ? `${libelleCellule(d.cellule.nom)} · chef de team ${d.cellule.chef ?? 'à désigner'}`
+                  : 'Cellule à assigner'}
                 {d.cellule?.chef && ` · validation aujourd’hui : ${d.cellule.chef}`} · pilote des études : {d.pilote}
                 {d.version && ` · ${d.version.code} ${d.version.libelle}`}
                 {d.offre && ` depuis ${d.offre}`}
@@ -539,8 +585,12 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
               J1 le {jjmmaaaa(d.ouvertLe)} → livraison J{d.horizon} le {jjmmaaaa(d.livraisonLe)}
             </span>
           )}
-          {d.jour > d.horizon && d.statutChantier !== 'livre' && <span className="pill pill--risque">Livraison dépassée</span>}
-          {d.budgetHeures !== null && !salarie && <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>}
+          {d.jour > d.horizon && d.statutChantier !== 'livre' && (
+            <span className="pill pill--risque">Livraison dépassée</span>
+          )}
+          {d.budgetHeures !== null && !salarie && (
+            <span className="po-aide">Budget atelier {d.budgetHeures} h · durée, pas une somme d’heures</span>
+          )}
           <StatutProjet slug={slug} projetId={d.id} statut={d.statutChantier} modifiable={ecriture} onMaj={onMaj} />
         </div>
       </header>
@@ -645,7 +695,15 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
               onMaj={onMaj}
             />
           ) : (
-            <CartePanneau key={carteFil!.id} slug={slug} projetId={d.id} carte={carteFil!} moiId={moiId} mentionnables={mentionnables} onMaj={onMaj} />
+            <CartePanneau
+              key={carteFil!.id}
+              slug={slug}
+              projetId={d.id}
+              carte={carteFil!}
+              moiId={moiId}
+              mentionnables={mentionnables}
+              onMaj={onMaj}
+            />
           )}
         </PanneauLateral>
       )}
@@ -655,7 +713,15 @@ function Dossier({ slug, dossier: d, etape, onEtape, selection, onSelection, ass
 
 // « Ajouter en TS » (Architecte DPLG) : l'élément demandé par le client
 // devient une tâche de la carte choisie, son temps s'ajoute au budget atelier.
-function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierProjetOuvert; onMaj: () => Promise<void> }) {
+function AjoutTs({
+  slug,
+  dossier: d,
+  onMaj,
+}: {
+  slug: string;
+  dossier: DossierProjetOuvert;
+  onMaj: () => Promise<void>;
+}) {
   const [carteId, setCarteId] = useState(d.optionsTs[0].carteId);
   const [element, setElement] = useState('');
   const [reprise, setReprise] = useState<'mineure' | 'majeure'>('mineure');
@@ -686,7 +752,10 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
         });
         return;
       }
-      setMessage({ ok: true, texte: `${t.libelle} ajoutée au projet et au devis d’avenant (en préparation, à envoyer au client).` });
+      setMessage({
+        ok: true,
+        texte: `${t.libelle} ajoutée au projet et au devis d’avenant (en préparation, à envoyer au client).`,
+      });
       await onMaj();
     } catch (e) {
       setMessage({ ok: false, texte: e instanceof Error && e.message ? e.message : 'L’ajout en TS a échoué.' });
@@ -701,7 +770,12 @@ function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: DossierPr
   return (
     <div className="po-ts">
       <div className="po-ts-ligne">
-        <select className="field-input" aria-label="Type d’élément" value={carteId} onChange={(e) => setCarteId(e.target.value)}>
+        <select
+          className="field-input"
+          aria-label="Type d’élément"
+          value={carteId}
+          onChange={(e) => setCarteId(e.target.value)}
+        >
           {d.optionsTs.map((o) => (
             <option key={o.carteId} value={o.carteId}>
               {o.libelle} ({o.heures} h)
@@ -800,7 +874,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
   const fenetre =
     c.debutJ !== null && c.debutLe && c.finLe
       ? `J${c.debutJ} → J${c.finJ} · ${jjmm(c.debutLe)} → ${jjmm(c.finLe)}${enHeures ? ` · ${(c.finJ! - c.debutJ + 1) * HEURES_PAR_JOUR} h ouvrées` : ''}`
-      : c.note?.split(' : ')[0] ?? null;
+      : (c.note?.split(' : ')[0] ?? null);
   const etiquettes = [c.etiquette, c.client ? 'CLIENT · hors budget atelier' : null].filter((x): x is string => !!x);
 
   return (
@@ -812,7 +886,13 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
         </div>
         <div className="po-carte-droite">
           {repliable && (
-            <button type="button" className="po-carte-replier" aria-expanded onClick={() => setDeplie(false)} aria-label={`Replier ${c.libelle}`}>
+            <button
+              type="button"
+              className="po-carte-replier"
+              aria-expanded
+              onClick={() => setDeplie(false)}
+              aria-label={`Replier ${c.libelle}`}
+            >
               <ChevronDown size={16} aria-hidden />
             </button>
           )}
@@ -851,13 +931,17 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
                     <strong>{t.libelle}</strong>
                     {(!memeLibelle(t.cle, t.libelle) || t.motif) && (
                       <span className="po-aide">
-                        {[!memeLibelle(t.cle, t.libelle) && t.cle.replace(/_/g, ' '), t.motif].filter(Boolean).join(' · ')}
+                        {[!memeLibelle(t.cle, t.libelle) && t.cle.replace(/_/g, ' '), t.motif]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </span>
                     )}
                   </span>
                   <span className="po-tache-assigne">{t.assigne?.nom ?? 'À assigner'}</span>
                   <span className="po-tache-heures">{heuresTache(t)}</span>
-                  <span className={`po-tache-echeance${t.etat.code === 'en_retard' ? ' po-retard' : ''}`}>{t.finLe ? jjmm(t.finLe) : '—'}</span>
+                  <span className={`po-tache-echeance${t.etat.code === 'en_retard' ? ' po-retard' : ''}`}>
+                    {t.finLe ? jjmm(t.finLe) : '—'}
+                  </span>
                   <span className="po-tache-etat">
                     <span className={`pill pill--${pt.ton}`}>{pt.libelle}</span>
                     {t.fil > 0 && (
@@ -872,7 +956,12 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
           })}
         </ul>
       )}
-      <button type="button" className={`po-fil-bouton${filActif ? ' is-actif' : ''}`} aria-pressed={filActif} onClick={onFil}>
+      <button
+        type="button"
+        className={`po-fil-bouton${filActif ? ' is-actif' : ''}`}
+        aria-pressed={filActif}
+        onClick={onFil}
+      >
         Fil de la carte · {c.fil}
       </button>
     </article>
@@ -894,7 +983,8 @@ const memeLibelle = (cle: string, libelle: string) => normaliser(cle) === normal
 function pastillesFactures(d: DossierProjetOuvert) {
   let premiere = true;
   return (['F1', 'F2', 'F3'] as const).map((f) => {
-    if (d.factures[f] === 'emise') return { libelle: f === 'F1' ? 'F1 émise · projet ouvert' : `${f} émise`, ton: 'succes' };
+    if (d.factures[f] === 'emise')
+      return { libelle: f === 'F1' ? 'F1 émise · projet ouvert' : `${f} émise`, ton: 'succes' };
     const attend = f === 'F1' ? [] : d.attentes[f];
     const ton = premiere ? 'attention' : 'neutre';
     premiere = false;

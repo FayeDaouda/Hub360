@@ -24,23 +24,17 @@ describe('MembreSocieteGuard', () => {
 
   it('AUTORISÉ : societe_admin du bon slug (aucun rôle exigé)', () => {
     expect(
-      new MembreSocieteGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'grey', role: 'societe_admin' } })),
-      ),
+      new MembreSocieteGuard().canActivate(ctxOf(req({ user: { societeSlug: 'grey', role: 'societe_admin' } }))),
     ).toBe(true);
   });
 
   it('HORS PÉRIMÈTRE : token émis pour une autre société → 403', () => {
     expect(() =>
-      new MembreSocieteGuard().canActivate(
-        ctxOf(req({ user: { societeSlug: 'autre', role: 'collaborateur' } })),
-      ),
+      new MembreSocieteGuard().canActivate(ctxOf(req({ user: { societeSlug: 'autre', role: 'collaborateur' } }))),
     ).toThrow(ForbiddenException);
   });
 
   it('token absent → 403', () => {
-    expect(() =>
-      new MembreSocieteGuard().canActivate(ctxOf(req({ user: undefined }))),
-    ).toThrow(ForbiddenException);
+    expect(() => new MembreSocieteGuard().canActivate(ctxOf(req({ user: undefined })))).toThrow(ForbiddenException);
   });
 });

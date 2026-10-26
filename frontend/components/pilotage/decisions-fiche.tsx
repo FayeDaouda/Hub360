@@ -7,12 +7,28 @@ import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 
 const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const PILL: Record<DecisionRattachee['statut'], string> = { proposee: 'pill--attention', ouverte: 'pill--azur', echeance_depassee: 'pill--risque', close: 'pill--succes' };
-const LIBELLE: Record<DecisionRattachee['statut'], string> = { proposee: 'Proposée au CEO', ouverte: 'Ouverte', echeance_depassee: 'Échéance dépassée', close: 'Close' };
+const PILL: Record<DecisionRattachee['statut'], string> = {
+  proposee: 'pill--attention',
+  ouverte: 'pill--azur',
+  echeance_depassee: 'pill--risque',
+  close: 'pill--succes',
+};
+const LIBELLE: Record<DecisionRattachee['statut'], string> = {
+  proposee: 'Proposée au CEO',
+  ouverte: 'Ouverte',
+  echeance_depassee: 'Échéance dépassée',
+  close: 'Close',
+};
 
 // Décisions du registre rattachées à une fiche — projet, cellule ou client
 // (revue CTO, 21/10/2026). Rien à afficher, ou pas d'accès au Pilotage : rien.
-export function DecisionsFiche({ slug, cible }: { slug: string; cible: { projet?: string; cellule?: string; client?: string } }) {
+export function DecisionsFiche({
+  slug,
+  cible,
+}: {
+  slug: string;
+  cible: { projet?: string; cellule?: string; client?: string };
+}) {
   const [decisions, setDecisions] = useState<DecisionRattachee[]>([]);
   const cle = cible.projet ?? cible.cellule ?? cible.client ?? '';
   // Sans le Pilotage (Salarié), pas d'appel voué au refus.

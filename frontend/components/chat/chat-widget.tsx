@@ -11,13 +11,7 @@ import {
   marquerCanalLu,
   ouvrirDirect,
 } from '@/lib/chat';
-import type {
-  CanalChat,
-  EtatFluxChat,
-  EvenementChat,
-  MembreAnnuaire,
-  MessageChat,
-} from '@/lib/types';
+import type { CanalChat, EtatFluxChat, EvenementChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { PanneauChat } from '@/components/chat/panneau-chat';
 import { jouerSonNotification } from '@/lib/notification-sound';
 
@@ -27,15 +21,7 @@ import { jouerSonNotification } from '@/lib/notification-sound';
 // ouvert. `GET /canaux` distingue déjà admin (Général + 6 cellules + DM) de
 // collaborateur (Général + sa cellule + DM) — rien de spécifique ici. Le
 // panneau lui-même est purement présentiel.
-export function ChatWidget({
-  slug,
-  moiId,
-  ecriture = true,
-}: {
-  slug: string;
-  moiId: string;
-  ecriture?: boolean;
-}) {
+export function ChatWidget({ slug, moiId, ecriture = true }: { slug: string; moiId: string; ecriture?: boolean }) {
   const [canaux, setCanaux] = useState<CanalChat[]>([]);
   const [ouvert, setOuvert] = useState(false);
   const [etatFlux, setEtatFlux] = useState<EtatFluxChat>('connexion');
@@ -75,9 +61,7 @@ export function ChatWidget({
 
   function appliquer(e: EvenementChat) {
     if (e.type === 'non_lus') {
-      setCanaux((cs) =>
-        cs.map((c) => (c.id === e.canalId ? { ...c, nonLus: e.nonLus } : c)),
-      );
+      setCanaux((cs) => cs.map((c) => (c.id === e.canalId ? { ...c, nonLus: e.nonLus } : c)));
       return;
     }
 
@@ -107,9 +91,7 @@ export function ChatWidget({
     );
 
     if (actif) {
-      setMessages((ms) =>
-        ms.some((m) => m.id === message.id) ? ms : [...ms, message],
-      );
+      setMessages((ms) => (ms.some((m) => m.id === message.id) ? ms : [...ms, message]));
       if (!mien) marquerCanalLu(slug, canalId).catch(() => {});
     }
   }
@@ -117,7 +99,9 @@ export function ChatWidget({
   function ouvrirAnnuaire() {
     setVueAnnuaire(true);
     setAnnuaire(null);
-    getAnnuaireChat(slug).then(setAnnuaire).catch(() => setAnnuaire([]));
+    getAnnuaireChat(slug)
+      .then(setAnnuaire)
+      .catch(() => setAnnuaire([]));
   }
 
   async function nouveauDm(utilisateurId: string) {
@@ -167,13 +151,7 @@ export function ChatWidget({
     try {
       const m = await envoyerMessage(slug, canalActifId, texte);
       setMessages((ms) => (ms.some((x) => x.id === m.id) ? ms : [...ms, m]));
-      setCanaux((cs) =>
-        trier(
-          cs.map((c) =>
-            c.id === canalActifId ? { ...c, dernierMessageLe: m.envoyeLe } : c,
-          ),
-        ),
-      );
+      setCanaux((cs) => trier(cs.map((c) => (c.id === canalActifId ? { ...c, dernierMessageLe: m.envoyeLe } : c))));
     } catch {
       /* l'erreur réseau laisse le brouillon perdu — acceptable v1 */
     } finally {

@@ -20,7 +20,8 @@ type Props = {
   confirmerDesactive?: boolean;
 };
 
-const FOCUSABLES = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLES =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function ConfirmModal({
   titre,
@@ -101,13 +102,7 @@ export function ConfirmModal({
       >
         <header className="modal-header">
           <h2 id="confirm-titre">{titre}</h2>
-          <button
-            type="button"
-            className="modal-close"
-            aria-label="Fermer"
-            onClick={onClose}
-            disabled={enCours}
-          >
+          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose} disabled={enCours}>
             <X size={18} />
           </button>
         </header>

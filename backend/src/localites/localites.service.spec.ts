@@ -23,7 +23,7 @@ function svc(opts: { existante?: object | null; dossiers?: number } = {}) {
   const prisma = {
     localite: {
       findUnique: jest.fn(({ where }: { where: { id?: string; code?: string } }) =>
-        Promise.resolve(where.id ? (where.id === 'L1' ? avecUsage : null) : opts.existante ?? null),
+        Promise.resolve(where.id ? (where.id === 'L1' ? avecUsage : null) : (opts.existante ?? null)),
       ),
       aggregate: jest.fn().mockResolvedValue({ _max: { ordre: 4 } }),
       create: jest.fn(({ data }) => Promise.resolve({ id: 'L2', ...data, _count: { dossiers: 0 } })),
@@ -60,9 +60,9 @@ describe('LocalitesService.creer', () => {
 
   it('code déjà pris (même par un pays) → 409 qui nomme la localité et sa zone', async () => {
     const { service, prisma } = svc({ existante: { nom: 'Somalie', zone: 'pays' } });
-    await expect(
-      service.creer({ code: 'SOM', nom: 'Somone', zone: 'senegal', region: 'Thiès' }),
-    ).rejects.toThrow('Le code SOM est déjà pris par « Somalie » (Pays).');
+    await expect(service.creer({ code: 'SOM', nom: 'Somone', zone: 'senegal', region: 'Thiès' })).rejects.toThrow(
+      'Le code SOM est déjà pris par « Somalie » (Pays).',
+    );
     expect(prisma.localite.create).not.toHaveBeenCalled();
   });
 });

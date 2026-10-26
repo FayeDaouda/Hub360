@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { allerA, useSectionEnLecture } from '@/lib/defilement';
-import { enregistrerGabarit, libelleVersion, type CarteGabarit, type Changement, type GabaritEnService, type Reglages, type TacheGabarit, type Temps } from '@/lib/reglages';
+import {
+  enregistrerGabarit,
+  libelleVersion,
+  type CarteGabarit,
+  type Changement,
+  type GabaritEnService,
+  type Reglages,
+  type TacheGabarit,
+  type Temps,
+} from '@/lib/reglages';
 import { BarreMotif } from './barre-motif';
 
 type Champ = Changement['champ'];
@@ -19,7 +28,15 @@ const suffixe = (t: Temps) => (t.type === 'par_unite' ? `h par ${t.unite}` : t.t
 // Réglages · Gabarit de projet versionné (maquette du boss) : fenêtres en
 // jours ouvrés depuis J1 et temps standard. Enregistrer crée la version
 // suivante ; les projets en cours gardent la leur.
-export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; gabarit: GabaritEnService; onEnregistre: (r: Reglages) => void }) {
+export function GabaritPanel({
+  slug,
+  gabarit,
+  onEnregistre,
+}: {
+  slug: string;
+  gabarit: GabaritEnService;
+  onEnregistre: (r: Reglages) => void;
+}) {
   const [saisies, setSaisies] = useState<Record<string, string>>({});
   const etapes = gabarit.contenu.etapes;
 
@@ -35,7 +52,10 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
     return () => obs.disconnect();
   }, []);
   const ancre = (numero: number) => `reg-etape-${numero}`;
-  const etapeVue = useSectionEnLecture(etapes.map((e) => ancre(e.numero)), tete);
+  const etapeVue = useSectionEnLecture(
+    etapes.map((e) => ancre(e.numero)),
+    tete,
+  );
 
   // Valeur d'origine de chaque champ modifiable, pour ne compter que les vrais changements.
   const origines = useMemo(() => {
@@ -49,7 +69,8 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         }
         // Seuls ces temps se modifient (le partagé est un libellé, cf. backend).
         const t = cible.temps;
-        if (t && (t.type === 'heures' || t.type === 'par_unite' || t.type === 'total')) m.set(cle(c.cle, tache, 'heures'), t.heures);
+        if (t && (t.type === 'heures' || t.type === 'par_unite' || t.type === 'total'))
+          m.set(cle(c.cle, tache, 'heures'), t.heures);
         // Visa DPLG (revue Dir. GC) : case par tâche, 1 = exigé.
         if (tache) m.set(cle(c.cle, tache, 'visa'), (cible as TacheGabarit).visaDplg ? 1 : 0);
         // Fichier au dépôt (lot F, 23/10/2026) : obligatoire par défaut.
@@ -73,7 +94,9 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
       <input
         className={`field-input reg-num reg-num--${largeur}${modifie ? ' is-modifie' : ''}`}
         inputMode={largeur === 'jour' ? 'numeric' : 'decimal'}
-        aria-label={c === 'heures' ? 'Temps standard (heures)' : c === 'debut' ? 'Début (jour ouvré)' : 'Fin (jour ouvré)'}
+        aria-label={
+          c === 'heures' ? 'Temps standard (heures)' : c === 'debut' ? 'Début (jour ouvré)' : 'Fin (jour ouvré)'
+        }
         value={saisies[k] ?? String(origines.get(k))}
         onChange={(e) => setSaisies((s) => ({ ...s, [k]: e.target.value }))}
       />
@@ -86,7 +109,11 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
     const modifie = k in saisies && Number(saisies[k]) !== origines.get(k);
     return (
       <label className={`reg-visa${modifie ? ' is-modifie' : ''}`}>
-        <input type="checkbox" checked={coche} onChange={(e) => setSaisies((s) => ({ ...s, [k]: e.target.checked ? '1' : '0' }))} />
+        <input
+          type="checkbox"
+          checked={coche}
+          onChange={(e) => setSaisies((s) => ({ ...s, [k]: e.target.checked ? '1' : '0' }))}
+        />
         {libelle}
       </label>
     );
@@ -125,10 +152,10 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
         </span>
       </div>
       <p className="dmd-note">
-        Fenêtres en jours ouvrés (J1 = ouverture du projet), durées standard, visa DPLG (la tâche validée attend la signature de
-        l’architecte) et fichier obligatoire (sans fichier, la tâche ne peut pas être déposée). Un enregistrement crée la version{' '}
-        {libelleVersion(gabarit.numero + 1)} : elle s’applique aux projets ouverts ensuite. Les projets en cours gardent leur
-        version, leurs fenêtres et leurs durées (délais figés).
+        Fenêtres en jours ouvrés (J1 = ouverture du projet), durées standard, visa DPLG (la tâche validée attend la
+        signature de l’architecte) et fichier obligatoire (sans fichier, la tâche ne peut pas être déposée). Un
+        enregistrement crée la version {libelleVersion(gabarit.numero + 1)} : elle s’applique aux projets ouverts
+        ensuite. Les projets en cours gardent leur version, leurs fenêtres et leurs durées (délais figés).
       </p>
 
       {/* Collé sous la barre du haut pendant la lecture du tableau. Les
@@ -177,7 +204,9 @@ export function GabaritPanel({ slug, gabarit, onEnregistre }: { slug: string; ga
                   <span>
                     <strong>{c.libelle}</strong>
                     {(c.note || c.client) && (
-                      <span className="cell-sub reg-texte">{c.client ? 'étiquette CLIENT · hors budget atelier' : c.note}</span>
+                      <span className="cell-sub reg-texte">
+                        {c.client ? 'étiquette CLIENT · hors budget atelier' : c.note}
+                      </span>
                     )}
                   </span>
                   <span>{c.fenetre && fenetre(c.cle)}</span>

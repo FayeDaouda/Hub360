@@ -9,7 +9,15 @@ const d = (n: number) => new Prisma.Decimal(n);
 const ligne = (ht: number) => ({ quantite: d(1), prixUnitaire: d(ht), tauxTva: d(18) });
 const SEUIL = 50_000_000;
 
-function svc(o: { devis?: object[]; projets?: object[]; facture?: object | null; devisSeul?: object | null; delegataire?: string } = {}) {
+function svc(
+  o: {
+    devis?: object[];
+    projets?: object[];
+    facture?: object | null;
+    devisSeul?: object | null;
+    delegataire?: string;
+  } = {},
+) {
   const prisma = {
     devis: {
       findMany: jest.fn().mockResolvedValue(o.devis ?? []),
@@ -63,7 +71,10 @@ describe('SeuilCeoService · contrôles', () => {
     await expect(s.verifierFacture(CFO, 'S', 'F')).resolves.toBeUndefined();
   });
   it('CEO : affaire au-delà du seuil → accepté ; en deçà (ou pile) → refusé', async () => {
-    const au = svc({ facture: facture('F', { devisEcheancierId: 'O' }), devis: [{ id: 'O', dossierCrmId: null, statut: 'accepte', lignes: [ligne(50_000_000)] }] });
+    const au = svc({
+      facture: facture('F', { devisEcheancierId: 'O' }),
+      devis: [{ id: 'O', dossierCrmId: null, statut: 'accepte', lignes: [ligne(50_000_000)] }],
+    });
     await expect(au.verifierFacture(CEO, 'S', 'F')).resolves.toBeUndefined();
     const deca = svc({ facture: facture('F') });
     await expect(deca.verifierFacture(CEO, 'S', 'F')).rejects.toThrow(ForbiddenException);
@@ -75,18 +86,27 @@ describe('SeuilCeoService · contrôles', () => {
 // Revue CEO (22/10/2026) : contresignature exclusive au-delà du seuil (envoi,
 // émission), pas pour les encaissements ni les avoirs.
 describe('SeuilCeoService · contresignature exclusive', () => {
-  const auDela = { facture: facture('F', { devisEcheancierId: 'O' }), devis: [{ id: 'O', dossierCrmId: null, statut: 'accepte', lignes: [ligne(50_000_000)] }] };
+  const auDela = {
+    facture: facture('F', { devisEcheancierId: 'O' }),
+    devis: [{ id: 'O', dossierCrmId: null, statut: 'accepte', lignes: [ligne(50_000_000)] }],
+  };
   it('au-delà : le CFO refusé, sauf délégataire en fonction ; le compte de secours passe', async () => {
     await expect(svc(auDela).verifierFacture(CFO, 'S', 'F', true)).rejects.toThrow('revient au CEO');
     await expect(svc({ ...auDela, delegataire: 'CFO1' }).verifierFacture(CFO, 'S', 'F', true)).resolves.toBeUndefined();
-    await expect(svc(auDela).verifierFacture({ userId: 'A', role: 'societe_admin' }, 'S', 'F', true)).resolves.toBeUndefined();
+    await expect(
+      svc(auDela).verifierFacture({ userId: 'A', role: 'societe_admin' }, 'S', 'F', true),
+    ).resolves.toBeUndefined();
   });
   it('en deçà, ou acte non exclusif (encaissement) : le CFO passe', async () => {
     await expect(svc({ facture: facture('F') }).verifierFacture(CFO, 'S', 'F', true)).resolves.toBeUndefined();
     await expect(svc(auDela).verifierFacture(CFO, 'S', 'F')).resolves.toBeUndefined();
   });
   it('offre d’un dossier au-delà du seuil : exclusive', async () => {
-    await expect(svc({ devisSeul: { lignes: [ligne(60_000_000)] } }).verifierOffreDossier(CFO, 'S', 'DOS')).rejects.toThrow('revient au CEO');
-    await expect(svc({ devisSeul: { lignes: [ligne(60_000_000)] } }).verifierOffreDossier(CEO, 'S', 'DOS')).resolves.toBeUndefined();
+    await expect(
+      svc({ devisSeul: { lignes: [ligne(60_000_000)] } }).verifierOffreDossier(CFO, 'S', 'DOS'),
+    ).rejects.toThrow('revient au CEO');
+    await expect(
+      svc({ devisSeul: { lignes: [ligne(60_000_000)] } }).verifierOffreDossier(CEO, 'S', 'DOS'),
+    ).resolves.toBeUndefined();
   });
 });

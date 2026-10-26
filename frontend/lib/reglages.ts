@@ -19,7 +19,14 @@ export type Temps =
   | { type: 'sans' };
 // visaDplg : la tâche, validée, attend le visa de l'architecte DPLG.
 // fichierFacultatif : dépôt possible sans fichier (absent = fichier obligatoire).
-export type TacheGabarit = { cle: string; libelle: string; fenetre?: Fenetre; temps: Temps; visaDplg?: boolean; fichierFacultatif?: boolean };
+export type TacheGabarit = {
+  cle: string;
+  libelle: string;
+  fenetre?: Fenetre;
+  temps: Temps;
+  visaDplg?: boolean;
+  fichierFacultatif?: boolean;
+};
 export type CarteGabarit = {
   cle: string;
   libelle: string;
@@ -65,15 +72,34 @@ export type Reglages =
   | { disponible: true; gabarits: GabaritEnService[]; regles: Reglage[]; objectifs: Reglage[]; modifications: number };
 
 // « visa » (tâche) : 1 = visa DPLG exigé, 0 = non.
-export type Changement = { carte: string; tache?: string; champ: 'debut' | 'fin' | 'heures' | 'visa' | 'fichier'; valeur: number };
-export type LigneJournal = { id: string; lot: string; section: string; libelle: string; motif: string; par: string | null; createdAt: string };
+export type Changement = {
+  carte: string;
+  tache?: string;
+  champ: 'debut' | 'fin' | 'heures' | 'visa' | 'fichier';
+  valeur: number;
+};
+export type LigneJournal = {
+  id: string;
+  lot: string;
+  section: string;
+  libelle: string;
+  motif: string;
+  par: string | null;
+  createdAt: string;
+};
 
 export const getReglages = (slug: string) => apiSociete<Reglages>(slug, '/reglages');
 export const getJournalReglages = (slug: string) => apiSociete<LigneJournal[]>(slug, '/reglages/journal');
-export const enregistrerGabarit = (slug: string, code: string, corps: { depuis: number; motif: string; changements: Changement[] }) =>
-  apiSociete<Reglages>(slug, `/reglages/gabarits/${code}`, { method: 'PUT', body: corps });
-export const enregistrerValeurs = (slug: string, section: 'regles' | 'objectifs', corps: { motif: string; valeurs: Record<string, unknown> }) =>
-  apiSociete<Reglages>(slug, `/reglages/${section}`, { method: 'PUT', body: corps });
+export const enregistrerGabarit = (
+  slug: string,
+  code: string,
+  corps: { depuis: number; motif: string; changements: Changement[] },
+) => apiSociete<Reglages>(slug, `/reglages/gabarits/${code}`, { method: 'PUT', body: corps });
+export const enregistrerValeurs = (
+  slug: string,
+  section: 'regles' | 'objectifs',
+  corps: { motif: string; valeurs: Record<string, unknown> },
+) => apiSociete<Reglages>(slug, `/reglages/${section}`, { method: 'PUT', body: corps });
 
 export const libelleVersion = (numero: number) => `bêta 1.${numero}`;
 const jjmmaaaa = (iso: string) => iso.split('-').reverse().join('/');
@@ -92,7 +118,8 @@ export function afficher(r: Pick<Reglage, 'valeur'>, v: unknown): string {
   if (t.type === 'zone') return `${(v as { de: number }).de} à ${(v as { a: number }).a} %`;
   if (t.type === 'pourcentage') return `${v} %`;
   // Budget atelier : heures et jours ouvrés (8 h), comme la maquette.
-  if (t.type === 'entier' && t.unite === 'h') return `${Number(v).toLocaleString('fr-FR')} h (${Number(v) / 8} jours ouvrés)`;
+  if (t.type === 'entier' && t.unite === 'h')
+    return `${Number(v).toLocaleString('fr-FR')} h (${Number(v) / 8} jours ouvrés)`;
   if (t.type === 'entier' && t.unite) return `${Number(v).toLocaleString('fr-FR')} ${t.unite}`;
   return String(v);
 }

@@ -29,9 +29,21 @@ describe('CIBLES_EVENEMENT — tableau validé', () => {
   it('créateur du lead (COO) : informé de l’issue, jamais de la soumission DAF', () => {
     const comptes = { daf: ['CFO'], proprietaire: ['DG'], apporteur: [], createur: ['COO'] };
     expect(planNotificationsCrm('dossier_soumis', CTX, comptes, 'DG').map((p) => p.destinataireId)).toEqual(['CFO']);
-    expect(planNotificationsCrm('contrat_signe', CTX, comptes, null).map((p) => p.destinataireId)).toEqual(['DG', 'CFO', 'COO']);
-    const [perdu] = planNotificationsCrm('dossier_perdu', { ...CTX, commentaire: 'Client parti chez un concurrent' }, comptes, 'DG');
-    expect(perdu).toEqual({ destinataireId: 'COO', titre: 'TCP_ALM.26 · Villa Almadies — dossier déclaré perdu : « Client parti chez un concurrent »' });
+    expect(planNotificationsCrm('contrat_signe', CTX, comptes, null).map((p) => p.destinataireId)).toEqual([
+      'DG',
+      'CFO',
+      'COO',
+    ]);
+    const [perdu] = planNotificationsCrm(
+      'dossier_perdu',
+      { ...CTX, commentaire: 'Client parti chez un concurrent' },
+      comptes,
+      'DG',
+    );
+    expect(perdu).toEqual({
+      destinataireId: 'COO',
+      titre: 'TCP_ALM.26 · Villa Almadies — dossier déclaré perdu : « Client parti chez un concurrent »',
+    });
   });
 });
 
@@ -83,9 +95,9 @@ describe('planNotificationsCrm', () => {
 
 describe('titreNotificationCrm', () => {
   it('renvoi DAF : le commentaire est repris, compacté et tronqué', () => {
-    expect(titreNotificationCrm('dossier_renvoye', 'proprietaire', { ...CTX, commentaire: ' Prix  DPC\nà fixer ' })).toBe(
-      'TCP_ALM.26 · Villa Almadies — renvoyé par la DAF : « Prix DPC à fixer »',
-    );
+    expect(
+      titreNotificationCrm('dossier_renvoye', 'proprietaire', { ...CTX, commentaire: ' Prix  DPC\nà fixer ' }),
+    ).toBe('TCP_ALM.26 · Villa Almadies — renvoyé par la DAF : « Prix DPC à fixer »');
     const long = titreNotificationCrm('dossier_renvoye', 'proprietaire', { ...CTX, commentaire: 'x'.repeat(500) });
     expect(long).toContain('…');
     expect(long.length).toBeLessThan(220);
@@ -150,4 +162,3 @@ describe('relanceFicheIncomplete', () => {
     expect(relanceFicheIncomplete(complete, apres(200))).toBeNull();
   });
 });
-

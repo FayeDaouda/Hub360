@@ -50,7 +50,11 @@ export class SyntheseService {
     // Tâche planifiée (ADR 0001) : clôtures de toutes les sociétés lues en
     // périmètre système, puis chaque synthèse générée dans le sien.
     const clotures = await runAsSystem('synthèses mensuelles · clôtures', () =>
-      this.prisma.journalCloture.findMany({ where: { action: 'cloture' }, orderBy: { createdAt: 'desc' }, select: { societeId: true, mois: true, createdAt: true } }),
+      this.prisma.journalCloture.findMany({
+        where: { action: 'cloture' },
+        orderBy: { createdAt: 'desc' },
+        select: { societeId: true, mois: true, createdAt: true },
+      }),
     );
     const vus = new Set<string>();
     for (const c of clotures) {
@@ -60,7 +64,10 @@ export class SyntheseService {
       try {
         await runInCompany(c.societeId, async () => {
           if (!(await moisClos(this.prisma, c.societeId)).has(c.mois)) return;
-          const existante = await this.prisma.syntheseMensuelle.findUnique({ where: { societeId_mois: { societeId: c.societeId, mois: c.mois } }, select: { genereLe: true } });
+          const existante = await this.prisma.syntheseMensuelle.findUnique({
+            where: { societeId_mois: { societeId: c.societeId, mois: c.mois } },
+            select: { genereLe: true },
+          });
           if (existante && existante.genereLe >= c.createdAt) return;
           await this.generer(c.societeId, c.mois, !existante);
         });
@@ -77,7 +84,10 @@ export class SyntheseService {
       create: { societeId, mois, contenu: contenu as unknown as Prisma.InputJsonValue, genereLe: new Date() },
       update: { contenu: contenu as unknown as Prisma.InputJsonValue, genereLe: new Date() },
     });
-    const [ceo, cfo] = await Promise.all([this.notifications.titulairesRole(societeId, ROLE_CEO), this.notifications.titulairesRole(societeId, ROLE_CFO)]);
+    const [ceo, cfo] = await Promise.all([
+      this.notifications.titulairesRole(societeId, ROLE_CEO),
+      this.notifications.titulairesRole(societeId, ROLE_CFO),
+    ]);
     await this.notifications.envoyer({
       societeId,
       type: 'synthese_mensuelle',
@@ -90,27 +100,65 @@ export class SyntheseService {
     const { debut, fin } = bornesMois(mois);
     const du = new Date(`${debut}T00:00:00Z`);
     const au = new Date(`${fin}T23:59:59.999Z`);
-    const [emises, paiements, factures, rentabilite, rh, direction, dossiers, signatures, decisions] = await Promise.all([
-      this.prisma.facture.findMany({ where: { societeId, emiseLe: { gte: du, lte: au } }, select: { estAvoir: true, montantHt: true, tauxTva: true } }),
-      this.prisma.paiement.aggregate({ where: { facture: { societeId }, date: { gte: debut, lte: fin } }, _sum: { montant: true }, _count: true }),
-      this.prisma.facture.findMany({
-        where: { societeId, estAvoir: false, statut: { in: ['emise', 'brouillon'] } },
-        select: { statut: true, dossierCrmId: true, projetId: true, echeanceLe: true, montantHt: true, tauxTva: true, paiements: { select: { montant: true } } },
-      }),
-      this.rentabilite.portefeuille({ userId: '', societeId, role: ROLE_CEO }, mois).catch(() => null),
-      this.reportingRh.contenu(societeId, mois).catch((): { libelle: string; valeur: string }[] => []),
-      this.pilotage.contenuDirection(societeId, mois, jour).catch((): { libelle: string; valeur: string }[] => []),
-      this.prisma.dossierCrm.findMany({
-        where: { societeId, archiveLe: null, statut: { in: ['nouveau_projet', 'en_validation', 'offre_envoyee'] } },
-        select: { statut: true, offres: { orderBy: { creeLe: 'desc' }, take: 1, select: { lignes: { select: { quantite: true, prixUnitaire: true } } } } },
-      }),
-      this.prisma.dossierCrmTransition.findMany({
-        where: { vers: 'onboard', creeLe: { gte: du, lte: au }, dossier: { societeId } },
-        select: { dossier: { select: { code: true, offres: { where: { statut: 'accepte' }, take: 1, select: { lignes: { select: { quantite: true, prixUnitaire: true } } } } } } },
-      }),
-      this.prisma.decisionRegistre.findMany({ where: { societeId, closeLe: null, ...DECISION_EN_VIGUEUR }, select: { echeance: true, closeLe: true } }),
-    ]);
-    const ttc = (f: { montantHt: Prisma.Decimal; tauxTva: Prisma.Decimal }) => ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc;
+    const [emises, paiements, factures, rentabilite, rh, direction, dossiers, signatures, decisions] =
+      await Promise.all([
+        this.prisma.facture.findMany({
+          where: { societeId, emiseLe: { gte: du, lte: au } },
+          select: { estAvoir: true, montantHt: true, tauxTva: true },
+        }),
+        this.prisma.paiement.aggregate({
+          where: { facture: { societeId }, date: { gte: debut, lte: fin } },
+          _sum: { montant: true },
+          _count: true,
+        }),
+        this.prisma.facture.findMany({
+          where: { societeId, estAvoir: false, statut: { in: ['emise', 'brouillon'] } },
+          select: {
+            statut: true,
+            dossierCrmId: true,
+            projetId: true,
+            echeanceLe: true,
+            montantHt: true,
+            tauxTva: true,
+            paiements: { select: { montant: true } },
+          },
+        }),
+        this.rentabilite.portefeuille({ userId: '', societeId, role: ROLE_CEO }, mois).catch(() => null),
+        this.reportingRh.contenu(societeId, mois).catch((): { libelle: string; valeur: string }[] => []),
+        this.pilotage.contenuDirection(societeId, mois, jour).catch((): { libelle: string; valeur: string }[] => []),
+        this.prisma.dossierCrm.findMany({
+          where: { societeId, archiveLe: null, statut: { in: ['nouveau_projet', 'en_validation', 'offre_envoyee'] } },
+          select: {
+            statut: true,
+            offres: {
+              orderBy: { creeLe: 'desc' },
+              take: 1,
+              select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+            },
+          },
+        }),
+        this.prisma.dossierCrmTransition.findMany({
+          where: { vers: 'onboard', creeLe: { gte: du, lte: au }, dossier: { societeId } },
+          select: {
+            dossier: {
+              select: {
+                code: true,
+                offres: {
+                  where: { statut: 'accepte' },
+                  take: 1,
+                  select: { lignes: { select: { quantite: true, prixUnitaire: true } } },
+                },
+              },
+            },
+          },
+        }),
+        this.prisma.decisionRegistre.findMany({
+          where: { societeId, closeLe: null, ...DECISION_EN_VIGUEUR },
+          select: { echeance: true, closeLe: true },
+        }),
+      ]);
+    const ttc = (f: { montantHt: Prisma.Decimal; tauxTva: Prisma.Decimal }) =>
+      ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc;
     const sections: SectionSynthese[] = [];
 
     // 1. Facturation du mois.
@@ -119,9 +167,21 @@ export class SyntheseService {
     sections.push({
       titre: `Facturation · ${moisFr(mois)}`,
       lignes: [
-        { libelle: 'Facturé', valeur: `${fcfa(facturees.reduce((t, f) => t + ttc(f), 0))} TTC · ${pluriel(facturees.length, 'facture')}` },
-        { libelle: 'Encaissé', valeur: `${fcfa(paiements._sum.montant?.toNumber() ?? 0)} · ${pluriel(paiements._count, 'paiement')}` },
-        { libelle: 'Avoirs', valeur: avoirs.length ? `${fcfa(avoirs.reduce((t, f) => t + ttc(f), 0))} TTC · ${pluriel(avoirs.length, 'avoir')}` : 'aucun', ton: avoirs.length ? 'attention' : undefined },
+        {
+          libelle: 'Facturé',
+          valeur: `${fcfa(facturees.reduce((t, f) => t + ttc(f), 0))} TTC · ${pluriel(facturees.length, 'facture')}`,
+        },
+        {
+          libelle: 'Encaissé',
+          valeur: `${fcfa(paiements._sum.montant?.toNumber() ?? 0)} · ${pluriel(paiements._count, 'paiement')}`,
+        },
+        {
+          libelle: 'Avoirs',
+          valeur: avoirs.length
+            ? `${fcfa(avoirs.reduce((t, f) => t + ttc(f), 0))} TTC · ${pluriel(avoirs.length, 'avoir')}`
+            : 'aucun',
+          ton: avoirs.length ? 'attention' : undefined,
+        },
       ],
     });
 
@@ -134,7 +194,8 @@ export class SyntheseService {
     const fenetres = [30, 60, 90].map((n) => ({ n, au: plus(jour, n), sur: 0, prevu: 0 }));
     for (const f of factures) {
       const prevu = f.statut === 'brouillon' && !f.dossierCrmId && f.montantHt.toNumber() > 0;
-      const reste = f.statut === 'brouillon' ? ttc(f) : ttc(f) - f.paiements.reduce((t, p) => t + p.montant.toNumber(), 0);
+      const reste =
+        f.statut === 'brouillon' ? ttc(f) : ttc(f) - f.paiements.reduce((t, p) => t + p.montant.toNumber(), 0);
       if ((!prevu && f.statut !== 'emise') || reste <= 0) continue;
       const date = f.echeanceLe?.slice(0, 10) ?? null;
       if (!date) {
@@ -155,12 +216,21 @@ export class SyntheseService {
     sections.push({
       titre: `Créances et trésorerie · au ${dateFr(jour)}`,
       lignes: [
-        { libelle: 'Créances en retard', valeur: enRetard ? `${fcfa(retard)} · ${pluriel(enRetard, 'facture')} échue${enRetard > 1 ? 's' : ''}` : 'aucune', ton: enRetard ? 'risque' : 'succes' },
+        {
+          libelle: 'Créances en retard',
+          valeur: enRetard
+            ? `${fcfa(retard)} · ${pluriel(enRetard, 'facture')} échue${enRetard > 1 ? 's' : ''}`
+            : 'aucune',
+          ton: enRetard ? 'risque' : 'succes',
+        },
         ...fenetres.map((w, i) => ({
-          libelle: i === 0 ? 'Encaissements attendus · 30 j' : `Encaissements attendus · ${fenetres[i - 1].n + 1} à ${w.n} j`,
+          libelle:
+            i === 0 ? 'Encaissements attendus · 30 j' : `Encaissements attendus · ${fenetres[i - 1].n + 1} à ${w.n} j`,
           valeur: `${fcfa(w.sur + w.prevu)} (${fcfa(w.sur)} de factures émises, ${fcfa(w.prevu)} de tranches prévues)`,
         })),
-        ...(nonDate ? [{ libelle: 'Attendu sans date', valeur: `${fcfa(nonDate)} · tranches ou factures sans échéance fixée` }] : []),
+        ...(nonDate
+          ? [{ libelle: 'Attendu sans date', valeur: `${fcfa(nonDate)} · tranches ou factures sans échéance fixée` }]
+          : []),
       ],
     });
 
@@ -168,19 +238,34 @@ export class SyntheseService {
     const t = rentabilite?.totaux;
     sections.push({
       titre: 'Marge provisoire',
-      lignes: t && t.marge !== null && t.ht !== null
-        ? [
-            { libelle: 'Marge', valeur: `${fcfa(t.marge)} sur ${fcfa(t.ht)} HT${t.taux !== null ? ` · ${t.taux} %` : ''}` },
-            { libelle: 'Périmètre', valeur: `${pluriel(rentabilite.projetsComplets, 'projet')} aux données complètes · provisoire tant que les mois ne sont pas tous contrôlés` },
-          ]
-        : [{ libelle: 'Marge', valeur: 'pas encore calculable (données de temps ou de salaires incomplètes)', ton: 'attention' }],
+      lignes:
+        t && t.marge !== null && t.ht !== null
+          ? [
+              {
+                libelle: 'Marge',
+                valeur: `${fcfa(t.marge)} sur ${fcfa(t.ht)} HT${t.taux !== null ? ` · ${t.taux} %` : ''}`,
+              },
+              {
+                libelle: 'Périmètre',
+                valeur: `${pluriel(rentabilite.projetsComplets, 'projet')} aux données complètes · provisoire tant que les mois ne sont pas tous contrôlés`,
+              },
+            ]
+          : [
+              {
+                libelle: 'Marge',
+                valeur: 'pas encore calculable (données de temps ou de salaires incomplètes)',
+                ton: 'attention',
+              },
+            ],
     });
 
     // 4. Équipe (reporting RH du mois, déjà calculé).
     const rhLigne = (libelle: string) => rh.find((r) => r.libelle === libelle);
     sections.push({
       titre: 'Équipe',
-      lignes: [rhLigne('Effectif'), rhLigne('Masse salariale brute')].filter((x): x is NonNullable<typeof x> => !!x).map((r) => ({ libelle: r.libelle, valeur: r.valeur })),
+      lignes: [rhLigne('Effectif'), rhLigne('Masse salariale brute')]
+        .filter((x): x is NonNullable<typeof x> => !!x)
+        .map((r) => ({ libelle: r.libelle, valeur: r.valeur })),
     });
 
     // 5. Production (contenu du reporting de la direction, même calcul).
@@ -188,34 +273,63 @@ export class SyntheseService {
       titre: 'Production',
       lignes: direction
         .filter((r) => ['Projets en cours', 'Étapes closes', 'Étapes en retard', 'Livrables émis'].includes(r.libelle))
-        .map((r) => ({ libelle: r.libelle, valeur: r.valeur, ton: r.libelle === 'Étapes en retard' && !r.valeur.startsWith('0') ? ('risque' as const) : undefined })),
+        .map((r) => ({
+          libelle: r.libelle,
+          valeur: r.valeur,
+          ton: r.libelle === 'Étapes en retard' && !r.valeur.startsWith('0') ? ('risque' as const) : undefined,
+        })),
     });
 
     // 6. Commercial : pipeline en cours, signatures du mois.
-    const htOffre = (o?: { lignes: { quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[] }) => (o ? montantHtLignes(o.lignes) : 0);
+    const htOffre = (o?: { lignes: { quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal }[] }) =>
+      o ? montantHtLignes(o.lignes) : 0;
     const signeHt = signatures.reduce((s, x) => s + htOffre(x.dossier.offres[0]), 0);
     sections.push({
       titre: 'Commercial',
       lignes: [
-        { libelle: 'Pipeline en cours', valeur: `${pluriel(dossiers.length, 'dossier')} · ${fcfa(dossiers.reduce((s, d) => s + htOffre(d.offres[0]), 0))} HT d’offres` },
-        { libelle: 'Signatures du mois', valeur: signatures.length ? `${pluriel(signatures.length, 'contrat')} · ${fcfa(signeHt)} HT · ${signatures.map((x) => x.dossier.code).join(', ')}` : 'aucune' },
+        {
+          libelle: 'Pipeline en cours',
+          valeur: `${pluriel(dossiers.length, 'dossier')} · ${fcfa(dossiers.reduce((s, d) => s + htOffre(d.offres[0]), 0))} HT d’offres`,
+        },
+        {
+          libelle: 'Signatures du mois',
+          valeur: signatures.length
+            ? `${pluriel(signatures.length, 'contrat')} · ${fcfa(signeHt)} HT · ${signatures.map((x) => x.dossier.code).join(', ')}`
+            : 'aucune',
+        },
       ],
     });
 
     // 7. Décisions ouvertes au registre.
-    const depassees = decisions.filter((d) => statutDecision({ echeance: d.echeance, closeLe: null }, jour) === 'echeance_depassee').length;
+    const depassees = decisions.filter(
+      (d) => statutDecision({ echeance: d.echeance, closeLe: null }, jour) === 'echeance_depassee',
+    ).length;
     sections.push({
       titre: 'Décisions',
-      lignes: [{ libelle: 'Décisions ouvertes', valeur: `${decisions.length}${depassees ? ` · dont ${depassees} à échéance dépassée` : ''}`, ton: depassees ? 'risque' : undefined }],
+      lignes: [
+        {
+          libelle: 'Décisions ouvertes',
+          valeur: `${decisions.length}${depassees ? ` · dont ${depassees} à échéance dépassée` : ''}`,
+          ton: depassees ? 'risque' : undefined,
+        },
+      ],
     });
     return sections;
   }
 
   async liste(a: Acteur) {
     this.exigerLecteur(a);
-    const syntheses = await this.prisma.syntheseMensuelle.findMany({ where: { societeId: a.societeId }, orderBy: { mois: 'desc' } });
+    const syntheses = await this.prisma.syntheseMensuelle.findMany({
+      where: { societeId: a.societeId },
+      orderBy: { mois: 'desc' },
+    });
     const ids = syntheses.map((s) => s.commentaireParId).filter((x): x is string => !!x);
-    const auteurs = ids.length ? await this.prisma.utilisateur.findMany({ where: { id: { in: ids } }, select: { id: true, prenom: true, nom: true } }) : [];
+    const auteurs = ids.length
+      ? await this.prisma.utilisateur.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, prenom: true, nom: true },
+        })
+      : [];
     const noms = new Map(auteurs.map((u) => [u.id, `${u.prenom} ${u.nom}`]));
     return {
       peutCommenter: a.role === ROLE_CFO,
@@ -224,7 +338,13 @@ export class SyntheseService {
         libelle: moisFr(s.mois),
         genereLe: s.genereLe.toISOString(),
         sections: s.contenu as unknown as SectionSynthese[],
-        commentaire: s.commentaire ? { texte: s.commentaire, par: (s.commentaireParId && noms.get(s.commentaireParId)) ?? null, le: s.commentaireLe?.toISOString() ?? null } : null,
+        commentaire: s.commentaire
+          ? {
+              texte: s.commentaire,
+              par: (s.commentaireParId && noms.get(s.commentaireParId)) ?? null,
+              le: s.commentaireLe?.toISOString() ?? null,
+            }
+          : null,
       })),
     };
   }
@@ -233,11 +353,15 @@ export class SyntheseService {
     if (a.role !== ROLE_CFO) throw new ForbiddenException('Le commentaire de la synthèse est celui du CFO.');
     const propre = texte.trim();
     if (propre.length > 2000) throw new BadRequestException('Commentaire trop long (2 000 caractères au plus).');
-    const s = await this.prisma.syntheseMensuelle.findUnique({ where: { societeId_mois: { societeId: a.societeId, mois } } });
+    const s = await this.prisma.syntheseMensuelle.findUnique({
+      where: { societeId_mois: { societeId: a.societeId, mois } },
+    });
     if (!s) throw new NotFoundException('Synthèse introuvable.');
     await this.prisma.syntheseMensuelle.update({
       where: { id: s.id },
-      data: propre ? { commentaire: propre, commentaireParId: a.userId, commentaireLe: new Date() } : { commentaire: null, commentaireParId: null, commentaireLe: null },
+      data: propre
+        ? { commentaire: propre, commentaireParId: a.userId, commentaireLe: new Date() }
+        : { commentaire: null, commentaireParId: null, commentaireLe: null },
     });
     return this.liste(a);
   }

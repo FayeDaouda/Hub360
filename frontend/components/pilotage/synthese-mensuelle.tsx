@@ -50,10 +50,17 @@ export function SyntheseMensuelle({ slug }: { slug: string }) {
       <header className="sy-tete">
         <div>
           <h2>Synthèse de {s.libelle}</h2>
-          <p className="pi-aide">Générée par le HUB à la clôture du mois, le {dateHeure(s.genereLe)} · aucun chiffre saisi à la main.</p>
+          <p className="pi-aide">
+            Générée par le HUB à la clôture du mois, le {dateHeure(s.genereLe)} · aucun chiffre saisi à la main.
+          </p>
         </div>
         {liste.syntheses.length > 1 && (
-          <select className="field-input sy-mois" aria-label="Mois" value={s.mois} onChange={(e) => (setMois(e.target.value), setSaisie(null))}>
+          <select
+            className="field-input sy-mois"
+            aria-label="Mois"
+            value={s.mois}
+            onChange={(e) => (setMois(e.target.value), setSaisie(null))}
+          >
             {liste.syntheses.map((x) => (
               <option key={x.mois} value={x.mois}>
                 {x.libelle}
@@ -83,7 +90,14 @@ export function SyntheseMensuelle({ slug }: { slug: string }) {
         <h3>Commentaire du CFO</h3>
         {saisie !== null ? (
           <>
-            <textarea className="field-input" rows={4} maxLength={2000} value={saisie} disabled={envoi} onChange={(e) => setSaisie(e.target.value)} />
+            <textarea
+              className="field-input"
+              rows={4}
+              maxLength={2000}
+              value={saisie}
+              disabled={envoi}
+              onChange={(e) => setSaisie(e.target.value)}
+            />
             {erreur && <p className="field-erreur">{erreur}</p>}
             <div className="pi-saisie-actions">
               <button type="button" className="btn-ghost" disabled={envoi} onClick={() => setSaisie(null)}>

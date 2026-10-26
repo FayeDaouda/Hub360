@@ -1,8 +1,4 @@
-import {
-  joursRetardFacture,
-  statutFactureEffectif,
-  ventilationTva,
-} from './gardes';
+import { joursRetardFacture, statutFactureEffectif, ventilationTva } from './gardes';
 
 // Règles métier pures (aucune I/O). Ces fonctions sont le miroir serveur des
 // gardes du front — une régression ici casse les deux côtés en silence.
@@ -46,9 +42,7 @@ describe('statutFactureEffectif', () => {
 
   it('en retard avant partiellement payée', () => {
     expect(f({ montantPaye: 400 })).toBe('en_retard');
-    expect(f({ montantPaye: 400, echeanceLe: '2026-03-01' })).toBe(
-      'partiellement_payee',
-    );
+    expect(f({ montantPaye: 400, echeanceLe: '2026-03-01' })).toBe('partiellement_payee');
   });
 
   it('émise sans paiement ni retard', () => {

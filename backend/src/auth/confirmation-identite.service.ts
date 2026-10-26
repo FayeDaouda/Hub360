@@ -32,18 +32,26 @@ export class ConfirmationIdentiteService {
         // Conditionnel : un même code ne sert qu'une fois.
         const ok =
           pas !== null &&
-          (await this.prisma.utilisateur.updateMany({ where: { id: u.id, OR: [{ totpDernierPas: null }, { totpDernierPas: { lt: pas } }] }, data: { totpDernierPas: pas } }))
-            .count > 0;
+          (
+            await this.prisma.utilisateur.updateMany({
+              where: { id: u.id, OR: [{ totpDernierPas: null }, { totpDernierPas: { lt: pas } }] },
+              data: { totpDernierPas: pas },
+            })
+          ).count > 0;
         if (!ok) throw new ForbiddenException('Code incorrect.');
       } else {
         const h = hacherCodeSecours(saisie);
         if (!u.totpCodesSecours.includes(h)) throw new ForbiddenException('Code incorrect.');
-        await this.prisma.utilisateur.update({ where: { id: u.id }, data: { totpCodesSecours: u.totpCodesSecours.filter((x) => x !== h) } });
+        await this.prisma.utilisateur.update({
+          where: { id: u.id },
+          data: { totpCodesSecours: u.totpCodesSecours.filter((x) => x !== h) },
+        });
       }
       return 'code';
     }
     if (!saisie) throw new ForbiddenException('Saisissez votre mot de passe pour confirmer.');
-    if (!u.motDePasseHash || !(await verifierMotDePasse(saisie, u.motDePasseHash))) throw new ForbiddenException('Mot de passe incorrect.');
+    if (!u.motDePasseHash || !(await verifierMotDePasse(saisie, u.motDePasseHash)))
+      throw new ForbiddenException('Mot de passe incorrect.');
     return 'mot_de_passe';
   }
 }

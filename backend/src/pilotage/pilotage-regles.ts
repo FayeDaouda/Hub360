@@ -26,7 +26,8 @@ export function moisSuivant(mois: string): string {
   return m === 12 ? `${a + 1}-01` : `${a}-${String(m + 1).padStart(2, '0')}`;
 }
 
-export const echeanceReporting = (mois: string) => `${moisSuivant(mois)}-${String(JOUR_DEPOT_REPORTING).padStart(2, '0')}`;
+export const echeanceReporting = (mois: string) =>
+  `${moisSuivant(mois)}-${String(JOUR_DEPOT_REPORTING).padStart(2, '0')}`;
 
 // Mois clos soumis au reporting, du plus ancien au plus récent.
 export function moisAReporter(aujourdhui: string): string[] {

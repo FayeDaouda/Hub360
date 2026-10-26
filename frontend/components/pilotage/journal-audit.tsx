@@ -16,7 +16,13 @@ const CATEGORIES: Record<CategorieAudit, string> = {
   pilotage: 'Reportings',
 };
 const horodatage = (iso: string) =>
-  new Date(iso).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 // Pilotage › Journal (CEO, CIO) : qui a fait quoi et quand — comptes, droits,
 // factures et paiements, réglages, départs. Lecture seule.
@@ -35,24 +41,43 @@ export function JournalAudit({ slug }: { slug: string }) {
   }, [slug, periode]);
   useEffect(charger, [charger]);
 
-  if (!journal) return erreur ? <p className="field-erreur">{erreur}</p> : <div className="skeleton admin-skeleton-panel" aria-hidden />;
+  if (!journal)
+    return erreur ? (
+      <p className="field-erreur">{erreur}</p>
+    ) : (
+      <div className="skeleton admin-skeleton-panel" aria-hidden />
+    );
 
   const auteurs = [...new Set(journal.lignes.map((l) => l.par).filter((x): x is string => !!x))].sort();
-  const visibles = journal.lignes.filter((l) => (categorie === 'toutes' || l.categorie === categorie) && (!personne || l.par === personne));
+  const visibles = journal.lignes.filter(
+    (l) => (categorie === 'toutes' || l.categorie === categorie) && (!personne || l.par === personne),
+  );
   const compte = (c: CategorieAudit) => journal.lignes.filter((l) => l.categorie === c).length;
 
   return (
     <section className="panel glass-panel pi-journal">
       <h2>Journal d’audit</h2>
-      <p className="pi-aide">Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.</p>
+      <p className="pi-aide">
+        Traces enregistrées par le HUB, jamais modifiables. Une consultation couvre un an au plus.
+      </p>
       <div className="pi-journal-outils">
         <label className="field">
           <span className="field-label">Du</span>
-          <input className="field-input" type="date" value={periode.debut ?? journal.debut} onChange={(e) => setPeriode((p) => ({ ...p, debut: e.target.value }))} />
+          <input
+            className="field-input"
+            type="date"
+            value={periode.debut ?? journal.debut}
+            onChange={(e) => setPeriode((p) => ({ ...p, debut: e.target.value }))}
+          />
         </label>
         <label className="field">
           <span className="field-label">Au</span>
-          <input className="field-input" type="date" value={periode.fin ?? journal.fin} onChange={(e) => setPeriode((p) => ({ ...p, fin: e.target.value }))} />
+          <input
+            className="field-input"
+            type="date"
+            value={periode.fin ?? journal.fin}
+            onChange={(e) => setPeriode((p) => ({ ...p, fin: e.target.value }))}
+          />
         </label>
         <label className="field">
           <span className="field-label">Par</span>
@@ -67,11 +92,22 @@ export function JournalAudit({ slug }: { slug: string }) {
         </label>
       </div>
       <div className="fin-filtres" role="group" aria-label="Filtrer le journal">
-        <button type="button" className={categorie === 'toutes' ? 'is-active' : ''} aria-pressed={categorie === 'toutes'} onClick={() => setCategorie('toutes')}>
+        <button
+          type="button"
+          className={categorie === 'toutes' ? 'is-active' : ''}
+          aria-pressed={categorie === 'toutes'}
+          onClick={() => setCategorie('toutes')}
+        >
           Tout ({journal.lignes.length})
         </button>
         {(Object.keys(CATEGORIES) as CategorieAudit[]).map((c) => (
-          <button key={c} type="button" className={categorie === c ? 'is-active' : ''} aria-pressed={categorie === c} onClick={() => setCategorie(c)}>
+          <button
+            key={c}
+            type="button"
+            className={categorie === c ? 'is-active' : ''}
+            aria-pressed={categorie === c}
+            onClick={() => setCategorie(c)}
+          >
             {CATEGORIES[c]} ({compte(c)})
           </button>
         ))}
@@ -116,12 +152,19 @@ export function JournalAudit({ slug }: { slug: string }) {
 }
 
 function exporter(lignes: LigneAudit[], j: Journal) {
-  exporterCsv(`journal-audit-${j.debut}-${j.fin}`, [
-    { titre: 'Date', valeur: (l) => dateExport(l.le) },
-    { titre: 'Heure', valeur: (l) => new Date(l.le).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) },
-    { titre: 'Catégorie', valeur: (l) => CATEGORIES[l.categorie] },
-    { titre: 'Action', valeur: (l) => l.action },
-    { titre: 'Détail', valeur: (l) => l.detail },
-    { titre: 'Par', valeur: (l) => l.par ?? 'le HUB' },
-  ], lignes);
+  exporterCsv(
+    `journal-audit-${j.debut}-${j.fin}`,
+    [
+      { titre: 'Date', valeur: (l) => dateExport(l.le) },
+      {
+        titre: 'Heure',
+        valeur: (l) => new Date(l.le).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      },
+      { titre: 'Catégorie', valeur: (l) => CATEGORIES[l.categorie] },
+      { titre: 'Action', valeur: (l) => l.action },
+      { titre: 'Détail', valeur: (l) => l.detail },
+      { titre: 'Par', valeur: (l) => l.par ?? 'le HUB' },
+    ],
+    lignes,
+  );
 }

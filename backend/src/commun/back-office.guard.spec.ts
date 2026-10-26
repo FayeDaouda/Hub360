@@ -18,15 +18,11 @@ describe('BackOfficeGuard', () => {
   );
 
   it.each(['holding_admin'])('%s → 403 (espace dédié ailleurs)', (role) => {
-    expect(() => guard.canActivate(ctx({ role, societeSlug: 'grey-concrete' }))).toThrow(
-      ForbiddenException,
-    );
+    expect(() => guard.canActivate(ctx({ role, societeSlug: 'grey-concrete' }))).toThrow(ForbiddenException);
   });
 
   it('autre société → 403', () => {
-    expect(() => guard.canActivate(ctx({ role: 'COO', societeSlug: 'codd-group' }))).toThrow(
-      ForbiddenException,
-    );
+    expect(() => guard.canActivate(ctx({ role: 'COO', societeSlug: 'codd-group' }))).toThrow(ForbiddenException);
   });
 
   it('pas d’utilisateur → 403', () => {

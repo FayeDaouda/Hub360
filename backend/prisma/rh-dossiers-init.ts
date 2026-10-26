@@ -10,7 +10,10 @@ export async function ouvrirDossiersManquants(prisma: PrismaClient): Promise<num
     where: { dossierPersonnel: null },
     orderBy: [{ dateArrivee: 'asc' }, { createdAt: 'asc' }],
   });
-  const dernier = await prisma.dossierPersonnel.findFirst({ orderBy: { matricule: 'desc' }, select: { matricule: true } });
+  const dernier = await prisma.dossierPersonnel.findFirst({
+    orderBy: { matricule: 'desc' },
+    select: { matricule: true },
+  });
   let n = dernier ? Number(dernier.matricule.replace(/\D/g, '')) : 0;
   for (const c of sans) {
     n += 1;

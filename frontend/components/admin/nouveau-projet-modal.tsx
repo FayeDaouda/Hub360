@@ -44,7 +44,7 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
   const champNom = useRef<HTMLInputElement>(null);
 
   const clientNouveau = clientId === NOUVEAU_CLIENT;
-  const clientExistant = clientNouveau ? null : clients.find((c) => c.id === clientId) ?? null;
+  const clientExistant = clientNouveau ? null : (clients.find((c) => c.id === clientId) ?? null);
   // Personne morale : stockée « entreprise » (le détail SCI / institution se
   // règle sur la fiche client) ; seule la règle du code en dépend.
   const typeNouveau: TypeClient = morale ? 'entreprise' : 'particulier';
@@ -52,7 +52,11 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
 
   // Aperçu du code, segment par segment (« ??? » tant qu'il manque) — le
   // -2/-3 éventuel est tranché par le serveur, qui connaît les codes pris.
-  const segment = clientNouveau ? segmentClient({ nom, type: typeNouveau }) : clientExistant ? segmentClient(clientExistant) : '';
+  const segment = clientNouveau
+    ? segmentClient({ nom, type: typeNouveau })
+    : clientExistant
+      ? segmentClient(clientExistant)
+      : '';
   const code = `${segment || '???'}_${localite?.code ?? '???'}.${String(new Date().getFullYear()).slice(-2)}`;
 
   const apporteurSaisi = versApporteurSaisi(apporteur);
@@ -247,7 +251,7 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
             className={`btn-primary nouveau-projet-valider${blocage ? ' is-bloque' : ''}`}
             disabled={!!blocage || envoi}
           >
-            {envoi ? 'Création…' : blocage ?? 'Créer le projet'}
+            {envoi ? 'Création…' : (blocage ?? 'Créer le projet')}
           </button>
         </form>
       </div>

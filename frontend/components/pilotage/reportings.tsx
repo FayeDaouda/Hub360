@@ -19,13 +19,23 @@ function pillStatut(r: ReportingPilotage): { classe: string; libelle: string } {
 
 // Reportings mensuels (manuel §9.4) : liste à gauche, fiche à droite —
 // préremplie depuis le HUB tant qu'elle n'est pas déposée, figée ensuite.
-export function Reportings({ slug, reportings, onVue }: { slug: string; reportings: ReportingPilotage[]; onVue: (v: VuePilotage) => void }) {
+export function Reportings({
+  slug,
+  reportings,
+  onVue,
+}: {
+  slug: string;
+  reportings: ReportingPilotage[];
+  onVue: (v: VuePilotage) => void;
+}) {
   const cle = (r: ReportingPilotage) => `${r.type}:${r.mois}`;
   // D'abord celui que l'acteur doit déposer (lien « À traiter » de la RH).
   // Puis, pour le destinataire, celui qu'il n'a pas lu ; pour l'émetteur, une question ouverte.
   const premier =
     reportings.find((r) => r.peutDeposer) ??
-    reportings.find((r) => (r.suivi?.peutLire && !r.suivi.luParMoi) || (r.suivi?.peutRepondre && r.suivi.questionsOuvertes > 0)) ??
+    reportings.find(
+      (r) => (r.suivi?.peutLire && !r.suivi.luParMoi) || (r.suivi?.peutRepondre && r.suivi.questionsOuvertes > 0),
+    ) ??
     // Sinon le plus récent dont l'acteur est destinataire ou émetteur.
     reportings.find((r) => r.suivi?.peutLire || r.suivi?.peutRepondre) ??
     reportings.find((r) => r.statut === 'a_deposer' || r.statut === 'en_retard') ??
@@ -36,7 +46,7 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
   // Brouillon d'analyse par reporting : changer de ligne ne le perd pas.
   const [analyses, setAnalyses] = useState<Record<string, string>>({});
   const r = reportings.find((x) => cle(x) === choisi) ?? null;
-  const analyse = r ? analyses[cle(r)] ?? '' : '';
+  const analyse = r ? (analyses[cle(r)] ?? '') : '';
 
   async function deposer(x: ReportingPilotage) {
     setEnvoi(true);
@@ -54,7 +64,9 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
     <div className="pi-colonnes">
       <section className="panel glass-panel pi-liste">
         <h2>Reportings mensuels (manuel §9.4)</h2>
-        <p className="pi-aide">Chaque émetteur dépose à J+5 ; un reporting en retard est une alerte signalée au CODIR (§4.3).</p>
+        <p className="pi-aide">
+          Chaque émetteur dépose à J+5 ; un reporting en retard est une alerte signalée au CODIR (§4.3).
+        </p>
         {reportings.length === 0 ? (
           <p className="pi-aide">Aucun mois clos à reporter pour l’instant.</p>
         ) : (
@@ -119,8 +131,8 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
           )}
           {!r.deposeLe && r.contenu && (
             <p className="pi-note">
-              Prérempli automatiquement depuis le HUB : l’émetteur relit puis dépose. Sans dépôt au {jjmmaaaa(r.echeance)}, une alerte est
-              inscrite au registre pour le CODIR.
+              Prérempli automatiquement depuis le HUB : l’émetteur relit puis dépose. Sans dépôt au{' '}
+              {jjmmaaaa(r.echeance)}, une alerte est inscrite au registre pour le CODIR.
             </p>
           )}
           {r.analyse ? (
@@ -146,7 +158,12 @@ export function Reportings({ slug, reportings, onVue }: { slug: string; reportin
           {erreur && <p className="field-erreur">{erreur}</p>}
           <SuiviReporting key={cle(r)} slug={slug} r={r} onVue={onVue} />
           {r.peutDeposer && (
-            <button type="button" className="btn-primary pi-deposer" disabled={envoi || analyse.trim().length < 10} onClick={() => deposer(r)}>
+            <button
+              type="button"
+              className="btn-primary pi-deposer"
+              disabled={envoi || analyse.trim().length < 10}
+              onClick={() => deposer(r)}
+            >
               {envoi ? 'Dépôt…' : 'Déposer le reporting'}
             </button>
           )}

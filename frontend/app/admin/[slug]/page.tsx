@@ -1,5 +1,5 @@
 'use client';
-import { use } from "react";
+import { use } from 'react';
 
 import { Pilotage } from '@/components/pilotage/pilotage';
 import { useTitrePage } from '@/lib/layout-contexte';

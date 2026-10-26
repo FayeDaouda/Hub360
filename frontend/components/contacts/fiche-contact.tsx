@@ -9,7 +9,15 @@ import { getFicheContact, type FicheContact } from '@/lib/contacts';
 // Fiche contact d'un collègue (revue Salarié 19/10/2026) : ouverte depuis la
 // recherche (Ctrl+K) et l'annuaire du chat — remplace la page Équipes comme
 // annuaire pour le Salarié.
-export function FicheContactModal({ slug, utilisateurId, onClose }: { slug: string; utilisateurId: string; onClose: () => void }) {
+export function FicheContactModal({
+  slug,
+  utilisateurId,
+  onClose,
+}: {
+  slug: string;
+  utilisateurId: string;
+  onClose: () => void;
+}) {
   const [fiche, setFiche] = useState<FicheContact | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -28,7 +36,13 @@ export function FicheContactModal({ slug, utilisateurId, onClose }: { slug: stri
   const nom = fiche ? `${fiche.prenom} ${fiche.nom}`.trim() : 'Contact';
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="fiche-contact-titre" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal modal--sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fiche-contact-titre"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="modal-header">
           <h2 id="fiche-contact-titre">{nom}</h2>
           <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>

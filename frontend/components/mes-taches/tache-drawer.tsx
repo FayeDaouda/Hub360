@@ -58,7 +58,11 @@ export function TacheDrawer({
     const surTouche = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || (e.key !== 'j' && e.key !== 'k')) return;
       const cible = e.target as HTMLElement | null;
-      if (cible?.closest('input, textarea, select, [contenteditable="true"]') || document.querySelector('.modal-backdrop')) return;
+      if (
+        cible?.closest('input, textarea, select, [contenteditable="true"]') ||
+        document.querySelector('.modal-backdrop')
+      )
+        return;
       e.preventDefault();
       onVoisine(e.key === 'j' ? 1 : -1);
     };

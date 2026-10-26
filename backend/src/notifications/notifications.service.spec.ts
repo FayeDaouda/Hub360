@@ -65,7 +65,13 @@ describe('NotificationsService.notifierDossierCrm', () => {
       dossier: { ...DOSSIER, proprietaireId: null },
       titulaires: { 'Dir. GC': ['DG1', 'DG2'] },
     });
-    await s.notifierDossierCrm({ societeId: 'S1', dossierId: 'D1', evenement: 'dossier_renvoye', parId: 'CFO1', commentaire: 'x' });
+    await s.notifierDossierCrm({
+      societeId: 'S1',
+      dossierId: 'D1',
+      evenement: 'dossier_renvoye',
+      parId: 'CFO1',
+      commentaire: 'x',
+    });
     expect(lignes(createMany)).toEqual(['DG1', 'DG2']);
   });
 

@@ -15,7 +15,13 @@ const FAMILLES: { code: string; libelle: string }[] = [
   { code: 'EX', libelle: 'Extras' },
   { code: 'PC', libelle: 'Permis de construire' },
 ];
-const UNITES: Record<string, string> = { piece: 'pièce(s)', mois: 'mois', forfait: 'forfait', reprise: 'reprise(s)', m2: 'm²' };
+const UNITES: Record<string, string> = {
+  piece: 'pièce(s)',
+  mois: 'mois',
+  forfait: 'forfait',
+  reprise: 'reprise(s)',
+  m2: 'm²',
+};
 const PAR_UNITE: Record<string, string> = { m2: '/ m²', piece: '/ pièce', mois: '/ mois', reprise: '/ reprise' };
 
 // « CO1 — Conception — … » → « CO1 · Conception — … » (maquette).
@@ -34,7 +40,12 @@ export function lignesBrouillon(lignes: LigneForm[], catalogue: ProduitService[]
   return lignes.flatMap((l) => {
     const p = catalogue.find((c) => c.id === l.produitServiceId);
     if (!p) return [];
-    const base = { produitServiceId: p.id, designation: p.designation, prixUnitaire: Math.max(0, Number(l.prixUnitaire) || 0), tauxTva: Number(l.tauxTva) };
+    const base = {
+      produitServiceId: p.id,
+      designation: p.designation,
+      prixUnitaire: Math.max(0, Number(l.prixUnitaire) || 0),
+      tauxTva: Number(l.tauxTva),
+    };
     if (p.modeCalcul === 'surface_planches') {
       return [{ ...base, quantite: 1, surfaceM2: entier(l.surfaceM2), planches: entier(l.planches) }];
     }
@@ -56,7 +67,8 @@ type Props = {
 export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }: Props) {
   const produitDe = (l: LigneForm) => catalogue.find((p) => p.id === l.produitServiceId);
   const changer = (ls: LigneForm[]) => onChange(synchroniserCategorie(ls, catalogue, categorieCo));
-  const maj = (i: number, patch: Partial<LigneForm>) => changer(lignes.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const maj = (i: number, patch: Partial<LigneForm>) =>
+    changer(lignes.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   const categorie = lignes.map(produitDe).find((p) => p?.modeCalcul === 'surface_planches')?.code ?? categorieCo;
 
   function choisir(i: number, id: string) {
@@ -99,10 +111,17 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
           return (
             <div className="offre-ligne" role="row" key={i}>
               <span role="cell" data-label="Désignation" className="offre-designation">
-                <select className="field-input" value={l.produitServiceId} onChange={(e) => choisir(i, e.target.value)} aria-label="Désignation">
+                <select
+                  className="field-input"
+                  value={l.produitServiceId}
+                  onChange={(e) => choisir(i, e.target.value)}
+                  aria-label="Désignation"
+                >
                   <option value="">Choisir une prestation…</option>
                   {FAMILLES.map((f) => {
-                    const produits = catalogue.filter((c) => c.famille === f.code && (!c.coAssocie || c.coAssocie === categorie));
+                    const produits = catalogue.filter(
+                      (c) => c.famille === f.code && (!c.coAssocie || c.coAssocie === categorie),
+                    );
                     if (produits.length === 0) return null;
                     return (
                       <optgroup key={f.code} label={f.libelle}>
@@ -191,8 +210,8 @@ export function OffreLignes({ lignes, onChange, catalogue, categorieCo, fiche }:
         <Plus size={14} aria-hidden /> Ajouter une prestation
       </button>
       <p className="offre-aide">
-        Calcul automatique : total HT = prix unitaire × surface du terrain (m²) × quantité (planches) pour la conception ;
-        prix × quantité pour les autres produits. Surface et planches sont reprises de la fiche projet ; un écart est
+        Calcul automatique : total HT = prix unitaire × surface du terrain (m²) × quantité (planches) pour la conception
+        ; prix × quantité pour les autres produits. Surface et planches sont reprises de la fiche projet ; un écart est
         signalé en ambre. Prix du catalogue figés. Saisie libre : forfait DPC/SPC.
       </p>
     </section>

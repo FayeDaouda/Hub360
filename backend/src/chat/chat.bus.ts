@@ -53,9 +53,7 @@ export class ChatBus {
       map((e): MessageEvent => this.versSse(e)),
     );
     // Battement : tient la connexion ouverte à travers les proxys / timeouts.
-    const battement$ = interval(BATTEMENT_MS).pipe(
-      map((): MessageEvent => ({ type: 'ping', data: {} })),
-    );
+    const battement$ = interval(BATTEMENT_MS).pipe(map((): MessageEvent => ({ type: 'ping', data: {} })));
     return merge(evenements$, battement$);
   }
 
