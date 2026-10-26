@@ -25,7 +25,10 @@ export function readFixtures(): Fixtures {
   return JSON.parse(readFileSync(join(STATE_DIR, 'fixtures.json'), 'utf8')) as Fixtures;
 }
 
-export const storageStateOf = (role: Role): string => join(STATE_DIR, 'auth', `${role}.json`);
+// Session d'un rôle pour l'environnement `envIndex` (scripts/reference-env.sh :
+// le localStorage du front est propre à chaque port).
+export const storageStateOf = (role: Role, envIndex = 0): string =>
+  join(STATE_DIR, 'auth', envIndex ? `${role}@${envIndex}.json` : `${role}.json`);
 
 // Same key as frontend/lib/theme.ts, set before any script of the page runs.
 export async function useTheme(page: Page, theme: Theme): Promise<void> {

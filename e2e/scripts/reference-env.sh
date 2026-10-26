@@ -3,6 +3,7 @@
 # Environnements de référence isolés pour les captures et les tests de fumée.
 #
 #   bash scripts/reference-env.sh up [git-ref]   # par défaut : l'arbre de travail
+#   bash scripts/reference-env.sh build <git-ref>  # compile seulement (cache)
 #   bash scripts/reference-env.sh down
 #
 # Copie le code (arbre de travail ou révision git), le compile une fois, puis
@@ -89,7 +90,7 @@ build() {
   echo "▶ backend: prisma generate, build"
   (
     cd "$work/backend"
-    npx prisma generate >"$STATE/prisma.log" 2>&1
+    npx prisma generate >"$STATE/prisma-generate.log" 2>&1
     npx nest build >"$STATE/backend-build.log" 2>&1
   )
   echo "▶ frontend: production build against :$(api_port 0)"
@@ -138,13 +139,34 @@ start_env() {
   )
 }
 
+# Compilation d'une révision git dans le cache (sans base ni serveur) : sert à
+# préparer une branche pendant que les captures de la référence tournent.
+build_ref() {
+  local ref=$1 key work
+  mkdir -p "$STATE" "$CACHE"
+  key="$(git -C "$ROOT" rev-parse "$ref^{commit}")$(printf '%s' "${FRONT_BUILD_FLAGS:-}" | shasum | cut -c1-8)"
+  work="$CACHE/$key"
+  if [[ ! -f "$work/.complete" ]]; then
+    rm -rf "$work"
+    mkdir -p "$work"
+    echo "▶ copying code ($ref) into $work"
+    git -C "$ROOT" archive "$ref" backend frontend | tar -x -C "$work"
+    build "$work"
+  else
+    echo "▶ cached build of $ref ($key)"
+  fi
+  touch "$work"
+  prune_cache "$key"
+  BUILT="$work"
+}
+
 up() {
   local ref=${1:-WORKTREE}
   stop_servers
   mkdir -p "$STATE" "$CACHE"
   rm -rf "$STATE"/work-*
 
-  local work key=""
+  local work
   if [[ "$ref" == "WORKTREE" ]]; then
     work="$STATE/work-$(date +%s)"
     mkdir -p "$work"
@@ -154,19 +176,8 @@ up() {
     done
     build "$work"
   else
-    key="$(git -C "$ROOT" rev-parse "$ref^{commit}")$(printf '%s' "${FRONT_BUILD_FLAGS:-}" | shasum | cut -c1-8)"
-    work="$CACHE/$key"
-    if [[ -f "$work/.complete" ]]; then
-      echo "▶ cached build of $ref ($key)"
-    else
-      rm -rf "$work"
-      mkdir -p "$work"
-      echo "▶ copying code ($ref) into $work"
-      git -C "$ROOT" archive "$ref" backend frontend | tar -x -C "$work"
-      build "$work"
-    fi
-    touch "$work"
-    prune_cache "$key"
+    build_ref "$ref"
+    work=$BUILT
   fi
 
   local db_url admin_url
@@ -215,12 +226,29 @@ up() {
       wait_for "http://localhost:$(front_port "$i")/" "frontend-$i"
     done
   fi
+  # Sessions : le front garde la session dans le localStorage de son origine
+  # (hub_session), propre à chaque port : une copie par environnement, son
+  # origine pointée sur le front de l'environnement (support/reference.ts,
+  # storageStateOf).
+  node -e '
+    const fs = require("fs"), path = require("path");
+    const [dir, count] = [process.argv[1], Number(process.argv[2])];
+    for (const file of fs.readdirSync(dir).filter((f) => /^[a-z]+\.json$/.test(f))) {
+      const state = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
+      for (let i = 1; i < count; i++) {
+        const origin = `http://localhost:${3100 + 10 * i}`;
+        const copy = { ...state, origins: state.origins.map((o) => ({ ...o, origin })) };
+        fs.writeFileSync(path.join(dir, file.replace(".json", `@${i}.json`)), JSON.stringify(copy));
+      }
+    }
+  ' "$STATE/auth" "$ENVS"
   printf '{ "count": %s }\n' "$ENVS" >"$STATE/envs.json"
   echo "✓ $ENVS reference environment(s) ready ($ref) — env 0: front http://localhost:$(front_port 0), API http://localhost:$(api_port 0)/api"
 }
 
 case "${1:-}" in
   up) up "${2:-WORKTREE}" ;;
+  build) build_ref "${2:?git-ref}" ;;
   down) stop_servers && echo "✓ reference servers stopped" ;;
-  *) echo "usage: $0 up [git-ref] | down" >&2 && exit 1 ;;
+  *) echo "usage: $0 up [git-ref] | build <git-ref> | down" >&2 && exit 1 ;;
 esac

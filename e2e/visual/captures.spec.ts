@@ -12,6 +12,7 @@ import {
   THEMES,
   useTheme,
   waitForContent,
+  type Role,
   type Theme,
 } from '../support/reference';
 import { GLASS_KEYS, keyTag, SCREENS } from '../support/screens';
@@ -26,7 +27,13 @@ import { GLASS_KEYS, keyTag, SCREENS } from '../support/screens';
 // Série réduite pendant le travail (jamais pour une fusion) :
 // `npm run visual:quick -- <filtre>` = écrans dont la clé contient le filtre,
 // thème clair seulement, sans le verre.
-const test = base.extend<CaptureOptions>({ envIndex: [0, { option: true }] });
+// `role` : session utilisée (aucune pour les écrans publics), chargée pour
+// l'environnement du projet.
+const test = base.extend<CaptureOptions & { role: Role | null }>({
+  envIndex: [0, { option: true }],
+  role: [null, { option: true }],
+  storageState: async ({ role, envIndex }, use) => use(role ? storageStateOf(role, envIndex) : undefined),
+});
 
 const QUICK = process.env.HUB_CAPTURE_QUICK;
 const themes: Theme[] = QUICK !== undefined ? ['light'] : THEMES;
@@ -101,7 +108,7 @@ async function captureScreenAndTabs(page: Page, folder: Folder, baseName: string
 
 for (const screen of SCREENS.filter((s) => retenu(s.key))) {
   test.describe(keyTag(screen.key), () => {
-    if (screen.role !== 'public') test.use({ storageState: storageStateOf(screen.role) });
+    test.use({ role: screen.role === 'public' ? null : screen.role });
     for (const [folder, options] of Object.entries(VIEWPORTS) as [keyof typeof VIEWPORTS, object][]) {
       test.describe(folder, () => {
         test.use(options);
@@ -178,7 +185,7 @@ if (GLASS.map((g) => g.key).join() !== GLASS_KEYS.join()) throw new Error('GLASS
 if (QUICK === undefined) {
   for (const { key, run } of GLASS) {
     test.describe(keyTag(key), () => {
-      test.use({ storageState: storageStateOf('ceo'), ...VIEWPORTS['visual-desktop'] });
+      test.use({ role: 'ceo', ...VIEWPORTS['visual-desktop'] });
       for (const theme of THEMES) {
         test(theme, async ({ page, envIndex }) => {
           await run(page, envIndex, theme);

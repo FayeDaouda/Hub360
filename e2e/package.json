@@ -11,6 +11,7 @@
     "visual:quick": "sh -c 'HUB_CAPTURE_QUICK=\"$0\" playwright test visual/'",
     "smoke": "playwright test --project=smoke",
     "archive": "bash scripts/archive-reference.sh",
+    "validate": "bash scripts/validate.sh",
     "report": "playwright show-report .state/report"
   },
   "devDependencies": {
