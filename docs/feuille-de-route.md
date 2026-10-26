@@ -6,15 +6,39 @@ Décisions structurantes : `docs/adr/`.
 
 ## Phases
 
-| Phase                 | Contenu                                                                                                                                                                     | État             |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                    | fait (PR #1)     |
-| 1 — Audit             | rapport chiffré, plan                                                                                                                                                       | fait (PR #1)     |
-| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002) | fait (PR #2)     |
-| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                             | en revue (PR #3) |
-| Structuration         | module par module : `features/<module>/`, composants d'interface uniques, règles métier au back, renommage en anglais (commentaires en français, `@map` en base)            | à venir          |
-| Types partagés        | OpenAPI généré depuis le back, client typé pour le front ; `packages/domain` limité aux schémas de formulaires, au formatage et aux constantes                              | à venir          |
-| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                            | à venir          |
+| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                      |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                              |
+| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                              |
+| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                              |
+| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                              |
+| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | en cours (S0a)                            |
+| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | juste après S0 : conditionne le lancement |
+| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                   |
+| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés   |
+| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | à venir                                   |
+
+## Règles de la structuration
+
+- **Rendu identique au pixel près.** La structuration ne change rien à
+  l'écran : les composants sont construits sur les tokens avec les valeurs
+  actuelles. Une capture qui change est une régression à corriger. La refonte
+  visuelle vient ensuite, en lots séparés : elle modifie les valeurs des tokens
+  (un seul fichier) et valide une nouvelle référence de captures.
+- **Critères de fin de chaque module :**
+  - le module est dans `features/`, avec ses noms en anglais ;
+  - aucun fichier de plus de 300 lignes, aucune copie de fonction utilitaire ;
+  - les règles métier du module sont calculées au back et testées ;
+  - chaque écran gère le chargement, le vide et l'erreur ;
+  - des tests côté front sur les composants et les hooks principaux ;
+  - les chiffres avant et après dans la description de la PR.
+- **Routes de l'API inchangées** pendant la structuration (contrat public).
+  Avant de sortir les applications macOS, Windows et iOS, introduire un
+  préfixe de version (`/api/v1`) : une fois des applications installées, on
+  ne peut plus changer une route sans casser les anciennes versions.
+- **Types partagés** (S0c) : OpenAPI généré depuis le back, client typé pour
+  le front ; `packages/domain` limité aux schémas de formulaires, au formatage
+  et aux constantes, les règles métier restant calculées au back.
 
 ## Suites décidées, pas encore faites
 
