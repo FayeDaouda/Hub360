@@ -14,7 +14,7 @@ import {
 } from '@/lib/contrats';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { formatCompactAmount } from '@/lib/format';
-import { formatDayShortMonth } from '@/lib/dates';
+import { formatDate, formatDayShortMonth } from '@/lib/dates';
 import {
   MODES_SIGNATURE,
   STATUTS_CONTRAT,
@@ -276,7 +276,12 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             </p>
           )}
           {c.statut === 'signe' && c.signatureTrace && (
-            <img src={c.signatureTrace} alt="Signature du client" className="contrat-signature" />
+            <figure className="contrat-signature">
+              <img src={c.signatureTrace} alt="Signature du client" />
+              <figcaption>
+                {c.signeParNom || 'Signataire'} · {formatDate(c.signeLe)}
+              </figcaption>
+            </figure>
           )}
           {c.statut === 'envoye' && c.dateEnvoi && (
             <p className="field-aide">
