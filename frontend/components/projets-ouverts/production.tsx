@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlarmClock, CalendarClock, Gauge, TriangleAlert } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getProduction, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
@@ -108,41 +108,41 @@ export function Production({ slug }: { slug: string }) {
         cellules.
       </p>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'retard',
+            id: 'retard',
             label: 'En retard',
-            valeur: c.enRetard,
-            sousTexte: retard ? 'filtre actif' : 'tâches en retard ou livraison dépassée',
-            icone: TriangleAlert,
-            etat: c.enRetard ? 'risque' : 'succes',
-            action: { type: 'filtre', actif: retard, onClick: () => setRetard((x) => !x) },
+            value: c.enRetard,
+            hint: retard ? 'filtre actif' : 'tâches en retard ou livraison dépassée',
+            icon: TriangleAlert,
+            state: c.enRetard ? 'risque' : 'succes',
+            action: { type: 'filter', active: retard, onClick: () => setRetard((x) => !x) },
           },
           {
-            cle: 'livraisons',
+            id: 'livraisons',
             label: 'Livraisons sous 15 jours',
-            valeur: c.livraisons15,
-            sousTexte: livraison ? 'filtre actif' : undefined,
-            icone: CalendarClock,
-            etat: c.livraisons15 ? 'attention' : 'succes',
-            action: { type: 'filtre', actif: livraison, onClick: () => setLivraison((x) => !x) },
+            value: c.livraisons15,
+            hint: livraison ? 'filtre actif' : undefined,
+            icon: CalendarClock,
+            state: c.livraisons15 ? 'attention' : 'succes',
+            action: { type: 'filter', active: livraison, onClick: () => setLivraison((x) => !x) },
           },
           {
-            cle: 'attente',
+            id: 'attente',
             label: 'En attente de décision',
-            valeur: c.enAttente,
-            sousTexte: 'remises, visas, prolongations, TS',
-            icone: AlarmClock,
-            etat: c.enAttente ? 'attention' : 'succes',
-            action: { type: 'lien', href: `/admin/${slug}` },
+            value: c.enAttente,
+            hint: 'remises, visas, prolongations, TS',
+            icon: AlarmClock,
+            state: c.enAttente ? 'attention' : 'succes',
+            action: { type: 'link', href: `/admin/${slug}` },
           },
           {
-            cle: 'charge',
+            id: 'charge',
             label: 'Charge moyenne · 2 semaines',
-            valeur: c.chargeMoyenne === null ? '—' : `${c.chargeMoyenne} %`,
-            sousTexte: vue.charge.zone ? `zone normale ${vue.charge.zone.de} à ${vue.charge.zone.a} %` : undefined,
-            icone: Gauge,
-            etat: tonCharge(c.chargeMoyenne, vue.charge.zone) === 'succes' ? 'succes' : 'attention',
+            value: c.chargeMoyenne === null ? '—' : `${c.chargeMoyenne} %`,
+            hint: vue.charge.zone ? `zone normale ${vue.charge.zone.de} à ${vue.charge.zone.a} %` : undefined,
+            icon: Gauge,
+            state: tonCharge(c.chargeMoyenne, vue.charge.zone) === 'succes' ? 'succes' : 'attention',
           },
         ]}
       />

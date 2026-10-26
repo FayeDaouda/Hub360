@@ -7,7 +7,7 @@ import { AlarmClock, CircleCheck, FolderKanban, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMaCellule } from '@/lib/mon-espace';
 import { NIVEAUX_COLLABORATEUR, PHASES, type MaCellule as DonneesCellule, type StatsPerformances } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { Avatar } from './avatar';
 
@@ -41,35 +41,35 @@ export function MaCellule({ slug }: { slug: string }) {
   return (
     <>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'projets',
+            id: 'projets',
             label: 'Projets pilotés',
-            valeur: projets.length,
-            sousTexte: 'projets signés de la cellule',
-            icone: FolderKanban,
+            value: projets.length,
+            hint: 'projets signés de la cellule',
+            icon: FolderKanban,
           },
           {
-            cle: 'en-cours',
+            id: 'en-cours',
             label: 'Tâches en cours',
-            valeur: stats.enCours,
-            sousTexte: 'toute la cellule',
-            icone: ListTodo,
+            value: stats.enCours,
+            hint: 'toute la cellule',
+            icon: ListTodo,
           },
           {
-            cle: 'retard',
+            id: 'retard',
             label: 'En retard',
-            valeur: stats.enRetard,
-            sousTexte: 'tâches hors délai',
-            icone: AlarmClock,
-            etat: stats.enRetard > 0 ? 'risque' : 'succes',
+            value: stats.enRetard,
+            hint: 'tâches hors délai',
+            icon: AlarmClock,
+            state: stats.enRetard > 0 ? 'risque' : 'succes',
           },
           {
-            cle: 'a-temps',
+            id: 'a-temps',
             label: 'Tâches remises à temps',
-            valeur: rd.pct == null ? '—' : `${rd.pct} %`,
-            sousTexte: `${stats.validees} validées dans la cellule`,
-            icone: CircleCheck,
+            value: rd.pct == null ? '—' : `${rd.pct} %`,
+            hint: `${stats.validees} validées dans la cellule`,
+            icon: CircleCheck,
           },
         ]}
       />

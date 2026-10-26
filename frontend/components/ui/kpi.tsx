@@ -16,16 +16,18 @@ import { formatAmount, formatCompactAmount } from '@/lib/format';
 // Un seul aplat de couleur par bandeau : la PREMIÈRE tuile « risque »
 // (l'ordre des tuiles est celui des priorités de la page) — c'est elle qui
 // demande une action. Aucun risque : bandeau entièrement calme.
-export type TendanceKpiTuile = {
-  sens: 'hausse' | 'baisse' | 'stable';
+// Les valeurs de `direction` et de `state` sont aussi des classes CSS
+// (kpi-tuile-badge--hausse, kpi-tuile--risque) : elles restent telles quelles.
+export type KpiTrend = {
+  direction: 'hausse' | 'baisse' | 'stable';
   // Texte court affiché dans la pastille (ex. « +10 ») — un vrai delta,
   // jamais une valeur inventée pour remplir l'espace.
-  court: string;
+  short: string;
   // Description complète, portée en `title` (accessibilité / survol).
-  texte: string;
+  text: string;
 };
 
-const ICONE_TENDANCE = {
+const TREND_ICON = {
   hausse: ArrowUpRight,
   baisse: ArrowDownRight,
   stable: Minus,
@@ -33,10 +35,10 @@ const ICONE_TENDANCE = {
 
 // Anneau miniature dans le coin de la tuile — un pourcentage RÉEL uniquement
 // (ex. taux de conversion déjà calculé). Jamais posé sans valeur derrière.
-function AnneauMini({ pourcentage }: { pourcentage: number }) {
+function MiniRing({ percent }: { percent: number }) {
   const r = 12;
   const c = 2 * Math.PI * r;
-  const p = Math.max(0, Math.min(100, pourcentage));
+  const p = Math.max(0, Math.min(100, percent));
   return (
     <svg width="30" height="30" viewBox="0 0 30 30" className="kpi-tuile-anneau" aria-hidden>
       <circle cx="15" cy="15" r={r} className="kpi-tuile-anneau-piste" fill="none" />
@@ -54,116 +56,115 @@ function AnneauMini({ pourcentage }: { pourcentage: number }) {
   );
 }
 
-export type KpiTuile = {
-  cle: string;
+export type KpiTile = {
+  id: string;
   label: string;
-  valeur?: string | number;
-  // Montant en FCFA : remplace `valeur`. ≥ 1 million → arrondi en grand
+  value?: string | number;
+  // Montant en FCFA : remplace `value`. ≥ 1 million → arrondi en grand
   // (« 31,02 M FCFA ») et montant exact en tête du sous-texte, lisible au
   // doigt comme à la souris ; en dessous, montant exact en grand.
-  montant?: number;
-  sousTexte?: string;
+  amount?: number;
+  hint?: string;
   // Pastille d'icône en tête de tuile — repère visuel immédiat.
-  icone?: LucideIcon;
+  icon?: LucideIcon;
   // Sens du chiffre (lib/couleurs-etat.ts). Absent = « marque » (neutre).
-  etat?: EtatTuile;
+  state?: EtatTuile;
   // Décor en tête, à droite — UN seul des trois, jamais un graphique inventé :
-  //  · `ringPourcentage` : anneau sur un vrai pourcentage déjà calculé
-  //  · `tendance`        : pastille flèche + delta réel vs une vraie période antérieure
-  //  · `decorIcone`      : icône purement graphique (aucune donnée, assumé comme décor)
-  ringPourcentage?: number;
-  tendance?: TendanceKpiTuile;
-  decorIcone?: LucideIcon;
-  // Remplace `valeur` pour une tuile qui porte un mini-graphe (ex. charge par cellule).
-  contenu?: ReactNode;
-  // Rend la tuile interactive. 'popup' → <button aria-haspopup="dialog"> ;
-  // 'lien' → <Link> ; 'filtre' → <button aria-pressed> qui bascule un filtre
-  // sur la page (`actif` reflète l'état courant). Absent → <div> statique.
+  //  · `ringPercent` : anneau sur un vrai pourcentage déjà calculé
+  //  · `trend`       : pastille flèche + delta réel vs une vraie période antérieure
+  //  · `decorIcon`   : icône purement graphique (aucune donnée, assumé comme décor)
+  ringPercent?: number;
+  trend?: KpiTrend;
+  decorIcon?: LucideIcon;
+  // Remplace `value` pour une tuile qui porte un mini-graphe (ex. charge par cellule).
+  content?: ReactNode;
+  // Rend la tuile interactive. 'dialog' → <button aria-haspopup="dialog"> ;
+  // 'link' → <Link> ; 'filter' → <button aria-pressed> qui bascule un filtre
+  // sur la page (`active` reflète l'état courant). Absent → <div> statique.
   action?:
-    | { type: 'popup'; onClick: () => void }
-    | { type: 'lien'; href: string }
-    | { type: 'filtre'; actif: boolean; onClick: () => void };
+    | { type: 'dialog'; onClick: () => void }
+    | { type: 'link'; href: string }
+    | { type: 'filter'; active: boolean; onClick: () => void };
 };
 
 // `compact` : tuiles en une ligne (icône · libellé et sous-texte · valeur)
 // sur grand écran, pour les pages où l'espace de travail prime (Projets).
-export function KpiStrip({ tuiles, compact = false }: { tuiles: KpiTuile[]; compact?: boolean }) {
-  const cleAlerte = tuiles.find((t) => t.etat === 'risque')?.cle;
+export function KpiStrip({ tiles, compact = false }: { tiles: KpiTile[]; compact?: boolean }) {
+  const alertId = tiles.find((t) => t.state === 'risque')?.id;
   return (
     <div className={`kpi-strip${compact ? ' kpi-strip--compact' : ''}`}>
-      {tuiles.map((t) => {
-        const Icone = t.icone;
-        const DecorIcone = t.decorIcone;
-        const IconeTendance = t.tendance ? ICONE_TENDANCE[t.tendance.sens] : null;
-        const estFiltreActif = t.action?.type === 'filtre' && t.action.actif;
-        const etat = t.etat ?? 'marque';
-        const classe = `kpi-tuile kpi-tuile--${etat}${t.cle === cleAlerte ? ' kpi-tuile--alerte' : ''}${
+      {tiles.map((t) => {
+        const Icon = t.icon;
+        const DecorIcon = t.decorIcon;
+        const TrendIcon = t.trend ? TREND_ICON[t.trend.direction] : null;
+        const activeFilter = t.action?.type === 'filter' && t.action.active;
+        const state = t.state ?? 'marque';
+        const className = `kpi-tuile kpi-tuile--${state}${t.id === alertId ? ' kpi-tuile--alerte' : ''}${
           t.action ? ' kpi-tuile--clic' : ''
-        }${estFiltreActif ? ' kpi-tuile--actif' : ''}`;
-        const arrondi = t.montant != null && Math.abs(t.montant) >= 1_000_000;
-        const valeur =
-          t.montant == null ? t.valeur : arrondi ? formatCompactAmount(t.montant) : formatAmount(t.montant);
-        const sousTexte = arrondi ? [formatAmount(t.montant!), t.sousTexte].filter(Boolean).join(' · ') : t.sousTexte;
-        const contenu = (
+        }${activeFilter ? ' kpi-tuile--actif' : ''}`;
+        const rounded = t.amount != null && Math.abs(t.amount) >= 1_000_000;
+        const value = t.amount == null ? t.value : rounded ? formatCompactAmount(t.amount) : formatAmount(t.amount);
+        const hint = rounded ? [formatAmount(t.amount!), t.hint].filter(Boolean).join(' · ') : t.hint;
+        const body = (
           <>
             <div className="kpi-tuile-tete">
-              {Icone && (
+              {Icon && (
                 <span className="kpi-tuile-icone" aria-hidden>
-                  <Icone size={18} />
+                  <Icon size={18} />
                 </span>
               )}
               <span className="kpi-tuile-tete-droite">
-                {t.ringPourcentage != null && <AnneauMini pourcentage={t.ringPourcentage} />}
-                {t.tendance && IconeTendance && (
-                  <span className={`kpi-tuile-badge kpi-tuile-badge--${t.tendance.sens}`} title={t.tendance.texte}>
-                    <IconeTendance size={11} strokeWidth={2.5} aria-hidden />
-                    {t.tendance.court}
+                {t.ringPercent != null && <MiniRing percent={t.ringPercent} />}
+                {t.trend && TrendIcon && (
+                  <span className={`kpi-tuile-badge kpi-tuile-badge--${t.trend.direction}`} title={t.trend.text}>
+                    <TrendIcon size={11} strokeWidth={2.5} aria-hidden />
+                    {t.trend.short}
                   </span>
                 )}
-                {DecorIcone && (
+                {DecorIcon && (
                   <span className="kpi-tuile-decor" aria-hidden>
-                    <DecorIcone size={18} />
+                    <DecorIcon size={18} />
                   </span>
                 )}
               </span>
             </div>
             <p className="kpi-tuile-label">{t.label}</p>
             {/* Taille de la valeur : suit la largeur de la tuile (10-kpi.css). */}
-            {t.contenu ?? <p className="kpi-tuile-valeur">{valeur}</p>}
-            {sousTexte && <p className="kpi-tuile-sous">{sousTexte}</p>}
+            {t.content ?? <p className="kpi-tuile-valeur">{value}</p>}
+            {hint && <p className="kpi-tuile-sous">{hint}</p>}
           </>
         );
 
-        if (t.action?.type === 'popup') {
+        if (t.action?.type === 'dialog') {
           return (
-            <button key={t.cle} type="button" className={classe} aria-haspopup="dialog" onClick={t.action.onClick}>
-              {contenu}
+            <button key={t.id} type="button" className={className} aria-haspopup="dialog" onClick={t.action.onClick}>
+              {body}
             </button>
           );
         }
-        if (t.action?.type === 'lien') {
+        if (t.action?.type === 'link') {
           return (
-            <Link key={t.cle} href={t.action.href} className={classe}>
-              {contenu}
+            <Link key={t.id} href={t.action.href} className={className}>
+              {body}
             </Link>
           );
         }
-        if (t.action?.type === 'filtre') {
+        if (t.action?.type === 'filter') {
           return (
             <button
-              key={t.cle}
+              key={t.id}
               type="button"
-              className={classe}
-              aria-pressed={t.action.actif}
+              className={className}
+              aria-pressed={t.action.active}
               onClick={t.action.onClick}
             >
-              {contenu}
+              {body}
             </button>
           );
         }
         return (
-          <div key={t.cle} className={classe}>
-            {contenu}
+          <div key={t.id} className={className}>
+            {body}
           </div>
         );
       })}
@@ -172,41 +173,42 @@ export function KpiStrip({ tuiles, compact = false }: { tuiles: KpiTuile[]; comp
 }
 
 // Barre de répartition (funnel CRM par statut + split mandat/promotion).
-export type FunnelSegment = { cle: string; label: string; valeur: number };
+// `id` est aussi une classe CSS (kpi-funnel-seg--<statut>).
+export type FunnelSegment = { id: string; label: string; value: number };
 
 export function KpiFunnel({
   segments,
   natureSplit,
 }: {
   segments: FunnelSegment[];
-  natureSplit?: { mandat: number; promotion: number };
+  natureSplit?: { mandate: number; promotion: number };
 }) {
-  const total = segments.reduce((s, x) => s + x.valeur, 0) || 1;
-  const natTotal = natureSplit ? natureSplit.mandat + natureSplit.promotion || 1 : 1;
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  const natTotal = natureSplit ? natureSplit.mandate + natureSplit.promotion || 1 : 1;
 
   return (
     <div className="kpi-funnel">
       <div className="kpi-funnel-barre" role="img" aria-label="Répartition par statut">
         {segments.map((s) => {
-          const pct = (s.valeur / total) * 100;
+          const pct = (s.value / total) * 100;
           return (
             <span
-              key={s.cle}
-              className={`kpi-funnel-seg kpi-funnel-seg--${s.cle}`}
+              key={s.id}
+              className={`kpi-funnel-seg kpi-funnel-seg--${s.id}`}
               style={{ width: `${pct}%` }}
-              title={`${s.label} : ${s.valeur}`}
+              title={`${s.label} : ${s.value}`}
             >
               {/* le chiffre dans le segment quand il y a la place — sinon la légende le porte */}
-              {pct >= 8 && s.valeur > 0 && <span className="kpi-funnel-seg-val">{s.valeur}</span>}
+              {pct >= 8 && s.value > 0 && <span className="kpi-funnel-seg-val">{s.value}</span>}
             </span>
           );
         })}
       </div>
       <ul className="kpi-funnel-legende">
         {segments.map((s) => (
-          <li key={s.cle}>
-            <span className={`kpi-funnel-puce kpi-funnel-seg--${s.cle}`} aria-hidden />
-            {s.label} <b>{s.valeur}</b>
+          <li key={s.id}>
+            <span className={`kpi-funnel-puce kpi-funnel-seg--${s.id}`} aria-hidden />
+            {s.label} <b>{s.value}</b>
           </li>
         ))}
       </ul>
@@ -216,7 +218,7 @@ export function KpiFunnel({
           <div className="kpi-funnel-barre kpi-funnel-barre--mince">
             <span
               className="kpi-funnel-seg kpi-funnel-seg--mandat"
-              style={{ width: `${(natureSplit.mandat / natTotal) * 100}%` }}
+              style={{ width: `${(natureSplit.mandate / natTotal) * 100}%` }}
             />
             <span
               className="kpi-funnel-seg kpi-funnel-seg--promotion"
@@ -224,7 +226,7 @@ export function KpiFunnel({
             />
           </div>
           <span className="kpi-funnel-nature-txt">
-            Mandat <b>{natureSplit.mandat}</b> · Promotion <b>{natureSplit.promotion}</b>
+            Mandat <b>{natureSplit.mandate}</b> · Promotion <b>{natureSplit.promotion}</b>
           </span>
         </div>
       )}
@@ -233,20 +235,20 @@ export function KpiFunnel({
 }
 
 // Mini-liste de barres (charge par cellule sur la page Projets).
-export function KpiMiniBars({ items }: { items: { cle: string; label: string; valeur: number }[] }) {
-  const max = Math.max(...items.map((i) => i.valeur), 1);
+export function KpiMiniBars({ items }: { items: { id: string; label: string; value: number }[] }) {
+  const max = Math.max(...items.map((i) => i.value), 1);
   if (items.length === 0) {
     return <p className="kpi-tuile-sous">Aucune cellule assignée.</p>;
   }
   return (
     <ul className="kpi-minibars">
       {items.map((i) => (
-        <li key={i.cle}>
+        <li key={i.id}>
           <span className="kpi-minibars-label">{i.label}</span>
           <span className="kpi-minibars-piste">
-            <span className="kpi-minibars-barre" style={{ width: `${(i.valeur / max) * 100}%` }} />
+            <span className="kpi-minibars-barre" style={{ width: `${(i.value / max) * 100}%` }} />
           </span>
-          <b>{i.valeur}</b>
+          <b>{i.value}</b>
         </li>
       ))}
     </ul>

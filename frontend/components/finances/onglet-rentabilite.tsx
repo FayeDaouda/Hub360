@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Banknote, Info, OctagonAlert, Percent, Settings2, Users } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite';
 import { ParametresRentabilite } from '@/components/finances/parametres-rentabilite';
@@ -114,47 +114,47 @@ export function OngletRentabilite({ slug }: { slug: string }) {
 
       <div className="fin-kpi rt-kpi">
         <KpiStrip
-          tuiles={
+          tiles={
             montants
               ? [
                   {
-                    cle: 'ht',
+                    id: 'ht',
                     label: 'Montant HT facturé',
-                    montant: donnees.totaux.ht ?? 0,
-                    sousTexte: `${donnees.projetsComplets} projet(s) aux données complètes, avoirs déduits`,
-                    icone: Banknote,
-                    etat: 'marque',
+                    amount: donnees.totaux.ht ?? 0,
+                    hint: `${donnees.projetsComplets} projet(s) aux données complètes, avoirs déduits`,
+                    icon: Banknote,
+                    state: 'marque',
                   },
                   {
-                    cle: 'cout',
+                    id: 'cout',
                     label: 'Coût salarial direct',
-                    montant: donnees.totaux.cout ?? 0,
-                    sousTexte: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`,
-                    icone: Users,
-                    etat: 'marque',
+                    amount: donnees.totaux.cout ?? 0,
+                    hint: `heures contrôlées · base ${formatParametre(p.heures_annuelles)}`,
+                    icon: Users,
+                    state: 'marque',
                   },
                   {
-                    cle: 'marge',
+                    id: 'marge',
                     label: 'Marge directe provisoire',
                     ...(donnees.totaux.marge === null
-                      ? { valeur: 'Données insuffisantes' }
-                      : { montant: donnees.totaux.marge }),
-                    sousTexte:
+                      ? { value: 'Données insuffisantes' }
+                      : { amount: donnees.totaux.marge }),
+                    hint:
                       donnees.totaux.marge === null
                         ? 'aucun projet aux données complètes'
                         : `${formatTaux(donnees.totaux.taux)} · cible ${formatParametre(p.marge_cible)}`,
-                    icone: Percent,
-                    etat: (donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque',
+                    icon: Percent,
+                    state: (donnees.totaux.marge ?? 0) < 0 ? 'risque' : 'marque',
                   },
                 ]
               : [
                   {
-                    cle: 'taux',
+                    id: 'taux',
                     label: 'Taux de marge directe provisoire',
-                    valeur: donnees.projetsComplets ? formatTaux(donnees.totaux.taux) : 'Données insuffisantes',
-                    sousTexte: `${donnees.projetsComplets} projet(s) aux données complètes · cible ${formatParametre(p.marge_cible)}`,
-                    icone: Percent,
-                    etat: 'marque',
+                    value: donnees.projetsComplets ? formatTaux(donnees.totaux.taux) : 'Données insuffisantes',
+                    hint: `${donnees.projetsComplets} projet(s) aux données complètes · cible ${formatParametre(p.marge_cible)}`,
+                    icon: Percent,
+                    state: 'marque',
                   },
                 ]
           }

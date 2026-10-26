@@ -35,7 +35,7 @@ import {
 import { formatNumber } from '@/lib/format';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
@@ -387,65 +387,63 @@ export default function CrmPage(props: Props) {
 
           <div className="crm-kpi">
             <KpiStrip
-              tuiles={[
+              tiles={[
                 {
-                  cle: 'actif',
+                  id: 'actif',
                   label: 'Pipeline actif',
-                  valeur: kpi.actifs,
-                  sousTexte: 'projets hors Perdu et Expirée',
-                  icone: FolderOpen,
-                  etat: 'marque',
-                  action: { type: 'filtre', actif: situation === 'tous', onClick: () => setSituation('tous') },
+                  value: kpi.actifs,
+                  hint: 'projets hors Perdu et Expirée',
+                  icon: FolderOpen,
+                  state: 'marque',
+                  action: { type: 'filter', active: situation === 'tous', onClick: () => setSituation('tous') },
                 },
                 {
-                  cle: 'fiches',
+                  id: 'fiches',
                   label: 'Fiches à compléter',
-                  valeur: kpi.aCompleter,
-                  sousTexte: kpi.fichesEchues
-                    ? `dont ${kpi.fichesEchues} au-delà de 72 h`
-                    : 'fiche incomplète · délai 72 h',
-                  icone: FileWarning,
-                  etat: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues),
+                  value: kpi.aCompleter,
+                  hint: kpi.fichesEchues ? `dont ${kpi.fichesEchues} au-delà de 72 h` : 'fiche incomplète · délai 72 h',
+                  icon: FileWarning,
+                  state: etatSelonDelai(kpi.aCompleter, kpi.fichesEchues),
                   action: {
-                    type: 'filtre',
-                    actif: situation === 'a_completer',
+                    type: 'filter',
+                    active: situation === 'a_completer',
                     onClick: () => basculer('a_completer'),
                   },
                 },
                 {
-                  cle: 'cfo',
+                  id: 'cfo',
                   label: 'En attente CFO',
-                  valeur: kpi.par('en_validation'),
-                  sousTexte: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h',
-                  icone: Clock3,
-                  etat: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues),
+                  value: kpi.par('en_validation'),
+                  hint: kpi.cfoEchues ? `dont ${kpi.cfoEchues} au-delà de 48 h` : 'offres soumises · délai 48 h',
+                  icon: Clock3,
+                  state: etatSelonDelai(kpi.par('en_validation'), kpi.cfoEchues),
                   action: {
-                    type: 'filtre',
-                    actif: situation === 'en_validation',
+                    type: 'filter',
+                    active: situation === 'en_validation',
                     onClick: () => basculer('en_validation'),
                   },
                 },
                 {
-                  cle: 'client',
+                  id: 'client',
                   label: 'Chez le client',
-                  valeur: kpi.par('offre_envoyee'),
-                  sousTexte: 'offres envoyées · validité 7 jours',
-                  icone: Send,
-                  etat: 'marque',
+                  value: kpi.par('offre_envoyee'),
+                  hint: 'offres envoyées · validité 7 jours',
+                  icon: Send,
+                  state: 'marque',
                   action: {
-                    type: 'filtre',
-                    actif: situation === 'offre_envoyee',
+                    type: 'filter',
+                    active: situation === 'offre_envoyee',
                     onClick: () => basculer('offre_envoyee'),
                   },
                 },
                 {
-                  cle: 'surface',
+                  id: 'surface',
                   label: 'Surface vendue',
-                  valeur: `${formatNumber(kpi.surfaceVendue)} m²`,
-                  sousTexte: kpi.detailSurface,
-                  icone: Home,
-                  etat: 'marque',
-                  action: { type: 'filtre', actif: situation === 'onboard', onClick: () => basculer('onboard') },
+                  value: `${formatNumber(kpi.surfaceVendue)} m²`,
+                  hint: kpi.detailSurface,
+                  icon: Home,
+                  state: 'marque',
+                  action: { type: 'filter', active: situation === 'onboard', onClick: () => basculer('onboard') },
                 },
               ]}
             />

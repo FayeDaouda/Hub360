@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { CalendarCheck, CalendarPlus, Hourglass, Plane } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { ApiError } from '@/lib/client-api';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import {
@@ -130,36 +130,36 @@ export function CongesAbsences({ slug }: { slug: string }) {
   return (
     <>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'restant',
+            id: 'restant',
             label: 'Restant',
-            valeur: `${solde.disponible} j`,
-            sousTexte: solde.enAttente
+            value: `${solde.disponible} j`,
+            hint: solde.enAttente
               ? `dont ${solde.enAttente} j réservés par vos demandes en attente`
               : 'à poser cette année',
-            icone: Plane,
+            icon: Plane,
           },
           {
-            cle: 'acquis',
+            id: 'acquis',
             label: `Acquis ${solde.annee}`,
-            valeur: `${solde.acquis} j`,
-            sousTexte: '2 jours ouvrables par mois de service',
-            icone: CalendarPlus,
+            value: `${solde.acquis} j`,
+            hint: '2 jours ouvrables par mois de service',
+            icon: CalendarPlus,
           },
           {
-            cle: 'report',
+            id: 'report',
             label: `Report de ${solde.annee - 1}`,
-            valeur: `${solde.report} j`,
-            sousTexte: solde.plafondReport ? `plafonné à ${solde.plafondReport} j` : 'aucun report',
-            icone: Hourglass,
+            value: `${solde.report} j`,
+            hint: solde.plafondReport ? `plafonné à ${solde.plafondReport} j` : 'aucun report',
+            icon: Hourglass,
           },
           {
-            cle: 'pris',
+            id: 'pris',
             label: 'Pris',
-            valeur: `${solde.pris} j`,
-            sousTexte: 'congés payés validés',
-            icone: CalendarCheck,
+            value: `${solde.pris} j`,
+            hint: 'congés payés validés',
+            icon: CalendarCheck,
           },
         ]}
       />

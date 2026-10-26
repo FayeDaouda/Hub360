@@ -17,7 +17,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
@@ -329,15 +329,15 @@ export default function RhPage(props: Props) {
       )}
       <div className="rh-kpi">
         <KpiStrip
-          tuiles={tuiles.map((t) => ({
-            cle: t.cle,
+          tiles={tuiles.map((t) => ({
+            id: t.cle,
             label: t.libelle,
-            valeur: t.valeur ?? '…',
-            montant: t.montant,
-            sousTexte: t.aide,
-            icone: t.icone,
-            etat: t.etat,
-            action: { type: 'filtre' as const, actif: t.actif, onClick: t.onClick },
+            value: t.valeur ?? '…',
+            amount: t.montant,
+            hint: t.aide,
+            icon: t.icone,
+            state: t.etat,
+            action: { type: 'filter' as const, active: t.actif, onClick: t.onClick },
           }))}
         />
       </div>

@@ -18,7 +18,7 @@ import {
   UserPlus,
   type LucideIcon,
 } from 'lucide-react';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { ROLE_CEO, ROLE_CIO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
@@ -144,16 +144,16 @@ export function Pilotage({ slug }: { slug: string }) {
       )}
       {vue.chiffres && (
         <KpiStrip
-          tuiles={vue.chiffres.tuiles
+          tiles={vue.chiffres.tuiles
             .filter((x) => TUILES[x.cle])
             .map((x) => ({
-              cle: x.cle,
+              id: x.cle,
               label: TUILES[x.cle].libelle,
-              ...(TUILES[x.cle].montant ? { montant: x.valeur } : { valeur: String(x.valeur) }),
-              sousTexte: x.aide,
-              icone: TUILES[x.cle].icone,
-              etat: x.etat,
-              action: { type: 'lien' as const, href: lien(x.cle) },
+              ...(TUILES[x.cle].montant ? { amount: x.valeur } : { value: String(x.valeur) }),
+              hint: x.aide,
+              icon: TUILES[x.cle].icone,
+              state: x.etat,
+              action: { type: 'link' as const, href: lien(x.cle) },
             }))}
         />
       )}

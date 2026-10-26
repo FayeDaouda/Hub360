@@ -10,7 +10,7 @@ import { useSessionCourante } from '@/lib/layout-contexte';
 import { getMesTaches, libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
 import { formatHeures, getMonTemps, LIBELLE_MANQUE } from '@/lib/temps';
 import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
-import { KpiStrip } from '@/components/admin/kpi-strip';
+import { KpiStrip } from '@/components/ui/kpi';
 import { RemiseModal } from './remise-modal';
 import { formatDate, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
@@ -89,41 +89,41 @@ export function MesPerformances({ slug }: { slug: string }) {
   return (
     <>
       <KpiStrip
-        tuiles={[
+        tiles={[
           {
-            cle: 'delais',
+            id: 'delais',
             label: 'Respect des délais',
-            valeur: rd.pct == null ? '—' : `${rd.pct} %`,
+            value: rd.pct == null ? '—' : `${rd.pct} %`,
             // Seules les tâches validées APRÈS une remise datée sont jugées.
-            sousTexte: rd.total
+            hint: rd.total
               ? `${plural(rd.aTemps, 'remise')} à temps sur ${plural(rd.total, 'jugée')}`
               : stats.validees
                 ? `${plural(stats.validees, 'tâche')} validée${stats.validees > 1 ? 's' : ''}, aucune remise datée à juger`
                 : 'aucune tâche validée pour l’instant',
-            icone: CircleCheck,
+            icon: CircleCheck,
           },
           {
-            cle: 'reprises',
+            id: 'reprises',
             label: 'Taux de reprise',
-            valeur: tauxReprise == null ? '—' : `${tauxReprise} %`,
-            sousTexte: remises.length
+            value: tauxReprise == null ? '—' : `${tauxReprise} %`,
+            hint: remises.length
               ? `${plural(avecReprise, 'tâche')} renvoyée${avecReprise > 1 ? 's' : ''} au moins une fois sur ${remises.length}`
               : 'aucune remise validée pour l’instant',
-            icone: RotateCcw,
+            icon: RotateCcw,
           },
           {
-            cle: 'validees',
+            id: 'validees',
             label: 'Tâches validées',
-            valeur: stats.validees,
-            sousTexte: `${stats.enCours} encore en cours`,
-            icone: ListChecks,
+            value: stats.validees,
+            hint: `${stats.enCours} encore en cours`,
+            icon: ListChecks,
           },
           {
-            cle: 'temps',
+            id: 'temps',
             label: temps ? `Temps imputé · ${formatMonthYear(temps.feuille.mois)}` : 'Temps imputé',
-            valeur: temps ? formatHeures(temps.feuille.heuresImputees) : '—',
-            sousTexte: `${temps?.feuille.occupation ?? 0} % d’occupation · calcul automatique`,
-            icone: Clock,
+            value: temps ? formatHeures(temps.feuille.heuresImputees) : '—',
+            hint: `${temps?.feuille.occupation ?? 0} % d’occupation · calcul automatique`,
+            icon: Clock,
           },
         ]}
       />

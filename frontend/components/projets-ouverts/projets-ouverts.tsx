@@ -14,7 +14,7 @@ import {
   MessageCircle,
   RotateCcw,
 } from 'lucide-react';
-import { KpiStrip, type KpiTuile } from '@/components/admin/kpi-strip';
+import { KpiStrip, type KpiTile } from '@/components/ui/kpi';
 import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
@@ -232,7 +232,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
       <div className="po-kpi">
         <KpiStrip
           compact
-          tuiles={
+          tiles={
             salarie
               ? tuilesSalarie(perso, tableau, slug, ouvrirRemiseAValider)
               : tuilesProjets(tableau, dplg, false, ouvrirRemiseAValider)
@@ -360,56 +360,56 @@ function tuilesSalarie(
   tableau: TableauProjets | null,
   slug: string,
   ouvrirRemise: () => void,
-): KpiTuile[] {
+): KpiTile[] {
   const n = (v: number | undefined) => (v === undefined ? '…' : v);
   const etat = (v: number | undefined, f: (x: number) => EtatTuile): EtatTuile => (v === undefined ? 'marque' : f(v));
-  const lien = (filtre: string) => ({ type: 'lien' as const, href: `/admin/${slug}/mes-taches?filtre=${filtre}` });
+  const lien = (filtre: string) => ({ type: 'link' as const, href: `/admin/${slug}/mes-taches?filtre=${filtre}` });
   const aValider = tableau?.kpi.aValiderParVous.length ?? 0;
   return [
     {
-      cle: 'reprises',
+      id: 'reprises',
       label: 'Mes tâches à reprendre',
-      valeur: n(perso?.reprises),
-      sousTexte: 'renvoyées par votre N+1',
-      icone: RotateCcw,
-      etat: etat(perso?.reprises, etatEnRetard),
+      value: n(perso?.reprises),
+      hint: 'renvoyées par votre N+1',
+      icon: RotateCcw,
+      state: etat(perso?.reprises, etatEnRetard),
       action: lien('reprises'),
     },
     {
-      cle: 'retard',
+      id: 'retard',
       label: 'Mes tâches en retard',
-      valeur: n(perso?.retards),
-      sousTexte: 'échéance dépassée',
-      icone: AlarmClock,
-      etat: etat(perso?.retards, etatEnRetard),
+      value: n(perso?.retards),
+      hint: 'échéance dépassée',
+      icon: AlarmClock,
+      state: etat(perso?.retards, etatEnRetard),
       action: lien('retards'),
     },
     {
-      cle: 'attente',
+      id: 'attente',
       label: 'Mes remises en attente',
-      valeur: n(perso?.attente),
-      sousTexte: 'déposées chez votre N+1',
-      icone: Hourglass,
-      etat: etat(perso?.attente, etatATraiter),
+      value: n(perso?.attente),
+      hint: 'déposées chez votre N+1',
+      icon: Hourglass,
+      state: etat(perso?.attente, etatATraiter),
       action: lien('attente'),
     },
     aValider > 0
       ? {
-          cle: 'a-valider',
+          id: 'a-valider',
           label: 'À valider par vous',
-          valeur: aValider,
-          sousTexte: 'remises de votre cellule',
-          icone: CheckCheck,
-          etat: etatATraiter(aValider),
-          action: { type: 'popup' as const, onClick: ouvrirRemise },
+          value: aValider,
+          hint: 'remises de votre cellule',
+          icon: CheckCheck,
+          state: etatATraiter(aValider),
+          action: { type: 'dialog' as const, onClick: ouvrirRemise },
         }
       : {
-          cle: 'mentions',
+          id: 'mentions',
           label: 'Mentions à lire',
-          valeur: n(perso?.mentions),
-          sousTexte: 'dans les fils des projets',
-          icone: AtSign,
-          etat: etat(perso?.mentions, etatATraiter),
+          value: n(perso?.mentions),
+          hint: 'dans les fils des projets',
+          icon: AtSign,
+          state: etat(perso?.mentions, etatATraiter),
           action: lien('mentions'),
         },
   ];
@@ -422,7 +422,7 @@ function tuilesProjets(
   valideur: boolean,
   salarie: boolean,
   ouvrirRemise: () => void,
-): KpiTuile[] {
+): KpiTile[] {
   const k = tableau?.kpi;
   const n = (v: number | undefined) => (v === undefined ? '…' : v);
   const etat = (v: number | undefined, f: (x: number) => EtatTuile): EtatTuile => (v === undefined ? 'marque' : f(v));
@@ -431,49 +431,49 @@ function tuilesProjets(
   return [
     valideur
       ? {
-          cle: 'a-valider',
+          id: 'a-valider',
           label: 'À valider par vous',
-          valeur: n(aValider),
-          sousTexte: 'jamais sa propre tâche · cliquer pour valider',
-          icone: CheckCheck,
-          etat: etat(aValider, etatATraiter),
-          ...(aValider ? { action: { type: 'popup' as const, onClick: ouvrirRemise } } : {}),
+          value: n(aValider),
+          hint: 'jamais sa propre tâche · cliquer pour valider',
+          icon: CheckCheck,
+          state: etat(aValider, etatATraiter),
+          ...(aValider ? { action: { type: 'dialog' as const, onClick: ouvrirRemise } } : {}),
         }
       : {
-          cle: 'remises',
+          id: 'remises',
           label: 'Remises à valider',
-          valeur: n(k?.remisesAValider),
-          sousTexte: 'tous projets · chef de team ou DPLG',
-          icone: CheckCheck,
-          etat: etat(k?.remisesAValider, etatATraiter),
+          value: n(k?.remisesAValider),
+          hint: 'tous projets · chef de team ou DPLG',
+          icon: CheckCheck,
+          state: etat(k?.remisesAValider, etatATraiter),
         },
     {
-      cle: 'retard',
+      id: 'retard',
       label: 'Tâches en retard',
-      valeur: n(k?.tachesEnRetard),
-      sousTexte: 'échéance de référence dépassée',
-      icone: Hourglass,
-      etat: etat(k?.tachesEnRetard, etatEnRetard),
+      value: n(k?.tachesEnRetard),
+      hint: 'échéance de référence dépassée',
+      icon: Hourglass,
+      state: etat(k?.tachesEnRetard, etatEnRetard),
     },
     {
-      cle: 'prolongations',
+      id: 'prolongations',
       label: 'Prolongations à décider',
-      valeur: n(k?.prolongations),
-      sousTexte: 'le retard est qualifié par le chef de team ou le DPLG',
-      icone: CalendarPlus,
-      etat: etat(k?.prolongations, etatATraiter),
+      value: n(k?.prolongations),
+      hint: 'le retard est qualifié par le chef de team ou le DPLG',
+      icon: CalendarPlus,
+      state: etat(k?.prolongations, etatATraiter),
     },
     {
-      cle: 'signalements',
+      id: 'signalements',
       label: 'Signalements et mentions',
-      valeur: n(signalements),
-      sousTexte:
+      value: n(signalements),
+      hint:
         salarie || !k
           ? 'mises à jour à reporter, @mentions'
           : `${k.tsNonAcceptes} TS non accepté(s) · ${k.mentions} tâche(s)`,
-      icone: AtSign,
+      icon: AtSign,
       // TS au-delà du délai réglé = en retard ; mention ouverte = à traiter.
-      etat: !k ? 'marque' : !salarie && k.tsNonAcceptes > 0 ? 'risque' : etatATraiter(k.mentions),
+      state: !k ? 'marque' : !salarie && k.tsNonAcceptes > 0 ? 'risque' : etatATraiter(k.mentions),
     },
   ];
 }
