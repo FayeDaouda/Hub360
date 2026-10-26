@@ -161,6 +161,8 @@ function mockPrisma() {
   const numerotation = {
     numerotationFactures: { findFirst: jest.fn().mockResolvedValue(null) },
     societe: { findUniqueOrThrow: jest.fn().mockResolvedValue({ nom: 'Grey Concrete' }) },
+    // Verrou d'émission par société et par année (ADR 0003).
+    verrouNumerotation: { upsert: jest.fn().mockResolvedValue({}) },
   };
   const tx = { facture, paiement, ...numerotation };
   const prisma = {
@@ -179,7 +181,18 @@ function mockPrisma() {
       Array.isArray(arg) ? Promise.all(arg) : (arg as (tx: unknown) => unknown)(tx),
     ),
   } as unknown as PrismaService;
-  return { prisma, facture, paiement, paiementSupprime, carteProjet, projet, ligneDevis, blocEtude, ligneFacture };
+  return {
+    prisma,
+    facture,
+    paiement,
+    paiementSupprime,
+    carteProjet,
+    projet,
+    ligneDevis,
+    blocEtude,
+    ligneFacture,
+    verrou: numerotation.verrouNumerotation,
+  };
 }
 
 function service(prisma: PrismaService) {
@@ -283,6 +296,19 @@ describe('FacturationService.emettre', () => {
         refSequence: 42,
       }),
     });
+  });
+
+  it('le verrou de la société pour l’année est pris avant de lire le plus grand numéro (ADR 0003)', async () => {
+    const { prisma, facture, verrou } = mockPrisma();
+    facture.findFirst.mockResolvedValue({ id: 'F1', statut: 'brouillon', montantHt: dec(1000) });
+    await service(prisma).emettre('S1', 'P1', 'F1', 'U1');
+    const annee = new Date().getUTCFullYear();
+    expect(verrou.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { societeId_annee: { societeId: 'S1', annee } } }),
+    );
+    expect(verrou.upsert.mock.invocationCallOrder[0]).toBeLessThan(
+      Math.min(...facture.aggregate.mock.invocationCallOrder),
+    );
   });
 });
 

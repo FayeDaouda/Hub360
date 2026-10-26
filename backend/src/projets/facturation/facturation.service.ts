@@ -34,7 +34,7 @@ import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './f
 import { NotificationsService } from '../../notifications/notifications.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
-import { prochainNumeroLegal } from './numerotation-base';
+import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
 
 const jourCourant = () => new Date().toISOString().slice(0, 10);
 
@@ -1062,11 +1062,14 @@ export class FacturationService {
   }
 
   // Attribue le prochain numéro séquentiel de la société (cadrage §5) et exécute
-  // `action` dans la même transaction. Retry sur collision de séquence (P2002
-  // sur @@unique([societeId, numero])) : la contention est quasi nulle (studio
-  // de 4 personnes), mais la garantie « sans trou » repose sur cette unicité,
-  // pas sur l'absence de course. Le numéro n'est attribué qu'ici — un brouillon
-  // reste sans numéro, donc sa suppression ne laisse pas de trou.
+  // `action` dans la même transaction. Les émissions d'une société sont
+  // sérialisées par un verrou par année (ADR 0003) : chacune lit le plus grand
+  // numéro après la précédente, aucune ne perd de course, quel que soit leur
+  // nombre. Les contraintes d'unicité restent la garantie « sans doublon » ;
+  // une collision (P2002) ne subsiste qu'au passage d'une année à l'autre et
+  // à la création de la ligne de verrou de l'année : elle est retentée. Le
+  // numéro n'est attribué qu'ici — un brouillon reste sans numéro, donc sa
+  // suppression ne laisse pas de trou.
   // Avec `codeDossier` (code du dossier de la facture), attribue aussi son rang
   // dans le dossier — la référence affichée « CODE-n » (maquette Finances),
   // sans trou par dossier : seule une émission consomme un rang.
@@ -1078,6 +1081,8 @@ export class FacturationService {
     for (let essai = 0; ; essai++) {
       try {
         await this.prisma.$transaction(async (tx) => {
+          const annee = new Date().getUTCFullYear();
+          await verrouillerNumerotation(tx, societeId, annee);
           const max = await tx.facture.aggregate({
             where: { societeId, numero: { not: null } },
             _max: { numero: true },
@@ -1085,7 +1090,7 @@ export class FacturationService {
           const rang = codeDossier
             ? await tx.facture.aggregate({ where: { societeId, codeDossier }, _max: { rangDossier: true } })
             : null;
-          const legal = await prochainNumeroLegal(tx, societeId);
+          const legal = await prochainNumeroLegal(tx, societeId, annee);
           await action(tx, {
             numero: (max._max.numero ?? 0) + 1,
             codeDossier,

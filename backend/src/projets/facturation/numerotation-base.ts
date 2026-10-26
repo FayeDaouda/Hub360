@@ -26,12 +26,23 @@ export async function formatEnVigueur(db: Client, societeId: string): Promise<Fo
   return formatParDefaut(s.nom);
 }
 
-// Prochain numéro légal : séquence (préfixe, année en cours), le plus grand
-// émis + 1 ou le numéro de départ. Appelé dans la transaction d'émission ;
+// Verrou d'émission (ADR 0003) : met à jour la ligne de la société pour
+// l'année, en tête de la transaction d'émission. Une autre émission de la même
+// société attend la fin de celle-ci avant de lire le plus grand numéro émis :
+// les numéros sont attribués un par un, dans l'ordre d'émission.
+export async function verrouillerNumerotation(tx: Prisma.TransactionClient, societeId: string, annee: number) {
+  await tx.verrouNumerotation.upsert({
+    where: { societeId_annee: { societeId, annee } },
+    create: { societeId, annee },
+    update: { derniereEmissionLe: new Date() },
+  });
+}
+
+// Prochain numéro légal : séquence (préfixe, année), le plus grand émis + 1 ou
+// le numéro de départ. Appelé dans la transaction d'émission, après le verrou ;
 // la contrainte unique (société, préfixe, année, séquence) exclut le doublon.
-export async function prochainNumeroLegal(db: Client, societeId: string) {
+export async function prochainNumeroLegal(db: Client, societeId: string, annee = new Date().getUTCFullYear()) {
   const format = await formatEnVigueur(db, societeId);
-  const annee = new Date().getUTCFullYear();
   const dernier = await db.facture.aggregate({
     where: { societeId, refPrefixe: format.prefixe, refAnnee: annee },
     _max: { refSequence: true },

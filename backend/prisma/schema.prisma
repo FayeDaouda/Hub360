@@ -72,6 +72,7 @@ model Societe {
   produitsServices      ProduitService[]
   contrats              Contrat[]
   annexesContratGabarit AnnexeContratGabarit[]
+  verrousNumerotation   VerrouNumerotation[]
 
   dossiersPersonnel DossierPersonnel[]
   gabaritVersions   GabaritVersion[]
@@ -1589,6 +1590,22 @@ model ParametreRentabilite {
 // réglage du CFO est une ligne (les préfixes déjà utilisés restent visibles
 // et resélectionnables) ; le format en vigueur est la dernière. Sans ligne :
 // initiales de la société, année sur 4 chiffres, « - », 4 chiffres, départ 1.
+// Verrou d'émission des factures (ADR 0003) : une ligne par société et par
+// année civile, mise à jour en tête de chaque transaction d'émission. Le
+// verrou de ligne ainsi pris sérialise les émissions d'une même société ; le
+// numéro légal reste dérivé des factures émises (plus grand + 1).
+model VerrouNumerotation {
+  id                 String   @id @default(uuid())
+  societeId          String   @map("societe_id")
+  annee              Int
+  derniereEmissionLe DateTime @default(now()) @map("derniere_emission_le")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@unique([societeId, annee])
+  @@map("verrous_numerotation")
+}
+
 model NumerotationFactures {
   id           String   @id @default(uuid())
   societeId    String   @map("societe_id")

@@ -40,19 +40,12 @@ Décisions structurantes : `docs/adr/`.
   régénération.
 - **Formats BIM** (équipe) : Revit, ArchiCAD, SketchUp pour les livrables.
 
-## Défaut signalé, correction proposée
+## Défaut corrigé
 
-**Émissions de factures simultanées.** La numérotation légale est
-chronologique, continue, sans trou ni doublon : contraintes d'unicité en
-base, numéro calculé dans la transaction d'émission, date d'émission posée
-dans la même écriture, brouillons sans numéro (test
-`backend/test/e2e/numerotation.e2e-spec.ts`). Mais une émission qui perd la
-course au numéro n'est retentée que 5 fois : à partir de 6 émissions
-simultanées pour une même société, l'une peut échouer (409, la facture reste
-en brouillon, sans trou). Mesuré : 8 émissions simultanées, un échec à chaque
-essai. Correction proposée : sérialiser l'attribution du numéro par société
-(verrou de transaction PostgreSQL), ce qui supprime les nouvelles tentatives
-et garantit l'ordre d'émission par construction.
+**Émissions de factures simultanées** (corrigé le 26/10/2026, ADR 0003) :
+au-delà de 5 émissions simultanées pour une même société, l'une pouvait
+échouer. Les émissions d'une société sont désormais sérialisées par un verrou
+par année ; test avec 20 émissions simultanées, stable sur 10 passages.
 
 ## Proposition à décider : journal d'événements en ajout seul
 
