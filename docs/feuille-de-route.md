@@ -88,9 +88,15 @@ Décisions structurantes : `docs/adr/`.
   tentative est consignée dans le rapport (annotation « nouvelle tentative ») ;
   le test échoue au-delà de 2 par test, ou si une requête échoue encore après
   son dernier essai : un échec qui se répète peut révéler un défaut du back.
-- Le flou d'arrière-plan de la pastille active des sélecteurs de vue est
-  neutralisé pendant les captures : son texte, à une position fractionnaire,
-  changeait de lissage d'un lancement du navigateur à l'autre.
+- Le flou d'arrière-plan (verre) est retiré des captures : le texte posé
+  dessus, à une position fractionnaire, basculait entre deux lissages d'un
+  lancement du navigateur à l'autre (pastille active des sélecteurs de vue,
+  dossier d'un projet ouvert). Mise en page, textes et couleurs restent
+  comparés ; le rendu du flou lui-même est à contrôler à l'œil lors de la
+  refonte visuelle.
+- Avant chaque capture, le harnais attend qu'aucune requête de l'API ne soit
+  en cours (le flux du chat excepté) ; au-delà de 30 s, la capture échoue en
+  listant les requêtes.
 
 ## Défaut corrigé
 

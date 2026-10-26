@@ -103,10 +103,12 @@ export async function installCaptureGuards(page: Page): Promise<void> {
       const style = document.createElement('style');
       style.textContent =
         '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }' +
-        // Texte posé sur un calque flouté, à une position fractionnaire : son
-        // lissage varie d'un lancement du navigateur à l'autre (pastille
-        // active des sélecteurs de vue). Le flou n'y couvre qu'un fond uni.
-        '.vue-toggle button.is-active { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }';
+        // Texte posé sur un calque flouté (verre), à une position fractionnaire :
+        // son lissage bascule entre deux rendus d'un lancement du navigateur à
+        // l'autre (pastille active des sélecteurs de vue, dossier d'un projet
+        // ouvert). Le flou d'arrière-plan est donc retiré des captures : mise en
+        // page, textes et couleurs restent comparés, pas le flou lui-même.
+        '*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }';
       document.head.append(style);
     };
     if (document.head) figer();
