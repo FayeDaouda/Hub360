@@ -129,4 +129,20 @@ describe('heure de Dakar, quel que soit le lieu de l’utilisateur', () => {
     expect(addMonths('2026-12', 1)).toBe('2027-01');
     expect(addMonths('2026-10', 0)).toBe('2026-10');
   });
+
+  it('addMonths sur un jour : dernier jour du mois si le jour n’existe pas', () => {
+    // Le 31 du mois.
+    expect(addMonths('2026-03-31', -1)).toBe('2026-02-28');
+    expect(addMonths('2026-08-31', 1)).toBe('2026-09-30');
+    expect(addMonths('2026-08-31', 6)).toBe('2027-02-28');
+    expect(addMonths('2026-05-31', 2)).toBe('2026-07-31');
+    // Le 29 février d'une année bissextile.
+    expect(addMonths('2028-01-31', 1)).toBe('2028-02-29');
+    expect(addMonths('2028-02-29', 12)).toBe('2029-02-28');
+    expect(addMonths('2028-02-29', 48)).toBe('2032-02-29');
+    // Le passage d'année, dans les deux sens.
+    expect(addMonths('2026-12-31', 1)).toBe('2027-01-31');
+    expect(addMonths('2026-11-30', 3)).toBe('2027-02-28');
+    expect(addMonths('2027-01-15', -2)).toBe('2026-11-15');
+  });
 });

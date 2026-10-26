@@ -7,7 +7,7 @@ import type {
   TypePieceDossier,
 } from './types';
 import { apiSociete } from './client-api';
-import { toIsoDay } from './dates';
+import { addMonths, toIsoDay, todayIso } from './dates';
 
 // RH · Dossiers du personnel — API NestJS (module « rh » de la matrice) :
 //   GET   …/rh/dossiers                 liste (groupe)
@@ -81,10 +81,7 @@ export const PIECES: { type: TypePieceDossier; libelle: string; aide?: string }[
 // Fin de contrat dans moins de 6 mois (CDD, stage) — à anticiper.
 export function finProche(d: DossierPersonnel, aujourdhui = new Date()): boolean {
   if (!d.dateFin || d.typeContrat === 'cdi' || d.archiveLe) return false;
-  const fin = new Date(`${d.dateFin}T00:00:00`);
-  const limite = new Date(aujourdhui);
-  limite.setMonth(limite.getMonth() + 6);
-  return fin <= limite;
+  return d.dateFin <= addMonths(todayIso(aujourdhui), 6);
 }
 
 // RH · Intégration des nouveaux arrivants (lot 3) : points J30/J60/J90.

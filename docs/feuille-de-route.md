@@ -63,13 +63,6 @@ Décisions structurantes : `docs/adr/`.
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
 
-## Défaut constaté, correction à valider
-
-- **Calcul « mois précédent » / « dans 6 mois »** (`moisPrecedent` de la page
-  RH, `finProche` de `lib/rh.ts`) : `setMonth` déborde en fin de mois. Le 31
-  mars, « le mois précédent » rend mars ; le 31 août, « dans 6 mois » rend le
-  3 mars au lieu du 28 février. Correction : `addMonths` de `lib/dates.ts`.
-
 ## En attente d'une décision extérieure
 
 - **Périmètre RH** (direction) : commun aux quatre sociétés ou propre à

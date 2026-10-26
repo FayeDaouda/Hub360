@@ -61,17 +61,14 @@ import { DepotBulletins } from '@/components/rh/depot-bulletins';
 import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
-import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { addMonths, formatDate, formatMonthYear, todayIso } from '@/lib/dates';
 import { plural } from '@/lib/text';
 
 type Props = { params: Promise<{ slug: string }> };
 
 // Mois de paie par défaut : le mois précédent (AAAA-MM).
 function moisPrecedent(): string {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return addMonths(todayIso().slice(0, 7), -1);
 }
 
 function messageErreur(e: unknown, repli: string) {

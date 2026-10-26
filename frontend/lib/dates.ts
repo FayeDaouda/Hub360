@@ -41,10 +41,19 @@ export function yearOf(date: Date = new Date()): number {
   return Number(toIsoDay(date).slice(0, 4));
 }
 
-/** Mois (AAAA-MM) décalé de `months` mois (négatif pour reculer). */
-export function addMonths(month: string, months: number): string {
-  const index = Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1 + months;
-  return `${Math.floor(index / 12)}-${String((index % 12) + 1).padStart(2, '0')}`;
+/**
+ * Mois (AAAA-MM) ou jour (AAAA-MM-JJ) décalé de `months` mois (négatif pour
+ * reculer). Règle (glossaire) : si le jour n'existe pas dans le mois
+ * d'arrivée, on prend le dernier jour de ce mois (31/01 + 1 mois → 28/02, ou
+ * 29/02 une année bissextile).
+ */
+export function addMonths(value: string, months: number): string {
+  const index = Number(value.slice(0, 4)) * 12 + Number(value.slice(5, 7)) - 1 + months;
+  const [year, month] = [Math.floor(index / 12), (index % 12) + 1];
+  const monthIso = `${year}-${String(month).padStart(2, '0')}`;
+  if (value.length < 10) return monthIso;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${monthIso}-${String(Math.min(Number(value.slice(8, 10)), lastDay)).padStart(2, '0')}`;
 }
 
 /** Jour ISO décalé de `days` jours (négatif pour reculer). */

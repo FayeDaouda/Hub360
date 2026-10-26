@@ -17,6 +17,10 @@ affiché et, quand il existe, son nom dans le code.
   travail.
 - **Jour** — une date sans heure s'échange au format ISO « AAAA-MM-JJ » et
   s'affiche « JJ/MM/AAAA » (`formatDate`) ou « JJ/MM » (`formatDayMonth`).
+- **Ajout de mois** — « dans 6 mois », « le mois précédent » : si le jour
+  n'existe pas dans le mois d'arrivée, on prend le dernier jour de ce mois
+  (31 août + 6 mois → 28 février, ou 29 février une année bissextile).
+  Code : `addMonths` de `frontend/lib/dates.ts`.
 - **Montant** — en francs CFA, sans centimes : « 1 770 000 FCFA »
   (`formatAmount`). Les montants sont des entiers ; seuls les pourcentages
   ont des décimales.
