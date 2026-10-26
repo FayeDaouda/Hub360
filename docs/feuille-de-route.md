@@ -56,9 +56,6 @@ Décisions structurantes : `docs/adr/`.
   pendant la structuration, puis remis en erreur.
 - **Tournée des rappels** : la découper par société (aujourd'hui en périmètre
   système, ADR 0001).
-- **Captures instables** (S0b) : pastille « Projets » en mobile (lissage du
-  texte) ; filtre de routes du harnais qui abandonne une requête au lieu de la
-  retenter quand `route.fetch` échoue.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
@@ -84,6 +81,16 @@ Décisions structurantes : `docs/adr/`.
   contrat actif jusqu'à la signature puis lecture seule limitée, révocation et
   régénération.
 - **Formats BIM** (équipe) : Revit, ArchiCAD, SketchUp pour les livrables.
+
+## Captures : règles du harnais
+
+- Une requête de l'API qui échoue est retentée (3 essais). Chaque nouvelle
+  tentative est consignée dans le rapport (annotation « nouvelle tentative ») ;
+  le test échoue au-delà de 2 par test, ou si une requête échoue encore après
+  son dernier essai : un échec qui se répète peut révéler un défaut du back.
+- Le flou d'arrière-plan de la pastille active des sélecteurs de vue est
+  neutralisé pendant les captures : son texte, à une position fractionnaire,
+  changeait de lissage d'un lancement du navigateur à l'autre.
 
 ## Défaut corrigé
 

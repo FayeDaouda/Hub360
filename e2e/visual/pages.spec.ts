@@ -4,6 +4,7 @@ import {
   COMPANY_SLUG,
   cspViolations,
   installCaptureGuards,
+  expectStableApi,
   installSeedNoiseFilter,
   readFixtures,
   resetHorizontalScroll,
@@ -121,6 +122,7 @@ async function captureScreenAndTabs(page: Page, baseName: string, hasTabs = fals
     const [name, theme] = splitTheme(baseName);
     await expectFullPageScreenshot(page, `${name}--tab${index}-${label}--${theme}.png`);
   }
+  expectStableApi(page);
 }
 
 const splitTheme = (baseName: string): [string, string] => {

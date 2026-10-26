@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Page } from '@playwright/test';
+import { expect, test, type APIResponse, type Page, type Request } from '@playwright/test';
 
 export const COMPANY_SLUG = 'grey-concrete';
 export const DEMO_PASSWORD = 'changeme123';
@@ -83,7 +83,11 @@ export async function installCaptureGuards(page: Page): Promise<void> {
     const figer = () => {
       const style = document.createElement('style');
       style.textContent =
-        '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
+        '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }' +
+        // Texte posé sur un calque flouté, à une position fractionnaire : son
+        // lissage varie d'un lancement du navigateur à l'autre (pastille
+        // active des sélecteurs de vue). Le flou n'y couvre qu'un fond uni.
+        '.vue-toggle button.is-active { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }';
       document.head.append(style);
     };
     if (document.head) figer();
@@ -95,13 +99,63 @@ export async function cspViolations(page: Page): Promise<string[]> {
   return page.evaluate(() => (window as unknown as { __cspViolations?: string[] }).__cspViolations ?? []);
 }
 
+// Nouvelles tentatives des requêtes de l'API. Elles stabilisent les captures,
+// mais un échec qui se répète peut révéler un défaut du back : chacune est
+// consignée dans le rapport (annotation « nouvelle tentative »), et le test
+// échoue au-delà de MAX_RETRIES_PER_TEST, ou si une requête échoue encore
+// après sa dernière tentative (expectStableApi).
+const MAX_ATTEMPTS = 3;
+const MAX_RETRIES_PER_TEST = 2;
+type Retry = { request: string; error: string; final: boolean };
+const retriesByPage = new WeakMap<Page, Retry[]>();
+
+function recordRetry(page: Page, request: Request, error: string, final: boolean) {
+  const retry = { request: `${request.method()} ${request.url()}`, error, final };
+  retriesByPage.set(page, [...(retriesByPage.get(page) ?? []), retry]);
+  try {
+    test.info().annotations.push({
+      type: final ? 'requête en échec' : 'nouvelle tentative',
+      description: `${retry.request} — ${error}`,
+    });
+  } catch {
+    // Hors d'un test (page encore ouverte après sa fin) : rien à consigner.
+  }
+}
+
+export function expectStableApi(page: Page): void {
+  const retries = retriesByPage.get(page) ?? [];
+  const lines = retries.map((r) => `${r.final ? 'ÉCHEC' : 'nouvelle tentative'} : ${r.request} — ${r.error}`);
+  expect(
+    retries.filter((r) => r.final),
+    `requêtes en échec malgré les nouvelles tentatives\n${lines.join('\n')}`,
+  ).toEqual([]);
+  expect(retries.length, `trop de nouvelles tentatives\n${lines.join('\n')}`).toBeLessThanOrEqual(MAX_RETRIES_PER_TEST);
+}
+
 export async function installSeedNoiseFilter(page: Page): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   await page.clock.setFixedTime(new Date(`${today}T12:00:00Z`));
   await page.route(`${API_ORIGIN}/**`, async (route) => {
-    // Polling requests still in flight when a test ends are simply dropped.
-    const response = await route.fetch().catch(() => null);
-    if (!response) return route.abort().catch(() => undefined);
+    // A failed fetch is retried (and recorded, see expectStableApi): aborting
+    // it would leave the screen loading until the capture times out. Requests
+    // still in flight when the test ends (polling) are dropped once the page
+    // is closed.
+    let response: APIResponse | null = null;
+    let error = '';
+    for (let attempt = 0; attempt < MAX_ATTEMPTS && !response && !page.isClosed(); attempt++) {
+      if (attempt) {
+        recordRetry(page, route.request(), error, false);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      response = await route.fetch().catch((e: unknown) => {
+        error = (e instanceof Error ? e.message : String(e)).split('\n')[0];
+        return null;
+      });
+    }
+    if (!response) {
+      if (!page.isClosed()) recordRetry(page, route.request(), error, true);
+      return route.abort().catch(() => undefined);
+    }
     const isJson = (response.headers()['content-type'] ?? '').includes('application/json');
     if (!isJson) return route.fulfill({ response }).catch(() => undefined);
     const body = (await response.text()).replace(ISO_TIMESTAMP, '"$1T00:00:00.000Z"');
