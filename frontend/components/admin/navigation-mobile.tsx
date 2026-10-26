@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import Link from 'next/link';
-import { HelpCircle, LogOut, Menu, MessageSquareWarning, X, type LucideIcon } from 'lucide-react';
+import { HelpCircle, LogOut, Menu, MessageSquareWarning, type LucideIcon } from 'lucide-react';
 import { usePreferenceTheme } from '@/lib/theme';
 import { ouvrirAide } from '@/components/admin/aide-globale';
 import { OPTIONS_THEME } from '@/components/selecteur-theme';
+import { CloseButton, Dialog } from '@/components/ui/dialog';
 
 export type ItemNav = { cle: string; libelle: string; icone: LucideIcon; href: string };
 
@@ -87,11 +87,6 @@ function PanneauPlus({
   onClose: () => void;
 }) {
   const { preference, choisir } = usePreferenceTheme();
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const lien = (i: ItemNav) => (
     <Link
@@ -109,54 +104,49 @@ function PanneauPlus({
     ouvrirAide(onglet);
   };
 
-  return createPortal(
-    <div className="feuille-fond" onClick={onClose}>
-      <div className="feuille" role="dialog" aria-modal="true" aria-label="Plus" onClick={(e) => e.stopPropagation()}>
-        <span className="feuille-poignee" aria-hidden />
-        <div className="feuille-tete">
-          <strong>Plus</strong>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        {autres.length > 0 && <div className="feuille-groupe">{autres.map(lien)}</div>}
-        <div className="feuille-groupe">
-          {administration && lien(administration)}
-          {lien(reglages)}
-          <button type="button" className="feuille-ligne" onClick={() => aide('guide')}>
-            <HelpCircle size={19} aria-hidden />
-            <span>Aide</span>
-          </button>
-          <button type="button" className="feuille-ligne" onClick={() => aide('signaler')}>
-            <MessageSquareWarning size={19} aria-hidden />
-            <span>Signaler un problème</span>
-          </button>
-        </div>
-        <div className="feuille-groupe feuille-theme">
-          <span className="feuille-libelle">Apparence</span>
-          <div className="vue-toggle" role="radiogroup" aria-label="Thème">
-            {OPTIONS_THEME.map(({ valeur, libelle, Icone }) => (
-              <button
-                key={valeur}
-                type="button"
-                role="radio"
-                aria-checked={preference === valeur}
-                className={`rg-theme${preference === valeur ? ' is-active' : ''}`}
-                onClick={() => choisir(valeur)}
-              >
-                <Icone size={14} aria-hidden /> {libelle}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="feuille-groupe">
-          <button type="button" className="feuille-ligne feuille-ligne--alerte" onClick={onDeconnexion}>
-            <LogOut size={19} aria-hidden />
-            <span>Se déconnecter</span>
-          </button>
+  return (
+    <Dialog onClose={onClose} portal backdropClassName="feuille-fond" className="feuille" label="Plus">
+      <span className="feuille-poignee" aria-hidden />
+      <div className="feuille-tete">
+        <strong>Plus</strong>
+        <CloseButton onClick={onClose} />
+      </div>
+      {autres.length > 0 && <div className="feuille-groupe">{autres.map(lien)}</div>}
+      <div className="feuille-groupe">
+        {administration && lien(administration)}
+        {lien(reglages)}
+        <button type="button" className="feuille-ligne" onClick={() => aide('guide')}>
+          <HelpCircle size={19} aria-hidden />
+          <span>Aide</span>
+        </button>
+        <button type="button" className="feuille-ligne" onClick={() => aide('signaler')}>
+          <MessageSquareWarning size={19} aria-hidden />
+          <span>Signaler un problème</span>
+        </button>
+      </div>
+      <div className="feuille-groupe feuille-theme">
+        <span className="feuille-libelle">Apparence</span>
+        <div className="vue-toggle" role="radiogroup" aria-label="Thème">
+          {OPTIONS_THEME.map(({ valeur, libelle, Icone }) => (
+            <button
+              key={valeur}
+              type="button"
+              role="radio"
+              aria-checked={preference === valeur}
+              className={`rg-theme${preference === valeur ? ' is-active' : ''}`}
+              onClick={() => choisir(valeur)}
+            >
+              <Icone size={14} aria-hidden /> {libelle}
+            </button>
+          ))}
         </div>
       </div>
-    </div>,
-    document.body,
+      <div className="feuille-groupe">
+        <button type="button" className="feuille-ligne feuille-ligne--alerte" onClick={onDeconnexion}>
+          <LogOut size={19} aria-hidden />
+          <span>Se déconnecter</span>
+        </button>
+      </div>
+    </Dialog>
   );
 }

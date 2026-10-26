@@ -41,6 +41,7 @@ import {
 import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
 import { daysSince, todayIso } from '@/lib/dates';
+import { Modal } from '@/components/ui/dialog';
 
 type Props = { params: Promise<{ slug: string; projetId: string }> };
 
@@ -911,79 +912,72 @@ function ModaleModifier({
   const [libelle, setLibelle] = useState(facture.libelle);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <header className="modal-header">
-          <h2>Modifier le brouillon</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            ✕
+    <Modal onClose={onClose} closeOnEscape={false}>
+      <header className="modal-header">
+        <h2>Modifier le brouillon</h2>
+        <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
+          ✕
+        </button>
+      </header>
+      <div className="modal-body">
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Montant HT (FCFA)</span>
+            <input
+              type="number"
+              min="0"
+              className="field-input"
+              value={montant}
+              disabled={aLignes}
+              onChange={(e) => setMontant(e.target.value)}
+            />
+            {aLignes && <span className="field-aide">Somme des lignes de la facture — non modifiable.</span>}
+          </label>
+          <label className="field">
+            <span className="field-label">TVA (%)</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              className="field-input"
+              value={taux}
+              onChange={(e) => setTaux(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Échéance</span>
+            <input type="date" className="field-input" value={echeance} onChange={(e) => setEcheance(e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="field-label">Libellé</span>
+            <input className="field-input" value={libelle} onChange={(e) => setLibelle(e.target.value)} />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
+            Annuler
           </button>
-        </header>
-        <div className="modal-body">
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Montant HT (FCFA)</span>
-              <input
-                type="number"
-                min="0"
-                className="field-input"
-                value={montant}
-                disabled={aLignes}
-                onChange={(e) => setMontant(e.target.value)}
-              />
-              {aLignes && <span className="field-aide">Somme des lignes de la facture — non modifiable.</span>}
-            </label>
-            <label className="field">
-              <span className="field-label">TVA (%)</span>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                className="field-input"
-                value={taux}
-                onChange={(e) => setTaux(e.target.value)}
-              />
-            </label>
-          </div>
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Échéance</span>
-              <input
-                type="date"
-                className="field-input"
-                value={echeance}
-                onChange={(e) => setEcheance(e.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">Libellé</span>
-              <input className="field-input" value={libelle} onChange={(e) => setLibelle(e.target.value)} />
-            </label>
-          </div>
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
-              Annuler
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={busy || !Number(montant)}
-              onClick={() =>
-                onEnregistrer({
-                  ...(!aLignes && { montantHt: Number(montant) }),
-                  tauxTva: Number(taux) || TAUX_TVA_DEFAUT,
-                  echeanceLe: echeance || null,
-                  libelle: libelle.trim(),
-                })
-              }
-            >
-              Enregistrer
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={busy || !Number(montant)}
+            onClick={() =>
+              onEnregistrer({
+                ...(!aLignes && { montantHt: Number(montant) }),
+                tauxTva: Number(taux) || TAUX_TVA_DEFAUT,
+                echeanceLe: echeance || null,
+                libelle: libelle.trim(),
+              })
+            }
+          >
+            Enregistrer
+          </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -1027,142 +1021,136 @@ function ModalePaiements({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <header className="modal-header">
-          <h2>Paiements — {facture.reference}</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            ✕
-          </button>
-        </header>
-        <div className="modal-body">
-          <p className="factu-pai-resume">
-            TTC {formatAmount(facture.montantTtc)} · payé {formatAmount(facture.montantPaye)} · reste{' '}
-            <strong>{formatAmount(facture.resteAPayer)}</strong>
-          </p>
+    <Modal onClose={onClose} closeOnEscape={false}>
+      <header className="modal-header">
+        <h2>Paiements — {facture.reference}</h2>
+        <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
+          ✕
+        </button>
+      </header>
+      <div className="modal-body">
+        <p className="factu-pai-resume">
+          TTC {formatAmount(facture.montantTtc)} · payé {formatAmount(facture.montantPaye)} · reste{' '}
+          <strong>{formatAmount(facture.resteAPayer)}</strong>
+        </p>
 
-          {facture.paiements.length > 0 && (
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Montant</th>
-                  <th>Mode</th>
-                  <th>Référence</th>
-                  <th aria-label="Supprimer" />
+        {facture.paiements.length > 0 && (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Mode</th>
+                <th>Référence</th>
+                <th aria-label="Supprimer" />
+              </tr>
+            </thead>
+            <tbody>
+              {facture.paiements.map((p) => (
+                <tr key={p.id}>
+                  <td data-label="Date">{p.date}</td>
+                  <td data-label="Montant">{formatCompactAmount(p.montant)}</td>
+                  <td data-label="Mode">{p.mode ? MODES_PAIEMENT[p.mode] : '—'}</td>
+                  <td data-label="Référence">{p.reference || '—'}</td>
+                  <td data-label="">
+                    <button
+                      type="button"
+                      className="lien-inline"
+                      aria-label="Supprimer le paiement"
+                      disabled={busy}
+                      onClick={() => {
+                        setASupprimer(p.id);
+                        setMotif('');
+                      }}
+                    >
+                      <Trash2 size={12} aria-hidden />
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {facture.paiements.map((p) => (
-                  <tr key={p.id}>
-                    <td data-label="Date">{p.date}</td>
-                    <td data-label="Montant">{formatCompactAmount(p.montant)}</td>
-                    <td data-label="Mode">{p.mode ? MODES_PAIEMENT[p.mode] : '—'}</td>
-                    <td data-label="Référence">{p.reference || '—'}</td>
-                    <td data-label="">
-                      <button
-                        type="button"
-                        className="lien-inline"
-                        aria-label="Supprimer le paiement"
-                        disabled={busy}
-                        onClick={() => {
-                          setASupprimer(p.id);
-                          setMotif('');
-                        }}
-                      >
-                        <Trash2 size={12} aria-hidden />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
+        )}
 
-          {aSupprimer && (
-            <div className="field" style={{ display: 'grid', gap: '0.5rem' }}>
-              <label className="field">
-                <span className="field-label">Motif de la suppression</span>
-                <input
-                  className="field-input"
-                  value={motif}
-                  maxLength={300}
-                  placeholder="ex. versement saisi deux fois"
-                  autoFocus
-                  onChange={(e) => setMotif(e.target.value)}
-                />
-              </label>
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setASupprimer(null)}>
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  disabled={busy || motif.trim().length < 3}
-                  onClick={async () => {
-                    if (await onSupprimer(aSupprimer, motif.trim())) setASupprimer(null);
-                  }}
-                >
-                  Confirmer la suppression
-                </button>
-              </div>
-            </div>
-          )}
-
-          <h4 className="exec-sous-titre">Enregistrer un versement</h4>
-          <div className="field-row">
+        {aSupprimer && (
+          <div className="field" style={{ display: 'grid', gap: '0.5rem' }}>
             <label className="field">
-              <span className="field-label">Date</span>
-              <input type="date" className="field-input" value={date} onChange={(e) => setDate(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="field-label">Montant (FCFA)</span>
+              <span className="field-label">Motif de la suppression</span>
               <input
-                type="number"
-                min="1"
                 className="field-input"
-                value={montant}
-                onChange={(e) => setMontant(e.target.value)}
+                value={motif}
+                maxLength={300}
+                placeholder="ex. versement saisi deux fois"
+                autoFocus
+                onChange={(e) => setMotif(e.target.value)}
               />
             </label>
-          </div>
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Mode</span>
-              <select
-                className="field-input"
-                value={mode}
-                onChange={(e) => setMode(e.target.value as ModePaiement | '')}
+            <div className="modal-actions">
+              <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setASupprimer(null)}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={busy || motif.trim().length < 3}
+                onClick={async () => {
+                  if (await onSupprimer(aSupprimer, motif.trim())) setASupprimer(null);
+                }}
               >
-                <option value="">—</option>
-                {(Object.keys(MODES_PAIEMENT) as ModePaiement[]).map((m) => (
-                  <option key={m} value={m}>
-                    {MODES_PAIEMENT[m]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Référence</span>
-              <input
-                className="field-input"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder="n° de virement / chèque"
-              />
-            </label>
+                Confirmer la suppression
+              </button>
+            </div>
           </div>
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
-              Fermer
-            </button>
-            <button type="button" className="btn-primary" disabled={busy || !Number(montant)} onClick={ajouter}>
-              <Plus size={15} aria-hidden /> Ajouter le versement
-            </button>
-          </div>
+        )}
+
+        <h4 className="exec-sous-titre">Enregistrer un versement</h4>
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Date</span>
+            <input type="date" className="field-input" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="field-label">Montant (FCFA)</span>
+            <input
+              type="number"
+              min="1"
+              className="field-input"
+              value={montant}
+              onChange={(e) => setMontant(e.target.value)}
+            />
+          </label>
+        </div>
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Mode</span>
+            <select className="field-input" value={mode} onChange={(e) => setMode(e.target.value as ModePaiement | '')}>
+              <option value="">—</option>
+              {(Object.keys(MODES_PAIEMENT) as ModePaiement[]).map((m) => (
+                <option key={m} value={m}>
+                  {MODES_PAIEMENT[m]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">Référence</span>
+            <input
+              className="field-input"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              placeholder="n° de virement / chèque"
+            />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
+            Fermer
+          </button>
+          <button type="button" className="btn-primary" disabled={busy || !Number(montant)} onClick={ajouter}>
+            <Plus size={15} aria-hidden /> Ajouter le versement
+          </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

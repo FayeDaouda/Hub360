@@ -3,7 +3,7 @@
 import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowRight, X } from 'lucide-react';
+import { Archive, ArrowRight } from 'lucide-react';
 import {
   GAMMES,
   STANDINGS,
@@ -27,6 +27,7 @@ import { CaracteristiquesProjet } from './caracteristiques-projet';
 import { FicheApporteurSection } from './fiche-apporteur-section';
 import { estPersonneMorale } from '@/lib/nomenclature';
 import { formatDate } from '@/lib/dates';
+import { CloseButton, Drawer } from '@/components/ui/dialog';
 
 type Props = {
   slug: string;
@@ -127,12 +128,6 @@ export function DetailDossierModal({
       .catch(() => setHistorique([]));
   }, [slug, projet.id, projet.statut, versionHistorique]);
 
-  useEffect(() => {
-    const echap = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', echap);
-    return () => window.removeEventListener('keydown', echap);
-  }, [onClose]);
-
   async function reassigner(id: string) {
     if (!id || id === projet.proprietaire?.id) return;
     setReassignation(true);
@@ -223,241 +218,229 @@ export function DetailDossierModal({
   ];
 
   return (
-    <div className="fiche-crm-fond" onClick={onClose}>
-      <aside
-        className="fiche-crm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fiche-crm-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="fiche-crm-entete">
-          <div>
-            <h2 id="fiche-crm-titre" className="fiche-crm-code">
-              {projet.code}
-            </h2>
-            <p className="fiche-crm-client">{projet.client.nom}</p>
-            <p className="fiche-crm-meta">
-              {estPersonneMorale(projet.client.type) ? 'Personne morale' : 'Personne physique'} ·{' '}
-              {projet.localite?.nom ?? projet.localisation} · créé le {formatDate(projet.creeLe)}
-            </p>
-          </div>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
-        <DecisionsFiche slug={slug} cible={{ client: projet.client.id }} />
+    <Drawer onClose={onClose} as="aside" labelledBy="fiche-crm-titre">
+      <header className="fiche-crm-entete">
+        <div>
+          <h2 id="fiche-crm-titre" className="fiche-crm-code">
+            {projet.code}
+          </h2>
+          <p className="fiche-crm-client">{projet.client.nom}</p>
+          <p className="fiche-crm-meta">
+            {estPersonneMorale(projet.client.type) ? 'Personne morale' : 'Personne physique'} ·{' '}
+            {projet.localite?.nom ?? projet.localisation} · créé le {formatDate(projet.creeLe)}
+          </p>
+        </div>
+        <CloseButton onClick={onClose} />
+      </header>
+      <DecisionsFiche slug={slug} cible={{ client: projet.client.id }} />
 
-        <section className="fiche-crm-section">
-          <h3 className="fiche-crm-titre">Situation</h3>
-          <ol className={`fiche-crm-etapes${projet.statut === 'perdu' || archive ? ' is-perdu' : ''}`}>
-            {ETAPES.map((e, i) => (
-              <li key={e.statut} className={i < rang ? 'is-fait' : i === rang ? 'is-courant' : undefined}>
-                {e.libelle}
-              </li>
-            ))}
-          </ol>
-          {projet.statut === 'perdu' && <p className="fiche-crm-note">Dossier perdu : le cycle est clos.</p>}
-          {projet.offreExpiree && <p className="fiche-crm-note">Offre expirée sans réponse du client.</p>}
-          {archive && (
-            <p className="fiche-crm-note">
-              Lead archivé le {formatDate(archive.le)}
-              {archive.par ? ` par ${archive.par.nom}` : ''} : consultable seulement, son code reste réservé.
-            </p>
-          )}
-        </section>
-
-        {!archive && projet.statut === 'nouveau_projet' && completude.faits < completude.total && (
-          <div className="fiche-crm-alerte" role="note">
-            <strong>
-              Fiche {completude.faits}/{completude.total} : il manque {completude.manquants.join(', ')}
-            </strong>
-            <span>Le bouton « Créer une offre » reste bloqué tant que la fiche n’est pas complète.</span>
-          </div>
+      <section className="fiche-crm-section">
+        <h3 className="fiche-crm-titre">Situation</h3>
+        <ol className={`fiche-crm-etapes${projet.statut === 'perdu' || archive ? ' is-perdu' : ''}`}>
+          {ETAPES.map((e, i) => (
+            <li key={e.statut} className={i < rang ? 'is-fait' : i === rang ? 'is-courant' : undefined}>
+              {e.libelle}
+            </li>
+          ))}
+        </ol>
+        {projet.statut === 'perdu' && <p className="fiche-crm-note">Dossier perdu : le cycle est clos.</p>}
+        {projet.offreExpiree && <p className="fiche-crm-note">Offre expirée sans réponse du client.</p>}
+        {archive && (
+          <p className="fiche-crm-note">
+            Lead archivé le {formatDate(archive.le)}
+            {archive.par ? ` par ${archive.par.nom}` : ''} : consultable seulement, son code reste réservé.
+          </p>
         )}
+      </section>
 
-        {editable && <CaracteristiquesProjet projet={projet} onModifier={onModifierFiche} />}
+      {!archive && projet.statut === 'nouveau_projet' && completude.faits < completude.total && (
+        <div className="fiche-crm-alerte" role="note">
+          <strong>
+            Fiche {completude.faits}/{completude.total} : il manque {completude.manquants.join(', ')}
+          </strong>
+          <span>Le bouton « Créer une offre » reste bloqué tant que la fiche n’est pas complète.</span>
+        </div>
+      )}
 
-        {(!editable || rattachable) && (
-          <section className="fiche-crm-section">
-            {!editable && (
-              <>
-                <div className="fiche-crm-titre-ligne">
-                  <h3 className="fiche-crm-titre">Les 9 champs de la fiche</h3>
-                  {projet.verrouillee && (
-                    <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>
-                  )}
-                </div>
-                <dl className="fiche-crm-champs">
-                  {champs.map((c) => (
-                    <div key={c.libelle}>
-                      <dt>{c.libelle}</dt>
-                      <dd>
-                        <span className="fiche-crm-valeur">{c.valeur}</span>
-                        <span className="fiche-crm-aide">{c.aide}</span>
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </>
-            )}
-            {rattachable && (
-              <div className="field-bloc">
-                <label className="field-label" htmlFor="rattacher-localite">
-                  Rattacher au référentiel des localités
-                </label>
-                <span className="field-aide">
-                  Libellé saisi à la création : « {projet.localisation} ». Le code du dossier ne change pas.
-                </span>
-                <LocaliteSelect
-                  localites={localites}
-                  valeur={localiteId}
-                  onChange={setLocaliteId}
-                  idChamp="rattacher-localite"
-                />
-                {erreur && <p className="field-erreur">{erreur}</p>}
-                <div className="modal-actions">
-                  <button type="button" className="btn-primary" disabled={enCours || !localiteId} onClick={rattacher}>
-                    {enCours ? 'Rattachement…' : 'Rattacher'}
-                  </button>
-                </div>
+      {editable && <CaracteristiquesProjet projet={projet} onModifier={onModifierFiche} />}
+
+      {(!editable || rattachable) && (
+        <section className="fiche-crm-section">
+          {!editable && (
+            <>
+              <div className="fiche-crm-titre-ligne">
+                <h3 className="fiche-crm-titre">Les 9 champs de la fiche</h3>
+                {projet.verrouillee && <span className="fiche-crm-badge">Verrouillé depuis l’émission de l’offre</span>}
               </div>
-            )}
-          </section>
-        )}
-
-        <FicheApporteurSection
-          slug={slug}
-          projet={projet}
-          onModifie={async () => {
-            await onMaj();
-            setVersionHistorique((v) => v + 1);
-          }}
-        />
-
-        <section className="fiche-crm-section">
-          <h3 className="fiche-crm-titre">Passation de la fiche</h3>
-          <div className="fiche-crm-passation">
-            <div className="fiche-crm-carte">
-              <span className="fiche-crm-aide">Créée par</span>
-              <strong>{projet.creePar?.nom ?? 'Non renseigné'}</strong>
-              <span className="fiche-crm-aide">automatique, non modifiable</span>
+              <dl className="fiche-crm-champs">
+                {champs.map((c) => (
+                  <div key={c.libelle}>
+                    <dt>{c.libelle}</dt>
+                    <dd>
+                      <span className="fiche-crm-valeur">{c.valeur}</span>
+                      <span className="fiche-crm-aide">{c.aide}</span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
+          {rattachable && (
+            <div className="field-bloc">
+              <label className="field-label" htmlFor="rattacher-localite">
+                Rattacher au référentiel des localités
+              </label>
+              <span className="field-aide">
+                Libellé saisi à la création : « {projet.localisation} ». Le code du dossier ne change pas.
+              </span>
+              <LocaliteSelect
+                localites={localites}
+                valeur={localiteId}
+                onChange={setLocaliteId}
+                idChamp="rattacher-localite"
+              />
+              {erreur && <p className="field-erreur">{erreur}</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-primary" disabled={enCours || !localiteId} onClick={rattacher}>
+                  {enCours ? 'Rattachement…' : 'Rattacher'}
+                </button>
+              </div>
             </div>
-            <ArrowRight size={18} aria-hidden className="fiche-crm-fleche" />
-            <div className="fiche-crm-carte fiche-crm-carte--proprio">
-              <span className="fiche-crm-aide">Propriétaire</span>
-              {peutReassigner && !archive && proprietaires && proprietaires.length > 0 ? (
-                <select
-                  className="field-input"
-                  aria-label="Propriétaire de la fiche"
-                  value={projet.proprietaire?.id ?? ''}
-                  disabled={reassignation}
-                  onChange={(e) => reassigner(e.target.value)}
-                >
-                  {!projet.proprietaire && <option value="">À assigner…</option>}
-                  {proprietaires.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nom}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <strong>{projet.proprietaire?.nom ?? 'À assigner'}</strong>
-              )}
-              <span className="fiche-crm-aide">pilote la fiche jusqu’au contrat</span>
-            </div>
-          </div>
-          {erreurProprio && <p className="field-erreur">{erreurProprio}</p>}
-        </section>
-
-        <section className="fiche-crm-section">
-          <h3 className="fiche-crm-titre">Historique</h3>
-          {!historique ? (
-            <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
-          ) : historique.length === 0 ? (
-            <p className="fiche-crm-aide">Aucun événement enregistré.</p>
-          ) : (
-            <ol className="fiche-crm-historique">
-              {historique.flatMap((t) =>
-                libellesTransition(t).map((libelle, i) => (
-                  <li key={`${t.id}-${i}`}>
-                    <time>{formatDate(t.le)}</time>
-                    <span>{libelle}</span>
-                  </li>
-                )),
-              )}
-              {archive && (
-                <li>
-                  <time>{formatDate(archive.le)}</time>
-                  <span>Lead archivé{archive.par ? ` par ${archive.par.nom}` : ''}</span>
-                </li>
-              )}
-            </ol>
           )}
         </section>
+      )}
 
-        {!archive && peutArchiver && projet.statut === 'nouveau_projet' && (
-          <div className="fiche-crm-archive">
-            <p>
-              Direction GC ou CIO (administrateur du HUB) · un lead incomplet ou mal renseigné s’archive, il ne se
-              supprime jamais. Il reste consultable dans « Archivés » et son code reste réservé.
-            </p>
-            {!confirmerArchive ? (
-              <button type="button" className="btn-ghost" onClick={() => setConfirmerArchive(true)}>
-                <Archive size={16} aria-hidden /> Archiver ce lead
-              </button>
+      <FicheApporteurSection
+        slug={slug}
+        projet={projet}
+        onModifie={async () => {
+          await onMaj();
+          setVersionHistorique((v) => v + 1);
+        }}
+      />
+
+      <section className="fiche-crm-section">
+        <h3 className="fiche-crm-titre">Passation de la fiche</h3>
+        <div className="fiche-crm-passation">
+          <div className="fiche-crm-carte">
+            <span className="fiche-crm-aide">Créée par</span>
+            <strong>{projet.creePar?.nom ?? 'Non renseigné'}</strong>
+            <span className="fiche-crm-aide">automatique, non modifiable</span>
+          </div>
+          <ArrowRight size={18} aria-hidden className="fiche-crm-fleche" />
+          <div className="fiche-crm-carte fiche-crm-carte--proprio">
+            <span className="fiche-crm-aide">Propriétaire</span>
+            {peutReassigner && !archive && proprietaires && proprietaires.length > 0 ? (
+              <select
+                className="field-input"
+                aria-label="Propriétaire de la fiche"
+                value={projet.proprietaire?.id ?? ''}
+                disabled={reassignation}
+                onChange={(e) => reassigner(e.target.value)}
+              >
+                {!projet.proprietaire && <option value="">À assigner…</option>}
+                {proprietaires.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom}
+                  </option>
+                ))}
+              </select>
             ) : (
-              <div className="fiche-crm-archive-confirmer" role="group" aria-label="Confirmer l’archivage">
-                <strong>Archiver {projet.code} ? C’est définitif : plus aucune action sur ce lead.</strong>
-                {erreurArchive && <p className="field-erreur">{erreurArchive}</p>}
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    disabled={archivage}
-                    onClick={() => setConfirmerArchive(false)}
-                  >
-                    Annuler
-                  </button>
-                  <button type="button" className="btn-danger" disabled={archivage} onClick={archiver}>
-                    {archivage ? 'Archivage…' : 'Archiver'}
-                  </button>
-                </div>
-              </div>
+              <strong>{projet.proprietaire?.nom ?? 'À assigner'}</strong>
             )}
+            <span className="fiche-crm-aide">pilote la fiche jusqu’au contrat</span>
           </div>
-        )}
+        </div>
+        {erreurProprio && <p className="field-erreur">{erreurProprio}</p>}
+      </section>
 
-        {!archive && (
-          <section className="fiche-crm-section fiche-crm-actions">
-            <CycleDossier
-              slug={slug}
-              projet={projet}
-              onAgir={async (action, commentaire) => {
-                const emise = await onAgir(action, commentaire);
-                if (emise) setLienEmis(emise);
-              }}
-            />
-            <OffreDossier
-              slug={slug}
-              projet={projet}
-              peutPreparer={peutPreparerOffre}
-              depuisFinances={depuisFinances}
-              onMaj={onMaj}
-              lienEmis={lienEmis}
-              onLienEmis={setLienEmis}
-            />
-            <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
-            {/* Facture directe du lead, sans offre (maquette Finances) : préparée
-                dans Finances, validée par le CFO avant émission. */}
-            {peutFacturer && (
-              <Link className="btn-ghost fiche-crm-facture" href={`/admin/${slug}/facturation?nouvelle=${projet.id}`}>
-                Émettre une facture directe (Finances)
-              </Link>
+      <section className="fiche-crm-section">
+        <h3 className="fiche-crm-titre">Historique</h3>
+        {!historique ? (
+          <div className="skeleton admin-skeleton-panel admin-skeleton-panel--sm" aria-hidden />
+        ) : historique.length === 0 ? (
+          <p className="fiche-crm-aide">Aucun événement enregistré.</p>
+        ) : (
+          <ol className="fiche-crm-historique">
+            {historique.flatMap((t) =>
+              libellesTransition(t).map((libelle, i) => (
+                <li key={`${t.id}-${i}`}>
+                  <time>{formatDate(t.le)}</time>
+                  <span>{libelle}</span>
+                </li>
+              )),
             )}
-          </section>
+            {archive && (
+              <li>
+                <time>{formatDate(archive.le)}</time>
+                <span>Lead archivé{archive.par ? ` par ${archive.par.nom}` : ''}</span>
+              </li>
+            )}
+          </ol>
         )}
-      </aside>
-    </div>
+      </section>
+
+      {!archive && peutArchiver && projet.statut === 'nouveau_projet' && (
+        <div className="fiche-crm-archive">
+          <p>
+            Direction GC ou CIO (administrateur du HUB) · un lead incomplet ou mal renseigné s’archive, il ne se
+            supprime jamais. Il reste consultable dans « Archivés » et son code reste réservé.
+          </p>
+          {!confirmerArchive ? (
+            <button type="button" className="btn-ghost" onClick={() => setConfirmerArchive(true)}>
+              <Archive size={16} aria-hidden /> Archiver ce lead
+            </button>
+          ) : (
+            <div className="fiche-crm-archive-confirmer" role="group" aria-label="Confirmer l’archivage">
+              <strong>Archiver {projet.code} ? C’est définitif : plus aucune action sur ce lead.</strong>
+              {erreurArchive && <p className="field-erreur">{erreurArchive}</p>}
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={archivage}
+                  onClick={() => setConfirmerArchive(false)}
+                >
+                  Annuler
+                </button>
+                <button type="button" className="btn-danger" disabled={archivage} onClick={archiver}>
+                  {archivage ? 'Archivage…' : 'Archiver'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!archive && (
+        <section className="fiche-crm-section fiche-crm-actions">
+          <CycleDossier
+            slug={slug}
+            projet={projet}
+            onAgir={async (action, commentaire) => {
+              const emise = await onAgir(action, commentaire);
+              if (emise) setLienEmis(emise);
+            }}
+          />
+          <OffreDossier
+            slug={slug}
+            projet={projet}
+            peutPreparer={peutPreparerOffre}
+            depuisFinances={depuisFinances}
+            onMaj={onMaj}
+            lienEmis={lienEmis}
+            onLienEmis={setLienEmis}
+          />
+          <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
+          {/* Facture directe du lead, sans offre (maquette Finances) : préparée
+                dans Finances, validée par le CFO avant émission. */}
+          {peutFacturer && (
+            <Link className="btn-ghost fiche-crm-facture" href={`/admin/${slug}/facturation?nouvelle=${projet.id}`}>
+              Émettre une facture directe (Finances)
+            </Link>
+          )}
+        </section>
+      )}
+    </Drawer>
   );
 }

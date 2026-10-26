@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Copy, X } from 'lucide-react';
+import { Copy } from 'lucide-react';
 import { comparerRoles, creerCompte, libelleRole } from '@/lib/groupe';
 import type { InvitationCompte, SocieteComptes } from '@/lib/types';
+import { CloseButton, Modal } from '@/components/ui/dialog';
 
 // Parcours unique de création d'un compte (phase 1, 14/10/2026) : dossier RH
 // → compte → rôle → cellule. Le dossier RH porte l'identité ; sans cellule,
@@ -49,96 +49,85 @@ export function NouveauCompteModal({
 
   // Portail : ouverte depuis un panneau « glass » (backdrop-filter), la modale
   // serait sinon positionnée par rapport au panneau, pas à l'écran.
-  return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal modal--sm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-titre-compte"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="modal-titre-compte">Nouveau compte · {societe.nom}</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
+  return (
+    <Modal onClose={onClose} closeOnEscape={false} portal className="modal--sm" labelledBy="modal-titre-compte">
+      <header className="modal-header">
+        <h2 id="modal-titre-compte">Nouveau compte · {societe.nom}</h2>
+        <CloseButton onClick={onClose} />
+      </header>
 
-        <div className="modal-body">
-          {resultat ? (
-            <ResultatInvitation {...resultat} onClose={onClose} />
-          ) : societe.dossiersSansCompte.length === 0 ? (
-            <p className="empty-state">
-              Tous les dossiers RH de {societe.nom} ont déjà un compte. Créez d&rsquo;abord le dossier de la personne
-              dans RH.
+      <div className="modal-body">
+        {resultat ? (
+          <ResultatInvitation {...resultat} onClose={onClose} />
+        ) : societe.dossiersSansCompte.length === 0 ? (
+          <p className="empty-state">
+            Tous les dossiers RH de {societe.nom} ont déjà un compte. Créez d&rsquo;abord le dossier de la personne dans
+            RH.
+          </p>
+        ) : (
+          <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
+            <label className="field">
+              <span className="field-label">Dossier RH</span>
+              <select
+                className="field-input"
+                value={dossierId}
+                onChange={(e) => choisirDossier(e.target.value)}
+                required
+              >
+                <option value="">Choisir une personne…</option>
+                {societe.dossiersSansCompte.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
+                    {d.poste ? ` · ${d.poste}` : ''} · {d.matricule}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span className="field-label">E-mail de connexion</span>
+              <input
+                type="email"
+                className="field-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="off"
+                required
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">Rôle</span>
+              <select className="field-input" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
+                <option value="">Choisir un rôle…</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {libelleRole(r.nom)}
+                    {r.transverse ? ' (transverse)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {/* Revue Dir. GC (21/10/2026) : la cellule est choisie par le Dir. GC. */}
+            <p className="dmd-note">
+              La cellule n’est pas choisie ici : un compte Salarié arrive dans Équipes › Salariés à affecter, et le Dir.
+              GC, qui organise les cellules, est prévenu.
             </p>
-          ) : (
-            <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
-              <label className="field">
-                <span className="field-label">Dossier RH</span>
-                <select
-                  className="field-input"
-                  value={dossierId}
-                  onChange={(e) => choisirDossier(e.target.value)}
-                  required
-                >
-                  <option value="">Choisir une personne…</option>
-                  {societe.dossiersSansCompte.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {`${d.prenom} ${d.nom}`.trim() || 'Sans nom'}
-                      {d.poste ? ` · ${d.poste}` : ''} · {d.matricule}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span className="field-label">E-mail de connexion</span>
-                <input
-                  type="email"
-                  className="field-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="off"
-                  required
-                />
-              </label>
-              <label className="field">
-                <span className="field-label">Rôle</span>
-                <select className="field-input" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
-                  <option value="">Choisir un rôle…</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {libelleRole(r.nom)}
-                      {r.transverse ? ' (transverse)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {/* Revue Dir. GC (21/10/2026) : la cellule est choisie par le Dir. GC. */}
-              <p className="dmd-note">
-                La cellule n’est pas choisie ici : un compte Salarié arrive dans Équipes › Salariés à affecter, et le
-                Dir. GC, qui organise les cellules, est prévenu.
+            {erreur && (
+              <p className="field-erreur" role="alert">
+                {erreur}
               </p>
-              {erreur && (
-                <p className="field-erreur" role="alert">
-                  {erreur}
-                </p>
-              )}
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
-                  Annuler
-                </button>
-                <button type="submit" className="btn-primary" disabled={busy}>
-                  {busy ? 'Création…' : 'Créer et inviter'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
+                Annuler
+              </button>
+              <button type="submit" className="btn-primary" disabled={busy}>
+                {busy ? 'Création…' : 'Créer et inviter'}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }
 

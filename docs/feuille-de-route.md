@@ -56,6 +56,13 @@ Décisions structurantes : `docs/adr/`.
   pendant la structuration, puis remis en erreur.
 - **Tournée des rappels** : la découper par société (aujourd'hui en périmètre
   système, ADR 0001).
+- **Lot accessibilité des fenêtres** : une règle unique, toutes les fenêtres
+  se ferment avec Échap, sauf pendant un envoi (8 ne le font pas :
+  `closeOnEscape={false}` les repère) ; le focus du clavier reste dans la
+  fenêtre tant qu'elle est ouverte et revient sur le bouton qui l'a ouverte à
+  la fermeture. Le composant commun (`components/ui/dialog.tsx`) ne fait ni
+  l'un ni l'autre aujourd'hui (tests « état actuel » dans `dialog.spec.tsx`,
+  à inverser) ; la confirmation (`ConfirmModal`) le fait déjà.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.

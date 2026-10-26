@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { CloseButton, Drawer } from '@/components/ui/dialog';
 
 // Panneau latéral (tâche, fil d'une carte) : même tiroir que la fiche CRM —
 // la liste reste en place derrière ; Échap ou un clic à côté referme.
@@ -17,32 +16,15 @@ export function PanneauLateral({
   onClose: () => void;
   children: ReactNode;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   // Portail : rendu dans un panneau en verre (backdrop-filter), le tiroir
   // « fixed » serait enfermé dans ce panneau au lieu de couvrir l'écran.
-  return createPortal(
-    <div className="fiche-crm-fond" onClick={onClose}>
-      <div
-        className="fiche-crm panneau-lateral"
-        role="dialog"
-        aria-modal="true"
-        aria-label={titre}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="fiche-crm-entete">
-          <div>{entete}</div>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        {children}
+  return (
+    <Drawer onClose={onClose} portal className="panneau-lateral" label={titre}>
+      <div className="fiche-crm-entete">
+        <div>{entete}</div>
+        <CloseButton onClick={onClose} />
       </div>
-    </div>,
-    document.body,
+      {children}
+    </Drawer>
   );
 }

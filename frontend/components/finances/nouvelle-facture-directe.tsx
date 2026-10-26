@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { creerFactureDirecte, getLeadsFacturables } from '@/lib/facturation';
 import { formatAmount } from '@/lib/format';
 import { STATUTS_CRM, type FactureCentrale, type LeadFacturable } from '@/lib/types';
+import { CloseButton, Drawer } from '@/components/ui/dialog';
 
 const TAUX_TVA = 18; // TVA par défaut des factures (backend TAUX_TVA_DEFAUT)
 
@@ -38,12 +39,6 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
       .catch((e) => setErreur(e instanceof Error ? e.message : 'Leads indisponibles.'));
   }, [slug]);
 
-  useEffect(() => {
-    const echap = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', echap);
-    return () => window.removeEventListener('keydown', echap);
-  }, [onClose]);
-
   const lead = leads?.find((l) => l.id === dossierId) ?? null;
   const valides = lignes.filter((l) => l.designation.trim() && montantDe(l) > 0);
   const ht = valides.reduce((t, l) => t + montantDe(l), 0);
@@ -73,116 +68,106 @@ export function NouvelleFactureDirecte({ slug, dossierPresel, onCreee, onClose }
   }
 
   return (
-    <div className="fiche-crm-fond" onClick={onClose}>
-      <aside
-        className="fiche-crm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="nfd-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="fiche-crm-entete">
-          <div>
-            <p className="fiche-crm-titre">Nouvelle facture</p>
-            <h2 id="nfd-titre" className="fiche-crm-code">
-              {lead ? lead.prochaineReference : '—'}
-            </h2>
-          </div>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
-
-        <div className="field">
-          <label className="field-label" htmlFor="nfd-lead">
-            Lead à facturer
-          </label>
-          <select
-            id="nfd-lead"
-            className="field-input"
-            value={dossierId}
-            onChange={(e) => setDossierId(e.target.value)}
-            disabled={!leads}
-          >
-            <option value="">— Choisir un lead du CRM —</option>
-            {(leads ?? []).map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.code} · {l.client}
-              </option>
-            ))}
-          </select>
-          {lead && (
-            <span className="fiche-crm-meta">
-              {lead.client} · {lead.localisation} · statut CRM : {STATUTS_CRM[lead.statut]}
-            </span>
-          )}
+    <Drawer onClose={onClose} as="aside" labelledBy="nfd-titre">
+      <header className="fiche-crm-entete">
+        <div>
+          <p className="fiche-crm-titre">Nouvelle facture</p>
+          <h2 id="nfd-titre" className="fiche-crm-code">
+            {lead ? lead.prochaineReference : '—'}
+          </h2>
         </div>
+        <CloseButton onClick={onClose} />
+      </header>
 
-        <section className="fiche-crm-carte nfd-bloc">
-          <h3 className="fiche-crm-titre">Facture directe (sans offre)</h3>
-          <p className="fiche-crm-aide">
-            Pour une prestation facturée directement depuis le lead, par exemple un diagnostic CO0 au forfait.
-          </p>
-          {lignes.map((l, i) => (
-            <div key={i} className="nfd-ligne">
-              <input
-                className="field-input"
-                aria-label={`Désignation, ligne ${i + 1}`}
-                placeholder="ex. CO0 · Diagnostic produit et positionnement"
-                maxLength={200}
-                value={l.designation}
-                onChange={(e) => majLigne(i, { designation: e.target.value })}
-              />
-              <input
-                className="field-input"
-                aria-label={`Montant HT, ligne ${i + 1}`}
-                placeholder="Montant HT"
-                inputMode="numeric"
-                value={l.montant}
-                onChange={(e) => majLigne(i, { montant: e.target.value })}
-              />
-              <button
-                type="button"
-                className="fp-retirer"
-                aria-label={`Retirer la ligne ${i + 1}`}
-                disabled={lignes.length === 1}
-                onClick={() => setLignes((ls) => ls.filter((_, j) => j !== i))}
-              >
-                <X size={15} />
-              </button>
-            </div>
+      <div className="field">
+        <label className="field-label" htmlFor="nfd-lead">
+          Lead à facturer
+        </label>
+        <select
+          id="nfd-lead"
+          className="field-input"
+          value={dossierId}
+          onChange={(e) => setDossierId(e.target.value)}
+          disabled={!leads}
+        >
+          <option value="">— Choisir un lead du CRM —</option>
+          {(leads ?? []).map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.code} · {l.client}
+            </option>
           ))}
-          <button
-            type="button"
-            className="fp-ajouter"
-            disabled={lignes.length >= 20}
-            onClick={() => setLignes((ls) => [...ls, { ...LIGNE_VIDE }])}
-          >
-            + Ajouter une ligne
+        </select>
+        {lead && (
+          <span className="fiche-crm-meta">
+            {lead.client} · {lead.localisation} · statut CRM : {STATUTS_CRM[lead.statut]}
+          </span>
+        )}
+      </div>
+
+      <section className="fiche-crm-carte nfd-bloc">
+        <h3 className="fiche-crm-titre">Facture directe (sans offre)</h3>
+        <p className="fiche-crm-aide">
+          Pour une prestation facturée directement depuis le lead, par exemple un diagnostic CO0 au forfait.
+        </p>
+        {lignes.map((l, i) => (
+          <div key={i} className="nfd-ligne">
+            <input
+              className="field-input"
+              aria-label={`Désignation, ligne ${i + 1}`}
+              placeholder="ex. CO0 · Diagnostic produit et positionnement"
+              maxLength={200}
+              value={l.designation}
+              onChange={(e) => majLigne(i, { designation: e.target.value })}
+            />
+            <input
+              className="field-input"
+              aria-label={`Montant HT, ligne ${i + 1}`}
+              placeholder="Montant HT"
+              inputMode="numeric"
+              value={l.montant}
+              onChange={(e) => majLigne(i, { montant: e.target.value })}
+            />
+            <button
+              type="button"
+              className="fp-retirer"
+              aria-label={`Retirer la ligne ${i + 1}`}
+              disabled={lignes.length === 1}
+              onClick={() => setLignes((ls) => ls.filter((_, j) => j !== i))}
+            >
+              <X size={15} />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="fp-ajouter"
+          disabled={lignes.length >= 20}
+          onClick={() => setLignes((ls) => [...ls, { ...LIGNE_VIDE }])}
+        >
+          + Ajouter une ligne
+        </button>
+        <p className="nfd-totaux">
+          <span>
+            HT <strong>{formatAmount(ht)}</strong>
+          </span>
+          <span>
+            TVA {TAUX_TVA} % <strong>{formatAmount(tva)}</strong>
+          </span>
+          <span>
+            TTC <strong className="nfd-ttc">{formatAmount(ht + tva)}</strong>
+          </span>
+        </p>
+        {erreur && <p className="field-erreur">{erreur}</p>}
+        {pret ? (
+          <button type="button" className="btn-primary nfd-preparer" disabled={envoi} onClick={preparer}>
+            {envoi ? 'Préparation…' : 'Préparer la facture · à valider par le CFO'}
           </button>
-          <p className="nfd-totaux">
-            <span>
-              HT <strong>{formatAmount(ht)}</strong>
-            </span>
-            <span>
-              TVA {TAUX_TVA} % <strong>{formatAmount(tva)}</strong>
-            </span>
-            <span>
-              TTC <strong className="nfd-ttc">{formatAmount(ht + tva)}</strong>
-            </span>
-          </p>
-          {erreur && <p className="field-erreur">{erreur}</p>}
-          {pret ? (
-            <button type="button" className="btn-primary nfd-preparer" disabled={envoi} onClick={preparer}>
-              {envoi ? 'Préparation…' : 'Préparer la facture · à valider par le CFO'}
-            </button>
-          ) : (
-            <button type="button" className="offre-bloquee-bouton" disabled>
-              {lead ? 'Renseigner au moins une ligne avec un montant' : 'Choisir un lead du CRM'}
-            </button>
-          )}
-        </section>
-      </aside>
-    </div>
+        ) : (
+          <button type="button" className="offre-bloquee-bouton" disabled>
+            {lead ? 'Renseigner au moins une ligne avec un montant' : 'Choisir un lead du CRM'}
+          </button>
+        )}
+      </section>
+    </Drawer>
   );
 }

@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { CalendrierCellule } from './calendrier-cellule';
 import { deciderAbsence, getPreparationDecision, LIBELLE_MOTIF_REFUS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
 import { formatDate } from '@/lib/dates';
+import { CloseButton, Modal } from '@/components/ui/dialog';
 
 const DECISIONS: { cle: DecisionN1; libelle: string; aide: string }[] = [
   {
@@ -44,19 +43,10 @@ export function DecisionN1Modal({
 }) {
   // Portail : ouverte depuis un panneau « glass » (backdrop-filter), la modale
   // serait sinon contenue — et rognée — par ce panneau.
-  return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal rh-fiche"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Décision N+1"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <DecisionN1Formulaire slug={slug} id={id} onFait={onFait} onAnnuler={onClose} />
-      </div>
-    </div>,
-    document.body,
+  return (
+    <Modal onClose={onClose} closeOnEscape={false} portal className="rh-fiche" label="Décision N+1">
+      <DecisionN1Formulaire slug={slug} id={id} onFait={onFait} onAnnuler={onClose} />
+    </Modal>
   );
 }
 
@@ -124,11 +114,7 @@ export function DecisionN1Formulaire({
           <span className="cell-sub">Demande d’absence · décision du N+1</span>
           <h2>{d?.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : 'Demande'}</h2>
         </div>
-        {onAnnuler && (
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onAnnuler}>
-            <X size={18} />
-          </button>
-        )}
+        {onAnnuler && <CloseButton onClick={onAnnuler} />}
       </header>
       <div className="modal-body">
         {!prep ? (
