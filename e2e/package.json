@@ -6,9 +6,10 @@
   "scripts": {
     "env:up": "bash scripts/reference-env.sh up",
     "env:down": "bash scripts/reference-env.sh down",
-    "visual:baseline": "playwright test --project=visual-desktop --project=visual-mobile --update-snapshots",
-    "visual": "playwright test --project=visual-desktop --project=visual-mobile",
+    "visual:baseline": "playwright test --project=visual-desktop --project=visual-mobile --project=visual-glass --update-snapshots",
+    "visual": "playwright test --project=visual-desktop --project=visual-mobile --project=visual-glass",
     "smoke": "playwright test --project=smoke",
+    "archive": "bash scripts/archive-reference.sh",
     "report": "playwright show-report .state/report"
   },
   "devDependencies": {

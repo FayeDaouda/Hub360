@@ -63,6 +63,10 @@ Décisions structurantes : `docs/adr/`.
   la fermeture. Le composant commun (`components/ui/dialog.tsx`) ne fait ni
   l'un ni l'autre aujourd'hui (tests « état actuel » dans `dialog.spec.tsx`,
   à inverser) ; la confirmation (`ConfirmModal`) le fait déjà.
+- **Squelettes de chargement des cartes de projet** (S0b, en priorité) :
+  certaines sections des cartes d'un projet (documents du client, relevés,
+  tâches) se chargent sans indicateur ; elles auront le squelette commun de
+  `components/ui`.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
   Changement de texte visible : lot à part, après la structuration.
@@ -87,11 +91,17 @@ Décisions structurantes : `docs/adr/`.
   dessus, à une position fractionnaire, basculait entre deux lissages d'un
   lancement du navigateur à l'autre (pastille active des sélecteurs de vue,
   dossier d'un projet ouvert). Mise en page, textes et couleurs restent
-  comparés ; le rendu du flou lui-même est à contrôler à l'œil lors de la
-  refonte visuelle.
+  comparés. Le flou, signature de l'application, garde ses propres captures
+  (projet `visual-glass` : barre latérale, en-tête, une modale, le portail,
+  « Dossier projet », en clair et en sombre), avec une tolérance de 1 % de
+  pixels différents au lieu d'une égalité stricte.
 - Avant chaque capture, le harnais attend qu'aucune requête de l'API ne soit
   en cours (le flux du chat excepté) ; au-delà de 30 s, la capture échoue en
   listant les requêtes.
+
+- La référence utilisée pour chaque fusion est archivée
+  (`npm run archive -- <PR> <base> <comparée> <journal>` dans `e2e/`) dans la
+  version GitHub « captures-references », conservée 120 jours.
 
 ## Défaut corrigé
 

@@ -92,8 +92,10 @@ const ISO_TIMESTAMP = /"(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z"/g;
 // Violations de la politique de contenu (CSP) relevées par le navigateur,
 // et feuille de style des captures : sans transition ni animation, un état
 // intermédiaire ne peut plus être capturé (pastilles, survol, défilement).
-export async function installCaptureGuards(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+// `blur` : garde le flou d'arrière-plan (captures du verre, projet
+// visual-glass) ; ailleurs il est retiré, voir plus bas.
+export async function installCaptureGuards(page: Page, { blur = false }: { blur?: boolean } = {}): Promise<void> {
+  await page.addInitScript((garderFlou) => {
     const violations: string[] = [];
     (window as unknown as { __cspViolations: string[] }).__cspViolations = violations;
     document.addEventListener('securitypolicyviolation', (e) =>
@@ -107,13 +109,16 @@ export async function installCaptureGuards(page: Page): Promise<void> {
         // son lissage bascule entre deux rendus d'un lancement du navigateur à
         // l'autre (pastille active des sélecteurs de vue, dossier d'un projet
         // ouvert). Le flou d'arrière-plan est donc retiré des captures : mise en
-        // page, textes et couleurs restent comparés, pas le flou lui-même.
-        '*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }';
+        // page, textes et couleurs restent comparés. Le flou lui-même a ses
+        // propres captures, avec une tolérance (projet visual-glass).
+        (garderFlou
+          ? ''
+          : '*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }');
       document.head.append(style);
     };
     if (document.head) figer();
     else document.addEventListener('DOMContentLoaded', figer);
-  });
+  }, blur);
 }
 
 export async function cspViolations(page: Page): Promise<string[]> {

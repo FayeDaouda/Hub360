@@ -31,6 +31,8 @@ export default defineConfig({
       testDir: './visual',
       use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 },
     },
+    // Le verre (flou d'arrière-plan) gardé, avec une tolérance : glass/.
+    { name: 'visual-glass', testDir: './glass', use: { viewport: { width: 1440, height: 900 } } },
     // Smoke tests change the reference data: one worker, in file order.
     {
       name: 'smoke',
