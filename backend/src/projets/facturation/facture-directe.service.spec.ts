@@ -44,6 +44,8 @@ function monter(o: { dossier?: object | null; facture?: object } = {}) {
     // Numérotation (lot 6) : format par défaut « GC », séquence vide.
     numerotationFactures: { findFirst: jest.fn().mockResolvedValue(null) },
     societe: { findUniqueOrThrow: jest.fn().mockResolvedValue({ nom: 'Grey Concrete' }) },
+    // Verrou d'émission par société et par année (ADR 0003).
+    verrouNumerotation: { upsert: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(prisma));

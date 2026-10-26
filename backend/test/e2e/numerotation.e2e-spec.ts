@@ -10,10 +10,9 @@ import { urlBaseE2e } from './base';
 type Facture = { id: string; statut: string; reference: string | null };
 
 describe('Numérotation des factures à l’émission', () => {
-  // Le service retente 5 fois une émission qui perd la course au numéro : au
-  // plus 5 émissions simultanées par société aboutissent toutes (limite
-  // signalée, verrou de numérotation proposé).
-  const SIMULTANEES = 4;
+  // Les émissions d'une société sont sérialisées par un verrou par année
+  // (ADR 0003) : toutes aboutissent, quel que soit leur nombre.
+  const SIMULTANEES = 20;
   let app: INestApplication;
   let prisma: PrismaClient;
   let cfo: ReturnType<typeof api>;
