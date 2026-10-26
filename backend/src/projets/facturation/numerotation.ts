@@ -1,3 +1,4 @@
+import { stripAccents } from '../../shared/text';
 // Numérotation des factures (lot 6, à la manière de Zervant) — règles pures.
 // Une séquence sans trou par préfixe et par année, commune aux factures et
 // aux avoirs, attribuée à l'émission seulement ; elle repart au numéro de
@@ -18,9 +19,7 @@ export const SEPARATEURS = ['-', '/', '.', ''] as const;
 
 // « Grey Concrete » → « GC » : le préfixe par défaut de la société.
 export const initiales = (nom: string) =>
-  nom
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  stripAccents(nom)
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
     .map((m) => m[0].toUpperCase())

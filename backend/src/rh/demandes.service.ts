@@ -14,6 +14,7 @@ import { DecisionN1Dto, DeposerAbsenceDto, DeposerRemboursementDto } from './dem
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 import { chevauche, joursOuvrables, PART_CELLULE_ABSENTE_ALERTE, soldeConges } from './regles-conges';
 import { addDays, formatDayMonth, todayIso } from '../shared/dates';
+import { formatAmount } from '../shared/format';
 
 // RH · Demandes (lot 2) — absences (N+1 puis RH) et remboursements santé
 // (soumise → transmise → remboursée/rejetée). Hypothèses de travail : cf.
@@ -63,7 +64,6 @@ const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = {
   OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }],
 };
 const COMPTE_DOSSIER = { utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } as const;
-const montant = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 
 @Injectable()
 export class DemandesService {
@@ -257,7 +257,7 @@ export class DemandesService {
     await this.notifications.envoyer({
       societeId: s.societeId,
       type: 'remboursement_a_traiter',
-      titre: `Remboursement à traiter · ${s.nom} · ${montant(dto.montant)}`,
+      titre: `Remboursement à traiter · ${s.nom} · ${formatAmount(dto.montant)}`,
       destinataireIds: await this.notifications.titulairesRole(s.societeId, ROLE_RH),
       parId: a.userId,
     });
@@ -625,7 +625,7 @@ export class DemandesService {
       action === 'transmettre'
         ? 'transmis pour remboursement'
         : action === 'rembourser'
-          ? `remboursé (${montant(Number(maj.montantRembourse ?? r.montant))})`
+          ? `remboursé (${formatAmount(Number(maj.montantRembourse ?? r.montant))})`
           : 'rejeté';
     await this.notifications.envoyer({
       societeId: s.societeId,

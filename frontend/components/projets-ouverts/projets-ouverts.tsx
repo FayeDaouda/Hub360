@@ -45,6 +45,7 @@ import { TachePanneau } from './tache-panneau';
 import { CartePanneau } from './carte-panneau';
 import { PanneauLateral } from './panneau-lateral';
 import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
+import { plural, stripAccents } from '@/lib/text';
 
 // Panneau latéral : une tâche, ou le fil d'une carte.
 type Selection = { type: 'tache' | 'carte'; id: string } | null;
@@ -856,9 +857,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
             {c.libelle}
           </span>
           <span className="po-carte-repliee-droite">
-            <span className="po-aide">
-              {c.taches.length} tâche{c.taches.length > 1 ? 's' : ''}
-            </span>
+            <span className="po-aide">{plural(c.taches.length, 'tâche')}</span>
             <span className={`pill pill--${p.ton}`}>{p.libelle}</span>
           </span>
         </button>
@@ -967,9 +966,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
 
 // Clé technique (« laterale_droite ») qui ne fait que répéter le libellé.
 const normaliser = (x: string) =>
-  x
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+  stripAccents(x)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();

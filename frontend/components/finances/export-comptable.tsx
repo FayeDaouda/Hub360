@@ -7,6 +7,7 @@ import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { formatAmount } from '@/lib/format';
 import { MODES_PAIEMENT, type FactureCentrale } from '@/lib/types';
 import { formatMonthYear } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Vente = { f: FactureCentrale; origine: string | null };
 type Encaissement = { f: FactureCentrale; date: string; montant: number; mode: string | null; reference: string };
@@ -132,8 +133,8 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
             <div className="exc-journal">
               <p className="field-label">Journal des ventes</p>
               <p className="exc-chiffres">
-                {ventes.length} pièce{ventes.length > 1 ? 's' : ''} · HT {formatAmount(total(ventes, 'montantHt'))} ·
-                TVA {formatAmount(total(ventes, 'montantTva'))} · TTC {formatAmount(total(ventes, 'montantTtc'))}
+                {plural(ventes.length, 'pièce')} · HT {formatAmount(total(ventes, 'montantHt'))} · TVA{' '}
+                {formatAmount(total(ventes, 'montantTva'))} · TTC {formatAmount(total(ventes, 'montantTtc'))}
               </p>
               <button type="button" className="btn-ghost" disabled={!ventes.length} onClick={exporterVentes}>
                 <FileSpreadsheet size={15} aria-hidden /> Télécharger
@@ -142,7 +143,7 @@ export function ExportComptable({ factures, onClose }: { factures: FactureCentra
             <div className="exc-journal">
               <p className="field-label">Journal des encaissements</p>
               <p className="exc-chiffres">
-                {encaissements.length} encaissement{encaissements.length > 1 ? 's' : ''} · {formatAmount(totalEncaisse)}
+                {plural(encaissements.length, 'encaissement')} · {formatAmount(totalEncaisse)}
               </p>
               <button
                 type="button"

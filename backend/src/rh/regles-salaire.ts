@@ -1,5 +1,5 @@
 import type { MotifSalaire, StatutSalaire } from '@prisma/client';
-import { toIsoDay } from '../shared/dates';
+import { formatDate, toIsoDay } from '../shared/dates';
 
 // Historique des salaires (revue RH validée 20/10/2026) — règles pures.
 
@@ -60,7 +60,7 @@ export function refusProposition(
     return "Le salaire d'entrée est déjà fixé : choisissez augmentation, promotion, fin d'essai ou correction.";
   if (p.motif !== 'embauche' && !aDejaUnSalaire) return "Aucun salaire validé : proposez d'abord le salaire d'entrée.";
   if (p.motif !== 'embauche' && p.dateEffet < dateEffetMin(jour)) {
-    return `Date d'effet trop ancienne : ${RETROACTIVITE_MAX_MOIS} mois en arrière au plus (à partir du ${dateEffetMin(jour).split('-').reverse().join('/')}).`;
+    return `Date d'effet trop ancienne : ${RETROACTIVITE_MAX_MOIS} mois en arrière au plus (à partir du ${formatDate(dateEffetMin(jour))}).`;
   }
   return null;
 }

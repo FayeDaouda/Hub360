@@ -115,7 +115,7 @@ export function OffreDossier({
         {offre?.relanceAFaire && <span className="pill pill--attention">Relance à faire</span>}
         {!!offre?.lignesAZero && (
           <span className="pill pill--attention" title="Un forfait « prix à fixer » laissé vide ?">
-            {offre.lignesAZero} ligne{offre.lignesAZero > 1 ? 's' : ''} à 0 FCFA
+            {plural(offre.lignesAZero, 'ligne')} à 0 FCFA
           </span>
         )}
       </div>
@@ -129,8 +129,7 @@ export function OffreDossier({
       ) : (
         <p className="offre-dossier-resume">
           {offre.reference && <strong>{offre.reference} · </strong>}
-          {offre.nbLignes} ligne{offre.nbLignes > 1 ? 's' : ''} ·{' '}
-          <strong>{formatCompactAmount(offre.montantTtc)} TTC</strong>
+          {plural(offre.nbLignes, 'ligne')} · <strong>{formatCompactAmount(offre.montantTtc)} TTC</strong>
           {offre.objet && <span className="cell-sub">{offre.objet}</span>}
           {offre.dateEnvoi && (
             <span className="cell-sub">

@@ -1,11 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { formatFcfa, signataireRequis } from '../contrats/domaine';
+import { signataireRequis } from '../contrats/domaine';
 import { montantTtcLignes } from '../devis/domaine';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { agitPourCeo } from '../commun/delegation-ceo';
 import { ReglagesService } from '../reglages/reglages.service';
+import { formatAmount } from '../shared/format';
 
 // Validation financière du CEO au-delà du seuil (décision du 12/10/2026) : le
 // CEO voit toutes les Finances, mais ne valide (envoi d'une offre, émission,
@@ -161,7 +162,7 @@ export class SeuilCeoService {
     if (signataireRequis(montantTtc, seuil) !== 'ceo') return;
     if (await agitPourCeo(this.prisma, { ...acteur, societeId })) return;
     throw new ForbiddenException(
-      `Affaire de ${formatFcfa(montantTtc)} TTC, au-delà du seuil de contresignature (${formatFcfa(seuil)}) : elle revient au CEO (ou à son délégataire).`,
+      `Affaire de ${formatAmount(montantTtc)} TTC, au-delà du seuil de contresignature (${formatAmount(seuil)}) : elle revient au CEO (ou à son délégataire).`,
     );
   }
 
@@ -169,7 +170,7 @@ export class SeuilCeoService {
     const seuil = await this.seuil(societeId);
     if (signataireRequis(montantTtc, seuil) === 'ceo') return;
     throw new ForbiddenException(
-      `Affaire de ${formatFcfa(montantTtc)} TTC, en deçà du seuil de contresignature (${formatFcfa(seuil)}) : la validation revient au CFO.`,
+      `Affaire de ${formatAmount(montantTtc)} TTC, en deçà du seuil de contresignature (${formatAmount(seuil)}) : la validation revient au CFO.`,
     );
   }
 }

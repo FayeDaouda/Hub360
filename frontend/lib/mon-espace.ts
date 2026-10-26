@@ -11,7 +11,7 @@ import type {
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
 import type { CorpsRemise } from './projets-ouverts';
-import { daysBetween } from './dates';
+import { daysBetween, formatDayMonth } from './dates';
 
 // RH · Mon espace (lot 5) — API NestJS, dossier du compte connecté :
 //   GET   …/mon-espace                  { dossier | null }
@@ -116,7 +116,6 @@ export function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
   }
   if (t.statut === 'a_venir') return `À venir · J-${daysBetween(aujourdhui, t.debut!)}`;
   if (t.statut === 'en_retard') return `En retard · ${daysBetween(t.echeance!, aujourdhui)} j`;
-  if (t.statut === 'prolongee' && t.prolongeeJusquau)
-    return `Prolongée jusqu’au ${t.prolongeeJusquau.slice(8, 10)}/${t.prolongeeJusquau.slice(5, 7)}`;
+  if (t.statut === 'prolongee' && t.prolongeeJusquau) return `Prolongée jusqu’au ${formatDayMonth(t.prolongeeJusquau)}`;
   return STATUT_TACHE[t.statut].libelle;
 }

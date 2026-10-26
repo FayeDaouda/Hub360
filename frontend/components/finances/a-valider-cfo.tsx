@@ -38,6 +38,7 @@ import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
 import { daysSince, formatDayMonth } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';
 type Element = {
@@ -318,9 +319,7 @@ export function AValiderCfo({
             <span className="avc-chiffre-libelle">En retard de paiement</span>
             <strong>{factures ? formatCompactAmount(retard) : '…'}</strong>
             {tresorerie.enRetard.length > 0 && (
-              <span className="cell-sub">
-                {tresorerie.enRetard.length} facture{tresorerie.enRetard.length > 1 ? 's' : ''}
-              </span>
+              <span className="cell-sub">{plural(tresorerie.enRetard.length, 'facture')}</span>
             )}
           </span>
         </div>

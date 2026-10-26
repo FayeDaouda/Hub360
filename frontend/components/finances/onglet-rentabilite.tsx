@@ -22,6 +22,7 @@ import {
   type Portefeuille,
 } from '@/lib/rentabilite';
 import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Tri = 'marge' | 'taux' | 'cout' | 'heures';
 const MOIS_DEBUT = '2026-09'; // premières feuilles de temps (rh/regles-temps.ts)
@@ -169,9 +170,9 @@ export function OngletRentabilite({ slug }: { slug: string }) {
             {donnees.blocages.feuilles.map((b) => (
               <li key={b.mois}>
                 <strong>
-                  {b.feuilles} feuille{b.feuilles > 1 ? 's' : ''} de temps de {formatMonthYear(b.mois)} à contrôler
+                  {plural(b.feuilles, 'feuille')} de temps de {formatMonthYear(b.mois)} à contrôler
                 </strong>{' '}
-                · bloque{b.feuilles > 1 ? 'nt' : ''} {b.projets} projet{b.projets > 1 ? 's' : ''}
+                · bloque{b.feuilles > 1 ? 'nt' : ''} {plural(b.projets, 'projet')}
                 <span className="cell-sub">
                   À faire par la RH{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, dans RH ›
                   Feuilles de temps.
@@ -180,11 +181,8 @@ export function OngletRentabilite({ slug }: { slug: string }) {
             ))}
             {donnees.blocages.salaires.salaries > 0 && (
               <li>
-                <strong>
-                  {donnees.blocages.salaires.salaries} salarié{donnees.blocages.salaires.salaries > 1 ? 's' : ''} sans
-                  salaire validé
-                </strong>{' '}
-                · bloque{donnees.blocages.salaires.salaries > 1 ? 'nt' : ''} {donnees.blocages.salaires.projets} projet
+                <strong>{plural(donnees.blocages.salaires.salaries, 'salarié')} sans salaire validé</strong> · bloque
+                {donnees.blocages.salaires.salaries > 1 ? 'nt' : ''} {donnees.blocages.salaires.projets} projet
                 {donnees.blocages.salaires.projets > 1 ? 's' : ''}
                 <span className="cell-sub">
                   La RH propose le salaire{donnees.blocages.rh.length ? ` (${donnees.blocages.rh.join(', ')})` : ''}, le
@@ -300,11 +298,9 @@ export function OngletRentabilite({ slug }: { slug: string }) {
                     <td data-label="Dépassements" className="rt-signaux">
                       <span className="cell-stack">
                         <span className={l.prolongations ? 'rt-signal' : 'cell-sub'}>
-                          {l.prolongations} prolongation{l.prolongations > 1 ? 's' : ''}
+                          {plural(l.prolongations, 'prolongation')}
                         </span>
-                        <span className={l.reprises ? 'rt-signal' : 'cell-sub'}>
-                          {l.reprises} reprise{l.reprises > 1 ? 's' : ''}
-                        </span>
+                        <span className={l.reprises ? 'rt-signal' : 'cell-sub'}>{plural(l.reprises, 'reprise')}</span>
                       </span>
                     </td>
                     <td data-label="Heures" className="num rt-heures">

@@ -11,10 +11,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { refFacture } from '../domaine/config';
 import { ventilationTva } from '../domaine/gardes';
-import { moisClos, moisFr } from './cloture';
+import { moisClos } from './cloture';
 import { FacturationService } from './facturation.service';
 import { agitPourCeo, avecDelegataire } from '../../commun/delegation-ceo';
 import { formatAmount } from '../../shared/format';
+import { formatMonthYear } from '../../shared/dates';
 
 const ROLE_CEO = 'CEO (transverse)';
 const ROLE_CFO = 'CFO';
@@ -244,7 +245,7 @@ export class ControleInterneService {
         const dernier = evenements.find((e) => e.mois === m) ?? null;
         return {
           mois: m,
-          periode: moisFr(m),
+          periode: formatMonthYear(m),
           clos: clos.has(m),
           le: dernier?.createdAt ?? null,
           par: dernier?.parId ? (noms.get(dernier.parId) ?? null) : null,
@@ -284,7 +285,7 @@ export class ControleInterneService {
     if (!/^\d{4}-\d{2}$/.test(mois)) throw new BadRequestException('Mois invalide (AAAA-MM).');
     if (mois >= moisDe(new Date())) throw new ConflictException('Seul un mois terminé se clôture.');
     if ((await moisClos(this.prisma, societeId)).has(mois))
-      throw new ConflictException(`${moisFr(mois)} est déjà clôturé.`);
+      throw new ConflictException(`${formatMonthYear(mois)} est déjà clôturé.`);
     await this.prisma.journalCloture.create({ data: { societeId, mois, action: 'cloture', parId: acteur.userId } });
     return this.clotures(societeId);
   }
@@ -295,14 +296,14 @@ export class ControleInterneService {
     if (motif.trim().length < 5)
       throw new BadRequestException('Le motif de la réouverture est obligatoire (5 caractères au moins).');
     if (!(await moisClos(this.prisma, societeId)).has(mois))
-      throw new ConflictException(`${moisFr(mois)} n'est pas clôturé.`);
+      throw new ConflictException(`${formatMonthYear(mois)} n'est pas clôturé.`);
     await this.prisma.journalCloture.create({
       data: { societeId, mois, action: 'reouverture', motif: motif.trim(), parId: acteur.userId },
     });
     await this.notifications.envoyer({
       societeId,
       type: 'cloture_a_faire',
-      titre: `${moisFr(mois)} rouvert par le CEO · ${motif.trim()} · à clôturer de nouveau`,
+      titre: `${formatMonthYear(mois)} rouvert par le CEO · ${motif.trim()} · à clôturer de nouveau`,
       destinataireIds: await this.notifications.titulairesRole(societeId, ROLE_CFO),
       parId: acteur.userId,
     });

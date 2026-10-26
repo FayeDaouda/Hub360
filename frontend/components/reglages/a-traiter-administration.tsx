@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getATraiterAdministration, type ElementAdministration } from '@/lib/roles';
+import { plural } from '@/lib/text';
 
 const VISIBLES = 6;
 const RANG_TON: Record<ElementAdministration['ton'], number> = { risque: 0, attention: 1, info: 2 };
@@ -67,11 +68,7 @@ export function ATraiterAdministration({
         <h2 className="dmd-titre">
           <AlarmClock size={17} aria-hidden /> À traiter aujourd’hui · {tries.length}
         </h2>
-        {urgents > 0 && (
-          <span className="pill pill--risque">
-            {urgents} urgent{urgents > 1 ? 's' : ''}
-          </span>
-        )}
+        {urgents > 0 && <span className="pill pill--risque">{plural(urgents, 'urgent')}</span>}
       </div>
       {tries.length === 0 ? (
         <p className="dmd-note">Rien en attente : comptes, accès et signalements sont à jour.</p>

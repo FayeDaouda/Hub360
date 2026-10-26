@@ -33,7 +33,15 @@ import { SuiviReportingService } from './suivi-reporting.service';
 import type { ArbitrerDecisionDto, SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
-import { addDays, formatDate, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
+import {
+  addDays,
+  formatDate,
+  formatDayMonth,
+  formatMonthYear,
+  formatNumericMonth,
+  toIsoDay,
+  todayIso,
+} from '../shared/dates';
 
 export type Acteur = {
   userId: string;
@@ -581,11 +589,10 @@ export class PilotageService {
       where: { id: a.userId },
       select: { prenom: true, nom: true },
     });
-    const [an, mm] = mois.split('-');
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'reporting_depose',
-      titre: `${type === 'rh' ? 'Reporting RH' : 'Reporting de la direction'} de ${new Date(Date.UTC(Number(an), Number(mm) - 1, 1)).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' })} déposé${auteur ? ` par ${auteur.prenom} ${auteur.nom}` : ''} · à lire`,
+      titre: `${type === 'rh' ? 'Reporting RH' : 'Reporting de la direction'} de ${formatMonthYear(mois)} déposé${auteur ? ` par ${auteur.prenom} ${auteur.nom}` : ''} · à lire`,
       destinataireIds: (await this.notifications.titulairesRole(a.societeId, REPORTINGS[type].destinataire)).filter(
         (id) => id !== a.userId,
       ),
@@ -768,7 +775,7 @@ export class PilotageService {
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'decision_assignee',
-      titre: `Décision à mettre en œuvre · ${court(d.texte)} · échéance ${d.echeance.slice(8, 10)}/${d.echeance.slice(5, 7)}`,
+      titre: `Décision à mettre en œuvre · ${court(d.texte)} · échéance ${formatDayMonth(d.echeance)}`,
       destinataireIds: d.responsableCollaborateurId
         ? await this.notifications.comptesDe([d.responsableCollaborateurId])
         : await this.notifications.titulairesRole(a.societeId, d.responsableRole!),
@@ -1156,7 +1163,7 @@ export class PilotageService {
             cle: `reporting:${type}:${mois}`,
             date: addDays(echeance, 1),
             instance: 'CODIR · reportings',
-            texte: `Alerte : ${titre} de ${mois.split('-').reverse().join('/')} non déposé au ${formatDate(echeance)}`,
+            texte: `Alerte : ${titre} de ${formatNumericMonth(mois)} non déposé au ${formatDate(echeance)}`,
             responsable: libelleRole(emetteur),
             responsableRole: emetteur,
             responsableCollaborateurId: null,

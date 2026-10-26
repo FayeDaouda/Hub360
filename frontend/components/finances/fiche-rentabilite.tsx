@@ -16,6 +16,7 @@ import {
   type FicheRentabilite,
 } from '@/lib/rentabilite';
 import { formatDate, formatMonthYear } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 
@@ -126,7 +127,7 @@ export function FicheRentabilitePanneau({
                 <div>
                   <dt>Signaux de dépassement</dt>
                   <dd>
-                    {f.prolongations} prolongation{f.prolongations > 1 ? 's' : ''} · {f.reprises} reprise
+                    {plural(f.prolongations, 'prolongation')} · {f.reprises} reprise
                     {f.reprises > 1 ? 's' : ''}
                   </dd>
                 </div>
@@ -203,9 +204,7 @@ export function FicheRentabilitePanneau({
 
             {montants && (
               <section className="fiche-crm-section">
-                <h3 className="fiche-crm-titre">
-                  Coût par salarié · {f.salaries} salarié{f.salaries > 1 ? 's' : ''}
-                </h3>
+                <h3 className="fiche-crm-titre">Coût par salarié · {plural(f.salaries, 'salarié')}</h3>
                 {salaries === null ? (
                   <>
                     <p className="dmd-note">Masqué par défaut : chaque affichage est inscrit au journal de la paie.</p>

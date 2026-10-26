@@ -19,7 +19,7 @@ import {
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
 import { chargerTachesAssignees, type TacheAssignee } from './taches-assignees';
-import { formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
+import { formatDate, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
 
 type Acteur = { userId: string; societeId: string };
 
@@ -176,8 +176,7 @@ export class TempsService {
     moisValide(mois, jour);
     if (mois >= moisDe(jour)) throw new ConflictException('Seul un mois clos peut être contrôlé.');
     const ouverture = controleOuvertLe(mois);
-    if (jour < ouverture)
-      throw new ConflictException(`Contrôle possible à partir du ${ouverture.split('-').reverse().join('/')}.`);
+    if (jour < ouverture) throw new ConflictException(`Contrôle possible à partir du ${formatDate(ouverture)}.`);
     const d = await this.prisma.dossierPersonnel.findUnique({ where: { id: dossierId }, include: INCLUDE_DOSSIER });
     if (!d) throw new NotFoundException('Dossier introuvable');
     if (!periodeComptee(mois, salarieDe(d), jour))

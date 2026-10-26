@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { doubleFacteurExige } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { daysSince, formatDayMonth, toIsoDay } from '../shared/dates';
+import { daysSince, formatDate, formatDayMonth, toIsoDay } from '../shared/dates';
 import { plural } from '../shared/text';
 
 export type ElementAdministration = {
@@ -185,7 +185,7 @@ export class AdministrationService {
         type: 'salarie_sans_compte',
         cle: `salarie-${d.id}`,
         titre: `Nouvel arrivant sans compte HUB · ${nomDe(d)}`,
-        detail: `${d.poste || 'poste non renseigné'} · entré le ${d.dateEntree.split('-').reverse().join('/')} · dossier RH ouvert, compte à créer`,
+        detail: `${d.poste || 'poste non renseigné'} · entré le ${formatDate(d.dateEntree)} · dossier RH ouvert, compte à créer`,
         ton: 'attention',
         le: d.createdAt.toISOString(),
       });

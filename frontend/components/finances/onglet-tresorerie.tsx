@@ -10,6 +10,7 @@ import { formatAmount, formatCompactAmount } from '@/lib/format';
 import { balanceAgee, echeancier, TRANCHES, type LigneBalance } from '@/lib/tresorerie';
 import type { FactureCentrale } from '@/lib/types';
 import { formatDayMonth, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 const nomFacture = (f: FactureCentrale) =>
   f.reference ?? (f.statut === 'brouillon' ? `${f.libelle || 'tranche'} (prévue)` : 'facture');
@@ -180,9 +181,7 @@ export function OngletTresorerie({
                           />
                           {l.client}
                         </button>
-                        <span className="cell-sub">
-                          {l.creances.length} facture{l.creances.length > 1 ? 's' : ''}
-                        </span>
+                        <span className="cell-sub">{plural(l.creances.length, 'facture')}</span>
                       </td>
                       {TRANCHES.map((t) => (
                         <td

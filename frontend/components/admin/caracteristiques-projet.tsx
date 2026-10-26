@@ -39,6 +39,7 @@ import {
   type Usage,
   type UsageNiveau,
 } from '@/lib/fiche-programme';
+import { plural } from '@/lib/text';
 
 type Props = {
   projet: Projet;
@@ -427,10 +428,7 @@ export function CaracteristiquesProjet({ projet, onModifier }: Props) {
 
             <div className="fp-commodites-tete">
               <span className="field-label">
-                F · Commodités{' '}
-                <span className="fiche-crm-aide">
-                  ({nbCommodites} cochée{nbCommodites > 1 ? 's' : ''})
-                </span>
+                F · Commodités <span className="fiche-crm-aide">({plural(nbCommodites, 'cochée')})</span>
               </span>
               <span className="fp-commodites-actions">
                 {projet.standing && (

@@ -62,6 +62,7 @@ import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
 import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { plural } from '@/lib/text';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -896,8 +897,8 @@ function FicheDossier({
               <div className="rh-paiement-demande" role="status">
                 <span>
                   <strong>Changement de moyen de paiement demandé</strong> le{' '}
-                  {dossier.paiementDemandeLe?.slice(0, 10).split('-').reverse().join('/')} :{' '}
-                  {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]} · {dossier.paiementDemandeCoordonnees}
+                  {formatDate(dossier.paiementDemandeLe, '')} : {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]}{' '}
+                  · {dossier.paiementDemandeCoordonnees}
                 </span>
                 {ecriture && (
                   <span className="dmd-actions">
@@ -1053,9 +1054,7 @@ function FicheDossier({
 
           {depart && (
             <>
-              <h3 className="rh-section">
-                Départ · {depart.taches.length} tâche{depart.taches.length > 1 ? 's' : ''} de projet à confier
-              </h3>
+              <h3 className="rh-section">Départ · {plural(depart.taches.length, 'tâche')} de projet à confier</h3>
               <p className="rh-note">
                 Le départ n’est enregistré qu’une fois chaque tâche confiée à un collègue de la société. Chaque nouveau
                 titulaire est prévenu ; les échéances ne bougent pas.

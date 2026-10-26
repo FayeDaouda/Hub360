@@ -35,7 +35,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
 import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
-import { todayIso } from '../../shared/dates';
+import { formatMonthYear, todayIso } from '../../shared/dates';
 
 // Facturation client — module admin-only (le contrôleur ne marque aucun
 // endpoint @EcritureCollaborateur, donc AccesProjetGuard rejette toute écriture
@@ -816,7 +816,7 @@ export class FacturationService {
     if (m.factureCeMois) {
       throw new ConflictException('La mensualité de ce mois est déjà facturée.');
     }
-    const mois = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const mois = formatMonthYear(todayIso());
     await this.prisma.facture.create({
       data: {
         societeId,

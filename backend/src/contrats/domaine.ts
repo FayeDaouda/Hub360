@@ -39,10 +39,6 @@ export function modeContrat(montantOffreHt: number, seuilSurMesureHt: number | n
   return seuilSurMesureHt != null && montantOffreHt >= seuilSurMesureHt ? 'sur_mesure' : 'modele';
 }
 
-export function formatFcfa(montant: number): string {
-  return `${new Intl.NumberFormat('fr-FR').format(Math.round(montant))} FCFA`;
-}
-
 export type Signataire = 'ceo' | 'dplg';
 
 // Seuil de contresignature (Réglages · Règles et délais) : au-delà de ce

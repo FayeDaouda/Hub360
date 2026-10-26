@@ -5,7 +5,7 @@ import { refDevis, relanceAFaire, JOURS_RELANCE_OFFRE } from '../devis/domaine';
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
-import { moisClos, moisFr } from '../projets/facturation/cloture';
+import { moisClos } from '../projets/facturation/cloture';
 import {
   DECISION_EN_VIGUEUR,
   echeanceReporting,
@@ -23,7 +23,7 @@ import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
 import { runAsSystem } from '../tenancy/tenant-context';
-import { addDays, daysBetween, daysSince, formatDayMonth, toIsoDay, todayIso } from '../shared/dates';
+import { addDays, daysBetween, daysSince, formatDayMonth, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
 import { formatAmount } from '../shared/format';
 import { plural } from '../shared/text';
 
@@ -471,10 +471,10 @@ export class RappelsService implements OnApplicationBootstrap {
               type: r.cible === 'emetteur' ? 'reporting_a_deposer' : 'reporting_en_retard',
               titre:
                 r.cible === 'destinataire'
-                  ? `${titre} de ${moisFr(m)} pas encore déposé (dû le ${echeance}) · l’émetteur est relancé chaque semaine`
+                  ? `${titre} de ${formatMonthYear(m)} pas encore déposé (dû le ${echeance}) · l’émetteur est relancé chaque semaine`
                   : r.nature === 'avant'
-                    ? `${titre} de ${moisFr(m)} à déposer au ${court(destinataire)} avant le ${echeance} · prérempli par le HUB, à compléter`
-                    : `${titre} de ${moisFr(m)} en retard (dû le ${echeance}) · à déposer au ${court(destinataire)}`,
+                    ? `${titre} de ${formatMonthYear(m)} à déposer au ${court(destinataire)} avant le ${echeance} · prérempli par le HUB, à compléter`
+                    : `${titre} de ${formatMonthYear(m)} en retard (dû le ${echeance}) · à déposer au ${court(destinataire)}`,
               destinataireIds:
                 r.cible === 'emetteur' ? emetteurs : await this.notifications.titulairesRole(societeId, destinataire),
             });
@@ -696,7 +696,7 @@ export class RappelsService implements OnApplicationBootstrap {
         cle: `cloture:${societeId}:${precedent}:${Math.floor((j - depuis) / 7)}`,
         societeId,
         type: 'cloture_a_faire',
-        titre: `Clôture de ${moisFr(precedent)} à faire · paiements et factures du mois à figer`,
+        titre: `Clôture de ${formatMonthYear(precedent)} à faire · paiements et factures du mois à figer`,
         destinataireIds: await this.notifications.titulairesRole(societeId, 'CFO'),
       });
     }

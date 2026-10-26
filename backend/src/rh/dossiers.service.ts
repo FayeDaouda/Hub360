@@ -4,7 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { salaireAu } from './regles-salaire';
 import { DossierPersonnelDto, PieceDto, ReaffectationDto } from './dto';
-import { todayIso } from '../shared/dates';
+import { formatNumericMonth, todayIso } from '../shared/dates';
 
 // Pièces attendues dans tout dossier (ordre d'affichage).
 export const PIECES_DOSSIER: TypePieceDossier[] = [
@@ -414,7 +414,7 @@ export class DossiersPersonnelService {
     await this.notifications.envoyer({
       societeId: d.societeId,
       type: 'bulletin_depose',
-      titre: `Bulletin de paie disponible · ${mois.split('-').reverse().join('/')}`,
+      titre: `Bulletin de paie disponible · ${formatNumericMonth(mois)}`,
       destinataireIds: [await this.notifications.compteDuDossier(id)],
       parId: acteurId,
     });

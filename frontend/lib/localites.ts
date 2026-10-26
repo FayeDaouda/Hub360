@@ -1,5 +1,6 @@
 import type { Localite, NouvelleLocalitePayload } from './types';
 import { apiSociete } from './client-api';
+import { stripAccents } from './text';
 
 // Référentiel des localités — API NestJS (societe_admin ou CIO) :
 //   GET   /api/societes/:slug/localites
@@ -26,11 +27,7 @@ export function modifierLocalite(
 // Minuscules sans accents — la recherche doit trouver « Sacré-Cœur » en
 // tapant « sacre coeur » et « Yène » en tapant « yene ».
 export function normaliserRecherche(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/œ/gi, 'oe')
-    .toLowerCase();
+  return stripAccents(s).replace(/œ/gi, 'oe').toLowerCase();
 }
 
 // Proposition de code pour une nouvelle localité : les 3 premières lettres

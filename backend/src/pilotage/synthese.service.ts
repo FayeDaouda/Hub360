@@ -5,14 +5,14 @@ import { montantHtLignes } from '../devis/domaine';
 import { RentabiliteService } from '../finances/rentabilite/rentabilite.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { moisClos, moisFr } from '../projets/facturation/cloture';
+import { moisClos } from '../projets/facturation/cloture';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { bornesMois } from '../rh/regles-temps';
 import { DECISION_EN_VIGUEUR, statutDecision } from './pilotage-regles';
 import { PilotageService } from './pilotage.service';
 import { ReportingRhService } from './reporting-rh.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { addDays, formatDate, todayIso } from '../shared/dates';
+import { addDays, formatDate, formatMonthYear, todayIso } from '../shared/dates';
 import { formatAmount } from '../shared/format';
 import { plural } from '../shared/text';
 
@@ -88,7 +88,7 @@ export class SyntheseService {
     await this.notifications.envoyer({
       societeId,
       type: 'synthese_mensuelle',
-      titre: `Synthèse de ${moisFr(mois)} ${premiere ? 'disponible' : 'mise à jour (mois clôturé de nouveau)'} · facturation, trésorerie, marge, équipe, production, commercial`,
+      titre: `Synthèse de ${formatMonthYear(mois)} ${premiere ? 'disponible' : 'mise à jour (mois clôturé de nouveau)'} · facturation, trésorerie, marge, équipe, production, commercial`,
       destinataireIds: [...ceo, ...cfo],
     });
   }
@@ -162,7 +162,7 @@ export class SyntheseService {
     const facturees = emises.filter((f) => !f.estAvoir);
     const avoirs = emises.filter((f) => f.estAvoir);
     sections.push({
-      titre: `Facturation · ${moisFr(mois)}`,
+      titre: `Facturation · ${formatMonthYear(mois)}`,
       lignes: [
         {
           libelle: 'Facturé',
@@ -337,7 +337,7 @@ export class SyntheseService {
       peutCommenter: a.role === ROLE_CFO,
       syntheses: syntheses.map((s) => ({
         mois: s.mois,
-        libelle: moisFr(s.mois),
+        libelle: formatMonthYear(s.mois),
         genereLe: s.genereLe.toISOString(),
         sections: s.contenu as unknown as SectionSynthese[],
         commentaire: s.commentaire

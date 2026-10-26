@@ -25,7 +25,7 @@ import {
   ROLE_CTO,
   verifierCircuit,
 } from './validation';
-import { toIsoDay, todayIso } from '../../shared/dates';
+import { formatDate, toIsoDay, todayIso } from '../../shared/dates';
 import { plural } from '../../shared/text';
 
 // Délai de relance : 3 jours ouvrés après le dépôt, puis après chaque relance.
@@ -527,7 +527,7 @@ export class TachesProjetService {
       .sort()
       .at(-1);
     if (plancher && jusquau <= plancher)
-      throw new BadRequestException(`La nouvelle date doit dépasser le ${plancher.split('-').reverse().join('/')}.`);
+      throw new BadRequestException(`La nouvelle date doit dépasser le ${formatDate(plancher)}.`);
 
     await this.prisma.$transaction([
       this.prisma.prolongationTache.create({
@@ -538,7 +538,7 @@ export class TachesProjetService {
           tacheId: tache.id,
           type: 'prolongation',
           parId: acteur.userId,
-          detail: `Prolongation demandée jusqu’au ${jusquau.split('-').reverse().join('/')} : ${motif.trim()}`,
+          detail: `Prolongation demandée jusqu’au ${formatDate(jusquau)} : ${motif.trim()}`,
         },
       }),
     ]);
@@ -593,7 +593,7 @@ export class TachesProjetService {
             : 'Le retard est qualifié par le chef de team ou l’Architecte DPLG, jamais sur sa propre tâche.',
       );
     }
-    const date = demande.jusquau.split('-').reverse().join('/');
+    const date = formatDate(demande.jusquau);
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.prolongationTache.updateMany({
         where: { id: demande.id, decision: null },
@@ -762,7 +762,7 @@ export class TachesProjetService {
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId) ?? new Set<string>();
     const possibleLe = relancePossibleLe(remise.creeLe, relance?.creeLe ?? null, feries);
     if (todayIso() < possibleLe) {
-      throw new ConflictException(`Relance possible à partir du ${possibleLe.split('-').reverse().join('/')}.`);
+      throw new ConflictException(`Relance possible à partir du ${formatDate(possibleLe)}.`);
     }
     const jours = joursOuvresApres(toIsoDay(remise.creeLe), todayIso(), feries);
     const vNN = `v${String(tache.version).padStart(2, '0')}`;

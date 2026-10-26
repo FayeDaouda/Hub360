@@ -84,12 +84,10 @@ export function Clotures({ slug, estCeo, onClose }: { slug: string; estCeo: bool
                   )}
                 </div>
                 <p className="clo-chiffres">
-                  {m.chiffres.factures} facture{m.chiffres.factures > 1 ? 's' : ''} ·{' '}
-                  {formatAmount(m.chiffres.factureTtc)} TTC
+                  {plural(m.chiffres.factures, 'facture')} · {formatAmount(m.chiffres.factureTtc)} TTC
                   {m.chiffres.avoirs > 0 &&
                     ` · ${plural(m.chiffres.avoirs, 'avoir')} (${formatAmount(m.chiffres.avoirsTtc)})`}{' '}
-                  · {m.chiffres.paiements} paiement{m.chiffres.paiements > 1 ? 's' : ''} ·{' '}
-                  {formatAmount(m.chiffres.encaisse)} encaissés
+                  · {plural(m.chiffres.paiements, 'paiement')} · {formatAmount(m.chiffres.encaisse)} encaissés
                 </p>
                 {!m.clos && m.derniereReouverture && (
                   <p className="cell-sub">Motif de la réouverture : {m.derniereReouverture}</p>

@@ -69,6 +69,11 @@ export function formatMonthYear(monthOrDay: string): string {
   return moisAnnee.format(new Date(`${monthOrDay.slice(0, 7)}-15T12:00:00Z`));
 }
 
+/** « 10/2026 » à partir d'un mois (AAAA-MM). */
+export function formatNumericMonth(month: string): string {
+  return month.split('-').reverse().join('/');
+}
+
 /** « 24 oct. », au fuseau de l'appareil (affichage d'un instant). */
 export function formatDayShortMonth(iso: string): string {
   return jourMoisCourt.format(new Date(iso));

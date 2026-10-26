@@ -11,6 +11,7 @@ import {
 } from '@/lib/finances';
 import { formatAmount } from '@/lib/format';
 import type { Devis, FactureCentrale, ProduitService } from '@/lib/types';
+import { plural } from '@/lib/text';
 
 type Props = { devis: Devis[]; factures: FactureCentrale[]; catalogue: ProduitService[] };
 
@@ -118,7 +119,7 @@ function Anneau({ tranches, total }: { tranches: Tranche[]; total: Tranche }) {
       </svg>
       <p>
         <span>
-          {total.nombre} facture{total.nombre > 1 ? 's' : ''} ouverte{total.nombre > 1 ? 's' : ''}
+          {plural(total.nombre, 'facture')} ouverte{total.nombre > 1 ? 's' : ''}
         </span>
         <strong>{formatAmount(total.montant)}</strong>
       </p>

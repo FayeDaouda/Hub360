@@ -8,6 +8,7 @@ import {
   formatDayShortMonth,
   formatLongDate,
   formatMonthYear,
+  formatNumericMonth,
   toIsoDay,
   todayIso,
 } from './dates';
@@ -51,6 +52,12 @@ describe('formatMonthYear', () => {
 
   it('accepte aussi un jour ISO', () => {
     expect(formatMonthYear('2026-10-24')).toBe('octobre 2026');
+  });
+});
+
+describe('formatNumericMonth', () => {
+  it('« 10/2026 », comme les anciennes copies', () => {
+    expect(formatNumericMonth('2026-10')).toBe('2026-10'.split('-').reverse().join('/'));
   });
 });
 

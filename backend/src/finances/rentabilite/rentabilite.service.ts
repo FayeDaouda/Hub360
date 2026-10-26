@@ -18,7 +18,7 @@ import {
   type LigneParametre,
   type Statut,
 } from './regles-rentabilite';
-import { toIsoDay, todayIso } from '../../shared/dates';
+import { formatMonthYear, toIsoDay, todayIso } from '../../shared/dates';
 
 type Acteur = { userId: string; societeId: string; role: string };
 type Acces = 'montants' | 'taux';
@@ -292,7 +292,7 @@ export class RentabiliteService {
           ((!!p.ouvertLe && p.ouvertLe.slice(0, 7) < MOIS_DEBUT_FEUILLES) || facturesAvantSuivi.has(p.id))
         ) {
           raisons.push(
-            `projet commencé avant le suivi des heures (${moisFrancais(MOIS_DEBUT_FEUILLES)}) : coût antérieur inconnu`,
+            `projet commencé avant le suivi des heures (${formatMonthYear(MOIS_DEBUT_FEUILLES)}) : coût antérieur inconnu`,
           );
         }
         if (c.sansSalaire.size) raisons.push(`${c.sansSalaire.size} salarié(s) sans salaire validé`);
@@ -535,19 +535,3 @@ export class RentabiliteService {
     return this.parametres(a);
   }
 }
-
-const MOIS_FR = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-];
-const moisFrancais = (m: string) => `${MOIS_FR[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;

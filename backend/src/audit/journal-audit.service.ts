@@ -2,13 +2,12 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import type { ActionPaie, EvenementCompteType, NiveauPermission } from '@prisma/client';
 import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
-import { moisFr } from '../projets/facturation/cloture';
 import { formaterNumero } from '../projets/facturation/numerotation';
 import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.service';
 import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
 import { PrismaService } from '../prisma/prisma.service';
-import { toIsoDay } from '../shared/dates';
+import { formatDate, formatMonthYear, formatNumericMonth, toIsoDay } from '../shared/dates';
 import { formatAmount } from '../shared/format';
 
 type Acteur = { userId: string; societeId: string; role: string };
@@ -206,7 +205,7 @@ export class JournalAuditService {
       }),
     ]);
     const nomReporting = (r: { type: 'direction' | 'rh'; mois: string }) =>
-      `${titreReporting(r.type)} · ${moisFr(r.mois)}`;
+      `${titreReporting(r.type)} · ${formatMonthYear(r.mois)}`;
     // Paramètres de rentabilité (lot 7) : valeur, date d'effet, motif — jamais un salaire.
     const [parametresRentabilite, numerotations, profils] = await Promise.all([
       this.prisma.parametreRentabilite.findMany({ where: { societeId: S, createdAt: dans } }),
@@ -270,7 +269,7 @@ export class JournalAuditService {
         ordre: p.ordreJournal,
         categorie: 'finances' as const,
         action: 'Paiement enregistré',
-        detail: `${formatAmount(p.montant.toNumber())} · ${refFacture(p.facture) ?? 'facture sans numéro'} · versé le ${p.date.split('-').reverse().join('/')}`,
+        detail: `${formatAmount(p.montant.toNumber())} · ${refFacture(p.facture) ?? 'facture sans numéro'} · versé le ${formatDate(p.date)}`,
         parId: p.creeParId,
       })),
       ...supprimes.map((p) => ({
@@ -361,7 +360,7 @@ export class JournalAuditService {
           ordre: r.ordreJournal,
           categorie: 'finances' as const,
           action: 'Paramètre de rentabilité modifié',
-          detail: `${def?.libelle ?? r.cle} : ${r.valeur === null ? 'désactivé' : `${r.valeur} ${def?.unite ?? ''}`.trim()} dès ${moisFr(r.dateEffet.slice(0, 7))} · motif : ${r.motif}`,
+          detail: `${def?.libelle ?? r.cle} : ${r.valeur === null ? 'désactivé' : `${r.valeur} ${def?.unite ?? ''}`.trim()} dès ${formatMonthYear(r.dateEffet.slice(0, 7))} · motif : ${r.motif}`,
           parId: r.parId,
         };
       }),
@@ -405,7 +404,7 @@ export class JournalAuditService {
         ordre: c.ordreJournal,
         categorie: 'finances' as const,
         action: c.action === 'cloture' ? 'Mois clôturé' : 'Mois rouvert',
-        detail: [moisFr(c.mois), c.motif && `motif : ${c.motif}`].filter(Boolean).join(' · '),
+        detail: [formatMonthYear(c.mois), c.motif && `motif : ${c.motif}`].filter(Boolean).join(' · '),
         parId: c.parId,
       })),
       ...reglages.map((r) => ({
@@ -435,7 +434,7 @@ export class JournalAuditService {
         detail: [
           `${p.dossier.prenom} ${p.dossier.nom}`.trim(),
           p.dossier.matricule,
-          p.mois && `bulletin ${p.mois.split('-').reverse().join('/')}`,
+          p.mois && `bulletin ${formatNumericMonth(p.mois)}`,
         ]
           .filter(Boolean)
           .join(' · '),
