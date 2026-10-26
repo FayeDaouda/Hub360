@@ -19,7 +19,7 @@ echo "▶ format — Prettier"
 echo "▶ backend — build + tests"
 ( cd "$root/backend" && npm run build && npm test )
 
-echo "▶ frontend — lint + types"
-( cd "$root/frontend" && npm run lint && npm run typecheck )
+echo "▶ frontend — lint + types + tests"
+( cd "$root/frontend" && npm run lint && npm run typecheck && npm test )
 
 echo "✓ tout est vert — push autorisé"

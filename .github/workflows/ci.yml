@@ -62,7 +62,7 @@ jobs:
           E2E_DATABASE_URL: postgresql://hub:hub@localhost:5432/hub_e2e?schema=public
 
   frontend:
-    name: Frontend — lint + types + build
+    name: Frontend — lint + types + tests + build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -77,4 +77,5 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm test
       - run: npm run build
