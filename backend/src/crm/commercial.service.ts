@@ -5,6 +5,7 @@ import { montantHtLignes } from '../devis/domaine';
 import { PrismaService } from '../prisma/prisma.service';
 import { aTraiterCommercial, performanceCommerciale, totauxPipeline, type DossierCommercial } from './commercial';
 import { CommissionsService } from './commissions.service';
+import { toIsoDay } from '../shared/dates';
 
 type Acteur = { societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
@@ -14,8 +15,6 @@ export const voitMontantsPipeline = (a: Acteur) =>
   a.role === 'societe_admin' ||
   aLaPermission(a.permissions, 'crm_totaux', 'lecture') ||
   aLaPermission(a.permissions, 'finances_devis', 'lecture');
-
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 
 // Vue commerciale (revue COO, 22/10/2026) : « À traiter aujourd'hui » du CRM,
 // performance de l'année par apporteur et, avec le droit, totaux HT par étape.
@@ -28,7 +27,7 @@ export class CommercialService {
 
   async vue(a: Acteur, annee: string) {
     const maintenant = new Date();
-    const jour = jourIso(maintenant);
+    const jour = toIsoDay(maintenant);
     const montants = voitMontantsPipeline(a);
     // Commissions à jour des derniers encaissements avant de les additionner.
     if (montants) await this.commissions.synchroniser(a.societeId);
@@ -141,11 +140,11 @@ export class CommercialService {
         offre: d.offres[0]
           ? {
               statut: d.offres[0].statut,
-              envoyeeLe: d.offres[0].dateEnvoi ? jourIso(d.offres[0].dateEnvoi) : null,
+              envoyeeLe: d.offres[0].dateEnvoi ? toIsoDay(d.offres[0].dateEnvoi) : null,
               valideJusquau: d.offres[0].dateValidite,
             }
           : null,
-        signeLe: d.transitions[0] ? jourIso(d.transitions[0].creeLe) : null,
+        signeLe: d.transitions[0] ? toIsoDay(d.transitions[0].creeLe) : null,
         montantHt: montants && offreMontant ? montantHtLignes(offreMontant.lignes) : null,
         commissions: {
           versees: montants

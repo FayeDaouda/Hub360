@@ -14,7 +14,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
   VALIDITE_OFFRE_JOURS,
-  ajouterJours,
   alerteAvenant,
   messageIntroductionParDefaut,
   refDevis,
@@ -22,8 +21,8 @@ import {
   statutDevisEffectif,
 } from './domaine';
 import { CreerDevisDto, LigneDevisDto, PatchDevisDto } from './dto';
-
-const jourCourant = () => new Date().toISOString().slice(0, 10);
+import { addDays, todayIso } from '../shared/dates';
+import { plural } from '../shared/text';
 
 // Ce que le devis porte, pour appliquer le catalogue (cf. contexteLignes).
 type ContexteLignes = {
@@ -290,7 +289,7 @@ export class DevisService {
       where: { devisId: offre.id, produitService: { famille: 'CO' } },
       select: { produitService: { select: { code: true } } },
     });
-    return this.emettre(societeId, offre, ajouterJours(jourCourant(), VALIDITE_OFFRE_JOURS), async (tx) => {
+    return this.emettre(societeId, offre, addDays(todayIso(), VALIDITE_OFFRE_JOURS), async (tx) => {
       await dansTransaction(tx);
       if (ligneCo?.produitService?.code) {
         await tx.dossierCrm.update({
@@ -308,7 +307,7 @@ export class DevisService {
   // nouveau est renvoyé à l'appelant pour le cas où l'email ne part pas.
   async relancer(societeId: string, id: string) {
     const devis = await this.charger(societeId, id);
-    if (statutDevisEffectif(devis, jourCourant()) !== 'envoye') {
+    if (statutDevisEffectif(devis, todayIso()) !== 'envoye') {
       throw new ConflictException('Seul un devis envoyé, non expiré et sans réponse se relance.');
     }
     const { clair, hash } = genererJeton();
@@ -348,7 +347,7 @@ export class DevisService {
 
   async repondrePublic(token: string, reponse: 'accepte' | 'refuse') {
     const devis = await this.chargerParToken(token);
-    const aujourdhui = jourCourant();
+    const aujourdhui = todayIso();
     if (statutDevisEffectif(devis, aujourdhui) === 'expire') {
       throw new ConflictException('Ce devis a expiré — contactez-nous pour en obtenir un nouveau.');
     }
@@ -410,7 +409,7 @@ export class DevisService {
       {
         projetId: devis.projetId,
         type,
-        libelle: `${refDevis(devis)} converti — ${devis.lignes.length} ligne${devis.lignes.length > 1 ? 's' : ''}`,
+        libelle: `${refDevis(devis)} converti — ${plural(devis.lignes.length, 'ligne')}`,
         montantHt,
         tauxTva: tauxTvaEffectif,
         devisOrigineId: devis.id,
@@ -852,7 +851,7 @@ export class DevisService {
       numero: d.numero,
       reference: refDevis(d),
       statut: d.statut,
-      statutEffectif: statutDevisEffectif(d, jourCourant()),
+      statutEffectif: statutDevisEffectif(d, todayIso()),
       objet: d.objet,
       client: versClient(d.client),
       projetId: d.projetId,
@@ -863,14 +862,14 @@ export class DevisService {
       dateReponse: d.dateReponse,
       relancesEnvoyees: d.relancesEnvoyees,
       derniereRelanceLe: d.derniereRelanceLe,
-      relanceAFaire: relanceAFaire(d, jourCourant()),
+      relanceAFaire: relanceAFaire(d, todayIso()),
       // Avenant (TS) envoyé et toujours pas accepté au-delà du délai réglé.
       alerteAvenant:
         seuilAvenant == null
           ? null
           : alerteAvenant(
               { ...d, familles: d.lignes.map((l) => l.produitService?.famille ?? null) },
-              jourCourant(),
+              todayIso(),
               seuilAvenant,
             ),
       lignes,
@@ -920,7 +919,7 @@ export class DevisService {
   // client (déjà les siennes), jamais la référence produit du catalogue.
   private formaterPublic(d: DevisAvecDetailPublic) {
     const { lignes, montantHt, montantTva, montantTtc } = this.calculerLignes(d.lignes);
-    const statutEffectif = statutDevisEffectif(d, jourCourant());
+    const statutEffectif = statutDevisEffectif(d, todayIso());
     return {
       reference: refDevis(d),
       statutEffectif,
@@ -955,7 +954,7 @@ export class DevisService {
           id,
           designation,
           // « 250 m² × 2 planches » : la quantité d'une ligne CO se lit mal seule.
-          detail: surfaceM2 && planches ? `${surfaceM2} m² × ${planches} planche${planches > 1 ? 's' : ''}` : null,
+          detail: surfaceM2 && planches ? `${surfaceM2} m² × ${plural(planches, 'planche')}` : null,
           quantite,
           prixUnitaire,
           tauxTva,

@@ -25,6 +25,7 @@
 
 import type { ActionCrm } from './cycle';
 import { ChampsFiche, TOTAL_CHAMPS_FICHE, champsManquants } from './fiche';
+import { plural } from '../shared/text';
 
 export type EvenementCrm =
   | 'dossier_soumis'
@@ -94,7 +95,7 @@ export function titreNotificationCrm(evenement: EvenementCrm, cible: CibleCrm, c
     case 'contrat_signe': {
       const n = ctx.facturesPreparees ?? 0;
       if (cible === 'daf' && n > 0) {
-        return `${dossier} — contrat signé, ${n} facture${n > 1 ? 's' : ''} brouillon à émettre`;
+        return `${dossier} — contrat signé, ${plural(n, 'facture')} brouillon à émettre`;
       }
       return `${dossier} — contrat signé, projet lancé`;
     }

@@ -13,6 +13,7 @@ import { ouDossierDuCompte } from './mon-compte';
 import { DecisionN1Dto, DeposerAbsenceDto, DeposerRemboursementDto } from './demandes.dto';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 import { chevauche, joursOuvrables, PART_CELLULE_ABSENTE_ALERTE, soldeConges } from './regles-conges';
+import { addDays, formatDayMonth, todayIso } from '../shared/dates';
 
 // RH · Demandes (lot 2) — absences (N+1 puis RH) et remboursements santé
 // (soumise → transmise → remboursée/rejetée). Hypothèses de travail : cf.
@@ -42,8 +43,6 @@ const ROLES_N1 = [...new Set([ROLE_N1_DIRECTION, ...Object.values(N1_DES_ROLES)]
 
 type Acteur = { userId: string; societeId: string; role: string };
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
-
 // Travail dû pendant l'absence (phase 1, 14/10/2026) : tâches de projet du
 // gabarit assignées au salarié — avant, blocs des anciennes checklists.
 type Livrable = {
@@ -64,7 +63,6 @@ const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = {
   OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }],
 };
 const COMPTE_DOSSIER = { utilisateurId: true, collaborateur: { select: { utilisateurId: true } } } as const;
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const montant = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 
 @Injectable()
@@ -117,7 +115,7 @@ export class DemandesService {
     ]);
     const plafond = await this.reglages.regle<number>(dossier.societeId, 'plafond_report_conges');
     return {
-      solde: soldeConges(dossier.dateEntree, absences, aujourdhui(), plafond),
+      solde: soldeConges(dossier.dateEntree, absences, todayIso(), plafond),
       absences: absences.map(versAbsence),
       remboursements,
     };
@@ -632,7 +630,7 @@ export class DemandesService {
     await this.notifications.envoyer({
       societeId: s.societeId,
       type: 'remboursement_traite',
-      titre: `Votre remboursement du ${jjmm(r.dateSoins)} : ${etat}`,
+      titre: `Votre remboursement du ${formatDayMonth(r.dateSoins)} : ${etat}`,
       destinataireIds: [s.compte],
       parId: a.userId,
     });
@@ -670,7 +668,7 @@ export class DemandesService {
   // N+1 (fiche d'équipe ou rôle), RH, ou le salarié lui-même.
   private async signalerAbsence(d: DemandeAbsence, parId: string, vers: 'n1' | 'rh' | 'salarie', message: string) {
     const s = await this.salarieDe(d.dossierId);
-    const periode = `${jjmm(d.dateDebut)} → ${jjmm(d.dateFin)}`;
+    const periode = `${formatDayMonth(d.dateDebut)} → ${formatDayMonth(d.dateFin)}`;
     let type: NotificationType = 'absence_a_decider';
     let titre = `${message} · ${s.nom} · ${periode}`;
     let ids: (string | null)[] = [];
@@ -709,14 +707,9 @@ export class DemandesService {
   // le CEO voient « Absent » (revue RH validée, 20/10/2026).
   async calendrierCellule(id: string, avecMotif: boolean) {
     const d = await this.absence(id);
-    const decaler = (iso: string, n: number) => {
-      const x = new Date(`${iso}T00:00:00Z`);
-      x.setUTCDate(x.getUTCDate() + n);
-      return x.toISOString().slice(0, 10);
-    };
     const fenetre = {
-      debut: decaler(d.dateDebut, -FENETRE_CALENDRIER_J),
-      fin: decaler(d.dateFin, FENETRE_CALENDRIER_J),
+      debut: addDays(d.dateDebut, -FENETRE_CALENDRIER_J),
+      fin: addDays(d.dateFin, FENETRE_CALENDRIER_J),
     };
     const periode = { debut: d.dateDebut, fin: d.dateFin };
     const collab = await this.collaborateurDe(d.dossierId);

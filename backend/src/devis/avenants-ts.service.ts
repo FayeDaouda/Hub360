@@ -16,6 +16,7 @@ import { droitTs, ROLE_CFO, ROLE_CTO } from '../projets/gabarit/validation';
 import type { AjouterTsDto } from '../projets/gabarit/dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
+import { todayIso } from '../shared/dates';
 
 const PRODUIT_TS = { mineure: 'TS-MIN', majeure: 'TS-MAJ' } as const;
 const OBJET_AVENANT = 'Avenant · travaux supplémentaires';
@@ -43,7 +44,7 @@ export class AvenantsTsService {
     const { ligne } = await this.chiffrer(societeId, projetId, dto);
     const montantHt = Math.round(ligne.quantite * ligne.prixUnitaire);
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_ts_cto_ht');
-    const ctx = await contexteDecision(this.prisma, societeId, new Date().toISOString().slice(0, 10));
+    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
     const droit = droitTs({ role: acteur.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }, montantHt, seuil);
     if (!droit) throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     if (droit === 'ajouter') return this.creer(societeId, acteur, projetId, dto);

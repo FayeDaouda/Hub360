@@ -12,7 +12,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from '../rh/temps.service';
 import { bornesMois, feuilleDuMois, moisDe, moisEntre, MOIS_DEBUT_FEUILLES, type Salarie } from '../rh/regles-temps';
 import { partATemps } from '../equipe/equipes-regles';
-import { ajouterJours, statutDevisEffectif } from '../devis/domaine';
+import { statutDevisEffectif } from '../devis/domaine';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import {
   DECISION_EN_VIGUEUR,
@@ -33,6 +33,7 @@ import { SuiviReportingService } from './suivi-reporting.service';
 import type { ArbitrerDecisionDto, SaisirDecisionDto } from './dto';
 import { derniersMois, serieNouveaux, seriesTaches, type Point } from './tendances';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
+import { addDays, formatDate, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
 
 export type Acteur = {
   userId: string;
@@ -58,15 +59,8 @@ const ROLES_RESPONSABLES = ['Dir. GC', 'COO', 'CFO', 'CEO (transverse)', 'CTO (t
 export const libelleRole = (role: string) =>
   role === 'Dir. GC' ? 'Direction GC' : role.replace(/\s*\(transverse\)$/, '');
 
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
-const aujourdhui = () => jourIso(new Date());
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
-const dateFr = (iso: string) => iso.split('-').reverse().join('/');
 const SU = ['SU1', 'SU2', 'SU3'];
-// « 2026-09 » → « septembre 2026 ».
-export const moisLong = (mois: string) =>
-  new Date(`${mois}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-
 // Décision inscrite par le HUB, telle que dérivée de sa source.
 type DecisionHub = {
   cle: string;
@@ -97,7 +91,7 @@ export class PilotageService {
   ) {}
 
   async vue(a: Acteur) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     await this.synchroniserRegistre(a.societeId, jour);
     const feuilles = await this.feuillesControlees(a.societeId, jour);
     const [indicateurs, reportings, registre, chiffres, tendances] = await Promise.all([
@@ -109,7 +103,7 @@ export class PilotageService {
     ]);
     const suivis = indicateurs.filter((i) => i.evaluation !== 'sans_donnee');
     return {
-      mois: moisLong(moisDe(jour)),
+      mois: formatMonthYear(moisDe(jour)),
       tuiles: {
         horsObjectif: indicateurs.filter((i) => i.evaluation === 'hors_objectif').length,
         suivis: suivis.length,
@@ -152,7 +146,7 @@ export class PilotageService {
       mois,
       taches.map((t) => ({
         statut: t.statut,
-        valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null,
+        valideeLe: t.valideeLe ? toIsoDay(t.valideeLe) : null,
         echeance: t.finLe,
         reprise: t.evenements.length > 0,
       })),
@@ -160,7 +154,7 @@ export class PilotageService {
     return {
       nouveaux_projets: serieNouveaux(
         mois,
-        leads.map((l) => jourIso(l.createdAt)),
+        leads.map((l) => toIsoDay(l.createdAt)),
       ),
       taches_a_temps: aTemps,
       taux_reprises: reprises,
@@ -228,7 +222,7 @@ export class PilotageService {
         echeance: t.finLe,
         heures: t.heures == null ? null : Number(t.heures),
         statut: t.statut,
-        valideeLe: t.valideeLe ? jourIso(t.valideeLe) : null,
+        valideeLe: t.valideeLe ? toIsoDay(t.valideeLe) : null,
       })),
     );
     // Reportings dus : déposés, ou dont l'échéance (J+5) est passée — un
@@ -238,7 +232,7 @@ export class PilotageService {
       types.flatMap((type) => {
         const depot = reportings.find((r) => r.type === type && r.mois === mois);
         if (!depot && jour <= echeanceReporting(mois)) return [];
-        return [{ aLHeure: !!depot && jourIso(depot.deposeLe) <= echeanceReporting(mois) }];
+        return [{ aLHeure: !!depot && toIsoDay(depot.deposeLe) <= echeanceReporting(mois) }];
       }),
     );
     const aLHeureReportings = dus.filter((r) => r.aLHeure).length;
@@ -265,7 +259,7 @@ export class PilotageService {
     return [
       indicateur(
         'nouveaux_projets',
-        `Nouveaux projets de conception · ${moisLong(mois)}`,
+        `Nouveaux projets de conception · ${formatMonthYear(mois)}`,
         nouveaux,
         objNouveaux == null ? String(nouveaux) : `${nouveaux} / ${objNouveaux}`,
         { type: 'minimum', valeur: objNouveaux },
@@ -303,7 +297,7 @@ export class PilotageService {
       ),
       indicateur(
         'charge_equipes',
-        `Charge des équipes · ${moisLong(mois)}`,
+        `Charge des équipes · ${formatMonthYear(mois)}`,
         charge,
         pct(charge),
         { type: 'zone', de: objCharge?.de ?? null, a: objCharge?.a ?? null, propose: { de: 70, a: 100 } },
@@ -388,7 +382,7 @@ export class PilotageService {
       const d = m.dossierPersonnel;
       const salarie: Salarie = {
         dateEntree: d?.dateEntree ?? null,
-        dateSortie: d?.archiveLe ? jourIso(d.archiveLe) : null,
+        dateSortie: d?.archiveLe ? toIsoDay(d.archiveLe) : null,
         absences: (d?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })),
       };
       const taches = m.tachesProjet.map((t) => ({
@@ -487,7 +481,7 @@ export class PilotageService {
     );
     return Promise.all(
       lignes.map(async ({ mois, type, depot }) => {
-        const deposeLe = depot ? jourIso(depot.deposeLe) : null;
+        const deposeLe = depot ? toIsoDay(depot.deposeLe) : null;
         const statut = statutReporting(mois, deposeLe, jour);
         const { emetteur, destinataire } = REPORTINGS[type];
         // Prérempli tant qu'il n'est pas déposé ; figé ensuite.
@@ -497,7 +491,7 @@ export class PilotageService {
         return {
           type,
           mois,
-          periode: moisLong(mois),
+          periode: formatMonthYear(mois),
           titre: type === 'direction' ? `Reporting ${societe.nom}` : 'Reporting RH',
           emetteur: libelleRole(emetteur),
           destinataire: libelleRole(destinataire),
@@ -516,7 +510,7 @@ export class PilotageService {
   // Reportings que l'acteur doit encore déposer, sans leur contenu (léger) :
   // « À traiter aujourd'hui » de la page RH (revue RH 20/10/2026).
   async aDeposer(a: Acteur) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const types = (Object.keys(REPORTINGS) as TypeReporting[]).filter((t) => REPORTINGS[t].emetteur === a.role);
     if (!types.length) return [];
     const deposes = await this.prisma.reportingMensuel.findMany({
@@ -529,7 +523,7 @@ export class PilotageService {
         .map((type) => ({
           type,
           mois,
-          periode: moisLong(mois),
+          periode: formatMonthYear(mois),
           echeance: echeanceReporting(mois),
           statut: statutReporting(mois, null, jour),
         })),
@@ -540,7 +534,7 @@ export class PilotageService {
   // « À valider aujourd'hui » du CFO (revue CFO, 20/10/2026).
   async recus(a: Acteur) {
     const types = (Object.keys(REPORTINGS) as TypeReporting[]).filter((t) => REPORTINGS[t].destinataire === a.role);
-    const mois = moisAReporter(aujourdhui()).at(-1);
+    const mois = moisAReporter(todayIso()).at(-1);
     if (!types.length || !mois) return [];
     const deposes = await this.prisma.reportingMensuel.findMany({
       where: { societeId: a.societeId, type: { in: types }, mois },
@@ -554,15 +548,15 @@ export class PilotageService {
     return deposes.map((d) => ({
       type: d.type,
       mois: d.mois,
-      periode: moisLong(d.mois),
-      deposeLe: jourIso(d.deposeLe),
+      periode: formatMonthYear(d.mois),
+      deposeLe: toIsoDay(d.deposeLe),
       emetteur: libelleRole(REPORTINGS[d.type].emetteur),
       lu: d.lectures.length > 0,
     }));
   }
 
   async deposer(a: Acteur, type: TypeReporting, mois: string, analyse: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     if (!REPORTINGS[type]) throw new NotFoundException('Reporting inconnu.');
     if (a.role !== REPORTINGS[type].emetteur) {
       throw new ForbiddenException(`Seul l’émetteur (${libelleRole(REPORTINGS[type].emetteur)}) dépose ce reporting.`);
@@ -648,18 +642,18 @@ export class PilotageService {
         responsable: d.responsable,
         echeance: d.echeance,
         statut: statutDecision(
-          { echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition },
+          { echeance: d.echeance, closeLe: d.closeLe ? toIsoDay(d.closeLe) : null, proposition: d.proposition },
           jour,
         ),
         rattachement: rattachementDe(d),
-        closeLe: d.closeLe ? jourIso(d.closeLe) : null,
+        closeLe: d.closeLe ? toIsoDay(d.closeLe) : null,
         peutCloturer: d.origine === 'saisie' && !d.closeLe && enVigueur(d) && this.peutCloturer(a, d, collaborateurId),
         // Proposition CTO → CEO : qui l'a soumise, qui l'a tranchée, et ce qui a changé.
         proposition: d.proposition
           ? {
               etat: d.proposition,
               par: (d.creeParId && auteurs.get(d.creeParId)) ?? null,
-              arbitreLe: d.arbitreLe ? jourIso(d.arbitreLe) : null,
+              arbitreLe: d.arbitreLe ? toIsoDay(d.arbitreLe) : null,
               arbitrePar: (d.arbitreParId && auteurs.get(d.arbitreParId)) ?? null,
               motif: d.motifArbitrage,
               initiale:
@@ -727,7 +721,7 @@ export class PilotageService {
           : 'Saisir une décision est réservé au CTO et au CEO.',
       );
     }
-    const jour = aujourdhui();
+    const jour = todayIso();
     const date = dto.date ?? jour;
     if (date > jour) throw new BadRequestException('Une décision ne peut pas être datée dans le futur.');
     if (dto.echeance < date) throw new BadRequestException('L’échéance précède la date de la décision.');
@@ -796,7 +790,7 @@ export class PilotageService {
     if (delegue && d.creeParId === a.userId)
       throw new ForbiddenException('Vous ne pouvez pas arbitrer votre propre proposition : elle attend le CEO.');
     if (d.proposition !== 'proposee') throw new ConflictException('Cette décision n’attend pas d’arbitrage.');
-    const jour = aujourdhui();
+    const jour = todayIso();
     const numero = numeroDecision(d.numero);
     let titre: string;
     if (dto.issue === 'refuser') {
@@ -931,7 +925,7 @@ export class PilotageService {
   async decisionsRattachees(a: Acteur, cible: { projetId?: string; celluleId?: string; clientId?: string }) {
     if (!cible.projetId && !cible.celluleId && !cible.clientId)
       throw new BadRequestException('Projet, cellule ou client requis.');
-    const jour = aujourdhui();
+    const jour = todayIso();
     const decisions = await this.prisma.decisionRegistre.findMany({
       where: {
         societeId: a.societeId,
@@ -954,7 +948,7 @@ export class PilotageService {
       responsable: d.responsable,
       echeance: d.echeance,
       statut: statutDecision(
-        { echeance: d.echeance, closeLe: d.closeLe ? jourIso(d.closeLe) : null, proposition: d.proposition },
+        { echeance: d.echeance, closeLe: d.closeLe ? toIsoDay(d.closeLe) : null, proposition: d.proposition },
         jour,
       ),
     }));
@@ -1083,7 +1077,7 @@ export class PilotageService {
       }),
     ]);
     return devis.map((d) => {
-      const envoi = jourIso(d.dateEnvoi!);
+      const envoi = toIsoDay(d.dateEnvoi!);
       const pilote = d.projet?.cellules[0]?.cellule.dispatcher ?? null;
       const ouvert = ['envoye', 'expire'].includes(statutDevisEffectif(d, jour));
       return {
@@ -1094,7 +1088,7 @@ export class PilotageService {
         responsable: pilote ? nomDe(pilote) : 'Direction GC',
         responsableRole: pilote ? null : 'Dir. GC',
         responsableCollaborateurId: pilote?.id ?? null,
-        echeance: ajouterJours(envoi, seuil),
+        echeance: addDays(envoi, seuil),
         closeLe: ouvert ? null : (d.dateReponse ?? new Date()),
       };
     });
@@ -1127,9 +1121,9 @@ export class PilotageService {
       const c = n1.find((x) => x.id === d.n1CollaborateurId);
       return {
         cle: `permission:${d.id}`,
-        date: jourIso(d.decisionN1Le!),
+        date: toIsoDay(d.decisionN1Le!),
         instance: 'RH · congés',
-        texte: `Accord · Permission exceptionnelle de ${nomDe(d.dossier)} (${dateFr(d.dateDebut)} → ${dateFr(d.dateFin)})`,
+        texte: `Accord · Permission exceptionnelle de ${nomDe(d.dossier)} (${formatDate(d.dateDebut)} → ${formatDate(d.dateFin)})`,
         responsable: c ? nomDe(c) : libelleRole(d.n1Role ?? 'Dir. GC'),
         responsableRole: c ? null : (d.n1Role ?? 'Dir. GC'),
         responsableCollaborateurId: c?.id ?? null,
@@ -1154,15 +1148,15 @@ export class PilotageService {
       types.flatMap((type) => {
         const echeance = echeanceReporting(mois);
         const depot = deposes.find((d) => d.type === type && d.mois === mois);
-        if (depot ? jourIso(depot.deposeLe) <= echeance : jour <= echeance) return [];
+        if (depot ? toIsoDay(depot.deposeLe) <= echeance : jour <= echeance) return [];
         const { emetteur } = REPORTINGS[type];
         const titre = type === 'direction' ? `Reporting ${societe.nom}` : 'Reporting RH';
         return [
           {
             cle: `reporting:${type}:${mois}`,
-            date: ajouterJours(echeance, 1),
+            date: addDays(echeance, 1),
             instance: 'CODIR · reportings',
-            texte: `Alerte : ${titre} de ${mois.split('-').reverse().join('/')} non déposé au ${dateFr(echeance)}`,
+            texte: `Alerte : ${titre} de ${mois.split('-').reverse().join('/')} non déposé au ${formatDate(echeance)}`,
             responsable: libelleRole(emetteur),
             responsableRole: emetteur,
             responsableCollaborateurId: null,
@@ -1183,7 +1177,7 @@ export class PilotageService {
     });
     return journal.map((j) => ({
       cle: `reglage:${j.id}`,
-      date: jourIso(j.createdAt),
+      date: toIsoDay(j.createdAt),
       instance: 'Réglages',
       texte: `${j.libelle} · motif : ${j.motif}`,
       responsable: 'CIO',

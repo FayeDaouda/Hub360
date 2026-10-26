@@ -9,12 +9,11 @@ import type { ActionPaie, MotifSalaire } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LIBELLE_MOTIF_SALAIRE, refusProposition, salaireAu } from './regles-salaire';
+import { formatDate, todayIso } from '../shared/dates';
 
 const ROLE_CFO = 'CFO';
 const ROLE_CEO = 'CEO (transverse)';
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
-const dateFr = (iso: string | null) => (iso ? iso.split('-').reverse().join('/') : 'date inconnue');
 const nomDe = (d: { prenom: string; nom: string }) => `${d.prenom} ${d.nom}`.trim();
 
 const SELECT_CHANGEMENT = {
@@ -82,7 +81,7 @@ export class SalairesService {
     await this.tracer(dossierId, 'salaire_consulte', acteurId);
     const noms = await this.noms(changements.flatMap((c) => [c.proposeParId, c.decideParId]));
     return {
-      enVigueur: salaireAu(changements, aujourdhui()),
+      enVigueur: salaireAu(changements, todayIso()),
       valideur: (await this.valideurs(d)).role,
       changements: changements.map((c) => ({
         ...c,
@@ -101,7 +100,7 @@ export class SalairesService {
     const refus = refusProposition(
       p,
       existants.some((c) => c.statut === 'valide'),
-      aujourdhui(),
+      todayIso(),
     );
     if (refus) throw new BadRequestException(refus);
     const { ids, role } = await this.valideurs(d);
@@ -112,7 +111,7 @@ export class SalairesService {
     await this.notifications.envoyer({
       societeId: d.societeId,
       type: 'salaire_a_valider',
-      titre: `Salaire à valider · ${nomDe(d)} · ${LIBELLE_MOTIF_SALAIRE[p.motif]}, effet le ${dateFr(p.dateEffet)}`,
+      titre: `Salaire à valider · ${nomDe(d)} · ${LIBELLE_MOTIF_SALAIRE[p.motif]}, effet le ${formatDate(p.dateEffet, 'date inconnue')}`,
       destinataireIds: ids,
       parId: acteurId,
     });
@@ -170,7 +169,7 @@ export class SalairesService {
       motif: c.motif,
       dateEffet: c.dateEffet,
       montant: c.montant,
-      actuel: salaireAu(valides, c.dateEffet ?? aujourdhui()),
+      actuel: salaireAu(valides, c.dateEffet ?? todayIso()),
     };
   }
 
@@ -192,7 +191,7 @@ export class SalairesService {
       societeId: d.societeId,
       type: 'salaire_decide',
       titre: valide
-        ? `Salaire validé · ${nomDe(d)} · ${LIBELLE_MOTIF_SALAIRE[c.motif]}, effet le ${dateFr(c.dateEffet)}`
+        ? `Salaire validé · ${nomDe(d)} · ${LIBELLE_MOTIF_SALAIRE[c.motif]}, effet le ${formatDate(c.dateEffet, 'date inconnue')}`
         : `Salaire refusé · ${nomDe(d)} · ${motifRefus!.trim()}`,
       destinataireIds: [c.proposeParId],
       parId: acteurId,

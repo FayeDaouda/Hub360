@@ -32,6 +32,7 @@ import {
   type CarteSource,
   type EtatTache,
 } from './etats';
+import { addDays, toIsoDay, todayIso } from '../../shared/dates';
 
 // Lecture des projets ouverts selon le gabarit (maquette « Projets » du
 // boss) : liste, tuiles, et dossier d'un projet — étapes, cartes, tâches et
@@ -39,8 +40,7 @@ import {
 
 const HEURES_PAR_JOUR = 8;
 const nom = (p: { prenom: string; nom: string } | null | undefined) => (p ? `${p.prenom} ${p.nom}` : null);
-const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+const iso = (d: Date | null) => (d ? toIsoDay(d) : null);
 
 const AVEC_TACHES = {
   cartes: {
@@ -85,11 +85,6 @@ const prolongationEnAttente = (l: Prolongations) => l.find((p) => p.decision ===
 // Cartes clés suivies dans « À venir » du tableau de production.
 const CARTES_CLES = ['permis_construire', 'pe_architecture', 'tache_finale'];
 const ROLE_CEO_PROD = 'CEO (transverse)';
-const jourPlus = (jour: string, n: number) => {
-  const d = new Date(`${jour}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
 
 const JALON_PAR_FACTURE: Record<'F1' | 'F2' | 'F3', JalonFacture> = {
   F1: 'signature',
@@ -107,9 +102,7 @@ export const CARTE_RELEVES = 'releves_existants';
 
 // Jour calendaire suivant (AAAA-MM-JJ), sans jours ouvrés ni fériés.
 export function lendemain(date: string): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  return addDays(date, 1);
 }
 
 @Injectable()
@@ -131,7 +124,7 @@ export class ProjetsOuvertsService {
       },
     });
     const feries = await this.feries(societeId);
-    const jour = aujourdhui();
+    const jour = todayIso();
     const resumes = projets.map((p) => {
       const { etapes } = this.etats(p, jour, feries);
       const somme = (cle: 'faites' | 'total' | 'enRetard') => etapes.reduce((s, e) => s + e[cle], 0);
@@ -325,7 +318,7 @@ export class ProjetsOuvertsService {
     });
     if (!p) throw new NotFoundException('Projet introuvable ou pas encore ouvert');
     const feries = await this.feries(societeId);
-    const jour = aujourdhui();
+    const jour = todayIso();
     const { etapes, etatsCartes, etatsTaches } = this.etats(p, jour, feries);
     const cellule = p.cellules[0]?.cellule ?? null;
     const chef = cellule?.dispatcher ?? null;
@@ -525,7 +518,7 @@ export class ProjetsOuvertsService {
   // retards qualifiés par une prolongation), tranches F1 à F3 prêtes et pas
   // encore émises, avenants TS non acceptés au-delà du délai réglé.
   async alertes(societeId: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const [projets, nonOuverts, feries, seuilTs] = await Promise.all([
       this.prisma.projet.findMany({
         where: { societeId, ouvertLe: { not: null } },
@@ -713,7 +706,7 @@ export class ProjetsOuvertsService {
     if (![ROLE_DPLG, ROLE_CTO, ROLE_CEO_PROD, 'societe_admin'].includes(acteur.role)) {
       throw new ForbiddenException('Le tableau de production est réservé au Dir. GC, au CTO et au CEO.');
     }
-    const jour = aujourdhui();
+    const jour = todayIso();
     const feries = await this.feries(societeId);
     const projets = await this.prisma.projet.findMany({
       where: {
@@ -735,7 +728,7 @@ export class ProjetsOuvertsService {
       _count: true,
     });
     const tsParProjet = new Map(ts.map((t) => [t.projetId, t._count]));
-    const dans = (n: number) => jourPlus(jour, n);
+    const dans = (n: number) => addDays(jour, n);
 
     const lignes = projets.map((p) => {
       const { etapes, etatsCartes, etatsTaches } = this.etats(p, jour, feries);
@@ -924,7 +917,7 @@ export class ProjetsOuvertsService {
   private async decideur(societeId: string, acteur: Acteur): Promise<{ decideur: Decideur; ctx: ContexteDecision }> {
     const [collaborateurId, ctx] = await Promise.all([
       collaborateurDuCompte(this.prisma, societeId, acteur.userId),
-      contexteDecision(this.prisma, societeId, aujourdhui()),
+      contexteDecision(this.prisma, societeId, todayIso()),
     ]);
     return { decideur: { role: acteur.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, ctx };
   }

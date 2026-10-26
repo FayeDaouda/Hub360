@@ -1,3 +1,4 @@
+import { stripAccents } from '../../shared/text';
 // Nom d'un fichier déposé sur une tâche (lot F de Mes tâches, format validé
 // le 23/10/2026) : CODE_ÉTAPE_TÂCHE_vNN.ext — ex. FS_POI.26_04_TIMBRE-FISCAL_v01.pdf.
 // Plusieurs fichiers dans le même dépôt : _v01-1, _v01-2… L'application
@@ -8,13 +9,9 @@
 
 const LONGUEUR_TACHE = 40;
 
-function sansAccents(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
 // « Plans · Coupes · Façades » → « PLANS-COUPES-FACADES »
 export function segmentTache(libelle: string): string {
-  const s = sansAccents(libelle)
+  const s = stripAccents(libelle)
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');

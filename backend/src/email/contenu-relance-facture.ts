@@ -1,13 +1,16 @@
 import { RelanceFactureEmail } from './email.service';
+import { formatLongDate } from '../shared/dates';
+import { formatAmount } from '../shared/format';
+import { escapeHtml, plural } from '../shared/text';
 
 // Contenu de l'email de relance manuelle. Pur (aucune I/O) — même motif que
 // contenu-lien-compte.ts / contenu-devis.ts. Pas de lien (pas de page
 // publique de facture) : juste un rappel courtois du montant et du retard.
 export function contenuRelanceFacture(r: RelanceFactureEmail): { sujet: string; texte: string; html: string } {
   const ref = r.reference ?? '';
-  const montant = formatMontant(r.resteAPayer);
-  const echeance = r.echeanceLe ? formatDate(r.echeanceLe) : null;
-  const retard = `${r.joursRetard} jour${r.joursRetard > 1 ? 's' : ''}`;
+  const montant = formatAmount(r.resteAPayer);
+  const echeance = r.echeanceLe ? formatLongDate(r.echeanceLe) : null;
+  const retard = `${plural(r.joursRetard, 'jour')}`;
 
   const sujet = `Rappel — Facture ${ref} en attente de règlement`;
   const intro = echeance
@@ -18,24 +21,11 @@ export function contenuRelanceFacture(r: RelanceFactureEmail): { sujet: string; 
   const texte = [`Bonjour ${r.clientNom},`, '', intro, '', pied, '', r.societeNom].join('\n');
 
   const html = [
-    `<p>Bonjour ${echapper(r.clientNom)},</p>`,
-    `<p>${echapper(intro)}</p>`,
-    `<p style="color:#6c6960;font-size:13px">${echapper(pied)}</p>`,
-    `<p>${echapper(r.societeNom)}</p>`,
+    `<p>Bonjour ${escapeHtml(r.clientNom)},</p>`,
+    `<p>${escapeHtml(intro)}</p>`,
+    `<p style="color:#6c6960;font-size:13px">${escapeHtml(pied)}</p>`,
+    `<p>${escapeHtml(r.societeNom)}</p>`,
   ].join('');
 
   return { sujet, texte, html };
-}
-
-function formatMontant(valeur: number): string {
-  return `${new Intl.NumberFormat('fr-FR').format(Math.round(valeur))} FCFA`;
-}
-
-function formatDate(iso: string): string {
-  const d = iso.length === 10 ? new Date(`${iso}T00:00:00`) : new Date(iso);
-  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function echapper(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

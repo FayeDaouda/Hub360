@@ -11,10 +11,10 @@ import { ouDossierDuCompte } from './mon-compte';
 import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from './regles-temps';
 import { etatValidationGabarit, statsPerformances, statutSelonEtat, statutTache } from './regles-taches';
 import { chargerTachesAssignees } from './taches-assignees';
+import { todayIso } from '../shared/dates';
 
 type Acteur = { userId: string; societeId: string; role: string };
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`.trim();
 
 // Mon espace · Mes performances, À valider, Ma cellule — sur les tâches du
@@ -38,7 +38,7 @@ export class TachesService {
 
   // --- Le salarié : ses tâches, leur temps et leur état de validation ----------
   async mesTaches(a: Acteur) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const dossier = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),
       select: {
@@ -108,7 +108,7 @@ export class TachesService {
   // Statistiques d'une équipe (« Ma cellule ») : mêmes règles que « Mes
   // performances », sur les tâches de tous ses membres.
   async statsEquipe(collaborateurIds: string[], societeId?: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const taches = await chargerTachesAssignees(this.prisma, collaborateurIds);
     const etats = societeId && taches.length ? await this.etats(societeId, jour) : new Map<string, EtatTache>();
     return statsPerformances(
@@ -158,7 +158,7 @@ export class TachesService {
       },
     });
     // Mêmes règles que Projets : suppléance du jour, travail d'un Dir. GC au CTO.
-    const ctx = await contexteDecision(this.prisma, a.societeId, new Date().toISOString().slice(0, 10));
+    const ctx = await contexteDecision(this.prisma, a.societeId, todayIso());
     return remises
       .filter((t) =>
         peutDecider(

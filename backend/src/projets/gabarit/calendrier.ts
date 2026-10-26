@@ -1,4 +1,5 @@
 import { AUCUN_FERIE, HEURES_PAR_JOUR, type Feries } from '../../rh/regles-temps';
+import { addDays, daysBetween } from '../../shared/dates';
 
 // Calendrier ouvrable d'un projet ouvert selon le gabarit : J1 = jour
 // d'ouverture (émission de F1) ou le premier jour ouvré qui suit ; Jn = n-ième
@@ -6,12 +7,7 @@ import { AUCUN_FERIE, HEURES_PAR_JOUR, type Feries } from '../../rh/regles-temps
 // pures, dates AAAA-MM-JJ.
 
 const jour = (iso: string) => new Date(`${iso}T00:00:00Z`);
-const versIso = (d: Date) => d.toISOString().slice(0, 10);
-const lendemain = (iso: string) => {
-  const d = jour(iso);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return versIso(d);
-};
+const lendemain = (iso: string) => addDays(iso, 1);
 
 export function estOuvre(iso: string, feries: Feries = AUCUN_FERIE): boolean {
   const j = jour(iso).getUTCDay();
@@ -67,5 +63,5 @@ export function ecartHeures(valideeLe: string, echeance: string, feries: Feries 
 
 // Retard d'une tâche non validée : jours calendaires depuis l'échéance.
 export function joursDeRetard(echeance: string, aujourdhui: string): number {
-  return Math.max(0, Math.round((jour(aujourdhui).getTime() - jour(echeance).getTime()) / 86_400_000));
+  return Math.max(0, daysBetween(echeance, aujourdhui));
 }

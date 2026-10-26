@@ -14,6 +14,7 @@ import { ventilationTva } from '../domaine/gardes';
 import { moisClos, moisFr } from './cloture';
 import { FacturationService } from './facturation.service';
 import { agitPourCeo, avecDelegataire } from '../../commun/delegation-ceo';
+import { formatAmount } from '../../shared/format';
 
 const ROLE_CEO = 'CEO (transverse)';
 const ROLE_CFO = 'CFO';
@@ -26,7 +27,6 @@ export const LIBELLE_MOTIF_AVOIR: Record<MotifAvoir, string> = {
   autre: 'autre',
 };
 
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 const moisDe = (d: Date) => d.toISOString().slice(0, 7);
 const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
 
@@ -80,7 +80,7 @@ export class ControleInterneService {
     const montantTtc = ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber()).montantTtc;
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_validation_avoir_ceo');
     const ref = refFacture(f) ?? 'facture';
-    const libelle = `${ref} (${f.projet?.code ?? 'sans projet'}) · ${fcfa(montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[p.motif]}`;
+    const libelle = `${ref} (${f.projet?.code ?? 'sans projet'}) · ${formatAmount(montantTtc)} TTC · ${LIBELLE_MOTIF_AVOIR[p.motif]}`;
     const ceo = await this.notifications.titulairesRole(societeId, ROLE_CEO);
 
     if (montantTtc > seuil) {

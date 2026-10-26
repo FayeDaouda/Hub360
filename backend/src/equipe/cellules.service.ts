@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { versCellule } from '../commun/format-contrat';
 import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
 import { codeCellule, prefixeSociete } from './equipes-regles';
+import { plural } from '../shared/text';
 
 // membres + le strict minimum du compte lié (jamais motDePasseHash).
 const MEMBRES = {
@@ -139,9 +140,7 @@ export class CellulesService {
     await this.charger(societeId, id);
     const membres = await this.prisma.collaborateur.count({ where: { celluleId: id } });
     if (membres > 0) {
-      throw new ConflictException(
-        `Cellule non vide (${membres} collaborateur${membres > 1 ? 's' : ''}) — réaffecte-les d'abord.`,
-      );
+      throw new ConflictException(`Cellule non vide (${plural(membres, 'collaborateur')}) — réaffecte-les d'abord.`);
     }
     await this.prisma.cellule.delete({ where: { id } });
   }

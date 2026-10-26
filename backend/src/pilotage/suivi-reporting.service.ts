@@ -9,13 +9,12 @@ import type { TypeReporting } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REPORTINGS } from './pilotage-regles';
+import { formatMonthYear } from '../shared/dates';
 
 type Acteur = { userId: string; societeId: string; role: string };
 type Position = 'destinataire' | 'emetteur' | null;
 
 const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
-const moisLong = (mois: string) =>
-  new Date(`${mois}-15T12:00:00Z`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 export const titreReporting = (type: TypeReporting) => (type === 'rh' ? 'Reporting RH' : 'Reporting de la direction');
 
 // Suivi d'un reporting déposé (revue CFO 20/10/2026, lot 5) : le destinataire
@@ -70,7 +69,7 @@ export class SuiviReportingService {
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'reporting_question',
-      titre: `Question sur votre ${titreReporting(type)} · ${moisLong(mois)} · à traiter dans Pilotage`,
+      titre: `Question sur votre ${titreReporting(type)} · ${formatMonthYear(mois)} · à traiter dans Pilotage`,
       destinataireIds: await this.notifications.titulairesRole(a.societeId, REPORTINGS[type].emetteur),
       parId: a.userId,
     });
@@ -95,7 +94,7 @@ export class SuiviReportingService {
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'reporting_reponse',
-      titre: `Réponse reçue · ${titreReporting(type)} · ${moisLong(mois)}`,
+      titre: `Réponse reçue · ${titreReporting(type)} · ${formatMonthYear(mois)}`,
       destinataireIds: [q.auteurId],
       parId: a.userId,
     });
@@ -161,7 +160,7 @@ export class SuiviReportingService {
       id: q.id,
       type: q.reporting.type,
       mois: q.reporting.mois,
-      periode: moisLong(q.reporting.mois),
+      periode: formatMonthYear(q.reporting.mois),
       titre: titreReporting(q.reporting.type),
       le: q.creeLe,
       par: noms.get(q.auteurId) ?? null,

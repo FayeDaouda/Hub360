@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { NotificationType } from '@prisma/client';
-import { joursEntre, refDevis, relanceAFaire, JOURS_RELANCE_OFFRE } from '../devis/domaine';
+import { refDevis, relanceAFaire, JOURS_RELANCE_OFFRE } from '../devis/domaine';
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +23,9 @@ import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
 import { runAsSystem } from '../tenancy/tenant-context';
+import { addDays, daysBetween, daysSince, formatDayMonth, toIsoDay, todayIso } from '../shared/dates';
+import { formatAmount } from '../shared/format';
+import { plural } from '../shared/text';
 
 // Heure de la tournée (Dakar = UTC, pas d'heure d'été).
 const HEURE_TOURNEE = 7;
@@ -31,14 +34,6 @@ const JOURS_ENTRE_RAPPELS_FACTURE = 7;
 // Revue CEO (22/10/2026) : délai avant de relancer le CEO, hors offres et factures à contresigner.
 const JOURS_OUVRES_RELANCE_CEO = 3;
 const ROLE_CEO = 'CEO (transverse)';
-
-const jourCourant = () => new Date().toISOString().slice(0, 10);
-const decaler = (jour: string, n: number) => {
-  const d = new Date(`${jour}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 
 type Rappel = {
   cle: string;
@@ -75,7 +70,7 @@ export class RappelsService implements OnApplicationBootstrap {
   }
 
   @Cron(`0 ${HEURE_TOURNEE} * * *`, { timeZone: 'Africa/Dakar' })
-  async tournee(jour = jourCourant()): Promise<number> {
+  async tournee(jour = todayIso()): Promise<number> {
     // Tournée globale (toutes sociétés en une passe) : périmètre système
     // déclaré (ADR 0001). La découper par société est un suivi prévu.
     return runAsSystem('rappels quotidiens', () => this.tourneeToutesSocietes(jour));
@@ -145,7 +140,7 @@ export class RappelsService implements OnApplicationBootstrap {
     return devis
       .filter((d) => relanceAFaire(d, jour))
       .map((d) => {
-        const jours = joursEntre(d.dateEnvoi!.toISOString().slice(0, 10), jour);
+        const jours = daysBetween(toIsoDay(d.dateEnvoi!), jour);
         const palier = JOURS_RELANCE_OFFRE.filter((j) => jours >= j).length;
         return {
           cle: `offre:${d.id}:${palier}`,
@@ -247,7 +242,7 @@ export class RappelsService implements OnApplicationBootstrap {
         cle: `facture:${f.id}:${Math.floor((retard - 1) / JOURS_ENTRE_RAPPELS_FACTURE)}`,
         societeId: f.societeId,
         type: 'rappel_facture',
-        titre: `Facture échue · ${refFacture(f) ?? 'sans numéro'} · ${retard} jour${retard > 1 ? 's' : ''} de retard · reste ${fcfa(reste)}`,
+        titre: `Facture échue · ${refFacture(f) ?? 'sans numéro'} · ${plural(retard, 'jour')} de retard · reste ${formatAmount(reste)}`,
         destinataireIds: [
           f.projet?.dossierCrm.proprietaireId ?? f.dossierCrm?.proprietaireId,
           ...cfo.get(f.societeId)!,
@@ -262,7 +257,7 @@ export class RappelsService implements OnApplicationBootstrap {
   // Tâche encore à rendre : la veille de l'échéance, puis une fois en retard.
   // L'échéance fait partie de la clé : une prolongation accordée relance le cycle.
   async taches(jour: string): Promise<Rappel[]> {
-    const demain = decaler(jour, 1);
+    const demain = addDays(jour, 1);
     const taches = await this.prisma.tacheProjet.findMany({
       where: { assigneId: { not: null }, statut: { in: ['a_faire', 'reprise'] }, finLe: { not: null, lte: demain } },
       select: {
@@ -365,7 +360,7 @@ export class RappelsService implements OnApplicationBootstrap {
       chez: string,
       ids: (string | null)[],
     ) => {
-      const n = joursOuvresDepuis(depuis.toISOString().slice(0, 10), jour);
+      const n = joursOuvresDepuis(toIsoDay(depuis), jour);
       const palier = Math.floor(n / (await delai(dossier.societeId)).relance);
       if (palier < 1) return 0;
       rappels.push({
@@ -378,7 +373,7 @@ export class RappelsService implements OnApplicationBootstrap {
       return palier;
     };
     for (const a of absences) {
-      const periode = `absence du ${jjmm(a.dateDebut)} au ${jjmm(a.dateFin)}`;
+      const periode = `absence du ${formatDayMonth(a.dateDebut)} au ${formatDayMonth(a.dateFin)}`;
       if (a.statut === 'attente_n1') {
         const ids = a.n1CollaborateurId
           ? await this.notifications.comptesDe([a.n1CollaborateurId])
@@ -468,7 +463,7 @@ export class RappelsService implements OnApplicationBootstrap {
         if (!emetteurs.length) continue; // pas d'émetteur dans la société : pas de reporting
         const titre = type === 'rh' ? 'Reporting RH' : 'Reporting de la direction';
         for (const m of mois) {
-          const echeance = jjmm(echeanceReporting(m));
+          const echeance = formatDayMonth(echeanceReporting(m));
           for (const r of rappelsReporting(m, fait.has(`${societeId}:${type}:${m}`), jour, joursAvant)) {
             rappels.push({
               cle: `reporting:${societeId}:${type}:${m}:${r.cle}`,
@@ -518,10 +513,10 @@ export class RappelsService implements OnApplicationBootstrap {
       const texte = d.texte.length > 70 ? `${d.texte.slice(0, 69)}…` : d.texte;
       const etat =
         suffixe === 'avant'
-          ? `échéance le ${jjmm(d.echeance!)}`
+          ? `échéance le ${formatDayMonth(d.echeance!)}`
           : suffixe === 'jour'
             ? 'échéance aujourd’hui'
-            : `échéance dépassée depuis le ${jjmm(d.echeance!)}`;
+            : `échéance dépassée depuis le ${formatDayMonth(d.echeance!)}`;
       rappels.push({
         cle: `decision:${d.id}:resp:${suffixe}`,
         societeId: d.societeId,
@@ -559,8 +554,7 @@ export class RappelsService implements OnApplicationBootstrap {
       if (!ceos.has(societeId)) ceos.set(societeId, this.notifications.titulairesRole(societeId, ROLE_CEO));
       return ceos.get(societeId)!;
     };
-    const joursDepuis = (d: Date) => Math.floor((maintenant - d.getTime()) / 86_400_000);
-    const ouvres = (d: Date) => joursOuvresDepuis(d.toISOString().slice(0, 10), jour);
+    const ouvres = (d: Date) => joursOuvresDepuis(toIsoDay(d), jour);
     // demandeurId : renseigné quand la décision se délègue (avoirs, propositions) —
     // le délégataire en fonction est relancé aussi, jamais sur sa propre demande.
     const pousser = async (r: Omit<Rappel, 'type' | 'destinataireIds'>, demandeurId?: string | null) =>
@@ -593,12 +587,12 @@ export class RappelsService implements OnApplicationBootstrap {
       if (!soumise || maintenant - soumise.getTime() < 86_400_000) continue;
       const montant = await this.seuilCeo.offreAuDelaDuSeuil(o.societeId, o.id);
       if (montant === null) continue;
-      const j = joursDepuis(soumise);
+      const j = daysSince(soumise, maintenant);
       await pousser(
         {
           cle: `ceo:offre:${o.id}:${j}`,
           societeId: o.societeId,
-          titre: `Offre à contresigner · ${o.code} · ${fcfa(montant)} TTC · en attente depuis ${j} j (validité de 7 jours une fois envoyée)`,
+          titre: `Offre à contresigner · ${o.code} · ${formatAmount(montant)} TTC · en attente depuis ${j} j (validité de 7 jours une fois envoyée)`,
           dossierCrmId: o.id,
         },
         null,
@@ -620,7 +614,7 @@ export class RappelsService implements OnApplicationBootstrap {
         {
           cle: `ceo:avoir:${a.id}:${p}`,
           societeId: a.societeId,
-          titre: `Avoir à valider · ${fcfa(a.montantTtc.toNumber())} TTC · en attente depuis ${ouvres(a.demandeLe)} jours ouvrés`,
+          titre: `Avoir à valider · ${formatAmount(a.montantTtc.toNumber())} TTC · en attente depuis ${ouvres(a.demandeLe)} jours ouvrés`,
           factureId: a.factureId,
         },
         a.demandeParId,
@@ -710,13 +704,11 @@ export class RappelsService implements OnApplicationBootstrap {
   }
 }
 
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-
 // Jours ouvrés (lundi → vendredi) écoulés après `depuis`, jusqu'à `jour` inclus.
 export function joursOuvresDepuis(depuis: string, jour: string): number {
   let n = 0;
   for (
-    let d = new Date(`${decaler(depuis, 1)}T00:00:00Z`);
+    let d = new Date(`${addDays(depuis, 1)}T00:00:00Z`);
     d <= new Date(`${jour}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() + 1)
   ) {

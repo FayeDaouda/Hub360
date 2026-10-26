@@ -3,8 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { cheminPhoto, lirePhoto, normaliserNomAffiche } from './profil';
 import { ouDossierDuCompte } from '../rh/mon-compte';
-
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
+import { todayIso } from '../shared/dates';
 
 // Profil de la personne connectée (menu du compte) : nom affiché, photo,
 // connexions, absence en cours ; et la coupure de toutes ses sessions.
@@ -13,7 +12,7 @@ export class ProfilService {
   constructor(private prisma: PrismaService) {}
 
   async lire(utilisateurId: string) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
       select: {

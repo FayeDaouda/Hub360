@@ -7,6 +7,7 @@ import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { DemandesService } from '../rh/demandes.service';
+import { todayIso } from '../shared/dates';
 
 export type ActeurAttention = {
   userId: string;
@@ -20,7 +21,6 @@ const TRANCHE_PAR_JALON: Partial<Record<JalonFacture, 'F1' | 'F2' | 'F3'>> = {
   avant_projet: 'F2',
   livraison: 'F3',
 };
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 
 // « À votre attention » (accueil du CEO, Pilotage) : ce qui attend une
 // décision ou une relance, rassemblé depuis les modules — projets en retard
@@ -41,7 +41,7 @@ export class AttentionService {
     const voit = (module: string, niveau: NiveauPermission = 'lecture') =>
       a.role === 'societe_admin' || aLaPermission(a.permissions, module, niveau);
     const [projets, factures, ts] = [voit('projets'), voit('finances_factures'), voit('finances_devis')];
-    const jour = jourIso(new Date());
+    const jour = todayIso();
     const [alertes, impayees, absences] = await Promise.all([
       projets || factures || ts ? this.projetsOuverts.alertes(a.societeId) : null,
       factures ? this.impayees(a.societeId, jour) : [],

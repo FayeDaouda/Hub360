@@ -6,10 +6,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
+import { todayIso } from '../shared/dates';
+import { formatAmount } from '../shared/format';
 
 const ROLE_CEO = 'CEO (transverse)';
 const HEURE = 3_600_000;
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
 
 // Revue CEO (22/10/2026) : une facture à contresigner (au-delà du seuil)
 // relance le CEO 24 h après être devenue prête à émettre, puis chaque jour.
@@ -33,7 +34,7 @@ export class RelancesCeoService implements OnApplicationBootstrap {
   }
 
   @Cron('10 7 * * *', { timeZone: 'UTC' })
-  async tournee(jour = new Date().toISOString().slice(0, 10)): Promise<number> {
+  async tournee(jour = todayIso()): Promise<number> {
     // Tâche planifiée (ADR 0001) : sociétés ayant un CEO lues en périmètre
     // système, puis les relances de chacune dans son seul périmètre.
     const societes = await runAsSystem('relances du CEO · sociétés concernées', () =>
@@ -102,7 +103,7 @@ export class RelancesCeoService implements OnApplicationBootstrap {
       const ecrites = await this.notifications.envoyer({
         societeId,
         type: 'attente_ceo',
-        titre: `Facture à contresigner · ${libelles.get(f.id) ?? 'facture directe'} · affaire de ${fcfa(affaire)} TTC · prête depuis ${Math.floor(heures / 24)} j`,
+        titre: `Facture à contresigner · ${libelles.get(f.id) ?? 'facture directe'} · affaire de ${formatAmount(affaire)} TTC · prête depuis ${Math.floor(heures / 24)} j`,
         destinataireIds: await avecDelegataire(this.prisma, societeId, ceo, null),
         factureId: f.id,
       });

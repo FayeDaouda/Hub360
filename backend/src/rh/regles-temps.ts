@@ -1,3 +1,4 @@
+import { toIsoDay } from '../shared/dates';
 // RH · Temps de travail (lot 4). Règles pures, testées.
 //
 // Tirées des maquettes « Feuilles de temps » et « Mon espace » (manuel non reçu) :
@@ -37,7 +38,6 @@ export type Tache = {
 export type Manque = 'duree' | 'debut' | 'echeance' | 'fenetre' | 'absence';
 
 const jour = (iso: string) => new Date(`${iso}T00:00:00Z`);
-const versIso = (d: Date) => d.toISOString().slice(0, 10);
 const max = (a: string, b: string) => (a > b ? a : b);
 const min = (a: string, b: string) => (a < b ? a : b);
 
@@ -48,7 +48,7 @@ export function joursOuvres(p: Periode, feries: Feries = AUCUN_FERIE): string[] 
   const jours: string[] = [];
   for (let d = jour(p.debut); d <= jour(p.fin); d.setUTCDate(d.getUTCDate() + 1)) {
     const j = d.getUTCDay();
-    if (j !== 0 && j !== 6 && !feries.has(versIso(d))) jours.push(versIso(d));
+    if (j !== 0 && j !== 6 && !feries.has(toIsoDay(d))) jours.push(toIsoDay(d));
   }
   return jours;
 }
@@ -79,10 +79,10 @@ export function moisEntre(depuis: string, jusqua: string): string[] {
   const [a0, m0] = depuis.split('-').map(Number);
   for (
     let d = new Date(Date.UTC(a0, m0 - 1, 1));
-    versIso(d).slice(0, 7) <= jusqua;
+    toIsoDay(d).slice(0, 7) <= jusqua;
     d.setUTCMonth(d.getUTCMonth() + 1)
   ) {
-    liste.push(versIso(d).slice(0, 7));
+    liste.push(toIsoDay(d).slice(0, 7));
   }
   return liste;
 }
@@ -166,7 +166,7 @@ export function calendrierDuMois(
     });
   const jours: JourCalendrier[] = [];
   for (let d = jour(m.debut); d <= jour(m.fin); d.setUTCDate(d.getUTCDate() + 1)) {
-    const date = versIso(d);
+    const date = toIsoDay(d);
     const js = d.getUTCDay();
     const nature: NatureJour =
       js === 0 || js === 6

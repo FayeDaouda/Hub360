@@ -11,6 +11,7 @@ import type {
 } from '@prisma/client';
 import { ficheModifiable } from '../crm/cycle';
 import { montantTtcLignes, refDevis, relanceAFaire, statutDevisEffectif } from '../devis/domaine';
+import { todayIso } from '../shared/dates';
 
 // Formatage des lignes Prisma vers les types partagés de frontend/lib/types.ts.
 // L'API est la source de vérité du contrat : on émet exactement la forme que le
@@ -114,15 +115,13 @@ export function versDossierCrm(
         ? { le: d.transitions[0].creeLe, commentaire: d.transitions[0].commentaire ?? '' }
         : null,
     offreExpiree:
-      d.statut === 'offre_envoyee' &&
-      !!d.offres[0] &&
-      statutDevisEffectif(d.offres[0], new Date().toISOString().slice(0, 10)) === 'expire',
+      d.statut === 'offre_envoyee' && !!d.offres[0] && statutDevisEffectif(d.offres[0], todayIso()) === 'expire',
   };
 }
 
 // Résumé de l'offre en cours d'un dossier (frontend/lib/types.ts::OffreDossier).
 function versResumeOffre(o: Devis & { lignes: LigneDevis[] }) {
-  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const aujourdhui = todayIso();
   return {
     id: o.id,
     reference: refDevis(o),

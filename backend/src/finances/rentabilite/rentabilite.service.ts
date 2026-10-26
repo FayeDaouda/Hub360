@@ -18,6 +18,7 @@ import {
   type LigneParametre,
   type Statut,
 } from './regles-rentabilite';
+import { toIsoDay, todayIso } from '../../shared/dates';
 
 type Acteur = { userId: string; societeId: string; role: string };
 type Acces = 'montants' | 'taux';
@@ -30,8 +31,6 @@ type Acces = 'montants' | 'taux';
 const ACCES_MONTANTS = new Set(['CFO', 'CEO (transverse)']);
 const ROLE_CFO = 'CFO';
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
 const arrondi = (n: number) => Math.round(n);
 const heures1 = (n: number) => Math.round(n * 10) / 10;
 const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
@@ -74,7 +73,7 @@ export class RentabiliteService {
   // --- Calcul ------------------------------------------------------------------
 
   private async calculer(societeId: string, periode: string | null) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     const dansPeriode = (mois: string) => !periode || mois === periode;
     const [projets, factures, brouillons, controles, dossiers, taches, prolongations, reprises, parametres, feries] =
       await Promise.all([
@@ -181,15 +180,15 @@ export class RentabiliteService {
     // Projets facturés avant le début du suivi des heures : le travail payé
     // par ces factures n'a jamais été compté en coût (marge gonflée).
     const facturesAvantSuivi = new Set(
-      factures.filter((f) => moisDe(jourIso(f.emiseLe!)) < MOIS_DEBUT_FEUILLES).map((f) => f.projetId!),
+      factures.filter((f) => moisDe(toIsoDay(f.emiseLe!)) < MOIS_DEBUT_FEUILLES).map((f) => f.projetId!),
     );
     for (const f of factures) {
       const c = cumuls.get(f.projetId!);
-      const m = moisDe(jourIso(f.emiseLe!));
+      const m = moisDe(toIsoDay(f.emiseLe!));
       if (!c || !retenu(m)) continue;
       c.ht += f.montantHt.toNumber();
       mois(c, m).ht += f.montantHt.toNumber();
-      plusRecent(c, jourIso(f.emiseLe!));
+      plusRecent(c, toIsoDay(f.emiseLe!));
     }
     for (const b of brouillons) {
       const c = cumuls.get(b.projetId!);
@@ -237,7 +236,7 @@ export class RentabiliteService {
         if (!c || !l.heures) continue;
         c.heures += l.heures;
         mois(c, ctrl.mois).heures += l.heures;
-        plusRecent(c, jourIso(ctrl.controleLe));
+        plusRecent(c, toIsoDay(ctrl.controleLe));
         if (horaire === null) {
           c.sansSalaire.add(ctrl.dossierId);
           continue;
@@ -356,7 +355,7 @@ export class RentabiliteService {
   }
 
   private parametresEnVigueur(params: LigneParametre[]) {
-    const jour = aujourdhui();
+    const jour = todayIso();
     return (Object.keys(PARAMETRES) as CleParametre[]).map((cle) => ({
       cle,
       libelle: PARAMETRES[cle].libelle,
@@ -429,13 +428,13 @@ export class RentabiliteService {
             .map((f) => ({
               id: f.id,
               reference: refFacture(f),
-              emiseLe: jourIso(f.emiseLe!),
+              emiseLe: toIsoDay(f.emiseLe!),
               estAvoir: f.estAvoir,
               annulee: f.statut === 'annulee',
               libelle: f.libelle,
               ht: f.montantHt.toNumber(),
               // Émise après le mois arrêté : pas encore dans le cumul.
-              horsCumul: !arrete || moisDe(jourIso(f.emiseLe!)) > arrete,
+              horsCumul: !arrete || moisDe(toIsoDay(f.emiseLe!)) > arrete,
             }))
         : null,
       mois: [...c.parMois.entries()]
@@ -495,7 +494,7 @@ export class RentabiliteService {
     const noms = new Map(auteurs.map((u) => [u.id, nomDe(u)]));
     return {
       peutModifier: a.role === ROLE_CFO,
-      premierMois: premierMoisModifiable(aujourdhui()),
+      premierMois: premierMoisModifiable(todayIso()),
       enVigueur: this.parametresEnVigueur(lignes as LigneParametre[]),
       definitions: PARAMETRES,
       historique: lignes.map((l) => ({
@@ -520,7 +519,7 @@ export class RentabiliteService {
       throw new BadRequestException(`${def.libelle} : de ${def.min} à ${def.max} ${def.unite}.`);
     }
     if (!/^\d{4}-\d{2}-01$/.test(p.dateEffet)) throw new BadRequestException('La date d’effet est le 1er d’un mois.');
-    if (p.dateEffet < premierMoisModifiable(aujourdhui()))
+    if (p.dateEffet < premierMoisModifiable(todayIso()))
       throw new BadRequestException('Un mois passé ne se réécrit pas : date d’effet à partir du mois en cours.');
     if (p.motif.trim().length < 3) throw new BadRequestException('Le motif est obligatoire.');
     await this.prisma.parametreRentabilite.create({

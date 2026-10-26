@@ -17,6 +17,8 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { commissionsAttendues, modeA, type EncaissementHonoraires } from './commissions';
 import { ROLE_DAF } from './cycle';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
+import { formatDayMonth, toIsoDay, todayIso } from '../shared/dates';
+import { formatAmount } from '../shared/format';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
@@ -31,9 +33,6 @@ const LIBELLE_COORDONNEE: Record<keyof Coordonnees, string> = {
   orangeMoney: 'Orange Money',
 };
 
-const jourIso = (d: Date) => d.toISOString().slice(0, 10);
-const fcfa = (n: number) => `${Math.round(n).toLocaleString('fr-FR')} FCFA`;
-const jjmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const apporteurDe = (d: {
   apporteurType: string | null;
   apporteurNom: string | null;
@@ -138,7 +137,7 @@ export class CommissionsService {
       }),
       this.prisma.commissionApporteur.findMany({ where: { societeId } }),
     ]);
-    const modes = versions.map((v) => ({ modeCommission: v.modeCommission, jour: jourIso(v.createdAt) }));
+    const modes = versions.map((v) => ({ modeCommission: v.modeCommission, jour: toIsoDay(v.createdAt) }));
     const parCle = new Map(existantes.map((c) => [c.cle, c]));
     const attendues = new Set<string>();
     const nouvelles: {
@@ -150,7 +149,7 @@ export class CommissionsService {
     }[] = [];
 
     for (const d of dossiers) {
-      const signeLe = d.transitions[0] ? jourIso(d.transitions[0].creeLe) : null;
+      const signeLe = d.transitions[0] ? toIsoDay(d.transitions[0].creeLe) : null;
       if (!signeLe) continue;
       const taux = d.commissionApporteur!.toNumber();
       const encaissements: EncaissementHonoraires[] = paiements
@@ -206,7 +205,7 @@ export class CommissionsService {
         await this.notifications.envoyer({
           societeId,
           type: 'commission_a_payer',
-          titre: `Commission à payer · ${apporteurDe(n.dossier)} · ${n.dossier.code} · ${fcfa(n.montant)} (${n.taux} % de ${fcfa(n.baseHt)} HT, exigible le ${jjmm(n.exigibleLe)})`,
+          titre: `Commission à payer · ${apporteurDe(n.dossier)} · ${n.dossier.code} · ${formatAmount(n.montant)} (${n.taux} % de ${formatAmount(n.baseHt)} HT, exigible le ${formatDayMonth(n.exigibleLe)})`,
           destinataireIds: cfo,
           dossierCrmId: n.dossier.id,
         });
@@ -287,8 +286,7 @@ export class CommissionsService {
     });
     if (!c) throw new NotFoundException('Commission introuvable.');
     if (c.statut === 'payee') throw new ConflictException('Commission déjà payée.');
-    if (dto.date > jourIso(new Date()))
-      throw new BadRequestException('La date de paiement ne peut pas être dans le futur.');
+    if (dto.date > todayIso()) throw new BadRequestException('La date de paiement ne peut pas être dans le futur.');
     const { count } = await this.prisma.commissionApporteur.updateMany({
       where: { id, statut: 'a_payer' },
       data: {
@@ -303,7 +301,7 @@ export class CommissionsService {
     await this.notifications.envoyer({
       societeId: a.societeId,
       type: 'commission_payee',
-      titre: `Commission payée · ${apporteurDe(c.dossier)} · ${c.dossier.code} · ${fcfa(c.montant.toNumber())} le ${jjmm(dto.date)}`,
+      titre: `Commission payée · ${apporteurDe(c.dossier)} · ${c.dossier.code} · ${formatAmount(c.montant.toNumber())} le ${formatDayMonth(dto.date)}`,
       destinataireIds: await this.notifications.titulairesRole(a.societeId, ROLE_COO),
       parId: a.userId,
       dossierCrmId: c.dossierCrmId,

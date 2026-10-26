@@ -1,4 +1,5 @@
 import type { PrismaService } from '../prisma/prisma.service';
+import { todayIso } from '../shared/dates';
 
 // Délégation du CEO (revue CEO, 22/10/2026) — lecture commune à tous les
 // modules (fonction, pas de service : aucun cycle de modules). Délégués :
@@ -8,13 +9,11 @@ import type { PrismaService } from '../prisma/prisma.service';
 export const ROLE_CEO = 'CEO (transverse)';
 export const ROLES_DELEGATAIRES: ReadonlySet<string> = new Set(['CTO (transverse)', 'CFO']);
 
-const aujourdhui = () => new Date().toISOString().slice(0, 10);
-
 // Compte du délégataire en fonction ce jour-là, ou null.
 export async function delegataireCeo(
   prisma: PrismaService,
   societeId: string,
-  jour = aujourdhui(),
+  jour = todayIso(),
 ): Promise<string | null> {
   const d = await prisma.delegationCeo.findFirst({
     where: { societeId, revoqueLe: null, du: { lte: jour }, au: { gte: jour } },

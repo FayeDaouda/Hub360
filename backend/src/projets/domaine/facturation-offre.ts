@@ -1,5 +1,6 @@
 import { JalonFacture } from '@prisma/client';
 import { JALONS_FACTURE, type PartsFactures } from './config';
+import { plural } from '../../shared/text';
 
 // Plan de facturation d'une offre acceptée (étape H2, CGV Grey Concrete 2026,
 // décisions du 27/09/2026) — pur, sans I/O : ligne d'offre → factures à
@@ -200,7 +201,7 @@ export function echeancierOffre(
     .map((l) => ({
       cle: null,
       famille: `${l.famille === 'SU' ? 'Suivi de chantier' : 'Extras'} · ${nomLigne(l)}`,
-      echeance: l.quantite ? `${l.quantite} mensualité${l.quantite > 1 ? 's' : ''}` : 'Mensuelle',
+      echeance: l.quantite ? `${plural(l.quantite, 'mensualité')}` : 'Mensuelle',
       part: null,
       declencheur: 'Chaque mois',
       delaiJours: null,

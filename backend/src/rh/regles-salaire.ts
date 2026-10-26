@@ -1,4 +1,5 @@
 import type { MotifSalaire, StatutSalaire } from '@prisma/client';
+import { toIsoDay } from '../shared/dates';
 
 // Historique des salaires (revue RH validée 20/10/2026) — règles pures.
 
@@ -42,7 +43,7 @@ export function dateEffetMin(jour: string): string {
   const cible = new Date(Date.UTC(a, m - 1 - RETROACTIVITE_MAX_MOIS, 1));
   const dernier = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
   cible.setUTCDate(Math.min(j, dernier));
-  return cible.toISOString().slice(0, 10);
+  return toIsoDay(cible);
 }
 
 // Motif d'erreur, ou null si la proposition est recevable.

@@ -29,6 +29,7 @@ import {
   resume,
   type FicheProgramme,
 } from './fiche-programme';
+import { todayIso } from '../shared/dates';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
@@ -606,7 +607,7 @@ export class CrmService {
         where: { dossierCrmId: dossierId, statut: { in: ['envoye', 'accepte'] } },
         select: { id: true, statut: true, dateValidite: true },
       });
-      const aujourdhui = new Date().toISOString().slice(0, 10);
+      const aujourdhui = todayIso();
       const acceptee = offres.find((o) => o.statut === 'accepte');
       const enAttente = offres.find((o) => statutDevisEffectif(o, aujourdhui) === 'envoye');
       if (action === 'onboarder') {

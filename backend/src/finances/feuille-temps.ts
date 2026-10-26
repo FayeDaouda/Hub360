@@ -1,14 +1,12 @@
-import { VALIDITE_OFFRE_JOURS, ajouterJours } from '../devis/domaine';
+import { VALIDITE_OFFRE_JOURS } from '../devis/domaine';
 import { DELAI_PAIEMENT_DIRECTE_JOURS } from '../projets/facturation/facture-directe';
 import { arrondi, heuresTache, joursAbsents, joursTache, type Feries, type Periode } from '../rh/regles-temps';
+import { addDays, daysBetween } from '../shared/dates';
 
 // Finances · Feuille de temps (maquette du boss, oct. 2026) — règles pures :
 // temps sur le pipe (lead → 1er encaissement), temps sur la facturation
 // (prévu = bon pour accord + délai figé dans l'offre) et temps imputé
 // (tâches assignées du gabarit, calcul RH). Dates AAAA-MM-JJ.
-
-export const jours = (de: string, a: string) =>
-  Math.round((Date.parse(a.slice(0, 10)) - Date.parse(de.slice(0, 10))) / 86_400_000);
 
 // --- Temps sur le pipe -------------------------------------------------------------
 export type CleEtape = 'lead' | 'soumission' | 'envoi' | 'accord' | 'facture' | 'encaissement';
@@ -47,7 +45,7 @@ export function tempsPipe(dates: Record<CleEtape, string | null>): EtapePipe[] {
   let precedente: string | null = null;
   return ETAPES.map((e) => {
     const date = dates[e.cle]?.slice(0, 10) ?? null;
-    const ecartJours = date && precedente ? jours(precedente, date) : null;
+    const ecartJours = date && precedente ? daysBetween(precedente, date) : null;
     if (date) precedente = date;
     return {
       cle: e.cle,
@@ -70,21 +68,21 @@ export type DelaiTranche =
   | { etat: 'non_planifiee' }; // ni facture, ni délai prévu
 
 export function prevueLe(accord: string | null, delaiJours: number | null): string | null {
-  return accord && delaiJours != null ? ajouterJours(accord.slice(0, 10), delaiJours) : null;
+  return accord && delaiJours != null ? addDays(accord.slice(0, 10), delaiJours) : null;
 }
 
 export function delaiTranche(
   t: { prevue: string | null; facturee: string | null; echeance: string | null; payee: string | null },
   aujourdhui: string,
 ): DelaiTranche {
-  if (t.facturee && t.payee) return { etat: 'payee', jours: Math.max(0, jours(t.facturee, t.payee)) };
+  if (t.facturee && t.payee) return { etat: 'payee', jours: Math.max(0, daysBetween(t.facturee, t.payee)) };
   if (t.facturee) {
     if (!t.echeance) return { etat: 'a_echoir', jours: 0 };
-    const reste = jours(aujourdhui, t.echeance);
+    const reste = daysBetween(aujourdhui, t.echeance);
     return reste >= 0 ? { etat: 'a_echoir', jours: reste } : { etat: 'en_retard', jours: -reste };
   }
   if (!t.prevue) return { etat: 'non_planifiee' };
-  const reste = jours(aujourdhui, t.prevue);
+  const reste = daysBetween(aujourdhui, t.prevue);
   return reste >= 0 ? { etat: 'a_facturer', jours: reste } : { etat: 'facturation_en_retard', jours: -reste };
 }
 

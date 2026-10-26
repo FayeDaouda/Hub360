@@ -1,5 +1,6 @@
 import type { TypeReporting } from '@prisma/client';
 import { moisDe, moisEntre } from '../rh/regles-temps';
+import { addDays, daysBetween } from '../shared/dates';
 
 // Pilotage · tableau de bord Holding (maquettes du boss, sept.–oct. 2026) —
 // règles pures : reportings mensuels (manuel §9.4, dépôt à J+5), registre des
@@ -48,22 +49,17 @@ export function statutReporting(mois: string, deposeLe: string | null, aujourdhu
 //     destinataire une seule fois.
 // `cle` : suffixe de la clé du rappel (jamais deux fois le même envoi).
 export type RappelReporting = { cle: string; cible: 'emetteur' | 'destinataire'; nature: 'avant' | 'retard' };
-const jourDecale = (jour: string, n: number) => {
-  const d = new Date(`${jour}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
 export function rappelsReporting(mois: string, depose: boolean, jour: string, joursAvant: number): RappelReporting[] {
   if (depose) return [];
   const echeance = echeanceReporting(mois);
   if (jour > echeance) {
-    const retard = Math.round((Date.parse(jour) - Date.parse(echeance)) / 86_400_000);
+    const retard = daysBetween(echeance, jour);
     return [
       { cle: `retard:${Math.floor((retard - 1) / 7)}`, cible: 'emetteur', nature: 'retard' },
       { cle: 'retard-destinataire', cible: 'destinataire', nature: 'retard' },
     ];
   }
-  return jour >= jourDecale(echeance, -joursAvant) ? [{ cle: 'avant', cible: 'emetteur', nature: 'avant' }] : [];
+  return jour >= addDays(echeance, -joursAvant) ? [{ cle: 'avant', cible: 'emetteur', nature: 'avant' }] : [];
 }
 
 // --- Registre des décisions ------------------------------------------------
@@ -74,10 +70,10 @@ export function rappelsReporting(mois: string, depose: boolean, jour: string, jo
 // Après 2 relances sans effet, l'auteur de la décision est prévenu (rappels).
 export const RELANCES_AVANT_AUTEUR = 2;
 export function relanceDecision(echeance: string, jour: string): string | null {
-  if (jour < jourDecale(echeance, -3)) return null;
+  if (jour < addDays(echeance, -3)) return null;
   if (jour < echeance) return 'avant';
   if (jour === echeance) return 'jour';
-  const retard = Math.round((Date.parse(jour) - Date.parse(echeance)) / 86_400_000);
+  const retard = daysBetween(echeance, jour);
   return `retard:${Math.floor((retard - 1) / 7)}`;
 }
 
