@@ -196,6 +196,9 @@ up() {
   wait_for "http://localhost:$(front_port 0)/" frontend-0
   rm -rf "$STATE/auth"
   node "$ROOT/e2e/scripts/reference-scenario.mjs" "http://localhost:$(api_port 0)/api" "http://localhost:$(front_port 0)" "$STATE"
+  # Fin des connexions du scénario : les tests de fumée attendent que la limite
+  # de connexions par minute soit écoulée (sinon 429).
+  date +%s >"$STATE/scenario-done"
 
   if ((ENVS > 1)); then
     echo "▶ cloning $DB_NAME into $((ENVS - 1)) environment(s)"
