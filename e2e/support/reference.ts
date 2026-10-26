@@ -69,16 +69,24 @@ export async function waitForContent(page: Page): Promise<void> {
   await waitForStableHeight(page);
 }
 
-// Requêtes en cours, par page, toutes origines (installSeedNoiseFilter). Le
-// flux du chat (SSE) reste ouvert en permanence : non compté.
+// Requêtes en cours, par page, toutes origines (installSeedNoiseFilter).
+//
+// Connexions permanentes, exclues de l'attente — inventaire du front au
+// 26/10/2026 (recherche de EventSource, WebSocket, setInterval) :
+//   - flux du chat : EventSource sur /societes/:slug/chat/flux (lib/chat.ts).
+// Requêtes périodiques, comptées, car elles se terminent :
+//   - notifications de la cloche et ses badges : GET /societes/:slug/notifications
+//     toutes les 15 s (lib/use-notifications-poll.ts) ; une seule en vol à la fois.
+// Toute nouvelle connexion permanente doit être ajoutée ici : sinon les
+// captures échouent après 30 s en la listant.
+const PERMANENT_CONNECTIONS: { name: string; url: RegExp }[] = [{ name: 'flux du chat', url: /\/chat\/flux\b/ }];
 const pendingByPage = new WeakMap<Page, Map<Request, string>>();
-const STREAMING = /\/chat\/flux\b/;
 
 function trackRequests(page: Page) {
   const pending = new Map<Request, string>();
   pendingByPage.set(page, pending);
   page.on('request', (request) => {
-    if (STREAMING.test(request.url()) || ['eventsource', 'websocket'].includes(request.resourceType())) return;
+    if (PERMANENT_CONNECTIONS.some((connection) => connection.url.test(request.url()))) return;
     pending.set(request, `${request.resourceType()} ${request.method()} ${request.url()}`);
   });
   page.on('requestfinished', (request) => pending.delete(request));
