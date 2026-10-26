@@ -195,7 +195,11 @@ export function expectStableApi(page: Page): void {
   expect(retries.length, `trop de nouvelles tentatives\n${lines.join('\n')}`).toBeLessThanOrEqual(MAX_RETRIES_PER_TEST);
 }
 
-export async function installSeedNoiseFilter(page: Page): Promise<void> {
+// `envIndex` : environnement de référence de la page. Le front est compilé une
+// fois pour l'API de l'environnement 0 (:3101) ; ses appels sont redirigés ici
+// vers l'API de l'environnement i (:3101 + 10 i).
+export async function installSeedNoiseFilter(page: Page, envIndex = 0): Promise<void> {
+  const apiOrigin = `http://localhost:${3101 + 10 * envIndex}`;
   const today = new Date().toISOString().slice(0, 10);
   await page.clock.setFixedTime(new Date(`${today}T12:00:00Z`));
   trackRequests(page);
@@ -212,10 +216,12 @@ export async function installSeedNoiseFilter(page: Page): Promise<void> {
         recordRetry(page, route.request(), error, false);
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
-      response = await route.fetch().catch((e: unknown) => {
-        error = (e instanceof Error ? e.message : String(e)).split('\n')[0];
-        return null;
-      });
+      response = await route
+        .fetch({ url: route.request().url().replace(API_ORIGIN, apiOrigin) })
+        .catch((e: unknown) => {
+          error = (e instanceof Error ? e.message : String(e)).split('\n')[0];
+          return null;
+        });
     }
     if (!response) {
       if (!page.isClosed()) recordRetry(page, route.request(), error, true);
