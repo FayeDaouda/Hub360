@@ -2,7 +2,7 @@ import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
 import type { Temps } from './reglages';
 import type { StatutDevisEffectif } from './types';
-import { daysBetween, formatDate, formatDayMonth, todayIso } from './dates';
+import { daysBetween, formatDayMonth, todayIso } from './dates';
 
 // -----------------------------------------------------------------------------
 // Projets ouverts selon le gabarit (maquette « Projets » du boss). Branché sur :

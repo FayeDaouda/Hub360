@@ -44,7 +44,6 @@ export function IntegrationRh({ slug, ecriture }: { slug: string; ecriture: bool
       <div className="skeleton admin-skeleton-panel" aria-hidden />
     );
 
-  const aTraiter = liste.reduce((n, s) => n + s.aTraiter, 0);
   const courant = liste.find((s) => s.id === choisi) ?? null;
   const remplacer = (s: IntegrationSalarie) => setListe((l) => (l ?? []).map((x) => (x.id === s.id ? s : x)));
 

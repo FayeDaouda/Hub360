@@ -45,7 +45,6 @@ type Element = {
   ouvrir: () => void;
 };
 
-const JOUR = 24 * 3_600_000;
 const nom = (p?: { prenom: string; nom: string } | null) => (p ? `${p.prenom} ${p.nom}`.trim() : 'Salarié');
 const depuis = (jours: number) => (jours <= 0 ? 'aujourd’hui' : `depuis ${jours} j`);
 const VISIBLES = 6;
