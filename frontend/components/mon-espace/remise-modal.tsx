@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { remettreTache } from '@/lib/mon-espace';
 import type { CorpsRemise } from '@/lib/projets-ouverts';
 import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
-import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import {
   corpsRemise,
   depotPret,
@@ -39,7 +39,7 @@ export function RemiseModal({
   const [saisie, setSaisie] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: piecesInitiales ?? [] });
   return (
     <ConfirmModal
-      titre="Déposer la tâche"
+      title="Déposer la tâche"
       message={
         <>
           <span className="depot-tache">
@@ -62,8 +62,8 @@ export function RemiseModal({
           />
         </>
       }
-      confirmer="Déposer"
-      confirmerDesactive={!depotPret(saisie, tache.fichierObligatoire)}
+      confirmLabel="Déposer"
+      confirmDisabled={!depotPret(saisie, tache.fichierObligatoire)}
       onConfirm={async () => {
         if (onEnvoyer) onEnvoyer(corpsRemise(saisie));
         else onRemise?.(await remettreTache(slug, tache, corpsRemise(saisie)));

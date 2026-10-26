@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { HelpCircle, X } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import { moduleDeSection, ORDRE_SECTIONS, sectionAccessible } from '@/lib/acces-back-office';
 import { FICHES_AIDE, phraseNiveau, REPERES_AIDE } from '@/lib/aide';
 import { lireFichier } from '@/lib/fichiers';
 import { creerSignalement } from '@/lib/signalements';
 import type { NiveauPermission, Session } from '@/lib/types';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 type Onglet = 'guide' | 'signaler';
 
@@ -58,55 +59,36 @@ function Panneau({
   onOnglet: (o: Onglet) => void;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal aide-panneau"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="aide-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="aide-titre">Aide</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
+    <Modal onClose={onClose} className="aide-panneau" labelledBy="aide-titre">
+      <ModalHeader title="Aide" titleId="aide-titre" onClose={onClose} />
+      <div className="vue-toggle aide-onglets" role="tablist" aria-label="Aide">
+        {(
+          [
+            ['guide', 'Mon guide'],
+            ['signaler', 'Signaler un problème'],
+          ] as const
+        ).map(([o, libelle]) => (
+          <button
+            key={o}
+            type="button"
+            role="tab"
+            aria-selected={onglet === o}
+            className={onglet === o ? 'is-active' : ''}
+            onClick={() => onOnglet(o)}
+          >
+            {libelle}
           </button>
-        </header>
-        <div className="vue-toggle aide-onglets" role="tablist" aria-label="Aide">
-          {(
-            [
-              ['guide', 'Mon guide'],
-              ['signaler', 'Signaler un problème'],
-            ] as const
-          ).map(([o, libelle]) => (
-            <button
-              key={o}
-              type="button"
-              role="tab"
-              aria-selected={onglet === o}
-              className={onglet === o ? 'is-active' : ''}
-              onClick={() => onOnglet(o)}
-            >
-              {libelle}
-            </button>
-          ))}
-        </div>
-        <div className="modal-body aide-corps">
-          {onglet === 'guide' ? (
-            <Guide session={session} onSignaler={() => onOnglet('signaler')} />
-          ) : (
-            <Signaler session={session} onClose={onClose} />
-          )}
-        </div>
+        ))}
       </div>
-    </div>
+      <div className="modal-body aide-corps">
+        {onglet === 'guide' ? (
+          <Guide session={session} onSignaler={() => onOnglet('signaler')} />
+        ) : (
+          <Signaler session={session} onClose={onClose} />
+        )}
+      </div>
+    </Modal>
   );
 }
 

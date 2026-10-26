@@ -13,7 +13,7 @@ import {
   STATUT_FEUILLE,
 } from '@/lib/temps';
 import type { FeuilleTempsSalarie, FeuillesTemps } from '@/lib/types';
-import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
@@ -288,7 +288,7 @@ function DetailFeuille({
 
       {confirmation && (
         <ConfirmModal
-          titre="Contrôler la feuille de temps"
+          title="Contrôler la feuille de temps"
           message={`La feuille de ${nomDe(f)} pour ${formatMonthYear(f.mois)} sera figée telle qu’affichée (${formatHeures(f.heuresImputees)} imputées sur ${formatHeures(f.heuresDisponibles)} disponibles).`}
           onConfirm={async () => {
             await controlerFeuilleTemps(slug, f.dossierId, f.mois);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 type Props = {
   titre: string;
@@ -34,14 +34,6 @@ export function ChampModal({
     ref.current?.select();
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !enCours) onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, enCours]);
-
   async function lancer() {
     const v = valeur.trim();
     if (!v) {
@@ -59,51 +51,38 @@ export function ChampModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={() => !enCours && onClose()}>
-      <div
-        className="modal modal--sm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="champ-titre"
-        onClick={(e) => e.stopPropagation()}
+    <Modal onClose={onClose} busy={enCours} className="modal--sm" labelledBy="champ-titre">
+      <ModalHeader title={titre} titleId="champ-titre" onClose={onClose} closeDisabled={enCours} />
+      <form
+        className="modal-body"
+        onSubmit={(e) => {
+          e.preventDefault();
+          lancer();
+        }}
       >
-        <header className="modal-header">
-          <h2 id="champ-titre">{titre}</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose} disabled={enCours}>
-            <X size={18} />
+        <label className="field">
+          <span className="field-label">{label}</span>
+          <input
+            ref={ref}
+            className="field-input"
+            value={valeur}
+            placeholder={placeholder}
+            onChange={(e) => {
+              setValeur(e.target.value);
+              setErreur(null);
+            }}
+          />
+        </label>
+        {erreur && <p className="field-erreur">{erreur}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
+            Annuler
           </button>
-        </header>
-        <form
-          className="modal-body"
-          onSubmit={(e) => {
-            e.preventDefault();
-            lancer();
-          }}
-        >
-          <label className="field">
-            <span className="field-label">{label}</span>
-            <input
-              ref={ref}
-              className="field-input"
-              value={valeur}
-              placeholder={placeholder}
-              onChange={(e) => {
-                setValeur(e.target.value);
-                setErreur(null);
-              }}
-            />
-          </label>
-          {erreur && <p className="field-erreur">{erreur}</p>}
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" onClick={onClose} disabled={enCours}>
-              Annuler
-            </button>
-            <button type="submit" className="btn-primary" disabled={enCours || valeur.trim() === ''}>
-              {enCours ? '…' : confirmer}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <button type="submit" className="btn-primary" disabled={enCours || valeur.trim() === ''}>
+            {enCours ? '…' : confirmer}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

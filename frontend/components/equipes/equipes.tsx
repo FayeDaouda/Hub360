@@ -8,7 +8,7 @@ import { getAbsencesAValider } from '@/lib/demandes';
 import { NIVEAUX_COLLABORATEUR, type CelluleEquipe, type NiveauCollaborateur, type VueEquipes } from '@/lib/types';
 import { AbsencesADecider } from '@/components/absences/absences-a-decider';
 import { ChampModal } from '@/components/admin/champ-modal';
-import { ConfirmModal } from '@/components/admin/confirm-modal';
+import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { CelluleCarte } from './cellule-carte';
 import { CreerCellule } from './creer-cellule';
 import { Nomenclature } from './nomenclature';
@@ -320,9 +320,9 @@ export function Equipes({ slug, ecriture }: { slug: string; ecriture: boolean })
       )}
       {aSupprimer && (
         <ConfirmModal
-          titre="Supprimer la cellule"
+          title="Supprimer la cellule"
           message={`Supprimer « ${aSupprimer.code} · ${aSupprimer.nom} » ? Une cellule qui a encore des membres ne peut pas être supprimée.`}
-          confirmer="Supprimer"
+          confirmLabel="Supprimer"
           danger
           onConfirm={async () => {
             await supprimerCellule(slug, aSupprimer.id);

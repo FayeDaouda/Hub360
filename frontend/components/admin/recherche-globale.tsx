@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { chercher, GROUPES, lienResultat, type ResultatRecherche } from '@/lib/recherche';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
+import { CloseButton, Modal } from '@/components/ui/dialog';
 
 const DELAI_SAISIE_MS = 250;
 const LONGUEUR_MIN = 2;
@@ -115,74 +116,69 @@ function Palette({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal recherche-palette"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Recherche"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDown}
-      >
-        <div className="champ-recherche recherche-champ">
-          <Search size={16} aria-hidden />
-          <input
-            ref={champ}
-            type="search"
-            className="field-input"
-            placeholder="Rechercher un projet, un client, un collègue…"
-            value={q}
-            maxLength={80}
-            onChange={(e) => setQ(e.target.value)}
-            aria-controls="recherche-resultats"
-            aria-activedescendant={ordonnes[actif] ? `recherche-${ordonnes[actif].id}` : undefined}
-          />
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        <div id="recherche-resultats" className="recherche-resultats" role="listbox" aria-label="Résultats">
-          {erreur ? (
-            <p className="recherche-aide field-erreur">La recherche a échoué.</p>
-          ) : q.trim().length < LONGUEUR_MIN ? (
-            <p className="recherche-aide">
-              Tapez au moins {LONGUEUR_MIN} caractères. ↑ ↓ pour choisir, Entrée pour ouvrir.
-            </p>
-          ) : !resultats ? (
-            <p className="recherche-aide">Recherche…</p>
-          ) : ordonnes.length === 0 ? (
-            <p className="recherche-aide">Aucun résultat pour « {q.trim()} ».</p>
-          ) : (
-            GROUPES.map((g) => {
-              const items = ordonnes.filter((r) => r.type === g.type);
-              if (!items.length) return null;
-              return (
-                <div key={g.type} role="group" aria-label={g.libelle}>
-                  <p className="recherche-groupe">{g.libelle}</p>
-                  {items.map((r) => {
-                    const i = ordonnes.indexOf(r);
-                    return (
-                      <button
-                        key={`${r.type}-${r.id}`}
-                        id={`recherche-${r.id}`}
-                        type="button"
-                        role="option"
-                        aria-selected={i === actif}
-                        className={`recherche-resultat${i === actif ? ' is-actif' : ''}`}
-                        onMouseEnter={() => setActif(i)}
-                        onClick={() => ouvrir(r)}
-                      >
-                        <strong>{r.titre}</strong>
-                        {r.detail && <span className="cell-sub">{r.detail}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })
-          )}
-        </div>
+    <Modal
+      onClose={onClose}
+      closeOnEscape={false}
+      className="recherche-palette"
+      label="Recherche"
+      onKeyDown={onKeyDown}
+    >
+      <div className="champ-recherche recherche-champ">
+        <Search size={16} aria-hidden />
+        <input
+          ref={champ}
+          type="search"
+          className="field-input"
+          placeholder="Rechercher un projet, un client, un collègue…"
+          value={q}
+          maxLength={80}
+          onChange={(e) => setQ(e.target.value)}
+          aria-controls="recherche-resultats"
+          aria-activedescendant={ordonnes[actif] ? `recherche-${ordonnes[actif].id}` : undefined}
+        />
+        <CloseButton onClick={onClose} />
       </div>
-    </div>
+      <div id="recherche-resultats" className="recherche-resultats" role="listbox" aria-label="Résultats">
+        {erreur ? (
+          <p className="recherche-aide field-erreur">La recherche a échoué.</p>
+        ) : q.trim().length < LONGUEUR_MIN ? (
+          <p className="recherche-aide">
+            Tapez au moins {LONGUEUR_MIN} caractères. ↑ ↓ pour choisir, Entrée pour ouvrir.
+          </p>
+        ) : !resultats ? (
+          <p className="recherche-aide">Recherche…</p>
+        ) : ordonnes.length === 0 ? (
+          <p className="recherche-aide">Aucun résultat pour « {q.trim()} ».</p>
+        ) : (
+          GROUPES.map((g) => {
+            const items = ordonnes.filter((r) => r.type === g.type);
+            if (!items.length) return null;
+            return (
+              <div key={g.type} role="group" aria-label={g.libelle}>
+                <p className="recherche-groupe">{g.libelle}</p>
+                {items.map((r) => {
+                  const i = ordonnes.indexOf(r);
+                  return (
+                    <button
+                      key={`${r.type}-${r.id}`}
+                      id={`recherche-${r.id}`}
+                      type="button"
+                      role="option"
+                      aria-selected={i === actif}
+                      className={`recherche-resultat${i === actif ? ' is-actif' : ''}`}
+                      onMouseEnter={() => setActif(i)}
+                      onClick={() => ouvrir(r)}
+                    >
+                      <strong>{r.titre}</strong>
+                      {r.detail && <span className="cell-sub">{r.detail}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </Modal>
   );
 }

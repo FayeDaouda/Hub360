@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
 import { creerDevis } from '@/lib/devis';
 import type { Client, ProduitService, ProjetRef } from '@/lib/types';
 import { LignesDevisEditeur, ligneVide, lignesSaisies, type LigneForm } from './lignes-devis-editeur';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 type Props = {
   slug: string;
@@ -28,11 +28,6 @@ export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPre
 
   useEffect(() => {
     premierChamp.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   // Client présélectionné automatiquement quand un projet est déjà choisi
@@ -70,101 +65,88 @@ export function NouveauDevisModal({ slug, clients, projets, catalogue, projetPre
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal modal--large"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-titre-devis"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="modal-titre-devis">Nouveau devis</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
+    <Modal onClose={onClose} className="modal--large" labelledBy="modal-titre-devis">
+      <ModalHeader title="Nouveau devis" titleId="modal-titre-devis" onClose={onClose} />
 
-        <form className="modal-body" onSubmit={soumettre}>
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Client</span>
-              <select
-                ref={premierChamp}
-                className="field-input"
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
-              >
-                <option value="">Choisir…</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nom}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              <span className="field-label">Projet (facultatif)</span>
-              <select className="field-input" value={projetId} onChange={(e) => setProjetId(e.target.value)}>
-                <option value="">Aucun — devis libre</option>
-                {projets.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.code} — {p.programme}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+      <form className="modal-body" onSubmit={soumettre}>
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Client</span>
+            <select
+              ref={premierChamp}
+              className="field-input"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+            >
+              <option value="">Choisir…</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nom}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field-label">Projet (facultatif)</span>
+            <select className="field-input" value={projetId} onChange={(e) => setProjetId(e.target.value)}>
+              <option value="">Aucun — devis libre</option>
+              {projets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code} — {p.programme}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
-          <div className="field-row">
-            <label className="field">
-              <span className="field-label">Objet (facultatif)</span>
-              <input
-                className="field-input"
-                value={objet}
-                onChange={(e) => setObjet(e.target.value)}
-                placeholder="ex : Honoraires de conception — Villa Cap Ouest"
-              />
-            </label>
-            <label className="field">
-              <span className="field-label">Valable jusqu’au (facultatif)</span>
-              <input
-                type="date"
-                className="field-input"
-                value={dateValidite}
-                onChange={(e) => setDateValidite(e.target.value)}
-              />
-            </label>
-          </div>
+        <div className="field-row">
+          <label className="field">
+            <span className="field-label">Objet (facultatif)</span>
+            <input
+              className="field-input"
+              value={objet}
+              onChange={(e) => setObjet(e.target.value)}
+              placeholder="ex : Honoraires de conception — Villa Cap Ouest"
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">Valable jusqu’au (facultatif)</span>
+            <input
+              type="date"
+              className="field-input"
+              value={dateValidite}
+              onChange={(e) => setDateValidite(e.target.value)}
+            />
+          </label>
+        </div>
 
-          {/* Rattaché à un projet = devis complémentaire : seul lieu des
+        {/* Rattaché à un projet = devis complémentaire : seul lieu des
               travaux supplémentaires (CGV art. 8), au tarif CO du projet. */}
-          <LignesDevisEditeur
-            lignes={lignes}
-            onChange={setLignes}
-            catalogue={catalogue}
-            devisProjet={!!projetId}
-            categorieCo={projets.find((p) => p.id === projetId)?.categorieConception ?? null}
-          />
-          {projetId && (
-            <p className="field-aide">
-              Devis complémentaire du projet : tout travail supplémentaire doit être accepté par écrit par le client
-              avant exécution (CGV art. 8) — il ne se facture qu’une fois accepté.
-            </p>
-          )}
+        <LignesDevisEditeur
+          lignes={lignes}
+          onChange={setLignes}
+          catalogue={catalogue}
+          devisProjet={!!projetId}
+          categorieCo={projets.find((p) => p.id === projetId)?.categorieConception ?? null}
+        />
+        {projetId && (
+          <p className="field-aide">
+            Devis complémentaire du projet : tout travail supplémentaire doit être accepté par écrit par le client avant
+            exécution (CGV art. 8) — il ne se facture qu’une fois accepté.
+          </p>
+        )}
 
-          {erreur && <p className="field-erreur">{erreur}</p>}
+        {erreur && <p className="field-erreur">{erreur}</p>}
 
-          <div className="modal-actions">
-            <button type="button" className="btn-ghost" onClick={onClose}>
-              Annuler
-            </button>
-            <button type="submit" className="btn-primary" disabled={envoi}>
-              {envoi ? 'Création…' : 'Créer le brouillon'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="modal-actions">
+          <button type="button" className="btn-ghost" onClick={onClose}>
+            Annuler
+          </button>
+          <button type="submit" className="btn-primary" disabled={envoi}>
+            {envoi ? 'Création…' : 'Créer le brouillon'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

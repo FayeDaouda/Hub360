@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { creerProduitService, supprimerProduitService, type NouveauProduitService } from '@/lib/devis';
 import type { ProduitService } from '@/lib/types';
 import { formatCompactAmount } from '@/lib/format';
 import { useConfirmer } from '@/components/confirmation';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 type Props = {
   slug: string;
@@ -72,109 +73,96 @@ export function CatalogueProduitsModal({ slug, produits, onClose, onChange }: Pr
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-titre-catalogue"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="modal-titre-catalogue">Catalogue produits / services</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
+    <Modal onClose={onClose} closeOnEscape={false} labelledBy="modal-titre-catalogue">
+      <ModalHeader title="Catalogue produits / services" titleId="modal-titre-catalogue" onClose={onClose} />
 
-        <div className="modal-body">
-          {produits.length === 0 ? (
-            <p className="images-vide">Catalogue vide — ajoute une première entrée ci-dessous.</p>
-          ) : (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Désignation</th>
-                    <th>Prix unitaire</th>
-                    <th>TVA</th>
-                    <th aria-label="Retirer" />
+      <div className="modal-body">
+        {produits.length === 0 ? (
+          <p className="images-vide">Catalogue vide — ajoute une première entrée ci-dessous.</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Désignation</th>
+                  <th>Prix unitaire</th>
+                  <th>TVA</th>
+                  <th aria-label="Retirer" />
+                </tr>
+              </thead>
+              <tbody>
+                {produits.map((p) => (
+                  <tr key={p.id}>
+                    <td data-label="Désignation">{p.designation}</td>
+                    <td data-label="Prix unitaire">
+                      {p.prixUnitaire != null ? formatCompactAmount(p.prixUnitaire) : '—'}
+                    </td>
+                    <td data-label="TVA">{p.tauxTva} %</td>
+                    <td data-label="">
+                      <button
+                        type="button"
+                        className="lien-inline"
+                        aria-label="Retirer"
+                        disabled={busy}
+                        onClick={() => retirer(p.id)}
+                      >
+                        <Trash2 size={12} aria-hidden />
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {produits.map((p) => (
-                    <tr key={p.id}>
-                      <td data-label="Désignation">{p.designation}</td>
-                      <td data-label="Prix unitaire">
-                        {p.prixUnitaire != null ? formatCompactAmount(p.prixUnitaire) : '—'}
-                      </td>
-                      <td data-label="TVA">{p.tauxTva} %</td>
-                      <td data-label="">
-                        <button
-                          type="button"
-                          className="lien-inline"
-                          aria-label="Retirer"
-                          disabled={busy}
-                          onClick={() => retirer(p.id)}
-                        >
-                          <Trash2 size={12} aria-hidden />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-          <h4 className="exec-sous-titre">Ajouter une entrée</h4>
-          <form onSubmit={ajouter}>
-            <div className="field-row">
-              <label className="field">
-                <span className="field-label">Désignation</span>
-                <input
-                  className="field-input"
-                  value={designation}
-                  onChange={(e) => setDesignation(e.target.value)}
-                  placeholder="ex : Honoraires de conception"
-                />
-              </label>
-              <label className="field">
-                <span className="field-label">Prix unitaire (facultatif)</span>
-                <input
-                  type="number"
-                  min="0"
-                  className="field-input"
-                  value={prixUnitaire}
-                  onChange={(e) => setPrixUnitaire(e.target.value)}
-                  placeholder="variable selon le projet"
-                />
-              </label>
-              <label className="field" style={{ maxWidth: 120 }}>
-                <span className="field-label">TVA %</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="field-input"
-                  value={tauxTva}
-                  onChange={(e) => setTauxTva(e.target.value)}
-                />
-              </label>
-            </div>
-            {erreur && <p className="field-erreur">{erreur}</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
-                Fermer
-              </button>
-              <button type="submit" className="btn-primary" disabled={busy}>
-                <Plus size={15} aria-hidden /> Ajouter au catalogue
-              </button>
-            </div>
-          </form>
-        </div>
+        <h4 className="exec-sous-titre">Ajouter une entrée</h4>
+        <form onSubmit={ajouter}>
+          <div className="field-row">
+            <label className="field">
+              <span className="field-label">Désignation</span>
+              <input
+                className="field-input"
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                placeholder="ex : Honoraires de conception"
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">Prix unitaire (facultatif)</span>
+              <input
+                type="number"
+                min="0"
+                className="field-input"
+                value={prixUnitaire}
+                onChange={(e) => setPrixUnitaire(e.target.value)}
+                placeholder="variable selon le projet"
+              />
+            </label>
+            <label className="field" style={{ maxWidth: 120 }}>
+              <span className="field-label">TVA %</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                className="field-input"
+                value={tauxTva}
+                onChange={(e) => setTauxTva(e.target.value)}
+              />
+            </label>
+          </div>
+          {erreur && <p className="field-erreur">{erreur}</p>}
+          <div className="modal-actions">
+            <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose}>
+              Fermer
+            </button>
+            <button type="submit" className="btn-primary" disabled={busy}>
+              <Plus size={15} aria-hidden /> Ajouter au catalogue
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }

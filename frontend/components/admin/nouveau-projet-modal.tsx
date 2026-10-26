@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
 import { creerProjet } from '@/lib/crm';
 import { getSession } from '@/lib/auth';
 import { libelleRole } from '@/lib/groupe';
@@ -14,6 +13,7 @@ import {
 } from './fiche-apporteur-champs';
 import { segmentClient } from '@/lib/nomenclature';
 import type { Client, Localite, NouveauProjetPayload, Personne, Projet, TypeClient } from '@/lib/types';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
 
 const NOUVEAU_CLIENT = '__nouveau__';
 
@@ -84,11 +84,6 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
 
   useEffect(() => {
     champNom.current?.focus();
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   async function soumettre(e: React.FormEvent) {
@@ -114,147 +109,134 @@ export function NouveauProjetModal({ slug, clients, localites, proprietaires, on
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal nouveau-projet"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-titre"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="modal-header">
-          <h2 id="modal-titre">Nouveau projet</h2>
-          <button type="button" className="modal-close" aria-label="Fermer" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </header>
+    <Modal onClose={onClose} className="nouveau-projet" labelledBy="modal-titre">
+      <ModalHeader title="Nouveau projet" titleId="modal-titre" onClose={onClose} />
 
-        <form className="modal-body" onSubmit={soumettre}>
-          <div className="nouveau-projet-code">
-            <span className="nouveau-projet-surtitre">Code projet généré</span>
-            <strong className="nouveau-projet-code-valeur" aria-live="polite">
-              {code}
-            </strong>
-            <span>Le code se compose au fur et à mesure de la saisie.</span>
-          </div>
+      <form className="modal-body" onSubmit={soumettre}>
+        <div className="nouveau-projet-code">
+          <span className="nouveau-projet-surtitre">Code projet généré</span>
+          <strong className="nouveau-projet-code-valeur" aria-live="polite">
+            {code}
+          </strong>
+          <span>Le code se compose au fur et à mesure de la saisie.</span>
+        </div>
 
-          <div className="field">
-            <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-client">
-              Client
-            </label>
-            <select
-              id="nouveau-projet-client"
-              className="field-input"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-            >
-              <option value={NOUVEAU_CLIENT}>+ Nouveau client</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nom}
-                </option>
-              ))}
-            </select>
-            <span className="field-aide">
-              Un client existant garde sa fiche, ses contacts et son adresse ; le nouveau projet s’y rattache.
-            </span>
-          </div>
-
-          {clientNouveau && (
-            <>
-              <div className="field">
-                <span className="field-label nouveau-projet-label" id="nouveau-projet-nature">
-                  Nature du client
-                </span>
-                <div className="nouveau-projet-nature" role="radiogroup" aria-labelledby="nouveau-projet-nature">
-                  {[false, true].map((m) => (
-                    <button
-                      key={String(m)}
-                      type="button"
-                      role="radio"
-                      aria-checked={morale === m}
-                      className={morale === m ? 'is-actif' : undefined}
-                      onClick={() => setMorale(m)}
-                    >
-                      {m ? 'Personne morale' : 'Personne physique'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="field">
-                <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-nom">
-                  {morale ? 'Raison sociale' : 'Prénom(s) et nom'}
-                </label>
-                <input
-                  ref={champNom}
-                  id="nouveau-projet-nom"
-                  className="field-input"
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  placeholder={morale ? 'ex. SCI Les Filaos' : 'ex. Dior Fall Sourang'}
-                  maxLength={160}
-                />
-                <span className="field-aide">
-                  {morale
-                    ? 'Les initiales ignorent les mots de liaison et la forme juridique (SA, SARL…).'
-                    : 'Dans l’ordre de l’état civil : une lettre par prénom et par nom.'}
-                </span>
-              </div>
-            </>
-          )}
-
-          <div className="field">
-            <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-localite">
-              Localisation
-            </label>
-            <LocaliteSelect
-              localites={localites}
-              valeur={localiteId}
-              onChange={setLocaliteId}
-              idChamp="nouveau-projet-localite"
-              filtre={false}
-            />
-            <span className="field-aide">
-              Choisie dans le référentiel des localités. Le code{localite ? ` (ici ${localite.code})` : ''} n’est jamais
-              tapé à la main.
-            </span>
-          </div>
-
-          <div
-            className={`fiche-apporteur${apporteur.aucun ? ' is-directe' : ''}`}
-            role="group"
-            aria-labelledby="nouveau-projet-apporteur"
+        <div className="field">
+          <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-client">
+            Client
+          </label>
+          <select
+            id="nouveau-projet-client"
+            className="field-input"
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
           >
-            <p className="fiche-apporteur-titre" id="nouveau-projet-apporteur">
-              <strong>Fiche apporteur d’affaire</strong> (obligatoire · validée et verrouillée à la création)
-            </p>
-            <FicheApporteurChamps saisie={apporteur} onChange={setApporteur} idPrefixe="nouveau-projet-apporteur" />
-            <span className="field-aide">Après création, seul le COO pourra modifier cette fiche.</span>
-          </div>
+            <option value={NOUVEAU_CLIENT}>+ Nouveau client</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nom}
+              </option>
+            ))}
+          </select>
+          <span className="field-aide">
+            Un client existant garde sa fiche, ses contacts et son adresse ; le nouveau projet s’y rattache.
+          </span>
+        </div>
 
-          <div className="nouveau-projet-passation">
-            <span className="nouveau-projet-surtitre">Créée par (automatique)</span>
-            <strong>{session ? libelleRole(session.role) : '—'}</strong>
-            <span>{passation}</span>
-          </div>
+        {clientNouveau && (
+          <>
+            <div className="field">
+              <span className="field-label nouveau-projet-label" id="nouveau-projet-nature">
+                Nature du client
+              </span>
+              <div className="nouveau-projet-nature" role="radiogroup" aria-labelledby="nouveau-projet-nature">
+                {[false, true].map((m) => (
+                  <button
+                    key={String(m)}
+                    type="button"
+                    role="radio"
+                    aria-checked={morale === m}
+                    className={morale === m ? 'is-actif' : undefined}
+                    onClick={() => setMorale(m)}
+                  >
+                    {m ? 'Personne morale' : 'Personne physique'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <p className="field-aide nouveau-projet-suite">
-            Les autres champs (type, terrain, planches, standing, gamme, programme) se complètent ensuite dans la fiche,
-            par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
+            <div className="field">
+              <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-nom">
+                {morale ? 'Raison sociale' : 'Prénom(s) et nom'}
+              </label>
+              <input
+                ref={champNom}
+                id="nouveau-projet-nom"
+                className="field-input"
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                placeholder={morale ? 'ex. SCI Les Filaos' : 'ex. Dior Fall Sourang'}
+                maxLength={160}
+              />
+              <span className="field-aide">
+                {morale
+                  ? 'Les initiales ignorent les mots de liaison et la forme juridique (SA, SARL…).'
+                  : 'Dans l’ordre de l’état civil : une lettre par prénom et par nom.'}
+              </span>
+            </div>
+          </>
+        )}
+
+        <div className="field">
+          <label className="field-label nouveau-projet-label" htmlFor="nouveau-projet-localite">
+            Localisation
+          </label>
+          <LocaliteSelect
+            localites={localites}
+            valeur={localiteId}
+            onChange={setLocaliteId}
+            idChamp="nouveau-projet-localite"
+            filtre={false}
+          />
+          <span className="field-aide">
+            Choisie dans le référentiel des localités. Le code{localite ? ` (ici ${localite.code})` : ''} n’est jamais
+            tapé à la main.
+          </span>
+        </div>
+
+        <div
+          className={`fiche-apporteur${apporteur.aucun ? ' is-directe' : ''}`}
+          role="group"
+          aria-labelledby="nouveau-projet-apporteur"
+        >
+          <p className="fiche-apporteur-titre" id="nouveau-projet-apporteur">
+            <strong>Fiche apporteur d’affaire</strong> (obligatoire · validée et verrouillée à la création)
           </p>
+          <FicheApporteurChamps saisie={apporteur} onChange={setApporteur} idPrefixe="nouveau-projet-apporteur" />
+          <span className="field-aide">Après création, seul le COO pourra modifier cette fiche.</span>
+        </div>
 
-          {erreur && <p className="field-erreur">{erreur}</p>}
+        <div className="nouveau-projet-passation">
+          <span className="nouveau-projet-surtitre">Créée par (automatique)</span>
+          <strong>{session ? libelleRole(session.role) : '—'}</strong>
+          <span>{passation}</span>
+        </div>
 
-          <button
-            type="submit"
-            className={`btn-primary nouveau-projet-valider${blocage ? ' is-bloque' : ''}`}
-            disabled={!!blocage || envoi}
-          >
-            {envoi ? 'Création…' : (blocage ?? 'Créer le projet')}
-          </button>
-        </form>
-      </div>
-    </div>
+        <p className="field-aide nouveau-projet-suite">
+          Les autres champs (type, terrain, planches, standing, gamme, programme) se complètent ensuite dans la fiche,
+          par listes déroulantes, sous 72 h. Au-delà, le HUB crée une relance.
+        </p>
+
+        {erreur && <p className="field-erreur">{erreur}</p>}
+
+        <button
+          type="submit"
+          className={`btn-primary nouveau-projet-valider${blocage ? ' is-bloque' : ''}`}
+          disabled={!!blocage || envoi}
+        >
+          {envoi ? 'Création…' : (blocage ?? 'Créer le projet')}
+        </button>
+      </form>
+    </Modal>
   );
 }
