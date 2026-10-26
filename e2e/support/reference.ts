@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test, type APIResponse, type Page, type Request } from '@playwright/test';
+import { expect, test, type APIResponse, type Page, type Request, type Route } from '@playwright/test';
 
 export const COMPANY_SLUG = 'grey-concrete';
 export const DEMO_PASSWORD = 'changeme123';
@@ -56,8 +56,27 @@ export async function waitForContent(page: Page): Promise<void> {
     undefined,
     { timeout: 30_000 },
   );
-  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
+  if (pendingByPage.has(page)) await waitForApiIdle(page);
+  else await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
   await page.evaluate(() => document.fonts.ready);
+}
+
+// Requêtes de l'API en cours, par page (filtre de installSeedNoiseFilter).
+// Une section sans indicateur de chargement (cartes d'un projet) se capturait
+// parfois avant sa réponse : on attend qu'il n'en reste aucune, deux relevés
+// de suite. Le flux du chat (SSE) reste ouvert en permanence : non compté.
+const pendingByPage = new WeakMap<Page, Set<string>>();
+const STREAMING = /\/chat\/flux\b/;
+
+async function waitForApiIdle(page: Page): Promise<void> {
+  const pending = pendingByPage.get(page)!;
+  const deadline = Date.now() + 30_000;
+  let quiet = 0;
+  while (quiet < 2) {
+    if (Date.now() > deadline) throw new Error(`requêtes de l'API toujours en cours :\n${[...pending].join('\n')}`);
+    quiet = pending.size === 0 ? quiet + 1 : 0;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
 }
 
 // Normalises what legitimately differs between two runs of the same revision,
@@ -135,7 +154,18 @@ export function expectStableApi(page: Page): void {
 export async function installSeedNoiseFilter(page: Page): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   await page.clock.setFixedTime(new Date(`${today}T12:00:00Z`));
+  const pending = new Set<string>();
+  pendingByPage.set(page, pending);
   await page.route(`${API_ORIGIN}/**`, async (route) => {
+    const key = `${route.request().method()} ${route.request().url()} #${Math.random()}`;
+    if (!STREAMING.test(route.request().url())) pending.add(key);
+    try {
+      await serve(route);
+    } finally {
+      pending.delete(key);
+    }
+  });
+  async function serve(route: Route) {
     // A failed fetch is retried (and recorded, see expectStableApi): aborting
     // it would leave the screen loading until the capture times out. Requests
     // still in flight when the test ends (polling) are dropped once the page
@@ -160,7 +190,7 @@ export async function installSeedNoiseFilter(page: Page): Promise<void> {
     if (!isJson) return route.fulfill({ response }).catch(() => undefined);
     const body = (await response.text()).replace(ISO_TIMESTAMP, '"$1T00:00:00.000Z"');
     await route.fulfill({ response, body }).catch(() => undefined);
-  });
+  }
   await page.addInitScript(() => {
     const neutraliseAvatars = (root: ParentNode) => {
       for (const avatar of root.querySelectorAll<HTMLElement>('.av, .eq-avatar')) {
