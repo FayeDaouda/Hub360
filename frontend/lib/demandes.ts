@@ -11,6 +11,7 @@ import type {
   TypeAbsence,
 } from './types';
 import { apiSociete } from './client-api';
+import { telechargerFichier } from './fichiers';
 
 // RH · Demandes (lot 2). Salarié : /mon-espace ; N+1 : /absences ; RH : /rh/demandes.
 type Fichier = { nom: string; url: string };
@@ -117,8 +118,5 @@ export const jjmm = (iso: string) => iso.split('-').reverse().join('/');
 
 export async function telechargerJustificatif(slug: string, chemin: string) {
   const f = await getJustificatif(slug, chemin);
-  const a = document.createElement('a');
-  a.href = f.url;
-  a.download = f.nom;
-  a.click();
+  telechargerFichier(f);
 }

@@ -68,15 +68,25 @@ describe('Remise → reprise → validation d’une tâche', () => {
       })
       .expect(201);
     const aValider: { id: string; version: number; pieces: { nom: string }[] }[] = (await dirgc.get('/taches/a-valider').expect(200)).body;
-    const remise = aValider.find((t) => t.id === tache.id);
-    expect(remise).toMatchObject({ version: 1, pieces: [{ nom: 'plan-masse.pdf' }] });
+    const remise = aValider.find((t) => t.id === tache.id)!;
+    // Le serveur renomme le fichier selon la nomenclature (…_vNN.ext).
+    expect(remise.version).toBe(1);
+    expect(remise.pieces).toHaveLength(1);
+    expect(remise.pieces[0].nom).toMatch(/_v01\.pdf$/);
   });
 
-  it('renvoyée en reprise avec un motif, puis remise v02 sans fichier', async () => {
+  it('renvoyée en reprise avec un motif, puis remise v02 avec son fichier (obligatoire)', async () => {
     await dirgc.post(`/taches/${projetId}/${tache.id}/decision`, { decision: 'renvoyer', motif: 'Cotes manquantes' }).expect(201);
-    await salarie.post(`/mon-espace/taches/${projetId}/${tache.id}/remise`, {}).expect(201);
-    const aValider: { id: string; version: number; pieces: unknown[] }[] = (await dirgc.get('/taches/a-valider').expect(200)).body;
-    expect(aValider.find((t) => t.id === tache.id)).toMatchObject({ version: 2, pieces: [] });
+    await salarie.post(`/mon-espace/taches/${projetId}/${tache.id}/remise`, {}).expect(400);
+    await salarie
+      .post(`/mon-espace/taches/${projetId}/${tache.id}/remise`, {
+        pieces: [{ nom: 'plan-masse-cote.pdf', url: 'data:application/pdf;base64,JVBERi0xLjQ=' }],
+      })
+      .expect(201);
+    const aValider: { id: string; version: number; pieces: { nom: string }[] }[] = (await dirgc.get('/taches/a-valider').expect(200)).body;
+    const remise = aValider.find((t) => t.id === tache.id)!;
+    expect(remise.version).toBe(2);
+    expect(remise.pieces.map((p) => p.nom)).toEqual([expect.stringMatching(/_v02\.pdf$/)]);
   });
 
   it('validée : la tâche est close et l’historique garde chaque étape', async () => {
@@ -86,6 +96,6 @@ describe('Remise → reprise → validation d’une tâche', () => {
     const historique: { detail: string }[] = (await dirgc.get(`/projets-ouverts/${projetId}/taches/${tache.id}/historique`).expect(200)).body;
     const textes = historique.map((e) => e.detail).join(' | ');
     expect(textes).toContain('Remise v01 · 1 fichier · « Première version »');
-    expect(textes).toContain('Remise v02 · sans fichier joint');
+    expect(textes).toContain('Remise v02 · 1 fichier');
   });
 });

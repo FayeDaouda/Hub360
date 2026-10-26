@@ -21,12 +21,13 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { UrlFichierJoint } from '../commun/fichier-joint';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 class FichierDto {
   @IsString() @MaxLength(300) nom: string;
-  @IsString() @MaxLength(20_000_000) url: string;
+  @UrlFichierJoint(20_000_000) url: string;
 }
 
 export class DeposerAbsenceDto {

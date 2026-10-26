@@ -1,4 +1,5 @@
 import { apiSociete } from './client-api';
+import { telechargerFichier } from './fichiers';
 
 // « Signaler un problème » (aide de la barre du haut) et leur suivi par le
 // CIO (Réglages › Signalements).
@@ -34,8 +35,5 @@ export const changerStatutSignalement = (slug: string, id: string, statut: Statu
 
 export async function ouvrirCaptureSignalement(slug: string, id: string) {
   const f = await apiSociete<{ nom: string; url: string }>(slug, `/signalements/${id}/capture`);
-  const a = document.createElement('a');
-  a.href = f.url;
-  a.download = f.nom;
-  a.click();
+  telechargerFichier(f);
 }

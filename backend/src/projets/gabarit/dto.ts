@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
+import { UrlFichierJoint } from '../../commun/fichier-joint';
 
 // PATCH …/projets-ouverts/:id/taches/:tacheId/assignation — null = retirer.
 export class AssignerTacheDto {
@@ -21,7 +22,7 @@ export class PublierCommentaireDto {
 // POST …/taches/:tacheId/remise — fichiers et commentaire facultatifs.
 export class PieceRemiseDto {
   @IsString() @MaxLength(300) nom!: string;
-  @IsString() @MaxLength(20_000_000) url!: string; // data URI
+  @UrlFichierJoint(20_000_000) url!: string;
 }
 export const MAX_PIECES_REMISE = 5;
 export class RemettreTacheDto {
