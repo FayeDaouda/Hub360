@@ -66,9 +66,9 @@ Décisions structurantes : `docs/adr/`.
 - **Référence coupée (onglet « Projets » de la vue Production, mobile)** :
   une référence a été prise avant la fin du rendu (1 118 px au lieu de
   3 051). Vérifié : les cartes arrivent avec le dossier, qui a un squelette ;
-  pas d'import dynamique. Cause non établie : reproduction en cours
-  (sonde rejouée), puis correction de la vraie cause. Attente des captures
-  renforcée entre-temps.
+  pas d'import dynamique. Non reproduite en 20 passages d'une sonde rejouant
+  l'ancienne attente (26/10/2026) : cause non établie, l'attente robuste des
+  captures est gardée telle quelle (décision du 26/10/2026).
 - **Images sans dimensions** (défaut d'interface) : signature du contrat
   (`.contrat-signature`) et logo du document de facture (`.fd-logo`), dont la
   hauteur dépend de l'image chargée ; à corriger, avec captures avant/après.
