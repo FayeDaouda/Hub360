@@ -47,8 +47,8 @@ describe('RelancesCeoService.factures', () => {
       envoyer: jest.fn().mockResolvedValue(1),
     };
     // Seule F1 est une tranche prête (alertes) ; F2, préparée mais pas due, n'y figure pas.
-    const projetsOuverts = {
-      alertes: jest.fn().mockResolvedValue({
+    const projectAlerts = {
+      alerts: jest.fn().mockResolvedValue({
         tranches: [{ factureId: 'F1', tranche: 'F3', code: 'CM_SAC.26', client: 'Cheikh Mbaye' }],
       }),
     };
@@ -57,7 +57,7 @@ describe('RelancesCeoService.factures', () => {
       seuil: jest.fn().mockResolvedValue(50_000_000),
     };
     return {
-      s: new RelancesCeoService(prisma as never, notifications as never, projetsOuverts as never, seuilCeo as never),
+      s: new RelancesCeoService(prisma as never, notifications as never, projectAlerts as never, seuilCeo as never),
       notifications,
       prisma,
     };

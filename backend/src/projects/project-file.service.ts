@@ -1,0 +1,298 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { todayIso } from '@hub/domain';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
+import type { Temps } from '../reglages/gabarit';
+import { refDevis, statutDevisEffectif } from '../devis/domaine';
+import { dateDuJour, rangOuvre } from '../projets/gabarit/calendrier';
+import { attentesFactures } from '../projets/gabarit/etats';
+import { dateLivraison, horizonProjet, type ContexteDecision } from '../projets/gabarit/suppleance';
+import { UNITE_TS } from '../projets/gabarit/taches-projet.service';
+import {
+  agitCommeDplg,
+  horsCircuit,
+  perimetreProjets,
+  peutDecider,
+  peutQualifier,
+  peutViser,
+  ROLE_CTO,
+} from '../projets/gabarit/validation';
+import {
+  fullName,
+  grantedExtension,
+  isoDay,
+  pendingExtension,
+  siteStatus,
+  trancheStatus,
+  WITH_TASKS,
+  type Actor,
+} from './project-query';
+import { ProjectStatesService } from './project-states.service';
+
+type Chief = {
+  id: string;
+  prenom: string;
+  nom: string;
+  utilisateur: { actif: boolean } | null;
+  dossierPersonnel: { utilisateur: { actif: boolean } | null } | null;
+} | null;
+
+// Validation (maquette) : sans temps atelier, le dépôt du justificatif vaut
+// validation ; sinon le chef de team, et l'Architecte DPLG quand la tâche est
+// celle du chef de team. Noms : les comptes réellement prévenus (même circuit
+// que les notifications), le signataire des contrats à défaut. `motif`
+// (pourquoi pas le chef) n'est affiché qu'aux gestionnaires.
+function reviewerOf(
+  temps: Temps,
+  assigneId: string | null,
+  ctx: ContexteDecision,
+  chief: Chief,
+  names: { dplg: string | null; cto: string | null },
+) {
+  if (temps.type === 'sans') return { mode: 'depot' as const };
+  if (assigneId && ctx.dplgCollaborateurs.has(assigneId))
+    return { mode: 'personne' as const, nom: names.cto, role: 'CTO', motif: 'travail du Dir. GC' };
+  if (
+    chief &&
+    assigneId !== chief.id &&
+    (ctx.collaborateursAbsents.has(chief.id) ||
+      (!chief.utilisateur?.actif && !chief.dossierPersonnel?.utilisateur?.actif))
+  )
+    // Chef sans compte HUB ou absent : la remise remonte à l'Architecte DPLG.
+    return {
+      mode: 'personne' as const,
+      nom: names.dplg,
+      role: 'Architecte DPLG',
+      motif: `${fullName(chief)} ${ctx.collaborateursAbsents.has(chief.id) ? 'absent' : 'sans compte HUB'}`,
+    };
+  if (chief && assigneId === chief.id)
+    return { mode: 'personne' as const, nom: names.dplg, role: 'Architecte DPLG', motif: 'tâche du chef de team' };
+  return { mode: 'personne' as const, nom: fullName(chief), role: 'chef de team' };
+}
+
+// Dossier d'un projet ouvert (maquette « Projets » du boss) : étapes, cartes,
+// tâches et leurs états du jour, et ce que la personne connectée peut y faire.
+@Injectable()
+export class ProjectFileService {
+  constructor(
+    private prisma: PrismaService,
+    private reglages: ReglagesService,
+    private states: ProjectStatesService,
+  ) {}
+
+  async file(companyId: string, projectId: string, actor: Actor) {
+    const { decideur, ctx } = await this.states.decider(companyId, actor);
+    const p = await this.prisma.projet.findFirst({
+      where: {
+        id: projectId,
+        societeId: companyId,
+        ouvertLe: { not: null },
+        ...perimetreProjets(actor.role, decideur.collaborateurId),
+      },
+      include: {
+        ...WITH_TASKS,
+        client: { select: { nom: true, type: true } },
+        cellules: {
+          include: {
+            cellule: {
+              include: {
+                dispatcher: {
+                  select: {
+                    id: true,
+                    prenom: true,
+                    nom: true,
+                    utilisateur: { select: { actif: true } },
+                    dossierPersonnel: { select: { utilisateur: { select: { actif: true } } } },
+                  },
+                },
+              },
+            },
+          },
+        },
+        gabaritVersion: { select: { code: true, libelle: true } },
+        factures: { where: { estAvoir: false, statut: { not: 'annulee' } }, select: { jalon: true, statut: true } },
+        devis: {
+          where: { statut: 'transforme' },
+          select: { numero: true, dateEnvoi: true, codeDossier: true, rangDossier: true },
+          take: 1,
+        },
+        societe: { select: { contratSignataireNom: true } },
+      },
+    });
+    if (!p) throw new NotFoundException('Projet introuvable ou pas encore ouvert');
+    const holidays = await this.states.holidays(companyId);
+    const today = todayIso();
+    const { etapes, etatsCartes, etatsTaches } = this.states.states(p, today, holidays);
+    const cell = p.cellules[0]?.cellule ?? null;
+    const chief = cell?.dispatcher ?? null;
+    // « Ajouter en TS » : l'Architecte DPLG (ou son suppléant) et le CTO.
+    const dplgConnected = agitCommeDplg(decideur) || actor.role === ROLE_CTO;
+    const deliveryOn = dateLivraison(p, holidays);
+    // Remise et demande de prolongation : jamais pour un rôle hors circuit (CEO).
+    const inCircuit = !horsCircuit(actor.role);
+    const dplg = p.societe.contratSignataireNom?.trim() || null;
+    const pilot = await this.reglages.regle<string>(companyId, 'pilote_etudes');
+    const horizon = horizonProjet(p.budgetHeures);
+    // Nombre de messages par fil (« Fil de la carte · N », bulle d'une tâche).
+    const threads = await this.prisma.commentaireProjet.groupBy({
+      by: ['carteId', 'tacheId'],
+      where: { projetId: p.id },
+      _count: true,
+    });
+    // Auteurs des visas DPLG apposés (nom affiché sous la tâche).
+    const viewers = new Map(
+      (
+        await this.prisma.utilisateur.findMany({
+          where: {
+            id: { in: p.cartes.flatMap((c) => c.taches.map((t) => t.visaParId)).filter((x): x is string => !!x) },
+          },
+          select: { id: true, prenom: true, nom: true },
+        })
+      ).map((u) => [u.id, fullName(u)]),
+    );
+    const threadOf = (carteId: string, tacheId: string | null) =>
+      threads.find((f) => f.carteId === carteId && f.tacheId === tacheId)?._count ?? 0;
+    const names = {
+      dplg: (await this.states.accountNames(ctx.comptesDplg)) ?? dplg,
+      cto: await this.states.accountNames(ctx.comptesCto),
+    };
+    const me = decideur.collaborateurId;
+
+    return {
+      id: p.id,
+      code: p.code,
+      client: { nom: p.client.nom, type: p.client.type },
+      cellule: cell ? { nom: cell.nom, chef: fullName(chief) } : null,
+      // La personne connectée pilote la cellule du projet (elle valide).
+      jeSuisChef: !!chief && !!me && chief.id === me,
+      pilote: pilot === 'head_of_engineering' ? 'Head of Engineering (à recruter)' : (dplg ?? 'Architecte DPLG'),
+      version: p.gabaritVersion,
+      offre: p.devis[0] ? refDevis(p.devis[0]) : null,
+      ouvertLe: p.ouvertLe,
+      livraisonLe: dateDuJour(p.ouvertLe!, horizon, holidays),
+      jour: rangOuvre(p.ouvertLe!, today, holidays),
+      horizon,
+      budgetHeures: p.budgetHeures,
+      dateVisiteSite: p.dateVisiteSite,
+      statutChantier: siteStatus(p.phase),
+      factures: {
+        F1: trancheStatus(p.factures, 'F1'),
+        F2: trancheStatus(p.factures, 'F2'),
+        F3: trancheStatus(p.factures, 'F3'),
+      },
+      // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
+      // Assigner : le CTO seulement en suppléance d'un Dir. GC (revue CTO).
+      peutAssigner: actor.role !== ROLE_CTO || ctx.ctoSupplee,
+      optionsTs: dplgConnected
+        ? p.cartes.flatMap((c) => {
+            const t = c.temps as Temps | null;
+            return t?.type === 'par_unite' && !c.desactivation
+              ? [{ carteId: c.id, libelle: UNITE_TS[t.unite], heures: t.heures }]
+              : [];
+          })
+        : [],
+      attentes: attentesFactures(etapes, this.states.cardSources(p)),
+      etapes: etapes.map((e) => {
+        const c = p.cartes.find((x) => x.etapeNumero === e.numero)!;
+        return { ...e, cle: c.etapeCle, libelle: c.etapeLibelle };
+      }),
+      cartes: p.cartes.map((c) => ({
+        id: c.id,
+        etapeNumero: c.etapeNumero,
+        etapeLibelle: c.etapeLibelle,
+        cle: c.cle,
+        libelle: c.libelle,
+        note: c.note,
+        descriptif: c.descriptif,
+        etiquette: c.etiquette,
+        debutJ: c.debutJ,
+        finJ: c.finJ,
+        debutLe: c.debutLe,
+        finLe: c.finLe,
+        temps: c.temps as Temps | null,
+        client: c.client,
+        fichiers: c.fichiers,
+        fil: threadOf(c.id, null),
+        etat: etatsCartes.get(c.id)!,
+        taches: c.taches.map((t) => {
+          const pending = pendingExtension(t.prolongations);
+          return {
+            id: t.id,
+            cle: t.cle,
+            libelle: t.libelle,
+            descriptif: t.descriptif,
+            sourceNative: t.sourceNative,
+            fichierObligatoire: t.fichierObligatoire,
+            debutJ: t.debutJ,
+            finJ: t.finJ,
+            debutLe: t.debutLe,
+            finLe: t.finLe,
+            temps: t.temps as Temps,
+            heures: t.heures === null ? null : Number(t.heures),
+            statut: t.statut,
+            motif: t.motif,
+            version: t.version,
+            // Fichiers de chaque remise (v01, v02…), sans leur contenu.
+            pieces: t.pieces,
+            // Élément TS : devis d'avenant qui le facture et son état.
+            avenant: t.devisTs
+              ? { devisId: t.devisTs.id, reference: refDevis(t.devisTs), statut: statutDevisEffectif(t.devisTs, today) }
+              : null,
+            valideeLe: isoDay(t.valideeLe),
+            valideePar: fullName(t.valideePar),
+            // Visa DPLG exigé : apposé le… par… (null tant qu'il ne l'est pas).
+            visa: t.visaRequis
+              ? {
+                  le: isoDay(t.visaLe),
+                  par: t.visaParId ? (viewers.get(t.visaParId) ?? null) : null,
+                  nonTrace: t.visaNonTrace,
+                }
+              : null,
+            // L'architecte DPLG (Dir. GC, ou un autre Dir. GC en suppléance —
+            // jamais le CTO : le visa engage la signature de l'architecte).
+            peutViser: peutViser(actor.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
+            assigne: t.assigne
+              ? { id: t.assigne.id, nom: fullName(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null }
+              : null,
+            // Assignée à la personne connectée (« Seulement mes tâches »).
+            aMoi: !!me && t.assigneId === me,
+            validation: reviewerOf(t.temps as Temps, t.assigneId, ctx, chief, names),
+            peutDecider: peutDecider(decideur, this.states.ruleFor(ctx, t), chief?.id ?? null),
+            prolongation: {
+              enAttente: pending
+                ? { jusquau: pending.jusquau, motif: pending.motif, le: isoDay(pending.demandeLe) }
+                : null,
+              accordeeJusquau: grantedExtension(t.prolongations),
+            },
+            // Prolongation : l'assigné la demande (tâche ni validée ni « non
+            // nécessaire », aucune demande en attente) ; chef de team ou DPLG décide.
+            peutDemanderProlongation:
+              inCircuit &&
+              !!me &&
+              t.assigneId === me &&
+              !['validee', 'non_necessaire'].includes(t.statut) &&
+              !c.desactivation &&
+              !pending,
+            peutDeciderProlongation:
+              !!pending &&
+              peutQualifier(
+                decideur,
+                this.states.ruleFor(ctx, t),
+                chief?.id ?? null,
+                !!deliveryOn && pending.jusquau > deliveryOn,
+              ),
+            // Remise par la personne assignée, carte ouverte (ni désactivée ni verrouillée).
+            peutRemettre:
+              inCircuit &&
+              !!me &&
+              t.assigneId === me &&
+              (t.statut === 'a_faire' || t.statut === 'reprise') &&
+              etatsCartes.get(c.id)!.code === 'ouverte',
+            fil: threadOf(c.id, t.id),
+            etat: etatsTaches.get(t.id)!,
+          };
+        }),
+      })),
+    };
+  }
+}

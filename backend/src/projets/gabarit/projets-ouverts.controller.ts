@@ -4,7 +4,10 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../../commun/back-office.guard';
 import { PermissionGuard } from '../../commun/permission.guard';
 import { RequiertPermission } from '../../commun/permission.decorator';
-import { ProjetsOuvertsService } from './projets-ouverts.service';
+import { ProductionService } from '../../projects/production.service';
+import { ProjectFileService } from '../../projects/project-file.service';
+import { ProjectSiteService } from '../../projects/project-site.service';
+import { ProjectsBoardService } from '../../projects/projects-board.service';
 import { TachesProjetService } from './taches-projet.service';
 import {
   AssignerTacheDto,
@@ -26,7 +29,10 @@ type R = { user: { societeId: string; userId: string; role: string; permissions?
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class ProjetsOuvertsController {
   constructor(
-    private projets: ProjetsOuvertsService,
+    private board: ProjectsBoardService,
+    private projectFile: ProjectFileService,
+    private productionService: ProductionService,
+    private site: ProjectSiteService,
     private taches: TachesProjetService,
     private fils: FilsProjetService,
   ) {}
@@ -34,7 +40,7 @@ export class ProjetsOuvertsController {
   @Get()
   @RequiertPermission('projets', 'lecture')
   tableau(@Req() req: R) {
-    return this.projets.tableau(req.user.societeId, req.user);
+    return this.board.board(req.user.societeId, req.user);
   }
 
   // Segment fixe, déclaré avant ':id'.
@@ -55,14 +61,14 @@ export class ProjetsOuvertsController {
   @Get('production')
   @RequiertPermission('projets', 'lecture')
   production(@Req() req: R) {
-    return this.projets.production(req.user.societeId, req.user);
+    return this.productionService.production(req.user.societeId, req.user);
   }
 
   // « À décider » : remises et prolongations que je peux trancher, tous projets.
   @Get('a-decider')
   @RequiertPermission('projets', 'lecture')
   aDecider(@Req() req: R) {
-    return this.projets.aDecider(req.user.societeId, req.user);
+    return this.board.toDecide(req.user.societeId, req.user);
   }
 
   // « Mes tâches » : mes @mentions, et les marquer traitées.
@@ -81,26 +87,26 @@ export class ProjetsOuvertsController {
   @Get(':id')
   @RequiertPermission('projets', 'lecture')
   dossier(@Req() req: R, @Param('id') id: string) {
-    return this.projets.dossier(req.user.societeId, id, req.user);
+    return this.projectFile.file(req.user.societeId, id, req.user);
   }
 
   @Patch(':id/chantier')
   @RequiertPermission('projets', 'ecriture')
   definirStatutChantier(@Req() req: R, @Param('id') id: string, @Body() dto: StatutChantierDto) {
-    return this.projets.definirStatutChantier(req.user.societeId, id, dto.statut);
+    return this.site.setSiteStatus(req.user.societeId, id, dto.statut);
   }
 
   @Patch(':id/visite')
   @RequiertPermission('projets', 'ecriture')
   definirDateVisite(@Req() req: R, @Param('id') id: string, @Body() dto: DateVisiteDto) {
-    return this.projets.definirDateVisite(req.user.societeId, id, dto.date);
+    return this.site.setSiteVisitDate(req.user.societeId, id, dto.date);
   }
 
   // Avant d'assigner : charge de chacun sur la fenêtre de la tâche.
   @Get(':id/taches/:tacheId/charges')
   @RequiertPermission('projets', 'ecriture')
   charges(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
-    return this.projets.charges(req.user.societeId, id, tacheId);
+    return this.productionService.workload(req.user.societeId, id, tacheId);
   }
 
   @Get(':id/taches/:tacheId/historique')

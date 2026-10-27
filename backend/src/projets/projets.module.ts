@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { FinancesModule } from '../finances/finances.module';
 import { ReglagesModule } from '../reglages/reglages.module';
+import { ProjectsModule } from '../projects/projects.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AccesProjetGuard } from './acces-projet.guard';
 import { FacturationService } from './facturation/facturation.service';
 import { OuvertureProjetService } from './gabarit/ouverture.service';
-import { ProjetsOuvertsService } from './gabarit/projets-ouverts.service';
 import { TachesProjetService } from './gabarit/taches-projet.service';
 import { FilsProjetService } from './gabarit/fils-projet.service';
 import { ProjetsOuvertsController } from './gabarit/projets-ouverts.controller';
@@ -19,14 +19,13 @@ import { FacturationCentraleController } from './facturation/facturation-central
 // chacune avec son service + son contrôleur mais sous le même module —
 // frontière métier unique. Voir l'artifact « Backend Grey Concrete » §05 / §08.
 @Module({
-  imports: [AuthModule, NotificationsModule, ReglagesModule, FinancesModule],
+  imports: [AuthModule, NotificationsModule, ReglagesModule, FinancesModule, ProjectsModule],
   providers: [
     AccesProjetGuard,
     FacturationService,
     ControleInterneService,
     ParametresFacturationService,
     OuvertureProjetService,
-    ProjetsOuvertsService,
     TachesProjetService,
     FilsProjetService,
   ],
@@ -34,7 +33,8 @@ import { FacturationCentraleController } from './facturation/facturation-central
   // FacturationService exporté pour DevisModule (conversion d'un devis
   // accepté en facture, cf. FacturationService.creerDepuisDevis) ;
   // TachesProjetService pour Mon espace (RhModule : remise, validation).
-  // ProjetsOuvertsService : alertes de l'accueil CEO (Pilotage).
-  exports: [FacturationService, TachesProjetService, ProjetsOuvertsService],
+  // ProjectsModule réexporté : états des projets (Équipes, Mes tâches,
+  // Pilotage) et alertes de l'accueil CEO.
+  exports: [FacturationService, TachesProjetService, ProjectsModule],
 })
 export class ProjetsModule {}

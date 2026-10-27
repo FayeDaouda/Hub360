@@ -13,7 +13,7 @@ import { TempsService } from '../rh/temps.service';
 import { bornesMois, feuilleDuMois, moisDe, moisEntre, MOIS_DEBUT_FEUILLES, type Salarie } from '../rh/regles-temps';
 import { onTimeShare } from '../teams/teams-rules';
 import { statutDevisEffectif } from '../devis/domaine';
-import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { ProjectStatesService } from '../projects/project-states.service';
 import {
   DECISION_EN_VIGUEUR,
   echeanceReporting,
@@ -95,7 +95,7 @@ export class PilotageService {
     private notifications: NotificationsService,
     private reportingRh: ReportingRhService,
     private suivi: SuiviReportingService,
-    private projetsOuverts: ProjetsOuvertsService,
+    private projectStates: ProjectStatesService,
   ) {}
 
   async vue(a: Acteur) {
@@ -420,7 +420,7 @@ export class PilotageService {
 
   // Étapes des projets ouverts : état commun des projets (Production, Équipes).
   private etapesProjets(societeId: string, jour: string) {
-    return this.projetsOuverts.etatsSociete(societeId, jour);
+    return this.projectStates.companyStates(societeId, jour);
   }
 
   // Reporting {société} prérempli depuis le HUB pour un mois clos.

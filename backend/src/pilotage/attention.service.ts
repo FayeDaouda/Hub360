@@ -5,7 +5,7 @@ import { ROLE_CEO, SeuilCeoService } from '../finances/seuil-ceo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
-import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { ProjectAlertsService } from '../projects/project-alerts.service';
 import { DemandesService } from '../rh/demandes.service';
 import { todayIso } from '@hub/domain';
 
@@ -32,7 +32,7 @@ const TRANCHE_PAR_JALON: Partial<Record<JalonFacture, 'F1' | 'F2' | 'F3'>> = {
 export class AttentionService {
   constructor(
     private prisma: PrismaService,
-    private projetsOuverts: ProjetsOuvertsService,
+    private projectAlerts: ProjectAlertsService,
     private seuilCeo: SeuilCeoService,
     private demandes: DemandesService,
   ) {}
@@ -43,7 +43,7 @@ export class AttentionService {
     const [projets, factures, ts] = [voit('projets'), voit('finances_factures'), voit('finances_devis')];
     const jour = todayIso();
     const [alertes, impayees, absences] = await Promise.all([
-      projets || factures || ts ? this.projetsOuverts.alertes(a.societeId) : null,
+      projets || factures || ts ? this.projectAlerts.alerts(a.societeId) : null,
       factures ? this.impayees(a.societeId, jour) : [],
       this.demandes.aValider(a),
     ]);
@@ -69,7 +69,7 @@ export class AttentionService {
   // du seuil de contresignature (finances/seuil-ceo.service.ts).
   private async tranchesAEmettre(
     a: ActeurAttention,
-    tranches: Awaited<ReturnType<ProjetsOuvertsService['alertes']>>['tranches'],
+    tranches: Awaited<ReturnType<ProjectAlertsService['alerts']>>['tranches'],
     validation: boolean,
   ) {
     const ids = tranches.map((t) => t.factureId).filter((x): x is string => !!x);
