@@ -25,6 +25,20 @@ describe('contenuAvisSecurite', () => {
     expect(contenuAvisSecurite({ email: 'a@b.sn', prenom: 'A', evenement, le }).sujet).toBe(`${sujet} · hub360°`);
   });
 
+  it('compte verrouillé (lot C) : heure de réouverture, attente ou déblocage par le CIO', () => {
+    const { sujet, texte } = contenuAvisSecurite({
+      email: 'a@b.sn',
+      prenom: 'A',
+      evenement: 'compte_verrouille',
+      le,
+      jusquau: new Date('2026-10-28T21:55:00Z'),
+    });
+    expect(sujet).toBe('Votre compte est verrouillé · hub360°');
+    expect(texte).toContain('Après 10 essais de connexion infructueux');
+    expect(texte).toContain('Il rouvrira le 28 octobre 2026 à 21:55.');
+    expect(texte).toContain('demandez au CIO de le débloquer');
+  });
+
   it('échappe le prénom dans le HTML', () => {
     const { html } = contenuAvisSecurite({
       email: 'a@b.sn',

@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService, dateEmission, doubleFacteurExige } from './auth.service';
@@ -235,11 +235,12 @@ describe('Double authentification', () => {
     expect(updateMany.mock.calls[0][0].data).toEqual({ totpDernierPas: pasCourant() });
   });
 
-  it('code faux refusé ; code de secours accepté une seule fois', async () => {
+  it('code faux refusé (compté comme essai, lot C) ; code de secours accepté une seule fois', async () => {
     const { s, update } = svc2();
     await expect(s.connexionAvecCode('jeton', '000000')).rejects.toThrow(UnauthorizedException);
+    expect((update.mock.calls[0][0] as { data: unknown }).data).toEqual({ echecsConnexion: { increment: 1 } });
     await s.connexionAvecCode('jeton', 'abcd efgh');
-    expect(update.mock.calls[0][0]).toEqual({ where: { id: 'U1' }, data: { totpCodesSecours: [] } });
+    expect(update.mock.calls[1][0]).toEqual({ where: { id: 'U1' }, data: { totpCodesSecours: [] } });
   });
 
   it('activation : premier code juste → 8 codes de secours et session', async () => {
@@ -275,5 +276,122 @@ describe('AuthService · compte de secours', () => {
     const ordinaire = svc([affectation('S1', 'CFO')]);
     await ordinaire.svc.login(DTO);
     expect(ordinaire.notifications.envoyer).not.toHaveBeenCalled();
+  });
+});
+
+describe('Verrouillage du compte (lot C)', () => {
+  const SECRET = base32(Buffer.from('12345678901234567890'));
+  type Etat = { echecsConnexion: number; verrouillages: number; verrouilleJusquau: Date | null };
+
+  function svc3(etat: Partial<Etat> = {}, compte: Record<string, unknown> = {}) {
+    const u = {
+      ...UTILISATEUR,
+      totpActifLe: null,
+      echecsConnexion: 0,
+      verrouillages: 0,
+      verrouilleJusquau: null,
+      ...compte,
+      ...etat,
+    };
+    // Applique l'incrément comme la base, et rend les compteurs choisis.
+    const update = jest.fn((a: { data: Record<string, unknown> }) => {
+      const e = a.data.echecsConnexion as number | { increment: number } | undefined;
+      if (typeof e === 'object') u.echecsConnexion += e.increment;
+      return Promise.resolve({ echecsConnexion: u.echecsConnexion, verrouillages: u.verrouillages });
+    });
+    const prisma = {
+      utilisateur: {
+        findUnique: jest.fn().mockResolvedValue(u),
+        update,
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      societe: { findUnique: jest.fn().mockResolvedValue(SOCIETE) },
+      utilisateurSocieteRole: { findMany: jest.fn().mockResolvedValue([affectation('S1', 'Salarié')]) },
+      evenementCompte: { create: jest.fn((a: unknown) => a) },
+      $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
+    } as unknown as PrismaService;
+    const jwt = {
+      sign: jest.fn().mockReturnValue('jeton'),
+      verify: jest.fn().mockReturnValue({ sub: 'U1', slug: 'grey-concrete', but: 'double-facteur' }),
+    } as unknown as JwtService;
+    const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
+    const evenement = (prisma as unknown as { evenementCompte: { create: jest.Mock } }).evenementCompte.create;
+    return {
+      s: new AuthService(prisma, jwt, { envoyer: jest.fn() } as never, email as never),
+      update,
+      email,
+      evenement,
+    };
+  }
+  const refus = (p: Promise<unknown>) =>
+    p.then(
+      () => null,
+      (e: unknown) => e as HttpException,
+    );
+  const minutes = (fin: Date) => Math.round((fin.getTime() - Date.now()) / 60_000);
+
+  beforeEach(() => {
+    (verifierMotDePasse as jest.Mock).mockClear();
+  });
+
+  it('pendant le verrouillage : refus (423, heure de fin) sans examiner le mot de passe', async () => {
+    const { s } = svc3({ verrouilleJusquau: new Date(Date.now() + 10 * 60_000) });
+    const e = await refus(s.login(DTO));
+    expect(e?.getStatus()).toBe(423);
+    expect(e?.message).toMatch(/^Compte verrouillé jusqu’à \d{2}:\d{2} \(heure de Dakar\)/);
+    expect(verifierMotDePasse).not.toHaveBeenCalled();
+  });
+
+  it('un échec ordinaire est compté, sans verrouiller', async () => {
+    (verifierMotDePasse as jest.Mock).mockResolvedValueOnce(false);
+    const { s, update, email } = svc3({ echecsConnexion: 3 });
+    await expect(s.login(DTO)).rejects.toThrow(UnauthorizedException);
+    expect(update.mock.calls[0][0].data).toEqual({ echecsConnexion: { increment: 1 } });
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(email.envoyerAvisSecurite).not.toHaveBeenCalled();
+  });
+
+  it('au dixième échec : verrouillé 15 min, journal, avis par e-mail, et la réponse le dit', async () => {
+    (verifierMotDePasse as jest.Mock).mockResolvedValueOnce(false);
+    const { s, update, email, evenement } = svc3({ echecsConnexion: 9 });
+    const e = await refus(s.login(DTO));
+    expect(e?.getStatus()).toBe(423);
+    const pose = update.mock.calls[1][0].data;
+    expect(pose).toMatchObject({ echecsConnexion: 0, verrouillages: { increment: 1 } });
+    expect(minutes(pose.verrouilleJusquau as Date)).toBe(15);
+    expect(evenement.mock.calls[0][0].data).toMatchObject({ type: 'compte_verrouille', parId: null });
+    expect(email.envoyerAvisSecurite).toHaveBeenCalledWith(
+      expect.objectContaining({ evenement: 'compte_verrouille', jusquau: pose.verrouilleJusquau }),
+    );
+  });
+
+  it('récidive : la durée double (30 min au deuxième verrouillage)', async () => {
+    (verifierMotDePasse as jest.Mock).mockResolvedValueOnce(false);
+    const { s, update } = svc3({ echecsConnexion: 9, verrouillages: 1 });
+    await refus(s.login(DTO));
+    expect(minutes(update.mock.calls[1][0].data.verrouilleJusquau as Date)).toBe(30);
+  });
+
+  it('un code de double authentification refusé compte aussi', async () => {
+    const avec2fa = {
+      totpActifLe: new Date(),
+      totpSecret: chiffrerSecret(SECRET),
+      totpDernierPas: null,
+      totpCodesSecours: [],
+    };
+    const { s, update } = svc3({ echecsConnexion: 9 }, avec2fa);
+    const e = await refus(s.connexionAvecCode('etape', 'ABCD-EFGH'));
+    expect(e?.getStatus()).toBe(423);
+    expect(update.mock.calls[0][0].data).toEqual({ echecsConnexion: { increment: 1 } });
+  });
+
+  it('connexion réussie : essais et récidives remis à zéro', async () => {
+    const { s, update } = svc3({ echecsConnexion: 4, verrouillages: 2 });
+    await s.login(DTO);
+    expect(update.mock.calls[0][0].data).toMatchObject({
+      echecsConnexion: 0,
+      verrouillages: 0,
+      verrouilleJusquau: null,
+    });
   });
 });

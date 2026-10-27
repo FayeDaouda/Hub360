@@ -113,6 +113,13 @@ model Utilisateur {
   totpDernierPas        Int?      @map("totp_dernier_pas")
   totpCodesSecours      String[]  @default([]) @map("totp_codes_secours")
   actif                 Boolean   @default(true)
+  // Verrouillage (lot C, décision du 28/10/2026) : essais de connexion
+  // infructueux depuis la dernière connexion réussie (mot de passe ou code),
+  // fin du verrouillage en cours, et verrouillages déjà subis depuis la
+  // dernière connexion réussie (la durée double à chaque récidive).
+  echecsConnexion       Int       @default(0) @map("echecs_connexion")
+  verrouilleJusquau     DateTime? @map("verrouille_jusquau")
+  verrouillages         Int       @default(0)
   // Invalide toute session émise avant cette date (reset de mot de passe,
   // désactivation). Vérifié dans jwt.strategy contre le `iat` du token.
   sessionsValidesDepuis DateTime? @map("sessions_valides_depuis")
@@ -189,6 +196,8 @@ enum EvenementCompteType {
   double_facteur_reinitialise // par l'administration du HUB (téléphone perdu)
   connexion_secours // revue CIO : connexion d'un compte technique (secours), CEO et CIO prévenus
   deconnexion_partout // le titulaire coupe toutes ses sessions (menu du compte)
+  compte_verrouille // lot C : trop d'essais de connexion infructueux
+  compte_debloque // lot C : par l'administration du HUB, avant la fin du verrouillage
 }
 
 // -- Notifications collaborateur --
