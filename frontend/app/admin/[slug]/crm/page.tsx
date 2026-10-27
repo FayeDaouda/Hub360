@@ -32,15 +32,13 @@ import {
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
-import { formatNumber } from '@/lib/format';
+import { daysSince, formatNumber, plural, yearOf } from '@hub/domain';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiStrip } from '@/components/ui/kpi';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { DELAI_CFO_MS, DELAI_FICHE_MS, etatSelonDelai } from '@/lib/couleurs-etat';
-import { daysSince, yearOf } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 

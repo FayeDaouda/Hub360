@@ -1,6 +1,6 @@
 import type { TypeReporting } from '@prisma/client';
 import { moisDe, moisEntre } from '../rh/regles-temps';
-import { addDays, daysBetween } from '../shared/dates';
+import { addDays, daysBetween } from '@hub/domain';
 
 // Pilotage · tableau de bord Holding (maquettes du boss, sept.–oct. 2026) —
 // règles pures : reportings mensuels (manuel §9.4, dépôt à J+5), registre des

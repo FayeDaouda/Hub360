@@ -6,7 +6,7 @@ import { getDevisPublic, repondreDevisPublic } from '@/lib/devis';
 import { STATUTS_DEVIS, type DevisPublic, type StatutDevisEffectif } from '@/lib/types';
 import { DocumentFacturation } from '@/components/document-facturation';
 import { useConfirmer } from '@/components/confirmation';
-import { formatLongDate } from '@/lib/dates';
+import { formatLongDate } from '@hub/domain';
 import { FieldError } from '@/components/ui/field';
 
 type Props = { params: Promise<{ token: string }> };

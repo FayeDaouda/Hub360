@@ -25,8 +25,7 @@ import {
   ROLE_CTO,
   verifierCircuit,
 } from './validation';
-import { formatDate, toIsoDay, todayIso } from '../../shared/dates';
-import { plural } from '../../shared/text';
+import { formatDate, plural, todayIso, toIsoDay } from '@hub/domain';
 
 // Délai de relance : 3 jours ouvrés après le dépôt, puis après chaque relance.
 export const DELAI_RELANCE_JOURS_OUVRES = 3;

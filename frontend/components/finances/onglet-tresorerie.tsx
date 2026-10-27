@@ -6,11 +6,9 @@ import { BoutonExport } from '@/components/bouton-export';
 import { ApiError } from '@/lib/client-api';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { relancerFacture } from '@/lib/facturation';
-import { formatAmount, formatCompactAmount } from '@/lib/format';
+import { formatAmount, formatCompactAmount, formatDayMonth, plural, todayIso } from '@hub/domain';
 import { balanceAgee, echeancier, TRANCHES, type LigneBalance } from '@/lib/tresorerie';
 import type { FactureCentrale } from '@/lib/types';
-import { formatDayMonth, todayIso } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 
 const nomFacture = (f: FactureCentrale) =>

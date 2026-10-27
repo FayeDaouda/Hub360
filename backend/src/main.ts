@@ -4,10 +4,24 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { PREFIXE_API, documentOpenApi } from './documentation';
+import { ErrorReporter } from './monitoring/error-reporter.service';
+import { TrackingLogger } from './monitoring/tracking-logger';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+
+  // Suivi des erreurs (src/monitoring) : les erreurs du journal, puis celles
+  // qui arrêteraient le processus (Docker le relance) sont d'abord suivies.
+  const logger = new TrackingLogger();
+  const reporter = app.get(ErrorReporter);
+  logger.attach(reporter);
+  app.useLogger(logger);
+  process.on('uncaughtExceptionMonitor', (erreur, origine) =>
+    reporter.report({ source: 'serveur', route: origine, message: erreur.message, stack: erreur.stack }),
+  );
 
   // En production, l'API est derrière un seul relais (Caddy, deploy/) : sans
   // cette confiance, chaque requête paraît venir du relais, et toute la société
@@ -39,7 +53,13 @@ async function bootstrap() {
     }),
   );
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix(PREFIXE_API);
+
+  // Page Swagger de la description de l'API (/api/docs) : en développement
+  // seulement, jamais en production (décision du 27/10/2026).
+  if (process.env.NODE_ENV !== 'production') {
+    SwaggerModule.setup(`${PREFIXE_API}/docs`, app, documentOpenApi(app));
+  }
 
   const port = process.env.PORT || 3001;
   await app.listen(port);

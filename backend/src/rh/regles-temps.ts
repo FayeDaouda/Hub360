@@ -1,4 +1,4 @@
-import { toIsoDay } from '../shared/dates';
+import { toIsoDay } from '@hub/domain';
 // RH · Temps de travail (lot 4). Règles pures, testées.
 //
 // Tirées des maquettes « Feuilles de temps » et « Mon espace » (manuel non reçu) :

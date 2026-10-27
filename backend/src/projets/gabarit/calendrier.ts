@@ -1,5 +1,5 @@
 import { AUCUN_FERIE, HEURES_PAR_JOUR, type Feries } from '../../rh/regles-temps';
-import { addDays, daysBetween } from '../../shared/dates';
+import { addDays, daysBetween } from '@hub/domain';
 
 // Calendrier ouvrable d'un projet ouvert selon le gabarit : J1 = jour
 // d'ouverture (émission de F1) ou le premier jour ouvré qui suit ; Jn = n-ième

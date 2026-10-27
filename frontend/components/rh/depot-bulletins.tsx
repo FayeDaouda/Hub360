@@ -7,8 +7,7 @@ import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
 import { deposerBulletin } from '@/lib/rh';
 
 import type { DossierPersonnel } from '@/lib/types';
-import { formatMonthYear } from '@/lib/dates';
-import { plural, stripAccents } from '@/lib/text';
+import { formatMonthYear, plural, stripAccents } from '@hub/domain';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { Field } from '@/components/ui/field';

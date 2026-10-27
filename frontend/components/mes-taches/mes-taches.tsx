@@ -52,8 +52,7 @@ import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
 import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { TacheDrawer } from './tache-drawer';
 import { prenomAffiche } from '@/lib/profil';
-import { daysBetween, formatDayMonth, toIsoDay, todayIso } from '@/lib/dates';
-import { plural } from '@/lib/text';
+import { daysBetween, formatDayMonth, plural, todayIso, toIsoDay } from '@hub/domain';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 

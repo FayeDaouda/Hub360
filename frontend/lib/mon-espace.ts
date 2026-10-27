@@ -11,7 +11,7 @@ import type {
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
 import type { CorpsRemise } from './projets-ouverts';
-import { daysBetween, formatDayMonth } from './dates';
+import { daysBetween, formatDayMonth } from '@hub/domain';
 
 // RH · Mon espace (lot 5) — API NestJS, dossier du compte connecté :
 //   GET   …/mon-espace                  { dossier | null }

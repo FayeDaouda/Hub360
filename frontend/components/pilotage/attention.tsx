@@ -32,10 +32,8 @@ import type { NotificationItem, NotificationType } from '@/lib/types';
 import { DecisionDroit } from './decision-droit';
 import { LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { lienFacturationProjet } from '@/lib/facturation';
-import { formatAmount } from '@/lib/format';
+import { addDays, daysBetween, formatAmount, formatDateTime, formatDayMonth, plural, todayIso } from '@hub/domain';
 import type { AttentionPilotage, VuePilotage } from '@/lib/types';
-import { addDays, daysBetween, formatDateTime, formatDayMonth, todayIso } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 
 // Décisions « arrivant à échéance » : ouvertes dont l'échéance tombe dans les

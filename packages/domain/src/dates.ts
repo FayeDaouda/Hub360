@@ -1,8 +1,9 @@
 // Dates du HUB : jours au format ISO « AAAA-MM-JJ », affichage en français, au
 // fuseau de Dakar (UTC+0 toute l'année, sans heure d'été), quel que soit le
-// lieu de l'utilisateur (glossaire). Seul endroit où les dates sont calculées
-// et formatées côté front. Exception : la salutation « Bonjour / Bonsoir »
-// suit l'heure de l'appareil (moment de l'utilisateur, pas une donnée).
+// lieu de l'utilisateur ou du serveur (glossaire). Seul endroit où les dates
+// sont calculées et formatées, au front comme au back. Exception : la
+// salutation « Bonjour / Bonsoir » du front suit l'heure de l'appareil
+// (moment de l'utilisateur, pas une donnée).
 
 const FUSEAU = 'Africa/Dakar';
 const JOUR_MS = 86_400_000;
@@ -92,6 +93,11 @@ export function formatLongDate(iso: string): string {
 /** « octobre 2026 » à partir d'un mois (AAAA-MM) ou d'un jour ISO. */
 export function formatMonthYear(monthOrDay: string): string {
   return moisAnnee.format(new Date(`${monthOrDay.slice(0, 7)}-15T12:00:00Z`));
+}
+
+/** « 10/2026 » à partir d'un mois (AAAA-MM). */
+export function formatNumericMonth(month: string): string {
+  return month.split('-').reverse().join('/');
 }
 
 /** « 24 oct. ». */

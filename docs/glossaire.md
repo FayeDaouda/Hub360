@@ -9,9 +9,9 @@ affiché et, quand il existe, son nom dans le code.
 - **Fuseau horaire** — toutes les dates et heures s'affichent au fuseau de
   Dakar (`Africa/Dakar`, UTC+0 toute l'année, sans heure d'été), quel que
   soit le lieu de l'utilisateur. Une échéance, une heure de message ou un
-  « aujourd'hui » sont les mêmes pour tous. Code : `frontend/lib/dates.ts`,
-  `backend/src/shared/dates.ts` (puis le paquet partagé, S0c). Vérifié par
-  les tests du front, exécutés avec un appareil réglé à UTC+14.
+  « aujourd'hui » sont les mêmes pour tous. Code : `packages/domain/src/dates.ts`
+  (paquet `@hub/domain`, commun au front et au back). Vérifié par ses tests,
+  exécutés avec un appareil réglé à UTC+14.
   **Exception** : la salutation « Bonjour » / « Bonsoir » suit l'heure de
   l'appareil, car elle parle du moment de l'utilisateur, pas d'une donnée de
   travail.
@@ -20,7 +20,7 @@ affiché et, quand il existe, son nom dans le code.
 - **Ajout de mois** — « dans 6 mois », « le mois précédent » : si le jour
   n'existe pas dans le mois d'arrivée, on prend le dernier jour de ce mois
   (31 août + 6 mois → 28 février, ou 29 février une année bissextile).
-  Code : `addMonths` de `frontend/lib/dates.ts`.
+  Code : `addMonths` de `packages/domain/src/dates.ts`.
 - **Montant** — en francs CFA, sans centimes : « 1 770 000 FCFA »
   (`formatAmount`). Les montants sont des entiers ; seuls les pourcentages
   ont des décimales.

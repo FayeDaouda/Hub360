@@ -8,7 +8,7 @@ import {
   modifierParametreRentabilite,
   type Parametres,
 } from '@/lib/rentabilite';
-import { formatMonthYear } from '@/lib/dates';
+import { formatMonthYear } from '@hub/domain';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';

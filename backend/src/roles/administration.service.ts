@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { doubleFacteurExige } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { daysSince, formatDate, formatDayMonth, toIsoDay } from '../shared/dates';
-import { plural } from '../shared/text';
+import { daysSince, formatDate, formatDayMonth, plural, toIsoDay } from '@hub/domain';
 
 export type ElementAdministration = {
   type: 'signalement' | 'droit_cio' | 'invitation' | 'chef_sans_compte' | 'double_facteur' | 'salarie_sans_compte';

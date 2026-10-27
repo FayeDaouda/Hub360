@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { IntegrationService } from '../rh/integration.service';
 import { bornesMois, moisDe } from '../rh/regles-temps';
-import { plural } from '../shared/text';
+import { plural } from '@hub/domain';
 
 // Tuiles du Pilotage (décision du 12/10/2026, option A) : des chiffres clés
 // au lieu des compteurs déjà présents plus bas. La rangée suit la matrice :

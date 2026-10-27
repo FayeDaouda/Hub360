@@ -1,5 +1,5 @@
 import { apiSociete } from './client-api';
-import { formatNumber } from './format';
+import { formatNumber } from '@hub/domain';
 
 // Rentabilité par projet, phase 1 (lot 7) : marge directe PROVISOIRE —
 // montant HT facturé − coût salarial des heures imputées et contrôlées.

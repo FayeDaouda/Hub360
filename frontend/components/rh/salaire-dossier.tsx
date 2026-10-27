@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate, todayIso } from '@hub/domain';
 import {
   dateEffetMin,
   getSalaireDossier,
@@ -14,7 +14,6 @@ import {
   type MotifSalaire,
 } from '@/lib/rh';
 import type { DossierPersonnel } from '@/lib/types';
-import { formatDate, todayIso } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 

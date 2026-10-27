@@ -9,9 +9,8 @@ import {
   type Barre,
   type Tranche,
 } from '@/lib/finances';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, plural } from '@hub/domain';
 import type { Devis, FactureCentrale, ProduitService } from '@/lib/types';
-import { plural } from '@/lib/text';
 
 type Props = { devis: Devis[]; factures: FactureCentrale[]; catalogue: ProduitService[] };
 

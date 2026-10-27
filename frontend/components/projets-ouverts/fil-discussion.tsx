@@ -9,7 +9,7 @@ import {
   type MessageFil,
 } from '@/lib/projets-ouverts';
 import { Infobulle } from '@/components/infobulle';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 

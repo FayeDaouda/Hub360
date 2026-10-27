@@ -5,7 +5,7 @@ import { ApiError } from '@/lib/client-api';
 import { demanderPaiement, LIBELLE_PAIEMENT_SALAIRE, majCoordonnees, type ChampsPersonnels } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
 import type { ModePaiementSalaire, ProfilMonEspace, SituationFamiliale } from '@/lib/types';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Field, FieldError } from '@/components/ui/field';
 
 const ou = (v: string) => v.trim() || '—';

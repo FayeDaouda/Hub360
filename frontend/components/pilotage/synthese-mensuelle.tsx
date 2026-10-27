@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { commenterSynthese, getSyntheses, type ListeSyntheses } from '@/lib/pilotage';
-import { formatLongDateTime } from '@/lib/dates';
+import { formatLongDateTime } from '@hub/domain';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 

@@ -10,9 +10,8 @@ import {
   type CoordonneesApporteur,
   type FicheCoordonnees,
 } from '@/lib/commissions';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatDate, formatNumber } from '@hub/domain';
 import { MODES_PAIEMENT } from '@/lib/types';
-import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 

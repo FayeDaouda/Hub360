@@ -18,7 +18,7 @@ import {
   type LigneParametre,
   type Statut,
 } from './regles-rentabilite';
-import { formatMonthYear, toIsoDay, todayIso } from '../../shared/dates';
+import { formatMonthYear, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 type Acces = 'montants' | 'taux';

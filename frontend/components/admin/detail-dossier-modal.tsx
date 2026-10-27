@@ -16,7 +16,7 @@ import {
   type StatutCrm,
   type TransitionDossier,
 } from '@/lib/types';
-import { formatNumber } from '@/lib/format';
+import { formatDate, formatNumber } from '@hub/domain';
 import type { ActionCrm } from '@/lib/cycle-crm';
 import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } from '@/lib/crm';
 import { CycleDossier } from './cycle-dossier';
@@ -26,7 +26,6 @@ import { LocaliteSelect } from './localite-select';
 import { CaracteristiquesProjet } from './caracteristiques-projet';
 import { FicheApporteurSection } from './fiche-apporteur-section';
 import { estPersonneMorale } from '@/lib/nomenclature';
-import { formatDate } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';

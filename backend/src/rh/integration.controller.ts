@@ -1,16 +1,11 @@
 import { Body, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
-import { IsString, Matches, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
 import { IntegrationService } from './integration.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
-
-class PointIntegrationDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/) realiseLe: string;
-  @IsString() @MaxLength(4000) compteRendu: string;
-}
+import { PointIntegrationDto } from './integration.dto';
 
 type R = { user: { userId: string } };
 

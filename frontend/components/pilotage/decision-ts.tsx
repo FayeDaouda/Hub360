@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate } from '@hub/domain';
 import { deciderDemandeTs, type DemandeTsADecider } from '@/lib/projets-ouverts';
-import { formatDate } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 

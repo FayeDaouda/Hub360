@@ -39,9 +39,9 @@ import {
   formatDayMonth,
   formatMonthYear,
   formatNumericMonth,
-  toIsoDay,
   todayIso,
-} from '../shared/dates';
+  toIsoDay,
+} from '@hub/domain';
 
 export type Acteur = {
   userId: string;

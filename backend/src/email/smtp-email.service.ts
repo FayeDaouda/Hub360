@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import {
+  AlerteEmail,
   ContratEmail,
   DevisEmail,
   EmailService,
@@ -126,6 +127,17 @@ export class SmtpEmailService extends EmailService {
       this.log.error(
         `[smtp] échec d'envoi contrat ${c.codeDossier} à ${c.email} : ${e instanceof Error ? e.message : e}`,
       );
+      return { envoye: false };
+    }
+  }
+
+  async envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }> {
+    try {
+      await this.transport.sendMail({ from: this.from, to: a.email, subject: a.sujet, text: a.texte });
+      this.log.log(`[smtp] alerte envoyée à ${a.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(`[smtp] échec d'envoi de l'alerte à ${a.email} : ${e instanceof Error ? e.message : e}`);
       return { envoye: false };
     }
   }

@@ -19,8 +19,7 @@ import { MesInformations } from './informations';
 import { MaCellule } from './ma-cellule';
 import { MonTemps } from './mon-temps';
 import { MesPerformances } from './performances';
-import { formatDate } from '@/lib/dates';
-import { plural } from '@/lib/text';
+import { formatDate, plural } from '@hub/domain';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 
 // Deux blocs (revue Salarié 19/10/2026) : le travail au quotidien, puis le

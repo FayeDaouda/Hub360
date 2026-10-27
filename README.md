@@ -15,6 +15,7 @@ clients.
 | Backend           | NestJS 10 · Prisma 5 · PostgreSQL 16 · JWT (Passport)     |
 | Frontend          | Next.js 14 (App Router) · React 18 · TypeScript           |
 | Tests             | Jest (backend)                                            |
+| Environnement     | Node.js 24 LTS (`.nvmrc`), partout : postes, CI, images   |
 | Hébergement prévu | Hetzner Cloud (VPS + Object Storage), domaine `hub.group` |
 
 ## Structure
@@ -40,6 +41,8 @@ hub/
 
 ## Démarrage
 
+Prérequis : Node.js 24 LTS, la version de `.nvmrc` (`nvm use` la sélectionne).
+
 ### 1. PostgreSQL
 
 Avec Docker :
@@ -51,7 +54,19 @@ docker compose up -d
 Ou une instance locale (ex. Homebrew) : créer une base `hub` accessible sur
 `localhost:5432` et reporter l'URL dans `backend/.env`.
 
-### 2. Backend
+### 2. Paquet partagé
+
+Fonctions communes au back et au front (dates à l'heure de Dakar, montants,
+texte) : `packages/domain`, importé sous le nom `@hub/domain`. À compiler
+avant le back et le front, et après chaque modification de ses sources :
+
+```bash
+cd packages/domain
+npm ci
+npm run build                  # dist/, lu par le back et le front
+```
+
+### 3. Backend
 
 ```bash
 cd backend
@@ -63,7 +78,7 @@ npm run prisma:seed            # données de démonstration Grey Concrete
 npm run start:dev              # http://localhost:3001/api
 ```
 
-### 3. Frontend
+### 4. Frontend
 
 ```bash
 cd frontend
@@ -72,14 +87,14 @@ npm ci
 npm run dev                    # http://localhost:3000
 ```
 
-### 4. Hook pre-push (une fois par clone)
+### 5. Hook pre-push (une fois par clone)
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-Bloque tout `git push` qui ne passe pas `build` + `test` (backend) et `lint` +
-`typecheck` (frontend) — l'équivalent local d'une protection de branche, non
+Bloque tout `git push` qui ne passe pas `typecheck` + `test` + `build` (paquet
+partagé), `build` + `test` (backend) et `lint` + `typecheck` + `test` (frontend) — l'équivalent local d'une protection de branche, non
 disponible sur un dépôt privé en plan gratuit. Contournement d'urgence :
 `git push --no-verify`. La CI GitHub reste le filet de sécurité côté serveur ;
 une vraie protection de branche demandera un dépôt public ou GitHub Pro.
@@ -102,12 +117,20 @@ Mot de passe commun : `changeme123` — à changer avant toute mise en productio
 | `npm run build`                                            | compilation (`nest build`) |
 | `npm test` · `test:watch` · `test:cov`                     | tests unitaires Jest       |
 | `npm run prisma:migrate` · `prisma:seed` · `prisma:studio` | base                       |
+| `npm run openapi` (après `build`)                          | `openapi.json` régénéré    |
 
 | Frontend                          |                      |
 | --------------------------------- | -------------------- |
 | `npm run dev` · `build` · `start` | Next.js              |
 | `npm run lint`                    | ESLint (`next lint`) |
 | `npm run typecheck`               | `tsc --noEmit`       |
+| `npm run api:types`               | types de l'API       |
+
+Description de l'API : `backend/openapi.json`, générée depuis le code
+(ADR 0005) ; page Swagger sur `/api/docs` en développement seulement. Après
+un changement de route ou de DTO : `npm run build && npm run openapi` au
+back, puis `npm run api:types` au front, et versionner les deux fichiers (la
+CI échoue s'ils ne sont plus à jour).
 
 ## Conventions (non négociables)
 

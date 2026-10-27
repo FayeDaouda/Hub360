@@ -1,6 +1,6 @@
 import { formatHeures, LIBELLE_MANQUE, LIBELLE_SECTION } from '@/lib/temps';
 import type { LigneCalculTemps } from '@/lib/types';
-import { formatDayMonth } from '@/lib/dates';
+import { formatDayMonth } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 
 // Détail du calcul d'une feuille de temps (RH et Mon temps) : un bloc assigné

@@ -5,7 +5,7 @@
 
 import { champsManquants, type ChampsFiche } from './fiche';
 import { DELAI_RELANCE_FICHE_MS } from './notifications-crm';
-import { daysBetween, formatDayMonth, toIsoDay } from '../shared/dates';
+import { daysBetween, formatDayMonth, toIsoDay } from '@hub/domain';
 
 export type DossierCommercial = ChampsFiche & {
   id: string;

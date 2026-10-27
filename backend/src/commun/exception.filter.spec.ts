@@ -1,5 +1,6 @@
 import { ArgumentsHost, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { ErrorReporter } from '../monitoring/error-reporter.service';
 import { FiltreExceptionsGlobal } from './exception.filter';
 
 // Le filtre doit : conserver les HttpException métier (statut + message tels
@@ -10,7 +11,7 @@ import { FiltreExceptionsGlobal } from './exception.filter';
 function faireHost() {
   const json = jest.fn();
   const status = jest.fn().mockReturnValue({ json });
-  const req = { method: 'POST', url: '/api/test' };
+  const req = { method: 'POST', url: '/api/test', path: '/api/test' };
   const host = {
     switchToHttp: () => ({ getResponse: () => ({ status }), getRequest: () => req }),
   } as unknown as ArgumentsHost;
@@ -18,7 +19,9 @@ function faireHost() {
 }
 
 describe('FiltreExceptionsGlobal', () => {
-  const filtre = new FiltreExceptionsGlobal();
+  const reporter = { report: jest.fn() };
+  const filtre = new FiltreExceptionsGlobal(reporter as unknown as ErrorReporter);
+  beforeEach(() => reporter.report.mockClear());
 
   it('HttpException métier : statut et message conservés', () => {
     const { host, status, corps } = faireHost();
@@ -85,6 +88,37 @@ describe('FiltreExceptionsGlobal', () => {
     expect(corps().message).toBe('Une erreur interne est survenue.');
     expect(JSON.stringify(corps())).not.toContain('motDePasseHash');
     expect(logSpy).toHaveBeenCalled();
+    expect(reporter.report).toHaveBeenCalledWith(expect.objectContaining({ source: 'api', status: 500 }));
     logSpy.mockRestore();
+  });
+
+  it('5xx suivie avec le modèle de route, jamais l’adresse et son jeton', () => {
+    const logSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const json = jest.fn();
+    const req = {
+      method: 'GET',
+      url: '/api/devis-public/jeton-secret',
+      path: '/api/devis-public/jeton-secret',
+      route: { path: '/api/devis-public/:token' },
+      user: { userId: 'u1', societeId: 's1' },
+    };
+    const host = {
+      switchToHttp: () => ({ getResponse: () => ({ status: () => ({ json }) }), getRequest: () => req }),
+    } as unknown as ArgumentsHost;
+
+    filtre.catch(new Error('panne'), host);
+
+    expect(reporter.report).toHaveBeenCalledWith(
+      expect.objectContaining({ route: '/api/devis-public/:token', method: 'GET', userId: 'u1', companyId: 's1' }),
+    );
+    expect(JSON.stringify(reporter.report.mock.calls)).not.toContain('jeton-secret');
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain('jeton-secret');
+    logSpy.mockRestore();
+  });
+
+  it('erreur métier (4xx) : pas suivie', () => {
+    const { host } = faireHost();
+    filtre.catch(new NotFoundException('Projet introuvable'), host);
+    expect(reporter.report).not.toHaveBeenCalled();
   });
 });

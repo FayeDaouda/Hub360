@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { daysBetween, todayIso } from '../shared/dates';
+import { daysBetween, todayIso } from '@hub/domain';
 
 export type TypeAlerteRh = 'fin_contrat' | 'fin_essai' | 'visite_medicale' | 'piece_identite';
 export type AlerteRh = {

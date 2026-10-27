@@ -5,11 +5,9 @@ import Link from 'next/link';
 import { Copy } from 'lucide-react';
 import { marquerReponseDevis, relancerDevis } from '@/lib/devis';
 import { completudeFiche, type OffreEmise } from '@/lib/crm';
-import { formatCompactAmount } from '@/lib/format';
-import { daysSince, formatDayShortMonth } from '@/lib/dates';
+import { daysSince, formatCompactAmount, formatDayShortMonth, plural } from '@hub/domain';
 import { STATUTS_DEVIS, type OffreDossier as Offre, type Projet } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 

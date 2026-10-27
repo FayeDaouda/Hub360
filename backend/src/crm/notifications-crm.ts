@@ -25,7 +25,7 @@
 
 import type { ActionCrm } from './cycle';
 import { ChampsFiche, TOTAL_CHAMPS_FICHE, champsManquants } from './fiche';
-import { plural } from '../shared/text';
+import { plural } from '@hub/domain';
 
 export type EvenementCrm =
   | 'dossier_soumis'

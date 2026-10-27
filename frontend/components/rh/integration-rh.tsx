@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/client-api';
 import { confirmerIntegration, enregistrerPointIntegration, getIntegrations, LIBELLE_CONTRAT } from '@/lib/rh';
 import type { IntegrationSalarie, PointIntegration } from '@/lib/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
-import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
+import { formatDate, formatDayMonth, todayIso } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';

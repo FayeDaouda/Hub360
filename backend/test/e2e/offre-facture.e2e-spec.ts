@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { api, COMPTES, connecter, demarrer, parametrerContratDeTest, signerContrat } from './app';
-import { todayIso } from '../../src/shared/dates';
+import { todayIso } from '@hub/domain';
 
 const DOSSIER = 'FS_NGO.26'; // démo : offre soumise au CFO, en attente de validation
 const AUJOURDHUI = todayIso();

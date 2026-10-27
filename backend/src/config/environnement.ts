@@ -3,7 +3,7 @@
 import 'reflect-metadata';
 import { existsSync } from 'fs';
 import { plainToInstance, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, Min, validateSync } from 'class-validator';
+import { IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, Min, validateSync } from 'class-validator';
 
 // Variables d'environnement de l'API (12-factor) : lues dans backend/.env en
 // développement, injectées par docker compose en production, et vérifiées au
@@ -33,6 +33,11 @@ class VariablesEnvironnement {
   @IsOptional() @IsIn(['true', 'false']) SMTP_SECURE?: string;
   @IsOptional() @IsString() MAIL_FROM?: string;
   @IsOptional() @IsString() MAIL_MARQUE?: string;
+  // Destinataire des alertes du suivi des erreurs (src/monitoring) ; absent :
+  // les erreurs restent dans les journaux, sans e-mail.
+  @IsOptional() @IsEmail() ALERTES_EMAIL?: string;
+  // Dossier des sauvegardes, surveillé chaque matin (src/monitoring).
+  @IsOptional() @IsString() SAUVEGARDES_DOSSIER?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) HUB_RELAIS?: number;
   @IsOptional() @IsIn(['obligatoire', 'desactive']) HUB_DOUBLE_FACTEUR?: string;
   @IsOptional() @IsIn(['autorise']) HUB_DONNEES_DEMO?: string;

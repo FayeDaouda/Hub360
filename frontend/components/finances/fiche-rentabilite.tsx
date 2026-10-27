@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Eye } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatDate, formatMonthYear, formatNumber, plural } from '@hub/domain';
 import {
   finDeMois,
   formatTaux,
@@ -15,8 +15,6 @@ import {
   type CoutSalarie,
   type FicheRentabilite,
 } from '@/lib/rentabilite';
-import { formatDate, formatMonthYear } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';

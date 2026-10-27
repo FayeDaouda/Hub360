@@ -3,10 +3,8 @@
 import { useMemo, useState } from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatMonthYear, plural } from '@hub/domain';
 import { MODES_PAIEMENT, type FactureCentrale } from '@/lib/types';
-import { formatMonthYear } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 

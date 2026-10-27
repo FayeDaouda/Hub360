@@ -35,8 +35,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
 import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
-import { formatMonthYear, todayIso } from '../../shared/dates';
-import { formatAmount } from '../../shared/format';
+import { formatAmount, formatMonthYear, todayIso } from '@hub/domain';
 
 // Facturation client — module admin-only (le contrôleur ne marque aucun
 // endpoint @EcritureCollaborateur, donc AccesProjetGuard rejette toute écriture

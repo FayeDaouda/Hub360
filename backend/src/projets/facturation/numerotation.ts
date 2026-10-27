@@ -1,4 +1,4 @@
-import { stripAccents } from '../../shared/text';
+import { stripAccents } from '@hub/domain';
 // Numérotation des factures (lot 6, à la manière de Zervant) — règles pures.
 // Une séquence sans trou par préfixe et par année, commune aux factures et
 // aux avoirs, attribuée à l'émission seulement ; elle repart au numéro de

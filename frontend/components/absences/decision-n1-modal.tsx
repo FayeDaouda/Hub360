@@ -5,7 +5,7 @@ import { ApiError } from '@/lib/client-api';
 import { CalendrierCellule } from './calendrier-cellule';
 import { deciderAbsence, getPreparationDecision, LIBELLE_MOTIF_REFUS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 

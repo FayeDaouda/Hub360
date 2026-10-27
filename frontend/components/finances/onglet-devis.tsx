@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { filtreDevis, libelleMois, parMois, statutDevis, type FiltreDevis } from '@/lib/finances';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate } from '@hub/domain';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
 import type { Devis } from '@/lib/types';
-import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 
 const FILTRES: { cle: FiltreDevis; libelle: string }[] = [

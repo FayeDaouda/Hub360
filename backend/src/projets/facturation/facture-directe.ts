@@ -1,4 +1,4 @@
-import { addDays } from '../../shared/dates';
+import { addDays } from '@hub/domain';
 // Facture directe d'un lead (maquette Finances, oct. 2026) : lignes libres,
 // TVA par défaut, préparée « à valider par le CFO avant émission » ; payable à
 // 15 jours (pied de facture de la maquette). Règles pures, testées.

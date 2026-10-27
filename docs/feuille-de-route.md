@@ -6,17 +6,17 @@ Décisions structurantes : `docs/adr/`.
 
 ## Phases
 
-| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                      |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                              |
-| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                              |
-| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                              |
-| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                              |
-| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a fait (PR #7) ; S0b en cours           |
-| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | juste après S0 : conditionne le lancement |
-| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                   |
-| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés   |
-| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                        |
+| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                            |
+| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                            |
+| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                            |
+| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                            |
+| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits     |
+| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | faite (PR #21, #22), serveurs à créer   |
+| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                 |
+| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés |
+| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                      |
 
 ## Règles de la structuration
 
@@ -31,6 +31,8 @@ Décisions structurantes : `docs/adr/`.
   - les règles métier du module sont calculées au back et testées ;
   - chaque écran gère le chargement, le vide et l'erreur ;
   - des tests côté front sur les composants et les hooks principaux ;
+  - ses réponses d'API décrites par des DTO, et ses appels typés par les
+    types générés (`frontend/lib/api/types.ts`, ADR 0005) ;
   - les chiffres avant et après dans la description de la PR.
 - **Routes de l'API inchangées** pendant la structuration (contrat public).
   Avant de sortir les applications macOS, Windows et iOS, introduire un
@@ -42,7 +44,9 @@ Décisions structurantes : `docs/adr/`.
   **Critère de fin de S0c** : les fonctions de dates, de montants et de texte
   n'existent plus qu'en une version, dans le paquet partagé ; les copies de
   `frontend/lib/` (`dates.ts`, `format.ts`, `text.ts`) et de
-  `backend/src/shared/` sont supprimées.
+  `backend/src/shared/` sont supprimées. Fait : paquet `@hub/domain`
+  (`packages/domain`, ADR 0004). Client d'API : description OpenAPI générée
+  depuis le code et types du front générés, vérifiés par la CI (ADR 0005).
 
 ## Suites décidées, pas encore faites
 
@@ -76,8 +80,24 @@ Décisions structurantes : `docs/adr/`.
   est un contrôle d'envoi de photo (label, image de fond), distinct de
   `PersonAvatar` ; l'unifier change le rendu : à faire avec le module Équipes.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
-  nombre (« 1 facture émise », « 3 factures émises »), avec `lib/text.ts`.
+  nombre (« 1 facture émise », « 3 factures émises »), avec `plural` de `@hub/domain`.
   Changement de texte visible : lot à part, après la structuration.
+
+## Exploitation : ce qui est en place, ce qui reste
+
+- **En place** : Node 24 LTS partout (#19) ; images Docker construites et
+  pile de production démarrée en CI, avec contrôle après déploiement
+  (`deploy/verifier-deploiement.sh`) ; restauration des sauvegardes testée en
+  CI (#21) et chaque semaine sur les vraies données, surveillée chaque matin ;
+  suivi des erreurs sans service extérieur, alertes par e-mail (ADR 0006) ;
+  état de santé `/api/sante`.
+- **À faire par le user** (accès qu'il détient) : créer les serveurs de
+  pré-production et de production, les domaines, les `.env` (dont
+  `ALERTES_EMAIL` et l'envoi d'e-mails) et le stockage objet des
+  sauvegardes (`deploy/README.md`).
+- **Plus tard, sur décision** : service de suivi des erreurs spécialisé
+  (Sentry ou GlitchTip : dépendance et sous-traitant de données) ; sonde de
+  disponibilité externe sur `/api/sante`.
 
 ## En attente d'une décision extérieure
 
@@ -88,6 +108,15 @@ Décisions structurantes : `docs/adr/`.
   contrat actif jusqu'à la signature puis lecture seule limitée, révocation et
   régénération.
 - **Formats BIM** (équipe) : Revit, ArchiCAD, SketchUp pour les livrables.
+- **Contrat signé imprimable** (décision métier du 27/10/2026, hors S0b) : la
+  version imprimée et le PDF du contrat incluent la signature, le nom du
+  signataire, la date et l'heure de signature (heure de Dakar) et une
+  référence unique du document signé. Aujourd'hui, aucune version imprimable
+  n'existe et la signature tracée ne s'affiche qu'à l'écran, dans le dossier
+  CRM. Les modalités sont proposées à la direction (document « Contrat signé :
+  version imprimée et PDF ») : format de la référence (recommandé :
+  `AB_YOF.26-CT1`, comme les offres), exemplaire du client, page de preuve
+  avec empreinte numérique, date des contrats papier, signature de la société.
 
 ## Captures : règles du harnais
 

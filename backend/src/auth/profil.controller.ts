@@ -15,19 +15,9 @@ import {
 } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { ProfilService } from './profil.service';
-
-class NomAfficheDto {
-  // null ou vide : revenir au nom officiel.
-  @IsOptional() @IsString() @MaxLength(120) nomAffiche: string | null;
-}
-
-class PhotoDto {
-  // data URI image (JPEG, PNG, WebP), déjà recadrée et allégée par le navigateur.
-  @IsString() @MaxLength(600_000) image: string;
-}
+import { NomAfficheDto, PhotoDto } from './dto/profil.dto';
 
 type R = { user: { userId: string } };
 

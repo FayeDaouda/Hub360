@@ -18,11 +18,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run format:check
+
+  domain:
+    name: Paquet partagé — types + tests + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/domain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: packages/domain/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
 
   backend:
     name: Backend — build + tests unitaires et e2e
@@ -46,9 +64,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            packages/domain/package-lock.json
+      # Le back lit le paquet partagé compilé (dist/).
+      - run: npm ci && npm run build
+        working-directory: packages/domain
       - run: npm ci
       # `prisma generate` ne se connecte pas à la base — l'URL n'a qu'à être
       # syntaxiquement valide pour que le client se génère.
@@ -56,6 +79,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
       - run: npm run build
+      # Description OpenAPI régénérée depuis le code : elle doit être à jour.
+      - name: Description OpenAPI à jour
+        run: |
+          npm run openapi
+          git diff --exit-code openapi.json || { echo "::error::backend/openapi.json n'est plus à jour : npm run build && npm run openapi (backend), puis npm run api:types (frontend)"; exit 1; }
       - run: npm test
       - run: npm run test:e2e
         env:
@@ -71,11 +99,125 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            packages/domain/package-lock.json
+      # Le front lit le paquet partagé compilé (dist/).
+      - run: npm ci && npm run build
+        working-directory: packages/domain
       - run: npm ci
+      # Types de l'API régénérés depuis backend/openapi.json : ils doivent être à jour.
+      - name: Types de l'API à jour
+        run: |
+          npm run api:types
+          git diff --exit-code lib/api/schema.d.ts || { echo "::error::frontend/lib/api/schema.d.ts n'est plus à jour : npm run api:types (frontend)"; exit 1; }
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  images:
+    name: Images Docker — construction et démarrage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy
+    # La pile de production telle que sur le serveur (deploy/docker-compose.yml :
+    # Postgres, API, interface, Caddy, sauvegarde), sur le domaine localhost.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configuration de test
+        run: |
+          {
+            echo HUB_DOMAINE=localhost
+            echo POSTGRES_USER=hub
+            echo POSTGRES_DB=hub
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "JWT_SECRET=$(openssl rand -hex 32)"
+          } > .env
+      - run: docker compose --env-file .env build
+      # Ce dont les conteneurs ont besoin au démarrage : le paquet partagé, le
+      # module natif de bcrypt (connexion) et la CLI Prisma (migrations) pour
+      # le back, le serveur pour le front.
+      - name: Contenu des images
+        run: |
+          docker compose --env-file .env run --rm --no-deps backend node -e "require('@hub/domain'); require('bcrypt')"
+          docker compose --env-file .env run --rm --no-deps backend npx --no-install prisma --version
+          docker compose --env-file .env run --rm --no-deps frontend test -f server.js
+      - name: Démarrage (migrations, contrôles de santé)
+        run: docker compose --env-file .env up -d --wait --wait-timeout 300
+      - name: Contrôle après déploiement
+        run: HUB_TLS_LOCAL=1 ./verifier-deploiement.sh https://localhost
+      - name: Sauvegarde et test de restauration dans la pile
+        run: |
+          docker compose --env-file .env exec -T sauvegarde sauvegarde.sh
+          docker compose --env-file .env exec -T sauvegarde tester-restauration.sh
+      - name: Journaux de la pile
+        if: failure()
+        run: docker compose --env-file .env logs --tail 200
+
+  restauration:
+    name: Sauvegarde et restauration — test
+    runs-on: ubuntu-latest
+    # Les scripts réels de deploy/ (image de sauvegarde) sur la base de démo :
+    # sauvegarde, restauration dans une base neuve, puis comparaison table par
+    # table. Une sauvegarde jamais restaurée n'est pas une sauvegarde.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hub
+          POSTGRES_PASSWORD: hub
+          POSTGRES_DB: hub
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: hub
+      PGPASSWORD: hub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            packages/domain/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: packages/domain
+      - name: Base de démo
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://hub:hub@localhost:5432/hub?schema=public
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npx ts-node prisma/seed.ts
+          npx ts-node prisma/rh-dossiers-init.ts
+      - run: docker build -f deploy/sauvegarde.Dockerfile -t hub-sauvegarde deploy
+      - name: Sauvegarde (sauvegarde.sh)
+        run: |
+          mkdir -p "$RUNNER_TEMP/sauvegardes"
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD -e PGDATABASE=hub \
+            -v "$RUNNER_TEMP/sauvegardes:/sauvegardes" hub-sauvegarde sauvegarde.sh
+      - name: Restauration dans une base neuve (restaurer.sh)
+        run: |
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD hub-sauvegarde \
+            psql -d hub -c 'CREATE DATABASE hub_restauree'
+          fichier=$(basename "$(ls "$RUNNER_TEMP"/sauvegardes/hub-*.dump)")
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD -e PGDATABASE=hub_restauree \
+            -v "$RUNNER_TEMP/sauvegardes:/sauvegardes" hub-sauvegarde restaurer.sh "/sauvegardes/$fichier" --oui
+      - name: Données identiques (verifier-restauration.sh)
+        run: |
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD hub-sauvegarde \
+            verifier-restauration.sh hub hub_restauree
+      - name: Schéma à jour pour l'application
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://hub:hub@localhost:5432/hub_restauree?schema=public
+        run: npx prisma migrate status

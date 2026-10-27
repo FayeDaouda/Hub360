@@ -19,7 +19,7 @@ import {
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
 import { chargerTachesAssignees, type TacheAssignee } from './taches-assignees';
-import { formatDate, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
+import { formatDate, formatMonthYear, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string };
 

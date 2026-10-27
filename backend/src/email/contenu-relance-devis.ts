@@ -1,7 +1,5 @@
 import { RelanceDevisEmail } from './email.service';
-import { formatLongDate } from '../shared/dates';
-import { formatAmount } from '../shared/format';
-import { escapeHtml } from '../shared/text';
+import { escapeHtml, formatAmount, formatLongDate } from '@hub/domain';
 
 // Contenu de l'email de relance d'une offre (étape F). Pur (aucune I/O) —
 // même motif que contenu-devis.ts, dont il reprend le lien de réponse en

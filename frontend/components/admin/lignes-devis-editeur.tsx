@@ -3,8 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { LigneDevisSaisie } from '@/lib/devis';
 import { ventilationTva, type LigneDevis, type ProduitService } from '@/lib/types';
-import { formatCompactAmount } from '@/lib/format';
-import { plural } from '@/lib/text';
+import { formatCompactAmount, plural } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 
 // Éditeur des lignes d'un devis — partagé par la modale « Nouveau devis »

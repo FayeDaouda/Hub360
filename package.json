@@ -1,7 +1,10 @@
 {
   "name": "hub",
   "private": true,
-  "description": "Outils communs au dépôt (formatage). Le front, le back et e2e ont chacun leur package.json.",
+  "description": "Outils communs au dépôt (formatage). Le front, le back, e2e et le paquet partagé (packages/domain) ont chacun leur package.json.",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check ."

@@ -1,6 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+import { ErrorReporter } from '../monitoring/error-reporter.service';
 
 // Filtre d'exception global : une seule forme de réponse d'erreur, et RIEN qui
 // fuite l'implémentation vers le client (stack traces, noms de tables /
@@ -13,6 +14,8 @@ type CorpsErreur = { statusCode: number; error: string; message: unknown };
 export class FiltreExceptionsGlobal implements ExceptionFilter {
   private readonly logger = new Logger('Exception');
 
+  constructor(private readonly reporter: ErrorReporter) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const res = ctx.getResponse<Response>();
@@ -21,11 +24,23 @@ export class FiltreExceptionsGlobal implements ExceptionFilter {
     const { status, corps } = this.resoudre(exception);
 
     if (status >= 500) {
-      // Le détail complet reste côté serveur.
-      this.logger.error(
-        `${req.method} ${req.url} → ${status}`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
+      // Le détail complet reste côté serveur, et passe au suivi des erreurs.
+      // Le modèle de route plutôt que l'adresse : les liens publics portent
+      // leur jeton dans l'adresse.
+      const route: string = (req.route as { path?: string } | undefined)?.path ?? req.path;
+      const pile = exception instanceof Error ? exception.stack : String(exception);
+      this.logger.error(`${req.method} ${route} → ${status}`, pile);
+      const user = (req as Request & { user?: { userId?: string; societeId?: string } }).user;
+      this.reporter.report({
+        source: 'api',
+        route,
+        method: req.method,
+        status,
+        userId: user?.userId,
+        companyId: user?.societeId,
+        message: exception instanceof Error ? exception.message : String(exception),
+        stack: pile,
+      });
     }
 
     res.status(status).json({ ...corps, timestamp: new Date().toISOString(), path: req.url });

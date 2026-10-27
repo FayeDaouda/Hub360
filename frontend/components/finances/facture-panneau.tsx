@@ -12,11 +12,10 @@ import {
   supprimerFactureCentrale,
 } from '@/lib/facturation';
 import { DemandeAvoir } from '@/components/finances/demande-avoir';
-import { formatAmount } from '@/lib/format';
+import { daysSince, formatAmount, formatDate, todayIso } from '@hub/domain';
 import { MODES_PAIEMENT, type FactureCentrale, type ModePaiement } from '@/lib/types';
 import { FactureDocument, type FactureDocumentProps } from '@/components/finances/facture-document';
 import { useConfirmer } from '@/components/confirmation';
-import { daysSince, formatDate, todayIso } from '@/lib/dates';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';

@@ -1,5 +1,5 @@
 import { relanceAFaire } from './domaine';
-import { addDays } from '../shared/dates';
+import { addDays } from '@hub/domain';
 
 // Relances d'offre J+3 / J+6 — « à faire » dérivé à la lecture (pas de
 // scheduler) : un palier atteint et pas encore relancé.

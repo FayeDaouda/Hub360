@@ -16,7 +16,7 @@ import {
   type ParametresFacturation,
   type ProfilFacturation,
 } from '@/lib/facturation';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';

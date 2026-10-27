@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { deciderDemandeDroit, type DemandeDroit } from '@/lib/roles';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 

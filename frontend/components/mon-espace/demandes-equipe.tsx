@@ -6,7 +6,7 @@ import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE, STATUT_ABSENCE, validerFinal
 import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Formulaire } from '@/components/absences/decision-n1-modal';
 import { CalendrierCellule } from '@/components/absences/calendrier-cellule';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 

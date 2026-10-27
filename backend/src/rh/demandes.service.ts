@@ -13,8 +13,7 @@ import { ouDossierDuCompte } from './mon-compte';
 import { DecisionN1Dto, DeposerAbsenceDto, DeposerRemboursementDto } from './demandes.dto';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 import { chevauche, joursOuvrables, PART_CELLULE_ABSENTE_ALERTE, soldeConges } from './regles-conges';
-import { addDays, formatDayMonth, todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { addDays, formatAmount, formatDayMonth, todayIso } from '@hub/domain';
 
 // RH · Demandes (lot 2) — absences (N+1 puis RH) et remboursements santé
 // (soumise → transmise → remboursée/rejetée). Hypothèses de travail : cf.
