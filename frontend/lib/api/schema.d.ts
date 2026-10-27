@@ -3631,14 +3631,14 @@ export interface components {
             image: string;
         };
         LectureDto: {
-            types?: ("projet_assigne" | "phase_changee" | "checklist_assignee" | "prolongation_demandee" | "prolongation_decidee" | "dossier_soumis" | "dossier_renvoye" | "offre_envoyee" | "rappel_offre" | "rappel_facture" | "rappel_tache" | "avenant_ts" | "signalement_recu" | "offre_acceptee" | "offre_refusee" | "contrat_signe" | "dossier_perdu" | "offre_expiree" | "tache_remise" | "tache_validee" | "tache_renvoyee" | "facture_a_valider" | "mention_projet" | "tache_assignee" | "absence_a_decider" | "absence_decidee" | "remboursement_a_traiter" | "remboursement_traite" | "decision_assignee" | "facture_emise" | "facture_payee" | "ecart_temps_signale" | "ecart_temps_traite" | "rappel_demande" | "bulletin_depose" | "attestation_delivree" | "salaire_a_valider" | "salaire_decide" | "avoir_emis" | "avoir_a_valider" | "avoir_decide" | "cloture_a_faire" | "reporting_question" | "reporting_reponse" | "coordonnees_paiement_modifiees" | "commission_a_payer" | "commission_payee" | "coordonnees_apporteur_modifiees" | "reglage_gouvernance_modifie" | "droits_modifies" | "connexion_secours" | "delegation_ceo" | "synthese_mensuelle" | "attente_ceo" | "demande_droit_a_valider" | "demande_droit_decidee" | "ts_a_valider" | "ts_decide" | "suppleance_designee" | "reporting_a_deposer" | "reporting_en_retard" | "reporting_depose" | "visa_a_apposer" | "arrivant_a_affecter" | "rappel_decision" | "decision_proposee" | "decision_arbitree" | "decision_en_retard")[];
+            types?: ("absence_a_decider" | "absence_decidee" | "arrivant_a_affecter" | "attente_ceo" | "attestation_delivree" | "avenant_ts" | "avoir_a_valider" | "avoir_decide" | "avoir_emis" | "bulletin_depose" | "checklist_assignee" | "cloture_a_faire" | "commission_a_payer" | "commission_payee" | "connexion_secours" | "contrat_signe" | "coordonnees_apporteur_modifiees" | "coordonnees_paiement_modifiees" | "decision_arbitree" | "decision_assignee" | "decision_en_retard" | "decision_proposee" | "delegation_ceo" | "demande_droit_a_valider" | "demande_droit_decidee" | "dossier_perdu" | "dossier_renvoye" | "dossier_soumis" | "droits_modifies" | "ecart_temps_signale" | "ecart_temps_traite" | "facture_a_valider" | "facture_emise" | "facture_payee" | "mention_projet" | "offre_acceptee" | "offre_envoyee" | "offre_expiree" | "offre_refusee" | "phase_changee" | "projet_assigne" | "prolongation_decidee" | "prolongation_demandee" | "rappel_decision" | "rappel_demande" | "rappel_facture" | "rappel_offre" | "rappel_tache" | "reglage_gouvernance_modifie" | "remboursement_a_traiter" | "remboursement_traite" | "reporting_a_deposer" | "reporting_depose" | "reporting_en_retard" | "reporting_question" | "reporting_reponse" | "salaire_a_valider" | "salaire_decide" | "signalement_recu" | "suppleance_designee" | "synthese_mensuelle" | "tache_assignee" | "tache_remise" | "tache_renvoyee" | "tache_validee" | "ts_a_valider" | "ts_decide" | "visa_a_apposer")[];
             ids?: string[];
         };
         ChangementDto: {
             carte: string;
             tache?: string;
             /** @enum {string} */
-            champ: "debut" | "fin" | "heures" | "visa" | "fichier";
+            champ: "debut" | "fichier" | "fin" | "heures" | "visa";
             valeur: number;
         };
         GabaritDto: {
@@ -3655,7 +3655,7 @@ export interface components {
         NouveauClientDto: {
             nom: string;
             /** @enum {string} */
-            type: "particulier" | "sci" | "entreprise" | "institution";
+            type: "entreprise" | "institution" | "particulier" | "sci";
             contact?: string;
             email?: string;
             telephone?: string;
@@ -3679,18 +3679,18 @@ export interface components {
             /** @enum {string} */
             nature: "mandat_client" | "promotion_interne";
             /** @enum {string} */
-            categorie?: "conception" | "developpement" | "amenagement";
+            categorie?: "amenagement" | "conception" | "developpement";
             localiteId: string;
             latitude?: number | null;
             longitude?: number | null;
             /** @enum {string} */
-            type?: "villa" | "immeuble_residentiel" | "immeuble_mixte" | "immeuble_bureaux" | "local_commercial" | "hotelier" | "equipement";
+            type?: "equipement" | "hotelier" | "immeuble_bureaux" | "immeuble_mixte" | "immeuble_residentiel" | "local_commercial" | "villa";
             nbPlanches?: number;
             surfaceTerrain?: number;
             /** @enum {string} */
-            standing?: "economique" | "moyen" | "grand";
+            standing?: "economique" | "grand" | "moyen";
             /** @enum {string} */
-            gamme?: "local" | "importe" | "sur_mesure_importe";
+            gamme?: "importe" | "local" | "sur_mesure_importe";
             programme?: string;
             client: components["schemas"]["ClientRefDto"];
             apporteur: components["schemas"]["ApporteurDto"];
@@ -3698,15 +3698,15 @@ export interface components {
         };
         ModifierFicheDto: {
             /** @enum {string} */
-            categorie?: "conception" | "developpement" | "amenagement";
+            categorie?: "amenagement" | "conception" | "developpement";
             /** @enum {string} */
-            type?: "villa" | "immeuble_residentiel" | "immeuble_mixte" | "immeuble_bureaux" | "local_commercial" | "hotelier" | "equipement";
+            type?: "equipement" | "hotelier" | "immeuble_bureaux" | "immeuble_mixte" | "immeuble_residentiel" | "local_commercial" | "villa";
             surfaceTerrain?: number;
             nbPlanches?: number;
             /** @enum {string} */
-            standing?: "economique" | "moyen" | "grand";
+            standing?: "economique" | "grand" | "moyen";
             /** @enum {string} */
-            gamme?: "local" | "importe" | "sur_mesure_importe";
+            gamme?: "importe" | "local" | "sur_mesure_importe";
             ficheProgramme?: {
                 [key: string]: unknown;
             };
@@ -3719,13 +3719,13 @@ export interface components {
         };
         ActionDossierDto: {
             /** @enum {string} */
-            action: "soumettre" | "valider" | "renvoyer" | "onboarder" | "refaire" | "perdre";
+            action: "onboarder" | "perdre" | "refaire" | "renvoyer" | "soumettre" | "valider";
             commentaire?: string;
         };
         PayerCommissionDto: {
             date: string;
             /** @enum {string} */
-            mode: "wave" | "virement" | "cheque" | "especes" | "orange_money";
+            mode: "cheque" | "especes" | "orange_money" | "virement" | "wave";
             reference?: string;
         };
         CoordonneesApporteurDto: {
@@ -3785,7 +3785,7 @@ export interface components {
             carteId: string;
             element: string;
             /** @enum {string} */
-            reprise: "mineure" | "majeure";
+            reprise: "majeure" | "mineure";
             surfaceM2?: number;
             planches?: number;
         };
@@ -3795,7 +3795,7 @@ export interface components {
         };
         StatutChantierDto: {
             /** @enum {string} */
-            statut: "conception" | "chantier" | "livre";
+            statut: "chantier" | "conception" | "livre";
         };
         DateVisiteDto: {
             date: string | null;
@@ -3821,7 +3821,7 @@ export interface components {
         };
         DeciderTacheDto: {
             /** @enum {string} */
-            decision: "valider" | "renvoyer";
+            decision: "renvoyer" | "valider";
             motif?: string;
         };
         ViserTacheDto: {
@@ -3879,14 +3879,14 @@ export interface components {
         };
         DemandeAvoirDto: {
             /** @enum {string} */
-            motif: "erreur_facturation" | "remise_commerciale" | "litige_client" | "annulation_prestation" | "autre";
+            motif: "annulation_prestation" | "autre" | "erreur_facturation" | "litige_client" | "remise_commerciale";
             commentaire: string;
         };
         AjouterPaiementDto: {
             date: string;
             montant: number;
             /** @enum {string} */
-            mode?: "wave" | "virement" | "cheque" | "especes" | "orange_money";
+            mode?: "cheque" | "especes" | "orange_money" | "virement" | "wave";
             reference?: string;
         };
         SupprimerPaiementDto: {
@@ -3895,9 +3895,9 @@ export interface components {
         FormatNumerotationDto: {
             prefixe: string;
             /** @enum {string} */
-            formatAnnee: "AAAA" | "AA";
+            formatAnnee: "AA" | "AAAA";
             /** @enum {string} */
-            separateur: "-" | "/" | "." | "";
+            separateur: "" | "-" | "." | "/";
             chiffres: number;
             numeroDepart: number;
             motif: string;
@@ -3919,7 +3919,7 @@ export interface components {
             mentionsPied: string;
             logoDocument?: string | null;
             /** @enum {string} */
-            cgvAnnexe?: "premiere_facture" | "toujours" | "jamais";
+            cgvAnnexe?: "jamais" | "premiere_facture" | "toujours";
             /** @enum {string} */
             modeCommission?: "encaisse_prorata" | "signature_contrat";
             confirmation?: string;
@@ -3941,12 +3941,12 @@ export interface components {
         };
         CreerCelluleDto: {
             /** @enum {string} */
-            processus: "DIR" | "ARC" | "INT" | "ETU";
+            processus: "ARC" | "DIR" | "ETU" | "INT";
             nom: string;
             /** @enum {string} */
-            clientele?: "externes" | "holding" | "tous" | "sans_objet";
+            clientele?: "externes" | "holding" | "sans_objet" | "tous";
             /** @enum {string} */
-            statut?: "active" | "a_constituer" | "reportee";
+            statut?: "a_constituer" | "active" | "reportee";
             piloteId?: string | null;
         };
         MajCelluleDto: {
@@ -3960,7 +3960,7 @@ export interface components {
             nom?: string;
             role?: string;
             /** @enum {string} */
-            niveau?: "stagiaire" | "junior" | "confirme" | "senior" | "lead";
+            niveau?: "confirme" | "junior" | "lead" | "senior" | "stagiaire";
             celluleId?: string | null;
             photo?: string | null;
             dateArrivee?: string | null;
@@ -3974,7 +3974,7 @@ export interface components {
         };
         ParametreDto: {
             /** @enum {string} */
-            cle: "heures_annuelles" | "coefficient_charges" | "marge_cible";
+            cle: "coefficient_charges" | "heures_annuelles" | "marge_cible";
             valeur: number | null;
             dateEffet: string;
             motif: string;
@@ -3987,7 +3987,7 @@ export interface components {
             montant: number;
             dateEffet: string;
             /** @enum {string} */
-            motif: "embauche" | "augmentation" | "promotion" | "fin_essai" | "correction";
+            motif: "augmentation" | "correction" | "embauche" | "fin_essai" | "promotion";
         };
         DossierPersonnelDto: {
             /** Format: uuid */
@@ -3998,7 +3998,7 @@ export interface components {
             utilisateurId?: string | null;
             poste?: string;
             /** @enum {string} */
-            typeContrat?: "cdi" | "cdd" | "stage";
+            typeContrat?: "cdd" | "cdi" | "stage";
             dateEntree?: string | null;
             dateFin?: string | null;
             finEssai?: string | null;
@@ -4014,7 +4014,7 @@ export interface components {
             emailPro?: string;
             contactUrgence?: string;
             /** @enum {string} */
-            modePaiement?: "wave" | "virement" | "orange_money";
+            modePaiement?: "orange_money" | "virement" | "wave";
             coordonneesPaiement?: string;
             numeroIpm?: string;
             missionResultat?: string;
@@ -4058,9 +4058,9 @@ export interface components {
         };
         DeposerRemboursementDto: {
             /** @enum {string} */
-            categorie: "autre" | "pharmacie" | "consultation" | "analyses_imagerie" | "hospitalisation" | "dentaire_optique";
+            categorie: "analyses_imagerie" | "autre" | "consultation" | "dentaire_optique" | "hospitalisation" | "pharmacie";
             /** @enum {string} */
-            beneficiaire: "moi" | "conjoint" | "enfant";
+            beneficiaire: "conjoint" | "enfant" | "moi";
             dateSoins: string;
             montant: number;
             justificatifs?: components["schemas"]["FichierDto"][];
@@ -4072,13 +4072,13 @@ export interface components {
         };
         DecisionN1Dto: {
             /** @enum {string} */
-            decision: "autres_dates" | "valider" | "sous_conditions" | "refuser";
+            decision: "autres_dates" | "refuser" | "sous_conditions" | "valider";
             delegations?: components["schemas"]["DelegationLivrableDto"][];
             nonDelegables?: string[];
             dateDebut?: string;
             dateFin?: string;
             /** @enum {string} */
-            motif?: "autre" | "periode_critique" | "effectif_insuffisant" | "solde_insuffisant";
+            motif?: "autre" | "effectif_insuffisant" | "periode_critique" | "solde_insuffisant";
             commentaire?: string;
         };
         ValidationRhDto: {
@@ -4107,7 +4107,7 @@ export interface components {
             /** Format: email */
             emailPerso?: string;
             /** @enum {string|null} */
-            situationFamiliale?: "celibataire" | "marie" | "divorce" | "veuf" | null;
+            situationFamiliale?: "celibataire" | "divorce" | "marie" | "veuf" | null;
             enfantsACharge?: number;
             adresse?: string;
             contactUrgence?: string;
@@ -4115,17 +4115,17 @@ export interface components {
         };
         DemandePaiementDto: {
             /** @enum {string} */
-            modePaiement: "wave" | "virement" | "orange_money";
+            modePaiement: "orange_money" | "virement" | "wave";
             coordonneesPaiement: string;
         };
         DecisionTacheDto: {
             /** @enum {string} */
-            decision: "valider" | "renvoyer";
+            decision: "renvoyer" | "valider";
             motif?: string;
         };
         MajPermissionDto: {
             /** @enum {string} */
-            niveau: "aucun" | "lecture" | "ecriture" | "validation";
+            niveau: "aucun" | "ecriture" | "lecture" | "validation";
         };
         DecisionDroitDto: {
             accepter: boolean;
@@ -4186,7 +4186,7 @@ export interface components {
             code: string;
             nom: string;
             /** @enum {string} */
-            zone: "dakar" | "senegal" | "pays";
+            zone: "dakar" | "pays" | "senegal";
             region: string;
             arrondissement?: string | null;
             commune?: string | null;
@@ -4233,7 +4233,7 @@ export interface components {
         };
         StatutSignalementDto: {
             /** @enum {string} */
-            statut: "a_traiter" | "en_cours" | "corrige";
+            statut: "a_traiter" | "corrige" | "en_cours";
         };
     };
     responses: never;
@@ -7481,7 +7481,7 @@ export interface operations {
             path: {
                 slug: string;
                 id: string;
-                type: "piece_identite" | "cv" | "diplomes" | "contrat_signe" | "fiche_poste" | "rib_ou_attestation" | "certificat_residence" | "photo_identite" | "carte_ipm";
+                type: "carte_ipm" | "certificat_residence" | "contrat_signe" | "cv" | "diplomes" | "fiche_poste" | "photo_identite" | "piece_identite" | "rib_ou_attestation";
             };
             cookie?: never;
         };
@@ -7502,7 +7502,7 @@ export interface operations {
             path: {
                 slug: string;
                 id: string;
-                type: "piece_identite" | "cv" | "diplomes" | "contrat_signe" | "fiche_poste" | "rib_ou_attestation" | "certificat_residence" | "photo_identite" | "carte_ipm";
+                type: "carte_ipm" | "certificat_residence" | "contrat_signe" | "cv" | "diplomes" | "fiche_poste" | "photo_identite" | "piece_identite" | "rib_ou_attestation";
             };
             cookie?: never;
         };

@@ -4921,15 +4921,15 @@
             "in": "path",
             "schema": {
               "enum": [
-                "piece_identite",
+                "carte_ipm",
+                "certificat_residence",
+                "contrat_signe",
                 "cv",
                 "diplomes",
-                "contrat_signe",
                 "fiche_poste",
-                "rib_ou_attestation",
-                "certificat_residence",
                 "photo_identite",
-                "carte_ipm"
+                "piece_identite",
+                "rib_ou_attestation"
               ],
               "type": "string"
             }
@@ -4969,15 +4969,15 @@
             "in": "path",
             "schema": {
               "enum": [
-                "piece_identite",
+                "carte_ipm",
+                "certificat_residence",
+                "contrat_signe",
                 "cv",
                 "diplomes",
-                "contrat_signe",
                 "fiche_poste",
-                "rib_ou_attestation",
-                "certificat_residence",
                 "photo_identite",
-                "carte_ipm"
+                "piece_identite",
+                "rib_ou_attestation"
               ],
               "type": "string"
             }
@@ -8605,74 +8605,74 @@
             "items": {
               "type": "string",
               "enum": [
-                "projet_assigne",
-                "phase_changee",
-                "checklist_assignee",
-                "prolongation_demandee",
-                "prolongation_decidee",
-                "dossier_soumis",
-                "dossier_renvoye",
-                "offre_envoyee",
-                "rappel_offre",
-                "rappel_facture",
-                "rappel_tache",
-                "avenant_ts",
-                "signalement_recu",
-                "offre_acceptee",
-                "offre_refusee",
-                "contrat_signe",
-                "dossier_perdu",
-                "offre_expiree",
-                "tache_remise",
-                "tache_validee",
-                "tache_renvoyee",
-                "facture_a_valider",
-                "mention_projet",
-                "tache_assignee",
                 "absence_a_decider",
                 "absence_decidee",
-                "remboursement_a_traiter",
-                "remboursement_traite",
-                "decision_assignee",
-                "facture_emise",
-                "facture_payee",
-                "ecart_temps_signale",
-                "ecart_temps_traite",
-                "rappel_demande",
-                "bulletin_depose",
+                "arrivant_a_affecter",
+                "attente_ceo",
                 "attestation_delivree",
-                "salaire_a_valider",
-                "salaire_decide",
-                "avoir_emis",
+                "avenant_ts",
                 "avoir_a_valider",
                 "avoir_decide",
+                "avoir_emis",
+                "bulletin_depose",
+                "checklist_assignee",
                 "cloture_a_faire",
-                "reporting_question",
-                "reporting_reponse",
-                "coordonnees_paiement_modifiees",
                 "commission_a_payer",
                 "commission_payee",
-                "coordonnees_apporteur_modifiees",
-                "reglage_gouvernance_modifie",
-                "droits_modifies",
                 "connexion_secours",
+                "contrat_signe",
+                "coordonnees_apporteur_modifiees",
+                "coordonnees_paiement_modifiees",
+                "decision_arbitree",
+                "decision_assignee",
+                "decision_en_retard",
+                "decision_proposee",
                 "delegation_ceo",
-                "synthese_mensuelle",
-                "attente_ceo",
                 "demande_droit_a_valider",
                 "demande_droit_decidee",
+                "dossier_perdu",
+                "dossier_renvoye",
+                "dossier_soumis",
+                "droits_modifies",
+                "ecart_temps_signale",
+                "ecart_temps_traite",
+                "facture_a_valider",
+                "facture_emise",
+                "facture_payee",
+                "mention_projet",
+                "offre_acceptee",
+                "offre_envoyee",
+                "offre_expiree",
+                "offre_refusee",
+                "phase_changee",
+                "projet_assigne",
+                "prolongation_decidee",
+                "prolongation_demandee",
+                "rappel_decision",
+                "rappel_demande",
+                "rappel_facture",
+                "rappel_offre",
+                "rappel_tache",
+                "reglage_gouvernance_modifie",
+                "remboursement_a_traiter",
+                "remboursement_traite",
+                "reporting_a_deposer",
+                "reporting_depose",
+                "reporting_en_retard",
+                "reporting_question",
+                "reporting_reponse",
+                "salaire_a_valider",
+                "salaire_decide",
+                "signalement_recu",
+                "suppleance_designee",
+                "synthese_mensuelle",
+                "tache_assignee",
+                "tache_remise",
+                "tache_renvoyee",
+                "tache_validee",
                 "ts_a_valider",
                 "ts_decide",
-                "suppleance_designee",
-                "reporting_a_deposer",
-                "reporting_en_retard",
-                "reporting_depose",
-                "visa_a_apposer",
-                "arrivant_a_affecter",
-                "rappel_decision",
-                "decision_proposee",
-                "decision_arbitree",
-                "decision_en_retard"
+                "visa_a_apposer"
               ]
             }
           },
@@ -8700,10 +8700,10 @@
             "type": "string",
             "enum": [
               "debut",
+              "fichier",
               "fin",
               "heures",
-              "visa",
-              "fichier"
+              "visa"
             ]
           },
           "valeur": {
@@ -8768,10 +8768,10 @@
           "type": {
             "type": "string",
             "enum": [
-              "particulier",
-              "sci",
               "entreprise",
-              "institution"
+              "institution",
+              "particulier",
+              "sci"
             ]
           },
           "contact": {
@@ -8856,9 +8856,9 @@
           "categorie": {
             "type": "string",
             "enum": [
+              "amenagement",
               "conception",
-              "developpement",
-              "amenagement"
+              "developpement"
             ]
           },
           "localiteId": {
@@ -8876,13 +8876,13 @@
           "type": {
             "type": "string",
             "enum": [
-              "villa",
-              "immeuble_residentiel",
-              "immeuble_mixte",
-              "immeuble_bureaux",
-              "local_commercial",
+              "equipement",
               "hotelier",
-              "equipement"
+              "immeuble_bureaux",
+              "immeuble_mixte",
+              "immeuble_residentiel",
+              "local_commercial",
+              "villa"
             ]
           },
           "nbPlanches": {
@@ -8897,15 +8897,15 @@
             "type": "string",
             "enum": [
               "economique",
-              "moyen",
-              "grand"
+              "grand",
+              "moyen"
             ]
           },
           "gamme": {
             "type": "string",
             "enum": [
-              "local",
               "importe",
+              "local",
               "sur_mesure_importe"
             ]
           },
@@ -8936,21 +8936,21 @@
           "categorie": {
             "type": "string",
             "enum": [
+              "amenagement",
               "conception",
-              "developpement",
-              "amenagement"
+              "developpement"
             ]
           },
           "type": {
             "type": "string",
             "enum": [
-              "villa",
-              "immeuble_residentiel",
-              "immeuble_mixte",
-              "immeuble_bureaux",
-              "local_commercial",
+              "equipement",
               "hotelier",
-              "equipement"
+              "immeuble_bureaux",
+              "immeuble_mixte",
+              "immeuble_residentiel",
+              "local_commercial",
+              "villa"
             ]
           },
           "surfaceTerrain": {
@@ -8966,15 +8966,15 @@
             "type": "string",
             "enum": [
               "economique",
-              "moyen",
-              "grand"
+              "grand",
+              "moyen"
             ]
           },
           "gamme": {
             "type": "string",
             "enum": [
-              "local",
               "importe",
+              "local",
               "sur_mesure_importe"
             ]
           },
@@ -9014,12 +9014,12 @@
           "action": {
             "type": "string",
             "enum": [
-              "soumettre",
-              "valider",
-              "renvoyer",
               "onboarder",
+              "perdre",
               "refaire",
-              "perdre"
+              "renvoyer",
+              "soumettre",
+              "valider"
             ]
           },
           "commentaire": {
@@ -9041,11 +9041,11 @@
           "mode": {
             "type": "string",
             "enum": [
-              "wave",
-              "virement",
               "cheque",
               "especes",
-              "orange_money"
+              "orange_money",
+              "virement",
+              "wave"
             ]
           },
           "reference": {
@@ -9277,8 +9277,8 @@
           "reprise": {
             "type": "string",
             "enum": [
-              "mineure",
-              "majeure"
+              "majeure",
+              "mineure"
             ]
           },
           "surfaceM2": {
@@ -9317,8 +9317,8 @@
           "statut": {
             "type": "string",
             "enum": [
-              "conception",
               "chantier",
+              "conception",
               "livre"
             ]
           }
@@ -9421,8 +9421,8 @@
           "decision": {
             "type": "string",
             "enum": [
-              "valider",
-              "renvoyer"
+              "renvoyer",
+              "valider"
             ]
           },
           "motif": {
@@ -9651,11 +9651,11 @@
           "motif": {
             "type": "string",
             "enum": [
-              "erreur_facturation",
-              "remise_commerciale",
-              "litige_client",
               "annulation_prestation",
-              "autre"
+              "autre",
+              "erreur_facturation",
+              "litige_client",
+              "remise_commerciale"
             ]
           },
           "commentaire": {
@@ -9681,11 +9681,11 @@
           },
           "mode": {
             "enum": [
-              "wave",
-              "virement",
               "cheque",
               "especes",
-              "orange_money"
+              "orange_money",
+              "virement",
+              "wave"
             ],
             "type": "string"
           },
@@ -9722,17 +9722,17 @@
           "formatAnnee": {
             "type": "string",
             "enum": [
-              "AAAA",
-              "AA"
+              "AA",
+              "AAAA"
             ]
           },
           "separateur": {
             "type": "string",
             "enum": [
+              "",
               "-",
-              "/",
               ".",
-              ""
+              "/"
             ]
           },
           "chiffres": {
@@ -9826,9 +9826,9 @@
           "cgvAnnexe": {
             "type": "string",
             "enum": [
+              "jamais",
               "premiere_facture",
-              "toujours",
-              "jamais"
+              "toujours"
             ]
           },
           "modeCommission": {
@@ -9931,10 +9931,10 @@
           "processus": {
             "type": "string",
             "enum": [
-              "DIR",
               "ARC",
-              "INT",
-              "ETU"
+              "DIR",
+              "ETU",
+              "INT"
             ]
           },
           "nom": {
@@ -9947,15 +9947,15 @@
             "enum": [
               "externes",
               "holding",
-              "tous",
-              "sans_objet"
+              "sans_objet",
+              "tous"
             ]
           },
           "statut": {
             "type": "string",
             "enum": [
-              "active",
               "a_constituer",
+              "active",
               "reportee"
             ]
           },
@@ -10012,11 +10012,11 @@
           "niveau": {
             "type": "string",
             "enum": [
-              "stagiaire",
-              "junior",
               "confirme",
+              "junior",
+              "lead",
               "senior",
-              "lead"
+              "stagiaire"
             ]
           },
           "celluleId": {
@@ -10064,8 +10064,8 @@
           "cle": {
             "type": "string",
             "enum": [
-              "heures_annuelles",
               "coefficient_charges",
+              "heures_annuelles",
               "marge_cible"
             ]
           },
@@ -10119,11 +10119,11 @@
           "motif": {
             "type": "string",
             "enum": [
-              "embauche",
               "augmentation",
-              "promotion",
+              "correction",
+              "embauche",
               "fin_essai",
-              "correction"
+              "promotion"
             ]
           }
         },
@@ -10156,8 +10156,8 @@
           },
           "typeContrat": {
             "enum": [
-              "cdi",
               "cdd",
+              "cdi",
               "stage"
             ],
             "type": "string"
@@ -10220,9 +10220,9 @@
           },
           "modePaiement": {
             "enum": [
-              "wave",
+              "orange_money",
               "virement",
-              "orange_money"
+              "wave"
             ],
             "type": "string"
           },
@@ -10382,20 +10382,20 @@
           "categorie": {
             "type": "string",
             "enum": [
-              "autre",
-              "pharmacie",
-              "consultation",
               "analyses_imagerie",
+              "autre",
+              "consultation",
+              "dentaire_optique",
               "hospitalisation",
-              "dentaire_optique"
+              "pharmacie"
             ]
           },
           "beneficiaire": {
             "type": "string",
             "enum": [
-              "moi",
               "conjoint",
-              "enfant"
+              "enfant",
+              "moi"
             ]
           },
           "dateSoins": {
@@ -10445,9 +10445,9 @@
             "type": "string",
             "enum": [
               "autres_dates",
-              "valider",
+              "refuser",
               "sous_conditions",
-              "refuser"
+              "valider"
             ]
           },
           "delegations": {
@@ -10474,8 +10474,8 @@
             "type": "string",
             "enum": [
               "autre",
-              "periode_critique",
               "effectif_insuffisant",
+              "periode_critique",
               "solde_insuffisant"
             ]
           },
@@ -10592,8 +10592,8 @@
             "nullable": true,
             "enum": [
               "celibataire",
-              "marie",
               "divorce",
+              "marie",
               "veuf"
             ]
           },
@@ -10622,9 +10622,9 @@
           "modePaiement": {
             "type": "string",
             "enum": [
-              "wave",
+              "orange_money",
               "virement",
-              "orange_money"
+              "wave"
             ]
           },
           "coordonneesPaiement": {
@@ -10643,8 +10643,8 @@
           "decision": {
             "type": "string",
             "enum": [
-              "valider",
-              "renvoyer"
+              "renvoyer",
+              "valider"
             ]
           },
           "motif": {
@@ -10664,8 +10664,8 @@
             "type": "string",
             "enum": [
               "aucun",
-              "lecture",
               "ecriture",
+              "lecture",
               "validation"
             ]
           }
@@ -10887,8 +10887,8 @@
             "type": "string",
             "enum": [
               "dakar",
-              "senegal",
-              "pays"
+              "pays",
+              "senegal"
             ]
           },
           "region": {
@@ -11089,8 +11089,8 @@
             "type": "string",
             "enum": [
               "a_traiter",
-              "en_cours",
-              "corrige"
+              "corrige",
+              "en_cours"
             ]
           }
         },
