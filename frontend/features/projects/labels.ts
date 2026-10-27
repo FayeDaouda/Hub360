@@ -13,6 +13,9 @@ export const SITE_STATUS_LABELS: Record<SiteStatus, string> = {
   livre: 'Livré',
 };
 
+// Journée de travail : le budget atelier (heures) se lit en jours ouvrés.
+export const HOURS_PER_DAY = 8;
+
 export const stepNumber = (n: number) => String(n).padStart(2, '0');
 const v = (n: number) => `v${String(n).padStart(2, '0')}`;
 
