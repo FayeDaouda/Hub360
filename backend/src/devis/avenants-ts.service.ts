@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { contexteDecision } from '../projets/gabarit/suppleance';
-import { TachesProjetService } from '../projets/gabarit/taches-projet.service';
+import { TsElementsService } from '../projects/ts-elements.service';
 import { droitTs, ROLE_CFO, ROLE_CTO } from '../projets/gabarit/validation';
 import type { AjouterTsDto } from '../projets/gabarit/dto';
 import { DevisService } from './devis.service';
@@ -33,7 +33,7 @@ export class AvenantsTsService {
   constructor(
     private prisma: PrismaService,
     private devis: DevisService,
-    private taches: TachesProjetService,
+    private tsElements: TsElementsService,
     private notifications: NotificationsService,
     private reglages: ReglagesService,
   ) {}
@@ -176,7 +176,7 @@ export class AvenantsTsService {
     if (!projet) throw new NotFoundException('Projet introuvable ou pas encore ouvert');
     // Chiffrage vérifié avant de créer la tâche : un refus ne laisse rien derrière.
     const { ligneDto: ligne } = await this.chiffrer(societeId, projetId, dto);
-    const tache = await this.taches.ajouterTs(societeId, acteur, projetId, dto.carteId, dto.element);
+    const tache = await this.tsElements.add(societeId, acteur, projetId, dto.carteId, dto.element);
     ligne.designation = tache.libelle;
 
     const enCours = await this.prisma.devis.findFirst({

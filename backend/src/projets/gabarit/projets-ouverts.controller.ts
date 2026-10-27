@@ -8,7 +8,10 @@ import { ProductionService } from '../../projects/production.service';
 import { ProjectFileService } from '../../projects/project-file.service';
 import { ProjectSiteService } from '../../projects/project-site.service';
 import { ProjectsBoardService } from '../../projects/projects-board.service';
-import { TachesProjetService } from './taches-projet.service';
+import { TaskAssignmentService } from '../../projects/task-assignment.service';
+import { TaskExtensionService } from '../../projects/task-extension.service';
+import { TaskReviewService } from '../../projects/task-review.service';
+import { TaskSubmissionService } from '../../projects/task-submission.service';
 import {
   AssignerTacheDto,
   DateVisiteDto,
@@ -33,7 +36,10 @@ export class ProjetsOuvertsController {
     private projectFile: ProjectFileService,
     private productionService: ProductionService,
     private site: ProjectSiteService,
-    private taches: TachesProjetService,
+    private assignment: TaskAssignmentService,
+    private submission: TaskSubmissionService,
+    private review: TaskReviewService,
+    private extension: TaskExtensionService,
     private fils: FilsProjetService,
   ) {}
 
@@ -47,7 +53,7 @@ export class ProjetsOuvertsController {
   @Get('assignables')
   @RequiertPermission('projets', 'ecriture')
   assignables(@Req() req: R) {
-    return this.taches.assignables(req.user.societeId);
+    return this.assignment.assignable(req.user.societeId);
   }
 
   @Get('mentionnables')
@@ -113,14 +119,14 @@ export class ProjetsOuvertsController {
   @RequiertPermission('projets', 'lecture')
   async historique(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string) {
     await this.fils.verifierLecture(req.user.societeId, req.user, id);
-    return this.taches.historique(req.user.societeId, id, tacheId);
+    return this.assignment.history(req.user.societeId, id, tacheId);
   }
 
   // « Lecture et assignation » : l'écriture sur Projets suffit.
   @Patch(':id/taches/:tacheId/assignation')
   @RequiertPermission('projets', 'ecriture')
   assigner(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: AssignerTacheDto) {
-    return this.taches.assigner(req.user.societeId, req.user, id, tacheId, dto.collaborateurId, !!dto.carte);
+    return this.assignment.assign(req.user.societeId, req.user, id, tacheId, dto.collaborateurId, !!dto.carte);
   }
 
   // Remise par la personne assignée (vérifié par le service) — le Salarié n'a
@@ -128,7 +134,7 @@ export class ProjetsOuvertsController {
   @Post(':id/taches/:tacheId/remise')
   @RequiertPermission('projets', 'lecture')
   remettre(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: RemettreTacheDto) {
-    return this.taches.remettre(req.user.societeId, req.user, id, tacheId, dto);
+    return this.submission.submit(req.user.societeId, req.user, id, tacheId, dto);
   }
 
   // Fichier d'une remise : quiconque voit le projet (même règle que l'historique).
@@ -141,7 +147,7 @@ export class ProjetsOuvertsController {
     @Param('pieceId') pieceId: string,
   ) {
     await this.fils.verifierLecture(req.user.societeId, req.user, id);
-    return this.taches.piece(req.user.societeId, id, tacheId, pieceId);
+    return this.submission.submissionFile(req.user.societeId, id, tacheId, pieceId);
   }
 
   // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG
@@ -154,7 +160,7 @@ export class ProjetsOuvertsController {
     @Param('tacheId') tacheId: string,
     @Body() dto: DemanderProlongationTacheDto,
   ) {
-    return this.taches.demanderProlongation(req.user.societeId, req.user, id, tacheId, dto.jusquau, dto.motif);
+    return this.extension.request(req.user.societeId, req.user, id, tacheId, dto.jusquau, dto.motif);
   }
 
   @Post(':id/taches/:tacheId/prolongation/decision')
@@ -165,7 +171,7 @@ export class ProjetsOuvertsController {
     @Param('tacheId') tacheId: string,
     @Body() dto: DeciderProlongationTacheDto,
   ) {
-    return this.taches.deciderProlongation(req.user.societeId, req.user, id, tacheId, dto.accorder);
+    return this.extension.decide(req.user.societeId, req.user, id, tacheId, dto.accorder);
   }
 
   // Remise : valider ou renvoyer en reprise (droits vérifiés par le service).
@@ -174,14 +180,14 @@ export class ProjetsOuvertsController {
   @Post(':id/taches/:tacheId/decision')
   @RequiertPermission('projets', 'lecture')
   decider(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: DeciderTacheDto) {
-    return this.taches.decider(req.user.societeId, req.user, id, tacheId, dto.decision, dto.motif);
+    return this.review.decide(req.user.societeId, req.user, id, tacheId, dto.decision, dto.motif);
   }
 
   // Visa DPLG d'une tâche validée (droits vérifiés par le service).
   @Post(':id/taches/:tacheId/visa')
   @RequiertPermission('projets', 'lecture')
   viser(@Req() req: R, @Param('id') id: string, @Param('tacheId') tacheId: string, @Body() dto: ViserTacheDto) {
-    return this.taches.viser(req.user.societeId, req.user, id, tacheId, dto.apposer, dto.motif);
+    return this.review.visa(req.user.societeId, req.user, id, tacheId, dto.apposer, dto.motif);
   }
 
   // Fil d'une carte (?carte=) ou d'une tâche (?tache=).

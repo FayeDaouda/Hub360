@@ -1,12 +1,13 @@
-import { ReglagesService } from '../../reglages/reglages.service';
 import { BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { TachesProjetService } from './taches-projet.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
+import { ReviewCircuitService } from './review-circuit.service';
+import { TaskSubmissionService } from './task-submission.service';
 
 // Remise d'une tâche : fichiers et commentaire facultatifs, rattachés à la
 // version remise ; le valideur voit « sans fichier joint » sinon.
-describe('TachesProjetService.remettre — fichiers', () => {
+describe('TaskSubmissionService.submit — fichiers', () => {
   function svc(fichierObligatoire = false) {
     const evenement = jest.fn();
     const pieces = jest.fn();
@@ -39,13 +40,15 @@ describe('TachesProjetService.remettre — fichiers', () => {
       $transaction: jest.fn((f: (t: typeof tx) => Promise<unknown>) => f(tx)),
     } as unknown as PrismaService;
     const notifications = { pousser: jest.fn() } as unknown as NotificationsService;
-    return { s: new TachesProjetService(prisma, notifications, {} as ReglagesService), evenement, pieces };
+    const reglages = {} as ReglagesService;
+    const circuit = new ReviewCircuitService(prisma, notifications, reglages);
+    return { s: new TaskSubmissionService(prisma, reglages, circuit), evenement, pieces };
   }
   const acteur = { userId: 'U1', role: 'Salarié' };
 
   it('fichiers rattachés à la nouvelle version, commentaire dans l’historique', async () => {
     const { s, evenement, pieces } = svc();
-    await s.remettre('S1', acteur, 'P1', 'T1', {
+    await s.submit('S1', acteur, 'P1', 'T1', {
       pieces: [{ nom: 'plan.pdf', url: 'data:application/pdf;base64,AA' }],
       commentaire: ' corrigé ',
     });
@@ -58,20 +61,20 @@ describe('TachesProjetService.remettre — fichiers', () => {
 
   it('sans fichier : remise acceptée, signalée dans l’historique', async () => {
     const { s, evenement, pieces } = svc();
-    await s.remettre('S1', acteur, 'P1', 'T1');
+    await s.submit('S1', acteur, 'P1', 'T1');
     expect(pieces).not.toHaveBeenCalled();
     expect(evenement.mock.calls[0][0].data.detail).toBe('Remise v02 · sans fichier joint');
   });
 
   it('refuse un fichier qui n’est pas un data URI', async () => {
     await expect(
-      svc().s.remettre('S1', acteur, 'P1', 'T1', { pieces: [{ nom: 'x', url: 'http://ailleurs' }] }),
+      svc().s.submit('S1', acteur, 'P1', 'T1', { pieces: [{ nom: 'x', url: 'http://ailleurs' }] }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('fichier obligatoire (case du gabarit) : dépôt sans fichier refusé', async () => {
     const { s, pieces } = svc(true);
-    await expect(s.remettre('S1', acteur, 'P1', 'T1')).rejects.toThrow('Joignez au moins un fichier');
+    await expect(s.submit('S1', acteur, 'P1', 'T1')).rejects.toThrow('Joignez au moins un fichier');
     expect(pieces).not.toHaveBeenCalled();
   });
 });

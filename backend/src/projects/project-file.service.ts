@@ -7,7 +7,6 @@ import { refDevis, statutDevisEffectif } from '../devis/domaine';
 import { dateDuJour, rangOuvre } from '../projets/gabarit/calendrier';
 import { attentesFactures } from '../projets/gabarit/etats';
 import { dateLivraison, horizonProjet, type ContexteDecision } from '../projets/gabarit/suppleance';
-import { UNITE_TS } from '../projets/gabarit/taches-projet.service';
 import {
   agitCommeDplg,
   horsCircuit,
@@ -24,6 +23,7 @@ import {
   pendingExtension,
   siteStatus,
   trancheStatus,
+  TS_UNITS,
   WITH_TASKS,
   type Actor,
 } from './project-query';
@@ -187,7 +187,7 @@ export class ProjectFileService {
         ? p.cartes.flatMap((c) => {
             const t = c.temps as Temps | null;
             return t?.type === 'par_unite' && !c.desactivation
-              ? [{ carteId: c.id, libelle: UNITE_TS[t.unite], heures: t.heures }]
+              ? [{ carteId: c.id, libelle: TS_UNITS[t.unite], heures: t.heures }]
               : [];
           })
         : [],

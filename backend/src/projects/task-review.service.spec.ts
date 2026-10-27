@@ -1,12 +1,13 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { NotificationsService } from '../../notifications/notifications.service';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ReglagesService } from '../../reglages/reglages.service';
-import { TachesProjetService } from './taches-projet.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
+import { ReviewCircuitService } from './review-circuit.service';
+import { TaskReviewService } from './task-review.service';
 
 // Visa DPLG (revue Dir. GC, 21/10/2026) : l'architecte DPLG appose son visa
 // sur une tâche validée qui l'exige, ou le refuse avec un motif (reprise).
-describe('TachesProjetService.viser', () => {
+describe('TaskReviewService.visa', () => {
   function svc(tache: object | null) {
     const maj = jest.fn().mockResolvedValue({ count: 1 });
     const evenement = jest.fn();
@@ -19,7 +20,8 @@ describe('TachesProjetService.viser', () => {
       $transaction: jest.fn((f: (t: typeof tx) => Promise<unknown>) => f(tx)),
     } as unknown as PrismaService;
     const notifications = { pousser: jest.fn() } as unknown as NotificationsService;
-    return { s: new TachesProjetService(prisma, notifications, {} as ReglagesService), maj, evenement, notifications };
+    const circuit = new ReviewCircuitService(prisma, notifications, {} as ReglagesService);
+    return { s: new TaskReviewService(prisma, circuit), maj, evenement, notifications };
   }
   const aViser = {
     id: 'T1',
@@ -35,13 +37,13 @@ describe('TachesProjetService.viser', () => {
 
   it('le CTO ne vise pas à la place de l’architecte, même en suppléance', async () => {
     await expect(
-      svc(aViser).s.viser('S1', { userId: 'CTO', role: 'CTO (transverse)' }, 'P1', 'T1', true),
+      svc(aViser).s.visa('S1', { userId: 'CTO', role: 'CTO (transverse)' }, 'P1', 'T1', true),
     ).rejects.toThrow(ForbiddenException);
   });
 
   it('apposé : daté, signé, tracé ; l’assigné est prévenu', async () => {
     const { s, maj, evenement, notifications } = svc(aViser);
-    expect(await s.viser('S1', dirGc, 'P1', 'T1', true)).toEqual({ visa: 'appose' });
+    expect(await s.visa('S1', dirGc, 'P1', 'T1', true)).toEqual({ visa: 'appose' });
     expect(maj).toHaveBeenCalledWith({
       where: { id: 'T1', statut: 'validee', visaLe: null },
       data: { visaLe: expect.any(Date), visaParId: 'DG' },
@@ -55,9 +57,9 @@ describe('TachesProjetService.viser', () => {
   });
 
   it('refusé : motif obligatoire, la tâche repart en reprise', async () => {
-    await expect(svc(aViser).s.viser('S1', dirGc, 'P1', 'T1', false)).rejects.toThrow(BadRequestException);
+    await expect(svc(aViser).s.visa('S1', dirGc, 'P1', 'T1', false)).rejects.toThrow(BadRequestException);
     const { s, maj, evenement } = svc(aViser);
-    await s.viser('S1', dirGc, 'P1', 'T1', false, 'Cotes de réservation à reprendre');
+    await s.visa('S1', dirGc, 'P1', 'T1', false, 'Cotes de réservation à reprendre');
     expect(maj).toHaveBeenCalledWith(
       expect.objectContaining({ data: { statut: 'reprise', valideeLe: null, valideeParId: null } }),
     );
@@ -69,13 +71,13 @@ describe('TachesProjetService.viser', () => {
   });
 
   it('rien à viser : pas de visa exigé, pas encore validée, ou déjà visée', async () => {
-    await expect(svc({ ...aViser, visaRequis: false }).s.viser('S1', dirGc, 'P1', 'T1', true)).rejects.toThrow(
+    await expect(svc({ ...aViser, visaRequis: false }).s.visa('S1', dirGc, 'P1', 'T1', true)).rejects.toThrow(
       ConflictException,
     );
-    await expect(svc({ ...aViser, statut: 'a_valider' }).s.viser('S1', dirGc, 'P1', 'T1', true)).rejects.toThrow(
+    await expect(svc({ ...aViser, statut: 'a_valider' }).s.visa('S1', dirGc, 'P1', 'T1', true)).rejects.toThrow(
       ConflictException,
     );
-    await expect(svc({ ...aViser, visaLe: new Date() }).s.viser('S1', dirGc, 'P1', 'T1', true)).rejects.toThrow(
+    await expect(svc({ ...aViser, visaLe: new Date() }).s.visa('S1', dirGc, 'P1', 'T1', true)).rejects.toThrow(
       ConflictException,
     );
   });

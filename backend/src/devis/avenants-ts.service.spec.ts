@@ -3,7 +3,7 @@ import { UnprocessableEntityException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { TachesProjetService } from '../projets/gabarit/taches-projet.service';
+import { TsElementsService } from '../projects/ts-elements.service';
 import { AvenantsTsService } from './avenants-ts.service';
 import { DevisService } from './devis.service';
 
@@ -47,16 +47,16 @@ function svc(
     creer: jest.fn().mockResolvedValue({ id: 'DV-NEUF' }),
     patch: jest.fn().mockResolvedValue({ id: 'DV-EN-COURS' }),
   };
-  const taches = { ajouterTs: jest.fn().mockResolvedValue({ id: 'T9', libelle: 'TS1 · Pièce intérieure · Bureau' }) };
+  const tsElements = { add: jest.fn().mockResolvedValue({ id: 'T9', libelle: 'TS1 · Pièce intérieure · Bureau' }) };
   const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['CFO1']) };
   const s = new AvenantsTsService(
     prisma,
     devis as unknown as DevisService,
-    taches as unknown as TachesProjetService,
+    tsElements as unknown as TsElementsService,
     notifications as unknown as NotificationsService,
     { regle: jest.fn().mockResolvedValue(500_000) } as unknown as ReglagesService,
   );
-  return { s, devis, taches, notifications, majTache, prisma };
+  return { s, devis, tsElements, notifications, majTache, prisma };
 }
 
 const acteur = { userId: 'DPLG1', role: 'Dir. GC' };
@@ -106,9 +106,9 @@ describe('AvenantsTsService.ajouterTs', () => {
   });
 
   it('chiffrage refusé : aucune tâche créée', async () => {
-    const { s, taches } = svc({ verification: new UnprocessableEntityException('catégorie CO inconnue') });
+    const { s, tsElements } = svc({ verification: new UnprocessableEntityException('catégorie CO inconnue') });
     await expect(s.ajouterTs('S1', acteur, 'P1', mineure)).rejects.toThrow('catégorie CO');
-    expect(taches.ajouterTs).not.toHaveBeenCalled();
+    expect(tsElements.add).not.toHaveBeenCalled();
   });
 
   it('produit TS absent du catalogue : refus clair', async () => {
@@ -130,10 +130,10 @@ describe('AvenantsTsService · TS au-delà du seuil', () => {
   const grosPrix = { quantite: 120, prixUnitaire: 7_000 }; // 840 000 FCFA HT
 
   it('Dir. GC au-delà du seuil : rien n’est ajouté, demande au CTO', async () => {
-    const { s, taches, notifications, prisma } = svc({ prix: grosPrix });
+    const { s, tsElements, notifications, prisma } = svc({ prix: grosPrix });
     const r = await s.ajouterTs('S1', acteur, 'P1', majeure);
     expect(r).toEqual({ enAttente: true, demandeId: 'DTS1', montantHt: 840_000, seuil: 500_000 });
-    expect(taches.ajouterTs).not.toHaveBeenCalled();
+    expect(tsElements.add).not.toHaveBeenCalled();
     expect(prisma.demandeTs.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ montantHt: 840_000, demandeParId: 'DPLG1', surfaceM2: 120, planches: 1 }),
     });
@@ -143,9 +143,9 @@ describe('AvenantsTsService · TS au-delà du seuil', () => {
   });
 
   it('le CTO l’ajoute directement, même au-delà du seuil', async () => {
-    const { s, taches } = svc({ prix: grosPrix });
+    const { s, tsElements } = svc({ prix: grosPrix });
     await s.ajouterTs('S1', { userId: 'CTO1', role: 'CTO (transverse)' }, 'P1', majeure);
-    expect(taches.ajouterTs).toHaveBeenCalled();
+    expect(tsElements.add).toHaveBeenCalled();
   });
 
   it('décision : seul le CTO ; accepté → ajouté, demandeur prévenu ; refus motivé', async () => {
@@ -166,7 +166,7 @@ describe('AvenantsTsService · TS au-delà du seuil', () => {
     const cto = { userId: 'CTO1', role: 'CTO (transverse)' };
     const ok = svc({ demande, prix: grosPrix });
     expect(await ok.s.deciderDemande('S1', cto, 'P1', 'DTS1', true)).toEqual({ statut: 'acceptee', tacheId: 'T9' });
-    expect(ok.taches.ajouterTs).toHaveBeenCalledWith('S1', cto, 'P1', 'C1', 'Nouvelle planche R+2');
+    expect(ok.tsElements.add).toHaveBeenCalledWith('S1', cto, 'P1', 'C1', 'Nouvelle planche R+2');
     expect(ok.notifications.envoyer).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'ts_decide', destinataireIds: ['DPLG1'] }),
     );
