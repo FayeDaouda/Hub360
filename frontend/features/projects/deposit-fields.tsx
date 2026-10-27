@@ -1,49 +1,49 @@
 'use client';
 
-import { ChampsRemise, type SaisieRemise } from './champs-remise';
+import { SubmissionEntryFields, type SubmissionEntry } from './submission-entry';
 
 // Formulaire de dépôt d'une tâche — LE même depuis la liste « Mes tâches »
 // (modale), « Mes performances » et le panneau de la tâche (lot F,
 // 23/10/2026) : qui valide (nommé), fichiers (zone de dépôt, nom final),
 // commentaire. Les boutons restent à l'appelant (modale ou panneau).
 // Balisage en <span> : utilisable dans le message d'une ConfirmModal.
-export function FormulaireDepot({
+export function DepositFields({
   id,
-  nomDepot,
-  validateur,
-  parDepot,
-  obligatoire,
-  avertissement = false,
-  valeur,
+  baseName,
+  reviewer,
+  byDeposit,
+  required,
+  warning = false,
+  value,
   onChange,
 }: {
   id: string;
   // Base du nom des fichiers du prochain dépôt, fournie par le serveur.
-  nomDepot: string;
+  baseName: string;
   // « Cheikh Fall (Architecte DPLG) » ; null : personne n'est encore désigné.
-  validateur: string | null;
-  parDepot: boolean; // sans temps atelier : le dépôt du justificatif vaut validation
-  obligatoire: boolean;
+  reviewer: string | null;
+  byDeposit: boolean; // sans temps atelier : le dépôt du justificatif vaut validation
+  required: boolean;
   // Rappel « plus de nouveau dépôt avant la réponse » (modale de la liste).
-  avertissement?: boolean;
-  valeur: SaisieRemise;
-  onChange: (v: SaisieRemise) => void;
+  warning?: boolean;
+  value: SubmissionEntry;
+  onChange: (v: SubmissionEntry) => void;
 }) {
   return (
     <span className="depot">
       <span className="depot-message">
-        {parDepot ? (
+        {byDeposit ? (
           'Le dépôt du justificatif vaut validation.'
         ) : (
           <>
-            Part en validation chez <strong>{validateur ?? 'un validateur à désigner'}</strong>.
+            Part en validation chez <strong>{reviewer ?? 'un validateur à désigner'}</strong>.
           </>
         )}
-        {avertissement &&
-          !parDepot &&
+        {warning &&
+          !byDeposit &&
           ' Vous ne pourrez plus la déposer à nouveau tant qu’elle n’est pas validée ou renvoyée en reprise.'}
       </span>
-      <ChampsRemise id={id} valeur={valeur} onChange={onChange} obligatoire={obligatoire} nomDepot={nomDepot} />
+      <SubmissionEntryFields id={id} value={value} onChange={onChange} required={required} baseName={baseName} />
     </span>
   );
 }

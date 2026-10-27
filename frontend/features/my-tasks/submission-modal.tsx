@@ -4,12 +4,12 @@ import { useState } from 'react';
 import type { ProjectSubmissionBody } from '@/features/projects/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import {
-  corpsRemise,
-  depotPret,
-  SAISIE_REMISE_VIDE,
-  type SaisieRemise,
-} from '@/components/projets-ouverts/champs-remise';
-import { FormulaireDepot } from '@/components/projets-ouverts/formulaire-depot';
+  submissionBody,
+  isSubmissionReady,
+  EMPTY_SUBMISSION_ENTRY,
+  type SubmissionEntry,
+} from '@/features/projects/submission-entry';
+import { DepositFields } from '@/features/projects/deposit-fields';
 import { submitTask } from './api';
 import type { MyTask, MyTasksView } from './types';
 
@@ -29,12 +29,12 @@ export function SubmissionModal({
   slug: string;
   task: MyTask;
   // Fichiers glissés sur la ligne de la tâche (« Mes tâches »).
-  initialFiles?: SaisieRemise['pieces'];
+  initialFiles?: SubmissionEntry['pieces'];
   onSubmitted?: (r: MyTasksView) => void;
   onSend?: (body: ProjectSubmissionBody) => void;
   onClose: () => void;
 }) {
-  const [entry, setEntry] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: initialFiles ?? [] });
+  const [entry, setEntry] = useState<SubmissionEntry>({ ...EMPTY_SUBMISSION_ENTRY, pieces: initialFiles ?? [] });
   return (
     <ConfirmModal
       title="Déposer la tâche"
@@ -43,23 +43,23 @@ export function SubmissionModal({
           <span className="depot-tache">
             « {task.libelle} » · {task.projetCode}
           </span>
-          <FormulaireDepot
+          <DepositFields
             id={`remise-${task.id}`}
-            nomDepot={task.nomDepot}
-            validateur={task.validateur}
-            parDepot={task.parDepot}
-            obligatoire={task.fichierObligatoire}
-            avertissement
-            valeur={entry}
+            baseName={task.nomDepot}
+            reviewer={task.validateur}
+            byDeposit={task.parDepot}
+            required={task.fichierObligatoire}
+            warning
+            value={entry}
             onChange={setEntry}
           />
         </>
       }
       confirmLabel="Déposer"
-      confirmDisabled={!depotPret(entry, task.fichierObligatoire)}
+      confirmDisabled={!isSubmissionReady(entry, task.fichierObligatoire)}
       onConfirm={async () => {
-        if (onSend) onSend(corpsRemise(entry));
-        else onSubmitted?.(await submitTask(slug, task, corpsRemise(entry)));
+        if (onSend) onSend(submissionBody(entry));
+        else onSubmitted?.(await submitTask(slug, task, submissionBody(entry)));
         onClose(); // ConfirmModal ne se ferme pas seule après succès
       }}
       onClose={onClose}

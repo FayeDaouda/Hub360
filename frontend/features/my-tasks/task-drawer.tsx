@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { getMentionablePeople, getProjectFile } from '@/features/projects/api';
 import type { OpenProjectFile } from '@/features/projects/types';
 import { PanneauLateral } from '@/components/projets-ouverts/panneau-lateral';
-import { TachePanneau } from '@/components/projets-ouverts/tache-panneau';
+import { TaskPanel } from '@/features/projects/task-panel';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 
@@ -100,17 +100,20 @@ export function TaskDrawer({
       {error && <FieldError>{error}</FieldError>}
       {!project && !error && <Skeleton />}
       {project && card && task ? (
-        <TachePanneau
+        // key : une autre tâche (J / K) ou l'ouverture sur « Demander un
+        // délai » = un panneau neuf, sa saisie repart de zéro.
+        <TaskPanel
+          key={`${task.id}:${extension}`}
           slug={slug}
-          projetId={projectId}
+          projectId={projectId}
           code={project.code}
-          carte={card}
-          tache={task}
-          assignables={null}
-          moiId={meId}
-          mentionnables={mentionable}
-          prolongationOuverte={extension}
-          onMaj={async () => {
+          card={card}
+          task={task}
+          assignable={null}
+          meId={meId}
+          mentionable={mentionable}
+          extensionOpen={extension}
+          onUpdate={async () => {
             await load();
             onChange();
           }}

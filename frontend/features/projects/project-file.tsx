@@ -2,18 +2,18 @@
 
 import { useEffect, useRef } from 'react';
 import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
-import { CartePanneau } from '@/components/projets-ouverts/carte-panneau';
 import { PanneauLateral } from '@/components/projets-ouverts/panneau-lateral';
-import { TachePanneau } from '@/components/projets-ouverts/tache-panneau';
 import { Pill } from '@/components/ui/pill';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { formatDate } from '@hub/domain';
 import { AddTsElement } from './add-ts-element';
+import { CardThreadPanel } from './card-thread-panel';
 import { stepNumber, stepPill } from './labels';
 import { ProjectCardView, SURVEY_CARD_KEY } from './project-card';
 import { cellLabel, invoicePills, myOpenTasksIn } from './project-tiles';
 import { SiteStatusField } from './site-fields';
+import { TaskPanel } from './task-panel';
 import type { AssignableEmployee, OpenProjectFile } from './types';
 import type { Selection } from './use-open-projects';
 
@@ -221,27 +221,27 @@ export function ProjectFile({
           }
         >
           {chosen ? (
-            <TachePanneau
+            <TaskPanel
               key={chosen.tache.id}
               slug={slug}
-              projetId={d.id}
+              projectId={d.id}
               code={d.code}
-              carte={chosen.carte}
-              tache={chosen.tache}
-              assignables={d.peutAssigner ? assignable : null}
-              moiId={meId}
-              mentionnables={mentionable}
-              onMaj={onUpdate}
+              card={chosen.carte}
+              task={chosen.tache}
+              assignable={d.peutAssigner ? assignable : null}
+              meId={meId}
+              mentionable={mentionable}
+              onUpdate={onUpdate}
             />
           ) : (
-            <CartePanneau
+            <CardThreadPanel
               key={threadCard!.id}
               slug={slug}
-              projetId={d.id}
-              carte={threadCard!}
-              moiId={meId}
-              mentionnables={mentionable}
-              onMaj={onUpdate}
+              projectId={d.id}
+              card={threadCard!}
+              meId={meId}
+              mentionable={mentionable}
+              onUpdate={onUpdate}
             />
           )}
         </PanneauLateral>
