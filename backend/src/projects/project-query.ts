@@ -1,0 +1,75 @@
+import { JalonFacture, Phase, Prisma } from '@prisma/client';
+import { toIsoDay } from '@hub/domain';
+
+// Lecture des projets ouverts selon le gabarit (maquette « Projets » du
+// boss) : ce que partagent le tableau, le dossier, la production et les
+// alertes — la requête des cartes et tâches, et les petites règles de lecture.
+
+export const WITH_TASKS = {
+  cartes: {
+    orderBy: { ordre: 'asc' },
+    include: {
+      taches: {
+        orderBy: { ordre: 'asc' },
+        include: {
+          assigne: { select: { id: true, prenom: true, nom: true, cellule: { select: { nom: true } } } },
+          valideePar: { select: { prenom: true, nom: true } },
+          prolongations: { orderBy: { demandeLe: 'desc' } },
+          pieces: {
+            orderBy: [{ version: 'asc' }, { createdAt: 'asc' }],
+            select: { id: true, nom: true, version: true },
+          },
+          devisTs: {
+            select: {
+              id: true,
+              statut: true,
+              dateValidite: true,
+              dateEnvoi: true,
+              numero: true,
+              codeDossier: true,
+              rangDossier: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ProjetInclude;
+
+export type ProjectWithTasks = Prisma.ProjetGetPayload<{ include: typeof WITH_TASKS }>;
+export type Actor = { userId: string; role: string };
+
+export const fullName = (p: { prenom: string; nom: string } | null | undefined) => (p ? `${p.prenom} ${p.nom}` : null);
+export const isoDay = (d: Date | null) => (d ? toIsoDay(d) : null);
+
+type Extensions = ProjectWithTasks['cartes'][number]['taches'][number]['prolongations'];
+// Dernière prolongation accordée (date jusqu'à laquelle le retard est qualifié)
+// et demande en attente de décision.
+export const grantedExtension = (l: Extensions) => l.find((p) => p.decision === 'accordee')?.jusquau ?? null;
+export const pendingExtension = (l: Extensions) => l.find((p) => p.decision === null) ?? null;
+
+// Cartes clés suivies dans « À venir » du tableau de production.
+export const KEY_CARDS = ['permis_construire', 'pe_architecture', 'tache_finale'];
+export const ROLE_CEO = 'CEO (transverse)';
+
+const INVOICE_MILESTONES: Record<'F1' | 'F2' | 'F3', JalonFacture> = {
+  F1: 'signature',
+  F2: 'avant_projet',
+  F3: 'livraison',
+};
+// Factures d'un projet rattachées à une tranche (F1 à F3).
+export const invoicesOf = <T extends { jalon: JalonFacture | null }>(invoices: T[], tranche: 'F1' | 'F2' | 'F3') =>
+  invoices.filter((x) => x.jalon === INVOICE_MILESTONES[tranche]);
+// État d'une tranche : émise dès qu'une de ses factures l'est, sinon en brouillon, sinon absente.
+export function trancheStatus(invoices: { jalon: JalonFacture | null; statut: string }[], tranche: 'F1' | 'F2' | 'F3') {
+  const of = invoicesOf(invoices, tranche);
+  return of.some((x) => x.statut === 'emise') ? 'emise' : of.length ? 'brouillon' : 'absente';
+}
+
+export type SiteStatus = 'conception' | 'chantier' | 'livre';
+export function siteStatus(phase: Phase): SiteStatus {
+  return phase === 'chantier' || phase === 'livre' ? phase : 'conception';
+}
+
+// Carte du gabarit dont les tâches sont dues 24 h après la visite sur site.
+export const SURVEY_CARD = 'releves_existants';

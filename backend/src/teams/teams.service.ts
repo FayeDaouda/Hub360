@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ProcessusCellule } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { ProjectStatesService } from '../projects/project-states.service';
 import {
   monthlyLoad,
   cellCode,
@@ -27,7 +27,7 @@ export class TeamsService {
   constructor(
     private prisma: PrismaService,
     private reglages: ReglagesService,
-    private projetsOuverts: ProjetsOuvertsService,
+    private projectStates: ProjectStatesService,
   ) {}
 
   async view(societeId: string): Promise<TeamsViewDto> {
@@ -116,7 +116,7 @@ export class TeamsService {
       this.prisma.demandeAbsence.count({ where: { statut: 'attente_n1', dossier: { societeId } } }),
       this.prisma.compteurCellule.findMany({ where: { societeId } }),
       this.reglages.joursFeries([societeId]),
-      this.projetsOuverts.etatsSociete(societeId, aujourdhui),
+      this.projectStates.companyStates(societeId, aujourdhui),
     ]);
     // État de chaque tâche selon la règle commune des projets (Production, reporting).
     const etatDe = new Map(etats.flatMap((p) => [...p.etatsTaches]));

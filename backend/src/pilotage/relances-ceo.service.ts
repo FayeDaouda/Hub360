@@ -4,7 +4,7 @@ import { avecDelegataire } from '../commun/delegation-ceo';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { ProjectAlertsService } from '../projects/project-alerts.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 import { formatAmount, todayIso } from '@hub/domain';
 
@@ -23,7 +23,7 @@ export class RelancesCeoService implements OnApplicationBootstrap {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
-    private projetsOuverts: ProjetsOuvertsService,
+    private projectAlerts: ProjectAlertsService,
     private seuilCeo: SeuilCeoService,
   ) {}
 
@@ -56,7 +56,7 @@ export class RelancesCeoService implements OnApplicationBootstrap {
 
   async factures(societeId: string, jour: string): Promise<number> {
     const [{ tranches }, directes] = await Promise.all([
-      this.projetsOuverts.alertes(societeId),
+      this.projectAlerts.alerts(societeId),
       this.prisma.facture.findMany({
         where: { societeId, statut: 'brouillon', estAvoir: false, dossierCrmId: { not: null }, projetId: null },
         select: { id: true },

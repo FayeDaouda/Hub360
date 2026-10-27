@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
 import type { EtatTache } from '../projets/gabarit/etats';
-import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import { ProjectStatesService } from '../projects/project-states.service';
 import { relancePossibleLe, TachesProjetService } from '../projets/gabarit/taches-projet.service';
 import { contexteDecision } from '../projets/gabarit/suppleance';
 import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
@@ -38,12 +38,12 @@ export class TasksService {
     private prisma: PrismaService,
     private reglages: ReglagesService,
     private projectTasks: TachesProjetService,
-    private openProjects: ProjetsOuvertsService,
+    private projectStates: ProjectStatesService,
   ) {}
 
   // État de chaque tâche des projets ouverts, selon la règle commune.
-  private async projectStates(companyId: string, day: string): Promise<Map<string, EtatTache>> {
-    return new Map((await this.openProjects.etatsSociete(companyId, day)).flatMap((p) => [...p.etatsTaches]));
+  private async taskStates(companyId: string, day: string): Promise<Map<string, EtatTache>> {
+    return new Map((await this.projectStates.companyStates(companyId, day)).flatMap((p) => [...p.etatsTaches]));
   }
 
   // --- L'assigné : ses tâches, leur temps et leur état de validation ---------
@@ -65,7 +65,7 @@ export class TasksService {
       (file?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })),
       holidays,
     );
-    const states = tasks.length ? await this.projectStates(companyId, today) : new Map<string, EtatTache>();
+    const states = tasks.length ? await this.taskStates(companyId, today) : new Map<string, EtatTache>();
     // Qui valide (mêmes personnes que celles prévenues au dépôt) : dès qu'une
     // tâche est à déposer (message du dépôt) ou en validation (« Chez mon
     // N+1 »), et quand une relance devient possible (3 jours ouvrés).
@@ -127,8 +127,7 @@ export class TasksService {
   async teamStats(employeeIds: string[], companyId?: string): Promise<PerformanceStatsDto> {
     const today = todayIso();
     const tasks = await loadAssignedTasks(this.prisma, employeeIds);
-    const states =
-      companyId && tasks.length ? await this.projectStates(companyId, today) : new Map<string, EtatTache>();
+    const states = companyId && tasks.length ? await this.taskStates(companyId, today) : new Map<string, EtatTache>();
     return performanceStats(
       tasks.map((t) => ({
         statut: statusFromProjectState(taskStatus(t, templateValidationState(t), today), states.get(t.id)),

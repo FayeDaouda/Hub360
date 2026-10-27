@@ -1,6 +1,7 @@
-import { PrismaService } from '../../prisma/prisma.service';
-import { ReglagesService } from '../../reglages/reglages.service';
-import { ProjetsOuvertsService } from './projets-ouverts.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
+import { ProjectStatesService } from './project-states.service';
+import { ProjectsBoardService } from './projects-board.service';
 
 // « À décider » (revue Dir. GC, 21/10/2026) : remises et prolongations que la
 // personne connectée peut trancher, sur tous les projets — mêmes règles que
@@ -56,12 +57,13 @@ function svc(collaborateurId: string, projet: object = PROJET) {
     utilisateur: { findMany: jest.fn().mockResolvedValue([]) },
   };
   const reglages = { joursFeries: jest.fn().mockResolvedValue(new Map()) } as unknown as ReglagesService;
-  return new ProjetsOuvertsService(prisma as unknown as PrismaService, reglages);
+  const db = prisma as unknown as PrismaService;
+  return new ProjectsBoardService(db, reglages, new ProjectStatesService(db, reglages));
 }
 
-describe('ProjetsOuvertsService.aDecider', () => {
+describe('ProjectsBoardService.toDecide', () => {
   it('Dir. GC (DPLG) : toutes les remises sauf la sienne, les prolongations en attente', async () => {
-    const r = await svc('DPLG').aDecider('S1', { userId: 'U', role: 'Dir. GC' });
+    const r = await svc('DPLG').toDecide('S1', { userId: 'U', role: 'Dir. GC' });
     expect(r.remises.map((x) => x.tacheId)).toEqual(['T1', 'T2']);
     expect(r.remises[0]).toMatchObject({
       code: 'FS_POI.26',
@@ -81,20 +83,20 @@ describe('ProjetsOuvertsService.aDecider', () => {
   });
 
   it('chef de team : son équipe, jamais sa propre remise', async () => {
-    const r = await svc('CHEF').aDecider('S1', { userId: 'U', role: 'Salarié' });
+    const r = await svc('CHEF').toDecide('S1', { userId: 'U', role: 'Salarié' });
     expect(r.remises.map((x) => x.tacheId)).toEqual(['T1', 'T3']);
   });
 
   it('CEO (hors circuit) : rien à décider', async () => {
-    const r = await svc('AUTRE').aDecider('S1', { userId: 'U', role: 'CEO (transverse)' });
+    const r = await svc('AUTRE').toDecide('S1', { userId: 'U', role: 'CEO (transverse)' });
     expect(r).toEqual({ remises: [], prolongations: [], visas: [], ts: [] });
   });
 
   it('prolongation qui repousse la livraison : au CTO, plus au Dir. GC', async () => {
     // Ouvert le 01/10, 80 h de budget = 10 jours ouvrés → livraison le 14/10.
     const projet = { ...PROJET, ouvertLe: '2026-10-01', budgetHeures: 80 };
-    expect((await svc('DPLG', projet).aDecider('S1', { userId: 'U', role: 'Dir. GC' })).prolongations).toEqual([]);
-    const cto = await svc('AUTRE', projet).aDecider('S1', { userId: 'U', role: 'CTO (transverse)' });
+    expect((await svc('DPLG', projet).toDecide('S1', { userId: 'U', role: 'Dir. GC' })).prolongations).toEqual([]);
+    const cto = await svc('AUTRE', projet).toDecide('S1', { userId: 'U', role: 'CTO (transverse)' });
     expect(cto.prolongations).toEqual([expect.objectContaining({ tacheId: 'T4', repousseLivraison: '2026-10-14' })]);
     expect(cto.remises).toEqual([]); // le travail des équipes reste au Dir. GC
   });

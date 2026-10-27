@@ -1,11 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { ReglagesService } from '../../reglages/reglages.service';
-import { ProjetsOuvertsService } from './projets-ouverts.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { ReglagesService } from '../reglages/reglages.service';
+import { ProductionService } from './production.service';
+import { ProjectStatesService } from './project-states.service';
 
 // Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : le Dir. GC voit
 // les projets dont il porte le dossier ; le CTO et le CEO, tous.
-describe('ProjetsOuvertsService.production · périmètre', () => {
+describe('ProductionService.production · périmètre', () => {
   function svc() {
     const prisma = {
       projet: { findMany: jest.fn().mockResolvedValue([]) },
@@ -16,7 +17,8 @@ describe('ProjetsOuvertsService.production · périmètre', () => {
       joursFeries: jest.fn().mockResolvedValue(new Map()),
       regle: jest.fn().mockResolvedValue({ de: 70, a: 100 }),
     } as unknown as ReglagesService;
-    return { s: new ProjetsOuvertsService(prisma as unknown as PrismaService, reglages), prisma };
+    const db = prisma as unknown as PrismaService;
+    return { s: new ProductionService(db, reglages, new ProjectStatesService(db, reglages)), prisma };
   }
 
   it('Dir. GC : ses dossiers seulement', async () => {

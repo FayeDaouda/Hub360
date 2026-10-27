@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { SeuilCeoService } from '../finances/seuil-ceo.service';
 import type { PrismaService } from '../prisma/prisma.service';
-import type { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
+import type { ProjectAlertsService } from '../projects/project-alerts.service';
 import type { DemandesService } from '../rh/demandes.service';
 import { AttentionService } from './attention.service';
 
@@ -29,8 +29,8 @@ function svc(affaire: number) {
     },
   } as unknown as PrismaService;
   const projets = {
-    alertes: jest.fn().mockResolvedValue({ retards: [], tranches: [TRANCHE], ts: [] }),
-  } as unknown as ProjetsOuvertsService;
+    alerts: jest.fn().mockResolvedValue({ retards: [], tranches: [TRANCHE], ts: [] }),
+  } as unknown as ProjectAlertsService;
   const seuil = {
     seuil: jest.fn().mockResolvedValue(50_000_000),
     montantsAffaire: jest.fn().mockResolvedValue(new Map([['F2', affaire]])),
