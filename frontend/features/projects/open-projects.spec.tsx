@@ -15,8 +15,8 @@ const api = vi.hoisted(() => ({
 vi.mock('./api', () => api);
 vi.mock('@/features/my-tasks/api', () => ({ getMyTasks: vi.fn() }));
 // Panneaux et décisions : leurs propres tests.
-vi.mock('@/components/projets-ouverts/tache-panneau', () => ({ TachePanneau: () => <p>Panneau de la tâche</p> }));
-vi.mock('@/components/projets-ouverts/carte-panneau', () => ({ CartePanneau: () => null }));
+vi.mock('./task-panel', () => ({ TaskPanel: () => <p>Panneau de la tâche</p> }));
+vi.mock('./card-thread-panel', () => ({ CardThreadPanel: () => null }));
 vi.mock('@/components/pilotage/decisions-fiche', () => ({ DecisionsFiche: () => null }));
 const session = vi.hoisted(() => ({
   role: 'CEO (transverse)',
