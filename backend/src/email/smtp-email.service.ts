@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import {
   AlerteEmail,
+  AvisSecurite,
   ContratEmail,
   DevisEmail,
   EmailService,
@@ -14,6 +15,7 @@ import { contenuDevis } from './contenu-devis';
 import { contenuRelanceFacture } from './contenu-relance-facture';
 import { contenuRelanceDevis } from './contenu-relance-devis';
 import { contenuContrat } from './contenu-contrat';
+import { contenuAvisSecurite } from './contenu-avis-securite';
 
 // Transport SMTP (nodemailer). Instancié uniquement quand EMAIL_TRANSPORT=smtp
 // ET SMTP_HOST est renseigné (cf. email.module.ts) — donc jamais actif sans
@@ -138,6 +140,20 @@ export class SmtpEmailService extends EmailService {
       return { envoye: true };
     } catch (e) {
       this.log.error(`[smtp] échec d'envoi de l'alerte à ${a.email} : ${e instanceof Error ? e.message : e}`);
+      return { envoye: false };
+    }
+  }
+
+  async envoyerAvisSecurite(a: AvisSecurite): Promise<{ envoye: boolean }> {
+    const { sujet, texte, html } = contenuAvisSecurite(a);
+    try {
+      await this.transport.sendMail({ from: this.from, to: a.email, subject: sujet, text: texte, html });
+      this.log.log(`[smtp] avis de sécurité ${a.evenement} envoyé à ${a.email}`);
+      return { envoye: true };
+    } catch (e) {
+      this.log.error(
+        `[smtp] échec d'envoi de l'avis ${a.evenement} à ${a.email} : ${e instanceof Error ? e.message : e}`,
+      );
       return { envoye: false };
     }
   }

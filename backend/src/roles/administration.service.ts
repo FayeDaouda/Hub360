@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { doubleFacteurExige } from '../auth/auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { daysSince, formatDate, formatDayMonth, plural, toIsoDay } from '@hub/domain';
 
@@ -113,15 +112,10 @@ export class AdministrationService {
       });
     }
     // Un compte par personne (un compte peut porter plusieurs rôles).
-    const comptes = new Map<string, { u: (typeof membres)[number]['utilisateur']; roles: string[] }>();
-    for (const m of membres)
-      comptes.set(m.utilisateur.id, {
-        u: m.utilisateur,
-        roles: [...(comptes.get(m.utilisateur.id)?.roles ?? []), m.role.nom],
-      });
-    const chefs = new Set(cellules.map((c) => c.dispatcher?.utilisateurId).filter((x): x is string => !!x));
+    const comptes = new Map<string, (typeof membres)[number]['utilisateur']>();
+    for (const m of membres) comptes.set(m.utilisateur.id, m.utilisateur);
     const sansDoubleFacteur: string[] = [];
-    for (const { u, roles } of comptes.values()) {
+    for (const u of comptes.values()) {
       if (!u.motDePasseHash) {
         const inv = u.invitations[0];
         const expiree = !inv || inv.expiresAt.getTime() < maintenant;
@@ -139,16 +133,15 @@ export class AdministrationService {
         });
         continue;
       }
-      // Règle de production (auth.service) : direction et chefs de cellule.
-      if (!u.totpActifLe && roles.some((r) => doubleFacteurExige(r, { NODE_ENV: 'production' }, chefs.has(u.id))))
-        sansDoubleFacteur.push(nomDe(u));
+      // Règle de production (auth.service) : tous les comptes (décision du 28/10/2026).
+      if (!u.totpActifLe) sansDoubleFacteur.push(nomDe(u));
     }
     if (sansDoubleFacteur.length) {
       elements.push({
         type: 'double_facteur',
         cle: 'double-facteur',
         titre: `Double authentification non activée · ${plural(sansDoubleFacteur.length, 'compte')}`,
-        detail: `exigée pour la direction et les chefs de cellule : ${sansDoubleFacteur.join(', ')}`,
+        detail: `exigée pour tous les comptes : ${sansDoubleFacteur.join(', ')}`,
         ton: 'risque',
         le: null,
       });

@@ -69,7 +69,7 @@ function mockPrisma(o: {
     collaborateur: { create: jest.fn().mockResolvedValue({ id: 'C9' }), update: jest.fn() },
     $transaction: tx,
   };
-  const comptes = { envoyerInvitation: invitation } as unknown as ComptesService;
+  const comptes = { envoyerInvitation: invitation, avertirSecurite: jest.fn() } as unknown as ComptesService;
   const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['DG']) };
   return {
     svc: new ComptesGroupeService(
@@ -81,6 +81,7 @@ function mockPrisma(o: {
     tx,
     invitation,
     notifications,
+    comptes,
   };
 }
 
@@ -292,5 +293,18 @@ describe('ComptesGroupeService.changerActif', () => {
   ])('refus : %s', async (_l, acteur, utilisateur) => {
     const { svc } = mockPrisma({ utilisateur });
     await expect(svc.changerActif('U1', false, acteur)).rejects.toThrow(ConflictException);
+  });
+});
+
+describe('ComptesGroupeService.reinitialiserDoubleFacteur', () => {
+  it('retire la double authentification, coupe les sessions et prévient la personne (lot A)', async () => {
+    const { svc, comptes } = mockPrisma({
+      utilisateur: { totpSecret: 'chiffré', totpActifLe: new Date(), email: 'awa@exemple.sn', prenom: 'Awa' },
+    });
+    await expect(svc.reinitialiserDoubleFacteur('U1', 'CIO')).resolves.toEqual({ id: 'U1', doubleFacteur: false });
+    expect(comptes.avertirSecurite).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'awa@exemple.sn', prenom: 'Awa' }),
+      'double_facteur_reinitialise',
+    );
   });
 });

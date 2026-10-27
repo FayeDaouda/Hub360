@@ -315,7 +315,7 @@ export class ComptesGroupeService {
   async reinitialiserDoubleFacteur(utilisateurId: string, acteurId: string) {
     const u = await this.prisma.utilisateur.findUnique({
       where: { id: utilisateurId },
-      select: { totpSecret: true, totpActifLe: true },
+      select: { totpSecret: true, totpActifLe: true, email: true, prenom: true },
     });
     if (!u) throw new NotFoundException('Compte introuvable.');
     if (!u.totpActifLe && !u.totpSecret)
@@ -336,6 +336,7 @@ export class ComptesGroupeService {
         data: { utilisateurId, type: 'double_facteur_reinitialise', parId: acteurId, detail: 'Administration du HUB' },
       }),
     ]);
+    this.comptes.avertirSecurite(u, 'double_facteur_reinitialise');
     return { id: utilisateurId, doubleFacteur: false };
   }
 }

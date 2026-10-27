@@ -10,8 +10,8 @@ type Etat = { actifLe: string | null; exige: boolean };
 type Reglage = { secret: string; qr: string };
 
 // Double authentification depuis « Mon compte » (revue Salarié 19/10/2026) :
-// facultative pour le Salarié, qui l'active ici ; la direction et les chefs
-// de cellule l'activent de toute façon à la connexion. Même parcours qu'à la
+// obligatoire pour tous les comptes en production (décision du 28/10/2026),
+// activée à la connexion ; ici, avant d'y être invité. Même parcours qu'à la
 // connexion (QR, premier code, 8 codes de secours) ; la session reste ouverte.
 // Désactiver ou changer de téléphone : réinitialisation par le CIO.
 export function DoubleFacteurCompte() {

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EvenementCompteType, InvitationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { EmailService } from '../email/email.service';
+import { EmailService, type AvisSecurite } from '../email/email.service';
 import { genererJeton, hacherJeton } from './jetons';
 import { hacherMotDePasse } from './mot-de-passe';
 
@@ -55,7 +55,7 @@ export class ComptesService {
   async definirMotDePasse(token: string, motDePasse: string, contexte: InvitationType): Promise<void> {
     const inv = await this.consommer(token, contexte);
     const hash = await hacherMotDePasse(motDePasse);
-    await this.prisma.utilisateur.update({
+    const u = await this.prisma.utilisateur.update({
       where: { id: inv.utilisateurId! },
       data: {
         motDePasseHash: hash,
@@ -63,8 +63,16 @@ export class ComptesService {
         // invalide toute session émise avant maintenant (reset surtout)
         sessionsValidesDepuis: new Date(),
       },
+      select: { email: true, prenom: true },
     });
     await this.journal(inv.utilisateurId!, contexte === 'invitation' ? 'compte_active' : 'mdp_reinitialise', null, '');
+    if (contexte === 'reset') this.avertirSecurite(u, 'mot_de_passe_reinitialise');
+  }
+
+  // Avis de sécurité à la personne (lot A) : envoyé sans retarder la réponse ;
+  // un échec d'envoi est journalisé par le transport, jamais bloquant.
+  avertirSecurite(u: { email: string; prenom: string }, evenement: AvisSecurite['evenement']): void {
+    void this.email.envoyerAvisSecurite({ email: u.email, prenom: u.prenom, evenement, le: new Date() });
   }
 
   // -- Internes --------------------------------------------------------
