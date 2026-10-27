@@ -1,40 +1,8 @@
 import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
-import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsIn,
-  IsInt,
-  IsNumber,
-  IsObject,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-  ValidateNested,
-} from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
 import { ReglagesService } from './reglages.service';
-
-class ChangementDto {
-  @IsString() @MaxLength(80) carte: string;
-  @IsOptional() @IsString() @MaxLength(80) tache?: string;
-  @IsIn(['debut', 'fin', 'heures', 'visa', 'fichier']) champ: 'debut' | 'fin' | 'heures' | 'visa' | 'fichier';
-  @IsNumber() valeur: number;
-}
-
-class MotifDto {
-  @IsString() @MinLength(3, { message: 'Motif obligatoire.' }) @MaxLength(500) motif: string;
-}
-
-class GabaritDto extends MotifDto {
-  @IsInt() depuis: number; // version éditée (contrôle de concurrence)
-  @IsArray() @ValidateNested({ each: true }) @Type(() => ChangementDto) changements: ChangementDto[];
-}
-
-class ValeursDto extends MotifDto {
-  @IsObject() valeurs: Record<string, unknown>;
-}
+import { GabaritDto, ValeursDto } from './reglages.dto';
 
 type R = { user: { userId: string; societeId: string } };
 

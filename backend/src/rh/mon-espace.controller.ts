@@ -1,31 +1,9 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { ModePaiementSalaire, SituationFamiliale } from '@prisma/client';
-import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { MonEspaceService } from './mon-espace.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
-
-// « Mes informations » (maquette) : ce que le salarié modifie lui-même,
-// enregistré immédiatement. Mêmes limites que DossierPersonnelDto.
-class CoordonneesDto {
-  @IsOptional() @IsString() @MaxLength(40) telephone?: string;
-  @IsOptional() @ValidateIf((_, v) => v !== '') @IsEmail() @MaxLength(120) emailPerso?: string;
-  @IsOptional()
-  @ValidateIf((_, v) => v !== null)
-  @IsEnum(SituationFamiliale)
-  situationFamiliale?: SituationFamiliale | null;
-  @IsOptional() @IsInt() @Min(0) @Max(30) enfantsACharge?: number;
-  @IsOptional() @IsString() @MaxLength(300) adresse?: string;
-  @IsOptional() @IsString() @MaxLength(200) contactUrgence?: string;
-  @IsOptional() @IsString() @MaxLength(40) telephoneUrgence?: string;
-}
-
-// Changement de moyen de paiement : soumis à la RH, appliqué après validation.
-class DemandePaiementDto {
-  @IsEnum(ModePaiementSalaire) modePaiement!: ModePaiementSalaire;
-  @IsString() @MaxLength(80) coordonneesPaiement!: string;
-}
+import { CoordonneesDto, DemandePaiementDto } from './mon-espace.dto';
 
 type R = { user: { userId: string; societeId: string } };
 

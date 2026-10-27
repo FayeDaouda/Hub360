@@ -39,7 +39,7 @@ export class ReponseAutresDatesDto {
   @IsBoolean() accepte: boolean;
 }
 
-class DelegationDto {
+class DelegationLivrableDto {
   @IsString() @MaxLength(200) livrable: string; // clé source:projetId:groupe
   @IsUUID() collaborateurId: string;
 }
@@ -50,8 +50,8 @@ export class DecisionN1Dto {
   @IsArray()
   @ArrayMaxSize(200)
   @ValidateNested({ each: true })
-  @Type(() => DelegationDto)
-  delegations?: DelegationDto[];
+  @Type(() => DelegationLivrableDto)
+  delegations?: DelegationLivrableDto[];
   @IsOptional() @IsArray() @ArrayMaxSize(200) @IsString({ each: true }) nonDelegables?: string[];
   @IsOptional() @Matches(DATE) dateDebut?: string;
   @IsOptional() @Matches(DATE) dateFin?: string;
