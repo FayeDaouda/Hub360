@@ -1,5 +1,5 @@
 import { apiSociete } from '@/lib/client-api';
-import type { Cell, CellClientele, CellProcess, CellStatus, Employee, EmployeeLevel, TeamsView } from './types';
+import type { EmployeeUpdate, NewCell, TeamsView } from './types';
 
 // -----------------------------------------------------------------------------
 // Équipes — cellules et collaborateurs. API NestJS :
@@ -7,7 +7,7 @@ import type { Cell, CellClientele, CellProcess, CellStatus, Employee, EmployeeLe
 //   POST/PATCH/DELETE      …/cellules[/:id]         (409 si suppression d'une cellule non vide)
 //   PATCH                  …/cellules/:id/dispatcher
 //   PATCH                  …/collaborateurs/:id     (fiche d'équipe : cellule, niveau, photo)
-// `photo` = data URI (redimensionnée côté navigateur, cf. lib/image-fichier.ts).
+// Les écritures relisent ensuite la vue : leurs réponses ne sont pas utilisées.
 // -----------------------------------------------------------------------------
 
 // Page « Équipes » (maquette du boss) : indicateurs, cellules, listes.
@@ -15,21 +15,12 @@ export function getTeamsView(slug: string): Promise<TeamsView> {
   return apiSociete<TeamsView>(slug, '/equipes');
 }
 
-// Code SOCIÉTÉ-PROCESSUS-NN attribué par le serveur ; le pilote rejoint la cellule.
-export type NewCell = {
-  processus: CellProcess;
-  nom: string;
-  clientele?: CellClientele;
-  statut?: CellStatus;
-  piloteId?: string | null;
-};
-
-export function createCell(slug: string, cell: NewCell): Promise<Cell> {
-  return apiSociete<Cell>(slug, '/cellules', { method: 'POST', body: cell });
+export function createCell(slug: string, cell: NewCell): Promise<unknown> {
+  return apiSociete(slug, '/cellules', { method: 'POST', body: cell });
 }
 
-export function renameCell(slug: string, id: string, nom: string): Promise<Cell> {
-  return apiSociete<Cell>(slug, `/cellules/${id}`, { method: 'PATCH', body: { nom } });
+export function renameCell(slug: string, id: string, nom: string): Promise<unknown> {
+  return apiSociete(slug, `/cellules/${id}`, { method: 'PATCH', body: { nom } });
 }
 
 export function deleteCell(slug: string, id: string): Promise<void> {
@@ -38,20 +29,10 @@ export function deleteCell(slug: string, id: string): Promise<void> {
 
 // Désigne (ou retire, dispatcherId=null) le pilote de la cellule — admin
 // uniquement, doit être membre de cette cellule (décision boss, sept. 2026).
-export function setCellPilot(slug: string, cellId: string, dispatcherId: string | null): Promise<Cell> {
-  return apiSociete<Cell>(slug, `/cellules/${cellId}/dispatcher`, { method: 'PATCH', body: { dispatcherId } });
+export function setCellPilot(slug: string, cellId: string, dispatcherId: string | null): Promise<unknown> {
+  return apiSociete(slug, `/cellules/${cellId}/dispatcher`, { method: 'PATCH', body: { dispatcherId } });
 }
 
-type EmployeeFields = {
-  prenom: string;
-  nom: string;
-  role: string;
-  niveau: EmployeeLevel;
-  celluleId?: string | null;
-  photo?: string | null;
-  dateArrivee?: string | null; // AAAA-MM-JJ ; null = effacer
-};
-
-export function updateEmployee(slug: string, id: string, data: Partial<EmployeeFields>): Promise<Employee> {
-  return apiSociete<Employee>(slug, `/collaborateurs/${id}`, { method: 'PATCH', body: data });
+export function updateEmployee(slug: string, id: string, data: EmployeeUpdate): Promise<unknown> {
+  return apiSociete(slug, `/collaborateurs/${id}`, { method: 'PATCH', body: data });
 }

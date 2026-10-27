@@ -18,7 +18,7 @@ export function teamsViewFixture(patch: Partial<TeamsView> = {}): TeamsView {
         nom: 'Architecture 1',
         clientele: 'externes',
         statut: 'active',
-        pilote: { id: 'm1', nom: 'Awa Diop' },
+        pilote: { id: 'm1', nom: 'Awa Diop', sansCompte: false },
         pctATemps: 90,
         postes: [],
         membres: [
@@ -28,6 +28,7 @@ export function teamsViewFixture(patch: Partial<TeamsView> = {}): TeamsView {
             role: 'Architecte',
             niveau: 'senior',
             photoUrl: null,
+            absentJusquau: null,
             poste: null,
             estPilote: true,
             taches: 4,
