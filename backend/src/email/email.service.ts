@@ -57,6 +57,14 @@ export type RelanceDevisEmail = {
   lien: string;
 };
 
+// Alerte d'exploitation (suivi des erreurs) : destinataire technique, texte
+// brut, pas de lien.
+export type AlerteEmail = {
+  email: string;
+  sujet: string;
+  texte: string;
+};
+
 // Contrat à signer (étape G) — lien public : consultation, annexes, signature
 // (« J'accepte » ou signature tracée), sans compte.
 export type ContratEmail = {
@@ -76,4 +84,5 @@ export abstract class EmailService {
   abstract envoyerRelanceFacture(r: RelanceFactureEmail): Promise<{ envoye: boolean }>;
   abstract envoyerRelanceDevis(r: RelanceDevisEmail): Promise<{ envoye: boolean }>;
   abstract envoyerContrat(c: ContratEmail): Promise<{ envoye: boolean }>;
+  abstract envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }>;
 }

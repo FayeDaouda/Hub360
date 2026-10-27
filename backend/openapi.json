@@ -8431,6 +8431,44 @@
           "JournalAudit"
         ]
       }
+    },
+    "/api/sante": {
+      "get": {
+        "operationId": "HealthController_etat",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/erreurs-client": {
+      "post": {
+        "operationId": "ClientErrorsController_signaler",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientErrorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ClientErrors"
+        ]
+      }
     }
   },
   "info": {
@@ -11096,6 +11134,27 @@
         },
         "required": [
           "statut"
+        ]
+      },
+      "ClientErrorDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "stack": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "page": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "message",
+          "page"
         ]
       }
     }
