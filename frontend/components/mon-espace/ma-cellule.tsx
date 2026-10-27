@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import { AlarmClock, CircleCheck, FolderKanban, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMaCellule } from '@/lib/mon-espace';
-import { NIVEAUX_COLLABORATEUR, PHASES, type MaCellule as DonneesCellule, type StatsPerformances } from '@/lib/types';
+import { EMPLOYEE_LEVELS } from '@/features/teams/constants';
+import { PHASES, type MaCellule as DonneesCellule, type StatsPerformances } from '@/lib/types';
 import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { Avatar } from './avatar';
@@ -97,7 +98,7 @@ export function MaCellule({ slug }: { slug: string }) {
                     <span>
                       <strong>{m.nom}</strong>
                       <span className="cell-sub">
-                        {m.role} · {NIVEAUX_COLLABORATEUR[m.niveau]}
+                        {m.role} · {EMPLOYEE_LEVELS[m.niveau]}
                       </span>
                     </span>
                   </button>

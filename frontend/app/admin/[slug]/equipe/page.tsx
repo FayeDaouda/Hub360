@@ -1,7 +1,7 @@
 'use client';
 import { use } from 'react';
 
-import { Equipes } from '@/components/equipes/equipes';
+import { Teams } from '@/features/teams/teams';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante, useSocieteCourante, useTitrePage } from '@/lib/layout-contexte';
 import type { Session } from '@/lib/types';
@@ -17,7 +17,7 @@ export default function EquipePage(props: Props) {
   const session = useSessionCourante();
   const societe = useSocieteCourante();
   useTitrePage(societe?.nom ? `Équipes · ${societe.nom}` : 'Équipes');
-  return <Equipes slug={params.slug} ecriture={niveauEquipeEcriture(session)} />;
+  return <Teams slug={params.slug} canWrite={niveauEquipeEcriture(session)} />;
 }
 
 // Module « équipe » de la matrice : écriture = admin ou rôle en écriture

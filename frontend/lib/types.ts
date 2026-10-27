@@ -1,4 +1,5 @@
 import type { FicheProgramme } from './fiche-programme';
+import type { EmployeeLevel } from '@/features/teams/types';
 import { yearOf } from '@hub/domain';
 export type Societe = {
   id: string;
@@ -332,24 +333,6 @@ export type ModifierFichePayload = Partial<{
 }>;
 
 // --- Équipe : 6 cellules cross-fonctionnelles (Archi 1-4, Intérieur, Études) ---
-// Un projet peut être suivi par PLUSIEURS cellules (décision boss, sept.
-// 2026 — remplace « 1 projet = 1 cellule »). L'admin y a un CRUD complet
-// (page Équipe). Un collaborateur, lui, reste rattaché à une seule cellule
-// au plus (celluleId null = sans cellule), ça ne change pas.
-
-// Séniorité (2ᵉ axe, distinct du métier `role`).
-export type NiveauCollaborateur = 'stagiaire' | 'junior' | 'confirme' | 'senior' | 'lead';
-
-export const NIVEAUX_COLLABORATEUR: Record<NiveauCollaborateur, string> = {
-  stagiaire: 'Stagiaire',
-  junior: 'Junior',
-  confirme: 'Confirmé',
-  senior: 'Senior',
-  lead: 'Lead',
-};
-
-export const NIVEAUX_ORDRE: NiveauCollaborateur[] = ['stagiaire', 'junior', 'confirme', 'senior', 'lead'];
-
 // Statut du compte de connexion — dérivé côté serveur (pas un champ stocké) :
 // sans_compte → invité → actif → désactivé. À relire à chaque chargement de
 // liste (pas de valeur en cache client — elle peut changer depuis un autre
@@ -361,99 +344,6 @@ export const STATUTS_COMPTE: Record<StatutCompte, string> = {
   invite: 'Invité',
   actif: 'Actif',
   desactive: 'Désactivé',
-};
-
-export type Collaborateur = {
-  id: string;
-  prenom: string;
-  nom: string;
-  role: string; // métier
-  niveau: NiveauCollaborateur;
-  photoUrl: string | null; // data URI en transition ; URL signée S3 plus tard
-  celluleId: string | null;
-  // Entrée dans le studio (AAAA-MM-JJ), saisie admin. null = non renseignée :
-  // aucune ancienneté improvisée. Distincte de la création de la fiche.
-  dateArrivee: string | null;
-  email: string | null; // du compte lié, s'il existe
-  statutCompte: StatutCompte;
-};
-
-export type Cellule = {
-  id: string;
-  nom: string; // nom d'usage
-  code: string; // « GC-ARC-01 » (nomenclature ISO 9001, jamais réutilisé)
-  processus: ProcessusCellule;
-  clientele: ClienteleCellule;
-  statut: StatutCellule;
-  // Membre habilité à répartir les tâches aux autres (décision boss, sept.
-  // 2026) — un seul par cellule, désigné par l'admin, doit être membre ;
-  // pilote de la cellule dans la page Équipes.
-  dispatcherId: string | null;
-  collaborateurs: Collaborateur[];
-};
-
-// Équipes (maquette du boss, oct. 2026) — backend : equipe/equipes.service.ts.
-export type ProcessusCellule = 'DIR' | 'ARC' | 'INT' | 'ETU';
-export type ClienteleCellule = 'externes' | 'holding' | 'tous' | 'sans_objet';
-export type StatutCellule = 'active' | 'a_constituer' | 'reportee';
-export type EtatPosteCellule = 'occupe' | 'ouvert' | 'reporte' | 'a_recruter' | 'externe';
-
-export type CelluleEquipe = {
-  id: string;
-  code: string;
-  processus: ProcessusCellule;
-  nom: string;
-  clientele: ClienteleCellule;
-  statut: StatutCellule;
-  // sansCompte : chef sans compte HUB actif — ses remises remontent au Dir. GC.
-  pilote: { id: string; nom: string; sansCompte?: boolean } | null;
-  pctATemps: number | null; // null = pas encore d'étape livrée
-  postes: { id: string; libelle: string; etat: EtatPosteCellule; titulaire: { id: string; nom: string } | null }[];
-  membres: {
-    id: string;
-    nom: string;
-    role: string;
-    niveau: NiveauCollaborateur;
-    photoUrl: string | null; // data URI en transition (cf. Collaborateur.photoUrl)
-    absentJusquau?: string | null; // absence validée qui couvre aujourd'hui
-    poste: string | null;
-    estPilote: boolean;
-    taches: number; // tâches du mois en cours
-    heures: number; // heures imputées ce mois, à ce jour
-    pctATemps: number | null;
-  }[];
-};
-
-export type VueEquipes = {
-  indicateurs: {
-    cellules: { actives: number; total: number };
-    salariesAAffecter: number;
-    projetsSignes: { total: number; nonAffectes: number };
-    // Tâches (revue CTO) ; etapesEnRetard = le chiffre du reporting de la direction.
-    taches: { enCours: number; enRetard: number; pctATemps: number | null; etapesEnRetard: number };
-    absencesEnAttente: number;
-  };
-  cellules: CelluleEquipe[];
-  salariesAAffecter: {
-    id: string;
-    nom: string;
-    role: string;
-    niveau: NiveauCollaborateur;
-    dateArrivee: string | null;
-  }[];
-  projets: { id: string; code: string; programme: string; client: string; cellules: { code: string; nom: string }[] }[];
-  tachesEnCours: {
-    id: string;
-    projet: string;
-    etape: string;
-    libelle: string;
-    assigne: string | null;
-    echeance: string | null;
-    enRetard: boolean;
-    prolongeeJusquau: string | null; // retard qualifié, pas compté en retard
-  }[];
-  collaborateurs: { id: string; nom: string; cellule: string | null }[];
-  prochainsCodes: Record<ProcessusCellule, string>;
 };
 
 // --- Notifications collaborateur ---
@@ -1771,7 +1661,7 @@ export type MaCellule = {
     id: string;
     nom: string;
     role: string;
-    niveau: NiveauCollaborateur;
+    niveau: EmployeeLevel;
     estChef: boolean;
     estMoi: boolean;
     photo: string | null;
