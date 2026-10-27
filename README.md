@@ -15,6 +15,7 @@ clients.
 | Backend           | NestJS 10 · Prisma 5 · PostgreSQL 16 · JWT (Passport)     |
 | Frontend          | Next.js 14 (App Router) · React 18 · TypeScript           |
 | Tests             | Jest (backend)                                            |
+| Environnement     | Node.js 24 LTS (`.nvmrc`), partout : postes, CI, images   |
 | Hébergement prévu | Hetzner Cloud (VPS + Object Storage), domaine `hub.group` |
 
 ## Structure
@@ -39,6 +40,8 @@ hub/
 ```
 
 ## Démarrage
+
+Prérequis : Node.js 24 LTS, la version de `.nvmrc` (`nvm use` la sélectionne).
 
 ### 1. PostgreSQL
 
