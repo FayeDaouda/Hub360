@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   AlerteEmail,
+  AvisSecurite,
   ContratEmail,
   DevisEmail,
   EmailService,
@@ -42,6 +43,11 @@ export class LogEmailService extends EmailService {
 
   async envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }> {
     this.log.log(`[log] alerte pour ${a.email} : ${a.sujet}`);
+    return { envoye: false };
+  }
+
+  async envoyerAvisSecurite(a: AvisSecurite): Promise<{ envoye: boolean }> {
+    this.log.log(`[log] avis de sécurité ${a.evenement} pour ${a.email}`);
     return { envoye: false };
   }
 }

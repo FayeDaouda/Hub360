@@ -78,11 +78,16 @@ describe('AdministrationService.aTraiter', () => {
     },
   };
 
-  it('double authentification de la direction, invitation expirée, chef sans compte, arrivées', async () => {
+  it('double authentification de tous les comptes, invitation expirée, chef sans compte, arrivées', async () => {
     const r = await new AdministrationService(prisma as never).aTraiter('S1');
     const par = (t: string) => r.filter((e) => e.type === t);
+    // Décision du 28/10/2026 : exigée pour tous les comptes, Salarié compris.
     expect(par('double_facteur')).toEqual([
-      expect.objectContaining({ titre: 'Double authentification non activée · 1 compte', ton: 'risque' }),
+      expect.objectContaining({
+        titre: 'Double authentification non activée · 2 comptes',
+        detail: 'exigée pour tous les comptes : CFO X, SAL X',
+        ton: 'risque',
+      }),
     ]);
     expect(par('invitation')).toEqual([
       expect.objectContaining({ ton: 'risque', detail: expect.stringContaining('expirée') }),

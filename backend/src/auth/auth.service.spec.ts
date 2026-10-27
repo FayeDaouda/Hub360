@@ -44,8 +44,10 @@ function svc(affectations: unknown[]) {
   const sign = jest.fn().mockReturnValue('jeton');
   const jwt = { sign } as unknown as JwtService;
   const notifications = { envoyer: jest.fn() };
+  const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
   return {
-    svc: new AuthService(prisma, jwt, notifications as never),
+    email,
+    svc: new AuthService(prisma, jwt, notifications as never, email as never),
     findMany,
     update,
     sign,
@@ -103,8 +105,12 @@ describe('AuthService.changerMotDePasse', () => {
   });
 
   it('change le hash, coupe les autres sessions et rend une session valide (iat ≥ coupure)', async () => {
-    const { svc: s, update, sign } = svc([affectation('S1', 'Salarié')]);
+    const { svc: s, update, sign, email } = svc([affectation('S1', 'Salarié')]);
     const res = await s.changerMotDePasse('U1', 'grey-concrete', 'ancien-mdp-1', 'nouveau-mdp-1');
+    // Avis de sécurité à la personne (lot A).
+    expect(email.envoyerAvisSecurite).toHaveBeenCalledWith(
+      expect.objectContaining({ evenement: 'mot_de_passe_modifie', le: expect.any(Date) }),
+    );
     const data = update.mock.calls[0][0].data;
     expect(data.motDePasseHash).toBe('nouveau-hash');
     expect(data.sessionsValidesDepuis).toBeInstanceOf(Date);
@@ -150,28 +156,26 @@ describe('Double authentification', () => {
       sign: jest.fn().mockReturnValue('jeton'),
       verify: jest.fn().mockReturnValue({ sub: 'U1', slug: 'grey-concrete', but: 'double-facteur' }),
     } as unknown as JwtService;
-    return { s: new AuthService(prisma, jwt, { envoyer: jest.fn() } as never), update, updateMany };
+    const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
+    return {
+      s: new AuthService(prisma, jwt, { envoyer: jest.fn() } as never, email as never),
+      update,
+      updateMany,
+      email,
+    };
   }
 
-  it('obligatoire pour la direction en production, jamais pour le Salarié ; réglable', () => {
-    expect(doubleFacteurExige('CFO', { NODE_ENV: 'production' })).toBe(true);
-    expect(doubleFacteurExige('Salarié', { NODE_ENV: 'production' })).toBe(false);
-    // Salarié chef de cellule : il valide le travail des autres.
-    expect(doubleFacteurExige('Salarié', { NODE_ENV: 'production' }, true)).toBe(true);
-    expect(doubleFacteurExige('CFO', { NODE_ENV: 'development' })).toBe(false);
-    expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'obligatoire' })).toBe(true);
+  it('obligatoire pour tous les rôles en production (décision du 28/10/2026) ; réglable', () => {
+    expect(doubleFacteurExige({ NODE_ENV: 'production' })).toBe(true);
+    expect(doubleFacteurExige({ NODE_ENV: 'development' })).toBe(false);
+    expect(doubleFacteurExige({ NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'obligatoire' })).toBe(true);
     // Revue CIO (22/10/2026) : « desactive » n'est accepté en production que
     // sur un serveur de démonstration ; jamais sur un HUB réel.
-    expect(doubleFacteurExige('CFO', { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(true);
+    expect(doubleFacteurExige({ NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(true);
     expect(
-      doubleFacteurExige('CIO (transverse)', {
-        NODE_ENV: 'production',
-        HUB_DOUBLE_FACTEUR: 'desactive',
-        HUB_DONNEES_DEMO: 'autorise',
-      }),
+      doubleFacteurExige({ NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive', HUB_DONNEES_DEMO: 'autorise' }),
     ).toBe(false);
-    expect(doubleFacteurExige('CFO', { NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
-    expect(doubleFacteurExige('societe_admin', { NODE_ENV: 'production' })).toBe(true);
+    expect(doubleFacteurExige({ NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
   });
 
   it('mot de passe juste + double facteur actif : pas de session, une étape « code »', async () => {
@@ -200,9 +204,13 @@ describe('Double authentification', () => {
       totpDernierPas: null,
       totpCodesSecours: [],
     };
-    const res = await svc2(enCours).s.activerDoubleFacteur('jeton', codeAuPas(SECRET, pasCourant()));
+    const { s, email } = svc2(enCours);
+    const res = await s.activerDoubleFacteur('jeton', codeAuPas(SECRET, pasCourant()));
     expect(res.codesSecours).toHaveLength(8);
     expect(res.role).toBe('CFO');
+    expect(email.envoyerAvisSecurite).toHaveBeenCalledWith(
+      expect.objectContaining({ evenement: 'double_facteur_active' }),
+    );
   });
 });
 

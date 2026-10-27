@@ -57,6 +57,16 @@ export type RelanceDevisEmail = {
   lien: string;
 };
 
+// Avis de sécurité à la personne concernée (lot A, 28/10/2026) : changement
+// de mot de passe ou de double authentification sur son compte.
+export type AvisSecurite = {
+  email: string;
+  prenom: string;
+  evenement:
+    'mot_de_passe_modifie' | 'mot_de_passe_reinitialise' | 'double_facteur_active' | 'double_facteur_reinitialise';
+  le: Date;
+};
+
 // Alerte d'exploitation (suivi des erreurs) : destinataire technique, texte
 // brut, pas de lien.
 export type AlerteEmail = {
@@ -85,4 +95,5 @@ export abstract class EmailService {
   abstract envoyerRelanceDevis(r: RelanceDevisEmail): Promise<{ envoye: boolean }>;
   abstract envoyerContrat(c: ContratEmail): Promise<{ envoye: boolean }>;
   abstract envoyerAlerte(a: AlerteEmail): Promise<{ envoye: boolean }>;
+  abstract envoyerAvisSecurite(a: AvisSecurite): Promise<{ envoye: boolean }>;
 }

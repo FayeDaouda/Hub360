@@ -15,22 +15,19 @@ import {
   verifierCode,
 } from './totp';
 import { cheminPhoto } from './profil';
+import { EmailService, type AvisSecurite } from '../email/email.service';
 
-// Double authentification obligatoire pour la direction (tous les rôles sauf
-// Salarié, phase 4), les comptes techniques et le Salarié chef de cellule, qui
-// valide le travail des autres (revue Salarié 19/10/2026) ; facultative pour
-// les autres Salariés, qui l'activent eux-mêmes une fois connectés.
-// Appliquée en production. HUB_DOUBLE_FACTEUR = « obligatoire » la force
-// partout ; « desactive » ne vaut que sur un poste de développement ou un
+// Double authentification obligatoire pour tous les rôles (décision du
+// 28/10/2026, lot A ; elle épargnait jusque-là le Salarié qui ne pilote pas de
+// cellule). Appliquée en production. HUB_DOUBLE_FACTEUR = « obligatoire » la
+// force partout ; « desactive » ne vaut que sur un poste de développement ou un
 // serveur de démonstration (HUB_DONNEES_DEMO=autorise) — jamais sur un HUB
 // réel (revue CIO, 22/10/2026).
-const ROLE_SALARIE = 'Salarié';
-export function doubleFacteurExige(role: string, env: NodeJS.ProcessEnv = process.env, chefDeCellule = false): boolean {
+export function doubleFacteurExige(env: NodeJS.ProcessEnv = process.env): boolean {
   const reglage = env.HUB_DOUBLE_FACTEUR;
   const production = env.NODE_ENV === 'production';
   const desactivable = !production || env.HUB_DONNEES_DEMO === 'autorise';
-  const applique = reglage === 'obligatoire' || (production && !(reglage === 'desactive' && desactivable));
-  return applique && (role !== ROLE_SALARIE || chefDeCellule);
+  return reglage === 'obligatoire' || (production && !(reglage === 'desactive' && desactivable));
 }
 
 // Comptes techniques de secours (revue CIO, 22/10/2026) : sans usage
@@ -49,7 +46,14 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private notifications: NotificationsService,
+    private email: EmailService,
   ) {}
+
+  // Avis de sécurité à la personne (lot A) : envoyé sans retarder la réponse ;
+  // un échec d'envoi est journalisé par le transport, jamais bloquant.
+  private avertir(u: { email: string; prenom: string }, evenement: AvisSecurite['evenement']) {
+    void this.email.envoyerAvisSecurite({ email: u.email, prenom: u.prenom, evenement, le: new Date() });
+  }
 
   async login(dto: LoginDto) {
     const utilisateur = await this.prisma.utilisateur.findUnique({
@@ -67,21 +71,11 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    const { societe, acces } = await this.acces(utilisateur.id, dto.societeSlug);
+    // Refuse un compte sans accès à la société demandée.
+    await this.acces(utilisateur.id, dto.societeSlug);
     if (utilisateur.totpActifLe) return this.etape('code', utilisateur.id, dto.societeSlug);
-    if (await this.exigePour(utilisateur.id, societe.id, acces.role.nom))
-      return this.etape('enrolement', utilisateur.id, dto.societeSlug);
+    if (doubleFacteurExige()) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
     return this.ouvrirSession(utilisateur, dto.societeSlug);
-  }
-
-  // Salarié : obligatoire seulement s'il pilote une cellule de la société.
-  private async exigePour(utilisateurId: string, societeId: string, role: string): Promise<boolean> {
-    if (!doubleFacteurExige(role, process.env, true)) return false;
-    if (role !== ROLE_SALARIE) return true;
-    const chef = await this.prisma.cellule.count({
-      where: { societeId, dispatcher: { OR: [{ utilisateurId }, { dossierPersonnel: { utilisateurId } }] } },
-    });
-    return chef > 0;
   }
 
   // --- Double authentification ---------------------------------------------
@@ -149,11 +143,11 @@ export class AuthService {
 
   // Depuis le HUB, par la personne connectée (Salarié : facultatif) — même
   // parcours, la session en cours reste valable.
-  async etatDoubleFacteur(utilisateurId: string, societeId: string, role: string) {
+  async etatDoubleFacteur(utilisateurId: string) {
     const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpActifLe: true } });
     return {
       actifLe: u?.totpActifLe?.toISOString() ?? null,
-      exige: await this.exigePour(utilisateurId, societeId, role),
+      exige: doubleFacteurExige(),
     };
   }
 
@@ -178,7 +172,7 @@ export class AuthService {
   }
 
   private async activerPour(
-    utilisateur: { id: string; totpActifLe: Date | null; totpSecret: string | null },
+    utilisateur: { id: string; email: string; prenom: string; totpActifLe: Date | null; totpSecret: string | null },
     code: string,
   ) {
     if (utilisateur.totpActifLe) throw new ConflictException('Double authentification déjà active.');
@@ -201,6 +195,7 @@ export class AuthService {
         },
       }),
     ]);
+    this.avertir(utilisateur, 'double_facteur_active');
     return clairs;
   }
 
@@ -225,6 +220,7 @@ export class AuthService {
         data: { utilisateurId, type: 'mdp_reinitialise', parId: utilisateurId, detail: 'Changé par le titulaire' },
       }),
     ]);
+    this.avertir(utilisateur, 'mot_de_passe_modifie');
     return this.ouvrirSession({ ...utilisateur, sessionsValidesDepuis: maintenant }, societeSlug);
   }
 

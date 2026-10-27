@@ -87,8 +87,8 @@ export class AuthController {
   // activation volontaire (Salarié) ou différée.
   @Get('double-facteur')
   @UseGuards(JwtAuthGuard)
-  etatDoubleFacteur(@Req() req: { user: { userId: string; societeId: string; role: string } }) {
-    return this.authService.etatDoubleFacteur(req.user.userId, req.user.societeId, req.user.role);
+  etatDoubleFacteur(@Req() req: { user: { userId: string } }) {
+    return this.authService.etatDoubleFacteur(req.user.userId);
   }
 
   @Post('double-facteur/compte/preparation')
