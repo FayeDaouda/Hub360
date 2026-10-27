@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getDossierProjet, getMentionnables, type DossierProjetOuvert } from '@/lib/projets-ouverts';
+import { getMentionablePeople, getProjectFile } from '@/features/projects/api';
+import type { OpenProjectFile } from '@/features/projects/types';
 import { PanneauLateral } from '@/components/projets-ouverts/panneau-lateral';
 import { TachePanneau } from '@/components/projets-ouverts/tache-panneau';
 import { Skeleton } from '@/components/ui/feedback';
@@ -35,13 +36,13 @@ export function TaskDrawer({
   // J / K : ouvrir la tâche précédente (-1) ou suivante (+1) de la liste.
   onNeighbour?: (step: -1 | 1) => void;
 }) {
-  const [project, setProject] = useState<DossierProjetOuvert | null>(null);
+  const [project, setProject] = useState<OpenProjectFile | null>(null);
   const [mentionable, setMentionable] = useState<{ id: string; nom: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
     () =>
-      getDossierProjet(slug, projectId)
+      getProjectFile(slug, projectId)
         .then(setProject)
         .catch((e) => setError(e instanceof Error && e.message ? e.message : 'Tâche indisponible.')),
     [slug, projectId],
@@ -52,7 +53,7 @@ export function TaskDrawer({
     void load();
   }, [load]);
   useEffect(() => {
-    getMentionnables(slug)
+    getMentionablePeople(slug)
       .then(setMentionable)
       .catch(() => setMentionable(null));
   }, [slug]);

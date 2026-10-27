@@ -4,24 +4,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { STATUTS_DEVIS } from '@/lib/types';
 import {
-  assignerTache,
-  deciderProlongation,
-  deciderTache,
-  viserTache,
-  demanderProlongation,
-  remettreTache,
-  getChargesTache,
-  getHistoriqueTache,
-  libelleCharge,
-  telechargerPieceRemise,
-  type ChargesTache,
-  numeroEtape,
-  pastilleTache,
-  type Assignable,
-  type CarteOuverte,
-  type EvenementTache,
-  type TacheOuverte,
-} from '@/lib/projets-ouverts';
+  assignTask,
+  decideExtension,
+  decideProjectTask,
+  downloadSubmissionPiece,
+  getTaskHistory,
+  getTaskWorkload,
+  requestExtension,
+  setTaskVisa,
+  submitProjectTask,
+} from '@/features/projects/api';
+import { stepNumber, taskPill, workloadLabel } from '@/features/projects/labels';
+import type { AssignableEmployee, ProjectCard, ProjectTask, TaskEvent, TaskWorkload } from '@/features/projects/types';
 import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from './champs-remise';
 import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
@@ -34,10 +28,10 @@ type Props = {
   slug: string;
   projetId: string;
   code: string;
-  carte: CarteOuverte;
-  tache: TacheOuverte;
+  carte: ProjectCard;
+  tache: ProjectTask;
   // null = pas le droit d'assigner (lecture seule).
-  assignables: Assignable[] | null;
+  assignables: AssignableEmployee[] | null;
   moiId: string;
   // null = lecture seule du fil.
   mentionnables: { id: string; nom: string }[] | null;
@@ -67,7 +61,7 @@ export function TachePanneau({
   const [aLaCarte, setALaCarte] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [historique, setHistorique] = useState<EvenementTache[] | null>(null);
+  const [historique, setHistorique] = useState<TaskEvent[] | null>(null);
   const [renvoi, setRenvoi] = useState(false);
   const [motif, setMotif] = useState('');
   // Visa DPLG : refus en cours de saisie (motif obligatoire).
@@ -77,14 +71,14 @@ export function TachePanneau({
   const [jusquau, setJusquau] = useState('');
   const [motifProlongation, setMotifProlongation] = useState('');
   const [saisie, setSaisie] = useState<SaisieRemise>(SAISIE_REMISE_VIDE);
-  const [charges, setCharges] = useState<ChargesTache | null>(null);
+  const [charges, setCharges] = useState<TaskWorkload | null>(null);
 
   // Rechargé quand la tâche change, que son assigné change, ou après une
   // remise / décision (statut, version) : la nouvelle ligne apparaît aussitôt.
   useEffect(() => {
     let annule = false;
     setHistorique(null);
-    getHistoriqueTache(slug, projetId, tache.id)
+    getTaskHistory(slug, projetId, tache.id)
       .then((h) => !annule && setHistorique(h))
       .catch(() => !annule && setHistorique([]));
     return () => {
@@ -110,7 +104,7 @@ export function TachePanneau({
     if (!peutAssigner) return;
     let annule = false;
     setCharges(null);
-    getChargesTache(slug, projetId, tache.id)
+    getTaskWorkload(slug, projetId, tache.id)
       .then((c) => !annule && setCharges(c))
       .catch(() => !annule && setCharges(null));
     return () => {
@@ -121,7 +115,7 @@ export function TachePanneau({
   async function ouvrirPiece(pieceId: string) {
     setErreur(null);
     try {
-      await telechargerPieceRemise(slug, projetId, tache.id, pieceId);
+      await downloadSubmissionPiece(slug, projetId, tache.id, pieceId);
     } catch (e) {
       setErreur(e instanceof Error && e.message ? e.message : 'Fichier indisponible.');
     }
@@ -146,7 +140,7 @@ export function TachePanneau({
     setEnCours(true);
     setErreur(null);
     try {
-      await deciderTache(slug, projetId, tache.id, decision, decision === 'renvoyer' ? motif.trim() : undefined);
+      await decideProjectTask(slug, projetId, tache.id, decision, decision === 'renvoyer' ? motif.trim() : undefined);
       setRenvoi(false);
       setMotif('');
       await onMaj();
@@ -161,7 +155,7 @@ export function TachePanneau({
     setEnCours(true);
     setErreur(null);
     try {
-      await assignerTache(slug, projetId, tache.id, collaborateurId || null, aLaCarte);
+      await assignTask(slug, projetId, tache.id, collaborateurId || null, aLaCarte);
       // Portée « carte » : un seul usage, pour qu'un changement suivant ne
       // réassigne pas toute la carte par mégarde.
       setALaCarte(false);
@@ -174,7 +168,7 @@ export function TachePanneau({
   }
 
   const chargeDe = (id: string) => charges?.charges.find((c) => c.collaborateurId === id);
-  const pastille = pastilleTache(tache.etat, tache.prolongation.accordeeJusquau ?? tache.finLe);
+  const pastille = taskPill(tache.etat, tache.prolongation.accordeeJusquau ?? tache.finLe);
   const piecesVersion = tache.pieces.filter((f) => f.version === tache.version);
   const ecart = tache.etat.code === 'validee' ? tache.etat.ecart : null;
   const v = tache.validation;
@@ -293,7 +287,7 @@ export function TachePanneau({
     <aside className="po-panneau tp" aria-label={`Tâche ${tache.libelle}`}>
       <header className="tp-entete">
         <p className="po-kicker">
-          {numeroEtape(carte.etapeNumero)} {carte.etapeLibelle} · {carte.libelle}
+          {stepNumber(carte.etapeNumero)} {carte.etapeLibelle} · {carte.libelle}
         </p>
         <h2 className="po-panneau-titre">{tache.libelle}</h2>
         <div className="po-pastilles">
@@ -357,7 +351,7 @@ export function TachePanneau({
               disabled={enCours || !depotPret(saisie, tache.fichierObligatoire)}
               onClick={() =>
                 agir(
-                  () => remettreTache(slug, projetId, tache.id, corpsRemise(saisie)),
+                  () => submitProjectTask(slug, projetId, tache.id, corpsRemise(saisie)),
                   'La remise a échoué.',
                   () => {
                     setSaisie(SAISIE_REMISE_VIDE);
@@ -413,7 +407,7 @@ export function TachePanneau({
               disabled={enCours || !jusquau || motifProlongation.trim().length < 3}
               onClick={() =>
                 agir(
-                  () => demanderProlongation(slug, projetId, tache.id, jusquau, motifProlongation.trim()),
+                  () => requestExtension(slug, projetId, tache.id, jusquau, motifProlongation.trim()),
                   'La demande a échoué.',
                   () => setAction(null),
                 )
@@ -463,9 +457,7 @@ export function TachePanneau({
                 type="button"
                 className="btn-ghost"
                 disabled={enCours}
-                onClick={() =>
-                  agir(() => deciderProlongation(slug, projetId, tache.id, false), 'La décision a échoué.')
-                }
+                onClick={() => agir(() => decideExtension(slug, projetId, tache.id, false), 'La décision a échoué.')}
               >
                 Refuser
               </button>
@@ -473,7 +465,7 @@ export function TachePanneau({
                 type="button"
                 className="btn-primary"
                 disabled={enCours}
-                onClick={() => agir(() => deciderProlongation(slug, projetId, tache.id, true), 'La décision a échoué.')}
+                onClick={() => agir(() => decideExtension(slug, projetId, tache.id, true), 'La décision a échoué.')}
               >
                 Accorder (retard qualifié)
               </button>
@@ -526,7 +518,7 @@ export function TachePanneau({
                     disabled={enCours || refusVisa.trim().length < 3}
                     onClick={() =>
                       agir(
-                        () => viserTache(slug, projetId, tache.id, false, refusVisa.trim()),
+                        () => setTaskVisa(slug, projetId, tache.id, false, refusVisa.trim()),
                         'Le refus a échoué.',
                         () => setRefusVisa(null),
                       )
@@ -545,7 +537,7 @@ export function TachePanneau({
                   type="button"
                   className="btn-primary"
                   disabled={enCours}
-                  onClick={() => agir(() => viserTache(slug, projetId, tache.id, true), 'Le visa a échoué.')}
+                  onClick={() => agir(() => setTaskVisa(slug, projetId, tache.id, true), 'Le visa a échoué.')}
                 >
                   Apposer le visa DPLG
                 </button>
@@ -622,7 +614,7 @@ export function TachePanneau({
           >
             <option value="">À assigner</option>
             {assignables.map((a) => {
-              const charge = libelleCharge(chargeDe(a.id), charges?.zone ?? null);
+              const charge = workloadLabel(chargeDe(a.id), charges?.zone ?? null);
               return (
                 <option key={a.id} value={a.id}>
                   {a.nom}
@@ -719,7 +711,7 @@ export function TachePanneau({
   );
 }
 
-function dureeStandard(t: TacheOuverte): string {
+function dureeStandard(t: ProjectTask): string {
   if (t.heures !== null) return `${String(t.heures).replace('.', ',')} h`;
   if (t.temps.type === 'partage') return t.temps.libelle;
   return 'Sans temps atelier';

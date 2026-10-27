@@ -1,12 +1,13 @@
 'use client';
 
-import { numeroEtape, type CarteOuverte } from '@/lib/projets-ouverts';
+import { stepNumber } from '@/features/projects/labels';
+import type { ProjectCard } from '@/features/projects/types';
 import { FilDiscussion } from './fil-discussion';
 
 type Props = {
   slug: string;
   projetId: string;
-  carte: CarteOuverte;
+  carte: ProjectCard;
   moiId: string;
   mentionnables: { id: string; nom: string }[] | null;
   onMaj: () => Promise<void>;
@@ -18,7 +19,7 @@ export function CartePanneau({ slug, projetId, carte, moiId, mentionnables, onMa
   return (
     <aside className="po-panneau" aria-label={`Fil de la carte ${carte.libelle}`}>
       <p className="po-kicker">
-        {numeroEtape(carte.etapeNumero)} {carte.etapeLibelle} · Fil de la carte
+        {stepNumber(carte.etapeNumero)} {carte.etapeLibelle} · Fil de la carte
       </p>
       <h3 className="po-panneau-titre">{carte.libelle}</h3>
       <FilDiscussion

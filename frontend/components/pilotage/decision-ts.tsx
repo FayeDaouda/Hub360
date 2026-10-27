@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { formatAmount, formatDate } from '@hub/domain';
-import { deciderDemandeTs, type DemandeTsADecider } from '@/lib/projets-ouverts';
+import { decideTsRequest } from '@/features/projects/api';
+import type { TsRequestToDecide } from '@/features/projects/types';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 
@@ -17,7 +18,7 @@ export function DecisionTs({
   onClose,
 }: {
   slug: string;
-  demande: DemandeTsADecider;
+  demande: TsRequestToDecide;
   onFait: () => void;
   onClose: () => void;
 }) {
@@ -29,7 +30,7 @@ export function DecisionTs({
     setEnvoi(true);
     setErreur(null);
     try {
-      await deciderDemandeTs(slug, demande.projetId, demande.id, accepter, accepter ? undefined : (refus ?? '').trim());
+      await decideTsRequest(slug, demande.projetId, demande.id, accepter, accepter ? undefined : (refus ?? '').trim());
       onFait();
       onClose();
     } catch (e) {

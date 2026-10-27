@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { CorpsRemise } from '@/lib/projets-ouverts';
+import type { ProjectSubmissionBody } from '@/features/projects/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import {
   corpsRemise,
@@ -31,7 +31,7 @@ export function SubmissionModal({
   // Fichiers glissés sur la ligne de la tâche (« Mes tâches »).
   initialFiles?: SaisieRemise['pieces'];
   onSubmitted?: (r: MyTasksView) => void;
-  onSend?: (body: CorpsRemise) => void;
+  onSend?: (body: ProjectSubmissionBody) => void;
   onClose: () => void;
 }) {
   const [entry, setEntry] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: initialFiles ?? [] });
