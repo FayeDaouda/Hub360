@@ -3964,16 +3964,528 @@ export interface components {
             dossierCrmId: string;
             lignes: components["schemas"]["LigneFactureDirecteDto"][];
         };
+        TaskDisabledStateDto: {
+            /** @enum {string} */
+            code: "desactivee";
+        };
+        TaskNotNeededStateDto: {
+            /** @enum {string} */
+            code: "non_necessaire";
+        };
+        TaskLockedStateDto: {
+            /** @enum {string} */
+            code: "verrouillee";
+        };
+        TaskValidatedStateDto: {
+            /** @enum {string} */
+            code: "validee";
+            ecart: number | null;
+        };
+        TaskAwaitingVisaStateDto: {
+            /** @enum {string} */
+            code: "a_viser";
+        };
+        TaskToReviewStateDto: {
+            /** @enum {string} */
+            code: "a_valider";
+            version: number;
+        };
+        TaskReworkStateDto: {
+            /** @enum {string} */
+            code: "reprise";
+            version: number;
+        };
+        TaskLateStateDto: {
+            /** @enum {string} */
+            code: "en_retard";
+            jours: number;
+        };
+        TaskExtendedStateDto: {
+            /** @enum {string} */
+            code: "prolongee";
+            jusquau: string;
+            jours: number;
+        };
+        TaskInProgressStateDto: {
+            /** @enum {string} */
+            code: "en_cours";
+        };
+        TaskUpcomingStateDto: {
+            /** @enum {string} */
+            code: "a_venir";
+        };
+        CardDisabledStateDto: {
+            /** @enum {string} */
+            code: "desactivee";
+            motif: string;
+        };
+        CardSectionsStateDto: {
+            /** @enum {string} */
+            code: "rubriques";
+        };
+        CardLockedStateDto: {
+            /** @enum {string} */
+            code: "verrouillee";
+            attend: string[];
+        };
+        CardClosedStateDto: {
+            /** @enum {string} */
+            code: "close";
+            le: string | null;
+        };
+        CardOpenStateDto: {
+            /** @enum {string} */
+            code: "ouverte";
+        };
+        HoursTimeDto: {
+            /** @enum {string} */
+            type: "heures";
+            heures: number;
+        };
+        PerUnitTimeDto: {
+            /** @enum {string} */
+            type: "par_unite";
+            heures: number;
+            /** @enum {string} */
+            unite: "pièce" | "vue";
+        };
+        TotalTimeDto: {
+            /** @enum {string} */
+            type: "total";
+            heures: number;
+        };
+        SharedTimeDto: {
+            /** @enum {string} */
+            type: "partage";
+            libelle: string;
+            heures?: number;
+        };
+        GcChargeTimeDto: {
+            /** @enum {string} */
+            type: "charge_gc";
+            /** @enum {string} */
+            charge: "cachet" | "notice" | "timbre";
+        };
+        CardShareTimeDto: {
+            /** @enum {string} */
+            type: "part_carte";
+        };
+        NoTimeDto: {
+            /** @enum {string} */
+            type: "sans";
+        };
+        ReviewByDepositDto: {
+            /** @enum {string} */
+            mode: "depot";
+        };
+        ReviewByPersonDto: {
+            /** @enum {string} */
+            mode: "personne";
+            nom: string | null;
+            role: string;
+            motif?: string;
+        };
+        OpenProjectSummaryDto: {
+            id: string;
+            code: string;
+            client: string;
+            cellule: string | null;
+            jour: number;
+            horizon: number;
+            faites: number;
+            total: number;
+            enRetard: number;
+            livraisonDepassee: boolean;
+        };
+        TaskRefDto: {
+            projetId: string;
+            tacheId: string;
+        };
+        BoardKpiDto: {
+            remisesAValider: number;
+            aValiderParVous: components["schemas"]["TaskRefDto"][];
+            tachesEnRetard: number;
+            prolongations: number;
+            tsNonAcceptes: number;
+            mentions: number;
+        };
+        OpenProjectsBoardDto: {
+            gabarit: string;
+            budgetHeures: number;
+            projets: components["schemas"]["OpenProjectSummaryDto"][];
+            kpi: components["schemas"]["BoardKpiDto"];
+        };
+        AssignableEmployeeDto: {
+            id: string;
+            nom: string;
+            cellule: string | null;
+        };
+        MentionablePersonDto: {
+            id: string;
+            nom: string;
+        };
+        ProductionFiguresDto: {
+            ouverts: number;
+            enRetard: number;
+            livraisons15: number;
+            enAttente: number;
+            chargeMoyenne: number | null;
+        };
+        ProductionProjectDto: {
+            id: string;
+            code: string;
+            client: string;
+            cellule: string | null;
+        };
+        CurrentStepDto: {
+            numero: number;
+            libelle: string;
+            terminee: boolean;
+        };
+        LaggingStepDto: {
+            numero: number;
+            libelle: string;
+            taches: number;
+        };
+        PendingDecisionsDto: {
+            remises: number;
+            visas: number;
+            prolongations: number;
+            ts: number;
+        };
+        NextTrancheDto: {
+            /** @enum {string} */
+            code: "F2" | "F3";
+            /** @enum {string} */
+            statut: "absente" | "brouillon" | "emise";
+            attend: string[];
+        };
+        CardDeadlineDto: {
+            carte: string;
+            finLe: string;
+        };
+        ProductionRowDto: {
+            projet: components["schemas"]["ProductionProjectDto"];
+            /** @enum {string} */
+            statutChantier: "chantier" | "conception" | "livre";
+            etape: components["schemas"]["CurrentStepDto"] | null;
+            souffrance: components["schemas"]["LaggingStepDto"][];
+            faites: number;
+            total: number;
+            jour: number;
+            horizon: number;
+            livraisonLe: string;
+            livraisonDepassee: boolean;
+            enRetard: number;
+            prolongees: number;
+            attente: components["schemas"]["PendingDecisionsDto"];
+            tranche: components["schemas"]["NextTrancheDto"] | null;
+            echeances: components["schemas"]["CardDeadlineDto"][];
+        };
+        PeriodDto: {
+            debut: string;
+            fin: string;
+        };
+        LoadTargetDto: {
+            de: number;
+            a: number;
+        };
+        MemberWorkloadDto: {
+            id: string;
+            nom: string;
+            heures: number;
+            disponibles: number;
+            pourcentage: number | null;
+            joursAbsence: number;
+        };
+        CellWorkloadDto: {
+            code: string;
+            nom: string;
+            membres: components["schemas"]["MemberWorkloadDto"][];
+            moyenne: number | null;
+        };
+        CellsWorkloadDto: {
+            periode: components["schemas"]["PeriodDto"];
+            zone: components["schemas"]["LoadTargetDto"] | null;
+            cellules: components["schemas"]["CellWorkloadDto"][];
+        };
+        UpcomingDeliveryDto: {
+            projetId: string;
+            code: string;
+            client: string;
+            livraisonLe: string;
+        };
+        ProductionViewDto: {
+            /** @enum {string} */
+            perimetre: "mes_projets" | "tous";
+            chiffres: components["schemas"]["ProductionFiguresDto"];
+            lignes: components["schemas"]["ProductionRowDto"][];
+            charge: components["schemas"]["CellsWorkloadDto"];
+            livraisons: components["schemas"]["UpcomingDeliveryDto"][];
+        };
+        SubmissionToDecideDto: {
+            version: number;
+            /** Format: date-time */
+            remiseLe: string | null;
+            projetId: string;
+            code: string;
+            client: string;
+            tacheId: string;
+            tache: string;
+            carte: string;
+            assigne: string | null;
+        };
+        ExtensionToDecideDto: {
+            jusquau: string;
+            motif: string;
+            /** Format: date-time */
+            demandeLe: string;
+            finPrevue: string | null;
+            repousseLivraison: string | null;
+            projetId: string;
+            code: string;
+            client: string;
+            tacheId: string;
+            tache: string;
+            carte: string;
+            assigne: string | null;
+        };
+        VisaToAffixDto: {
+            /** Format: date-time */
+            valideeLe: string | null;
+            projetId: string;
+            code: string;
+            client: string;
+            tacheId: string;
+            tache: string;
+            carte: string;
+            assigne: string | null;
+        };
+        TsRequestToDecideDto: {
+            id: string;
+            projetId: string;
+            code: string;
+            client: string;
+            element: string;
+            reprise: string;
+            montantHt: number;
+            /** Format: date-time */
+            demandeLe: string;
+            demandePar: string | null;
+        };
+        ToDecideDto: {
+            remises: components["schemas"]["SubmissionToDecideDto"][];
+            prolongations: components["schemas"]["ExtensionToDecideDto"][];
+            visas: components["schemas"]["VisaToAffixDto"][];
+            ts: components["schemas"]["TsRequestToDecideDto"][];
+        };
+        MyMentionDto: {
+            id: string;
+            texte: string;
+            /** Format: date-time */
+            creeLe: string;
+            lue: boolean;
+            auteur: string | null;
+            auteurId: string | null;
+            projetId: string;
+            projetCode: string;
+            carteId: string;
+            tacheId: string | null;
+            cible: string;
+            racineId: string;
+        };
+        CommentRefDto: {
+            id: string;
+        };
+        ProjectClientDto: {
+            nom: string;
+            /** @enum {string} */
+            type: "entreprise" | "institution" | "particulier" | "sci";
+        };
+        OpenProjectCellDto: {
+            nom: string;
+            chef: string | null;
+        };
+        TemplateVersionDto: {
+            code: string;
+            libelle: string;
+        };
+        TrancheStatusesDto: {
+            /** @enum {string} */
+            F1: "absente" | "brouillon" | "emise";
+            /** @enum {string} */
+            F2: "absente" | "brouillon" | "emise";
+            /** @enum {string} */
+            F3: "absente" | "brouillon" | "emise";
+        };
+        TsOptionDto: {
+            carteId: string;
+            libelle: string;
+            heures: number;
+        };
+        InvoiceWaitsDto: {
+            F2: string[];
+            F3: string[];
+        };
+        ProjectStepDto: {
+            numero: number;
+            faites: number;
+            total: number;
+            enRetard: number;
+            /** @enum {string} */
+            etat: "a_venir" | "en_cours" | "en_retard" | "terminee";
+            cle: string;
+            libelle: string;
+        };
+        SubmissionPieceDto: {
+            id: string;
+            nom: string;
+            version: number;
+        };
+        TsQuoteDto: {
+            devisId: string;
+            reference: string | null;
+            /** @enum {string} */
+            statut: "accepte" | "brouillon" | "envoye" | "expire" | "refuse" | "transforme";
+        };
+        TaskVisaStateDto: {
+            le: string | null;
+            par: string | null;
+            nonTrace: boolean;
+        };
+        TaskAssigneeDto: {
+            id: string;
+            nom: string;
+            cellule: string | null;
+        };
+        PendingExtensionDto: {
+            jusquau: string;
+            motif: string;
+            le: string | null;
+        };
+        TaskExtensionsDto: {
+            enAttente: components["schemas"]["PendingExtensionDto"] | null;
+            accordeeJusquau: string | null;
+        };
+        ProjectTaskDto: {
+            temps: components["schemas"]["HoursTimeDto"] | components["schemas"]["PerUnitTimeDto"] | components["schemas"]["TotalTimeDto"] | components["schemas"]["SharedTimeDto"] | components["schemas"]["GcChargeTimeDto"] | components["schemas"]["CardShareTimeDto"] | components["schemas"]["NoTimeDto"];
+            validation: components["schemas"]["ReviewByDepositDto"] | components["schemas"]["ReviewByPersonDto"];
+            etat: components["schemas"]["TaskDisabledStateDto"] | components["schemas"]["TaskNotNeededStateDto"] | components["schemas"]["TaskLockedStateDto"] | components["schemas"]["TaskValidatedStateDto"] | components["schemas"]["TaskAwaitingVisaStateDto"] | components["schemas"]["TaskToReviewStateDto"] | components["schemas"]["TaskReworkStateDto"] | components["schemas"]["TaskLateStateDto"] | components["schemas"]["TaskExtendedStateDto"] | components["schemas"]["TaskInProgressStateDto"] | components["schemas"]["TaskUpcomingStateDto"];
+            id: string;
+            cle: string;
+            libelle: string;
+            descriptif: string | null;
+            sourceNative: boolean;
+            fichierObligatoire: boolean;
+            debutJ: number | null;
+            finJ: number | null;
+            debutLe: string | null;
+            finLe: string | null;
+            heures: number | null;
+            /** @enum {string} */
+            statut: "a_faire" | "a_valider" | "non_necessaire" | "reprise" | "validee";
+            motif: string | null;
+            version: number;
+            pieces: components["schemas"]["SubmissionPieceDto"][];
+            avenant: components["schemas"]["TsQuoteDto"] | null;
+            valideeLe: string | null;
+            valideePar: string | null;
+            visa: components["schemas"]["TaskVisaStateDto"] | null;
+            peutViser: boolean;
+            assigne: components["schemas"]["TaskAssigneeDto"] | null;
+            aMoi: boolean;
+            peutDecider: boolean;
+            prolongation: components["schemas"]["TaskExtensionsDto"];
+            peutDemanderProlongation: boolean;
+            peutDeciderProlongation: boolean;
+            peutRemettre: boolean;
+            fil: number;
+        };
+        ProjectCardDto: {
+            temps: (components["schemas"]["HoursTimeDto"] | components["schemas"]["PerUnitTimeDto"] | components["schemas"]["TotalTimeDto"] | components["schemas"]["SharedTimeDto"] | components["schemas"]["GcChargeTimeDto"] | components["schemas"]["CardShareTimeDto"] | components["schemas"]["NoTimeDto"]) | null;
+            etat: components["schemas"]["CardDisabledStateDto"] | components["schemas"]["CardSectionsStateDto"] | components["schemas"]["CardLockedStateDto"] | components["schemas"]["CardClosedStateDto"] | components["schemas"]["CardOpenStateDto"];
+            id: string;
+            etapeNumero: number;
+            etapeLibelle: string;
+            cle: string;
+            libelle: string;
+            note: string | null;
+            descriptif: string | null;
+            etiquette: string | null;
+            debutJ: number | null;
+            finJ: number | null;
+            debutLe: string | null;
+            finLe: string | null;
+            client: boolean;
+            fichiers: boolean;
+            fil: number;
+            taches: components["schemas"]["ProjectTaskDto"][];
+        };
+        OpenProjectFileDto: {
+            id: string;
+            code: string;
+            client: components["schemas"]["ProjectClientDto"];
+            cellule: components["schemas"]["OpenProjectCellDto"] | null;
+            jeSuisChef: boolean;
+            pilote: string;
+            version: components["schemas"]["TemplateVersionDto"] | null;
+            offre: string | null;
+            ouvertLe: string | null;
+            livraisonLe: string;
+            jour: number;
+            horizon: number;
+            budgetHeures: number | null;
+            dateVisiteSite: string | null;
+            /** @enum {string} */
+            statutChantier: "chantier" | "conception" | "livre";
+            factures: components["schemas"]["TrancheStatusesDto"];
+            peutAssigner: boolean;
+            optionsTs: components["schemas"]["TsOptionDto"][];
+            attentes: components["schemas"]["InvoiceWaitsDto"];
+            etapes: components["schemas"]["ProjectStepDto"][];
+            cartes: components["schemas"]["ProjectCardDto"][];
+        };
         SiteStatusDto: {
             /** @enum {string} */
             statut: "chantier" | "conception" | "livre";
         };
+        SiteStatusResultDto: {
+            /** @enum {string} */
+            statutChantier: "chantier" | "conception" | "livre";
+        };
         SiteVisitDateDto: {
             date: string | null;
+        };
+        SiteVisitDateResultDto: {
+            dateVisiteSite: string | null;
+        };
+        EmployeeLoadDto: {
+            collaborateurId: string;
+            disponibles: number;
+            assignees: number;
+            joursAbsence: number;
+            pourcentage: number | null;
+        };
+        TaskWorkloadDto: {
+            periode: components["schemas"]["PeriodDto"] | null;
+            zone: components["schemas"]["LoadTargetDto"] | null;
+            charges: components["schemas"]["EmployeeLoadDto"][];
+        };
+        TaskEventDto: {
+            id: string;
+            /** @enum {string} */
+            type: "assignation" | "prolongation" | "relance" | "remise" | "reprise" | "validation" | "visa";
+            detail: string;
+            par: string | null;
+            /** Format: date-time */
+            le: string;
         };
         AssignTaskDto: {
             collaborateurId: string | null;
             carte?: boolean;
+        };
+        AssignmentResultDto: {
+            modifiees: number;
         };
         SubmissionAttachmentDto: {
             nom: string;
@@ -3983,21 +4495,75 @@ export interface components {
             pieces?: components["schemas"]["SubmissionAttachmentDto"][];
             commentaire?: string;
         };
+        SubmissionResultDto: {
+            /** @enum {string} */
+            statut: "a_valider" | "validee";
+            version: number;
+        };
+        SubmissionFileDto: {
+            nom: string;
+            url: string;
+        };
         RequestExtensionDto: {
             jusquau: string;
             motif: string;
         };
+        ExtensionRequestResultDto: {
+            ok: boolean;
+        };
         DecideExtensionDto: {
             accorder: boolean;
+        };
+        ExtensionDecisionResultDto: {
+            /** @enum {string} */
+            decision: "accordee" | "refusee";
         };
         DecideTaskDto: {
             /** @enum {string} */
             decision: "renvoyer" | "valider";
             motif?: string;
         };
+        ReviewDecisionResultDto: {
+            /** @enum {string} */
+            statut: "reprise" | "validee";
+        };
         TaskVisaDto: {
             apposer: boolean;
             motif?: string;
+        };
+        VisaResultDto: {
+            /** @enum {string} */
+            visa: "appose" | "refuse";
+        };
+        CommentAuthorDto: {
+            id: string;
+            nom: string | null;
+        };
+        MentionedPersonDto: {
+            id: string;
+            nom: string;
+        };
+        ThreadCommentDto: {
+            id: string;
+            texte: string;
+            /** Format: date-time */
+            le: string;
+            /** Format: date-time */
+            resoluLe: string | null;
+            auteur: components["schemas"]["CommentAuthorDto"] | null;
+            mentionne: components["schemas"]["MentionedPersonDto"] | null;
+        };
+        ThreadRootDto: {
+            ouvert: boolean;
+            reponses: components["schemas"]["ThreadCommentDto"][];
+            id: string;
+            texte: string;
+            /** Format: date-time */
+            le: string;
+            /** Format: date-time */
+            resoluLe: string | null;
+            auteur: components["schemas"]["CommentAuthorDto"] | null;
+            mentionne: components["schemas"]["MentionedPersonDto"] | null;
         };
         PostCommentDto: {
             carteId?: string;
@@ -4005,6 +4571,9 @@ export interface components {
             parentId?: string;
             texte: string;
             mentionneId?: string | null;
+        };
+        ResolutionDto: {
+            ok: boolean;
         };
         CreateCellDto: {
             /** @enum {string} */
@@ -4223,10 +4792,6 @@ export interface components {
             remisLe: string | null;
             aTemps: boolean | null;
             pieces: components["schemas"]["SubmissionFileRefDto"][];
-        };
-        SubmissionFileDto: {
-            nom: string;
-            url: string;
         };
         PendingPaymentChangeDto: {
             /** @enum {string} */
@@ -6664,7 +7229,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OpenProjectsBoardDto"];
+                };
             };
         };
     };
@@ -6683,7 +7250,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssignableEmployeeDto"][];
+                };
             };
         };
     };
@@ -6702,7 +7271,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MentionablePersonDto"][];
+                };
             };
         };
     };
@@ -6721,7 +7292,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProductionViewDto"];
+                };
             };
         };
     };
@@ -6740,7 +7313,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ToDecideDto"];
+                };
             };
         };
     };
@@ -6759,7 +7334,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MyMentionDto"][];
+                };
             };
         };
     };
@@ -6779,7 +7356,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommentRefDto"];
+                };
             };
         };
     };
@@ -6799,7 +7378,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["OpenProjectFileDto"];
+                };
             };
         };
     };
@@ -6823,7 +7404,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SiteStatusResultDto"];
+                };
             };
         };
     };
@@ -6847,7 +7430,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SiteVisitDateResultDto"];
+                };
             };
         };
     };
@@ -6869,7 +7454,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskWorkloadDto"];
                 };
             };
         };
@@ -6891,7 +7476,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TaskEventDto"][];
+                };
             };
         };
     };
@@ -6916,7 +7503,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssignmentResultDto"];
+                };
             };
         };
     };
@@ -6941,7 +7530,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubmissionResultDto"];
+                };
             };
         };
     };
@@ -6963,7 +7554,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubmissionFileDto"];
+                };
             };
         };
     };
@@ -6988,7 +7581,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ExtensionRequestResultDto"];
+                };
             };
         };
     };
@@ -7013,7 +7608,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ExtensionDecisionResultDto"];
+                };
             };
         };
     };
@@ -7038,7 +7635,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ReviewDecisionResultDto"];
+                };
             };
         };
     };
@@ -7063,7 +7662,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VisaResultDto"];
+                };
             };
         };
     };
@@ -7086,7 +7687,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ThreadRootDto"][];
+                };
             };
         };
     };
@@ -7110,7 +7713,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommentRefDto"];
+                };
             };
         };
     };
@@ -7131,7 +7736,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ResolutionDto"];
+                };
             };
         };
     };

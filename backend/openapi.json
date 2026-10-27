@@ -3018,7 +3018,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenProjectsBoardDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3041,7 +3048,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssignableEmployeeDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3064,7 +3081,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MentionablePersonDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3087,7 +3114,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductionViewDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3110,7 +3144,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToDecideDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3133,7 +3174,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MyMentionDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3164,7 +3215,14 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentRefDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3195,7 +3253,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenProjectFileDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3236,7 +3301,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteStatusResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3277,7 +3349,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteVisitDateResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3319,7 +3398,9 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWorkloadDto"
+                }
               }
             }
           }
@@ -3360,7 +3441,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskEventDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3409,7 +3500,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3458,7 +3556,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3505,7 +3610,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionFileDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3554,7 +3666,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionRequestResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3603,7 +3722,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionDecisionResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3652,7 +3778,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3701,7 +3834,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisaResultDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3748,7 +3888,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ThreadRootDto"
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3787,7 +3937,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentRefDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3826,7 +3983,14 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolutionDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -9959,6 +10123,2103 @@
           "lignes"
         ]
       },
+      "TaskDisabledStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "desactivee"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "TaskNotNeededStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "non_necessaire"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "TaskLockedStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "verrouillee"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "TaskValidatedStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "validee"
+            ]
+          },
+          "ecart": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "ecart"
+        ]
+      },
+      "TaskAwaitingVisaStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "a_viser"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "TaskToReviewStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "a_valider"
+            ]
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "version"
+        ]
+      },
+      "TaskReworkStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "reprise"
+            ]
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "version"
+        ]
+      },
+      "TaskLateStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "en_retard"
+            ]
+          },
+          "jours": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "jours"
+        ]
+      },
+      "TaskExtendedStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "prolongee"
+            ]
+          },
+          "jusquau": {
+            "type": "string"
+          },
+          "jours": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "jusquau",
+          "jours"
+        ]
+      },
+      "TaskInProgressStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "en_cours"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "TaskUpcomingStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "a_venir"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "CardDisabledStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "desactivee"
+            ]
+          },
+          "motif": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "motif"
+        ]
+      },
+      "CardSectionsStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "rubriques"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "CardLockedStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "verrouillee"
+            ]
+          },
+          "attend": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "attend"
+        ]
+      },
+      "CardClosedStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "close"
+            ]
+          },
+          "le": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "le"
+        ]
+      },
+      "CardOpenStateDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "ouverte"
+            ]
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "HoursTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "heures"
+            ]
+          },
+          "heures": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "heures"
+        ]
+      },
+      "PerUnitTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "par_unite"
+            ]
+          },
+          "heures": {
+            "type": "number"
+          },
+          "unite": {
+            "type": "string",
+            "enum": [
+              "pièce",
+              "vue"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "heures",
+          "unite"
+        ]
+      },
+      "TotalTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "total"
+            ]
+          },
+          "heures": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "heures"
+        ]
+      },
+      "SharedTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "partage"
+            ]
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "heures": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "libelle"
+        ]
+      },
+      "GcChargeTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "charge_gc"
+            ]
+          },
+          "charge": {
+            "type": "string",
+            "enum": [
+              "cachet",
+              "notice",
+              "timbre"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "charge"
+        ]
+      },
+      "CardShareTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "part_carte"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "NoTimeDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "sans"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "ReviewByDepositDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "depot"
+            ]
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "ReviewByPersonDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "personne"
+            ]
+          },
+          "nom": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string"
+          },
+          "motif": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "nom",
+          "role"
+        ]
+      },
+      "OpenProjectSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          },
+          "jour": {
+            "type": "number"
+          },
+          "horizon": {
+            "type": "number"
+          },
+          "faites": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "enRetard": {
+            "type": "number"
+          },
+          "livraisonDepassee": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "client",
+          "cellule",
+          "jour",
+          "horizon",
+          "faites",
+          "total",
+          "enRetard",
+          "livraisonDepassee"
+        ]
+      },
+      "TaskRefDto": {
+        "type": "object",
+        "properties": {
+          "projetId": {
+            "type": "string"
+          },
+          "tacheId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projetId",
+          "tacheId"
+        ]
+      },
+      "BoardKpiDto": {
+        "type": "object",
+        "properties": {
+          "remisesAValider": {
+            "type": "number"
+          },
+          "aValiderParVous": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskRefDto"
+            }
+          },
+          "tachesEnRetard": {
+            "type": "number"
+          },
+          "prolongations": {
+            "type": "number"
+          },
+          "tsNonAcceptes": {
+            "type": "number"
+          },
+          "mentions": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "remisesAValider",
+          "aValiderParVous",
+          "tachesEnRetard",
+          "prolongations",
+          "tsNonAcceptes",
+          "mentions"
+        ]
+      },
+      "OpenProjectsBoardDto": {
+        "type": "object",
+        "properties": {
+          "gabarit": {
+            "type": "string"
+          },
+          "budgetHeures": {
+            "type": "number"
+          },
+          "projets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpenProjectSummaryDto"
+            }
+          },
+          "kpi": {
+            "$ref": "#/components/schemas/BoardKpiDto"
+          }
+        },
+        "required": [
+          "gabarit",
+          "budgetHeures",
+          "projets",
+          "kpi"
+        ]
+      },
+      "AssignableEmployeeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "cellule"
+        ]
+      },
+      "MentionablePersonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nom"
+        ]
+      },
+      "ProductionFiguresDto": {
+        "type": "object",
+        "properties": {
+          "ouverts": {
+            "type": "number"
+          },
+          "enRetard": {
+            "type": "number"
+          },
+          "livraisons15": {
+            "type": "number"
+          },
+          "enAttente": {
+            "type": "number"
+          },
+          "chargeMoyenne": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "ouverts",
+          "enRetard",
+          "livraisons15",
+          "enAttente",
+          "chargeMoyenne"
+        ]
+      },
+      "ProductionProjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "client",
+          "cellule"
+        ]
+      },
+      "CurrentStepDto": {
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "number"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "terminee": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "numero",
+          "libelle",
+          "terminee"
+        ]
+      },
+      "LaggingStepDto": {
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "number"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "taches": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "numero",
+          "libelle",
+          "taches"
+        ]
+      },
+      "PendingDecisionsDto": {
+        "type": "object",
+        "properties": {
+          "remises": {
+            "type": "number"
+          },
+          "visas": {
+            "type": "number"
+          },
+          "prolongations": {
+            "type": "number"
+          },
+          "ts": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "remises",
+          "visas",
+          "prolongations",
+          "ts"
+        ]
+      },
+      "NextTrancheDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "F2",
+              "F3"
+            ]
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "absente",
+              "brouillon",
+              "emise"
+            ]
+          },
+          "attend": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "statut",
+          "attend"
+        ]
+      },
+      "CardDeadlineDto": {
+        "type": "object",
+        "properties": {
+          "carte": {
+            "type": "string"
+          },
+          "finLe": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "carte",
+          "finLe"
+        ]
+      },
+      "ProductionRowDto": {
+        "type": "object",
+        "properties": {
+          "projet": {
+            "$ref": "#/components/schemas/ProductionProjectDto"
+          },
+          "statutChantier": {
+            "type": "string",
+            "enum": [
+              "chantier",
+              "conception",
+              "livre"
+            ]
+          },
+          "etape": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrentStepDto"
+              }
+            ]
+          },
+          "souffrance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LaggingStepDto"
+            }
+          },
+          "faites": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "jour": {
+            "type": "number"
+          },
+          "horizon": {
+            "type": "number"
+          },
+          "livraisonLe": {
+            "type": "string"
+          },
+          "livraisonDepassee": {
+            "type": "boolean"
+          },
+          "enRetard": {
+            "type": "number"
+          },
+          "prolongees": {
+            "type": "number"
+          },
+          "attente": {
+            "$ref": "#/components/schemas/PendingDecisionsDto"
+          },
+          "tranche": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NextTrancheDto"
+              }
+            ]
+          },
+          "echeances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CardDeadlineDto"
+            }
+          }
+        },
+        "required": [
+          "projet",
+          "statutChantier",
+          "etape",
+          "souffrance",
+          "faites",
+          "total",
+          "jour",
+          "horizon",
+          "livraisonLe",
+          "livraisonDepassee",
+          "enRetard",
+          "prolongees",
+          "attente",
+          "tranche",
+          "echeances"
+        ]
+      },
+      "PeriodDto": {
+        "type": "object",
+        "properties": {
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "debut",
+          "fin"
+        ]
+      },
+      "LoadTargetDto": {
+        "type": "object",
+        "properties": {
+          "de": {
+            "type": "number"
+          },
+          "a": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "de",
+          "a"
+        ]
+      },
+      "MemberWorkloadDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "heures": {
+            "type": "number"
+          },
+          "disponibles": {
+            "type": "number"
+          },
+          "pourcentage": {
+            "type": "number",
+            "nullable": true
+          },
+          "joursAbsence": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "heures",
+          "disponibles",
+          "pourcentage",
+          "joursAbsence"
+        ]
+      },
+      "CellWorkloadDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "membres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberWorkloadDto"
+            }
+          },
+          "moyenne": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "code",
+          "nom",
+          "membres",
+          "moyenne"
+        ]
+      },
+      "CellsWorkloadDto": {
+        "type": "object",
+        "properties": {
+          "periode": {
+            "$ref": "#/components/schemas/PeriodDto"
+          },
+          "zone": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LoadTargetDto"
+              }
+            ]
+          },
+          "cellules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CellWorkloadDto"
+            }
+          }
+        },
+        "required": [
+          "periode",
+          "zone",
+          "cellules"
+        ]
+      },
+      "UpcomingDeliveryDto": {
+        "type": "object",
+        "properties": {
+          "projetId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "livraisonLe": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projetId",
+          "code",
+          "client",
+          "livraisonLe"
+        ]
+      },
+      "ProductionViewDto": {
+        "type": "object",
+        "properties": {
+          "perimetre": {
+            "type": "string",
+            "enum": [
+              "mes_projets",
+              "tous"
+            ]
+          },
+          "chiffres": {
+            "$ref": "#/components/schemas/ProductionFiguresDto"
+          },
+          "lignes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductionRowDto"
+            }
+          },
+          "charge": {
+            "$ref": "#/components/schemas/CellsWorkloadDto"
+          },
+          "livraisons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpcomingDeliveryDto"
+            }
+          }
+        },
+        "required": [
+          "perimetre",
+          "chiffres",
+          "lignes",
+          "charge",
+          "livraisons"
+        ]
+      },
+      "SubmissionToDecideDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "remiseLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "tacheId": {
+            "type": "string"
+          },
+          "tache": {
+            "type": "string"
+          },
+          "carte": {
+            "type": "string"
+          },
+          "assigne": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "version",
+          "remiseLe",
+          "projetId",
+          "code",
+          "client",
+          "tacheId",
+          "tache",
+          "carte",
+          "assigne"
+        ]
+      },
+      "ExtensionToDecideDto": {
+        "type": "object",
+        "properties": {
+          "jusquau": {
+            "type": "string"
+          },
+          "motif": {
+            "type": "string"
+          },
+          "demandeLe": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "finPrevue": {
+            "type": "string",
+            "nullable": true
+          },
+          "repousseLivraison": {
+            "type": "string",
+            "nullable": true
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "tacheId": {
+            "type": "string"
+          },
+          "tache": {
+            "type": "string"
+          },
+          "carte": {
+            "type": "string"
+          },
+          "assigne": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "jusquau",
+          "motif",
+          "demandeLe",
+          "finPrevue",
+          "repousseLivraison",
+          "projetId",
+          "code",
+          "client",
+          "tacheId",
+          "tache",
+          "carte",
+          "assigne"
+        ]
+      },
+      "VisaToAffixDto": {
+        "type": "object",
+        "properties": {
+          "valideeLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "tacheId": {
+            "type": "string"
+          },
+          "tache": {
+            "type": "string"
+          },
+          "carte": {
+            "type": "string"
+          },
+          "assigne": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "valideeLe",
+          "projetId",
+          "code",
+          "client",
+          "tacheId",
+          "tache",
+          "carte",
+          "assigne"
+        ]
+      },
+      "TsRequestToDecideDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "element": {
+            "type": "string"
+          },
+          "reprise": {
+            "type": "string"
+          },
+          "montantHt": {
+            "type": "number"
+          },
+          "demandeLe": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "demandePar": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "projetId",
+          "code",
+          "client",
+          "element",
+          "reprise",
+          "montantHt",
+          "demandeLe",
+          "demandePar"
+        ]
+      },
+      "ToDecideDto": {
+        "type": "object",
+        "properties": {
+          "remises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionToDecideDto"
+            }
+          },
+          "prolongations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtensionToDecideDto"
+            }
+          },
+          "visas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisaToAffixDto"
+            }
+          },
+          "ts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TsRequestToDecideDto"
+            }
+          }
+        },
+        "required": [
+          "remises",
+          "prolongations",
+          "visas",
+          "ts"
+        ]
+      },
+      "MyMentionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "texte": {
+            "type": "string"
+          },
+          "creeLe": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "lue": {
+            "type": "boolean"
+          },
+          "auteur": {
+            "type": "string",
+            "nullable": true
+          },
+          "auteurId": {
+            "type": "string",
+            "nullable": true
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "projetCode": {
+            "type": "string"
+          },
+          "carteId": {
+            "type": "string"
+          },
+          "tacheId": {
+            "type": "string",
+            "nullable": true
+          },
+          "cible": {
+            "type": "string"
+          },
+          "racineId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "texte",
+          "creeLe",
+          "lue",
+          "auteur",
+          "auteurId",
+          "projetId",
+          "projetCode",
+          "carteId",
+          "tacheId",
+          "cible",
+          "racineId"
+        ]
+      },
+      "CommentRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "ProjectClientDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "entreprise",
+              "institution",
+              "particulier",
+              "sci"
+            ]
+          }
+        },
+        "required": [
+          "nom",
+          "type"
+        ]
+      },
+      "OpenProjectCellDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "chef": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "nom",
+          "chef"
+        ]
+      },
+      "TemplateVersionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "libelle"
+        ]
+      },
+      "TrancheStatusesDto": {
+        "type": "object",
+        "properties": {
+          "F1": {
+            "type": "string",
+            "enum": [
+              "absente",
+              "brouillon",
+              "emise"
+            ]
+          },
+          "F2": {
+            "type": "string",
+            "enum": [
+              "absente",
+              "brouillon",
+              "emise"
+            ]
+          },
+          "F3": {
+            "type": "string",
+            "enum": [
+              "absente",
+              "brouillon",
+              "emise"
+            ]
+          }
+        },
+        "required": [
+          "F1",
+          "F2",
+          "F3"
+        ]
+      },
+      "TsOptionDto": {
+        "type": "object",
+        "properties": {
+          "carteId": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "heures": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "carteId",
+          "libelle",
+          "heures"
+        ]
+      },
+      "InvoiceWaitsDto": {
+        "type": "object",
+        "properties": {
+          "F2": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "F3": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "F2",
+          "F3"
+        ]
+      },
+      "ProjectStepDto": {
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "number"
+          },
+          "faites": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "enRetard": {
+            "type": "number"
+          },
+          "etat": {
+            "type": "string",
+            "enum": [
+              "a_venir",
+              "en_cours",
+              "en_retard",
+              "terminee"
+            ]
+          },
+          "cle": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "numero",
+          "faites",
+          "total",
+          "enRetard",
+          "etat",
+          "cle",
+          "libelle"
+        ]
+      },
+      "SubmissionPieceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "version"
+        ]
+      },
+      "TsQuoteDto": {
+        "type": "object",
+        "properties": {
+          "devisId": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "accepte",
+              "brouillon",
+              "envoye",
+              "expire",
+              "refuse",
+              "transforme"
+            ]
+          }
+        },
+        "required": [
+          "devisId",
+          "reference",
+          "statut"
+        ]
+      },
+      "TaskVisaStateDto": {
+        "type": "object",
+        "properties": {
+          "le": {
+            "type": "string",
+            "nullable": true
+          },
+          "par": {
+            "type": "string",
+            "nullable": true
+          },
+          "nonTrace": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "le",
+          "par",
+          "nonTrace"
+        ]
+      },
+      "TaskAssigneeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "cellule"
+        ]
+      },
+      "PendingExtensionDto": {
+        "type": "object",
+        "properties": {
+          "jusquau": {
+            "type": "string"
+          },
+          "motif": {
+            "type": "string"
+          },
+          "le": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "jusquau",
+          "motif",
+          "le"
+        ]
+      },
+      "TaskExtensionsDto": {
+        "type": "object",
+        "properties": {
+          "enAttente": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PendingExtensionDto"
+              }
+            ]
+          },
+          "accordeeJusquau": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enAttente",
+          "accordeeJusquau"
+        ]
+      },
+      "ProjectTaskDto": {
+        "type": "object",
+        "properties": {
+          "temps": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/HoursTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/PerUnitTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/TotalTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/SharedTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/GcChargeTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/CardShareTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/NoTimeDto"
+              }
+            ]
+          },
+          "validation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ReviewByDepositDto"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewByPersonDto"
+              }
+            ]
+          },
+          "etat": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskDisabledStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskNotNeededStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskLockedStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskValidatedStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskAwaitingVisaStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskToReviewStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskReworkStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskLateStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskExtendedStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskInProgressStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/TaskUpcomingStateDto"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "cle": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "descriptif": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceNative": {
+            "type": "boolean"
+          },
+          "fichierObligatoire": {
+            "type": "boolean"
+          },
+          "debutJ": {
+            "type": "number",
+            "nullable": true
+          },
+          "finJ": {
+            "type": "number",
+            "nullable": true
+          },
+          "debutLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "finLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "heures": {
+            "type": "number",
+            "nullable": true
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "a_faire",
+              "a_valider",
+              "non_necessaire",
+              "reprise",
+              "validee"
+            ]
+          },
+          "motif": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "pieces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionPieceDto"
+            }
+          },
+          "avenant": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TsQuoteDto"
+              }
+            ]
+          },
+          "valideeLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "valideePar": {
+            "type": "string",
+            "nullable": true
+          },
+          "visa": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskVisaStateDto"
+              }
+            ]
+          },
+          "peutViser": {
+            "type": "boolean"
+          },
+          "assigne": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskAssigneeDto"
+              }
+            ]
+          },
+          "aMoi": {
+            "type": "boolean"
+          },
+          "peutDecider": {
+            "type": "boolean"
+          },
+          "prolongation": {
+            "$ref": "#/components/schemas/TaskExtensionsDto"
+          },
+          "peutDemanderProlongation": {
+            "type": "boolean"
+          },
+          "peutDeciderProlongation": {
+            "type": "boolean"
+          },
+          "peutRemettre": {
+            "type": "boolean"
+          },
+          "fil": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "temps",
+          "validation",
+          "etat",
+          "id",
+          "cle",
+          "libelle",
+          "descriptif",
+          "sourceNative",
+          "fichierObligatoire",
+          "debutJ",
+          "finJ",
+          "debutLe",
+          "finLe",
+          "heures",
+          "statut",
+          "motif",
+          "version",
+          "pieces",
+          "avenant",
+          "valideeLe",
+          "valideePar",
+          "visa",
+          "peutViser",
+          "assigne",
+          "aMoi",
+          "peutDecider",
+          "prolongation",
+          "peutDemanderProlongation",
+          "peutDeciderProlongation",
+          "peutRemettre",
+          "fil"
+        ]
+      },
+      "ProjectCardDto": {
+        "type": "object",
+        "properties": {
+          "temps": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/HoursTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/PerUnitTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/TotalTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/SharedTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/GcChargeTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/CardShareTimeDto"
+              },
+              {
+                "$ref": "#/components/schemas/NoTimeDto"
+              }
+            ]
+          },
+          "etat": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CardDisabledStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/CardSectionsStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/CardLockedStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/CardClosedStateDto"
+              },
+              {
+                "$ref": "#/components/schemas/CardOpenStateDto"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "etapeNumero": {
+            "type": "number"
+          },
+          "etapeLibelle": {
+            "type": "string"
+          },
+          "cle": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "descriptif": {
+            "type": "string",
+            "nullable": true
+          },
+          "etiquette": {
+            "type": "string",
+            "nullable": true
+          },
+          "debutJ": {
+            "type": "number",
+            "nullable": true
+          },
+          "finJ": {
+            "type": "number",
+            "nullable": true
+          },
+          "debutLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "finLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "client": {
+            "type": "boolean"
+          },
+          "fichiers": {
+            "type": "boolean"
+          },
+          "fil": {
+            "type": "number"
+          },
+          "taches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectTaskDto"
+            }
+          }
+        },
+        "required": [
+          "temps",
+          "etat",
+          "id",
+          "etapeNumero",
+          "etapeLibelle",
+          "cle",
+          "libelle",
+          "note",
+          "descriptif",
+          "etiquette",
+          "debutJ",
+          "finJ",
+          "debutLe",
+          "finLe",
+          "client",
+          "fichiers",
+          "fil",
+          "taches"
+        ]
+      },
+      "OpenProjectFileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ProjectClientDto"
+          },
+          "cellule": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpenProjectCellDto"
+              }
+            ]
+          },
+          "jeSuisChef": {
+            "type": "boolean"
+          },
+          "pilote": {
+            "type": "string"
+          },
+          "version": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TemplateVersionDto"
+              }
+            ]
+          },
+          "offre": {
+            "type": "string",
+            "nullable": true
+          },
+          "ouvertLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "livraisonLe": {
+            "type": "string"
+          },
+          "jour": {
+            "type": "number"
+          },
+          "horizon": {
+            "type": "number"
+          },
+          "budgetHeures": {
+            "type": "number",
+            "nullable": true
+          },
+          "dateVisiteSite": {
+            "type": "string",
+            "nullable": true
+          },
+          "statutChantier": {
+            "type": "string",
+            "enum": [
+              "chantier",
+              "conception",
+              "livre"
+            ]
+          },
+          "factures": {
+            "$ref": "#/components/schemas/TrancheStatusesDto"
+          },
+          "peutAssigner": {
+            "type": "boolean"
+          },
+          "optionsTs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TsOptionDto"
+            }
+          },
+          "attentes": {
+            "$ref": "#/components/schemas/InvoiceWaitsDto"
+          },
+          "etapes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectStepDto"
+            }
+          },
+          "cartes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectCardDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "client",
+          "cellule",
+          "jeSuisChef",
+          "pilote",
+          "version",
+          "offre",
+          "ouvertLe",
+          "livraisonLe",
+          "jour",
+          "horizon",
+          "budgetHeures",
+          "dateVisiteSite",
+          "statutChantier",
+          "factures",
+          "peutAssigner",
+          "optionsTs",
+          "attentes",
+          "etapes",
+          "cartes"
+        ]
+      },
       "SiteStatusDto": {
         "type": "object",
         "properties": {
@@ -9975,6 +12236,22 @@
           "statut"
         ]
       },
+      "SiteStatusResultDto": {
+        "type": "object",
+        "properties": {
+          "statutChantier": {
+            "type": "string",
+            "enum": [
+              "chantier",
+              "conception",
+              "livre"
+            ]
+          }
+        },
+        "required": [
+          "statutChantier"
+        ]
+      },
       "SiteVisitDateDto": {
         "type": "object",
         "properties": {
@@ -9986,6 +12263,118 @@
         },
         "required": [
           "date"
+        ]
+      },
+      "SiteVisitDateResultDto": {
+        "type": "object",
+        "properties": {
+          "dateVisiteSite": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "dateVisiteSite"
+        ]
+      },
+      "EmployeeLoadDto": {
+        "type": "object",
+        "properties": {
+          "collaborateurId": {
+            "type": "string"
+          },
+          "disponibles": {
+            "type": "number"
+          },
+          "assignees": {
+            "type": "number"
+          },
+          "joursAbsence": {
+            "type": "number"
+          },
+          "pourcentage": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "collaborateurId",
+          "disponibles",
+          "assignees",
+          "joursAbsence",
+          "pourcentage"
+        ]
+      },
+      "TaskWorkloadDto": {
+        "type": "object",
+        "properties": {
+          "periode": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PeriodDto"
+              }
+            ]
+          },
+          "zone": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LoadTargetDto"
+              }
+            ]
+          },
+          "charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeLoadDto"
+            }
+          }
+        },
+        "required": [
+          "periode",
+          "zone",
+          "charges"
+        ]
+      },
+      "TaskEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "assignation",
+              "prolongation",
+              "relance",
+              "remise",
+              "reprise",
+              "validation",
+              "visa"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "par": {
+            "type": "string",
+            "nullable": true
+          },
+          "le": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "detail",
+          "par",
+          "le"
         ]
       },
       "AssignTaskDto": {
@@ -10001,6 +12390,17 @@
         },
         "required": [
           "collaborateurId"
+        ]
+      },
+      "AssignmentResultDto": {
+        "type": "object",
+        "properties": {
+          "modifiees": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "modifiees"
         ]
       },
       "SubmissionAttachmentDto": {
@@ -10034,6 +12434,40 @@
           }
         }
       },
+      "SubmissionResultDto": {
+        "type": "object",
+        "properties": {
+          "statut": {
+            "type": "string",
+            "enum": [
+              "a_valider",
+              "validee"
+            ]
+          },
+          "version": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "statut",
+          "version"
+        ]
+      },
+      "SubmissionFileDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nom",
+          "url"
+        ]
+      },
       "RequestExtensionDto": {
         "type": "object",
         "properties": {
@@ -10052,6 +12486,17 @@
           "motif"
         ]
       },
+      "ExtensionRequestResultDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      },
       "DecideExtensionDto": {
         "type": "object",
         "properties": {
@@ -10061,6 +12506,21 @@
         },
         "required": [
           "accorder"
+        ]
+      },
+      "ExtensionDecisionResultDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accordee",
+              "refusee"
+            ]
+          }
+        },
+        "required": [
+          "decision"
         ]
       },
       "DecideTaskDto": {
@@ -10083,6 +12543,21 @@
           "decision"
         ]
       },
+      "ReviewDecisionResultDto": {
+        "type": "object",
+        "properties": {
+          "statut": {
+            "type": "string",
+            "enum": [
+              "reprise",
+              "validee"
+            ]
+          }
+        },
+        "required": [
+          "statut"
+        ]
+      },
       "TaskVisaDto": {
         "type": "object",
         "properties": {
@@ -10096,6 +12571,155 @@
         },
         "required": [
           "apposer"
+        ]
+      },
+      "VisaResultDto": {
+        "type": "object",
+        "properties": {
+          "visa": {
+            "type": "string",
+            "enum": [
+              "appose",
+              "refuse"
+            ]
+          }
+        },
+        "required": [
+          "visa"
+        ]
+      },
+      "CommentAuthorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom"
+        ]
+      },
+      "MentionedPersonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nom"
+        ]
+      },
+      "ThreadCommentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "texte": {
+            "type": "string"
+          },
+          "le": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resoluLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "auteur": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommentAuthorDto"
+              }
+            ]
+          },
+          "mentionne": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MentionedPersonDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "texte",
+          "le",
+          "resoluLe",
+          "auteur",
+          "mentionne"
+        ]
+      },
+      "ThreadRootDto": {
+        "type": "object",
+        "properties": {
+          "ouvert": {
+            "type": "boolean"
+          },
+          "reponses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThreadCommentDto"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "texte": {
+            "type": "string"
+          },
+          "le": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "resoluLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "auteur": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CommentAuthorDto"
+              }
+            ]
+          },
+          "mentionne": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MentionedPersonDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "ouvert",
+          "reponses",
+          "id",
+          "texte",
+          "le",
+          "resoluLe",
+          "auteur",
+          "mentionne"
         ]
       },
       "PostCommentDto": {
@@ -10122,6 +12746,17 @@
         },
         "required": [
           "texte"
+        ]
+      },
+      "ResolutionDto": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
         ]
       },
       "CreateCellDto": {
@@ -11064,21 +13699,6 @@
           "remisLe",
           "aTemps",
           "pieces"
-        ]
-      },
-      "SubmissionFileDto": {
-        "type": "object",
-        "properties": {
-          "nom": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "nom",
-          "url"
         ]
       },
       "PendingPaymentChangeDto": {

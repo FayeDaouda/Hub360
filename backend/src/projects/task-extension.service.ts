@@ -11,6 +11,7 @@ import { decisionContext } from './decision-context';
 import { assertInCircuit, canQualify, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
+import type { ExtensionDecisionResultDto } from './open-projects-view.dto';
 
 // Prolongations d'une tâche : demandées par l'assigné, décidées par le chef de
 // team, l'Architecte DPLG ou le CTO (livraison du projet repoussée, Dir. GC).
@@ -73,7 +74,13 @@ export class TaskExtensionService {
   }
 
   // Décision (chef de team, sauf sa propre tâche ; Architecte DPLG partout).
-  async decide(companyId: string, actor: Actor, projectId: string, taskId: string, grant: boolean) {
+  async decide(
+    companyId: string,
+    actor: Actor,
+    projectId: string,
+    taskId: string,
+    grant: boolean,
+  ): Promise<ExtensionDecisionResultDto> {
     assertInCircuit(actor.role);
     const task = await this.load(companyId, projectId, taskId);
     const pending = task.prolongations.find((p) => p.decision === null);
