@@ -6,9 +6,6 @@ import { ProjectsModule } from '../projects/projects.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AccesProjetGuard } from './acces-projet.guard';
 import { FacturationService } from './facturation/facturation.service';
-import { OuvertureProjetService } from './gabarit/ouverture.service';
-import { FilsProjetService } from './gabarit/fils-projet.service';
-import { ProjetsOuvertsController } from './gabarit/projets-ouverts.controller';
 import { FacturationController } from './facturation/facturation.controller';
 import { ControleInterneService } from './facturation/controle-interne.service';
 import { ParametresFacturationService } from './facturation/parametres-facturation.service';
@@ -19,20 +16,15 @@ import { FacturationCentraleController } from './facturation/facturation-central
 // frontière métier unique. Voir l'artifact « Backend Grey Concrete » §05 / §08.
 @Module({
   imports: [AuthModule, NotificationsModule, ReglagesModule, FinancesModule, ProjectsModule],
-  providers: [
-    AccesProjetGuard,
-    FacturationService,
-    ControleInterneService,
-    ParametresFacturationService,
-    OuvertureProjetService,
-    FilsProjetService,
-  ],
-  controllers: [ProjetsOuvertsController, FacturationController, FacturationCentraleController],
+  providers: [AccesProjetGuard, FacturationService, ControleInterneService, ParametresFacturationService],
+  controllers: [FacturationController, FacturationCentraleController],
   // FacturationService exporté pour DevisModule (conversion d'un devis
   // accepté en facture, cf. FacturationService.creerDepuisDevis).
   // ProjectsModule réexporté : états des projets (Équipes, Mes tâches,
   // Pilotage), alertes de l'accueil CEO, et les services des tâches (Mes
   // tâches et Mon espace : remise, validation ; avenants TS : ajout en TS).
+  // Les routes des projets ouverts (OpenProjectsController) vivent dans
+  // ProjectsModule depuis S3d.
   exports: [FacturationService, ProjectsModule],
 })
 export class ProjetsModule {}

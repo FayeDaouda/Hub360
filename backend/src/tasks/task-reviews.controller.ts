@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
 import { SubmissionFileDto, TaskToReviewDto } from './task-review.dto';
-import { TaskDecisionDto } from './tasks.dto';
+import { DecideTaskDto } from '../projects/open-projects.dto';
 import { TasksService } from './tasks.service';
 
 type R = { user: { userId: string; societeId: string; role: string } };
@@ -37,7 +37,7 @@ export class TaskReviewsController {
     @Req() req: R,
     @Param('projetId', ParseUUIDPipe) projectId: string,
     @Param('tacheId', ParseUUIDPipe) taskId: string,
-    @Body() dto: TaskDecisionDto,
+    @Body() dto: DecideTaskDto,
   ): Promise<TaskToReviewDto[]> {
     return this.tasks.decide(req.user, projectId, taskId, dto);
   }

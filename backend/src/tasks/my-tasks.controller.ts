@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
-import { RemettreTacheDto } from '../projets/gabarit/dto';
+import { SubmitTaskDto } from '../projects/open-projects.dto';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
 import { MyTasksViewDto } from './my-tasks-view.dto';
 import { TasksService } from './tasks.service';
@@ -26,7 +26,7 @@ export class MyTasksController {
     @Req() req: R,
     @Param('projetId', ParseUUIDPipe) projectId: string,
     @Param('tacheId', ParseUUIDPipe) taskId: string,
-    @Body() dto: RemettreTacheDto,
+    @Body() dto: SubmitTaskDto,
   ): Promise<MyTasksViewDto> {
     return this.tasks.submit(req.user, projectId, taskId, dto);
   }

@@ -9,7 +9,7 @@ import { formatDate, plural, todayIso, toIsoDay } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { Temps } from '../reglages/gabarit';
-import type { RemettreTacheDto } from '../projets/gabarit/dto';
+import type { SubmitTaskDto } from './open-projects.dto';
 import { workdaysAfter } from './work-calendar';
 import { submissionFileName } from './submission-file-name';
 import { decisionContext } from './decision-context';
@@ -32,7 +32,7 @@ export class TaskSubmissionService {
   // ou en reprise. Sans temps atelier, le dépôt vaut validation (exception
   // écrite au principe 4) ; sinon la remise vNN attend le chef de team (ou le
   // DPLG pour la tâche du chef).
-  async submit(companyId: string, actor: Actor, projectId: string, taskId: string, body: RemettreTacheDto = {}) {
+  async submit(companyId: string, actor: Actor, projectId: string, taskId: string, body: SubmitTaskDto = {}) {
     assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },

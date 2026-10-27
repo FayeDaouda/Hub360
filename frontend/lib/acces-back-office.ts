@@ -57,10 +57,10 @@ export const ROLE_CIO = 'CIO (transverse)';
 export const ROLE_CTO = 'CTO (transverse)';
 
 // Dir. GC = Architecte DPLG (validation en suppléance, ajout en TS) — même
-// nom que backend/src/projets/gabarit/validation.ts (ROLE_DPLG).
+// nom que backend/src/projects/review-rules.ts (ROLE_DPLG).
 export const ROLE_DIR_GC = 'Dir. GC';
 // Salarié : projets en lecture, limités à ceux où il a une tâche — même nom
-// que backend/src/projets/gabarit/validation.ts (ROLE_SALARIE).
+// que backend/src/projects/review-rules.ts (ROLE_EMPLOYEE).
 export const ROLE_SALARIE = 'Salarié';
 
 export const ROLE_CEO = 'CEO (transverse)';
@@ -69,7 +69,7 @@ export const ROLE_CFO = 'CFO';
 export const ROLE_COO = 'COO';
 
 // Lecture et commentaires dans les fils, sans action sur les tâches — même
-// liste que backend/src/projets/gabarit/validation.ts (ROLES_COMMENTAIRE_FIL).
+// liste que backend/src/projects/review-rules.ts (THREAD_COMMENT_ROLES).
 export function consultationEtCommentaires(session: Session): boolean {
   return [ROLE_CEO, ROLE_CFO].includes(session.role);
 }
