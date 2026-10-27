@@ -2,126 +2,97 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { ROLE_CEO } from '@/lib/acces-back-office';
+import { formatDate, plural } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { getNonLuesParType, marquerTypesLus } from '@/lib/notifications';
-import { getTasksToReview } from '@/features/my-tasks/api';
-import { getMonEspace } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
-import type { NotificationType, ProfilMonEspace } from '@/lib/types';
-import { AValider } from './a-valider';
-import { CongesAbsences, RemboursementsSante } from './demandes';
-import { MesDocuments } from './documents';
-import { Avatar } from './avatar';
-import { MesInformations } from './informations';
-import { MaCellule } from './ma-cellule';
-import { MonTemps } from './mon-temps';
-import { MesPerformances } from './performances';
-import { formatDate, plural } from '@hub/domain';
+import type { NotificationType } from '@/lib/types';
+import { getTasksToReview } from '@/features/my-tasks/api';
+import { PersonAvatar } from '@/components/ui/avatar';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
-
-// Deux blocs (revue Salarié 19/10/2026) : le travail au quotidien, puis le
-// dossier personnel — neuf onglets à plat étaient trop chargés.
-const BLOCS = [
-  { cle: 'travail', libelle: 'Mon travail' },
-  { cle: 'dossier', libelle: 'Mon dossier' },
-] as const;
-type Bloc = (typeof BLOCS)[number]['cle'];
-
-const ONGLETS = [
-  { cle: 'performances', libelle: 'Mes performances', dossierRequis: false, bloc: 'travail' },
-  { cle: 'temps', libelle: 'Mon temps', dossierRequis: false, bloc: 'travail' },
-  { cle: 'cellule', libelle: 'Ma cellule', dossierRequis: false, bloc: 'travail' },
-  { cle: 'a-valider', libelle: 'À valider', dossierRequis: false, bloc: 'travail' },
-  { cle: 'mission', libelle: 'Ma carte de mission', dossierRequis: true, bloc: 'travail' },
-  { cle: 'conges', libelle: 'Congés et absences', dossierRequis: true, bloc: 'dossier' },
-  { cle: 'remboursements', libelle: 'Remboursements santé', dossierRequis: true, bloc: 'dossier' },
-  { cle: 'informations', libelle: 'Mes informations', dossierRequis: true, bloc: 'dossier' },
-  { cle: 'documents', libelle: 'Mes documents', dossierRequis: true, bloc: 'dossier' },
-] as const;
-type Onglet = (typeof ONGLETS)[number]['cle'];
-
-// Nouveautés par onglet (pastilles) : notifications non lues de ces types,
-// marquées lues à l'ouverture de l'onglet.
-const NOUVEAUTES: Partial<Record<Onglet, NotificationType[]>> = {
-  performances: ['tache_validee'],
-  temps: ['ecart_temps_traite'],
-  conges: ['absence_decidee'],
-  remboursements: ['remboursement_traite'],
-  documents: ['bulletin_depose', 'attestation_delivree'],
-};
-
-// Rôles qui ne valident rien (maquettes RH et Salarié) : « À valider »
-// n'apparaît pour eux que si quelque chose les attend.
-const SANS_VALIDATION = new Set(['RH', 'Salarié']);
-// Salarié pas encore affecté à une équipe : bandeau d'explication (maquette).
-const EQUIPE_ATTENDUE = new Set(['Salarié']);
-// Rôles hors circuit des tâches (le CEO n'en reçoit jamais) : ni
-// performances, ni temps, ni cellule — son espace s'ouvre sur « À valider »
-// (N+1 des directeurs) et ses demandes personnelles.
-const SANS_TACHES = new Set([ROLE_CEO]);
-const ONGLETS_TACHES = new Set<Onglet>(['performances', 'temps', 'cellule']);
+import { getMySpace } from './api';
+import { MyDocuments } from './documents';
+import { HealthRefunds } from './health-refunds';
+import { LeaveRequests } from './leave-requests';
+import { MissionCard } from './mission-card';
+import { MyCell } from './my-cell';
+import {
+  AWAITING_TEAM,
+  TAB_GROUPS,
+  TAB_NEWS,
+  TABS,
+  visibleTabs,
+  WITHOUT_TASKS,
+  type Tab,
+  type TabGroup,
+} from './my-space-tabs';
+import { MyTime } from './my-time';
+import { MyPerformance } from './performance';
+import { PersonalInfo } from './personal-info';
+import { ToReview } from './to-review';
+import type { MyFile } from './types';
 
 // « Mon espace » (RH lot 5) : l'espace personnel de chaque compte, direction
 // comprise, monté dans le back-office comme dans l'espace collaborateur.
 // L'onglet vit dans l'URL (?onglet=) pour les liens directs.
-export function MonEspace({ slug }: { slug: string }) {
+export function MySpace({ slug }: { slug: string }) {
   const { utilisateur, role } = useSessionCourante();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const demande = params.get('onglet');
-  const demandeOnglet: Onglet = ONGLETS.some((o) => o.cle === demande) ? (demande as Onglet) : ONGLETS[0].cle;
+  const requested = params.get('onglet');
+  const requestedTab: Tab = TABS.some((t) => t.key === requested) ? (requested as Tab) : TABS[0].key;
 
-  const [dossier, setDossier] = useState<ProfilMonEspace | null | undefined>(undefined);
-  const [erreur, setErreur] = useState<string | null>(null);
-  const onglets = useRef<HTMLDivElement>(null);
+  // undefined : en chargement ; null : aucun dossier du personnel relié au compte.
+  const [file, setFile] = useState<MyFile | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+  const tabBar = useRef<HTMLDivElement>(null);
   // Tâches remises + absences en attente de ma décision (N+1) : compteur de
   // l'onglet « À valider » (toujours affiché, maquette du boss).
-  const [aValider, setAValider] = useState(0);
-  const compter = useCallback((n: number) => setAValider(n), []);
-  const [nonLues, setNonLues] = useState<Partial<Record<NotificationType, number>>>({});
-  const nouveautes = (o: Onglet) => (NOUVEAUTES[o] ?? []).reduce((n, t) => n + (nonLues[t] ?? 0), 0);
+  const [toReview, setToReview] = useState(0);
+  const count = useCallback((n: number) => setToReview(n), []);
+  const [unread, setUnread] = useState<Partial<Record<NotificationType, number>>>({});
+  const news = (t: Tab) => (TAB_NEWS[t] ?? []).reduce((n, type) => n + (unread[type] ?? 0), 0);
 
   // Titre (maquette) : « Mon espace · Prénom Nom » — celui du dossier RH, sinon du compte.
-  const nomAffiche = dossier
-    ? `${dossier.prenom} ${dossier.nom}`.trim()
-    : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
-  useTitrePage(dossier === undefined ? 'Mon espace' : `Mon espace · ${nomAffiche}`);
+  const displayName = file ? `${file.prenom} ${file.nom}`.trim() : `${utilisateur.prenom} ${utilisateur.nom}`.trim();
+  useTitrePage(file === undefined ? 'Mon espace' : `Mon espace · ${displayName}`);
   useEnteteFixe();
 
   useEffect(() => {
-    getMonEspace(slug)
-      .then((r) => setDossier(r.dossier))
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre espace.'));
+    getMySpace(slug)
+      .then((r) => setFile(r.dossier))
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'Impossible de charger votre espace.'));
     Promise.all([getTasksToReview(slug), getAbsencesAValider(slug)])
-      .then(([t, a]) => setAValider(t.length + a.length))
-      .catch(() => setAValider(0));
+      .then(([t, a]) => setToReview(t.length + a.length))
+      .catch(() => setToReview(0));
     getNonLuesParType(slug)
-      .then(setNonLues)
-      .catch(() => setNonLues({}));
+      .then(setUnread)
+      .catch(() => setUnread({}));
   }, [slug]);
 
-  // Onglet ouvert : ses nouveautés sont vues (cloche comprise).
+  // Onglet ouvert : ses nouveautés sont vues (cloche comprise). Ses pastilles
+  // ne s'affichent que hors de l'onglet : remises à zéro après l'envoi.
   useEffect(() => {
-    const types = (NOUVEAUTES[demandeOnglet] ?? []).filter((t) => (nonLues[t] ?? 0) > 0);
+    const types = (TAB_NEWS[requestedTab] ?? []).filter((t) => (unread[t] ?? 0) > 0);
     if (!types.length) return;
-    setNonLues((x) => ({ ...x, ...Object.fromEntries(types.map((t) => [t, 0])) }));
-    marquerTypesLus(slug, types).catch(() => undefined);
-  }, [slug, demandeOnglet, nonLues]);
+    marquerTypesLus(slug, types)
+      .catch(() => undefined)
+      .then(() => setUnread((x) => ({ ...x, ...Object.fromEntries(types.map((t) => [t, 0])) })));
+  }, [slug, requestedTab, unread]);
 
   // Barre d'onglets défilante sur mobile : l'onglet actif reste visible.
   useEffect(() => {
-    onglets.current
+    tabBar.current
       ?.querySelector<HTMLElement>('[aria-selected="true"]')
       ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [demandeOnglet, dossier]);
+  }, [requestedTab, file]);
 
-  if (erreur) return <EmptyState>{erreur}</EmptyState>;
-  if (dossier === undefined) {
+  if (error) return <EmptyState>{error}</EmptyState>;
+  if (file === undefined) {
     return (
       <div className="admin-skeleton" aria-hidden>
         <Skeleton />
@@ -129,38 +100,30 @@ export function MonEspace({ slug }: { slug: string }) {
     );
   }
 
-  // Carte de mission : seulement quand la RH l'a rédigée (nouvel arrivant).
-  const visibles = ONGLETS.filter(
-    (o) =>
-      (o.cle !== 'mission' || !!dossier?.mission) &&
-      (o.cle !== 'a-valider' || aValider > 0 || !SANS_VALIDATION.has(role)) &&
-      !(SANS_TACHES.has(role) && ONGLETS_TACHES.has(o.cle)),
-  );
-  const onglet: Onglet = visibles.some((o) => o.cle === demandeOnglet) ? demandeOnglet : visibles[0].cle;
-  const courant = ONGLETS.find((o) => o.cle === onglet)!;
-  const blocs = BLOCS.filter((b) => visibles.some((o) => o.bloc === b.cle));
-  const ongletsDuBloc = visibles.filter((o) => o.bloc === courant.bloc);
+  const visible = visibleTabs(role, !!file?.mission, toReview);
+  const tab: Tab = visible.some((t) => t.key === requestedTab) ? requestedTab : visible[0].key;
+  const current = TABS.find((t) => t.key === tab)!;
+  const groups = TAB_GROUPS.filter((g) => visible.some((t) => t.group === g.key));
+  const groupTabs = visible.filter((t) => t.group === current.group);
   // Sans dossier RH : le nom du compte connecté.
-  const prenom = dossier?.prenom ?? utilisateur.prenom;
-  const nom = dossier?.nom ?? utilisateur.nom;
-  const choisir = (cle: Onglet) => router.replace(`${pathname}?onglet=${cle}`, { scroll: false });
-  const nouveautesDuBloc = (b: Bloc) =>
-    visibles
-      .filter((o) => o.bloc === b)
-      .reduce((n, o) => n + (o.cle === 'a-valider' ? aValider : nouveautes(o.cle)), 0);
-  const choisirBloc = (b: Bloc) => b !== courant.bloc && choisir(visibles.find((o) => o.bloc === b)!.cle);
+  const firstName = file?.prenom ?? utilisateur.prenom;
+  const lastName = file?.nom ?? utilisateur.nom;
+  const choose = (key: Tab) => router.replace(`${pathname}?onglet=${key}`, { scroll: false });
+  const groupNews = (g: TabGroup) =>
+    visible.filter((t) => t.group === g).reduce((n, t) => n + (t.key === 'a-valider' ? toReview : news(t.key)), 0);
+  const chooseGroup = (g: TabGroup) => g !== current.group && choose(visible.find((t) => t.group === g)!.key);
 
   return (
     <div className="mes-page page-entete-fixe">
       <div className="mes-entete">
-        <Avatar nom={`${prenom} ${nom}`} photo={dossier?.photo ?? null} />
+        <PersonAvatar name={`${firstName} ${lastName}`} photo={file?.photo ?? null} size="lg" />
         <p className="mes-sous-titre">
-          {dossier
+          {file
             ? [
-                dossier.poste,
-                dossier.societe,
-                dossier.cellule ?? (SANS_TACHES.has(role) ? null : 'sans cellule'),
-                `${LIBELLE_CONTRAT[dossier.typeContrat]}${dossier.dateEntree ? ` depuis le ${formatDate(dossier.dateEntree)}` : ''}`,
+                file.poste,
+                file.societe,
+                file.cellule ?? (WITHOUT_TASKS.has(role) ? null : 'sans cellule'),
+                `${LIBELLE_CONTRAT[file.typeContrat]}${file.dateEntree ? ` depuis le ${formatDate(file.dateEntree)}` : ''}`,
               ]
                 .filter(Boolean)
                 .join(' · ')
@@ -170,104 +133,78 @@ export function MonEspace({ slug }: { slug: string }) {
 
       {/* En-tête fixe : blocs et onglets sur une ligne, au-dessus du contenu qui défile. */}
       <div className="entete-fixe mes-navigation">
-        {blocs.length > 1 && (
+        {groups.length > 1 && (
           <div className="vue-toggle mes-blocs" role="tablist" aria-label="Mon espace">
-            {blocs.map((b) => (
+            {groups.map((g) => (
               <button
-                key={b.cle}
+                key={g.key}
                 type="button"
                 role="tab"
-                aria-selected={courant.bloc === b.cle}
-                className={courant.bloc === b.cle ? 'is-active' : ''}
-                onClick={() => choisirBloc(b.cle)}
+                aria-selected={current.group === g.key}
+                className={current.group === g.key ? 'is-active' : ''}
+                onClick={() => chooseGroup(g.key)}
               >
-                {b.libelle}
+                {g.label}
                 {/* Nouveautés (et décisions en attente) de l'autre bloc : visibles d'ici. */}
-                {courant.bloc !== b.cle && <Pastille n={nouveautesDuBloc(b.cle)} />}
+                {current.group !== g.key && <NewsBadge n={groupNews(g.key)} />}
               </button>
             ))}
           </div>
         )}
 
-        <div ref={onglets} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
-          {ongletsDuBloc.map((o) => (
+        <div ref={tabBar} className="vue-toggle rh-onglets" role="tablist" aria-label="Rubrique de Mon espace">
+          {groupTabs.map((t) => (
             <button
-              key={o.cle}
+              key={t.key}
               type="button"
               role="tab"
-              aria-selected={onglet === o.cle}
-              className={onglet === o.cle ? 'is-active' : ''}
-              onClick={() => choisir(o.cle)}
+              aria-selected={tab === t.key}
+              className={tab === t.key ? 'is-active' : ''}
+              onClick={() => choose(t.key)}
             >
-              {o.cle === 'a-valider' ? `${o.libelle} · ${aValider}` : o.libelle}
-              {o.cle !== onglet && <Pastille n={nouveautes(o.cle)} />}
+              {t.key === 'a-valider' ? `${t.label} · ${toReview}` : t.label}
+              {t.key !== tab && <NewsBadge n={news(t.key)} />}
             </button>
           ))}
         </div>
       </div>
 
-      {dossier && !dossier.cellule && EQUIPE_ATTENDUE.has(role) && (
+      {file && !file.cellule && AWAITING_TEAM.has(role) && (
         <p className="mes-bandeau" role="status">
           Votre dossier est créé par la RH. Vous n’êtes pas encore affecté à une équipe : votre responsable de société
           le fera depuis la rubrique Équipes. Vos performances apparaîtront dès votre premier livrable assigné.
         </p>
       )}
 
-      {courant.dossierRequis && !dossier ? (
+      {current.needsFile && !file ? (
         <EmptyState>
           Aucun dossier du personnel n’est relié à votre compte : la RH doit l’ouvrir (ou le relier) avant que cette
           rubrique soit disponible.
         </EmptyState>
-      ) : onglet === 'performances' ? (
-        <MesPerformances slug={slug} />
-      ) : onglet === 'mission' ? (
-        <CarteMission mission={dossier!.mission!} />
-      ) : onglet === 'a-valider' ? (
-        <AValider slug={slug} onCompte={compter} />
-      ) : onglet === 'temps' ? (
-        <MonTemps slug={slug} />
-      ) : onglet === 'cellule' ? (
-        <MaCellule slug={slug} />
-      ) : onglet === 'conges' ? (
-        <CongesAbsences slug={slug} />
-      ) : onglet === 'remboursements' ? (
-        <RemboursementsSante slug={slug} />
-      ) : onglet === 'informations' ? (
-        <MesInformations slug={slug} dossier={dossier!} onMaj={setDossier} />
+      ) : tab === 'performances' ? (
+        <MyPerformance slug={slug} />
+      ) : tab === 'mission' ? (
+        <MissionCard mission={file!.mission!} />
+      ) : tab === 'a-valider' ? (
+        <ToReview slug={slug} onCount={count} />
+      ) : tab === 'temps' ? (
+        <MyTime slug={slug} />
+      ) : tab === 'cellule' ? (
+        <MyCell slug={slug} />
+      ) : tab === 'conges' ? (
+        <LeaveRequests slug={slug} />
+      ) : tab === 'remboursements' ? (
+        <HealthRefunds slug={slug} />
+      ) : tab === 'informations' ? (
+        <PersonalInfo slug={slug} file={file!} onChange={setFile} />
       ) : (
-        <MesDocuments slug={slug} dossier={dossier!} onMaj={setDossier} />
+        <MyDocuments slug={slug} file={file!} onChange={setFile} />
       )}
     </div>
   );
 }
 
-// Carte de mission du nouvel arrivant (manuel §3.3), rédigée par la RH.
-function CarteMission({ mission }: { mission: NonNullable<ProfilMonEspace['mission']> }) {
-  const rubriques: [string, string][] = [
-    ['Résultat attendu', mission.resultat],
-    ['Livrables', mission.livrables],
-    ['KPI', mission.kpi],
-    ['Signal d’alerte', mission.signalAlerte],
-  ];
-  return (
-    <section className="panel glass-panel pi-fiche">
-      <h2>Ma carte de mission</h2>
-      <p className="pi-aide">
-        Rédigée par la RH à votre arrivée ; elle sert de repère jusqu’à la confirmation de votre intégration (90 jours).
-      </p>
-      <dl className="pi-rubriques">
-        {rubriques.map(([libelle, valeur]) => (
-          <div key={libelle}>
-            <dt>{libelle}</dt>
-            <dd>{valeur.trim() || '—'}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-function Pastille({ n }: { n: number }) {
+function NewsBadge({ n }: { n: number }) {
   return n > 0 ? (
     <span className="mes-pastille" aria-label={`${plural(n, 'nouveauté')}`}>
       {n}

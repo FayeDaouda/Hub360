@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { submitTask } from '@/features/my-tasks/api';
 import type { CorpsRemise } from '@/lib/projets-ouverts';
-import type { MyTask, MyTasksView } from '@/features/my-tasks/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import {
   corpsRemise,
@@ -12,59 +10,61 @@ import {
   type SaisieRemise,
 } from '@/components/projets-ouverts/champs-remise';
 import { FormulaireDepot } from '@/components/projets-ouverts/formulaire-depot';
+import { submitTask } from './api';
+import type { MyTask, MyTasksView } from './types';
 
 // Remise d'une tâche au N+1 — même formulaire (FormulaireDepot) depuis « Mes
 // tâches », « Mon espace › Mes performances » et le panneau de la tâche.
-// Deux modes : envoi immédiat (onRemise reçoit la réponse), ou envoi confié à
-// l'appelant (onEnvoyer reçoit le corps — « Mes tâches » le diffère de
+// Deux modes : envoi immédiat (onSubmitted reçoit la réponse), ou envoi
+// confié à l'appelant (onSend reçoit le corps — « Mes tâches » le diffère de
 // quelques secondes pour proposer « Annuler »).
-export function RemiseModal({
+export function SubmissionModal({
   slug,
-  tache,
-  piecesInitiales,
-  onRemise,
-  onEnvoyer,
+  task,
+  initialFiles,
+  onSubmitted,
+  onSend,
   onClose,
 }: {
   slug: string;
-  tache: MyTask;
+  task: MyTask;
   // Fichiers glissés sur la ligne de la tâche (« Mes tâches »).
-  piecesInitiales?: SaisieRemise['pieces'];
-  onRemise?: (r: MyTasksView) => void;
-  onEnvoyer?: (corps: CorpsRemise) => void;
+  initialFiles?: SaisieRemise['pieces'];
+  onSubmitted?: (r: MyTasksView) => void;
+  onSend?: (body: CorpsRemise) => void;
   onClose: () => void;
 }) {
-  const [saisie, setSaisie] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: piecesInitiales ?? [] });
+  const [entry, setEntry] = useState<SaisieRemise>({ ...SAISIE_REMISE_VIDE, pieces: initialFiles ?? [] });
   return (
     <ConfirmModal
       title="Déposer la tâche"
       message={
         <>
           <span className="depot-tache">
-            « {tache.libelle} » · {tache.projetCode}
+            « {task.libelle} » · {task.projetCode}
           </span>
           <FormulaireDepot
-            id={`remise-${tache.id}`}
+            id={`remise-${task.id}`}
             nommage={{
-              code: tache.projetCode,
-              etapeNumero: tache.etapeNumero,
-              tache: tache.libelle,
-              version: tache.version + 1,
+              code: task.projetCode,
+              etapeNumero: task.etapeNumero,
+              tache: task.libelle,
+              version: task.version + 1,
             }}
-            validateur={tache.validateur}
-            parDepot={tache.parDepot}
-            obligatoire={tache.fichierObligatoire}
+            validateur={task.validateur}
+            parDepot={task.parDepot}
+            obligatoire={task.fichierObligatoire}
             avertissement
-            valeur={saisie}
-            onChange={setSaisie}
+            valeur={entry}
+            onChange={setEntry}
           />
         </>
       }
       confirmLabel="Déposer"
-      confirmDisabled={!depotPret(saisie, tache.fichierObligatoire)}
+      confirmDisabled={!depotPret(entry, task.fichierObligatoire)}
       onConfirm={async () => {
-        if (onEnvoyer) onEnvoyer(corpsRemise(saisie));
-        else onRemise?.(await submitTask(slug, tache, corpsRemise(saisie)));
+        if (onSend) onSend(corpsRemise(entry));
+        else onSubmitted?.(await submitTask(slug, task, corpsRemise(entry)));
         onClose(); // ConfirmModal ne se ferme pas seule après succès
       }}
       onClose={onClose}

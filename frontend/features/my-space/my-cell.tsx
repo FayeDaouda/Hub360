@@ -5,42 +5,42 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AlarmClock, CircleCheck, FolderKanban, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { getMaCellule } from '@/lib/mon-espace';
 import { EMPLOYEE_LEVELS } from '@/features/teams/constants';
-import type { PerformanceStats } from '@/features/my-tasks/types';
-import { PHASES, type MaCellule as DonneesCellule } from '@/lib/types';
+import { PHASES } from '@/lib/types';
 import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
-import { Avatar } from './avatar';
+import { PersonAvatar } from '@/components/ui/avatar';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
+import { getMyCell } from './api';
+import type { MyCellView } from './types';
 
 // « Mon espace » · Ma cellule (maquette du boss) : projets pilotés, tâches en
 // cours, en retard et remises à temps de toute la cellule ; ses membres et son
 // pilote (chef de team) ; ses projets. Aucun montant. Même écran sans cellule.
-export function MaCellule({ slug }: { slug: string }) {
+export function MyCell({ slug }: { slug: string }) {
   const base = usePathname().split('/mon-espace')[0];
-  const [donnees, setDonnees] = useState<{ cellule: DonneesCellule | null; stats: PerformanceStats } | null>(null);
-  const [erreur, setErreur] = useState<string | null>(null);
+  const [data, setData] = useState<MyCellView | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [contact, setContact] = useState<string | null>(null);
 
   useEffect(() => {
-    getMaCellule(slug)
-      .then(setDonnees)
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre cellule.'));
+    getMyCell(slug)
+      .then(setData)
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'Impossible de charger votre cellule.'));
   }, [slug]);
 
-  if (erreur) return <EmptyState>{erreur}</EmptyState>;
-  if (!donnees) {
+  if (error) return <EmptyState>{error}</EmptyState>;
+  if (!data) {
     return (
       <div className="admin-skeleton" aria-hidden>
         <Skeleton />
       </div>
     );
   }
-  const { cellule, stats } = donnees;
-  const rd = stats.respectDelais;
-  const projets = cellule?.projets ?? [];
+  const { cellule, stats } = data;
+  const onTime = stats.respectDelais;
+  const projects = cellule?.projets ?? [];
 
   return (
     <>
@@ -49,7 +49,7 @@ export function MaCellule({ slug }: { slug: string }) {
           {
             id: 'projets',
             label: 'Projets pilotés',
-            value: projets.length,
+            value: projects.length,
             hint: 'projets signés de la cellule',
             icon: FolderKanban,
           },
@@ -71,7 +71,7 @@ export function MaCellule({ slug }: { slug: string }) {
           {
             id: 'a-temps',
             label: 'Tâches remises à temps',
-            value: rd.pct == null ? '—' : `${rd.pct} %`,
+            value: onTime.pct == null ? '—' : `${onTime.pct} %`,
             hint: `${stats.validees} validées dans la cellule`,
             icon: CircleCheck,
           },
@@ -95,7 +95,7 @@ export function MaCellule({ slug }: { slug: string }) {
                     onClick={() => m.utilisateurId && setContact(m.utilisateurId)}
                     title={m.utilisateurId && !m.estMoi ? 'Voir sa fiche contact' : undefined}
                   >
-                    <Avatar nom={m.nom} photo={m.photo} taille="sm" />
+                    <PersonAvatar name={m.nom} photo={m.photo} size="sm" />
                     <span>
                       <strong>{m.nom}</strong>
                       <span className="cell-sub">
@@ -118,11 +118,11 @@ export function MaCellule({ slug }: { slug: string }) {
         </section>
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Projets pilotés par la cellule</h2>
-          {projets.length === 0 ? (
+          {projects.length === 0 ? (
             <p className="dmd-note">Aucun projet affecté à la cellule.</p>
           ) : (
             <ul className="dmd-liste">
-              {projets.map((p) => (
+              {projects.map((p) => (
                 <li key={p.id} className="dmd-ligne">
                   <span>
                     <Link className="lien-inline" href={`${base}/projets?projet=${p.id}`}>

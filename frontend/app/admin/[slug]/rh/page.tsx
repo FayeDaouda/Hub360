@@ -49,7 +49,7 @@ import {
 } from '@/lib/rh';
 import { getFeuillesTemps } from '@/lib/temps';
 import { getDemandesRh } from '@/lib/demandes';
-import { LIBELLE_PAIEMENT_SALAIRE } from '@/lib/mon-espace';
+import { PAYMENT_MODE_LABELS } from '@/features/my-space/constants';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
 import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
@@ -879,7 +879,7 @@ function FicheDossier({
             <div className="rh-paiement-demande" role="status">
               <span>
                 <strong>Changement de moyen de paiement demandé</strong> le {formatDate(dossier.paiementDemandeLe, '')}{' '}
-                : {LIBELLE_PAIEMENT_SALAIRE[dossier.paiementDemandeMode]} · {dossier.paiementDemandeCoordonnees}
+                : {PAYMENT_MODE_LABELS[dossier.paiementDemandeMode]} · {dossier.paiementDemandeCoordonnees}
               </span>
               {ecriture && (
                 <span className="dmd-actions">

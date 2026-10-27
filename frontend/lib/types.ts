@@ -1,5 +1,4 @@
 import type { FicheProgramme } from './fiche-programme';
-import type { EmployeeLevel } from '@/features/teams/types';
 import { yearOf } from '@hub/domain';
 export type Societe = {
   id: string;
@@ -1556,63 +1555,11 @@ export type MonTemps = {
 // Le dossier du compte connecté, sans le salaire (réservé RH, CFO, CEO).
 export type SituationFamiliale = 'celibataire' | 'marie' | 'divorce' | 'veuf';
 
-export type ProfilMonEspace = {
-  id: string;
-  matricule: string;
-  prenom: string;
-  nom: string;
-  poste: string;
-  societe: string;
-  cellule: string | null;
-  photo: string | null; // photo de la fiche d'équipe
-  typeContrat: TypeContrat;
-  dateEntree: string | null;
-  dateFin: string | null;
-  dateNaissance: string | null;
-  lieuNaissance: string;
-  nationalite: string;
-  numeroPiece: string;
-  telephone: string;
-  emailPro: string;
-  contactUrgence: string;
-  telephoneUrgence: string;
-  emailPerso: string;
-  situationFamiliale: SituationFamiliale | null;
-  enfantsACharge: number;
-  adresse: string;
-  modePaiement: ModePaiementSalaire;
-  coordonneesPaiement: string;
-  // Changement soumis à la RH (validé avant la paie) ; null = rien en attente.
-  paiementDemande: { mode: ModePaiementSalaire; coordonnees: string; le: string } | null;
-  numeroIpm: string;
-  mission: { resultat: string; livrables: string; kpi: string; signalAlerte: string } | null;
-  documents: { type: TypePieceDossier; nom: string | null; ajouteLe: string | null }[];
-  bulletins: BulletinPaie[];
-  attestations: AttestationTravail[]; // la plus récente d'abord
-};
-
-// Attestation de travail sur demande : délivrée par la RH (delivreeLe non null).
-export type AttestationTravail = { id: string; demandeLe: string; delivreeLe: string | null; nom: string | null };
+// Mon espace (dossier du compte, attestations, Ma cellule) : types tirés de
+// l'API, dans features/my-space/types.ts.
 
 // Tâches assignées (Mes tâches, Mon espace) : types tirés de l'API, dans
 // features/my-tasks/types.ts.
-
-// Mon espace · Ma cellule (lot 5d) : l'équipe et les projets qu'elle suit.
-export type MaCellule = {
-  nom: string;
-  pilote: string | null; // chef de team (dispatcher) ; null = « Pilote à désigner »
-  membres: {
-    id: string;
-    nom: string;
-    role: string;
-    niveau: EmployeeLevel;
-    estChef: boolean;
-    estMoi: boolean;
-    photo: string | null;
-    utilisateurId: string | null; // compte HUB (fiche contact) ; null sans compte
-  }[];
-  projets: { id: string; code: string; programme: string; phase: Phase }[];
-};
 
 // --- Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026) ----
 

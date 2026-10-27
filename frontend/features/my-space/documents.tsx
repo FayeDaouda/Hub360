@@ -2,19 +2,13 @@
 
 import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import {
-  demanderAttestation,
-  telechargerAttestation,
-  telechargerBulletin,
-  telechargerDocument,
-} from '@/lib/mon-espace';
-
-import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
 import { formatDate, formatMonthYear, yearOf } from '@hub/domain';
 import { FieldError } from '@/components/ui/field';
+import { downloadCertificate, downloadDocument, downloadPayslip, requestCertificate } from './api';
+import type { EmployeeDocumentType, MyFile } from './types';
 
 // Libellés de la maquette (« Contrat de travail », « Fiche de poste »).
-const LIBELLE_DOCUMENT: Partial<Record<TypePieceDossier, string>> = {
+const DOCUMENT_LABELS: Partial<Record<EmployeeDocumentType, string>> = {
   contrat_signe: 'Contrat de travail',
   fiche_poste: 'Fiche de poste',
 };
@@ -22,57 +16,49 @@ const LIBELLE_DOCUMENT: Partial<Record<TypePieceDossier, string>> = {
 // « Mon espace » · Mes documents (maquette du boss) : contrat et poste
 // déposés par la RH, bulletins de paie, et attestations de travail sur demande
 // (délivrées par la RH).
-export function MesDocuments({
-  slug,
-  dossier,
-  onMaj,
-}: {
-  slug: string;
-  dossier: ProfilMonEspace;
-  onMaj: (d: ProfilMonEspace) => void;
-}) {
-  const [erreur, setErreur] = useState<string | null>(null);
-  const [envoi, setEnvoi] = useState(false);
-  const telecharger = (action: () => Promise<void>) => {
-    setErreur(null);
-    action().catch((e) => setErreur(e instanceof ApiError ? e.message : 'Téléchargement impossible.'));
+export function MyDocuments({ slug, file, onChange }: { slug: string; file: MyFile; onChange: (f: MyFile) => void }) {
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const download = (action: () => Promise<void>) => {
+    setError(null);
+    action().catch((e) => setError(e instanceof ApiError ? e.message : 'Téléchargement impossible.'));
   };
 
-  async function demander() {
-    setEnvoi(true);
-    setErreur(null);
+  async function askCertificate() {
+    setSending(true);
+    setError(null);
     try {
-      const r = await demanderAttestation(slug);
-      if (r.dossier) onMaj(r.dossier);
+      const r = await requestCertificate(slug);
+      if (r.dossier) onChange(r.dossier);
     } catch (e) {
-      setErreur(e instanceof ApiError ? e.message : 'Demande non envoyée.');
+      setError(e instanceof ApiError ? e.message : 'Demande non envoyée.');
     } finally {
-      setEnvoi(false);
+      setSending(false);
     }
   }
 
-  const annee = yearOf();
-  const bulletinsAnnee = dossier.bulletins.filter((b) => b.mois.startsWith(String(annee))).length;
-  const documents = dossier.documents.filter((d) => d.ajouteLe);
-  const enAttente = dossier.attestations.find((a) => !a.delivreeLe);
-  const delivrees = dossier.attestations.filter((a) => a.delivreeLe);
+  const year = yearOf();
+  const payslipsThisYear = file.bulletins.filter((b) => b.mois.startsWith(String(year))).length;
+  const documents = file.documents.filter((d) => d.ajouteLe);
+  const pending = file.attestations.find((a) => !a.delivreeLe);
+  const delivered = file.attestations.filter((a) => a.delivreeLe);
 
-  const ligne = (
-    cle: string,
-    titre: string,
-    depose: string,
-    teinte: 'contrat' | 'bulletin',
+  const row = (
+    key: string,
+    title: string,
+    filedAt: string,
+    tint: 'contrat' | 'bulletin',
     action: () => Promise<void>,
   ) => (
-    <li key={cle} className="me-doc">
-      <span className={`me-doc-pdf me-doc-pdf--${teinte}`} aria-hidden>
+    <li key={key} className="me-doc">
+      <span className={`me-doc-pdf me-doc-pdf--${tint}`} aria-hidden>
         PDF
       </span>
       <span className="me-doc-texte">
-        <strong>{titre}</strong>
-        <span className="cell-sub">déposé le {formatDate(depose)}</span>
+        <strong>{title}</strong>
+        <span className="cell-sub">déposé le {formatDate(filedAt)}</span>
       </span>
-      <button type="button" className="me-doc-lien" onClick={() => telecharger(action)}>
+      <button type="button" className="me-doc-lien" onClick={() => download(action)}>
         Télécharger
       </button>
     </li>
@@ -80,7 +66,7 @@ export function MesDocuments({
 
   return (
     <>
-      {erreur && <FieldError>{erreur}</FieldError>}
+      {error && <FieldError>{error}</FieldError>}
       <div className="me-documents">
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Contrat et poste</h2>
@@ -90,8 +76,8 @@ export function MesDocuments({
           ) : (
             <ul className="me-docs">
               {documents.map((d) =>
-                ligne(d.type, LIBELLE_DOCUMENT[d.type] ?? d.type, d.ajouteLe!, 'contrat', () =>
-                  telechargerDocument(slug, d.type),
+                row(d.type, DOCUMENT_LABELS[d.type] ?? d.type, d.ajouteLe!, 'contrat', () =>
+                  downloadDocument(slug, d.type),
                 ),
               )}
             </ul>
@@ -101,13 +87,13 @@ export function MesDocuments({
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Bulletins de paie</h2>
           <p className="dmd-note">
-            {bulletinsAnnee} bulletin(s) en {annee}
+            {payslipsThisYear} bulletin(s) en {year}
           </p>
-          {dossier.bulletins.length > 0 && (
+          {file.bulletins.length > 0 && (
             <ul className="me-docs">
-              {dossier.bulletins.map((b) =>
-                ligne(b.mois, `Bulletin · ${formatMonthYear(b.mois)}`, b.deposeLe, 'bulletin', () =>
-                  telechargerBulletin(slug, b.mois),
+              {file.bulletins.map((b) =>
+                row(b.mois, `Bulletin · ${formatMonthYear(b.mois)}`, b.deposeLe, 'bulletin', () =>
+                  downloadPayslip(slug, b.mois),
                 ),
               )}
             </ul>
@@ -117,19 +103,17 @@ export function MesDocuments({
         <section className="panel glass-panel dmd-section">
           <h2 className="dmd-titre">Attestations</h2>
           <p className="dmd-note">Attestation de travail sur demande, délivrée par la RH.</p>
-          {delivrees.length > 0 && (
+          {delivered.length > 0 && (
             <ul className="me-docs">
-              {delivrees.map((a) =>
-                ligne(a.id, 'Attestation de travail', a.delivreeLe!, 'contrat', () =>
-                  telechargerAttestation(slug, a.id),
-                ),
+              {delivered.map((a) =>
+                row(a.id, 'Attestation de travail', a.delivreeLe!, 'contrat', () => downloadCertificate(slug, a.id)),
               )}
             </ul>
           )}
-          {enAttente ? (
-            <p className="me-attente">Demandée le {formatDate(enAttente.demandeLe)} · la RH la prépare.</p>
+          {pending ? (
+            <p className="me-attente">Demandée le {formatDate(pending.demandeLe)} · la RH la prépare.</p>
           ) : (
-            <button type="button" className="btn-ghost me-envoyer" disabled={envoi} onClick={demander}>
+            <button type="button" className="btn-ghost me-envoyer" disabled={sending} onClick={askCertificate}>
               Demander une attestation de travail
             </button>
           )}

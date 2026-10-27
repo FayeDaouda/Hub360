@@ -6,36 +6,33 @@ import { usePathname } from 'next/navigation';
 import { ApiError } from '@/lib/client-api';
 import { decideTask, downloadSubmissionFile, getTasksToReview } from '@/features/my-tasks/api';
 import type { TaskToReview } from '@/features/my-tasks/types';
-import { DemandesEquipe } from './demandes-equipe';
 import { formatDate } from '@hub/domain';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';
-
-// Le projet dans la vue Projets : back-office (?projet=) ou espace collaborateur.
-const lienProjet = (base: string, projetId: string) =>
-  base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
+import { projectHref } from './project-link';
+import { TeamRequests } from './team-requests';
 
 // « Mon espace » · À valider (maquette du boss) : les demandes de l'équipe
 // dont on est le N+1 ; et, quand il y en a, les remises des tâches du
 // gabarit que l'on valide (chef de team, Architecte DPLG en suppléance).
-export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: number) => void }) {
-  const [taches, setTaches] = useState<TaskToReview[] | null>(null);
+export function ToReview({ slug, onCount }: { slug: string; onCount: (n: number) => void }) {
+  const [tasks, setTasks] = useState<TaskToReview[] | null>(null);
   const [absences, setAbsences] = useState(0);
-  const [erreur, setErreur] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const charger = useCallback(() => {
+  const load = useCallback(() => {
     getTasksToReview(slug)
-      .then(setTaches)
-      .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger les tâches à valider.'));
+      .then(setTasks)
+      .catch((e) => setError(e instanceof ApiError ? e.message : 'Impossible de charger les tâches à valider.'));
   }, [slug]);
-  useEffect(charger, [charger]);
+  useEffect(load, [load]);
   useEffect(() => {
-    if (taches) onCompte(taches.length + absences);
-  }, [taches, absences, onCompte]);
+    if (tasks) onCount(tasks.length + absences);
+  }, [tasks, absences, onCount]);
 
-  if (!taches) {
-    return erreur ? (
-      <EmptyState>{erreur}</EmptyState>
+  if (!tasks) {
+    return error ? (
+      <EmptyState>{error}</EmptyState>
     ) : (
       <div className="admin-skeleton" aria-hidden>
         <Skeleton />
@@ -45,14 +42,14 @@ export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: numbe
 
   return (
     <>
-      <DemandesEquipe slug={slug} onCompte={setAbsences} />
-      {erreur && <FieldError>{erreur}</FieldError>}
-      {taches.length > 0 && (
+      <TeamRequests slug={slug} onCount={setAbsences} />
+      {error && <FieldError>{error}</FieldError>}
+      {tasks.length > 0 && (
         <section className="panel glass-panel dmd-section">
-          <h2 className="dmd-titre">Tâches remises à valider · {taches.length}</h2>
+          <h2 className="dmd-titre">Tâches remises à valider · {tasks.length}</h2>
           <ul className="dmd-liste">
-            {taches.map((t) => (
-              <LigneAValider key={t.id} slug={slug} t={t} onDecide={setTaches} />
+            {tasks.map((t) => (
+              <ReviewRow key={t.id} slug={slug} t={t} onDecide={setTasks} />
             ))}
           </ul>
         </section>
@@ -61,27 +58,19 @@ export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: numbe
   );
 }
 
-function LigneAValider({
-  slug,
-  t,
-  onDecide,
-}: {
-  slug: string;
-  t: TaskToReview;
-  onDecide: (l: TaskToReview[]) => void;
-}) {
+// Une remise : ses fichiers, puis valider ou renvoyer en reprise (motif).
+function ReviewRow({ slug, t, onDecide }: { slug: string; t: TaskToReview; onDecide: (l: TaskToReview[]) => void }) {
   const base = usePathname().split('/mon-espace')[0];
-  const [renvoi, setRenvoi] = useState(false);
+  const [sendBack, setSendBack] = useState(false);
   const [motif, setMotif] = useState('');
-  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
-  const enRetard = !!t.echeance && !!t.remisLe && t.remisLe.slice(0, 10) > t.echeance;
+  const [state, setState] = useState<{ sending: boolean; error: string | null }>({ sending: false, error: null });
 
-  async function decider(decision: 'valider' | 'renvoyer') {
-    setEtat({ envoi: true, erreur: null });
+  async function decide(decision: 'valider' | 'renvoyer') {
+    setState({ sending: true, error: null });
     try {
       onDecide(await decideTask(slug, t, decision, decision === 'renvoyer' ? motif : undefined));
     } catch (e) {
-      setEtat({ envoi: false, erreur: e instanceof ApiError ? e.message : 'Décision non enregistrée.' });
+      setState({ sending: false, error: e instanceof ApiError ? e.message : 'Décision non enregistrée.' });
     }
   }
 
@@ -92,14 +81,15 @@ function LigneAValider({
           {t.responsable} · {t.libelle}
         </strong>
         <span className="cell-sub">
-          <Link className="lien-inline" href={lienProjet(base, t.projetId)}>
+          <Link className="lien-inline" href={projectHref(base, t.projetId)}>
             {t.projetCode}
           </Link>{' '}
           · {t.etape} · remise v{String(t.version).padStart(2, '0')}
           {t.remisLe && ` le ${formatDate(t.remisLe)}`}
           {t.echeance && ` · échéance ${formatDate(t.echeance)}`}
         </span>
-        {enRetard && <span className="cell-sub temps-alerte">Remis après l’échéance</span>}
+        {/* Remise jugée par le back (task-rules.ts, onTime). */}
+        {t.aTemps === false && <span className="cell-sub temps-alerte">Remis après l’échéance</span>}
         <span className="cell-sub">
           {t.pieces.length
             ? t.pieces.map((f, i) => (
@@ -110,7 +100,7 @@ function LigneAValider({
                     className="po-fichier"
                     onClick={() =>
                       downloadSubmissionFile(slug, t, f.id).catch(() =>
-                        setEtat({ envoi: false, erreur: 'Fichier indisponible.' }),
+                        setState({ sending: false, error: 'Fichier indisponible.' }),
                       )
                     }
                   >
@@ -120,7 +110,7 @@ function LigneAValider({
               ))
             : 'Sans fichier joint'}
         </span>
-        {renvoi && (
+        {sendBack && (
           <Field label="Motif du renvoi">
             <textarea
               className="field-input"
@@ -131,19 +121,19 @@ function LigneAValider({
             />
           </Field>
         )}
-        {etat.erreur && <span className="field-erreur">{etat.erreur}</span>}
+        {state.error && <span className="field-erreur">{state.error}</span>}
       </span>
       <span className="dmd-actions">
-        {renvoi ? (
+        {sendBack ? (
           <>
-            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setRenvoi(false)}>
+            <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => setSendBack(false)}>
               Annuler
             </button>
             <button
               type="button"
               className="btn-primary btn-primary--sm"
-              disabled={etat.envoi || !motif.trim()}
-              onClick={() => decider('renvoyer')}
+              disabled={state.sending || !motif.trim()}
+              onClick={() => decide('renvoyer')}
             >
               Renvoyer
             </button>
@@ -153,16 +143,16 @@ function LigneAValider({
             <button
               type="button"
               className="btn-ghost btn-ghost--sm"
-              disabled={etat.envoi}
-              onClick={() => setRenvoi(true)}
+              disabled={state.sending}
+              onClick={() => setSendBack(true)}
             >
               Renvoyer…
             </button>
             <button
               type="button"
               className="btn-primary btn-primary--sm"
-              disabled={etat.envoi}
-              onClick={() => decider('valider')}
+              disabled={state.sending}
+              onClick={() => decide('valider')}
             >
               Valider
             </button>

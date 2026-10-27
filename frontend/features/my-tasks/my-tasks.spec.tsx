@@ -15,9 +15,9 @@ const api = vi.hoisted(() => ({
 vi.mock('./api', () => api);
 vi.mock('./task-drawer', () => ({ TaskDrawer: () => null }));
 // Fenêtre de dépôt réduite à son envoi : le formulaire a ses propres tests.
-vi.mock('@/components/mon-espace/remise-modal', () => ({
-  RemiseModal: ({ onEnvoyer }: { onEnvoyer: (corps: object) => void }) => (
-    <button type="button" onClick={() => onEnvoyer({})}>
+vi.mock('./submission-modal', () => ({
+  SubmissionModal: ({ onSend }: { onSend: (body: object) => void }) => (
+    <button type="button" onClick={() => onSend({})}>
       Confirmer le dépôt
     </button>
   ),
