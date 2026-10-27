@@ -51,7 +51,3 @@ export const STATUT_FEUILLE: Record<StatutFeuilleTemps, { libelle: string; pill:
   sans_heures: { libelle: 'Sans heures', pill: 'pill--neutre' },
   controlee: { libelle: 'Contrôlée', pill: 'pill--succes' },
 };
-
-export function formatHeures(n: number): string {
-  return `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
-}

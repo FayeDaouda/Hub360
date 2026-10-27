@@ -1,6 +1,6 @@
-import { formatHeures, LIBELLE_MANQUE, LIBELLE_SECTION } from '@/lib/temps';
+import { LIBELLE_MANQUE, LIBELLE_SECTION } from '@/lib/temps';
 import type { LigneCalculTemps } from '@/lib/types';
-import { formatDayMonth } from '@hub/domain';
+import { formatDayMonth, formatHours } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 
 // Détail du calcul d'une feuille de temps (RH et Mon temps) : un bloc assigné
@@ -35,10 +35,10 @@ export function LignesCalcul({ lignes, variante = 'rh' }: { lignes: LigneCalculT
                 du {formatDayMonth(l.debut)} au {formatDayMonth(l.echeance)}
               </td>
               <td data-label="Durée std" className="num">
-                {l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}
+                {l.dureeStandard == null ? '—' : formatHours(l.dureeStandard)}
               </td>
               <td data-label="Ce mois" className="num">
-                {l.manque ? <Pill tone="attention">{LIBELLE_MANQUE[l.manque]}</Pill> : formatHeures(l.heures)}
+                {l.manque ? <Pill tone="attention">{LIBELLE_MANQUE[l.manque]}</Pill> : formatHours(l.heures)}
               </td>
             </tr>
           ))}
@@ -80,13 +80,13 @@ function LignesSalarie({ lignes }: { lignes: LigneCalculTemps[] }) {
                 </span>
               </td>
               <td data-label="Durée std" className="num">
-                {l.dureeStandard == null ? '—' : formatHeures(l.dureeStandard)}
+                {l.dureeStandard == null ? '—' : formatHours(l.dureeStandard)}
               </td>
               <td data-label="Jours" className="num">
                 {l.jours ?? '—'}
               </td>
               <td data-label="Heures" className="num">
-                {l.manque ? <Pill tone="attention">{LIBELLE_MANQUE[l.manque]}</Pill> : formatHeures(l.heures)}
+                {l.manque ? <Pill tone="attention">{LIBELLE_MANQUE[l.manque]}</Pill> : formatHours(l.heures)}
               </td>
             </tr>
           ))}

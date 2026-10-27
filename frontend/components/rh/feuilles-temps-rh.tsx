@@ -5,7 +5,6 @@ import { ClipboardCheck, Clock } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import {
   controlerFeuilleTemps,
-  formatHeures,
   traiterEcartTemps,
   getFeuillesTemps,
   HEURES_PAR_JOUR,
@@ -17,7 +16,7 @@ import { ConfirmModal } from '@/components/ui/confirm-modal';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { LignesCalcul } from './lignes-calcul';
-import { formatDate, formatMonthYear, plural } from '@hub/domain';
+import { formatDate, formatHours, formatMonthYear, plural } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';
@@ -143,10 +142,10 @@ export function FeuillesTempsRh({ slug, ecriture }: { slug: string; ecriture: bo
                         {f.cellule ?? <span className="cell-sub">—</span>}
                       </td>
                       <td data-label="Imputées" className="num">
-                        {formatHeures(f.heuresImputees)}
+                        {formatHours(f.heuresImputees)}
                       </td>
                       <td data-label="Disponibles" className="num">
-                        {formatHeures(f.heuresDisponibles)}
+                        {formatHours(f.heuresDisponibles)}
                       </td>
                       <td data-label="Absences" className="num">
                         {f.joursAbsence} j
@@ -218,11 +217,11 @@ function DetailFeuille({
       <dl className="temps-chiffres">
         <div>
           <dt>Imputées</dt>
-          <dd>{formatHeures(f.heuresImputees)}</dd>
+          <dd>{formatHours(f.heuresImputees)}</dd>
         </div>
         <div>
           <dt>Disponibles</dt>
-          <dd>{formatHeures(f.heuresDisponibles)}</dd>
+          <dd>{formatHours(f.heuresDisponibles)}</dd>
         </div>
         <div>
           <dt>Absences</dt>
@@ -285,7 +284,7 @@ function DetailFeuille({
       {confirmation && (
         <ConfirmModal
           title="Contrôler la feuille de temps"
-          message={`La feuille de ${nomDe(f)} pour ${formatMonthYear(f.mois)} sera figée telle qu’affichée (${formatHeures(f.heuresImputees)} imputées sur ${formatHeures(f.heuresDisponibles)} disponibles).`}
+          message={`La feuille de ${nomDe(f)} pour ${formatMonthYear(f.mois)} sera figée telle qu’affichée (${formatHours(f.heuresImputees)} imputées sur ${formatHours(f.heuresDisponibles)} disponibles).`}
           onConfirm={async () => {
             await controlerFeuilleTemps(slug, f.dossierId, f.mois);
             onControle();
