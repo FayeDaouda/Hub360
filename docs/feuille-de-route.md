@@ -116,21 +116,28 @@ Décisions structurantes : `docs/adr/`.
 - **Plus tard, sur décision** : service de suivi des erreurs spécialisé
   (Sentry ou GlitchTip : dépendance et sous-traitant de données).
 
-## Prêt pour le lancement (état des lieux du 28/10/2026)
+## Prêt pour le lancement (état des lieux et décisions du 28/10/2026)
 
 Déjà en place : réinitialisation du mot de passe par e-mail (lien d'une
-heure, sessions coupées), double authentification obligatoire hors Salarié
-(dont CEO, CFO, RH), création des comptes par invitation (lien de 72 h).
-Lots proposés, en attente des décisions du user :
+heure, sessions coupées), double authentification (hors Salarié), création
+des comptes par invitation (lien de 72 h). Lots décidés :
 
 - **A** : e-mail d'avis quand le mot de passe ou la double authentification
-  change ; essai des e-mails réels en pré-production.
-- **B** : expiration des sessions par inactivité et durée maximale par rôle
-  (durées à décider) ; cookie `httpOnly` après le lancement.
-- **C** : verrouillage par compte après plusieurs échecs, avis et journal
-  (seuils à décider, migration).
-- **D** : import des clients, projets, salariés et factures en cours (sources,
-  périmètre, numérotation et responsables à décider), à blanc puis réel.
+  change ; double authentification obligatoire pour **tous** les rôles ;
+  essai des e-mails réels en pré-production.
+- **B** : session de 12 h au plus partout ; expiration après 1 h
+  d'inactivité pour CEO, CFO, CIO et RH, 4 h pour les autres. Cookie
+  `httpOnly` juste après le lancement.
+- **C** : verrouillage d'un compte après 10 échecs, 15 min, durée doublée à
+  chaque récidive et plafonnée à 1 h ; déblocage par le CIO ; migration
+  accordée.
+- **D** (attend les exports du user) : import des clients actifs, projets en
+  cours, salariés présents et factures non soldées ; pièces jointes des
+  factures non soldées et des contrats en cours seulement ; numéros de
+  facture d'origine conservés, la suite du HUB après le dernier émis (à
+  valider par le CFO et le comptable) ; fichiers fournis et validés par la RH
+  (salariés), le CFO (factures) et le COO (clients, projets) ; à blanc, puis
+  réel.
 
 ## En attente d'une décision extérieure
 
