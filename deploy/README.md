@@ -98,5 +98,19 @@ Les migrations de base s'appliquent au démarrage du backend.
   docker compose start backend
   ```
   Une copie distante se restaure de la même façon avec son adresse `s3://…`.
-- Tester une restauration sur la pré-production au moins une fois par
-  trimestre : une sauvegarde jamais restaurée n'est pas une sauvegarde.
+- **Vérifier une restauration** : restaurer dans une base neuve, puis
+  comparer les deux bases table par table (nombre de lignes, empreinte du
+  contenu, séquences) :
+  ```sh
+  docker compose exec sauvegarde psql -c 'CREATE DATABASE hub_verification'
+  docker compose exec -e PGDATABASE=hub_verification sauvegarde \
+    restaurer.sh /sauvegardes/hub-AAAAMMJJ-HHMM.dump --oui
+  docker compose exec sauvegarde verifier-restauration.sh hub hub_verification
+  docker compose exec sauvegarde psql -c 'DROP DATABASE hub_verification'
+  ```
+  Sur une base en service, des écarts peuvent venir de l'activité depuis la
+  sauvegarde : comparer de préférence juste après une sauvegarde manuelle.
+- La CI le fait à chaque envoi sur les données de démo (job « Sauvegarde et
+  restauration ») avec les scripts réels de l'image. Tester aussi une
+  restauration sur la pré-production au moins une fois par trimestre : une
+  sauvegarde jamais restaurée n'est pas une sauvegarde.
