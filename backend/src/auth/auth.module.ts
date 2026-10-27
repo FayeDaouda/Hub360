@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ComptesService } from './comptes.service';
@@ -14,11 +14,9 @@ import { NotificationsModule } from '../notifications/notifications.module';
   imports: [
     PassportModule,
     NotificationsModule, // connexions du compte de secours (revue CIO)
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'change-moi-en-production',
-      // Format déjà vérifié au démarrage (src/config/environnement.ts : 7d, 12h…).
-      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as JwtSignOptions['expiresIn'] },
-    }),
+    // Chaque jeton porte sa propre durée : session selon le rôle
+    // (session.ts), étape de la double authentification (10 minutes).
+    JwtModule.register({ secret: process.env.JWT_SECRET || 'change-moi-en-production' }),
   ],
   controllers: [AuthController, MonCompteController, PhotosController],
   providers: [AuthService, ComptesService, ConfirmationIdentiteService, ProfilService, JwtStrategy],

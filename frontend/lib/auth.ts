@@ -4,8 +4,12 @@ const STORAGE_KEY = 'hub_session';
 
 // "Se souvenir de moi" coché -> localStorage (survit à la fermeture du
 // navigateur). Décoché -> sessionStorage (effacé à la fermeture de l'onglet).
+// recuLe : heure du poste à la réception du jeton, gardée tant que le jeton
+// ne change pas (échéance de la session, components/session-keeper.tsx).
 export function saveSession(session: Session, remember: boolean) {
-  const raw = JSON.stringify(session);
+  const actuelle = getSession();
+  const recuLe = actuelle?.access_token === session.access_token ? actuelle.recuLe : Date.now();
+  const raw = JSON.stringify({ ...session, recuLe });
   if (remember) {
     localStorage.setItem(STORAGE_KEY, raw);
     sessionStorage.removeItem(STORAGE_KEY);
@@ -26,15 +30,46 @@ export function getSession(): Session | null {
 }
 
 // Remplace la session en place (même stockage : « rester connecté » ou non),
-// ex. après un changement de mot de passe qui a renouvelé le jeton.
+// ex. après un changement de mot de passe qui a renouvelé le jeton. Pour le
+// même compte, le jeton enregistré n'est jamais remplacé par un plus ancien :
+// un écran peut repasser sa copie de la session, prise avant une
+// prolongation (lot B).
 export function remplacerSession(session: Session) {
-  saveSession(session, localStorage.getItem(STORAGE_KEY) !== null);
+  const actuelle = getSession();
+  const memeCompte = actuelle?.utilisateur.id === session.utilisateur.id && actuelle.societe.id === session.societe.id;
+  const jeton =
+    actuelle && memeCompte && emission(actuelle.access_token) > emission(session.access_token)
+      ? actuelle.access_token
+      : session.access_token;
+  saveSession({ ...session, access_token: jeton }, localStorage.getItem(STORAGE_KEY) !== null);
 }
 
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
   sessionStorage.removeItem(STORAGE_KEY);
 }
+
+// Session refusée par l'API ou échue : effacée, retour à l'écran de connexion
+// de la société, qui dit pourquoi.
+export function retourConnexion(slug: string) {
+  clearSession();
+  window.location.assign(`/login/${slug}?session=expiree`);
+}
+
+// Dates du jeton de session (secondes, horloge du serveur), lues sans vérifier
+// la signature : minuterie d'affichage seulement, le serveur reste seul juge.
+export function datesJeton(jeton: string): { iat: number; exp: number } | null {
+  try {
+    const contenu = JSON.parse(atob(jeton.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof contenu.iat === 'number' && typeof contenu.exp === 'number'
+      ? { iat: contenu.iat, exp: contenu.exp }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+const emission = (jeton: string) => datesJeton(jeton)?.iat ?? 0;
 
 const ORDRE_NIVEAUX: Record<NiveauPermission, number> = {
   aucun: 0,

@@ -8,6 +8,7 @@ import { SCRIPT_THEME_INITIAL } from '@/lib/theme';
 import { SynchroTheme } from '@/components/synchro-theme';
 import { ConfirmationProvider } from '@/components/confirmation';
 import { ErrorReporting } from '@/components/error-reporting';
+import { SessionKeeper } from '@/components/session-keeper';
 
 // Geist et Geist Mono (paquet `geist`, auto-hébergées par next/font/local) :
 // une seule famille pour les titres, le texte, les montants et les codes —
@@ -53,6 +54,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SynchroTheme />
         {/* Erreurs du navigateur remontées au suivi (rien d'affiché). */}
         <ErrorReporting />
+        {/* Durée des sessions : prolongée par l'activité, fermée à
+            l'échéance (rien d'affiché). */}
+        <SessionKeeper />
         {/* Trait des icônes Lucide affiné (2 → 1,5) partout ; une icône qui
             passe son propre strokeWidth le garde. */}
         <LucideProvider strokeWidth={1.5}>

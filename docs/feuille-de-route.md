@@ -119,15 +119,18 @@ Décisions structurantes : `docs/adr/`.
 ## Prêt pour le lancement (état des lieux et décisions du 28/10/2026)
 
 Déjà en place : réinitialisation du mot de passe par e-mail (lien d'une
-heure, sessions coupées), double authentification (hors Salarié), création
-des comptes par invitation (lien de 72 h). Lots décidés :
+heure, sessions coupées), double authentification (hors Salarié jusqu'au
+lot A), création des comptes par invitation (lien de 72 h). Lots décidés :
 
-- **A** : e-mail d'avis quand le mot de passe ou la double authentification
-  change ; double authentification obligatoire pour **tous** les rôles ;
-  essai des e-mails réels en pré-production.
-- **B** : session de 12 h au plus partout ; expiration après 1 h
-  d'inactivité pour CEO, CFO, CIO et RH, 4 h pour les autres. Cookie
-  `httpOnly` juste après le lancement.
+- **A** (fait, PR #27) : e-mail d'avis quand le mot de passe ou la double
+  authentification change ; double authentification obligatoire pour
+  **tous** les rôles. Reste : essai des e-mails réels en pré-production.
+- **B** (fait) : session de 12 h au plus partout ; expiration après 1 h
+  d'inactivité pour CEO, CFO, CIO et RH, 4 h pour les autres
+  (`backend/src/auth/session.ts`), prolongée par l'activité dans le HUB ;
+  retour à l'écran de connexion à l'échéance. À confirmer : les comptes de
+  secours (`holding_admin`, `societe_admin`) ont 4 h, comme « les autres ».
+  Cookie `httpOnly` juste après le lancement.
 - **C** : verrouillage d'un compte après 10 échecs, 15 min, durée doublée à
   chaque récidive et plafonnée à 1 h ; déblocage par le CIO ; migration
   accordée.
@@ -175,6 +178,10 @@ des comptes par invitation (lien de 72 h). Lots décidés :
 - Avant chaque capture, le harnais attend qu'aucune requête de l'API ne soit
   en cours (le flux du chat excepté) ; au-delà de 30 s, la capture échoue en
   listant les requêtes.
+- Les sessions des captures sont ouvertes au démarrage de l'environnement :
+  depuis le lot B, celles du CEO, du CFO et du CIO valent 1 h. La série
+  complète et les tests de fumée doivent tenir dans l'heure (environ
+  4 minutes aujourd'hui).
 
 - La référence utilisée pour chaque fusion est archivée
   (`npm run archive -- <PR> <base> <comparée> <journal>` dans `e2e/`) dans la

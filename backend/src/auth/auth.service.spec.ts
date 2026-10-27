@@ -87,11 +87,14 @@ describe('AuthService.login — choix de l’affectation', () => {
   });
 });
 
+// Session ouverte il y a une heure (lot B : le début voyage d'un jeton à l'autre).
+const DEBUT = Math.floor(Date.now() / 1000) - 3600;
+
 describe('AuthService.changerMotDePasse', () => {
   it('mot de passe actuel incorrect → 400, rien n’est modifié', async () => {
     (verifierMotDePasse as jest.Mock).mockResolvedValueOnce(false);
     const { svc: s, update } = svc([affectation('S1', 'Salarié')]);
-    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'faux', 'nouveau-mdp-1')).rejects.toThrow(
+    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'faux', 'nouveau-mdp-1', DEBUT)).rejects.toThrow(
       BadRequestException,
     );
     expect(update).not.toHaveBeenCalled();
@@ -99,14 +102,14 @@ describe('AuthService.changerMotDePasse', () => {
 
   it('nouveau identique à l’actuel → 400', async () => {
     const { svc: s } = svc([affectation('S1', 'Salarié')]);
-    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'meme-mdp-123', 'meme-mdp-123')).rejects.toThrow(
+    await expect(s.changerMotDePasse('U1', 'grey-concrete', 'meme-mdp-123', 'meme-mdp-123', DEBUT)).rejects.toThrow(
       BadRequestException,
     );
   });
 
   it('change le hash, coupe les autres sessions et rend une session valide (iat ≥ coupure)', async () => {
     const { svc: s, update, sign, email } = svc([affectation('S1', 'Salarié')]);
-    const res = await s.changerMotDePasse('U1', 'grey-concrete', 'ancien-mdp-1', 'nouveau-mdp-1');
+    const res = await s.changerMotDePasse('U1', 'grey-concrete', 'ancien-mdp-1', 'nouveau-mdp-1', DEBUT);
     // Avis de sécurité à la personne (lot A).
     expect(email.envoyerAvisSecurite).toHaveBeenCalledWith(
       expect.objectContaining({ evenement: 'mot_de_passe_modifie', le: expect.any(Date) }),
@@ -114,9 +117,52 @@ describe('AuthService.changerMotDePasse', () => {
     const data = update.mock.calls[0][0].data;
     expect(data.motDePasseHash).toBe('nouveau-hash');
     expect(data.sessionsValidesDepuis).toBeInstanceOf(Date);
-    const { iat } = sign.mock.calls[0][0];
+    const { iat, debut } = sign.mock.calls[0][0];
     expect(iat * 1000).toBeGreaterThanOrEqual(data.sessionsValidesDepuis.getTime());
+    // Lot B : même début de session, le changement ne repousse pas les 12 h.
+    expect(debut).toBe(DEBUT);
     expect(res.access_token).toBe('jeton');
+  });
+});
+
+describe('Durée des sessions (lot B)', () => {
+  const CONNECTE = {
+    userId: 'U1',
+    email: 'a@b.c',
+    societeId: 'S1',
+    societeSlug: 'grey-concrete',
+    role: 'Salarié',
+    permissions: { crm: 'aucun' },
+  };
+  const maintenant = () => Math.floor(Date.now() / 1000);
+
+  it('connexion : la session commence avec le jeton, valable selon le rôle', async () => {
+    const { svc: s, sign } = svc([affectation('S1', 'CFO')]);
+    await s.login(DTO);
+    const [contenu, options] = sign.mock.calls[0];
+    expect(contenu.debut).toBe(contenu.iat);
+    expect(options).toEqual({ expiresIn: 3600 });
+  });
+
+  it('prolongation : mêmes droits, même début, expiration repoussée', () => {
+    const { svc: s, sign } = svc([]);
+    const t = maintenant();
+    const res = s.prolongerSession({ ...CONNECTE, debutSession: t - 3600, emissionJeton: t - 600 });
+    const [contenu, options] = sign.mock.calls[0];
+    expect(contenu).toMatchObject({ sub: 'U1', role: 'Salarié', permissions: { crm: 'aucun' }, debut: t - 3600 });
+    expect(contenu.iat).toBeGreaterThanOrEqual(t);
+    expect(options).toEqual({ expiresIn: 4 * 3600 });
+    expect(res.access_token).toBe('jeton');
+  });
+
+  it('prolongation près des 12 h : le jeton s’arrête avec la session ; au-delà, refus', () => {
+    const { svc: s, sign } = svc([]);
+    const t = maintenant();
+    s.prolongerSession({ ...CONNECTE, debutSession: t - 12 * 3600 + 600, emissionJeton: t - 60 });
+    expect(sign.mock.calls[0][1].expiresIn).toBeLessThanOrEqual(600);
+    expect(() => s.prolongerSession({ ...CONNECTE, debutSession: t - 12 * 3600, emissionJeton: t })).toThrow(
+      UnauthorizedException,
+    );
   });
 });
 

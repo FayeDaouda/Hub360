@@ -15,9 +15,11 @@ import {
 } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { UtilisateurConnecte } from './jwt.strategy';
 import { ProfilService } from './profil.service';
-import { NomAfficheDto, PhotoDto } from './dto/profil.dto';
+import { NomAfficheDto, PhotoDto, SessionProlongeeDto } from './dto/profil.dto';
 
 type R = { user: { userId: string } };
 
@@ -25,7 +27,10 @@ type R = { user: { userId: string } };
 @Controller('auth/moi')
 @UseGuards(JwtAuthGuard)
 export class MonCompteController {
-  constructor(private profil: ProfilService) {}
+  constructor(
+    private profil: ProfilService,
+    private auth: AuthService,
+  ) {}
 
   @Get()
   lire(@Req() req: R) {
@@ -51,6 +56,15 @@ export class MonCompteController {
   @HttpCode(200)
   deconnecterPartout(@Req() req: R) {
     return this.profil.deconnecterPartout(req.user.userId);
+  }
+
+  // Activité dans le HUB : nouveau jeton, expiration repoussée selon le rôle,
+  // jamais au-delà des 12 heures de la session (session.ts). Sans plafond
+  // de tentatives : route réservée à une session valide.
+  @Post('prolongation')
+  @HttpCode(200)
+  prolongerSession(@Req() req: { user: UtilisateurConnecte }): SessionProlongeeDto {
+    return this.auth.prolongerSession(req.user);
   }
 }
 
