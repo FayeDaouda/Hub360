@@ -12,6 +12,7 @@ import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from '../r
 import {
   effectiveDue,
   isLate,
+  onTime,
   performanceStats,
   statusFromProjectState,
   taskStatus,
@@ -82,6 +83,8 @@ export class TasksService {
         // Retard qualifié : la nouvelle date accordée (l'échéance de référence reste).
         const prolongeeJusquau = state?.code === 'prolongee' ? state.jusquau : null;
         const due = { statut, echeance: t.echeance, prolongeeJusquau };
+        // Date de la remise, seulement quand elle compte (en validation, validée).
+        const remisLe = t.statut === 'a_valider' || t.statut === 'validee' ? t.remisLe : null;
         return {
           id: t.id,
           etape: t.etape,
@@ -102,7 +105,8 @@ export class TasksService {
           dateEffective: effectiveDue(due),
           prolongeeJusquau,
           version: t.version,
-          remisLe: t.statut === 'a_valider' || t.statut === 'validee' ? t.remisLe : null,
+          remisLe,
+          aTemps: onTime({ echeance: t.echeance, remisLe }),
           valideLe: t.valideeLe,
           renvoiMotif: t.renvoiMotif,
           validateur: reviewers.get(t.id) ?? null,
@@ -130,6 +134,7 @@ export class TasksService {
         statut: statusFromProjectState(taskStatus(t, templateValidationState(t), today), states.get(t.id)),
         echeance: t.echeance,
         remisLe: t.remisLe,
+        version: t.version,
       })),
     );
   }
@@ -181,21 +186,25 @@ export class TasksService {
           t.projet.cellules[0]?.cellule.dispatcherId ?? null,
         ),
       )
-      .map((t) => ({
-        id: t.id,
-        etape: `${String(t.carte.etapeNumero).padStart(2, '0')} · ${t.carte.etapeLibelle}`,
-        libelle: t.libelle,
-        version: t.version,
-        projetId: t.projet.id,
-        projetCode: t.projet.code,
-        projetProgramme: t.projet.programme,
-        responsable: t.assigne ? fullName(t.assigne) : '—',
-        debut: t.debutLe,
-        echeance: t.finLe,
-        remisLe: t.evenements[0]?.creeLe ?? null,
-        // Fichiers de la remise à valider (vide = « sans fichier joint »).
-        pieces: t.pieces.filter((f) => f.version === t.version).map((f) => ({ id: f.id, nom: f.nom })),
-      }))
+      .map((t) => {
+        const remisLe = t.evenements[0]?.creeLe ?? null;
+        return {
+          id: t.id,
+          etape: `${String(t.carte.etapeNumero).padStart(2, '0')} · ${t.carte.etapeLibelle}`,
+          libelle: t.libelle,
+          version: t.version,
+          projetId: t.projet.id,
+          projetCode: t.projet.code,
+          projetProgramme: t.projet.programme,
+          responsable: t.assigne ? fullName(t.assigne) : '—',
+          debut: t.debutLe,
+          echeance: t.finLe,
+          remisLe,
+          aTemps: onTime({ echeance: t.finLe, remisLe }),
+          // Fichiers de la remise à valider (vide = « sans fichier joint »).
+          pieces: t.pieces.filter((f) => f.version === t.version).map((f) => ({ id: f.id, nom: f.nom })),
+        };
+      })
       .sort((x, y) => (x.remisLe?.getTime() ?? 0) - (y.remisLe?.getTime() ?? 0));
   }
 

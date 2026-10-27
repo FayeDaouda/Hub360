@@ -20,6 +20,7 @@ export function myTaskFixture(patch: Partial<MyTask> = {}): MyTask {
     statut: 'en_cours',
     enRetard: false,
     dateEffective: '2026-10-30',
+    aTemps: null,
     prolongeeJusquau: null,
     version: 0,
     remisLe: null,
@@ -43,6 +44,7 @@ export function myTasksViewFixture(taches: MyTask[] = []): MyTasksView {
       enCours: taches.length,
       enRetard: 0,
       respectDelais: { aTemps: 0, total: 0, pct: null },
+      reprises: { avecReprise: 0, total: 0, pct: null },
     },
   };
 }

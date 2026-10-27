@@ -10,13 +10,13 @@ import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
 import { prenomAffiche } from '@/lib/profil';
 import { marquerMentionLue, type MentionRecue } from '@/lib/projets-ouverts';
-import { RemiseModal } from '@/components/mon-espace/remise-modal';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 import { DepositToast } from './deposit-toast';
 import { MentionRow } from './mention-row';
 import { MyTasksHeader, type View } from './my-tasks-header';
 import { ReviewerAside } from './reviewer-aside';
+import { SubmissionModal } from './submission-modal';
 import { TaskDrawer } from './task-drawer';
 import { FILTERS, SECTIONS, groupTasks, type Filter } from './task-groups';
 import { TaskList } from './task-list';
@@ -253,11 +253,11 @@ export function MyTasks({ slug }: { slug: string }) {
       </p>
 
       {toSubmit && (
-        <RemiseModal
+        <SubmissionModal
           slug={slug}
-          tache={toSubmit.task}
-          piecesInitiales={toSubmit.pieces}
-          onEnvoyer={(body) => tasks.submitLater(toSubmit.task, body)}
+          task={toSubmit.task}
+          initialFiles={toSubmit.pieces}
+          onSend={(body) => tasks.submitLater(toSubmit.task, body)}
           onClose={() => setToSubmit(null)}
         />
       )}

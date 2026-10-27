@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, use } from 'react';
-import { MonEspace } from '@/components/mon-espace/mon-espace';
+import { MySpace } from '@/features/my-space/my-space';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -11,7 +11,7 @@ export default function MonEspacePage(props: Props) {
   const params = use(props.params);
   return (
     <Suspense>
-      <MonEspace slug={params.slug} />
+      <MySpace slug={params.slug} />
     </Suspense>
   );
 }

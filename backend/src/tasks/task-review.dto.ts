@@ -19,6 +19,8 @@ export class TaskToReviewDto {
   debut!: string | null;
   echeance!: string | null;
   remisLe!: Date | null;
+  // Remise jugée à temps (task-rules.ts, onTime) ; null : rien à juger.
+  aTemps!: boolean | null;
   // Fichiers de la remise à valider (vide = « sans fichier joint »).
   pieces!: SubmissionFileRefDto[];
 }

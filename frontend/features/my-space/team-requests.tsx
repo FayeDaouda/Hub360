@@ -10,31 +10,35 @@ import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 
-type Filtre = 'a_decider' | 'toutes';
+type Filter = 'a_decider' | 'toutes';
 
 // « Mon espace › À valider » (maquette du boss) : les demandes de l'équipe
 // dont je suis le N+1 — à décider, ou toutes — et, à droite, les signaux et
 // la décision de la demande choisie.
-export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n: number) => void }) {
-  const [toutes, setToutes] = useState<DemandeAbsence[] | null>(null);
-  const [filtre, setFiltre] = useState<Filtre>('a_decider');
-  const [choisie, setChoisie] = useState<string | null>(null);
+export function TeamRequests({ slug, onCount }: { slug: string; onCount: (n: number) => void }) {
+  const [all, setAll] = useState<DemandeAbsence[] | null>(null);
+  const [filter, setFilter] = useState<Filter>('a_decider');
+  const [chosen, setChosen] = useState<string | null>(null);
 
-  const charger = useCallback(() => {
+  const load = useCallback(() => {
     getAbsencesAValider(slug, true)
-      .then(setToutes)
-      .catch(() => setToutes([]));
+      .then(setAll)
+      .catch(() => setAll([]));
   }, [slug]);
-  useEffect(charger, [charger]);
+  useEffect(load, [load]);
 
   // À décider : comme N+1, ou en validation finale (CEO, demandes de la RH).
-  const aDecider = (toutes ?? []).filter((d) => d.statut === 'attente_n1' || d.validationFinale);
+  const toDecide = (all ?? []).filter((d) => d.statut === 'attente_n1' || d.validationFinale);
   useEffect(() => {
-    if (toutes) onCompte(aDecider.length);
-  }, [toutes, aDecider.length, onCompte]);
+    if (all) onCount(toDecide.length);
+  }, [all, toDecide.length, onCount]);
 
-  const visibles = filtre === 'a_decider' ? aDecider : (toutes ?? []);
-  const demande = (toutes ?? []).find((d) => d.id === choisie) ?? null;
+  const shown = filter === 'a_decider' ? toDecide : (all ?? []);
+  const request = (all ?? []).find((d) => d.id === chosen) ?? null;
+  const done = () => {
+    setChosen(null);
+    load();
+  };
 
   return (
     <div className="me-colonnes">
@@ -43,34 +47,34 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
         <div className="vue-toggle" role="group" aria-label="Filtrer les demandes">
           {(
             [
-              ['a_decider', 'À décider', aDecider.length],
-              ['toutes', 'Toutes', toutes?.length ?? 0],
+              ['a_decider', 'À décider', toDecide.length],
+              ['toutes', 'Toutes', all?.length ?? 0],
             ] as const
-          ).map(([cle, libelle, n]) => (
+          ).map(([key, label, n]) => (
             <button
-              key={cle}
+              key={key}
               type="button"
-              className={filtre === cle ? 'is-active' : ''}
-              aria-pressed={filtre === cle}
-              onClick={() => setFiltre(cle)}
+              className={filter === key ? 'is-active' : ''}
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
             >
-              {libelle} · {n}
+              {label} · {n}
             </button>
           ))}
         </div>
-        {!toutes ? (
+        {!all ? (
           <p className="dmd-note">Chargement…</p>
-        ) : visibles.length === 0 ? (
+        ) : shown.length === 0 ? (
           <p className="dmd-note">Aucune demande.</p>
         ) : (
           <ul className="dmd-liste">
-            {visibles.map((d) => (
+            {shown.map((d) => (
               <li key={d.id}>
                 <button
                   type="button"
-                  className={`me-demande${d.id === choisie ? ' is-actif' : ''}`}
-                  aria-pressed={d.id === choisie}
-                  onClick={() => setChoisie(d.id)}
+                  className={`me-demande${d.id === chosen ? ' is-actif' : ''}`}
+                  aria-pressed={d.id === chosen}
+                  onClick={() => setChosen(d.id)}
                 >
                   <span>
                     <strong>{d.salarie ? `${d.salarie.prenom} ${d.salarie.nom}` : '—'}</strong>
@@ -87,39 +91,23 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
       </section>
 
       <section className="panel glass-panel dmd-section me-decision">
-        {!demande ? (
+        {!request ? (
           <p className="dmd-note">Sélectionnez une demande pour voir les signaux et décider.</p>
-        ) : demande.validationFinale ? (
-          <ValidationFinale
-            key={demande.id}
-            slug={slug}
-            demande={demande}
-            onFait={() => {
-              setChoisie(null);
-              charger();
-            }}
-          />
-        ) : demande.statut === 'attente_n1' ? (
-          <DecisionN1Formulaire
-            key={demande.id}
-            slug={slug}
-            id={demande.id}
-            onFait={() => {
-              setChoisie(null);
-              charger();
-            }}
-          />
+        ) : request.validationFinale ? (
+          <FinalApproval key={request.id} slug={slug} request={request} onDone={done} />
+        ) : request.statut === 'attente_n1' ? (
+          <DecisionN1Formulaire key={request.id} slug={slug} id={request.id} onFait={done} />
         ) : (
           <>
             <h2 className="dmd-titre">
-              {demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}
+              {request.salarie ? `${request.salarie.prenom} ${request.salarie.nom}` : 'Demande'}
             </h2>
             <p>
-              <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du{' '}
-              {formatDate(demande.dateDebut)} au {formatDate(demande.dateFin)}
+              <strong>{LIBELLE_TYPE_ABSENCE[request.type]}</strong> · {request.jours} j ouvrables · du{' '}
+              {formatDate(request.dateDebut)} au {formatDate(request.dateFin)}
             </p>
             <p className="dmd-note">
-              {STATUT_ABSENCE[demande.statut].libelle} : la demande n’attend plus votre décision.
+              {STATUT_ABSENCE[request.statut].libelle} : la demande n’attend plus votre décision.
             </p>
           </>
         )}
@@ -130,35 +118,35 @@ export function DemandesEquipe({ slug, onCompte }: { slug: string; onCompte: (n:
 
 // Validation finale par le CEO d'une demande de la RH (accord du CFO déjà
 // donné) : la RH ne valide jamais sa propre demande.
-function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: DemandeAbsence; onFait: () => void }) {
-  const [refus, setRefus] = useState(false);
+function FinalApproval({ slug, request, onDone }: { slug: string; request: DemandeAbsence; onDone: () => void }) {
+  const [refusing, setRefusing] = useState(false);
   const [motif, setMotif] = useState('');
-  const [etat, setEtat] = useState<{ envoi: boolean; erreur: string | null }>({ envoi: false, erreur: null });
+  const [state, setState] = useState<{ sending: boolean; error: string | null }>({ sending: false, error: null });
 
-  async function trancher(valide: boolean) {
-    setEtat({ envoi: true, erreur: null });
+  async function decide(approved: boolean) {
+    setState({ sending: true, error: null });
     try {
-      await validerFinaleCeo(slug, demande.id, valide, valide ? undefined : motif.trim());
-      onFait();
+      await validerFinaleCeo(slug, request.id, approved, approved ? undefined : motif.trim());
+      onDone();
     } catch (e) {
-      setEtat({ envoi: false, erreur: e instanceof ApiError ? e.message : 'Décision non enregistrée.' });
+      setState({ sending: false, error: e instanceof ApiError ? e.message : 'Décision non enregistrée.' });
     }
   }
 
   return (
     <>
-      <h2 className="dmd-titre">{demande.salarie ? `${demande.salarie.prenom} ${demande.salarie.nom}` : 'Demande'}</h2>
+      <h2 className="dmd-titre">{request.salarie ? `${request.salarie.prenom} ${request.salarie.nom}` : 'Demande'}</h2>
       <p>
-        <strong>{LIBELLE_TYPE_ABSENCE[demande.type]}</strong> · {demande.jours} j ouvrables · du{' '}
-        {formatDate(demande.dateDebut)} au {formatDate(demande.dateFin)}
+        <strong>{LIBELLE_TYPE_ABSENCE[request.type]}</strong> · {request.jours} j ouvrables · du{' '}
+        {formatDate(request.dateDebut)} au {formatDate(request.dateFin)}
       </p>
-      {demande.commentaire && <p className="dmd-note">« {demande.commentaire} »</p>}
+      {request.commentaire && <p className="dmd-note">« {request.commentaire} »</p>}
       <p className="dmd-note">
         Demande de la RH, accord de son N+1 (CFO) donné : la validation finale vous revient — la RH ne valide jamais sa
         propre demande.
       </p>
-      <CalendrierCellule slug={slug} demandeId={demande.id} source="decideur" />
-      {refus && (
+      <CalendrierCellule slug={slug} demandeId={request.id} source="decideur" />
+      {refusing && (
         <Field label="Motif du refus">
           <textarea
             className="field-input"
@@ -169,23 +157,23 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
           />
         </Field>
       )}
-      {etat.erreur && <FieldError>{etat.erreur}</FieldError>}
+      {state.error && <FieldError>{state.error}</FieldError>}
       <div className="dmd-actions">
-        {refus ? (
+        {refusing ? (
           <>
             <button
               type="button"
               className="btn-ghost btn-ghost--sm"
-              disabled={etat.envoi}
-              onClick={() => setRefus(false)}
+              disabled={state.sending}
+              onClick={() => setRefusing(false)}
             >
               Annuler
             </button>
             <button
               type="button"
               className="btn-primary btn-primary--sm"
-              disabled={etat.envoi || !motif.trim()}
-              onClick={() => trancher(false)}
+              disabled={state.sending || !motif.trim()}
+              onClick={() => decide(false)}
             >
               Refuser
             </button>
@@ -195,16 +183,16 @@ function ValidationFinale({ slug, demande, onFait }: { slug: string; demande: De
             <button
               type="button"
               className="btn-ghost btn-ghost--sm"
-              disabled={etat.envoi}
-              onClick={() => setRefus(true)}
+              disabled={state.sending}
+              onClick={() => setRefusing(true)}
             >
               Refuser…
             </button>
             <button
               type="button"
               className="btn-primary btn-primary--sm"
-              disabled={etat.envoi}
-              onClick={() => trancher(true)}
+              disabled={state.sending}
+              onClick={() => decide(true)}
             >
               Valider
             </button>

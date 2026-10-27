@@ -1,32 +1,33 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ModePaiementSalaire, Prisma, SituationFamiliale, TypePieceDossier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ouDossierDuCompte } from './mon-compte';
+import { ouDossierDuCompte } from '../rh/mon-compte';
 import { TasksService } from '../tasks/tasks.service';
 import { cheminPhoto, photoMembre } from '../auth/profil';
+import type { DownloadDto, MyCellViewDto, MyFileDto, MySpaceViewDto } from './my-space-view.dto';
 
-type Acteur = { userId: string; societeId?: string };
+type Actor = { userId: string; societeId?: string };
 
 // Pièces du dossier que le salarié retrouve dans « Mon espace » (maquette RH :
 // « visible dans Mon espace »). Les autres pièces restent côté RH.
-export const DOCUMENTS_SALARIE: TypePieceDossier[] = ['contrat_signe', 'fiche_poste'];
+export const EMPLOYEE_DOCUMENTS: TypePieceDossier[] = ['contrat_signe', 'fiche_poste'];
 
-const INCLURE = {
+const PROFILE_INCLUDE = {
   societe: { select: { nom: true } },
   collaborateur: { select: { photoCle: true, cellule: { select: { nom: true } } } },
   // Photo choisie par la personne (menu du compte) : prime sur la fiche d'équipe.
   utilisateur: { select: { photoCle: true } },
-  pieces: { where: { type: { in: DOCUMENTS_SALARIE } }, select: { type: true, nom: true, createdAt: true } },
+  pieces: { where: { type: { in: EMPLOYEE_DOCUMENTS } }, select: { type: true, nom: true, createdAt: true } },
   bulletins: { select: { mois: true, nom: true, updatedAt: true }, orderBy: { mois: 'desc' } },
   attestations: { select: { id: true, demandeLe: true, delivreeLe: true, nom: true }, orderBy: { demandeLe: 'desc' } },
 } satisfies Prisma.DossierPersonnelInclude;
-type DossierProfil = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE }>;
+type ProfileFile = Prisma.DossierPersonnelGetPayload<{ include: typeof PROFILE_INCLUDE }>;
 
 // « Mon espace » (lot 5) : le salarié consulte son dossier, modifie ses seules
 // coordonnées (téléphone, contact d'urgence) et télécharge ses documents.
 // Le salaire n'y figure pas (réservé RH, CFO, CEO).
 @Injectable()
-export class MonEspaceService {
+export class MySpaceService {
   constructor(
     private prisma: PrismaService,
     private tasks: TasksService,
@@ -34,14 +35,17 @@ export class MonEspaceService {
 
   // `dossier: null` plutôt qu'une erreur : les autres onglets (tâches, temps,
   // validations du N+1) restent utilisables sans dossier ouvert par la RH.
-  async profil(a: Acteur) {
-    const d = await this.prisma.dossierPersonnel.findFirst({ where: ouDossierDuCompte(a.userId), include: INCLURE });
-    return { dossier: d ? versProfil(d) : null };
+  async profile(a: Actor): Promise<MySpaceViewDto> {
+    const d = await this.prisma.dossierPersonnel.findFirst({
+      where: ouDossierDuCompte(a.userId),
+      include: PROFILE_INCLUDE,
+    });
+    return { dossier: d ? toProfile(d) : null };
   }
 
-  async majCoordonnees(
-    a: Acteur,
-    corps: {
+  async updateContactDetails(
+    a: Actor,
+    body: {
       telephone?: string;
       emailPerso?: string;
       situationFamiliale?: SituationFamiliale | null;
@@ -51,105 +55,105 @@ export class MonEspaceService {
       telephoneUrgence?: string;
     },
   ) {
-    const id = await this.idDossier(a);
-    const texte = (v?: string) => (v === undefined ? undefined : v.trim());
+    const id = await this.fileId(a);
+    const text = (v?: string) => (v === undefined ? undefined : v.trim());
     await this.prisma.dossierPersonnel.update({
       where: { id },
       data: {
-        telephone: texte(corps.telephone),
-        emailPerso: texte(corps.emailPerso),
-        situationFamiliale: corps.situationFamiliale,
-        enfantsACharge: corps.enfantsACharge,
-        adresse: texte(corps.adresse),
-        contactUrgence: texte(corps.contactUrgence),
-        telephoneUrgence: texte(corps.telephoneUrgence),
+        telephone: text(body.telephone),
+        emailPerso: text(body.emailPerso),
+        situationFamiliale: body.situationFamiliale,
+        enfantsACharge: body.enfantsACharge,
+        adresse: text(body.adresse),
+        contactUrgence: text(body.contactUrgence),
+        telephoneUrgence: text(body.telephoneUrgence),
       },
     });
-    return this.profil(a);
+    return this.profile(a);
   }
 
   // « Demander une attestation de travail » : une seule demande en attente à
   // la fois ; la RH la délivre (onglet RH › Demandes).
-  async demanderAttestation(a: Acteur) {
-    const id = await this.idDossier(a);
-    const enAttente = await this.prisma.demandeAttestation.count({ where: { dossierId: id, delivreeLe: null } });
-    if (enAttente) throw new ConflictException('Une attestation est déjà demandée : la RH la prépare.');
+  async requestCertificate(a: Actor) {
+    const id = await this.fileId(a);
+    const pending = await this.prisma.demandeAttestation.count({ where: { dossierId: id, delivreeLe: null } });
+    if (pending) throw new ConflictException('Une attestation est déjà demandée : la RH la prépare.');
     await this.prisma.demandeAttestation.create({ data: { dossierId: id } });
-    return this.profil(a);
+    return this.profile(a);
   }
 
-  async attestation(a: Acteur, attestationId: string) {
-    const id = await this.idDossier(a);
-    const at = await this.prisma.demandeAttestation.findFirst({
-      where: { id: attestationId, dossierId: id },
+  async certificate(a: Actor, certificateId: string): Promise<DownloadDto> {
+    const id = await this.fileId(a);
+    const c = await this.prisma.demandeAttestation.findFirst({
+      where: { id: certificateId, dossierId: id },
       select: { nom: true, cle: true },
     });
-    if (!at?.cle) throw new NotFoundException('Attestation pas encore délivrée par la RH.');
-    return { nom: at.nom ?? 'attestation-de-travail', url: at.cle };
+    if (!c?.cle) throw new NotFoundException('Attestation pas encore délivrée par la RH.');
+    return { nom: c.nom ?? 'attestation-de-travail', url: c.cle };
   }
 
   // « Soumettre à la RH » : le nouveau moyen de paiement attend la validation
   // de la RH (appliqué à la paie ensuite) ; une nouvelle demande remplace la
   // précédente. Identique à celui en service : rien à valider.
-  async demanderPaiement(a: Acteur, corps: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string }) {
-    const id = await this.idDossier(a);
+  async requestPaymentChange(a: Actor, body: { modePaiement: ModePaiementSalaire; coordonneesPaiement: string }) {
+    const id = await this.fileId(a);
     const d = await this.prisma.dossierPersonnel.findUniqueOrThrow({
       where: { id },
       select: { modePaiement: true, coordonneesPaiement: true },
     });
-    const coordonnees = corps.coordonneesPaiement.trim();
-    if (!coordonnees) throw new BadRequestException('Indiquez la banque et le RIB, ou le numéro.');
-    if (d.modePaiement === corps.modePaiement && d.coordonneesPaiement === coordonnees) {
+    const details = body.coordonneesPaiement.trim();
+    if (!details) throw new BadRequestException('Indiquez la banque et le RIB, ou le numéro.');
+    if (d.modePaiement === body.modePaiement && d.coordonneesPaiement === details) {
       throw new ConflictException('C’est déjà le moyen de paiement en service.');
     }
     await this.prisma.dossierPersonnel.update({
       where: { id },
       data: {
-        paiementDemandeMode: corps.modePaiement,
-        paiementDemandeCoordonnees: coordonnees,
+        paiementDemandeMode: body.modePaiement,
+        paiementDemandeCoordonnees: details,
         paiementDemandeLe: new Date(),
       },
     });
-    return this.profil(a);
+    return this.profile(a);
   }
 
-  async document(a: Acteur, type: string) {
-    if (!(DOCUMENTS_SALARIE as string[]).includes(type)) throw new NotFoundException('Document inconnu.');
+  async document(a: Actor, type: string): Promise<DownloadDto> {
+    if (!(EMPLOYEE_DOCUMENTS as string[]).includes(type)) throw new NotFoundException('Document inconnu.');
     const p = await this.prisma.pieceDossierPersonnel.findUnique({
-      where: { dossierId_type: { dossierId: await this.idDossier(a), type: type as TypePieceDossier } },
+      where: { dossierId_type: { dossierId: await this.fileId(a), type: type as TypePieceDossier } },
       select: { nom: true, cle: true },
     });
     if (!p) throw new NotFoundException('Document pas encore déposé par la RH.');
     return { nom: p.nom, url: p.cle };
   }
 
-  async bulletin(a: Acteur, mois: string) {
-    const b = await this.prisma.bulletinPaie.findUnique({
-      where: { dossierId_mois: { dossierId: await this.idDossier(a), mois } },
+  async payslip(a: Actor, month: string): Promise<DownloadDto> {
+    const p = await this.prisma.bulletinPaie.findUnique({
+      where: { dossierId_mois: { dossierId: await this.fileId(a), mois: month } },
       select: { nom: true, cle: true },
     });
-    if (!b) throw new NotFoundException('Bulletin pas encore déposé par la RH.');
-    return { nom: b.nom, url: b.cle };
+    if (!p) throw new NotFoundException('Bulletin pas encore déposé par la RH.');
+    return { nom: p.nom, url: p.cle };
   }
 
   // Ma cellule (lot 5d, maquette « Mon espace » du boss) : l'équipe, son
   // pilote (chef de team), ses projets et ses tâches (en cours, en retard,
   // remises à temps). Aucun montant. Sans cellule : tout à zéro.
-  async maCellule(a: Acteur) {
-    const dossier = await this.prisma.dossierPersonnel.findFirst({
+  async myCell(a: Actor): Promise<MyCellViewDto> {
+    const file = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),
       select: { collaborateur: { select: { id: true, celluleId: true } } },
     });
-    const fiche =
-      dossier?.collaborateur ??
+    const member =
+      file?.collaborateur ??
       (await this.prisma.collaborateur.findFirst({
         where: { utilisateurId: a.userId, ...(a.societeId && { societeId: a.societeId }) },
         select: { id: true, celluleId: true },
       }));
-    if (!fiche?.celluleId) return { cellule: null, stats: await this.tasks.teamStats([]) };
+    if (!member?.celluleId) return { cellule: null, stats: await this.tasks.teamStats([]) };
 
     const c = await this.prisma.cellule.findUniqueOrThrow({
-      where: { id: fiche.celluleId },
+      where: { id: member.celluleId },
       select: {
         nom: true,
         societeId: true,
@@ -189,7 +193,7 @@ export class MonEspaceService {
           role: m.role,
           niveau: m.niveau,
           estChef: m.id === c.dispatcherId,
-          estMoi: m.id === fiche.id,
+          estMoi: m.id === member.id,
           photo: photoMembre(m),
           // Compte HUB du membre (fiche contact) ; null s'il n'en a pas.
           utilisateurId: m.utilisateurId ?? m.dossierPersonnel?.utilisateurId ?? null,
@@ -199,7 +203,7 @@ export class MonEspaceService {
     };
   }
 
-  private async idDossier(a: Acteur): Promise<string> {
+  private async fileId(a: Actor): Promise<string> {
     const d = await this.prisma.dossierPersonnel.findFirst({
       where: ouDossierDuCompte(a.userId),
       select: { id: true },
@@ -209,7 +213,7 @@ export class MonEspaceService {
   }
 }
 
-function versProfil(d: DossierProfil) {
+function toProfile(d: ProfileFile): MyFileDto {
   const mission = {
     resultat: d.missionResultat,
     livrables: d.missionLivrables,
@@ -249,7 +253,7 @@ function versProfil(d: DossierProfil) {
       : null,
     numeroIpm: d.numeroIpm,
     mission: Object.values(mission).some((v) => v.trim()) ? mission : null,
-    documents: DOCUMENTS_SALARIE.map((type) => {
+    documents: EMPLOYEE_DOCUMENTS.map((type) => {
       const p = d.pieces.find((x) => x.type === type);
       return { type, nom: p?.nom ?? null, ajouteLe: p?.createdAt ?? null };
     }),

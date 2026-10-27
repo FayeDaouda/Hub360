@@ -12,12 +12,21 @@ export class OnTimeRateDto {
   pct!: number | null;
 }
 
+// Taux de reprise : tâches validées renvoyées au moins une fois, parmi
+// celles validées après au moins une remise.
+export class ReworkRateDto {
+  avecReprise!: number;
+  total!: number;
+  pct!: number | null;
+}
+
 export class PerformanceStatsDto {
   total!: number;
   validees!: number;
   enCours!: number;
   enRetard!: number;
   respectDelais!: OnTimeRateDto;
+  reprises!: ReworkRateDto;
 }
 
 export class MyTaskDto {
@@ -41,6 +50,8 @@ export class MyTaskDto {
   enRetard!: boolean;
   dateEffective!: string | null;
   prolongeeJusquau!: string | null; // statut « prolongee » : nouvelle date accordée
+  // Remise jugée à temps (task-rules.ts, onTime) ; null : rien à juger.
+  aTemps!: boolean | null;
   version!: number;
   remisLe!: Date | null;
   valideLe!: Date | null;

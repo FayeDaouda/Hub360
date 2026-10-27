@@ -3,7 +3,7 @@ import { IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, Vali
 
 // « Mes informations » (maquette) : ce que le salarié modifie lui-même,
 // enregistré immédiatement. Mêmes limites que DossierPersonnelDto.
-export class CoordonneesDto {
+export class ContactDetailsDto {
   @IsOptional() @IsString() @MaxLength(40) telephone?: string;
   @IsOptional() @ValidateIf((_, v) => v !== '') @IsEmail() @MaxLength(120) emailPerso?: string;
   @IsOptional()
@@ -17,7 +17,7 @@ export class CoordonneesDto {
 }
 
 // Changement de moyen de paiement : soumis à la RH, appliqué après validation.
-export class DemandePaiementDto {
+export class PaymentChangeDto {
   @IsEnum(ModePaiementSalaire) modePaiement!: ModePaiementSalaire;
   @IsString() @MaxLength(80) coordonneesPaiement!: string;
 }

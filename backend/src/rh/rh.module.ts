@@ -12,13 +12,10 @@ import { IntegrationController } from './integration.controller';
 import { IntegrationService } from './integration.service';
 import { FeuillesTempsController, MonTempsController } from './temps.controller';
 import { TempsService } from './temps.service';
-import { MonEspaceController } from './mon-espace.controller';
-import { MonEspaceService } from './mon-espace.service';
-import { TasksModule } from '../tasks/tasks.module';
 import { DemandesRhController, MesDemandesController, ValidationsAbsencesController } from './demandes.controller';
 
 @Module({
-  imports: [NotificationsModule, ReglagesModule, TasksModule], // TasksModule : statistiques de Ma cellule
+  imports: [NotificationsModule, ReglagesModule],
   providers: [
     AlertesRhService,
     DossiersPersonnelService,
@@ -26,7 +23,6 @@ import { DemandesRhController, MesDemandesController, ValidationsAbsencesControl
     DemandesService,
     IntegrationService,
     TempsService,
-    MonEspaceService,
   ],
   controllers: [
     SalairesController,
@@ -38,7 +34,6 @@ import { DemandesRhController, MesDemandesController, ValidationsAbsencesControl
     IntegrationController,
     FeuillesTempsController,
     MonTempsController,
-    MonEspaceController,
   ],
   // Pilotage : feuilles de temps contrôlées, absences à valider (N+1),
   // points d'intégration (tuiles RH).
