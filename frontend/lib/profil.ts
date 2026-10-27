@@ -1,4 +1,5 @@
 import { apiAuth, urlApi } from './client-api';
+import type { ReponseApi } from './api/types';
 import type { Session } from './types';
 
 // Profil de la personne connectée (menu du compte, 23/10/2026).
@@ -23,6 +24,9 @@ export const majPhoto = (image: string) => apiAuth<Profil>('/auth/moi/photo', { 
 export const retirerPhoto = () => apiAuth<Profil>('/auth/moi/photo', { method: 'DELETE' });
 export const deconnecterPartout = () =>
   apiAuth<{ ok: true }>('/auth/moi/deconnexion-partout', { method: 'POST', body: {} });
+// Activité dans le HUB : nouveau jeton, expiration repoussée (lot B).
+export const prolongerSession = () =>
+  apiAuth<ReponseApi<'/api/auth/moi/prolongation', 'post'>>('/auth/moi/prolongation', { method: 'POST', body: {} });
 
 // Source d'une photo : chemin de l'API (photo du compte) ou data URI (photo
 // de fiche d'équipe posée par l'administration).

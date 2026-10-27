@@ -1,4 +1,4 @@
-import { clearSession, getSession } from './auth';
+import { getSession, retourConnexion } from './auth';
 
 // Base de l'API NestJS. Override possible via NEXT_PUBLIC_API_URL.
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -59,8 +59,7 @@ export async function apiAuth<T>(chemin: string, options: Options = {}): Promise
     // reconnecte-toi. » (session invalide, expirée, société introuvable).
     const sessionRefusee = message === 'Unauthorized' || /reconnecte-toi\.?$/.test(message);
     if (res.status === 401 && session && sessionRefusee && typeof window !== 'undefined') {
-      clearSession();
-      window.location.assign(`/login/${session.societe.slug}?session=expiree`);
+      retourConnexion(session.societe.slug);
     }
     throw new ApiError(message, res.status);
   }

@@ -45,6 +45,9 @@ export type Session = {
   // d'une session ouverte avant son ajout : traitée comme « aucun » partout
   // (cf. lib/auth.ts::aLaPermission) — une reconnexion la récupère.
   permissions?: Partial<Record<string, NiveauPermission>>;
+  // Heure du poste (ms) à la réception du jeton, posée par lib/auth.ts ;
+  // absente d'une session enregistrée avant le lot B.
+  recuLe?: number;
 };
 
 // --- Tableau de bord back-office d'une société ---
