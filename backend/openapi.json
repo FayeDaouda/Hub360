@@ -10931,6 +10931,9 @@
           "livraisonDepassee": {
             "type": "boolean"
           },
+          "livraisonProche": {
+            "type": "boolean"
+          },
           "enRetard": {
             "type": "number"
           },
@@ -10967,6 +10970,7 @@
           "horizon",
           "livraisonLe",
           "livraisonDepassee",
+          "livraisonProche",
           "enRetard",
           "prolongees",
           "attente",

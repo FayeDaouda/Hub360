@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
-import { PanneauLateral } from '@/components/projets-ouverts/panneau-lateral';
+import { SidePanel } from './side-panel';
 import { Pill } from '@/components/ui/pill';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -210,10 +210,10 @@ export function ProjectFile({
 
       {/* Tâche ou fil d'une carte : panneau latéral, le dossier garde la largeur. */}
       {(chosen || threadCard) && (
-        <PanneauLateral
-          titre={chosen ? `Tâche ${chosen.tache.libelle}` : `Fil de la carte ${threadCard!.libelle}`}
+        <SidePanel
+          title={chosen ? `Tâche ${chosen.tache.libelle}` : `Fil de la carte ${threadCard!.libelle}`}
           onClose={() => onSelection(null)}
-          entete={
+          header={
             <>
               <p className="fiche-crm-code">{d.code}</p>
               <p className="fiche-crm-meta">{d.client.nom}</p>
@@ -244,7 +244,7 @@ export function ProjectFile({
               onUpdate={onUpdate}
             />
           )}
-        </PanneauLateral>
+        </SidePanel>
       )}
     </>
   );

@@ -4177,6 +4177,7 @@ export interface components {
             horizon: number;
             livraisonLe: string;
             livraisonDepassee: boolean;
+            livraisonProche: boolean;
             enRetard: number;
             prolongees: number;
             attente: components["schemas"]["PendingDecisionsDto"];

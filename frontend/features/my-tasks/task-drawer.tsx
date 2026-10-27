@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getMentionablePeople, getProjectFile } from '@/features/projects/api';
 import type { OpenProjectFile } from '@/features/projects/types';
-import { PanneauLateral } from '@/components/projets-ouverts/panneau-lateral';
+import { SidePanel } from '@/features/projects/side-panel';
 import { TaskPanel } from '@/features/projects/task-panel';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
@@ -79,10 +79,10 @@ export function TaskDrawer({
   const task = card?.taches.find((t) => t.id === taskId);
 
   return (
-    <PanneauLateral
-      titre="Tâche"
+    <SidePanel
+      title="Tâche"
       onClose={onClose}
-      entete={
+      header={
         <p className="tp-fil">
           <span className="tp-fil-code">{project?.code ?? '…'}</span>
           {project && (
@@ -121,6 +121,6 @@ export function TaskDrawer({
       ) : (
         project && <p className="dmd-note">Cette tâche n’est plus dans le projet.</p>
       )}
-    </PanneauLateral>
+    </SidePanel>
   );
 }

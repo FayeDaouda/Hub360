@@ -1,5 +1,5 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { decisionContext, deliveryDate } from './decision-context';
+import { decisionContext, deliveryDate, isDeliverySoon } from './decision-context';
 
 // Suppléance du jour (revue Dir. GC, 21/10/2026, lot 4).
 describe('decisionContext', () => {
@@ -64,5 +64,15 @@ describe('deliveryDate', () => {
     expect(deliveryDate({ ouvertLe: '2026-10-01', budgetHeures: 80 }, new Set())).toBe('2026-10-14');
     expect(deliveryDate({ ouvertLe: '2026-10-01', budgetHeures: 80 }, new Set(['2026-10-05']))).toBe('2026-10-15');
     expect(deliveryDate({ ouvertLe: null, budgetHeures: 80 }, new Set())).toBeNull();
+  });
+});
+
+describe('isDeliverySoon', () => {
+  it('projet non livré, livraison entre aujourd’hui et J+15 inclus', () => {
+    expect(isDeliverySoon('chantier', '2026-10-27', '2026-10-27')).toBe(true);
+    expect(isDeliverySoon('conception', '2026-11-11', '2026-10-27')).toBe(true);
+    expect(isDeliverySoon('conception', '2026-11-12', '2026-10-27')).toBe(false);
+    expect(isDeliverySoon('conception', '2026-10-26', '2026-10-27')).toBe(false); // déjà dépassée
+    expect(isDeliverySoon('livre', '2026-10-30', '2026-10-27')).toBe(false);
   });
 });
