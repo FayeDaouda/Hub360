@@ -91,13 +91,21 @@ Décisions structurantes : `docs/adr/`.
   CI (#21) et chaque semaine sur les vraies données, surveillée chaque matin ;
   suivi des erreurs sans service extérieur, alertes par e-mail (ADR 0006) ;
   état de santé `/api/sante`.
-- **À faire par le user** (accès qu'il détient) : créer les serveurs de
-  pré-production et de production, les domaines, les `.env` (dont
-  `ALERTES_EMAIL` et l'envoi d'e-mails) et le stockage objet des
-  sauvegardes (`deploy/README.md`).
+- **Sauvegardes hors du serveur** (demande du 27/10/2026) : Storage Box
+  Hetzner, plus une seconde copie chiffrée (age, clé privée hors du serveur)
+  chez un autre fournisseur ; conservation 7 quotidiennes, 4 hebdomadaires,
+  12 mensuelles, sur le serveur et sur chaque copie ; le test hebdomadaire
+  restaure la copie de la Storage Box. Outils de l'image de sauvegarde :
+  `rclone` et `age` (paquets Alpine) à la place d'`aws-cli` — **nouvelle
+  dépendance, en attente de l'accord du user** avant fusion.
+- **Guide de mise en production** : `docs/mise-en-production.md` (serveurs,
+  pare-feu, SSH, domaine, e-mails SPF/DKIM/DMARC, sauvegardes, surveillance
+  externe, variables `.env`, pré-production sans donnée réelle).
+- **À faire par le user** (accès qu'il détient) : tout le récapitulatif du
+  guide (serveurs, domaine, service d'e-mails, Storage Box, second
+  fournisseur, clé age, `.env`, surveillance externe de `/api/sante`).
 - **Plus tard, sur décision** : service de suivi des erreurs spécialisé
-  (Sentry ou GlitchTip : dépendance et sous-traitant de données) ; sonde de
-  disponibilité externe sur `/api/sante`.
+  (Sentry ou GlitchTip : dépendance et sous-traitant de données).
 
 ## En attente d'une décision extérieure
 

@@ -32,8 +32,9 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
 
 ## Première installation
 
-1. **Serveur** : Hetzner Cloud, Ubuntu 24.04, 2 vCPU / 4 Go (CX23, ex-CX22) suffisent
-   au départ. Ajouter sa clé SSH à la création.
+1. **Serveur** : Hetzner Cloud en Allemagne, Ubuntu 24.04, CX33 (4 vCPU,
+   8 Go) pour la production ; pare-feu, clé SSH, instantanés, e-mails,
+   sauvegardes et surveillance : `docs/mise-en-production.md`.
 2. **Domaine** : chez le registraire, un enregistrement `A` du domaine choisi
    (ex. `hub.greyconcrete.sn`) vers l'IP du serveur. Attendre qu'il réponde
    (`ping hub.greyconcrete.sn`) avant l'étape 5, sinon le certificat échoue.
@@ -69,7 +70,7 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
 
 ## Pré-production
 
-Même dossier, sur un second petit serveur (CX23, comme la production), avec
+Même dossier, sur un second serveur (CX23 : 2 vCPU, 4 Go), avec
 son propre `.env` : un autre domaine (ex. `preprod.hub.greyconcrete.sn`),
 d'autres secrets, `ALERTES_EMAIL` renseignée, et `HUB_DONNEES_DEMO=autorise`
 si l'on veut y charger la démo (`docker compose --profile demo run --rm demo`).
@@ -121,9 +122,11 @@ s'appliquent au démarrage du backend ; l'interface attend que l'API réponde
 
 ## Sauvegardes
 
-- Automatique chaque nuit à 02:30 : `deploy/sauvegardes/hub-AAAAMMJJ-HHMM.dump`
-  (14 gardées) et copie dans `S3_BUCKET_SAUVEGARDES` si le stockage objet est
-  configuré.
+- Automatique chaque nuit à 02:30 : `deploy/sauvegardes/hub-AAAAMMJJ-HHMM.dump`,
+  copie sur la Storage Box Hetzner et seconde copie chiffrée (age) chez un
+  autre fournisseur, si configurées. Conservation partout : 7 quotidiennes,
+  4 hebdomadaires (dimanche), 12 mensuelles. Mise en place :
+  `docs/mise-en-production.md`.
 - À la demande : `docker compose exec sauvegarde sauvegarde.sh`
 - **Restaurer** (remplace les données actuelles) :
   ```sh
@@ -131,7 +134,10 @@ s'appliquent au démarrage du backend ; l'interface attend que l'API réponde
   docker compose exec sauvegarde restaurer.sh /sauvegardes/hub-AAAAMMJJ-HHMM.dump --oui
   docker compose start backend
   ```
-  Une copie distante se restaure de la même façon avec son adresse `s3://…`.
+  Une copie de la Storage Box se restaure de la même façon avec son adresse
+  `boite:hub/hub-….dump` ; la copie chiffrée avec
+  `distant:<bucket>/hub/hub-….dump.age`, en apportant la clé privée age
+  (`-e SAUVEGARDE_CLE_PRIVEE=…`, `docs/mise-en-production.md`).
 - **Vérifier une restauration** : restaurer dans une base neuve, puis
   comparer les deux bases table par table (nombre de lignes, empreinte du
   contenu, séquences) :
