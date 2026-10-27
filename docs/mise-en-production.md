@@ -209,25 +209,47 @@ chaque sauvegarde.
    ```
    La ligne « public key: age1… » est la **clé publique** : la mettre dans
    `SAUVEGARDE_CLE_PUBLIQUE`. Le fichier `hub-sauvegardes-cle.txt` est la
-   **clé privée** : le ranger dans le gestionnaire de mots de passe et sur un
-   support hors ligne (ex. clé USB au coffre), **jamais sur un serveur**. Sans
-   elle, la copie chiffrée est illisible, pour un voleur comme pour nous.
+   **clé privée** : la conserver comme décrit en 7.3, **jamais sur un
+   serveur**. Sans elle, la copie chiffrée est illisible, pour un voleur comme
+   pour nous.
 3. Dans `.env` : `SAUVEGARDE_DISTANT_FOURNISSEUR` (ex. `Scaleway`, sinon
    `Other`), `SAUVEGARDE_DISTANT_ENDPOINT`, `SAUVEGARDE_DISTANT_REGION`,
    `SAUVEGARDE_DISTANT_BUCKET`, `SAUVEGARDE_DISTANT_ACCESS_KEY`,
    `SAUVEGARDE_DISTANT_SECRET_KEY`.
 
-### 7.3 Vérifier
+### 7.3 La clé privée age
+
+La clé privée est la seule à pouvoir ouvrir la copie chiffrée. Elle tient sur
+une ligne (`AGE-SECRET-KEY-1…`).
+
+- **Deux endroits sûrs, hors ligne et séparés** : par exemple une clé USB
+  chiffrée dans le coffre de l'entreprise, et un tirage papier de la clé dans
+  un second coffre (direction, banque). Jamais sur un serveur, dans un
+  e-mail, une messagerie ou le dépôt de code.
+- **Vérifier chaque exemplaire** au moment de le ranger : la commande
+  `age-keygen -y hub-sauvegardes-cle.txt` doit afficher exactement la clé
+  publique de `SAUVEGARDE_CLE_PUBLIQUE` (pour le tirage papier, la retaper
+  dans un fichier puis faire de même).
+- **Test de restauration avant le lancement** avec cette clé (7.5), puis
+  chaque trimestre : il prouve que la clé ouvre bien les copies.
+- **Clé perdue** : en créer une nouvelle (7.2, point 2) et mettre sa clé
+  publique dans `.env` ; les copies suivantes l'utilisent. Les copies
+  chiffrées avec l'ancienne restent illisibles (celles de la Storage Box ne
+  sont pas concernées).
+
+### 7.4 Vérifier
 
 ```sh
 docker compose exec sauvegarde sauvegarde.sh            # trois copies écrites
 docker compose exec sauvegarde tester-restauration.sh   # restauration identique
 ```
 
-### 7.4 Tester la copie chiffrée (chaque trimestre)
+### 7.5 Tester la copie chiffrée (avant le lancement, puis chaque trimestre)
 
 Jamais sur la pré-production (aucune donnée réelle n'y entre) : sur un
-serveur temporaire (CX23, facturé à l'heure), supprimé à la fin.
+serveur temporaire (CX23, facturé à l'heure), supprimé à la fin. Avant le
+lancement, la base ne contient que le socle et le compte du CIO : le test
+prouve déjà que la chaîne (sauvegarde, chiffrement, clé privée) fonctionne.
 
 1. Créer le serveur, y installer Docker et le code (étape 5, points 1 et 2),
    avec un `.env` minimal : `POSTGRES_USER`, `POSTGRES_PASSWORD` et
@@ -303,7 +325,7 @@ Storage Box, contre l'usurpation).
 - **Jamais** d'import de données réelles : ni sauvegarde de production
   restaurée, ni copie de la base, ni fichier client, ni compte d'un vrai
   salarié. Les tests de restauration de la production se font sur un serveur
-  temporaire supprimé ensuite (étape 7.4).
+  temporaire supprimé ensuite (étape 7.5).
 - **Secrets distincts** de la production (`POSTGRES_PASSWORD`,
   `JWT_SECRET`) : une session de pré-production ne vaut rien en production.
 - **E-mails** : `EMAIL_TRANSPORT=log`, aucun envoi.
@@ -330,9 +352,9 @@ Storage Box, contre l'usurpation).
 - [ ] Service d'e-mails : domaine authentifié (SPF, DKIM, DMARC), identifiants SMTP
 - [ ] Storage Box BX11 : SSH activé, instantanés automatiques, clé du serveur installée
 - [ ] Second fournisseur : bucket privé et clé d'accès limitée
-- [ ] Clé age : privée hors ligne et dans le gestionnaire de mots de passe, publique dans `.env`
+- [ ] Clé age : privée à deux endroits sûrs hors ligne, chaque exemplaire vérifié (7.3), publique dans `.env`
 - [ ] `.env` des deux serveurs (étape 9) et `deploy/secrets/` en production
 - [ ] Premier démarrage, compte du CIO, démo en pré-production
 - [ ] `deploy/verifier-deploiement.sh` vert sur les deux adresses
 - [ ] Surveillance externe de `/api/sante`
-- [ ] Premier test de la copie chiffrée (étape 7.4) dans le mois
+- [ ] Test de restauration de la copie chiffrée avec la clé privée (7.5), **avant le lancement**
