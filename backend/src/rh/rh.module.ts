@@ -5,7 +5,6 @@ import { SalairesController } from './salaires.controller';
 import { SalairesService } from './salaires.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ReglagesModule } from '../reglages/reglages.module';
-import { ProjetsModule } from '../projets/projets.module';
 import { DossiersPersonnelController } from './dossiers.controller';
 import { DossiersPersonnelService } from './dossiers.service';
 import { DemandesService } from './demandes.service';
@@ -15,12 +14,11 @@ import { FeuillesTempsController, MonTempsController } from './temps.controller'
 import { TempsService } from './temps.service';
 import { MonEspaceController } from './mon-espace.controller';
 import { MonEspaceService } from './mon-espace.service';
-import { MesTachesController, ValidationsTachesController } from './taches.controller';
-import { TachesService } from './taches.service';
+import { TasksModule } from '../tasks/tasks.module';
 import { DemandesRhController, MesDemandesController, ValidationsAbsencesController } from './demandes.controller';
 
 @Module({
-  imports: [NotificationsModule, ReglagesModule, ProjetsModule], // ProjetsModule : remise / validation des tâches du gabarit
+  imports: [NotificationsModule, ReglagesModule, TasksModule], // TasksModule : statistiques de Ma cellule
   providers: [
     AlertesRhService,
     DossiersPersonnelService,
@@ -29,7 +27,6 @@ import { DemandesRhController, MesDemandesController, ValidationsAbsencesControl
     IntegrationService,
     TempsService,
     MonEspaceService,
-    TachesService,
   ],
   controllers: [
     SalairesController,
@@ -42,8 +39,6 @@ import { DemandesRhController, MesDemandesController, ValidationsAbsencesControl
     FeuillesTempsController,
     MonTempsController,
     MonEspaceController,
-    MesTachesController,
-    ValidationsTachesController,
   ],
   // Pilotage : feuilles de temps contrôlées, absences à valider (N+1),
   // points d'intégration (tuiles RH).

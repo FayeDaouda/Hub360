@@ -1764,6 +1764,102 @@ export interface paths {
         patch: operations["EmployeesController_update"];
         trace?: never;
     };
+    "/api/societes/{slug}/mon-espace/taches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MyTasksController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/remise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyTasksController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/relance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MyTasksController_remind"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/taches/a-valider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TaskReviewsController_toReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/taches/{projetId}/{tacheId}/pieces/{pieceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TaskReviewsController_submissionFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/taches/{projetId}/{tacheId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TaskReviewsController_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/canaux": {
         parameters: {
             query?: never;
@@ -2766,102 +2862,6 @@ export interface paths {
         get: operations["MonEspaceController_document"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/taches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MesTachesController_lister"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/remise": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MesTachesController_remettre"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/relance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MesTachesController_relancer"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/taches/a-valider": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ValidationsTachesController_aValider"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/taches/{projetId}/{tacheId}/pieces/{pieceId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ValidationsTachesController_piece"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/taches/{projetId}/{tacheId}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ValidationsTachesController_decider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4147,6 +4147,84 @@ export interface components {
             photo?: string | null;
             dateArrivee?: string | null;
         };
+        MyTaskDto: {
+            id: string;
+            etape: string;
+            carte: string;
+            libelle: string;
+            projetId: string;
+            projetCode: string;
+            projetProgramme: string;
+            projetClient: string;
+            debut: string | null;
+            echeance: string | null;
+            dureeStandard: number | null;
+            heuresImputees: number;
+            /** @enum {string|null} */
+            manque: "absence" | "debut" | "duree" | "echeance" | "fenetre" | null;
+            /** @enum {string|null} */
+            etat: "a_venir" | "en_cours" | "terminee" | null;
+            /** @enum {string} */
+            statut: "a_planifier" | "a_reprendre" | "a_venir" | "bloquee" | "en_cours" | "en_retard" | "prolongee" | "remise" | "validee";
+            enRetard: boolean;
+            dateEffective: string | null;
+            prolongeeJusquau: string | null;
+            version: number;
+            /** Format: date-time */
+            remisLe: string | null;
+            /** Format: date-time */
+            valideLe: string | null;
+            renvoiMotif: string | null;
+            validateur: string | null;
+            relancePossibleLe: string | null;
+            etapeNumero: number;
+            fichierObligatoire: boolean;
+            parDepot: boolean;
+        };
+        OnTimeRateDto: {
+            aTemps: number;
+            total: number;
+            pct: number | null;
+        };
+        PerformanceStatsDto: {
+            total: number;
+            validees: number;
+            enCours: number;
+            enRetard: number;
+            respectDelais: components["schemas"]["OnTimeRateDto"];
+        };
+        MyTasksViewDto: {
+            taches: components["schemas"]["MyTaskDto"][];
+            stats: components["schemas"]["PerformanceStatsDto"];
+        };
+        SubmissionFileRefDto: {
+            id: string;
+            nom: string;
+        };
+        TaskToReviewDto: {
+            id: string;
+            etape: string;
+            libelle: string;
+            version: number;
+            projetId: string;
+            projetCode: string;
+            projetProgramme: string;
+            responsable: string;
+            debut: string | null;
+            echeance: string | null;
+            /** Format: date-time */
+            remisLe: string | null;
+            pieces: components["schemas"]["SubmissionFileRefDto"][];
+        };
+        SubmissionFileDto: {
+            nom: string;
+            url: string;
+        };
+        TaskDecisionDto: {
+            /** @enum {string} */
+            decision: "renvoyer" | "valider";
+            motif?: string;
+        };
         EnvoyerMessageDto: {
             texte: string;
         };
@@ -4299,11 +4377,6 @@ export interface components {
             /** @enum {string} */
             modePaiement: "orange_money" | "virement" | "wave";
             coordonneesPaiement: string;
-        };
-        DecisionTacheDto: {
-            /** @enum {string} */
-            decision: "renvoyer" | "valider";
-            motif?: string;
         };
         MajPermissionDto: {
             /** @enum {string} */
@@ -7131,6 +7204,149 @@ export interface operations {
             };
         };
     };
+    MyTasksController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTasksViewDto"];
+                };
+            };
+        };
+    };
+    MyTasksController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                projetId: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemettreTacheDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTasksViewDto"];
+                };
+            };
+        };
+    };
+    MyTasksController_remind: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                projetId: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTasksViewDto"];
+                };
+            };
+        };
+    };
+    TaskReviewsController_toReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskToReviewDto"][];
+                };
+            };
+        };
+    };
+    TaskReviewsController_submissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                projetId: string;
+                tacheId: string;
+                pieceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionFileDto"];
+                };
+            };
+        };
+    };
+    TaskReviewsController_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                projetId: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskDecisionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskToReviewDto"][];
+                };
+            };
+        };
+    };
     ChatController_canaux: {
         parameters: {
             query?: never;
@@ -8633,137 +8849,6 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MesTachesController_lister: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MesTachesController_remettre: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                projetId: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RemettreTacheDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MesTachesController_relancer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                projetId: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ValidationsTachesController_aValider: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ValidationsTachesController_piece: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                projetId: string;
-                tacheId: string;
-                pieceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ValidationsTachesController_decider: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                projetId: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DecisionTacheDto"];
-            };
-        };
-        responses: {
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
