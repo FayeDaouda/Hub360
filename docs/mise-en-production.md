@@ -295,7 +295,6 @@ Une copie par serveur (`deploy/.env`, jamais versionnée, jamais envoyée par
 | `POSTGRES_PASSWORD`                                                       | mot de passe de la base                                 | secret propre                   | autre secret             |
 | `POSTGRES_DB`                                                             | nom de la base                                          | `hub`                           | `hub`                    |
 | `JWT_SECRET`                                                              | signature des sessions (32 caractères au moins)         | secret propre                   | autre secret             |
-| `JWT_EXPIRES_IN`                                                          | durée d'une session                                     | `7d`                            | `7d`                     |
 | `HUB_DOUBLE_FACTEUR`                                                      | double authentification de tous les comptes             | vide (obligatoire)              | `desactive` permis       |
 | `EMAIL_TRANSPORT`                                                         | `smtp` : envoi réel ; `log` : rien n'est envoyé         | `smtp`                          | `log`                    |
 | `SMTP_HOST`, `SMTP_PORT`                                                  | serveur du service d'e-mails                            | fournis par le service          | vides                    |
@@ -317,6 +316,11 @@ Une copie par serveur (`deploy/.env`, jamais versionnée, jamais envoyée par
 Et dans `deploy/secrets/` (production) : `storagebox_ed25519` (clé SSH du
 serveur vers la Storage Box) et `storagebox_known_hosts` (empreinte de la
 Storage Box, contre l'usurpation).
+
+La durée des sessions n'est pas réglable dans `.env` (décision du 28/10/2026,
+`backend/src/auth/session.ts`) : 12 heures au plus depuis la connexion ; sans
+activité, 1 heure pour le CEO, le CFO, le CIO et la RH, 4 heures pour les
+autres. Une ancienne variable `JWT_EXPIRES_IN` est ignorée.
 
 ## 10. Pré-production sans aucune donnée personnelle réelle
 
