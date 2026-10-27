@@ -12,7 +12,7 @@ Décisions structurantes : `docs/adr/`.
 | 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                              |
 | 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                              |
 | Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                              |
-| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14) ; S0c en cours   |
+| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits       |
 | Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | juste après S0 : conditionne le lancement |
 | Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                   |
 | Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés   |
@@ -31,6 +31,8 @@ Décisions structurantes : `docs/adr/`.
   - les règles métier du module sont calculées au back et testées ;
   - chaque écran gère le chargement, le vide et l'erreur ;
   - des tests côté front sur les composants et les hooks principaux ;
+  - ses réponses d'API décrites par des DTO, et ses appels typés par les
+    types générés (`frontend/lib/api/types.ts`, ADR 0005) ;
   - les chiffres avant et après dans la description de la PR.
 - **Routes de l'API inchangées** pendant la structuration (contrat public).
   Avant de sortir les applications macOS, Windows et iOS, introduire un
@@ -43,7 +45,8 @@ Décisions structurantes : `docs/adr/`.
   n'existent plus qu'en une version, dans le paquet partagé ; les copies de
   `frontend/lib/` (`dates.ts`, `format.ts`, `text.ts`) et de
   `backend/src/shared/` sont supprimées. Fait : paquet `@hub/domain`
-  (`packages/domain`, ADR 0004) ; le client d'API reste à faire.
+  (`packages/domain`, ADR 0004). Client d'API : description OpenAPI générée
+  depuis le code et types du front générés, vérifiés par la CI (ADR 0005).
 
 ## Suites décidées, pas encore faites
 

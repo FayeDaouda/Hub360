@@ -24,6 +24,10 @@ Turbopack : voir la feuille de route.
 - Dates (heure de Dakar), montants et texte : une seule version, dans le
   paquet `@hub/domain` (`docs/adr/0004-paquet-partage-domain.md`) ; le
   recompiler (`npm run build` dans `packages/domain`) après l'avoir modifié.
+- Contrat d'API : `backend/openapi.json` et `frontend/lib/api/schema.d.ts`
+  sont générés (`docs/adr/0005-contrat-api-openapi.md`) ; après un changement
+  de route ou de DTO, `npm run build && npm run openapi` (back) puis
+  `npm run api:types` (front). Les DTO vivent dans des fichiers `*dto.ts`.
 - Une branche et une pull request par lot ; Conventional Commits.
 - Avant de conclure qu'une modification ne change rien : tests unitaires et
   e2e du back, captures et tests de fumée (`e2e/`, voir son `package.json`).
