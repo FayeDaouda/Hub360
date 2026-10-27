@@ -51,7 +51,19 @@ docker compose up -d
 Ou une instance locale (ex. Homebrew) : créer une base `hub` accessible sur
 `localhost:5432` et reporter l'URL dans `backend/.env`.
 
-### 2. Backend
+### 2. Paquet partagé
+
+Fonctions communes au back et au front (dates à l'heure de Dakar, montants,
+texte) : `packages/domain`, importé sous le nom `@hub/domain`. À compiler
+avant le back et le front, et après chaque modification de ses sources :
+
+```bash
+cd packages/domain
+npm ci
+npm run build                  # dist/, lu par le back et le front
+```
+
+### 3. Backend
 
 ```bash
 cd backend
@@ -63,7 +75,7 @@ npm run prisma:seed            # données de démonstration Grey Concrete
 npm run start:dev              # http://localhost:3001/api
 ```
 
-### 3. Frontend
+### 4. Frontend
 
 ```bash
 cd frontend
@@ -72,14 +84,14 @@ npm ci
 npm run dev                    # http://localhost:3000
 ```
 
-### 4. Hook pre-push (une fois par clone)
+### 5. Hook pre-push (une fois par clone)
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-Bloque tout `git push` qui ne passe pas `build` + `test` (backend) et `lint` +
-`typecheck` (frontend) — l'équivalent local d'une protection de branche, non
+Bloque tout `git push` qui ne passe pas `typecheck` + `test` + `build` (paquet
+partagé), `build` + `test` (backend) et `lint` + `typecheck` + `test` (frontend) — l'équivalent local d'une protection de branche, non
 disponible sur un dépôt privé en plan gratuit. Contournement d'urgence :
 `git push --no-verify`. La CI GitHub reste le filet de sécurité côté serveur ;
 une vraie protection de branche demandera un dépôt public ou GitHub Pro.
