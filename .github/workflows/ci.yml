@@ -119,21 +119,44 @@ jobs:
       - run: npm run build
 
   images:
-    name: Images Docker — construction
+    name: Images Docker — construction et démarrage
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy
+    # La pile de production telle que sur le serveur (deploy/docker-compose.yml :
+    # Postgres, API, interface, Caddy, sauvegarde), sur le domaine localhost.
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f deploy/backend.Dockerfile -t hub-backend .
-      - run: docker build -f deploy/frontend.Dockerfile -t hub-frontend .
-      - run: docker build -f deploy/sauvegarde.Dockerfile -t hub-sauvegarde deploy
+      - name: Configuration de test
+        run: |
+          {
+            echo HUB_DOMAINE=localhost
+            echo POSTGRES_USER=hub
+            echo POSTGRES_DB=hub
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "JWT_SECRET=$(openssl rand -hex 32)"
+          } > .env
+      - run: docker compose --env-file .env build
       # Ce dont les conteneurs ont besoin au démarrage : le paquet partagé, le
       # module natif de bcrypt (connexion) et la CLI Prisma (migrations) pour
       # le back, le serveur pour le front.
       - name: Contenu des images
         run: |
-          docker run --rm hub-backend node -e "require('@hub/domain'); require('bcrypt')"
-          docker run --rm hub-backend npx --no-install prisma --version
-          docker run --rm hub-frontend test -f server.js
+          docker compose --env-file .env run --rm --no-deps backend node -e "require('@hub/domain'); require('bcrypt')"
+          docker compose --env-file .env run --rm --no-deps backend npx --no-install prisma --version
+          docker compose --env-file .env run --rm --no-deps frontend test -f server.js
+      - name: Démarrage (migrations, contrôles de santé)
+        run: docker compose --env-file .env up -d --wait --wait-timeout 300
+      - name: Contrôle après déploiement
+        run: HUB_TLS_LOCAL=1 ./verifier-deploiement.sh https://localhost
+      - name: Sauvegarde et test de restauration dans la pile
+        run: |
+          docker compose --env-file .env exec -T sauvegarde sauvegarde.sh
+          docker compose --env-file .env exec -T sauvegarde tester-restauration.sh
+      - name: Journaux de la pile
+        if: failure()
+        run: docker compose --env-file .env logs --tail 200
 
   restauration:
     name: Sauvegarde et restauration — test
