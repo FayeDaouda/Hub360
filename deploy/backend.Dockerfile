@@ -4,7 +4,7 @@
 # données de démo sur un serveur de test (service « demo » du compose).
 # Même disposition que le dépôt (backend/ à côté de packages/domain/) : le
 # lien « file:../packages/domain » du package.json se résout tel quel.
-FROM node:20-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 # Paquet partagé (@hub/domain), compilé avant le back qui le lit.
 WORKDIR /repo/packages/domain
@@ -18,7 +18,7 @@ RUN npm ci
 COPY backend/ ./
 RUN npx prisma generate && npm run build
 
-FROM node:20-bookworm-slim
+FROM node:24-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo/backend
 ENV NODE_ENV=production

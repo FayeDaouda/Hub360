@@ -5,7 +5,7 @@
 # Même disposition que le dépôt (frontend/ à côté de packages/domain/) : le
 # lien « file:../packages/domain » du package.json se résout tel quel. Le
 # paquet est intégré au code des pages : l'image finale n'en a pas besoin.
-FROM node:20-bookworm-slim AS build
+FROM node:24-bookworm-slim AS build
 # Paquet partagé (@hub/domain), compilé avant le front qui le lit.
 WORKDIR /repo/packages/domain
 COPY packages/domain/package*.json ./
@@ -19,7 +19,7 @@ COPY frontend/ ./
 ENV NEXT_PUBLIC_API_URL=/api NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-FROM node:20-bookworm-slim
+FROM node:24-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=build /repo/frontend/.next/standalone ./
