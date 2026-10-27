@@ -65,6 +65,9 @@ export class ProductionRowDto {
   horizon!: number;
   livraisonLe!: string;
   livraisonDepassee!: boolean;
+  // Livraison dans les 15 jours, projet pas encore livré (tuile « Livraisons
+  // sous 15 jours » et son filtre).
+  livraisonProche!: boolean;
   enRetard!: number;
   prolongees!: number;
   attente!: PendingDecisionsDto;

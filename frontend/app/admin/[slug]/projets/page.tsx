@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ADecider } from '@/components/pilotage/a-decider';
 import { Delegation } from '@/components/pilotage/delegation';
 import { OpenProjects } from '@/features/projects/open-projects';
-import { Production } from '@/components/projets-ouverts/production';
+import { Production } from '@/features/projects/production';
 import { ROLE_CEO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 

@@ -1,3 +1,4 @@
+import { addDays } from '@hub/domain';
 import type { PrismaService } from '../prisma/prisma.service';
 import { HEURES_PAR_JOUR, type Feries } from '../rh/regles-temps';
 import { dateOfDay } from './work-calendar';
@@ -91,4 +92,10 @@ export function deliveryDate(
   holidays: Feries,
 ): string | null {
   return p.ouvertLe ? dateOfDay(p.ouvertLe, projectHorizon(p.budgetHeures), holidays) : null;
+}
+
+// Livraison proche (tableau de production) : projet pas encore livré, livré
+// au plus tard dans 15 jours, pas déjà en retard de livraison.
+export function isDeliverySoon(siteStatus: string, deliveryOn: string, today: string): boolean {
+  return siteStatus !== 'livre' && deliveryOn >= today && deliveryOn <= addDays(today, 15);
 }

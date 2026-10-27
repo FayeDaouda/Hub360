@@ -1,4 +1,11 @@
-import type { OpenProjectFile, OpenProjectsBoard, ProjectCard, ProjectTask } from './types';
+import type {
+  OpenProjectFile,
+  OpenProjectsBoard,
+  ProductionRow,
+  ProductionView,
+  ProjectCard,
+  ProjectTask,
+} from './types';
 
 // Données d'essai des tests du module Projets, typées par le contrat généré.
 
@@ -121,5 +128,43 @@ export function boardFixture(over: Partial<OpenProjectsBoard> = {}): OpenProject
       mentions: 0,
     },
     ...over,
+  };
+}
+
+export function productionRowFixture(over: Partial<ProductionRow> = {}): ProductionRow {
+  return {
+    projet: { id: 'p1', code: 'FS_POI.26', client: 'Fatou Sarr', cellule: 'Archi 3' },
+    statutChantier: 'conception',
+    etape: { numero: 2, libelle: 'Esquisse', terminee: false },
+    souffrance: [],
+    faites: 3,
+    total: 10,
+    jour: 12,
+    horizon: 50,
+    livraisonLe: '2026-12-15',
+    livraisonDepassee: false,
+    livraisonProche: false,
+    enRetard: 0,
+    prolongees: 0,
+    attente: { remises: 0, visas: 0, prolongations: 0, ts: 0 },
+    tranche: null,
+    echeances: [],
+    ...over,
+  };
+}
+
+export function productionViewFixture(lignes: ProductionRow[] = [productionRowFixture()]): ProductionView {
+  return {
+    perimetre: 'tous',
+    chiffres: {
+      ouverts: lignes.length,
+      enRetard: 0,
+      livraisons15: lignes.filter((l) => l.livraisonProche).length,
+      enAttente: 0,
+      chargeMoyenne: 80,
+    },
+    lignes,
+    charge: { periode: { debut: '2026-10-27', fin: '2026-11-09' }, zone: { de: 70, a: 100 }, cellules: [] },
+    livraisons: [],
   };
 }

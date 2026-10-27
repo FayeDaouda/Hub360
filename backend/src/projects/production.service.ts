@@ -6,7 +6,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import { dateOfDay, workdayRank } from './work-calendar';
 import { workloadOver } from './workload';
 import { invoiceWaits, type TaskState } from './task-states';
-import { projectHorizon } from './decision-context';
+import { isDeliverySoon, projectHorizon } from './decision-context';
 import { ROLE_CEO, ROLE_CTO, ROLE_DPLG } from './review-rules';
 import {
   fullName,
@@ -149,6 +149,8 @@ export class ProductionService {
       };
       const late = count('en_retard');
       const deliveryPassed = today > deliveryOn && status !== 'livre';
+      // Livraison dans les 15 jours, projet pas encore livré (tuile et filtre).
+      const deliverySoon = isDeliverySoon(status, deliveryOn, today);
       return {
         projet: { id: p.id, code: p.code, client: p.client.nom, cellule: p.cellules[0]?.cellule.nom ?? null },
         statutChantier: status,
@@ -162,6 +164,7 @@ export class ProductionService {
         horizon,
         livraisonLe: deliveryOn,
         livraisonDepassee: deliveryPassed,
+        livraisonProche: deliverySoon,
         enRetard: late,
         prolongees: count('prolongee'),
         attente: pendingDecisions,
@@ -191,9 +194,7 @@ export class ProductionService {
       chiffres: {
         ouverts: rows.length,
         enRetard: rows.filter((l) => l.enRetard > 0 || l.livraisonDepassee).length,
-        livraisons15: rows.filter(
-          (l) => l.statutChantier !== 'livre' && l.livraisonLe >= today && l.livraisonLe <= inDays(15),
-        ).length,
+        livraisons15: rows.filter((l) => l.livraisonProche).length,
         enAttente: rows.reduce((s, l) => s + Object.values(l.attente).reduce((t, n) => t + n, 0), 0),
         chargeMoyenne: averages.length ? Math.round(averages.reduce((s, x) => s + x, 0) / averages.length) : null,
       },
