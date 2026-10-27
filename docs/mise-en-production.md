@@ -131,8 +131,8 @@ renouvelle. Les ports 80 et 443 doivent être ouverts (étape 2).
 
 ## 6. Envoi d'e-mails (production)
 
-Le HUB envoie ses e-mails (invitations, mots de passe, devis, contrats,
-relances, alertes) par SMTP, via un service spécialisé dans les e-mails
+Le HUB envoie ses e-mails (invitations, mots de passe, avis de sécurité,
+devis, contrats, relances, alertes) par SMTP, via un service spécialisé dans les e-mails
 transactionnels, européen de préférence (ex. Brevo, Mailjet, Postmark).
 
 1. Créer le compte, déclarer le domaine d'envoi `exemple.sn` et l'adresse
@@ -296,7 +296,7 @@ Une copie par serveur (`deploy/.env`, jamais versionnée, jamais envoyée par
 | `POSTGRES_DB`                                                             | nom de la base                                          | `hub`                           | `hub`                    |
 | `JWT_SECRET`                                                              | signature des sessions (32 caractères au moins)         | secret propre                   | autre secret             |
 | `JWT_EXPIRES_IN`                                                          | durée d'une session                                     | `7d`                            | `7d`                     |
-| `HUB_DOUBLE_FACTEUR`                                                      | double authentification de la direction                 | vide (obligatoire)              | `desactive` permis       |
+| `HUB_DOUBLE_FACTEUR`                                                      | double authentification de tous les comptes             | vide (obligatoire)              | `desactive` permis       |
 | `EMAIL_TRANSPORT`                                                         | `smtp` : envoi réel ; `log` : rien n'est envoyé         | `smtp`                          | `log`                    |
 | `SMTP_HOST`, `SMTP_PORT`                                                  | serveur du service d'e-mails                            | fournis par le service          | vides                    |
 | `SMTP_USER`, `SMTP_PASS`                                                  | identifiants SMTP                                       | fournis par le service          | vides                    |
