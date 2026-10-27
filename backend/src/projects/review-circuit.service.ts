@@ -4,7 +4,7 @@ import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { contexteDecision, dateLivraison, type ContexteDecision } from '../projets/gabarit/suppleance';
+import { decisionContext, deliveryDate, type DecisionContext } from './decision-context';
 
 // Circuit de validation des tâches d'un projet : qui prévenir d'une remise,
 // d'une prolongation ou d'un visa, et la notification elle-même.
@@ -34,22 +34,22 @@ export class ReviewCircuitService {
   // Qui prévenir d'une remise ou d'une prolongation : le chef de team s'il a
   // un compte et n'est pas absent ; sinon l'Architecte DPLG (ou son
   // suppléant) ; le CTO pour le travail d'un Dir. GC.
-  async reviewers(ctx: ContexteDecision, assigneeId: string | null, chiefId: string | null): Promise<string[]> {
+  async reviewers(ctx: DecisionContext, assigneeId: string | null, chiefId: string | null): Promise<string[]> {
     return (await this.circuit(ctx, assigneeId, chiefId)).ids;
   }
 
   // Le même circuit, avec le rôle de la personne qui valide (affiché à l'assigné).
   private async circuit(
-    ctx: ContexteDecision,
+    ctx: DecisionContext,
     assigneeId: string | null,
     chiefId: string | null,
   ): Promise<{ ids: string[]; role: string }> {
-    if (assigneeId && ctx.dplgCollaborateurs.has(assigneeId)) return { ids: ctx.comptesCto, role: 'CTO' };
-    if (chiefId && chiefId !== assigneeId && !ctx.collaborateursAbsents.has(chiefId)) {
+    if (assigneeId && ctx.dplgEmployees.has(assigneeId)) return { ids: ctx.ctoAccounts, role: 'CTO' };
+    if (chiefId && chiefId !== assigneeId && !ctx.absentEmployees.has(chiefId)) {
       const chief = await this.accountsOf([chiefId]);
       if (chief.length) return { ids: chief, role: 'chef de team' };
     }
-    return { ids: ctx.comptesDplg, role: 'Architecte DPLG' };
+    return { ids: ctx.dplgAccounts, role: 'Architecte DPLG' };
   }
 
   // Qui valide, en clair, pour l'assigné (Mes tâches, panneau) : les MÊMES
@@ -61,7 +61,7 @@ export class ReviewCircuitService {
   ): Promise<Map<string, string | null>> {
     const result = new Map<string, string | null>();
     if (!tasks.length) return result;
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
     const byTask = await Promise.all(
       tasks.map(async (t) => ({ id: t.id, ...(await this.circuit(ctx, t.assigneId, t.chefId)) })),
     );
@@ -80,9 +80,9 @@ export class ReviewCircuitService {
   // Qui vise : les Dir. GC présents (ou un Dir. GC suppléant). Aucun : le visa
   // attend leur retour et le CTO en est prévenu (il ne vise pas à leur place).
   async visaHolders(companyId: string): Promise<{ comptes: string[]; enAttente: boolean }> {
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
-    const dirGc = ctx.comptesDplg.filter((id) => !ctx.comptesCto.includes(id));
-    return dirGc.length ? { comptes: dirGc, enAttente: false } : { comptes: ctx.comptesCto, enAttente: true };
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
+    const dirGc = ctx.dplgAccounts.filter((id) => !ctx.ctoAccounts.includes(id));
+    return dirGc.length ? { comptes: dirGc, enAttente: false } : { comptes: ctx.ctoAccounts, enAttente: true };
   }
 
   // La nouvelle date dépasse-t-elle la livraison du projet (jour J de son horizon) ?
@@ -92,7 +92,7 @@ export class ReviewCircuitService {
     until: string,
   ): Promise<boolean> {
     const holidays = (await this.reglages.joursFeries([companyId])).get(companyId) ?? new Set<string>();
-    const delivery = dateLivraison(project, holidays);
+    const delivery = deliveryDate(project, holidays);
     return !!delivery && until > delivery;
   }
 

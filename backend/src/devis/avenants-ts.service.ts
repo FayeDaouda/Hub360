@@ -10,9 +10,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { contexteDecision } from '../projets/gabarit/suppleance';
+import { decisionContext } from '../projects/decision-context';
 import { TsElementsService } from '../projects/ts-elements.service';
-import { droitTs, ROLE_CFO, ROLE_CTO } from '../projets/gabarit/validation';
+import { ROLE_CFO, ROLE_CTO, tsRight } from '../projects/review-rules';
 import type { AjouterTsDto } from '../projets/gabarit/dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
@@ -44,8 +44,8 @@ export class AvenantsTsService {
     const { ligne } = await this.chiffrer(societeId, projetId, dto);
     const montantHt = Math.round(ligne.quantite * ligne.prixUnitaire);
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_ts_cto_ht');
-    const ctx = await contexteDecision(this.prisma, societeId, todayIso());
-    const droit = droitTs({ role: acteur.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }, montantHt, seuil);
+    const ctx = await decisionContext(this.prisma, societeId, todayIso());
+    const droit = tsRight({ role: acteur.role, employeeId: null, ctoStandsIn: ctx.ctoStandsIn }, montantHt, seuil);
     if (!droit) throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     if (droit === 'ajouter') return this.creer(societeId, acteur, projetId, dto);
 
@@ -70,7 +70,7 @@ export class AvenantsTsService {
       societeId,
       type: 'ts_a_valider',
       titre: `TS à valider · ${projet.code} · ${dto.element.trim()} · ${formatAmount(montantHt)} HT (au-delà du seuil)`,
-      destinataireIds: ctx.comptesCto.filter((id) => id !== acteur.userId),
+      destinataireIds: ctx.ctoAccounts.filter((id) => id !== acteur.userId),
       parId: acteur.userId,
       projetId,
     });

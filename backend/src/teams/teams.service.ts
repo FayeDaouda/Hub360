@@ -119,7 +119,7 @@ export class TeamsService {
       this.projectStates.companyStates(societeId, aujourdhui),
     ]);
     // État de chaque tâche selon la règle commune des projets (Production, reporting).
-    const etatDe = new Map(etats.flatMap((p) => [...p.etatsTaches]));
+    const etatDe = new Map(etats.flatMap((p) => [...p.taskStates]));
     const ferieSet = feries.get(societeId) ?? new Set<string>();
 
     const versTache = (t: (typeof taches)[number]): TeamTask => ({

@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLE_SALARIE } from './gabarit/validation';
+import { ROLE_EMPLOYEE } from '../projects/review-rules';
 import {
   PERMISSION_REQUISE,
   PERMISSION_SELON_METHODE,
@@ -26,7 +26,7 @@ export class AccesProjetGuard implements CanActivate {
       throw new ForbiddenException("Vous n'avez pas accès à cette société");
     }
     if (user.role === 'societe_admin') return true;
-    if (user.role === ROLE_SALARIE) {
+    if (user.role === ROLE_EMPLOYEE) {
       throw new ForbiddenException('Vos projets sont accessibles depuis « Projets ».');
     }
     const cibles = [ctx.getHandler(), ctx.getClass()];

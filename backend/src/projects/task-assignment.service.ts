@@ -2,9 +2,9 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { motifNonAssignable, tachesAssignees } from '../projets/gabarit/assignation';
-import { contexteDecision } from '../projets/gabarit/suppleance';
-import { ROLE_CTO, verifierCircuit } from '../projets/gabarit/validation';
+import { tasksToAssign, unassignableReason } from './assignment-rules';
+import { decisionContext } from './decision-context';
+import { assertInCircuit, ROLE_CTO } from './review-rules';
 import { fullName, type Actor } from './project-query';
 
 // Assignation des tâches d'un projet ouvert (maquette « Projets ») : à la
@@ -34,10 +34,10 @@ export class TaskAssignmentService {
     employeeId: string | null,
     wholeCard: boolean,
   ) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     // Revue CTO (21/10/2026) : assigner, c'est organiser le travail — le Dir.
     // GC et les chefs de cellule ; le CTO seulement en suppléance d'un Dir. GC.
-    if (actor.role === ROLE_CTO && !(await contexteDecision(this.prisma, companyId, todayIso())).ctoSupplee) {
+    if (actor.role === ROLE_CTO && !(await decisionContext(this.prisma, companyId, todayIso())).ctoStandsIn) {
       throw new ForbiddenException('Le CTO n’assigne les tâches qu’en suppléance d’un Dir. GC absent.');
     }
     const task = await this.prisma.tacheProjet.findFirst({
@@ -60,12 +60,12 @@ export class TaskAssignmentService {
     if (employeeId && !employee) throw new NotFoundException('Collaborateur introuvable');
 
     const disabled = !!task.carte.desactivation;
-    const chosen = { id: task.id, statut: task.statut, carteDesactivee: disabled };
-    const reason = motifNonAssignable(chosen);
+    const chosen = { id: task.id, statut: task.statut, cardDisabled: disabled };
+    const reason = unassignableReason(chosen);
     if (reason && !wholeCard) throw new ConflictException(reason);
-    const ids = tachesAssignees(
+    const ids = tasksToAssign(
       chosen,
-      task.carte.taches.map((t) => ({ ...t, carteDesactivee: disabled })),
+      task.carte.taches.map((t) => ({ ...t, cardDisabled: disabled })),
       wholeCard,
     );
     if (!ids.length) throw new ConflictException('Aucune tâche ouverte à assigner dans cette carte.');

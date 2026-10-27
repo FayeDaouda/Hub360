@@ -3,16 +3,15 @@ import { Prisma } from '@prisma/client';
 import { addDays, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { dateDuJour, rangOuvre } from '../projets/gabarit/calendrier';
-import { chargeSurPeriode } from '../projets/gabarit/charge';
-import { attentesFactures, type EtatTache } from '../projets/gabarit/etats';
-import { horizonProjet } from '../projets/gabarit/suppleance';
-import { ROLE_CTO, ROLE_DPLG } from '../projets/gabarit/validation';
+import { dateOfDay, workdayRank } from './work-calendar';
+import { workloadOver } from './workload';
+import { invoiceWaits, type TaskState } from './task-states';
+import { projectHorizon } from './decision-context';
+import { ROLE_CEO, ROLE_CTO, ROLE_DPLG } from './review-rules';
 import {
   fullName,
   KEY_CARDS,
   pendingExtension,
-  ROLE_CEO,
   siteStatus,
   trancheStatus,
   WITH_TASKS,
@@ -79,7 +78,7 @@ export class ProductionService {
       zone,
       charges: employees.map((c) => ({
         collaborateurId: c.id,
-        ...chargeSurPeriode(
+        ...workloadOver(
           p,
           c.tachesProjet.map(toLoad),
           toLoad(task),
@@ -123,11 +122,11 @@ export class ProductionService {
     const inDays = (n: number) => addDays(today, n);
 
     const rows = projects.map((p) => {
-      const { etapes, etatsCartes, etatsTaches } = this.states.states(p, today, holidays);
+      const { etapes, cardStates, taskStates } = this.states.states(p, today, holidays);
       const tasks = p.cartes.flatMap((c) => c.taches);
-      const count = (code: EtatTache['code']) => tasks.filter((t) => etatsTaches.get(t.id)?.code === code).length;
-      const horizon = horizonProjet(p.budgetHeures);
-      const deliveryOn = dateDuJour(p.ouvertLe!, horizon, holidays);
+      const count = (code: TaskState['code']) => tasks.filter((t) => taskStates.get(t.id)?.code === code).length;
+      const horizon = projectHorizon(p.budgetHeures);
+      const deliveryOn = dateOfDay(p.ouvertLe!, horizon, holidays);
       const status = siteStatus(p.phase);
       // Étape en cours : la plus avancée où le travail a lieu (commencée,
       // terminée ou non) ; les tâches restées ouvertes dans une étape
@@ -140,7 +139,7 @@ export class ProductionService {
             .filter((e) => e.numero < current.numero && e.total > e.faites)
             .map((e) => ({ numero: e.numero, libelle: stepLabel(e.numero), taches: e.total - e.faites }))
         : [];
-      const waiting = attentesFactures(etapes, this.states.cardSources(p));
+      const waiting = invoiceWaits(etapes, this.states.cardSources(p));
       const next = (['F2', 'F3'] as const).find((f) => trancheStatus(p.factures, f) !== 'emise');
       const pendingDecisions = {
         remises: count('a_valider'),
@@ -159,7 +158,7 @@ export class ProductionService {
         souffrance: lagging,
         faites: etapes.reduce((s, e) => s + e.faites, 0),
         total: etapes.reduce((s, e) => s + e.total, 0),
-        jour: rangOuvre(p.ouvertLe!, today, holidays),
+        jour: workdayRank(p.ouvertLe!, today, holidays),
         horizon,
         livraisonLe: deliveryOn,
         livraisonDepassee: deliveryPassed,
@@ -176,7 +175,7 @@ export class ProductionService {
               c.finLe &&
               c.finLe >= today &&
               c.finLe <= inDays(14) &&
-              !['close', 'desactivee'].includes(etatsCartes.get(c.id)!.code),
+              !['close', 'desactivee'].includes(cardStates.get(c.id)!.code),
           )
           .map((c) => ({ carte: c.libelle, finLe: c.finLe! })),
         // Tri : livraison dépassée, retards, décisions en attente.
@@ -244,7 +243,7 @@ export class ProductionService {
         .filter((c) => c.membres.length)
         .map((c) => {
           const members = c.membres.map((m) => {
-            const load = chargeSurPeriode(
+            const load = workloadOver(
               p,
               m.tachesProjet.map(toLoad),
               empty,

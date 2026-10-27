@@ -3,14 +3,20 @@ import { Categorie, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import type { ContenuGabarit } from '../../reglages/gabarit';
-import { premierJourOuvre } from './calendrier';
-import { instancier, type CarteInstanciee, type ChargesGc } from './instanciation';
+import { firstWorkday } from '../../projects/work-calendar';
+import { instantiate, type GcCharges, type InstantiatedCard } from '../../projects/template-instantiation';
 
 // Gabarit par catégorie : seule la conception a le sien (GC-CONCEPTION) ;
 // un projet d'une autre catégorie ne s'ouvre pas selon un gabarit.
 const GABARIT_PAR_CATEGORIE: Partial<Record<Categorie, string>> = { conception: 'GC-CONCEPTION' };
 
-type Preparation = { projetId: string; j1: string; versionId: string; budgetHeures: number; cartes: CarteInstanciee[] };
+type Preparation = {
+  projetId: string;
+  j1: string;
+  versionId: string;
+  budgetHeures: number;
+  cartes: InstantiatedCard[];
+};
 
 // Ouverture d'un projet (Réglages · « Ouverture du projet » : à l'émission
 // de F1) : la version en service du gabarit est recopiée en cartes et tâches,
@@ -45,18 +51,18 @@ export class OuvertureProjetService {
 
     const [feriesParSociete, chargesGc, budgetHeures] = await Promise.all([
       this.reglages.joursFeries([projet.societeId]),
-      this.reglages.regle<ChargesGc>(projet.societeId, 'charges_gc_heures'),
+      this.reglages.regle<GcCharges>(projet.societeId, 'charges_gc_heures'),
       this.reglages.regle<number>(projet.societeId, 'budget_atelier_heures'),
     ]);
     const feries = feriesParSociete.get(projet.societeId) ?? new Set<string>();
-    const j1 = premierJourOuvre(le, feries);
+    const j1 = firstWorkday(le, feries);
     const codes = projet.devis.flatMap((d) => d.lignes.map((l) => l.produitService?.code));
-    const cartes = instancier(version.contenu as unknown as ContenuGabarit, {
-      j1,
-      feries,
-      chargesGc,
-      spcCommande: codes.includes('SPC'),
-      clientPersonnePhysique: projet.client.type === 'particulier',
+    const cartes = instantiate(version.contenu as unknown as ContenuGabarit, {
+      day1: j1,
+      holidays: feries,
+      gcCharges: chargesGc,
+      spcOrdered: codes.includes('SPC'),
+      individualClient: projet.client.type === 'particulier',
     });
     return { projetId, j1, versionId: version.id, budgetHeures, cartes };
   }

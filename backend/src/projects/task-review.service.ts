@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
-import { contexteDecision } from '../projets/gabarit/suppleance';
-import { collaborateurDuCompte, peutDecider, peutViser, verifierCircuit } from '../projets/gabarit/validation';
+import { decisionContext } from './decision-context';
+import { assertInCircuit, canDecide, canVisa, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
 
@@ -31,7 +31,7 @@ export class TaskReviewService {
     decision: 'valider' | 'renvoyer',
     reason?: string,
   ) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: {
@@ -46,13 +46,13 @@ export class TaskReviewService {
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
     if (task.statut !== 'a_valider') throw new ConflictException('Aucune remise en attente sur cette tâche.');
-    const employeeId = await collaborateurDuCompte(this.prisma, companyId, actor.userId);
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
-    const assigneeIsDplg = !!task.assigneId && ctx.dplgCollaborateurs.has(task.assigneId);
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
+    const assigneeIsDplg = !!task.assigneId && ctx.dplgEmployees.has(task.assigneId);
     if (
-      !peutDecider(
-        { role: actor.role, collaborateurId: employeeId, ctoSupplee: ctx.ctoSupplee },
-        { ...task, assigneEstDplg: assigneeIsDplg },
+      !canDecide(
+        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn },
+        { ...task, assigneeIsDplg },
         chiefOf(task.projet),
       )
     ) {
@@ -122,8 +122,8 @@ export class TaskReviewService {
   // l'architecte DPLG appose son visa (daté, tracé) ou le refuse avec un
   // motif — la tâche repart alors en reprise chez la personne assignée.
   async visa(companyId: string, actor: Actor, projectId: string, taskId: string, affix: boolean, reason?: string) {
-    verifierCircuit(actor.role);
-    if (!peutViser(actor.role))
+    assertInCircuit(actor.role);
+    if (!canVisa(actor.role))
       throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },

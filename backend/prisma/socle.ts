@@ -201,7 +201,7 @@ export async function installerSocle(prisma: PrismaClient) {
       permissions: {
         crm: 'aucun',
         // lecture (06/10/2026, maquette Salarié validée par le user) : limitée
-        // aux projets où une tâche lui est assignée (projets/gabarit/validation.ts).
+        // aux projets où une tâche lui est assignée (projects/review-rules.ts).
         projets: 'lecture',
         finances_devis: 'aucun',
         finances_factures: 'aucun',

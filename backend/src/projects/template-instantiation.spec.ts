@@ -1,14 +1,14 @@
-import { GABARIT_GC_CONCEPTION } from '../../reglages/gabarit-gc-conception';
-import { instancier, type ContexteOuverture } from './instanciation';
+import { GABARIT_GC_CONCEPTION } from '../reglages/gabarit-gc-conception';
+import { instantiate, type OpeningContext } from './template-instantiation';
 
-const CTX: ContexteOuverture = {
-  j1: '2026-09-10',
-  feries: new Set(),
-  chargesGc: { Notice: 2, Cachet: 1, Timbre: 1 },
-  spcCommande: false,
-  clientPersonnePhysique: true,
+const CTX: OpeningContext = {
+  day1: '2026-09-10',
+  holidays: new Set(),
+  gcCharges: { Notice: 2, Cachet: 1, Timbre: 1 },
+  spcOrdered: false,
+  individualClient: true,
 };
-const cartes = instancier(GABARIT_GC_CONCEPTION, CTX);
+const cartes = instantiate(GABARIT_GC_CONCEPTION, CTX);
 const carte = (cle: string) => cartes.find((c) => c.cle === cle)!;
 const tache = (c: string, t: string) => carte(c).taches.find((x) => x.cle === t)!;
 
@@ -26,7 +26,7 @@ describe('ouverture d’un projet selon GC-CONCEPTION (maquette Projets)', () =>
       statut: 'non_necessaire',
       motif: 'Client personne physique (CRM) : sans objet',
     });
-    const morale = instancier(GABARIT_GC_CONCEPTION, { ...CTX, clientPersonnePhysique: false });
+    const morale = instantiate(GABARIT_GC_CONCEPTION, { ...CTX, individualClient: false });
     expect(morale.find((c) => c.cle === 'documents_client')!.taches.find((t) => t.cle === 'ninea')!.statut).toBe(
       'a_faire',
     );
@@ -37,7 +37,7 @@ describe('ouverture d’un projet selon GC-CONCEPTION (maquette Projets)', () =>
       statut: 'non_necessaire',
       motif: 'SPC non commandé au devis',
     });
-    const avecSpc = instancier(GABARIT_GC_CONCEPTION, { ...CTX, spcCommande: true });
+    const avecSpc = instantiate(GABARIT_GC_CONCEPTION, { ...CTX, spcOrdered: true });
     expect(
       avecSpc.find((c) => c.cle === 'permis_construire')!.taches.find((t) => t.cle === 'autorisation')!.statut,
     ).toBe('a_faire');

@@ -4,16 +4,16 @@
 //  - une carte désactivée n'a pas d'assignation (son temps n'est pas compté) ;
 //  - à la carte : seules ses tâches encore ouvertes sont réassignées.
 
-export type TacheAAssigner = { id: string; statut: string; carteDesactivee: boolean };
+export type AssignableTask = { id: string; statut: string; cardDisabled: boolean };
 
-export function motifNonAssignable(t: TacheAAssigner): string | null {
-  if (t.carteDesactivee) return 'Carte désactivée : pas d’assignation.';
+export function unassignableReason(t: AssignableTask): string | null {
+  if (t.cardDisabled) return 'Carte désactivée : pas d’assignation.';
   if (t.statut === 'validee') return 'Tâche validée : son assignation ne change plus.';
   if (t.statut === 'non_necessaire') return 'Tâche non nécessaire : pas d’assignation.';
   return null;
 }
 
-export function tachesAssignees(choisie: TacheAAssigner, carte: TacheAAssigner[], aLaCarte: boolean): string[] {
-  if (!aLaCarte) return motifNonAssignable(choisie) ? [] : [choisie.id];
-  return carte.filter((t) => !motifNonAssignable(t)).map((t) => t.id);
+export function tasksToAssign(chosen: AssignableTask, card: AssignableTask[], wholeCard: boolean): string[] {
+  if (!wholeCard) return unassignableReason(chosen) ? [] : [chosen.id];
+  return card.filter((t) => !unassignableReason(t)).map((t) => t.id);
 }

@@ -4,8 +4,9 @@ import { stripAccents } from '@hub/domain';
 // Plusieurs fichiers dans le même dépôt : _v01-1, _v01-2… L'application
 // renomme : la personne n'a pas à retenir la règle.
 //
-// MIROIR de backend/src/projets/gabarit/nom-fichier.ts (le serveur renomme ;
-// ici, l’aperçu avant le dépôt) — garder les deux fichiers identiques.
+// MIROIR de backend/src/projects/submission-file-name.ts (submissionFileName :
+// le serveur renomme ; ici, l’aperçu avant le dépôt) — même règle, jusqu’à ce
+// que le back envoie le nom (passe front de S3).
 
 const LONGUEUR_TACHE = 40;
 

@@ -3,8 +3,8 @@ import { Prisma } from '@prisma/client';
 import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Temps } from '../reglages/gabarit';
-import { contexteDecision } from '../projets/gabarit/suppleance';
-import { agitCommeDplg, ROLE_CTO, verifierCircuit } from '../projets/gabarit/validation';
+import { decisionContext } from './decision-context';
+import { actsAsDplg, assertInCircuit, ROLE_CTO } from './review-rules';
 import { TS_UNITS, type Actor } from './project-query';
 
 // « Ajouter en TS » (Architecte DPLG) : un élément demandé par le client
@@ -15,13 +15,10 @@ export class TsElementsService {
   constructor(private prisma: PrismaService) {}
 
   async add(companyId: string, actor: Actor, projectId: string, cardId: string, element: string) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     // Seuil et suppléance vérifiés en amont (AvenantsTsService) ; ici, le rôle.
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
-    if (
-      !agitCommeDplg({ role: actor.role, collaborateurId: null, ctoSupplee: ctx.ctoSupplee }) &&
-      actor.role !== ROLE_CTO
-    ) {
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
+    if (!actsAsDplg({ role: actor.role, employeeId: null, ctoStandsIn: ctx.ctoStandsIn }) && actor.role !== ROLE_CTO) {
       throw new ForbiddenException('Ajouter en TS est réservé à l’Architecte DPLG (ou au CTO).');
     }
     const card = await this.prisma.carteProjet.findFirst({
