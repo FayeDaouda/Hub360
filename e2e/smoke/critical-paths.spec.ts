@@ -119,7 +119,13 @@ test.describe('invoices', () => {
     const leadCode = (await form.locator('#nfd-lead option:checked').innerText()).split(' · ')[0].trim();
     await form.getByLabel('Désignation, ligne 1').fill('CO0 · Diagnostic de référence');
     await form.getByLabel('Montant HT, ligne 1').fill('250000');
+    // La création doit aboutir avant de quitter la page : une navigation
+    // immédiate interrompait la requête sur une machine chargée (27/10/2026).
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/factures/directes') && r.request().method() === 'POST',
+    );
     await form.getByRole('button', { name: /Préparer la facture/ }).click();
+    expect((await created).ok()).toBe(true);
 
     // A direct invoice waits for the CFO's validation; its number comes at issue.
     await page.goto(`${ADMIN_PATH}/facturation?onglet=factures`);

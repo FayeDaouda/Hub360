@@ -149,6 +149,13 @@ Décisions structurantes : `docs/adr/`.
   travail : `npm run visual:quick -- <filtre>` (jamais pour une fusion).
   Mesuré : série 4,8 à 5 min (contre 6 à 10), environnement en cache 40 s
   (contre ~7 min) ; 8 environnements saturent la machine.
+- **Rien de lourd en même temps qu'une validation** (envoi avec son crochet
+  `pre-push`, compilation) : le 27/10/2026, un test de fumée a échoué ainsi.
+  Un test qui crée quelque chose attend la réponse avant de quitter la page,
+  sinon la navigation interrompt la requête sur une machine chargée. À froid
+  (premier passage dans un dossier neuf), la compilation de la branche en
+  parallèle de la référence peut faire couper des connexions à l'API
+  (`ECONNRESET`, constaté une fois le 27/10/2026) : relancer à chaud.
 
 ## Défaut corrigé
 
