@@ -2,15 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
-import type { EtatTache } from '../projets/gabarit/etats';
+import type { TaskState } from '../projects/task-states';
 import { CHIEF_CELL, chiefOf } from '../projects/project-query';
 import { ProjectStatesService } from '../projects/project-states.service';
 import { ReviewCircuitService } from '../projects/review-circuit.service';
 import { reminderPossibleOn } from '../projects/task-reminder';
 import { TaskReviewService } from '../projects/task-review.service';
 import { TaskSubmissionService } from '../projects/task-submission.service';
-import { contexteDecision } from '../projets/gabarit/suppleance';
-import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
+import { decisionContext } from '../projects/decision-context';
+import { canDecide, employeeOfAccount } from '../projects/review-rules';
 import { ouDossierDuCompte } from '../rh/mon-compte';
 import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from '../rh/regles-temps';
 import {
@@ -48,8 +48,8 @@ export class TasksService {
   ) {}
 
   // État de chaque tâche des projets ouverts, selon la règle commune.
-  private async taskStates(companyId: string, day: string): Promise<Map<string, EtatTache>> {
-    return new Map((await this.projectStates.companyStates(companyId, day)).flatMap((p) => [...p.etatsTaches]));
+  private async taskStates(companyId: string, day: string): Promise<Map<string, TaskState>> {
+    return new Map((await this.projectStates.companyStates(companyId, day)).flatMap((p) => [...p.taskStates]));
   }
 
   // --- L'assigné : ses tâches, leur temps et leur état de validation ---------
@@ -63,7 +63,7 @@ export class TasksService {
         absences: { where: { statut: 'validee' }, select: { dateDebut: true, dateFin: true } },
       },
     });
-    const employeeId = file?.collaborateurId ?? (await collaborateurDuCompte(this.prisma, a.societeId, a.userId));
+    const employeeId = file?.collaborateurId ?? (await employeeOfAccount(this.prisma, a.societeId, a.userId));
     const tasks = employeeId ? await loadAssignedTasks(this.prisma, [employeeId]) : [];
     const companyId = file?.societeId ?? a.societeId;
     const holidays = (await this.reglages.joursFeries([companyId])).get(companyId)!;
@@ -71,7 +71,7 @@ export class TasksService {
       (file?.absences ?? []).map((x) => ({ debut: x.dateDebut, fin: x.dateFin })),
       holidays,
     );
-    const states = tasks.length ? await this.taskStates(companyId, today) : new Map<string, EtatTache>();
+    const states = tasks.length ? await this.taskStates(companyId, today) : new Map<string, TaskState>();
     // Qui valide (mêmes personnes que celles prévenues au dépôt) : dès qu'une
     // tâche est à déposer (message du dépôt) ou en validation (« Chez mon
     // N+1 »), et quand une relance devient possible (3 jours ouvrés).
@@ -133,7 +133,7 @@ export class TasksService {
   async teamStats(employeeIds: string[], companyId?: string): Promise<PerformanceStatsDto> {
     const today = todayIso();
     const tasks = await loadAssignedTasks(this.prisma, employeeIds);
-    const states = companyId && tasks.length ? await this.taskStates(companyId, today) : new Map<string, EtatTache>();
+    const states = companyId && tasks.length ? await this.taskStates(companyId, today) : new Map<string, TaskState>();
     return performanceStats(
       tasks.map((t) => ({
         statut: statusFromProjectState(taskStatus(t, templateValidationState(t), today), states.get(t.id)),
@@ -156,7 +156,7 @@ export class TasksService {
 
   // --- Le valideur : remises qui l'attendent ----------------------------------
   async toReview(a: Actor): Promise<TaskToReviewDto[]> {
-    const employeeId = await collaborateurDuCompte(this.prisma, a.societeId, a.userId);
+    const employeeId = await employeeOfAccount(this.prisma, a.societeId, a.userId);
     const submissions = await this.prisma.tacheProjet.findMany({
       where: { statut: 'a_valider', projet: { societeId: a.societeId, ouvertLe: { not: null } } },
       select: {
@@ -182,12 +182,12 @@ export class TasksService {
       },
     });
     // Mêmes règles que Projets : suppléance du jour, travail d'un Dir. GC au CTO.
-    const ctx = await contexteDecision(this.prisma, a.societeId, todayIso());
+    const ctx = await decisionContext(this.prisma, a.societeId, todayIso());
     return submissions
       .filter((t) =>
-        peutDecider(
-          { role: a.role, collaborateurId: employeeId, ctoSupplee: ctx.ctoSupplee },
-          { ...t, assigneEstDplg: !!t.assigneId && ctx.dplgCollaborateurs.has(t.assigneId) },
+        canDecide(
+          { role: a.role, employeeId, ctoStandsIn: ctx.ctoStandsIn },
+          { ...t, assigneeIsDplg: !!t.assigneId && ctx.dplgEmployees.has(t.assigneId) },
           chiefOf(t.projet),
         ),
       )

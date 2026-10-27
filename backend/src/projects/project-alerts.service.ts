@@ -3,7 +3,7 @@ import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { alerteAvenant } from '../devis/domaine';
-import { attentesFactures } from '../projets/gabarit/etats';
+import { invoiceWaits } from './task-states';
 import { invoicesOf, WITH_TASKS } from './project-query';
 import { ProjectStatesService } from './project-states.service';
 
@@ -89,8 +89,8 @@ export class ProjectAlertsService {
         factureId: p.factures[0]?.id ?? null,
       }));
     for (const p of projects) {
-      const { etapes, etatsTaches } = this.states.states(p, today, holidays);
-      const states = [...etatsTaches.values()];
+      const { etapes, taskStates } = this.states.states(p, today, holidays);
+      const states = [...taskStates.values()];
       const late = states.filter((e) => e.code === 'en_retard').length;
       const extended = states.filter((e) => e.code === 'prolongee').length;
       if (late || extended) {
@@ -104,7 +104,7 @@ export class ProjectAlertsService {
           joursMax: maxDays,
         });
       }
-      const waiting = attentesFactures(etapes, this.states.cardSources(p));
+      const waiting = invoiceWaits(etapes, this.states.cardSources(p));
       for (const f of ['F2', 'F3'] as const) {
         const invoices = invoicesOf(p.factures, f);
         if (waiting[f].length || invoices.some((x) => x.statut === 'emise')) continue;

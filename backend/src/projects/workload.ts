@@ -8,9 +8,9 @@ import {
   type Feries,
   type Periode,
   type Tache,
-} from '../../rh/regles-temps';
+} from '../rh/regles-temps';
 
-export type Charge = {
+export type Workload = {
   disponibles: number; // heures ouvrées de présence sur la période
   assignees: number; // heures standard de ses autres tâches tombant dans la période
   joursAbsence: number; // jours ouvrés d'absence validée dans la période
@@ -22,23 +22,23 @@ export type Charge = {
 // répartie sur la fenêtre de chaque tâche, 8 h par jour ouvré, fériés et
 // absences validées retirés — le même chiffre que l'indicateur « Charge des
 // équipes », vu avant d'assigner.
-export function chargeSurPeriode(
-  p: Periode,
-  autres: Tache[],
-  tache: Tache,
+export function workloadOver(
+  period: Periode,
+  others: Tache[],
+  task: Tache,
   absences: Periode[],
-  feries: Feries = AUCUN_FERIE,
-): Charge {
-  const absents = joursAbsents(absences, feries);
-  const ouvres = joursOuvres(p, feries);
-  const presents = ouvres.filter((j) => !absents.has(j)).length;
-  const disponibles = presents * HEURES_PAR_JOUR;
-  const assignees = autres.reduce((s, t) => s + heuresTache(t, absents, p, feries), 0);
-  const avec = assignees + heuresTache(tache, absents, p, feries);
+  holidays: Feries = AUCUN_FERIE,
+): Workload {
+  const absentDays = joursAbsents(absences, holidays);
+  const workdays = joursOuvres(period, holidays);
+  const presentDays = workdays.filter((j) => !absentDays.has(j)).length;
+  const available = presentDays * HEURES_PAR_JOUR;
+  const assigned = others.reduce((s, t) => s + heuresTache(t, absentDays, period, holidays), 0);
+  const withTask = assigned + heuresTache(task, absentDays, period, holidays);
   return {
-    disponibles,
-    assignees: arrondi(assignees),
-    joursAbsence: ouvres.length - presents,
-    pourcentage: disponibles > 0 ? Math.round((avec / disponibles) * 100) : null,
+    disponibles: available,
+    assignees: arrondi(assigned),
+    joursAbsence: workdays.length - presentDays,
+    pourcentage: available > 0 ? Math.round((withTask / available) * 100) : null,
   };
 }

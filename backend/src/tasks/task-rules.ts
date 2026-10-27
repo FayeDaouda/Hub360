@@ -20,7 +20,7 @@ export const TASK_STATUSES = [
 ] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
-// Statut affiné par l'état commun des projets (projets/gabarit/etats.ts), le
+// Statut affiné par l'état commun des projets (projects/task-states.ts), le
 // même que Production et Équipes (22/10/2026) : une prolongation accordée
 // qualifie le retard (pas « en retard »), une carte verrouillée attend
 // l'étape précédente (ni en cours, ni en retard).

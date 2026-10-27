@@ -10,10 +10,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { Temps } from '../reglages/gabarit';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
-import { joursOuvresApres } from '../projets/gabarit/calendrier';
-import { nomFichierDepot } from '../projets/gabarit/nom-fichier';
-import { contexteDecision } from '../projets/gabarit/suppleance';
-import { collaborateurDuCompte, peutQualifier, verifierCircuit } from '../projets/gabarit/validation';
+import { workdaysAfter } from './work-calendar';
+import { submissionFileName } from './submission-file-name';
+import { decisionContext } from './decision-context';
+import { assertInCircuit, canQualify, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
 import { reminderPossibleOn } from './task-reminder';
@@ -33,7 +33,7 @@ export class TaskSubmissionService {
   // écrite au principe 4) ; sinon la remise vNN attend le chef de team (ou le
   // DPLG pour la tâche du chef).
   async submit(companyId: string, actor: Actor, projectId: string, taskId: string, body: RemettreTacheDto = {}) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: {
@@ -60,7 +60,7 @@ export class TaskSubmissionService {
       },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    const employeeId = await collaborateurDuCompte(this.prisma, companyId, actor.userId);
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
     if (!employeeId || employeeId !== task.assigneId)
       throw new ForbiddenException('Seule la personne assignée remet sa tâche.');
     if (task.statut !== 'a_faire' && task.statut !== 'reprise')
@@ -85,13 +85,13 @@ export class TaskSubmissionService {
     // Renommés selon la règle du HUB (CODE_ÉTAPE_TÂCHE_vNN) : personne n'a à la retenir.
     const files = received.map((f, rang) => ({
       ...f,
-      nom: nomFichierDepot({
+      nom: submissionFileName({
         code: task.projet.code,
         etapeNumero: task.carte.etapeNumero,
-        tache: task.libelle,
+        task: task.libelle,
         version,
-        nomOrigine: f.nom,
-        rang,
+        originalName: f.nom,
+        rank: rang,
         total: received.length,
       }),
     }));
@@ -131,7 +131,7 @@ export class TaskSubmissionService {
     });
 
     if (!byDeposit) {
-      const ctx = await contexteDecision(this.prisma, companyId, todayIso());
+      const ctx = await decisionContext(this.prisma, companyId, todayIso());
       await this.circuit.notify(
         companyId,
         projectId,
@@ -150,7 +150,7 @@ export class TaskSubmissionService {
   // après la relance précédente. Prévient les mêmes personnes que le dépôt et
   // laisse une trace dans l'historique de la tâche.
   async remind(companyId: string, actor: Actor, projectId: string, taskId: string) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: {
@@ -168,7 +168,7 @@ export class TaskSubmissionService {
       },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    const employeeId = await collaborateurDuCompte(this.prisma, companyId, actor.userId);
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
     if (!employeeId || employeeId !== task.assigneId)
       throw new ForbiddenException('Seule la personne assignée relance son validateur.');
     if (task.statut !== 'a_valider') throw new ConflictException('Cette tâche n’attend pas de validation.');
@@ -180,7 +180,7 @@ export class TaskSubmissionService {
     if (todayIso() < possibleOn) {
       throw new ConflictException(`Relance possible à partir du ${formatDate(possibleOn)}.`);
     }
-    const days = joursOuvresApres(toIsoDay(submission.creeLe), todayIso(), holidays);
+    const days = workdaysAfter(toIsoDay(submission.creeLe), todayIso(), holidays);
     const vNN = versionLabel(task.version);
     await this.prisma.evenementTacheProjet.create({
       data: {
@@ -190,7 +190,7 @@ export class TaskSubmissionService {
         detail: `Relance du validateur · ${vNN} déposée il y a ${days} jours ouvrés`,
       },
     });
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
     await this.circuit.notify(
       companyId,
       projectId,
@@ -220,21 +220,14 @@ export class TaskSubmissionService {
       select: { assigneId: true, projet: { select: { cellules: CHIEF_CELL } } },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
-    const employeeId = await collaborateurDuCompte(this.prisma, companyId, actor.userId);
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
     if (employeeId && task.assigneId === employeeId) return;
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
     const t = {
       assigneId: task.assigneId,
-      assigneEstDplg: !!task.assigneId && ctx.dplgCollaborateurs.has(task.assigneId),
+      assigneeIsDplg: !!task.assigneId && ctx.dplgEmployees.has(task.assigneId),
     };
-    if (
-      peutQualifier(
-        { role: actor.role, collaborateurId: employeeId, ctoSupplee: ctx.ctoSupplee },
-        t,
-        chiefOf(task.projet),
-      )
-    )
-      return;
+    if (canQualify({ role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn }, t, chiefOf(task.projet))) return;
     throw new ForbiddenException('Fichier réservé à l’assigné et à son valideur.');
   }
 

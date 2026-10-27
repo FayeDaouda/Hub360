@@ -3,10 +3,10 @@ import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { alerteAvenant } from '../devis/domaine';
-import { rangOuvre } from '../projets/gabarit/calendrier';
-import { estOuvert } from '../projets/gabarit/fil';
-import { dateLivraison, horizonProjet } from '../projets/gabarit/suppleance';
-import { perimetreProjets, peutDecider, peutQualifier, peutViser } from '../projets/gabarit/validation';
+import { workdayRank } from './work-calendar';
+import { isOpenComment } from './thread-rules';
+import { deliveryDate, projectHorizon } from './decision-context';
+import { canDecide, canQualify, canVisa, projectScope } from './review-rules';
 import { chiefOf, pendingExtension, siteStatus, WITH_TASKS, type Actor } from './project-query';
 import { ProjectStatesService } from './project-states.service';
 
@@ -20,12 +20,12 @@ export class ProjectsBoardService {
   ) {}
 
   async board(companyId: string, actor: Actor) {
-    const { decideur, ctx } = await this.states.decider(companyId, actor);
+    const { decider, ctx } = await this.states.decider(companyId, actor);
     const projects = await this.prisma.projet.findMany({
       where: {
         societeId: companyId,
         ouvertLe: { not: null },
-        ...perimetreProjets(actor.role, decideur.collaborateurId),
+        ...projectScope(actor.role, decider.employeeId),
       },
       orderBy: { ouvertLe: 'asc' },
       include: {
@@ -39,8 +39,8 @@ export class ProjectsBoardService {
     const summaries = projects.map((p) => {
       const { etapes } = this.states.states(p, today, holidays);
       const sum = (key: 'faites' | 'total' | 'enRetard') => etapes.reduce((s, e) => s + e[key], 0);
-      const day = rangOuvre(p.ouvertLe!, today, holidays);
-      const horizon = horizonProjet(p.budgetHeures);
+      const day = workdayRank(p.ouvertLe!, today, holidays);
+      const horizon = projectHorizon(p.budgetHeures);
       return {
         id: p.id,
         code: p.code,
@@ -67,7 +67,7 @@ export class ProjectsBoardService {
         aValiderParVous: projects.flatMap((p) =>
           p.cartes.flatMap((c) =>
             c.taches
-              .filter((t) => peutDecider(decideur, this.states.ruleFor(ctx, t), chiefOf(p)))
+              .filter((t) => canDecide(decider, this.states.ruleFor(ctx, t), chiefOf(p)))
               .map((t) => ({ projetId: p.id, tacheId: t.id })),
           ),
         ),
@@ -86,15 +86,15 @@ export class ProjectsBoardService {
 
   // « À décider » (revue Dir. GC, 21/10/2026) : sur tous les projets visibles,
   // les remises et les demandes de prolongation que la personne connectée peut
-  // trancher — mêmes règles que les boutons (peutDecider, peutQualifier).
+  // trancher — mêmes règles que les boutons (canDecide, canQualify).
   async toDecide(companyId: string, actor: Actor) {
-    const { decideur, ctx } = await this.states.decider(companyId, actor);
+    const { decider, ctx } = await this.states.decider(companyId, actor);
     const holidays = await this.states.holidays(companyId);
     const projects = await this.prisma.projet.findMany({
       where: {
         societeId: companyId,
         ouvertLe: { not: null },
-        ...perimetreProjets(actor.role, decideur.collaborateurId),
+        ...projectScope(actor.role, decider.employeeId),
       },
       include: {
         ...WITH_TASKS,
@@ -103,22 +103,22 @@ export class ProjectsBoardService {
       },
     });
     const rows = projects.flatMap((p) => {
-      const chefId = chiefOf(p);
-      return p.cartes.flatMap((c) => c.taches.map((t) => ({ p, c, t, chefId })));
+      const chiefId = chiefOf(p);
+      return p.cartes.flatMap((c) => c.taches.map((t) => ({ p, c, t, chiefId })));
     });
-    const submissions = rows.filter(({ t, chefId }) => peutDecider(decideur, this.states.ruleFor(ctx, t), chefId));
+    const submissions = rows.filter(({ t, chiefId }) => canDecide(decider, this.states.ruleFor(ctx, t), chiefId));
     const extensions = rows
       .map((l) => {
         const request = pendingExtension(l.t.prolongations);
-        const delivery = dateLivraison(l.p, holidays);
+        const delivery = deliveryDate(l.p, holidays);
         return { ...l, request, pushesBack: !!request && !!delivery && request.jusquau > delivery, delivery };
       })
       .filter(
-        ({ t, chefId, request, pushesBack }) =>
-          request && peutQualifier(decideur, this.states.ruleFor(ctx, t), chefId, pushesBack),
+        ({ t, chiefId, request, pushesBack }) =>
+          request && canQualify(decider, this.states.ruleFor(ctx, t), chiefId, pushesBack),
       );
     // Visas DPLG à apposer (l'architecte DPLG seul).
-    const visas = peutViser(actor.role)
+    const visas = canVisa(actor.role)
       ? rows.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace)
       : [];
     // Date de la dernière remise de chaque tâche à valider.
@@ -157,7 +157,7 @@ export class ProjectsBoardService {
       // TS au-delà du seuil, demandés par le Dir. GC : au CTO de trancher.
       ts: await this.states.tsRequestsToDecide(
         companyId,
-        decideur,
+        decider,
         projects.map((p) => p.id),
       ),
     };
@@ -177,7 +177,7 @@ export class ProjectsBoardService {
         _count: { select: { reponses: true } },
       },
     });
-    const open = roots.filter((r) => estOuvert({ ...r, reponses: r._count.reponses }));
+    const open = roots.filter((r) => isOpenComment({ ...r, reponses: r._count.reponses }));
     return new Set(open.map((r) => r.tacheId ?? r.carteId)).size;
   }
 

@@ -60,7 +60,6 @@ export const pendingExtension = (l: Extensions) => l.find((p) => p.decision === 
 
 // Cartes clés suivies dans « À venir » du tableau de production.
 export const KEY_CARDS = ['permis_construire', 'pe_architecture', 'tache_finale'];
-export const ROLE_CEO = 'CEO (transverse)';
 
 const INVOICE_MILESTONES: Record<'F1' | 'F2' | 'F3', JalonFacture> = {
   F1: 'signature',

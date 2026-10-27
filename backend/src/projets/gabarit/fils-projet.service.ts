@@ -8,10 +8,10 @@ import {
 } from '@nestjs/common';
 import { NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../../commun/permission.guard';
-import { collaborateurDuCompte, commenteSansEcriture, perimetreProjets, ROLE_SALARIE } from './validation';
+import { commentsWithoutWrite, employeeOfAccount, projectScope, ROLE_EMPLOYEE } from '../../projects/review-rules';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { estOuvert, motifRefusResolution } from './fil';
+import { isOpenComment, resolutionRefusal } from '../../projects/thread-rules';
 import { nomPublic } from '../../auth/profil';
 
 type Acteur = { userId: string };
@@ -103,17 +103,17 @@ export class FilsProjetService {
     });
     return racines.map((r) => ({
       ...this.format(r),
-      ouvert: estOuvert({ ...r, reponses: r.reponses.length }),
+      ouvert: isOpenComment({ ...r, reponses: r.reponses.length }),
       reponses: r.reponses.map((x) => this.format(x)),
     }));
   }
 
   // Salarié : il ne lit que les projets où une tâche lui est assignée.
   async verifierLecture(societeId: string, acteur: Acteur & { role: string }, projetId: string) {
-    if (acteur.role !== ROLE_SALARIE) return;
-    const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    if (acteur.role !== ROLE_EMPLOYEE) return;
+    const collaborateurId = await employeeOfAccount(this.prisma, societeId, acteur.userId);
     const p = await this.prisma.projet.findFirst({
-      where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) },
+      where: { id: projetId, societeId, ...projectScope(acteur.role, collaborateurId) },
       select: { id: true },
     });
     if (!p) throw new NotFoundException('Projet introuvable');
@@ -128,11 +128,11 @@ export class FilsProjetService {
     projetId: string,
   ) {
     if (aLaPermission(acteur.permissions, 'projets', 'ecriture')) return;
-    if (commenteSansEcriture(acteur.role)) return;
-    if (acteur.role === ROLE_SALARIE) {
-      const collaborateurId = await collaborateurDuCompte(this.prisma, societeId, acteur.userId);
+    if (commentsWithoutWrite(acteur.role)) return;
+    if (acteur.role === ROLE_EMPLOYEE) {
+      const collaborateurId = await employeeOfAccount(this.prisma, societeId, acteur.userId);
       const p = await this.prisma.projet.findFirst({
-        where: { id: projetId, societeId, ...perimetreProjets(acteur.role, collaborateurId) },
+        where: { id: projetId, societeId, ...projectScope(acteur.role, collaborateurId) },
         select: { id: true },
       });
       if (p) return;
@@ -202,7 +202,7 @@ export class FilsProjetService {
       select: { auteurId: true, mentionneId: true, resoluLe: true, _count: { select: { reponses: true } } },
     });
     if (!c) throw new NotFoundException('Commentaire introuvable');
-    const motif = motifRefusResolution({ ...c, reponses: c._count.reponses }, acteur.userId);
+    const motif = resolutionRefusal({ ...c, reponses: c._count.reponses }, acteur.userId);
     if (motif) throw c.auteurId !== acteur.userId ? new ForbiddenException(motif) : new ConflictException(motif);
     await this.prisma.commentaireProjet.update({ where: { id: commentaireId }, data: { resoluLe: new Date() } });
     return { ok: true };

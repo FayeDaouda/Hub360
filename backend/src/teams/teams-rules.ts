@@ -1,5 +1,5 @@
 import type { ProcessusCellule, StatutTacheProjet } from '@prisma/client';
-import type { EtatTache } from '../projets/gabarit/etats';
+import type { TaskState } from '../projects/task-states';
 import { arrondi, bornesMois, heuresTache, joursAbsents, type Feries, type Periode } from '../rh/regles-temps';
 
 // Équipes (maquette du boss, oct. 2026) — règles pures : nomenclature des
@@ -38,10 +38,10 @@ export function onTimeShare(taches: TeamTask[]): number | null {
 }
 
 // Tâches en cours (revue CTO, 22/10/2026) : démarrées et pas encore faites,
-// selon l'état commun des projets (etats.ts) — le même que Production et le
+// selon l'état commun des projets (projects/task-states.ts) — le même que Production et le
 // reporting de la direction. Une prolongation accordée qualifie le retard :
 // la tâche n'est pas comptée en retard.
-const EN_COURS: ReadonlySet<EtatTache['code']> = new Set([
+const EN_COURS: ReadonlySet<TaskState['code']> = new Set([
   'en_cours',
   'en_retard',
   'prolongee',
@@ -49,8 +49,8 @@ const EN_COURS: ReadonlySet<EtatTache['code']> = new Set([
   'reprise',
   'a_viser',
 ]);
-export const isInProgress = (code: EtatTache['code']) => EN_COURS.has(code);
-export function tasksInProgress(codes: EtatTache['code'][]) {
+export const isInProgress = (code: TaskState['code']) => EN_COURS.has(code);
+export function tasksInProgress(codes: TaskState['code'][]) {
   const enCours = codes.filter(isInProgress);
   const enRetard = enCours.filter((c) => c === 'en_retard').length;
   return {

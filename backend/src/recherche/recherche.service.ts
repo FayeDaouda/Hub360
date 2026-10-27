@@ -4,7 +4,7 @@ import { aLaPermission } from '../commun/permission.guard';
 import { chercherCollegues } from '../contacts/contacts.service';
 import { refDevis } from '../devis/domaine';
 import { refFacture } from '../projets/domaine/config';
-import { collaborateurDuCompte, perimetreProjets } from '../projets/gabarit/validation';
+import { employeeOfAccount, projectScope } from '../projects/review-rules';
 import { PrismaService } from '../prisma/prisma.service';
 import { runInGroupScope } from '../tenancy/tenant-context';
 
@@ -67,14 +67,14 @@ export class RechercheService {
   }
 
   private async projets(a: Acteur, q: string): Promise<Resultat[]> {
-    const collaborateurId = await collaborateurDuCompte(this.prisma, a.societeId, a.userId);
+    const collaborateurId = await employeeOfAccount(this.prisma, a.societeId, a.userId);
     const l = await this.prisma.projet.findMany({
       where: {
         societeId: a.societeId,
         ouvertLe: { not: null },
         // AND : le périmètre du Salarié est lui-même un OR — ne pas l'écraser.
         AND: [
-          perimetreProjets(a.role, collaborateurId),
+          projectScope(a.role, collaborateurId),
           { OR: [{ code: contient(q) }, { client: { nom: contient(q) } }, { programme: contient(q) }] },
         ],
       },

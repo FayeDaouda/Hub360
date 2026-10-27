@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
-import { ROLE_CEO } from '../projets/gabarit/validation';
+import { ROLE_CEO } from '../projects/review-rules';
 
 // Modification du catalogue produits et services (grille tarifaire) :
 // confiée au CEO (décision du 14/10/2026, « pour l'instant ») ; le compte

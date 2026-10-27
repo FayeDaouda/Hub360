@@ -3,16 +3,16 @@ import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
-  attendVisa,
-  etatCarte,
-  etatTache,
-  indexTaches,
-  resumeEtape,
-  type CarteSource,
-  type EtatTache,
-} from '../projets/gabarit/etats';
-import { contexteDecision, type ContexteDecision } from '../projets/gabarit/suppleance';
-import { collaborateurDuCompte, ROLE_CTO, type Decideur } from '../projets/gabarit/validation';
+  cardState,
+  depositAwaitsVisa,
+  indexTasks,
+  stepSummary,
+  taskState,
+  type CardSource,
+  type TaskState,
+} from './task-states';
+import { decisionContext, type DecisionContext } from './decision-context';
+import { employeeOfAccount, ROLE_CTO, type Decider } from './review-rules';
 import { grantedExtension, isoDay, WITH_TASKS, type Actor, type ProjectWithTasks } from './project-query';
 
 // États des projets ouverts selon la règle unique (cartes verrouillées,
@@ -30,7 +30,7 @@ export class ProjectStatesService {
     return (await this.reglages.joursFeries([companyId])).get(companyId) ?? new Set<string>();
   }
 
-  cardSources(p: ProjectWithTasks): CarteSource[] {
+  cardSources(p: ProjectWithTasks): CardSource[] {
     return p.cartes.map((c) => ({
       cle: c.cle,
       etapeNumero: c.etapeNumero,
@@ -57,26 +57,26 @@ export class ProjectStatesService {
   // États des étapes, des cartes et des tâches d'un projet au jour donné.
   states(p: ProjectWithTasks, day: string, holidays: ReadonlySet<string>) {
     const sources = this.cardSources(p);
-    const index = indexTaches(sources);
-    const etatsCartes = new Map(p.cartes.map((c, i) => [c.id, etatCarte(sources[i], index)] as const));
-    const etatsTaches = new Map<string, EtatTache>();
-    const byStep = new Map<number, { tache: (typeof sources)[number]['taches'][number]; etat: EtatTache }[]>();
+    const index = indexTasks(sources);
+    const cardStates = new Map(p.cartes.map((c, i) => [c.id, cardState(sources[i], index)] as const));
+    const taskStates = new Map<string, TaskState>();
+    const byStep = new Map<number, { task: (typeof sources)[number]['taches'][number]; state: TaskState }[]>();
     p.cartes.forEach((c, i) => {
       c.taches.forEach((t, j) => {
-        const etat = etatTache(
+        const state = taskState(
           sources[i].taches[j],
-          etatsCartes.get(c.id)!,
+          cardStates.get(c.id)!,
           day,
           holidays,
-          attendVisa(sources[i].taches[j], sources[i]),
+          depositAwaitsVisa(sources[i].taches[j], sources[i]),
         );
-        etatsTaches.set(t.id, etat);
-        byStep.set(c.etapeNumero, [...(byStep.get(c.etapeNumero) ?? []), { tache: sources[i].taches[j], etat }]);
+        taskStates.set(t.id, state);
+        byStep.set(c.etapeNumero, [...(byStep.get(c.etapeNumero) ?? []), { task: sources[i].taches[j], state }]);
       });
       if (!byStep.has(c.etapeNumero)) byStep.set(c.etapeNumero, []);
     });
-    const etapes = [...byStep.entries()].sort(([a], [b]) => a - b).map(([n, e]) => resumeEtape(n, e));
-    return { etapes, etatsCartes, etatsTaches };
+    const etapes = [...byStep.entries()].sort(([a], [b]) => a - b).map(([n, e]) => stepSummary(n, e));
+    return { etapes, cardStates, taskStates };
   }
 
   // États de tous les projets ouverts de la société (Production, Équipes,
@@ -91,11 +91,11 @@ export class ProjectStatesService {
       this.holidays(companyId),
     ]);
     return projects.map((p) => {
-      const { etapes, etatsTaches } = this.states(p, day, holidays);
+      const { etapes, taskStates } = this.states(p, day, holidays);
       return {
         id: p.id,
         code: p.code,
-        etatsTaches,
+        taskStates,
         etapes: etapes.map((e) => {
           const cards = p.cartes.filter((c) => c.etapeNumero === e.numero);
           const validated = cards
@@ -113,17 +113,17 @@ export class ProjectStatesService {
   }
 
   // Personne connectée face aux règles du jour (suppléance, escalade au CTO).
-  async decider(companyId: string, actor: Actor): Promise<{ decideur: Decideur; ctx: ContexteDecision }> {
-    const [collaborateurId, ctx] = await Promise.all([
-      collaborateurDuCompte(this.prisma, companyId, actor.userId),
-      contexteDecision(this.prisma, companyId, todayIso()),
+  async decider(companyId: string, actor: Actor): Promise<{ decider: Decider; ctx: DecisionContext }> {
+    const [employeeId, ctx] = await Promise.all([
+      employeeOfAccount(this.prisma, companyId, actor.userId),
+      decisionContext(this.prisma, companyId, todayIso()),
     ]);
-    return { decideur: { role: actor.role, collaborateurId, ctoSupplee: ctx.ctoSupplee }, ctx };
+    return { decider: { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn }, ctx };
   }
 
   // Tâche lue par les règles de décision : son assigné est-il l'Architecte DPLG ?
-  ruleFor<T extends { assigneId: string | null }>(ctx: ContexteDecision, t: T) {
-    return { ...t, assigneEstDplg: !!t.assigneId && ctx.dplgCollaborateurs.has(t.assigneId) };
+  ruleFor<T extends { assigneId: string | null }>(ctx: DecisionContext, t: T) {
+    return { ...t, assigneeIsDplg: !!t.assigneId && ctx.dplgEmployees.has(t.assigneId) };
   }
 
   // « Prénom Nom » des comptes actifs (« A ou B »), null s'il n'y en a aucun.
@@ -138,8 +138,8 @@ export class ProjectStatesService {
   }
 
   // Demandes de TS en attente sur ces projets, si la personne peut les trancher (CTO).
-  async tsRequestsToDecide(companyId: string, decideur: Decideur, projectIds: string[]) {
-    if (decideur.role !== ROLE_CTO && decideur.role !== 'societe_admin') return [];
+  async tsRequestsToDecide(companyId: string, decider: Decider, projectIds: string[]) {
+    if (decider.role !== ROLE_CTO && decider.role !== 'societe_admin') return [];
     const requests = await this.prisma.demandeTs.findMany({
       where: { societeId: companyId, statut: 'a_valider', projetId: { in: projectIds } },
       orderBy: { demandeLe: 'asc' },

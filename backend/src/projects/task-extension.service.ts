@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { formatDate, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
-import { contexteDecision } from '../projets/gabarit/suppleance';
-import { collaborateurDuCompte, peutQualifier, verifierCircuit } from '../projets/gabarit/validation';
+import { decisionContext } from './decision-context';
+import { assertInCircuit, canQualify, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
 
@@ -25,9 +25,9 @@ export class TaskExtensionService {
   // figée (choix du 06/10/2026) : accordée, la prolongation qualifie le retard
   // jusqu'à cette date.
   async request(companyId: string, actor: Actor, projectId: string, taskId: string, until: string, reason: string) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     const task = await this.load(companyId, projectId, taskId);
-    const employeeId = await collaborateurDuCompte(this.prisma, companyId, actor.userId);
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
     if (!employeeId || employeeId !== task.assigneId)
       throw new ForbiddenException('Seule la personne assignée demande une prolongation.');
     if (task.statut === 'validee' || task.statut === 'non_necessaire')
@@ -55,11 +55,11 @@ export class TaskExtensionService {
         },
       }),
     ]);
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
     // Au-delà de la livraison du projet, ou travail d'un Dir. GC : le CTO.
     const pushesBack = await this.circuit.pushesBackDelivery(companyId, task.projet, until);
-    const escalated = pushesBack || ctx.dplgCollaborateurs.has(employeeId);
-    const deciders = escalated ? ctx.comptesCto : await this.circuit.reviewers(ctx, employeeId, chiefOf(task.projet));
+    const escalated = pushesBack || ctx.dplgEmployees.has(employeeId);
+    const deciders = escalated ? ctx.ctoAccounts : await this.circuit.reviewers(ctx, employeeId, chiefOf(task.projet));
     await this.circuit.notify(
       companyId,
       projectId,
@@ -74,18 +74,18 @@ export class TaskExtensionService {
 
   // Décision (chef de team, sauf sa propre tâche ; Architecte DPLG partout).
   async decide(companyId: string, actor: Actor, projectId: string, taskId: string, grant: boolean) {
-    verifierCircuit(actor.role);
+    assertInCircuit(actor.role);
     const task = await this.load(companyId, projectId, taskId);
     const pending = task.prolongations.find((p) => p.decision === null);
     if (!pending) throw new ConflictException('Aucune demande de prolongation en attente.');
-    const employeeId = await collaborateurDuCompte(this.prisma, companyId, actor.userId);
-    const ctx = await contexteDecision(this.prisma, companyId, todayIso());
-    const assigneeIsDplg = !!task.assigneId && ctx.dplgCollaborateurs.has(task.assigneId);
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
+    const ctx = await decisionContext(this.prisma, companyId, todayIso());
+    const assigneeIsDplg = !!task.assigneId && ctx.dplgEmployees.has(task.assigneId);
     const pushesBack = await this.circuit.pushesBackDelivery(companyId, task.projet, pending.jusquau);
     if (
-      !peutQualifier(
-        { role: actor.role, collaborateurId: employeeId, ctoSupplee: ctx.ctoSupplee },
-        { assigneId: task.assigneId, assigneEstDplg: assigneeIsDplg },
+      !canQualify(
+        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn },
+        { assigneId: task.assigneId, assigneeIsDplg },
         chiefOf(task.projet),
         pushesBack,
       )

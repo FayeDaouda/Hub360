@@ -4,18 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { Temps } from '../reglages/gabarit';
 import { refDevis, statutDevisEffectif } from '../devis/domaine';
-import { dateDuJour, rangOuvre } from '../projets/gabarit/calendrier';
-import { attentesFactures } from '../projets/gabarit/etats';
-import { dateLivraison, horizonProjet, type ContexteDecision } from '../projets/gabarit/suppleance';
-import {
-  agitCommeDplg,
-  horsCircuit,
-  perimetreProjets,
-  peutDecider,
-  peutQualifier,
-  peutViser,
-  ROLE_CTO,
-} from '../projets/gabarit/validation';
+import { dateOfDay, workdayRank } from './work-calendar';
+import { invoiceWaits } from './task-states';
+import { deliveryDate, projectHorizon, type DecisionContext } from './decision-context';
+import { actsAsDplg, canDecide, canQualify, canVisa, outsideCircuit, projectScope, ROLE_CTO } from './review-rules';
 import {
   fullName,
   grantedExtension,
@@ -45,25 +37,24 @@ type Chief = {
 function reviewerOf(
   temps: Temps,
   assigneId: string | null,
-  ctx: ContexteDecision,
+  ctx: DecisionContext,
   chief: Chief,
   names: { dplg: string | null; cto: string | null },
 ) {
   if (temps.type === 'sans') return { mode: 'depot' as const };
-  if (assigneId && ctx.dplgCollaborateurs.has(assigneId))
+  if (assigneId && ctx.dplgEmployees.has(assigneId))
     return { mode: 'personne' as const, nom: names.cto, role: 'CTO', motif: 'travail du Dir. GC' };
   if (
     chief &&
     assigneId !== chief.id &&
-    (ctx.collaborateursAbsents.has(chief.id) ||
-      (!chief.utilisateur?.actif && !chief.dossierPersonnel?.utilisateur?.actif))
+    (ctx.absentEmployees.has(chief.id) || (!chief.utilisateur?.actif && !chief.dossierPersonnel?.utilisateur?.actif))
   )
     // Chef sans compte HUB ou absent : la remise remonte à l'Architecte DPLG.
     return {
       mode: 'personne' as const,
       nom: names.dplg,
       role: 'Architecte DPLG',
-      motif: `${fullName(chief)} ${ctx.collaborateursAbsents.has(chief.id) ? 'absent' : 'sans compte HUB'}`,
+      motif: `${fullName(chief)} ${ctx.absentEmployees.has(chief.id) ? 'absent' : 'sans compte HUB'}`,
     };
   if (chief && assigneId === chief.id)
     return { mode: 'personne' as const, nom: names.dplg, role: 'Architecte DPLG', motif: 'tâche du chef de team' };
@@ -81,13 +72,13 @@ export class ProjectFileService {
   ) {}
 
   async file(companyId: string, projectId: string, actor: Actor) {
-    const { decideur, ctx } = await this.states.decider(companyId, actor);
+    const { decider, ctx } = await this.states.decider(companyId, actor);
     const p = await this.prisma.projet.findFirst({
       where: {
         id: projectId,
         societeId: companyId,
         ouvertLe: { not: null },
-        ...perimetreProjets(actor.role, decideur.collaborateurId),
+        ...projectScope(actor.role, decider.employeeId),
       },
       include: {
         ...WITH_TASKS,
@@ -122,17 +113,17 @@ export class ProjectFileService {
     if (!p) throw new NotFoundException('Projet introuvable ou pas encore ouvert');
     const holidays = await this.states.holidays(companyId);
     const today = todayIso();
-    const { etapes, etatsCartes, etatsTaches } = this.states.states(p, today, holidays);
+    const { etapes, cardStates, taskStates } = this.states.states(p, today, holidays);
     const cell = p.cellules[0]?.cellule ?? null;
     const chief = cell?.dispatcher ?? null;
     // « Ajouter en TS » : l'Architecte DPLG (ou son suppléant) et le CTO.
-    const dplgConnected = agitCommeDplg(decideur) || actor.role === ROLE_CTO;
-    const deliveryOn = dateLivraison(p, holidays);
+    const dplgConnected = actsAsDplg(decider) || actor.role === ROLE_CTO;
+    const deliveryOn = deliveryDate(p, holidays);
     // Remise et demande de prolongation : jamais pour un rôle hors circuit (CEO).
-    const inCircuit = !horsCircuit(actor.role);
+    const inCircuit = !outsideCircuit(actor.role);
     const dplg = p.societe.contratSignataireNom?.trim() || null;
     const pilot = await this.reglages.regle<string>(companyId, 'pilote_etudes');
-    const horizon = horizonProjet(p.budgetHeures);
+    const horizon = projectHorizon(p.budgetHeures);
     // Nombre de messages par fil (« Fil de la carte · N », bulle d'une tâche).
     const threads = await this.prisma.commentaireProjet.groupBy({
       by: ['carteId', 'tacheId'],
@@ -153,10 +144,10 @@ export class ProjectFileService {
     const threadOf = (carteId: string, tacheId: string | null) =>
       threads.find((f) => f.carteId === carteId && f.tacheId === tacheId)?._count ?? 0;
     const names = {
-      dplg: (await this.states.accountNames(ctx.comptesDplg)) ?? dplg,
-      cto: await this.states.accountNames(ctx.comptesCto),
+      dplg: (await this.states.accountNames(ctx.dplgAccounts)) ?? dplg,
+      cto: await this.states.accountNames(ctx.ctoAccounts),
     };
-    const me = decideur.collaborateurId;
+    const me = decider.employeeId;
 
     return {
       id: p.id,
@@ -169,8 +160,8 @@ export class ProjectFileService {
       version: p.gabaritVersion,
       offre: p.devis[0] ? refDevis(p.devis[0]) : null,
       ouvertLe: p.ouvertLe,
-      livraisonLe: dateDuJour(p.ouvertLe!, horizon, holidays),
-      jour: rangOuvre(p.ouvertLe!, today, holidays),
+      livraisonLe: dateOfDay(p.ouvertLe!, horizon, holidays),
+      jour: workdayRank(p.ouvertLe!, today, holidays),
       horizon,
       budgetHeures: p.budgetHeures,
       dateVisiteSite: p.dateVisiteSite,
@@ -182,7 +173,7 @@ export class ProjectFileService {
       },
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
       // Assigner : le CTO seulement en suppléance d'un Dir. GC (revue CTO).
-      peutAssigner: actor.role !== ROLE_CTO || ctx.ctoSupplee,
+      peutAssigner: actor.role !== ROLE_CTO || ctx.ctoStandsIn,
       optionsTs: dplgConnected
         ? p.cartes.flatMap((c) => {
             const t = c.temps as Temps | null;
@@ -191,7 +182,7 @@ export class ProjectFileService {
               : [];
           })
         : [],
-      attentes: attentesFactures(etapes, this.states.cardSources(p)),
+      attentes: invoiceWaits(etapes, this.states.cardSources(p)),
       etapes: etapes.map((e) => {
         const c = p.cartes.find((x) => x.etapeNumero === e.numero)!;
         return { ...e, cle: c.etapeCle, libelle: c.etapeLibelle };
@@ -213,7 +204,7 @@ export class ProjectFileService {
         client: c.client,
         fichiers: c.fichiers,
         fil: threadOf(c.id, null),
-        etat: etatsCartes.get(c.id)!,
+        etat: cardStates.get(c.id)!,
         taches: c.taches.map((t) => {
           const pending = pendingExtension(t.prolongations);
           return {
@@ -250,14 +241,14 @@ export class ProjectFileService {
               : null,
             // L'architecte DPLG (Dir. GC, ou un autre Dir. GC en suppléance —
             // jamais le CTO : le visa engage la signature de l'architecte).
-            peutViser: peutViser(actor.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
+            peutViser: canVisa(actor.role) && t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace,
             assigne: t.assigne
               ? { id: t.assigne.id, nom: fullName(t.assigne)!, cellule: t.assigne.cellule?.nom ?? null }
               : null,
             // Assignée à la personne connectée (« Seulement mes tâches »).
             aMoi: !!me && t.assigneId === me,
             validation: reviewerOf(t.temps as Temps, t.assigneId, ctx, chief, names),
-            peutDecider: peutDecider(decideur, this.states.ruleFor(ctx, t), chief?.id ?? null),
+            peutDecider: canDecide(decider, this.states.ruleFor(ctx, t), chief?.id ?? null),
             prolongation: {
               enAttente: pending
                 ? { jusquau: pending.jusquau, motif: pending.motif, le: isoDay(pending.demandeLe) }
@@ -275,8 +266,8 @@ export class ProjectFileService {
               !pending,
             peutDeciderProlongation:
               !!pending &&
-              peutQualifier(
-                decideur,
+              canQualify(
+                decider,
                 this.states.ruleFor(ctx, t),
                 chief?.id ?? null,
                 !!deliveryOn && pending.jusquau > deliveryOn,
@@ -287,9 +278,9 @@ export class ProjectFileService {
               !!me &&
               t.assigneId === me &&
               (t.statut === 'a_faire' || t.statut === 'reprise') &&
-              etatsCartes.get(c.id)!.code === 'ouverte',
+              cardStates.get(c.id)!.code === 'ouverte',
             fil: threadOf(c.id, t.id),
-            etat: etatsTaches.get(t.id)!,
+            etat: taskStates.get(t.id)!,
           };
         }),
       })),
