@@ -7,7 +7,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Création (maquette « Équipes ») : le code SOCIÉTÉ-PROCESSUS-NN est attribué
 // par le serveur ; le pilote, facultatif, rejoint la cellule qu'il pilote.
-export class CreerCelluleDto {
+export class CreateCellDto {
   @IsEnum(ProcessusCellule) processus!: ProcessusCellule;
   @IsString() @MinLength(1) @MaxLength(120) nom!: string;
   @IsOptional() @IsEnum(ClienteleCellule) clientele?: ClienteleCellule;
@@ -15,19 +15,19 @@ export class CreerCelluleDto {
   @IsOptional() @IsString() piloteId?: string | null;
 }
 
-export class MajCelluleDto {
+export class RenameCellDto {
   @IsString() @MinLength(1) @MaxLength(120) nom!: string;
 }
 
 // null = retirer le dispatcher (aucun désigné). Admin uniquement — cf.
-// CellulesService.definirDispatcher (doit appartenir à la cellule).
-export class DefinirDispatcherDto {
+// CellsService.setDispatcher (doit appartenir à la cellule).
+export class SetDispatcherDto {
   @IsOptional() @IsString() dispatcherId!: string | null;
 }
 
 // `photo` = data URI (redimensionnée client-side), stockée telle quelle dans
 // photoCle en transition — seam S3 identique à ImageProjet.
-export class MajCollaborateurDto {
+export class UpdateEmployeeDto {
   @IsOptional() @IsString() @MaxLength(120) prenom?: string;
   @IsOptional() @IsString() @MaxLength(120) nom?: string;
   @IsOptional() @IsString() @MaxLength(120) role?: string;

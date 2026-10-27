@@ -1,14 +1,7 @@
-import {
-  chargeDuMois,
-  codeCellule,
-  partATemps,
-  prefixeSociete,
-  tachesEnCours,
-  type TacheEquipe,
-} from './equipes-regles';
+import { monthlyLoad, cellCode, onTimeShare, companyPrefix, tasksInProgress, type TeamTask } from './teams-rules';
 
 // Équipes (maquette du boss) : nomenclature et indicateurs des cellules.
-const tache = (o: Partial<TacheEquipe>): TacheEquipe => ({
+const tache = (o: Partial<TeamTask>): TeamTask => ({
   debut: '2026-09-14',
   echeance: '2026-09-18',
   heures: 10,
@@ -19,17 +12,17 @@ const tache = (o: Partial<TacheEquipe>): TacheEquipe => ({
 
 describe('nomenclature des cellules', () => {
   it('SOCIÉTÉ-PROCESSUS-NN, initiales de la société', () => {
-    expect(prefixeSociete('Grey Concrete')).toBe('GC');
-    expect(codeCellule('GC', 'ARC', 4)).toBe('GC-ARC-04');
-    expect(codeCellule('GC', 'ETU', 12)).toBe('GC-ETU-12');
+    expect(companyPrefix('Grey Concrete')).toBe('GC');
+    expect(cellCode('GC', 'ARC', 4)).toBe('GC-ARC-04');
+    expect(cellCode('GC', 'ETU', 12)).toBe('GC-ETU-12');
   });
 });
 
-describe('partATemps', () => {
+describe('onTimeShare', () => {
   it('validées à l’échéance ou avant, sur les validées ; null sans livraison', () => {
-    expect(partATemps([tache({}), tache({ statut: 'non_necessaire' })])).toBeNull();
+    expect(onTimeShare([tache({}), tache({ statut: 'non_necessaire' })])).toBeNull();
     expect(
-      partATemps([
+      onTimeShare([
         tache({ statut: 'validee', valideeLe: '2026-09-18' }),
         tache({ statut: 'validee', valideeLe: '2026-09-17' }),
         tache({ statut: 'validee', valideeLe: '2026-09-21' }),
@@ -39,9 +32,9 @@ describe('partATemps', () => {
   });
 });
 
-describe('tachesEnCours', () => {
+describe('tasksInProgress', () => {
   it('état commun des projets : démarrées, pas faites ; prolongée = retard qualifié, non compté', () => {
-    const r = tachesEnCours([
+    const r = tasksInProgress([
       'en_cours',
       'en_retard',
       'prolongee',
@@ -53,13 +46,13 @@ describe('tachesEnCours', () => {
       'desactivee',
     ]);
     expect(r).toEqual({ enCours: 4, enRetard: 1, pctATemps: 75 });
-    expect(tachesEnCours([]).pctATemps).toBeNull();
+    expect(tasksInProgress([]).pctATemps).toBeNull();
   });
 });
 
-describe('chargeDuMois', () => {
+describe('monthlyLoad', () => {
   it('tâches touchant le mois, heures imputées jusqu’à aujourd’hui', () => {
-    const r = chargeDuMois(
+    const r = monthlyLoad(
       [
         tache({}), // 14 → 18/09 : 10 h sur 5 j, 3 j passés le 16
         tache({ debut: '2026-08-03', echeance: '2026-08-07' }), // hors mois

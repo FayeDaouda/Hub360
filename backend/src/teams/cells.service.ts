@@ -2,8 +2,8 @@ import { ConflictException, Injectable, NotFoundException, UnprocessableEntityEx
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { versCellule } from '../commun/format-contrat';
-import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
-import { codeCellule, prefixeSociete } from './equipes-regles';
+import { CreateCellDto, SetDispatcherDto, RenameCellDto } from './teams.dto';
+import { cellCode, companyPrefix } from './teams-rules';
 import { plural } from '@hub/domain';
 
 // membres + le strict minimum du compte lié (jamais motDePasseHash).
@@ -33,7 +33,7 @@ function formater(cel: CelluleAvecMembres) {
 }
 
 @Injectable()
-export class CellulesService {
+export class CellsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(societeId: string) {
@@ -47,15 +47,15 @@ export class CellulesService {
 
   // Code SOCIÉTÉ-PROCESSUS-NN : numéro suivant du compteur (jamais réutilisé,
   // même après suppression). Le pilote rejoint la cellule qu'il pilote — il en
-  // répartit les tâches, il doit en être membre (cf. definirDispatcher) — et
+  // répartit les tâches, il doit en être membre (cf. setDispatcher) — et
   // quitte l'ancienne (poste libéré, plus dispatcher là-bas).
-  async creer(societeId: string, dto: CreerCelluleDto) {
+  async create(societeId: string, dto: CreateCellDto) {
     const societe = await this.prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } });
     const pilote = dto.piloteId
       ? await this.prisma.collaborateur.findFirst({ where: { id: dto.piloteId, societeId } })
       : null;
     if (dto.piloteId && !pilote) throw new UnprocessableEntityException('Pilote introuvable dans la société.');
-    if (pilote) await this.exigerCompteActif(pilote.id);
+    if (pilote) await this.requireActiveAccount(pilote.id);
     const cellule = await this.prisma.$transaction(async (tx) => {
       const { dernier } = await tx.compteurCellule.upsert({
         where: { societeId_processus: { societeId, processus: dto.processus } },
@@ -68,13 +68,13 @@ export class CellulesService {
           nom: dto.nom.trim(),
           processus: dto.processus,
           numero: dernier,
-          code: codeCellule(prefixeSociete(societe.nom), dto.processus, dernier),
+          code: cellCode(companyPrefix(societe.nom), dto.processus, dernier),
           clientele: dto.clientele,
           statut: dto.statut,
         },
       });
       if (pilote) {
-        await quitterCellule(tx, pilote.id, pilote.celluleId);
+        await leaveCell(tx, pilote.id, pilote.celluleId);
         await tx.collaborateur.update({ where: { id: pilote.id }, data: { celluleId: cel.id } });
         await tx.cellule.update({ where: { id: cel.id }, data: { dispatcherId: pilote.id } });
       }
@@ -83,8 +83,8 @@ export class CellulesService {
     return formater(cellule);
   }
 
-  async renommer(societeId: string, id: string, dto: MajCelluleDto) {
-    await this.charger(societeId, id);
+  async rename(societeId: string, id: string, dto: RenameCellDto) {
+    await this.load(societeId, id);
     const cellule = await this.prisma.cellule.update({
       where: { id },
       data: { nom: dto.nom },
@@ -98,8 +98,8 @@ export class CellulesService {
   // cellule : un dispatcher répartit les tâches de son équipe, pas d'une
   // autre — vérifié ici plutôt qu'en contrainte DB (le lien est un simple
   // FK vers Collaborateur, sans savoir à quelle cellule il appartient).
-  async definirDispatcher(societeId: string, id: string, dto: DefinirDispatcherDto) {
-    await this.charger(societeId, id);
+  async setDispatcher(societeId: string, id: string, dto: SetDispatcherDto) {
+    await this.load(societeId, id);
     if (dto.dispatcherId) {
       const membre = await this.prisma.collaborateur.findFirst({
         where: { id: dto.dispatcherId, societeId, celluleId: id },
@@ -107,7 +107,7 @@ export class CellulesService {
       if (!membre) {
         throw new UnprocessableEntityException('Le dispatcher doit être membre de cette cellule.');
       }
-      await this.exigerCompteActif(dto.dispatcherId);
+      await this.requireActiveAccount(dto.dispatcherId);
     }
     const cellule = await this.prisma.cellule.update({
       where: { id },
@@ -119,7 +119,7 @@ export class CellulesService {
 
   // Revue Dir. GC (21/10/2026) : un chef sans compte HUB actif ne serait
   // jamais prévenu des remises de son équipe — refusé à la source.
-  private async exigerCompteActif(collaborateurId: string) {
+  private async requireActiveAccount(collaborateurId: string) {
     const c = await this.prisma.collaborateur.findUniqueOrThrow({
       where: { id: collaborateurId },
       select: {
@@ -136,8 +136,8 @@ export class CellulesService {
     }
   }
 
-  async supprimer(societeId: string, id: string) {
-    await this.charger(societeId, id);
+  async remove(societeId: string, id: string) {
+    await this.load(societeId, id);
     const membres = await this.prisma.collaborateur.count({ where: { celluleId: id } });
     if (membres > 0) {
       throw new ConflictException(`Cellule non vide (${plural(membres, 'collaborateur')}) — réaffecte-les d'abord.`);
@@ -145,7 +145,7 @@ export class CellulesService {
     await this.prisma.cellule.delete({ where: { id } });
   }
 
-  private async charger(societeId: string, id: string) {
+  private async load(societeId: string, id: string) {
     const cellule = await this.prisma.cellule.findFirst({ where: { id, societeId } });
     if (!cellule) throw new NotFoundException('Cellule introuvable');
     return cellule;
@@ -154,7 +154,7 @@ export class CellulesService {
 
 // Un collaborateur qui quitte sa cellule y libère son poste (« poste ouvert ·
 // à affecter ») et n'en est plus le pilote (dispatcher).
-export async function quitterCellule(tx: Prisma.TransactionClient, collaborateurId: string, celluleId: string | null) {
+export async function leaveCell(tx: Prisma.TransactionClient, collaborateurId: string, celluleId: string | null) {
   if (!celluleId) return;
   await tx.posteCellule.updateMany({
     where: { celluleId, titulaireId: collaborateurId },

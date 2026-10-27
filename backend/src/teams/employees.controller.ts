@@ -3,8 +3,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { PermissionSelonMethode } from '../commun/permission.decorator';
-import { CollaborateursService } from './collaborateurs.service';
-import { MajCollaborateurDto } from './dto';
+import { EmployeesService } from './employees.service';
+import { UpdateEmployeeDto } from './teams.dto';
 
 type R = { user: { societeId: string; userId: string } };
 
@@ -15,18 +15,18 @@ type R = { user: { societeId: string; userId: string } };
 // et la création passe par l'Administration du HUB (phase 1, 14/10/2026).
 @PermissionSelonMethode('equipe')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
-export class CollaborateursController {
-  constructor(private collaborateurs: CollaborateursService) {}
+export class EmployeesController {
+  constructor(private employees: EmployeesService) {}
 
   // `?cellule=A` (une équipe) ou `?cellule=A&cellule=B` (plusieurs — Nest
-  // renvoie alors un tableau) : cf. CollaborateursService.findAll.
+  // renvoie alors un tableau) : cf. EmployeesService.findAll.
   @Get()
   findAll(@Req() req: R, @Query('q') q?: string, @Query('cellule') cellule?: string | string[]) {
-    return this.collaborateurs.findAll(req.user.societeId, q, cellule);
+    return this.employees.findAll(req.user.societeId, q, cellule);
   }
 
   @Patch(':id')
-  maj(@Req() req: R, @Param('id') id: string, @Body() dto: MajCollaborateurDto) {
-    return this.collaborateurs.maj(req.user.societeId, id, dto);
+  update(@Req() req: R, @Param('id') id: string, @Body() dto: UpdateEmployeeDto) {
+    return this.employees.update(req.user.societeId, id, dto);
   }
 }

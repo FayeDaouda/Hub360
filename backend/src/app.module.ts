@@ -10,7 +10,7 @@ import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { CrmModule } from './crm/crm.module';
 import { ProjetsModule } from './projets/projets.module';
-import { EquipeModule } from './equipe/equipe.module';
+import { TeamsModule } from './teams/teams.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { DevisModule } from './devis/devis.module';
@@ -52,7 +52,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ClientsModule,
     CrmModule,
     ProjetsModule,
-    EquipeModule,
+    TeamsModule,
     NotificationsModule,
     ChatModule,
     DevisModule,

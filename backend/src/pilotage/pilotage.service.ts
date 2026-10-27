@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { TempsService } from '../rh/temps.service';
 import { bornesMois, feuilleDuMois, moisDe, moisEntre, MOIS_DEBUT_FEUILLES, type Salarie } from '../rh/regles-temps';
-import { partATemps } from '../equipe/equipes-regles';
+import { onTimeShare } from '../teams/teams-rules';
 import { statutDevisEffectif } from '../devis/domaine';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import {
@@ -224,7 +224,7 @@ export class PilotageService {
 
     const { signees, avecSuivi } = offres;
     const validees = taches.filter((t) => t.statut === 'validee');
-    const aTemps = partATemps(
+    const aTemps = onTimeShare(
       taches.map((t) => ({
         debut: t.debutLe,
         echeance: t.finLe,
