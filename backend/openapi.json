@@ -3815,7 +3815,7 @@
     },
     "/api/societes/{slug}/cellules": {
       "get": {
-        "operationId": "CellulesController_findAll",
+        "operationId": "CellsController_findAll",
         "parameters": [
           {
             "name": "slug",
@@ -3832,11 +3832,11 @@
           }
         },
         "tags": [
-          "Cellules"
+          "Cells"
         ]
       },
       "post": {
-        "operationId": "CellulesController_creer",
+        "operationId": "CellsController_create",
         "parameters": [
           {
             "name": "slug",
@@ -3852,7 +3852,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreerCelluleDto"
+                "$ref": "#/components/schemas/CreateCellDto"
               }
             }
           }
@@ -3863,13 +3863,13 @@
           }
         },
         "tags": [
-          "Cellules"
+          "Cells"
         ]
       }
     },
     "/api/societes/{slug}/cellules/{id}": {
       "patch": {
-        "operationId": "CellulesController_renommer",
+        "operationId": "CellsController_rename",
         "parameters": [
           {
             "name": "slug",
@@ -3893,7 +3893,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MajCelluleDto"
+                "$ref": "#/components/schemas/RenameCellDto"
               }
             }
           }
@@ -3904,11 +3904,11 @@
           }
         },
         "tags": [
-          "Cellules"
+          "Cells"
         ]
       },
       "delete": {
-        "operationId": "CellulesController_supprimer",
+        "operationId": "CellsController_remove",
         "parameters": [
           {
             "name": "slug",
@@ -3933,13 +3933,13 @@
           }
         },
         "tags": [
-          "Cellules"
+          "Cells"
         ]
       }
     },
     "/api/societes/{slug}/cellules/{id}/dispatcher": {
       "patch": {
-        "operationId": "CellulesController_definirDispatcher",
+        "operationId": "CellsController_setDispatcher",
         "parameters": [
           {
             "name": "slug",
@@ -3963,7 +3963,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DefinirDispatcherDto"
+                "$ref": "#/components/schemas/SetDispatcherDto"
               }
             }
           }
@@ -3974,13 +3974,13 @@
           }
         },
         "tags": [
-          "Cellules"
+          "Cells"
         ]
       }
     },
     "/api/societes/{slug}/equipes": {
       "get": {
-        "operationId": "EquipesController_vue",
+        "operationId": "TeamsController_view",
         "parameters": [
           {
             "name": "slug",
@@ -3993,17 +3993,24 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsViewDto"
+                }
+              }
+            }
           }
         },
         "tags": [
-          "Equipes"
+          "Teams"
         ]
       }
     },
     "/api/societes/{slug}/collaborateurs": {
       "get": {
-        "operationId": "CollaborateursController_findAll",
+        "operationId": "EmployeesController_findAll",
         "parameters": [
           {
             "name": "slug",
@@ -4034,13 +4041,13 @@
           }
         },
         "tags": [
-          "Collaborateurs"
+          "Employees"
         ]
       }
     },
     "/api/societes/{slug}/collaborateurs/{id}": {
       "patch": {
-        "operationId": "CollaborateursController_maj",
+        "operationId": "EmployeesController_update",
         "parameters": [
           {
             "name": "slug",
@@ -4064,7 +4071,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MajCollaborateurDto"
+                "$ref": "#/components/schemas/UpdateEmployeeDto"
               }
             }
           }
@@ -4075,7 +4082,7 @@
           }
         },
         "tags": [
-          "Collaborateurs"
+          "Employees"
         ]
       }
     },
@@ -9963,7 +9970,7 @@
           "lignes"
         ]
       },
-      "CreerCelluleDto": {
+      "CreateCellDto": {
         "type": "object",
         "properties": {
           "processus": {
@@ -10007,7 +10014,7 @@
           "nom"
         ]
       },
-      "MajCelluleDto": {
+      "RenameCellDto": {
         "type": "object",
         "properties": {
           "nom": {
@@ -10020,7 +10027,7 @@
           "nom"
         ]
       },
-      "DefinirDispatcherDto": {
+      "SetDispatcherDto": {
         "type": "object",
         "properties": {
           "dispatcherId": {
@@ -10032,7 +10039,512 @@
           "dispatcherId"
         ]
       },
-      "MajCollaborateurDto": {
+      "CellCountDto": {
+        "type": "object",
+        "properties": {
+          "actives": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "actives",
+          "total"
+        ]
+      },
+      "SignedProjectsCountDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "nonAffectes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "total",
+          "nonAffectes"
+        ]
+      },
+      "TasksIndicatorDto": {
+        "type": "object",
+        "properties": {
+          "enCours": {
+            "type": "number"
+          },
+          "enRetard": {
+            "type": "number"
+          },
+          "pctATemps": {
+            "type": "number",
+            "nullable": true
+          },
+          "etapesEnRetard": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "enCours",
+          "enRetard",
+          "pctATemps",
+          "etapesEnRetard"
+        ]
+      },
+      "TeamsIndicatorsDto": {
+        "type": "object",
+        "properties": {
+          "cellules": {
+            "$ref": "#/components/schemas/CellCountDto"
+          },
+          "salariesAAffecter": {
+            "type": "number"
+          },
+          "projetsSignes": {
+            "$ref": "#/components/schemas/SignedProjectsCountDto"
+          },
+          "taches": {
+            "$ref": "#/components/schemas/TasksIndicatorDto"
+          },
+          "absencesEnAttente": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "cellules",
+          "salariesAAffecter",
+          "projetsSignes",
+          "taches",
+          "absencesEnAttente"
+        ]
+      },
+      "CellPilotDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "sansCompte": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "sansCompte"
+        ]
+      },
+      "PositionHolderDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nom"
+        ]
+      },
+      "CellPositionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "etat": {
+            "type": "string",
+            "enum": [
+              "a_recruter",
+              "externe",
+              "occupe",
+              "ouvert",
+              "reporte"
+            ]
+          },
+          "titulaire": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositionHolderDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "libelle",
+          "etat",
+          "titulaire"
+        ]
+      },
+      "CellMemberDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "niveau": {
+            "type": "string",
+            "enum": [
+              "confirme",
+              "junior",
+              "lead",
+              "senior",
+              "stagiaire"
+            ]
+          },
+          "photoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "absentJusquau": {
+            "type": "string",
+            "nullable": true
+          },
+          "poste": {
+            "type": "string",
+            "nullable": true
+          },
+          "estPilote": {
+            "type": "boolean"
+          },
+          "taches": {
+            "type": "number"
+          },
+          "heures": {
+            "type": "number"
+          },
+          "pctATemps": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "role",
+          "niveau",
+          "photoUrl",
+          "absentJusquau",
+          "poste",
+          "estPilote",
+          "taches",
+          "heures",
+          "pctATemps"
+        ]
+      },
+      "TeamCellDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "processus": {
+            "type": "string",
+            "enum": [
+              "ARC",
+              "DIR",
+              "ETU",
+              "INT"
+            ]
+          },
+          "nom": {
+            "type": "string"
+          },
+          "clientele": {
+            "type": "string",
+            "enum": [
+              "externes",
+              "holding",
+              "sans_objet",
+              "tous"
+            ]
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "a_constituer",
+              "active",
+              "reportee"
+            ]
+          },
+          "pilote": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CellPilotDto"
+              }
+            ]
+          },
+          "pctATemps": {
+            "type": "number",
+            "nullable": true
+          },
+          "postes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CellPositionDto"
+            }
+          },
+          "membres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CellMemberDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "processus",
+          "nom",
+          "clientele",
+          "statut",
+          "pilote",
+          "pctATemps",
+          "postes",
+          "membres"
+        ]
+      },
+      "UnassignedEmployeeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "niveau": {
+            "type": "string",
+            "enum": [
+              "confirme",
+              "junior",
+              "lead",
+              "senior",
+              "stagiaire"
+            ]
+          },
+          "dateArrivee": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "role",
+          "niveau",
+          "dateArrivee"
+        ]
+      },
+      "ProjectCellDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "nom"
+        ]
+      },
+      "SignedProjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "programme": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "cellules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectCellDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "programme",
+          "client",
+          "cellules"
+        ]
+      },
+      "OngoingTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "projet": {
+            "type": "string"
+          },
+          "etape": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "assigne": {
+            "type": "string",
+            "nullable": true
+          },
+          "echeance": {
+            "type": "string",
+            "nullable": true
+          },
+          "enRetard": {
+            "type": "boolean"
+          },
+          "prolongeeJusquau": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "projet",
+          "etape",
+          "libelle",
+          "assigne",
+          "echeance",
+          "enRetard",
+          "prolongeeJusquau"
+        ]
+      },
+      "EmployeeOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "cellule"
+        ]
+      },
+      "NextCodesDto": {
+        "type": "object",
+        "properties": {
+          "DIR": {
+            "type": "string"
+          },
+          "ARC": {
+            "type": "string"
+          },
+          "INT": {
+            "type": "string"
+          },
+          "ETU": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "DIR",
+          "ARC",
+          "INT",
+          "ETU"
+        ]
+      },
+      "TeamsViewDto": {
+        "type": "object",
+        "properties": {
+          "indicateurs": {
+            "$ref": "#/components/schemas/TeamsIndicatorsDto"
+          },
+          "cellules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamCellDto"
+            }
+          },
+          "salariesAAffecter": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnassignedEmployeeDto"
+            }
+          },
+          "projets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SignedProjectDto"
+            }
+          },
+          "tachesEnCours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OngoingTaskDto"
+            }
+          },
+          "collaborateurs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeOptionDto"
+            }
+          },
+          "prochainsCodes": {
+            "$ref": "#/components/schemas/NextCodesDto"
+          }
+        },
+        "required": [
+          "indicateurs",
+          "cellules",
+          "salariesAAffecter",
+          "projets",
+          "tachesEnCours",
+          "collaborateurs",
+          "prochainsCodes"
+        ]
+      },
+      "UpdateEmployeeDto": {
         "type": "object",
         "properties": {
           "prenom": {
