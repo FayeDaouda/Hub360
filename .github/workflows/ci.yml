@@ -216,6 +216,14 @@ jobs:
         run: |
           docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD hub-sauvegarde \
             verifier-restauration.sh hub hub_restauree
+      - name: Conservation 7 / 4 / 12 (rotation-sauvegardes.sh)
+        run: docker run --rm -v "$PWD/deploy/tests:/tests:ro" hub-sauvegarde sh /tests/rotation-sauvegardes.test.sh
+      # Storage Box et second fournisseur remplacés par des dossiers locaux ;
+      # pg_dump, age, rclone, restauration et comparaison sont réels.
+      - name: Copies Storage Box et chiffrée (sauvegardes.test.sh)
+        run: |
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD -e PGDATABASE=hub \
+            -v "$PWD/deploy/tests:/tests:ro" hub-sauvegarde sh /tests/sauvegardes.test.sh
       - name: Schéma à jour pour l'application
         working-directory: backend
         env:

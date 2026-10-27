@@ -8,6 +8,8 @@ out/
 build/
 
 # Secrets & config locale (les *.example sont versionnés)
+deploy/secrets/
+deploy/sauvegardes/
 .env
 .env.local
 .env.*.local
