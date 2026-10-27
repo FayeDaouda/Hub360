@@ -1813,7 +1813,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AjouterTsDto"
+                "$ref": "#/components/schemas/AddTsElementDto"
               }
             }
           }
@@ -1867,7 +1867,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DeciderDemandeTsDto"
+                "$ref": "#/components/schemas/DecideTsRequestDto"
               }
             }
           }
@@ -1879,837 +1879,6 @@
         },
         "tags": [
           "AvenantsTs"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_tableau",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/assignables": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_assignables",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/mentionnables": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_mentionnables",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/production": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_production",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/a-decider": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_aDecider",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/mes-mentions": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_mesMentions",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/mes-mentions/{commentaireId}/lue": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_marquerMentionLue",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "commentaireId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_dossier",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/chantier": {
-      "patch": {
-        "operationId": "ProjetsOuvertsController_definirStatutChantier",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StatutChantierDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/visite": {
-      "patch": {
-        "operationId": "ProjetsOuvertsController_definirDateVisite",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DateVisiteDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/charges": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_charges",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/historique": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_historique",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/assignation": {
-      "patch": {
-        "operationId": "ProjetsOuvertsController_assigner",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssignerTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/remise": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_remettre",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemettreTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/pieces/{pieceId}": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_piece",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pieceId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_demanderProlongation",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DemanderProlongationTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation/decision": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_deciderProlongation",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeciderProlongationTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/decision": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_decider",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeciderTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/visa": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_viser",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ViserTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/fil": {
-      "get": {
-        "operationId": "ProjetsOuvertsController_fil",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "carte",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tache",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      },
-      "post": {
-        "operationId": "ProjetsOuvertsController_publier",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublierCommentaireDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
-        ]
-      }
-    },
-    "/api/societes/{slug}/projets-ouverts/{id}/fil/{commentaireId}/resolution": {
-      "post": {
-        "operationId": "ProjetsOuvertsController_resoudre",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "commentaireId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ProjetsOuverts"
         ]
       }
     },
@@ -3834,6 +3003,837 @@
         ]
       }
     },
+    "/api/societes/{slug}/projets-ouverts": {
+      "get": {
+        "operationId": "OpenProjectsController_board",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/assignables": {
+      "get": {
+        "operationId": "OpenProjectsController_assignable",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/mentionnables": {
+      "get": {
+        "operationId": "OpenProjectsController_mentionable",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/production": {
+      "get": {
+        "operationId": "OpenProjectsController_production",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/a-decider": {
+      "get": {
+        "operationId": "OpenProjectsController_toDecide",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/mes-mentions": {
+      "get": {
+        "operationId": "OpenProjectsController_myMentions",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/mes-mentions/{commentaireId}/lue": {
+      "post": {
+        "operationId": "OpenProjectsController_markMentionRead",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "commentaireId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}": {
+      "get": {
+        "operationId": "OpenProjectsController_file",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/chantier": {
+      "patch": {
+        "operationId": "OpenProjectsController_setSiteStatus",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/visite": {
+      "patch": {
+        "operationId": "OpenProjectsController_setSiteVisitDate",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteVisitDateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/charges": {
+      "get": {
+        "operationId": "OpenProjectsController_workload",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/historique": {
+      "get": {
+        "operationId": "OpenProjectsController_history",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/assignation": {
+      "patch": {
+        "operationId": "OpenProjectsController_assign",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/remise": {
+      "post": {
+        "operationId": "OpenProjectsController_submit",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/pieces/{pieceId}": {
+      "get": {
+        "operationId": "OpenProjectsController_submissionFile",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pieceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation": {
+      "post": {
+        "operationId": "OpenProjectsController_requestExtension",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestExtensionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation/decision": {
+      "post": {
+        "operationId": "OpenProjectsController_decideExtension",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideExtensionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/decision": {
+      "post": {
+        "operationId": "OpenProjectsController_decide",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/visa": {
+      "post": {
+        "operationId": "OpenProjectsController_visa",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskVisaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/fil": {
+      "get": {
+        "operationId": "OpenProjectsController_thread",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "carte",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tache",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      },
+      "post": {
+        "operationId": "OpenProjectsController_postComment",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/fil/{commentaireId}/resolution": {
+      "post": {
+        "operationId": "OpenProjectsController_resolveComment",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "commentaireId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
     "/api/societes/{slug}/cellules": {
       "get": {
         "operationId": "CellsController_findAll",
@@ -4171,7 +4171,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RemettreTacheDto"
+                "$ref": "#/components/schemas/SubmitTaskDto"
               }
             }
           }
@@ -4360,7 +4360,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TaskDecisionDto"
+                "$ref": "#/components/schemas/DecideTaskDto"
               }
             }
           }
@@ -9462,7 +9462,7 @@
           }
         }
       },
-      "AjouterTsDto": {
+      "AddTsElementDto": {
         "type": "object",
         "properties": {
           "carteId": {
@@ -9495,7 +9495,7 @@
           "reprise"
         ]
       },
-      "DeciderDemandeTsDto": {
+      "DecideTsRequestDto": {
         "type": "object",
         "properties": {
           "accepter": {
@@ -9508,171 +9508,6 @@
         },
         "required": [
           "accepter"
-        ]
-      },
-      "StatutChantierDto": {
-        "type": "object",
-        "properties": {
-          "statut": {
-            "type": "string",
-            "enum": [
-              "chantier",
-              "conception",
-              "livre"
-            ]
-          }
-        },
-        "required": [
-          "statut"
-        ]
-      },
-      "DateVisiteDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          }
-        },
-        "required": [
-          "date"
-        ]
-      },
-      "AssignerTacheDto": {
-        "type": "object",
-        "properties": {
-          "collaborateurId": {
-            "type": "string",
-            "nullable": true
-          },
-          "carte": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "collaborateurId"
-        ]
-      },
-      "PieceRemiseDto": {
-        "type": "object",
-        "properties": {
-          "nom": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "url": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "nom",
-          "url"
-        ]
-      },
-      "RemettreTacheDto": {
-        "type": "object",
-        "properties": {
-          "pieces": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PieceRemiseDto"
-            }
-          },
-          "commentaire": {
-            "type": "string",
-            "maxLength": 500
-          }
-        }
-      },
-      "DemanderProlongationTacheDto": {
-        "type": "object",
-        "properties": {
-          "jusquau": {
-            "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-          },
-          "motif": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "jusquau",
-          "motif"
-        ]
-      },
-      "DeciderProlongationTacheDto": {
-        "type": "object",
-        "properties": {
-          "accorder": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "accorder"
-        ]
-      },
-      "DeciderTacheDto": {
-        "type": "object",
-        "properties": {
-          "decision": {
-            "type": "string",
-            "enum": [
-              "renvoyer",
-              "valider"
-            ]
-          },
-          "motif": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "decision"
-        ]
-      },
-      "ViserTacheDto": {
-        "type": "object",
-        "properties": {
-          "apposer": {
-            "type": "boolean"
-          },
-          "motif": {
-            "type": "string",
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "apposer"
-        ]
-      },
-      "PublierCommentaireDto": {
-        "type": "object",
-        "properties": {
-          "carteId": {
-            "type": "string"
-          },
-          "tacheId": {
-            "type": "string"
-          },
-          "parentId": {
-            "type": "string"
-          },
-          "texte": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2000
-          },
-          "mentionneId": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "texte"
         ]
       },
       "CreerFactureDto": {
@@ -10122,6 +9957,171 @@
         "required": [
           "dossierCrmId",
           "lignes"
+        ]
+      },
+      "SiteStatusDto": {
+        "type": "object",
+        "properties": {
+          "statut": {
+            "type": "string",
+            "enum": [
+              "chantier",
+              "conception",
+              "livre"
+            ]
+          }
+        },
+        "required": [
+          "statut"
+        ]
+      },
+      "SiteVisitDateDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          }
+        },
+        "required": [
+          "date"
+        ]
+      },
+      "AssignTaskDto": {
+        "type": "object",
+        "properties": {
+          "collaborateurId": {
+            "type": "string",
+            "nullable": true
+          },
+          "carte": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "collaborateurId"
+        ]
+      },
+      "SubmissionAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nom",
+          "url"
+        ]
+      },
+      "SubmitTaskDto": {
+        "type": "object",
+        "properties": {
+          "pieces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionAttachmentDto"
+            }
+          },
+          "commentaire": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "RequestExtensionDto": {
+        "type": "object",
+        "properties": {
+          "jusquau": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "jusquau",
+          "motif"
+        ]
+      },
+      "DecideExtensionDto": {
+        "type": "object",
+        "properties": {
+          "accorder": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accorder"
+        ]
+      },
+      "DecideTaskDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "enum": [
+              "renvoyer",
+              "valider"
+            ],
+            "type": "string"
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "TaskVisaDto": {
+        "type": "object",
+        "properties": {
+          "apposer": {
+            "type": "boolean"
+          },
+          "motif": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "apposer"
+        ]
+      },
+      "PostCommentDto": {
+        "type": "object",
+        "properties": {
+          "carteId": {
+            "type": "string"
+          },
+          "tacheId": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "texte": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "mentionneId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "texte"
         ]
       },
       "CreateCellDto": {
@@ -11079,26 +11079,6 @@
         "required": [
           "nom",
           "url"
-        ]
-      },
-      "TaskDecisionDto": {
-        "type": "object",
-        "properties": {
-          "decision": {
-            "type": "string",
-            "enum": [
-              "renvoyer",
-              "valider"
-            ]
-          },
-          "motif": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "decision"
         ]
       },
       "PendingPaymentChangeDto": {

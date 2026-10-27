@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../email/email.service';
 import { ReglagesService } from '../../reglages/reglages.service';
-import { OuvertureProjetService } from '../gabarit/ouverture.service';
+import { ProjectOpeningService } from '../../projects/project-opening.service';
 import { FacturationService } from './facturation.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { NotificationsService } from '../../notifications/notifications.service';
@@ -54,7 +54,7 @@ function monter(o: { dossier?: object | null; facture?: object } = {}) {
     prisma as unknown as PrismaService,
     {} as EmailService,
     {} as ReglagesService,
-    {} as OuvertureProjetService,
+    {} as ProjectOpeningService,
     notifications as unknown as NotificationsService,
     {} as SeuilCeoService,
   );

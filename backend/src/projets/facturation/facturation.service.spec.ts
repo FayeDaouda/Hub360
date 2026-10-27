@@ -8,7 +8,7 @@ import { EmailService } from '../../email/email.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReglagesService } from '../../reglages/reglages.service';
 import { FacturationService } from './facturation.service';
-import { OuvertureProjetService } from '../gabarit/ouverture.service';
+import { ProjectOpeningService } from '../../projects/project-opening.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 
@@ -22,9 +22,9 @@ const SEUIL_CEO = {
     .mockImplementation((fs: { id: string }[]) => Promise.resolve(new Map(fs.map((f) => [f.id, 0])))),
 } as unknown as SeuilCeoService;
 const OUVERTURE = {
-  preparer: jest.fn().mockResolvedValue(null),
-  enregistrer: jest.fn(),
-} as unknown as OuvertureProjetService;
+  prepare: jest.fn().mockResolvedValue(null),
+  save: jest.fn(),
+} as unknown as ProjectOpeningService;
 
 // FacturationService.relancer() — relance MANUELLE d'une facture en retard
 // (cf. cadrage « Devis » §Zervant : pas de scheduler dans ce backend, donc

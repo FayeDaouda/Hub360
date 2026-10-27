@@ -13,7 +13,7 @@ import { ReglagesService } from '../reglages/reglages.service';
 import { decisionContext } from '../projects/decision-context';
 import { TsElementsService } from '../projects/ts-elements.service';
 import { ROLE_CFO, ROLE_CTO, tsRight } from '../projects/review-rules';
-import type { AjouterTsDto } from '../projets/gabarit/dto';
+import type { AddTsElementDto } from '../projects/open-projects.dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
 import { formatAmount, todayIso } from '@hub/domain';
@@ -40,7 +40,7 @@ export class AvenantsTsService {
 
   // Seuil des Réglages (revue Dir. GC, 21/10/2026) : jusqu'au seuil, le Dir. GC
   // ajoute le TS ; au-delà, il le demande et le CTO le valide (ou l'ajoute).
-  async ajouterTs(societeId: string, acteur: { userId: string; role: string }, projetId: string, dto: AjouterTsDto) {
+  async ajouterTs(societeId: string, acteur: { userId: string; role: string }, projetId: string, dto: AddTsElementDto) {
     const { ligne } = await this.chiffrer(societeId, projetId, dto);
     const montantHt = Math.round(ligne.quantite * ligne.prixUnitaire);
     const seuil = await this.reglages.regle<number>(societeId, 'seuil_ts_cto_ht');
@@ -107,10 +107,10 @@ export class AvenantsTsService {
     if (!count) throw new ConflictException('Cette demande a déjà été tranchée.');
     let tacheId: string | null = null;
     if (accepter) {
-      const dto: AjouterTsDto = {
+      const dto: AddTsElementDto = {
         carteId: d.carteId,
         element: d.element,
-        reprise: d.reprise as AjouterTsDto['reprise'],
+        reprise: d.reprise as AddTsElementDto['reprise'],
         ...(d.reprise === 'majeure' ? { surfaceM2: d.surfaceM2 ?? undefined, planches: d.planches ?? undefined } : {}),
       };
       try {
@@ -142,7 +142,7 @@ export class AvenantsTsService {
 
   // Ligne d'avenant chiffrée au catalogue (TS-MIN forfait, TS-MAJ tarif CO ×
   // surface × planches) : vérifiée avant toute écriture.
-  private async chiffrer(societeId: string, projetId: string, dto: AjouterTsDto) {
+  private async chiffrer(societeId: string, projetId: string, dto: AddTsElementDto) {
     const code = PRODUIT_TS[dto.reprise];
     const produit = await this.prisma.produitService.findFirst({
       where: { societeId, code, supprime: false },
@@ -167,7 +167,7 @@ export class AvenantsTsService {
     societeId: string,
     acteur: { userId: string; role: string },
     projetId: string,
-    dto: AjouterTsDto,
+    dto: AddTsElementDto,
   ) {
     const projet = await this.prisma.projet.findFirst({
       where: { id: projetId, societeId, ouvertLe: { not: null } },

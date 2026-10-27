@@ -884,342 +884,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/societes/{slug}/projets-ouverts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_tableau"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/assignables": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_assignables"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/mentionnables": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_mentionnables"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/production": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_production"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/a-decider": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_aDecider"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/mes-mentions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_mesMentions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/mes-mentions/{commentaireId}/lue": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_marquerMentionLue"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_dossier"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/chantier": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["ProjetsOuvertsController_definirStatutChantier"];
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/visite": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["ProjetsOuvertsController_definirDateVisite"];
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/charges": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_charges"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/historique": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_historique"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/assignation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["ProjetsOuvertsController_assigner"];
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/remise": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_remettre"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/pieces/{pieceId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_piece"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_demanderProlongation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_deciderProlongation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_decider"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/visa": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_viser"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/fil": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ProjetsOuvertsController_fil"];
-        put?: never;
-        post: operations["ProjetsOuvertsController_publier"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/projets-ouverts/{id}/fil/{commentaireId}/resolution": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ProjetsOuvertsController_resoudre"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/societes/{slug}/projets/{id}/factures": {
         parameters: {
             query?: never;
@@ -1662,6 +1326,342 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["FacturationCentraleController_relancer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/assignables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_assignable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/mentionnables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_mentionable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/production": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_production"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/a-decider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_toDecide"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/mes-mentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_myMentions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/mes-mentions/{commentaireId}/lue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_markMentionRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/chantier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OpenProjectsController_setSiteStatus"];
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/visite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OpenProjectsController_setSiteVisitDate"];
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_workload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/historique": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/assignation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OpenProjectsController_assign"];
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/remise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/pieces/{pieceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_submissionFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_requestExtension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/prolongation/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_decideExtension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/visa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_visa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/fil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_thread"];
+        put?: never;
+        post: operations["OpenProjectsController_postComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/fil/{commentaireId}/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OpenProjectsController_resolveComment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3848,7 +3848,7 @@ export interface components {
             tauxTva?: number;
             description?: string;
         };
-        AjouterTsDto: {
+        AddTsElementDto: {
             carteId: string;
             element: string;
             /** @enum {string} */
@@ -3856,51 +3856,9 @@ export interface components {
             surfaceM2?: number;
             planches?: number;
         };
-        DeciderDemandeTsDto: {
+        DecideTsRequestDto: {
             accepter: boolean;
             motif?: string;
-        };
-        StatutChantierDto: {
-            /** @enum {string} */
-            statut: "chantier" | "conception" | "livre";
-        };
-        DateVisiteDto: {
-            date: string | null;
-        };
-        AssignerTacheDto: {
-            collaborateurId: string | null;
-            carte?: boolean;
-        };
-        PieceRemiseDto: {
-            nom: string;
-            url: string;
-        };
-        RemettreTacheDto: {
-            pieces?: components["schemas"]["PieceRemiseDto"][];
-            commentaire?: string;
-        };
-        DemanderProlongationTacheDto: {
-            jusquau: string;
-            motif: string;
-        };
-        DeciderProlongationTacheDto: {
-            accorder: boolean;
-        };
-        DeciderTacheDto: {
-            /** @enum {string} */
-            decision: "renvoyer" | "valider";
-            motif?: string;
-        };
-        ViserTacheDto: {
-            apposer: boolean;
-            motif?: string;
-        };
-        PublierCommentaireDto: {
-            carteId?: string;
-            tacheId?: string;
-            parentId?: string;
-            texte: string;
-            mentionneId?: string | null;
         };
         CreerFactureDto: {
             montantHt?: number;
@@ -4005,6 +3963,48 @@ export interface components {
         CreerFactureDirecteDto: {
             dossierCrmId: string;
             lignes: components["schemas"]["LigneFactureDirecteDto"][];
+        };
+        SiteStatusDto: {
+            /** @enum {string} */
+            statut: "chantier" | "conception" | "livre";
+        };
+        SiteVisitDateDto: {
+            date: string | null;
+        };
+        AssignTaskDto: {
+            collaborateurId: string | null;
+            carte?: boolean;
+        };
+        SubmissionAttachmentDto: {
+            nom: string;
+            url: string;
+        };
+        SubmitTaskDto: {
+            pieces?: components["schemas"]["SubmissionAttachmentDto"][];
+            commentaire?: string;
+        };
+        RequestExtensionDto: {
+            jusquau: string;
+            motif: string;
+        };
+        DecideExtensionDto: {
+            accorder: boolean;
+        };
+        DecideTaskDto: {
+            /** @enum {string} */
+            decision: "renvoyer" | "valider";
+            motif?: string;
+        };
+        TaskVisaDto: {
+            apposer: boolean;
+            motif?: string;
+        };
+        PostCommentDto: {
+            carteId?: string;
+            tacheId?: string;
+            parentId?: string;
+            texte: string;
+            mentionneId?: string | null;
         };
         CreateCellDto: {
             /** @enum {string} */
@@ -4227,11 +4227,6 @@ export interface components {
         SubmissionFileDto: {
             nom: string;
             url: string;
-        };
-        TaskDecisionDto: {
-            /** @enum {string} */
-            decision: "renvoyer" | "valider";
-            motif?: string;
         };
         PendingPaymentChangeDto: {
             /** @enum {string} */
@@ -5932,7 +5927,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AjouterTsDto"];
+                "application/json": components["schemas"]["AddTsElementDto"];
             };
         };
         responses: {
@@ -5959,495 +5954,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DeciderDemandeTsDto"];
+                "application/json": components["schemas"]["DecideTsRequestDto"];
             };
         };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_tableau: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_assignables: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_mentionnables: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_production: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_aDecider: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_mesMentions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_marquerMentionLue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                commentaireId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_dossier: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_definirStatutChantier: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StatutChantierDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_definirDateVisite: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DateVisiteDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_charges: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    ProjetsOuvertsController_historique: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_assigner: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssignerTacheDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_remettre: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RemettreTacheDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_piece: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-                pieceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_demanderProlongation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DemanderProlongationTacheDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_deciderProlongation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeciderProlongationTacheDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_decider: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeciderTacheDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_viser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                tacheId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ViserTacheDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_fil: {
-        parameters: {
-            query?: {
-                carte?: string;
-                tache?: string;
-            };
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_publier: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PublierCommentaireDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ProjetsOuvertsController_resoudre: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-                commentaireId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             201: {
                 headers: {
@@ -7140,6 +6649,492 @@ export interface operations {
             };
         };
     };
+    OpenProjectsController_board: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_assignable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_mentionable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_production: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_toDecide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_myMentions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_markMentionRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                commentaireId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_setSiteStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_setSiteVisitDate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteVisitDateDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_workload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    OpenProjectsController_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignTaskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_submissionFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+                pieceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_requestExtension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestExtensionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_decideExtension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideExtensionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_visa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                tacheId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskVisaDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_thread: {
+        parameters: {
+            query?: {
+                carte?: string;
+                tache?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_postComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostCommentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenProjectsController_resolveComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                commentaireId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CellsController_findAll: {
         parameters: {
             query?: never;
@@ -7351,7 +7346,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RemettreTacheDto"];
+                "application/json": components["schemas"]["SubmitTaskDto"];
             };
         };
         responses: {
@@ -7446,7 +7441,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TaskDecisionDto"];
+                "application/json": components["schemas"]["DecideTaskDto"];
             };
         };
         responses: {

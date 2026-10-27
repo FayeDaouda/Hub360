@@ -29,7 +29,7 @@ import {
   PatchFactureDto,
 } from './dto';
 import { EmailService } from '../../email/email.service';
-import { OuvertureProjetService } from '../gabarit/ouverture.service';
+import { ProjectOpeningService } from '../../projects/project-opening.service';
 import { echeanceDirecte, ErreurFactureDirecte, lignesFactureDirecte } from './facture-directe';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
@@ -52,7 +52,7 @@ export class FacturationService {
     private prisma: PrismaService,
     private email: EmailService,
     private reglages: ReglagesService,
-    private ouverture: OuvertureProjetService,
+    private ouverture: ProjectOpeningService,
     private notifications: NotificationsService,
     private seuilCeo: SeuilCeoService,
   ) {}
@@ -147,7 +147,7 @@ export class FacturationService {
     // F1 (acompte à la signature) ouvre le projet selon son gabarit
     // (Réglages · « Ouverture du projet ») : J1 = jour d'émission.
     const ouverture =
-      facture.jalon === 'signature' && !facture.estAvoir ? await this.ouverture.preparer(projetId, todayIso()) : null;
+      facture.jalon === 'signature' && !facture.estAvoir ? await this.ouverture.prepare(projetId, todayIso()) : null;
     // Transition conditionnée sur `statut` dans la transaction : deux émissions
     // concurrentes du même brouillon ne peuvent pas consommer deux numéros.
     // Code du projet = code de son dossier (recopié à l'Onboard).
@@ -163,7 +163,7 @@ export class FacturationService {
         },
       });
       if (r.count === 0) throw new ConflictException('Facture déjà émise.');
-      if (ouverture) await this.ouverture.enregistrer(tx, ouverture);
+      if (ouverture) await this.ouverture.save(tx, ouverture);
     });
     await this.signalerFacture(facture.id, 'facture_emise', acteurId);
     return this.formater(projetId);

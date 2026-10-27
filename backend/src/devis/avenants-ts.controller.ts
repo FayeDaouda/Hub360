@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { AjouterTsDto, DeciderDemandeTsDto } from '../projets/gabarit/dto';
+import { AddTsElementDto, DecideTsRequestDto } from '../projects/open-projects.dto';
 import { AvenantsTsService } from './avenants-ts.service';
 
 type R = { user: { societeId: string; userId: string; role: string } };
@@ -17,7 +17,7 @@ export class AvenantsTsController {
 
   @Post(':id/ts')
   @RequiertPermission('projets', 'ecriture')
-  ajouterTs(@Req() req: R, @Param('id') id: string, @Body() dto: AjouterTsDto) {
+  ajouterTs(@Req() req: R, @Param('id') id: string, @Body() dto: AddTsElementDto) {
     return this.avenants.ajouterTs(req.user.societeId, req.user, id, dto);
   }
 
@@ -29,7 +29,7 @@ export class AvenantsTsController {
     @Req() req: R,
     @Param('id') id: string,
     @Param('demandeId') demandeId: string,
-    @Body() dto: DeciderDemandeTsDto,
+    @Body() dto: DecideTsRequestDto,
   ) {
     return this.avenants.deciderDemande(req.user.societeId, req.user, id, demandeId, dto.accepter, dto.motif);
   }

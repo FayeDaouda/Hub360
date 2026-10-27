@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import type { RemettreTacheDto } from '../projets/gabarit/dto';
+import type { SubmitTaskDto } from '../projects/open-projects.dto';
 import type { TaskState } from '../projects/task-states';
 import { CHIEF_CELL, chiefOf } from '../projects/project-query';
 import { ProjectStatesService } from '../projects/project-states.service';
@@ -144,7 +144,7 @@ export class TasksService {
     );
   }
 
-  async submit(a: Actor, projectId: string, taskId: string, body: RemettreTacheDto = {}) {
+  async submit(a: Actor, projectId: string, taskId: string, body: SubmitTaskDto = {}) {
     await this.taskSubmission.submit(a.societeId, a, projectId, taskId, body);
     return this.myTasks(a);
   }
