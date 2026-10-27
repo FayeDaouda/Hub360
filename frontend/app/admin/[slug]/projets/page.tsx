@@ -4,7 +4,7 @@ import { use } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ADecider } from '@/components/pilotage/a-decider';
 import { Delegation } from '@/components/pilotage/delegation';
-import { ProjetsOuverts } from '@/components/projets-ouverts/projets-ouverts';
+import { OpenProjects } from '@/features/projects/open-projects';
 import { Production } from '@/components/projets-ouverts/production';
 import { ROLE_CEO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -24,7 +24,7 @@ export default function ProjetsPage(props: Props) {
   const router = useRouter();
   const chemin = usePathname();
   const production = useSearchParams().get('vue') === 'production';
-  if (!ROLES_PRODUCTION.has(session.role)) return <ProjetsOuverts slug={params.slug} />;
+  if (!ROLES_PRODUCTION.has(session.role)) return <OpenProjects slug={params.slug} />;
 
   return (
     <>
@@ -51,7 +51,7 @@ export default function ProjetsPage(props: Props) {
       {/* CTO : sa page d'arrivée — ce qui attend sa décision, puis la production. */}
       {production && session.role === ROLE_CTO && <Delegation slug={params.slug} />}
       {production && session.role === ROLE_CTO && <ADecider slug={params.slug} />}
-      {production ? <Production slug={params.slug} /> : <ProjetsOuverts slug={params.slug} />}
+      {production ? <Production slug={params.slug} /> : <OpenProjects slug={params.slug} />}
     </>
   );
 }
