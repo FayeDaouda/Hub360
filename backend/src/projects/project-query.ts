@@ -41,6 +41,16 @@ export type Actor = { userId: string; role: string };
 
 export const fullName = (p: { prenom: string; nom: string } | null | undefined) => (p ? `${p.prenom} ${p.nom}` : null);
 export const isoDay = (d: Date | null) => (d ? toIsoDay(d) : null);
+// Numéro de remise affiché (« v03 »), le même que dans le nom des fichiers déposés.
+export const versionLabel = (version: number) => `v${String(version).padStart(2, '0')}`;
+
+// Chef de team d'un projet : le dispatcher de sa cellule (la première).
+export const CHIEF_CELL = {
+  take: 1,
+  select: { cellule: { select: { dispatcherId: true } } },
+} satisfies Prisma.Projet$cellulesArgs;
+export const chiefOf = (p: { cellules?: { cellule: { dispatcherId: string | null } }[] }) =>
+  p.cellules?.[0]?.cellule.dispatcherId ?? null;
 
 type Extensions = ProjectWithTasks['cartes'][number]['taches'][number]['prolongations'];
 // Dernière prolongation accordée (date jusqu'à laquelle le retard est qualifié)
@@ -70,6 +80,9 @@ export type SiteStatus = 'conception' | 'chantier' | 'livre';
 export function siteStatus(phase: Phase): SiteStatus {
   return phase === 'chantier' || phase === 'livre' ? phase : 'conception';
 }
+
+// Libellé d'un élément ajouté en TS, selon l'unité de la carte (gabarit).
+export const TS_UNITS: Record<'pièce' | 'vue', string> = { pièce: 'Pièce intérieure', vue: 'Vue de détail' };
 
 // Carte du gabarit dont les tâches sont dues 24 h après la visite sur site.
 export const SURVEY_CARD = 'releves_existants';

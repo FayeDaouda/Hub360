@@ -3,8 +3,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { RemettreTacheDto } from '../projets/gabarit/dto';
 import type { EtatTache } from '../projets/gabarit/etats';
+import { CHIEF_CELL, chiefOf } from '../projects/project-query';
 import { ProjectStatesService } from '../projects/project-states.service';
-import { relancePossibleLe, TachesProjetService } from '../projets/gabarit/taches-projet.service';
+import { ReviewCircuitService } from '../projects/review-circuit.service';
+import { reminderPossibleOn } from '../projects/task-reminder';
+import { TaskReviewService } from '../projects/task-review.service';
+import { TaskSubmissionService } from '../projects/task-submission.service';
 import { contexteDecision } from '../projets/gabarit/suppleance';
 import { collaborateurDuCompte, peutDecider } from '../projets/gabarit/validation';
 import { ouDossierDuCompte } from '../rh/mon-compte';
@@ -29,7 +33,7 @@ const fullName = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`.
 
 // Mes tâches, Mon espace (Mes performances, À valider, Ma cellule) : les
 // tâches du gabarit (TacheProjet) assignées, depuis oct. 2026. La remise et
-// la validation passent par TachesProjetService : mêmes règles que la page
+// la validation passent par les services des tâches de Projets : mêmes règles que la page
 // Projets (l'assigné remet ; le chef de team valide, l'Architecte DPLG
 // supplée ; jamais sa propre tâche).
 @Injectable()
@@ -37,7 +41,9 @@ export class TasksService {
   constructor(
     private prisma: PrismaService,
     private reglages: ReglagesService,
-    private projectTasks: TachesProjetService,
+    private taskSubmission: TaskSubmissionService,
+    private taskReview: TaskReviewService,
+    private reviewCircuit: ReviewCircuitService,
     private projectStates: ProjectStatesService,
   ) {}
 
@@ -70,7 +76,7 @@ export class TasksService {
     // tâche est à déposer (message du dépôt) ou en validation (« Chez mon
     // N+1 »), et quand une relance devient possible (3 jours ouvrés).
     const open = tasks.filter((t) => t.statut === 'a_faire' || t.statut === 'reprise' || t.statut === 'a_valider');
-    const reviewers = await this.projectTasks.nomsValideurs(
+    const reviewers = await this.reviewCircuit.reviewerNames(
       companyId,
       open.filter((t) => !t.parDepot).map((t) => ({ id: t.id, assigneId: t.collaborateurId, chefId: t.chefId })),
     );
@@ -114,7 +120,7 @@ export class TasksService {
           fichierObligatoire: t.fichierObligatoire,
           parDepot: t.parDepot,
           relancePossibleLe:
-            t.statut === 'a_valider' && t.remisLe ? relancePossibleLe(t.remisLe, t.derniereRelance, holidays) : null,
+            t.statut === 'a_valider' && t.remisLe ? reminderPossibleOn(t.remisLe, t.derniereRelance, holidays) : null,
         };
       })
       .sort((x, y) => (x.echeance ?? '9999').localeCompare(y.echeance ?? '9999'));
@@ -139,12 +145,12 @@ export class TasksService {
   }
 
   async submit(a: Actor, projectId: string, taskId: string, body: RemettreTacheDto = {}) {
-    await this.projectTasks.remettre(a.societeId, a, projectId, taskId, body);
+    await this.taskSubmission.submit(a.societeId, a, projectId, taskId, body);
     return this.myTasks(a);
   }
 
   async remind(a: Actor, projectId: string, taskId: string) {
-    await this.projectTasks.relancer(a.societeId, a, projectId, taskId);
+    await this.taskSubmission.remind(a.societeId, a, projectId, taskId);
     return this.myTasks(a);
   }
 
@@ -168,7 +174,7 @@ export class TasksService {
             id: true,
             code: true,
             programme: true,
-            cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } },
+            cellules: CHIEF_CELL,
           },
         },
         evenements: { where: { type: 'remise' }, orderBy: { creeLe: 'desc' }, take: 1, select: { creeLe: true } },
@@ -182,7 +188,7 @@ export class TasksService {
         peutDecider(
           { role: a.role, collaborateurId: employeeId, ctoSupplee: ctx.ctoSupplee },
           { ...t, assigneEstDplg: !!t.assigneId && ctx.dplgCollaborateurs.has(t.assigneId) },
-          t.projet.cellules[0]?.cellule.dispatcherId ?? null,
+          chiefOf(t.projet),
         ),
       )
       .map((t) => {
@@ -208,8 +214,8 @@ export class TasksService {
   }
 
   async submissionFile(a: Actor, projectId: string, taskId: string, fileId: string): Promise<SubmissionFileDto> {
-    await this.projectTasks.verifierAccesPiece(a.societeId, a, projectId, taskId);
-    return this.projectTasks.piece(a.societeId, projectId, taskId, fileId);
+    await this.taskSubmission.checkFileAccess(a.societeId, a, projectId, taskId);
+    return this.taskSubmission.submissionFile(a.societeId, projectId, taskId, fileId);
   }
 
   async decide(
@@ -218,7 +224,7 @@ export class TasksService {
     taskId: string,
     body: { decision: 'valider' | 'renvoyer'; motif?: string },
   ) {
-    await this.projectTasks.decider(a.societeId, a, projectId, taskId, body.decision, body.motif);
+    await this.taskReview.decide(a.societeId, a, projectId, taskId, body.decision, body.motif);
     return this.toReview(a);
   }
 }

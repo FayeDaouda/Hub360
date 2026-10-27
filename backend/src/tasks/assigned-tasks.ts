@@ -1,5 +1,6 @@
 import { StatutTacheProjet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CHIEF_CELL, chiefOf } from '../projects/project-query';
 import type { Tache } from '../rh/regles-temps';
 
 // Une tâche assignée = une tâche du gabarit (TacheProjet) assignée au
@@ -58,7 +59,7 @@ export async function loadAssignedTasks(prisma: PrismaService, employeeIds: stri
           code: true,
           programme: true,
           client: { select: { nom: true } },
-          cellules: { take: 1, select: { cellule: { select: { dispatcherId: true } } } },
+          cellules: CHIEF_CELL,
         },
       },
       evenements: {
@@ -91,7 +92,7 @@ export async function loadAssignedTasks(prisma: PrismaService, employeeIds: stri
       remisLe: submission?.creeLe ?? null,
       // « Remise vNN renvoyée en reprise : motif » → motif
       renvoiMotif: t.statut === 'reprise' && rework ? rework.detail.replace(/^.*?reprise : /, '') : null,
-      chefId: t.projet.cellules?.[0]?.cellule.dispatcherId ?? null,
+      chefId: chiefOf(t.projet),
       etapeNumero: t.carte.etapeNumero,
       fichierObligatoire: t.fichierObligatoire ?? false,
       parDepot: (t.temps as { type?: string } | null)?.type === 'sans',

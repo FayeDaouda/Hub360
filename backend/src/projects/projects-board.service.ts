@@ -7,7 +7,7 @@ import { rangOuvre } from '../projets/gabarit/calendrier';
 import { estOuvert } from '../projets/gabarit/fil';
 import { dateLivraison, horizonProjet } from '../projets/gabarit/suppleance';
 import { perimetreProjets, peutDecider, peutQualifier, peutViser } from '../projets/gabarit/validation';
-import { pendingExtension, siteStatus, WITH_TASKS, type Actor } from './project-query';
+import { chiefOf, pendingExtension, siteStatus, WITH_TASKS, type Actor } from './project-query';
 import { ProjectStatesService } from './project-states.service';
 
 // Page Projets : la liste des projets ouverts et ses tuiles, et « À décider ».
@@ -67,9 +67,7 @@ export class ProjectsBoardService {
         aValiderParVous: projects.flatMap((p) =>
           p.cartes.flatMap((c) =>
             c.taches
-              .filter((t) =>
-                peutDecider(decideur, this.states.ruleFor(ctx, t), p.cellules[0]?.cellule.dispatcherId ?? null),
-              )
+              .filter((t) => peutDecider(decideur, this.states.ruleFor(ctx, t), chiefOf(p)))
               .map((t) => ({ projetId: p.id, tacheId: t.id })),
           ),
         ),
@@ -105,7 +103,7 @@ export class ProjectsBoardService {
       },
     });
     const rows = projects.flatMap((p) => {
-      const chefId = p.cellules[0]?.cellule.dispatcherId ?? null;
+      const chefId = chiefOf(p);
       return p.cartes.flatMap((c) => c.taches.map((t) => ({ p, c, t, chefId })));
     });
     const submissions = rows.filter(({ t, chefId }) => peutDecider(decideur, this.states.ruleFor(ctx, t), chefId));
