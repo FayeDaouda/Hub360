@@ -1369,13 +1369,14 @@
   color: var(--fd-doux);
   font-size: 0.8rem;
 }
-/* Cadre fixe (décision du 26/10/2026) : la place est réservée avant le
-   chargement, le logo s'y ajuste sans déformation, aligné à gauche. En mm :
-   mêmes dimensions à l'écran, à l'impression et en PDF. */
+/* Cadre fixe (décision du 27/10/2026 : 60 × 20 mm, proche de l'ancienne
+   hauteur d'environ 21 mm) : la place est réservée avant le chargement, le
+   logo s'y ajuste sans déformation, aligné à gauche. En mm : mêmes
+   dimensions à l'écran, à l'impression et en PDF. */
 .fd-logo {
   display: block;
-  width: 50mm;
-  height: 15mm;
+  width: 60mm;
+  height: 20mm;
   margin-bottom: 0.6rem;
   object-fit: contain;
   object-position: left center;
