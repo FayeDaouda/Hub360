@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { remettreTache } from '@/lib/mon-espace';
+import { submitTask } from '@/features/my-tasks/api';
 import type { CorpsRemise } from '@/lib/projets-ouverts';
-import type { StatsPerformances, TacheMonEspace } from '@/lib/types';
+import type { MyTask, MyTasksView } from '@/features/my-tasks/types';
 import { ConfirmModal } from '@/components/ui/confirm-modal';
 import {
   corpsRemise,
@@ -12,8 +12,6 @@ import {
   type SaisieRemise,
 } from '@/components/projets-ouverts/champs-remise';
 import { FormulaireDepot } from '@/components/projets-ouverts/formulaire-depot';
-
-type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
 
 // Remise d'une tâche au N+1 — même formulaire (FormulaireDepot) depuis « Mes
 // tâches », « Mon espace › Mes performances » et le panneau de la tâche.
@@ -29,10 +27,10 @@ export function RemiseModal({
   onClose,
 }: {
   slug: string;
-  tache: TacheMonEspace;
+  tache: MyTask;
   // Fichiers glissés sur la ligne de la tâche (« Mes tâches »).
   piecesInitiales?: SaisieRemise['pieces'];
-  onRemise?: (r: MesTaches) => void;
+  onRemise?: (r: MyTasksView) => void;
   onEnvoyer?: (corps: CorpsRemise) => void;
   onClose: () => void;
 }) {
@@ -66,7 +64,7 @@ export function RemiseModal({
       confirmDisabled={!depotPret(saisie, tache.fichierObligatoire)}
       onConfirm={async () => {
         if (onEnvoyer) onEnvoyer(corpsRemise(saisie));
-        else onRemise?.(await remettreTache(slug, tache, corpsRemise(saisie)));
+        else onRemise?.(await submitTask(slug, tache, corpsRemise(saisie)));
         onClose(); // ConfirmModal ne se ferme pas seule après succès
       }}
       onClose={onClose}

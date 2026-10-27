@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ModePaiementSalaire, Prisma, SituationFamiliale, TypePieceDossier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ouDossierDuCompte } from './mon-compte';
-import { TachesService } from './taches.service';
+import { TasksService } from '../tasks/tasks.service';
 import { cheminPhoto, photoMembre } from '../auth/profil';
 
 type Acteur = { userId: string; societeId?: string };
@@ -29,7 +29,7 @@ type DossierProfil = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLURE
 export class MonEspaceService {
   constructor(
     private prisma: PrismaService,
-    private taches: TachesService,
+    private tasks: TasksService,
   ) {}
 
   // `dossier: null` plutôt qu'une erreur : les autres onglets (tâches, temps,
@@ -146,7 +146,7 @@ export class MonEspaceService {
         where: { utilisateurId: a.userId, ...(a.societeId && { societeId: a.societeId }) },
         select: { id: true, celluleId: true },
       }));
-    if (!fiche?.celluleId) return { cellule: null, stats: await this.taches.statsEquipe([]) };
+    if (!fiche?.celluleId) return { cellule: null, stats: await this.tasks.teamStats([]) };
 
     const c = await this.prisma.cellule.findUniqueOrThrow({
       where: { id: fiche.celluleId },
@@ -176,7 +176,7 @@ export class MonEspaceService {
       },
     });
     return {
-      stats: await this.taches.statsEquipe(
+      stats: await this.tasks.teamStats(
         c.membres.map((m) => m.id),
         c.societeId,
       ),

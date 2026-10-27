@@ -18,7 +18,7 @@ import {
   type Salarie,
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
-import { chargerTachesAssignees, type TacheAssignee } from './taches-assignees';
+import { loadAssignedTasks, type AssignedTask } from '../tasks/assigned-tasks';
 import { formatDate, formatMonthYear, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string };
@@ -102,7 +102,7 @@ const salarieDe = (d: DossierTemps): Salarie => ({
   absences: d.absences.map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
 });
 
-const planifiee = (t: TacheAssignee) => !!t.debut && !!t.echeance;
+const planifiee = (t: AssignedTask) => !!t.debut && !!t.echeance;
 
 // RH · Temps de travail (lot 4) : feuilles mensuelles calculées depuis les
 // tâches assignées (regles-temps.ts), contrôle RH des mois clos, « Mon temps »
@@ -130,7 +130,7 @@ export class TempsService {
       include: INCLUDE_DOSSIER,
       orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
     });
-    const taches = await chargerTachesAssignees(
+    const taches = await loadAssignedTasks(
       this.prisma,
       dossiers.flatMap((d) => (d.collaborateur ? [d.collaborateur.id] : [])),
     );
@@ -188,7 +188,7 @@ export class TempsService {
       );
     }
 
-    const taches = d.collaborateur ? await chargerTachesAssignees(this.prisma, [d.collaborateur.id]) : [];
+    const taches = d.collaborateur ? await loadAssignedTasks(this.prisma, [d.collaborateur.id]) : [];
     const feries = (await this.reglages.joursFeries([d.societeId])).get(d.societeId)!;
     const f = calculer(mois, salarieDe(d), [], taches, jour, feries);
     const detail: DetailFige = { lignes: f.lignes };
@@ -235,7 +235,7 @@ export class TempsService {
     // Sans dossier RH : pas d'absence validée possible, entrée = arrivée de la fiche.
     const salarie = dossier ? salarieDe(dossier) : { dateEntree: fiche!.dateArrivee, dateSortie: null, absences: [] };
     const collabId = dossier ? dossier.collaborateur?.id : fiche!.id;
-    const taches = collabId ? await chargerTachesAssignees(this.prisma, [collabId]) : [];
+    const taches = collabId ? await loadAssignedTasks(this.prisma, [collabId]) : [];
     const societeId = dossier?.societeId ?? a.societeId;
     const feries = (await this.reglages.joursFeries([societeId])).get(societeId)!;
     return {
@@ -313,7 +313,7 @@ function calculer(
   mois: string,
   salarie: Salarie,
   controles: Controle[],
-  taches: TacheAssignee[],
+  taches: AssignedTask[],
   jour: string,
   feries: Feries,
 ): FeuilleCalculee {

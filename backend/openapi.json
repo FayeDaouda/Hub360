@@ -4107,6 +4107,284 @@
         ]
       }
     },
+    "/api/societes/{slug}/mon-espace/taches": {
+      "get": {
+        "operationId": "MyTasksController_list",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTasksViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MyTasks"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/remise": {
+      "post": {
+        "operationId": "MyTasksController_submit",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemettreTacheDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTasksViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MyTasks"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/relance": {
+      "post": {
+        "operationId": "MyTasksController_remind",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTasksViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MyTasks"
+        ]
+      }
+    },
+    "/api/societes/{slug}/taches/a-valider": {
+      "get": {
+        "operationId": "TaskReviewsController_toReview",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskToReviewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TaskReviews"
+        ]
+      }
+    },
+    "/api/societes/{slug}/taches/{projetId}/{tacheId}/pieces/{pieceId}": {
+      "get": {
+        "operationId": "TaskReviewsController_submissionFile",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pieceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionFileDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TaskReviews"
+        ]
+      }
+    },
+    "/api/societes/{slug}/taches/{projetId}/{tacheId}/decision": {
+      "post": {
+        "operationId": "TaskReviewsController_decide",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "projetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tacheId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskToReviewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TaskReviews"
+        ]
+      }
+    },
     "/api/societes/{slug}/canaux": {
       "get": {
         "operationId": "ChatController_canaux",
@@ -6460,236 +6738,6 @@
         },
         "tags": [
           "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/taches": {
-      "get": {
-        "operationId": "MesTachesController_lister",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MesTaches"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/remise": {
-      "post": {
-        "operationId": "MesTachesController_remettre",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projetId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RemettreTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MesTaches"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/taches/{projetId}/{tacheId}/relance": {
-      "post": {
-        "operationId": "MesTachesController_relancer",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projetId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MesTaches"
-        ]
-      }
-    },
-    "/api/societes/{slug}/taches/a-valider": {
-      "get": {
-        "operationId": "ValidationsTachesController_aValider",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ValidationsTaches"
-        ]
-      }
-    },
-    "/api/societes/{slug}/taches/{projetId}/{tacheId}/pieces/{pieceId}": {
-      "get": {
-        "operationId": "ValidationsTachesController_piece",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projetId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pieceId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ValidationsTaches"
-        ]
-      }
-    },
-    "/api/societes/{slug}/taches/{projetId}/{tacheId}/decision": {
-      "post": {
-        "operationId": "ValidationsTachesController_decider",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "projetId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "tacheId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DecisionTacheDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "ValidationsTaches"
         ]
       }
     },
@@ -10639,6 +10687,335 @@
           }
         }
       },
+      "MyTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "etape": {
+            "type": "string"
+          },
+          "carte": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "projetCode": {
+            "type": "string"
+          },
+          "projetProgramme": {
+            "type": "string"
+          },
+          "projetClient": {
+            "type": "string"
+          },
+          "debut": {
+            "type": "string",
+            "nullable": true
+          },
+          "echeance": {
+            "type": "string",
+            "nullable": true
+          },
+          "dureeStandard": {
+            "type": "number",
+            "nullable": true
+          },
+          "heuresImputees": {
+            "type": "number"
+          },
+          "manque": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "absence",
+              "debut",
+              "duree",
+              "echeance",
+              "fenetre"
+            ]
+          },
+          "etat": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "a_venir",
+              "en_cours",
+              "terminee"
+            ]
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "a_planifier",
+              "a_reprendre",
+              "a_venir",
+              "bloquee",
+              "en_cours",
+              "en_retard",
+              "prolongee",
+              "remise",
+              "validee"
+            ]
+          },
+          "enRetard": {
+            "type": "boolean"
+          },
+          "dateEffective": {
+            "type": "string",
+            "nullable": true
+          },
+          "prolongeeJusquau": {
+            "type": "string",
+            "nullable": true
+          },
+          "version": {
+            "type": "number"
+          },
+          "remisLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "valideLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "renvoiMotif": {
+            "type": "string",
+            "nullable": true
+          },
+          "validateur": {
+            "type": "string",
+            "nullable": true
+          },
+          "relancePossibleLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "etapeNumero": {
+            "type": "number"
+          },
+          "fichierObligatoire": {
+            "type": "boolean"
+          },
+          "parDepot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "etape",
+          "carte",
+          "libelle",
+          "projetId",
+          "projetCode",
+          "projetProgramme",
+          "projetClient",
+          "debut",
+          "echeance",
+          "dureeStandard",
+          "heuresImputees",
+          "manque",
+          "etat",
+          "statut",
+          "enRetard",
+          "dateEffective",
+          "prolongeeJusquau",
+          "version",
+          "remisLe",
+          "valideLe",
+          "renvoiMotif",
+          "validateur",
+          "relancePossibleLe",
+          "etapeNumero",
+          "fichierObligatoire",
+          "parDepot"
+        ]
+      },
+      "OnTimeRateDto": {
+        "type": "object",
+        "properties": {
+          "aTemps": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "pct": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "aTemps",
+          "total",
+          "pct"
+        ]
+      },
+      "PerformanceStatsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "validees": {
+            "type": "number"
+          },
+          "enCours": {
+            "type": "number"
+          },
+          "enRetard": {
+            "type": "number"
+          },
+          "respectDelais": {
+            "$ref": "#/components/schemas/OnTimeRateDto"
+          }
+        },
+        "required": [
+          "total",
+          "validees",
+          "enCours",
+          "enRetard",
+          "respectDelais"
+        ]
+      },
+      "MyTasksViewDto": {
+        "type": "object",
+        "properties": {
+          "taches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyTaskDto"
+            }
+          },
+          "stats": {
+            "$ref": "#/components/schemas/PerformanceStatsDto"
+          }
+        },
+        "required": [
+          "taches",
+          "stats"
+        ]
+      },
+      "SubmissionFileRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nom"
+        ]
+      },
+      "TaskToReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "etape": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "projetId": {
+            "type": "string"
+          },
+          "projetCode": {
+            "type": "string"
+          },
+          "projetProgramme": {
+            "type": "string"
+          },
+          "responsable": {
+            "type": "string"
+          },
+          "debut": {
+            "type": "string",
+            "nullable": true
+          },
+          "echeance": {
+            "type": "string",
+            "nullable": true
+          },
+          "remisLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "pieces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubmissionFileRefDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "etape",
+          "libelle",
+          "version",
+          "projetId",
+          "projetCode",
+          "projetProgramme",
+          "responsable",
+          "debut",
+          "echeance",
+          "remisLe",
+          "pieces"
+        ]
+      },
+      "SubmissionFileDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nom",
+          "url"
+        ]
+      },
+      "TaskDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "renvoyer",
+              "valider"
+            ]
+          },
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
       "EnvoyerMessageDto": {
         "type": "object",
         "properties": {
@@ -11240,26 +11617,6 @@
         "required": [
           "modePaiement",
           "coordonneesPaiement"
-        ]
-      },
-      "DecisionTacheDto": {
-        "type": "object",
-        "properties": {
-          "decision": {
-            "type": "string",
-            "enum": [
-              "renvoyer",
-              "valider"
-            ]
-          },
-          "motif": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 500
-          }
-        },
-        "required": [
-          "decision"
         ]
       },
       "MajPermissionDto": {

@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MonEspaceService } from './mon-espace.service';
-import { TachesService } from './taches.service';
+import { TasksService } from '../tasks/tasks.service';
 
 const DOSSIER = {
   id: 'D1',
@@ -68,7 +68,7 @@ function svc(dossier: object | null = DOSSIER, attestationsEnAttente = 0) {
   } as unknown as PrismaService;
   // Statistiques d'équipe : sans objet ici (aucun membre n'a de tâche).
   const taches = {
-    statsEquipe: jest.fn().mockResolvedValue({
+    teamStats: jest.fn().mockResolvedValue({
       total: 0,
       validees: 0,
       enCours: 0,
@@ -76,7 +76,7 @@ function svc(dossier: object | null = DOSSIER, attestationsEnAttente = 0) {
       respectDelais: { aTemps: 0, total: 0, pct: null },
     }),
   };
-  return { s: new MonEspaceService(prisma, taches as unknown as TachesService), prisma };
+  return { s: new MonEspaceService(prisma, taches as unknown as TasksService), prisma };
 }
 
 describe('MonEspaceService', () => {

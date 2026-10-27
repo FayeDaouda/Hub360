@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, use } from 'react';
-import { MesTaches } from '@/components/mes-taches/mes-taches';
+import { MyTasks } from '@/features/my-tasks/my-tasks';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -10,7 +10,7 @@ export default function MesTachesPage(props: Props) {
   const params = use(props.params);
   return (
     <Suspense>
-      <MesTaches slug={params.slug} />
+      <MyTasks slug={params.slug} />
     </Suspense>
   );
 }

@@ -1,13 +1,13 @@
 import { StatutTacheProjet } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import type { Tache } from './regles-temps';
+import type { Tache } from '../rh/regles-temps';
 
 // Une tâche assignée = une tâche du gabarit (TacheProjet) assignée au
 // collaborateur, depuis le passage de Mon espace et des feuilles de temps sur
 // le gabarit (oct. 2026). Durée standard et fenêtre figées sur la tâche ;
 // les tâches « non nécessaires » et celles d'une carte désactivée ne comptent pas.
 // Les blocs de checklist (lot 4) ne produisent plus d'heures.
-export type TacheAssignee = Tache & {
+export type AssignedTask = Tache & {
   collaborateurId: string;
   libelle: string;
   etape: string; // « 02 · Avant-projet »
@@ -28,16 +28,13 @@ export type TacheAssignee = Tache & {
   derniereRelance: Date | null; // dernière relance du validateur par l'assigné
 };
 
-const numeroEtape = (n: number) => String(n).padStart(2, '0');
+const stepNumber = (n: number) => String(n).padStart(2, '0');
 
-export async function chargerTachesAssignees(
-  prisma: PrismaService,
-  collaborateurIds: string[],
-): Promise<TacheAssignee[]> {
-  if (collaborateurIds.length === 0) return [];
-  const taches = await prisma.tacheProjet.findMany({
+export async function loadAssignedTasks(prisma: PrismaService, employeeIds: string[]): Promise<AssignedTask[]> {
+  if (employeeIds.length === 0) return [];
+  const tasks = await prisma.tacheProjet.findMany({
     where: {
-      assigneId: { in: collaborateurIds },
+      assigneId: { in: employeeIds },
       statut: { not: 'non_necessaire' },
       carte: { desactivation: null },
       projet: { ouvertLe: { not: null } },
@@ -71,15 +68,15 @@ export async function chargerTachesAssignees(
       },
     },
   });
-  return taches.map((t) => {
-    const remise = t.evenements.find((e) => e.type === 'remise') ?? null;
-    const reprise = t.evenements.find((e) => e.type === 'reprise') ?? null;
-    const relance = t.evenements.find((e) => e.type === 'relance') ?? null;
+  return tasks.map((t) => {
+    const submission = t.evenements.find((e) => e.type === 'remise') ?? null;
+    const rework = t.evenements.find((e) => e.type === 'reprise') ?? null;
+    const reminder = t.evenements.find((e) => e.type === 'relance') ?? null;
     return {
       id: t.id,
       collaborateurId: t.assigneId!,
       libelle: t.libelle,
-      etape: `${numeroEtape(t.carte.etapeNumero)} · ${t.carte.etapeLibelle}`,
+      etape: `${stepNumber(t.carte.etapeNumero)} · ${t.carte.etapeLibelle}`,
       carte: t.carte.libelle,
       projetId: t.projet.id,
       projetCode: t.projet.code,
@@ -91,14 +88,14 @@ export async function chargerTachesAssignees(
       statut: t.statut,
       version: t.version,
       valideeLe: t.valideeLe,
-      remisLe: remise?.creeLe ?? null,
+      remisLe: submission?.creeLe ?? null,
       // « Remise vNN renvoyée en reprise : motif » → motif
-      renvoiMotif: t.statut === 'reprise' && reprise ? reprise.detail.replace(/^.*?reprise : /, '') : null,
+      renvoiMotif: t.statut === 'reprise' && rework ? rework.detail.replace(/^.*?reprise : /, '') : null,
       chefId: t.projet.cellules?.[0]?.cellule.dispatcherId ?? null,
       etapeNumero: t.carte.etapeNumero,
       fichierObligatoire: t.fichierObligatoire ?? false,
       parDepot: (t.temps as { type?: string } | null)?.type === 'sans',
-      derniereRelance: relance?.creeLe ?? null,
+      derniereRelance: reminder?.creeLe ?? null,
     };
   });
 }

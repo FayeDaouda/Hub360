@@ -1,16 +1,7 @@
-import type {
-  MaCellule,
-  ModePaiementSalaire,
-  ProfilMonEspace,
-  StatsPerformances,
-  StatutTache,
-  TacheAValider,
-  TacheMonEspace,
-  TypePieceDossier,
-} from './types';
+import type { MaCellule, ModePaiementSalaire, ProfilMonEspace, TypePieceDossier } from './types';
+import type { MyTask, PerformanceStats, TaskStatus } from '@/features/my-tasks/types';
 import { apiSociete } from './client-api';
 import { telechargerFichier } from './fichiers';
-import type { CorpsRemise } from './projets-ouverts';
 import { daysBetween, formatDayMonth } from '@hub/domain';
 
 // RH · Mon espace (lot 5) — API NestJS, dossier du compte connecté :
@@ -22,7 +13,7 @@ import { daysBetween, formatDayMonth } from '@hub/domain';
 
 // Sans cellule : `cellule: null`, compteurs à zéro.
 export const getMaCellule = (slug: string) =>
-  apiSociete<{ cellule: MaCellule | null; stats: StatsPerformances }>(slug, '/mon-espace/cellule');
+  apiSociete<{ cellule: MaCellule | null; stats: PerformanceStats }>(slug, '/mon-espace/cellule');
 export const getMonEspace = (slug: string) => apiSociete<{ dossier: ProfilMonEspace | null }>(slug, '/mon-espace');
 // « Mes informations » : enregistrées immédiatement, champ par champ.
 export type ChampsPersonnels = Partial<
@@ -62,31 +53,7 @@ export const LIBELLE_PAIEMENT_SALAIRE: Record<ModePaiementSalaire, string> = {
   orange_money: 'Orange Money',
 };
 
-// Remise et validation des tâches du gabarit (mêmes règles que Projets) :
-//   GET  …/mon-espace/taches                              mes tâches + stats
-//   POST …/mon-espace/taches/:projetId/:tacheId/remise
-//   POST …/mon-espace/taches/:projetId/:tacheId/relance
-//   GET  …/taches/a-valider                               remises qui m'attendent
-//   POST …/taches/:projetId/:tacheId/decision             { decision, motif? }
-type MesTaches = { taches: TacheMonEspace[]; stats: StatsPerformances };
-
-export const getMesTaches = (slug: string) => apiSociete<MesTaches>(slug, '/mon-espace/taches');
-export const remettreTache = (slug: string, t: TacheMonEspace, corps: CorpsRemise = {}) =>
-  apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/remise`, { method: 'POST', body: corps });
-// Relancer son validateur (3 jours ouvrés après le dépôt, puis après la relance précédente).
-export const relancerTache = (slug: string, t: TacheMonEspace) =>
-  apiSociete<MesTaches>(slug, `/mon-espace/taches/${t.projetId}/${t.id}/relance`, { method: 'POST' });
-// Fichier d'une remise à valider (le valideur, ou l'assigné).
-export const telechargerPieceRemise = (slug: string, t: TacheAValider, pieceId: string) =>
-  telecharger(slug, `/taches/${t.projetId}/${t.id}/pieces/${pieceId}`);
-export const getTachesAValider = (slug: string) => apiSociete<TacheAValider[]>(slug, '/taches/a-valider');
-export const deciderTache = (slug: string, t: TacheAValider, decision: 'valider' | 'renvoyer', motif?: string) =>
-  apiSociete<TacheAValider[]>(slug, `/taches/${t.projetId}/${t.id}/decision`, {
-    method: 'POST',
-    body: { decision, ...(motif ? { motif } : {}) },
-  });
-
-export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }> = {
+export const STATUT_TACHE: Record<TaskStatus, { libelle: string; pill: string }> = {
   validee: { libelle: 'Validée', pill: 'pill--succes' },
   remise: { libelle: 'Remis · à valider', pill: 'pill--info' },
   a_reprendre: { libelle: 'À reprendre', pill: 'pill--risque' },
@@ -98,18 +65,8 @@ export const STATUT_TACHE: Record<StatutTache, { libelle: string; pill: string }
   a_planifier: { libelle: 'À planifier', pill: 'pill--neutre' },
 };
 
-// Retard (règle validée le 23/10/2026 : le retard est un attribut, pas une
-// catégorie) : échéance passée — la date accordée pour une prolongée —,
-// reprises comprises. Une tâche « bloquée » attend l'étape précédente : son
-// retard ne lui est pas imputable. Partagée par « Mes tâches » et « Projets ».
-export const dateEffective = (t: TacheMonEspace) =>
-  t.statut === 'prolongee' && t.prolongeeJusquau ? t.prolongeeJusquau : t.echeance;
-export const estEnRetard = (t: TacheMonEspace, aujourdhui: string) =>
-  t.statut === 'en_retard' ||
-  ((t.statut === 'a_reprendre' || t.statut === 'prolongee') && !!dateEffective(t) && dateEffective(t)! < aujourdhui);
-
 // Libellé du statut, précisé par la fenêtre quand la tâche est ouverte.
-export function libelleStatut(t: TacheMonEspace, aujourdhui: string): string {
+export function libelleStatut(t: MyTask, aujourdhui: string): string {
   if (t.statut === 'en_cours') {
     const reste = daysBetween(aujourdhui, t.echeance!);
     return reste === 0 ? 'Échéance aujourd’hui' : `Échéance dans ${reste} j`;
