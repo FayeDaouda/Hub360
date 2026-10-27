@@ -1,6 +1,8 @@
 #!/bin/sh
-# Test de restauration sur les vraies données : la dernière sauvegarde est
-# restaurée dans une base temporaire, comparée à la base en service
+# Test de restauration sur les vraies données : la dernière sauvegarde (celle
+# de la Storage Box si elle est configurée : la copie hors du serveur est
+# celle qui compte) est restaurée dans une base temporaire, comparée à la
+# base en service
 # (verifier-restauration.sh), puis la base temporaire est supprimée. Le
 # résultat va dans derniere-verification.txt, à côté des sauvegardes, que le backend
 # surveille (alerte si échec ou si le test n'a pas tourné depuis 8 jours).
@@ -12,9 +14,18 @@ dossier=${SAUVEGARDES_DOSSIER:-/sauvegardes}
 temporaire=hub_verification
 statut="$dossier/derniere-verification.txt"
 fichier=$(ls -1t "$dossier"/hub-*.dump 2>/dev/null | head -1)
+if [ -n "${SAUVEGARDE_BOITE_HOTE:-}" ]; then
+  derniere=$(rclone lsf boite:hub --files-only | grep -E '^hub-[0-9]{8}-[0-9]{4}\.dump$' | sort | tail -1)
+  fichier=""
+  if [ -n "$derniere" ]; then
+    rclone copyto "boite:hub/$derniere" "$dossier/verification-$derniere"
+    fichier="$dossier/verification-$derniere"
+    trap 'rm -f "$fichier"' EXIT
+  fi
+fi
 
 ecrire() {
-  printf '%s %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$(basename "${fichier:-aucune}")" "$2" >"$statut"
+  printf '%s %s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$(basename "${fichier:-aucune}" | sed 's/^verification-/boite:/')" "$2" >"$statut"
   echo "Test de restauration : $1 — $2"
 }
 
