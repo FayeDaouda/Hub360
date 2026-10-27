@@ -6,17 +6,17 @@ Décisions structurantes : `docs/adr/`.
 
 ## Phases
 
-| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                                       |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                                               |
-| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                                               |
-| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                                               |
-| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                                               |
-| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits                        |
-| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | faite (PR #21, #22), serveurs à créer                      |
-| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | S1 Équipes et S2 Mes tâches faites ; S2 Mon espace ensuite |
-| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés                    |
-| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                                         |
+| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                                                  |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                                                          |
+| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                                                          |
+| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                                                          |
+| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                                                          |
+| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits                                   |
+| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | faite (PR #21, #22), serveurs à créer                                 |
+| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | S1 Équipes et S2 (Mes tâches, Mon espace) faites ; S3 Projets ensuite |
+| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés                               |
+| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                                                    |
 
 ## Règles de la structuration
 
@@ -64,7 +64,11 @@ Décisions structurantes : `docs/adr/`.
 - **NestJS 12** : publié en ESM uniquement ; migrer d'abord le back et Jest en
   ESM.
 - **Règles React Compiler** : 53 avertissements, corrigés module par module
-  pendant la structuration, puis remis en erreur.
+  pendant la structuration, puis remis en erreur (46 après S2).
+- **Saisie des dates dans Réglages** (S7) : `components/reglages/valeurs-panel.tsx`
+  accepte une date impossible (31/02/2026). L'analyseur strict de Mon espace
+  (`parseDayInput`, `features/my-space/request-parts.tsx`) pourrait la
+  remplacer : changement de comportement, à décider avec S7.
 - **Tournée des rappels** : la découper par société (aujourd'hui en périmètre
   système, ADR 0001).
 - **Lot accessibilité des fenêtres** : une règle unique, toutes les fenêtres
@@ -213,7 +217,10 @@ lot A), création des comptes par invitation (lien de 72 h). Lots décidés :
   sinon la navigation interrompt la requête sur une machine chargée. À froid
   (premier passage dans un dossier neuf), la compilation de la branche en
   parallèle de la référence peut faire couper des connexions à l'API
-  (`ECONNRESET`, constaté une fois le 27/10/2026) : relancer à chaud.
+  (`ECONNRESET`, constaté une fois le 27/10/2026) : relancer à chaud. Autre
+  signature vue une fois (PR #30, premier écran capturé d'un environnement) :
+  « SyntaxError: Unexpected end of JSON input » en moins d'une seconde, l'API
+  de l'environnement muette ensuite ; source non trouvée, relancer à chaud.
 
 ## Défaut corrigé
 
