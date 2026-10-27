@@ -2,7 +2,9 @@
 #
 # Validation d'une PR avant fusion : série complète de captures (deux thèmes,
 # tous les écrans, le verre) contre la référence prise sur la base, puis tests
-# de fumée. C'est la seule série qui vaut pour une fusion (jamais visual:quick).
+# de fumée, puis forme des réponses de l'API (clés et types relevés pendant les
+# captures, scripts/api-shapes.mjs : une clé disparue ou de type changé fait
+# échouer). C'est la seule série qui vaut pour une fusion (jamais visual:quick).
 #
 #   bash scripts/validate.sh <git-ref> [base]        # base : main par défaut
 #
@@ -24,7 +26,8 @@ prebuild=$!
 
 if [[ "$(cat .reference/.meta 2>/dev/null)" != "$meta" ]]; then
   bash scripts/reference-env.sh up "$BASE"
-  npm run visual:baseline
+  rm -rf .reference/api-shapes
+  HUB_API_SHAPES_DIR="$PWD/.reference/api-shapes" npm run visual:baseline
   echo "$meta" >.reference/.meta
 else
   echo "▶ reference of $BASE already taken today with this harness"
@@ -33,7 +36,9 @@ fi
 wait "$prebuild" || { echo "✗ build of $REF failed (see .state/prebuild.log)" >&2; exit 1; }
 bash scripts/reference-env.sh up "$REF"
 status=0
-npm run visual || status=$?
+rm -rf .state/api-shapes
+HUB_API_SHAPES_DIR="$PWD/.state/api-shapes" npm run visual || status=$?
 npm run smoke || status=$?
+node scripts/api-shapes.mjs .reference/api-shapes .state/api-shapes || status=$?
 bash scripts/reference-env.sh down
 exit $status
