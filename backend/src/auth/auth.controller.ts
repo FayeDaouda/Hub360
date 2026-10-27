@@ -84,7 +84,7 @@ export class AuthController {
   }
 
   // Double authentification depuis le HUB (personne connectée) : état, puis
-  // activation volontaire (Salarié) ou différée.
+  // activation là où elle n'est pas exigée (développement, démonstration).
   @Get('double-facteur')
   @UseGuards(JwtAuthGuard)
   etatDoubleFacteur(@Req() req: { user: { userId: string } }) {

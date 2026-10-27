@@ -153,8 +153,9 @@ export class AuthService {
     return { ...(await this.ouvrirSession(utilisateur, societeSlug)), codesSecours };
   }
 
-  // Depuis le HUB, par la personne connectée (Salarié : facultatif) — même
-  // parcours, la session en cours reste valable.
+  // Depuis le HUB, par la personne connectée, là où elle n'est pas exigée
+  // (développement, démonstration) — même parcours, la session en cours reste
+  // valable.
   async etatDoubleFacteur(utilisateurId: string) {
     const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpActifLe: true } });
     return {
