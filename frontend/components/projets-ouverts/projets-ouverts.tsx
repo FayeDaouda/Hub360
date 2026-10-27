@@ -18,7 +18,7 @@ import { KpiStrip, type KpiTile } from '@/components/ui/kpi';
 import { etatATraiter, etatEnRetard, type EtatTuile } from '@/lib/couleurs-etat';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
-import { estEnRetard, getMesTaches } from '@/lib/mon-espace';
+import { getMyTasks } from '@/features/my-tasks/api';
 import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
   ajouterTs,
@@ -44,7 +44,7 @@ import {
 import { TachePanneau } from './tache-panneau';
 import { CartePanneau } from './carte-panneau';
 import { PanneauLateral } from './panneau-lateral';
-import { formatAmount, formatDate, formatDayMonth, plural, stripAccents, todayIso } from '@hub/domain';
+import { formatAmount, formatDate, formatDayMonth, plural, stripAccents } from '@hub/domain';
 import { Pill, type PillTone } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
@@ -136,12 +136,12 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
   const chargerPerso = useCallback(() => {
     if (!salarie) return;
-    Promise.all([getMesTaches(slug), getMesMentions(slug)])
+    Promise.all([getMyTasks(slug), getMesMentions(slug)])
       .then(([t, m]) =>
         setPerso({
           reprises: t.taches.filter((x) => x.statut === 'a_reprendre').length,
-          // Même règle que « Mes tâches » : reprises en retard comprises.
-          retards: t.taches.filter((x) => x.statut !== 'validee' && estEnRetard(x, todayIso())).length,
+          // Même règle que « Mes tâches » (calculée au back) : reprises en retard comprises.
+          retards: t.taches.filter((x) => x.statut !== 'validee' && x.enRetard).length,
           attente: t.taches.filter((x) => x.statut === 'remise').length,
           mentions: m.filter((x) => !x.lue).length,
         }),

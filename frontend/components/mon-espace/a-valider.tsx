@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ApiError } from '@/lib/client-api';
-import { deciderTache, getTachesAValider, telechargerPieceRemise } from '@/lib/mon-espace';
-import type { TacheAValider } from '@/lib/types';
+import { decideTask, downloadSubmissionFile, getTasksToReview } from '@/features/my-tasks/api';
+import type { TaskToReview } from '@/features/my-tasks/types';
 import { DemandesEquipe } from './demandes-equipe';
 import { formatDate } from '@hub/domain';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
@@ -19,12 +19,12 @@ const lienProjet = (base: string, projetId: string) =>
 // dont on est le N+1 ; et, quand il y en a, les remises des tâches du
 // gabarit que l'on valide (chef de team, Architecte DPLG en suppléance).
 export function AValider({ slug, onCompte }: { slug: string; onCompte: (n: number) => void }) {
-  const [taches, setTaches] = useState<TacheAValider[] | null>(null);
+  const [taches, setTaches] = useState<TaskToReview[] | null>(null);
   const [absences, setAbsences] = useState(0);
   const [erreur, setErreur] = useState<string | null>(null);
 
   const charger = useCallback(() => {
-    getTachesAValider(slug)
+    getTasksToReview(slug)
       .then(setTaches)
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger les tâches à valider.'));
   }, [slug]);
@@ -67,8 +67,8 @@ function LigneAValider({
   onDecide,
 }: {
   slug: string;
-  t: TacheAValider;
-  onDecide: (l: TacheAValider[]) => void;
+  t: TaskToReview;
+  onDecide: (l: TaskToReview[]) => void;
 }) {
   const base = usePathname().split('/mon-espace')[0];
   const [renvoi, setRenvoi] = useState(false);
@@ -79,7 +79,7 @@ function LigneAValider({
   async function decider(decision: 'valider' | 'renvoyer') {
     setEtat({ envoi: true, erreur: null });
     try {
-      onDecide(await deciderTache(slug, t, decision, decision === 'renvoyer' ? motif : undefined));
+      onDecide(await decideTask(slug, t, decision, decision === 'renvoyer' ? motif : undefined));
     } catch (e) {
       setEtat({ envoi: false, erreur: e instanceof ApiError ? e.message : 'Décision non enregistrée.' });
     }
@@ -109,7 +109,7 @@ function LigneAValider({
                     type="button"
                     className="po-fichier"
                     onClick={() =>
-                      telechargerPieceRemise(slug, t, f.id).catch(() =>
+                      downloadSubmissionFile(slug, t, f.id).catch(() =>
                         setEtat({ envoi: false, erreur: 'Fichier indisponible.' }),
                       )
                     }

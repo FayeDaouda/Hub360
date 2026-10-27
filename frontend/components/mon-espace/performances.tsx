@@ -7,9 +7,11 @@ import { CircleCheck, Clock, ListChecks, RotateCcw } from 'lucide-react';
 import { sectionAccessible } from '@/lib/acces-back-office';
 import { ApiError } from '@/lib/client-api';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { getMesTaches, libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
+import { getMyTasks } from '@/features/my-tasks/api';
+import type { MyTask, MyTasksView } from '@/features/my-tasks/types';
+import { libelleStatut, STATUT_TACHE } from '@/lib/mon-espace';
 import { formatHeures, getMonTemps, LIBELLE_MANQUE } from '@/lib/temps';
-import type { MonTemps, StatsPerformances, TacheMonEspace } from '@/lib/types';
+import type { MonTemps } from '@/lib/types';
 import { KpiStrip } from '@/components/ui/kpi';
 import { RemiseModal } from './remise-modal';
 import { formatDate, formatDayMonth, formatMonthYear, plural, todayIso } from '@hub/domain';
@@ -23,7 +25,7 @@ type Filtre = 'toutes' | 'en_cours' | 'en_retard' | 'validees';
 const lienProjet = (base: string, projetId: string) =>
   base.startsWith('/admin') ? `${base}/projets?projet=${projetId}` : `${base}/projets/${projetId}`;
 
-const FILTRES: { cle: Filtre; libelle: string; garde: (t: TacheMonEspace) => boolean }[] = [
+const FILTRES: { cle: Filtre; libelle: string; garde: (t: MyTask) => boolean }[] = [
   { cle: 'toutes', libelle: 'Toutes', garde: () => true },
   { cle: 'en_cours', libelle: 'En cours', garde: (t) => t.statut !== 'validee' },
   { cle: 'en_retard', libelle: 'En retard', garde: (t) => t.statut === 'en_retard' },
@@ -31,8 +33,8 @@ const FILTRES: { cle: Filtre; libelle: string; garde: (t: TacheMonEspace) => boo
 ];
 
 // Remise jugée « à temps » : dernière remise au plus tard le jour de l'échéance.
-const jugee = (t: TacheMonEspace) => !!t.remisLe && !!t.echeance;
-const aTemps = (t: TacheMonEspace) => jugee(t) && t.remisLe!.slice(0, 10) <= t.echeance!;
+const jugee = (t: MyTask) => !!t.remisLe && !!t.echeance;
+const aTemps = (t: MyTask) => jugee(t) && t.remisLe!.slice(0, 10) <= t.echeance!;
 const pct = (n: number, sur: number) => (sur ? Math.round((n / sur) * 100) : null);
 
 // « Mon espace » · Mes performances — un BILAN (revue Salarié 19/10/2026) :
@@ -43,16 +45,16 @@ export function MesPerformances({ slug }: { slug: string }) {
   const pathname = usePathname();
   const base = pathname.split('/mon-espace')[0];
   const aujourdhui = useMemo(() => todayIso(), []);
-  const [donnees, setDonnees] = useState<{ taches: TacheMonEspace[]; stats: StatsPerformances } | null>(null);
+  const [donnees, setDonnees] = useState<MyTasksView | null>(null);
   const [temps, setTemps] = useState<MonTemps | null>(null);
   const [filtre, setFiltre] = useState<Filtre>('toutes');
-  const [aRemettre, setARemettre] = useState<TacheMonEspace | null>(null);
+  const [aRemettre, setARemettre] = useState<MyTask | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [heuresParMois, setHeuresParMois] = useState<Record<string, MonTemps['feuille']>>({});
   const aMesTaches = sectionAccessible(useSessionCourante(), 'mes-taches');
 
   const charger = useCallback(() => {
-    getMesTaches(slug)
+    getMyTasks(slug)
       .then(setDonnees)
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger vos tâches.'));
     getMonTemps(slug)

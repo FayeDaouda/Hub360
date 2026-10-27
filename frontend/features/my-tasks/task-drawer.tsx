@@ -14,66 +14,68 @@ import { FieldError } from '@/components/ui/field';
 // liste. Lecture seule pour l'assignation (le Salarié n'assigne pas).
 // En-tête : une ligne fine projet · client (le titre est celui de la tâche,
 // dans le panneau). J / K : tâche précédente / suivante sans fermer.
-export function TacheDrawer({
+export function TaskDrawer({
   slug,
-  projetId,
-  tacheId,
-  moiId,
-  prolongation,
-  onMaj,
+  projectId,
+  taskId,
+  meId,
+  extension,
+  onChange,
   onClose,
-  onVoisine,
+  onNeighbour,
 }: {
   slug: string;
-  projetId: string;
-  tacheId: string;
-  moiId: string;
-  prolongation: boolean;
-  onMaj: () => void;
+  projectId: string;
+  taskId: string;
+  meId: string;
+  // Ouvre directement la demande de délai (prolongation).
+  extension: boolean;
+  onChange: () => void;
   onClose: () => void;
   // J / K : ouvrir la tâche précédente (-1) ou suivante (+1) de la liste.
-  onVoisine?: (sens: -1 | 1) => void;
+  onNeighbour?: (step: -1 | 1) => void;
 }) {
-  const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
-  const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
-  const [erreur, setErreur] = useState<string | null>(null);
+  const [project, setProject] = useState<DossierProjetOuvert | null>(null);
+  const [mentionable, setMentionable] = useState<{ id: string; nom: string }[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const charger = useCallback(
+  const load = useCallback(
     () =>
-      getDossierProjet(slug, projetId)
-        .then(setDossier)
-        .catch((e) => setErreur(e instanceof Error && e.message ? e.message : 'Tâche indisponible.')),
-    [slug, projetId],
+      getDossierProjet(slug, projectId)
+        .then(setProject)
+        .catch((e) => setError(e instanceof Error && e.message ? e.message : 'Tâche indisponible.')),
+    [slug, projectId],
   );
+  // Un panneau par tâche : « Mes tâches » le remonte à chaque tâche ouverte
+  // (key), son état repart donc vide sans être remis à zéro ici.
   useEffect(() => {
-    setDossier(null);
-    void charger();
-  }, [charger]);
+    void load();
+  }, [load]);
   useEffect(() => {
     getMentionnables(slug)
-      .then(setMentionnables)
-      .catch(() => setMentionnables(null));
+      .then(setMentionable)
+      .catch(() => setMentionable(null));
   }, [slug]);
 
   useEffect(() => {
-    if (!onVoisine) return;
-    const surTouche = (e: KeyboardEvent) => {
+    if (!onNeighbour) return;
+    const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || (e.key !== 'j' && e.key !== 'k')) return;
-      const cible = e.target as HTMLElement | null;
+      const target = e.target as HTMLElement | null;
       if (
-        cible?.closest('input, textarea, select, [contenteditable="true"]') ||
+        target?.closest('input, textarea, select, [contenteditable="true"]') ||
         document.querySelector('.modal-backdrop')
       )
         return;
       e.preventDefault();
-      onVoisine(e.key === 'j' ? 1 : -1);
+      onNeighbour(e.key === 'j' ? 1 : -1);
     };
-    window.addEventListener('keydown', surTouche);
-    return () => window.removeEventListener('keydown', surTouche);
-  }, [onVoisine]);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onNeighbour]);
 
-  const carte = dossier?.cartes.find((c) => c.taches.some((t) => t.id === tacheId));
-  const tache = carte?.taches.find((t) => t.id === tacheId);
+  const card = project?.cartes.find((c) => c.taches.some((t) => t.id === taskId));
+  const task = card?.taches.find((t) => t.id === taskId);
 
   return (
     <PanneauLateral
@@ -81,12 +83,12 @@ export function TacheDrawer({
       onClose={onClose}
       entete={
         <p className="tp-fil">
-          <span className="tp-fil-code">{dossier?.code ?? '…'}</span>
-          {dossier && (
+          <span className="tp-fil-code">{project?.code ?? '…'}</span>
+          {project && (
             <>
               {' · '}
-              {dossier.client.nom} ·{' '}
-              <Link className="lien-inline" href={`/admin/${slug}/projets?projet=${projetId}`}>
+              {project.client.nom} ·{' '}
+              <Link className="lien-inline" href={`/admin/${slug}/projets?projet=${projectId}`}>
                 Ouvrir le projet
               </Link>
             </>
@@ -94,26 +96,26 @@ export function TacheDrawer({
         </p>
       }
     >
-      {erreur && <FieldError>{erreur}</FieldError>}
-      {!dossier && !erreur && <Skeleton />}
-      {dossier && carte && tache ? (
+      {error && <FieldError>{error}</FieldError>}
+      {!project && !error && <Skeleton />}
+      {project && card && task ? (
         <TachePanneau
           slug={slug}
-          projetId={projetId}
-          code={dossier.code}
-          carte={carte}
-          tache={tache}
+          projetId={projectId}
+          code={project.code}
+          carte={card}
+          tache={task}
           assignables={null}
-          moiId={moiId}
-          mentionnables={mentionnables}
-          prolongationOuverte={prolongation}
+          moiId={meId}
+          mentionnables={mentionable}
+          prolongationOuverte={extension}
           onMaj={async () => {
-            await charger();
-            onMaj();
+            await load();
+            onChange();
           }}
         />
       ) : (
-        dossier && <p className="dmd-note">Cette tâche n’est plus dans le projet.</p>
+        project && <p className="dmd-note">Cette tâche n’est plus dans le projet.</p>
       )}
     </PanneauLateral>
   );

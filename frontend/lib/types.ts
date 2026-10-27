@@ -1487,7 +1487,6 @@ export type IntegrationSalarie = {
 export type SectionTache = 'avant_projet' | 'permis' | 'execution';
 export type ManqueTache = 'duree' | 'debut' | 'echeance' | 'fenetre' | 'absence';
 export type StatutFeuilleTemps = 'en_cours' | 'cloture' | 'a_controler' | 'sans_heures' | 'controlee';
-export type EtatTacheTemps = 'a_venir' | 'en_cours' | 'terminee';
 
 export type LigneCalculTemps = {
   id: string;
@@ -1595,67 +1594,8 @@ export type ProfilMonEspace = {
 // Attestation de travail sur demande : délivrée par la RH (delivreeLe non null).
 export type AttestationTravail = { id: string; demandeLe: string; delivreeLe: string | null; nom: string | null };
 
-// --- RH · Remise et validation des tâches (lot 5c) -----------------------------
-// prolongee : retard qualifié par une prolongation accordée ; bloquee : sa carte attend l'étape précédente
-// (règle commune des projets, la même que Production et Équipes).
-export type StatutTache =
-  'validee' | 'remise' | 'a_reprendre' | 'en_retard' | 'prolongee' | 'bloquee' | 'en_cours' | 'a_venir' | 'a_planifier';
-
-// Tâche du gabarit assignée (TacheProjet), depuis oct. 2026.
-export type TacheMonEspace = {
-  id: string;
-  etape: string; // « 02 · Avant-projet »
-  carte: string;
-  libelle: string;
-  projetId: string;
-  projetCode: string;
-  projetProgramme: string;
-  projetClient: string;
-  version: number;
-  debut: string | null;
-  echeance: string | null;
-  dureeStandard: number | null;
-  heuresImputees: number; // cumul jusqu'à aujourd'hui
-  manque: ManqueTache | null;
-  etat: EtatTacheTemps | null;
-  statut: StatutTache;
-  prolongeeJusquau: string | null; // statut « prolongee » : nouvelle date accordée
-  remisLe: string | null;
-  valideLe: string | null;
-  renvoiMotif: string | null; // tant que la tâche est à reprendre
-  // En validation : qui valide (« Aïssatou Faye (chef de team) »), null si
-  // personne à prévenir ; date à partir de laquelle on peut le relancer.
-  validateur: string | null;
-  relancePossibleLe: string | null;
-  // Dépôt (lot F) : numéro d'étape (nommage des fichiers), fichier exigé,
-  // et cas où le dépôt du justificatif vaut validation.
-  etapeNumero: number;
-  fichierObligatoire: boolean;
-  parDepot: boolean;
-};
-
-export type StatsPerformances = {
-  total: number;
-  validees: number;
-  enCours: number;
-  enRetard: number;
-  respectDelais: { aTemps: number; total: number; pct: number | null };
-};
-
-export type TacheAValider = {
-  id: string;
-  etape: string;
-  libelle: string;
-  version: number;
-  projetId: string;
-  projetCode: string;
-  projetProgramme: string;
-  responsable: string;
-  debut: string | null;
-  echeance: string | null;
-  remisLe: string | null;
-  pieces: { id: string; nom: string }[]; // fichiers de la remise à valider (vide = sans fichier joint)
-};
+// Tâches assignées (Mes tâches, Mon espace) : types tirés de l'API, dans
+// features/my-tasks/types.ts.
 
 // Mon espace · Ma cellule (lot 5d) : l'équipe et les projets qu'elle suit.
 export type MaCellule = {

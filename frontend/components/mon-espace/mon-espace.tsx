@@ -8,7 +8,8 @@ import { useEnteteFixe } from '@/lib/entete-fixe';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { getAbsencesAValider } from '@/lib/demandes';
 import { getNonLuesParType, marquerTypesLus } from '@/lib/notifications';
-import { getMonEspace, getTachesAValider } from '@/lib/mon-espace';
+import { getTasksToReview } from '@/features/my-tasks/api';
+import { getMonEspace } from '@/lib/mon-espace';
 import { LIBELLE_CONTRAT } from '@/lib/rh';
 import type { NotificationType, ProfilMonEspace } from '@/lib/types';
 import { AValider } from './a-valider';
@@ -96,7 +97,7 @@ export function MonEspace({ slug }: { slug: string }) {
     getMonEspace(slug)
       .then((r) => setDossier(r.dossier))
       .catch((e) => setErreur(e instanceof ApiError ? e.message : 'Impossible de charger votre espace.'));
-    Promise.all([getTachesAValider(slug), getAbsencesAValider(slug)])
+    Promise.all([getTasksToReview(slug), getAbsencesAValider(slug)])
       .then(([t, a]) => setAValider(t.length + a.length))
       .catch(() => setAValider(0));
     getNonLuesParType(slug)

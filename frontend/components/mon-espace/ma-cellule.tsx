@@ -7,7 +7,8 @@ import { AlarmClock, CircleCheck, FolderKanban, ListTodo } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { getMaCellule } from '@/lib/mon-espace';
 import { EMPLOYEE_LEVELS } from '@/features/teams/constants';
-import { PHASES, type MaCellule as DonneesCellule, type StatsPerformances } from '@/lib/types';
+import type { PerformanceStats } from '@/features/my-tasks/types';
+import { PHASES, type MaCellule as DonneesCellule } from '@/lib/types';
 import { KpiStrip } from '@/components/ui/kpi';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import { Avatar } from './avatar';
@@ -19,7 +20,7 @@ import { EmptyState, Skeleton } from '@/components/ui/feedback';
 // pilote (chef de team) ; ses projets. Aucun montant. Même écran sans cellule.
 export function MaCellule({ slug }: { slug: string }) {
   const base = usePathname().split('/mon-espace')[0];
-  const [donnees, setDonnees] = useState<{ cellule: DonneesCellule | null; stats: StatsPerformances } | null>(null);
+  const [donnees, setDonnees] = useState<{ cellule: DonneesCellule | null; stats: PerformanceStats } | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [contact, setContact] = useState<string | null>(null);
 
