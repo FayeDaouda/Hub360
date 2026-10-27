@@ -20,7 +20,7 @@ import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from '.
 import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
-import { daysBetween, formatDate, todayIso } from '@hub/domain';
+import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 
@@ -168,7 +168,7 @@ export function TachePanneau({
   }
 
   const chargeDe = (id: string) => charges?.charges.find((c) => c.collaborateurId === id);
-  const pastille = taskPill(tache.etat, tache.prolongation.accordeeJusquau ?? tache.finLe);
+  const pastille = taskPill(tache.etat);
   const piecesVersion = tache.pieces.filter((f) => f.version === tache.version);
   const ecart = tache.etat.code === 'validee' ? tache.etat.ecart : null;
   const v = tache.validation;
@@ -182,14 +182,9 @@ export function TachePanneau({
 
   // Résumé : ce qu'il faut savoir d'un coup d'œil.
   const echeance = tache.prolongation.accordeeJusquau ?? tache.finLe;
-  // Retard affiché : en retard, ou reprise dont l'échéance est passée.
-  const aujourdhui = todayIso();
-  const joursRetard =
-    tache.etat.code === 'en_retard'
-      ? tache.etat.jours
-      : tache.etat.code === 'reprise' && echeance && echeance < aujourdhui
-        ? daysBetween(echeance, aujourdhui)
-        : null;
+  // Retard affiché : en retard, ou reprise dont l'échéance est passée
+  // (jours calculés par le serveur).
+  const joursRetard = tache.etat.code === 'en_retard' || tache.etat.code === 'reprise' ? tache.etat.jours : null;
   const resume: [string, React.ReactNode][] = [];
   if (gestionnaire) resume.push(['Assignée à', tache.assigne?.nom ?? 'À assigner']);
   resume.push([
@@ -334,7 +329,7 @@ export function TachePanneau({
           </p>
           <FormulaireDepot
             id={`po-remise-${tache.id}`}
-            nommage={{ code, etapeNumero: carte.etapeNumero, tache: tache.libelle, version: tache.version + 1 }}
+            nomDepot={tache.nomDepot}
             validateur={v.mode === 'personne' && v.nom ? `${v.nom} (${v.role})` : null}
             parDepot={v.mode === 'depot'}
             obligatoire={tache.fichierObligatoire}

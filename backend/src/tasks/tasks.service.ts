@@ -25,6 +25,7 @@ import {
 import { loadAssignedTasks } from './assigned-tasks';
 import type { MyTasksViewDto, PerformanceStatsDto } from './my-tasks-view.dto';
 import type { SubmissionFileDto } from '../projects/open-projects-view.dto';
+import { submissionBaseName } from '../projects/submission-file-name';
 import type { TaskToReviewDto } from './task-review.dto';
 import { todayIso } from '@hub/domain';
 
@@ -120,6 +121,12 @@ export class TasksService {
           etapeNumero: t.etapeNumero,
           fichierObligatoire: t.fichierObligatoire,
           parDepot: t.parDepot,
+          nomDepot: submissionBaseName({
+            code: t.projetCode,
+            etapeNumero: t.etapeNumero,
+            task: t.libelle,
+            version: t.version + 1,
+          }),
           relancePossibleLe:
             t.statut === 'a_valider' && t.remisLe ? reminderPossibleOn(t.remisLe, t.derniereRelance, holidays) : null,
         };

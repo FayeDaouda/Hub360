@@ -10227,11 +10227,16 @@
           },
           "version": {
             "type": "number"
+          },
+          "jours": {
+            "type": "number",
+            "nullable": true
           }
         },
         "required": [
           "code",
-          "version"
+          "version",
+          "jours"
         ]
       },
       "TaskLateStateDto": {
@@ -11933,6 +11938,9 @@
           "peutRemettre": {
             "type": "boolean"
           },
+          "nomDepot": {
+            "type": "string"
+          },
           "fil": {
             "type": "number"
           }
@@ -11968,6 +11976,7 @@
           "peutDemanderProlongation",
           "peutDeciderProlongation",
           "peutRemettre",
+          "nomDepot",
           "fil"
         ]
       },
@@ -13497,6 +13506,9 @@
           },
           "parDepot": {
             "type": "boolean"
+          },
+          "nomDepot": {
+            "type": "string"
           }
         },
         "required": [
@@ -13527,7 +13539,8 @@
           "relancePossibleLe",
           "etapeNumero",
           "fichierObligatoire",
-          "parDepot"
+          "parDepot",
+          "nomDepot"
         ]
       },
       "OnTimeRateDto": {

@@ -1,4 +1,4 @@
-import { daysBetween, formatDayMonth, todayIso } from '@hub/domain';
+import { formatDayMonth } from '@hub/domain';
 import type { CardState, EmployeeLoad, ProjectStep, ProjectTask, SiteStatus, TaskState, TaskWorkload } from './types';
 
 // Libellés et pastilles du module Projets (maquette « Projets »).
@@ -19,11 +19,10 @@ export const HOURS_PER_DAY = 8;
 export const stepNumber = (n: number) => String(n).padStart(2, '0');
 const v = (n: number) => `v${String(n).padStart(2, '0')}`;
 
-// Pastille d'une tâche : libellé + ton.
-// `echeance` (date effective : accordée ou de référence) : une reprise dont
-// l'échéance est passée est aussi en retard — même règle que « Mes tâches »
-// (le retard est un attribut, pas une catégorie).
-export function taskPill(e: TaskState, echeance?: string | null): { libelle: string; ton: Tone } {
+// Pastille d'une tâche : libellé + ton. Une reprise dont l'échéance effective
+// est passée est aussi en retard (jours calculés par le serveur) — même règle
+// que « Mes tâches » (le retard est un attribut, pas une catégorie).
+export function taskPill(e: TaskState): { libelle: string; ton: Tone } {
   switch (e.code) {
     case 'validee':
       if (e.ecart && e.ecart > 0) return { libelle: `Validé · avance ${e.ecart} h`, ton: 'succes' };
@@ -33,14 +32,9 @@ export function taskPill(e: TaskState, echeance?: string | null): { libelle: str
       return { libelle: 'Visa DPLG à apposer', ton: 'attention' };
     case 'a_valider':
       return { libelle: `À valider · ${v(e.version)}`, ton: 'attention' };
-    case 'reprise': {
-      const jour = todayIso();
-      if (echeance && echeance < jour) {
-        const jours = daysBetween(echeance, jour);
-        return { libelle: `Reprise · ${jours} j de retard`, ton: 'risque' };
-      }
+    case 'reprise':
+      if (e.jours !== null) return { libelle: `Reprise · ${e.jours} j de retard`, ton: 'risque' };
       return { libelle: `Reprise · ${v(e.version)}`, ton: 'attention' };
-    }
     case 'en_retard':
       return { libelle: `En retard · ${e.jours} j`, ton: 'risque' };
     case 'prolongee':

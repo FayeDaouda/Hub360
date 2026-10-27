@@ -65,6 +65,8 @@ export class MyTaskDto {
   etapeNumero!: number;
   fichierObligatoire!: boolean;
   parDepot!: boolean;
+  // Base du nom des fichiers du prochain dépôt, sans rang ni extension.
+  nomDepot!: string;
 }
 
 export class MyTasksViewDto {

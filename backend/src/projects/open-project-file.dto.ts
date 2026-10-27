@@ -136,6 +136,9 @@ export class ProjectTaskDto {
   peutDemanderProlongation!: boolean;
   peutDeciderProlongation!: boolean;
   peutRemettre!: boolean;
+  // Base du nom des fichiers du prochain dépôt (FS_POI.26_04_TIMBRE-FISCAL_v02),
+  // sans rang ni extension : règle du serveur (submission-file-name.ts).
+  nomDepot!: string;
   fil!: number; // messages du fil de la tâche
   @ApiProperty({ oneOf: oneOfVariants(TASK_STATE_VARIANTS) })
   etat!: TaskStateDto;

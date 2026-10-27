@@ -33,6 +33,7 @@ export function taskFixture(over: Partial<ProjectTask> = {}): ProjectTask {
     peutDemanderProlongation: false,
     peutDeciderProlongation: false,
     peutRemettre: false,
+    nomDepot: 'FS_POI.26_01_PLAN-MASSE_v01',
     fil: 0,
     etat: { code: 'en_cours' },
     ...over,

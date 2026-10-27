@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { ArrowRight, Camera, UploadCloud, X } from 'lucide-react';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
-import { nomFichierDepot } from '@/lib/nom-fichier';
 
 // Nombre de fichiers par remise (même plafond que le serveur).
 const MAX_PIECES = 5;
@@ -11,8 +10,14 @@ const MAX_PIECES = 5;
 export type SaisieRemise = { pieces: { nom: string; url: string }[]; commentaire: string };
 export const SAISIE_REMISE_VIDE: SaisieRemise = { pieces: [], commentaire: '' };
 
-// Paramètres du nom donné aux fichiers déposés (règle du HUB, cf. lib/nom-fichier.ts).
-export type NommageDepot = { code: string; etapeNumero: number; tache: string; version: number };
+// Nom final d'un fichier déposé : la base vient du serveur (règle du HUB,
+// backend/src/projects/submission-file-name.ts, champ `nomDepot` de la tâche) ;
+// le rang (-1, -2… s'il y a plusieurs fichiers) et l'extension sont ceux des
+// fichiers choisis, seuls connus ici avant l'envoi.
+function finalName(base: string, original: string, rank: number, total: number): string {
+  const ext = /\.([A-Za-z0-9]{1,8})$/.exec(original.trim());
+  return `${base}${total > 1 ? `-${rank + 1}` : ''}${ext ? `.${ext[1].toLowerCase()}` : ''}`;
+}
 
 // Fichiers et commentaire d'une remise. Le fichier est obligatoire ou non
 // selon la tâche (case du gabarit) ; une visite ou une réunion n'en produit
@@ -24,13 +29,14 @@ export function ChampsRemise({
   onChange,
   id,
   obligatoire = false,
-  nommage,
+  nomDepot,
 }: {
   valeur: SaisieRemise;
   onChange: (v: SaisieRemise) => void;
   id: string;
   obligatoire?: boolean;
-  nommage?: NommageDepot;
+  // Base du nom des fichiers (fournie par le serveur) ; absente : pas d'aperçu.
+  nomDepot?: string;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [survol, setSurvol] = useState(false);
@@ -116,10 +122,10 @@ export function ChampsRemise({
             <span key={`${f.nom}-${i}`} className="depot-fichier">
               <span className="depot-fichier-noms">
                 <span className="depot-fichier-origine">{f.nom}</span>
-                {nommage && (
+                {nomDepot && (
                   <span className="depot-fichier-final">
                     <ArrowRight size={12} aria-label="enregistré sous" />{' '}
-                    {nomFichierDepot({ ...nommage, nomOrigine: f.nom, rang: i, total: valeur.pieces.length })}
+                    {finalName(nomDepot, f.nom, i, valeur.pieces.length)}
                   </span>
                 )}
               </span>

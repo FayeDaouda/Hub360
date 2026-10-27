@@ -100,7 +100,7 @@ export function ProjectCardView({ card: c, taskId, threadActive, onTask, onThrea
       ) : (
         <ul className="po-taches">
           {c.taches.map((t) => {
-            const pt = taskPill(t.etat, t.prolongation.accordeeJusquau ?? t.finLe);
+            const pt = taskPill(t.etat);
             const off = t.etat.code === 'non_necessaire' || t.etat.code === 'desactivee';
             const keyShown = !sameAsLabel(t.cle, t.libelle);
             return (

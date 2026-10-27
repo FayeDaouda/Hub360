@@ -20,6 +20,7 @@ import {
   type Actor,
 } from './project-query';
 import { ProjectStatesService } from './project-states.service';
+import { submissionBaseName } from './submission-file-name';
 
 type Chief = {
   id: string;
@@ -279,6 +280,13 @@ export class ProjectFileService {
               t.assigneId === me &&
               (t.statut === 'a_faire' || t.statut === 'reprise') &&
               cardStates.get(c.id)!.code === 'ouverte',
+            // Base du nom des fichiers du prochain dépôt (aperçu du formulaire).
+            nomDepot: submissionBaseName({
+              code: p.code,
+              etapeNumero: c.etapeNumero,
+              task: t.libelle,
+              version: t.version + 1,
+            }),
             fil: threadOf(c.id, t.id),
             etat: taskStates.get(t.id)!,
           };

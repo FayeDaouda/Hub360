@@ -57,7 +57,17 @@ describe('états dérivés (maquette Projets)', () => {
     expect(taskState(tache('sdb', { statut: 'reprise', version: 1 }), ouverte, AUJ, F)).toEqual({
       code: 'reprise',
       version: 2,
+      jours: 7,
     });
+  });
+
+  it('reprise : jours de retard depuis l’échéance effective (délai accordé, sinon référence)', () => {
+    const reprise = (o: Partial<TaskSource>) => taskState(tache('sdb', { statut: 'reprise', ...o }), ouverte, AUJ, F);
+    expect(reprise({ finLe: '2026-09-30' })).toMatchObject({ code: 'reprise', jours: null });
+    expect(reprise({ finLe: AUJ })).toMatchObject({ jours: null });
+    expect(reprise({ finLe: null })).toMatchObject({ jours: null });
+    expect(reprise({ prolongeeJusquau: '2026-09-30' })).toMatchObject({ jours: null });
+    expect(reprise({ prolongeeJusquau: '2026-09-20' })).toMatchObject({ jours: 3 });
   });
 
   it('carte verrouillée tant que ses tâches d’ouverture ne sont pas validées', () => {
