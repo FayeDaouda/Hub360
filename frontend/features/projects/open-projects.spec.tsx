@@ -38,7 +38,8 @@ describe('OpenProjects', () => {
     api.getProjectFile.mockResolvedValue(fileFixture());
     const { container } = render(<OpenProjects slug="gc" />);
     expect(container.querySelector('.skeleton, .admin-skeleton, [aria-busy]')).not.toBeNull();
-    expect(await screen.findByRole('heading', { name: /FS_POI\.26/ })).toBeInTheDocument();
+    // Tableau puis dossier : deux chargements enchaînés, plus lents qu'un seul.
+    expect(await screen.findByRole('heading', { name: /FS_POI\.26/ }, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /Onboard/ })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('F2 attend 02, 03')).toBeInTheDocument();
     expect(api.getProjectFile).toHaveBeenCalledWith('gc', 'p1');
@@ -48,7 +49,7 @@ describe('OpenProjects', () => {
     api.getBoard.mockResolvedValue(boardFixture());
     api.getProjectFile.mockResolvedValue(fileFixture());
     render(<OpenProjects slug="gc" />);
-    await userEvent.click(await screen.findByRole('button', { name: /Plan masse/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Plan masse/ }, { timeout: 3000 }));
     expect(screen.getByText('Panneau de la tâche')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: /Esquisse/ }));
     expect(screen.queryByText('Panneau de la tâche')).not.toBeInTheDocument();

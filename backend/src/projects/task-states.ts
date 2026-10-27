@@ -40,7 +40,9 @@ export type TaskState =
   | { code: 'validee'; ecart: number | null } // heures : + avance, − retard
   | { code: 'a_viser' } // validée par le chef de team, visa DPLG à apposer
   | { code: 'a_valider'; version: number }
-  | { code: 'reprise'; version: number }
+  // jours : retard d'une reprise dont l'échéance effective (délai accordé,
+  // sinon de référence) est passée ; null dans les délais.
+  | { code: 'reprise'; version: number; jours: number | null }
   | { code: 'en_retard'; jours: number }
   | { code: 'prolongee'; jusquau: string; jours: number } // retard qualifié (jours depuis la référence)
   | { code: 'en_cours' }
@@ -104,7 +106,10 @@ export function taskState(
     return { code: 'validee', ecart: t.valideeLe && t.finLe ? hoursGap(t.valideeLe, t.finLe, holidays) : null };
   }
   if (t.statut === 'a_valider') return { code: 'a_valider', version: t.version };
-  if (t.statut === 'reprise') return { code: 'reprise', version: t.version + 1 };
+  if (t.statut === 'reprise') {
+    const due = t.prolongeeJusquau ?? t.finLe;
+    return { code: 'reprise', version: t.version + 1, jours: due && due < today ? daysLate(due, today) : null };
+  }
   if (card.code === 'verrouillee' || visaLock) return { code: 'verrouillee' };
   if (t.finLe && today > t.finLe) {
     const days = daysLate(t.finLe, today);

@@ -48,6 +48,9 @@ export class TaskReworkStateDto {
   @Literal('reprise')
   code!: 'reprise';
   version!: number;
+  // Retard d'une reprise dont l'échéance effective (délai accordé, sinon de
+  // référence) est passée, en jours ; null dans les délais.
+  jours!: number | null;
 }
 export class TaskLateStateDto {
   @Literal('en_retard')

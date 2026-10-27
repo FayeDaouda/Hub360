@@ -1,6 +1,6 @@
 'use client';
 
-import { ChampsRemise, type NommageDepot, type SaisieRemise } from './champs-remise';
+import { ChampsRemise, type SaisieRemise } from './champs-remise';
 
 // Formulaire de dépôt d'une tâche — LE même depuis la liste « Mes tâches »
 // (modale), « Mes performances » et le panneau de la tâche (lot F,
@@ -9,7 +9,7 @@ import { ChampsRemise, type NommageDepot, type SaisieRemise } from './champs-rem
 // Balisage en <span> : utilisable dans le message d'une ConfirmModal.
 export function FormulaireDepot({
   id,
-  nommage,
+  nomDepot,
   validateur,
   parDepot,
   obligatoire,
@@ -18,7 +18,8 @@ export function FormulaireDepot({
   onChange,
 }: {
   id: string;
-  nommage: NommageDepot;
+  // Base du nom des fichiers du prochain dépôt, fournie par le serveur.
+  nomDepot: string;
   // « Cheikh Fall (Architecte DPLG) » ; null : personne n'est encore désigné.
   validateur: string | null;
   parDepot: boolean; // sans temps atelier : le dépôt du justificatif vaut validation
@@ -42,7 +43,7 @@ export function FormulaireDepot({
           !parDepot &&
           ' Vous ne pourrez plus la déposer à nouveau tant qu’elle n’est pas validée ou renvoyée en reprise.'}
       </span>
-      <ChampsRemise id={id} valeur={valeur} onChange={onChange} obligatoire={obligatoire} nommage={nommage} />
+      <ChampsRemise id={id} valeur={valeur} onChange={onChange} obligatoire={obligatoire} nomDepot={nomDepot} />
     </span>
   );
 }

@@ -31,6 +31,7 @@ export function myTaskFixture(patch: Partial<MyTask> = {}): MyTask {
     etapeNumero: 2,
     fichierObligatoire: false,
     parDepot: false,
+    nomDepot: 'FS_POI.26_02_PLAN-MASSE_v01',
     ...patch,
   };
 }

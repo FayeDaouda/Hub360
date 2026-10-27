@@ -5,9 +5,9 @@ import { versionLabel } from './project-query';
 // Plusieurs fichiers dans le même dépôt : _v01-1, _v01-2… L'application
 // renomme : la personne n'a pas à retenir la règle.
 //
-// Le front en garde une copie (frontend/lib/nom-fichier.ts : aperçu du nom
-// avant le dépôt) : même règle, à tenir identique jusqu'à ce que le back lui
-// envoie le nom (passe front de S3).
+// Le front n'en garde pas de copie : il reçoit la base du prochain dépôt
+// (submissionBaseName, champ `nomDepot` des tâches) et n'y ajoute, pour
+// l'aperçu, que le rang et l'extension des fichiers choisis.
 
 const TASK_SEGMENT_LENGTH = 40;
 
@@ -25,16 +25,21 @@ function extensionOf(fileName: string): string {
   return m ? `.${m[1].toLowerCase()}` : '';
 }
 
-export function submissionFileName(p: {
-  code: string;
-  etapeNumero: number;
-  task: string;
-  version: number;
-  originalName: string;
-  rank: number; // 0 pour le premier fichier du dépôt
-  total: number; // nombre de fichiers du dépôt
-}): string {
+type Naming = { code: string; etapeNumero: number; task: string; version: number };
+
+// Base du nom, sans rang ni extension : FS_POI.26_04_TIMBRE-FISCAL_v01.
+export function submissionBaseName(p: Naming): string {
   const step = String(p.etapeNumero).padStart(2, '0');
+  return `${p.code}_${step}_${taskSegment(p.task)}_${versionLabel(p.version)}`;
+}
+
+export function submissionFileName(
+  p: Naming & {
+    originalName: string;
+    rank: number; // 0 pour le premier fichier du dépôt
+    total: number; // nombre de fichiers du dépôt
+  },
+): string {
   const suffix = p.total > 1 ? `-${p.rank + 1}` : '';
-  return `${p.code}_${step}_${taskSegment(p.task)}_${versionLabel(p.version)}${suffix}${extensionOf(p.originalName)}`;
+  return `${submissionBaseName(p)}${suffix}${extensionOf(p.originalName)}`;
 }

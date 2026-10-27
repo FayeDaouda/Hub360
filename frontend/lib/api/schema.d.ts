@@ -3994,6 +3994,7 @@ export interface components {
             /** @enum {string} */
             code: "reprise";
             version: number;
+            jours: number | null;
         };
         TaskLateStateDto: {
             /** @enum {string} */
@@ -4399,6 +4400,7 @@ export interface components {
             peutDemanderProlongation: boolean;
             peutDeciderProlongation: boolean;
             peutRemettre: boolean;
+            nomDepot: string;
             fil: number;
         };
         ProjectCardDto: {
@@ -4750,6 +4752,7 @@ export interface components {
             etapeNumero: number;
             fichierObligatoire: boolean;
             parDepot: boolean;
+            nomDepot: string;
         };
         OnTimeRateDto: {
             aTemps: number;

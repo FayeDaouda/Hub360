@@ -45,12 +45,7 @@ export function SubmissionModal({
           </span>
           <FormulaireDepot
             id={`remise-${task.id}`}
-            nommage={{
-              code: task.projetCode,
-              etapeNumero: task.etapeNumero,
-              tache: task.libelle,
-              version: task.version + 1,
-            }}
+            nomDepot={task.nomDepot}
             validateur={task.validateur}
             parDepot={task.parDepot}
             obligatoire={task.fichierObligatoire}
