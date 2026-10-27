@@ -1,9 +1,9 @@
-import { quitterCellule } from './cellules.service';
+import { leaveCell } from './cells.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CompteMini, versCollaborateur } from '../commun/format-contrat';
-import { MajCollaborateurDto } from './dto';
+import { UpdateEmployeeDto } from './teams.dto';
 
 // On ne remonte QUE ces champs du compte — jamais motDePasseHash.
 const AVEC_COMPTE = {
@@ -20,7 +20,7 @@ function compteMini(c: AvecUtilisateur): CompteMini {
 }
 
 @Injectable()
-export class CollaborateursService {
+export class EmployeesService {
   constructor(private prisma: PrismaService) {}
 
   // `cellule` : un id (une équipe), plusieurs (tableau — ex. équipes d'un
@@ -42,9 +42,9 @@ export class CollaborateursService {
     return filtres.map((c) => versCollaborateur({ ...c, compte: compteMini(c) }));
   }
 
-  async maj(societeId: string, id: string, dto: MajCollaborateurDto) {
-    const actuel = await this.charger(societeId, id);
-    if (dto.celluleId) await this.verifierCellule(societeId, dto.celluleId);
+  async update(societeId: string, id: string, dto: UpdateEmployeeDto) {
+    const actuel = await this.load(societeId, id);
+    if (dto.celluleId) await this.checkCell(societeId, dto.celluleId);
 
     const data: Prisma.CollaborateurUpdateInput = {};
     if (dto.prenom !== undefined) data.prenom = dto.prenom;
@@ -61,7 +61,7 @@ export class CollaborateursService {
     // un dispatcher n'en est plus le dispatcher — sans ce nettoyage,
     // Cellule.dispatcherId pointerait vers quelqu'un qui n'en est plus membre.
     if (dto.celluleId !== undefined && dto.celluleId !== actuel.celluleId && actuel.celluleId) {
-      await this.prisma.$transaction((tx) => quitterCellule(tx, id, actuel.celluleId));
+      await this.prisma.$transaction((tx) => leaveCell(tx, id, actuel.celluleId));
     }
 
     const c = await this.prisma.collaborateur.update({
@@ -72,13 +72,13 @@ export class CollaborateursService {
     return versCollaborateur({ ...c, compte: compteMini(c) });
   }
 
-  private async charger(societeId: string, id: string) {
+  private async load(societeId: string, id: string) {
     const c = await this.prisma.collaborateur.findFirst({ where: { id, societeId } });
     if (!c) throw new NotFoundException('Collaborateur introuvable');
     return c;
   }
 
-  private async verifierCellule(societeId: string, celluleId: string) {
+  private async checkCell(societeId: string, celluleId: string) {
     const c = await this.prisma.cellule.findFirst({ where: { id: celluleId, societeId } });
     if (!c) throw new NotFoundException('Cellule introuvable');
   }

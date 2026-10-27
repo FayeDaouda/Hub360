@@ -1,5 +1,5 @@
 import type { StatutTacheProjet } from '@prisma/client';
-import { partATemps } from '../equipe/equipes-regles';
+import { onTimeShare } from '../teams/teams-rules';
 import { pourcentage } from './pilotage-regles';
 
 // Tendances mois par mois des indicateurs qui SE MESURENT par mois (les autres
@@ -30,7 +30,7 @@ export function seriesTaches(mois: string[], taches: TacheValidee[]): { aTemps: 
   return {
     aTemps: mois.map((m) => ({
       mois: m,
-      valeur: partATemps(
+      valeur: onTimeShare(
         duMois(m).map((t) => ({
           statut: t.statut,
           valideeLe: t.valideeLe,

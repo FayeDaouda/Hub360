@@ -4,13 +4,12 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { getFeuilleTemps } from '@/lib/facturation';
 
-import { formatAmount, formatDate, formatDayMonth } from '@hub/domain';
+import { formatAmount, formatDate, formatDayMonth, formatHours } from '@hub/domain';
 import { STATUTS_CRM, type DelaiTranche, type FeuilleTemps, type Projet } from '@/lib/types';
 import { Pill, type PillTone } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 
-const heures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
 // Tableau de facturation : année sur deux chiffres, pour tenir dans la colonne.
 const jjmmaa = (iso: string) => `${formatDayMonth(iso)}/${iso.slice(2, 4)}`;
 
@@ -128,8 +127,8 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
               voir les factures
             </button>
           </Tuile>
-          <Tuile titre="Heures imputées" valeur={i?.heuresImputees != null ? heures(i.heuresImputees) : '—'}>
-            {i?.heuresPrevues != null ? `prévu ${heures(i.heuresPrevues)}` : 'projet non ouvert'}
+          <Tuile titre="Heures imputées" valeur={i?.heuresImputees != null ? formatHours(i.heuresImputees) : '—'}>
+            {i?.heuresPrevues != null ? `prévu ${formatHours(i.heuresPrevues)}` : 'projet non ouvert'}
             {f?.dossier.projet && (
               <>
                 {' · '}
@@ -242,7 +241,8 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
               <h2 className="fin-carte-titre">Temps imputé · calcul automatique</h2>
               {f.temps && (
                 <span>
-                  {heures(f.temps.total)} imputées{f.temps.prevues != null && ` · ${heures(f.temps.prevues)} prévues`}
+                  {formatHours(f.temps.total)} imputées
+                  {f.temps.prevues != null && ` · ${formatHours(f.temps.prevues)} prévues`}
                 </span>
               )}
             </div>
@@ -269,7 +269,7 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                           }}
                         />
                       </span>
-                      <strong>{heures(e.heures)}</strong>
+                      <strong>{formatHours(e.heures)}</strong>
                     </li>
                   ))}
                 </ul>
@@ -284,10 +284,10 @@ export function OngletFeuilleTemps({ slug, dossiers, onVoirFactures, onOuvrirOff
                       </span>
                       <span className="ft-detail">
                         {t.libelle} ·{' '}
-                        {t.heuresStandard != null ? `${heures(t.heuresStandard)} standard` : 'sans durée standard'} ·{' '}
-                        {t.joursEcoules} j ouvrés écoulés
+                        {t.heuresStandard != null ? `${formatHours(t.heuresStandard)} standard` : 'sans durée standard'}{' '}
+                        · {t.joursEcoules} j ouvrés écoulés
                       </span>
-                      <strong>{heures(t.heures)}</strong>
+                      <strong>{formatHours(t.heures)}</strong>
                     </li>
                   ))}
                 </ul>

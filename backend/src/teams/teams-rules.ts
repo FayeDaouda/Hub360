@@ -8,7 +8,7 @@ import { arrondi, bornesMois, heuresTache, joursAbsents, type Feries, type Perio
 
 // Initiales de la société : « Grey Concrete » → GC (même règle que la
 // migration qui a codé les cellules existantes).
-export const prefixeSociete = (nom: string) =>
+export const companyPrefix = (nom: string) =>
   nom
     .split(/[\s-]+/)
     .filter(Boolean)
@@ -16,10 +16,10 @@ export const prefixeSociete = (nom: string) =>
     .join('')
     .toUpperCase();
 
-export const codeCellule = (prefixe: string, processus: ProcessusCellule, numero: number) =>
+export const cellCode = (prefixe: string, processus: ProcessusCellule, numero: number) =>
   `${prefixe}-${processus}-${String(numero).padStart(2, '0')}`;
 
-export type TacheEquipe = {
+export type TeamTask = {
   debut: string | null;
   echeance: string | null; // échéance de référence (délai figé)
   heures: number | null; // durée standard
@@ -31,7 +31,7 @@ const pourcent = (n: number, sur: number) => Math.round((n / sur) * 100);
 
 // Part des tâches validées au plus tard à leur échéance ; null = aucune
 // tâche encore validée (« pas encore d'étape livrée »).
-export function partATemps(taches: TacheEquipe[]): number | null {
+export function onTimeShare(taches: TeamTask[]): number | null {
   const livrees = taches.filter((t) => t.statut === 'validee' && t.valideeLe && t.echeance);
   if (livrees.length === 0) return null;
   return pourcent(livrees.filter((t) => t.valideeLe! <= t.echeance!).length, livrees.length);
@@ -49,9 +49,9 @@ const EN_COURS: ReadonlySet<EtatTache['code']> = new Set([
   'reprise',
   'a_viser',
 ]);
-export const estEnCours = (code: EtatTache['code']) => EN_COURS.has(code);
-export function tachesEnCours(codes: EtatTache['code'][]) {
-  const enCours = codes.filter(estEnCours);
+export const isInProgress = (code: EtatTache['code']) => EN_COURS.has(code);
+export function tasksInProgress(codes: EtatTache['code'][]) {
+  const enCours = codes.filter(isInProgress);
   const enRetard = enCours.filter((c) => c === 'en_retard').length;
   return {
     enCours: enCours.length,
@@ -63,7 +63,7 @@ export function tachesEnCours(codes: EtatTache['code'][]) {
 // Charge du mois en cours d'un collaborateur : tâches dont la fenêtre touche
 // le mois, et heures imputées jusqu'à aujourd'hui (calcul RH : durée standard
 // répartie sur les jours de présence de la fenêtre).
-export function chargeDuMois(taches: TacheEquipe[], absences: Periode[], aujourdhui: string, feries: Feries) {
+export function monthlyLoad(taches: TeamTask[], absences: Periode[], aujourdhui: string, feries: Feries) {
   const mois = bornesMois(aujourdhui.slice(0, 7));
   const actives = taches.filter(
     (t) =>

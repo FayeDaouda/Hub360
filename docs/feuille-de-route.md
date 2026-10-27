@@ -14,7 +14,7 @@ Décisions structurantes : `docs/adr/`.
 | Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                            |
 | S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits     |
 | Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | faite (PR #21, #22), serveurs à créer   |
-| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                 |
+| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | S1 Équipes faite ; S2 ensuite           |
 | Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés |
 | Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                      |
 
@@ -82,9 +82,11 @@ Décisions structurantes : `docs/adr/`.
 - **Images sans dimensions** (défaut d'interface) : signature du contrat
   (`.contrat-signature`) et logo du document de facture (`.fd-logo`), dont la
   hauteur dépend de l'image chargée ; à corriger, avec captures avant/après.
-- **Avatar des cellules (Équipes, S1)** : `eq-avatar` de `cellule-carte.tsx`
-  est un contrôle d'envoi de photo (label, image de fond), distinct de
-  `PersonAvatar` ; l'unifier change le rendu : à faire avec le module Équipes.
+- **Avatar des cellules (Équipes)** : `eq-avatar` de
+  `features/teams/cell-card.tsx` est un contrôle d'envoi de photo (label,
+  image de fond), distinct de `PersonAvatar`, et ses initiales ne sont pas
+  mises en majuscules (`initialesDe` le fait) ; l'unifier change le rendu :
+  avec la refonte visuelle (S1 garde le rendu au pixel).
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `plural` de `@hub/domain`.
   Changement de texte visible : lot à part, après la structuration.

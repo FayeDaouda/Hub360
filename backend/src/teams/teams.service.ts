@@ -4,15 +4,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import {
-  chargeDuMois,
-  codeCellule,
-  estEnCours,
-  partATemps,
-  prefixeSociete,
-  tachesEnCours,
-  type TacheEquipe,
-} from './equipes-regles';
+  monthlyLoad,
+  cellCode,
+  isInProgress,
+  onTimeShare,
+  companyPrefix,
+  tasksInProgress,
+  type TeamTask,
+} from './teams-rules';
 import { photoMembre } from '../auth/profil';
+import type { TeamsViewDto } from './teams-view.dto';
 import { todayIso, toIsoDay } from '@hub/domain';
 
 const jour = (d: Date | null) => (d ? toIsoDay(d) : null);
@@ -22,14 +23,14 @@ const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
 // indicateurs, cellules (pilote, postes, membres et leur charge), listes
 // ouvertes par les indicateurs, prochains codes de la nomenclature.
 @Injectable()
-export class EquipesService {
+export class TeamsService {
   constructor(
     private prisma: PrismaService,
     private reglages: ReglagesService,
     private projetsOuverts: ProjetsOuvertsService,
   ) {}
 
-  async vue(societeId: string) {
+  async view(societeId: string): Promise<TeamsViewDto> {
     const aujourdhui = todayIso();
     const [
       societe,
@@ -121,7 +122,7 @@ export class EquipesService {
     const etatDe = new Map(etats.flatMap((p) => [...p.etatsTaches]));
     const ferieSet = feries.get(societeId) ?? new Set<string>();
 
-    const versTache = (t: (typeof taches)[number]): TacheEquipe => ({
+    const versTache = (t: (typeof taches)[number]): TeamTask => ({
       debut: t.debutLe,
       echeance: t.finLe,
       heures: t.heures?.toNumber() ?? null,
@@ -154,7 +155,7 @@ export class EquipesService {
               sansCompte: !c.dispatcher.utilisateur?.actif && !c.dispatcher.dossierPersonnel?.utilisateur?.actif,
             }
           : null,
-        pctATemps: partATemps(c.membres.flatMap((m) => tachesDe(m.id))),
+        pctATemps: onTimeShare(c.membres.flatMap((m) => tachesDe(m.id))),
         postes: c.postes.map((p) => ({
           id: p.id,
           libelle: p.libelle,
@@ -165,7 +166,7 @@ export class EquipesService {
           .sort((a, b) => rang(a.id) - rang(b.id))
           .map((m) => {
             const t = tachesDe(m.id);
-            const charge = chargeDuMois(
+            const charge = monthlyLoad(
               t,
               (m.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
               aujourdhui,
@@ -188,7 +189,7 @@ export class EquipesService {
               estPilote: c.dispatcherId === m.id,
               taches: charge.taches,
               heures: charge.heures,
-              pctATemps: partATemps(t),
+              pctATemps: onTimeShare(t),
             };
           }),
       };
@@ -196,9 +197,9 @@ export class EquipesService {
 
     const enCours = taches.flatMap((t) => {
       const etat = etatDe.get(t.id);
-      return etat && estEnCours(etat.code) ? [{ ...t, etat }] : [];
+      return etat && isInProgress(etat.code) ? [{ ...t, etat }] : [];
     });
-    const prefixe = prefixeSociete(societe.nom);
+    const prefixe = companyPrefix(societe.nom);
     const dernier = new Map(compteurs.map((c) => [c.processus, c.dernier]));
 
     return {
@@ -209,7 +210,7 @@ export class EquipesService {
         // Revue CTO (22/10/2026) : des tâches, plus des « étapes » ; les étapes
         // en retard sont celles du reporting de la direction.
         taches: {
-          ...tachesEnCours(enCours.map((t) => t.etat.code)),
+          ...tasksInProgress(enCours.map((t) => t.etat.code)),
           etapesEnRetard: etats.reduce((n, p) => n + p.etapes.filter((e) => e.etat === 'en_retard').length, 0),
         },
         absencesEnAttente,
@@ -245,7 +246,7 @@ export class EquipesService {
         .sort((a, b) => (a.echeance ?? '9999').localeCompare(b.echeance ?? '9999')),
       collaborateurs: collaborateurs.map((c) => ({ id: c.id, nom: nomDe(c), cellule: c.cellule?.code ?? null })),
       prochainsCodes: Object.fromEntries(
-        Object.values(ProcessusCellule).map((p) => [p, codeCellule(prefixe, p, (dernier.get(p) ?? 0) + 1)]),
+        Object.values(ProcessusCellule).map((p) => [p, cellCode(prefixe, p, (dernier.get(p) ?? 0) + 1)]),
       ) as Record<ProcessusCellule, string>,
     };
   }

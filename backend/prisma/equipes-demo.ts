@@ -5,7 +5,7 @@ import {
   type ProcessusCellule,
   type StatutCellule,
 } from '@prisma/client';
-import { codeCellule, prefixeSociete } from '../src/equipe/equipes-regles';
+import { cellCode, companyPrefix } from '../src/teams/teams-rules';
 import { verifierEnvironnementDemo } from './garde-demo';
 
 // Cellules FICTIVES de démonstration (maquette « Équipes », oct. 2026) :
@@ -135,7 +135,7 @@ export const CELLULES_DEMO: CelluleDemo[] = [
 
 export async function organiserEquipesDemo(prisma: PrismaClient, societeId: string): Promise<Record<string, string>> {
   const societe = await prisma.societe.findUniqueOrThrow({ where: { id: societeId }, select: { nom: true } });
-  const prefixe = prefixeSociete(societe.nom);
+  const prefixe = companyPrefix(societe.nom);
   const collaborateurs = await prisma.collaborateur.findMany({
     where: { societeId },
     select: { id: true, prenom: true, nom: true },
@@ -148,7 +148,7 @@ export async function organiserEquipesDemo(prisma: PrismaClient, societeId: stri
 
   const ids: Record<string, string> = {};
   for (const d of CELLULES_DEMO) {
-    const code = codeCellule(prefixe, d.processus, d.numero);
+    const code = cellCode(prefixe, d.processus, d.numero);
     const champs = { nom: d.nom, clientele: d.clientele, statut: d.statut };
     const cellule = await prisma.cellule.upsert({
       where: { societeId_code: { societeId, code } },

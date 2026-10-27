@@ -1659,9 +1659,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["CellulesController_findAll"];
+        get: operations["CellsController_findAll"];
         put?: never;
-        post: operations["CellulesController_creer"];
+        post: operations["CellsController_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1678,10 +1678,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["CellulesController_supprimer"];
+        delete: operations["CellsController_remove"];
         options?: never;
         head?: never;
-        patch: operations["CellulesController_renommer"];
+        patch: operations["CellsController_rename"];
         trace?: never;
     };
     "/api/societes/{slug}/cellules/{id}/dispatcher": {
@@ -1697,7 +1697,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["CellulesController_definirDispatcher"];
+        patch: operations["CellsController_setDispatcher"];
         trace?: never;
     };
     "/api/societes/{slug}/equipes": {
@@ -1707,7 +1707,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["EquipesController_vue"];
+        get: operations["TeamsController_view"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1723,7 +1723,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["CollaborateursController_findAll"];
+        get: operations["EmployeesController_findAll"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1745,7 +1745,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch: operations["CollaborateursController_maj"];
+        patch: operations["EmployeesController_update"];
         trace?: never;
     };
     "/api/societes/{slug}/canaux": {
@@ -3971,7 +3971,7 @@ export interface components {
             dossierCrmId: string;
             lignes: components["schemas"]["LigneFactureDirecteDto"][];
         };
-        CreerCelluleDto: {
+        CreateCellDto: {
             /** @enum {string} */
             processus: "ARC" | "DIR" | "ETU" | "INT";
             nom: string;
@@ -3981,13 +3981,128 @@ export interface components {
             statut?: "a_constituer" | "active" | "reportee";
             piloteId?: string | null;
         };
-        MajCelluleDto: {
+        RenameCellDto: {
             nom: string;
         };
-        DefinirDispatcherDto: {
+        SetDispatcherDto: {
             dispatcherId: string | null;
         };
-        MajCollaborateurDto: {
+        CellCountDto: {
+            actives: number;
+            total: number;
+        };
+        SignedProjectsCountDto: {
+            total: number;
+            nonAffectes: number;
+        };
+        TasksIndicatorDto: {
+            enCours: number;
+            enRetard: number;
+            pctATemps: number | null;
+            etapesEnRetard: number;
+        };
+        TeamsIndicatorsDto: {
+            cellules: components["schemas"]["CellCountDto"];
+            salariesAAffecter: number;
+            projetsSignes: components["schemas"]["SignedProjectsCountDto"];
+            taches: components["schemas"]["TasksIndicatorDto"];
+            absencesEnAttente: number;
+        };
+        CellPilotDto: {
+            id: string;
+            nom: string;
+            sansCompte: boolean;
+        };
+        PositionHolderDto: {
+            id: string;
+            nom: string;
+        };
+        CellPositionDto: {
+            id: string;
+            libelle: string;
+            /** @enum {string} */
+            etat: "a_recruter" | "externe" | "occupe" | "ouvert" | "reporte";
+            titulaire: components["schemas"]["PositionHolderDto"] | null;
+        };
+        CellMemberDto: {
+            id: string;
+            nom: string;
+            role: string;
+            /** @enum {string} */
+            niveau: "confirme" | "junior" | "lead" | "senior" | "stagiaire";
+            photoUrl: string | null;
+            absentJusquau: string | null;
+            poste: string | null;
+            estPilote: boolean;
+            taches: number;
+            heures: number;
+            pctATemps: number | null;
+        };
+        TeamCellDto: {
+            id: string;
+            code: string;
+            /** @enum {string} */
+            processus: "ARC" | "DIR" | "ETU" | "INT";
+            nom: string;
+            /** @enum {string} */
+            clientele: "externes" | "holding" | "sans_objet" | "tous";
+            /** @enum {string} */
+            statut: "a_constituer" | "active" | "reportee";
+            pilote: components["schemas"]["CellPilotDto"] | null;
+            pctATemps: number | null;
+            postes: components["schemas"]["CellPositionDto"][];
+            membres: components["schemas"]["CellMemberDto"][];
+        };
+        UnassignedEmployeeDto: {
+            id: string;
+            nom: string;
+            role: string;
+            /** @enum {string} */
+            niveau: "confirme" | "junior" | "lead" | "senior" | "stagiaire";
+            dateArrivee: string | null;
+        };
+        ProjectCellDto: {
+            code: string;
+            nom: string;
+        };
+        SignedProjectDto: {
+            id: string;
+            code: string;
+            programme: string;
+            client: string;
+            cellules: components["schemas"]["ProjectCellDto"][];
+        };
+        OngoingTaskDto: {
+            id: string;
+            projet: string;
+            etape: string;
+            libelle: string;
+            assigne: string | null;
+            echeance: string | null;
+            enRetard: boolean;
+            prolongeeJusquau: string | null;
+        };
+        EmployeeOptionDto: {
+            id: string;
+            nom: string;
+            cellule: string | null;
+        };
+        NextCodesDto: {
+            DIR: string;
+            ARC: string;
+            INT: string;
+            ETU: string;
+        };
+        TeamsViewDto: {
+            indicateurs: components["schemas"]["TeamsIndicatorsDto"];
+            cellules: components["schemas"]["TeamCellDto"][];
+            salariesAAffecter: components["schemas"]["UnassignedEmployeeDto"][];
+            projets: components["schemas"]["SignedProjectDto"][];
+            tachesEnCours: components["schemas"]["OngoingTaskDto"][];
+            collaborateurs: components["schemas"]["EmployeeOptionDto"][];
+            prochainsCodes: components["schemas"]["NextCodesDto"];
+        };
+        UpdateEmployeeDto: {
             prenom?: string;
             nom?: string;
             role?: string;
@@ -6785,7 +6900,7 @@ export interface operations {
             };
         };
     };
-    CellulesController_findAll: {
+    CellsController_findAll: {
         parameters: {
             query?: never;
             header?: never;
@@ -6804,7 +6919,7 @@ export interface operations {
             };
         };
     };
-    CellulesController_creer: {
+    CellsController_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -6815,7 +6930,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreerCelluleDto"];
+                "application/json": components["schemas"]["CreateCellDto"];
             };
         };
         responses: {
@@ -6827,7 +6942,7 @@ export interface operations {
             };
         };
     };
-    CellulesController_supprimer: {
+    CellsController_remove: {
         parameters: {
             query?: never;
             header?: never;
@@ -6847,7 +6962,7 @@ export interface operations {
             };
         };
     };
-    CellulesController_renommer: {
+    CellsController_rename: {
         parameters: {
             query?: never;
             header?: never;
@@ -6859,7 +6974,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MajCelluleDto"];
+                "application/json": components["schemas"]["RenameCellDto"];
             };
         };
         responses: {
@@ -6871,7 +6986,7 @@ export interface operations {
             };
         };
     };
-    CellulesController_definirDispatcher: {
+    CellsController_setDispatcher: {
         parameters: {
             query?: never;
             header?: never;
@@ -6883,7 +6998,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DefinirDispatcherDto"];
+                "application/json": components["schemas"]["SetDispatcherDto"];
             };
         };
         responses: {
@@ -6895,7 +7010,7 @@ export interface operations {
             };
         };
     };
-    EquipesController_vue: {
+    TeamsController_view: {
         parameters: {
             query?: never;
             header?: never;
@@ -6910,11 +7025,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TeamsViewDto"];
+                };
             };
         };
     };
-    CollaborateursController_findAll: {
+    EmployeesController_findAll: {
         parameters: {
             query?: {
                 q?: string;
@@ -6936,7 +7053,7 @@ export interface operations {
             };
         };
     };
-    CollaborateursController_maj: {
+    EmployeesController_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -6948,7 +7065,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MajCollaborateurDto"];
+                "application/json": components["schemas"]["UpdateEmployeeDto"];
             };
         };
         responses: {

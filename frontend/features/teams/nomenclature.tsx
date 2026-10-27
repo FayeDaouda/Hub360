@@ -1,7 +1,7 @@
-import { PROCESSUS, PROCESSUS_NOMENCLATURE } from '@/lib/equipes';
+import { NOMENCLATURE_ORDER, PROCESSES } from './constants';
 
 // Nomenclature des cellules · ISO 9001 (maquette « Équipes »).
-export function Nomenclature({ prefixe }: { prefixe: string }) {
+export function Nomenclature({ prefix }: { prefix: string }) {
   return (
     <section className="panel glass-panel eq-nomenclature" aria-labelledby="eq-nomenclature-titre">
       <h2 id="eq-nomenclature-titre">Nomenclature des cellules · ISO 9001</h2>
@@ -10,14 +10,14 @@ export function Nomenclature({ prefixe }: { prefixe: string }) {
         nom d’usage et la clientèle peuvent évoluer.
       </p>
       <dl>
-        {PROCESSUS_NOMENCLATURE.map((p) => (
+        {NOMENCLATURE_ORDER.map((p) => (
           <div key={p}>
             <dt className="eq-code">
-              {prefixe}-{p}-nn
+              {prefix}-{p}-nn
             </dt>
             <dd>
-              <strong>{PROCESSUS[p].libelle}</strong>
-              <small>ISO 9001 {PROCESSUS[p].iso}</small>
+              <strong>{PROCESSES[p].libelle}</strong>
+              <small>ISO 9001 {PROCESSES[p].iso}</small>
             </dd>
           </div>
         ))}

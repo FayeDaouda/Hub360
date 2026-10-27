@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { getProjets } from '@/lib/crm';
-import { getVueEquipes } from '@/lib/equipe';
+import { getTeamsView } from '@/features/teams/api';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { daysBetween, daysSince, formatAmount, formatDayMonth, toIsoDay } from '@hub/domain';
 import { useSessionCourante } from '@/lib/layout-contexte';
@@ -108,7 +108,7 @@ export function ADecider({
         .then((l) => setDossiers(l.filter((d) => !d.archive)))
         .catch(() => setDossiers([]));
       // Salariés sans cellule : le Dir. GC, qui organise les cellules, les affecte.
-      getVueEquipes(slug)
+      getTeamsView(slug)
         .then((v) => setArrivants(v.salariesAAffecter))
         .catch(() => setArrivants([]));
     }

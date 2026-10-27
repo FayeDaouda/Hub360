@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAmount, formatCompactAmount, formatNumber } from './format';
+import { formatAmount, formatCompactAmount, formatHours, formatNumber } from './format';
 import { capitalize, escapeHtml, plural, stripAccents } from './text';
 
 // Mêmes rendus que les anciennes copies (« fcfa », « formatMontant », « echapper »).
@@ -15,6 +15,14 @@ describe('montants', () => {
       `${new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 2 }).format(1_770_000)} FCFA`,
     );
     expect(formatNumber(20_154_400)).toBe((20_154_400).toLocaleString('fr-FR'));
+  });
+});
+
+describe('heures', () => {
+  // Les anciennes copies (Équipes, feuille de temps des Finances).
+  const ancienHeures = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} h`;
+  it.each([0, 7, 12.5, 151.66, 1234.56])('%s comme les anciennes copies', (n) => {
+    expect(formatHours(n)).toBe(ancienHeures(n));
   });
 });
 

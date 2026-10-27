@@ -6,6 +6,7 @@ const CURRENCY = 'FCFA';
 
 const number = new Intl.NumberFormat('fr-FR');
 const compact = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 2 });
+const hours = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 
 /** « 1 770 000 FCFA » (arrondi au franc). */
 export function formatAmount(value: number): string {
@@ -20,4 +21,9 @@ export function formatCompactAmount(value: number): string {
 /** « 1 770 000 ». */
 export function formatNumber(value: number): string {
   return number.format(value);
+}
+
+/** « 12,5 h » : des heures, une décimale au plus. */
+export function formatHours(value: number): string {
+  return `${hours.format(value)} h`;
 }
