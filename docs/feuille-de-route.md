@@ -40,7 +40,8 @@ Décisions structurantes : `docs/adr/`.
 - **Noms des modèles de données** : ils restent en français pendant la
   structuration des modules ; renommés en anglais à la fin, en une seule PR,
   avec `@map`/`@@map` et sans migration (décision du 28/10/2026).
-- **Routes de l'API inchangées** pendant la structuration (contrat public).
+- **Routes et champs de l'API inchangés** pendant la structuration (contrat
+  public) ; vérifié par `npm run validate` (forme des réponses, ci-dessous).
   Avant de sortir les applications macOS, Windows et iOS, introduire un
   préfixe de version (`/api/v1`) : une fois des applications installées, on
   ne peut plus changer une route sans casser les anciennes versions.
@@ -115,6 +116,22 @@ Décisions structurantes : `docs/adr/`.
 - **Plus tard, sur décision** : service de suivi des erreurs spécialisé
   (Sentry ou GlitchTip : dépendance et sous-traitant de données).
 
+## Prêt pour le lancement (état des lieux du 28/10/2026)
+
+Déjà en place : réinitialisation du mot de passe par e-mail (lien d'une
+heure, sessions coupées), double authentification obligatoire hors Salarié
+(dont CEO, CFO, RH), création des comptes par invitation (lien de 72 h).
+Lots proposés, en attente des décisions du user :
+
+- **A** : e-mail d'avis quand le mot de passe ou la double authentification
+  change ; essai des e-mails réels en pré-production.
+- **B** : expiration des sessions par inactivité et durée maximale par rôle
+  (durées à décider) ; cookie `httpOnly` après le lancement.
+- **C** : verrouillage par compte après plusieurs échecs, avis et journal
+  (seuils à décider, migration).
+- **D** : import des clients, projets, salariés et factures en cours (sources,
+  périmètre, numérotation et responsables à décider), à blanc puis réel.
+
 ## En attente d'une décision extérieure
 
 - **Périmètre RH** (direction) : commun aux quatre sociétés ou propre à
@@ -165,6 +182,12 @@ Décisions structurantes : `docs/adr/`.
   travail : `npm run visual:quick -- <filtre>` (jamais pour une fusion).
   Mesuré : série 4,8 à 5 min (contre 6 à 10), environnement en cache 40 s
   (contre ~7 min) ; 8 environnements saturent la machine.
+- **Forme des réponses de l'API** : pendant les captures, chaque réponse JSON
+  réussie laisse ses clés et leurs types, par route ; `validate` compare le
+  relevé de la branche à celui de `main` et échoue si une clé disparaît ou
+  change de type (`scripts/api-shapes.mjs`). Couverture : les routes appelées
+  par les écrans capturés (les écritures et les écrans non capturés n'y sont
+  pas).
 - **Rien de lourd en même temps qu'une validation** (envoi avec son crochet
   `pre-push`, compilation) : le 27/10/2026, un test de fumée a échoué ainsi.
   Un test qui crée quelque chose attend la réponse avant de quitter la page,
