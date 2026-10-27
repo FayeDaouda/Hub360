@@ -28,16 +28,21 @@ export async function getSociete(slug: string): Promise<Societe | null> {
 // « identifiants incorrects » — y compris le blocage anti-bruteforce du
 // backend (429, 5 essais/min) ou un serveur injoignable, ce qui poussait à
 // retaper un mot de passe pourtant juste. Les 401 restent volontairement
-// indistincts (anti-énumération, cf. AuthService.login).
-export type MotifEchecConnexion = 'identifiants' | 'trop_de_tentatives' | 'reseau' | 'serveur';
+// indistincts (anti-énumération, cf. AuthService.login). Compte verrouillé
+// après trop d'essais (423, lot C) : le serveur donne l'heure de fin.
+export type MotifEchecConnexion = 'identifiants' | 'trop_de_tentatives' | 'verrouille' | 'reseau' | 'serveur';
 
 export class EchecConnexion extends Error {
   readonly motif: MotifEchecConnexion;
+  // Texte du serveur, quand il en dit plus que le motif (heure de fin du
+  // verrouillage).
+  readonly detail?: string;
 
-  constructor(motif: MotifEchecConnexion) {
+  constructor(motif: MotifEchecConnexion, detail?: string) {
     super(`Échec de connexion (${motif})`);
     this.name = 'EchecConnexion';
     this.motif = motif;
+    this.detail = detail;
   }
 }
 
@@ -60,6 +65,10 @@ export async function login(email: string, motDePasse: string, societeSlug: stri
   }
   if (res.ok) return res.json();
   if (res.status === 429) throw new EchecConnexion('trop_de_tentatives');
+  if (res.status === 423) {
+    const corps = await res.json().catch(() => null);
+    throw new EchecConnexion('verrouille', typeof corps?.message === 'string' ? corps.message : undefined);
+  }
   if (res.status >= 500) throw new EchecConnexion('serveur');
   throw new EchecConnexion('identifiants');
 }
