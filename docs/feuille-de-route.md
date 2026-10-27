@@ -6,17 +6,17 @@ Décisions structurantes : `docs/adr/`.
 
 ## Phases
 
-| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                      |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                              |
-| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                              |
-| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                              |
-| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                              |
-| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits       |
-| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | en cours : images Docker, restauration CI |
-| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                   |
-| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés   |
-| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                        |
+| Phase                 | Contenu                                                                                                                                                                                                                                 | État                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| 0 — Filet de sécurité | environnement de référence, 232 captures, tests de fumée                                                                                                                                                                                | fait (PR #1)                            |
+| 1 — Audit             | rapport chiffré, plan                                                                                                                                                                                                                   | fait (PR #1)                            |
+| 2 — Sécurité          | dépendances (0 vulnérabilité), isolation entre sociétés (ADR 0001), fichiers par usage, configuration validée, en-têtes et CSP à nonce, ordre du journal d'audit (ADR 0002)                                                             | fait (PR #2)                            |
+| Formatage             | Prettier sur tout le dépôt, en un commit ignoré par `git blame`                                                                                                                                                                         | fait (PR #3)                            |
+| S0 — Fondations       | S0a fonctions utilitaires, S0b composants d'interface, S0c client d'API généré (OpenAPI) : trois PR séparées                                                                                                                            | S0a (#7), S0b (#12, #14), S0c faits     |
+| Exploitation          | préproduction, sauvegardes automatiques avec restauration testée, suivi des erreurs en production                                                                                                                                       | faite (PR #21, #22), serveurs à créer   |
+| Structuration         | module par module, du plus petit au plus gros : S1 Équipes, S2 Mes tâches et Mon espace, S3 Projets, S4 Finances, devis et contrats, S5 CRM, S6 RH, S7 Pilotage, Réglages, Groupe et chat ; peut se poursuivre l'application en service | à venir                                 |
+| Refonte visuelle      | indigo, Geist, tuile neutre, verre réservé au chrome : on change les valeurs des tokens, puis on valide les nouvelles captures comme nouvelle référence                                                                                 | après la structuration, en lots séparés |
+| Documentation         | `README.md`, `ARCHITECTURE.md`, `docs/glossaire.md`, `CLAUDE.md`                                                                                                                                                                        | glossaire commencé                      |
 
 ## Règles de la structuration
 
@@ -82,6 +82,22 @@ Décisions structurantes : `docs/adr/`.
 - **Lot de microcopie** : remplacer les « (s) » par de vrais accords selon le
   nombre (« 1 facture émise », « 3 factures émises »), avec `plural` de `@hub/domain`.
   Changement de texte visible : lot à part, après la structuration.
+
+## Exploitation : ce qui est en place, ce qui reste
+
+- **En place** : Node 24 LTS partout (#19) ; images Docker construites et
+  pile de production démarrée en CI, avec contrôle après déploiement
+  (`deploy/verifier-deploiement.sh`) ; restauration des sauvegardes testée en
+  CI (#21) et chaque semaine sur les vraies données, surveillée chaque matin ;
+  suivi des erreurs sans service extérieur, alertes par e-mail (ADR 0006) ;
+  état de santé `/api/sante`.
+- **À faire par le user** (accès qu'il détient) : créer les serveurs de
+  pré-production et de production, les domaines, les `.env` (dont
+  `ALERTES_EMAIL` et l'envoi d'e-mails) et le stockage objet des
+  sauvegardes (`deploy/README.md`).
+- **Plus tard, sur décision** : service de suivi des erreurs spécialisé
+  (Sentry ou GlitchTip : dépendance et sous-traitant de données) ; sonde de
+  disponibilité externe sur `/api/sante`.
 
 ## En attente d'une décision extérieure
 
