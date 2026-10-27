@@ -2,8 +2,19 @@
 #   docker compose --env-file .env up -d --build
 # Une seule configuration pour les deux : seuls .env (domaine, secrets) et le
 # nom du projet compose changent.
+
+# Journaux des conteneurs bornés (5 fichiers de 10 Mo par service) : le suivi
+# des erreurs y écrit, le disque du serveur ne doit pas se remplir.
+x-journaux: &journaux
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: '5'
+
 services:
   postgres:
+    <<: *journaux
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -18,6 +29,7 @@ services:
       retries: 10
 
   backend:
+    <<: *journaux
     build:
       context: ..
       dockerfile: deploy/backend.Dockerfile
@@ -45,18 +57,41 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       HUB_DONNEES_DEMO: ${HUB_DONNEES_DEMO:-}
+      # Suivi des erreurs (backend/src/monitoring) : destinataire des alertes,
+      # et dossier des sauvegardes surveillé chaque matin.
+      ALERTES_EMAIL: ${ALERTES_EMAIL:-}
+      SAUVEGARDES_DOSSIER: /sauvegardes
+    volumes:
+      - ./sauvegardes:/sauvegardes:ro
+    # Prêt quand l'API répond et que la base répond (/api/sante) ; les
+    # migrations passent avant, d'où le délai de démarrage.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3001/api/sante').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
 
   frontend:
+    <<: *journaux
     build:
       context: ..
       dockerfile: deploy/frontend.Dockerfile
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       API_INTERNE_URL: http://backend:3001/api
 
   caddy:
+    <<: *journaux
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
@@ -76,6 +111,7 @@ services:
   # « autorise » dans .env (cf. prisma/garde-demo.ts).
   #   docker compose --profile demo run --rm demo
   demo:
+    <<: *journaux
     profiles: ['demo']
     build:
       context: ..
@@ -95,6 +131,7 @@ services:
   #   docker compose --profile demarrage run --rm \
   #     -e HUB_CIO_EMAIL=… -e HUB_CIO_PRENOM=… -e HUB_CIO_NOM=… demarrage
   demarrage:
+    <<: *journaux
     profiles: ['demarrage']
     build:
       context: ..
@@ -111,6 +148,7 @@ services:
   # Sauvegarde quotidienne de la base (02:30) : copie locale (14 gardées) et,
   # si le stockage objet est configuré, envoi dans S3_BUCKET_SAUVEGARDES.
   sauvegarde:
+    <<: *journaux
     build:
       context: .
       dockerfile: sauvegarde.Dockerfile
