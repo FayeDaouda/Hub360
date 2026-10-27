@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type APIResponse, type Page, type Request, type Route } from '@playwright/test';
+import { recordApiShape } from './api-shapes';
 
 export const COMPANY_SLUG = 'grey-concrete';
 export const DEMO_PASSWORD = 'changeme123';
@@ -234,6 +235,7 @@ export async function installSeedNoiseFilter(page: Page, envIndex = 0): Promise<
       if (!page.isClosed()) recordRetry(page, route.request(), error, true);
       return route.abort().catch(() => undefined);
     }
+    recordApiShape(route.request().method(), route.request().url(), served.response.status(), served.body);
     await route.fulfill(served).catch(() => undefined);
   }
 
