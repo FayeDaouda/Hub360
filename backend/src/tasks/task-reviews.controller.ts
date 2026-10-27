@@ -2,7 +2,8 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, UseGuards } fro
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
-import { SubmissionFileDto, TaskToReviewDto } from './task-review.dto';
+import { SubmissionFileDto } from '../projects/open-projects-view.dto';
+import { TaskToReviewDto } from './task-review.dto';
 import { DecideTaskDto } from '../projects/open-projects.dto';
 import { TasksService } from './tasks.service';
 

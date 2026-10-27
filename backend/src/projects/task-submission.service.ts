@@ -17,6 +17,7 @@ import { assertInCircuit, canQualify, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
 import { reminderPossibleOn } from './task-reminder';
+import type { SubmissionResultDto } from './open-projects-view.dto';
 
 // Remise d'une tâche par la personne assignée, relance de son validateur et
 // accès aux fichiers déposés (maquette « Projets », vue Salarié ; Mes tâches).
@@ -32,7 +33,13 @@ export class TaskSubmissionService {
   // ou en reprise. Sans temps atelier, le dépôt vaut validation (exception
   // écrite au principe 4) ; sinon la remise vNN attend le chef de team (ou le
   // DPLG pour la tâche du chef).
-  async submit(companyId: string, actor: Actor, projectId: string, taskId: string, body: SubmitTaskDto = {}) {
+  async submit(
+    companyId: string,
+    actor: Actor,
+    projectId: string,
+    taskId: string,
+    body: SubmitTaskDto = {},
+  ): Promise<SubmissionResultDto> {
     assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },

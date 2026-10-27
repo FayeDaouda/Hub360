@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiExtraModels } from '@nestjs/swagger';
 import { NiveauPermission } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
@@ -15,9 +16,33 @@ import {
   SubmitTaskDto,
   TaskVisaDto,
 } from './open-projects.dto';
+import { OpenProjectFileDto } from './open-project-file.dto';
+import {
+  AssignableEmployeeDto,
+  AssignmentResultDto,
+  CommentRefDto,
+  ExtensionDecisionResultDto,
+  ExtensionRequestResultDto,
+  MentionablePersonDto,
+  MyMentionDto,
+  OpenProjectsBoardDto,
+  ResolutionDto,
+  ReviewDecisionResultDto,
+  SiteStatusResultDto,
+  SiteVisitDateResultDto,
+  SubmissionFileDto,
+  SubmissionResultDto,
+  TaskEventDto,
+  TaskWorkloadDto,
+  ThreadRootDto,
+  ToDecideDto,
+  VisaResultDto,
+} from './open-projects-view.dto';
+import { ProductionViewDto } from './production-view.dto';
 import { ProductionService } from './production.service';
 import { ProjectFileService } from './project-file.service';
 import { ProjectSiteService } from './project-site.service';
+import { PROJECT_STATE_MODELS } from './project-state.dto';
 import { ProjectThreadsService } from './project-threads.service';
 import { ProjectsBoardService } from './projects-board.service';
 import { TaskAssignmentService } from './task-assignment.service';
@@ -28,6 +53,7 @@ import { TaskSubmissionService } from './task-submission.service';
 type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
 
 // Projets ouverts selon le gabarit (maquette « Projets » du boss).
+@ApiExtraModels(...PROJECT_STATE_MODELS)
 @Controller('societes/:slug/projets-ouverts')
 @UseGuards(JwtAuthGuard, BackOfficeGuard, PermissionGuard)
 export class OpenProjectsController {
@@ -45,20 +71,20 @@ export class OpenProjectsController {
 
   @Get()
   @RequiertPermission('projets', 'lecture')
-  board(@Req() req: R) {
+  board(@Req() req: R): Promise<OpenProjectsBoardDto> {
     return this.boards.board(req.user.societeId, req.user);
   }
 
   // Segment fixe, déclaré avant ':id'.
   @Get('assignables')
   @RequiertPermission('projets', 'ecriture')
-  assignable(@Req() req: R) {
+  assignable(@Req() req: R): Promise<AssignableEmployeeDto[]> {
     return this.assignment.assignable(req.user.societeId);
   }
 
   @Get('mentionnables')
   @RequiertPermission('projets', 'lecture')
-  mentionable(@Req() req: R) {
+  mentionable(@Req() req: R): Promise<MentionablePersonDto[]> {
     return this.threads.mentionable(req.user.societeId);
   }
 
@@ -66,58 +92,70 @@ export class OpenProjectsController {
   // vérifié par le service.
   @Get('production')
   @RequiertPermission('projets', 'lecture')
-  production(@Req() req: R) {
+  production(@Req() req: R): Promise<ProductionViewDto> {
     return this.productionService.production(req.user.societeId, req.user);
   }
 
   // « À décider » : remises et prolongations que je peux trancher, tous projets.
   @Get('a-decider')
   @RequiertPermission('projets', 'lecture')
-  toDecide(@Req() req: R) {
+  toDecide(@Req() req: R): Promise<ToDecideDto> {
     return this.boards.toDecide(req.user.societeId, req.user);
   }
 
   // « Mes tâches » : mes @mentions, et les marquer traitées.
   @Get('mes-mentions')
   @RequiertPermission('projets', 'lecture')
-  myMentions(@Req() req: R) {
+  myMentions(@Req() req: R): Promise<MyMentionDto[]> {
     return this.threads.myMentions(req.user.societeId, req.user.userId);
   }
 
   @Post('mes-mentions/:commentaireId/lue')
   @RequiertPermission('projets', 'lecture')
-  markMentionRead(@Req() req: R, @Param('commentaireId') commentId: string) {
+  markMentionRead(@Req() req: R, @Param('commentaireId') commentId: string): Promise<CommentRefDto> {
     return this.threads.markMentionRead(req.user.societeId, req.user.userId, commentId);
   }
 
   @Get(':id')
   @RequiertPermission('projets', 'lecture')
-  file(@Req() req: R, @Param('id') projectId: string) {
+  file(@Req() req: R, @Param('id') projectId: string): Promise<OpenProjectFileDto> {
     return this.projectFile.file(req.user.societeId, projectId, req.user);
   }
 
   @Patch(':id/chantier')
   @RequiertPermission('projets', 'ecriture')
-  setSiteStatus(@Req() req: R, @Param('id') projectId: string, @Body() dto: SiteStatusDto) {
+  setSiteStatus(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Body() dto: SiteStatusDto,
+  ): Promise<SiteStatusResultDto> {
     return this.site.setSiteStatus(req.user.societeId, projectId, dto.statut);
   }
 
   @Patch(':id/visite')
   @RequiertPermission('projets', 'ecriture')
-  setSiteVisitDate(@Req() req: R, @Param('id') projectId: string, @Body() dto: SiteVisitDateDto) {
+  setSiteVisitDate(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Body() dto: SiteVisitDateDto,
+  ): Promise<SiteVisitDateResultDto> {
     return this.site.setSiteVisitDate(req.user.societeId, projectId, dto.date);
   }
 
   // Avant d'assigner : charge de chacun sur la fenêtre de la tâche.
   @Get(':id/taches/:tacheId/charges')
   @RequiertPermission('projets', 'ecriture')
-  workload(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string) {
+  workload(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string): Promise<TaskWorkloadDto> {
     return this.productionService.workload(req.user.societeId, projectId, taskId);
   }
 
   @Get(':id/taches/:tacheId/historique')
   @RequiertPermission('projets', 'lecture')
-  async history(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string) {
+  async history(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+  ): Promise<TaskEventDto[]> {
     await this.threads.checkRead(req.user.societeId, req.user, projectId);
     return this.assignment.history(req.user.societeId, projectId, taskId);
   }
@@ -125,7 +163,12 @@ export class OpenProjectsController {
   // « Lecture et assignation » : l'écriture sur Projets suffit.
   @Patch(':id/taches/:tacheId/assignation')
   @RequiertPermission('projets', 'ecriture')
-  assign(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string, @Body() dto: AssignTaskDto) {
+  assign(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+    @Body() dto: AssignTaskDto,
+  ): Promise<AssignmentResultDto> {
     return this.assignment.assign(req.user.societeId, req.user, projectId, taskId, dto.collaborateurId, !!dto.carte);
   }
 
@@ -133,7 +176,12 @@ export class OpenProjectsController {
   // que la lecture sur Projets.
   @Post(':id/taches/:tacheId/remise')
   @RequiertPermission('projets', 'lecture')
-  submit(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string, @Body() dto: SubmitTaskDto) {
+  submit(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+    @Body() dto: SubmitTaskDto,
+  ): Promise<SubmissionResultDto> {
     return this.submission.submit(req.user.societeId, req.user, projectId, taskId, dto);
   }
 
@@ -145,7 +193,7 @@ export class OpenProjectsController {
     @Param('id') projectId: string,
     @Param('tacheId') taskId: string,
     @Param('pieceId') fileId: string,
-  ) {
+  ): Promise<SubmissionFileDto> {
     await this.threads.checkRead(req.user.societeId, req.user, projectId);
     return this.submission.submissionFile(req.user.societeId, projectId, taskId, fileId);
   }
@@ -159,7 +207,7 @@ export class OpenProjectsController {
     @Param('id') projectId: string,
     @Param('tacheId') taskId: string,
     @Body() dto: RequestExtensionDto,
-  ) {
+  ): Promise<ExtensionRequestResultDto> {
     return this.extension.request(req.user.societeId, req.user, projectId, taskId, dto.jusquau, dto.motif);
   }
 
@@ -170,7 +218,7 @@ export class OpenProjectsController {
     @Param('id') projectId: string,
     @Param('tacheId') taskId: string,
     @Body() dto: DecideExtensionDto,
-  ) {
+  ): Promise<ExtensionDecisionResultDto> {
     return this.extension.decide(req.user.societeId, req.user, projectId, taskId, dto.accorder);
   }
 
@@ -179,14 +227,24 @@ export class OpenProjectsController {
   // qu'il s'agit du chef de team du projet ou de l'Architecte DPLG.
   @Post(':id/taches/:tacheId/decision')
   @RequiertPermission('projets', 'lecture')
-  decide(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string, @Body() dto: DecideTaskDto) {
+  decide(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+    @Body() dto: DecideTaskDto,
+  ): Promise<ReviewDecisionResultDto> {
     return this.review.decide(req.user.societeId, req.user, projectId, taskId, dto.decision, dto.motif);
   }
 
   // Visa DPLG d'une tâche validée (droits vérifiés par le service).
   @Post(':id/taches/:tacheId/visa')
   @RequiertPermission('projets', 'lecture')
-  visa(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string, @Body() dto: TaskVisaDto) {
+  visa(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+    @Body() dto: TaskVisaDto,
+  ): Promise<VisaResultDto> {
     return this.review.visa(req.user.societeId, req.user, projectId, taskId, dto.apposer, dto.motif);
   }
 
@@ -198,7 +256,7 @@ export class OpenProjectsController {
     @Param('id') projectId: string,
     @Query('carte') carteId?: string,
     @Query('tache') tacheId?: string,
-  ) {
+  ): Promise<ThreadRootDto[]> {
     await this.threads.checkRead(req.user.societeId, req.user, projectId);
     return this.threads.read(req.user.societeId, projectId, { carteId, tacheId });
   }
@@ -206,14 +264,22 @@ export class OpenProjectsController {
   // Écriture sur Projets, ou Salarié sur un de ses projets (cf. checkWrite).
   @Post(':id/fil')
   @RequiertPermission('projets', 'lecture')
-  async postComment(@Req() req: R, @Param('id') projectId: string, @Body() dto: PostCommentDto) {
+  async postComment(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Body() dto: PostCommentDto,
+  ): Promise<CommentRefDto> {
     await this.threads.checkWrite(req.user.societeId, req.user, projectId);
     return this.threads.post(req.user.societeId, req.user, projectId, dto);
   }
 
   @Post(':id/fil/:commentaireId/resolution')
   @RequiertPermission('projets', 'lecture')
-  async resolveComment(@Req() req: R, @Param('id') projectId: string, @Param('commentaireId') commentId: string) {
+  async resolveComment(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('commentaireId') commentId: string,
+  ): Promise<ResolutionDto> {
     await this.threads.checkWrite(req.user.societeId, req.user, projectId);
     return this.threads.resolve(req.user.societeId, req.user, projectId, commentId);
   }

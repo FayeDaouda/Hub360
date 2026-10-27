@@ -24,7 +24,8 @@ import {
 } from './task-rules';
 import { loadAssignedTasks } from './assigned-tasks';
 import type { MyTasksViewDto, PerformanceStatsDto } from './my-tasks-view.dto';
-import type { SubmissionFileDto, TaskToReviewDto } from './task-review.dto';
+import type { SubmissionFileDto } from '../projects/open-projects-view.dto';
+import type { TaskToReviewDto } from './task-review.dto';
 import { todayIso } from '@hub/domain';
 
 type Actor = { userId: string; societeId: string; role: string };

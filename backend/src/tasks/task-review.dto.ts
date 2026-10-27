@@ -24,9 +24,3 @@ export class TaskToReviewDto {
   // Fichiers de la remise à valider (vide = « sans fichier joint »).
   pieces!: SubmissionFileRefDto[];
 }
-
-// Fichier d'une remise : nom et contenu (data URI), pour le téléchargement.
-export class SubmissionFileDto {
-  nom!: string;
-  url!: string;
-}

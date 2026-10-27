@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { decisionContext } from './decision-context';
 import { assertInCircuit, canDecide, canVisa, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
+import type { ReviewDecisionResultDto, VisaResultDto } from './open-projects-view.dto';
 import { ReviewCircuitService } from './review-circuit.service';
 
 // Décision sur une remise (valider ou renvoyer en reprise) et visa DPLG
@@ -30,7 +31,7 @@ export class TaskReviewService {
     taskId: string,
     decision: 'valider' | 'renvoyer',
     reason?: string,
-  ) {
+  ): Promise<ReviewDecisionResultDto> {
     assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
@@ -121,7 +122,14 @@ export class TaskReviewService {
   // Visa DPLG (revue Dir. GC, 21/10/2026) : sur une tâche validée qui l'exige,
   // l'architecte DPLG appose son visa (daté, tracé) ou le refuse avec un
   // motif — la tâche repart alors en reprise chez la personne assignée.
-  async visa(companyId: string, actor: Actor, projectId: string, taskId: string, affix: boolean, reason?: string) {
+  async visa(
+    companyId: string,
+    actor: Actor,
+    projectId: string,
+    taskId: string,
+    affix: boolean,
+    reason?: string,
+  ): Promise<VisaResultDto> {
     assertInCircuit(actor.role);
     if (!canVisa(actor.role))
       throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');

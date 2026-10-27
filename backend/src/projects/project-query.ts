@@ -70,7 +70,12 @@ const INVOICE_MILESTONES: Record<'F1' | 'F2' | 'F3', JalonFacture> = {
 export const invoicesOf = <T extends { jalon: JalonFacture | null }>(invoices: T[], tranche: 'F1' | 'F2' | 'F3') =>
   invoices.filter((x) => x.jalon === INVOICE_MILESTONES[tranche]);
 // État d'une tranche : émise dès qu'une de ses factures l'est, sinon en brouillon, sinon absente.
-export function trancheStatus(invoices: { jalon: JalonFacture | null; statut: string }[], tranche: 'F1' | 'F2' | 'F3') {
+// Statut d'une tranche de facturation : émise, en brouillon, ou pas encore créée.
+export type TrancheStatus = 'emise' | 'brouillon' | 'absente';
+export function trancheStatus(
+  invoices: { jalon: JalonFacture | null; statut: string }[],
+  tranche: 'F1' | 'F2' | 'F3',
+): TrancheStatus {
   const of = invoicesOf(invoices, tranche);
   return of.some((x) => x.statut === 'emise') ? 'emise' : of.length ? 'brouillon' : 'absente';
 }
