@@ -88,6 +88,15 @@ Décisions structurantes : `docs/adr/`.
   contrat actif jusqu'à la signature puis lecture seule limitée, révocation et
   régénération.
 - **Formats BIM** (équipe) : Revit, ArchiCAD, SketchUp pour les livrables.
+- **Contrat signé imprimable** (décision métier du 27/10/2026, hors S0b) : la
+  version imprimée et le PDF du contrat incluent la signature, le nom du
+  signataire, la date et l'heure de signature (heure de Dakar) et une
+  référence unique du document signé. Aujourd'hui, aucune version imprimable
+  n'existe et la signature tracée ne s'affiche qu'à l'écran, dans le dossier
+  CRM. Les modalités sont proposées à la direction (document « Contrat signé :
+  version imprimée et PDF ») : format de la référence (recommandé :
+  `AB_YOF.26-CT1`, comme les offres), exemplaire du client, page de preuve
+  avec empreinte numérique, date des contrats papier, signature de la société.
 
 ## Captures : règles du harnais
 
