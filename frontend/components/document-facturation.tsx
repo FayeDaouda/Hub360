@@ -1,6 +1,5 @@
 import { CompanyAvatar } from '@/components/ui/avatar';
-import { formatAmount } from '@/lib/format';
-import { plural } from '@/lib/text';
+import { formatAmount, plural } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 
 // Rendu visuel PARTAGÉ d'un document de facturation (Devis ou Facture) —

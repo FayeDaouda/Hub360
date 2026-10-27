@@ -7,7 +7,7 @@ import { ApiError } from '@/lib/client-api';
 import { deciderTache, getTachesAValider, telechargerPieceRemise } from '@/lib/mon-espace';
 import type { TacheAValider } from '@/lib/types';
 import { DemandesEquipe } from './demandes-equipe';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';
 

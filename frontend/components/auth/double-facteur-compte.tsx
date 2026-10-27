@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { apiAuth } from '@/lib/client-api';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 

@@ -1,5 +1,5 @@
 import { FactureStatut } from '@prisma/client';
-import { daysBetween } from '../../shared/dates';
+import { daysBetween } from '@hub/domain';
 
 // -- Section « Facturation client » ----------------------------------------
 

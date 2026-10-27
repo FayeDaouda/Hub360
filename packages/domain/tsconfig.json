@@ -1,0 +1,15 @@
+{
+  // Vérification des types, tests compris. La compilation (CommonJS, lisible
+  // par le back comme par le front) est dans tsconfig.build.json.
+  "compilerOptions": {
+    "target": "ES2021",
+    "lib": ["ES2021"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUnusedLocals": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src", "vitest.config.mts"]
+}

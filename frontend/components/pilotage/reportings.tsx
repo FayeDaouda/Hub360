@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { deposerReporting } from '@/lib/pilotage';
 import { PastillesSuivi, SuiviReporting } from '@/components/pilotage/suivi-reporting';
 import type { ReportingPilotage, StatutReporting, VuePilotage } from '@/lib/types';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 

@@ -7,9 +7,7 @@ import { joursOuvrables } from '../rh/regles-conges';
 import { salaireAu, type ChangementSource } from '../rh/regles-salaire';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { TempsService } from '../rh/temps.service';
-import { formatDayMonth, toIsoDay } from '../shared/dates';
-import { formatAmount, formatNumber } from '../shared/format';
-import { plural } from '../shared/text';
+import { formatAmount, formatDayMonth, formatNumber, plural, toIsoDay } from '@hub/domain';
 
 // `montant` : chiffre brut figé avec le reporting (masse salariale), relu le
 // mois suivant pour la comparaison.

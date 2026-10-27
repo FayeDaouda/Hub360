@@ -1,6 +1,6 @@
 import { JalonFacture } from '@prisma/client';
 import { JALONS_FACTURE, type PartsFactures } from './config';
-import { plural } from '../../shared/text';
+import { plural } from '@hub/domain';
 
 // Plan de facturation d'une offre acceptée (étape H2, CGV Grey Concrete 2026,
 // décisions du 27/09/2026) — pur, sans I/O : ligne d'offre → factures à

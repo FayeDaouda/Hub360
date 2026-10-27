@@ -4,10 +4,9 @@ import { useEffect, useState, use } from 'react';
 import { CheckCircle2, Download } from 'lucide-react';
 import { getContratPublic, getFichierContratPublic, signerContrat } from '@/lib/contrats';
 import { telechargerFichier } from '@/lib/fichiers';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatLongDate } from '@hub/domain';
 import type { ContratPublic } from '@/lib/types';
 import { SignaturePad } from '@/components/signature-pad';
-import { formatLongDate } from '@/lib/dates';
 import { Field, FieldError } from '@/components/ui/field';
 
 type Props = { params: Promise<{ token: string }> };

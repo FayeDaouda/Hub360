@@ -19,9 +19,8 @@ import {
   STATUT_REMBOURSEMENT,
   type Suppleant,
 } from '@/lib/demandes';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate, toIsoDay } from '@hub/domain';
 import type { CategorieSoins, DemandeAbsence, DemandeRemboursement, SoldeConges, TypeAbsence } from '@/lib/types';
-import { formatDate, toIsoDay } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';

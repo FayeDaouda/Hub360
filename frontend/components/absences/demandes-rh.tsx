@@ -19,9 +19,8 @@ import {
   transmettreRemboursement,
   validerAbsenceRh,
 } from '@/lib/demandes';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate } from '@hub/domain';
 import type { DemandeAbsence, DemandeRemboursement } from '@/lib/types';
-import { formatDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';

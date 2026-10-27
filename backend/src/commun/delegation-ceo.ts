@@ -1,5 +1,5 @@
 import type { PrismaService } from '../prisma/prisma.service';
-import { todayIso } from '../shared/dates';
+import { todayIso } from '@hub/domain';
 
 // Délégation du CEO (revue CEO, 22/10/2026) — lecture commune à tous les
 // modules (fonction, pas de service : aucun cycle de modules). Délégués :

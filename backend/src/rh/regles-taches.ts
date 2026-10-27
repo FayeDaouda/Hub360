@@ -1,4 +1,4 @@
-import { toIsoDay } from '../shared/dates';
+import { toIsoDay } from '@hub/domain';
 // RH · Remise et validation des tâches (lot 5c). Règles pures, testées.
 //
 // Tirées de la maquette « Mon espace · Mes performances » : une tâche est

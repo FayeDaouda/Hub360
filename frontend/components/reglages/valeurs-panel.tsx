@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { afficher, enregistrerValeurs, type Reglage, type Reglages } from '@/lib/reglages';
 import { BarreMotif } from './barre-motif';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 
 // Saisie « formulaire » d'une valeur (chaînes), convertie à l'envoi.
 type Saisie = string | Record<string, string>;

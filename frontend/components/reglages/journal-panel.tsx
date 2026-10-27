@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { getJournalReglages, type LigneJournal } from '@/lib/reglages';
-import { formatDateTime } from '@/lib/dates';
+import { formatDateTime } from '@hub/domain';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 

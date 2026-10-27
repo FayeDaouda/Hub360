@@ -7,9 +7,8 @@ import {
   type CommissionApporteur,
   type CoordonneesApporteur,
 } from '@/lib/commissions';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatDate, formatNumber, todayIso } from '@hub/domain';
 import { MODES_PAIEMENT, type ModePaiement } from '@/lib/types';
-import { formatDate, todayIso } from '@/lib/dates';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 

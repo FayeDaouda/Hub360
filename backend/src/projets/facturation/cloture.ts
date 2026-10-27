@@ -1,6 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import type { PrismaService } from '../../prisma/prisma.service';
-import { formatMonthYear } from '../../shared/dates';
+import { formatMonthYear } from '@hub/domain';
 
 // Clôture mensuelle (revue CFO validée 20/10/2026) — lecture de l'état.
 

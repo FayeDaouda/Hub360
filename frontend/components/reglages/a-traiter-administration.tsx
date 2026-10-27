@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getATraiterAdministration, type ElementAdministration } from '@/lib/roles';
-import { plural } from '@/lib/text';
+import { plural } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 
 const VISIBLES = 6;

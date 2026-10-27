@@ -1,4 +1,4 @@
-import { stripAccents } from '../shared/text';
+import { stripAccents } from '@hub/domain';
 // Nomenclature du code dossier / projet — règle Grey Concrete v2, validée
 // (étape B de l'intégration CRM, sept. 2026).
 //

@@ -1,4 +1,4 @@
-import { formatDate, todayIso } from './dates';
+import { formatDate, todayIso } from '@hub/domain';
 // Export d'une liste vers Excel : CSV au format attendu par Excel en
 // français (séparateur « ; », virgule décimale, BOM UTF-8 pour les accents).
 // Construit côté navigateur à partir des lignes déjà affichées — les filtres

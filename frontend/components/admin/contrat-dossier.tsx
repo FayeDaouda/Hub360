@@ -13,8 +13,7 @@ import {
   signerContratPapier,
 } from '@/lib/contrats';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
-import { formatCompactAmount } from '@/lib/format';
-import { formatDayShortMonth } from '@/lib/dates';
+import { formatCompactAmount, formatDayShortMonth, plural } from '@hub/domain';
 import {
   MODES_SIGNATURE,
   STATUTS_CONTRAT,
@@ -23,7 +22,6 @@ import {
   type StatutAnnexeContrat,
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 

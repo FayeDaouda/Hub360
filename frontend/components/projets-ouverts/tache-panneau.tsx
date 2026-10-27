@@ -26,7 +26,7 @@ import { corpsRemise, depotPret, SAISIE_REMISE_VIDE, type SaisieRemise } from '.
 import { FormulaireDepot } from './formulaire-depot';
 import { FilDiscussion } from './fil-discussion';
 import { Infobulle } from '@/components/infobulle';
-import { daysBetween, formatDate, todayIso } from '@/lib/dates';
+import { daysBetween, formatDate, todayIso } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 

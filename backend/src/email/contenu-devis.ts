@@ -1,6 +1,5 @@
 import { DevisEmail } from './email.service';
-import { formatAmount } from '../shared/format';
-import { escapeHtml } from '../shared/text';
+import { escapeHtml, formatAmount } from '@hub/domain';
 
 // Contenu de l'email de notification devis. Pur (aucune I/O) — même motif que
 // contenu-lien-compte.ts : partagé par les transports, facile à tester.

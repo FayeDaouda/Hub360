@@ -13,7 +13,7 @@ import {
   type TacheEquipe,
 } from './equipes-regles';
 import { photoMembre } from '../auth/profil';
-import { toIsoDay, todayIso } from '../shared/dates';
+import { todayIso, toIsoDay } from '@hub/domain';
 
 const jour = (d: Date | null) => (d ? toIsoDay(d) : null);
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;

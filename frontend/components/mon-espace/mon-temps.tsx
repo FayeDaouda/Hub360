@@ -7,7 +7,7 @@ import { formatHeures, getMonTemps, HEURES_PAR_JOUR, signalerEcartTemps, STATUT_
 import type { JourCalendrierTemps, MonTemps as DonneesMonTemps } from '@/lib/types';
 import { KpiStrip } from '@/components/ui/kpi';
 import { LignesCalcul } from '@/components/rh/lignes-calcul';
-import { formatDate, formatMonthYear, todayIso } from '@/lib/dates';
+import { formatDate, formatMonthYear, todayIso } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';

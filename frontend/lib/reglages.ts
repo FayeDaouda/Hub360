@@ -1,6 +1,5 @@
 import { apiSociete } from './client-api';
-import { formatDate } from './dates';
-import { formatNumber } from './format';
+import { formatDate, formatNumber } from '@hub/domain';
 
 // Réglages du HUB (CIO) — maquette du boss, sept. 2026. API NestJS :
 //   GET …/reglages                    gabarits en service, règles, objectifs

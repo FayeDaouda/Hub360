@@ -10,6 +10,11 @@ export function plural(count: number, word: string): string {
   return `${count} ${word}${count > 1 ? 's' : ''}`;
 }
 
+/** Première lettre en capitale : « octobre 2026 » → « Octobre 2026 ». */
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Texte sûr dans du HTML (contenu des e-mails). */
 export function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

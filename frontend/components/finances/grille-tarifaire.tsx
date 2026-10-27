@@ -2,7 +2,7 @@
 
 import { Lock } from 'lucide-react';
 import { TAUX_COORDINATION_ET, identiteSociete } from '@/lib/finances';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatNumber } from '@hub/domain';
 import { TAUX_TVA_DEFAUT, type ProduitService, type Societe } from '@/lib/types';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 

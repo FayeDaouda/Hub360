@@ -5,8 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { PartsFactures } from '../projets/domaine/config';
 import { appliquer, type Changement, type ContenuGabarit, decrire, ErreurGabarit, libelleVersion } from './gabarit';
 import { type DefinitionReglage, GABARITS_PAR_SOCIETE, normaliser, OBJECTIFS, REGLES } from './definitions';
-import { formatDate } from '../shared/dates';
-import { formatNumber } from '../shared/format';
+import { formatDate, formatNumber } from '@hub/domain';
 
 type Section = 'regles' | 'objectifs';
 const DEFINITIONS: Record<Section, DefinitionReglage[]> = { regles: REGLES, objectifs: OBJECTIFS };

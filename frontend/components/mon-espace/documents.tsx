@@ -10,7 +10,7 @@ import {
 } from '@/lib/mon-espace';
 
 import type { ProfilMonEspace, TypePieceDossier } from '@/lib/types';
-import { formatDate, formatMonthYear, yearOf } from '@/lib/dates';
+import { formatDate, formatMonthYear, yearOf } from '@hub/domain';
 import { FieldError } from '@/components/ui/field';
 
 // Libellés de la maquette (« Contrat de travail », « Fiche de poste »).

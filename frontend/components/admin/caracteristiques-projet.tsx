@@ -39,8 +39,7 @@ import {
   type Usage,
   type UsageNiveau,
 } from '@/lib/fiche-programme';
-import { plural } from '@/lib/text';
-import { formatNumber } from '@/lib/format';
+import { formatNumber, plural } from '@hub/domain';
 import { Field } from '@/components/ui/field';
 
 type Props = {

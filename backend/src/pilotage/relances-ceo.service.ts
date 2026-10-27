@@ -6,8 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { formatAmount, todayIso } from '@hub/domain';
 
 const ROLE_CEO = 'CEO (transverse)';
 const HEURE = 3_600_000;

@@ -1,6 +1,5 @@
 import { STATUTS_DEVIS, type Devis, type FactureCentrale, type ProduitService } from './types';
-import { addMonths, formatMonthYear, todayIso, yearOf } from './dates';
-import { capitalize } from './text';
+import { addMonths, capitalize, formatMonthYear, todayIso, yearOf } from '@hub/domain';
 
 // -----------------------------------------------------------------------------
 // Finances · Devis et factures (maquette du boss, oct. 2026) : statuts, filtres,

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { ChampModal } from '@/components/admin/champ-modal';
 import { arbitrerDecision, cloturerDecision, saisirDecision, type ArbitrageDecision } from '@/lib/pilotage';
 import type { DecisionRegistre, ResponsableDecision, StatutDecision, VuePilotage } from '@/lib/types';
-import { daysSince, formatDate, todayIso } from '@/lib/dates';
+import { daysSince, formatDate, todayIso } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 

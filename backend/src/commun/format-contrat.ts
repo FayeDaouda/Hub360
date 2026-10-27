@@ -11,7 +11,7 @@ import type {
 } from '@prisma/client';
 import { ficheModifiable } from '../crm/cycle';
 import { montantTtcLignes, refDevis, relanceAFaire, statutDevisEffectif } from '../devis/domaine';
-import { todayIso } from '../shared/dates';
+import { todayIso } from '@hub/domain';
 
 // Formatage des lignes Prisma vers les types partagés de frontend/lib/types.ts.
 // L'API est la source de vérité du contrat : on émet exactement la forme que le

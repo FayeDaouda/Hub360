@@ -16,7 +16,7 @@ import {
   variablesInconnues,
 } from './domaine';
 import { FichierContratDto, ParametresContratDto, SignerContratDto } from './dto';
-import { formatAmount } from '../shared/format';
+import { formatAmount } from '@hub/domain';
 
 const AVEC_DETAIL = {
   annexes: { orderBy: { ordre: 'asc' } },

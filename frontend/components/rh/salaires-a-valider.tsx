@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { BadgeCheck } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatDate, formatNumber } from '@hub/domain';
 import {
   deciderSalaire,
   getDetailSalaire,
@@ -12,7 +12,6 @@ import {
   type DetailSalaire,
   type SalaireAValider,
 } from '@/lib/rh';
-import { formatDate } from '@/lib/dates';
 import { Field, FieldError } from '@/components/ui/field';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);

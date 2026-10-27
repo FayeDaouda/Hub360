@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { dansFiltreFacture, libelleMois, parMois, payeeLe, statutFacture, type FiltreFacture } from '@/lib/finances';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate, todayIso } from '@hub/domain';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { BoutonExport } from '@/components/bouton-export';
 import type { FactureCentrale } from '@/lib/types';
-import { formatDate, todayIso } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 
 const FILTRES: { cle: FiltreFacture; libelle: string }[] = [

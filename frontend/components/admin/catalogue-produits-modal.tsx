@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { creerProduitService, supprimerProduitService, type NouveauProduitService } from '@/lib/devis';
 import type { ProduitService } from '@/lib/types';
-import { formatCompactAmount } from '@/lib/format';
+import { formatCompactAmount } from '@hub/domain';
 import { useConfirmer } from '@/components/confirmation';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';

@@ -6,7 +6,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { agitPourCeo } from '../commun/delegation-ceo';
 import { ReglagesService } from '../reglages/reglages.service';
-import { formatAmount } from '../shared/format';
+import { formatAmount } from '@hub/domain';
 
 // Validation financière du CEO au-delà du seuil (décision du 12/10/2026) : le
 // CEO voit toutes les Finances, mais ne valide (envoi d'une offre, émission,

@@ -7,7 +7,7 @@ import type {
   TypePieceDossier,
 } from './types';
 import { apiSociete } from './client-api';
-import { addMonths, toIsoDay, todayIso } from './dates';
+import { addMonths, todayIso, toIsoDay } from '@hub/domain';
 
 // RH · Dossiers du personnel — API NestJS (module « rh » de la matrice) :
 //   GET   …/rh/dossiers                 liste (groupe)

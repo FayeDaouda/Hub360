@@ -5,7 +5,7 @@ import { ChevronLeft, Info, Plus, SendHorizonal, X } from 'lucide-react';
 import { FicheContactModal } from '@/components/contacts/fiche-contact';
 import type { CanalChat, EtatFluxChat, MembreAnnuaire, MessageChat } from '@/lib/types';
 import { PersonAvatar } from '@/components/ui/avatar';
-import { addDays, formatDayLongMonth, formatTime, toIsoDay, todayIso } from '@/lib/dates';
+import { addDays, formatDayLongMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
 
 type Props = {
   slug: string;

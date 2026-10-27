@@ -21,8 +21,7 @@ import {
   statutDevisEffectif,
 } from './domaine';
 import { CreerDevisDto, LigneDevisDto, PatchDevisDto } from './dto';
-import { addDays, todayIso } from '../shared/dates';
-import { plural } from '../shared/text';
+import { addDays, plural, todayIso } from '@hub/domain';
 
 // Ce que le devis porte, pour appliquer le catalogue (cf. contexteLignes).
 type ContexteLignes = {

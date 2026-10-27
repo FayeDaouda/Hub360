@@ -31,7 +31,7 @@ import {
   type Projet,
   type ProjetRef,
 } from '@/lib/types';
-import { formatCompactAmount } from '@/lib/format';
+import { formatCompactAmount, formatLongDate } from '@hub/domain';
 import { KpiStrip } from '@/components/ui/kpi';
 import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
@@ -57,7 +57,6 @@ import { ParametresFacturationFenetre } from '@/components/finances/parametres-f
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
-import { formatLongDate } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 

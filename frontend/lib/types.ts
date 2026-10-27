@@ -1,5 +1,5 @@
 import type { FicheProgramme } from './fiche-programme';
-import { yearOf } from './dates';
+import { yearOf } from '@hub/domain';
 export type Societe = {
   id: string;
   nom: string;

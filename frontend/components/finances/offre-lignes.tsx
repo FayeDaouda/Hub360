@@ -3,7 +3,7 @@
 import { Lock, Plus, X } from 'lucide-react';
 import { ligneVide, synchroniserCategorie, type LigneForm } from '@/components/admin/lignes-devis-editeur';
 import type { LigneDevisSaisie } from '@/lib/devis';
-import { formatAmount } from '@/lib/format';
+import { formatAmount } from '@hub/domain';
 import type { ProduitService } from '@/lib/types';
 
 // Familles proposées dans une offre de lead, dans l'ordre (les TS ne passent

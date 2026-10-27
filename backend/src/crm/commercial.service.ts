@@ -5,7 +5,7 @@ import { montantHtLignes } from '../devis/domaine';
 import { PrismaService } from '../prisma/prisma.service';
 import { aTraiterCommercial, performanceCommerciale, totauxPipeline, type DossierCommercial } from './commercial';
 import { CommissionsService } from './commissions.service';
-import { toIsoDay } from '../shared/dates';
+import { toIsoDay } from '@hub/domain';
 
 type Acteur = { societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 

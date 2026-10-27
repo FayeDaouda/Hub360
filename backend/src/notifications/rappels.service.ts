@@ -23,9 +23,17 @@ import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from './notifications.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
 import { runAsSystem } from '../tenancy/tenant-context';
-import { addDays, daysBetween, daysSince, formatDayMonth, formatMonthYear, toIsoDay, todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
-import { plural } from '../shared/text';
+import {
+  addDays,
+  daysBetween,
+  daysSince,
+  formatAmount,
+  formatDayMonth,
+  formatMonthYear,
+  plural,
+  todayIso,
+  toIsoDay,
+} from '@hub/domain';
 
 // Heure de la tournée (Dakar = UTC, pas d'heure d'été).
 const HEURE_TOURNEE = 7;

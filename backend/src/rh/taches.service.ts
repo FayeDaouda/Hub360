@@ -11,7 +11,7 @@ import { ouDossierDuCompte } from './mon-compte';
 import { arrondi, etatTache, heuresTache, joursAbsents, manqueTache } from './regles-temps';
 import { etatValidationGabarit, statsPerformances, statutSelonEtat, statutTache } from './regles-taches';
 import { chargerTachesAssignees } from './taches-assignees';
-import { todayIso } from '../shared/dates';
+import { todayIso } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 

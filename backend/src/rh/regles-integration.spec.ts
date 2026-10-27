@@ -1,5 +1,5 @@
 import { enSuivi, statutPoint } from './regles-integration';
-import { addDays } from '../shared/dates';
+import { addDays } from '@hub/domain';
 
 describe("règles d'intégration", () => {
   it('jalons calendaires : dates de la maquette', () => {

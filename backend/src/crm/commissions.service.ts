@@ -17,8 +17,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { commissionsAttendues, modeA, type EncaissementHonoraires } from './commissions';
 import { ROLE_DAF } from './cycle';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { formatDayMonth, toIsoDay, todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { formatAmount, formatDayMonth, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 

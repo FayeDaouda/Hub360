@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CheckCheck, MessageCircleQuestion } from 'lucide-react';
 import { lireReporting, poserQuestionReporting, repondreQuestionReporting } from '@/lib/pilotage';
 import type { ReportingPilotage, VuePilotage } from '@/lib/types';
-import { formatDate, formatDayMonth, formatTime, toIsoDay } from '@/lib/dates';
+import { formatDate, formatDayMonth, formatTime, toIsoDay } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 
