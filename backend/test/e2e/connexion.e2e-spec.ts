@@ -1,6 +1,9 @@
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { formatTime } from '@hub/domain';
 import request from 'supertest';
+import { PrismaService } from '../../src/prisma/prisma.service';
+import { runAsSystem } from '../../src/tenancy/tenant-context';
 import { api, COMPTES, connecter, demarrer, MOT_DE_PASSE, SLUG } from './app';
 
 // Contenu d'un jeton (dates en secondes), lu sans vérifier la signature.
@@ -113,5 +116,45 @@ describe('Durée des sessions', () => {
     const r = await api(app, jeton).get('/dossiers').expect(401);
     expect(r.body.message).toBe('Session expirée — reconnecte-toi.');
     await prolonger(jeton).expect(401);
+  });
+});
+
+// Verrouillage (décision du 28/10/2026, lot C) : 10 essais infructueux, 15 min
+// au premier verrouillage ; déblocage par le CIO.
+describe('Verrouillage du compte', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    app = await demarrer();
+  });
+  // Même si le test échoue en route : le compte ne reste pas verrouillé pour
+  // les parcours suivants, qui partagent la base.
+  afterAll(async () => {
+    await runAsSystem('test : compte rendu à son état initial', () =>
+      app.get(PrismaService).utilisateur.update({
+        where: { email: COMPTES.ceo },
+        data: { echecsConnexion: 0, verrouillages: 0, verrouilleJusquau: null },
+      }),
+    );
+    await app.close();
+  });
+
+  const essai = (motDePasse: string) =>
+    request(app.getHttpServer()).post('/api/auth/login').send({ email: COMPTES.ceo, motDePasse, societeSlug: SLUG });
+
+  it('verrouillé au dixième essai infructueux, même avec le bon mot de passe ; le CIO débloque', async () => {
+    for (let i = 0; i < 9; i++) await essai('mauvais-mot-de-passe').expect(401);
+    const verrou = await essai('mauvais-mot-de-passe').expect(423);
+    expect(verrou.body.message).toContain('Le CIO peut le débloquer');
+    await essai(MOT_DE_PASSE).expect(423);
+
+    const cio = await connecter(app, COMPTES.cio);
+    const groupe = request(app.getHttpServer());
+    const liste = await groupe.get('/api/groupe/comptes').set('Authorization', `Bearer ${cio}`).expect(200);
+    const compte = (liste.body.societes as { comptes: { id: string; email: string; verrouilleJusquau: string }[] }[])
+      .flatMap((s) => s.comptes)
+      .find((c) => c.email === COMPTES.ceo);
+    expect(verrou.body.message).toContain(`jusqu’à ${formatTime(compte?.verrouilleJusquau ?? '')}`);
+    await groupe.post(`/api/groupe/comptes/${compte?.id}/deblocage`).set('Authorization', `Bearer ${cio}`).expect(201);
+    await essai(MOT_DE_PASSE).expect(200);
   });
 });

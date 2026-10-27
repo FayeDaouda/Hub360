@@ -14,6 +14,8 @@ import type { Session } from '@/lib/types';
 const MESSAGE_ECHEC: Record<MotifEchecConnexion, string> = {
   identifiants: 'Adresse e-mail ou mot de passe incorrect.',
   trop_de_tentatives: 'Trop de tentatives. Patientez une minute avant de réessayer.',
+  verrouille:
+    'Compte verrouillé après trop d’essais infructueux. Réessayez plus tard ou demandez au CIO de le débloquer.',
   reseau: 'Serveur injoignable. Vérifiez votre connexion internet puis réessayez.',
   serveur: 'Service momentanément indisponible. Réessayez dans un instant.',
 };
@@ -53,7 +55,7 @@ export function LoginForm({ societeSlug }: { societeSlug: string }) {
       // loading reste vrai jusqu'au changement de page : pas de double envoi.
       entrer(reponse);
     } catch (err) {
-      setError(MESSAGE_ECHEC[err instanceof EchecConnexion ? err.motif : 'serveur']);
+      setError(err instanceof EchecConnexion ? (err.detail ?? MESSAGE_ECHEC[err.motif]) : MESSAGE_ECHEC.serveur);
       setLoading(false);
     }
   }

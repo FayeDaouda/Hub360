@@ -131,9 +131,14 @@ lot A), création des comptes par invitation (lien de 72 h). Lots décidés :
   retour à l'écran de connexion à l'échéance. À confirmer : les comptes de
   secours (`holding_admin`, `societe_admin`) ont 4 h, comme « les autres ».
   Cookie `httpOnly` juste après le lancement.
-- **C** : verrouillage d'un compte après 10 échecs, 15 min, durée doublée à
-  chaque récidive et plafonnée à 1 h ; déblocage par le CIO ; migration
-  accordée.
+- **C** (fait) : verrouillage d'un compte après 10 échecs (mot de passe ou
+  code de double authentification), 15 min, durée doublée à chaque récidive
+  et plafonnée à 1 h ; déblocage par le CIO (Comptes & rôles) ; avis par
+  e-mail et journal (`backend/src/auth/verrouillage.ts`). Choix à confirmer :
+  l'écran de connexion dit que le compte est verrouillé, avec l'heure de fin
+  (il révèle donc qu'un compte existe, après 10 essais ; sinon, message
+  habituel et e-mail seul) ; les récidives se comptent depuis la dernière
+  connexion réussie ; un mot de passe réinitialisé par lien ne débloque pas.
 - **D** (attend les exports du user) : import des clients actifs, projets en
   cours, salariés présents et factures non soldées ; pièces jointes des
   factures non soldées et des contrats en cours seulement ; numéros de

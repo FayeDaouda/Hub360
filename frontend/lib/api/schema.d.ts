@@ -2996,6 +2996,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/groupe/comptes/{utilisateurId}/deblocage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ComptesGroupeController_debloquer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/groupe/comptes/{utilisateurId}/actif": {
         parameters: {
             query?: never;
@@ -8921,6 +8937,25 @@ export interface operations {
         };
     };
     ComptesGroupeController_reinitialiserDoubleFacteur: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                utilisateurId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ComptesGroupeController_debloquer: {
         parameters: {
             query?: never;
             header?: never;

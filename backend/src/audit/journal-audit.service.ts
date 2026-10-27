@@ -39,6 +39,8 @@ const ACTIONS_COMPTE: Record<EvenementCompteType, string> = {
   double_facteur_reinitialise: 'Double authentification réinitialisée',
   connexion_secours: 'Connexion du compte de secours',
   deconnexion_partout: 'Toutes les sessions coupées par le titulaire',
+  compte_verrouille: 'Compte verrouillé (essais de connexion infructueux)',
+  compte_debloque: 'Compte débloqué',
 };
 // Journal de la paie (revue RH 20/10/2026) : jamais de montant.
 const ACTIONS_PAIE: Record<ActionPaie, string> = {

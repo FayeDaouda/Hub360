@@ -63,8 +63,14 @@ export type AvisSecurite = {
   email: string;
   prenom: string;
   evenement:
-    'mot_de_passe_modifie' | 'mot_de_passe_reinitialise' | 'double_facteur_active' | 'double_facteur_reinitialise';
+    | 'mot_de_passe_modifie'
+    | 'mot_de_passe_reinitialise'
+    | 'double_facteur_active'
+    | 'double_facteur_reinitialise'
+    | 'compte_verrouille';
   le: Date;
+  // Compte verrouillé (lot C) : fin du verrouillage.
+  jusquau?: Date;
 };
 
 // Alerte d'exploitation (suivi des erreurs) : destinataire technique, texte

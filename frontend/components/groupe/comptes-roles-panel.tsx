@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Check, CircleAlert, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { formatTime } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
 import { NouveauCompteModal, ResultatInvitation } from '@/components/groupe/nouveau-compte-modal';
 import {
   changerActifCompte,
+  debloquerCompte,
   reinitialiserDoubleFacteur,
   changerRoleCompte,
   comparerRoles,
@@ -364,6 +366,20 @@ function ActionsCompte({
     }
   }
 
+  // Verrouillé après trop d'essais de connexion (lot C) : sans confirmation,
+  // le déblocage ne fait que rendre l'accès plus tôt.
+  async function debloquer() {
+    setBusy(true);
+    setErreur(null);
+    try {
+      onMaj(await debloquerCompte(compte.id));
+    } catch (e) {
+      setErreur(messageErreur(e, 'Action impossible.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const libelle =
     compte.statut === 'en_attente' ? 'Renvoyer l’invitation' : compte.statut === 'actif' ? 'Désactiver' : 'Réactiver';
   return (
@@ -379,6 +395,16 @@ function ActionsCompte({
           disabled={busy}
         >
           Réinitialiser la double authentification
+        </button>
+      )}
+      {compte.verrouilleJusquau && (
+        <button
+          type="button"
+          className="btn-ghost btn-ghost--sm groupe-action-compte"
+          onClick={debloquer}
+          disabled={busy}
+        >
+          Débloquer (verrouillé jusqu’à {formatTime(compte.verrouilleJusquau)})
         </button>
       )}
       {erreur && <span className="field-erreur">{erreur}</span>}

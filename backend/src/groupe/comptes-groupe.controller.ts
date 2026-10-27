@@ -35,6 +35,12 @@ export class ComptesGroupeController {
     return this.comptes.reinitialiserDoubleFacteur(utilisateurId, req.user.userId);
   }
 
+  // Compte verrouillé après trop d'essais (lot C) : débloqué avant la fin.
+  @Post(':utilisateurId/deblocage')
+  debloquer(@Req() req: R, @Param('utilisateurId', ParseUUIDPipe) utilisateurId: string) {
+    return this.comptes.debloquer(utilisateurId, req.user.userId);
+  }
+
   @Put(':utilisateurId/actif')
   changerActif(
     @Req() req: R,

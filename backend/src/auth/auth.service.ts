@@ -1,6 +1,14 @@
 import { NotificationsService } from '../notifications/notifications.service';
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { formatTime } from '@hub/domain';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { hacherMotDePasse, verifierMotDePasse } from './mot-de-passe';
@@ -16,6 +24,7 @@ import {
 } from './totp';
 import { cheminPhoto } from './profil';
 import { dureeJeton } from './session';
+import { dureeVerrouillage, ESSAIS_AVANT_VERROUILLAGE, estVerrouille } from './verrouillage';
 import type { UtilisateurConnecte } from './jwt.strategy';
 import { EmailService, type AvisSecurite } from '../email/email.service';
 
@@ -41,6 +50,16 @@ export const ROLES_SECOURS: ReadonlySet<string> = new Set(['holding_admin', 'soc
 // que les sessions (jamais accepté comme session), valable 10 minutes.
 const secretEtape = () => `${process.env.JWT_SECRET || 'change-moi-en-production'}:double-facteur`;
 type EtapeConnexion = { etape: 'code' | 'enrolement'; jeton: string };
+
+// Compte verrouillé (lot C) : 423 ; le message, affiché tel quel par les
+// écrans de connexion et du code, donne l'heure de fin (le filtre global ne
+// transmet que le message). Aucun essai n'est examiné pendant le verrouillage.
+function compteVerrouille(jusquau: Date) {
+  return new HttpException(
+    `Compte verrouillé jusqu’à ${formatTime(jusquau.toISOString())} (heure de Dakar) après ${ESSAIS_AVANT_VERROUILLAGE} essais infructueux. Le CIO peut le débloquer plus tôt.`,
+    HttpStatus.LOCKED,
+  );
+}
 
 // Contenu d'un jeton de session, hors dates (iat, debut, exp).
 type ContenuSession = {
@@ -77,10 +96,12 @@ export class AuthService {
     if (!utilisateur || !utilisateur.actif || !utilisateur.motDePasseHash) {
       throw new UnauthorizedException('Identifiants invalides');
     }
+    this.refuserSiVerrouille(utilisateur);
 
     const motDePasseValide = await verifierMotDePasse(dto.motDePasse, utilisateur.motDePasseHash);
     if (!motDePasseValide) {
-      throw new UnauthorizedException('Identifiants invalides');
+      const jusquau = await this.compterEchec(utilisateur);
+      throw jusquau ? compteVerrouille(jusquau) : new UnauthorizedException('Identifiants invalides');
     }
 
     // Refuse un compte sans accès à la société demandée.
@@ -109,7 +130,56 @@ export class AuthService {
     }
     const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id: p.sub } });
     if (p.but !== 'double-facteur' || !utilisateur?.actif) throw new UnauthorizedException('Identifiants invalides');
+    this.refuserSiVerrouille(utilisateur);
     return { utilisateur, societeSlug: p.slug };
+  }
+
+  // --- Verrouillage (lot C, src/auth/verrouillage.ts) ------------------------
+
+  private refuserSiVerrouille(u: { verrouilleJusquau: Date | null }) {
+    if (u.verrouilleJusquau && estVerrouille(u.verrouilleJusquau)) throw compteVerrouille(u.verrouilleJusquau);
+  }
+
+  // Essai infructueux (mot de passe ou code). Au dixième, le compte est
+  // verrouillé : une seule requête voit le compteur atteindre le seuil, même
+  // si plusieurs essais arrivent ensemble. Rend la fin du verrouillage posé.
+  private async compterEchec(u: { id: string; email: string; prenom: string }): Promise<Date | null> {
+    const { echecsConnexion, verrouillages } = await this.prisma.utilisateur.update({
+      where: { id: u.id },
+      data: { echecsConnexion: { increment: 1 } },
+      select: { echecsConnexion: true, verrouillages: true },
+    });
+    if (echecsConnexion !== ESSAIS_AVANT_VERROUILLAGE) return null;
+    const le = new Date();
+    const duree = dureeVerrouillage(verrouillages);
+    const jusquau = new Date(le.getTime() + duree);
+    await this.prisma.$transaction([
+      this.prisma.utilisateur.update({
+        where: { id: u.id },
+        data: { echecsConnexion: 0, verrouilleJusquau: jusquau, verrouillages: { increment: 1 } },
+      }),
+      this.prisma.evenementCompte.create({
+        data: {
+          utilisateurId: u.id,
+          type: 'compte_verrouille',
+          parId: null,
+          detail: `${ESSAIS_AVANT_VERROUILLAGE} essais infructueux ; verrouillé ${duree / 60_000} min`,
+        },
+      }),
+    ]);
+    void this.email.envoyerAvisSecurite({
+      email: u.email,
+      prenom: u.prenom,
+      evenement: 'compte_verrouille',
+      le,
+      jusquau,
+    });
+    return jusquau;
+  }
+
+  private async codeRefuse(u: { id: string; email: string; prenom: string }) {
+    const jusquau = await this.compterEchec(u);
+    return jusquau ? compteVerrouille(jusquau) : new UnauthorizedException('Code incorrect.');
   }
 
   // Code de l'application (6 chiffres) ou code de secours (usage unique).
@@ -121,7 +191,7 @@ export class AuthService {
     const code = saisie.trim();
     if (/^\d{6}$/.test(code)) {
       const pas = verifierCode(secret, code, utilisateur.totpDernierPas);
-      if (pas === null) throw new UnauthorizedException('Code incorrect.');
+      if (pas === null) throw await this.codeRefuse(utilisateur);
       // Conditionnel : deux envois simultanés du même code n'ouvrent qu'une session.
       const { count } = await this.prisma.utilisateur.updateMany({
         where: { id: utilisateur.id, OR: [{ totpDernierPas: null }, { totpDernierPas: { lt: pas } }] },
@@ -130,7 +200,7 @@ export class AuthService {
       if (!count) throw new UnauthorizedException('Code incorrect.');
     } else {
       const h = hacherCodeSecours(code);
-      if (!utilisateur.totpCodesSecours.includes(h)) throw new UnauthorizedException('Code incorrect.');
+      if (!utilisateur.totpCodesSecours.includes(h)) throw await this.codeRefuse(utilisateur);
       await this.prisma.utilisateur.update({
         where: { id: utilisateur.id },
         data: { totpCodesSecours: utilisateur.totpCodesSecours.filter((x) => x !== h) },
@@ -354,9 +424,16 @@ export class AuthService {
       where: { id: utilisateur.id },
       select: { derniereConnexionLe: true, nomAffiche: true, photoCle: true },
     });
+    // Connexion réussie : essais infructueux et récidives remis à zéro (lot C).
     await this.prisma.utilisateur.update({
       where: { id: utilisateur.id },
-      data: { derniereConnexionLe: new Date(), connexionPrecedenteLe: avant?.derniereConnexionLe ?? null },
+      data: {
+        derniereConnexionLe: new Date(),
+        connexionPrecedenteLe: avant?.derniereConnexionLe ?? null,
+        echecsConnexion: 0,
+        verrouillages: 0,
+        verrouilleJusquau: null,
+      },
     });
 
     const contenu = {

@@ -1,7 +1,11 @@
 import { escapeHtml, formatLongDateTime } from '@hub/domain';
+import { ESSAIS_AVANT_VERROUILLAGE } from '../auth/verrouillage';
 import { AvisSecurite } from './email.service';
 
-const EVENEMENTS: Record<AvisSecurite['evenement'], { sujet: string; phrase: string }> = {
+const CONDUITE =
+  'Si c’est bien vous, il n’y a rien à faire. Sinon, réinitialisez tout de suite votre mot de passe (« Mot de passe oublié » sur la page de connexion) et prévenez l’administration du HUB.';
+
+const EVENEMENTS: Record<AvisSecurite['evenement'], { sujet: string; phrase: string; conduite?: string }> = {
   mot_de_passe_modifie: {
     sujet: 'Votre mot de passe a été modifié',
     phrase: 'Le mot de passe de votre compte {marque} a été modifié',
@@ -19,6 +23,12 @@ const EVENEMENTS: Record<AvisSecurite['evenement'], { sujet: string; phrase: str
     phrase:
       'La double authentification de votre compte {marque} a été réinitialisée par l’administration du HUB ; vous la réactiverez à votre prochaine connexion',
   },
+  compte_verrouille: {
+    sujet: 'Votre compte est verrouillé',
+    phrase: `Après ${ESSAIS_AVANT_VERROUILLAGE} essais de connexion infructueux, votre compte {marque} a été verrouillé`,
+    conduite:
+      'Si c’est bien vous, patientez jusque-là ou demandez au CIO de le débloquer. Sinon, quelqu’un a essayé d’entrer avec votre adresse : prévenez l’administration du HUB et changez votre mot de passe (« Mot de passe oublié » sur la page de connexion).',
+  },
 };
 
 // Avis de sécurité : la personne est prévenue de chaque changement sensible
@@ -28,9 +38,9 @@ export function contenuAvisSecurite(a: AvisSecurite): { sujet: string; texte: st
   const marque = process.env.MAIL_MARQUE || 'hub360°';
   const evenement = EVENEMENTS[a.evenement];
   const sujet = `${evenement.sujet} · ${marque}`;
-  const constat = `${evenement.phrase.replace('{marque}', marque)} le ${formatLongDateTime(a.le.toISOString())} (heure de Dakar).`;
-  const conduite =
-    'Si c’est bien vous, il n’y a rien à faire. Sinon, réinitialisez tout de suite votre mot de passe (« Mot de passe oublié » sur la page de connexion) et prévenez l’administration du HUB.';
+  const fin = a.jusquau ? ` Il rouvrira le ${formatLongDateTime(a.jusquau.toISOString())}.` : '';
+  const constat = `${evenement.phrase.replace('{marque}', marque)} le ${formatLongDateTime(a.le.toISOString())} (heure de Dakar).${fin}`;
+  const conduite = evenement.conduite ?? CONDUITE;
   const texte = [`Bonjour ${a.prenom},`, '', constat, '', conduite].join('\n');
   const html = [
     `<p>Bonjour ${escapeHtml(a.prenom)},</p>`,
