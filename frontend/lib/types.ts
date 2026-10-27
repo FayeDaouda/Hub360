@@ -1297,6 +1297,7 @@ export type CompteGroupe = {
   role: { id: string; nom: string };
   administration: boolean;
   doubleFacteur: boolean; // application d'authentification active
+  verrouilleJusquau: string | null; // trop d'essais de connexion (lot C) : fin du verrouillage
 };
 
 export type SocieteComptes = {

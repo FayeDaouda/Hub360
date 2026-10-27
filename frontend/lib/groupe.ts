@@ -7,6 +7,7 @@ import { apiAuth } from './client-api';
 //   POST /groupe/comptes                                 { dossierId, email, roleId } — crée + invite (cellule : le Dir. GC)
 //   POST /groupe/comptes/:id/invitation                  renvoie l'invitation (compte en attente)
 //   PUT  /groupe/comptes/:id/actif                       { actif } — désactiver coupe les sessions
+//   POST /groupe/comptes/:id/deblocage                   compte verrouillé après trop d'essais (lot C)
 
 export function getComptesGroupe(): Promise<ComptesGroupe> {
   return apiAuth<ComptesGroupe>('/groupe/comptes');
@@ -42,6 +43,11 @@ export function changerActifCompte(
 // la personne la réactive à sa prochaine connexion.
 export function reinitialiserDoubleFacteur(utilisateurId: string): Promise<{ id: string; doubleFacteur: boolean }> {
   return apiAuth(`/groupe/comptes/${utilisateurId}/double-facteur/reinitialisation`, { method: 'POST' });
+}
+
+// Compte verrouillé après trop d'essais de connexion : débloqué avant la fin.
+export function debloquerCompte(utilisateurId: string): Promise<{ id: string; verrouilleJusquau: null }> {
+  return apiAuth(`/groupe/comptes/${utilisateurId}/deblocage`, { method: 'POST' });
 }
 
 // Libellés affichés : les noms techniques des rôles socles restent en base,

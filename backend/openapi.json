@@ -6942,6 +6942,29 @@
         ]
       }
     },
+    "/api/groupe/comptes/{utilisateurId}/deblocage": {
+      "post": {
+        "operationId": "ComptesGroupeController_debloquer",
+        "parameters": [
+          {
+            "name": "utilisateurId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ComptesGroupe"
+        ]
+      }
+    },
     "/api/groupe/comptes/{utilisateurId}/actif": {
       "put": {
         "operationId": "ComptesGroupeController_changerActif",

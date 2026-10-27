@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 // Seul rôle qui travaille en cellule (fiche d'équipe, tâches de projet).
 const ROLE_SALARIE = 'Salarié';
 import { ComptesService } from '../auth/comptes.service';
+import { estVerrouille } from '../auth/verrouillage';
 
 // Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
 // compte technique holding_admin, cf. AdministrationHubGuard) attribue à
@@ -33,6 +34,7 @@ type UtilisateurLu = {
   actif: boolean;
   motDePasseHash: string | null;
   totpActifLe?: Date | null;
+  verrouilleJusquau?: Date | null;
 };
 
 const SELECT_UTILISATEUR = {
@@ -43,6 +45,7 @@ const SELECT_UTILISATEUR = {
   actif: true,
   motDePasseHash: true,
   totpActifLe: true,
+  verrouilleJusquau: true,
 } as const;
 
 // Invité pas encore activé = pas de mot de passe ; désactivé = en avait un.
@@ -61,6 +64,9 @@ function versCompte(u: UtilisateurLu, role: { id: string; nom: string }) {
     role: { id: role.id, nom: role.nom },
     administration: ROLES_ADMINISTRATION.has(role.nom),
     doubleFacteur: !!u.totpActifLe,
+    // Verrouillage en cours (lot C) : fin, pour le bouton « Débloquer ».
+    verrouilleJusquau:
+      u.verrouilleJusquau && estVerrouille(u.verrouilleJusquau) ? u.verrouilleJusquau.toISOString() : null,
   };
 }
 
@@ -338,5 +344,26 @@ export class ComptesGroupeService {
     ]);
     this.comptes.avertirSecurite(u, 'double_facteur_reinitialise');
     return { id: utilisateurId, doubleFacteur: false };
+  }
+
+  // Déblocage par l'administration du HUB avant la fin du verrouillage
+  // (lot C) : essais et récidives remis à zéro, trace au journal.
+  async debloquer(utilisateurId: string, acteurId: string) {
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { verrouilleJusquau: true },
+    });
+    if (!u) throw new NotFoundException('Compte introuvable.');
+    if (!estVerrouille(u.verrouilleJusquau)) throw new ConflictException('Ce compte n’est pas verrouillé.');
+    await this.prisma.$transaction([
+      this.prisma.utilisateur.update({
+        where: { id: utilisateurId },
+        data: { verrouilleJusquau: null, echecsConnexion: 0, verrouillages: 0 },
+      }),
+      this.prisma.evenementCompte.create({
+        data: { utilisateurId, type: 'compte_debloque', parId: acteurId, detail: 'Administration du HUB' },
+      }),
+    ]);
+    return { id: utilisateurId, verrouilleJusquau: null };
   }
 }

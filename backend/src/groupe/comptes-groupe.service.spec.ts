@@ -308,3 +308,25 @@ describe('ComptesGroupeService.reinitialiserDoubleFacteur', () => {
     );
   });
 });
+
+describe('ComptesGroupeService.debloquer (lot C)', () => {
+  it('débloque avant la fin : compteurs remis à zéro, trace au journal', async () => {
+    const { svc, prisma, tx } = mockPrisma({ utilisateur: { verrouilleJusquau: new Date(Date.now() + 600_000) } });
+    await expect(svc.debloquer('U1', 'CIO')).resolves.toEqual({ id: 'U1', verrouilleJusquau: null });
+    expect(prisma.utilisateur.update).toHaveBeenCalledWith({
+      where: { id: 'U1' },
+      data: { verrouilleJusquau: null, echecsConnexion: 0, verrouillages: 0 },
+    });
+    expect(prisma.evenementCompte.create.mock.calls[0][0].data).toMatchObject({
+      type: 'compte_debloque',
+      parId: 'CIO',
+    });
+    expect(tx).toHaveBeenCalledTimes(1);
+  });
+
+  it('compte non verrouillé (ou verrouillage échu) → 409 ; inconnu → 404', async () => {
+    const echu = mockPrisma({ utilisateur: { verrouilleJusquau: new Date(Date.now() - 1000) } });
+    await expect(echu.svc.debloquer('U1', 'CIO')).rejects.toThrow(ConflictException);
+    await expect(mockPrisma({}).svc.debloquer('U1', 'CIO')).rejects.toThrow(NotFoundException);
+  });
+});
