@@ -66,20 +66,33 @@ export function isLate(
   return !!due && due < today;
 }
 
-export function performanceStats(tasks: { statut: TaskStatus; echeance: string | null; remisLe: Date | null }[]) {
+// Remise jugée « à temps » : la dernière remise au plus tard le jour de
+// l'échéance. null quand il n'y a rien à juger (pas de remise datée, pas
+// d'échéance). Calculé ici depuis S2 (Mes performances le refaisait au front).
+export function onTime(t: { echeance: string | null; remisLe: Date | null }): boolean | null {
+  if (!t.echeance || !t.remisLe) return null;
+  return toIsoDay(t.remisLe) <= t.echeance;
+}
+
+const percent = (n: number, total: number) => (total ? Math.round((n / total) * 100) : null);
+
+export function performanceStats(
+  tasks: { statut: TaskStatus; echeance: string | null; remisLe: Date | null; version: number }[],
+) {
   const validated = tasks.filter((t) => t.statut === 'validee');
-  const judged = validated.filter((t) => t.echeance && t.remisLe);
-  const onTime = judged.filter((t) => toIsoDay(t.remisLe!) <= t.echeance!).length;
+  const judged = validated.map(onTime).filter((v) => v !== null);
+  const inTime = judged.filter((v) => v).length;
+  // Taux de reprise : parmi les tâches validées après au moins une remise,
+  // celles renvoyées au moins une fois (version 2 ou plus).
+  const submitted = validated.filter((t) => t.version >= 1);
+  const reworked = submitted.filter((t) => t.version > 1).length;
   return {
     total: tasks.length,
     validees: validated.length,
     enCours: tasks.length - validated.length,
     enRetard: tasks.filter((t) => t.statut === 'en_retard').length,
-    respectDelais: {
-      aTemps: onTime,
-      total: judged.length,
-      pct: judged.length ? Math.round((onTime / judged.length) * 100) : null,
-    },
+    respectDelais: { aTemps: inTime, total: judged.length, pct: percent(inTime, judged.length) },
+    reprises: { avecReprise: reworked, total: submitted.length, pct: percent(reworked, submitted.length) },
   };
 }
 

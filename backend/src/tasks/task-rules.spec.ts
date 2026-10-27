@@ -1,4 +1,4 @@
-import { isLate, performanceStats, statusFromProjectState, taskStatus } from './task-rules';
+import { isLate, onTime, performanceStats, statusFromProjectState, taskStatus } from './task-rules';
 
 const J = '2026-09-23';
 const fenetre = (debut: string | null, echeance: string | null) => ({ debut, echeance });
@@ -24,13 +24,13 @@ describe('task-rules', () => {
     expect(taskStatus(fenetre(null, '2026-09-30'), null, J)).toBe('a_planifier');
   });
 
-  it('respect des délais : validées remises au plus tard le jour de l’échéance', () => {
+  it('respect des délais : validées remises au plus tard le jour de l’échéance ; taux de reprise', () => {
     const s = performanceStats([
-      { statut: 'validee', echeance: '2026-09-18', remisLe: new Date('2026-09-18T17:00:00Z') },
-      { statut: 'validee', echeance: '2026-09-18', remisLe: new Date('2026-09-19T08:00:00Z') },
-      { statut: 'validee', echeance: null, remisLe: new Date('2026-09-19T08:00:00Z') },
-      { statut: 'remise', echeance: '2026-09-30', remisLe: new Date('2026-09-20T08:00:00Z') },
-      { statut: 'en_retard', echeance: '2026-09-10', remisLe: null },
+      { statut: 'validee', echeance: '2026-09-18', remisLe: new Date('2026-09-18T17:00:00Z'), version: 1 },
+      { statut: 'validee', echeance: '2026-09-18', remisLe: new Date('2026-09-19T08:00:00Z'), version: 2 },
+      { statut: 'validee', echeance: null, remisLe: new Date('2026-09-19T08:00:00Z'), version: 1 },
+      { statut: 'remise', echeance: '2026-09-30', remisLe: new Date('2026-09-20T08:00:00Z'), version: 3 },
+      { statut: 'en_retard', echeance: '2026-09-10', remisLe: null, version: 0 },
     ]);
     expect(s).toEqual({
       total: 5,
@@ -38,8 +38,18 @@ describe('task-rules', () => {
       enCours: 2,
       enRetard: 1,
       respectDelais: { aTemps: 1, total: 2, pct: 50 },
+      // Validées après au moins une remise : 3 ; renvoyées au moins une fois : 1.
+      reprises: { avecReprise: 1, total: 3, pct: 33 },
     });
     expect(performanceStats([]).respectDelais.pct).toBeNull();
+    expect(performanceStats([]).reprises.pct).toBeNull();
+  });
+
+  it('à temps : remise au plus tard le jour de l’échéance ; rien à juger sans remise datée ni échéance', () => {
+    expect(onTime({ echeance: '2026-09-18', remisLe: new Date('2026-09-18T23:00:00Z') })).toBe(true);
+    expect(onTime({ echeance: '2026-09-18', remisLe: new Date('2026-09-19T00:30:00Z') })).toBe(false);
+    expect(onTime({ echeance: null, remisLe: new Date('2026-09-19T00:30:00Z') })).toBeNull();
+    expect(onTime({ echeance: '2026-09-18', remisLe: null })).toBeNull();
   });
 });
 
