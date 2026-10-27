@@ -16,6 +16,10 @@ echo "── pre-push : vérifications avant envoi ──"
 echo "▶ format — Prettier"
 ( cd "$root" && npx prettier --check . >/dev/null ) || { echo "✗ fichiers non formatés : lancer npm run format à la racine"; exit 1; }
 
+# Le back et le front lisent le paquet partagé compilé (dist/) : il passe en premier.
+echo "▶ paquet partagé — types + tests + build"
+( cd "$root/packages/domain" && npm run typecheck && npm test && npm run build )
+
 echo "▶ backend — build + tests"
 ( cd "$root/backend" && npm run build && npm test )
 
