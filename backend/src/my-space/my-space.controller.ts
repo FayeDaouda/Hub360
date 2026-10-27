@@ -1,9 +1,10 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
-import { MonEspaceService } from './mon-espace.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
-import { CoordonneesDto, DemandePaiementDto } from './mon-espace.dto';
+import { ContactDetailsDto, PaymentChangeDto } from './my-space.dto';
+import { DownloadDto, MyCellViewDto, MySpaceViewDto } from './my-space-view.dto';
+import { MySpaceService } from './my-space.service';
 
 type R = { user: { userId: string; societeId: string } };
 
@@ -11,46 +12,46 @@ type R = { user: { userId: string; societeId: string } };
 @GroupScope()
 @Controller('societes/:slug/mon-espace')
 @UseGuards(JwtAuthGuard, MembreSocieteGuard)
-export class MonEspaceController {
-  constructor(private monEspace: MonEspaceService) {}
+export class MySpaceController {
+  constructor(private mySpace: MySpaceService) {}
 
   @Get()
-  profil(@Req() req: R) {
-    return this.monEspace.profil(req.user);
+  profile(@Req() req: R): Promise<MySpaceViewDto> {
+    return this.mySpace.profile(req.user);
   }
 
   @Patch('coordonnees')
-  coordonnees(@Req() req: R, @Body() dto: CoordonneesDto) {
-    return this.monEspace.majCoordonnees(req.user, dto);
+  updateContactDetails(@Req() req: R, @Body() dto: ContactDetailsDto): Promise<MySpaceViewDto> {
+    return this.mySpace.updateContactDetails(req.user, dto);
   }
 
   @Post('paiement')
-  paiement(@Req() req: R, @Body() dto: DemandePaiementDto) {
-    return this.monEspace.demanderPaiement(req.user, dto);
+  requestPaymentChange(@Req() req: R, @Body() dto: PaymentChangeDto): Promise<MySpaceViewDto> {
+    return this.mySpace.requestPaymentChange(req.user, dto);
   }
 
   @Post('attestations')
-  demanderAttestation(@Req() req: R) {
-    return this.monEspace.demanderAttestation(req.user);
+  requestCertificate(@Req() req: R): Promise<MySpaceViewDto> {
+    return this.mySpace.requestCertificate(req.user);
   }
 
   @Get('attestations/:id')
-  attestation(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
-    return this.monEspace.attestation(req.user, id);
+  certificate(@Req() req: R, @Param('id', ParseUUIDPipe) id: string): Promise<DownloadDto> {
+    return this.mySpace.certificate(req.user, id);
   }
 
   @Get('bulletins/:mois')
-  bulletin(@Req() req: R, @Param('mois') mois: string) {
-    return this.monEspace.bulletin(req.user, mois);
+  payslip(@Req() req: R, @Param('mois') month: string): Promise<DownloadDto> {
+    return this.mySpace.payslip(req.user, month);
   }
 
   @Get('cellule')
-  cellule(@Req() req: R) {
-    return this.monEspace.maCellule(req.user);
+  myCell(@Req() req: R): Promise<MyCellViewDto> {
+    return this.mySpace.myCell(req.user);
   }
 
   @Get('documents/:type')
-  document(@Req() req: R, @Param('type') type: string) {
-    return this.monEspace.document(req.user, type);
+  document(@Req() req: R, @Param('type') type: string): Promise<DownloadDto> {
+    return this.mySpace.document(req.user, type);
   }
 }

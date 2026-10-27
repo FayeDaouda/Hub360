@@ -12,6 +12,7 @@ import { CrmModule } from './crm/crm.module';
 import { ProjetsModule } from './projets/projets.module';
 import { TeamsModule } from './teams/teams.module';
 import { TasksModule } from './tasks/tasks.module';
+import { MySpaceModule } from './my-space/my-space.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ChatModule } from './chat/chat.module';
 import { DevisModule } from './devis/devis.module';
@@ -55,6 +56,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ProjetsModule,
     TeamsModule,
     TasksModule,
+    MySpaceModule,
     NotificationsModule,
     ChatModule,
     DevisModule,

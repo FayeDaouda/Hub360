@@ -1860,6 +1860,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/mon-espace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MySpaceController_profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/coordonnees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["MySpaceController_updateContactDetails"];
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/paiement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MySpaceController_requestPaymentChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/attestations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MySpaceController_requestCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/attestations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MySpaceController_certificate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/bulletins/{mois}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MySpaceController_payslip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/cellule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MySpaceController_myCell"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/mon-espace/documents/{type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MySpaceController_document"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/canaux": {
         parameters: {
             query?: never;
@@ -2734,134 +2862,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["MonTempsController_signalerEcart"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MonEspaceController_profil"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/coordonnees": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["MonEspaceController_coordonnees"];
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/paiement": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MonEspaceController_paiement"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/attestations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["MonEspaceController_demanderAttestation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/attestations/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MonEspaceController_attestation"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/bulletins/{mois}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MonEspaceController_bulletin"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/cellule": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MonEspaceController_cellule"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/mon-espace/documents/{type}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["MonEspaceController_document"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4169,6 +4169,7 @@ export interface components {
             enRetard: boolean;
             dateEffective: string | null;
             prolongeeJusquau: string | null;
+            aTemps: boolean | null;
             version: number;
             /** Format: date-time */
             remisLe: string | null;
@@ -4186,12 +4187,18 @@ export interface components {
             total: number;
             pct: number | null;
         };
+        ReworkRateDto: {
+            avecReprise: number;
+            total: number;
+            pct: number | null;
+        };
         PerformanceStatsDto: {
             total: number;
             validees: number;
             enCours: number;
             enRetard: number;
             respectDelais: components["schemas"]["OnTimeRateDto"];
+            reprises: components["schemas"]["ReworkRateDto"];
         };
         MyTasksViewDto: {
             taches: components["schemas"]["MyTaskDto"][];
@@ -4214,6 +4221,7 @@ export interface components {
             echeance: string | null;
             /** Format: date-time */
             remisLe: string | null;
+            aTemps: boolean | null;
             pieces: components["schemas"]["SubmissionFileRefDto"][];
         };
         SubmissionFileDto: {
@@ -4224,6 +4232,127 @@ export interface components {
             /** @enum {string} */
             decision: "renvoyer" | "valider";
             motif?: string;
+        };
+        PendingPaymentChangeDto: {
+            /** @enum {string} */
+            mode: "orange_money" | "virement" | "wave";
+            coordonnees: string;
+            /** Format: date-time */
+            le: string | null;
+        };
+        MissionCardDto: {
+            resultat: string;
+            livrables: string;
+            kpi: string;
+            signalAlerte: string;
+        };
+        EmployeeDocumentDto: {
+            /** @enum {string} */
+            type: "carte_ipm" | "certificat_residence" | "contrat_signe" | "cv" | "diplomes" | "fiche_poste" | "photo_identite" | "piece_identite" | "rib_ou_attestation";
+            nom: string | null;
+            /** Format: date-time */
+            ajouteLe: string | null;
+        };
+        PayslipDto: {
+            mois: string;
+            nom: string;
+            /** Format: date-time */
+            deposeLe: string;
+        };
+        CertificateDto: {
+            id: string;
+            /** Format: date-time */
+            demandeLe: string;
+            /** Format: date-time */
+            delivreeLe: string | null;
+            nom: string | null;
+        };
+        MyFileDto: {
+            id: string;
+            matricule: string;
+            prenom: string;
+            nom: string;
+            poste: string;
+            societe: string;
+            cellule: string | null;
+            photo: string | null;
+            /** @enum {string} */
+            typeContrat: "cdd" | "cdi" | "stage";
+            dateEntree: string | null;
+            dateFin: string | null;
+            dateNaissance: string | null;
+            lieuNaissance: string;
+            nationalite: string;
+            numeroPiece: string;
+            telephone: string;
+            emailPro: string;
+            contactUrgence: string;
+            telephoneUrgence: string;
+            emailPerso: string;
+            /** @enum {string|null} */
+            situationFamiliale: "celibataire" | "divorce" | "marie" | "veuf" | null;
+            enfantsACharge: number;
+            adresse: string;
+            /** @enum {string} */
+            modePaiement: "orange_money" | "virement" | "wave";
+            coordonneesPaiement: string;
+            paiementDemande: components["schemas"]["PendingPaymentChangeDto"] | null;
+            numeroIpm: string;
+            mission: components["schemas"]["MissionCardDto"] | null;
+            documents: components["schemas"]["EmployeeDocumentDto"][];
+            bulletins: components["schemas"]["PayslipDto"][];
+            attestations: components["schemas"]["CertificateDto"][];
+        };
+        MySpaceViewDto: {
+            dossier: components["schemas"]["MyFileDto"] | null;
+        };
+        ContactDetailsDto: {
+            telephone?: string;
+            /** Format: email */
+            emailPerso?: string;
+            /** @enum {string|null} */
+            situationFamiliale?: "celibataire" | "divorce" | "marie" | "veuf" | null;
+            enfantsACharge?: number;
+            adresse?: string;
+            contactUrgence?: string;
+            telephoneUrgence?: string;
+        };
+        PaymentChangeDto: {
+            /** @enum {string} */
+            modePaiement: "orange_money" | "virement" | "wave";
+            coordonneesPaiement: string;
+        };
+        DownloadDto: {
+            nom: string;
+            url: string;
+        };
+        CellMateDto: {
+            id: string;
+            nom: string;
+            role: string;
+            /** @enum {string} */
+            niveau: "confirme" | "junior" | "lead" | "senior" | "stagiaire";
+            estChef: boolean;
+            estMoi: boolean;
+            photo: string | null;
+            utilisateurId: string | null;
+        };
+        CellProjectDto: {
+            id: string;
+            code: string;
+            programme: string;
+            /** @enum {string} */
+            phase: "avant_projet" | "chantier" | "etudes" | "livre" | "permis";
+        };
+        MyCellDto: {
+            nom: string;
+            pilote: string | null;
+            membres: components["schemas"]["CellMateDto"][];
+            projets: components["schemas"]["CellProjectDto"][];
+        };
+        MyCellViewDto: {
+            cellule: components["schemas"]["MyCellDto"] | null;
+            stats: components["schemas"]["PerformanceStatsDto"];
         };
         EnvoyerMessageDto: {
             texte: string;
@@ -4361,22 +4490,6 @@ export interface components {
         SignalerEcartDto: {
             mois: string;
             commentaire: string;
-        };
-        CoordonneesDto: {
-            telephone?: string;
-            /** Format: email */
-            emailPerso?: string;
-            /** @enum {string|null} */
-            situationFamiliale?: "celibataire" | "divorce" | "marie" | "veuf" | null;
-            enfantsACharge?: number;
-            adresse?: string;
-            contactUrgence?: string;
-            telephoneUrgence?: string;
-        };
-        DemandePaiementDto: {
-            /** @enum {string} */
-            modePaiement: "orange_money" | "virement" | "wave";
-            coordonneesPaiement: string;
         };
         MajPermissionDto: {
             /** @enum {string} */
@@ -7347,6 +7460,185 @@ export interface operations {
             };
         };
     };
+    MySpaceController_profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySpaceViewDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_updateContactDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactDetailsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySpaceViewDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_requestPaymentChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentChangeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySpaceViewDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_requestCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySpaceViewDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_certificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_payslip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                mois: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_myCell: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyCellViewDto"];
+                };
+            };
+        };
+    };
+    MySpaceController_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadDto"];
+                };
+            };
+        };
+    };
     ChatController_canaux: {
         parameters: {
             query?: never;
@@ -8684,171 +8976,6 @@ export interface operations {
         };
         responses: {
             201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_profil: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_coordonnees: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CoordonneesDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_paiement: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DemandePaiementDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_demanderAttestation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_attestation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_bulletin: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                mois: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    MonEspaceController_cellule: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    MonEspaceController_document: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                type: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -4385,6 +4385,290 @@
         ]
       }
     },
+    "/api/societes/{slug}/mon-espace": {
+      "get": {
+        "operationId": "MySpaceController_profile",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySpaceViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/coordonnees": {
+      "patch": {
+        "operationId": "MySpaceController_updateContactDetails",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactDetailsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySpaceViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/paiement": {
+      "post": {
+        "operationId": "MySpaceController_requestPaymentChange",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySpaceViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/attestations": {
+      "post": {
+        "operationId": "MySpaceController_requestCertificate",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MySpaceViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/attestations/{id}": {
+      "get": {
+        "operationId": "MySpaceController_certificate",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/bulletins/{mois}": {
+      "get": {
+        "operationId": "MySpaceController_payslip",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mois",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/cellule": {
+      "get": {
+        "operationId": "MySpaceController_myCell",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyCellViewDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
+    "/api/societes/{slug}/mon-espace/documents/{type}": {
+      "get": {
+        "operationId": "MySpaceController_document",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MySpace"
+        ]
+      }
+    },
     "/api/societes/{slug}/canaux": {
       "get": {
         "operationId": "ChatController_canaux",
@@ -6505,239 +6789,6 @@
         },
         "tags": [
           "MonTemps"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace": {
-      "get": {
-        "operationId": "MonEspaceController_profil",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/coordonnees": {
-      "patch": {
-        "operationId": "MonEspaceController_coordonnees",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CoordonneesDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/paiement": {
-      "post": {
-        "operationId": "MonEspaceController_paiement",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DemandePaiementDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/attestations": {
-      "post": {
-        "operationId": "MonEspaceController_demanderAttestation",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/attestations/{id}": {
-      "get": {
-        "operationId": "MonEspaceController_attestation",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/bulletins/{mois}": {
-      "get": {
-        "operationId": "MonEspaceController_bulletin",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "mois",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/cellule": {
-      "get": {
-        "operationId": "MonEspaceController_cellule",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "tags": [
-          "MonEspace"
-        ]
-      }
-    },
-    "/api/societes/{slug}/mon-espace/documents/{type}": {
-      "get": {
-        "operationId": "MonEspaceController_document",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "type",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "MonEspace"
         ]
       }
     },
@@ -10774,6 +10825,10 @@
             "type": "string",
             "nullable": true
           },
+          "aTemps": {
+            "type": "boolean",
+            "nullable": true
+          },
           "version": {
             "type": "number"
           },
@@ -10828,6 +10883,7 @@
           "enRetard",
           "dateEffective",
           "prolongeeJusquau",
+          "aTemps",
           "version",
           "remisLe",
           "valideLe",
@@ -10859,6 +10915,26 @@
           "pct"
         ]
       },
+      "ReworkRateDto": {
+        "type": "object",
+        "properties": {
+          "avecReprise": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "pct": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "avecReprise",
+          "total",
+          "pct"
+        ]
+      },
       "PerformanceStatsDto": {
         "type": "object",
         "properties": {
@@ -10876,6 +10952,9 @@
           },
           "respectDelais": {
             "$ref": "#/components/schemas/OnTimeRateDto"
+          },
+          "reprises": {
+            "$ref": "#/components/schemas/ReworkRateDto"
           }
         },
         "required": [
@@ -10883,7 +10962,8 @@
           "validees",
           "enCours",
           "enRetard",
-          "respectDelais"
+          "respectDelais",
+          "reprises"
         ]
       },
       "MyTasksViewDto": {
@@ -10959,6 +11039,10 @@
             "type": "string",
             "nullable": true
           },
+          "aTemps": {
+            "type": "boolean",
+            "nullable": true
+          },
           "pieces": {
             "type": "array",
             "items": {
@@ -10978,6 +11062,7 @@
           "debut",
           "echeance",
           "remisLe",
+          "aTemps",
           "pieces"
         ]
       },
@@ -11014,6 +11099,532 @@
         },
         "required": [
           "decision"
+        ]
+      },
+      "PendingPaymentChangeDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "orange_money",
+              "virement",
+              "wave"
+            ]
+          },
+          "coordonnees": {
+            "type": "string"
+          },
+          "le": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "mode",
+          "coordonnees",
+          "le"
+        ]
+      },
+      "MissionCardDto": {
+        "type": "object",
+        "properties": {
+          "resultat": {
+            "type": "string"
+          },
+          "livrables": {
+            "type": "string"
+          },
+          "kpi": {
+            "type": "string"
+          },
+          "signalAlerte": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "resultat",
+          "livrables",
+          "kpi",
+          "signalAlerte"
+        ]
+      },
+      "EmployeeDocumentDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "carte_ipm",
+              "certificat_residence",
+              "contrat_signe",
+              "cv",
+              "diplomes",
+              "fiche_poste",
+              "photo_identite",
+              "piece_identite",
+              "rib_ou_attestation"
+            ]
+          },
+          "nom": {
+            "type": "string",
+            "nullable": true
+          },
+          "ajouteLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "nom",
+          "ajouteLe"
+        ]
+      },
+      "PayslipDto": {
+        "type": "object",
+        "properties": {
+          "mois": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "deposeLe": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mois",
+          "nom",
+          "deposeLe"
+        ]
+      },
+      "CertificateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "demandeLe": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "delivreeLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "nom": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "demandeLe",
+          "delivreeLe",
+          "nom"
+        ]
+      },
+      "MyFileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "matricule": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "poste": {
+            "type": "string"
+          },
+          "societe": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          },
+          "photo": {
+            "type": "string",
+            "nullable": true
+          },
+          "typeContrat": {
+            "type": "string",
+            "enum": [
+              "cdd",
+              "cdi",
+              "stage"
+            ]
+          },
+          "dateEntree": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateFin": {
+            "type": "string",
+            "nullable": true
+          },
+          "dateNaissance": {
+            "type": "string",
+            "nullable": true
+          },
+          "lieuNaissance": {
+            "type": "string"
+          },
+          "nationalite": {
+            "type": "string"
+          },
+          "numeroPiece": {
+            "type": "string"
+          },
+          "telephone": {
+            "type": "string"
+          },
+          "emailPro": {
+            "type": "string"
+          },
+          "contactUrgence": {
+            "type": "string"
+          },
+          "telephoneUrgence": {
+            "type": "string"
+          },
+          "emailPerso": {
+            "type": "string"
+          },
+          "situationFamiliale": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "celibataire",
+              "divorce",
+              "marie",
+              "veuf"
+            ]
+          },
+          "enfantsACharge": {
+            "type": "number"
+          },
+          "adresse": {
+            "type": "string"
+          },
+          "modePaiement": {
+            "type": "string",
+            "enum": [
+              "orange_money",
+              "virement",
+              "wave"
+            ]
+          },
+          "coordonneesPaiement": {
+            "type": "string"
+          },
+          "paiementDemande": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PendingPaymentChangeDto"
+              }
+            ]
+          },
+          "numeroIpm": {
+            "type": "string"
+          },
+          "mission": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MissionCardDto"
+              }
+            ]
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeDocumentDto"
+            }
+          },
+          "bulletins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayslipDto"
+            }
+          },
+          "attestations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CertificateDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "matricule",
+          "prenom",
+          "nom",
+          "poste",
+          "societe",
+          "cellule",
+          "photo",
+          "typeContrat",
+          "dateEntree",
+          "dateFin",
+          "dateNaissance",
+          "lieuNaissance",
+          "nationalite",
+          "numeroPiece",
+          "telephone",
+          "emailPro",
+          "contactUrgence",
+          "telephoneUrgence",
+          "emailPerso",
+          "situationFamiliale",
+          "enfantsACharge",
+          "adresse",
+          "modePaiement",
+          "coordonneesPaiement",
+          "paiementDemande",
+          "numeroIpm",
+          "mission",
+          "documents",
+          "bulletins",
+          "attestations"
+        ]
+      },
+      "MySpaceViewDto": {
+        "type": "object",
+        "properties": {
+          "dossier": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MyFileDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "dossier"
+        ]
+      },
+      "ContactDetailsDto": {
+        "type": "object",
+        "properties": {
+          "telephone": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "emailPerso": {
+            "type": "string",
+            "maxLength": 120,
+            "format": "email"
+          },
+          "situationFamiliale": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "celibataire",
+              "divorce",
+              "marie",
+              "veuf"
+            ]
+          },
+          "enfantsACharge": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "adresse": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "contactUrgence": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "telephoneUrgence": {
+            "type": "string",
+            "maxLength": 40
+          }
+        }
+      },
+      "PaymentChangeDto": {
+        "type": "object",
+        "properties": {
+          "modePaiement": {
+            "type": "string",
+            "enum": [
+              "orange_money",
+              "virement",
+              "wave"
+            ]
+          },
+          "coordonneesPaiement": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "modePaiement",
+          "coordonneesPaiement"
+        ]
+      },
+      "DownloadDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nom",
+          "url"
+        ]
+      },
+      "CellMateDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "niveau": {
+            "type": "string",
+            "enum": [
+              "confirme",
+              "junior",
+              "lead",
+              "senior",
+              "stagiaire"
+            ]
+          },
+          "estChef": {
+            "type": "boolean"
+          },
+          "estMoi": {
+            "type": "boolean"
+          },
+          "photo": {
+            "type": "string",
+            "nullable": true
+          },
+          "utilisateurId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "role",
+          "niveau",
+          "estChef",
+          "estMoi",
+          "photo",
+          "utilisateurId"
+        ]
+      },
+      "CellProjectDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "programme": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "avant_projet",
+              "chantier",
+              "etudes",
+              "livre",
+              "permis"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "programme",
+          "phase"
+        ]
+      },
+      "MyCellDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "pilote": {
+            "type": "string",
+            "nullable": true
+          },
+          "membres": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CellMateDto"
+            }
+          },
+          "projets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CellProjectDto"
+            }
+          }
+        },
+        "required": [
+          "nom",
+          "pilote",
+          "membres",
+          "projets"
+        ]
+      },
+      "MyCellViewDto": {
+        "type": "object",
+        "properties": {
+          "cellule": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MyCellDto"
+              }
+            ]
+          },
+          "stats": {
+            "$ref": "#/components/schemas/PerformanceStatsDto"
+          }
+        },
+        "required": [
+          "cellule",
+          "stats"
         ]
       },
       "EnvoyerMessageDto": {
@@ -11555,68 +12166,6 @@
         "required": [
           "mois",
           "commentaire"
-        ]
-      },
-      "CoordonneesDto": {
-        "type": "object",
-        "properties": {
-          "telephone": {
-            "type": "string",
-            "maxLength": 40
-          },
-          "emailPerso": {
-            "type": "string",
-            "maxLength": 120,
-            "format": "email"
-          },
-          "situationFamiliale": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "celibataire",
-              "divorce",
-              "marie",
-              "veuf"
-            ]
-          },
-          "enfantsACharge": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 30
-          },
-          "adresse": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "contactUrgence": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "telephoneUrgence": {
-            "type": "string",
-            "maxLength": 40
-          }
-        }
-      },
-      "DemandePaiementDto": {
-        "type": "object",
-        "properties": {
-          "modePaiement": {
-            "type": "string",
-            "enum": [
-              "orange_money",
-              "virement",
-              "wave"
-            ]
-          },
-          "coordonneesPaiement": {
-            "type": "string",
-            "maxLength": 80
-          }
-        },
-        "required": [
-          "modePaiement",
-          "coordonneesPaiement"
         ]
       },
       "MajPermissionDto": {
