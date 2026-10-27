@@ -14,8 +14,7 @@ import { ventilationTva } from '../domaine/gardes';
 import { moisClos } from './cloture';
 import { FacturationService } from './facturation.service';
 import { agitPourCeo, avecDelegataire } from '../../commun/delegation-ceo';
-import { formatAmount } from '../../shared/format';
-import { formatMonthYear } from '../../shared/dates';
+import { formatAmount, formatMonthYear } from '@hub/domain';
 
 const ROLE_CEO = 'CEO (transverse)';
 const ROLE_CFO = 'CFO';

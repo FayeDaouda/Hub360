@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getCalendrierCellule, LIBELLE_TYPE_ABSENCE, type CalendrierCellule as Donnees } from '@/lib/demandes';
-import { toIsoDay } from '@/lib/dates';
-import { plural } from '@/lib/text';
+import { plural, toIsoDay } from '@hub/domain';
 import { Skeleton } from '@/components/ui/feedback';
 
 const JOURS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];

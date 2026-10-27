@@ -1,4 +1,4 @@
-import { addDays, toIsoDay } from '../shared/dates';
+import { addDays, toIsoDay } from '@hub/domain';
 // RH · Intégration des nouveaux arrivants (lot 3). Règles pures, testées.
 //
 // Tirées de la maquette RH (« cap des 90 jours », manuel §9.3 non reçu) :

@@ -38,9 +38,8 @@ import {
   STATUTS_REGLEMENT_BUREAU,
   type StatutReglementBureau,
 } from '@/lib/types';
-import { formatAmount, formatCompactAmount } from '@/lib/format';
+import { daysSince, formatAmount, formatCompactAmount, todayIso } from '@hub/domain';
 import { useConfirmer } from '@/components/confirmation';
-import { daysSince, todayIso } from '@/lib/dates';
 import { Modal } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';

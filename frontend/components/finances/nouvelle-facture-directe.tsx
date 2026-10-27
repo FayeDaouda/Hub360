@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { creerFactureDirecte, getLeadsFacturables } from '@/lib/facturation';
-import { formatAmount } from '@/lib/format';
+import { formatAmount } from '@hub/domain';
 import { STATUTS_CRM, type FactureCentrale, type LeadFacturable } from '@/lib/types';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { FieldError } from '@/components/ui/field';

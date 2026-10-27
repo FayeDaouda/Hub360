@@ -1,7 +1,7 @@
 // Montants et nombres, en français. La devise de Grey Concrete est le franc
 // CFA (XOF), sans centimes ; si une autre société utilise une autre devise,
 // c'est le seul endroit à adapter (ou à rendre paramétrable par société).
-// Les dates sont dans lib/dates.ts.
+// Les dates sont dans dates.ts.
 const CURRENCY = 'FCFA';
 
 const number = new Intl.NumberFormat('fr-FR');

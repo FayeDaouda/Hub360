@@ -1,7 +1,7 @@
 import { VALIDITE_OFFRE_JOURS } from '../devis/domaine';
 import { DELAI_PAIEMENT_DIRECTE_JOURS } from '../projets/facturation/facture-directe';
 import { arrondi, heuresTache, joursAbsents, joursTache, type Feries, type Periode } from '../rh/regles-temps';
-import { addDays, daysBetween } from '../shared/dates';
+import { addDays, daysBetween } from '@hub/domain';
 
 // Finances · Feuille de temps (maquette du boss, oct. 2026) — règles pures :
 // temps sur le pipe (lead → 1er encaissement), temps sur la facturation

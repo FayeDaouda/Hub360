@@ -1,7 +1,7 @@
 'use client';
 
 import { CGV_PAR_SOCIETE } from '@/lib/cgv';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatNumber } from '@hub/domain';
 import { TAUX_TVA_DEFAUT, type EcheanceOffre, type Societe } from '@/lib/types';
 
 // Règles reprises dans les conditions particulières (CGV art. 12 à 14) et le

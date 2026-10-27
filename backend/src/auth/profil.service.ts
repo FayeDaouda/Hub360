@@ -3,7 +3,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { cheminPhoto, lirePhoto, normaliserNomAffiche } from './profil';
 import { ouDossierDuCompte } from '../rh/mon-compte';
-import { todayIso } from '../shared/dates';
+import { todayIso } from '@hub/domain';
 
 // Profil de la personne connectée (menu du compte) : nom affiché, photo,
 // connexions, absence en cours ; et la coupure de toutes ses sessions.

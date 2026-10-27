@@ -58,11 +58,11 @@ wait_for() {
 # serveur de développement, et Turbopack refuse un node_modules en lien.
 install_dependencies() {
   local app=$1 work=$2
-  if cmp -s "$work/$app/package-lock.json" "$ROOT/$app/package-lock.json"; then
+  if [[ -d "$ROOT/$app/node_modules" ]] && cmp -s "$work/$app/package-lock.json" "$ROOT/$app/package-lock.json"; then
     cp -Rc "$ROOT/$app/node_modules" "$work/$app/node_modules" 2>/dev/null || cp -R "$ROOT/$app/node_modules" "$work/$app/node_modules"
   else
-    echo "  $app: lockfile differs from the working tree, clean install"
-    (cd "$work/$app" && npm ci --no-audit --no-fund >"$STATE/npm-$app.log" 2>&1)
+    echo "  $app: no matching node_modules in the working tree, clean install"
+    (cd "$work/$app" && npm ci --no-audit --no-fund >"$STATE/npm-${app//\//-}.log" 2>&1)
   fi
 }
 
@@ -82,9 +82,16 @@ check_reference_url() {
   [[ "$1" =~ /${DB_NAME}(_[0-9]+)?(\?|$) ]] || { echo "✗ refusing non-reference database URL" >&2; exit 1; }
 }
 
-# Compile la révision dans $1 (backend dist/, front .next/standalone).
+# Compile la révision dans $1 (backend dist/, front .next/standalone). Le
+# paquet partagé (packages/domain, absent des révisions d'avant S0c) est
+# compilé d'abord : le back et le front lisent son dist/.
 build() {
   local work=$1
+  if [[ -d "$work/packages/domain" ]]; then
+    install_dependencies packages/domain "$work"
+    echo "▶ shared package: build"
+    (cd "$work/packages/domain" && npm run build >"$STATE/domain-build.log" 2>&1)
+  fi
   install_dependencies backend "$work"
   install_dependencies frontend "$work"
   echo "▶ backend: prisma generate, build"
@@ -150,7 +157,7 @@ build_ref() {
     rm -rf "$work"
     mkdir -p "$work"
     echo "▶ copying code ($ref) into $work"
-    git -C "$ROOT" archive "$ref" backend frontend | tar -x -C "$work"
+    git -C "$ROOT" archive "$ref" backend frontend $(git -C "$ROOT" ls-tree --name-only "$ref" packages) | tar -x -C "$work"
     build "$work"
   else
     echo "▶ cached build of $ref ($key)"
@@ -171,7 +178,8 @@ up() {
     work="$STATE/work-$(date +%s)"
     mkdir -p "$work"
     echo "▶ copying code (working tree) into $work"
-    for app in backend frontend; do
+    for app in backend frontend packages; do
+      [[ -d "$ROOT/$app" ]] || continue
       rsync -a --exclude node_modules --exclude .next --exclude dist --exclude '*.tsbuildinfo' "$ROOT/$app" "$work/"
     done
     build "$work"

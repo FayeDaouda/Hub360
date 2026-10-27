@@ -32,7 +32,7 @@ import {
   type CarteSource,
   type EtatTache,
 } from './etats';
-import { addDays, toIsoDay, todayIso } from '../../shared/dates';
+import { addDays, todayIso, toIsoDay } from '@hub/domain';
 
 // Lecture des projets ouverts selon le gabarit (maquette « Projets » du
 // boss) : liste, tuiles, et dossier d'un projet — étapes, cartes, tâches et

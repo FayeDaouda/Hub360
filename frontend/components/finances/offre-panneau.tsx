@@ -10,8 +10,7 @@ import { CATEGORIES, GAMMES, STANDINGS, type Devis, type ProduitService, type Pr
 import { lignesDepuisDevis, ligneVide, type LigneForm } from '@/components/admin/lignes-devis-editeur';
 import { OffreLignes, lignesBrouillon } from './offre-lignes';
 import { OffreAnnexes } from './offre-annexes';
-import { formatDate } from '@/lib/dates';
-import { formatNumber } from '@/lib/format';
+import { formatDate, formatNumber } from '@hub/domain';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';

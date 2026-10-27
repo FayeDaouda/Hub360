@@ -1,5 +1,5 @@
 import type { IndicateurPilotage } from '@/lib/types';
-import { formatMonthYear } from '@/lib/dates';
+import { formatMonthYear } from '@hub/domain';
 
 const L = 240; // largeur du tracé (viewBox)
 const H = 64;

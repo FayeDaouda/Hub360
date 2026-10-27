@@ -31,14 +31,12 @@ import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { PayerCommission } from '@/components/finances/payer-commission';
 import { getCommissions, type CommissionApporteur } from '@/lib/commissions';
 import { aValiderCfo } from '@/lib/finances';
-import { formatAmount, formatCompactAmount } from '@/lib/format';
+import { daysSince, formatAmount, formatCompactAmount, formatDayMonth, plural, todayIso } from '@hub/domain';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
 import { contresigneAffaire, useContresignature } from '@/lib/seuil-ceo';
 import type { BureauARegler, DemandeAbsence, FactureCentrale, Projet } from '@/lib/types';
-import { daysSince, formatDayMonth, todayIso } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';

@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { enSuivi, JALONS, type Jalon, statutPoint } from './regles-integration';
-import { addDays, todayIso } from '../shared/dates';
+import { addDays, todayIso } from '@hub/domain';
 
 type Acteur = { userId: string };
 

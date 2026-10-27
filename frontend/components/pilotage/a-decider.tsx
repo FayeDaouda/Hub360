@@ -23,13 +23,12 @@ import { ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { getProjets } from '@/lib/crm';
 import { getVueEquipes } from '@/lib/equipe';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
-import { formatAmount } from '@/lib/format';
+import { daysBetween, daysSince, formatAmount, formatDayMonth, toIsoDay } from '@hub/domain';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getADeciderProjets, type ADeciderProjets, type DemandeTsADecider } from '@/lib/projets-ouverts';
 import { DecisionTs } from './decision-ts';
 import type { DemandeAbsence, Projet, VuePilotage } from '@/lib/types';
-import { daysBetween, daysSince, formatDayMonth, toIsoDay } from '@/lib/dates';
 import { Pill } from '@/components/ui/pill';
 
 type Ton = 'risque' | 'attention' | 'info' | 'neutre';

@@ -14,7 +14,7 @@ import {
 import { segmentClient } from '@/lib/nomenclature';
 import type { Client, Localite, NouveauProjetPayload, Personne, Projet, TypeClient } from '@/lib/types';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
-import { yearOf } from '@/lib/dates';
+import { yearOf } from '@hub/domain';
 import { FieldError } from '@/components/ui/field';
 
 const NOUVEAU_CLIENT = '__nouveau__';

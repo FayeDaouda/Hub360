@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { getDecisionsRattachees, type DecisionRattachee } from '@/lib/pilotage';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { formatDayMonth } from '@/lib/dates';
+import { formatDayMonth } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 
 const PILL: Record<DecisionRattachee['statut'], string> = {

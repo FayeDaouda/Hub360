@@ -1,5 +1,5 @@
 import { ContratEmail } from './email.service';
-import { escapeHtml } from '../shared/text';
+import { escapeHtml } from '@hub/domain';
 
 // Contenu de l'email d'envoi d'un contrat à signer (étape G). Pur (aucune
 // I/O) — même motif que contenu-devis.ts.

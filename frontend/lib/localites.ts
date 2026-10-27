@@ -1,6 +1,6 @@
 import type { Localite, NouvelleLocalitePayload } from './types';
 import { apiSociete } from './client-api';
-import { stripAccents } from './text';
+import { stripAccents } from '@hub/domain';
 
 // Référentiel des localités — API NestJS (societe_admin ou CIO) :
 //   GET   /api/societes/:slug/localites

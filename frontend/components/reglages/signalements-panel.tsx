@@ -8,7 +8,7 @@ import {
   type Signalement,
   type StatutSignalement,
 } from '@/lib/signalements';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';

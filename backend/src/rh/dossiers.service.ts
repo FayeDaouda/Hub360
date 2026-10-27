@@ -4,7 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { salaireAu } from './regles-salaire';
 import { DossierPersonnelDto, PieceDto, ReaffectationDto } from './dto';
-import { formatNumericMonth, todayIso } from '../shared/dates';
+import { formatNumericMonth, todayIso } from '@hub/domain';
 
 // Pièces attendues dans tout dossier (ordre d'affichage).
 export const PIECES_DOSSIER: TypePieceDossier[] = [

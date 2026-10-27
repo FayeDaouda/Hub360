@@ -1,5 +1,5 @@
 import type { MotifSalaire, StatutSalaire } from '@prisma/client';
-import { formatDate, toIsoDay } from '../shared/dates';
+import { formatDate, toIsoDay } from '@hub/domain';
 
 // Historique des salaires (revue RH validée 20/10/2026) — règles pures.
 

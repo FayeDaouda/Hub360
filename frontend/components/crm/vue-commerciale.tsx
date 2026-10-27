@@ -12,8 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getVueCommerciale, type ElementCommercial, type EtapePipeline, type VueCommerciale } from '@/lib/crm';
-import { formatAmount, formatCompactAmount } from '@/lib/format';
-import { plural } from '@/lib/text';
+import { formatAmount, formatCompactAmount, plural } from '@hub/domain';
 import { Pill, type PillTone } from '@/components/ui/pill';
 
 const VISIBLES = 6;

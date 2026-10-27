@@ -8,7 +8,7 @@ import { FicheRentabilitePanneau } from '@/components/finances/fiche-rentabilite
 import { ParametresRentabilite } from '@/components/finances/parametres-rentabilite';
 import { ApiError } from '@/lib/client-api';
 import { exporterCsv } from '@/lib/export-csv';
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatDate, formatDateTime, formatMonthYear, formatNumber, plural, todayIso } from '@hub/domain';
 import {
   finDeMois,
   formatParametre,
@@ -21,8 +21,6 @@ import {
   type LigneRentabilite,
   type Portefeuille,
 } from '@/lib/rentabilite';
-import { formatDate, formatDateTime, formatMonthYear, todayIso } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';

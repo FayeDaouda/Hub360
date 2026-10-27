@@ -4,6 +4,7 @@
 frontend/.next/
 frontend/next-env.d.ts
 backend/dist/
+packages/domain/dist/
 coverage/
 e2e/.state/
 e2e/.reference/

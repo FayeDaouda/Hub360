@@ -1,7 +1,5 @@
 import { RelanceFactureEmail } from './email.service';
-import { formatLongDate } from '../shared/dates';
-import { formatAmount } from '../shared/format';
-import { escapeHtml, plural } from '../shared/text';
+import { escapeHtml, formatAmount, formatLongDate, plural } from '@hub/domain';
 
 // Contenu de l'email de relance manuelle. Pur (aucune I/O) — même motif que
 // contenu-lien-compte.ts / contenu-devis.ts. Pas de lien (pas de page

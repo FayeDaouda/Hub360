@@ -21,7 +21,7 @@ import {
 import type { AttestationRh } from '@/lib/demandes';
 import { LIBELLE_SOINS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { getFeuillesTemps } from '@/lib/temps';
-import { formatAmount } from '@/lib/format';
+import { daysBetween, formatAmount, formatDayMonth, formatMonthYear, plural, todayIso } from '@hub/domain';
 import type { AlerteRh } from '@/lib/rh';
 import type { QuestionOuverte } from '@/lib/pilotage';
 import type {
@@ -32,8 +32,6 @@ import type {
   IntegrationSalarie,
   ReportingADeposer,
 } from '@/lib/types';
-import { daysBetween, formatDayMonth, formatMonthYear, todayIso } from '@/lib/dates';
-import { plural } from '@/lib/text';
 import { Pill } from '@/components/ui/pill';
 
 export type OngletRh = 'personnel' | 'temps' | 'integration' | 'demandes';

@@ -1,4 +1,4 @@
-import { stripAccents } from './text';
+import { stripAccents } from '@hub/domain';
 // Nom d'un fichier déposé sur une tâche (lot F de Mes tâches, format validé
 // le 23/10/2026) : CODE_ÉTAPE_TÂCHE_vNN.ext — ex. FS_POI.26_04_TIMBRE-FISCAL_v01.pdf.
 // Plusieurs fichiers dans le même dépôt : _v01-1, _v01-2… L'application

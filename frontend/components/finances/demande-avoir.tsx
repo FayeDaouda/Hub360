@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { creerAvoir, LIBELLE_MOTIF_AVOIR, type MotifAvoir } from '@/lib/facturation';
-import { formatAmount } from '@/lib/format';
+import { formatAmount } from '@hub/domain';
 import type { Facturation } from '@/lib/types';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';

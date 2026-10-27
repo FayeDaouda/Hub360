@@ -9,7 +9,7 @@ import { statutDevis } from '@/lib/finances';
 import type { Devis } from '@/lib/types';
 import { DocumentFacturation, type DocumentFacturationProps } from '@/components/document-facturation';
 import { useConfirmer } from '@/components/confirmation';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 import { CloseButton, Drawer } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';

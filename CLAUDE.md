@@ -21,6 +21,9 @@ Turbopack : voir la feuille de route.
 - Isolation entre sociétés : `docs/adr/0001-isolation-multi-societes.md`
   (refus par défaut, `runInCompany`, `runInGroupScope`, `runAsSystem`).
 - Ordre du journal d'audit : `docs/adr/0002-ordre-journal-audit.md`.
+- Dates (heure de Dakar), montants et texte : une seule version, dans le
+  paquet `@hub/domain` (`docs/adr/0004-paquet-partage-domain.md`) ; le
+  recompiler (`npm run build` dans `packages/domain`) après l'avoir modifié.
 - Une branche et une pull request par lot ; Conventional Commits.
 - Avant de conclure qu'une modification ne change rien : tests unitaires et
   e2e du back, captures et tests de fumée (`e2e/`, voir son `package.json`).

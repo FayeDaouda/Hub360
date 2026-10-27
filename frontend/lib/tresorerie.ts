@@ -1,5 +1,5 @@
 import type { FactureCentrale } from './types';
-import { addDays, daysBetween } from './dates';
+import { addDays, daysBetween } from '@hub/domain';
 
 // Trésorerie (revue CFO 20/10/2026, lot 3) : balance âgée des créances et
 // échéancier des encaissements attendus, calculés depuis la liste des

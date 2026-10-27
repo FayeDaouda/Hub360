@@ -7,8 +7,7 @@ import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.ser
 import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatDate, formatMonthYear, formatNumericMonth, toIsoDay } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { formatAmount, formatDate, formatMonthYear, formatNumericMonth, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';

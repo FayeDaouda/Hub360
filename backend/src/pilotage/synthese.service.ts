@@ -12,9 +12,7 @@ import { DECISION_EN_VIGUEUR, statutDecision } from './pilotage-regles';
 import { PilotageService } from './pilotage.service';
 import { ReportingRhService } from './reporting-rh.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { addDays, formatDate, formatMonthYear, todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
-import { plural } from '../shared/text';
+import { addDays, formatAmount, formatDate, formatMonthYear, plural, todayIso } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };

@@ -7,7 +7,7 @@ import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { ProjetsOuvertsService } from '../projets/gabarit/projets-ouverts.service';
 import { DemandesService } from '../rh/demandes.service';
-import { todayIso } from '../shared/dates';
+import { todayIso } from '@hub/domain';
 
 export type ActeurAttention = {
   userId: string;

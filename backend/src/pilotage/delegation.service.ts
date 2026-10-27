@@ -8,7 +8,7 @@ import {
 import { ROLE_CEO, ROLES_DELEGATAIRES } from '../commun/delegation-ceo';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatDate, todayIso } from '../shared/dates';
+import { formatDate, todayIso } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 const ROLE_CIO = 'CIO (transverse)';

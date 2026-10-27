@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, Minus, type LucideIcon } from 'lucide-react';
 import type { EtatTuile } from '@/lib/couleurs-etat';
-import { formatAmount, formatCompactAmount } from '@/lib/format';
+import { formatAmount, formatCompactAmount } from '@hub/domain';
 
 // Bandeau de KPI — chiffres dérivés de la liste déjà chargée par la page
 // (aucun endpoint, aucune saisie). Pas de « vs période précédente » comme le

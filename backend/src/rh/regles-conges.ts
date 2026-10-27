@@ -1,4 +1,4 @@
-import { addDays, toIsoDay } from '../shared/dates';
+import { addDays, toIsoDay } from '@hub/domain';
 // Règles de congés — HYPOTHÈSES DE TRAVAIL (conception d'origine, jamais
 // confirmées par un vrai titulaire RH) : à ajuster ici, en un seul endroit,
 // dès qu'un RH en poste les corrige.

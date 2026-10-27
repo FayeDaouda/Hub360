@@ -44,9 +44,7 @@ import {
 import { TachePanneau } from './tache-panneau';
 import { CartePanneau } from './carte-panneau';
 import { PanneauLateral } from './panneau-lateral';
-import { formatDate, formatDayMonth, todayIso } from '@/lib/dates';
-import { plural, stripAccents } from '@/lib/text';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate, formatDayMonth, plural, stripAccents, todayIso } from '@hub/domain';
 import { Pill, type PillTone } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';

@@ -9,7 +9,7 @@ import type { TypeReporting } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REPORTINGS } from './pilotage-regles';
-import { formatMonthYear } from '../shared/dates';
+import { formatMonthYear } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 type Position = 'destinataire' | 'emetteur' | null;

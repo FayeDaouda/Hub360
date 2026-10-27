@@ -1,6 +1,6 @@
 import { StatutDevis } from '@prisma/client';
 import { ventilationTva } from '../projets/domaine/gardes';
-import { daysBetween, toIsoDay } from '../shared/dates';
+import { daysBetween, toIsoDay } from '@hub/domain';
 
 // Référence d'un devis (maquette Finances, oct. 2026) : une offre de dossier
 // porte le code du dossier + « OF » + son rang (« KSN_DIA.26-OF1 »), attribués

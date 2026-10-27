@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import type { DemandeAbsence } from '@/lib/types';
 import { DecisionN1Modal } from './decision-n1-modal';
-import { formatDate } from '@/lib/dates';
+import { formatDate } from '@hub/domain';
 
 // File des absences dont la personne connectée est le N+1 (chef de cellule
 // côté collab, Dir. GC côté back-office). Rien à afficher = rien rendu.

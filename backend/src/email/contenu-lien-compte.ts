@@ -1,5 +1,5 @@
 import { LienCompte } from './email.service';
-import { escapeHtml } from '../shared/text';
+import { escapeHtml } from '@hub/domain';
 
 // Contenu des deux emails de compte. Pur (aucune I/O) — partagé par les
 // transports et facile à tester. FR, ton sobre, une seule action.

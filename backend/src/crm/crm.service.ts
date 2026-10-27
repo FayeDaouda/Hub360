@@ -29,8 +29,7 @@ import {
   resume,
   type FicheProgramme,
 } from './fiche-programme';
-import { todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { formatAmount, todayIso } from '@hub/domain';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {

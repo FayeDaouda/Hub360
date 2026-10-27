@@ -1,4 +1,4 @@
-import { formatAmount, formatNumber } from '@/lib/format';
+import { formatAmount, formatNumber } from '@hub/domain';
 import { montantEnLettres } from '@/lib/montant-lettres';
 import type { ProfilFacturation } from '@/lib/facturation';
 import type { LigneDocument } from '@/components/document-facturation';

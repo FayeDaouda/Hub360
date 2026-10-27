@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { getFeuilleTemps } from '@/lib/facturation';
 
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDate, formatDayMonth } from '@hub/domain';
 import { STATUTS_CRM, type DelaiTranche, type FeuilleTemps, type Projet } from '@/lib/types';
-import { formatDate, formatDayMonth } from '@/lib/dates';
 import { Pill, type PillTone } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';

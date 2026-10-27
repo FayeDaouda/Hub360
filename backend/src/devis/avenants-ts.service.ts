@@ -16,8 +16,7 @@ import { droitTs, ROLE_CFO, ROLE_CTO } from '../projets/gabarit/validation';
 import type { AjouterTsDto } from '../projets/gabarit/dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
-import { todayIso } from '../shared/dates';
-import { formatAmount } from '../shared/format';
+import { formatAmount, todayIso } from '@hub/domain';
 
 const PRODUIT_TS = { mineure: 'TS-MIN', majeure: 'TS-MAJ' } as const;
 const OBJET_AVENANT = 'Avenant · travaux supplémentaires';

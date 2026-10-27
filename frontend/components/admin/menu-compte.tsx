@@ -29,7 +29,7 @@ import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { deconnecterPartout, getProfil, nomAffiche, type Profil } from '@/lib/profil';
 import { useConfirmer } from '@/components/confirmation';
-import { formatDayMonth, formatTime, toIsoDay, todayIso } from '@/lib/dates';
+import { formatDayMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
 
 // Menu du compte (avatar, en haut à droite) : qui je suis (nom, e-mail, rôle,
 // société), l'état de ma double authentification, mes accès personnels

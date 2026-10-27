@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { BoutonExport } from '@/components/bouton-export';
 import { dateExport, exporterCsv } from '@/lib/export-csv';
 import { getJournalAudit, type CategorieAudit, type JournalAudit as Journal, type LigneAudit } from '@/lib/pilotage';
-import { formatDateTime, formatTime } from '@/lib/dates';
+import { formatDateTime, formatTime } from '@hub/domain';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';
 

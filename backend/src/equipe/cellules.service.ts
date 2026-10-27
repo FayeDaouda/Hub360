@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { versCellule } from '../commun/format-contrat';
 import { CreerCelluleDto, DefinirDispatcherDto, MajCelluleDto } from './dto';
 import { codeCellule, prefixeSociete } from './equipes-regles';
-import { plural } from '../shared/text';
+import { plural } from '@hub/domain';
 
 // membres + le strict minimum du compte lié (jamais motDePasseHash).
 const MEMBRES = {

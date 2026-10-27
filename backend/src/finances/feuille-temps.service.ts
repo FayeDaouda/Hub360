@@ -6,7 +6,7 @@ import { echeancierOffre, lignesOffreDepuisDevis } from '../projets/domaine/fact
 import { ventilationTva } from '../projets/domaine/gardes';
 import { refDevis } from '../devis/domaine';
 import { delaiTranche, prevueLe, tempsImpute, tempsPipe } from './feuille-temps';
-import { daysBetween, toIsoDay, todayIso } from '../shared/dates';
+import { daysBetween, todayIso, toIsoDay } from '@hub/domain';
 
 const jour = (d: Date | string | null | undefined) =>
   d ? (typeof d === 'string' ? d.slice(0, 10) : toIsoDay(d)) : null;
