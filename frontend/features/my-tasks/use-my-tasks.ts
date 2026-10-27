@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
 import { getAbsencesAValider } from '@/lib/demandes';
-import { getMesMentions, type MentionRecue } from '@/lib/projets-ouverts';
+import { getMyMentions } from '@/features/projects/api';
+import type { MyMention } from '@/features/projects/types';
 import { getMyTasks, getTasksToReview, remindReviewer, submitTask } from './api';
 import type { MyTask, MyTasksView, SubmissionBody } from './types';
 import { animate } from './view-transition';
@@ -21,7 +22,7 @@ export type Reminder = 'envoi' | 'ok' | { erreur: string };
 export function useMyTasks(slug: string) {
   const [data, setData] = useState<MyTasksView | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mentions, setMentions] = useState<MentionRecue[]>([]);
+  const [mentions, setMentions] = useState<MyMention[]>([]);
   const [toDecide, setToDecide] = useState({ taches: 0, absences: 0 });
   // Relance du validateur, par tâche (aside « Chez mon N+1 »).
   const [reminders, setReminders] = useState<Record<string, Reminder>>({});
@@ -41,7 +42,7 @@ export function useMyTasks(slug: string) {
   );
   const reloadMentions = useCallback(
     () =>
-      getMesMentions(slug)
+      getMyMentions(slug)
         .then(setMentions)
         .catch(() => setMentions([])),
     [slug],

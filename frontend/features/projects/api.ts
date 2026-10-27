@@ -1,0 +1,180 @@
+import { apiSociete } from '@/lib/client-api';
+import { telechargerFichier } from '@/lib/fichiers';
+import type { ReponseApi } from '@/lib/api/types';
+import type {
+  AssignableEmployee,
+  MyMention,
+  OpenProjectFile,
+  OpenProjectsBoard,
+  ProductionView,
+  ProjectSubmissionBody,
+  SiteStatus,
+  TaskEvent,
+  TaskWorkload,
+  ThreadRoot,
+  ThreadTarget,
+  ToDecide,
+  TsElementResult,
+  TsRequestDecision,
+  TsRework,
+} from './types';
+
+// -----------------------------------------------------------------------------
+// Projets ouverts selon le gabarit (maquette « Projets » du boss) — API NestJS
+// (backend/src/projects), sous /api/societes/:slug/projets-ouverts :
+//   GET   (liste + tuiles) · GET :id (dossier : étapes, cartes, tâches)
+//   GET   assignables · mentionnables · mes-mentions · a-decider · production
+//   PATCH :id/chantier · :id/visite · :id/taches/:tacheId/assignation
+//   GET   :id/taches/:tacheId/charges · historique · pieces/:pieceId
+//   POST  :id/taches/:tacheId/remise · prolongation(/decision) · decision · visa
+//   GET/POST :id/fil · POST :id/fil/:commentaireId/resolution
+//   POST  :id/ts · :id/ts/demandes/:demandeId/decision (avenants TS, module devis)
+// -----------------------------------------------------------------------------
+
+type Route<P extends string> = `/api/societes/{slug}/projets-ouverts${P}`;
+
+export const getBoard = (slug: string) => apiSociete<OpenProjectsBoard>(slug, '/projets-ouverts');
+
+export const getProjectFile = (slug: string, id: string) => apiSociete<OpenProjectFile>(slug, `/projets-ouverts/${id}`);
+
+export const getAssignableEmployees = (slug: string) =>
+  apiSociete<AssignableEmployee[]>(slug, '/projets-ouverts/assignables');
+
+// À la tâche, ou (carte = true) à toutes les tâches encore ouvertes de sa carte.
+export const assignTask = (
+  slug: string,
+  projetId: string,
+  tacheId: string,
+  collaborateurId: string | null,
+  carte: boolean,
+) =>
+  apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/assignation'>, 'patch'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/assignation`,
+    { method: 'PATCH', body: { collaborateurId, carte } },
+  );
+
+// Remise par la personne assignée (sans temps atelier : le dépôt vaut validation).
+export const submitProjectTask = (slug: string, projetId: string, tacheId: string, corps: ProjectSubmissionBody = {}) =>
+  apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/remise'>, 'post'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/remise`,
+    { method: 'POST', body: corps },
+  );
+
+export async function downloadSubmissionPiece(slug: string, projetId: string, tacheId: string, pieceId: string) {
+  const f = await apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/pieces/{pieceId}'>, 'get'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/pieces/${pieceId}`,
+  );
+  telechargerFichier(f);
+}
+
+// Prolongation : demande de l'assigné, décision du chef de team ou du DPLG.
+export const requestExtension = (slug: string, projetId: string, tacheId: string, jusquau: string, motif: string) =>
+  apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/prolongation'>, 'post'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation`,
+    { method: 'POST', body: { jusquau, motif } },
+  );
+
+export const decideExtension = (slug: string, projetId: string, tacheId: string, accorder: boolean) =>
+  apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/prolongation/decision'>, 'post'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/prolongation/decision`,
+    { method: 'POST', body: { accorder } },
+  );
+
+// Visa DPLG (revue Dir. GC, 21/10/2026) : apposer, ou refuser avec un motif.
+export const setTaskVisa = (slug: string, projetId: string, tacheId: string, apposer: boolean, motif?: string) =>
+  apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/visa'>, 'post'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/visa`,
+    { method: 'POST', body: { apposer, ...(motif ? { motif } : {}) } },
+  );
+
+// Remise : valider, ou renvoyer en reprise avec un motif.
+export const decideProjectTask = (
+  slug: string,
+  projetId: string,
+  tacheId: string,
+  decision: 'valider' | 'renvoyer',
+  motif?: string,
+) =>
+  apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/decision'>, 'post'>>(
+    slug,
+    `/projets-ouverts/${projetId}/taches/${tacheId}/decision`,
+    { method: 'POST', body: { decision, ...(motif ? { motif } : {}) } },
+  );
+
+export const setSiteStatus = (slug: string, projetId: string, statut: SiteStatus) =>
+  apiSociete<ReponseApi<Route<'/{id}/chantier'>, 'patch'>>(slug, `/projets-ouverts/${projetId}/chantier`, {
+    method: 'PATCH',
+    body: { statut },
+  });
+
+// Date de visite sur site : les relevés de l'existant reçoivent leur
+// échéance (lendemain de la visite) ; null = effacer.
+export const setSiteVisitDate = (slug: string, projetId: string, date: string | null) =>
+  apiSociete<ReponseApi<Route<'/{id}/visite'>, 'patch'>>(slug, `/projets-ouverts/${projetId}/visite`, {
+    method: 'PATCH',
+    body: { date },
+  });
+
+export const addTsElement = (slug: string, projetId: string, carteId: string, element: string, reprise: TsRework) =>
+  apiSociete<TsElementResult>(slug, `/projets-ouverts/${projetId}/ts`, {
+    method: 'POST',
+    body: { carteId, element, ...reprise },
+  });
+
+export const decideTsRequest = (slug: string, projetId: string, demandeId: string, accepter: boolean, motif?: string) =>
+  apiSociete<TsRequestDecision>(slug, `/projets-ouverts/${projetId}/ts/demandes/${demandeId}/decision`, {
+    method: 'POST',
+    body: { accepter, ...(motif ? { motif } : {}) },
+  });
+
+// --- Fils de discussion et mentions -----------------------------------------------------
+export const getMentionablePeople = (slug: string) =>
+  apiSociete<ReponseApi<Route<'/mentionnables'>, 'get'>>(slug, '/projets-ouverts/mentionnables');
+
+export const getMyMentions = (slug: string) => apiSociete<MyMention[]>(slug, '/projets-ouverts/mes-mentions');
+
+export const markMentionRead = (slug: string, commentaireId: string) =>
+  apiSociete<ReponseApi<Route<'/mes-mentions/{commentaireId}/lue'>, 'post'>>(
+    slug,
+    `/projets-ouverts/mes-mentions/${commentaireId}/lue`,
+    { method: 'POST', body: {} },
+  );
+
+export function getThread(slug: string, projetId: string, cible: ThreadTarget) {
+  const q = 'carteId' in cible ? `carte=${cible.carteId}` : `tache=${cible.tacheId}`;
+  return apiSociete<ThreadRoot[]>(slug, `/projets-ouverts/${projetId}/fil?${q}`);
+}
+
+export const postComment = (
+  slug: string,
+  projetId: string,
+  corps: ThreadTarget & { texte: string; mentionneId?: string | null; parentId?: string },
+) =>
+  apiSociete<ReponseApi<Route<'/{id}/fil'>, 'post'>>(slug, `/projets-ouverts/${projetId}/fil`, {
+    method: 'POST',
+    body: corps,
+  });
+
+export const resolveComment = (slug: string, projetId: string, commentaireId: string) =>
+  apiSociete<ReponseApi<Route<'/{id}/fil/{commentaireId}/resolution'>, 'post'>>(
+    slug,
+    `/projets-ouverts/${projetId}/fil/${commentaireId}/resolution`,
+    { method: 'POST' },
+  );
+
+// --- Charge, historique, à décider, production ------------------------------------------
+export const getTaskWorkload = (slug: string, projetId: string, tacheId: string) =>
+  apiSociete<TaskWorkload>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/charges`);
+
+export const getTaskHistory = (slug: string, projetId: string, tacheId: string) =>
+  apiSociete<TaskEvent[]>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/historique`);
+
+export const getToDecide = (slug: string) => apiSociete<ToDecide>(slug, '/projets-ouverts/a-decider');
+
+export const getProduction = (slug: string) => apiSociete<ProductionView>(slug, '/projets-ouverts/production');

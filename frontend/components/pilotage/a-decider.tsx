@@ -26,7 +26,8 @@ import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
 import { daysBetween, daysSince, formatAmount, formatDayMonth, toIsoDay } from '@hub/domain';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
-import { getADeciderProjets, type ADeciderProjets, type DemandeTsADecider } from '@/lib/projets-ouverts';
+import { getToDecide } from '@/features/projects/api';
+import type { ToDecide, TsRequestToDecide } from '@/features/projects/types';
 import { DecisionTs } from './decision-ts';
 import type { DemandeAbsence, Projet, VuePilotage } from '@/lib/types';
 import { Pill } from '@/components/ui/pill';
@@ -53,7 +54,7 @@ const RANG_TON: Record<Ton, number> = { risque: 0, attention: 1, info: 2, neutre
 // « Revêtements · Revêtements » : la carte n'est rappelée que si elle dit autre chose.
 const carteDe = (carte: string, tache: string) => (carte === tache ? '' : ` · ${carte}`);
 
-const VIDE: ADeciderProjets = { remises: [], prolongations: [], visas: [], ts: [] };
+const VIDE: ToDecide = { remises: [], prolongations: [], visas: [], ts: [] };
 
 // « À décider aujourd'hui » (revue Dir. GC, 21/10/2026) : en tête de
 // Pilotage, tout ce qui attend une décision ou une action, par urgence.
@@ -78,21 +79,21 @@ export function ADecider({
   const versReportings = () => (onOnglet ? onOnglet('reportings') : router.push(`/admin/${slug}?onglet=reportings`));
   const session = useSessionCourante();
   const dirGc = session.role === ROLE_DIR_GC;
-  const [projets, setProjets] = useState<ADeciderProjets>(VIDE);
+  const [projets, setProjets] = useState<ToDecide>(VIDE);
   const [absences, setAbsences] = useState<DemandeAbsence[]>([]);
   const [dossiers, setDossiers] = useState<Projet[]>([]);
   const [recus, setRecus] = useState<ReportingRecu[]>([]);
   const [arrivants, setArrivants] = useState<{ id: string; nom: string; role: string; dateArrivee: string | null }[]>(
     [],
   );
-  const [tsOuvert, setTsOuvert] = useState<DemandeTsADecider | null>(null);
+  const [tsOuvert, setTsOuvert] = useState<TsRequestToDecide | null>(null);
   const [version, setVersion] = useState(0);
   const [tout, setTout] = useState(false);
   const [maintenant] = useState(() => Date.now());
 
   // Chaque source est facultative : sans le droit, la ligne n'apparaît pas.
   useEffect(() => {
-    getADeciderProjets(slug)
+    getToDecide(slug)
       .then(setProjets)
       .catch(() => setProjets(VIDE));
   }, [slug, version]);

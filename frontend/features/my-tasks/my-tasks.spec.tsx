@@ -23,10 +23,10 @@ vi.mock('./submission-modal', () => ({
   ),
 }));
 vi.mock('@/lib/demandes', () => ({ getAbsencesAValider: () => Promise.resolve([]) }));
-vi.mock('@/lib/projets-ouverts', () => ({
-  getMesMentions: () => Promise.resolve([]),
-  marquerMentionLue: vi.fn(),
-  publierCommentaire: vi.fn(),
+vi.mock('@/features/projects/api', () => ({
+  getMyMentions: () => Promise.resolve([]),
+  markMentionRead: vi.fn(),
+  postComment: vi.fn(),
 }));
 vi.mock('@/lib/layout-contexte', () => ({
   useTitrePage: () => undefined,

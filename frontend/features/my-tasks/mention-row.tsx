@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { formatDayMonth } from '@hub/domain';
 import { ApiError } from '@/lib/client-api';
-import { marquerMentionLue, publierCommentaire, type MentionRecue } from '@/lib/projets-ouverts';
+import { markMentionRead, postComment } from '@/features/projects/api';
+import type { MyMention } from '@/features/projects/types';
 
 // Mention : lire, répondre dans le fil (l'auteur est mentionné en retour),
 // marquer comme lue, ouvrir la tâche.
@@ -16,7 +17,7 @@ export function MentionRow({
   onChange,
 }: {
   slug: string;
-  m: MentionRecue;
+  m: MyMention;
   base: string;
   onOpen: () => void;
   onChange: () => void;
@@ -38,13 +39,13 @@ export function MentionRow({
 
   const sendReply = () =>
     run(async () => {
-      await publierCommentaire(slug, m.projetId, {
+      await postComment(slug, m.projetId, {
         ...(m.tacheId ? { tacheId: m.tacheId } : { carteId: m.carteId }),
         parentId: m.racineId,
         texte: reply!.trim(),
         mentionneId: m.auteurId,
       });
-      await marquerMentionLue(slug, m.id);
+      await markMentionRead(slug, m.id);
     });
 
   return (
@@ -117,7 +118,7 @@ export function MentionRow({
             type="button"
             className="btn-ghost btn-ghost--sm"
             disabled={state.sending}
-            onClick={() => run(() => marquerMentionLue(slug, m.id))}
+            onClick={() => run(() => markMentionRead(slug, m.id))}
           >
             Marquer lu
           </button>

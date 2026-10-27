@@ -6,21 +6,23 @@ import { AlarmClock, CalendarClock, Gauge, TriangleAlert } from 'lucide-react';
 import { KpiStrip } from '@/components/ui/kpi';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { getProduction, numeroEtape, type LigneProduction, type VueProduction } from '@/lib/projets-ouverts';
+import { getProduction } from '@/features/projects/api';
+import { stepNumber } from '@/features/projects/labels';
+import type { ProductionRow, ProductionView } from '@/features/projects/types';
 import { getRentabilite, type LigneRentabilite } from '@/lib/rentabilite';
 import { addDays, formatDayMonth, plural, todayIso } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 
-const STATUT: Record<LigneProduction['statutChantier'], string> = {
+const STATUT: Record<ProductionRow['statutChantier'], string> = {
   conception: 'En conception',
   chantier: 'En chantier',
   livre: 'Livré',
 };
 
 // Ce qui attend une décision sur le projet (remises, visas, prolongations, TS).
-function enAttente(a: LigneProduction['attente']): string[] {
+function enAttente(a: ProductionRow['attente']): string[] {
   return [
     a.remises && plural(a.remises, 'remise'),
     a.visas && `${plural(a.visas, 'visa')} DPLG`,
@@ -47,7 +49,7 @@ function tonCharge(
 export function Production({ slug }: { slug: string }) {
   const router = useRouter();
   const session = useSessionCourante();
-  const [vue, setVue] = useState<VueProduction | null>(null);
+  const [vue, setVue] = useState<ProductionView | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [renta, setRenta] = useState<Map<string, LigneRentabilite>>(new Map());
   const [cellule, setCellule] = useState('');
@@ -199,7 +201,7 @@ export function Production({ slug }: { slug: string }) {
                       <span className="prod-etiquette">Avancement</span>
                       <span>
                         {l.etape
-                          ? `${numeroEtape(l.etape.numero)} · ${l.etape.libelle}${l.etape.terminee ? ' · terminée' : ''}`
+                          ? `${stepNumber(l.etape.numero)} · ${l.etape.libelle}${l.etape.terminee ? ' · terminée' : ''}`
                           : 'Pas encore commencé'}
                       </span>
                       {l.souffrance.length > 0 && (
@@ -207,15 +209,15 @@ export function Production({ slug }: { slug: string }) {
                         <span
                           className="prod-souffrance"
                           title={l.souffrance
-                            .map((s) => `${numeroEtape(s.numero)} · ${s.libelle} : ${s.taches}`)
+                            .map((s) => `${stepNumber(s.numero)} · ${s.libelle} : ${s.taches}`)
                             .join('\n')}
                         >
                           {l.souffrance.length === 1
-                            ? `${plural(l.souffrance[0].taches, 'tâche')} en souffrance dans ${numeroEtape(l.souffrance[0].numero)} · ${l.souffrance[0].libelle}`
+                            ? `${plural(l.souffrance[0].taches, 'tâche')} en souffrance dans ${stepNumber(l.souffrance[0].numero)} · ${l.souffrance[0].libelle}`
                             : `${plural(
                                 l.souffrance.reduce((t, s) => t + s.taches, 0),
                                 'tâche',
-                              )} en souffrance : ${l.souffrance.map((s) => `${numeroEtape(s.numero)} (${s.taches})`).join(', ')}`}
+                              )} en souffrance : ${l.souffrance.map((s) => `${stepNumber(s.numero)} (${s.taches})`).join(', ')}`}
                         </span>
                       )}
                       <span className="prod-barre" aria-label={`${l.faites} tâches faites sur ${l.total}`}>

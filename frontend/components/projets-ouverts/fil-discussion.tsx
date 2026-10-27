@@ -1,13 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  getFil,
-  publierCommentaire,
-  resoudreCommentaire,
-  type CommentaireFil,
-  type MessageFil,
-} from '@/lib/projets-ouverts';
+import { getThread, postComment, resolveComment } from '@/features/projects/api';
+import type { ThreadComment, ThreadRoot } from '@/features/projects/types';
 import { Infobulle } from '@/components/infobulle';
 import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
@@ -30,15 +25,15 @@ type Props = {
 // réponse ou sa résolution par l'auteur.
 export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mentionnables, onMaj }: Props) {
   const cible = tacheId ? { tacheId } : { carteId: carteId! };
-  const [fil, setFil] = useState<CommentaireFil[] | null>(null);
+  const [fil, setFil] = useState<ThreadRoot[] | null>(null);
   const [texte, setTexte] = useState('');
   const [mention, setMention] = useState('');
-  const [reponseA, setReponseA] = useState<CommentaireFil | null>(null);
+  const [reponseA, setReponseA] = useState<ThreadRoot | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
   const charger = useCallback(async () => {
-    setFil(await getFil(slug, projetId, tacheId ? { tacheId } : { carteId: carteId! }));
+    setFil(await getThread(slug, projetId, tacheId ? { tacheId } : { carteId: carteId! }));
   }, [slug, projetId, carteId, tacheId]);
 
   useEffect(() => {
@@ -68,7 +63,7 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
   async function publier() {
     if (!texte.trim()) return;
     const ok = await agir(() =>
-      publierCommentaire(slug, projetId, {
+      postComment(slug, projetId, {
         ...cible,
         texte: texte.trim(),
         mentionneId: mention || null,
@@ -117,7 +112,7 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
                       type="button"
                       className="po-lien"
                       disabled={enCours}
-                      onClick={() => agir(() => resoudreCommentaire(slug, projetId, c.id))}
+                      onClick={() => agir(() => resolveComment(slug, projetId, c.id))}
                     >
                       Résoudre
                     </button>
@@ -176,7 +171,7 @@ export function FilDiscussion({ slug, projetId, carteId, tacheId, moiId, mention
   );
 }
 
-function Message({ m }: { m: MessageFil }) {
+function Message({ m }: { m: ThreadComment }) {
   return (
     <div className="po-fil-message">
       <p className="po-aide">

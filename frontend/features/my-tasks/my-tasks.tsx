@@ -9,7 +9,8 @@ import { lireFichier } from '@/lib/fichiers';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
 import { prenomAffiche } from '@/lib/profil';
-import { marquerMentionLue, type MentionRecue } from '@/lib/projets-ouverts';
+import { markMentionRead } from '@/features/projects/api';
+import type { MyMention } from '@/features/projects/types';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
 import { DepositToast } from './deposit-toast';
@@ -134,7 +135,7 @@ export function MyTasks({ slug }: { slug: string }) {
       : SECTIONS.filter((s) => !(withAside && s === 'attente')).flatMap((s) => g.sections[s])
     ).map((t) => t.id),
   );
-  const mentionsByTask = new Map<string, MentionRecue[]>();
+  const mentionsByTask = new Map<string, MyMention[]>();
   if (filter !== 'mentions') {
     for (const m of mentions) {
       if (m.lue || !m.tacheId || !shown.has(m.tacheId)) continue;
@@ -156,9 +157,9 @@ export function MyTasks({ slug }: { slug: string }) {
 
   // Pastille de mention : ouvre la tâche (le fil est dans le panneau) et
   // marque ses mentions comme lues.
-  function openMentions(t: MyTask, list: MentionRecue[]) {
+  function openMentions(t: MyTask, list: MyMention[]) {
     open(t);
-    void Promise.all(list.map((m) => marquerMentionLue(slug, m.id)))
+    void Promise.all(list.map((m) => markMentionRead(slug, m.id)))
       .then(() => tasks.reloadMentions())
       .catch(() => undefined);
   }

@@ -21,26 +21,30 @@ import { niveauSuffisant } from '@/lib/auth';
 import { getMyTasks } from '@/features/my-tasks/api';
 import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
 import {
-  ajouterTs,
-  definirDateVisite,
-  definirStatutChantier,
-  getAssignables,
-  getDossierProjet,
-  getMentionnables,
-  getMesMentions,
-  getTableauProjets,
-  heuresTache,
-  numeroEtape,
-  pastilleCarte,
-  pastilleEtape,
-  pastilleTache,
-  type Assignable,
-  type CarteOuverte,
-  type DossierProjetOuvert,
-  STATUTS_CHANTIER,
-  type StatutChantier,
-  type TableauProjets,
-} from '@/lib/projets-ouverts';
+  addTsElement,
+  getAssignableEmployees,
+  getBoard,
+  getMentionablePeople,
+  getMyMentions,
+  getProjectFile,
+  setSiteStatus,
+  setSiteVisitDate,
+} from '@/features/projects/api';
+import {
+  SITE_STATUS_LABELS,
+  cardPill,
+  stepNumber,
+  stepPill,
+  taskHoursLabel,
+  taskPill,
+} from '@/features/projects/labels';
+import type {
+  AssignableEmployee,
+  OpenProjectFile,
+  OpenProjectsBoard,
+  ProjectCard,
+  SiteStatus,
+} from '@/features/projects/types';
 import { TachePanneau } from './tache-panneau';
 import { CartePanneau } from './carte-panneau';
 import { PanneauLateral } from './panneau-lateral';
@@ -58,7 +62,7 @@ const HEURES_PAR_JOUR = 8;
 // ouverts, et le dossier du projet choisi — étapes, cartes, tâches.
 export function ProjetsOuverts({ slug }: { slug: string }) {
   const session = useSessionCourante();
-  const [tableau, setTableau] = useState<TableauProjets | null>(null);
+  const [tableau, setTableau] = useState<OpenProjectsBoard | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   // ?projet= : lien d'une notification (mention dans un fil) ; &tache= : la
   // tâche à ouvrir (« À décider aujourd'hui » du Dir. GC).
@@ -66,7 +70,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const projetDemande = parametres.get('projet');
   const tacheDemandee = parametres.get('tache');
   const [projetId, setProjetId] = useState<string | null>(projetDemande);
-  const [dossier, setDossier] = useState<DossierProjetOuvert | null>(null);
+  const [dossier, setDossier] = useState<OpenProjectFile | null>(null);
   const [etape, setEtape] = useState(1);
   const [selection, setSelection] = useState<Selection>(null);
   // « À valider par vous » : la remise à ouvrir une fois son dossier chargé.
@@ -98,7 +102,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   // CEO, CFO : lecture, et les fils en écriture (exception ciblée, revérifiée
   // par le serveur) ; aucune action de circuit.
   const consultation = consultationEtCommentaires(session);
-  const [assignables, setAssignables] = useState<Assignable[] | null>(null);
+  const [assignables, setAssignables] = useState<AssignableEmployee[] | null>(null);
   const [mentionnables, setMentionnables] = useState<{ id: string; nom: string }[] | null>(null);
 
   // Le nom du gabarit parle à la direction, pas au Salarié (revue mobile 20/10/2026).
@@ -106,7 +110,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
 
   const chargerTableau = useCallback(
     () =>
-      getTableauProjets(slug)
+      getBoard(slug)
         .then((t) => {
           setTableau(t);
           setProjetId((id) => id ?? t.projets[0]?.id ?? null);
@@ -122,12 +126,12 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   const peutEcrireFil = peutAssigner || salarie || consultation;
   useEffect(() => {
     if (peutAssigner) {
-      getAssignables(slug)
+      getAssignableEmployees(slug)
         .then(setAssignables)
         .catch(() => setAssignables(null));
     }
     if (peutEcrireFil) {
-      getMentionnables(slug)
+      getMentionablePeople(slug)
         .then(setMentionnables)
         .catch(() => setMentionnables(null));
     }
@@ -136,7 +140,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
   const chargerPerso = useCallback(() => {
     if (!salarie) return;
-    Promise.all([getMyTasks(slug), getMesMentions(slug)])
+    Promise.all([getMyTasks(slug), getMyMentions(slug)])
       .then(([t, m]) =>
         setPerso({
           reprises: t.taches.filter((x) => x.statut === 'a_reprendre').length,
@@ -151,7 +155,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
   useEffect(chargerPerso, [chargerPerso]);
 
   const recharger = useCallback(async () => {
-    if (projetId) setDossier(await getDossierProjet(slug, projetId));
+    if (projetId) setDossier(await getProjectFile(slug, projetId));
     await chargerTableau();
     chargerPerso();
   }, [slug, projetId, chargerTableau, chargerPerso]);
@@ -179,7 +183,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
     let annule = false;
     setDossier(null);
     setSelection(null);
-    getDossierProjet(slug, projetId)
+    getProjectFile(slug, projetId)
       .then((d) => {
         if (annule) return;
         setDossier(d);
@@ -346,7 +350,7 @@ export function ProjetsOuverts({ slug }: { slug: string }) {
 
 // Étape ouverte à l'arrivée : celle de ma première tâche en cours, sinon la
 // première étape pas finie (plutôt que 01, souvent déjà close).
-function etapeParDefaut(d: DossierProjetOuvert): number {
+function etapeParDefaut(d: OpenProjectFile): number {
   const ouverte = (statut: string) => statut !== 'validee' && statut !== 'non_necessaire';
   const miennes = d.cartes.filter((c) => c.taches.some((t) => t.aMoi && ouverte(t.statut))).map((c) => c.etapeNumero);
   if (miennes.length) return Math.min(...miennes);
@@ -358,7 +362,7 @@ function etapeParDefaut(d: DossierProjetOuvert): number {
 // chef de cellule avec des remises en attente : « À valider par vous ».
 function tuilesSalarie(
   perso: { reprises: number; retards: number; attente: number; mentions: number } | null,
-  tableau: TableauProjets | null,
+  tableau: OpenProjectsBoard | null,
   slug: string,
   ouvrirRemise: () => void,
 ): KpiTile[] {
@@ -419,7 +423,7 @@ function tuilesSalarie(
 // Tuiles du tableau (couleur = sens, lib/couleurs-etat.ts) : ambre à
 // traiter, rouge en retard (tâches, TS non acceptés), vert rien en attente.
 function tuilesProjets(
-  tableau: TableauProjets | null,
+  tableau: OpenProjectsBoard | null,
   valideur: boolean,
   salarie: boolean,
   ouvrirRemise: () => void,
@@ -481,12 +485,12 @@ function tuilesProjets(
 
 type PropsDossier = {
   slug: string;
-  dossier: DossierProjetOuvert;
+  dossier: OpenProjectFile;
   etape: number;
   onEtape: (n: number) => void;
   selection: Selection;
   onSelection: (s: Selection) => void;
-  assignables: Assignable[] | null;
+  assignables: AssignableEmployee[] | null;
   moiId: string;
   mentionnables: { id: string; nom: string }[] | null;
   onMaj: () => Promise<void>;
@@ -596,7 +600,7 @@ function Dossier({
 
       <div ref={etapesRef} className="po-etapes" role="tablist" aria-label="Étapes">
         {d.etapes.map((e) => {
-          const p = pastilleEtape(e);
+          const p = stepPill(e);
           return (
             <button
               key={e.numero}
@@ -610,7 +614,7 @@ function Dossier({
               }}
             >
               <span className="po-etape-tete">
-                <span>{numeroEtape(e.numero)}</span>
+                <span>{stepNumber(e.numero)}</span>
                 <span>
                   {e.faites}/{e.total} tâches
                 </span>
@@ -711,15 +715,7 @@ function Dossier({
 
 // « Ajouter en TS » (Architecte DPLG) : l'élément demandé par le client
 // devient une tâche de la carte choisie, son temps s'ajoute au budget atelier.
-function AjoutTs({
-  slug,
-  dossier: d,
-  onMaj,
-}: {
-  slug: string;
-  dossier: DossierProjetOuvert;
-  onMaj: () => Promise<void>;
-}) {
+function AjoutTs({ slug, dossier: d, onMaj }: { slug: string; dossier: OpenProjectFile; onMaj: () => Promise<void> }) {
   const [carteId, setCarteId] = useState(d.optionsTs[0].carteId);
   const [element, setElement] = useState('');
   const [reprise, setReprise] = useState<'mineure' | 'majeure'>('mineure');
@@ -732,7 +728,7 @@ function AjoutTs({
     setEnvoi(true);
     setMessage(null);
     try {
-      const t = await ajouterTs(
+      const t = await addTsElement(
         slug,
         d.id,
         carteId,
@@ -835,7 +831,7 @@ function AjoutTs({
 const CARTE_RELEVES = 'releves_existants';
 
 type PropsCarte = {
-  carte: CarteOuverte;
+  carte: ProjectCard;
   tacheId: string | null;
   filActif: boolean;
   onTache: (id: string) => void;
@@ -844,7 +840,7 @@ type PropsCarte = {
 };
 
 function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCarte) {
-  const p = pastilleCarte(c.etat);
+  const p = cardPill(c.etat);
   // Carte close (tout validé) : repliée sur une ligne, dépliable au clic.
   const repliable = c.etat.code === 'close';
   const [deplie, setDeplie] = useState(!repliable);
@@ -913,7 +909,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
       ) : (
         <ul className="po-taches">
           {c.taches.map((t) => {
-            const pt = pastilleTache(t.etat, t.prolongation.accordeeJusquau ?? t.finLe);
+            const pt = taskPill(t.etat, t.prolongation.accordeeJusquau ?? t.finLe);
             const eteint = t.etat.code === 'non_necessaire' || t.etat.code === 'desactivee';
             return (
               <li key={t.id}>
@@ -934,7 +930,7 @@ function Carte({ carte: c, tacheId, filActif, onTache, onFil, visite }: PropsCar
                     )}
                   </span>
                   <span className="po-tache-assigne">{t.assigne?.nom ?? 'À assigner'}</span>
-                  <span className="po-tache-heures">{heuresTache(t)}</span>
+                  <span className="po-tache-heures">{taskHoursLabel(t)}</span>
                   <span className={`po-tache-echeance${t.etat.code === 'en_retard' ? ' po-retard' : ''}`}>
                     {t.finLe ? formatDayMonth(t.finLe) : '—'}
                   </span>
@@ -974,7 +970,7 @@ const memeLibelle = (cle: string, libelle: string) => normaliser(cle) === normal
 
 // « F1 émise · projet ouvert », « F2 attend 02, 03, récépissé 04 »… La
 // première facture en attente est mise en avant (maquette).
-function pastillesFactures(d: DossierProjetOuvert): { libelle: string; ton: PillTone }[] {
+function pastillesFactures(d: OpenProjectFile): { libelle: string; ton: PillTone }[] {
   let premiere = true;
   return (['F1', 'F2', 'F3'] as const).map((f) => {
     if (d.factures[f] === 'emise')
@@ -997,7 +993,7 @@ function DateVisite({ slug, projetId, date, modifiable, onMaj }: NonNullable<Pro
   async function changer(valeur: string) {
     setErreur(null);
     try {
-      await definirDateVisite(slug, projetId, valeur || null);
+      await setSiteVisitDate(slug, projetId, valeur || null);
       await onMaj();
     } catch (e) {
       setErreur(e instanceof Error && e.message ? e.message : 'Date non enregistrée.');
@@ -1030,7 +1026,7 @@ function StatutProjet({
 }: {
   slug: string;
   projetId: string;
-  statut: StatutChantier;
+  statut: SiteStatus;
   modifiable: boolean;
   onMaj: () => Promise<void>;
 }) {
@@ -1038,7 +1034,7 @@ function StatutProjet({
   if (!modifiable)
     return (
       <Pill tone="neutre" className="po-statut-chantier">
-        {STATUTS_CHANTIER[statut]}
+        {SITE_STATUS_LABELS[statut]}
       </Pill>
     );
   return (
@@ -1050,16 +1046,16 @@ function StatutProjet({
         onChange={async (e) => {
           setErreur(null);
           try {
-            await definirStatutChantier(slug, projetId, e.target.value as StatutChantier);
+            await setSiteStatus(slug, projetId, e.target.value as SiteStatus);
             await onMaj();
           } catch (err) {
             setErreur(err instanceof Error && err.message ? err.message : 'Statut non enregistré.');
           }
         }}
       >
-        {(Object.keys(STATUTS_CHANTIER) as StatutChantier[]).map((k) => (
+        {(Object.keys(SITE_STATUS_LABELS) as SiteStatus[]).map((k) => (
           <option key={k} value={k}>
-            {STATUTS_CHANTIER[k]}
+            {SITE_STATUS_LABELS[k]}
           </option>
         ))}
       </select>
