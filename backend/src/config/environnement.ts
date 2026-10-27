@@ -19,9 +19,6 @@ class VariablesEnvironnement {
   @Matches(/^postgres(ql)?:\/\//, { message: 'DATABASE_URL doit être une URL PostgreSQL (postgresql://…).' })
   DATABASE_URL!: string;
   @IsOptional() @IsString() JWT_SECRET?: string;
-  @IsOptional()
-  @Matches(/^\d+[smhd]?$/, { message: 'JWT_EXPIRES_IN doit être une durée (ex. 7d, 12h).' })
-  JWT_EXPIRES_IN?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(65_535) PORT?: number;
   @IsOptional() @IsUrl({ require_tld: false }) FRONT_URL?: string;
   @IsOptional() @IsString() CORS_ORIGINS?: string;

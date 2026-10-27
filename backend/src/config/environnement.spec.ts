@@ -47,7 +47,6 @@ describe('problemesEnvironnement', () => {
     ['SMTP_SECURE', 'oui'],
     ['HUB_DOUBLE_FACTEUR', 'facultatif'],
     ['HUB_DONNEES_DEMO', 'oui'],
-    ['JWT_EXPIRES_IN', 'une semaine'],
     ['NODE_ENV', 'staging'],
   ])('REFUSÉ : %s = %s', (variable, valeur) => {
     expect(problemesEnvironnement({ ...BASE, [variable]: valeur })).toEqual(

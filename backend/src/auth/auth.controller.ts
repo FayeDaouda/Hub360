@@ -113,7 +113,11 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  changerMotDePasse(@Req() req: { user: { userId: string; societeSlug: string } }, @Body() dto: ChangerMotDePasseDto) {
-    return this.authService.changerMotDePasse(req.user.userId, req.user.societeSlug, dto.actuel, dto.nouveau);
+  changerMotDePasse(
+    @Req() req: { user: { userId: string; societeSlug: string; debutSession: number } },
+    @Body() dto: ChangerMotDePasseDto,
+  ) {
+    const u = req.user;
+    return this.authService.changerMotDePasse(u.userId, u.societeSlug, dto.actuel, dto.nouveau, u.debutSession);
   }
 }

@@ -1,6 +1,10 @@
 import { INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { api, COMPTES, connecter, demarrer, MOT_DE_PASSE, SLUG } from './app';
+
+// Contenu d'un jeton (dates en secondes), lu sans vérifier la signature.
+const contenu = (jeton: string) => JSON.parse(Buffer.from(jeton.split('.')[1], 'base64url').toString());
 
 // Parcours 1 — connexion et droits : la porte d'entrée et la matrice.
 describe('Connexion et droits', () => {
@@ -50,11 +54,64 @@ describe('Connexion et droits', () => {
       .expect(200);
     await api(app, ancienne).get('/dossiers').expect(401);
     await api(app, r.body.access_token).get('/dossiers').expect(200);
+    // Même début de session : changer de mot de passe ne repousse pas les 12 h.
+    expect(contenu(r.body.access_token).debut).toBe(contenu(ancienne).debut);
     // Remis en l'état pour les autres parcours.
     await request(app.getHttpServer())
       .post('/api/auth/mot-de-passe')
       .set('Authorization', `Bearer ${r.body.access_token}`)
       .send({ actuel: 'NouveauMotDePasse2026!', nouveau: MOT_DE_PASSE })
       .expect(200);
+  });
+});
+
+// Durée des sessions (décision du 28/10/2026, lot B) : 12 h au plus ;
+// inactivité 1 h pour CEO, CFO, CIO et RH, 4 h pour les autres.
+describe('Durée des sessions', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    app = await demarrer();
+  });
+  afterAll(() => app.close());
+
+  const prolonger = (jeton: string) =>
+    request(app.getHttpServer()).post('/api/auth/moi/prolongation').set('Authorization', `Bearer ${jeton}`);
+
+  it('la session commence à la connexion ; le jeton vaut 1 h pour le CFO, 4 h pour le Salarié', async () => {
+    const cfo = contenu(await connecter(app, COMPTES.cfo));
+    expect(cfo.debut).toBe(cfo.iat);
+    expect(cfo.exp - cfo.iat).toBe(3600);
+    const salarie = contenu(await connecter(app, COMPTES.salarie));
+    expect(salarie.exp - salarie.iat).toBe(4 * 3600);
+  });
+
+  it('la prolongation rend un jeton valable, sur le même début de session', async () => {
+    const jeton = await connecter(app, COMPTES.dirgc);
+    const r = await prolonger(jeton).expect(200);
+    await api(app, r.body.access_token).get('/dossiers').expect(200);
+    const avant = contenu(jeton);
+    const apres = contenu(r.body.access_token);
+    expect(apres).toMatchObject({
+      sub: avant.sub,
+      role: avant.role,
+      permissions: avant.permissions,
+      debut: avant.debut,
+    });
+    expect(apres.exp).toBeGreaterThanOrEqual(avant.exp);
+  });
+
+  it('au-delà de 12 h depuis la connexion : refusée, même avec un jeton encore valable', async () => {
+    const { sub, email, societeId, societeSlug, role, permissions } = contenu(await connecter(app, COMPTES.cio));
+    const maintenant = Math.floor(Date.now() / 1000);
+    // Jeton bien signé et non expiré, mais d'une session ouverte il y a 12 h.
+    const jeton = app
+      .get(JwtService)
+      .sign(
+        { sub, email, societeId, societeSlug, role, permissions, iat: maintenant, debut: maintenant - 12 * 3600 },
+        { expiresIn: 3600 },
+      );
+    const r = await api(app, jeton).get('/dossiers').expect(401);
+    expect(r.body.message).toBe('Session expirée — reconnecte-toi.');
+    await prolonger(jeton).expect(401);
   });
 });

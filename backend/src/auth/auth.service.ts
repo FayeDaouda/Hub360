@@ -15,6 +15,8 @@ import {
   verifierCode,
 } from './totp';
 import { cheminPhoto } from './profil';
+import { dureeJeton } from './session';
+import type { UtilisateurConnecte } from './jwt.strategy';
 import { EmailService, type AvisSecurite } from '../email/email.service';
 
 // Double authentification obligatoire pour tous les rôles (décision du
@@ -39,6 +41,16 @@ export const ROLES_SECOURS: ReadonlySet<string> = new Set(['holding_admin', 'soc
 // que les sessions (jamais accepté comme session), valable 10 minutes.
 const secretEtape = () => `${process.env.JWT_SECRET || 'change-moi-en-production'}:double-facteur`;
 type EtapeConnexion = { etape: 'code' | 'enrolement'; jeton: string };
+
+// Contenu d'un jeton de session, hors dates (iat, debut, exp).
+type ContenuSession = {
+  sub: string;
+  email: string;
+  societeId: string | null;
+  societeSlug: string | null;
+  role: string;
+  permissions: Record<string, string>;
+};
 
 @Injectable()
 export class AuthService {
@@ -201,8 +213,15 @@ export class AuthService {
 
   // Changement par la personne connectée : mot de passe actuel exigé (un
   // poste resté ouvert ne suffit pas). Toutes les sessions émises avant
-  // sont coupées ; une nouvelle est rendue pour ne pas déconnecter l'auteur.
-  async changerMotDePasse(utilisateurId: string, societeSlug: string, actuel: string, nouveau: string) {
+  // sont coupées ; une nouvelle est rendue pour ne pas déconnecter l'auteur,
+  // sur le même début de session (le changement ne repousse pas les 12 h).
+  async changerMotDePasse(
+    utilisateurId: string,
+    societeSlug: string,
+    actuel: string,
+    nouveau: string,
+    debutSession: number,
+  ) {
     const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
     if (!utilisateur?.motDePasseHash || !(await verifierMotDePasse(actuel, utilisateur.motDePasseHash))) {
       throw new BadRequestException('Mot de passe actuel incorrect.');
@@ -221,7 +240,30 @@ export class AuthService {
       }),
     ]);
     this.avertir(utilisateur, 'mot_de_passe_modifie');
-    return this.ouvrirSession({ ...utilisateur, sessionsValidesDepuis: maintenant }, societeSlug);
+    return this.ouvrirSession({ ...utilisateur, sessionsValidesDepuis: maintenant }, societeSlug, debutSession);
+  }
+
+  // Prolongation par l'activité dans le HUB (lot B) : même rôle, mêmes
+  // droits, même début de session ; seule l'expiration avance (session.ts).
+  // Un compte désactivé ou une session coupée n'arrivent pas jusqu'ici
+  // (JwtStrategy). Jamais daté avant le jeton présenté (cf. dateEmission).
+  prolongerSession(u: UtilisateurConnecte) {
+    const iat = Math.max(Math.floor(Date.now() / 1000), u.emissionJeton);
+    const contenu = {
+      sub: u.userId,
+      email: u.email,
+      societeId: u.societeId,
+      societeSlug: u.societeSlug,
+      role: u.role,
+      permissions: u.permissions,
+    };
+    return { access_token: this.signerSession(contenu, iat, u.debutSession) };
+  }
+
+  private signerSession(contenu: ContenuSession, iat: number, debut: number) {
+    const duree = dureeJeton(contenu.role, debut, iat);
+    if (duree <= 0) throw new UnauthorizedException('Session expirée — reconnecte-toi.');
+    return this.jwtService.sign({ ...contenu, debut, iat }, { expiresIn: duree });
   }
 
   // Société de l'URL et affectation du compte : celle de la société, sinon
@@ -285,9 +327,12 @@ export class AuthService {
     });
   }
 
+  // `debut` : heure de la connexion, reprise d'une session en cours ; absente,
+  // la session commence avec ce jeton.
   private async ouvrirSession(
     utilisateur: { id: string; email: string; nom: string; prenom: string; sessionsValidesDepuis: Date | null },
     societeSlug: string,
+    debut?: number,
   ) {
     const { societe, acces } = await this.acces(utilisateur.id, societeSlug);
 
@@ -313,18 +358,18 @@ export class AuthService {
       data: { derniereConnexionLe: new Date(), connexionPrecedenteLe: avant?.derniereConnexionLe ?? null },
     });
 
-    const payload = {
+    const contenu = {
       sub: utilisateur.id,
       email: utilisateur.email,
       societeId: societe.id,
       societeSlug: societe.slug,
       role: acces.role.nom,
       permissions,
-      iat: dateEmission(utilisateur.sessionsValidesDepuis),
     };
+    const iat = dateEmission(utilisateur.sessionsValidesDepuis);
 
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.signerSession(contenu, iat, debut ?? iat),
       utilisateur: {
         id: utilisateur.id,
         email: utilisateur.email,

@@ -3,6 +3,21 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { identifyCompany } from '../tenancy/tenant-context';
+import { sessionEchue } from './session';
+
+// Personne connectée, posée sur req.user par JwtAuthGuard.
+export type UtilisateurConnecte = {
+  userId: string;
+  email: string;
+  societeId: string | null;
+  societeSlug: string | null;
+  role: string;
+  permissions: Record<string, string>;
+  // Session (src/auth/session.ts) : heure de la connexion et émission du
+  // jeton présenté, en secondes.
+  debutSession: number;
+  emissionJeton: number;
+};
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -28,7 +43,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     role: string;
     permissions?: Record<string, string>;
     iat?: number;
-  }) {
+    debut?: number;
+  }): Promise<UtilisateurConnecte> {
+    // Douze heures au plus depuis la connexion, même pour un jeton émis avant
+    // cette règle (sans `debut` : sa propre émission en tient lieu).
+    const debutSession = payload.debut ?? payload.iat ?? 0;
+    if (sessionEchue(debutSession)) {
+      throw new UnauthorizedException('Session expirée — reconnecte-toi.');
+    }
+
     const utilisateur = await this.prisma.utilisateur.findUnique({
       where: { id: payload.sub },
       select: { id: true, email: true, actif: true, sessionsValidesDepuis: true },
@@ -72,6 +95,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // socle sans RolePermission (cf. auth.service.ts) — PermissionGuard
       // traite l'absence d'entrée pour un module comme 'aucun' (fail closed).
       permissions: payload.permissions ?? {},
+      debutSession,
+      emissionJeton: payload.iat ?? 0,
     };
   }
 }
