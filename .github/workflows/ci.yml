@@ -79,6 +79,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
       - run: npm run build
+      # Description OpenAPI régénérée depuis le code : elle doit être à jour.
+      - name: Description OpenAPI à jour
+        run: |
+          npm run openapi
+          git diff --exit-code openapi.json || { echo "::error::backend/openapi.json n'est plus à jour : npm run build && npm run openapi (backend), puis npm run api:types (frontend)"; exit 1; }
       - run: npm test
       - run: npm run test:e2e
         env:
@@ -103,6 +108,11 @@ jobs:
       - run: npm ci && npm run build
         working-directory: packages/domain
       - run: npm ci
+      # Types de l'API régénérés depuis backend/openapi.json : ils doivent être à jour.
+      - name: Types de l'API à jour
+        run: |
+          npm run api:types
+          git diff --exit-code lib/api/schema.d.ts || { echo "::error::frontend/lib/api/schema.d.ts n'est plus à jour : npm run api:types (frontend)"; exit 1; }
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
