@@ -107,3 +107,84 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  images:
+    name: Images Docker — construction
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/backend.Dockerfile -t hub-backend .
+      - run: docker build -f deploy/frontend.Dockerfile -t hub-frontend .
+      - run: docker build -f deploy/sauvegarde.Dockerfile -t hub-sauvegarde deploy
+      # Ce dont les conteneurs ont besoin au démarrage : le paquet partagé, le
+      # module natif de bcrypt (connexion) et la CLI Prisma (migrations) pour
+      # le back, le serveur pour le front.
+      - name: Contenu des images
+        run: |
+          docker run --rm hub-backend node -e "require('@hub/domain'); require('bcrypt')"
+          docker run --rm hub-backend npx --no-install prisma --version
+          docker run --rm hub-frontend test -f server.js
+
+  restauration:
+    name: Sauvegarde et restauration — test
+    runs-on: ubuntu-latest
+    # Les scripts réels de deploy/ (image de sauvegarde) sur la base de démo :
+    # sauvegarde, restauration dans une base neuve, puis comparaison table par
+    # table. Une sauvegarde jamais restaurée n'est pas une sauvegarde.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: hub
+          POSTGRES_PASSWORD: hub
+          POSTGRES_DB: hub
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: hub
+      PGPASSWORD: hub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            packages/domain/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: packages/domain
+      - name: Base de démo
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://hub:hub@localhost:5432/hub?schema=public
+        run: |
+          npm ci
+          npx prisma generate
+          npx prisma migrate deploy
+          npx ts-node prisma/seed.ts
+          npx ts-node prisma/rh-dossiers-init.ts
+      - run: docker build -f deploy/sauvegarde.Dockerfile -t hub-sauvegarde deploy
+      - name: Sauvegarde (sauvegarde.sh)
+        run: |
+          mkdir -p "$RUNNER_TEMP/sauvegardes"
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD -e PGDATABASE=hub \
+            -v "$RUNNER_TEMP/sauvegardes:/sauvegardes" hub-sauvegarde sauvegarde.sh
+      - name: Restauration dans une base neuve (restaurer.sh)
+        run: |
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD hub-sauvegarde \
+            psql -d hub -c 'CREATE DATABASE hub_restauree'
+          fichier=$(basename "$(ls "$RUNNER_TEMP"/sauvegardes/hub-*.dump)")
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD -e PGDATABASE=hub_restauree \
+            -v "$RUNNER_TEMP/sauvegardes:/sauvegardes" hub-sauvegarde restaurer.sh "/sauvegardes/$fichier" --oui
+      - name: Données identiques (verifier-restauration.sh)
+        run: |
+          docker run --rm --network host -e PGHOST -e PGUSER -e PGPASSWORD hub-sauvegarde \
+            verifier-restauration.sh hub hub_restauree
+      - name: Schéma à jour pour l'application
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://hub:hub@localhost:5432/hub_restauree?schema=public
+        run: npx prisma migrate status
