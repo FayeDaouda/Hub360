@@ -32,15 +32,6 @@ export class MonCompteController {
     private auth: AuthService,
   ) {}
 
-  // Activité dans le HUB : nouveau jeton, expiration repoussée selon le rôle,
-  // jamais au-delà des 12 heures de la session (session.ts). Sans plafond
-  // de tentatives : route réservée à une session valide.
-  @Post('prolongation')
-  @HttpCode(200)
-  prolongerSession(@Req() req: { user: UtilisateurConnecte }): SessionProlongeeDto {
-    return this.auth.prolongerSession(req.user);
-  }
-
   @Get()
   lire(@Req() req: R) {
     return this.profil.lire(req.user.userId);
@@ -65,6 +56,15 @@ export class MonCompteController {
   @HttpCode(200)
   deconnecterPartout(@Req() req: R) {
     return this.profil.deconnecterPartout(req.user.userId);
+  }
+
+  // Activité dans le HUB : nouveau jeton, expiration repoussée selon le rôle,
+  // jamais au-delà des 12 heures de la session (session.ts). Sans plafond
+  // de tentatives : route réservée à une session valide.
+  @Post('prolongation')
+  @HttpCode(200)
+  prolongerSession(@Req() req: { user: UtilisateurConnecte }): SessionProlongeeDto {
+    return this.auth.prolongerSession(req.user);
   }
 }
 

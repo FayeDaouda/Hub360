@@ -336,6 +336,27 @@
         ]
       }
     },
+    "/api/auth/moi/prolongation": {
+      "post": {
+        "operationId": "MonCompteController_prolongerSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionProlongeeDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MonCompte"
+        ]
+      }
+    },
     "/api/photos/{cle}": {
       "get": {
         "operationId": "PhotosController_photo",
@@ -8640,6 +8661,17 @@
         },
         "required": [
           "image"
+        ]
+      },
+      "SessionProlongeeDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token"
         ]
       },
       "LectureDto": {
