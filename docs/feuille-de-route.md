@@ -27,13 +27,19 @@ Décisions structurantes : `docs/adr/`.
   (un seul fichier) et valide une nouvelle référence de captures.
 - **Critères de fin de chaque module :**
   - le module est dans `features/`, avec ses noms en anglais ;
-  - aucun fichier de plus de 300 lignes, aucune copie de fonction utilitaire ;
+  - aucun fichier de code (TS, TSX) de plus de 300 lignes, aucune copie de
+    fonction utilitaire. Exception : les feuilles CSS, découpées avec la
+    refonte visuelle (les découper avant change l'ordre de la cascade, donc
+    le rendu ; décision du 28/10/2026) ;
   - les règles métier du module sont calculées au back et testées ;
   - chaque écran gère le chargement, le vide et l'erreur ;
   - des tests côté front sur les composants et les hooks principaux ;
   - ses réponses d'API décrites par des DTO, et ses appels typés par les
     types générés (`frontend/lib/api/types.ts`, ADR 0005) ;
   - les chiffres avant et après dans la description de la PR.
+- **Noms des modèles de données** : ils restent en français pendant la
+  structuration des modules ; renommés en anglais à la fin, en une seule PR,
+  avec `@map`/`@@map` et sans migration (décision du 28/10/2026).
 - **Routes de l'API inchangées** pendant la structuration (contrat public).
   Avant de sortir les applications macOS, Windows et iOS, introduire un
   préfixe de version (`/api/v1`) : une fois des applications installées, on
