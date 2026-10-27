@@ -145,8 +145,9 @@ services:
       NODE_ENV: production
     command: ['sh', '-c', 'npx prisma migrate deploy && npx ts-node prisma/demarrage.ts']
 
-  # Sauvegarde quotidienne de la base (02:30) : copie locale (14 gardées) et,
-  # si le stockage objet est configuré, envoi dans S3_BUCKET_SAUVEGARDES.
+  # Sauvegarde quotidienne de la base (02:30) : copie sur le serveur, sur la
+  # Storage Box et, chiffrée, chez un second fournisseur ; conservation 7 / 4 /
+  # 12 (sauvegarde.sh). Test de restauration chaque dimanche à 03:30.
   sauvegarde:
     <<: *journaux
     build:
@@ -161,13 +162,29 @@ services:
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
-      S3_ENDPOINT: ${S3_ENDPOINT:-}
-      S3_BUCKET_SAUVEGARDES: ${S3_BUCKET_SAUVEGARDES:-}
-      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-}
-      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-}
-      AWS_DEFAULT_REGION: ${S3_REGION:-eu-central}
+      # Storage Box Hetzner : SFTP sur le port 23, clé SSH et empreinte du
+      # serveur dans deploy/secrets/ (docs/mise-en-production.md).
+      SAUVEGARDE_BOITE_HOTE: ${SAUVEGARDE_BOITE_HOTE:-}
+      RCLONE_CONFIG_BOITE_TYPE: sftp
+      RCLONE_CONFIG_BOITE_HOST: ${SAUVEGARDE_BOITE_HOTE:-}
+      RCLONE_CONFIG_BOITE_USER: ${SAUVEGARDE_BOITE_UTILISATEUR:-}
+      RCLONE_CONFIG_BOITE_PORT: '23'
+      RCLONE_CONFIG_BOITE_KEY_FILE: /run/secrets/storagebox_ed25519
+      RCLONE_CONFIG_BOITE_KNOWN_HOSTS_FILE: /run/secrets/storagebox_known_hosts
+      RCLONE_CONFIG_BOITE_SHELL_TYPE: none
+      # Second fournisseur (compatible S3) : copie chiffrée avec age pour la
+      # clé publique SAUVEGARDE_CLE_PUBLIQUE.
+      SAUVEGARDE_DISTANT_BUCKET: ${SAUVEGARDE_DISTANT_BUCKET:-}
+      SAUVEGARDE_CLE_PUBLIQUE: ${SAUVEGARDE_CLE_PUBLIQUE:-}
+      RCLONE_CONFIG_DISTANT_TYPE: s3
+      RCLONE_CONFIG_DISTANT_PROVIDER: ${SAUVEGARDE_DISTANT_FOURNISSEUR:-Other}
+      RCLONE_CONFIG_DISTANT_ENDPOINT: ${SAUVEGARDE_DISTANT_ENDPOINT:-}
+      RCLONE_CONFIG_DISTANT_REGION: ${SAUVEGARDE_DISTANT_REGION:-}
+      RCLONE_CONFIG_DISTANT_ACCESS_KEY_ID: ${SAUVEGARDE_DISTANT_ACCESS_KEY:-}
+      RCLONE_CONFIG_DISTANT_SECRET_ACCESS_KEY: ${SAUVEGARDE_DISTANT_SECRET_KEY:-}
     volumes:
       - ./sauvegardes:/sauvegardes
+      - ./secrets:/run/secrets:ro
 
 volumes:
   postgres_data:
