@@ -21,7 +21,13 @@ vi.mock('@/lib/defilement', () => ({ useSectionEnLecture: () => undefined, aller
 vi.mock('@/components/pilotage/decisions-fiche', () => ({ DecisionsFiche: () => null }));
 
 describe('Teams', () => {
-  beforeEach(() => api.getTeamsView.mockReset());
+  // Corps entre accolades : une fonction renvoyée par beforeEach est rappelée
+  // par Vitest après le test, comme nettoyage. `mockReset()` renvoie la
+  // fonction simulée : elle était rappelée après chaque test, et son rejet,
+  // que personne n'attrapait, faisait échouer le test d'erreur.
+  beforeEach(() => {
+    api.getTeamsView.mockReset();
+  });
 
   it('chargement, puis les cellules', async () => {
     api.getTeamsView.mockResolvedValue(teamsViewFixture());
@@ -32,10 +38,7 @@ describe('Teams', () => {
   });
 
   it('erreur de chargement : le message du serveur', async () => {
-    // Réponse en erreur, arrivée après coup comme une vraie requête.
-    api.getTeamsView.mockImplementation(
-      () => new Promise((_, reject) => setTimeout(() => reject(new Error('Équipes indisponibles pour le moment.')))),
-    );
+    api.getTeamsView.mockRejectedValue(new Error('Équipes indisponibles pour le moment.'));
     render(<Teams slug="gc" canWrite />);
     expect(await screen.findByText('Équipes indisponibles pour le moment.')).toBeInTheDocument();
   });
