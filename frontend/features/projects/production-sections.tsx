@@ -8,8 +8,13 @@ import type { ProductionView } from './types';
 export function CellsLoad({ load }: { load: ProductionView['charge'] }) {
   return (
     <section className="panel glass-panel prod-section" aria-label="Charge des cellules">
+      {/* Le découpage du texte (« au », espace, date en nœuds séparés) est
+          celui d'origine : recollé, Chrome espace « au 09/11 » autrement et le
+          rendu change de quelques pixels. Prettier le recollerait. */}
+      {/* prettier-ignore */}
       <h2 className="dmd-titre">
-        Charge des cellules · du {formatDayMonth(load.periode.debut)} au {formatDayMonth(load.periode.fin)}
+        Charge des cellules · du {formatDayMonth(load.periode.debut)} au{' '}
+        {formatDayMonth(load.periode.fin)}
       </h2>
       <p className="dmd-note">
         Heures prévues des tâches à faire, sur la présence de chacun (absences et fériés retirés), comparées à la zone
