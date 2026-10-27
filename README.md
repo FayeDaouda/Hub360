@@ -117,12 +117,20 @@ Mot de passe commun : `changeme123` — à changer avant toute mise en productio
 | `npm run build`                                            | compilation (`nest build`) |
 | `npm test` · `test:watch` · `test:cov`                     | tests unitaires Jest       |
 | `npm run prisma:migrate` · `prisma:seed` · `prisma:studio` | base                       |
+| `npm run openapi` (après `build`)                          | `openapi.json` régénéré    |
 
 | Frontend                          |                      |
 | --------------------------------- | -------------------- |
 | `npm run dev` · `build` · `start` | Next.js              |
 | `npm run lint`                    | ESLint (`next lint`) |
 | `npm run typecheck`               | `tsc --noEmit`       |
+| `npm run api:types`               | types de l'API       |
+
+Description de l'API : `backend/openapi.json`, générée depuis le code
+(ADR 0005) ; page Swagger sur `/api/docs` en développement seulement. Après
+un changement de route ou de DTO : `npm run build && npm run openapi` au
+back, puis `npm run api:types` au front, et versionner les deux fichiers (la
+CI échoue s'ils ne sont plus à jour).
 
 ## Conventions (non négociables)
 

@@ -1,17 +1,10 @@
 import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
-import { NotificationType } from '@prisma/client';
-import { IsArray, IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { NotificationsService } from './notifications.service';
+import { LectureDto } from './notifications.dto';
 
 type R = { user: { societeId: string; userId: string } };
-
-class LectureDto {
-  @IsOptional() @IsArray() @IsEnum(NotificationType, { each: true }) types?: NotificationType[];
-  // Ces notifications seulement (« Vu » du contrôle interne, revue CEO).
-  @IsOptional() @IsArray() @IsUUID('all', { each: true }) ids?: string[];
-}
 
 // Ouvert à tout membre de la société (garde « membre », pas « admin ») :
 // chacun lit / marque lues SES propres notifications — l'id vient du token,

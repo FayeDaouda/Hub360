@@ -20,10 +20,13 @@ echo "▶ format — Prettier"
 echo "▶ paquet partagé — types + tests + build"
 ( cd "$root/packages/domain" && npm run typecheck && npm test && npm run build )
 
-echo "▶ backend — build + tests"
-( cd "$root/backend" && npm run build && npm test )
+echo "▶ backend — build + tests, description OpenAPI à jour"
+( cd "$root/backend" && npm run build && npm test && npm run -s openapi >/dev/null 2>&1 && git diff --quiet -- openapi.json ) ||
+  { echo "✗ backend en échec, ou backend/openapi.json à régénérer : npm run openapi (backend), puis npm run api:types (frontend)"; exit 1; }
 
-echo "▶ frontend — lint + types + tests"
+echo "▶ frontend — types de l'API à jour, lint + types + tests"
+( cd "$root/frontend" && npm run -s api:types >/dev/null 2>&1 && git diff --quiet -- lib/api/schema.d.ts ) ||
+  { echo "✗ frontend/lib/api/schema.d.ts à régénérer : npm run api:types (frontend)"; exit 1; }
 ( cd "$root/frontend" && npm run lint && npm run typecheck && npm test )
 
 echo "✓ tout est vert — push autorisé"

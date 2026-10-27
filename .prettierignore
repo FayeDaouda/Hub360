@@ -5,6 +5,9 @@ frontend/.next/
 frontend/next-env.d.ts
 backend/dist/
 packages/domain/dist/
+# Générés (npm run openapi au back, npm run api:types au front)
+backend/openapi.json
+frontend/lib/api/schema.d.ts
 coverage/
 e2e/.state/
 e2e/.reference/
