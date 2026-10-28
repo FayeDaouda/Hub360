@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { installerSocle } from './socle';
+import { ROLE_CIO } from '@hub/domain';
 
 // Amorçage d'une VRAIE installation (base vide, production comprise) : le
 // socle réel (rôles, matrice validée, société, catalogue, annexes) et le
@@ -13,7 +14,6 @@ import { installerSocle } from './socle';
 // Le mot de passe provisoire n'est affiché qu'une fois : le CIO le change à
 // sa première connexion (menu du compte · changer mon mot de passe).
 
-const ROLE_CIO = 'CIO (transverse)';
 const COUT_BCRYPT = 12;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

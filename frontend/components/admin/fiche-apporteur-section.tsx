@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { getSession } from '@/lib/auth';
 import { modifierApporteur } from '@/lib/crm';
 import { PaiementApporteur } from '@/components/crm/paiement-apporteur';
-import { formatDate, formatNumber } from '@hub/domain';
+import { formatDate, formatNumber, ROLE_COO } from '@hub/domain';
 import type { Projet } from '@/lib/types';
 import {
   FicheApporteurChamps,
@@ -16,7 +16,7 @@ import { FieldError } from '@/components/ui/field';
 
 // Même rôle que le serveur (CrmService.ROLE_MODIF_APPORTEUR) — affichage
 // seulement, le serveur tranche.
-const ROLE_MODIF_APPORTEUR = 'COO';
+const ROLE_MODIF_APPORTEUR = ROLE_COO;
 
 type Props = {
   slug: string;

@@ -1,8 +1,7 @@
-import { addDays } from '@hub/domain';
+import { addDays, ROLE_CTO, ROLE_DIR_GC } from '@hub/domain';
 import type { PrismaService } from '../prisma/prisma.service';
 import { HEURES_PAR_JOUR, type Feries } from '../rh/regles-temps';
 import { dateOfDay } from './work-calendar';
-import { ROLE_CTO, ROLE_DPLG } from './review-rules';
 
 // Suppléance et escalade (revue Dir. GC, 21/10/2026, lot 4) : qui décide et
 // qui est prévenu AUJOURD'HUI, selon les absences validées.
@@ -41,7 +40,7 @@ async function holdersOf(prisma: PrismaService, companyId: string, role: string)
 
 export async function decisionContext(prisma: PrismaService, companyId: string, day: string): Promise<DecisionContext> {
   const [dirGcIds, ctoIds, absences] = await Promise.all([
-    holdersOf(prisma, companyId, ROLE_DPLG),
+    holdersOf(prisma, companyId, ROLE_DIR_GC),
     holdersOf(prisma, companyId, ROLE_CTO),
     prisma.demandeAbsence.findMany({
       where: { statut: 'validee', dateDebut: { lte: day }, dateFin: { gte: day }, dossier: { societeId: companyId } },

@@ -1,12 +1,12 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLE_EMPLOYEE } from '../projects/review-rules';
 import {
   PERMISSION_REQUISE,
   PERMISSION_SELON_METHODE,
   PermissionRequise,
   PermissionSelonMethode,
 } from '../commun/permission.decorator';
+import { ROLE_COMPANY_ADMIN, ROLE_EMPLOYEE } from '@hub/domain';
 
 // Garde des routes /societes/:slug/projets/:id/… restantes (facturation d'un
 // projet, depuis la phase 1). Le jeton doit avoir été émis pour la société
@@ -25,7 +25,7 @@ export class AccesProjetGuard implements CanActivate {
     if (!user || user.societeSlug !== req.params.slug) {
       throw new ForbiddenException("Vous n'avez pas accès à cette société");
     }
-    if (user.role === 'societe_admin') return true;
+    if (user.role === ROLE_COMPANY_ADMIN) return true;
     if (user.role === ROLE_EMPLOYEE) {
       throw new ForbiddenException('Vos projets sont accessibles depuis « Projets ».');
     }

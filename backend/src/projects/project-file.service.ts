@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { todayIso } from '@hub/domain';
+import { ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import type { Temps } from '../reglages/gabarit';
@@ -7,7 +7,7 @@ import { refDevis, statutDevisEffectif } from '../devis/domaine';
 import { dateOfDay, workdayRank } from './work-calendar';
 import { invoiceWaits } from './task-states';
 import { deliveryDate, projectHorizon, type DecisionContext } from './decision-context';
-import { actsAsDplg, canDecide, canQualify, canVisa, outsideCircuit, projectScope, ROLE_CTO } from './review-rules';
+import { actsAsDplg, canDecide, canQualify, canVisa, outsideCircuit, projectScope } from './review-rules';
 import {
   fullName,
   grantedExtension,

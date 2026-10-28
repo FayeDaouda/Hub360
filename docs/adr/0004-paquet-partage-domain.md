@@ -1,6 +1,6 @@
 # ADR 0004 — Paquet partagé `@hub/domain` : une seule version des fonctions communes
 
-- Statut : accepté (27/10/2026)
+- Statut : accepté (27/10/2026), complété le 28/10/2026 (noms de rôles)
 - Contexte de décision : décision n° 8 du chantier de structuration
   (25/10/2026, « `packages/domain` limité aux schémas de formulaires, au
   formatage et aux constantes ») et critère de fin de S0c
@@ -64,3 +64,50 @@ espaces de travail npm (`workspaces`), avec un seul lockfile à la racine.
   `packages/domain`, avant le back et le front (`README.md`).
 - `formatDayShortMonth` suit l'heure de Dakar au back aussi ; sans effet
   aujourd'hui (aucun appel au back).
+
+## Complément du 28/10/2026 — noms de rôles
+
+Décision du user (option A) : les noms de rôles tiennent dans un seul
+fichier, `packages/domain/src/roles.ts`.
+
+### Contexte
+
+Le nom d'un rôle (`Role.nom` en base, `role` dans la session) est le seul
+identifiant stable d'un rôle : il n'y a pas de code séparé. Ces noms étaient
+écrits en dur à environ 160 endroits du back et du front, avec une quinzaine
+de constantes locales en double (`ROLE_CEO` dans neuf fichiers du back,
+`ROLE_CIO` dans deux, `ROLE_DAF`, `ROLE_DPLG`, `ROLE_SALARIE`…), chacune
+accompagnée du même avertissement « si le rôle est renommé, ce fichier est
+le seul à mettre à jour ».
+
+### Décision
+
+1. **Un fichier** : `ROLE_CEO`, `ROLE_CTO`, `ROLE_CIO`, `ROLE_CFO`,
+   `ROLE_COO`, `ROLE_DIR_GC`, `ROLE_HR`, `ROLE_EMPLOYEE`,
+   `ROLE_COMPANY_ADMIN` (`societe_admin`), `ROLE_HOLDING_ADMIN`
+   (`holding_admin`) et le type `RoleName`, importés depuis `@hub/domain`
+   par le back, le front et l'installation du socle
+   (`backend/prisma/socle.ts`, `demarrage.ts`).
+2. **Des noms, pas des règles** (point 5 ci-dessus) : qui peut faire quoi
+   reste au back (matrice des permissions, règles des modules). Les rôles
+   désignés par leur fonction restent des alias du back, définis à partir de
+   ces noms : `ROLE_PROPRIETAIRE_DOSSIER` (`crm/cycle.ts`),
+   `ROLE_MODIF_APPORTEUR` (`crm/crm.service.ts`), `ROLE_N1_DIRECTION`
+   (`rh/demandes.service.ts`).
+3. **Les synonymes disparaissent** : `ROLE_DAF` devient `ROLE_CFO`,
+   `ROLE_DPLG` devient `ROLE_DIR_GC`, `ROLE_SALARIE` et `ROLE_RH` deviennent
+   `ROLE_EMPLOYEE` et `ROLE_HR`.
+4. **Les libellés restent du texte** : une chaîne d'écran qui a la même
+   valeur qu'un rôle sans en être un garde sa valeur écrite (entrée de menu « RH »,
+   repli « Salarié » quand le nom manque, marqueur « validée par la RH »,
+   valideur « CFO » / « CEO » d'un salaire).
+5. **Les tests et les jeux de démonstration** écrivent les valeurs en
+   clair : ils décrivent ce qui est enregistré en base.
+
+### Conséquences
+
+- Renommer un rôle : changer `roles.ts`, recompiler le paquet, et migrer
+  `Role.nom` en base (et les champs qui gardent un nom de rôle, comme
+  `n1Role` des demandes).
+- Une nouvelle comparaison de rôle s'écrit avec la constante, jamais avec la
+  chaîne.

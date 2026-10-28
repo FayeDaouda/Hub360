@@ -8,7 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { formatTime } from '@hub/domain';
+import { formatTime, ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { hacherMotDePasse, verifierMotDePasse } from './mot-de-passe';
@@ -44,7 +44,7 @@ export function doubleFacteurExige(env: NodeJS.ProcessEnv = process.env): boolea
 // Comptes techniques de secours (revue CIO, 22/10/2026) : sans usage
 // quotidien, accès confié au CEO ; chaque connexion est tracée au journal et
 // notifiée au CEO et au CIO.
-export const ROLES_SECOURS: ReadonlySet<string> = new Set(['holding_admin', 'societe_admin']);
+export const ROLES_SECOURS: ReadonlySet<string> = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]);
 
 // Jeton d'étape entre le mot de passe et le code : signé avec une autre clé
 // que les sessions (jamais accepté comme session), valable 10 minutes.
@@ -384,7 +384,7 @@ export class AuthService {
     const destinataires = await this.prisma.utilisateurSocieteRole.findMany({
       where: {
         societeId: societe.id,
-        role: { nom: { in: ['CEO (transverse)', 'CIO (transverse)'] } },
+        role: { nom: { in: [ROLE_CEO, ROLE_CIO] } },
         utilisateur: { actif: true },
       },
       select: { utilisateurId: true },

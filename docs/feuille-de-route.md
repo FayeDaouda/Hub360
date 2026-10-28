@@ -73,11 +73,9 @@ Décisions structurantes : `docs/adr/`.
   remplacer : changement de comportement, à décider avec S7.
 - **Tournée des rappels** : la découper par société (aujourd'hui en périmètre
   système, ADR 0001).
-- **Noms des rôles** : `'CEO (transverse)'` est écrit dans 18 fichiers du back
-  (Finances, CRM, RH, Pilotage, Rôles, rappels…), `'Salarié'` dans 3.
-  Regrouper les noms de rôles dans un seul fichier de constantes, partagé par
-  tous les modules : étape à part, puisqu'elle touche tous les modules (sans
-  changement de comportement).
+- **Noms des rôles** : fait le 28/10/2026, un seul fichier partagé par le
+  back et le front, `packages/domain/src/roles.ts` (ADR 0004, complément du
+  28/10/2026 ; sans changement de comportement).
 - **Lot accessibilité des fenêtres** : une règle unique, toutes les fenêtres
   se ferment avec Échap, sauf pendant un envoi (8 ne le font pas :
   `closeOnEscape={false}` les repère) ; le focus du clavier reste dans la

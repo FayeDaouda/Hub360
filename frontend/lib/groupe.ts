@@ -1,5 +1,17 @@
 import type { CompteGroupe, ComptesGroupe, InvitationCompte, StatutCompteGroupe } from './types';
 import { apiAuth } from './client-api';
+import {
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  ROLE_CTO,
+  ROLE_DIR_GC,
+  ROLE_EMPLOYEE,
+  ROLE_HOLDING_ADMIN,
+  ROLE_HR,
+} from '@hub/domain';
 
 // Comptes & rôles — API NestJS, admin du groupe (HoldingAdminGuard) :
 //   GET  /groupe/comptes                                 sociétés, rôles attribuables, comptes
@@ -54,8 +66,8 @@ export function debloquerCompte(utilisateurId: string): Promise<{ id: string; ve
 // l'écran montre un intitulé lisible ; le suffixe « (transverse) » est porté
 // par le regroupement de la liste, pas répété sur chaque option.
 const LIBELLES_ROLES: Record<string, string> = {
-  societe_admin: 'Administration société',
-  holding_admin: 'Administration groupe',
+  [ROLE_COMPANY_ADMIN]: 'Administration société',
+  [ROLE_HOLDING_ADMIN]: 'Administration groupe',
 };
 
 export function libelleRole(nom: string): string {
@@ -63,16 +75,7 @@ export function libelleRole(nom: string): string {
 }
 
 // Ordre métier (celui de la matrice validée), pas alphabétique.
-const ORDRE_ROLES = [
-  'Dir. GC',
-  'COO',
-  'CFO',
-  'RH',
-  'Salarié',
-  'CEO (transverse)',
-  'CTO (transverse)',
-  'CIO (transverse)',
-];
+const ORDRE_ROLES = [ROLE_DIR_GC, ROLE_COO, ROLE_CFO, ROLE_HR, ROLE_EMPLOYEE, ROLE_CEO, ROLE_CTO, ROLE_CIO];
 
 export function comparerRoles(a: { nom: string }, b: { nom: string }): number {
   const ia = ORDRE_ROLES.indexOf(a.nom);

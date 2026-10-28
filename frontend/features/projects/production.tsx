@@ -14,6 +14,7 @@ import { loadTone } from './production-labels';
 import { ProductionRowItem } from './production-row';
 import { CellsLoad, UpcomingDeadlines } from './production-sections';
 import type { ProductionView } from './types';
+import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : toute la
 // production sur un écran — projets par risque, charge des cellules sur deux
@@ -29,7 +30,7 @@ export function Production({ slug }: { slug: string }) {
   const [lateOnly, setLateOnly] = useState(false);
   const [deliverySoon, setDeliverySoon] = useState(false);
   // La matrice fait foi (revue CIO) : marges en lecture = couleur de marge.
-  const showMargin = niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== 'societe_admin';
+  const showMargin = niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== ROLE_COMPANY_ADMIN;
 
   useEffect(() => {
     getProduction(slug)

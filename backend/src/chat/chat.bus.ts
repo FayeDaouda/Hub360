@@ -4,6 +4,7 @@ import { TypeCanal } from '@prisma/client';
 import { interval, merge, Observable, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import type { MessageRendu } from './chat.service';
+import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 type EvtMessage = {
   kind: 'message';
@@ -64,7 +65,7 @@ export class ChatBus {
       return a.userId === e.participant1Id || a.userId === e.participant2Id;
     }
     // cellule
-    return a.role === 'societe_admin' || a.celluleId === e.celluleId;
+    return a.role === ROLE_COMPANY_ADMIN || a.celluleId === e.celluleId;
   }
 
   private versSse(e: ChatEvt): MessageEvent {

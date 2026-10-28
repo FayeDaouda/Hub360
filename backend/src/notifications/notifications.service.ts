@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ROLE_DAF, ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
+import { ROLE_PROPRIETAIRE_DOSSIER } from '../crm/cycle';
 import {
   ContexteNotificationCrm,
   DELAI_RELANCE_FICHE_MS,
@@ -9,6 +9,7 @@ import {
   planNotificationsCrm,
   relanceFicheIncomplete,
 } from '../crm/notifications-crm';
+import { ROLE_CFO } from '@hub/domain';
 
 const MAX_STOCKEES = 30;
 
@@ -72,7 +73,7 @@ export class NotificationsService {
   // Appelée APRÈS la transaction de l'événement. Ne lève jamais : une
   // notification manquée ne doit pas faire échouer une validation DAF, une
   // réponse client ou une signature — l'échec est journalisé.
-  //   · DAF          = titulaires du rôle ROLE_DAF de la société
+  //   · DAF          = titulaires du rôle CFO de la société
   //   · propriétaire = le propriétaire du dossier ; « à assigner » → tous les
   //                    titulaires Dir. GC (l'un d'eux reprendra le dossier)
   //   · apporteur    = l'apporteur INTERNE (compte HUB) ; externe → personne
@@ -101,7 +102,7 @@ export class NotificationsService {
       if (!d) return;
 
       const [daf, dirGc] = await Promise.all([
-        this.titulairesRole(societeId, ROLE_DAF),
+        this.titulairesRole(societeId, ROLE_CFO),
         d.proprietaireId ? Promise.resolve([]) : this.titulairesRole(societeId, ROLE_PROPRIETAIRE_DOSSIER),
       ]);
       const ctx: ContexteNotificationCrm = {
@@ -146,7 +147,7 @@ export class NotificationsService {
   // manquée ne doit pas faire échouer la préparation (l'échec est journalisé).
   async notifierFactureAValider(params: { societeId: string; factureId: string; dossierCrmId: string; titre: string }) {
     try {
-      const cfo = await this.titulairesRole(params.societeId, ROLE_DAF);
+      const cfo = await this.titulairesRole(params.societeId, ROLE_CFO);
       if (!cfo.length) return;
       await this.prisma.notification.createMany({
         data: cfo.map((destinataireId) => ({

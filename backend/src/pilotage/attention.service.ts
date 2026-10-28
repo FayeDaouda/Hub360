@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { JalonFacture, NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../commun/permission.guard';
-import { ROLE_CEO, SeuilCeoService } from '../finances/seuil-ceo.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { ProjectAlertsService } from '../projects/project-alerts.service';
 import { DemandesService } from '../rh/demandes.service';
-import { todayIso } from '@hub/domain';
+import { ROLE_CEO, ROLE_COMPANY_ADMIN, todayIso } from '@hub/domain';
 
 export type ActeurAttention = {
   userId: string;
@@ -39,7 +39,7 @@ export class AttentionService {
 
   async attention(a: ActeurAttention) {
     const voit = (module: string, niveau: NiveauPermission = 'lecture') =>
-      a.role === 'societe_admin' || aLaPermission(a.permissions, module, niveau);
+      a.role === ROLE_COMPANY_ADMIN || aLaPermission(a.permissions, module, niveau);
     const [projets, factures, ts] = [voit('projets'), voit('finances_factures'), voit('finances_devis')];
     const jour = todayIso();
     const [alertes, impayees, absences] = await Promise.all([

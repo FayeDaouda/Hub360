@@ -1,6 +1,6 @@
 import type { TypeReporting } from '@prisma/client';
 import { moisDe, moisEntre } from '../rh/regles-temps';
-import { addDays, daysBetween } from '@hub/domain';
+import { addDays, daysBetween, ROLE_CFO, ROLE_CTO, ROLE_DIR_GC, ROLE_HR } from '@hub/domain';
 
 // Pilotage · tableau de bord Holding (maquettes du boss, sept.–oct. 2026) —
 // règles pures : reportings mensuels (manuel §9.4, dépôt à J+5), registre des
@@ -18,8 +18,8 @@ export const JOUR_DEPOT_REPORTING = 5;
 
 // Émetteur → destinataire, d'après la maquette (rôles de la matrice).
 export const REPORTINGS: Record<TypeReporting, { emetteur: string; destinataire: string }> = {
-  direction: { emetteur: 'Dir. GC', destinataire: 'CTO (transverse)' },
-  rh: { emetteur: 'RH', destinataire: 'CFO' },
+  direction: { emetteur: ROLE_DIR_GC, destinataire: ROLE_CTO },
+  rh: { emetteur: ROLE_HR, destinataire: ROLE_CFO },
 };
 
 export function moisSuivant(mois: string): string {

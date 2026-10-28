@@ -5,26 +5,25 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ROLE_CEO, ROLES_DELEGATAIRES } from '../commun/delegation-ceo';
+import { ROLES_DELEGATAIRES } from '../commun/delegation-ceo';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatDate, todayIso } from '@hub/domain';
+import { formatDate, ROLE_CEO, ROLE_CFO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
-const ROLE_CIO = 'CIO (transverse)';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const libelleRole = (r: string) => r.replace(/\s*\(transverse\)$/, '');
 
 // Ce que le délégataire peut décider, selon sa fonction (ses propres droits
 // font foi : le CTO n'a pas la main sur les finances).
 export const PERIMETRE_DELEGATION: Record<string, string[]> = {
-  CFO: [
+  [ROLE_CFO]: [
     'contresignature des offres et factures au-delà du seuil',
     'avoirs au-delà du seuil',
     'décisions proposées',
     'absences des directeurs',
   ],
-  'CTO (transverse)': ['décisions proposées', 'absences des directeurs'],
+  [ROLE_CTO]: ['décisions proposées', 'absences des directeurs'],
 };
 export const JAMAIS_DELEGUE = ['droits du CIO', 'ses propres demandes', 'salaire du CFO'];
 
@@ -53,7 +52,7 @@ export class DelegationService {
       enCours: d.du <= jour,
       perimetre: PERIMETRE_DELEGATION[d.roleDelegataire] ?? [],
     });
-    if (a.role === ROLE_CEO || a.role === 'societe_admin') {
+    if (a.role === ROLE_CEO || a.role === ROLE_COMPANY_ADMIN) {
       const candidats = await this.prisma.utilisateurSocieteRole.findMany({
         where: { societeId: a.societeId, role: { nom: { in: [...ROLES_DELEGATAIRES] } }, utilisateur: { actif: true } },
         select: { role: { select: { nom: true } }, utilisateur: { select: { id: true, prenom: true, nom: true } } },

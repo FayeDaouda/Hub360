@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ROLE_CEO } from './acces-back-office';
 import { apiSociete } from './client-api';
 import type { Session } from './types';
+import { ROLE_CEO, ROLE_CFO } from '@hub/domain';
 
 // Validation financière du CEO (décision du 12/10/2026) : il voit toutes les
 // Finances mais ne valide (envoi d'une offre, émission, avoir, encaissements)
@@ -44,13 +44,13 @@ export type Contresignature = { seuil: number | null; delegue: boolean };
 
 export function useContresignature(slug: string, session: Session): Contresignature {
   const [etat, setEtat] = useState<Contresignature>({ seuil: null, delegue: false });
-  const concerne = session.role === ROLE_CEO || session.role === 'CFO';
+  const concerne = session.role === ROLE_CEO || session.role === ROLE_CFO;
   useEffect(() => {
     if (!concerne) return;
     getSeuilContresignature(slug)
       .then((r) => setEtat((e) => ({ ...e, seuil: r.seuilTtc })))
       .catch(() => undefined);
-    if (session.role === 'CFO') {
+    if (session.role === ROLE_CFO) {
       apiSociete<{ delegations: { enCours: boolean }[] }>(slug, '/pilotage/delegation')
         .then((v) => setEtat((e) => ({ ...e, delegue: v.delegations.some((d) => d.enCours) })))
         .catch(() => undefined);
@@ -61,6 +61,6 @@ export function useContresignature(slug: string, session: Session): Contresignat
 
 export function contresigneAffaire(session: Session, c: Contresignature, montantTtc: number): boolean {
   if (session.role === ROLE_CEO) return c.seuil !== null && montantTtc > c.seuil;
-  if (session.role === 'CFO') return c.seuil !== null && (montantTtc <= c.seuil || c.delegue);
+  if (session.role === ROLE_CFO) return c.seuil !== null && (montantTtc <= c.seuil || c.delegue);
   return true;
 }

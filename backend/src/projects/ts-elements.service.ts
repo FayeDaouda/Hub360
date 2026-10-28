@@ -1,10 +1,10 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { todayIso } from '@hub/domain';
+import { ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Temps } from '../reglages/gabarit';
 import { decisionContext } from './decision-context';
-import { actsAsDplg, assertInCircuit, ROLE_CTO } from './review-rules';
+import { actsAsDplg, assertInCircuit } from './review-rules';
 import { TS_UNITS, type Actor } from './project-query';
 
 // « Ajouter en TS » (Architecte DPLG) : un élément demandé par le client

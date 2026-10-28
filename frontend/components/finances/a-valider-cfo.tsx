@@ -31,7 +31,7 @@ import { DecisionAvoir } from '@/components/finances/decision-avoir';
 import { PayerCommission } from '@/components/finances/payer-commission';
 import { getCommissions, type CommissionApporteur } from '@/lib/commissions';
 import { aValiderCfo } from '@/lib/finances';
-import { daysSince, formatAmount, formatCompactAmount, formatDayMonth, plural, todayIso } from '@hub/domain';
+import { daysSince, formatAmount, formatCompactAmount, formatDayMonth, plural, ROLE_CEO, todayIso } from '@hub/domain';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getSalairesAValider, LIBELLE_MOTIF_SALAIRE, type SalaireAValider } from '@/lib/rh';
@@ -262,7 +262,7 @@ export function AValiderCfo({
     });
   }
   // 5 bis. Clôture du mois terminé (relance par défaut à partir du 5).
-  if (moisTermine && !moisTermine.clos && session.role !== 'CEO (transverse)') {
+  if (moisTermine && !moisTermine.clos && session.role !== ROLE_CEO) {
     const jour = Number(todayIso().slice(8, 10));
     elements.push({
       cle: `cloture-${moisTermine.mois}`,

@@ -1,5 +1,6 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { SocieteAdminOuCioGuard, ROLE_CIO } from './societe-admin-ou-cio.guard';
+import { SocieteAdminOuCioGuard } from './societe-admin-ou-cio.guard';
+import { ROLE_CIO } from '@hub/domain';
 
 // Deux chemins d'autorisation légitimes, testés séparément — comme pour le
 // dispatcher de cellule (« admin OU dispatcher ») : societe_admin ou CIO,

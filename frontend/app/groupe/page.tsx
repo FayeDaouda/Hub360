@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 import { clearSession, getSession } from '@/lib/auth';
-import { estAdministrateurHub, ROLE_CIO } from '@/lib/acces-back-office';
+import { estAdministrateurHub } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { Session } from '@/lib/types';
 import { HubLogo } from '@/components/hub-logo';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
+import { ROLE_CIO } from '@hub/domain';
 
 // Administration du HUB — le CIO, super admin désigné (28/09/2026), ou le
 // compte technique holding_admin (cf. estAdministrateurHub). Les autres rôles

@@ -14,10 +14,7 @@ import { ventilationTva } from '../domaine/gardes';
 import { moisClos } from './cloture';
 import { FacturationService } from './facturation.service';
 import { agitPourCeo, avecDelegataire } from '../../commun/delegation-ceo';
-import { formatAmount, formatMonthYear } from '@hub/domain';
-
-const ROLE_CEO = 'CEO (transverse)';
-const ROLE_CFO = 'CFO';
+import { formatAmount, formatMonthYear, ROLE_CEO, ROLE_CFO } from '@hub/domain';
 
 export const LIBELLE_MOTIF_AVOIR: Record<MotifAvoir, string> = {
   erreur_facturation: 'erreur de facturation',

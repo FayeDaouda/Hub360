@@ -35,7 +35,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { SeuilCeoService } from '../../finances/seuil-ceo.service';
 import { exigerMoisOuvert } from './cloture';
 import { prochainNumeroLegal, verrouillerNumerotation } from './numerotation-base';
-import { formatAmount, formatMonthYear, todayIso } from '@hub/domain';
+import { formatAmount, formatMonthYear, ROLE_CFO, todayIso } from '@hub/domain';
 
 // Facturation client — module admin-only (le contrôleur ne marque aucun
 // endpoint @EcritureCollaborateur, donc AccesProjetGuard rejette toute écriture
@@ -638,7 +638,7 @@ export class FacturationService {
       if (!f) return;
       const proprietaire = f.projet?.dossierCrm.proprietaireId ?? f.dossierCrm?.proprietaireId ?? null;
       const { montantTtc } = ventilationTva(f.montantHt.toNumber(), f.tauxTva.toNumber());
-      const cfo = type === 'facture_payee' ? await this.notifications.titulairesRole(f.societeId, 'CFO') : [];
+      const cfo = type === 'facture_payee' ? await this.notifications.titulairesRole(f.societeId, ROLE_CFO) : [];
       await this.notifications.envoyer({
         societeId: f.societeId,
         type,

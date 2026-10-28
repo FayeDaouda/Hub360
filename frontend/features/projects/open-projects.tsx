@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { KpiStrip } from '@/components/ui/kpi';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
-import { consultationEtCommentaires, ROLE_DIR_GC, ROLE_SALARIE, sectionAccessible } from '@/lib/acces-back-office';
+import { consultationEtCommentaires, sectionAccessible } from '@/lib/acces-back-office';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { HOURS_PER_DAY } from './labels';
@@ -13,6 +13,7 @@ import { ProjectFile } from './project-file';
 import { ProjectPicker } from './project-picker';
 import { boardTiles, employeeTiles } from './project-tiles';
 import { useOpenProjects } from './use-open-projects';
+import { ROLE_DIR_GC, ROLE_EMPLOYEE } from '@hub/domain';
 
 // Projets · gabarit (maquette « Projets » du boss, vue CIO) : tuiles, projets
 // ouverts, et le dossier du projet choisi — étapes, cartes, tâches.
@@ -32,7 +33,7 @@ export function OpenProjects({ slug }: { slug: string }) {
   // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
   const canAssign = niveauSuffisant(session, 'projets', 'ecriture');
   const dplg = session.role === ROLE_DIR_GC;
-  const employee = session.role === ROLE_SALARIE;
+  const employee = session.role === ROLE_EMPLOYEE;
   // « Seulement mes tâches » (revue Salarié 19/10/2026) : actif d'office
   // pour le Salarié, proposé à quiconque a une tâche dans le projet.
   const [onlyMine, setOnlyMine] = useState(employee);

@@ -12,15 +12,23 @@ import { DECISION_EN_VIGUEUR, statutDecision } from './pilotage-regles';
 import { PilotageService } from './pilotage.service';
 import { ReportingRhService } from './reporting-rh.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { addDays, formatAmount, formatDate, formatMonthYear, plural, todayIso } from '@hub/domain';
+import {
+  addDays,
+  formatAmount,
+  formatDate,
+  formatMonthYear,
+  plural,
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_COMPANY_ADMIN,
+  todayIso,
+} from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };
 export type SectionSynthese = { titre: string; lignes: LigneSynthese[] };
 
-const ROLE_CEO = 'CEO (transverse)';
-const ROLE_CFO = 'CFO';
-const LECTEURS = new Set([ROLE_CEO, ROLE_CFO, 'societe_admin']);
+const LECTEURS = new Set([ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN]);
 
 // Synthèse mensuelle du CEO (revue CEO, 22/10/2026) : générée par le HUB
 // après la clôture du mois par le CFO, avec ce qu'il sait déjà — facturation,

@@ -2,7 +2,8 @@ import { ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
-import { ROLE_CEO, SeuilCeoService } from './seuil-ceo.service';
+import { SeuilCeoService } from './seuil-ceo.service';
+import { ROLE_CEO } from '@hub/domain';
 
 const d = (n: number) => new Prisma.Decimal(n);
 // Une ligne d'offre : quantité 1, prix HT, TVA 18 %.

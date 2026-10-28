@@ -1,5 +1,16 @@
 import { niveauSuffisant } from './auth';
 import type { Session } from './types';
+import {
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  ROLE_CTO,
+  ROLE_EMPLOYEE,
+  ROLE_HOLDING_ADMIN,
+  ROLE_HR,
+} from '@hub/domain';
 
 // Qui entre dans le back-office société (/admin/[slug]) et quelles sections
 // y voit-il — un seul point de vérité, lu par le layout (redirections), la
@@ -49,24 +60,7 @@ const CHEMINS: Record<string, string> = {
 
 // Rôle socle qui a son propre espace (/groupe) — même liste que
 // backend/src/commun/back-office.guard.ts.
-const ROLES_HORS_BACK_OFFICE = new Set(['holding_admin']);
-
-// Le CIO est le super admin du HUB (décision 28/09/2026) — même nom de rôle
-// que backend/src/commun/societe-admin-ou-cio.guard.ts (ROLE_CIO).
-export const ROLE_CIO = 'CIO (transverse)';
-export const ROLE_CTO = 'CTO (transverse)';
-
-// Dir. GC = Architecte DPLG (validation en suppléance, ajout en TS) — même
-// nom que backend/src/projects/review-rules.ts (ROLE_DPLG).
-export const ROLE_DIR_GC = 'Dir. GC';
-// Salarié : projets en lecture, limités à ceux où il a une tâche — même nom
-// que backend/src/projects/review-rules.ts (ROLE_EMPLOYEE).
-export const ROLE_SALARIE = 'Salarié';
-
-export const ROLE_CEO = 'CEO (transverse)';
-export const ROLE_CFO = 'CFO';
-// COO : le commercial (CRM, apporteurs) — même nom que backend crm.service.ts (ROLE_MODIF_APPORTEUR).
-export const ROLE_COO = 'COO';
+const ROLES_HORS_BACK_OFFICE = new Set([ROLE_HOLDING_ADMIN]);
 
 // Lecture et commentaires dans les fils, sans action sur les tâches — même
 // liste que backend/src/projects/review-rules.ts (THREAD_COMMENT_ROLES).
@@ -78,18 +72,18 @@ export function consultationEtCommentaires(session: Session): boolean {
 // que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte
 // technique holding_admin (secours).
 export function estAdministrateurHub(session: Session): boolean {
-  return session.role === ROLE_CIO || session.role === 'holding_admin';
+  return session.role === ROLE_CIO || session.role === ROLE_HOLDING_ADMIN;
 }
 
 export function sectionAccessible(session: Session, cle: string): boolean {
   // Mes tâches (revue Salarié 19/10/2026) : sa page d'arrivée, hors matrice
   // comme Mon espace — le serveur ne sert que les tâches du compte connecté.
   // Testé avant societe_admin, qui verrait sinon toutes les sections.
-  if (cle === 'mes-taches') return session.role === ROLE_SALARIE;
+  if (cle === 'mes-taches') return session.role === ROLE_EMPLOYEE;
   // Administration : ses lignes de la matrice font foi pour les sections
   // qu'elle gouverne (bilan avant déploiement, 22/10/2026 : la page RH lui
   // était proposée alors que la matrice la lui ferme) ; le reste est ouvert.
-  if (session.role === 'societe_admin') {
+  if (session.role === ROLE_COMPANY_ADMIN) {
     const moduleSection = SECTIONS_DIRECTION[cle];
     return !moduleSection || niveauSuffisant(session, moduleSection, 'lecture');
   }
@@ -125,8 +119,8 @@ export function premiereSectionAccessible(session: Session): string | null {
 // commerciale en tête (revue COO, 22/10/2026).
 // Le CIO arrive sur Réglages, « À traiter aujourd'hui » en tête (revue CIO, 22/10/2026).
 const ARRIVEE_PAR_ROLE: Record<string, string> = {
-  RH: 'rh',
-  CFO: 'facturation',
+  [ROLE_HR]: 'rh',
+  [ROLE_CFO]: 'facturation',
   [ROLE_CTO]: 'projets',
   [ROLE_COO]: 'crm',
   [ROLE_CIO]: 'parametres',

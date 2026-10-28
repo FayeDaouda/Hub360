@@ -19,7 +19,7 @@ import {
 } from './regles-temps';
 import { ouDossierDuCompte } from './mon-compte';
 import { loadAssignedTasks, type AssignedTask } from '../tasks/assigned-tasks';
-import { formatDate, formatMonthYear, todayIso, toIsoDay } from '@hub/domain';
+import { formatDate, formatMonthYear, ROLE_HR, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string };
 
@@ -70,8 +70,6 @@ const INCLUDE_DOSSIER = {
 } satisfies Prisma.DossierPersonnelInclude;
 type DossierTemps = Prisma.DossierPersonnelGetPayload<{ include: typeof INCLUDE_DOSSIER }>;
 type Controle = DossierTemps['controlesTemps'][number];
-
-const ROLE_RH = 'RH';
 
 export type EcartFeuille = {
   id: string;
@@ -273,7 +271,7 @@ export class TempsService {
       societeId: d.societeId,
       type: 'ecart_temps_signale',
       titre: `Écart signalé · ${d.prenom} ${d.nom} · feuille de temps ${deMois(mois)}`,
-      destinataireIds: await this.notifications.titulairesRole(d.societeId, ROLE_RH),
+      destinataireIds: await this.notifications.titulairesRole(d.societeId, ROLE_HR),
       parId: a.userId,
     });
     return this.monTemps(a, mois);

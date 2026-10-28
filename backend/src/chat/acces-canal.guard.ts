@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { estRoleBackOffice } from '../commun/back-office.guard';
+import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // Garde des routes /societes/:slug/canaux/:id/… — point d'application UNIQUE du
 // cloisonnement chat, sur le modèle d'AccesProjetGuard.
@@ -41,7 +42,7 @@ export class AccesCanalGuard implements CanActivate {
     }
 
     // type === 'cellule'
-    if (user.role === 'societe_admin') return true;
+    if (user.role === ROLE_COMPANY_ADMIN) return true;
     const collab = await this.prisma.collaborateur.findFirst({
       where: { utilisateurId: user.userId, societeId: user.societeId },
       select: { celluleId: true },

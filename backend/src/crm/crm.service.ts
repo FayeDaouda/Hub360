@@ -11,12 +11,11 @@ import { avecDelegataire } from '../commun/delegation-ceo';
 import { PHASES_PAR_CATEGORIE } from '../projets/domaine/config';
 import { versDossierCrm, versProjetExecution } from '../commun/format-contrat';
 import { aLaPermission } from '../commun/permission.guard';
-import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
-import { ROLE_CEO, SeuilCeoService } from '../finances/seuil-ceo.service';
+import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { ActionCrm, REGLES_ACTIONS, ROLE_PROPRIETAIRE_DOSSIER, ficheModifiable } from './cycle';
 import { EVENEMENT_PAR_ACTION } from './notifications-crm';
 import { ApporteurDto, CreerDossierDto, ModifierFicheDto } from './dto';
@@ -29,7 +28,7 @@ import {
   resume,
   type FicheProgramme,
 } from './fiche-programme';
-import { formatAmount, todayIso } from '@hub/domain';
+import { formatAmount, ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_COO, todayIso } from '@hub/domain';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
@@ -59,7 +58,7 @@ const INCLUDE_DOSSIER = {
 
 // Seul rôle habilité à modifier la fiche apporteur après sa création — pas
 // même l'administration (maquette « Nouveau projet », oct. 2026).
-export const ROLE_MODIF_APPORTEUR = 'COO';
+export const ROLE_MODIF_APPORTEUR = ROLE_COO;
 
 @Injectable()
 export class CrmService {
@@ -655,7 +654,7 @@ export class CrmService {
   }
 
   async peutReassigner(societeId: string, acteur: Acteur): Promise<boolean> {
-    if (acteur.role === 'societe_admin' || acteur.role === ROLE_CIO) return true;
+    if (acteur.role === ROLE_COMPANY_ADMIN || acteur.role === ROLE_CIO) return true;
     const titulaires = await this.titulairesProprietaire(this.prisma, societeId);
     return titulaires.some((u) => u.id === acteur.userId);
   }

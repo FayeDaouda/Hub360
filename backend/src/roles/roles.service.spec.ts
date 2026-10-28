@@ -1,7 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RolesService } from './roles.service';
-import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
+import { ROLE_CIO } from '@hub/domain';
 
 // Gouvernance de la matrice (CIO = super admin du HUB, 28/09/2026) : rôles
 // propres → admin société ou CIO ; rôles transverses (CEO/CTO/CIO) → CIO

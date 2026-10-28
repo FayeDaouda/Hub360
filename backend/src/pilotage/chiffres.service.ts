@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { IntegrationService } from '../rh/integration.service';
 import { bornesMois, moisDe } from '../rh/regles-temps';
-import { plural } from '@hub/domain';
+import { plural, ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // Tuiles du Pilotage (décision du 12/10/2026, option A) : des chiffres clés
 // au lieu des compteurs déjà présents plus bas. La rangée suit la matrice :
@@ -49,7 +49,7 @@ export class ChiffresPilotageService {
     jour: string,
     feuilles: { total: number; controlees: number },
   ): Promise<{ jeu: JeuTuiles; tuiles: TuileChiffre[] } | null> {
-    const voit = (module: string) => a.role === 'societe_admin' || aLaPermission(a.permissions, module, 'lecture');
+    const voit = (module: string) => a.role === ROLE_COMPANY_ADMIN || aLaPermission(a.permissions, module, 'lecture');
     if (voit('finances_factures') && voit('projets'))
       return { jeu: 'finances', tuiles: await this.finances(a.societeId, jour) };
     if (voit('crm')) return { jeu: 'crm', tuiles: await this.crm(a.societeId, jour) };

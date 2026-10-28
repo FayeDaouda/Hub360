@@ -1,3 +1,5 @@
+import { ROLE_CEO, ROLE_CFO, ROLE_CIO, ROLE_HR } from '@hub/domain';
+
 // Durée des sessions (décision du 28/10/2026, lot B) : douze heures au plus
 // depuis la connexion, pour tous les rôles ; sans activité, une heure pour le
 // CEO, le CFO, le CIO et la RH, quatre heures pour les autres. Le jeton porte
@@ -8,7 +10,7 @@
 export const DUREE_MAX_SESSION_S = 12 * 3600;
 const INACTIVITE_COURTE_S = 3600;
 const INACTIVITE_S = 4 * 3600;
-const ROLES_INACTIVITE_COURTE: ReadonlySet<string> = new Set(['CEO (transverse)', 'CFO', 'CIO (transverse)', 'RH']);
+const ROLES_INACTIVITE_COURTE: ReadonlySet<string> = new Set([ROLE_CEO, ROLE_CFO, ROLE_CIO, ROLE_HR]);
 
 export const delaiInactivite = (role: string) =>
   ROLES_INACTIVITE_COURTE.has(role) ? INACTIVITE_COURTE_S : INACTIVITE_S;

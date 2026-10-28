@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { estRoleBackOffice } from '../commun/back-office.guard';
 import { ChatBus } from './chat.bus';
 import { cheminPhoto, nomPublic } from '../auth/profil';
+import { ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 
@@ -53,7 +54,7 @@ export class ChatService {
   // -- Liste des canaux visibles + non-lus par canal ---------------------
   async listerCanaux(acteur: Acteur): Promise<CanalResume[]> {
     const { societeId, userId } = acteur;
-    const estAdmin = acteur.role === 'societe_admin';
+    const estAdmin = acteur.role === ROLE_COMPANY_ADMIN;
 
     await this.coquilleGeneral(societeId);
     let celluleId: string | null = null;
@@ -249,7 +250,7 @@ export class ChatService {
       this.prisma.utilisateurSocieteRole.findMany({
         where: {
           OR: [{ societeId: acteur.societeId }, { societeId: null }],
-          role: { nom: { not: 'holding_admin' }, supprimeLe: null },
+          role: { nom: { not: ROLE_HOLDING_ADMIN }, supprimeLe: null },
         },
         select: {
           utilisateur: { select: { id: true, prenom: true, nom: true, nomAffiche: true, photoCle: true } },
@@ -292,7 +293,7 @@ export class ChatService {
           nom: u.nom,
           nomAffiche: u.nomAffiche,
           photoUrl: cheminPhoto(u.photoCle),
-          role: d.role.nom === 'societe_admin' ? 'Administration' : d.role.nom,
+          role: d.role.nom === ROLE_COMPANY_ADMIN ? 'Administration' : d.role.nom,
           cellule: null,
         });
       }
@@ -317,7 +318,7 @@ export class ChatService {
     if (roles.length === 0) {
       throw new NotFoundException("Cet utilisateur n'est pas membre de la société");
     }
-    if (roles.some((r) => r.role.nom === 'holding_admin')) {
+    if (roles.some((r) => r.role.nom === ROLE_HOLDING_ADMIN)) {
       throw new ForbiddenException('Conversation directe indisponible pour ce compte');
     }
 

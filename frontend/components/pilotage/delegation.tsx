@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { UserCog } from 'lucide-react';
 import { deleguer, getDelegation, revoquerDelegation, type VueDelegation } from '@/lib/pilotage';
-import { ROLE_CEO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { formatDate, todayIso } from '@hub/domain';
+import { formatDate, ROLE_CEO, todayIso } from '@hub/domain';
 import { Field, FieldError } from '@/components/ui/field';
 
 // Délégation du CEO (revue CEO, 22/10/2026). Le CEO : sa carte (déléguer,

@@ -9,10 +9,7 @@ import type { ActionPaie, MotifSalaire } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LIBELLE_MOTIF_SALAIRE, refusProposition, salaireAu } from './regles-salaire';
-import { formatDate, todayIso } from '@hub/domain';
-
-const ROLE_CFO = 'CFO';
-const ROLE_CEO = 'CEO (transverse)';
+import { formatDate, ROLE_CEO, ROLE_CFO, todayIso } from '@hub/domain';
 
 const nomDe = (d: { prenom: string; nom: string }) => `${d.prenom} ${d.nom}`.trim();
 

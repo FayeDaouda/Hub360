@@ -31,6 +31,9 @@ import {
   formatDayMonth,
   formatMonthYear,
   plural,
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_HR,
   todayIso,
   toIsoDay,
 } from '@hub/domain';
@@ -41,7 +44,6 @@ const HEURE_TOURNEE = 7;
 const JOURS_ENTRE_RAPPELS_FACTURE = 7;
 // Revue CEO (22/10/2026) : délai avant de relancer le CEO, hors offres et factures à contresigner.
 const JOURS_OUVRES_RELANCE_CEO = 3;
-const ROLE_CEO = 'CEO (transverse)';
 
 type Rappel = {
   cle: string;
@@ -245,7 +247,7 @@ export class RappelsService implements OnApplicationBootstrap {
       const reste = montantTtc - f.paiements.reduce((s, p) => s + p.montant.toNumber(), 0);
       if (reste <= 0) continue;
       const retard = joursRetardFacture(f.echeanceLe, jour);
-      if (!cfo.has(f.societeId)) cfo.set(f.societeId, await this.notifications.titulairesRole(f.societeId, 'CFO'));
+      if (!cfo.has(f.societeId)) cfo.set(f.societeId, await this.notifications.titulairesRole(f.societeId, ROLE_CFO));
       rappels.push({
         cle: `facture:${f.id}:${Math.floor((retard - 1) / JOURS_ENTRE_RAPPELS_FACTURE)}`,
         societeId: f.societeId,
@@ -350,8 +352,8 @@ export class RappelsService implements OnApplicationBootstrap {
       this.prisma.dossierPersonnel.findMany({
         where: {
           OR: [
-            { utilisateur: { roles: { some: { role: { nom: 'RH' } } } } },
-            { collaborateur: { utilisateur: { roles: { some: { role: { nom: 'RH' } } } } } },
+            { utilisateur: { roles: { some: { role: { nom: ROLE_HR } } } } },
+            { collaborateur: { utilisateur: { roles: { some: { role: { nom: ROLE_HR } } } } } },
           ],
         },
         select: { id: true },
@@ -399,7 +401,7 @@ export class RappelsService implements OnApplicationBootstrap {
         // N relances du N+1 restées sans réponse : la demande est signalée
         // aussi à la RH (au CEO si la demandeuse est la RH), une seule fois.
         if (palier > (await delai(a.dossier.societeId)).signalement) {
-          const escalade = demandeurRh.has(a.dossier.id) ? 'CEO (transverse)' : 'RH';
+          const escalade = demandeurRh.has(a.dossier.id) ? ROLE_CEO : ROLE_HR;
           rappels.push({
             cle: `demande:absence:${a.id}:n1:signalee`,
             societeId: a.dossier.societeId,
@@ -409,7 +411,7 @@ export class RappelsService implements OnApplicationBootstrap {
           });
         }
       } else {
-        const final = demandeurRh.has(a.dossier.id) ? 'CEO (transverse)' : 'RH';
+        const final = demandeurRh.has(a.dossier.id) ? ROLE_CEO : ROLE_HR;
         await ajouter(
           `demande:absence:${a.id}:final`,
           a.decisionN1Le ?? a.createdAt,
@@ -427,7 +429,7 @@ export class RappelsService implements OnApplicationBootstrap {
         r.dossier,
         'remboursement',
         'à transmettre',
-        await role(r.dossier.societeId, 'RH'),
+        await role(r.dossier.societeId, ROLE_HR),
       );
     }
     for (const t of attestations) {
@@ -437,7 +439,7 @@ export class RappelsService implements OnApplicationBootstrap {
         t.dossier,
         'attestation de travail',
         'à délivrer',
-        await role(t.dossier.societeId, 'RH'),
+        await role(t.dossier.societeId, ROLE_HR),
       );
     }
     return rappels;
@@ -674,7 +676,8 @@ export class RappelsService implements OnApplicationBootstrap {
       },
     })) {
       const compte = c.dossier.utilisateurId ?? c.dossier.collaborateur?.utilisateurId ?? null;
-      if (!compte || !(await this.notifications.titulairesRole(c.dossier.societeId, 'CFO')).includes(compte)) continue;
+      if (!compte || !(await this.notifications.titulairesRole(c.dossier.societeId, ROLE_CFO)).includes(compte))
+        continue;
       const p = palier(c.proposeLe);
       if (p < 1) continue;
       await pousser({
@@ -705,7 +708,7 @@ export class RappelsService implements OnApplicationBootstrap {
         societeId,
         type: 'cloture_a_faire',
         titre: `Clôture de ${formatMonthYear(precedent)} à faire · paiements et factures du mois à figer`,
-        destinataireIds: await this.notifications.titulairesRole(societeId, 'CFO'),
+        destinataireIds: await this.notifications.titulairesRole(societeId, ROLE_CFO),
       });
     }
     return rappels;

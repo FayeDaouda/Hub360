@@ -15,14 +15,20 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { commissionsAttendues, modeA, type EncaissementHonoraires } from './commissions';
-import { ROLE_DAF } from './cycle';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { formatAmount, formatDayMonth, todayIso, toIsoDay } from '@hub/domain';
+import {
+  formatAmount,
+  formatDayMonth,
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  todayIso,
+  toIsoDay,
+} from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
-const ROLE_COO = 'COO';
-const ROLE_CEO = 'CEO (transverse)';
 const CHAMPS_COORDONNEES = ['banque', 'rib', 'wave', 'orangeMoney'] as const;
 type Coordonnees = Record<(typeof CHAMPS_COORDONNEES)[number], string>;
 const LIBELLE_COORDONNEE: Record<keyof Coordonnees, string> = {
@@ -60,14 +66,14 @@ export class CommissionsService {
   voit(a: Acteur) {
     return (
       a.role === ROLE_COO ||
-      a.role === ROLE_DAF ||
-      a.role === 'societe_admin' ||
+      a.role === ROLE_CFO ||
+      a.role === ROLE_COMPANY_ADMIN ||
       aLaPermission(a.permissions, 'finances_charges', 'lecture')
     );
   }
   // Les coordonnées de paiement : celui qui les saisit et celui qui paie.
   private voitCoordonnees(a: Acteur) {
-    return a.role === ROLE_COO || a.role === ROLE_DAF || a.role === 'societe_admin';
+    return a.role === ROLE_COO || a.role === ROLE_CFO || a.role === ROLE_COMPANY_ADMIN;
   }
 
   @Cron('5 7 * * *', { timeZone: 'UTC' })
@@ -199,7 +205,7 @@ export class CommissionsService {
     if (orphelines.length) await this.prisma.commissionApporteur.deleteMany({ where: { id: { in: orphelines } } });
 
     if (nouvelles.length) {
-      const cfo = await this.notifications.titulairesRole(societeId, ROLE_DAF);
+      const cfo = await this.notifications.titulairesRole(societeId, ROLE_CFO);
       for (const n of nouvelles) {
         await this.notifications.envoyer({
           societeId,
@@ -242,7 +248,7 @@ export class CommissionsService {
     });
     const nomPayeur = new Map(payeurs.map((u) => [u.id, `${u.prenom} ${u.nom}`]));
     return {
-      peutPayer: a.role === ROLE_DAF || a.role === 'societe_admin',
+      peutPayer: a.role === ROLE_CFO || a.role === ROLE_COMPANY_ADMIN,
       lignes: lignes.map((l) => ({
         id: l.id,
         dossierId: l.dossierCrmId,
@@ -268,7 +274,7 @@ export class CommissionsService {
 
   // Le CFO règle une commission : date, mode, référence. Le COO est prévenu.
   async payer(a: Acteur, id: string, dto: { date: string; mode: ModePaiement; reference?: string }) {
-    if (a.role !== ROLE_DAF && a.role !== 'societe_admin')
+    if (a.role !== ROLE_CFO && a.role !== ROLE_COMPANY_ADMIN)
       throw new ForbiddenException('Seul le CFO paie les commissions des apporteurs.');
     const c = await this.prisma.commissionApporteur.findFirst({
       where: { id, societeId: a.societeId },
@@ -344,7 +350,7 @@ export class CommissionsService {
       data: { dossierCrmId: dossierId, ...valeurs, confirmation: confirmePar, parId: a.userId },
     });
     const destinataires = [
-      ...(await this.notifications.titulairesRole(a.societeId, ROLE_DAF)),
+      ...(await this.notifications.titulairesRole(a.societeId, ROLE_CFO)),
       ...(await this.notifications.titulairesRole(a.societeId, ROLE_CEO)),
     ];
     await this.notifications.envoyer({

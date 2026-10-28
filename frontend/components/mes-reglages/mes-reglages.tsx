@@ -12,10 +12,11 @@ import { OPTIONS_THEME } from '@/components/selecteur-theme';
 import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { nomAffiche } from '@/lib/profil';
+import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // « CEO (transverse) » → « CEO » ; socle technique en clair.
 const libelleRole = (role: string) =>
-  role === 'societe_admin' ? 'Administration de la société' : role.replace(/\s*\(transverse\)$/, '');
+  role === ROLE_COMPANY_ADMIN ? 'Administration de la société' : role.replace(/\s*\(transverse\)$/, '');
 
 // Réglages personnels (revue Salarié 19/10/2026) : ce que chacun règle pour
 // lui-même — compte, mot de passe, double authentification, apparence, son.

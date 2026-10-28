@@ -8,9 +8,8 @@ import {
 import { NiveauPermission } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
+import { ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 
-const ROLE_CEO = 'CEO (transverse)';
 const LIBELLE_NIVEAU: Record<NiveauPermission, string> = {
   aucun: 'aucun',
   lecture: 'lecture',
@@ -23,7 +22,7 @@ const libelleRole = (nom: string) => nom.replace(/\s*\(transverse\)$/, '');
 // tout) — jamais modifiables ici, même par
 // le CIO : une case changée sur societe_admin couperait l'accès de toutes
 // les administrations de société.
-const ROLES_SOCLE = new Set(['holding_admin', 'societe_admin']);
+const ROLES_SOCLE = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]);
 
 type RoleLu = { nom: string; societeId: string | null };
 
@@ -177,7 +176,7 @@ export class RolesService {
 
   // Demandes sur le rôle CIO (CEO : à valider ; CIO : les siennes en attente).
   async demandes(societeId: string, acteurRole: string) {
-    if (acteurRole !== ROLE_CEO && acteurRole !== ROLE_CIO && acteurRole !== 'societe_admin') {
+    if (acteurRole !== ROLE_CEO && acteurRole !== ROLE_CIO && acteurRole !== ROLE_COMPANY_ADMIN) {
       throw new ForbiddenException('Réservé au CEO et au CIO.');
     }
     const lignes = await this.prisma.demandeDroit.findMany({

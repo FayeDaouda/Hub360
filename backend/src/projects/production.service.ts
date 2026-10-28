@@ -1,13 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { addDays, todayIso } from '@hub/domain';
+import { addDays, ROLE_CEO, ROLE_COMPANY_ADMIN, ROLE_CTO, ROLE_DIR_GC, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { dateOfDay, workdayRank } from './work-calendar';
 import { workloadOver } from './workload';
 import { invoiceWaits, type TaskState } from './task-states';
 import { isDeliverySoon, projectHorizon } from './decision-context';
-import { ROLE_CEO, ROLE_CTO, ROLE_DPLG } from './review-rules';
 import {
   fullName,
   KEY_CARDS,
@@ -94,7 +93,7 @@ export class ProductionService {
   // avancement, calendrier, retards, décisions en attente, prochaine tranche,
   // charge des cellules sur deux semaines, échéances des 14 jours.
   async production(companyId: string, actor: Actor) {
-    if (![ROLE_DPLG, ROLE_CTO, ROLE_CEO, 'societe_admin'].includes(actor.role)) {
+    if (![ROLE_DIR_GC, ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN].includes(actor.role)) {
       throw new ForbiddenException('Le tableau de production est réservé au Dir. GC, au CTO et au CEO.');
     }
     const today = todayIso();
@@ -103,7 +102,7 @@ export class ProductionService {
       where: {
         societeId: companyId,
         ouvertLe: { not: null },
-        ...(actor.role === ROLE_DPLG ? { dossierCrm: { proprietaireId: actor.userId } } : {}),
+        ...(actor.role === ROLE_DIR_GC ? { dossierCrm: { proprietaireId: actor.userId } } : {}),
       },
       orderBy: { ouvertLe: 'asc' },
       include: {
@@ -190,7 +189,7 @@ export class ProductionService {
     const load = await this.cellWorkload(companyId, { debut: today, fin: inDays(13) }, holidays);
     const averages = load.cellules.map((c) => c.moyenne).filter((x): x is number => x !== null);
     return {
-      perimetre: actor.role === ROLE_DPLG ? ('mes_projets' as const) : ('tous' as const),
+      perimetre: actor.role === ROLE_DIR_GC ? ('mes_projets' as const) : ('tous' as const),
       chiffres: {
         ouverts: rows.length,
         enRetard: rows.filter((l) => l.enRetard > 0 || l.livraisonDepassee).length,

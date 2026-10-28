@@ -1,5 +1,5 @@
-import { ROLE_CEO } from '@/lib/acces-back-office';
 import type { NotificationType } from '@/lib/types';
+import { ROLE_CEO, ROLE_EMPLOYEE, ROLE_HR } from '@hub/domain';
 
 // Deux blocs (revue Salarié 19/10/2026) : le travail au quotidien, puis le
 // dossier personnel — neuf onglets à plat étaient trop chargés. Les clés sont
@@ -35,9 +35,9 @@ export const TAB_NEWS: Partial<Record<Tab, NotificationType[]>> = {
 
 // Rôles qui ne valident rien (maquettes RH et Salarié) : « À valider »
 // n'apparaît pour eux que si quelque chose les attend.
-const WITHOUT_REVIEWS = new Set(['RH', 'Salarié']);
+const WITHOUT_REVIEWS = new Set([ROLE_HR, ROLE_EMPLOYEE]);
 // Salarié pas encore affecté à une équipe : bandeau d'explication (maquette).
-export const AWAITING_TEAM = new Set(['Salarié']);
+export const AWAITING_TEAM = new Set([ROLE_EMPLOYEE]);
 // Rôles hors circuit des tâches (le CEO n'en reçoit jamais) : ni
 // performances, ni temps, ni cellule — son espace s'ouvre sur « À valider »
 // (N+1 des directeurs) et ses demandes personnelles.

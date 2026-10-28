@@ -19,7 +19,6 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { KpiStrip } from '@/components/ui/kpi';
-import { ROLE_CEO, ROLE_CIO, ROLE_CTO, ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { useMediaQuery } from '@/lib/media';
 import { getAttention, getPilotage } from '@/lib/pilotage';
@@ -35,13 +34,14 @@ import { Progression, Tendance } from './tendance';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
+import { ROLE_CEO, ROLE_CFO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_CTO, ROLE_DIR_GC } from '@hub/domain';
 
 type Onglet = 'indicateurs' | 'reportings' | 'registre' | 'journal' | 'synthese';
 
 // Journal d'audit : mêmes rôles que le serveur (audit/journal-audit.service.ts).
-const ROLES_JOURNAL = new Set([ROLE_CEO, ROLE_CIO, 'societe_admin']);
+const ROLES_JOURNAL = new Set([ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN]);
 // Synthèse mensuelle (revue CEO) : le CEO la lit, le CFO la commente.
-const ROLES_SYNTHESE = new Set([ROLE_CEO, 'CFO', 'societe_admin']);
+const ROLES_SYNTHESE = new Set([ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN]);
 
 const PILL_EVALUATION: Record<IndicateurPilotage['evaluation'], { classe: string; libelle: string } | null> = {
   hors_objectif: { classe: 'pill--risque', libelle: 'Hors objectif' },

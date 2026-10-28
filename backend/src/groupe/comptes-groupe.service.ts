@@ -1,11 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-
-// Seul rôle qui travaille en cellule (fiche d'équipe, tâches de projet).
-const ROLE_SALARIE = 'Salarié';
 import { ComptesService } from '../auth/comptes.service';
 import { estVerrouille } from '../auth/verrouillage';
+import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN } from '@hub/domain';
 
 // Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
 // compte technique holding_admin, cf. AdministrationHubGuard) attribue à
@@ -22,7 +20,7 @@ import { estVerrouille } from '../auth/verrouillage';
 // - Pas de salaire ici : sa seule source est le dossier RH (revue RH
 //   20/10/2026, D19) — la rémunération saisie par le CIO a été retirée.
 
-const ROLES_ADMINISTRATION = new Set(['holding_admin', 'societe_admin']);
+const ROLES_ADMINISTRATION = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]);
 
 type StatutCompte = 'actif' | 'en_attente' | 'desactive';
 
@@ -242,7 +240,8 @@ export class ComptesGroupeService {
       });
       if (dossier.collaborateur) {
         await tx.collaborateur.update({ where: { id: dossier.collaborateur.id }, data: { utilisateurId: u.id } });
-      } else if (role.nom === ROLE_SALARIE) {
+      } else if (role.nom === ROLE_EMPLOYEE) {
+        // Seul rôle qui travaille en cellule (fiche d'équipe, tâches de projet).
         const fiche = await tx.collaborateur.create({
           data: {
             societeId: dossier.societeId,
@@ -262,12 +261,12 @@ export class ComptesGroupeService {
 
     const invitation = await this.comptes.envoyerInvitation(utilisateur.id, email, utilisateur.prenom, acteurId);
     // Nouvel arrivant à affecter : le Dir. GC choisit sa cellule (Équipes).
-    if (role.nom === ROLE_SALARIE && !dossier.collaborateur) {
+    if (role.nom === ROLE_EMPLOYEE && !dossier.collaborateur) {
       await this.notifications.envoyer({
         societeId: dossier.societeId,
         type: 'arrivant_a_affecter',
         titre: `Nouvel arrivant à affecter · ${utilisateur.prenom} ${utilisateur.nom}${dossier.poste.trim() ? ` · ${dossier.poste.trim()}` : ''}`,
-        destinataireIds: await this.notifications.titulairesRole(dossier.societeId, 'Dir. GC'),
+        destinataireIds: await this.notifications.titulairesRole(dossier.societeId, ROLE_DIR_GC),
         parId: acteurId,
       });
     }

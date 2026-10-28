@@ -5,8 +5,8 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { PrismaService } from '../../prisma/prisma.service';
 import { formaterNumero, PREFIXE_TEST, refusFormat, type FormatNumero } from './numerotation';
 import { formatEnVigueur, prochainNumeroLegal } from './numerotation-base';
+import { ROLE_CEO, ROLE_CFO } from '@hub/domain';
 
-const ROLE_CFO = 'CFO';
 type Acteur = { userId: string; societeId: string; role: string };
 
 export type Profil = {
@@ -207,7 +207,7 @@ export class ParametresFacturationService {
         societeId: a.societeId,
         type: 'coordonnees_paiement_modifiees',
         titre: `Coordonnées de paiement des factures modifiées par le CFO : ${changes.map((c) => LIBELLE_PAIEMENT[c]).join(', ')} · confirmé par ${confirmePar === 'code' ? 'code de double authentification' : 'mot de passe'}`,
-        destinataireIds: await this.notifications.titulairesRole(a.societeId, 'CEO (transverse)'),
+        destinataireIds: await this.notifications.titulairesRole(a.societeId, ROLE_CEO),
         parId: a.userId,
       });
     }

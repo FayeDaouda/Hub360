@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 
 export type FicheContact = {
   utilisateurId: string;
@@ -19,7 +20,7 @@ export type FicheContact = {
 // invitation en attente ; un compte désactivé (départ) n'apparaît plus.
 const membreDe = (societeId: string): Prisma.UtilisateurWhereInput => ({
   roles: {
-    some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: 'holding_admin' }, supprimeLe: null } },
+    some: { OR: [{ societeId }, { societeId: null }], role: { nom: { not: ROLE_HOLDING_ADMIN }, supprimeLe: null } },
   },
   OR: [{ actif: true }, { motDePasseHash: null }],
 });
@@ -63,7 +64,7 @@ function versFiche(u: LigneContact): FicheContact {
     utilisateurId: u.id,
     prenom: u.prenom,
     nom: u.nom,
-    poste: dossier?.poste.trim() || collab?.role.trim() || (role === 'societe_admin' ? 'Administration' : role),
+    poste: dossier?.poste.trim() || collab?.role.trim() || (role === ROLE_COMPANY_ADMIN ? 'Administration' : role),
     cellule: collab?.cellule?.nom ?? null,
     chef: chef && !estChef ? `${chef.prenom} ${chef.nom}`.trim() : null,
     estChef,

@@ -16,6 +16,7 @@ import {
 } from './demandes.dto';
 import { PieceDto } from './dto';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
+import { ROLE_HR } from '@hub/domain';
 
 type R = { user: { userId: string; societeId: string; role: string } };
 
@@ -112,7 +113,7 @@ export class DemandesRhController {
   // Page RH (RH, CFO, CEO) : le motif des absences à la RH seule.
   @Get('absences/:id/calendrier')
   calendrier(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
-    return this.demandes.calendrierCellule(id, req.user.role === 'RH');
+    return this.demandes.calendrierCellule(id, req.user.role === ROLE_HR);
   }
 
   @Get('absences/:id/justificatif')

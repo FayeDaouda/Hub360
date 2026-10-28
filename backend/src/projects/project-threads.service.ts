@@ -11,8 +11,9 @@ import { nomPublic } from '../auth/profil';
 import { aLaPermission } from '../commun/permission.guard';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { commentsWithoutWrite, employeeOfAccount, projectScope, ROLE_EMPLOYEE } from './review-rules';
+import { commentsWithoutWrite, employeeOfAccount, projectScope } from './review-rules';
 import { isOpenComment, resolutionRefusal } from './thread-rules';
+import { ROLE_EMPLOYEE } from '@hub/domain';
 
 type Actor = { userId: string };
 type ThreadTarget = { carteId?: string; tacheId?: string };
