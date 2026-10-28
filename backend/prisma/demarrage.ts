@@ -7,7 +7,8 @@ import { ROLE_CIO } from '@hub/domain';
 // Amorçage d'une VRAIE installation (base vide, production comprise) : le
 // socle réel (rôles, matrice validée, société, catalogue, annexes) et le
 // compte du CIO — aucune donnée de démonstration. Rejouable : rien n'est
-// dupliqué, un compte existant garde son mot de passe.
+// dupliqué, un compte existant garde son mot de passe ; mais la matrice des
+// droits revient aux valeurs du socle. Premier dossier RH : first-hr-dossier.ts.
 //
 //   HUB_CIO_EMAIL=… HUB_CIO_PRENOM=… HUB_CIO_NOM=… npm run demarrage
 //

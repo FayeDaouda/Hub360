@@ -125,6 +125,16 @@ renouvelle. Les ports 80 et 443 doivent être ouverts (étape 2).
      -e HUB_CIO_EMAIL=prenom.nom@exemple.sn -e HUB_CIO_PRENOM=Prénom -e HUB_CIO_NOM=Nom \
      demarrage
    ```
+   Ne pas le relancer ensuite : il remettrait la matrice des droits aux
+   valeurs du socle. Puis ouvrir le premier dossier RH (un compte ne se crée
+   qu'à partir d'un dossier, et seul le rôle RH ouvre les dossiers) :
+   ```sh
+   docker compose --profile demarrage run --rm --build \
+     -e HUB_RH_EMAIL=prenom.nom@exemple.sn -e HUB_RH_PRENOM=Prénom -e HUB_RH_NOM=Nom \
+     demarrage npx ts-node prisma/first-hr-dossier.ts
+   ```
+   Le CIO crée ensuite le compte RH dans le HUB ; la RH ouvre les autres
+   dossiers, puis le CIO crée leurs comptes.
    **Pré-production** : charger la démo (étape 10).
 6. Depuis le Mac : `deploy/verifier-deploiement.sh https://hub.exemple.sn`
    (API et base, interface, certificat, page Swagger absente, en-têtes de

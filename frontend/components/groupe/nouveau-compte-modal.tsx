@@ -63,8 +63,8 @@ export function NouveauCompteModal({
           <ResultatInvitation {...resultat} onClose={onClose} />
         ) : societe.dossiersSansCompte.length === 0 ? (
           <EmptyState>
-            Tous les dossiers RH de {societe.nom} ont déjà un compte. Créez d&rsquo;abord le dossier de la personne dans
-            RH.
+            Tous les dossiers RH de {societe.nom} ont déjà un compte. La RH ouvre d&rsquo;abord le dossier de la
+            personne, dans RH.
           </EmptyState>
         ) : (
           <form onSubmit={soumettre} style={{ display: 'grid', gap: '0.85rem' }}>
