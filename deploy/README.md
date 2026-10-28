@@ -44,12 +44,15 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
    ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
    ```
 4. **Code et configuration** : depuis le Mac, `deploy/envoyer.sh root@<IP>`
-   copie le code dans `/opt/hub` (il s'arrête la première fois faute de
-   `.env`). Puis sur le serveur :
+   copie les fichiers versionnés du dernier commit dans `/opt/hub` (jamais un
+   fichier non suivi ni une modification non commitée ; il s'arrête la
+   première fois faute de `.env`). Puis sur le serveur :
    ```sh
    cd /opt/hub/deploy && cp .env.example .env && nano .env   # domaine, mots de passe, secrets
    ```
-   Générer les secrets : `openssl rand -base64 32` (base), `openssl rand -base64 48` (JWT).
+   Générer les secrets : `openssl rand -hex 32` (base), `openssl rand -hex 48` (JWT).
+   Pas de base64 : un « / » dans le mot de passe de la base casserait
+   l'adresse de connexion (`DATABASE_URL`).
 5. **Lancement** :
    ```sh
    docker compose --env-file .env up -d --build

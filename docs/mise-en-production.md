@@ -113,8 +113,9 @@ renouvelle. Les ports 80 et 443 doivent être ouverts (étape 2).
    curl -fsSL https://get.docker.com | sh
    ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
    ```
-2. Depuis le Mac : `deploy/envoyer.sh root@<IP>` copie le code dans
-   `/opt/hub` ; la première fois, il s'arrête faute de `.env`.
+2. Depuis le Mac : `deploy/envoyer.sh root@<IP>` copie les fichiers
+   versionnés du dernier commit dans `/opt/hub` (le commit envoyé est écrit
+   dans `/opt/hub/VERSION`) ; la première fois, il s'arrête faute de `.env`.
 3. Sur le serveur : `cd /opt/hub/deploy && cp .env.example .env`, puis remplir
    `.env` (étape 9) et `deploy/secrets/` (étape 7.1, production).
 4. `deploy/envoyer.sh root@<IP>` de nouveau : il compile et démarre le HUB.
@@ -286,7 +287,8 @@ Les alertes internes (erreurs, sauvegardes) partent de leur côté vers
 ## 9. Variables du fichier `.env`
 
 Une copie par serveur (`deploy/.env`, jamais versionnée, jamais envoyée par
-`envoyer.sh`) ; secrets générés avec `openssl rand -base64 32` (ou 48).
+`envoyer.sh`) ; secrets générés avec `openssl rand -hex 32` (ou 48), pas en
+base64 : un « / » dans le mot de passe de la base casserait `DATABASE_URL`.
 
 | Variable                                                                  | Rôle                                                    | Production                      | Pré-production           |
 | ------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------- | ------------------------ |
