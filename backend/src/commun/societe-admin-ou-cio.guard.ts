@@ -1,11 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
-
-// Nom du rôle transverse CIO (holding, cf. seed.ts) — comparaison directe
-// comme le reste du projet le fait pour les rôles socles (`'societe_admin'`
-// etc.) : Role.nom est le seul identifiant stable dont on dispose, pas de
-// code séparé. Si le CIO est renommé un jour, ce fichier est le seul à
-// mettre à jour.
-export const ROLE_CIO = 'CIO (transverse)';
+import { ROLE_CIO, ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // À poser après JwtAuthGuard sur une route de configuration « méta » d'une
 // société (ex: gabarit Unbord, matrice des rôles) — pas une permission de
@@ -28,7 +22,7 @@ export class SocieteAdminOuCioGuard implements CanActivate {
       throw new ForbiddenException("Vous n'avez pas accès à cette société");
     }
     const bonneSociete = user.societeSlug === slug;
-    if (bonneSociete && (user.role === ROLE_CIO || user.role === 'societe_admin')) return true;
+    if (bonneSociete && (user.role === ROLE_CIO || user.role === ROLE_COMPANY_ADMIN)) return true;
 
     throw new ForbiddenException('Réservé à l’administration de la société ou au CIO.');
   }

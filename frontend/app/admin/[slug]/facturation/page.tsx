@@ -16,7 +16,6 @@ import {
   type ParametresFacturation,
 } from '@/lib/facturation';
 import { niveauSuffisant } from '@/lib/auth';
-import { ROLE_CEO } from '@/lib/acces-back-office';
 import { contresigneAffaire, useContresignature, useSeuilCeo, valideAffaire } from '@/lib/seuil-ceo';
 import { getDevisListe, getProduitsServices } from '@/lib/devis';
 import { dansListeFactures, indicateursFinances, statutDevis, statutFacture } from '@/lib/finances';
@@ -31,7 +30,7 @@ import {
   type Projet,
   type ProjetRef,
 } from '@/lib/types';
-import { formatCompactAmount, formatLongDate } from '@hub/domain';
+import { formatCompactAmount, formatLongDate, ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN } from '@hub/domain';
 import { KpiStrip } from '@/components/ui/kpi';
 import { etatEnRetard } from '@/lib/couleurs-etat';
 import { NouveauDevisModal } from '@/components/admin/nouveau-devis-modal';
@@ -77,14 +76,14 @@ export default function FinancesPage(props: Props) {
     devisValidation: niveauSuffisant(session, 'finances_devis', 'validation'),
     facturesEcriture: niveauSuffisant(session, 'finances_factures', 'ecriture'),
     facturesValidation: niveauSuffisant(session, 'finances_factures', 'validation'),
-    catalogue: session.role === ROLE_CEO || session.role === 'societe_admin',
+    catalogue: session.role === ROLE_CEO || session.role === ROLE_COMPANY_ADMIN,
     // Bureaux d'études à régler : donnée de charges (CFO).
     charges: niveauSuffisant(session, 'finances_charges', 'lecture'),
     // Tableau de bord et rentabilité : CFO, CEO, CTO, CIO (sous-titre de la maquette).
     tableauDeBord: niveauSuffisant(session, 'finances_marges', 'lecture'),
     // Rentabilité par projet (lot 7, décision 8) : CFO, CEO (montants), CTO (taux).
     // La matrice fait foi (revue CIO) : marges en lecture = Rentabilité (montants au CFO et au CEO, taux aux autres).
-    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== 'societe_admin',
+    rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture') && session.role !== ROLE_COMPANY_ADMIN,
   };
   const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.
@@ -398,7 +397,7 @@ export default function FinancesPage(props: Props) {
       {/* Qui valide (CFO ; CEO au-delà du seuil) : ce qui attend sa décision,
           avec l'encaissé du mois et le retard (revue CFO 20/10/2026). */}
       {/* Délégataire du CEO (revue CEO) : ce qui lui est confié, et jusqu'à quand. */}
-      {session.role === 'CFO' && <Delegation slug={params.slug} />}
+      {session.role === ROLE_CFO && <Delegation slug={params.slug} />}
       {validateur && (
         <AValiderCfo
           slug={params.slug}

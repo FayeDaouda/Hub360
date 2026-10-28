@@ -60,7 +60,7 @@ import { DepotBulletins } from '@/components/rh/depot-bulletins';
 import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
-import { addMonths, formatDate, formatMonthYear, plural, todayIso } from '@hub/domain';
+import { addMonths, formatDate, formatMonthYear, plural, ROLE_COMPANY_ADMIN, todayIso } from '@hub/domain';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
@@ -90,7 +90,7 @@ export default function RhPage(props: Props) {
   const params = use(props.params);
   useTitrePage('Ressources humaines · Groupe');
   const session = useSessionCourante();
-  const ecriture = session.role === 'societe_admin' || niveauSuffisant(session, 'rh', 'ecriture');
+  const ecriture = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'rh', 'ecriture');
 
   const [dossiers, setDossiers] = useState<DossierPersonnel[] | null>(null);
   const [options, setOptions] = useState<OptionsDossiers | null>(null);

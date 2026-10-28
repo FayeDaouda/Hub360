@@ -39,6 +39,14 @@ import {
   formatDayMonth,
   formatMonthYear,
   formatNumericMonth,
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  ROLE_CTO,
+  ROLE_DIR_GC,
+  ROLE_HR,
   todayIso,
   toIsoDay,
 } from '@hub/domain';
@@ -52,20 +60,18 @@ export type Acteur = {
 
 // Rôles qui saisissent et clôturent les décisions des instances (choix du
 // 05/10/2026 : « par fonction », la matrice reste en lecture).
-const ROLES_REGISTRE = new Set(['CTO (transverse)', 'CEO (transverse)', 'societe_admin']);
+const ROLES_REGISTRE = new Set([ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN]);
 // Revue CTO puis COO (22/10/2026) : pas de reporting CTO → CEO ni COO → CEO ;
 // ils proposent une décision, le CEO l'arbitre. Le COO ne fait que proposer.
-const ROLE_CTO = 'CTO (transverse)';
-const ROLE_CEO = 'CEO (transverse)';
-const PROPOSANTS = new Set([ROLE_CTO, 'COO']);
-const ARBITRES = new Set([ROLE_CEO, 'societe_admin']);
+const PROPOSANTS = new Set([ROLE_CTO, ROLE_COO]);
+const ARBITRES = new Set([ROLE_CEO, ROLE_COMPANY_ADMIN]);
 
 // Rôles proposés comme responsables d'une décision (fonctions de direction).
-const ROLES_RESPONSABLES = ['Dir. GC', 'COO', 'CFO', 'CEO (transverse)', 'CTO (transverse)', 'CIO (transverse)', 'RH'];
+const ROLES_RESPONSABLES = [ROLE_DIR_GC, ROLE_COO, ROLE_CFO, ROLE_CEO, ROLE_CTO, ROLE_CIO, ROLE_HR];
 
 // « CTO (transverse) » → « CTO », « Dir. GC » → « Direction GC » (maquette).
 export const libelleRole = (role: string) =>
-  role === 'Dir. GC' ? 'Direction GC' : role.replace(/\s*\(transverse\)$/, '');
+  role === ROLE_DIR_GC ? 'Direction GC' : role.replace(/\s*\(transverse\)$/, '');
 
 const nomDe = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`;
 const SU = ['SU1', 'SU2', 'SU3'];
@@ -1093,7 +1099,7 @@ export class PilotageService {
         instance: `Projets · ${d.projet?.code ?? '—'}`,
         texte: `${d.lignes.map((l) => l.designation).join(' · ')} : avenant envoyé au client`,
         responsable: pilote ? nomDe(pilote) : 'Direction GC',
-        responsableRole: pilote ? null : 'Dir. GC',
+        responsableRole: pilote ? null : ROLE_DIR_GC,
         responsableCollaborateurId: pilote?.id ?? null,
         echeance: addDays(envoi, seuil),
         closeLe: ouvert ? null : (d.dateReponse ?? new Date()),
@@ -1131,8 +1137,8 @@ export class PilotageService {
         date: toIsoDay(d.decisionN1Le!),
         instance: 'RH · congés',
         texte: `Accord · Permission exceptionnelle de ${nomDe(d.dossier)} (${formatDate(d.dateDebut)} → ${formatDate(d.dateFin)})`,
-        responsable: c ? nomDe(c) : libelleRole(d.n1Role ?? 'Dir. GC'),
-        responsableRole: c ? null : (d.n1Role ?? 'Dir. GC'),
+        responsable: c ? nomDe(c) : libelleRole(d.n1Role ?? ROLE_DIR_GC),
+        responsableRole: c ? null : (d.n1Role ?? ROLE_DIR_GC),
         responsableCollaborateurId: c?.id ?? null,
         echeance: null,
         closeLe: d.dateFin < jour ? new Date(`${d.dateFin}T23:59:59Z`) : null,
@@ -1188,7 +1194,7 @@ export class PilotageService {
       instance: 'Réglages',
       texte: `${j.libelle} · motif : ${j.motif}`,
       responsable: 'CIO',
-      responsableRole: 'CIO (transverse)',
+      responsableRole: ROLE_CIO,
       responsableCollaborateurId: null,
       echeance: null,
       closeLe: j.createdAt,

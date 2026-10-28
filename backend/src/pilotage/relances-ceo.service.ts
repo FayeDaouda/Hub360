@@ -6,9 +6,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAlertsService } from '../projects/project-alerts.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
-import { formatAmount, todayIso } from '@hub/domain';
+import { formatAmount, ROLE_CEO, todayIso } from '@hub/domain';
 
-const ROLE_CEO = 'CEO (transverse)';
 const HEURE = 3_600_000;
 
 // Revue CEO (22/10/2026) : une facture à contresigner (au-delà du seuil)

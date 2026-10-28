@@ -2,6 +2,18 @@ import { NiveauPermission, PrismaClient } from '@prisma/client';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CatalogueSource, importerCatalogue } from './catalogue';
+import {
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  ROLE_CTO,
+  ROLE_DIR_GC,
+  ROLE_EMPLOYEE,
+  ROLE_HOLDING_ADMIN,
+  ROLE_HR,
+} from '@hub/domain';
 
 // Socle RÉEL du HUB : rôles, modules, société Grey Concrete (pied des
 // documents), autres sociétés du groupe annoncées « Bientôt », matrice de permissions validée par le boss, catalogue réel,
@@ -20,7 +32,7 @@ export async function installerSocle(prisma: PrismaClient) {
   // `findFirst` + `create` plutôt que `.upsert()` : Prisma ne sait pas
   // exprimer `null` dans la clé composite d'un `@@unique` portant sur un
   // champ nullable (societeId) — le where-unique généré le type `string`.
-  for (const nom of ['holding_admin', 'societe_admin']) {
+  for (const nom of [ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]) {
     const existant = await prisma.role.findFirst({ where: { societeId: null, nom } });
     if (!existant) {
       await prisma.role.create({ data: { nom } });
@@ -126,7 +138,7 @@ export async function installerSocle(prisma: PrismaClient) {
   // `transverse: true` = rôle socle holding-wide (Role.societeId null,
   // attribution transverse) ; sinon rôle propre à Grey Concrete.
   const MATRICE_GREY: Record<string, { transverse: boolean; permissions: Record<string, NiveauPermission> }> = {
-    'Dir. GC': {
+    [ROLE_DIR_GC]: {
       transverse: false,
       permissions: {
         crm: 'ecriture',
@@ -142,7 +154,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    COO: {
+    [ROLE_COO]: {
       transverse: false,
       permissions: {
         crm: 'ecriture',
@@ -163,7 +175,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    CFO: {
+    [ROLE_CFO]: {
       transverse: false,
       permissions: {
         crm: 'lecture',
@@ -180,7 +192,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    RH: {
+    [ROLE_HR]: {
       transverse: false,
       permissions: {
         crm: 'aucun',
@@ -196,7 +208,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    Salarié: {
+    [ROLE_EMPLOYEE]: {
       transverse: false,
       permissions: {
         crm: 'aucun',
@@ -217,7 +229,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    'CEO (transverse)': {
+    [ROLE_CEO]: {
       transverse: true,
       permissions: {
         crm: 'lecture',
@@ -241,7 +253,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    'CTO (transverse)': {
+    [ROLE_CTO]: {
       transverse: true,
       permissions: {
         crm: 'lecture',
@@ -260,7 +272,7 @@ export async function installerSocle(prisma: PrismaClient) {
         communication: 'ecriture',
       },
     },
-    'CIO (transverse)': {
+    [ROLE_CIO]: {
       transverse: true,
       permissions: {
         // lecture (22/10/2026, revue CIO) : limité à la réassignation des
@@ -315,7 +327,7 @@ export async function installerSocle(prisma: PrismaClient) {
   }
 
   const roleAdmin = await prisma.role.findFirstOrThrow({
-    where: { societeId: null, nom: 'societe_admin' },
+    where: { societeId: null, nom: ROLE_COMPANY_ADMIN },
   });
   // societe_admin = le compte « tout voir » historique de chaque société :
   // lignes EXPLICITES à `validation` sur tous les modules (décision

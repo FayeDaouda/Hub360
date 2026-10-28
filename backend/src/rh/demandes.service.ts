@@ -13,7 +13,21 @@ import { ouDossierDuCompte } from './mon-compte';
 import { DecisionN1Dto, DeposerAbsenceDto, DeposerRemboursementDto } from './demandes.dto';
 import { agitPourCeo, avecDelegataire } from '../commun/delegation-ceo';
 import { chevauche, joursOuvrables, PART_CELLULE_ABSENTE_ALERTE, soldeConges } from './regles-conges';
-import { addDays, formatAmount, formatDayMonth, todayIso } from '@hub/domain';
+import {
+  addDays,
+  formatAmount,
+  formatDayMonth,
+  ROLE_CEO,
+  ROLE_CFO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  ROLE_CTO,
+  ROLE_DIR_GC,
+  ROLE_EMPLOYEE,
+  ROLE_HR,
+  todayIso,
+} from '@hub/domain';
 
 // RH · Demandes (lot 2) — absences (N+1 puis RH) et remboursements santé
 // (soumise → transmise → remboursée/rejetée). Hypothèses de travail : cf.
@@ -27,18 +41,17 @@ import { addDays, formatAmount, formatDayMonth, todayIso } from '@hub/domain';
 // RH → CFO (revue RH 20/10/2026, à confirmer par le boss : la RH remet son
 // reporting au CFO). Sa validation finale passe au CEO : personne ne valide
 // jamais sa propre demande (contrôlé à chaque étape).
-export const ROLE_N1_DIRECTION = 'Dir. GC';
-export const ROLE_CEO = 'CEO (transverse)';
+export const ROLE_N1_DIRECTION = ROLE_DIR_GC;
 export const N1_DES_ROLES: Readonly<Record<string, string>> = {
-  [ROLE_N1_DIRECTION]: 'CTO (transverse)',
-  COO: ROLE_CEO,
-  CFO: ROLE_CEO,
-  'CTO (transverse)': ROLE_CEO,
-  'CIO (transverse)': ROLE_CEO,
-  RH: 'CFO',
+  [ROLE_N1_DIRECTION]: ROLE_CTO,
+  [ROLE_COO]: ROLE_CEO,
+  [ROLE_CFO]: ROLE_CEO,
+  [ROLE_CTO]: ROLE_CEO,
+  [ROLE_CIO]: ROLE_CEO,
+  [ROLE_HR]: ROLE_CFO,
 };
 // Salarié : sans cellule (ou chef de sa cellule) → Dir. GC.
-const ROLES_SALARIES = ['Salarié'];
+const ROLES_SALARIES = [ROLE_EMPLOYEE];
 const ROLES_N1 = [...new Set([ROLE_N1_DIRECTION, ...Object.values(N1_DES_ROLES)])];
 
 type Acteur = { userId: string; societeId: string; role: string };
@@ -55,10 +68,9 @@ type Livrable = {
   echeance: string;
 };
 
-const ROLE_RH = 'RH';
 const FENETRE_CALENDRIER_J = 7; // jours montrés avant et après la demande
 // Dossier dont le compte (direct ou via la fiche d'équipe) tient le rôle RH.
-const RH_ROLE = { roles: { some: { role: { nom: ROLE_RH } } } };
+const RH_ROLE = { roles: { some: { role: { nom: ROLE_HR } } } };
 const DEMANDEUR_RH: Prisma.DossierPersonnelWhereInput = {
   OR: [{ utilisateur: RH_ROLE }, { collaborateur: { utilisateur: RH_ROLE } }],
 };
@@ -173,7 +185,7 @@ export class DemandesService {
         societeId: a.societeId,
         utilisateurId: { not: a.userId },
         role: {
-          nom: { in: [ROLE_N1_DIRECTION, 'CTO (transverse)'] },
+          nom: { in: [ROLE_N1_DIRECTION, ROLE_CTO] },
           supprimeLe: null,
           OR: [{ societeId: a.societeId }, { societeId: null }],
         },
@@ -257,7 +269,7 @@ export class DemandesService {
       societeId: s.societeId,
       type: 'remboursement_a_traiter',
       titre: `Remboursement à traiter · ${s.nom} · ${formatAmount(dto.montant)}`,
-      destinataireIds: await this.notifications.titulairesRole(s.societeId, ROLE_RH),
+      destinataireIds: await this.notifications.titulairesRole(s.societeId, ROLE_HR),
       parId: a.userId,
     });
     return r;
@@ -286,7 +298,7 @@ export class DemandesService {
         select: { societeId: true },
       });
       if (dossier?.societeId !== a.societeId) return false;
-      if (a.role === d.n1Role || a.role === 'societe_admin') return true;
+      if (a.role === d.n1Role || a.role === ROLE_COMPANY_ADMIN) return true;
       // Délégation du CEO (revue CEO) : le délégataire décide à sa place
       // (sa propre demande reste exclue, cf. interdireSaPropreDemande).
       return d.n1Role === ROLE_CEO && (await agitPourCeo(this.prisma, a));
@@ -310,7 +322,7 @@ export class DemandesService {
     if (ROLES_N1.includes(a.role)) ou.push({ n1Role: a.role });
     // Délégataire du CEO en fonction : les absences des directeurs (pas la sienne, filtrée plus bas).
     if (a.role !== ROLE_CEO && (await agitPourCeo(this.prisma, a))) ou.push({ n1Role: ROLE_CEO });
-    if (a.role === 'societe_admin') ou.push({ n1Role: { in: ROLES_N1 } });
+    if (a.role === ROLE_COMPANY_ADMIN) ou.push({ n1Role: { in: ROLES_N1 } });
     // CEO : la validation finale des demandes de la RH (après l'accord du CFO).
     if (a.role === ROLE_CEO) ou.push({ statut: toutes ? undefined : 'accord_n1', dossier: DEMANDEUR_RH });
     if (!ou.length) return [];
@@ -677,7 +689,7 @@ export class DemandesService {
       ids = [s.compte];
     } else if (vers === 'rh') {
       const final = await this.valideurFinal(d.dossierId);
-      ids = await this.notifications.titulairesRole(s.societeId, final === 'ceo' ? ROLE_CEO : ROLE_RH);
+      ids = await this.notifications.titulairesRole(s.societeId, final === 'ceo' ? ROLE_CEO : ROLE_HR);
     } else if (d.n1CollaborateurId) {
       ids = await this.notifications.comptesDe([d.n1CollaborateurId]);
     } else if (d.n1Role) {

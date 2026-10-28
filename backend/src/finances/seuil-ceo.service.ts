@@ -6,7 +6,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
 import { agitPourCeo } from '../commun/delegation-ceo';
 import { ReglagesService } from '../reglages/reglages.service';
-import { formatAmount } from '@hub/domain';
+import { formatAmount, ROLE_CEO, ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // Validation financière du CEO au-delà du seuil (décision du 12/10/2026) : le
 // CEO voit toutes les Finances, mais ne valide (envoi d'une offre, émission,
@@ -18,7 +18,6 @@ import { formatAmount } from '@hub/domain';
 // Montant de l'affaire d'une facture : TTC de l'offre dont elle provient
 // (tranche d'échéancier ou devis converti), sinon de l'offre acceptée de son
 // dossier, sinon de la facture elle-même (facture directe sans offre).
-export const ROLE_CEO = 'CEO (transverse)';
 
 const LIGNES_TTC = { select: { quantite: true, prixUnitaire: true, tauxTva: true } } as const;
 
@@ -157,7 +156,7 @@ export class SeuilCeoService {
 
   private async controler(acteur: ActeurSeuil, societeId: string, montantTtc: number, exclusif: boolean) {
     if (acteur.role === ROLE_CEO) return this.exigerAuDela(societeId, montantTtc);
-    if (!exclusif || acteur.role === 'societe_admin') return;
+    if (!exclusif || acteur.role === ROLE_COMPANY_ADMIN) return;
     const seuil = await this.seuil(societeId);
     if (signataireRequis(montantTtc, seuil) !== 'ceo') return;
     if (await agitPourCeo(this.prisma, { ...acteur, societeId })) return;

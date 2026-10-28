@@ -1,10 +1,10 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { todayIso } from '@hub/domain';
+import { ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { tasksToAssign, unassignableReason } from './assignment-rules';
 import { decisionContext } from './decision-context';
-import { assertInCircuit, ROLE_CTO } from './review-rules';
+import { assertInCircuit } from './review-rules';
 import { fullName, type Actor } from './project-query';
 
 // Assignation des tâches d'un projet ouvert (maquette « Projets ») : à la

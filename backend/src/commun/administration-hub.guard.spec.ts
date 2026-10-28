@@ -1,6 +1,6 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AdministrationHubGuard } from './administration-hub.guard';
-import { ROLE_CIO } from './societe-admin-ou-cio.guard';
+import { ROLE_CIO } from '@hub/domain';
 
 const ctxOf = (user: unknown): ExecutionContext =>
   ({ switchToHttp: () => ({ getRequest: () => ({ user }) }) }) as unknown as ExecutionContext;

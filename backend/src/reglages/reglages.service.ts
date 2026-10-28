@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { PartsFactures } from '../projets/domaine/config';
 import { appliquer, type Changement, type ContenuGabarit, decrire, ErreurGabarit, libelleVersion } from './gabarit';
 import { type DefinitionReglage, GABARITS_PAR_SOCIETE, normaliser, OBJECTIFS, REGLES } from './definitions';
-import { formatDate, formatNumber } from '@hub/domain';
+import { formatDate, formatNumber, ROLE_CEO } from '@hub/domain';
 
 type Section = 'regles' | 'objectifs';
 const DEFINITIONS: Record<Section, DefinitionReglage[]> = { regles: REGLES, objectifs: OBJECTIFS };
@@ -202,7 +202,7 @@ export class ReglagesService {
       const ceo = await this.prisma.utilisateurSocieteRole.findMany({
         where: {
           societeId,
-          role: { nom: 'CEO (transverse)', supprimeLe: null, OR: [{ societeId }, { societeId: null }] },
+          role: { nom: ROLE_CEO, supprimeLe: null, OR: [{ societeId }, { societeId: null }] },
           utilisateur: { actif: true },
         },
         select: { utilisateurId: true },

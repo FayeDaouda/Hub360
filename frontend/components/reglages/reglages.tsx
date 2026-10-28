@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { ClipboardList, FileClock, MessageSquareWarning, Scale, Target } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
-import { ROLE_CIO } from '@/lib/acces-back-office';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { afficher, getReglages, libelleVersion, type Reglages as DonneesReglages } from '@/lib/reglages';
 import { getSignalements, type Signalement } from '@/lib/signalements';
@@ -16,6 +15,7 @@ import { SignalementsPanel } from './signalements-panel';
 import { ValeursPanel } from './valeurs-panel';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
 import { FieldError } from '@/components/ui/field';
+import { ROLE_CIO } from '@hub/domain';
 
 const SECTIONS = ['gabarit', 'regles', 'objectifs', 'journal', 'signalements', 'administration'] as const;
 type Section = (typeof SECTIONS)[number];

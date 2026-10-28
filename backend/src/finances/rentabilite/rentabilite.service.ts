@@ -18,7 +18,7 @@ import {
   type LigneParametre,
   type Statut,
 } from './regles-rentabilite';
-import { formatMonthYear, todayIso, toIsoDay } from '@hub/domain';
+import { formatMonthYear, ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_HR, todayIso, toIsoDay } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 type Acces = 'montants' | 'taux';
@@ -28,8 +28,7 @@ type Acces = 'montants' | 'taux';
 // recalculer les salaires ; tout autre rôle que la matrice ouvre aux marges
 // voit le taux et la couleur (revue CIO, 22/10/2026 : la matrice fait foi,
 // plus de liste parallèle) ; le compte d'administration n'a pas accès.
-const ACCES_MONTANTS = new Set(['CFO', 'CEO (transverse)']);
-const ROLE_CFO = 'CFO';
+const ACCES_MONTANTS = new Set([ROLE_CFO, ROLE_CEO]);
 
 const arrondi = (n: number) => Math.round(n);
 const heures1 = (n: number) => Math.round(n * 10) / 10;
@@ -65,7 +64,7 @@ export class RentabiliteService {
   // Le contrôleur exige finances_marges en lecture (matrice) ; ici, le
   // niveau de détail selon la fonction.
   private acces(a: Acteur): Acces {
-    if (a.role === 'societe_admin')
+    if (a.role === ROLE_COMPANY_ADMIN)
       throw new ForbiddenException('La rentabilité par projet n’est pas ouverte au compte d’administration.');
     return ACCES_MONTANTS.has(a.role) ? 'montants' : 'taux';
   }
@@ -371,7 +370,10 @@ export class RentabiliteService {
     const acces = this.acces(a);
     if (periode && !/^\d{4}-\d{2}$/.test(periode)) throw new BadRequestException('Période invalide (AAAA-MM).');
     const { lignes, params, blocages, arrete } = await this.calculer(a.societeId, periode ?? null);
-    const [rh, cfo] = await Promise.all([this.titulaires(a.societeId, 'RH'), this.titulaires(a.societeId, ROLE_CFO)]);
+    const [rh, cfo] = await Promise.all([
+      this.titulaires(a.societeId, ROLE_HR),
+      this.titulaires(a.societeId, ROLE_CFO),
+    ]);
     // Totaux : projets aux données complètes seulement.
     const complets = lignes.filter((l) => l.etat === 'complet');
     const totaux = {

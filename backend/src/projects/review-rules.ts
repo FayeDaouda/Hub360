@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
+import { ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_CTO, ROLE_DIR_GC, ROLE_EMPLOYEE } from '@hub/domain';
 
 // Validation d'une remise (maquettes « Projets ») : le chef de team valide ;
 // l'Architecte DPLG (rôle Dir. GC) valide les tâches du chef de team et
@@ -13,20 +14,10 @@ import type { PrismaService } from '../prisma/prisma.service';
 //   · décide seul des prolongations qui repoussent la livraison du projet et
 //     des TS au-delà du seuil des Réglages.
 
-export const ROLE_DPLG = 'Dir. GC';
-export const ROLE_CTO = 'CTO (transverse)';
-
-// Salarié (matrice : projets en lecture, 06/10/2026) : il ne voit que les
-// projets où une tâche lui est assignée, et ceux de la cellule qu'il pilote
-// (chef de team : il valide les remises de son équipe).
-export const ROLE_EMPLOYEE = 'Salarié';
-
 // CEO et CFO (étape 1, 12/10/2026) : vue gabarit en lecture, projets à
 // « lecture » dans la matrice. Exception ciblée : ils écrivent dans les fils
 // de discussion, sans aucune action de circuit (remise, validation, renvoi,
 // assignation, prolongation, TS) — refusées ici quel que soit leur niveau.
-export const ROLE_CEO = 'CEO (transverse)';
-export const ROLE_CFO = 'CFO';
 const OUTSIDE_CIRCUIT_ROLES = new Set([ROLE_CEO, ROLE_CFO]);
 const THREAD_COMMENT_ROLES = new Set([ROLE_CEO, ROLE_CFO]);
 
@@ -40,6 +31,9 @@ export function assertInCircuit(role: string) {
     );
 }
 
+// Salarié (matrice : projets en lecture, 06/10/2026) : il ne voit que les
+// projets où une tâche lui est assignée, et ceux de la cellule qu'il pilote
+// (chef de team : il valide les remises de son équipe).
 export function projectScope(role: string, employeeId: string | null): Prisma.ProjetWhereInput {
   if (role !== ROLE_EMPLOYEE) return {};
   const id = employeeId ?? '__aucun__';
@@ -58,9 +52,9 @@ export type TaskRule = { assigneId: string | null; assigneeIsDplg: boolean };
 
 // Pouvoirs de l'Architecte DPLG : le Dir. GC, l'admin société, le CTO en suppléance.
 export const actsAsDplg = (d: Decider) =>
-  d.role === ROLE_DPLG || d.role === 'societe_admin' || (d.role === ROLE_CTO && d.ctoStandsIn);
+  d.role === ROLE_DIR_GC || d.role === ROLE_COMPANY_ADMIN || (d.role === ROLE_CTO && d.ctoStandsIn);
 // Ce qui remonte au CTO (et à l'admin société).
-const ctoLevel = (d: Decider) => d.role === ROLE_CTO || d.role === 'societe_admin';
+const ctoLevel = (d: Decider) => d.role === ROLE_CTO || d.role === ROLE_COMPANY_ADMIN;
 const isChiefOf = (d: Decider, assigneId: string | null, chiefId: string | null) =>
   !!chiefId && d.employeeId === chiefId && assigneId !== chiefId;
 
@@ -84,7 +78,7 @@ export function canQualify(d: Decider, t: TaskRule, chiefId: string | null, push
 
 // Visa DPLG : il engage la signature de l'architecte — le Dir. GC (ou un
 // autre Dir. GC en suppléance), l'admin société ; jamais le CTO.
-export const canVisa = (role: string) => role === ROLE_DPLG || role === 'societe_admin';
+export const canVisa = (role: string) => role === ROLE_DIR_GC || role === ROLE_COMPANY_ADMIN;
 
 // TS : le Dir. GC (ou son suppléant) l'ajoute jusqu'au seuil ; au-delà, il le
 // demande et le CTO le valide (ou l'ajoute lui-même).

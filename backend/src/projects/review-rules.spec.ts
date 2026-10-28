@@ -1,16 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
-import {
-  assertInCircuit,
-  canDecide,
-  canQualify,
-  commentsWithoutWrite,
-  outsideCircuit,
-  ROLE_CEO,
-  ROLE_CFO,
-  ROLE_CTO,
-  ROLE_DPLG,
-  tsRight,
-} from './review-rules';
+import { assertInCircuit, canDecide, canQualify, commentsWithoutWrite, outsideCircuit, tsRight } from './review-rules';
+import { ROLE_CEO, ROLE_CFO, ROLE_CTO, ROLE_DIR_GC } from '@hub/domain';
 
 // CEO et CFO (étape 1) : lecture + commentaires, aucune action de circuit.
 describe('validation · rôle hors circuit (CEO)', () => {
@@ -28,10 +18,10 @@ describe('validation · rôle hors circuit (CEO)', () => {
   });
 
   it('le DPLG garde la validation', () => {
-    expect(canDecide({ role: ROLE_DPLG, employeeId: null, ctoStandsIn: false }, aValider, 'CHEF')).toBe(true);
+    expect(canDecide({ role: ROLE_DIR_GC, employeeId: null, ctoStandsIn: false }, aValider, 'CHEF')).toBe(true);
     expect(
       canQualify(
-        { role: ROLE_DPLG, employeeId: null, ctoStandsIn: false },
+        { role: ROLE_DIR_GC, employeeId: null, ctoStandsIn: false },
         { assigneId: 'C1', assigneeIsDplg: false },
         'CHEF',
       ),
@@ -40,7 +30,7 @@ describe('validation · rôle hors circuit (CEO)', () => {
 
   it('assertInCircuit refuse le CEO, laisse passer les autres', () => {
     expect(() => assertInCircuit(ROLE_CEO)).toThrow(ForbiddenException);
-    expect(() => assertInCircuit(ROLE_DPLG)).not.toThrow();
+    expect(() => assertInCircuit(ROLE_DIR_GC)).not.toThrow();
     expect(() => assertInCircuit('CTO (transverse)')).not.toThrow();
   });
 
@@ -51,19 +41,21 @@ describe('validation · rôle hors circuit (CEO)', () => {
       expect(() => assertInCircuit(r)).toThrow(ForbiddenException);
     }
     expect(commentsWithoutWrite('RH')).toBe(false);
-    expect(outsideCircuit(ROLE_DPLG)).toBe(false);
+    expect(outsideCircuit(ROLE_DIR_GC)).toBe(false);
   });
 });
 
 // Revue Dir. GC (21/10/2026, lot 4) : le CTO, niveau au-dessus du Dir. GC.
 describe('validation · escalade au CTO et suppléance', () => {
-  const dplg = { role: ROLE_DPLG, employeeId: 'DG', ctoStandsIn: false };
+  const dplg = { role: ROLE_DIR_GC, employeeId: 'DG', ctoStandsIn: false };
   const cto = { role: ROLE_CTO, employeeId: null, ctoStandsIn: false };
   const remise = (assigneId: string, assigneeIsDplg = false) => ({ statut: 'a_valider', assigneId, assigneeIsDplg });
 
   it('le travail d’un Dir. GC est validé par le CTO, pas par un autre Dir. GC', () => {
     expect(canDecide(cto, remise('DG', true), null)).toBe(true);
-    expect(canDecide({ role: ROLE_DPLG, employeeId: 'DG2', ctoStandsIn: false }, remise('DG', true), null)).toBe(false);
+    expect(canDecide({ role: ROLE_DIR_GC, employeeId: 'DG2', ctoStandsIn: false }, remise('DG', true), null)).toBe(
+      false,
+    );
     expect(canDecide(dplg, remise('DG', true), null)).toBe(false); // ni sa propre tâche
   });
 

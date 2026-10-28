@@ -10,6 +10,7 @@ import { creerSignalement } from '@/lib/signalements';
 import type { NiveauPermission, Session } from '@/lib/types';
 import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
+import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 type Onglet = 'guide' | 'signaler';
 
@@ -95,7 +96,7 @@ function Panneau({
 
 function Guide({ session, onSignaler }: { session: Session; onSignaler: () => void }) {
   const niveauDe = (cle: string): NiveauPermission => {
-    if (session.role === 'societe_admin') return 'validation';
+    if (session.role === ROLE_COMPANY_ADMIN) return 'validation';
     const moduleMatrice = moduleDeSection(cle);
     return moduleMatrice ? (session.permissions?.[moduleMatrice] ?? 'aucun') : 'aucun';
   };

@@ -1,14 +1,15 @@
 import { premiereSectionAccessible } from './acces-back-office';
 import { Session } from './types';
+import { ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 
 // Où envoyer un utilisateur une fois connecté, selon son rôle — un seul
 // endroit à modifier si un rôle change de destination ou qu'un nouveau
 // rôle apparaît.
 export function destinationForSession(session: Session): string {
   switch (session.role) {
-    case 'holding_admin': // compte technique : administration du HUB
+    case ROLE_HOLDING_ADMIN: // compte technique : administration du HUB
       return '/groupe';
-    case 'societe_admin':
+    case ROLE_COMPANY_ADMIN:
       return `/admin/${session.societe.slug}`;
     default: {
       // Rôle de la matrice (Dir. GC, COO, CFO, CEO, CIO…) : première section

@@ -12,11 +12,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { decisionContext } from '../projects/decision-context';
 import { TsElementsService } from '../projects/ts-elements.service';
-import { ROLE_CFO, ROLE_CTO, tsRight } from '../projects/review-rules';
+import { tsRight } from '../projects/review-rules';
 import type { AddTsElementDto } from '../projects/open-projects.dto';
 import { DevisService } from './devis.service';
 import type { LigneDevisDto } from './dto';
-import { formatAmount, todayIso } from '@hub/domain';
+import { formatAmount, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 
 const PRODUIT_TS = { mineure: 'TS-MIN', majeure: 'TS-MAJ' } as const;
 const OBJET_AVENANT = 'Avenant · travaux supplémentaires';
@@ -87,7 +87,7 @@ export class AvenantsTsService {
     accepter: boolean,
     motif?: string,
   ) {
-    if (acteur.role !== ROLE_CTO && acteur.role !== 'societe_admin')
+    if (acteur.role !== ROLE_CTO && acteur.role !== ROLE_COMPANY_ADMIN)
       throw new ForbiddenException('Un TS au-delà du seuil est validé par le CTO.');
     const d = await this.prisma.demandeTs.findFirst({
       where: { id: demandeId, projetId, societeId },

@@ -19,11 +19,10 @@ import {
   UserPlus,
   type LucideIcon,
 } from 'lucide-react';
-import { ROLE_DIR_GC } from '@/lib/acces-back-office';
 import { getProjets } from '@/lib/crm';
 import { getTeamsView } from '@/features/teams/api';
 import { getAbsencesAValider, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
-import { daysBetween, daysSince, formatAmount, formatDayMonth, toIsoDay } from '@hub/domain';
+import { daysBetween, daysSince, formatAmount, formatDayMonth, ROLE_DIR_GC, toIsoDay } from '@hub/domain';
 import { useSessionCourante } from '@/lib/layout-contexte';
 import { getReportingsRecus, type ReportingRecu } from '@/lib/pilotage';
 import { getToDecide } from '@/features/projects/api';

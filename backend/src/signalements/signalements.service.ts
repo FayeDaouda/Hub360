@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ROLE_CIO } from '../commun/societe-admin-ou-cio.guard';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreerSignalementDto } from './dto';
+import { ROLE_CIO } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 const apercu = (texte: string) => (texte.length > 80 ? `${texte.slice(0, 77)}…` : texte);

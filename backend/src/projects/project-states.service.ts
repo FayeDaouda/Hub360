@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { todayIso } from '@hub/domain';
+import { ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
@@ -12,7 +12,7 @@ import {
   type TaskState,
 } from './task-states';
 import { decisionContext, type DecisionContext } from './decision-context';
-import { employeeOfAccount, ROLE_CTO, type Decider } from './review-rules';
+import { employeeOfAccount, type Decider } from './review-rules';
 import { grantedExtension, isoDay, WITH_TASKS, type Actor, type ProjectWithTasks } from './project-query';
 
 // États des projets ouverts selon la règle unique (cartes verrouillées,
@@ -139,7 +139,7 @@ export class ProjectStatesService {
 
   // Demandes de TS en attente sur ces projets, si la personne peut les trancher (CTO).
   async tsRequestsToDecide(companyId: string, decider: Decider, projectIds: string[]) {
-    if (decider.role !== ROLE_CTO && decider.role !== 'societe_admin') return [];
+    if (decider.role !== ROLE_CTO && decider.role !== ROLE_COMPANY_ADMIN) return [];
     const requests = await this.prisma.demandeTs.findMany({
       where: { societeId: companyId, statut: 'a_valider', projetId: { in: projectIds } },
       orderBy: { demandeLe: 'asc' },

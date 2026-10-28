@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // À poser après JwtAuthGuard sur toutes les routes /societes/:slug/… du
 // back-office : exige un token societe_admin émis pour CETTE société.
@@ -9,7 +10,7 @@ export class SocieteAccesGuard implements CanActivate {
     const user = req.user;
     const slug = req.params.slug;
 
-    if (!user || user.role !== 'societe_admin' || user.societeSlug !== slug) {
+    if (!user || user.role !== ROLE_COMPANY_ADMIN || user.societeSlug !== slug) {
       throw new ForbiddenException("Accès réservé à l'administration de cette société");
     }
     return true;

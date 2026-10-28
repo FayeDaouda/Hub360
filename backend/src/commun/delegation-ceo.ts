@@ -1,13 +1,12 @@
 import type { PrismaService } from '../prisma/prisma.service';
-import { todayIso } from '@hub/domain';
+import { ROLE_CEO, ROLE_CFO, ROLE_CTO, todayIso } from '@hub/domain';
 
 // Délégation du CEO (revue CEO, 22/10/2026) — lecture commune à tous les
 // modules (fonction, pas de service : aucun cycle de modules). Délégués :
 // avoirs au-delà du seuil, arbitrage des décisions proposées, absences des
 // directeurs (N+1 CEO) — dans la limite des droits du délégataire, jamais
 // sur sa propre demande. Jamais délégués : droits du CIO, salaire du CFO.
-export const ROLE_CEO = 'CEO (transverse)';
-export const ROLES_DELEGATAIRES: ReadonlySet<string> = new Set(['CTO (transverse)', 'CFO']);
+export const ROLES_DELEGATAIRES: ReadonlySet<string> = new Set([ROLE_CTO, ROLE_CFO]);
 
 // Compte du délégataire en fonction ce jour-là, ou null.
 export async function delegataireCeo(

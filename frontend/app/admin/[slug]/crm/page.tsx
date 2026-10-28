@@ -17,7 +17,6 @@ import {
 } from '@/lib/crm';
 import { getLocalites } from '@/lib/localites';
 import { VueCommercialeCoo } from '@/components/crm/vue-commerciale';
-import { ROLE_COO } from '@/lib/acces-back-office';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { niveauSuffisant } from '@/lib/auth';
 import { type ActionCrm } from '@/lib/cycle-crm';
@@ -32,7 +31,7 @@ import {
   type Projet,
   type StatutCrm,
 } from '@/lib/types';
-import { daysSince, formatNumber, plural, yearOf } from '@hub/domain';
+import { daysSince, formatNumber, plural, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_COO, yearOf } from '@hub/domain';
 import { NouveauProjetModal } from '@/components/admin/nouveau-projet-modal';
 import { DetailDossierModal } from '@/components/admin/detail-dossier-modal';
 import { KpiStrip } from '@/components/ui/kpi';
@@ -173,8 +172,8 @@ export default function CrmPage(props: Props) {
   // Réassigner et archiver : titulaires Dir. GC, administration, CIO (même
   // règle que CrmService.peutReassigner — le serveur tranche).
   const estDirectionOuCio =
-    session.role === 'societe_admin' ||
-    session.role === 'CIO (transverse)' ||
+    session.role === ROLE_COMPANY_ADMIN ||
+    session.role === ROLE_CIO ||
     !!proprietaires?.some((p) => p.id === session.utilisateur.id);
 
   // Tuiles et compteurs — sur le pipeline de l'année, indépendants de la recherche.

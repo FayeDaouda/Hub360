@@ -5,14 +5,14 @@ import { montantHtLignes } from '../devis/domaine';
 import { PrismaService } from '../prisma/prisma.service';
 import { aTraiterCommercial, performanceCommerciale, totauxPipeline, type DossierCommercial } from './commercial';
 import { CommissionsService } from './commissions.service';
-import { toIsoDay } from '@hub/domain';
+import { ROLE_COMPANY_ADMIN, toIsoDay } from '@hub/domain';
 
 type Acteur = { societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
 
 // Montants du pipeline (revue COO, lot D) : totaux HT, jamais le détail des
 // offres — module « crm_totaux » de la matrice, ou déjà les offres (finances_devis).
 export const voitMontantsPipeline = (a: Acteur) =>
-  a.role === 'societe_admin' ||
+  a.role === ROLE_COMPANY_ADMIN ||
   aLaPermission(a.permissions, 'crm_totaux', 'lecture') ||
   aLaPermission(a.permissions, 'finances_devis', 'lecture');
 

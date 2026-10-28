@@ -7,7 +7,16 @@ import { LIBELLE_MOTIF_AVOIR } from '../projets/facturation/controle-interne.ser
 import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatAmount, formatDate, formatMonthYear, formatNumericMonth, toIsoDay } from '@hub/domain';
+import {
+  formatAmount,
+  formatDate,
+  formatMonthYear,
+  formatNumericMonth,
+  ROLE_CEO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  toIsoDay,
+} from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string };
 export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';
@@ -21,7 +30,7 @@ export type LigneAudit = {
 };
 
 // Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.
-export const ROLES_JOURNAL = new Set(['CEO (transverse)', 'CIO (transverse)', 'societe_admin']);
+export const ROLES_JOURNAL = new Set([ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN]);
 // Période par défaut et plafond : le journal se lit par tranches.
 const JOURS_PAR_DEFAUT = 30;
 const JOURS_MAX = 366;
