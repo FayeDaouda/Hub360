@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { doubleFacteurSuspendue } from '../auth/auth.service';
 import { daysSince, formatDate, formatDayMonth, plural, toIsoDay } from '@hub/domain';
 
 export type ElementAdministration = {
@@ -133,8 +134,9 @@ export class AdministrationService {
         });
         continue;
       }
-      // Règle de production (auth.service) : tous les comptes (décision du 28/10/2026).
-      if (!u.totpActifLe) sansDoubleFacteur.push(nomDe(u));
+      // Règle de production (auth.service) : tous les comptes (décision du
+      // 28/10/2026) ; rien à signaler pendant une suspension.
+      if (!u.totpActifLe && !doubleFacteurSuspendue()) sansDoubleFacteur.push(nomDe(u));
     }
     if (sansDoubleFacteur.length) {
       elements.push({

@@ -45,6 +45,20 @@ describe('ConfirmationIdentiteService (coordonnées de paiement, revue CFO)', ()
     expect(prisma.utilisateur.update).toHaveBeenCalledWith({ where: { id: 'U1' }, data: { totpCodesSecours: [] } });
   });
 
+  it('double authentification suspendue (pilote) : le mot de passe, même pour un compte inscrit', async () => {
+    const avant = process.env.HUB_DOUBLE_FACTEUR;
+    process.env.HUB_DOUBLE_FACTEUR = 'desactive';
+    try {
+      const { s } = await svc(true);
+      expect(await s.mode('U1')).toBe('mot_de_passe');
+      expect(await s.verifier('U1', 'bon-mot-de-passe')).toBe('mot_de_passe');
+      await expect(s.verifier('U1', codeAuPas(SECRET, pasCourant()))).rejects.toThrow('Mot de passe incorrect.');
+    } finally {
+      if (avant === undefined) delete process.env.HUB_DOUBLE_FACTEUR;
+      else process.env.HUB_DOUBLE_FACTEUR = avant;
+    }
+  });
+
   it('code déjà utilisé : refusé (rejeu)', async () => {
     const { s, prisma } = await svc(true);
     (prisma.utilisateur.updateMany as jest.Mock).mockResolvedValue({ count: 0 });

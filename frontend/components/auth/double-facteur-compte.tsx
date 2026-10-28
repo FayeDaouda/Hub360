@@ -6,14 +6,15 @@ import { formatDate } from '@hub/domain';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
 
-type Etat = { actifLe: string | null; exige: boolean };
+type Etat = { actifLe: string | null; exige: boolean; suspendue: boolean };
 type Reglage = { secret: string; qr: string };
 
 // Double authentification depuis « Mon compte » (revue Salarié 19/10/2026) :
 // obligatoire pour tous les comptes en production (décision du 28/10/2026),
 // activée à la connexion ; ici, avant d'y être invité. Même parcours qu'à la
 // connexion (QR, premier code, 8 codes de secours) ; la session reste ouverte.
-// Désactiver ou changer de téléphone : réinitialisation par le CIO.
+// Désactiver ou changer de téléphone : réinitialisation par le CIO. Suspendue
+// sur tout le HUB (HUB_DOUBLE_FACTEUR=desactive) : on le dit, rien n'est perdu.
 export function DoubleFacteurCompte() {
   const [etat, setEtat] = useState<Etat | null>(null);
   const [reglage, setReglage] = useState<Reglage | null>(null);
@@ -83,6 +84,15 @@ export function DoubleFacteurCompte() {
     );
   }
 
+  if (etat.actifLe && etat.suspendue) {
+    return (
+      <p className="dmd-note">
+        <Pill tone="attention">Suspendue</Pill> sur ce HUB pour le moment : aucun code n’est demandé à la connexion.
+        Votre application reste réglée et resservira dès la réactivation.
+      </p>
+    );
+  }
+
   if (etat.actifLe) {
     return (
       <p className="dmd-note">
@@ -96,9 +106,11 @@ export function DoubleFacteurCompte() {
     return (
       <div className="df-compte">
         <p className="dmd-note">
-          {etat.exige
-            ? 'Obligatoire pour votre rôle : elle vous sera demandée à la prochaine connexion. Vous pouvez l’activer dès maintenant.'
-            : 'Facultative, recommandée si vous ouvrez le HUB hors du bureau : un code à 6 chiffres de votre téléphone, en plus du mot de passe.'}
+          {etat.suspendue
+            ? 'Suspendue sur ce HUB pour le moment : aucun code n’est demandé à la connexion. Vous pouvez déjà l’activer, elle servira dès la réactivation.'
+            : etat.exige
+              ? 'Obligatoire pour votre rôle : elle vous sera demandée à la prochaine connexion. Vous pouvez l’activer dès maintenant.'
+              : 'Facultative, recommandée si vous ouvrez le HUB hors du bureau : un code à 6 chiffres de votre téléphone, en plus du mot de passe.'}
         </p>
         {erreur && <FieldError>{erreur}</FieldError>}
         <button type="button" className="btn-ghost btn-ghost--sm" disabled={busy} onClick={commencer}>
