@@ -68,8 +68,20 @@ Pour essayer avant la vraie mise en service, sans acheter de domaine :
      demarrage
    ```
    Il affiche une seule fois un mot de passe provisoire : le CIO se connecte
-   avec, puis le change (menu du compte). Rejouable sans risque. Ne jamais
-   lancer `prisma db seed` ici : les scripts de démo sont refusés en production.
+   avec, puis le change (menu du compte). Ne pas le relancer une fois le HUB
+   en service : il remettrait la matrice des droits aux valeurs du socle. Ne
+   jamais lancer `prisma db seed` ici : les scripts de démo sont refusés en
+   production.
+7. **Premier dossier RH** : un compte ne se crée qu'à partir d'un dossier RH,
+   et seul le rôle RH ouvre les dossiers. Celui de la personne RH s'ouvre donc
+   ici, avec son identité seule (refusé dès qu'un compte RH existe) :
+   ```sh
+   docker compose --profile demarrage run --rm --build \
+     -e HUB_RH_EMAIL=prenom.nom@greyconcrete.sn -e HUB_RH_PRENOM=Prénom -e HUB_RH_NOM=Nom \
+     demarrage npx ts-node prisma/first-hr-dossier.ts
+   ```
+   Le CIO crée ensuite son compte (Nouveau compte, rôle RH) ; la RH ouvre les
+   dossiers des autres, puis le CIO crée leurs comptes.
 
 ## Pré-production
 
