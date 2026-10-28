@@ -1,7 +1,7 @@
 import { BadRequestException, HttpException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthService, dateEmission, doubleFacteurExige } from './auth.service';
+import { AuthService, dateEmission, doubleFacteurExige, doubleFacteurSuspendue } from './auth.service';
 import { base32, chiffrerSecret, codeAuPas, hacherCodeSecours, pasCourant } from './totp';
 
 jest.mock('./mot-de-passe', () => ({
@@ -211,21 +211,31 @@ describe('Double authentification', () => {
     };
   }
 
-  it('obligatoire pour tous les rôles en production (décision du 28/10/2026) ; réglable', () => {
+  it('obligatoire pour tous les rôles en production (décision du 28/10/2026) ; réglable, suspendable', () => {
     expect(doubleFacteurExige({ NODE_ENV: 'production' })).toBe(true);
     expect(doubleFacteurExige({ NODE_ENV: 'development' })).toBe(false);
     expect(doubleFacteurExige({ NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'obligatoire' })).toBe(true);
-    // Revue CIO (22/10/2026) : « desactive » n'est accepté en production que
-    // sur un serveur de démonstration ; jamais sur un HUB réel.
-    expect(doubleFacteurExige({ NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(true);
-    expect(
-      doubleFacteurExige({ NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive', HUB_DONNEES_DEMO: 'autorise' }),
-    ).toBe(false);
+    // Pilote (28/10/2026) : « desactive » la suspend, production comprise.
+    expect(doubleFacteurExige({ NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
     expect(doubleFacteurExige({ NODE_ENV: 'development', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(false);
+    expect(doubleFacteurSuspendue({ NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' })).toBe(true);
+    expect(doubleFacteurSuspendue({ NODE_ENV: 'production' })).toBe(false);
   });
 
   it('mot de passe juste + double facteur actif : pas de session, une étape « code »', async () => {
     expect(await svc2().s.login(DTO)).toEqual({ etape: 'code', jeton: 'jeton' });
+  });
+
+  it('suspendue : session ouverte sans code, même pour un compte inscrit', async () => {
+    const avant = process.env.HUB_DOUBLE_FACTEUR;
+    process.env.HUB_DOUBLE_FACTEUR = 'desactive';
+    try {
+      const res = (await svc2().s.login(DTO)) as Session;
+      expect(res.role).toBe('CFO');
+    } finally {
+      if (avant === undefined) delete process.env.HUB_DOUBLE_FACTEUR;
+      else process.env.HUB_DOUBLE_FACTEUR = avant;
+    }
   });
 
   it('code de l’application : session ouverte, pas mémorisé contre le rejeu', async () => {

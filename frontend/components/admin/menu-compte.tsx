@@ -38,7 +38,7 @@ import { formatDayMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
 // Clavier : Entrée / Espace ouvre, flèches haut / bas parcourent, Échap
 // referme et rend le focus à l'avatar.
 
-type EtatDoubleFacteur = { actifLe: string | null; exige: boolean };
+type EtatDoubleFacteur = { actifLe: string | null; exige: boolean; suspendue: boolean };
 
 const LIBELLE_ABSENCE: Record<NonNullable<Profil['absence']>['type'], string> = {
   conge_paye: 'congés payés',
@@ -148,7 +148,7 @@ export function MenuCompte({
   }
 
   const fermer = () => setOuvert(false);
-  const securise = !!doubleFacteur?.actifLe;
+  const securise = !!doubleFacteur?.actifLe && !doubleFacteur.suspendue;
 
   return (
     <div ref={racine} className="mc">
@@ -199,7 +199,11 @@ export function MenuCompte({
             >
               {securise ? <ShieldCheck size={16} aria-hidden /> : <ShieldAlert size={16} aria-hidden />}
               <span>
-                {securise ? 'Double authentification activée' : 'Double authentification à activer'}
+                {doubleFacteur.suspendue
+                  ? 'Double authentification suspendue'
+                  : securise
+                    ? 'Double authentification activée'
+                    : 'Double authentification à activer'}
                 {!securise && doubleFacteur.exige && (
                   <span className="mc-securite-exigee"> · exigée pour votre rôle</span>
                 )}

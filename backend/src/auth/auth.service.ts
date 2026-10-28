@@ -31,14 +31,18 @@ import { EmailService, type AvisSecurite } from '../email/email.service';
 // Double authentification obligatoire pour tous les rôles (décision du
 // 28/10/2026, lot A ; elle épargnait jusque-là le Salarié qui ne pilote pas de
 // cellule). Appliquée en production. HUB_DOUBLE_FACTEUR = « obligatoire » la
-// force partout ; « desactive » ne vaut que sur un poste de développement ou un
-// serveur de démonstration (HUB_DONNEES_DEMO=autorise) — jamais sur un HUB
-// réel (revue CIO, 22/10/2026).
+// force partout ; « desactive » la suspend, production comprise.
 export function doubleFacteurExige(env: NodeJS.ProcessEnv = process.env): boolean {
   const reglage = env.HUB_DOUBLE_FACTEUR;
-  const production = env.NODE_ENV === 'production';
-  const desactivable = !production || env.HUB_DONNEES_DEMO === 'autorise';
-  return reglage === 'obligatoire' || (production && !(reglage === 'desactive' && desactivable));
+  return reglage === 'obligatoire' || (env.NODE_ENV === 'production' && reglage !== 'desactive');
+}
+
+// Suspension pendant le pilote (décision du user, 28/10/2026, qui lève le
+// verrou de la revue CIO du 22/10/2026) : aucun code demandé, même aux
+// comptes inscrits, dont l'inscription est gardée ; vider le réglage la
+// réactive telle quelle.
+export function doubleFacteurSuspendue(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.HUB_DOUBLE_FACTEUR === 'desactive';
 }
 
 // Comptes techniques de secours (revue CIO, 22/10/2026) : sans usage
@@ -106,7 +110,8 @@ export class AuthService {
 
     // Refuse un compte sans accès à la société demandée.
     await this.acces(utilisateur.id, dto.societeSlug);
-    if (utilisateur.totpActifLe) return this.etape('code', utilisateur.id, dto.societeSlug);
+    if (utilisateur.totpActifLe && !doubleFacteurSuspendue())
+      return this.etape('code', utilisateur.id, dto.societeSlug);
     if (doubleFacteurExige()) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
     return this.ouvrirSession(utilisateur, dto.societeSlug);
   }
@@ -231,6 +236,7 @@ export class AuthService {
     return {
       actifLe: u?.totpActifLe?.toISOString() ?? null,
       exige: doubleFacteurExige(),
+      suspendue: doubleFacteurSuspendue(),
     };
   }
 

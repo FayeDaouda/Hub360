@@ -325,6 +325,12 @@ base64 : un « / » dans le mot de passe de la base casserait `DATABASE_URL`.
 | `SAUVEGARDE_CLE_PUBLIQUE`                                                 | clé publique age (`age1…`) qui chiffre la seconde copie | à remplir                       | vide                     |
 | `HUB_DONNEES_DEMO`                                                        | autorise les données de démo                            | **vide**                        | `autorise`               |
 
+`HUB_DOUBLE_FACTEUR=desactive` suspend la double authentification, production
+comprise (décidé pour le pilote le 28/10/2026) : aucun code n'est demandé,
+même aux comptes inscrits. Vider le réglage puis redémarrer le backend
+(`docker compose --env-file .env up -d backend`) la réactive ; les inscriptions
+sont gardées, les autres comptes s'inscrivent à leur connexion suivante.
+
 Et dans `deploy/secrets/` (production) : `storagebox_ed25519` (clé SSH du
 serveur vers la Storage Box) et `storagebox_known_hosts` (empreinte de la
 Storage Box, contre l'usurpation).
