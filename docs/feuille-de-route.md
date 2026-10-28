@@ -37,9 +37,11 @@ Décisions structurantes : `docs/adr/`.
   - ses réponses d'API décrites par des DTO, et ses appels typés par les
     types générés (`frontend/lib/api/types.ts`, ADR 0005) ;
   - les chiffres avant et après dans la description de la PR.
-- **Noms des modèles de données** : ils restent en français pendant la
-  structuration des modules ; renommés en anglais à la fin, en une seule PR,
-  avec `@map`/`@@map` et sans migration (décision du 28/10/2026).
+- **Noms des modèles de données** : ils restent en français, définitivement
+  (décision du user du 28/10/2026, qui remplace celle de renommer à la fin) :
+  gain faible, et une opération sur toute la base juste avant l'import des
+  vraies données. Le code autour est en anglais ; les modèles Prisma, leurs
+  champs et les clés de l'API gardent leurs noms français.
 - **Routes et champs de l'API inchangés** pendant la structuration (contrat
   public) ; vérifié par `npm run validate` (forme des réponses, ci-dessous).
   Avant de sortir les applications macOS, Windows et iOS, introduire un
@@ -148,7 +150,8 @@ lot A), création des comptes par invitation (lien de 72 h). Lots décidés :
   (il révèle donc qu'un compte existe, après 10 essais ; sinon, message
   habituel et e-mail seul) ; les récidives se comptent depuis la dernière
   connexion réussie ; un mot de passe réinitialisé par lien ne débloque pas.
-- **D** (attend les exports du user) : import des clients actifs, projets en
+- **D** (modèles prêts : `docs/reprise/`, à remplir par la RH, le CFO et le
+  COO ; points à trancher dans `docs/reprise/README.md`) : import des clients actifs, projets en
   cours, salariés présents et factures non soldées ; pièces jointes des
   factures non soldées et des contrats en cours seulement ; numéros de
   facture d'origine conservés, la suite du HUB après le dernier émis (à
