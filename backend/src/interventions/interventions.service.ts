@@ -189,6 +189,69 @@ export class InterventionsService {
     return this.state(companyId, project.code);
   }
 
+  // Suppression définitive (décision du user, 29/10/2026 : sans limite, même
+  // avec des factures émises ou des paiements) d'un code : le dossier CRM et
+  // son projet, ou le projet seul quand il n'a pas de dossier. Tout ce qui en
+  // dépend part avec : offres, contrat, factures (avoirs et paiements
+  // compris), cartes et tâches. Ordre imposé par les clés étrangères sans
+  // cascade : contrat (→ offre), avoirs (→ facture d'origine), factures
+  // (→ offre d'origine), offres, puis projet et dossier. Le journal garde
+  // l'intervention et le décompte de ce qui a été supprimé.
+  async deleteCode(companyId: string, code: string, actorId: string, motif: string) {
+    const [dossier, project] = await Promise.all([
+      this.prisma.dossierCrm.findFirst({ where: { societeId: companyId, code }, select: { id: true } }),
+      this.prisma.projet.findFirst({ where: { societeId: companyId, code }, select: { id: true } }),
+    ]);
+    if (!dossier && !project) throw new NotFoundException('Aucun dossier ni projet avec ce code.');
+    const dossierId = dossier?.id ?? null;
+    const projectId = project?.id ?? null;
+    const invoiceScope: Prisma.FactureWhereInput = {
+      societeId: companyId,
+      OR: [...(projectId ? [{ projetId: projectId }] : []), ...(dossierId ? [{ dossierCrmId: dossierId }] : [])],
+    };
+    const offerScope: Prisma.DevisWhereInput = {
+      societeId: companyId,
+      OR: [...(projectId ? [{ projetId: projectId }] : []), ...(dossierId ? [{ dossierCrmId: dossierId }] : [])],
+    };
+
+    await this.prisma.$transaction(async (tx) => {
+      const [invoices, issued, payments, offers, cards, tasks] = await Promise.all([
+        tx.facture.count({ where: invoiceScope }),
+        tx.facture.count({ where: { ...invoiceScope, emiseLe: { not: null } } }),
+        tx.paiement.count({ where: { facture: invoiceScope } }),
+        tx.devis.count({ where: offerScope }),
+        projectId ? tx.carteProjet.count({ where: { projetId: projectId } }) : 0,
+        projectId ? tx.tacheProjet.count({ where: { projetId: projectId } }) : 0,
+      ]);
+      const offerIds = (await tx.devis.findMany({ where: offerScope, select: { id: true } })).map((o) => o.id);
+      await tx.contrat.deleteMany({
+        where: {
+          societeId: companyId,
+          OR: [...(dossierId ? [{ dossierCrmId: dossierId }] : []), { devisId: { in: offerIds } }],
+        },
+      });
+      await tx.facture.deleteMany({ where: { ...invoiceScope, factureOrigineId: { not: null } } });
+      await tx.facture.deleteMany({ where: invoiceScope });
+      await tx.devis.deleteMany({ where: offerScope });
+      if (projectId) await tx.projet.delete({ where: { id: projectId } });
+      if (dossierId) await tx.dossierCrm.delete({ where: { id: dossierId } });
+      const parts = [
+        dossierId && 'dossier CRM',
+        projectId && `projet (${cards} cartes, ${tasks} tâches)`,
+        `${offers} offre(s)`,
+        `${invoices} facture(s) dont ${issued} émise(s)`,
+        `${payments} paiement(s)`,
+      ].filter(Boolean);
+      await this.record(tx, companyId, actorId, {
+        type: 'suppression',
+        cible: code,
+        detail: `Supprimés : ${parts.join(', ')}`,
+        motif,
+      });
+    });
+    return this.state(companyId, code);
+  }
+
   private async dossier(companyId: string, id: string) {
     const d = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId: companyId },

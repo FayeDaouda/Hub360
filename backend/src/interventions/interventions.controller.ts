@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { HubAdminGuard } from '../commun/hub-admin.guard';
-import { CellulesProjetDto, EtatInterventionsDto, MotifInterventionDto } from './interventions.dto';
+import { CellulesProjetDto, EtatInterventionsDto, MotifInterventionDto, SuppressionDto } from './interventions.dto';
 import { InterventionsService } from './interventions.service';
 
 type R = { user: { userId: string; societeId: string } };
@@ -66,5 +66,12 @@ export class InterventionsController {
     @Body() dto: CellulesProjetDto,
   ): Promise<EtatInterventionsDto> {
     return this.interventions.setCells(req.user.societeId, id, dto.celluleIds, req.user.userId, dto.motif.trim());
+  }
+
+  // Suppression définitive du dossier et/ou du projet portant ce code.
+  @Post('suppression')
+  @HttpCode(200)
+  delete(@Req() req: R, @Body() dto: SuppressionDto): Promise<EtatInterventionsDto> {
+    return this.interventions.deleteCode(req.user.societeId, dto.code.trim(), req.user.userId, dto.motif.trim());
   }
 }

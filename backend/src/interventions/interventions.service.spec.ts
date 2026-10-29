@@ -19,11 +19,35 @@ function setup(
     count?: number;
   } = {},
 ) {
+  // Ordre des suppressions, pour vérifier le respect des clés étrangères.
+  const ordre: string[] = [];
+  const supprime = (quoi: string) => jest.fn(async () => void ordre.push(quoi));
   const tx = {
-    dossierCrm: { updateMany: jest.fn().mockResolvedValue({ count: o.count ?? 1 }) },
+    dossierCrm: {
+      updateMany: jest.fn().mockResolvedValue({ count: o.count ?? 1 }),
+      delete: supprime('dossier'),
+    },
     dossierCrmTransition: { create: jest.fn(), updateMany: jest.fn() },
     projetCellule: { deleteMany: jest.fn(), createMany: jest.fn() },
     interventionHub: { create: jest.fn() },
+    contrat: { deleteMany: supprime('contrat') },
+    facture: {
+      count: jest.fn(async ({ where }: { where: { emiseLe?: unknown } }) => (where.emiseLe ? 1 : 4)),
+      deleteMany: jest.fn(
+        async ({ where }: { where: { factureOrigineId?: unknown } }) =>
+          void ordre.push(where.factureOrigineId ? 'avoirs' : 'factures'),
+      ),
+    },
+    paiement: { count: jest.fn().mockResolvedValue(2) },
+    devis: {
+      count: jest.fn().mockResolvedValue(1),
+      findMany: jest.fn().mockResolvedValue([{ id: 'O1' }]),
+      deleteMany: supprime('offres'),
+    },
+    carteProjet: { count: jest.fn().mockResolvedValue(24) },
+    tacheProjet: { count: jest.fn().mockResolvedValue(76) },
+    projet: { delete: supprime('projet') },
+    ordre,
   };
   const prisma = {
     // Même ligne pour la garde et pour l'état rendu (state).
@@ -150,5 +174,30 @@ describe('InterventionsService', () => {
     const { svc, tx } = setup({ projet: { code: 'X', ouvertLe: null }, cellules: [{ id: 'C1', nom: 'A' }] });
     await expect(svc.setCells('S1', 'P1', ['C1', 'C9'], 'ADM', 'm')).rejects.toThrow(NotFoundException);
     expect(tx.projetCellule.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('suppression : contrat, avoirs, factures, offres, projet puis dossier ; décompte au journal', async () => {
+    const { svc, tx } = setup({ dossier: { code: 'GB_TBD.26', statut: 'onboard' }, projet: { code: 'GB_TBD.26' } });
+    await svc.deleteCode('S1', 'GB_TBD.26', 'ADM', 'Projet test');
+    expect(tx.ordre).toEqual(['contrat', 'avoirs', 'factures', 'offres', 'projet', 'dossier']);
+    expect(tx.projet.delete).toHaveBeenCalledWith({ where: { id: 'P1' } });
+    expect(tx.dossierCrm.delete).toHaveBeenCalledWith({ where: { id: 'D1' } });
+    expect(intervention(tx)).toEqual({
+      societeId: 'S1',
+      parId: 'ADM',
+      type: 'suppression',
+      cible: 'GB_TBD.26',
+      detail:
+        'Supprimés : dossier CRM, projet (24 cartes, 76 tâches), 1 offre(s), 4 facture(s) dont 1 émise(s), 2 paiement(s)',
+      motif: 'Projet test',
+    });
+  });
+
+  it('suppression d’un dossier sans projet : le projet n’est pas touché ; code inconnu → 404', async () => {
+    const { svc, tx } = setup({ dossier: { code: 'AM_STL.26', statut: 'perdu' } });
+    await svc.deleteCode('S1', 'AM_STL.26', 'ADM', 'Doublon');
+    expect(tx.projet.delete).not.toHaveBeenCalled();
+    expect(tx.ordre).toEqual(['contrat', 'avoirs', 'factures', 'offres', 'dossier']);
+    await expect(setup().svc.deleteCode('S1', 'X', 'ADM', 'm')).rejects.toThrow(NotFoundException);
   });
 });

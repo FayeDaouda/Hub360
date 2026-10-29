@@ -7,6 +7,7 @@ import type { StatutCrm } from './types';
 //   POST /societes/:slug/interventions/dossiers/:id/reouverture  { motif } — dossier perdu rouvert
 //   POST /societes/:slug/interventions/projets/:id/ouverture     { motif } — projet ouvert sans F1
 //   PUT  /societes/:slug/interventions/projets/:id/cellules      { celluleIds, motif }
+//   POST /societes/:slug/interventions/suppression               { code, motif } — suppression définitive
 
 export type CelluleIntervention = { id: string; nom: string; code: string };
 
@@ -37,7 +38,8 @@ export type EtatInterventions = {
       | 'module_desactive'
       | 'module_reactive'
       | 'maintenance_activee'
-      | 'maintenance_levee';
+      | 'maintenance_levee'
+      | 'suppression';
     detail: string;
     motif: string;
     par: string | null;
@@ -70,4 +72,9 @@ export function changerCellulesProjet(
   motif: string,
 ): Promise<EtatInterventions> {
   return apiAuth(`${base(slug)}/projets/${projetId}/cellules`, { method: 'PUT', body: { celluleIds, motif } });
+}
+
+// Suppression définitive du dossier et/ou du projet portant ce code.
+export function supprimerCode(slug: string, code: string, motif: string): Promise<EtatInterventions> {
+  return apiAuth(`${base(slug)}/suppression`, { method: 'POST', body: { code, motif } });
 }

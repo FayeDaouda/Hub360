@@ -9082,6 +9082,46 @@
         ]
       }
     },
+    "/api/societes/{slug}/interventions/suppression": {
+      "post": {
+        "operationId": "InterventionsController_delete",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatInterventionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Interventions"
+        ]
+      }
+    },
     "/api/societes/{slug}/interrupteurs": {
       "get": {
         "operationId": "SwitchesController_state",
@@ -15918,6 +15958,25 @@
         "required": [
           "motif",
           "celluleIds"
+        ]
+      },
+      "SuppressionDto": {
+        "type": "object",
+        "properties": {
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "motif",
+          "code"
         ]
       },
       "ModuleInterrupteurDto": {
