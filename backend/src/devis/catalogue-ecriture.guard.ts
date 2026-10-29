@@ -11,7 +11,11 @@ export class CatalogueEcritureGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
     const req = ctx.switchToHttp().getRequest();
     const user = req.user;
-    if (user && user.societeSlug === req.params.slug && (user.role === ROLE_CEO || user.role === ROLE_COMPANY_ADMIN)) {
+    if (
+      user &&
+      user.societeSlug === req.params.slug &&
+      (user.adminHub || user.role === ROLE_CEO || user.role === ROLE_COMPANY_ADMIN)
+    ) {
       return true;
     }
     throw new ForbiddenException('La modification du catalogue est réservée au CEO.');

@@ -30,13 +30,14 @@ type RoleLu = { nom: string; societeId: string | null };
 // Qui modifie quelle ligne de la matrice (gouvernance Bloc A, CIO = super
 // admin du HUB, 28/09/2026) : les rôles propres à la société → son admin ou
 // le CIO ; les rôles transverses (CEO/CTO/CIO) → le CIO seul.
-function motifRefus(role: RoleLu, societeId: string, acteurRole: string): string | null {
+// L'Administrateur HUB (`adminHub`) modifie toute ligne métier, transverse comprise.
+function motifRefus(role: RoleLu, societeId: string, acteurRole: string, adminHub = false): string | null {
   if (ROLES_SOCLE.has(role.nom)) {
     return 'Les rôles d’administration ne se modifient pas depuis la matrice.';
   }
   if (role.societeId === societeId) return null;
   if (role.societeId === null) {
-    return acteurRole === ROLE_CIO ? null : 'Les rôles transverses (CEO, CTO, CIO) se gèrent par le CIO.';
+    return adminHub || acteurRole === ROLE_CIO ? null : 'Les rôles transverses (CEO, CTO, CIO) se gèrent par le CIO.';
   }
   return "Ce rôle n'appartient pas à cette société.";
 }
@@ -52,7 +53,7 @@ export class RolesService {
   // les rôles transverses (societeId null, ex. CEO/CTO/CIO). `modifiable`
   // est calculé pour l'appelant (même règle que majPermission) : le front
   // l'affiche tel quel, sans refaire la règle de son côté.
-  async listerAvecPermissions(societeId: string, acteurRole: string) {
+  async listerAvecPermissions(societeId: string, acteurRole: string, adminHub = false) {
     const [roles, modules] = await Promise.all([
       this.prisma.role.findMany({
         where: { OR: [{ societeId }, { societeId: null }], supprimeLe: null },
@@ -68,7 +69,7 @@ export class RolesService {
         id: r.id,
         nom: r.nom,
         transverse: r.societeId === null,
-        modifiable: motifRefus(r, societeId, acteurRole) === null,
+        modifiable: motifRefus(r, societeId, acteurRole, adminHub) === null,
         permissions: Object.fromEntries(r.permissions.map((p) => [p.module.cle, p.niveau])) as Record<
           string,
           NiveauPermission
@@ -87,10 +88,11 @@ export class RolesService {
     niveau: NiveauPermission,
     acteurRole: string,
     acteurId: string | null = null,
+    adminHub = false,
   ) {
     const role = await this.prisma.role.findUnique({ where: { id: roleId } });
     if (!role || role.supprimeLe) throw new NotFoundException('Rôle introuvable');
-    const refus = motifRefus(role, societeId, acteurRole);
+    const refus = motifRefus(role, societeId, acteurRole, adminHub);
     if (refus) throw new ForbiddenException(refus);
 
     const module = await this.prisma.module.findUnique({ where: { cle: moduleCle } });
@@ -101,7 +103,8 @@ export class RolesService {
     });
     if (actuelle?.niveau === niveau) return { roleId, moduleCle, niveau, enAttente: false };
 
-    if (role.nom === ROLE_CIO) {
+    // L'Administrateur HUB applique directement, sans passer par le CEO.
+    if (role.nom === ROLE_CIO && !adminHub) {
       const enCours = await this.prisma.demandeDroit.findFirst({
         where: { societeId, roleId, module: moduleCle, statut: 'en_attente' },
       });

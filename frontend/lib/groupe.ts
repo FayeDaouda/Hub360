@@ -20,6 +20,8 @@ import {
 //   POST /groupe/comptes/:id/invitation                  renvoie l'invitation (compte en attente)
 //   PUT  /groupe/comptes/:id/actif                       { actif } — désactiver coupe les sessions
 //   POST /groupe/comptes/:id/deblocage                   compte verrouillé après trop d'essais (lot C)
+//   POST /groupe/comptes/:id/sessions/coupure            coupe toutes les sessions du compte
+//   POST /groupe/comptes/:id/mot-de-passe/reinitialisation  envoie le lien de nouveau mot de passe
 
 export function getComptesGroupe(): Promise<ComptesGroupe> {
   return apiAuth<ComptesGroupe>('/groupe/comptes');
@@ -55,6 +57,16 @@ export function changerActifCompte(
 // la personne la réactive à sa prochaine connexion.
 export function reinitialiserDoubleFacteur(utilisateurId: string): Promise<{ id: string; doubleFacteur: boolean }> {
   return apiAuth(`/groupe/comptes/${utilisateurId}/double-facteur/reinitialisation`, { method: 'POST' });
+}
+
+// Coupe toutes les sessions du compte : il devra se reconnecter.
+export function couperSessionsCompte(utilisateurId: string): Promise<{ id: string }> {
+  return apiAuth(`/groupe/comptes/${utilisateurId}/sessions/coupure`, { method: 'POST' });
+}
+
+// Envoie le lien « nouveau mot de passe » (même e-mail que « mot de passe oublié »).
+export function envoyerReinitialisationCompte(utilisateurId: string): Promise<{ id: string; email: string }> {
+  return apiAuth(`/groupe/comptes/${utilisateurId}/mot-de-passe/reinitialisation`, { method: 'POST' });
 }
 
 // Compte verrouillé après trop d'essais de connexion : débloqué avant la fin.

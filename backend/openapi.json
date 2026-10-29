@@ -7236,6 +7236,52 @@
         ]
       }
     },
+    "/api/groupe/comptes/{utilisateurId}/sessions/coupure": {
+      "post": {
+        "operationId": "ComptesGroupeController_couperSessions",
+        "parameters": [
+          {
+            "name": "utilisateurId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ComptesGroupe"
+        ]
+      }
+    },
+    "/api/groupe/comptes/{utilisateurId}/mot-de-passe/reinitialisation": {
+      "post": {
+        "operationId": "ComptesGroupeController_envoyerReinitialisation",
+        "parameters": [
+          {
+            "name": "utilisateurId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ComptesGroupe"
+        ]
+      }
+    },
     "/api/groupe/comptes/{utilisateurId}/deblocage": {
       "post": {
         "operationId": "ComptesGroupeController_debloquer",

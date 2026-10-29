@@ -287,6 +287,36 @@ describe('RolesService · contrôle du CIO', () => {
     );
   });
 
+  it('Administrateur HUB : rôle CIO appliqué directement, sans demande au CEO', async () => {
+    const {
+      svc: s,
+      upsert,
+      prisma,
+    } = svc({
+      roleTrouve: { id: 'RC', nom: 'CIO (transverse)', societeId: null },
+      moduleTrouve: crm,
+      permissionActuelle: { niveau: 'ecriture' },
+    } as never);
+    const r = await s.majPermission('S1', 'RC', 'crm', 'lecture', 'CEO (transverse)', 'ADM', true);
+    expect(r).toMatchObject({ enAttente: false });
+    expect(upsert).toHaveBeenCalled();
+    expect(prisma.demandeDroit.create).not.toHaveBeenCalled();
+  });
+
+  it('Administrateur HUB : rôles transverses modifiables, rôles d’administration jamais', async () => {
+    const { svc: s } = svc({
+      roles: [
+        { id: 'R1', nom: 'CTO (transverse)', societeId: null, permissions: [] },
+        { id: 'R2', nom: 'societe_admin', societeId: null, permissions: [] },
+      ],
+    });
+    const { roles } = await s.listerAvecPermissions('S1', 'Salarié', true);
+    expect(roles.map((r) => [r.nom, r.modifiable])).toEqual([
+      ['CTO (transverse)', true],
+      ['societe_admin', false],
+    ]);
+  });
+
   it('décision : le CEO seul ; refus motivé ; acceptée = appliquée « validée par » le CEO', async () => {
     const demande = {
       id: 'D1',

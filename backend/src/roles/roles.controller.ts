@@ -6,7 +6,7 @@ import { AdministrationService } from './administration.service';
 import { RolesService } from './roles.service';
 import { DecisionDroitDto, MajPermissionDto } from './dto';
 
-type R = { user: { societeId: string; role: string; userId: string } };
+type R = { user: { societeId: string; role: string; userId: string; adminHub: boolean } };
 
 // Matrice des rôles d'une société — son admin, ou le CIO (super admin du
 // HUB) connecté sur cette société. Qui modifie quelle ligne : RolesService.
@@ -17,7 +17,7 @@ export class RolesController {
 
   @Get()
   lister(@Req() req: R) {
-    return this.roles.listerAvecPermissions(req.user.societeId, req.user.role);
+    return this.roles.listerAvecPermissions(req.user.societeId, req.user.role, req.user.adminHub);
   }
 
   @Patch(':roleId/modules/:moduleCle')
@@ -27,7 +27,8 @@ export class RolesController {
     @Param('moduleCle') moduleCle: string,
     @Body() dto: MajPermissionDto,
   ) {
-    return this.roles.majPermission(req.user.societeId, roleId, moduleCle, dto.niveau, req.user.role, req.user.userId);
+    const u = req.user;
+    return this.roles.majPermission(u.societeId, roleId, moduleCle, dto.niveau, u.role, u.userId, u.adminHub);
   }
 }
 

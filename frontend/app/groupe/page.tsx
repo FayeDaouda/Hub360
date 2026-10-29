@@ -3,23 +3,38 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, LogOut } from 'lucide-react';
+import { LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { clearSession, getSession } from '@/lib/auth';
-import { estAdministrateurHub } from '@/lib/acces-back-office';
+import { estAdministrateurHub, sectionAccessible } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { Session } from '@/lib/types';
 import { HubLogo } from '@/components/hub-logo';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
+import { RolesPanel } from '@/components/admin/roles-panel';
+import { JournalAudit } from '@/components/pilotage/journal-audit';
+import { libelleRole } from '@/lib/groupe';
 import { ROLE_CIO } from '@hub/domain';
 
-// Administration du HUB — le CIO, super admin désigné (28/09/2026), ou le
-// compte technique holding_admin (cf. estAdministrateurHub). Les autres rôles
-// sont renvoyés vers leur propre destination (voir destinationForSession).
-// Premier outil : Comptes & rôles (rôles de la matrice + salaires).
+type Onglet = 'comptes' | 'droits' | 'journal';
+
+const ONGLETS: { cle: Onglet; libelle: string }[] = [
+  { cle: 'comptes', libelle: 'Comptes & rôles' },
+  { cle: 'droits', libelle: 'Droits des rôles' },
+  { cle: 'journal', libelle: 'Journal d’audit' },
+];
+
+// Administration du HUB — l'Administrateur HUB (carte blanche, 29/10/2026),
+// le CIO, super admin désigné (28/09/2026), ou le compte technique
+// holding_admin (cf. estAdministrateurHub). Les autres rôles sont renvoyés
+// vers leur propre destination (voir destinationForSession). Console :
+// comptes & rôles, droits des rôles (matrice) et journal d'audit de la
+// société de connexion ; les droits et le journal ne s'ouvrent pas à
+// holding_admin, qui n'a pas de société.
 export default function GroupePage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
+  const [onglet, setOnglet] = useState<Onglet>('comptes');
 
   useEffect(() => {
     const current = getSession();
@@ -35,6 +50,7 @@ export default function GroupePage() {
   }, [router]);
 
   if (!session) return null;
+  const gouverne = !!session.adminHub || session.role === ROLE_CIO;
 
   function handleLogout() {
     clearSession();
@@ -57,7 +73,13 @@ export default function GroupePage() {
         <div className="groupe-barre-actions">
           {/* Le CIO a aussi un rôle métier dans sa société (ex. CRM) — le
               compte technique holding_admin, lui, n'a pas de back-office. */}
-          {session.role === ROLE_CIO && (
+          {gouverne && sectionAccessible(session, 'parametres') && (
+            <Link href={`/admin/${session.societe.slug}/reglages`} className="btn-ghost">
+              <Settings size={15} aria-hidden />
+              <span className="groupe-libelle-bouton">Réglages du HUB</span>
+            </Link>
+          )}
+          {gouverne && (
             <Link href={`/admin/${session.societe.slug}`} className="btn-ghost">
               <LayoutDashboard size={15} aria-hidden />
               <span className="groupe-libelle-bouton">Back-office {session.societe.nom}</span>
@@ -74,9 +96,32 @@ export default function GroupePage() {
       <main className="groupe-contenu">
         <div className="groupe-intro">
           <h1>Bonjour {session.utilisateur.prenom}</h1>
-          <p>Administration du HUB — rôles et rémunérations des comptes de chaque société.</p>
+          <p>
+            {session.adminHub
+              ? `Administrateur HUB · en tant que ${libelleRole(session.role)} · ${session.societe.nom}. Comptes de toutes les sociétés ; droits et journal de ${session.societe.nom}.`
+              : 'Administration du HUB — rôles et rémunérations des comptes de chaque société.'}
+          </p>
         </div>
-        <ComptesRolesPanel moiId={session.utilisateur.id} />
+        {gouverne && (
+          <div className="admin-periode">
+            <div className="admin-periode-toggle" role="group" aria-label="Section de l’administration">
+              {ONGLETS.map((o) => (
+                <button
+                  key={o.cle}
+                  type="button"
+                  className={o.cle === onglet ? 'is-active' : ''}
+                  aria-pressed={o.cle === onglet}
+                  onClick={() => setOnglet(o.cle)}
+                >
+                  {o.libelle}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {onglet === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
+        {gouverne && onglet === 'droits' && <RolesPanel slug={session.societe.slug} />}
+        {gouverne && onglet === 'journal' && <JournalAudit slug={session.societe.slug} />}
       </main>
     </div>
   );
