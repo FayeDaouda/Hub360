@@ -23,9 +23,9 @@ type Action = 'onboard' | 'reouverture' | 'ouverture' | 'cellules' | 'suppressio
 
 const ACTIONS: Record<Action, { titre: string; texte: string; confirmer: string }> = {
   onboard: {
-    titre: 'Passer en Onboard sans signature',
+    titre: 'Passer en Onboard (offre acceptée)',
     texte:
-      'Comme à la signature du contrat : le projet est créé, l’offre acceptée lui est rattachée et ses factures sont préparées en brouillon. Aucun contrat n’est enregistré.',
+      'Pour un dossier dont l’offre acceptée attend encore : comme à l’acceptation, le projet est créé, l’offre lui est rattachée et ses factures sont préparées en brouillon. Le contrat se régularise ensuite.',
     confirmer: 'Passer en Onboard',
   },
   reouverture: {
@@ -54,7 +54,7 @@ const ACTIONS: Record<Action, { titre: string; texte: string; confirmer: string 
 };
 
 const LIBELLE_INTERVENTION: Record<EtatInterventions['historique'][number]['type'], string> = {
-  onboard_sans_signature: 'Onboard sans signature',
+  onboard_sans_signature: 'Onboard débloqué',
   ouverture_projet: 'Projet ouvert sans F1',
   cellules_projet: 'Cellules modifiées',
   reouverture_dossier: 'Dossier rouvert',
@@ -156,7 +156,7 @@ export function DeblocagesPanel({ slug }: { slug: string }) {
                     </button>
                   )}
                   {!peutOnboarder && d.statut === 'offre_envoyee' && !d.offreAcceptee && (
-                    <p className="deb-note">L’Onboard sans signature attend une offre acceptée par le client.</p>
+                    <p className="deb-note">L’Onboard attend une offre acceptée par le client.</p>
                   )}
                 </div>
               </>

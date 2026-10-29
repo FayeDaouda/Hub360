@@ -64,7 +64,7 @@ export class ContratsController {
     return this.contrats.retirerEnvoi(req.user.societeId, id);
   }
 
-  // Contrat papier signé et scanné — vaut signature (Onboard).
+  // Contrat papier signé et scanné — vaut signature (régularisation).
   @Post('signature-papier')
   @RequiertPermission('finances_devis', 'ecriture')
   signerPapier(@Req() req: R, @Param('id') id: string, @Body() dto: FichierContratDto) {

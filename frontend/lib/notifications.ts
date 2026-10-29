@@ -37,9 +37,10 @@ export function marquerNotificationsLues(slug: string): Promise<FluxNotification
 }
 
 // Cible d'une notification dans le back-office (cloche + toast admin).
-//   · contrat signé → la page Facturation du projet pour qui ÉMET les
-//     factures (finances_factures validation : la CFO) — ses brouillons l'y
-//     attendent ; les autres destinataires ouvrent le dossier.
+//   · offre acceptée (Onboard) → la page Facturation du projet pour qui
+//     ÉMET les factures (finances_factures validation : la CFO) — ses
+//     brouillons l'y attendent ; les autres destinataires ouvrent le dossier.
+//     (« contrat signé » portait le projet avant le 29/10/2026.)
 //   · cycle CRM → le dossier, ouvert dans le CRM (?dossier=).
 //   · sinon → le projet, ouvert dans Projets (?projet=).
 export function lienNotificationAdmin(
@@ -47,7 +48,11 @@ export function lienNotificationAdmin(
   n: Pick<NotificationItem, 'type' | 'projetId' | 'dossierCrmId' | 'factureId'>,
   session: Session | null,
 ): string | null {
-  if (n.type === 'contrat_signe' && n.projetId && niveauSuffisant(session, 'finances_factures', 'validation')) {
+  if (
+    (n.type === 'offre_acceptee' || n.type === 'contrat_signe') &&
+    n.projetId &&
+    niveauSuffisant(session, 'finances_factures', 'validation')
+  ) {
     return lienFacturationProjet(slug, n.projetId);
   }
   const base = `/admin/${slug}`;

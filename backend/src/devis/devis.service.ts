@@ -10,6 +10,7 @@ import { FacturationService } from '../projets/facturation/facturation.service';
 import { EmailService } from '../email/email.service';
 import { genererJeton, hacherJeton } from '../auth/jetons';
 import { MOTIF_REFUS_CLIENT } from '../crm/cycle';
+import { COMMENT_ONBOARD_ACCEPTANCE, OnboardingService } from '../crm/onboarding.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
@@ -102,6 +103,7 @@ export class DevisService {
     private email: EmailService,
     private notifications: NotificationsService,
     private reglages: ReglagesService,
+    private onboarding: OnboardingService,
   ) {}
 
   // Délai d'acceptation d'un avenant (Réglages · Règles et délais).
@@ -474,25 +476,37 @@ export class DevisService {
     return { ...misAJour, lienPublic, emailEnvoye };
   }
 
-  // Réponse du client (lien public) ou saisie à sa place (manuel). Un REFUS
-  // sur une offre de dossier CRM fait passer le dossier en « perdu »
-  // automatiquement, motif posé — le client a dit non, c'est un fait
-  // (décision F). Une acceptation ne bascule rien : l'Onboard reste un geste
-  // humain (le contrat, étape G, pourra s'intercaler). Sur une offre de
-  // dossier, propriétaire et apporteur sont prévenus dans les deux cas.
+  // Réponse du client (lien public) ou saisie à sa place (manuel), sur une
+  // offre de dossier CRM :
+  //   - REFUS : le dossier passe en « perdu », motif posé — le client a dit
+  //     non, c'est un fait (décision F) ;
+  //   - ACCEPTATION : on commence — le dossier passe en Onboard, projet et
+  //     factures brouillon créés dans la même transaction ; le contrat se
+  //     régularise ensuite (décision du 29/10/2026, OnboardingService).
+  // Propriétaire et apporteur sont prévenus dans les deux cas.
   private async enregistrerReponse(
     devisId: string,
     dossierCrmId: string | null,
     reponse: 'accepte' | 'refuse',
     parId: string | null,
   ) {
-    const societeId = await this.prisma.$transaction(async (tx) => {
+    const { societeId, onboard } = await this.prisma.$transaction(async (tx) => {
       const { societeId } = await tx.devis.update({
         where: { id: devisId },
         data: { statut: reponse, dateReponse: new Date() },
         select: { societeId: true },
       });
-      if (reponse !== 'refuse' || !dossierCrmId) return societeId;
+      if (!dossierCrmId) return { societeId, onboard: null };
+      // Dossier déclaré perdu pendant que l'offre attendait : rien ne bascule.
+      const { statut } = await tx.dossierCrm.findUniqueOrThrow({
+        where: { id: dossierCrmId },
+        select: { statut: true },
+      });
+      if (statut !== 'offre_envoyee') return { societeId, onboard: null };
+      if (reponse === 'accepte') {
+        const onboard = await this.onboarding.onboard(tx, societeId, dossierCrmId, parId, COMMENT_ONBOARD_ACCEPTANCE);
+        return { societeId, onboard };
+      }
       const { count } = await tx.dossierCrm.updateMany({
         where: { id: dossierCrmId, statut: 'offre_envoyee' },
         data: { statut: 'perdu' },
@@ -508,7 +522,7 @@ export class DevisService {
           },
         });
       }
-      return societeId;
+      return { societeId, onboard: null };
     });
     if (dossierCrmId) {
       await this.notifications.notifierDossierCrm({
@@ -516,6 +530,8 @@ export class DevisService {
         dossierId: dossierCrmId,
         evenement: reponse === 'accepte' ? 'offre_acceptee' : 'offre_refusee',
         parId,
+        projetId: onboard?.projet.id ?? null,
+        facturesPreparees: onboard?.facturesPreparees,
       });
     }
   }

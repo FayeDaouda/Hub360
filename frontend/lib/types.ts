@@ -1189,8 +1189,9 @@ export type MatriceRoles = {
 };
 
 // --- Contrat (étape G, cadrage validé 27/09/2026) -----------------------------
-// Préparé une fois l'offre acceptée ; sa SIGNATURE (lien public : bouton ou
-// signature tracée ; ou papier scanné) fait passer le dossier en Onboard.
+// Préparé une fois le dossier en Onboard (l'offre acceptée suffit, décision
+// du 29/10/2026) ; sa SIGNATURE (lien public : bouton ou signature tracée ;
+// ou papier scanné) régularise le dossier.
 export type ModeContrat = 'modele' | 'sur_mesure';
 export type StatutContrat = 'brouillon' | 'envoye' | 'signe';
 export type ModeSignatureContrat = 'bouton' | 'trace' | 'papier';

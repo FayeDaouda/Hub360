@@ -9,16 +9,17 @@ import { CommissionsController } from './commissions.controller';
 import { CommissionsService } from './commissions.service';
 import { CrmService } from './crm.service';
 import { CrmController } from './crm.controller';
+import { OnboardingModule } from './onboarding.module';
 
 // DevisModule : l'offre d'un dossier est un devis, envoyé par la validation
 // DAF du cycle (CrmService.agir → DevisService.emettreOffre). ProjetsModule :
 // à l'Onboard, l'offre acceptée devient les factures du projet
-// (FacturationService.preparerDepuisOffre, étape H2).
+// (FacturationService.preparerDepuisOffre, étape H2), via OnboardingModule.
 @Module({
-  imports: [DevisModule, ProjetsModule, NotificationsModule, FinancesModule, AuthModule],
+  imports: [DevisModule, ProjetsModule, NotificationsModule, FinancesModule, AuthModule, OnboardingModule],
   providers: [CrmService, CommercialService, CommissionsService],
   controllers: [CrmController, CommissionsController],
-  // Le contrat (étape G) déclenche l'Onboard par CrmService.
+  // Déblocages de l'Administrateur HUB (Onboard d'une offre acceptée en attente).
   exports: [CrmService],
 })
 export class CrmModule {}

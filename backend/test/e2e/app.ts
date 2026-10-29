@@ -66,8 +66,8 @@ export async function parametrerContratDeTest(app: INestApplication) {
     .expect(200);
 }
 
-// Offre acceptée → contrat préparé, annexes sans objet, signature papier :
-// le dossier passe en Onboard (projet + factures d'échéancier en brouillon).
+// Dossier en Onboard (offre acceptée) → contrat préparé, annexes sans objet,
+// signature papier : le contrat régularise le dossier.
 export async function signerContrat(cfo: ReturnType<typeof api>, dossierId: string) {
   const { contrat } = (await cfo.post(`/dossiers/${dossierId}/contrat`).expect(201)).body as {
     contrat: { annexes: { id: string; statut: string }[] };

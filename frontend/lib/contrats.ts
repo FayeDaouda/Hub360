@@ -7,7 +7,7 @@ import { apiPublic, apiSociete } from './client-api';
 //   POST     …/contrat/document                déposer le contrat sur mesure
 //   PATCH    …/contrat/annexes/:annexeId       joindre / « non nécessaire »
 //   POST/DELETE …/contrat/envoi                envoyer / retirer l'envoi
-//   POST     …/contrat/signature-papier        contrat papier scanné (Onboard)
+//   POST     …/contrat/signature-papier        contrat papier scanné (vaut signature)
 //   …/parametres-contrat                       réglages société (admin / CIO)
 //   contrats-public/:token                     lien client (sans compte)
 
@@ -58,11 +58,7 @@ export function retirerEnvoiContrat(slug: string, dossierId: string): Promise<Co
   return apiSociete<ContratDossier>(slug, `${base(dossierId)}/envoi`, { method: 'DELETE' });
 }
 
-export function signerContratPapier(
-  slug: string,
-  dossierId: string,
-  scan: Fichier,
-): Promise<ContratDossier & { facturesPreparees: number }> {
+export function signerContratPapier(slug: string, dossierId: string, scan: Fichier): Promise<ContratDossier> {
   return apiSociete(slug, `${base(dossierId)}/signature-papier`, { method: 'POST', body: scan });
 }
 

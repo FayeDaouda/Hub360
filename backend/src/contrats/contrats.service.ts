@@ -1,9 +1,9 @@
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { Prisma, StatutAnnexeContrat } from '@prisma/client';
+import { Prisma, StatutAnnexeContrat, StatutDevis } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { genererJeton, hacherJeton } from '../auth/jetons';
-import { CrmService } from '../crm/crm.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { montantHtLignes, refDevis } from '../devis/domaine';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { ReglagesService } from '../reglages/reglages.service';
@@ -24,6 +24,10 @@ const AVEC_DETAIL = {
   dossier: { include: { client: true } },
   societe: { select: { nom: true } },
 } satisfies Prisma.ContratInclude;
+
+// L'offre acceptée devient « transformée » à l'Onboard (factures préparées) :
+// c'est elle que le contrat reprend.
+const OFFRE_RETENUE: StatutDevis[] = ['accepte', 'transforme'];
 
 type ContratDetail = Prisma.ContratGetPayload<{ include: typeof AVEC_DETAIL }>;
 type LigneMontant = { tauxTva: Prisma.Decimal; quantite: Prisma.Decimal; prixUnitaire: Prisma.Decimal };
@@ -53,14 +57,15 @@ function signataireDe(s: SignatairesSociete, qui: Signataire) {
 }
 
 // Contrat d'un dossier CRM (étape G, cadrage validé 27/09/2026) — cf. modèle
-// Contrat dans schema.prisma. Préparé une fois l'offre ACCEPTÉE ; sa
-// signature (lien public ou papier scanné) déclenche l'Onboard, dans la même
-// transaction (CrmService.onboarderParContrat).
+// Contrat dans schema.prisma. Depuis le 29/10/2026, l'acceptation de l'offre
+// fait passer le dossier en Onboard (DevisService) : le contrat se prépare
+// ensuite et se signe (lien public ou papier scanné) pour RÉGULARISER, sans
+// rien débloquer.
 @Injectable()
 export class ContratsService {
   constructor(
     private prisma: PrismaService,
-    private crm: CrmService,
+    private notifications: NotificationsService,
     private email: EmailService,
     private reglages: ReglagesService,
   ) {}
@@ -82,7 +87,7 @@ export class ContratsService {
       where: { id: dossierId, societeId },
       include: {
         contrat: { include: AVEC_DETAIL },
-        offres: { where: { statut: 'accepte' }, include: { lignes: true }, take: 1 },
+        offres: { where: { statut: { in: OFFRE_RETENUE } }, include: { lignes: true }, take: 1 },
         societe: true,
       },
     });
@@ -120,12 +125,12 @@ export class ContratsService {
         contrat: { select: { id: true } },
         client: true,
         societe: true,
-        offres: { where: { statut: 'accepte' }, include: { lignes: true }, take: 1 },
+        offres: { where: { statut: { in: OFFRE_RETENUE } }, include: { lignes: true }, take: 1 },
       },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
-    if (dossier.statut !== 'offre_envoyee') {
-      throw new ConflictException('Le contrat se prépare quand l’offre du dossier a été envoyée et acceptée.');
+    if (dossier.statut !== 'onboard') {
+      throw new ConflictException('Le contrat se prépare une fois l’offre acceptée et le dossier en Onboard.');
     }
     if (dossier.contrat) throw new ConflictException('Ce dossier a déjà un contrat.');
     const offre = dossier.offres[0];
@@ -290,26 +295,24 @@ export class ContratsService {
     return this.get(societeId, dossierId);
   }
 
-  // Contrat papier signé, scanné, déposé par l'équipe — vaut signature :
-  // Onboard dans la même transaction.
+  // Contrat papier signé, scanné, déposé par l'équipe — vaut signature.
   async signerPapier(societeId: string, dossierId: string, userId: string, scan: FichierContratDto) {
     const c = await this.charger(societeId, dossierId);
     if (c.statut === 'signe') throw new ConflictException('Ce contrat est déjà signé.');
     if (c.statut === 'brouillon') this.exigerPret(c);
-    const r = await this.crm.onboarderParContrat(societeId, dossierId, userId, async (tx) => {
-      await tx.contrat.update({
-        where: { id: c.id },
-        data: {
-          statut: 'signe',
-          signeLe: new Date(),
-          modeSignature: 'papier',
-          scanNom: scan.nom,
-          scanUrl: scan.url,
-          tokenPublicHash: null,
-        },
-      });
+    await this.prisma.contrat.update({
+      where: { id: c.id },
+      data: {
+        statut: 'signe',
+        signeLe: new Date(),
+        modeSignature: 'papier',
+        scanNom: scan.nom,
+        scanUrl: scan.url,
+        tokenPublicHash: null,
+      },
     });
-    return { ...(await this.get(societeId, dossierId)), facturesPreparees: r.facturesPreparees };
+    await this.notifierSignature(societeId, dossierId, userId);
+    return this.get(societeId, dossierId);
   }
 
   // -- Lien public (sans compte) ------------------------------------------------
@@ -340,9 +343,8 @@ export class ContratsService {
       })),
       statut: c.statut,
       signeLe: c.signeLe,
-      // Signable : envoyé, non signé, et le dossier attend encore sa signature
-      // (pas déclaré perdu entre-temps).
-      peutSigner: c.statut === 'envoye' && c.dossier.statut === 'offre_envoyee',
+      // Signable : envoyé, non signé, et le dossier n'a pas été déclaré perdu.
+      peutSigner: c.statut === 'envoye' && c.dossier.statut !== 'perdu',
     };
   }
 
@@ -361,20 +363,19 @@ export class ContratsService {
   async signerPublic(token: string, dto: SignerContratDto, ip: string | null) {
     const c = await this.chargerParToken(token);
     if (c.statut !== 'envoye') throw new ConflictException('Ce contrat n’attend pas de signature.');
-    await this.crm.onboarderParContrat(c.societeId, c.dossierCrmId, null, async (tx) => {
-      const { count } = await tx.contrat.updateMany({
-        where: { id: c.id, statut: 'envoye' },
-        data: {
-          statut: 'signe',
-          signeLe: new Date(),
-          modeSignature: dto.mode,
-          signeParNom: dto.nom.trim(),
-          signatureTrace: dto.mode === 'trace' ? dto.signatureTrace : null,
-          signeIp: ip,
-        },
-      });
-      if (count === 0) throw new ConflictException('Ce contrat vient d’être signé.');
+    const { count } = await this.prisma.contrat.updateMany({
+      where: { id: c.id, statut: 'envoye' },
+      data: {
+        statut: 'signe',
+        signeLe: new Date(),
+        modeSignature: dto.mode,
+        signeParNom: dto.nom.trim(),
+        signatureTrace: dto.mode === 'trace' ? dto.signatureTrace : null,
+        signeIp: ip,
+      },
     });
+    if (count === 0) throw new ConflictException('Ce contrat vient d’être signé.');
+    await this.notifierSignature(c.societeId, c.dossierCrmId, null);
     return this.getPublic(token);
   }
 
@@ -445,6 +446,12 @@ export class ContratsService {
   }
 
   // -- Internes ------------------------------------------------------------------
+
+  // Contrat signé : le dossier est déjà en Onboard, la signature le
+  // régularise — information du propriétaire, de la DAF et du créateur.
+  private notifierSignature(societeId: string, dossierId: string, parId: string | null) {
+    return this.notifications.notifierDossierCrm({ societeId, dossierId, evenement: 'contrat_signe', parId });
+  }
 
   private reglagesManquants(
     s: SignatairesSociete & { contratModele: string | null },

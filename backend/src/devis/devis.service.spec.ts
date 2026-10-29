@@ -1,3 +1,4 @@
+import { OnboardingService } from '../crm/onboarding.service';
 import { EmailService } from '../email/email.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -65,6 +66,7 @@ function setup(clientEmail: string | null) {
     email,
     {} as NotificationsService,
     { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
+    {} as OnboardingService,
   );
   return { service, envoyerDevis, findFirst };
 }
@@ -113,7 +115,10 @@ describe('DevisService — offre de dossier CRM', () => {
     };
     const tx = {
       devis: { update: jest.fn().mockResolvedValue({ societeId: 'S1' }) },
-      dossierCrm: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      dossierCrm: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ statut: 'offre_envoyee' }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       dossierCrmTransition: { create: jest.fn().mockResolvedValue({}) },
     };
     const prisma = {
@@ -121,14 +126,16 @@ describe('DevisService — offre de dossier CRM', () => {
       $transaction: jest.fn((cb: (t: unknown) => unknown) => cb(tx)),
     } as unknown as PrismaService;
     const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
+    const onboarding = { onboard: jest.fn().mockResolvedValue({ projet: { id: 'P1' }, facturesPreparees: 3 }) };
     const service = new DevisService(
       prisma,
       {} as FacturationService,
       { envoyerDevis: jest.fn() } as unknown as EmailService,
       notifications as unknown as NotificationsService,
       { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
+      onboarding as unknown as OnboardingService,
     );
-    return { service, tx, notifications };
+    return { service, tx, notifications, onboarding };
   }
 
   it('envoi direct d’une offre (hors validation DAF) → 409', async () => {
@@ -144,6 +151,7 @@ describe('DevisService — offre de dossier CRM', () => {
       dossierId: 'DOS1',
       evenement: 'offre_refusee',
       parId: null,
+      projetId: null,
     });
     expect(tx.dossierCrm.updateMany).toHaveBeenCalledWith({
       where: { id: 'DOS1', statut: 'offre_envoyee' },
@@ -157,14 +165,28 @@ describe('DevisService — offre de dossier CRM', () => {
     });
   });
 
-  it('acceptation du client → le dossier ne bouge pas (Onboard = geste humain)', async () => {
-    const { service, tx, notifications } = monterOffre('envoye', '2999-12-31');
+  it('acceptation du client → Onboard dans la même transaction, projet et factures notifiés', async () => {
+    const { service, tx, notifications, onboarding } = monterOffre('envoye', '2999-12-31');
     await service.repondrePublic('jeton', 'accepte');
     expect(tx.devis.update).toHaveBeenCalled();
-    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith(
-      expect.objectContaining({ evenement: 'offre_acceptee', dossierId: 'DOS1' }),
-    );
+    expect(onboarding.onboard).toHaveBeenCalledWith(tx, 'S1', 'DOS1', null, 'offre acceptée par le client');
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
+      societeId: 'S1',
+      dossierId: 'DOS1',
+      evenement: 'offre_acceptee',
+      parId: null,
+      projetId: 'P1',
+      facturesPreparees: 3,
+    });
     expect(tx.dossierCrm.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('acceptation sur un dossier déclaré perdu entre-temps → pas d’Onboard', async () => {
+    const { service, tx, onboarding } = monterOffre('envoye', '2999-12-31');
+    tx.dossierCrm.findUniqueOrThrow.mockResolvedValue({ statut: 'perdu' });
+    await service.repondrePublic('jeton', 'accepte');
+    expect(tx.devis.update).toHaveBeenCalled();
+    expect(onboarding.onboard).not.toHaveBeenCalled();
   });
 });
 
@@ -214,6 +236,7 @@ describe('DevisService — catalogue réel', () => {
     {} as EmailService,
     {} as NotificationsService,
     { regle: jest.fn().mockResolvedValue(7) } as unknown as ReglagesService,
+    {} as OnboardingService,
   ) as unknown as {
     appliquerCatalogue: (
       s: string,

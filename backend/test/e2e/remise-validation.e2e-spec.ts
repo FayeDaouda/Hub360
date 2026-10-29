@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { api, COMPTES, connecter, demarrer, parametrerContratDeTest, signerContrat } from './app';
+import { api, COMPTES, connecter, demarrer } from './app';
 
 type Tache = { id: string; statut: string; heures: number | null; version: number };
 type Carte = { etat: { code: string }; taches: Tache[] };
@@ -20,10 +20,9 @@ describe('Remise → reprise → validation d’une tâche', () => {
     salarie = api(app, await connecter(app, COMPTES.salarie));
 
     // Un projet de conception s'ouvre (gabarit instancié) à l'émission de F1.
-    // La démo n'en a aucun d'ouvert : on signe NF_OUA.26 (offre envoyée,
-    // conception) et on émet sa F1.
+    // La démo n'en a aucun d'ouvert : l'offre de NF_OUA.26 (envoyée,
+    // conception) est acceptée — Onboard — et on émet sa F1.
     const cfo = api(app, await connecter(app, COMPTES.cfo));
-    await parametrerContratDeTest(app);
     const dossier = ((await cfo.get('/dossiers').expect(200)).body as { id: string; code: string }[]).find(
       (d) => d.code === 'NF_OUA.26',
     )!;
@@ -31,7 +30,6 @@ describe('Remise → reprise → validation d’une tâche', () => {
       (await cfo.get('/devis').expect(200)).body as { id: string; statut: string; dossierCrm: { id: string } | null }[]
     ).find((d) => d.dossierCrm?.id === dossier.id && d.statut === 'envoye')!;
     await cfo.post(`/devis/${offre.id}/reponse`, { reponse: 'accepte' }).expect(201);
-    await signerContrat(cfo, dossier.id);
     const f1 = (
       (await cfo.get('/factures').expect(200)).body as {
         id: string;

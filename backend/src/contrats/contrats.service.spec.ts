@@ -1,11 +1,12 @@
 import { ConflictException, UnprocessableEntityException } from '@nestjs/common';
-import { CrmService } from '../crm/crm.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { ContratsService } from './contrats.service';
 
-// Contrat (étape G) — ContratsService contre un Prisma simulé.
+// Contrat (étape G) — ContratsService contre un Prisma simulé. Depuis le
+// 29/10/2026, le contrat se prépare sur un dossier déjà en Onboard.
 const dec = (n: number) => ({ toNumber: () => n });
 const ligne = (ht: number) => ({ quantite: dec(1), prixUnitaire: dec(ht), tauxTva: dec(18) });
 
@@ -20,10 +21,10 @@ const SOCIETE = {
   contratSeuilSurMesureHt: dec(50_000_000),
 };
 
-function monter(o: { societe?: object; offreHt?: number; contrat?: object | null } = {}) {
+function monter(o: { societe?: object; offreHt?: number; contrat?: object | null; statut?: string } = {}) {
   const dossier = {
     id: 'D1',
-    statut: 'offre_envoyee',
+    statut: o.statut ?? 'onboard',
     code: 'AS_ALM.26',
     programme: 'Villa',
     localisation: 'Almadies',
@@ -40,22 +41,22 @@ function monter(o: { societe?: object; offreHt?: number; contrat?: object | null
         { libelle: 'Planning', automatique: null, ordre: 1 },
       ]),
     },
-    contrat: { create: jest.fn().mockResolvedValue({}), findFirst: jest.fn(), update: jest.fn() },
+    contrat: {
+      create: jest.fn().mockResolvedValue({}),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     societe: { update: jest.fn(), findUniqueOrThrow: jest.fn().mockResolvedValue(SOCIETE) },
   };
-  const crm = {
-    onboarderParContrat: jest.fn(async (_s, _d, _p, dansTx) => {
-      await dansTx({ contrat: { updateMany: jest.fn().mockResolvedValue({ count: 1 }), update: jest.fn() } });
-      return { facturesPreparees: 5 };
-    }),
-  };
+  const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
   const svc = new ContratsService(
     prisma as unknown as PrismaService,
-    crm as unknown as CrmService,
+    notifications as unknown as NotificationsService,
     { envoyerContrat: jest.fn().mockResolvedValue({ envoye: false }) } as unknown as EmailService,
     { regle: jest.fn().mockResolvedValue(50_000_000) } as unknown as ReglagesService, // seuil CEO (TTC)
   );
-  return { svc, prisma, crm };
+  return { svc, prisma, notifications };
 }
 
 describe('ContratsService.preparer', () => {
@@ -93,6 +94,12 @@ describe('ContratsService.preparer', () => {
     expect(prisma.contrat.create).toHaveBeenCalled();
   });
 
+  it('dossier pas encore en Onboard → 409, rien créé', async () => {
+    const { svc, prisma } = monter({ statut: 'offre_envoyee' });
+    await expect(svc.preparer('S1', 'D1')).rejects.toThrow('Onboard');
+    expect(prisma.contrat.create).not.toHaveBeenCalled();
+  });
+
   it('contrat déjà préparé → 409', async () => {
     const { svc } = monter({ contrat: { id: 'C1' } });
     await expect(svc.preparer('S1', 'D1')).rejects.toThrow(ConflictException);
@@ -111,7 +118,7 @@ describe('ContratsService — envoi et signature', () => {
       { id: 'A1', libelle: 'Offre acceptée', automatique: 'offre', statut: 'jointe' },
       { id: 'A2', libelle: 'Planning', automatique: null, statut: 'a_joindre' },
     ],
-    dossier: { code: 'AS_ALM.26', statut: 'offre_envoyee', client: { nom: 'Awa Sow', email: 'a@b.sn' } },
+    dossier: { code: 'AS_ALM.26', statut: 'onboard', client: { nom: 'Awa Sow', email: 'a@b.sn' } },
     societe: { nom: 'Grey Concrete' },
     devis: { lignes: [] },
     ...o,
@@ -130,18 +137,28 @@ describe('ContratsService — envoi et signature', () => {
     await expect(svc.majAnnexe('S1', 'D1', 'A1', 'non_necessaire')).rejects.toThrow(ConflictException);
   });
 
-  it('signature en ligne : passe par l’Onboard (contrat marqué signé dans SA transaction)', async () => {
-    const { svc, prisma, crm } = monter();
+  it('signature en ligne : contrat marqué signé (régularisation), propriétaire prévenu', async () => {
+    const { svc, prisma, notifications } = monter();
     prisma.contrat.findFirst.mockResolvedValue(contrat({ statut: 'envoye' }));
     await svc.signerPublic('jeton', { mode: 'bouton', nom: 'Awa Sow' }, '10.0.0.1').catch(() => undefined);
-    expect(crm.onboarderParContrat).toHaveBeenCalledWith('S1', 'D1', null, expect.any(Function));
+    expect(prisma.contrat.updateMany).toHaveBeenCalledWith({
+      where: { id: 'C1', statut: 'envoye' },
+      data: expect.objectContaining({ statut: 'signe', modeSignature: 'bouton', signeParNom: 'Awa Sow' }),
+    });
+    expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
+      societeId: 'S1',
+      dossierId: 'D1',
+      evenement: 'contrat_signe',
+      parId: null,
+    });
   });
 
-  it('signature d’un contrat non envoyé → 409, aucun Onboard', async () => {
-    const { svc, prisma, crm } = monter();
+  it('signature d’un contrat non envoyé → 409, rien signé', async () => {
+    const { svc, prisma, notifications } = monter();
     prisma.contrat.findFirst.mockResolvedValue(contrat({ statut: 'brouillon' }));
     await expect(svc.signerPublic('jeton', { mode: 'bouton', nom: 'Awa' }, null)).rejects.toThrow(ConflictException);
-    expect(crm.onboarderParContrat).not.toHaveBeenCalled();
+    expect(prisma.contrat.updateMany).not.toHaveBeenCalled();
+    expect(notifications.notifierDossierCrm).not.toHaveBeenCalled();
   });
 });
 

@@ -70,7 +70,9 @@ function setup(
     $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   const crm = {
-    onboarderParContrat: jest.fn((_s: string, _d: string, _p: string, fn: (t: typeof tx) => Promise<void>) => fn(tx)),
+    onboarderOffreAcceptee: jest.fn(
+      (_s: string, _d: string, _p: string, _c: string, fn: (t: typeof tx) => Promise<void>) => fn(tx),
+    ),
   };
   const opening = {
     prepare: jest.fn().mockResolvedValue(o.plan ?? null),
@@ -88,20 +90,22 @@ const intervention = (tx: { interventionHub: { create: jest.Mock } }) =>
   tx.interventionHub.create.mock.calls[0][0].data;
 
 describe('InterventionsService', () => {
-  it('onboard sans signature : l’Onboard du contrat, transition renommée, intervention tracée', async () => {
+  it('offre acceptée en attente : l’Onboard de l’acceptation, motif au journal, intervention tracée', async () => {
     const { svc, tx, crm } = setup({ dossier: { code: 'GB_TBD.26', statut: 'offre_envoyee' } });
     await svc.onboardWithoutSignature('S1', 'D1', 'ADM', 'Projet test');
-    expect(crm.onboarderParContrat).toHaveBeenCalledWith('S1', 'D1', 'ADM', expect.any(Function));
-    expect(tx.dossierCrmTransition.updateMany).toHaveBeenCalledWith({
-      where: { dossierId: 'D1', vers: 'onboard', commentaire: 'Contrat signé.' },
-      data: { commentaire: 'Signature client sautée par l’Administrateur HUB : Projet test' },
-    });
+    expect(crm.onboarderOffreAcceptee).toHaveBeenCalledWith(
+      'S1',
+      'D1',
+      'ADM',
+      'Onboard débloqué par l’Administrateur HUB : Projet test',
+      expect.any(Function),
+    );
     expect(intervention(tx)).toEqual({
       societeId: 'S1',
       parId: 'ADM',
       type: 'onboard_sans_signature',
       cible: 'GB_TBD.26',
-      detail: 'Onboard sans contrat signé',
+      detail: 'Onboard d’une offre acceptée en attente',
       motif: 'Projet test',
     });
   });

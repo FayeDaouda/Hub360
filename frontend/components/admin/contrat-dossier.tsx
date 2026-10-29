@@ -13,7 +13,7 @@ import {
   signerContratPapier,
 } from '@/lib/contrats';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
-import { formatCompactAmount, formatDate, formatDayShortMonth, plural } from '@hub/domain';
+import { formatCompactAmount, formatDate, formatDayShortMonth } from '@hub/domain';
 import {
   MODES_SIGNATURE,
   STATUTS_CONTRAT,
@@ -29,7 +29,7 @@ type Props = {
   slug: string;
   projet: Projet; // le dossier CRM
   peutPreparer: boolean; // finances_devis ≥ écriture
-  onMaj: () => Promise<void>; // recharge le dossier (signature → Onboard)
+  onMaj: () => Promise<void>; // recharge le dossier après une signature
 };
 
 const CLASSE_ANNEXE: Record<StatutAnnexeContrat, string> = {
@@ -43,10 +43,12 @@ const LIBELLE_ANNEXE: Record<StatutAnnexeContrat, string> = {
   non_necessaire: 'Non nécessaire',
 };
 
-// Contrat du dossier (étape G) — préparé une fois l'offre acceptée, envoyé au
-// client par lien (signature en ligne) ou signé sur papier ; la SIGNATURE
-// fait passer le dossier en Onboard. Contient le prix : visible avec
-// finances_devis (clé `offre` présente sur le dossier), comme l'offre.
+// Contrat du dossier (étape G) — depuis le 29/10/2026, l'offre acceptée fait
+// passer le dossier en Onboard : le contrat se prépare ensuite, s'envoie au
+// client par lien (signature en ligne) ou se signe sur papier, pour
+// RÉGULARISER — rappel non bloquant tant qu'il n'est pas signé. Contient le
+// prix : visible avec finances_devis (clé `offre` présente sur le dossier),
+// comme l'offre.
 export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
   const confirmer = useConfirmer();
   const [etat, setEtat] = useState<EtatContrat | null>(null);
@@ -78,8 +80,9 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
   const c = etat.contrat;
   const prep = etat.preparation;
   const modifiable = peutPreparer && c?.statut === 'brouillon';
-  // Un dossier sans contrat déjà en Onboard (antérieur à l'étape G) : rien.
-  if (!c && projet.statut !== 'offre_envoyee') return null;
+  // Pas de contrat à préparer avant l'Onboard, ni pour un dossier sans offre
+  // acceptée (antérieur à l'étape F).
+  if (!c && (projet.statut !== 'onboard' || !prep.offreAcceptee)) return null;
 
   async function agir<T>(fn: () => Promise<T>, apres?: (r: T) => void) {
     setEnCours(true);
@@ -121,7 +124,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
       if (
         !(await confirmer({
           titre: 'Enregistrer le contrat papier signé ?',
-          message: 'Le dossier passera en Onboard (projet et factures brouillon créés).',
+          message: 'Le contrat sera marqué signé : le dossier est régularisé.',
           confirmer: 'Enregistrer',
         }))
       ) {
@@ -129,10 +132,8 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
       }
       await agir(
         () => signerContratPapier(slug, projet.id, fichier),
-        (r) => {
-          setMessage(
-            `Contrat signé — dossier en Onboard, ${plural(r.facturesPreparees, 'facture')} préparée${r.facturesPreparees > 1 ? 's' : ''} en brouillon.`,
-          );
+        () => {
+          setMessage('Contrat signé — dossier régularisé.');
           void onMaj();
         },
       );
@@ -154,6 +155,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             {STATUTS_CONTRAT[c.statut]}
           </Pill>
         )}
+        {c?.statut !== 'signe' && <Pill className="pill--attention">À régulariser</Pill>}
         {c && <span className="cell-sub">{c.mode === 'modele' ? 'Généré depuis le modèle' : 'Rédigé sur mesure'}</span>}
       </div>
 
@@ -162,11 +164,11 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
         <>
           <p className="field-aide">
             Offre {prep.offreAcceptee?.reference} acceptée ({formatCompactAmount(prep.offreAcceptee?.montantHt ?? 0)}{' '}
-            HT) — contrat{' '}
+            HT) : le projet est lancé. Contrat à régulariser,{' '}
             {prep.modePrevu === 'sur_mesure'
               ? `rédigé sur mesure (offre ≥ seuil de ${formatCompactAmount(prep.seuilSurMesureHt ?? 0)} HT)`
               : 'généré depuis le modèle de la société'}
-            . Sa signature fera passer le dossier en Onboard.
+            .
           </p>
           {prep.signataire && prep.offreAcceptee && (
             <p className="field-aide">
@@ -185,8 +187,8 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             </p>
           )}
           {prep.reglagesManquants.length > 0 && (
-            <p className="cycle-dossier-note cycle-dossier-note--perte" role="note">
-              À renseigner dans Paramètres → Contrats : {prep.reglagesManquants.join(', ')}.
+            <p className="field-aide" role="note">
+              Pour préparer le contrat, à renseigner dans Paramètres → Contrats : {prep.reglagesManquants.join(', ')}.
             </p>
           )}
           {peutPreparer && (
@@ -373,7 +375,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                 className="btn-ghost btn-ghost--sm"
                 disabled={enCours || annexesManquantes.length > 0 || documentManquant}
                 onClick={() => choisirFichier('scan')}
-                title="Contrat signé sur papier, scanné — vaut signature (Onboard)"
+                title="Contrat signé sur papier, scanné — vaut signature"
               >
                 Signature papier (scan)
               </button>
