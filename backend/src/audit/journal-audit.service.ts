@@ -35,6 +35,10 @@ const ACTIONS_INTERVENTION: Record<TypeInterventionHub, string> = {
   ouverture_projet: 'Projet ouvert sans F1',
   cellules_projet: 'Cellules du projet modifiées',
   reouverture_dossier: 'Dossier perdu rouvert',
+  module_desactive: 'Module désactivé',
+  module_reactive: 'Module réactivé',
+  maintenance_activee: 'Maintenance du HUB activée',
+  maintenance_levee: 'Maintenance du HUB levée',
 };
 
 // Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.

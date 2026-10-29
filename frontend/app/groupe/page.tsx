@@ -14,17 +14,19 @@ import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 import { RolesPanel } from '@/components/admin/roles-panel';
 import { JournalAudit } from '@/components/pilotage/journal-audit';
 import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
+import { InterrupteursPanel } from '@/components/groupe/interrupteurs-panel';
 import { libelleRole } from '@/lib/groupe';
 import { ROLE_CIO } from '@hub/domain';
 
-type Onglet = 'comptes' | 'droits' | 'journal' | 'deblocages';
+type Onglet = 'comptes' | 'droits' | 'journal' | 'deblocages' | 'interrupteurs';
 
-// Déblocages : Administrateur HUB seulement.
+// Déblocages et interrupteurs : Administrateur HUB seulement.
 const ONGLETS: { cle: Onglet; libelle: string; adminHub?: true }[] = [
   { cle: 'comptes', libelle: 'Comptes & rôles' },
   { cle: 'droits', libelle: 'Droits des rôles' },
   { cle: 'journal', libelle: 'Journal d’audit' },
   { cle: 'deblocages', libelle: 'Déblocages', adminHub: true },
+  { cle: 'interrupteurs', libelle: 'Interrupteurs', adminHub: true },
 ];
 
 // Administration du HUB — l'Administrateur HUB (carte blanche, 29/10/2026),
@@ -106,7 +108,7 @@ export default function GroupePage() {
           </p>
         </div>
         {gouverne && (
-          <div className="admin-periode">
+          <div className="admin-periode groupe-console-onglets">
             <div className="admin-periode-toggle" role="group" aria-label="Section de l’administration">
               {ONGLETS.filter((o) => !o.adminHub || session.adminHub).map((o) => (
                 <button
@@ -126,6 +128,7 @@ export default function GroupePage() {
         {gouverne && onglet === 'droits' && <RolesPanel slug={session.societe.slug} />}
         {gouverne && onglet === 'journal' && <JournalAudit slug={session.societe.slug} />}
         {session.adminHub && onglet === 'deblocages' && <DeblocagesPanel slug={session.societe.slug} />}
+        {session.adminHub && onglet === 'interrupteurs' && <InterrupteursPanel slug={session.societe.slug} />}
       </main>
     </div>
   );

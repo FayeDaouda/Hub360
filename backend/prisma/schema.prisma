@@ -79,6 +79,7 @@ model Societe {
   reglages          ReglageSociete[]
   journalReglages   JournalReglage[]
   interventionsHub  InterventionHub[]
+  modulesDesactives ModuleDesactive[]
   signalements      Signalement[]
   journalDroits     JournalDroit[]
 
@@ -2649,6 +2650,10 @@ enum TypeInterventionHub {
   ouverture_projet // projet ouvert selon le gabarit sans attendre l'émission de F1
   cellules_projet // cellules rattachées au projet (remplace l'ensemble)
   reouverture_dossier // dossier CRM perdu remis en « Nouveau projet »
+  module_desactive // interrupteur : module coupé pour la société
+  module_reactive // interrupteur : module rendu à la société
+  maintenance_activee // HUB fermé à tous, sauf l'Administrateur HUB
+  maintenance_levee // HUB rouvert
 }
 
 model InterventionHub {
@@ -2668,6 +2673,36 @@ model InterventionHub {
 
   @@index([societeId, createdAt])
   @@map("interventions_hub")
+}
+
+// Interrupteurs (Administrateur HUB, 29/10/2026) : un module de la matrice
+// coupé pour une société. Tant que la ligne existe, le module vaut « aucun »
+// pour tous ses comptes, quoi que dise la matrice (l'Administrateur HUB garde
+// l'accès). Chaque bascule est une intervention au journal.
+model ModuleDesactive {
+  societeId String   @map("societe_id")
+  moduleCle String   @map("module_cle")
+  motif     String
+  parId     String?  @map("par_id") // audit, pas de FK
+  createdAt DateTime @default(now()) @map("created_at")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@id([societeId, moduleCle])
+  @@map("modules_desactives")
+}
+
+// Mode maintenance du HUB entier (une seule ligne, id « hub ») : connexions
+// et requêtes refusées, sauf pour l'Administrateur HUB ; le message est
+// affiché à tous.
+model MaintenanceHub {
+  id        String   @id @default("hub")
+  actif     Boolean  @default(false)
+  message   String   @default("")
+  parId     String?  @map("par_id") // audit, pas de FK
+  modifieLe DateTime @updatedAt @map("modifie_le")
+
+  @@map("maintenance_hub")
 }
 
 // Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026).

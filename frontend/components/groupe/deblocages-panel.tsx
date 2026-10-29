@@ -51,6 +51,10 @@ const LIBELLE_INTERVENTION: Record<EtatInterventions['historique'][number]['type
   ouverture_projet: 'Projet ouvert sans F1',
   cellules_projet: 'Cellules modifiées',
   reouverture_dossier: 'Dossier rouvert',
+  module_desactive: 'Module désactivé',
+  module_reactive: 'Module réactivé',
+  maintenance_activee: 'Maintenance activée',
+  maintenance_levee: 'Maintenance levée',
 };
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);

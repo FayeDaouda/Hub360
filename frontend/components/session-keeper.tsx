@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { datesJeton, getSession, remplacerSession, retourConnexion } from '@/lib/auth';
 import { prolongerSession } from '@/lib/profil';
+import type { Session } from '@/lib/types';
 
 // Durée des sessions côté navigateur (décision du 28/10/2026, lot B ; règles
 // et durées : backend/src/auth/session.ts) :
@@ -52,9 +53,12 @@ export function SessionKeeper() {
       if (enCours || Date.now() < prochaineProlongation || !getSession()) return;
       enCours = true;
       prolongerSession()
-        .then(({ access_token }) => {
+        // Droits relus avec le jeton : un module coupé ou rendu par
+        // l'Administrateur HUB apparaît ou disparaît sans reconnexion.
+        .then(({ access_token, permissions }) => {
           const session = getSession();
-          if (session) remplacerSession({ ...session, access_token });
+          if (session)
+            remplacerSession({ ...session, access_token, permissions: permissions as Session['permissions'] });
           prochaineProlongation = Date.now() + PROLONGATION_MS;
         })
         // Session refusée : apiAuth ramène déjà à la connexion. Réseau coupé :

@@ -29,7 +29,7 @@ const prolonger = vi.mocked(prolongerSession);
 beforeEach(() => {
   vi.useFakeTimers({ now: MAINTENANT });
   navigation.chemin = '/admin/grey-concrete';
-  prolonger.mockResolvedValue({ access_token: jeton(S + 1) });
+  prolonger.mockResolvedValue({ access_token: jeton(S + 1), permissions: { crm: 'lecture' } });
 });
 
 afterEach(() => {
@@ -46,6 +46,8 @@ describe('SessionKeeper (lot B)', () => {
     await act(async () => {});
     expect(prolonger).toHaveBeenCalledTimes(1);
     expect(getSession()?.access_token).toBe(jeton(S + 1));
+    // Droits relus avec le jeton (interrupteurs de l'Administrateur HUB).
+    expect(getSession()?.permissions).toEqual({ crm: 'lecture' });
 
     fireEvent.keyDown(window);
     expect(prolonger).toHaveBeenCalledTimes(1);

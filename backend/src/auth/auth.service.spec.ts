@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -38,7 +44,16 @@ function affectation(societeId: string | null, nom: string, perms: [string, stri
   };
 }
 
-function svc(affectations: unknown[]) {
+const interrupteurs = (coupes: string[] = [], maintenance = false) => ({
+  refuseDuringMaintenance: jest.fn(async (adminHub: boolean) => {
+    if (maintenance && !adminHub) throw new ServiceUnavailableException('Maintenance en cours.');
+  }),
+  effectivePermissions: jest.fn(async (_s: string, p: Record<string, string>) =>
+    Object.fromEntries(Object.entries(p).map(([c, n]) => [c, coupes.includes(c) ? 'aucun' : n])),
+  ),
+});
+
+function svc(affectations: unknown[], switches = interrupteurs()) {
   const findMany = jest.fn().mockResolvedValue(affectations);
   const update = jest.fn((a: { data: { motDePasseHash: string; sessionsValidesDepuis: Date } }) => a);
   const prisma = {
@@ -55,7 +70,7 @@ function svc(affectations: unknown[]) {
   const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
   return {
     email,
-    svc: new AuthService(prisma, jwt, notifications as never, email as never),
+    svc: new AuthService(prisma, jwt, notifications as never, email as never, switches as never),
     findMany,
     update,
     sign,
@@ -153,23 +168,23 @@ describe('Durée des sessions (lot B)', () => {
     expect(options).toEqual({ expiresIn: 3600 });
   });
 
-  it('prolongation : mêmes droits, même début, expiration repoussée', () => {
-    const { svc: s, sign } = svc([]);
+  it('prolongation : droits relus, même début, expiration repoussée', async () => {
+    const { svc: s, sign } = svc([affectation('S1', 'Salarié', [['crm', 'aucun']])]);
     const t = maintenant();
-    const res = s.prolongerSession({ ...CONNECTE, debutSession: t - 3600, emissionJeton: t - 600 });
+    const res = await s.prolongerSession({ ...CONNECTE, debutSession: t - 3600, emissionJeton: t - 600 });
     const [contenu, options] = sign.mock.calls[0];
     expect(contenu).toMatchObject({ sub: 'U1', role: 'Salarié', permissions: { crm: 'aucun' }, debut: t - 3600 });
     expect(contenu.iat).toBeGreaterThanOrEqual(t);
     expect(options).toEqual({ expiresIn: 4 * 3600 });
-    expect(res.access_token).toBe('jeton');
+    expect(res).toEqual({ access_token: 'jeton', permissions: { crm: 'aucun' } });
   });
 
-  it('prolongation près des 12 h : le jeton s’arrête avec la session ; au-delà, refus', () => {
-    const { svc: s, sign } = svc([]);
+  it('prolongation près des 12 h : le jeton s’arrête avec la session ; au-delà, refus', async () => {
+    const { svc: s, sign } = svc([affectation('S1', 'Salarié', [['crm', 'aucun']])]);
     const t = maintenant();
-    s.prolongerSession({ ...CONNECTE, debutSession: t - 12 * 3600 + 600, emissionJeton: t - 60 });
+    await s.prolongerSession({ ...CONNECTE, debutSession: t - 12 * 3600 + 600, emissionJeton: t - 60 });
     expect(sign.mock.calls[0][1].expiresIn).toBeLessThanOrEqual(600);
-    expect(() => s.prolongerSession({ ...CONNECTE, debutSession: t - 12 * 3600, emissionJeton: t })).toThrow(
+    await expect(s.prolongerSession({ ...CONNECTE, debutSession: t - 12 * 3600, emissionJeton: t })).rejects.toThrow(
       UnauthorizedException,
     );
   });
@@ -213,7 +228,16 @@ describe('Double authentification', () => {
     } as unknown as JwtService;
     const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
     return {
-      s: new AuthService(prisma, jwt, { envoyer: jest.fn() } as never, email as never),
+      s: new AuthService(
+        prisma,
+        jwt,
+        { envoyer: jest.fn() } as never,
+        email as never,
+        {
+          refuseDuringMaintenance: jest.fn(),
+          effectivePermissions: jest.fn((_s: string, p: unknown) => Promise.resolve(p)),
+        } as never,
+      ),
       update,
       updateMany,
       email,
@@ -365,6 +389,28 @@ describe('Administrateur HUB (carte blanche)', () => {
   });
 });
 
+describe('Interrupteurs (Administrateur HUB)', () => {
+  it('connexion : un module coupé pour la société vaut « aucun »', async () => {
+    const { svc: s } = svc(
+      [
+        affectation('S1', 'CFO', [
+          ['crm', 'lecture'],
+          ['rh', 'lecture'],
+        ]),
+      ],
+      interrupteurs(['crm']),
+    );
+    expect(((await s.login(DTO)) as Session).permissions).toEqual({ crm: 'aucun', rh: 'lecture' });
+  });
+
+  it('maintenance : connexion refusée, sauf à l’Administrateur HUB (droits complets gardés)', async () => {
+    const ferme = interrupteurs(['crm'], true);
+    await expect(svc([affectation('S1', 'CFO')], ferme).svc.login(DTO)).rejects.toThrow(ServiceUnavailableException);
+    const admin = (await svc([affectation(null, 'Administrateur HUB (transverse)')], ferme).svc.login(DTO)) as Session;
+    expect(admin.permissions).toEqual({ crm: 'validation', finances_marges: 'validation' });
+  });
+});
+
 describe('Verrouillage du compte (lot C)', () => {
   const SECRET = base32(Buffer.from('12345678901234567890'));
   type Etat = { echecsConnexion: number; verrouillages: number; verrouilleJusquau: Date | null };
@@ -403,7 +449,16 @@ describe('Verrouillage du compte (lot C)', () => {
     const email = { envoyerAvisSecurite: jest.fn().mockResolvedValue({ envoye: true }) };
     const evenement = (prisma as unknown as { evenementCompte: { create: jest.Mock } }).evenementCompte.create;
     return {
-      s: new AuthService(prisma, jwt, { envoyer: jest.fn() } as never, email as never),
+      s: new AuthService(
+        prisma,
+        jwt,
+        { envoyer: jest.fn() } as never,
+        email as never,
+        {
+          refuseDuringMaintenance: jest.fn(),
+          effectivePermissions: jest.fn((_s: string, p: unknown) => Promise.resolve(p)),
+        } as never,
+      ),
       update,
       email,
       evenement,

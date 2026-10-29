@@ -9051,6 +9051,124 @@
         ]
       }
     },
+    "/api/societes/{slug}/interrupteurs": {
+      "get": {
+        "operationId": "SwitchesController_state",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterrupteursDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Switches"
+        ]
+      }
+    },
+    "/api/societes/{slug}/interrupteurs/modules/{cle}": {
+      "put": {
+        "operationId": "SwitchesController_setModule",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cle",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterrupteurModuleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterrupteursDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Switches"
+        ]
+      }
+    },
+    "/api/societes/{slug}/interrupteurs/maintenance": {
+      "put": {
+        "operationId": "SwitchesController_setMaintenance",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InterrupteursDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Switches"
+        ]
+      }
+    },
     "/api/sante": {
       "get": {
         "operationId": "HealthController_etat",
@@ -9259,10 +9377,17 @@
         "properties": {
           "access_token": {
             "type": "string"
+          },
+          "permissions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "required": [
-          "access_token"
+          "access_token",
+          "permissions"
         ]
       },
       "EndosserRoleDto": {
@@ -15762,6 +15887,109 @@
         "required": [
           "motif",
           "celluleIds"
+        ]
+      },
+      "ModuleInterrupteurDto": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "actif": {
+            "type": "boolean"
+          },
+          "desactiveLe": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "motif": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "cle",
+          "nom",
+          "actif",
+          "desactiveLe",
+          "motif"
+        ]
+      },
+      "EtatMaintenanceDto": {
+        "type": "object",
+        "properties": {
+          "actif": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actif",
+          "message"
+        ]
+      },
+      "InterrupteursDto": {
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModuleInterrupteurDto"
+            }
+          },
+          "maintenance": {
+            "$ref": "#/components/schemas/EtatMaintenanceDto"
+          }
+        },
+        "required": [
+          "modules",
+          "maintenance"
+        ]
+      },
+      "InterrupteurModuleDto": {
+        "type": "object",
+        "properties": {
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "actif": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "motif",
+          "actif"
+        ]
+      },
+      "MaintenanceDto": {
+        "type": "object",
+        "properties": {
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "actif": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "motif",
+          "actif",
+          "message"
         ]
       },
       "ClientErrorDto": {

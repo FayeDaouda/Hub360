@@ -11,6 +11,7 @@ import { ClientsModule } from './clients/clients.module';
 import { CrmModule } from './crm/crm.module';
 import { ProjetsModule } from './projets/projets.module';
 import { InterventionsModule } from './interventions/interventions.module';
+import { SwitchesModule } from './switches/switches.module';
 import { TeamsModule } from './teams/teams.module';
 import { TasksModule } from './tasks/tasks.module';
 import { MySpaceModule } from './my-space/my-space.module';
@@ -75,6 +76,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     SignalementsModule,
     AuditModule,
     InterventionsModule,
+    SwitchesModule,
     MonitoringModule,
   ],
   providers: [

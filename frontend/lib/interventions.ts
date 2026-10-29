@@ -29,7 +29,15 @@ export type EtatInterventions = {
   cellulesDisponibles: CelluleIntervention[];
   historique: {
     id: string;
-    type: 'onboard_sans_signature' | 'ouverture_projet' | 'cellules_projet' | 'reouverture_dossier';
+    type:
+      | 'onboard_sans_signature'
+      | 'ouverture_projet'
+      | 'cellules_projet'
+      | 'reouverture_dossier'
+      | 'module_desactive'
+      | 'module_reactive'
+      | 'maintenance_activee'
+      | 'maintenance_levee';
     detail: string;
     motif: string;
     par: string | null;
