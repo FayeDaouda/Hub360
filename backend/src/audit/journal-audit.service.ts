@@ -39,6 +39,7 @@ const ACTIONS_INTERVENTION: Record<TypeInterventionHub, string> = {
   module_reactive: 'Module réactivé',
   maintenance_activee: 'Maintenance du HUB activée',
   maintenance_levee: 'Maintenance du HUB levée',
+  suppression: 'Dossier / projet supprimé définitivement',
 };
 
 // Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.

@@ -3748,6 +3748,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/interventions/suppression": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["InterventionsController_delete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/interrupteurs": {
         parameters: {
             query?: never;
@@ -5398,6 +5414,10 @@ export interface components {
         CellulesProjetDto: {
             motif: string;
             celluleIds: string[];
+        };
+        SuppressionDto: {
+            motif: string;
+            code: string;
         };
         ModuleInterrupteurDto: {
             cle: string;
@@ -11197,6 +11217,31 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CellulesProjetDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
+            };
+        };
+    };
+    InterventionsController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuppressionDto"];
             };
         };
         responses: {

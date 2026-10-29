@@ -2654,6 +2654,7 @@ enum TypeInterventionHub {
   module_reactive // interrupteur : module rendu à la société
   maintenance_activee // HUB fermé à tous, sauf l'Administrateur HUB
   maintenance_levee // HUB rouvert
+  suppression // dossier CRM et/ou projet supprimés définitivement, avec tout ce qui en dépend
 }
 
 model InterventionHub {
