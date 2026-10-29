@@ -2,7 +2,7 @@ import { ModeContrat } from '@prisma/client';
 
 // Contrat (étape G) — règles pures, sans I/O.
 //
-// Le modèle est un texte fourni par la société (Paramètres → Contrats) où
+// Le modèle est un texte fourni par la société (réglages des contrats) où
 // des champs {{…}} sont remplacés à la génération. Liste FERMÉE : un champ
 // inconnu est refusé (faute de frappe dans le modèle) plutôt que laissé tel
 // quel dans un document destiné à être signé.
@@ -43,7 +43,7 @@ export type Signataire = 'ceo' | 'dplg';
 
 // Seuil de contresignature (Réglages · Règles et délais) : au-delà de ce
 // montant TTC, seul le CEO contresigne ; en deçà — ou pile au seuil —
-// l'Architecte DPLG.
+// le Dir. GC (architecte DPLG).
 export function signataireRequis(montantOffreTtc: number, seuilCeoTtc: number): Signataire {
   return montantOffreTtc > seuilCeoTtc ? 'ceo' : 'dplg';
 }

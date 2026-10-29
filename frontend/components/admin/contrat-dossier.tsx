@@ -13,7 +13,7 @@ import {
   signerContratPapier,
 } from '@/lib/contrats';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
-import { formatCompactAmount, formatDate, formatDayShortMonth } from '@hub/domain';
+import { formatDate, formatDayShortMonth } from '@hub/domain';
 import {
   MODES_SIGNATURE,
   STATUTS_CONTRAT,
@@ -22,6 +22,10 @@ import {
   type StatutAnnexeContrat,
 } from '@/lib/types';
 import { useConfirmer } from '@/components/confirmation';
+import { Modal, ModalHeader } from '@/components/ui/dialog';
+import { ParametresContratPanel } from '@/components/admin/parametres-contrat-panel';
+import { peutReglerContrats } from '@/lib/acces-back-office';
+import { useSessionCourante } from '@/lib/layout-contexte';
 import { Pill } from '@/components/ui/pill';
 import { FieldError } from '@/components/ui/field';
 
@@ -51,6 +55,11 @@ const LIBELLE_ANNEXE: Record<StatutAnnexeContrat, string> = {
 // comme l'offre.
 export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
   const confirmer = useConfirmer();
+  const session = useSessionCourante();
+  // Réglages des contrats ouverts depuis le bloc (Dir. GC, CIO…) ; à la
+  // fermeture, l'état est relu (réglages manquants à jour).
+  const [reglages, setReglages] = useState(false);
+  const [relecture, setRelecture] = useState(0);
   const [etat, setEtat] = useState<EtatContrat | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -74,7 +83,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
     return () => {
       annule = true;
     };
-  }, [slug, projet.id, projet.statut, visible]);
+  }, [slug, projet.id, projet.statut, visible, relecture]);
 
   if (!visible || !etat) return null;
   const c = etat.contrat;
@@ -140,6 +149,14 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
     }
   }
 
+  // Réglages manquants (réglages des contrats), dits en clair : « le
+  // signataire », « le modèle de contrat » — pas le détail nom / fonction.
+  const manquants = [
+    ...(prep.reglagesManquants.some((m) => m.includes('signataire'))
+      ? [prep.signataire?.qui === 'ceo' ? 'le signataire (CEO)' : 'le signataire (Dir. GC)']
+      : []),
+    ...(prep.reglagesManquants.includes('modèle de contrat') ? ['le modèle de contrat'] : []),
+  ];
   const annexesManquantes = c?.annexes.filter((a) => a.statut === 'a_joindre') ?? [];
   const documentManquant = c?.mode === 'sur_mesure' && !c.document;
 
@@ -159,44 +176,44 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
         {c && <span className="cell-sub">{c.mode === 'modele' ? 'Généré depuis le modèle' : 'Rédigé sur mesure'}</span>}
       </div>
 
-      {/* Pas encore préparé */}
+      {/* Pas encore préparé : une phrase pour la situation, une pour ce qui
+          manque (dit simplement, et à qui le demander), puis l'action. */}
       {!c && (
         <>
           <p className="field-aide">
-            Offre {prep.offreAcceptee?.reference} acceptée ({formatCompactAmount(prep.offreAcceptee?.montantHt ?? 0)}{' '}
-            HT) : le projet est lancé. Contrat à régulariser,{' '}
-            {prep.modePrevu === 'sur_mesure'
-              ? `rédigé sur mesure (offre ≥ seuil de ${formatCompactAmount(prep.seuilSurMesureHt ?? 0)} HT)`
-              : 'généré depuis le modèle de la société'}
-            .
+            Le projet est lancé. Il reste à faire signer le contrat au client — cela ne bloque rien.
           </p>
-          {prep.signataire && prep.offreAcceptee && (
-            <p className="field-aide">
-              Signataire pour la société :{' '}
-              <strong>
-                {prep.signataire.nom
-                  ? `${prep.signataire.nom}, ${prep.signataire.fonction}`
-                  : prep.signataire.qui === 'ceo'
-                    ? 'le CEO (non renseigné)'
-                    : 'l’Architecte DPLG (non renseigné)'}
-              </strong>{' '}
-              — {prep.signataire.qui === 'ceo' ? 'seul le CEO contresigne' : 'l’Architecte DPLG signe'} : offre de{' '}
-              {formatCompactAmount(prep.offreAcceptee.montantTtc)} TTC,{' '}
-              {prep.signataire.qui === 'ceo' ? 'au-delà' : 'en deçà'} du seuil de{' '}
-              {formatCompactAmount(prep.signataire.seuilTtc)}.
-            </p>
+          {manquants.length > 0 ? (
+            <>
+              <p className="field-aide" role="note">
+                Le contrat ne peut pas encore être préparé : il manque {manquants.join(' et ')}.
+                {!peutReglerContrats(session) && ' À compléter par le Dir. GC ou le CIO.'}
+              </p>
+              {peutReglerContrats(session) && (
+                <div className="cycle-dossier-actions">
+                  <button type="button" className="btn-primary" onClick={() => setReglages(true)}>
+                    Renseigner le modèle et le signataire
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            prep.signataire?.nom && (
+              <p className="field-aide">
+                Signé pour la société par{' '}
+                <strong>
+                  {prep.signataire.nom}, {prep.signataire.fonction}
+                </strong>
+                {prep.modePrevu === 'sur_mesure' && ' — montant élevé : contrat rédigé sur mesure, à déposer'}.
+              </p>
+            )
           )}
-          {prep.reglagesManquants.length > 0 && (
-            <p className="field-aide" role="note">
-              Pour préparer le contrat, à renseigner dans Paramètres → Contrats : {prep.reglagesManquants.join(', ')}.
-            </p>
-          )}
-          {peutPreparer && (
+          {peutPreparer && manquants.length === 0 && (
             <div className="cycle-dossier-actions">
               <button
                 type="button"
                 className="btn-primary"
-                disabled={enCours || prep.reglagesManquants.length > 0}
+                disabled={enCours}
                 onClick={() => agir(() => preparerContrat(slug, projet.id))}
               >
                 Préparer le contrat
@@ -319,7 +336,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
                   className="btn-ghost btn-ghost--sm"
                   disabled={enCours}
                   onClick={() => agir(() => regenererContrat(slug, projet.id))}
-                  title="Reprend le modèle et le signataire actuels de Paramètres"
+                  title="Reprend le modèle et le signataire actuels des réglages des contrats"
                 >
                   Régénérer depuis le modèle
                 </button>
@@ -394,6 +411,30 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
         </>
       )}
       {erreur && <FieldError>{erreur}</FieldError>}
+      {reglages && (
+        <Modal
+          onClose={() => {
+            setReglages(false);
+            setRelecture((n) => n + 1);
+          }}
+          closeOnEscape={false}
+          labelledBy="reglages-contrats-titre"
+          className="modal--large"
+          backdropClassName="modal-backdrop--premier-plan"
+        >
+          <ModalHeader
+            title="Réglages des contrats"
+            titleId="reglages-contrats-titre"
+            onClose={() => {
+              setReglages(false);
+              setRelecture((n) => n + 1);
+            }}
+          />
+          <div className="modal-body">
+            <ParametresContratPanel slug={slug} />
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }

@@ -84,7 +84,7 @@ describe('ContratsService.preparer', () => {
 
   it('modèle ou signataire non renseignés → 422 qui dit quoi remplir, rien créé', async () => {
     const { svc, prisma } = monter({ societe: { contratModele: null, contratSignataireNom: null } });
-    await expect(svc.preparer('S1', 'D1')).rejects.toThrow('nom du signataire (Architecte DPLG), modèle de contrat');
+    await expect(svc.preparer('S1', 'D1')).rejects.toThrow('nom du signataire (Dir. GC), modèle de contrat');
     expect(prisma.contrat.create).not.toHaveBeenCalled();
   });
 
@@ -173,7 +173,7 @@ describe('ContratsService — réglages', () => {
 });
 
 describe('ContratsService · seuil de contresignature CEO (Réglages, TTC)', () => {
-  it('en deçà du seuil TTC : l’Architecte DPLG signe pour la société', async () => {
+  it('en deçà du seuil TTC : le Dir. GC signe pour la société', async () => {
     const { svc, prisma } = monter({ offreHt: 40_000_000 }); // 47,2 M TTC
     await svc.preparer('S1', 'D1');
     expect(prisma.contrat.create.mock.calls[0][0].data).toMatchObject({

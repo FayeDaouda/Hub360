@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { BellRing, KeyRound, LifeBuoy, Palette, ShieldCheck, UserRound } from 'lucide-react';
+import { BellRing, FileSignature, KeyRound, LifeBuoy, Palette, ShieldCheck, UserRound } from 'lucide-react';
 import { useSessionCourante, useTitrePage } from '@/lib/layout-contexte';
 import { definirSonActive, sonActive } from '@/lib/notification-sound';
 import { usePreferenceTheme } from '@/lib/theme';
@@ -12,7 +12,8 @@ import { OPTIONS_THEME } from '@/components/selecteur-theme';
 import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { nomAffiche } from '@/lib/profil';
-import { ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { ParametresContratPanel } from '@/components/admin/parametres-contrat-panel';
+import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC } from '@hub/domain';
 
 // « CEO (transverse) » → « CEO » ; socle technique en clair.
 const libelleRole = (role: string) =>
@@ -20,7 +21,8 @@ const libelleRole = (role: string) =>
 
 // Réglages personnels (revue Salarié 19/10/2026) : ce que chacun règle pour
 // lui-même — compte, mot de passe, double authentification, apparence, son.
-// Les Réglages du HUB (gabarit, règles, rôles) restent au CIO.
+// Les Réglages du HUB (gabarit, règles, rôles) restent au CIO ; le Dir. GC y
+// trouve aussi les réglages des contrats qu'il signe (29/10/2026).
 export function MesReglages() {
   useTitrePage('Réglages');
   const session = useSessionCourante();
@@ -122,6 +124,13 @@ export function MesReglages() {
           </button>
         </div>
       </Bloc>
+
+      {/* Le CIO et l'administration les ont dans Réglages › Administration. */}
+      {session.role === ROLE_DIR_GC && (
+        <Bloc icone={FileSignature} titre="Contrats">
+          <ParametresContratPanel slug={session.societe.slug} />
+        </Bloc>
+      )}
 
       {mdp && <ChangerMotDePasseModal onClose={() => setMdp(false)} />}
       {profil && <ProfilModal onClose={() => setProfil(false)} />}

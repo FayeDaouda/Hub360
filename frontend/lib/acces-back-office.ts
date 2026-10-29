@@ -7,6 +7,7 @@ import {
   ROLE_COMPANY_ADMIN,
   ROLE_COO,
   ROLE_CTO,
+  ROLE_DIR_GC,
   ROLE_EMPLOYEE,
   ROLE_HOLDING_ADMIN,
   ROLE_HR,
@@ -74,6 +75,18 @@ export function consultationEtCommentaires(session: Session): boolean {
 // rôle endossé (carte blanche, 29/10/2026).
 export function estAdministrateurHub(session: Session): boolean {
   return !!session.adminHub || session.role === ROLE_CIO || session.role === ROLE_HOLDING_ADMIN;
+}
+
+// Réglages des contrats (modèle, signataires, annexes) — même règle que
+// backend/src/contrats/parametres-contrat.guard.ts : administration, CIO,
+// Administrateur HUB, et le Dir. GC (29/10/2026).
+export function peutReglerContrats(session: Session): boolean {
+  return (
+    !!session.adminHub ||
+    session.role === ROLE_CIO ||
+    session.role === ROLE_COMPANY_ADMIN ||
+    session.role === ROLE_DIR_GC
+  );
 }
 
 export function sectionAccessible(session: Session, cle: string): boolean {
