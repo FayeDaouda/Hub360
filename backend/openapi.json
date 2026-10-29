@@ -8823,6 +8823,234 @@
         ]
       }
     },
+    "/api/societes/{slug}/interventions": {
+      "get": {
+        "operationId": "InterventionsController_state",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatInterventionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Interventions"
+        ]
+      }
+    },
+    "/api/societes/{slug}/interventions/dossiers/{id}/onboard": {
+      "post": {
+        "operationId": "InterventionsController_onboard",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotifInterventionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatInterventionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Interventions"
+        ]
+      }
+    },
+    "/api/societes/{slug}/interventions/dossiers/{id}/reouverture": {
+      "post": {
+        "operationId": "InterventionsController_reopen",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotifInterventionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatInterventionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Interventions"
+        ]
+      }
+    },
+    "/api/societes/{slug}/interventions/projets/{id}/ouverture": {
+      "post": {
+        "operationId": "InterventionsController_open",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotifInterventionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatInterventionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Interventions"
+        ]
+      }
+    },
+    "/api/societes/{slug}/interventions/projets/{id}/cellules": {
+      "put": {
+        "operationId": "InterventionsController_cells",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CellulesProjetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EtatInterventionsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Interventions"
+        ]
+      }
+    },
     "/api/sante": {
       "get": {
         "operationId": "HealthController_etat",
@@ -15344,6 +15572,196 @@
         },
         "required": [
           "statut"
+        ]
+      },
+      "EtatDossierInterventionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "statut": {
+            "type": "string"
+          },
+          "client": {
+            "type": "string"
+          },
+          "offreAcceptee": {
+            "type": "boolean"
+          },
+          "contratSigne": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "statut",
+          "client",
+          "offreAcceptee",
+          "contratSigne"
+        ]
+      },
+      "CelluleInterventionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "code"
+        ]
+      },
+      "EtatProjetInterventionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "ouvertLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "gabarit": {
+            "type": "boolean"
+          },
+          "cellules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelluleInterventionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "ouvertLe",
+          "gabarit",
+          "cellules"
+        ]
+      },
+      "InterventionPasseeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "motif": {
+            "type": "string"
+          },
+          "par": {
+            "type": "string",
+            "nullable": true
+          },
+          "le": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "detail",
+          "motif",
+          "par",
+          "le"
+        ]
+      },
+      "EtatInterventionsDto": {
+        "type": "object",
+        "properties": {
+          "dossier": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EtatDossierInterventionDto"
+              }
+            ]
+          },
+          "projet": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EtatProjetInterventionDto"
+              }
+            ]
+          },
+          "cellulesDisponibles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelluleInterventionDto"
+            }
+          },
+          "historique": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InterventionPasseeDto"
+            }
+          }
+        },
+        "required": [
+          "dossier",
+          "projet",
+          "cellulesDisponibles",
+          "historique"
+        ]
+      },
+      "MotifInterventionDto": {
+        "type": "object",
+        "properties": {
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "motif"
+        ]
+      },
+      "CellulesProjetDto": {
+        "type": "object",
+        "properties": {
+          "motif": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "celluleIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "motif",
+          "celluleIds"
         ]
       },
       "ClientErrorDto": {

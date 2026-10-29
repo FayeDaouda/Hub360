@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { CrmModule } from './crm/crm.module';
 import { ProjetsModule } from './projets/projets.module';
+import { InterventionsModule } from './interventions/interventions.module';
 import { TeamsModule } from './teams/teams.module';
 import { TasksModule } from './tasks/tasks.module';
 import { MySpaceModule } from './my-space/my-space.module';
@@ -73,6 +74,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     ContactsModule,
     SignalementsModule,
     AuditModule,
+    InterventionsModule,
     MonitoringModule,
   ],
   providers: [
