@@ -3668,6 +3668,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/interventions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["InterventionsController_state"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/interventions/dossiers/{id}/onboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["InterventionsController_onboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/interventions/dossiers/{id}/reouverture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["InterventionsController_reopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/interventions/projets/{id}/ouverture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["InterventionsController_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/interventions/projets/{id}/cellules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["InterventionsController_cells"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sante": {
         parameters: {
             query?: never;
@@ -5225,6 +5305,48 @@ export interface components {
         StatutSignalementDto: {
             /** @enum {string} */
             statut: "a_traiter" | "corrige" | "en_cours";
+        };
+        EtatDossierInterventionDto: {
+            id: string;
+            code: string;
+            statut: string;
+            client: string;
+            offreAcceptee: boolean;
+            contratSigne: boolean;
+        };
+        CelluleInterventionDto: {
+            id: string;
+            nom: string;
+            code: string;
+        };
+        EtatProjetInterventionDto: {
+            id: string;
+            code: string;
+            ouvertLe: string | null;
+            gabarit: boolean;
+            cellules: components["schemas"]["CelluleInterventionDto"][];
+        };
+        InterventionPasseeDto: {
+            id: string;
+            type: string;
+            detail: string;
+            motif: string;
+            par: string | null;
+            /** Format: date-time */
+            le: string;
+        };
+        EtatInterventionsDto: {
+            dossier: components["schemas"]["EtatDossierInterventionDto"] | null;
+            projet: components["schemas"]["EtatProjetInterventionDto"] | null;
+            cellulesDisponibles: components["schemas"]["CelluleInterventionDto"][];
+            historique: components["schemas"]["InterventionPasseeDto"][];
+        };
+        MotifInterventionDto: {
+            motif: string;
+        };
+        CellulesProjetDto: {
+            motif: string;
+            celluleIds: string[];
         };
         ClientErrorDto: {
             message: string;
@@ -10882,6 +11004,133 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    InterventionsController_state: {
+        parameters: {
+            query?: {
+                code?: unknown;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
+            };
+        };
+    };
+    InterventionsController_onboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MotifInterventionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
+            };
+        };
+    };
+    InterventionsController_reopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MotifInterventionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
+            };
+        };
+    };
+    InterventionsController_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MotifInterventionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
+            };
+        };
+    };
+    InterventionsController_cells: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CellulesProjetDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
             };
         };
     };

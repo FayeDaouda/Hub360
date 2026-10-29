@@ -78,6 +78,7 @@ model Societe {
   gabaritVersions   GabaritVersion[]
   reglages          ReglageSociete[]
   journalReglages   JournalReglage[]
+  interventionsHub  InterventionHub[]
   signalements      Signalement[]
   journalDroits     JournalDroit[]
 
@@ -2638,6 +2639,35 @@ model JournalReglage {
 
   @@index([societeId, createdAt])
   @@map("journal_reglages")
+}
+
+// Interventions de l'Administrateur HUB (carte blanche, 29/10/2026) : les
+// déblocages qu'aucun rôle ne peut faire par le parcours normal, chacun avec
+// son motif, au journal d'audit (catégorie « administration »).
+enum TypeInterventionHub {
+  onboard_sans_signature // dossier CRM passé en Onboard sans contrat signé
+  ouverture_projet // projet ouvert selon le gabarit sans attendre l'émission de F1
+  cellules_projet // cellules rattachées au projet (remplace l'ensemble)
+  reouverture_dossier // dossier CRM perdu remis en « Nouveau projet »
+}
+
+model InterventionHub {
+  id           String              @id @default(uuid())
+  societeId    String              @map("societe_id")
+  type         TypeInterventionHub
+  cible        String // code du dossier ou du projet
+  detail       String              @default("")
+  motif        String
+  parId        String?             @map("par_id") // audit, pas de FK
+  createdAt    DateTime            @default(now()) @map("created_at")
+  // Ordre réel de l'événement dans le journal d'audit, posé par la base
+  // (séquence commune, migration 20261026090000_ordre_journal).
+  ordreJournal BigInt?             @map("ordre_journal")
+
+  societe Societe @relation(fields: [societeId], references: [id], onDelete: Cascade)
+
+  @@index([societeId, createdAt])
+  @@map("interventions_hub")
 }
 
 // Pilotage · tableau de bord Holding (maquettes du boss, oct. 2026).

@@ -78,7 +78,12 @@ function libelleTransition(t: TransitionDossier, par: string): string {
   if (t.de === 'en_validation' && t.vers === 'offre_envoyee') return `Offre validée par le CFO, envoyée au client`;
   if (t.de === 'en_validation' && t.vers === 'nouveau_projet') return `Renvoyée par le CFO${motif}`;
   if (t.de === 'offre_envoyee' && t.vers === 'nouveau_projet') return `Offre reprise (expirée sans réponse)`;
-  if (t.vers === 'onboard') return `Contrat signé : projet onboard`;
+  // Onboard sans signature (Administrateur HUB) : son motif remplace « Contrat signé. ».
+  if (t.vers === 'onboard')
+    return t.commentaire && t.commentaire !== 'Contrat signé.'
+      ? `Projet onboard : ${t.commentaire}`
+      : `Contrat signé : projet onboard`;
+  if (t.de === 'perdu' && t.vers === 'nouveau_projet') return `Dossier rouvert${motif}`;
   if (t.vers === 'perdu') return `Dossier perdu${motif}`;
   return `${t.de} → ${t.vers}${par}`;
 }

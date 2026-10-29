@@ -13,15 +13,18 @@ import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { ComptesRolesPanel } from '@/components/groupe/comptes-roles-panel';
 import { RolesPanel } from '@/components/admin/roles-panel';
 import { JournalAudit } from '@/components/pilotage/journal-audit';
+import { DeblocagesPanel } from '@/components/groupe/deblocages-panel';
 import { libelleRole } from '@/lib/groupe';
 import { ROLE_CIO } from '@hub/domain';
 
-type Onglet = 'comptes' | 'droits' | 'journal';
+type Onglet = 'comptes' | 'droits' | 'journal' | 'deblocages';
 
-const ONGLETS: { cle: Onglet; libelle: string }[] = [
+// Déblocages : Administrateur HUB seulement.
+const ONGLETS: { cle: Onglet; libelle: string; adminHub?: true }[] = [
   { cle: 'comptes', libelle: 'Comptes & rôles' },
   { cle: 'droits', libelle: 'Droits des rôles' },
   { cle: 'journal', libelle: 'Journal d’audit' },
+  { cle: 'deblocages', libelle: 'Déblocages', adminHub: true },
 ];
 
 // Administration du HUB — l'Administrateur HUB (carte blanche, 29/10/2026),
@@ -105,7 +108,7 @@ export default function GroupePage() {
         {gouverne && (
           <div className="admin-periode">
             <div className="admin-periode-toggle" role="group" aria-label="Section de l’administration">
-              {ONGLETS.map((o) => (
+              {ONGLETS.filter((o) => !o.adminHub || session.adminHub).map((o) => (
                 <button
                   key={o.cle}
                   type="button"
@@ -122,6 +125,7 @@ export default function GroupePage() {
         {onglet === 'comptes' && <ComptesRolesPanel moiId={session.utilisateur.id} />}
         {gouverne && onglet === 'droits' && <RolesPanel slug={session.societe.slug} />}
         {gouverne && onglet === 'journal' && <JournalAudit slug={session.societe.slug} />}
+        {session.adminHub && onglet === 'deblocages' && <DeblocagesPanel slug={session.societe.slug} />}
       </main>
     </div>
   );

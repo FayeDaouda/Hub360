@@ -17,6 +17,8 @@ const CATEGORIES: Record<CategorieAudit, string> = {
   // Qui a consulté ou modifié le salaire ou un bulletin de qui (jamais de montant).
   paie: 'Paie',
   pilotage: 'Reportings',
+  // Interventions de l'Administrateur HUB (déblocages, avec motif).
+  administration: 'Administration',
 };
 
 // Pilotage › Journal (CEO, CIO) : qui a fait quoi et quand — comptes, droits,

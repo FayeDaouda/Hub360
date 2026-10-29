@@ -530,3 +530,96 @@
     flex: 1 1 40%;
   }
 }
+
+/* Administration du HUB › Déblocages (Administrateur HUB, 29/10/2026). */
+.deb-recherche {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+.deb-recherche .field {
+  flex: 1 1 16rem;
+  max-width: 360px;
+}
+.deb-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+.deb-carte {
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-14, 14px);
+  background: var(--surface);
+}
+.deb-carte h3,
+.deb-sous-titre {
+  margin: 0;
+  font-size: var(--t-12);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+.deb-titre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+.deb-faits {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.deb-faits dt {
+  color: var(--text-muted);
+}
+.deb-faits dd {
+  margin: 0;
+}
+.deb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.deb-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.deb-historique {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+.deb-modale {
+  display: grid;
+  gap: 0.85rem;
+}
+.deb-modale > p {
+  margin: 0;
+}
+.deb-cellules {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 14rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.deb-cellules label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

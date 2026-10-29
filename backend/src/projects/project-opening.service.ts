@@ -9,6 +9,7 @@ import { firstWorkday } from './work-calendar';
 // Gabarit par catégorie : seule la conception a le sien (GC-CONCEPTION) ;
 // un projet d'une autre catégorie ne s'ouvre pas selon un gabarit.
 const TEMPLATE_BY_CATEGORY: Partial<Record<Categorie, string>> = { conception: 'GC-CONCEPTION' };
+export const hasTemplate = (category: Categorie) => !!TEMPLATE_BY_CATEGORY[category];
 
 export type OpeningPlan = {
   projectId: string;

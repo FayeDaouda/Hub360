@@ -72,6 +72,19 @@ function svc() {
       ]),
     },
     lectureReporting: vide,
+    interventionHub: {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'I1',
+          type: 'ouverture_projet',
+          cible: 'GB_TBD.26',
+          detail: 'J1 le 29/10/2026 · 24 cartes',
+          motif: 'Projet test',
+          parId: 'U9',
+          createdAt: new Date('2026-10-04T08:00:00Z'),
+        },
+      ]),
+    },
     parametreRentabilite: vide,
     numerotationFactures: vide,
     profilFacturation: vide,
@@ -110,6 +123,10 @@ describe('JournalAuditService', () => {
     await expect(svc().journal({ userId: 'U1', societeId: 'S1', role: 'CFO' })).rejects.toThrow(ForbiddenException);
   });
 
+  it('ouvert à l’Administrateur HUB, quel que soit le rôle endossé', async () => {
+    await expect(svc().journal({ userId: 'U1', societeId: 'S1', role: 'CFO', adminHub: true })).resolves.toBeDefined();
+  });
+
   it('réunit les sources, du plus récent au plus ancien, auteur nommé', async () => {
     const { lignes } = await svc().journal(
       { userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' },
@@ -125,7 +142,13 @@ describe('JournalAuditService', () => {
       'Facture émise',
       'Compte désactivé',
       'Mois clôturé',
+      'Projet ouvert sans F1',
     ]);
+    expect(lignes.find((l) => l.action === 'Projet ouvert sans F1')).toMatchObject({
+      categorie: 'administration',
+      detail: 'GB_TBD.26 · J1 le 29/10/2026 · 24 cartes · motif : Projet test',
+      par: 'Ousseynou Camara',
+    });
     const ligne = (action: string) => lignes.find((l) => l.action === action)!;
     // Paie : qui a ouvert le bulletin de qui — jamais de montant.
     expect(ligne('Bulletin consulté')).toMatchObject({

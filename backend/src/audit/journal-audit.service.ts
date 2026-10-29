@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
-import type { ActionPaie, EvenementCompteType, NiveauPermission } from '@prisma/client';
+import type { ActionPaie, EvenementCompteType, NiveauPermission, TypeInterventionHub } from '@prisma/client';
 import { refFacture } from '../projets/domaine/config';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { formaterNumero } from '../projets/facturation/numerotation';
@@ -19,7 +19,8 @@ import {
 } from '@hub/domain';
 
 type Acteur = { userId: string; societeId: string; role: string; adminHub?: boolean };
-export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';
+export type CategorieAudit =
+  'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage' | 'administration';
 export type LigneAudit = {
   id: string;
   le: Date;
@@ -27,6 +28,13 @@ export type LigneAudit = {
   action: string;
   detail: string;
   par: string | null;
+};
+
+const ACTIONS_INTERVENTION: Record<TypeInterventionHub, string> = {
+  onboard_sans_signature: 'Onboard sans signature du client',
+  ouverture_projet: 'Projet ouvert sans F1',
+  cellules_projet: 'Cellules du projet modifiées',
+  reouverture_dossier: 'Dossier perdu rouvert',
 };
 
 // Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.
@@ -229,6 +237,8 @@ export class JournalAuditService {
         orderBy: { createdAt: 'asc' },
       }),
     ]);
+    // Interventions de l'Administrateur HUB (déblocages motivés, 29/10/2026).
+    const interventions = await this.prisma.interventionHub.findMany({ where: { societeId: S, createdAt: dans } });
     const [demandesAvoir, clotures] = await Promise.all([
       this.prisma.demandeAvoir.findMany({
         where: { societeId: S, OR: [{ demandeLe: dans }, { decideLe: dans }] },
@@ -410,6 +420,15 @@ export class JournalAuditService {
           },
         ];
       }),
+      ...interventions.map((i) => ({
+        id: `intervention:${i.id}`,
+        le: i.createdAt,
+        ordre: i.ordreJournal,
+        categorie: 'administration' as const,
+        action: ACTIONS_INTERVENTION[i.type],
+        detail: [i.cible, i.detail, `motif : ${i.motif}`].filter(Boolean).join(' · '),
+        parId: i.parId,
+      })),
       ...clotures.map((c) => ({
         id: `cloture:${c.id}`,
         le: c.createdAt,
