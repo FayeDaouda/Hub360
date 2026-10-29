@@ -199,6 +199,7 @@ enum EvenementCompteType {
   compte_verrouille // lot C : trop d'essais de connexion infructueux
   compte_debloque // lot C : par l'administration du HUB, avant la fin du verrouillage
   role_endosse // Administrateur HUB : rôle endossé à la connexion ou depuis le menu du compte
+  lien_reinitialisation_envoye // par l'administration du HUB : lien de nouveau mot de passe envoyé par e-mail
 }
 
 // -- Notifications collaborateur --

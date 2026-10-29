@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { JournalAuditService } from './journal-audit.service';
 
-type R = { user: { userId: string; societeId: string; role: string } };
+type R = { user: { userId: string; societeId: string; role: string; adminHub: boolean } };
 
 // Journal d'audit (Pilotage › Journal) — le service réserve la lecture au
 // CEO, au CIO et à l'administration de la société.

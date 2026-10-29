@@ -22,7 +22,8 @@ export class SocieteAdminOuCioGuard implements CanActivate {
       throw new ForbiddenException("Vous n'avez pas accès à cette société");
     }
     const bonneSociete = user.societeSlug === slug;
-    if (bonneSociete && (user.role === ROLE_CIO || user.role === ROLE_COMPANY_ADMIN)) return true;
+    // L'Administrateur HUB (carte blanche, 29/10/2026), quel que soit le rôle endossé.
+    if (bonneSociete && (user.adminHub || user.role === ROLE_CIO || user.role === ROLE_COMPANY_ADMIN)) return true;
 
     throw new ForbiddenException('Réservé à l’administration de la société ou au CIO.');
   }

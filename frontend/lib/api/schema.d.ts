@@ -3012,6 +3012,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/groupe/comptes/{utilisateurId}/sessions/coupure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ComptesGroupeController_couperSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/groupe/comptes/{utilisateurId}/mot-de-passe/reinitialisation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ComptesGroupeController_envoyerReinitialisation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/groupe/comptes/{utilisateurId}/deblocage": {
         parameters: {
             query?: never;
@@ -9805,6 +9837,44 @@ export interface operations {
         };
     };
     ComptesGroupeController_reinitialiserDoubleFacteur: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                utilisateurId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ComptesGroupeController_couperSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                utilisateurId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ComptesGroupeController_envoyerReinitialisation: {
         parameters: {
             query?: never;
             header?: never;

@@ -17,7 +17,7 @@ export class AccesCanalGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
-    const user = req.user as { societeId: string; userId: string; role: string } | undefined;
+    const user = req.user as { societeId: string; userId: string; role: string; adminHub?: boolean } | undefined;
     const canalId = req.params.id as string | undefined;
     if (!user || !canalId) throw new ForbiddenException('Accès refusé');
 
@@ -42,7 +42,7 @@ export class AccesCanalGuard implements CanActivate {
     }
 
     // type === 'cellule'
-    if (user.role === ROLE_COMPANY_ADMIN) return true;
+    if (user.adminHub || user.role === ROLE_COMPANY_ADMIN) return true;
     const collab = await this.prisma.collaborateur.findFirst({
       where: { utilisateurId: user.userId, societeId: user.societeId },
       select: { celluleId: true },

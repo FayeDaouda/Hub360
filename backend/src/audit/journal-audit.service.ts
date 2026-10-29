@@ -18,7 +18,7 @@ import {
   toIsoDay,
 } from '@hub/domain';
 
-type Acteur = { userId: string; societeId: string; role: string };
+type Acteur = { userId: string; societeId: string; role: string; adminHub?: boolean };
 export type CategorieAudit = 'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage';
 export type LigneAudit = {
   id: string;
@@ -51,6 +51,7 @@ const ACTIONS_COMPTE: Record<EvenementCompteType, string> = {
   compte_verrouille: 'Compte verrouillé (essais de connexion infructueux)',
   compte_debloque: 'Compte débloqué',
   role_endosse: 'Rôle endossé (Administrateur HUB)',
+  lien_reinitialisation_envoye: 'Lien de réinitialisation du mot de passe envoyé',
 };
 // Journal de la paie (revue RH 20/10/2026) : jamais de montant.
 const ACTIONS_PAIE: Record<ActionPaie, string> = {
@@ -119,7 +120,7 @@ export class JournalAuditService {
   constructor(private prisma: PrismaService) {}
 
   async journal(a: Acteur, debut?: string, fin?: string) {
-    if (!ROLES_JOURNAL.has(a.role)) throw new ForbiddenException('Journal réservé au CEO et au CIO.');
+    if (!a.adminHub && !ROLES_JOURNAL.has(a.role)) throw new ForbiddenException('Journal réservé au CEO et au CIO.');
     const { de, a: jusque } = periode(debut, fin);
     const dans = { gte: de, lt: jusque };
     const S = a.societeId;

@@ -14,6 +14,10 @@ describe('AdministrationHubGuard', () => {
     expect(() => new AdministrationHubGuard().canActivate(ctxOf({ role }))).toThrow(ForbiddenException);
   });
 
+  it('AUTORISÉ : Administrateur HUB, quel que soit le rôle endossé', () => {
+    expect(new AdministrationHubGuard().canActivate(ctxOf({ role: 'Salarié', adminHub: true }))).toBe(true);
+  });
+
   it('token absent → 403', () => {
     expect(() => new AdministrationHubGuard().canActivate(ctxOf(undefined))).toThrow(ForbiddenException);
   });

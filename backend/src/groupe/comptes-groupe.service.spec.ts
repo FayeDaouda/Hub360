@@ -69,7 +69,11 @@ function mockPrisma(o: {
     collaborateur: { create: jest.fn().mockResolvedValue({ id: 'C9' }), update: jest.fn() },
     $transaction: tx,
   };
-  const comptes = { envoyerInvitation: invitation, avertirSecurite: jest.fn() } as unknown as ComptesService;
+  const comptes = {
+    envoyerInvitation: invitation,
+    avertirSecurite: jest.fn(),
+    motDePasseOublie: jest.fn().mockResolvedValue(undefined),
+  } as unknown as ComptesService;
   const notifications = { envoyer: jest.fn(), titulairesRole: jest.fn().mockResolvedValue(['DG']) };
   return {
     svc: new ComptesGroupeService(
@@ -328,5 +332,51 @@ describe('ComptesGroupeService.debloquer (lot C)', () => {
     const echu = mockPrisma({ utilisateur: { verrouilleJusquau: new Date(Date.now() - 1000) } });
     await expect(echu.svc.debloquer('U1', 'CIO')).rejects.toThrow(ConflictException);
     await expect(mockPrisma({}).svc.debloquer('U1', 'CIO')).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('ComptesGroupeService · sessions et mot de passe (Administration du HUB)', () => {
+  const avecRoles = (nom: string, extra = {}) => ({ ...UTIL, roles: [{ role: { nom } }], ...extra });
+
+  it('couper les sessions : coupure datée, trace au journal', async () => {
+    const { svc, prisma, tx } = mockPrisma({ utilisateur: avecRoles('CFO') });
+    await expect(svc.couperSessions('U1', 'ADM')).resolves.toEqual({ id: 'U1' });
+    expect(prisma.utilisateur.update).toHaveBeenCalledWith({
+      where: { id: 'U1' },
+      data: { sessionsValidesDepuis: expect.any(Date) },
+    });
+    expect(prisma.evenementCompte.create.mock.calls[0][0].data).toMatchObject({
+      type: 'deconnexion_partout',
+      parId: 'ADM',
+    });
+    expect(tx).toHaveBeenCalledTimes(1);
+  });
+
+  it('lien de réinitialisation : même e-mail que « mot de passe oublié », trace au journal', async () => {
+    const { svc, prisma, comptes } = mockPrisma({ utilisateur: avecRoles('CFO') });
+    await expect(svc.envoyerReinitialisation('U1', 'ADM')).resolves.toEqual({ id: 'U1', email: 'awa@x.sn' });
+    expect(comptes.motDePasseOublie).toHaveBeenCalledWith('awa@x.sn');
+    expect(prisma.evenementCompte.create.mock.calls[0][0].data).toMatchObject({
+      type: 'lien_reinitialisation_envoye',
+      parId: 'ADM',
+    });
+  });
+
+  it.each([
+    ['ses propres sessions', () => mockPrisma({ utilisateur: avecRoles('CFO') }).svc.couperSessions('U1', 'U1')],
+    [
+      'compte d’administration',
+      () => mockPrisma({ utilisateur: avecRoles('Administrateur HUB (transverse)') }).svc.couperSessions('U1', 'ADM'),
+    ],
+    [
+      'invitation en attente',
+      () =>
+        mockPrisma({ utilisateur: avecRoles('CFO', { motDePasseHash: null }) }).svc.envoyerReinitialisation(
+          'U1',
+          'ADM',
+        ),
+    ],
+  ])('refus : %s', async (_l, appel) => {
+    await expect(appel()).rejects.toThrow(ConflictException);
   });
 });

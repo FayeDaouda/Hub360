@@ -66,7 +66,11 @@ export function Reglages({ slug }: { slug: string }) {
         gabarit est versionné : un projet garde la version avec laquelle il a été ouvert.
       </p>
       <span className="reg-badge">
-        {session.role === ROLE_CIO ? 'CIO : modification des réglages' : 'Administration de la société'}
+        {session.adminHub
+          ? 'Administrateur HUB : modification des réglages'
+          : session.role === ROLE_CIO
+            ? 'CIO : modification des réglages'
+            : 'Administration de la société'}
       </span>
     </div>
   );

@@ -11,7 +11,8 @@ export const ROLES_ADMINISTRATION_HUB: ReadonlySet<string> = new Set([ROLE_CIO, 
 export class AdministrationHubGuard implements CanActivate {
   canActivate(ctx: ExecutionContext): boolean {
     const user = ctx.switchToHttp().getRequest().user;
-    if (!user || !ROLES_ADMINISTRATION_HUB.has(user.role)) {
+    // L'Administrateur HUB (carte blanche, 29/10/2026), quel que soit le rôle endossé.
+    if (!user || !(user.adminHub || ROLES_ADMINISTRATION_HUB.has(user.role))) {
       throw new ForbiddenException("Accès réservé à l'administration du HUB (CIO)");
     }
     return true;

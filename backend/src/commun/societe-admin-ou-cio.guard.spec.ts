@@ -7,7 +7,7 @@ import { ROLE_CIO } from '@hub/domain';
 // chacun connecté sur la société de l'URL (les services lisent la société
 // du jeton — un jeton d'une autre société écrirait au mauvais endroit).
 
-type User = { societeSlug: string | null; role: string };
+type User = { societeSlug: string | null; role: string; adminHub?: boolean };
 
 const ctxOf = (req: unknown): ExecutionContext =>
   ({ switchToHttp: () => ({ getRequest: () => req }) }) as unknown as ExecutionContext;
@@ -19,6 +19,16 @@ const req = (o: Partial<{ user: User; params: { slug: string } }> = {}) => ({
 });
 
 describe('SocieteAdminOuCioGuard', () => {
+  it('AUTORISÉ : Administrateur HUB connecté sur cette société, quel que soit le rôle endossé', () => {
+    const user = { societeSlug: 'grey', role: 'CFO', adminHub: true };
+    expect(new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user })))).toBe(true);
+  });
+
+  it('REFUSÉ : Administrateur HUB dont le jeton porte une AUTRE société → 403', () => {
+    const user = { societeSlug: 'autre', role: 'CFO', adminHub: true };
+    expect(() => new SocieteAdminOuCioGuard().canActivate(ctxOf(req({ user })))).toThrow(ForbiddenException);
+  });
+
   it('AUTORISÉ : societe_admin de la bonne société, sans être CIO', () => {
     expect(new SocieteAdminOuCioGuard().canActivate(ctxOf(req()))).toBe(true);
   });

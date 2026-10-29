@@ -7,7 +7,9 @@ import { ApiError } from '@/lib/client-api';
 import { NouveauCompteModal, ResultatInvitation } from '@/components/groupe/nouveau-compte-modal';
 import {
   changerActifCompte,
+  couperSessionsCompte,
   debloquerCompte,
+  envoyerReinitialisationCompte,
   reinitialiserDoubleFacteur,
   changerRoleCompte,
   comparerRoles,
@@ -307,7 +309,9 @@ function LigneCompte({
 }
 
 // Invitation à renvoyer (en attente), désactivation (coupe les sessions) ou
-// réactivation — jamais sur soi-même ni sur un compte d'administration.
+// réactivation ; pour un compte actif, couper ses sessions ou lui envoyer un
+// lien de nouveau mot de passe — jamais sur soi-même ni sur un compte
+// d'administration.
 function ActionsCompte({
   compte,
   onMaj,
@@ -319,6 +323,7 @@ function ActionsCompte({
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [invitation, setInvitation] = useState<InvitationCompte | null>(null);
+  const [fait, setFait] = useState<string | null>(null);
 
   async function agir() {
     if (
@@ -366,6 +371,39 @@ function ActionsCompte({
     }
   }
 
+  async function executer(action: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setErreur(null);
+    setFait(null);
+    try {
+      await action();
+      setFait(message);
+    } catch (e) {
+      setErreur(messageErreur(e, 'Action impossible.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function couperSessions() {
+    const ok = await confirmer({
+      titre: `Couper les sessions de ${compte.prenom} ${compte.nom} ?`,
+      message: 'Il est déconnecté de tous ses appareils et devra se reconnecter. Rien d’autre ne change.',
+      confirmer: 'Couper les sessions',
+      danger: true,
+    });
+    if (ok) await executer(() => couperSessionsCompte(compte.id), 'Sessions coupées');
+  }
+
+  async function envoyerLienMotDePasse() {
+    const ok = await confirmer({
+      titre: `Envoyer un lien de nouveau mot de passe à ${compte.prenom} ${compte.nom} ?`,
+      message: `Un e-mail part à ${compte.email}. Son mot de passe actuel reste valable tant que le lien n’est pas utilisé.`,
+      confirmer: 'Envoyer le lien',
+    });
+    if (ok) await executer(() => envoyerReinitialisationCompte(compte.id), 'Lien envoyé');
+  }
+
   // Verrouillé après trop d'essais de connexion (lot C) : sans confirmation,
   // le déblocage ne fait que rendre l'accès plus tôt.
   async function debloquer() {
@@ -387,6 +425,26 @@ function ActionsCompte({
       <button type="button" className="btn-ghost btn-ghost--sm groupe-action-compte" onClick={agir} disabled={busy}>
         {busy ? '…' : libelle}
       </button>
+      {compte.statut === 'actif' && (
+        <>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm groupe-action-compte"
+            onClick={envoyerLienMotDePasse}
+            disabled={busy}
+          >
+            Envoyer un lien de mot de passe
+          </button>
+          <button
+            type="button"
+            className="btn-ghost btn-ghost--sm groupe-action-compte"
+            onClick={couperSessions}
+            disabled={busy}
+          >
+            Couper les sessions
+          </button>
+        </>
+      )}
       {compte.doubleFacteur && (
         <button
           type="button"
@@ -408,6 +466,7 @@ function ActionsCompte({
         </button>
       )}
       {erreur && <span className="field-erreur">{erreur}</span>}
+      {fait && <EtatLigne etat={{ type: 'ok' }} ok={fait} />}
       {invitation && (
         <Modal
           onClose={() => setInvitation(null)}

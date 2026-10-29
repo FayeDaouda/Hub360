@@ -346,6 +346,53 @@ export class ComptesGroupeService {
     return { id: utilisateurId, doubleFacteur: false };
   }
 
+  // Compte existant, hors comptes d'administration (même règle que la
+  // désactivation).
+  private async compteOrdinaire(utilisateurId: string) {
+    const u = await this.prisma.utilisateur.findUnique({
+      where: { id: utilisateurId },
+      select: { ...SELECT_UTILISATEUR, roles: { select: { role: { select: { nom: true } } } } },
+    });
+    if (!u) throw new NotFoundException('Compte introuvable.');
+    if (u.roles.some((r) => ROLES_ADMINISTRATION.has(r.role.nom))) {
+      throw new ConflictException("Compte d'administration : il ne se gère pas depuis cet écran.");
+    }
+    return u;
+  }
+
+  // Coupe toutes les sessions d'un compte (poste oublié ouvert, doute sur un
+  // accès) : il devra se reconnecter, rien d'autre ne change.
+  async couperSessions(utilisateurId: string, acteurId: string) {
+    if (utilisateurId === acteurId) {
+      throw new ConflictException(
+        'Pour vos propres sessions : menu du compte, « Se déconnecter de tous les appareils ».',
+      );
+    }
+    await this.compteOrdinaire(utilisateurId);
+    await this.prisma.$transaction([
+      this.prisma.utilisateur.update({ where: { id: utilisateurId }, data: { sessionsValidesDepuis: new Date() } }),
+      this.prisma.evenementCompte.create({
+        data: { utilisateurId, type: 'deconnexion_partout', parId: acteurId, detail: 'Administration du HUB' },
+      }),
+    ]);
+    return { id: utilisateurId };
+  }
+
+  // Mot de passe oublié, à la demande de la personne : le même lien que
+  // « mot de passe oublié », envoyé par l'administration. Le mot de passe
+  // actuel reste valable tant que le lien n'est pas utilisé.
+  async envoyerReinitialisation(utilisateurId: string, acteurId: string) {
+    const u = await this.compteOrdinaire(utilisateurId);
+    if (!u.actif || !u.motDePasseHash) {
+      throw new ConflictException('Compte en attente ou désactivé : pas de réinitialisation possible.');
+    }
+    await this.comptes.motDePasseOublie(u.email);
+    await this.prisma.evenementCompte.create({
+      data: { utilisateurId, type: 'lien_reinitialisation_envoye', parId: acteurId, detail: 'Administration du HUB' },
+    });
+    return { id: utilisateurId, email: u.email };
+  }
+
   // Déblocage par l'administration du HUB avant la fin du verrouillage
   // (lot C) : essais et récidives remis à zéro, trace au journal.
   async debloquer(utilisateurId: string, acteurId: string) {

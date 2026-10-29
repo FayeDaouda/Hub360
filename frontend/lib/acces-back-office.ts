@@ -70,9 +70,10 @@ export function consultationEtCommentaires(session: Session): boolean {
 
 // Administration du HUB (/groupe : comptes, rôles, salaires) — même règle
 // que backend/src/commun/administration-hub.guard.ts : le CIO, ou le compte
-// technique holding_admin (secours).
+// technique holding_admin (secours), et l'Administrateur HUB quel que soit le
+// rôle endossé (carte blanche, 29/10/2026).
 export function estAdministrateurHub(session: Session): boolean {
-  return session.role === ROLE_CIO || session.role === ROLE_HOLDING_ADMIN;
+  return !!session.adminHub || session.role === ROLE_CIO || session.role === ROLE_HOLDING_ADMIN;
 }
 
 export function sectionAccessible(session: Session, cle: string): boolean {
@@ -95,8 +96,9 @@ export function sectionAccessible(session: Session, cle: string): boolean {
   // sert que le dossier du compte connecté.
   if (cle === 'mon-espace') return true;
   // Paramètres (matrice des rôles, gabarits, localités, contrats) : pouvoir
-  // d'admin plateforme hors matrice — le CIO, en plus de l'admin société.
-  if (cle === 'parametres') return session.role === ROLE_CIO;
+  // d'admin plateforme hors matrice — le CIO et l'Administrateur HUB, en plus
+  // de l'admin société.
+  if (cle === 'parametres') return !!session.adminHub || session.role === ROLE_CIO;
   const moduleMatrice = SECTIONS_DIRECTION[cle];
   return !!moduleMatrice && niveauSuffisant(session, moduleMatrice, 'lecture');
 }
