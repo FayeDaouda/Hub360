@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Optional } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { NiveauPermission } from '@prisma/client';
 import {
@@ -8,6 +8,7 @@ import {
   PermissionRequise,
   PermissionSelonMethode,
 } from './permission.decorator';
+import { SwitchesService } from '../switches/switches.service';
 
 // Ordre total des niveaux — un niveau donne accès à tout ce qui est en
 // dessous (validation implique ecriture implique lecture).
@@ -35,11 +36,18 @@ export function aLaPermission(
 // par guard, pas en un seul changement qui rebrancherait tout l'admin d'un
 // coup). Absence d'entrée pour le module dans req.user.permissions = 'aucun'
 // (fail closed), pas une exception.
+//
+// Interrupteurs (Administrateur HUB, 29/10/2026) : un module coupé pour la
+// société est refusé tout de suite, même avec un jeton émis avant la coupure
+// (le jeton suivant le porte déjà à « aucun ») ; l'Administrateur HUB passe.
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    @Optional() private switches?: SwitchesService,
+  ) {}
 
-  canActivate(ctx: ExecutionContext): boolean {
+  canActivate(ctx: ExecutionContext): boolean | Promise<boolean> {
     const cibles = [ctx.getHandler(), ctx.getClass()];
     const req = ctx.switchToHttp().getRequest();
     const permissions = req.user?.permissions as Record<string, NiveauPermission> | undefined;
@@ -48,7 +56,7 @@ export class PermissionGuard implements CanActivate {
     const requis = this.reflector.getAllAndOverride<PermissionRequise | undefined>(PERMISSION_REQUISE, cibles);
     if (requis) {
       verifier(permissions, requis.module, requis.niveau);
-      return true;
+      return this.siModuleActif(req.user, requis.module);
     }
 
     // Règle de contrôleur selon la méthode (cf. @PermissionSelonMethode).
@@ -63,7 +71,22 @@ export class PermissionGuard implements CanActivate {
       req.method === 'HEAD' ||
       this.reflector.getAllAndOverride<boolean>(COMPTE_COMME_LECTURE, cibles) === true;
     verifier(permissions, selon.module, lecture ? 'lecture' : 'ecriture');
-    return true;
+    return this.siModuleActif(req.user, selon.module);
+  }
+
+  // Droits vérifiés (refus immédiat) ; reste l'interrupteur du module, lu
+  // seulement quand il peut s'appliquer.
+  private siModuleActif(
+    user: { societeId?: string | null; adminHub?: boolean } | undefined,
+    module: string,
+  ): boolean | Promise<boolean> {
+    if (!this.switches || !user?.societeId || user.adminHub) return true;
+    return this.switches.disabledModules(user.societeId).then((coupes) => {
+      if (coupes.has(module)) {
+        throw new ForbiddenException(`Module « ${module} » désactivé par l’administration du HUB.`);
+      }
+      return true;
+    });
   }
 }
 

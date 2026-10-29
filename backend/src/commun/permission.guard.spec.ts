@@ -134,3 +134,28 @@ describe('PermissionGuard — règle selon la méthode', () => {
     ).toThrow(ForbiddenException);
   });
 });
+
+// Interrupteurs (Administrateur HUB) : un module coupé pour la société est
+// refusé même avec les droits ; l'Administrateur HUB passe.
+describe('PermissionGuard — module coupé', () => {
+  const switches = { disabledModules: jest.fn().mockResolvedValue(new Set(['crm'])) };
+  const guard = () => new PermissionGuard(reflector({ module: 'crm', niveau: 'lecture' }), switches as never);
+  const avec = (user: Record<string, unknown>) => ({
+    user: { societeId: 'S1', permissions: { crm: 'validation' }, ...user },
+  });
+
+  it('REFUSÉ : droits suffisants mais module coupé → 403', async () => {
+    await expect(guard().canActivate(ctxOf(avec({})))).rejects.toThrow(ForbiddenException);
+    expect(switches.disabledModules).toHaveBeenCalledWith('S1');
+  });
+
+  it('AUTORISÉ : l’Administrateur HUB, module coupé ou non', async () => {
+    expect(await guard().canActivate(ctxOf(avec({ adminHub: true })))).toBe(true);
+  });
+
+  it('AUTORISÉ : module actif', async () => {
+    const actifs = { disabledModules: jest.fn().mockResolvedValue(new Set()) };
+    const g = new PermissionGuard(reflector({ module: 'crm', niveau: 'lecture' }), actifs as never);
+    expect(await g.canActivate(ctxOf(avec({})))).toBe(true);
+  });
+});

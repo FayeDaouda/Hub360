@@ -63,7 +63,7 @@ export class MonCompteController {
   // de tentatives : route réservée à une session valide.
   @Post('prolongation')
   @HttpCode(200)
-  prolongerSession(@Req() req: { user: UtilisateurConnecte }): SessionProlongeeDto {
+  prolongerSession(@Req() req: { user: UtilisateurConnecte }): Promise<SessionProlongeeDto> {
     return this.auth.prolongerSession(req.user);
   }
 

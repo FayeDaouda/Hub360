@@ -36,6 +36,7 @@ import { dureeJeton } from './session';
 import { dureeVerrouillage, ESSAIS_AVANT_VERROUILLAGE, estVerrouille } from './verrouillage';
 import type { UtilisateurConnecte } from './jwt.strategy';
 import { EmailService, type AvisSecurite } from '../email/email.service';
+import { SwitchesService } from '../switches/switches.service';
 
 // Double authentification obligatoire pour tous les rôles (décision du
 // 28/10/2026, lot A ; elle épargnait jusque-là le Salarié qui ne pilote pas de
@@ -106,6 +107,7 @@ export class AuthService {
     private jwtService: JwtService,
     private notifications: NotificationsService,
     private email: EmailService,
+    private switches: SwitchesService,
   ) {}
 
   // Avis de sécurité à la personne (lot A) : envoyé sans retarder la réponse ;
@@ -135,6 +137,8 @@ export class AuthService {
     // Refuse un compte sans accès à la société demandée.
     const { acces } = await this.acces(utilisateur.id, dto.societeSlug);
     const role = acces.role.nom;
+    // Maintenance du HUB : dit tout de suite, avant le code de double authentification.
+    await this.switches.refuseDuringMaintenance(role === ROLE_HUB_ADMIN);
     if (utilisateur.totpActifLe && !doubleFacteurSuspenduePour(role))
       return this.etape('code', utilisateur.id, dto.societeSlug);
     if (doubleFacteurExigePour(role)) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
@@ -352,22 +356,33 @@ export class AuthService {
     );
   }
 
-  // Prolongation par l'activité dans le HUB (lot B) : même rôle, mêmes
-  // droits, même début de session ; seule l'expiration avance (session.ts).
-  // Un compte désactivé ou une session coupée n'arrivent pas jusqu'ici
-  // (JwtStrategy). Jamais daté avant le jeton présenté (cf. dateEmission).
-  prolongerSession(u: UtilisateurConnecte) {
+  // Prolongation par l'activité dans le HUB (lot B) : même rôle, même début
+  // de session ; seule l'expiration avance (session.ts). Les droits sont
+  // relus (matrice, puis interrupteurs : un module coupé ou rendu entre-temps)
+  // et rendus avec le jeton. Un compte désactivé ou une session coupée
+  // n'arrivent pas jusqu'ici (JwtStrategy). Jamais daté avant le jeton
+  // présenté (cf. dateEmission).
+  async prolongerSession(u: UtilisateurConnecte) {
     const iat = Math.max(Math.floor(Date.now() / 1000), u.emissionJeton);
+    const permissions = await this.permissionsActuelles(u);
     const contenu = {
       sub: u.userId,
       email: u.email,
       societeId: u.societeId,
       societeSlug: u.societeSlug,
       role: u.role,
-      permissions: u.permissions,
+      permissions,
       ...(u.adminHub && { adminHub: true as const }),
     };
-    return { access_token: this.signerSession(contenu, iat, u.debutSession) };
+    return { access_token: this.signerSession(contenu, iat, u.debutSession), permissions };
+  }
+
+  private async permissionsActuelles(u: UtilisateurConnecte): Promise<Record<string, string>> {
+    if (u.adminHub) return this.permissionsCompletes();
+    if (!u.societeSlug || !u.societeId) return u.permissions;
+    const { acces } = await this.acces(u.userId, u.societeSlug);
+    const matrice = Object.fromEntries(acces.role.permissions.map((p) => [p.module.cle, p.niveau as string]));
+    return this.switches.effectivePermissions(u.societeId, matrice);
   }
 
   // Administrateur HUB : endosse un autre rôle (menu du compte), mêmes droits
@@ -495,6 +510,8 @@ export class AuthService {
       permissions[p.module.cle] = p.niveau;
     }
     const role = adminHub ? (estEndossable(roleEndosse) ? roleEndosse : ROLE_CEO) : acces.role.nom;
+    await this.switches.refuseDuringMaintenance(adminHub);
+    if (!adminHub) permissions = await this.switches.effectivePermissions(societe.id, permissions);
     if (adminHub) {
       permissions = await this.permissionsCompletes();
       if (debut === undefined)

@@ -3748,6 +3748,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/interrupteurs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SwitchesController_state"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/interrupteurs/modules/{cle}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SwitchesController_setModule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/interrupteurs/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SwitchesController_setMaintenance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sante": {
         parameters: {
             query?: never;
@@ -3824,6 +3872,9 @@ export interface components {
         };
         SessionProlongeeDto: {
             access_token: string;
+            permissions: {
+                [key: string]: string;
+            };
         };
         EndosserRoleDto: {
             /** @enum {string} */
@@ -5347,6 +5398,31 @@ export interface components {
         CellulesProjetDto: {
             motif: string;
             celluleIds: string[];
+        };
+        ModuleInterrupteurDto: {
+            cle: string;
+            nom: string;
+            actif: boolean;
+            /** Format: date-time */
+            desactiveLe: string | null;
+            motif: string | null;
+        };
+        EtatMaintenanceDto: {
+            actif: boolean;
+            message: string;
+        };
+        InterrupteursDto: {
+            modules: components["schemas"]["ModuleInterrupteurDto"][];
+            maintenance: components["schemas"]["EtatMaintenanceDto"];
+        };
+        InterrupteurModuleDto: {
+            motif: string;
+            actif: boolean;
+        };
+        MaintenanceDto: {
+            motif: string;
+            actif: boolean;
+            message: string;
         };
         ClientErrorDto: {
             message: string;
@@ -11130,6 +11206,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EtatInterventionsDto"];
+                };
+            };
+        };
+    };
+    SwitchesController_state: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterrupteursDto"];
+                };
+            };
+        };
+    };
+    SwitchesController_setModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                cle: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InterrupteurModuleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterrupteursDto"];
+                };
+            };
+        };
+    };
+    SwitchesController_setMaintenance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterrupteursDto"];
                 };
             };
         };

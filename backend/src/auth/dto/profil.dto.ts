@@ -12,8 +12,10 @@ export class PhotoDto {
 }
 
 // Réponse de POST /auth/moi/prolongation : le jeton qui remplace le précédent.
+// Les droits relus (matrice, interrupteurs) accompagnent le jeton.
 export class SessionProlongeeDto {
   access_token: string;
+  permissions: Record<string, string>;
 }
 
 // POST /auth/moi/role : rôle endossé par l'Administrateur HUB.

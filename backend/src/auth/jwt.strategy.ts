@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { identifyCompany } from '../tenancy/tenant-context';
 import { sessionEchue } from './session';
+import { SwitchesService } from '../switches/switches.service';
 
 // Personne connectée, posée sur req.user par JwtAuthGuard.
 export type UtilisateurConnecte = {
@@ -23,7 +24,10 @@ export type UtilisateurConnecte = {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private switches: SwitchesService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -71,6 +75,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     ) {
       throw new UnauthorizedException('Session expirée — reconnecte-toi.');
     }
+
+    // Maintenance du HUB : toute requête refusée, sauf l'Administrateur HUB.
+    await this.switches.refuseDuringMaintenance(payload.adminHub === true);
 
     let societeId = payload.societeId ?? null;
     if (payload.societeSlug) {
