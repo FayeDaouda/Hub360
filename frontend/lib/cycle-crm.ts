@@ -74,8 +74,8 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
   },
 };
 
-// « onboarder » n'est plus proposé : c'est la signature du contrat qui fait
-// passer le dossier en Onboard (étape G, bloc « Contrat » de la fiche).
+// « onboarder » n'est pas proposé : c'est l'acceptation de l'offre par le
+// client qui fait passer le dossier en Onboard (décision du 29/10/2026).
 const ORDRE: ActionCrm[] = ['soumettre', 'valider', 'refaire', 'renvoyer', 'perdre'];
 
 // Pourquoi une action permise par le statut et le rôle ne peut PAS encore
@@ -101,7 +101,7 @@ export function raisonBlocage(action: ActionCrm, projet: Projet): string | null 
     return `L’offre attend encore la réponse du client (valable jusqu’au ${offre?.dateValidite}).`;
   }
   if (action === 'refaire' && statut === 'accepte') {
-    return 'L’offre a été acceptée : prépare le contrat — sa signature fera passer le dossier en Onboard.';
+    return 'L’offre a été acceptée : le dossier passe en Onboard, il ne repart pas pour une nouvelle offre.';
   }
   return null;
 }

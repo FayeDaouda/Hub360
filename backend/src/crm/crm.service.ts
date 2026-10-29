@@ -5,14 +5,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Categorie, Client, NatureDossier, NiveauPermission, Prisma, TypeBien } from '@prisma/client';
+import { Client, NiveauPermission, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
-import { PHASES_PAR_CATEGORIE } from '../projets/domaine/config';
-import { versDossierCrm, versProjetExecution } from '../commun/format-contrat';
+import { versDossierCrm } from '../commun/format-contrat';
 import { aLaPermission } from '../commun/permission.guard';
 import { DevisService } from '../devis/devis.service';
 import { FacturationService } from '../projets/facturation/facturation.service';
+import { OnboardingService } from './onboarding.service';
 import { statutDevisEffectif } from '../devis/domaine';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
@@ -79,6 +79,7 @@ export class CrmService {
     private facturation: FacturationService,
     private notifications: NotificationsService,
     private seuilCeo: SeuilCeoService,
+    private onboarding: OnboardingService,
   ) {}
 
   async findAll(societeId: string, acteur: Acteur, q?: string) {
@@ -414,10 +415,10 @@ export class CrmService {
     // La fiche se verrouille à la soumission : incomplète, elle le resterait.
     const incomplete = action === 'soumettre' && motifFicheIncomplete(dossier, 'avant de la soumettre au CFO');
     if (incomplete) throw new ConflictException(incomplete);
-    // Étape G : l'Onboard n'est plus un clic — c'est la SIGNATURE du contrat
-    // qui le déclenche (onboarderParContrat), un seul chemin vers cet état.
+    // L'Onboard n'est pas un clic : c'est l'acceptation de l'offre par le
+    // client qui le déclenche (DevisService, décision du 29/10/2026).
     if (action === 'onboarder') {
-      throw new ConflictException('L’Onboard se fait à la signature du contrat (bloc « Contrat » de la fiche).');
+      throw new ConflictException('L’Onboard se fait à l’acceptation de l’offre par le client.');
     }
     const commentaire = commentaireSaisi?.trim() || null;
     if (regle.commentaireObligatoire && !commentaire) {
@@ -518,50 +519,26 @@ export class CrmService {
     };
   }
 
-  // Étape G — la signature du contrat fait passer le dossier en « onboard »
-  // (seul chemin vers cet état) : bascule + journal + `dansTransaction`
-  // (le contrat marqué signé) + transaction pivot, TOUT OU RIEN. Pas de
-  // contrôle de droit ici : la signature du client (ou le scan déposé par
-  // un rôle ayant le droit, cf. ContratsService) fait autorité.
-  async onboarderParContrat(
+  // Onboard d'un dossier dont l'offre acceptée attend encore (dossier antérieur
+  // au 29/10/2026, quand la signature du contrat déclenchait l'Onboard) —
+  // déblocage de l'Administrateur HUB. Bascule + `dansTransaction` + projet,
+  // TOUT OU RIEN, puis les mêmes notifications qu'une acceptation.
+  async onboarderOffreAcceptee(
     societeId: string,
     dossierId: string,
     parId: string | null,
+    commentaire: string,
     dansTransaction: (tx: Prisma.TransactionClient) => Promise<void>,
   ) {
-    const dossier = await this.prisma.dossierCrm.findFirst({
-      where: { id: dossierId, societeId },
-      include: { projet: { select: { id: true } } },
-    });
-    if (!dossier) throw new NotFoundException('Dossier introuvable');
-    if (dossier.statut !== 'offre_envoyee' || dossier.projet) {
-      throw new ConflictException('Ce dossier n’attend plus de signature de contrat.');
-    }
-    const offreAcceptee = await this.verifierOffre(dossierId, 'onboarder');
-
     const onboard = await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.dossierCrm.updateMany({
-        where: { id: dossierId, statut: 'offre_envoyee' },
-        data: { statut: 'onboard' },
-      });
-      if (count === 0) throw new ConflictException('Le dossier vient de changer de statut.');
-      await tx.dossierCrmTransition.create({
-        data: {
-          dossierId,
-          de: 'offre_envoyee',
-          vers: 'onboard',
-          parId,
-          commentaire: 'Contrat signé.',
-        },
-      });
+      const r = await this.onboarding.onboard(tx, societeId, dossierId, parId, commentaire);
       await dansTransaction(tx);
-      const d = await tx.dossierCrm.findUniqueOrThrow({ where: { id: dossierId } });
-      return this.creerProjetOnboard(tx, societeId, d, offreAcceptee);
+      return r;
     });
     await this.notifications.notifierDossierCrm({
       societeId,
       dossierId,
-      evenement: 'contrat_signe',
+      evenement: 'offre_acceptee',
       parId,
       projetId: onboard.projet.id,
       facturesPreparees: onboard.facturesPreparees,
@@ -569,71 +546,8 @@ export class CrmService {
     return onboard;
   }
 
-  // Transaction pivot : le projet d'exécution et sa coquille avant-projet,
-  // puis l'offre acceptée rattachée au projet et transformée en factures
-  // brouillon (échéanciers CGV, étape H2) — « transformée » : plus de
-  // conversion « 1 devis → 1 facture » possible sur elle.
-  private async creerProjetOnboard(
-    tx: Prisma.TransactionClient,
-    societeId: string,
-    d: {
-      id: string;
-      code: string;
-      nature: NatureDossier;
-      categorie: Categorie | null;
-      programme: string;
-      localisation: string;
-      latitude: number | null;
-      longitude: number | null;
-      type: TypeBien | null;
-      clientId: string;
-    },
-    offreAcceptee: string | null,
-  ) {
-    // Soumis complet (crm/fiche.ts), un dossier a sa catégorie et son type ;
-    // garde pour un dossier antérieur resté incomplet (annule la transaction).
-    const { categorie, type } = d;
-    if (!categorie || !type) {
-      throw new ConflictException('Fiche incomplète : catégorie et type de projet requis pour ouvrir le projet.');
-    }
-    const p = await tx.projet.create({
-      data: {
-        societeId,
-        dossierCrmId: d.id,
-        code: d.code,
-        nature: d.nature,
-        categorie,
-        programme: d.programme,
-        localisation: d.localisation,
-        latitude: d.latitude,
-        longitude: d.longitude,
-        type,
-        clientId: d.clientId,
-        phase: PHASES_PAR_CATEGORIE[categorie][0],
-      },
-      include: { client: true, cellules: true },
-    });
-    // Factures directes du lead (sans offre) : rattachées au projet ouvert.
-    await tx.facture.updateMany({ where: { dossierCrmId: d.id, projetId: null }, data: { projetId: p.id } });
-    let facturesPreparees = 0;
-    if (offreAcceptee) {
-      await tx.devis.update({
-        where: { id: offreAcceptee },
-        data: { projetId: p.id, statut: 'transforme' },
-      });
-      facturesPreparees = await this.facturation.preparerDepuisOffre(
-        tx,
-        societeId,
-        { id: p.id, nature: d.nature },
-        offreAcceptee,
-      );
-    }
-    return { projet: versProjetExecution(p), facturesPreparees };
-  }
-
-  // Conditions posées par l'offre du dossier (étape F). Renvoie l'id de
-  // l'offre acceptée pour « onboarder » (rattachement au projet), null sinon.
-  private async verifierOffre(dossierId: string, action: ActionCrm): Promise<string | null> {
+  // Conditions posées par l'offre du dossier (étape F).
+  private async verifierOffre(dossierId: string, action: ActionCrm): Promise<void> {
     if (action === 'soumettre') {
       // Le brouillon tolère des lignes pas encore chiffrées (maquette
       // Finances) ; le CFO ne reçoit qu'une offre entièrement chiffrée.
@@ -651,25 +565,18 @@ export class CrmService {
         );
       }
     }
-    if (action === 'onboarder' || action === 'refaire') {
+    if (action === 'refaire') {
       const offres = await this.prisma.devis.findMany({
         where: { dossierCrmId: dossierId, statut: { in: ['envoye', 'accepte'] } },
         select: { id: true, statut: true, dateValidite: true },
       });
       const aujourdhui = todayIso();
-      const acceptee = offres.find((o) => o.statut === 'accepte');
       const enAttente = offres.find((o) => statutDevisEffectif(o, aujourdhui) === 'envoye');
-      if (action === 'onboarder') {
-        if (!acceptee) {
-          throw new ConflictException(
-            'L’Onboard exige une offre acceptée par le client (via son lien, ou réponse saisie).',
-          );
-        }
-        return acceptee.id;
-      }
-      if (acceptee) {
+      // Une offre acceptée a fait passer le dossier en Onboard ; si elle attend
+      // encore (dossier antérieur au 29/10/2026), c'est un déblocage.
+      if (offres.some((o) => o.statut === 'accepte')) {
         throw new ConflictException(
-          'L’offre a été acceptée : prépare le contrat — sa signature fera passer le dossier en Onboard.',
+          'L’offre a été acceptée : le dossier passe en Onboard, il ne repart pas pour une nouvelle offre.',
         );
       }
       if (enAttente) {
@@ -678,7 +585,6 @@ export class CrmService {
         );
       }
     }
-    return null;
   }
 
   // Journal du cycle, du plus ancien au plus récent.

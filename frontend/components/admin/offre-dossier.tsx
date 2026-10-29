@@ -81,7 +81,9 @@ export function OffreDossier({
     const accepte = reponse === 'accepte';
     const ok = await confirmer({
       titre: accepte ? 'Enregistrer l’acceptation du client ?' : 'Enregistrer le refus du client ?',
-      message: accepte ? 'Réponse reçue par un autre canal.' : 'Le dossier passera en « Perdu ».',
+      message: accepte
+        ? 'Réponse reçue par un autre canal. Le dossier passera en Onboard (projet et factures brouillon créés) ; le contrat se régularise ensuite.'
+        : 'Le dossier passera en « Perdu ».',
       confirmer: accepte ? 'Enregistrer l’acceptation' : 'Enregistrer le refus',
       danger: !accepte,
     });
@@ -90,15 +92,14 @@ export function OffreDossier({
   }
 
   // Offre acceptée (maquette CTO, oct. 2026) : plus rien à faire ici — l'offre
-  // se consulte et ses tranches se facturent dans Finances. Avant l'Onboard,
-  // reste le contrat.
+  // se consulte et ses tranches se facturent dans Finances ; le contrat se
+  // régularise dans son bloc.
   if (offre && (offre.statutEffectif === 'accepte' || offre.statutEffectif === 'transforme')) {
     return (
       <section className="offre-dossier offre-dossier--acceptee" aria-label="Offre">
         <Link className="btn-primary offre-dossier-cta" href={`/admin/${slug}/facturation?devis=${offre.id}`}>
           Voir l’offre et facturer les tranches
         </Link>
-        {projet.statut !== 'onboard' && <p className="field-aide offre-dossier-suite">Étape suivante : contrat.</p>}
       </section>
     );
   }

@@ -5,11 +5,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
+import { OnboardingService } from './onboarding.service';
 import { REGLES_ACTIONS } from './cycle';
 
 // Cycle commercial (étape E) — CrmService.agir, contre un Prisma simulé.
 // On verrouille : qui peut faire quoi, depuis quel statut, le texte
-// obligatoire, la garde de concurrence et la transaction pivot (onboard).
+// obligatoire, la garde de concurrence et la transaction pivot (onboard, via
+// le vrai OnboardingService).
 
 const DOSSIER = {
   id: 'D1',
@@ -60,15 +62,20 @@ function monter(
     },
     dossierCrmTransition: { create: jest.fn().mockResolvedValue({}) },
     devis: {
-      findFirst: jest.fn().mockResolvedValue(
-        opts.lignesBrouillon === null
-          ? null
-          : {
-              lignes: (opts.lignesBrouillon ?? [[1, 100_000]]).map(([q, p]) => ({
-                quantite: { toNumber: () => q },
-                prixUnitaire: { toNumber: () => p },
-              })),
-            },
+      // Brouillon d'offre (soumettre) ou offre acceptée (Onboard).
+      findFirst: jest.fn(({ where }: { where: { statut: string } }) =>
+        Promise.resolve(
+          where.statut === 'accepte'
+            ? ((opts.offres ?? []).find((o) => o.statut === 'accepte') ?? null)
+            : opts.lignesBrouillon === null
+              ? null
+              : {
+                  lignes: (opts.lignesBrouillon ?? [[1, 100_000]]).map(([q, p]) => ({
+                    quantite: { toNumber: () => q },
+                    prixUnitaire: { toNumber: () => p },
+                  })),
+                },
+        ),
       ),
       findMany: jest.fn().mockResolvedValue(opts.offres ?? []),
       update: jest.fn().mockResolvedValue({}),
@@ -109,6 +116,7 @@ function monter(
         verifierOffreDossier: jest.fn().mockResolvedValue(undefined),
         offreAuDelaDuSeuil: jest.fn().mockResolvedValue(null),
       } as unknown as SeuilCeoService,
+      new OnboardingService(facturation as unknown as FacturationService),
     ),
   };
 }
@@ -236,26 +244,26 @@ describe('CrmService.agir', () => {
     expect(prisma.dossierCrmTransition.create).not.toHaveBeenCalled();
   });
 
-  it('onboarder à la main → 409 : l’Onboard se fait à la signature du contrat (étape G)', async () => {
+  it('onboarder à la main → 409 : l’Onboard se fait à l’acceptation de l’offre', async () => {
     const { svc, prisma } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'accepte', dateValidite: '2026-01-10' }],
     });
-    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow('signature du contrat');
+    await expect(svc.agir('S1', COO as never, 'D1', 'onboarder', undefined)).rejects.toThrow('acceptation de l’offre');
     expect(prisma.projet.create).not.toHaveBeenCalled();
   });
 
-  it('signature du contrat : bascule + contrat signé + projet + factures, une transaction', async () => {
+  it('offre acceptée en attente débloquée : bascule + projet + factures, une transaction', async () => {
     const { svc, prisma, facturation, notifications } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'accepte', dateValidite: '2026-01-10' }],
     });
-    const marquerSigne = jest.fn().mockResolvedValue(undefined);
-    const r = await svc.onboarderParContrat('S1', 'D1', null, marquerSigne);
-    expect(marquerSigne).toHaveBeenCalledWith(prisma);
+    const tracer = jest.fn().mockResolvedValue(undefined);
+    const r = await svc.onboarderOffreAcceptee('S1', 'D1', 'ADM', 'motif', tracer);
+    expect(tracer).toHaveBeenCalledWith(prisma);
     expect(prisma.dossierCrmTransition.create.mock.calls[0][0].data).toMatchObject({
       de: 'offre_envoyee',
       vers: 'onboard',
-      parId: null,
-      commentaire: 'Contrat signé.',
+      parId: 'ADM',
+      commentaire: 'motif',
     });
     expect(prisma.projet.create).toHaveBeenCalledTimes(1);
     // Factures directes du lead (sans offre) rattachées au projet ouvert.
@@ -279,8 +287,8 @@ describe('CrmService.agir', () => {
     expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
       societeId: 'S1',
       dossierId: 'D1',
-      evenement: 'contrat_signe',
-      parId: null,
+      evenement: 'offre_acceptee',
+      parId: 'ADM',
       projetId: 'P1',
       facturesPreparees: 4,
     });
@@ -314,11 +322,11 @@ describe('CrmService.agir — offre', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('signature de contrat sans offre acceptée → 409, aucun projet', async () => {
+  it('Onboard sans offre acceptée → 409, aucun projet', async () => {
     const { svc, prisma } = monter('offre_envoyee', {
       offres: [{ id: 'O1', statut: 'envoye', dateValidite: demain }],
     });
-    await expect(svc.onboarderParContrat('S1', 'D1', null, jest.fn())).rejects.toThrow('offre acceptée');
+    await expect(svc.onboarderOffreAcceptee('S1', 'D1', null, 'x', jest.fn())).rejects.toThrow('offre acceptée');
     expect(prisma.projet.create).not.toHaveBeenCalled();
   });
 

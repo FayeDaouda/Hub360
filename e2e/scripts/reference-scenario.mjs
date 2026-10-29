@@ -92,7 +92,7 @@ async function main() {
   const offerOf = async (dossierId, statut) =>
     (await cfo('GET', '/devis')).find((d) => d.dossierCrm?.id === dossierId && d.statut === statut);
 
-  // Opened project: offer accepted, paper-signed contract (Onboard), F1 issued.
+  // Opened project: offer accepted (Onboard), paper-signed contract, F1 issued.
   const opened = dossierByCode(OPENED_DOSSIER);
   await cfo('POST', `/devis/${(await offerOf(opened.id, 'envoye')).id}/reponse`, { reponse: 'accepte' });
   await signContract(cfo, opened.id);
@@ -120,7 +120,7 @@ async function main() {
     });
   }
 
-  // Contract sent to the client, left unsigned.
+  // Offer accepted (Onboard), contract sent to the client and left unsigned.
   const contractDossier = dossierByCode(CONTRACT_DOSSIER);
   await cfo('POST', `/dossiers/${contractDossier.id}/actions`, { action: 'valider' });
   await cfo('POST', `/devis/${(await offerOf(contractDossier.id, 'envoye')).id}/reponse`, { reponse: 'accepte' });

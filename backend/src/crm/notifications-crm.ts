@@ -5,9 +5,13 @@
 //   Événement                  Qui est prévenu                Pourquoi
 //   dossier soumis à la DAF    DAF (CFO)                      elle doit valider
 //   DAF renvoie le dossier     propriétaire (Dir. GC)         il doit corriger
-//   offre acceptée             propriétaire + apporteur       contrat à préparer / information
+//   offre acceptée (Onboard)   propriétaire + DAF + apporteur projet lancé, contrat à régulariser /
+//                                                             factures brouillon / information
 //   offre refusée              propriétaire + apporteur       information
-//   contrat signé (Onboard)    propriétaire + DAF             projet lancé / factures brouillon
+//   contrat signé              propriétaire + DAF             régularisation (information)
+//
+// Depuis le 29/10/2026, l'acceptation de l'offre fait passer le dossier en
+// Onboard (projet et factures brouillon) ; le contrat se signe ensuite.
 //
 // Revue COO (22/10/2026) : la personne qui a CRÉÉ le lead (souvent le COO)
 // et l'apporteur interne suivent l'issue de leurs dossiers — offre acceptée
@@ -40,7 +44,7 @@ export type EvenementCrm =
 export type CibleCrm = 'daf' | 'proprietaire' | 'apporteur' | 'createur';
 
 // Actions manuelles du cycle qui notifient (les autres événements viennent de
-// la réponse du client et de la signature du contrat).
+// la réponse du client — Onboard à l'acceptation — et de la signature du contrat).
 export const EVENEMENT_PAR_ACTION: Partial<Record<ActionCrm, EvenementCrm>> = {
   soumettre: 'dossier_soumis',
   renvoyer: 'dossier_renvoye',
@@ -54,7 +58,7 @@ export const CIBLES_EVENEMENT: Record<EvenementCrm, CibleCrm[]> = {
   dossier_soumis: ['daf'],
   dossier_renvoye: ['proprietaire'],
   offre_envoyee: ['proprietaire'],
-  offre_acceptee: ['proprietaire', 'apporteur', 'createur'],
+  offre_acceptee: ['proprietaire', 'daf', 'apporteur', 'createur'],
   offre_refusee: ['proprietaire', 'apporteur', 'createur'],
   contrat_signe: ['proprietaire', 'daf', 'createur'],
   dossier_perdu: ['proprietaire', 'createur', 'apporteur'],
@@ -65,7 +69,7 @@ export type ContexteNotificationCrm = {
   code: string;
   programme: string;
   commentaire?: string | null; // renvoi DAF, motif de perte
-  facturesPreparees?: number; // contrat signé
+  facturesPreparees?: number; // offre acceptée (Onboard)
 };
 
 const LONGUEUR_MAX_COMMENTAIRE = 140;
@@ -86,19 +90,19 @@ export function titreNotificationCrm(evenement: EvenementCrm, cible: CibleCrm, c
         : `${dossier} — renvoyé par la DAF`;
     case 'offre_envoyee':
       return `${dossier} — offre validée et envoyée au client`;
-    case 'offre_acceptee':
-      return cible === 'proprietaire'
-        ? `${dossier} — offre acceptée par le client, contrat à préparer`
-        : `${dossier} — offre acceptée par le client`;
-    case 'offre_refusee':
-      return `${dossier} — offre refusée par le client, dossier perdu`;
-    case 'contrat_signe': {
+    case 'offre_acceptee': {
       const n = ctx.facturesPreparees ?? 0;
       if (cible === 'daf' && n > 0) {
-        return `${dossier} — contrat signé, ${plural(n, 'facture')} brouillon à émettre`;
+        return `${dossier} — offre acceptée, ${plural(n, 'facture')} brouillon à émettre`;
       }
-      return `${dossier} — contrat signé, projet lancé`;
+      return cible === 'proprietaire'
+        ? `${dossier} — offre acceptée par le client, projet lancé (contrat à régulariser)`
+        : `${dossier} — offre acceptée par le client, projet lancé`;
     }
+    case 'offre_refusee':
+      return `${dossier} — offre refusée par le client, dossier perdu`;
+    case 'contrat_signe':
+      return `${dossier} — contrat signé, dossier régularisé`;
     case 'dossier_perdu':
       return ctx.commentaire
         ? `${dossier} — dossier déclaré perdu : « ${extrait(ctx.commentaire)} »`

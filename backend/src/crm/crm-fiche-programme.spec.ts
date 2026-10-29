@@ -1,3 +1,4 @@
+import { OnboardingService } from './onboarding.service';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from '../devis/devis.service';
@@ -20,6 +21,7 @@ function svc(dossier: object = { statut: 'nouveau_projet', archiveLe: null, nbPl
     {} as FacturationService,
     {} as NotificationsService,
     {} as SeuilCeoService,
+    {} as OnboardingService,
   );
   return { s, update };
 }

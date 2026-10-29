@@ -1,3 +1,4 @@
+import { OnboardingService } from './onboarding.service';
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DevisService } from '../devis/devis.service';
@@ -36,6 +37,7 @@ function svc(prisma: ReturnType<typeof prismaMock>) {
     {} as FacturationService,
     {} as NotificationsService,
     {} as SeuilCeoService,
+    {} as OnboardingService,
   ) as unknown as Prive;
 }
 
@@ -112,6 +114,7 @@ describe('CrmService.resoudreProprietaire', () => {
       {} as FacturationService,
       {} as NotificationsService,
       {} as SeuilCeoService,
+      {} as OnboardingService,
     ) as unknown as P;
     return (choisi?: string) => s.resoudreProprietaire(prisma, 'S1', choisi);
   };
@@ -182,6 +185,7 @@ describe('CrmService — fiche apporteur', () => {
       {} as FacturationService,
       {} as NotificationsService,
       {} as SeuilCeoService,
+      {} as OnboardingService,
     );
     return { s, tx };
   }
@@ -237,6 +241,7 @@ describe('CrmService — fiche apporteur', () => {
       {} as FacturationService,
       {} as NotificationsService,
       {} as SeuilCeoService,
+      {} as OnboardingService,
     );
     return { s, prisma };
   }
@@ -287,6 +292,7 @@ describe('CrmService.peutReassigner', () => {
       {} as FacturationService,
       {} as NotificationsService,
       {} as SeuilCeoService,
+      {} as OnboardingService,
     );
   const acteur = (userId: string, role: string) => ({ userId, role, permissions: {} });
 
@@ -330,6 +336,7 @@ describe('CrmService.desarchiver', () => {
       {} as FacturationService,
       {} as NotificationsService,
       {} as SeuilCeoService,
+      {} as OnboardingService,
     );
     return { s, tx };
   };
@@ -381,6 +388,7 @@ describe('CrmService.archiver', () => {
       {} as FacturationService,
       {} as NotificationsService,
       {} as SeuilCeoService,
+      {} as OnboardingService,
     );
     return { s, prisma };
   };

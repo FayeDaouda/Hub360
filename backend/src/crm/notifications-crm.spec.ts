@@ -17,7 +17,7 @@ describe('CIBLES_EVENEMENT — tableau validé', () => {
       dossier_soumis: ['daf'],
       dossier_renvoye: ['proprietaire'],
       offre_envoyee: ['proprietaire'],
-      offre_acceptee: ['proprietaire', 'apporteur', 'createur'],
+      offre_acceptee: ['proprietaire', 'daf', 'apporteur', 'createur'],
       offre_refusee: ['proprietaire', 'apporteur', 'createur'],
       contrat_signe: ['proprietaire', 'daf', 'createur'],
       dossier_perdu: ['proprietaire', 'createur', 'apporteur'],
@@ -78,14 +78,14 @@ describe('planNotificationsCrm', () => {
     expect(plan).toEqual([
       {
         destinataireId: 'DG',
-        titre: 'TCP_ALM.26 · Villa Almadies — offre acceptée par le client, contrat à préparer',
+        titre: 'TCP_ALM.26 · Villa Almadies — offre acceptée par le client, projet lancé (contrat à régulariser)',
       },
     ]);
   });
 
-  it('apporteur seul (simple information) : pas de « contrat à préparer »', () => {
+  it('apporteur seul (simple information) : pas de « contrat à régulariser »', () => {
     const [ap] = planNotificationsCrm('offre_acceptee', CTX, { ...aucun, apporteur: ['AP'] }, null);
-    expect(ap.titre).toBe('TCP_ALM.26 · Villa Almadies — offre acceptée par le client');
+    expect(ap.titre).toBe('TCP_ALM.26 · Villa Almadies — offre acceptée par le client, projet lancé');
   });
 
   it('personne à prévenir (apporteur externe, aucun titulaire) → plan vide', () => {
@@ -103,18 +103,24 @@ describe('titreNotificationCrm', () => {
     expect(long.length).toBeLessThan(220);
   });
 
-  it('contrat signé : la DAF voit les factures brouillon, le propriétaire le projet lancé', () => {
+  it('offre acceptée (Onboard) : la DAF voit les factures brouillon, le propriétaire le projet lancé', () => {
     const ctx = { ...CTX, facturesPreparees: 6 };
-    expect(titreNotificationCrm('contrat_signe', 'daf', ctx)).toBe(
-      'TCP_ALM.26 · Villa Almadies — contrat signé, 6 factures brouillon à émettre',
+    expect(titreNotificationCrm('offre_acceptee', 'daf', ctx)).toBe(
+      'TCP_ALM.26 · Villa Almadies — offre acceptée, 6 factures brouillon à émettre',
     );
-    expect(titreNotificationCrm('contrat_signe', 'proprietaire', ctx)).toBe(
-      'TCP_ALM.26 · Villa Almadies — contrat signé, projet lancé',
+    expect(titreNotificationCrm('offre_acceptee', 'proprietaire', ctx)).toBe(
+      'TCP_ALM.26 · Villa Almadies — offre acceptée par le client, projet lancé (contrat à régulariser)',
     );
-    expect(titreNotificationCrm('contrat_signe', 'daf', { ...CTX, facturesPreparees: 1 })).toContain(
+    expect(titreNotificationCrm('offre_acceptee', 'daf', { ...CTX, facturesPreparees: 1 })).toContain(
       '1 facture brouillon à émettre',
     );
-    expect(titreNotificationCrm('contrat_signe', 'daf', { ...CTX, facturesPreparees: 0 })).toContain('projet lancé');
+    expect(titreNotificationCrm('offre_acceptee', 'daf', { ...CTX, facturesPreparees: 0 })).toContain('projet lancé');
+  });
+
+  it('contrat signé : simple régularisation', () => {
+    expect(titreNotificationCrm('contrat_signe', 'daf', CTX)).toBe(
+      'TCP_ALM.26 · Villa Almadies — contrat signé, dossier régularisé',
+    );
   });
 });
 

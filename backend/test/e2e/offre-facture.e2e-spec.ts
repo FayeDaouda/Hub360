@@ -18,9 +18,9 @@ type Facture = {
 };
 
 // Parcours 2 — de l'offre à la facture payée : validation CFO, réponse du
-// client, contrat signé (Onboard + projet + factures d'échéancier), émission,
-// paiement, et la trace au journal d'audit.
-describe('Offre → contrat → facture payée', () => {
+// client (Onboard + projet + factures d'échéancier), contrat signé ensuite
+// pour régulariser, émission, paiement, et la trace au journal d'audit.
+describe('Offre → Onboard → contrat → facture payée', () => {
   let app: INestApplication;
   let cfo: ReturnType<typeof api>;
   let dossier: Dossier;
@@ -45,10 +45,14 @@ describe('Offre → contrat → facture payée', () => {
     await cfo.post(`/devis/${offre!.id}/reponse`, { reponse: 'accepte' }).expect(201);
   });
 
-  it('le contrat signé fait passer le dossier en Onboard et ouvre le projet', async () => {
+  it('l’offre acceptée fait passer le dossier en Onboard ; le contrat se signe ensuite', async () => {
+    const avant: Dossier[] = (await cfo.get('/dossiers').expect(200)).body;
+    expect(avant.find((d) => d.id === dossier.id)!.statut).toBe('onboard');
     await signerContrat(cfo, dossier.id);
-    const dossiers: Dossier[] = (await cfo.get('/dossiers').expect(200)).body;
-    expect(dossiers.find((d) => d.id === dossier.id)!.statut).toBe('onboard');
+    const { contrat } = (await cfo.get(`/dossiers/${dossier.id}/contrat`).expect(200)).body as {
+      contrat: { statut: string };
+    };
+    expect(contrat.statut).toBe('signe');
   });
 
   it('la facture d’échéancier est émise, numérotée, puis payée', async () => {

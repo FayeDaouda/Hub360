@@ -86,19 +86,18 @@ export class InterventionsService {
     };
   }
 
-  // Signature client sautée : l'Onboard du contrat signé (projet créé, offre
-  // rattachée, factures préparées), sans contrat.
+  // Offre acceptée restée en attente (dossier antérieur au 29/10/2026, quand
+  // l'Onboard attendait la signature du contrat) : l'Onboard de l'acceptation
+  // (projet créé, offre rattachée, factures préparées) ; le contrat se
+  // régularise ensuite.
   async onboardWithoutSignature(companyId: string, dossierId: string, actorId: string, motif: string) {
     const dossier = await this.dossier(companyId, dossierId);
-    await this.crm.onboarderParContrat(companyId, dossierId, actorId, async (tx) => {
-      await tx.dossierCrmTransition.updateMany({
-        where: { dossierId, vers: 'onboard', commentaire: 'Contrat signé.' },
-        data: { commentaire: `Signature client sautée par l’Administrateur HUB : ${motif}` },
-      });
+    const comment = `Onboard débloqué par l’Administrateur HUB : ${motif}`;
+    await this.crm.onboarderOffreAcceptee(companyId, dossierId, actorId, comment, async (tx) => {
       await this.record(tx, companyId, actorId, {
         type: 'onboard_sans_signature',
         cible: dossier.code,
-        detail: 'Onboard sans contrat signé',
+        detail: 'Onboard d’une offre acceptée en attente',
         motif,
       });
     });
