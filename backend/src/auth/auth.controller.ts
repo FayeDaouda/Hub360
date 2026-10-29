@@ -87,8 +87,8 @@ export class AuthController {
   // activation là où elle n'est pas exigée (développement, démonstration).
   @Get('double-facteur')
   @UseGuards(JwtAuthGuard)
-  etatDoubleFacteur(@Req() req: { user: { userId: string } }) {
-    return this.authService.etatDoubleFacteur(req.user.userId);
+  etatDoubleFacteur(@Req() req: { user: { userId: string; adminHub: boolean } }) {
+    return this.authService.etatDoubleFacteur(req.user.userId, req.user.adminHub);
   }
 
   @Post('double-facteur/compte/preparation')
@@ -114,10 +114,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   changerMotDePasse(
-    @Req() req: { user: { userId: string; societeSlug: string; debutSession: number } },
+    @Req() req: { user: { userId: string; societeSlug: string; debutSession: number; role: string } },
     @Body() dto: ChangerMotDePasseDto,
   ) {
     const u = req.user;
-    return this.authService.changerMotDePasse(u.userId, u.societeSlug, dto.actuel, dto.nouveau, u.debutSession);
+    return this.authService.changerMotDePasse(u.userId, u.societeSlug, dto.actuel, dto.nouveau, u.debutSession, u.role);
   }
 }

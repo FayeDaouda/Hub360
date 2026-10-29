@@ -18,8 +18,9 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import type { Session } from '@/lib/types';
+import type { NiveauPermission, Session } from '@/lib/types';
 import { apiAuth } from '@/lib/client-api';
+import { remplacerSession } from '@/lib/auth';
 import { libelleRole } from '@/lib/groupe';
 import { usePreferenceTheme } from '@/lib/theme';
 import { OPTIONS_THEME } from '@/components/selecteur-theme';
@@ -29,7 +30,7 @@ import { PersonAvatar } from '@/components/ui/avatar';
 import { ProfilModal } from '@/components/admin/profil-modal';
 import { deconnecterPartout, getProfil, nomAffiche, type Profil } from '@/lib/profil';
 import { useConfirmer } from '@/components/confirmation';
-import { formatDayMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
+import { formatDayMonth, formatTime, ROLES_ENDOSSABLES, todayIso, toIsoDay } from '@hub/domain';
 
 // Menu du compte (avatar, en haut à droite) : qui je suis (nom, e-mail, rôle,
 // société), l'état de ma double authentification, mes accès personnels
@@ -39,6 +40,7 @@ import { formatDayMonth, formatTime, todayIso, toIsoDay } from '@hub/domain';
 // referme et rend le focus à l'avatar.
 
 type EtatDoubleFacteur = { actifLe: string | null; exige: boolean; suspendue: boolean };
+type RoleEndosse = { access_token: string; role: string; permissions: Record<string, NiveauPermission> };
 
 const LIBELLE_ABSENCE: Record<NonNullable<Profil['absence']>['type'], string> = {
   conge_paye: 'congés payés',
@@ -148,6 +150,25 @@ export function MenuCompte({
   }
 
   const fermer = () => setOuvert(false);
+
+  // Administrateur HUB : nouveau jeton pour le rôle choisi, puis retour à
+  // l'accueil de la société (la page en cours peut ne pas exister pour ce rôle).
+  async function endosser(role: string) {
+    if (role === session.role) return;
+    fermer();
+    try {
+      const r = await apiAuth<RoleEndosse>('/auth/moi/role', { method: 'POST', body: { role } });
+      remplacerSession({ ...session, ...r });
+      window.location.assign(base);
+    } catch (e) {
+      await confirmer({
+        titre: 'Rôle non changé',
+        message: e instanceof Error ? e.message : 'Réessayez.',
+        confirmer: 'Fermer',
+      });
+    }
+  }
+
   const securise = !!doubleFacteur?.actifLe && !doubleFacteur.suspendue;
 
   return (
@@ -173,7 +194,10 @@ export function MenuCompte({
               <strong>{affiche}</strong>
               <span className="mc-email">{u.email}</span>
               <span className="mc-role">
-                {libelleRole(session.role)} · {session.societe.nom}
+                {session.adminHub
+                  ? `Administrateur HUB · en tant que ${libelleRole(session.role)}`
+                  : libelleRole(session.role)}{' '}
+                · {session.societe.nom}
               </span>
             </span>
           </div>
@@ -252,6 +276,30 @@ export function MenuCompte({
               <KeyRound size={16} aria-hidden /> Changer le mot de passe
             </button>
           </nav>
+
+          {/* Administrateur HUB : carte blanche, il endosse le rôle de son choix. */}
+          {session.adminHub && (
+            <div className="mc-groupe">
+              <span className="mc-libelle" id={`${id}-role`}>
+                Rôle endossé
+              </span>
+              <div className="mc-roles" role="radiogroup" aria-labelledby={`${id}-role`}>
+                {ROLES_ENDOSSABLES.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    role="radio"
+                    aria-checked={session.role === role}
+                    className={session.role === role ? 'is-actif' : undefined}
+                    data-item
+                    onClick={() => void endosser(role)}
+                  >
+                    {libelleRole(role)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mc-groupe">
             <span className="mc-libelle" id={`${id}-theme`}>

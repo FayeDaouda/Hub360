@@ -13,6 +13,8 @@ export type UtilisateurConnecte = {
   societeSlug: string | null;
   role: string;
   permissions: Record<string, string>;
+  // Administrateur HUB (carte blanche) : `role` est le rôle qu'il endosse.
+  adminHub: boolean;
   // Session (src/auth/session.ts) : heure de la connexion et émission du
   // jeton présenté, en secondes.
   debutSession: number;
@@ -42,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     societeSlug?: string | null;
     role: string;
     permissions?: Record<string, string>;
+    adminHub?: boolean;
     iat?: number;
     debut?: number;
   }): Promise<UtilisateurConnecte> {
@@ -95,6 +98,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // socle sans RolePermission (cf. auth.service.ts) — PermissionGuard
       // traite l'absence d'entrée pour un module comme 'aucun' (fail closed).
       permissions: payload.permissions ?? {},
+      adminHub: payload.adminHub === true,
       debutSession,
       emissionJeton: payload.iat ?? 0,
     };

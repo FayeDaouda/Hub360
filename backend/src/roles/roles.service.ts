@@ -8,7 +8,7 @@ import {
 import { NiveauPermission } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
+import { ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN, ROLE_HUB_ADMIN } from '@hub/domain';
 
 const LIBELLE_NIVEAU: Record<NiveauPermission, string> = {
   aucun: 'aucun',
@@ -22,7 +22,8 @@ const libelleRole = (nom: string) => nom.replace(/\s*\(transverse\)$/, '');
 // tout) — jamais modifiables ici, même par
 // le CIO : une case changée sur societe_admin couperait l'accès de toutes
 // les administrations de société.
-const ROLES_SOCLE = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]);
+// L'Administrateur HUB non plus : ses droits ne viennent pas de la matrice.
+const ROLES_SOCLE = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN]);
 
 type RoleLu = { nom: string; societeId: string | null };
 

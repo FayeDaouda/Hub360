@@ -39,7 +39,11 @@ export type Session = {
     nom: string;
     slug: string;
   };
+  // Rôle endossé quand `adminHub` est vrai.
   role: string;
+  // Administrateur HUB (carte blanche, 29/10/2026) : absent pour les autres
+  // comptes. Il change de rôle depuis le menu du compte.
+  adminHub?: boolean;
   // Carte module → niveau (matrice RolePermission), identique au JWT. Absente
   // d'une session ouverte avant son ajout : traitée comme « aucun » partout
   // (cf. lib/auth.ts::aLaPermission) — une reconnexion la récupère.

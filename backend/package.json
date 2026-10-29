@@ -20,6 +20,7 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "demarrage": "ts-node prisma/demarrage.ts",
     "first-hr-dossier": "ts-node prisma/first-hr-dossier.ts",
+    "hub-admin": "ts-node prisma/hub-admin.ts",
     "codes:regenerer": "ts-node prisma/scripts/regenerer-codes-dossiers.ts",
     "catalogue:importer": "ts-node prisma/scripts/importer-catalogue.ts",
     "prisma:studio": "prisma studio",

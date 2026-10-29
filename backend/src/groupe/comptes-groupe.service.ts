@@ -3,7 +3,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ComptesService } from '../auth/comptes.service';
 import { estVerrouille } from '../auth/verrouillage';
-import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN } from '@hub/domain';
+import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN, ROLE_HUB_ADMIN } from '@hub/domain';
 
 // Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
 // compte technique holding_admin, cf. AdministrationHubGuard) attribue à
@@ -20,7 +20,8 @@ import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN } fr
 // - Pas de salaire ici : sa seule source est le dossier RH (revue RH
 //   20/10/2026, D19) — la rémunération saisie par le CIO a été retirée.
 
-const ROLES_ADMINISTRATION = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]);
+// L'Administrateur HUB (29/10/2026) : ni attribué, ni modifié, ni désactivé ici.
+const ROLES_ADMINISTRATION = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN]);
 
 type StatutCompte = 'actif' | 'en_attente' | 'desactive';
 

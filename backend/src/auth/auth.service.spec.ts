@@ -1,7 +1,14 @@
-import { BadRequestException, HttpException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthService, dateEmission, doubleFacteurExige, doubleFacteurSuspendue } from './auth.service';
+import {
+  AuthService,
+  dateEmission,
+  doubleFacteurExige,
+  doubleFacteurExigePour,
+  doubleFacteurSuspendue,
+  doubleFacteurSuspenduePour,
+} from './auth.service';
 import { base32, chiffrerSecret, codeAuPas, hacherCodeSecours, pasCourant } from './totp';
 
 jest.mock('./mot-de-passe', () => ({
@@ -38,6 +45,7 @@ function svc(affectations: unknown[]) {
     utilisateur: { findUnique: jest.fn().mockResolvedValue(UTILISATEUR), update },
     societe: { findUnique: jest.fn().mockResolvedValue(SOCIETE) },
     utilisateurSocieteRole: { findMany },
+    module: { findMany: jest.fn().mockResolvedValue([{ cle: 'crm' }, { cle: 'finances_marges' }]) },
     evenementCompte: { create: jest.fn((a: unknown) => a) },
     $transaction: jest.fn((ops: unknown[]) => Promise.all(ops)),
   } as unknown as PrismaService;
@@ -133,6 +141,7 @@ describe('Durée des sessions (lot B)', () => {
     societeSlug: 'grey-concrete',
     role: 'Salarié',
     permissions: { crm: 'aucun' },
+    adminHub: false,
   };
   const maintenant = () => Math.floor(Date.now() / 1000);
 
@@ -286,6 +295,73 @@ describe('AuthService · compte de secours', () => {
     const ordinaire = svc([affectation('S1', 'CFO')]);
     await ordinaire.svc.login(DTO);
     expect(ordinaire.notifications.envoyer).not.toHaveBeenCalled();
+  });
+});
+
+describe('Administrateur HUB (carte blanche)', () => {
+  const ADMIN = 'Administrateur HUB (transverse)';
+  const TOUT = { crm: 'validation', finances_marges: 'validation' };
+
+  it('connexion : endosse le CEO, tous les modules en validation, rôle tracé', async () => {
+    const { svc: s, sign, evenement } = svc([affectation(null, ADMIN)]);
+    const res = (await s.login(DTO)) as Session & { adminHub: boolean };
+    expect(res).toMatchObject({ role: 'CEO (transverse)', permissions: TOUT, adminHub: true });
+    const [contenu, options] = sign.mock.calls[0];
+    expect(contenu).toMatchObject({ role: 'CEO (transverse)', adminHub: true });
+    expect(options).toEqual({ expiresIn: 3600 });
+    expect(evenement).toHaveBeenCalledWith({
+      data: expect.objectContaining({ type: 'role_endosse', detail: expect.stringContaining('en tant que CEO') }),
+    });
+  });
+
+  it('compte ordinaire : pas de drapeau, droits de la matrice', async () => {
+    const { svc: s, sign } = svc([affectation('S1', 'CFO', [['crm', 'lecture']])]);
+    const res = (await s.login(DTO)) as Session & { adminHub: boolean };
+    expect(res).toMatchObject({ role: 'CFO', permissions: { crm: 'lecture' }, adminHub: false });
+    expect(sign.mock.calls[0][0].adminHub).toBeUndefined();
+  });
+
+  const t = Math.floor(Date.now() / 1000);
+  const CONNECTE = {
+    userId: 'U1',
+    email: 'a@b.c',
+    societeId: 'S1',
+    societeSlug: 'grey-concrete',
+    role: 'CEO (transverse)',
+    permissions: TOUT,
+    adminHub: true,
+    debutSession: t - 600,
+    emissionJeton: t - 60,
+  };
+
+  it('endosser un rôle : même début de session, droits complets, tracé', async () => {
+    const { svc: s, sign, evenement } = svc([affectation(null, ADMIN)]);
+    const res = await s.endosserRole(CONNECTE, 'CFO');
+    expect(res).toEqual({ access_token: 'jeton', role: 'CFO', permissions: TOUT });
+    expect(sign.mock.calls[0][0]).toMatchObject({ role: 'CFO', adminHub: true, debut: t - 600 });
+    expect(evenement).toHaveBeenCalledWith({
+      data: expect.objectContaining({ type: 'role_endosse', detail: 'Grey Concrete · en tant que CFO' }),
+    });
+  });
+
+  it('refuse un compte qui n’est pas (ou plus) Administrateur HUB, et un rôle inconnu', async () => {
+    const ordinaire = svc([affectation('S1', 'CFO')]);
+    await expect(ordinaire.svc.endosserRole({ ...CONNECTE, adminHub: false }, 'CFO')).rejects.toThrow(
+      ForbiddenException,
+    );
+    const retire = svc([affectation('S1', 'CFO')]);
+    await expect(retire.svc.endosserRole(CONNECTE, 'CFO')).rejects.toThrow(ForbiddenException);
+    const admin = svc([affectation(null, ADMIN)]);
+    await expect(admin.svc.endosserRole(CONNECTE, 'societe_admin')).rejects.toThrow(BadRequestException);
+  });
+
+  it('double authentification : exigée en production même suspendue', () => {
+    const prod = { NODE_ENV: 'production', HUB_DOUBLE_FACTEUR: 'desactive' } as NodeJS.ProcessEnv;
+    expect(doubleFacteurExigePour(ADMIN, prod)).toBe(true);
+    expect(doubleFacteurSuspenduePour(ADMIN, prod)).toBe(false);
+    expect(doubleFacteurExigePour('CFO', prod)).toBe(false);
+    expect(doubleFacteurSuspenduePour('CFO', prod)).toBe(true);
+    expect(doubleFacteurExigePour(ADMIN, { NODE_ENV: 'development' } as NodeJS.ProcessEnv)).toBe(false);
   });
 });
 

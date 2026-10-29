@@ -1,4 +1,5 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ROLES_ENDOSSABLES } from '@hub/domain';
 
 export class NomAfficheDto {
   // null ou vide : revenir au nom officiel.
@@ -13,4 +14,16 @@ export class PhotoDto {
 // Réponse de POST /auth/moi/prolongation : le jeton qui remplace le précédent.
 export class SessionProlongeeDto {
   access_token: string;
+}
+
+// POST /auth/moi/role : rôle endossé par l'Administrateur HUB.
+export class EndosserRoleDto {
+  @IsIn(ROLES_ENDOSSABLES) role: string;
+}
+
+// Réponse : le jeton du rôle endossé, qui remplace le précédent.
+export class RoleEndosseDto {
+  access_token: string;
+  role: string;
+  permissions: Record<string, string>;
 }

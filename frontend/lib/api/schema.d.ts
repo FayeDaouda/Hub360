@@ -244,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/moi/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MonCompteController_endosserRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/photos/{cle}": {
         parameters: {
             query?: never;
@@ -3697,6 +3713,17 @@ export interface components {
         SessionProlongeeDto: {
             access_token: string;
         };
+        EndosserRoleDto: {
+            /** @enum {string} */
+            role: "CEO (transverse)" | "CFO" | "CIO (transverse)" | "COO" | "CTO (transverse)" | "Dir. GC" | "RH" | "Salarié";
+        };
+        RoleEndosseDto: {
+            access_token: string;
+            role: string;
+            permissions: {
+                [key: string]: string;
+            };
+        };
         LectureDto: {
             types?: ("absence_a_decider" | "absence_decidee" | "arrivant_a_affecter" | "attente_ceo" | "attestation_delivree" | "avenant_ts" | "avoir_a_valider" | "avoir_decide" | "avoir_emis" | "bulletin_depose" | "checklist_assignee" | "cloture_a_faire" | "commission_a_payer" | "commission_payee" | "connexion_secours" | "contrat_signe" | "coordonnees_apporteur_modifiees" | "coordonnees_paiement_modifiees" | "decision_arbitree" | "decision_assignee" | "decision_en_retard" | "decision_proposee" | "delegation_ceo" | "demande_droit_a_valider" | "demande_droit_decidee" | "dossier_perdu" | "dossier_renvoye" | "dossier_soumis" | "droits_modifies" | "ecart_temps_signale" | "ecart_temps_traite" | "facture_a_valider" | "facture_emise" | "facture_payee" | "mention_projet" | "offre_acceptee" | "offre_envoyee" | "offre_expiree" | "offre_refusee" | "phase_changee" | "projet_assigne" | "prolongation_decidee" | "prolongation_demandee" | "rappel_decision" | "rappel_demande" | "rappel_facture" | "rappel_offre" | "rappel_tache" | "reglage_gouvernance_modifie" | "remboursement_a_traiter" | "remboursement_traite" | "reporting_a_deposer" | "reporting_depose" | "reporting_en_retard" | "reporting_question" | "reporting_reponse" | "salaire_a_valider" | "salaire_decide" | "signalement_recu" | "suppleance_designee" | "synthese_mensuelle" | "tache_assignee" | "tache_remise" | "tache_renvoyee" | "tache_validee" | "ts_a_valider" | "ts_decide" | "visa_a_apposer")[];
             ids?: string[];
@@ -5514,6 +5541,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionProlongeeDto"];
+                };
+            };
+        };
+    };
+    MonCompteController_endosserRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndosserRoleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleEndosseDto"];
                 };
             };
         };
