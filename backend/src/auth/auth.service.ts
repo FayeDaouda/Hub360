@@ -2,13 +2,22 @@ import { NotificationsService } from '../notifications/notifications.service';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { formatTime, ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
+import {
+  formatTime,
+  ROLE_CEO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_HOLDING_ADMIN,
+  ROLE_HUB_ADMIN,
+  ROLES_ENDOSSABLES,
+} from '@hub/domain';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { hacherMotDePasse, verifierMotDePasse } from './mot-de-passe';
@@ -50,6 +59,19 @@ export function doubleFacteurSuspendue(env: NodeJS.ProcessEnv = process.env): bo
 // notifiée au CEO et au CIO.
 export const ROLES_SECOURS: ReadonlySet<string> = new Set([ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]);
 
+// Administrateur HUB (décision du 29/10/2026) : carte blanche. Le compte le
+// plus puissant du HUB garde la double authentification en production, même
+// quand elle est suspendue pour les autres (pilote).
+export function doubleFacteurExigePour(role: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  return doubleFacteurExige(env) || (role === ROLE_HUB_ADMIN && env.NODE_ENV === 'production');
+}
+export function doubleFacteurSuspenduePour(role: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  return doubleFacteurSuspendue(env) && role !== ROLE_HUB_ADMIN;
+}
+
+const estEndossable = (role: string | undefined): role is string =>
+  !!role && (ROLES_ENDOSSABLES as readonly string[]).includes(role);
+
 // Jeton d'étape entre le mot de passe et le code : signé avec une autre clé
 // que les sessions (jamais accepté comme session), valable 10 minutes.
 const secretEtape = () => `${process.env.JWT_SECRET || 'change-moi-en-production'}:double-facteur`;
@@ -73,6 +95,8 @@ type ContenuSession = {
   societeSlug: string | null;
   role: string;
   permissions: Record<string, string>;
+  // Administrateur HUB : `role` est alors le rôle endossé.
+  adminHub?: true;
 };
 
 @Injectable()
@@ -109,10 +133,11 @@ export class AuthService {
     }
 
     // Refuse un compte sans accès à la société demandée.
-    await this.acces(utilisateur.id, dto.societeSlug);
-    if (utilisateur.totpActifLe && !doubleFacteurSuspendue())
+    const { acces } = await this.acces(utilisateur.id, dto.societeSlug);
+    const role = acces.role.nom;
+    if (utilisateur.totpActifLe && !doubleFacteurSuspenduePour(role))
       return this.etape('code', utilisateur.id, dto.societeSlug);
-    if (doubleFacteurExige()) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
+    if (doubleFacteurExigePour(role)) return this.etape('enrolement', utilisateur.id, dto.societeSlug);
     return this.ouvrirSession(utilisateur, dto.societeSlug);
   }
 
@@ -231,12 +256,13 @@ export class AuthService {
   // Depuis le HUB, par la personne connectée, là où elle n'est pas exigée
   // (développement, démonstration) — même parcours, la session en cours reste
   // valable.
-  async etatDoubleFacteur(utilisateurId: string) {
+  async etatDoubleFacteur(utilisateurId: string, adminHub = false) {
     const u = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId }, select: { totpActifLe: true } });
+    const role = adminHub ? ROLE_HUB_ADMIN : '';
     return {
       actifLe: u?.totpActifLe?.toISOString() ?? null,
-      exige: doubleFacteurExige(),
-      suspendue: doubleFacteurSuspendue(),
+      exige: doubleFacteurExigePour(role),
+      suspendue: doubleFacteurSuspenduePour(role),
     };
   }
 
@@ -298,6 +324,7 @@ export class AuthService {
     actuel: string,
     nouveau: string,
     debutSession: number,
+    roleEndosse?: string,
   ) {
     const utilisateur = await this.prisma.utilisateur.findUnique({ where: { id: utilisateurId } });
     if (!utilisateur?.motDePasseHash || !(await verifierMotDePasse(actuel, utilisateur.motDePasseHash))) {
@@ -317,7 +344,12 @@ export class AuthService {
       }),
     ]);
     this.avertir(utilisateur, 'mot_de_passe_modifie');
-    return this.ouvrirSession({ ...utilisateur, sessionsValidesDepuis: maintenant }, societeSlug, debutSession);
+    return this.ouvrirSession(
+      { ...utilisateur, sessionsValidesDepuis: maintenant },
+      societeSlug,
+      debutSession,
+      roleEndosse,
+    );
   }
 
   // Prolongation par l'activité dans le HUB (lot B) : même rôle, mêmes
@@ -333,12 +365,50 @@ export class AuthService {
       societeSlug: u.societeSlug,
       role: u.role,
       permissions: u.permissions,
+      ...(u.adminHub && { adminHub: true as const }),
     };
     return { access_token: this.signerSession(contenu, iat, u.debutSession) };
   }
 
+  // Administrateur HUB : endosse un autre rôle (menu du compte), mêmes droits
+  // complets, même début de session. Revérifie que le compte détient
+  // toujours ce rôle d'administration dans la société de la session.
+  async endosserRole(u: UtilisateurConnecte, role: string) {
+    if (!u.adminHub || !u.societeSlug) throw new ForbiddenException('Réservé à l’Administrateur HUB.');
+    if (!estEndossable(role)) throw new BadRequestException('Rôle inconnu.');
+    const { societe, acces } = await this.acces(u.userId, u.societeSlug);
+    if (acces.role.nom !== ROLE_HUB_ADMIN) throw new ForbiddenException('Réservé à l’Administrateur HUB.');
+    const permissions = await this.permissionsCompletes();
+    await this.tracerRoleEndosse(u.userId, `${societe.nom} · en tant que ${role}`);
+    const iat = Math.max(Math.floor(Date.now() / 1000), u.emissionJeton);
+    const contenu = {
+      sub: u.userId,
+      email: u.email,
+      societeId: societe.id,
+      societeSlug: societe.slug,
+      role,
+      permissions,
+      adminHub: true as const,
+    };
+    return { access_token: this.signerSession(contenu, iat, u.debutSession), role, permissions };
+  }
+
+  // Carte blanche : chaque module du HUB, y compris ceux ajoutés plus tard,
+  // au niveau le plus haut.
+  private async permissionsCompletes(): Promise<Record<string, string>> {
+    const modules = await this.prisma.module.findMany({ select: { cle: true } });
+    return Object.fromEntries(modules.map((m) => [m.cle, 'validation']));
+  }
+
+  private async tracerRoleEndosse(utilisateurId: string, detail: string) {
+    await this.prisma.evenementCompte.create({
+      data: { utilisateurId, type: 'role_endosse', parId: utilisateurId, detail },
+    });
+  }
+
   private signerSession(contenu: ContenuSession, iat: number, debut: number) {
-    const duree = dureeJeton(contenu.role, debut, iat);
+    // Inactivité de l'Administrateur HUB, quel que soit le rôle endossé.
+    const duree = dureeJeton(contenu.adminHub ? ROLE_HUB_ADMIN : contenu.role, debut, iat);
     if (duree <= 0) throw new UnauthorizedException('Session expirée — reconnecte-toi.');
     return this.jwtService.sign({ ...contenu, debut, iat }, { expiresIn: duree });
   }
@@ -405,21 +475,30 @@ export class AuthService {
   }
 
   // `debut` : heure de la connexion, reprise d'une session en cours ; absente,
-  // la session commence avec ce jeton.
+  // la session commence avec ce jeton. `roleEndosse` : rôle que garde un
+  // Administrateur HUB (CEO à défaut).
   private async ouvrirSession(
     utilisateur: { id: string; email: string; nom: string; prenom: string; sessionsValidesDepuis: Date | null },
     societeSlug: string,
     debut?: number,
+    roleEndosse?: string,
   ) {
     const { societe, acces } = await this.acces(utilisateur.id, societeSlug);
+    const adminHub = acces.role.nom === ROLE_HUB_ADMIN;
 
     // Niveau par module (cle), lu dans la matrice RolePermission. societe_admin
     // y a des lignes explicites (validation partout, cf. seed.ts) ; les autres
     // rôles socles (holding_admin/collaborateur) n'en ont pas → {} (fail closed
     // sur toute route marquée @RequiertPermission).
-    const permissions: Record<string, string> = {};
+    let permissions: Record<string, string> = {};
     for (const p of acces.role.permissions) {
       permissions[p.module.cle] = p.niveau;
+    }
+    const role = adminHub ? (estEndossable(roleEndosse) ? roleEndosse : ROLE_CEO) : acces.role.nom;
+    if (adminHub) {
+      permissions = await this.permissionsCompletes();
+      if (debut === undefined)
+        await this.tracerRoleEndosse(utilisateur.id, `Connexion à ${societe.nom} · en tant que ${role}`);
     }
 
     if (ROLES_SECOURS.has(acces.role.nom)) await this.tracerSecours(utilisateur, societe);
@@ -447,8 +526,9 @@ export class AuthService {
       email: utilisateur.email,
       societeId: societe.id,
       societeSlug: societe.slug,
-      role: acces.role.nom,
+      role,
       permissions,
+      ...(adminHub && { adminHub: true as const }),
     };
     const iat = dateEmission(utilisateur.sessionsValidesDepuis);
 
@@ -467,7 +547,8 @@ export class AuthService {
         nom: societe.nom,
         slug: societe.slug,
       },
-      role: acces.role.nom,
+      role,
+      adminHub,
       // Même carte que dans le JWT — l'interface s'en sert pour afficher ou
       // masquer (le serveur reste seul juge : chaque route revérifie).
       permissions,

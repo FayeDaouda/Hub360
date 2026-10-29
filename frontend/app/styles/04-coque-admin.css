@@ -1375,6 +1375,9 @@ button:focus-visible .repli-icone {
   right: 0;
   z-index: 45;
   width: min(20rem, calc(100vw - 2rem));
+  /* Menu plus long que l'écran (téléphone, Administrateur HUB) : il défile. */
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
   padding: var(--e-8);
   border: 1px solid var(--border);
   border-radius: var(--r-20);
@@ -1483,7 +1486,8 @@ button:focus-visible .repli-icone {
 .mc-item:focus-visible {
   box-shadow: inset 0 0 0 2px var(--focus);
 }
-.mc-theme {
+.mc-theme,
+.mc-roles {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--e-4);
@@ -1492,7 +1496,8 @@ button:focus-visible .repli-icone {
   border-radius: var(--r-10);
   background: var(--surface-2);
 }
-.mc-theme button {
+.mc-theme button,
+.mc-roles button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1505,14 +1510,16 @@ button:focus-visible .repli-icone {
   font: 500 var(--t-13) / 1 var(--font-sans);
   cursor: pointer;
 }
-.mc-theme button.is-actif {
+.mc-theme button.is-actif,
+.mc-roles button.is-actif {
   background: var(--surface);
   color: var(--text);
   box-shadow:
     var(--ombre-1),
     inset 0 0 0 1px var(--border);
 }
-.mc-theme button:focus-visible {
+.mc-theme button:focus-visible,
+.mc-roles button:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }

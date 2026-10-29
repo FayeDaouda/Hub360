@@ -13,6 +13,7 @@ import {
   ROLE_EMPLOYEE,
   ROLE_HOLDING_ADMIN,
   ROLE_HR,
+  ROLE_HUB_ADMIN,
 } from '@hub/domain';
 
 // Socle RÉEL du HUB : rôles, modules, société Grey Concrete (pied des
@@ -32,7 +33,9 @@ export async function installerSocle(prisma: PrismaClient) {
   // `findFirst` + `create` plutôt que `.upsert()` : Prisma ne sait pas
   // exprimer `null` dans la clé composite d'un `@@unique` portant sur un
   // champ nullable (societeId) — le where-unique généré le type `string`.
-  for (const nom of [ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN]) {
+  // Administrateur HUB (29/10/2026) : sans ligne de matrice, ses droits
+  // complets sont posés à la connexion (auth.service.ts).
+  for (const nom of [ROLE_HOLDING_ADMIN, ROLE_COMPANY_ADMIN, ROLE_HUB_ADMIN]) {
     const existant = await prisma.role.findFirst({ where: { societeId: null, nom } });
     if (!existant) {
       await prisma.role.create({ data: { nom } });

@@ -198,6 +198,7 @@ enum EvenementCompteType {
   deconnexion_partout // le titulaire coupe toutes ses sessions (menu du compte)
   compte_verrouille // lot C : trop d'essais de connexion infructueux
   compte_debloque // lot C : par l'administration du HUB, avant la fin du verrouillage
+  role_endosse // Administrateur HUB : rôle endossé à la connexion ou depuis le menu du compte
 }
 
 // -- Notifications collaborateur --

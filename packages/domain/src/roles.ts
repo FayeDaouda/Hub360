@@ -23,6 +23,21 @@ export const ROLE_EMPLOYEE = 'Salarié';
 export const ROLE_COMPANY_ADMIN = 'societe_admin';
 export const ROLE_HOLDING_ADMIN = 'holding_admin';
 
+// Administrateur HUB (décision du 29/10/2026) : carte blanche sur toutes les
+// sociétés. Le compte endosse l'un des rôles ci-dessous (sélecteur du menu du
+// compte) et garde tous les modules au niveau « validation ».
+export const ROLE_HUB_ADMIN = 'Administrateur HUB (transverse)';
+export const ROLES_ENDOSSABLES = [
+  ROLE_CEO,
+  ROLE_CTO,
+  ROLE_CIO,
+  ROLE_CFO,
+  ROLE_COO,
+  ROLE_DIR_GC,
+  ROLE_HR,
+  ROLE_EMPLOYEE,
+] as const;
+
 export type RoleName =
   | typeof ROLE_CEO
   | typeof ROLE_CTO
@@ -33,4 +48,5 @@ export type RoleName =
   | typeof ROLE_HR
   | typeof ROLE_EMPLOYEE
   | typeof ROLE_COMPANY_ADMIN
-  | typeof ROLE_HOLDING_ADMIN;
+  | typeof ROLE_HOLDING_ADMIN
+  | typeof ROLE_HUB_ADMIN;

@@ -19,7 +19,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { UtilisateurConnecte } from './jwt.strategy';
 import { ProfilService } from './profil.service';
-import { NomAfficheDto, PhotoDto, SessionProlongeeDto } from './dto/profil.dto';
+import { EndosserRoleDto, NomAfficheDto, PhotoDto, RoleEndosseDto, SessionProlongeeDto } from './dto/profil.dto';
 
 type R = { user: { userId: string } };
 
@@ -65,6 +65,13 @@ export class MonCompteController {
   @HttpCode(200)
   prolongerSession(@Req() req: { user: UtilisateurConnecte }): SessionProlongeeDto {
     return this.auth.prolongerSession(req.user);
+  }
+
+  // Administrateur HUB : endosser un autre rôle, sans se reconnecter.
+  @Post('role')
+  @HttpCode(200)
+  endosserRole(@Req() req: { user: UtilisateurConnecte }, @Body() dto: EndosserRoleDto): Promise<RoleEndosseDto> {
+    return this.auth.endosserRole(req.user, dto.role);
   }
 }
 

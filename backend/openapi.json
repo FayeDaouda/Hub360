@@ -357,6 +357,37 @@
         ]
       }
     },
+    "/api/auth/moi/role": {
+      "post": {
+        "operationId": "MonCompteController_endosserRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndosserRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleEndosseDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MonCompte"
+        ]
+      }
+    },
     "/api/photos/{cle}": {
       "get": {
         "operationId": "PhotosController_photo",
@@ -8958,6 +8989,49 @@
         },
         "required": [
           "access_token"
+        ]
+      },
+      "EndosserRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "CEO (transverse)",
+              "CFO",
+              "CIO (transverse)",
+              "COO",
+              "CTO (transverse)",
+              "Dir. GC",
+              "RH",
+              "Salarié"
+            ]
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "RoleEndosseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "access_token",
+          "role",
+          "permissions"
         ]
       },
       "LectureDto": {
