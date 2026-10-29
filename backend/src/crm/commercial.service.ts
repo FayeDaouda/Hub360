@@ -39,7 +39,9 @@ export class CommercialService {
       ),
       this.dossiers(
         a.societeId,
+        // Lead archivé : hors des calculs (décision du 29/10/2026).
         {
+          archiveLe: null,
           createdAt: {
             gte: new Date(`${annee}-01-01T00:00:00Z`),
             lt: new Date(`${Number(annee) + 1}-01-01T00:00:00Z`),

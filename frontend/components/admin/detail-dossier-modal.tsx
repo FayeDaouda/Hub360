@@ -49,6 +49,7 @@ type Props = {
   onRattacher: (localiteId: string) => Promise<void>;
   onChangerProprietaire: (proprietaireId: string) => Promise<void>;
   onArchiver: () => Promise<void>;
+  onDesarchiver: () => Promise<void>;
   peutFacturer: boolean; // finances_factures ≥ écriture : facture directe du lead
   onModifierFiche: (champs: ModifierFichePayload) => Promise<void>;
 };
@@ -107,6 +108,7 @@ export function DetailDossierModal({
   onRattacher,
   onChangerProprietaire,
   onArchiver,
+  onDesarchiver,
   peutFacturer,
   onModifierFiche,
 }: Props) {
@@ -121,7 +123,7 @@ export function DetailDossierModal({
   const [localiteId, setLocaliteId] = useState('');
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  // Archivage : définitif, donc confirmé avant l'envoi.
+  // Archivage : le lead sort des calculs, donc confirmé avant l'envoi.
   const [confirmerArchive, setConfirmerArchive] = useState(false);
   const [archivage, setArchivage] = useState(false);
   const [erreurArchive, setErreurArchive] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export function DetailDossierModal({
     setArchivage(true);
     setErreurArchive(null);
     try {
-      await onArchiver();
+      await (archive ? onDesarchiver() : onArchiver());
       setConfirmerArchive(false);
     } catch (e) {
       setErreurArchive(e instanceof Error && e.message ? e.message : 'L’archivage a échoué.');
@@ -386,19 +388,24 @@ export function DetailDossierModal({
         )}
       </section>
 
-      {!archive && peutArchiver && projet.statut === 'nouveau_projet' && (
+      {peutArchiver && projet.statut === 'nouveau_projet' && (
         <div className="fiche-crm-archive">
           <p>
-            Direction GC ou CIO (administrateur du HUB) · un lead incomplet ou mal renseigné s’archive, il ne se
-            supprime jamais. Il reste consultable dans « Archivés » et son code reste réservé.
+            {archive
+              ? 'Direction GC ou CIO · désarchivé, le lead revient en « Nouveau projet », dans le pipeline et dans les calculs.'
+              : 'Direction GC ou CIO · un lead incomplet ou mal renseigné s’archive, il ne se supprime jamais. Il reste consultable dans « Archivés », son code reste réservé, et il ne compte plus dans les tableaux de bord.'}
           </p>
           {!confirmerArchive ? (
             <button type="button" className="btn-ghost" onClick={() => setConfirmerArchive(true)}>
-              <Archive size={16} aria-hidden /> Archiver ce lead
+              <Archive size={16} aria-hidden /> {archive ? 'Désarchiver ce lead' : 'Archiver ce lead'}
             </button>
           ) : (
             <div className="fiche-crm-archive-confirmer" role="group" aria-label="Confirmer l’archivage">
-              <strong>Archiver {projet.code} ? C’est définitif : plus aucune action sur ce lead.</strong>
+              <strong>
+                {archive
+                  ? `Désarchiver ${projet.code} ? Il revient dans le pipeline et dans les calculs.`
+                  : `Archiver ${projet.code} ? Il sort des calculs et se fige ; il pourra être désarchivé.`}
+              </strong>
               {erreurArchive && <FieldError>{erreurArchive}</FieldError>}
               <div className="modal-actions">
                 <button
@@ -409,8 +416,13 @@ export function DetailDossierModal({
                 >
                   Annuler
                 </button>
-                <button type="button" className="btn-danger" disabled={archivage} onClick={archiver}>
-                  {archivage ? 'Archivage…' : 'Archiver'}
+                <button
+                  type="button"
+                  className={archive ? 'btn-primary' : 'btn-danger'}
+                  disabled={archivage}
+                  onClick={archiver}
+                >
+                  {archivage ? 'En cours…' : archive ? 'Désarchiver' : 'Archiver'}
                 </button>
               </div>
             </div>

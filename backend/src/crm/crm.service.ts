@@ -28,13 +28,24 @@ import {
   resume,
   type FicheProgramme,
 } from './fiche-programme';
-import { formatAmount, ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_COO, todayIso } from '@hub/domain';
+import {
+  formatAmount,
+  formatDate,
+  ROLE_CEO,
+  ROLE_CIO,
+  ROLE_COMPANY_ADMIN,
+  ROLE_COO,
+  todayIso,
+  toIsoDay,
+} from '@hub/domain';
 
 // Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
 export type Acteur = {
   userId: string;
   role: string;
   permissions: Record<string, NiveauPermission>;
+  // Administrateur HUB (carte blanche), quel que soit le rôle endossé.
+  adminHub?: boolean;
 };
 
 const PERSONNE = { select: { id: true, prenom: true, nom: true } } as const;
@@ -252,7 +263,8 @@ export class CrmService {
   // Archive un lead (maquette CRM) : Direction GC ou CIO — mêmes titulaires
   // que la réassignation. Seul un lead en « Nouveau projet » s'archive (aucune
   // offre partie) ; jamais supprimé, il reste consultable et son code réservé
-  // (la ligne demeure, cf. resoudreCode). Définitif : aucune action ensuite.
+  // (la ligne demeure, cf. resoudreCode). Figé tant qu'il est archivé ; les
+  // mêmes titulaires peuvent le désarchiver (décision du 29/10/2026).
   async archiver(societeId: string, acteur: Acteur, id: string) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
@@ -278,6 +290,44 @@ export class CrmService {
       where: { id },
       include: INCLUDE_DOSSIER,
     });
+    return versDossierCrm(maj, this.optsFormat(acteur));
+  }
+
+  // Désarchive un lead (décision du 29/10/2026) : mêmes titulaires que
+  // l'archivage ; il revient en « Nouveau projet », dans tous les calculs.
+  // L'archivage effacé reste dans l'historique du dossier (transition).
+  async desarchiver(societeId: string, acteur: Acteur, id: string) {
+    const dossier = await this.prisma.dossierCrm.findFirst({
+      where: { id, societeId },
+      select: { archiveLe: true, archivePar: { select: { prenom: true, nom: true } } },
+    });
+    if (!dossier) throw new NotFoundException('Dossier introuvable');
+    if (!(await this.peutReassigner(societeId, acteur))) {
+      throw new ForbiddenException(
+        `Désarchiver un lead est réservé aux titulaires ${ROLE_PROPRIETAIRE_DOSSIER}, à l’administration et au CIO.`,
+      );
+    }
+    if (!dossier.archiveLe) throw new ConflictException('Ce lead n’est pas archivé.');
+    const archivage = `archivé le ${formatDate(toIsoDay(dossier.archiveLe))}${
+      dossier.archivePar ? ` par ${dossier.archivePar.prenom} ${dossier.archivePar.nom}` : ''
+    }`;
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.dossierCrm.updateMany({
+        where: { id, archiveLe: { not: null } },
+        data: { archiveLe: null, archiveParId: null },
+      });
+      if (count === 0) throw new ConflictException('Ce lead vient de changer : recharge la fiche.');
+      await tx.dossierCrmTransition.create({
+        data: {
+          dossierId: id,
+          de: 'nouveau_projet',
+          vers: 'nouveau_projet',
+          parId: acteur.userId,
+          commentaire: `Lead désarchivé (${archivage})`,
+        },
+      });
+    });
+    const maj = await this.prisma.dossierCrm.findUniqueOrThrow({ where: { id }, include: INCLUDE_DOSSIER });
     return versDossierCrm(maj, this.optsFormat(acteur));
   }
 
@@ -654,7 +704,7 @@ export class CrmService {
   }
 
   async peutReassigner(societeId: string, acteur: Acteur): Promise<boolean> {
-    if (acteur.role === ROLE_COMPANY_ADMIN || acteur.role === ROLE_CIO) return true;
+    if (acteur.adminHub || acteur.role === ROLE_COMPANY_ADMIN || acteur.role === ROLE_CIO) return true;
     const titulaires = await this.titulairesProprietaire(this.prisma, societeId);
     return titulaires.some((u) => u.id === acteur.userId);
   }

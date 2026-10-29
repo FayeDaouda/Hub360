@@ -6,6 +6,7 @@ import { Clock3, FileWarning, FolderOpen, Home, Plus, Search, Send } from 'lucid
 import {
   agirSurDossier,
   archiverDossier,
+  desarchiverDossier,
   changerProprietaire,
   completudeFiche,
   libelleCategorie,
@@ -172,6 +173,7 @@ export default function CrmPage(props: Props) {
   // Réassigner et archiver : titulaires Dir. GC, administration, CIO (même
   // règle que CrmService.peutReassigner — le serveur tranche).
   const estDirectionOuCio =
+    !!session.adminHub ||
     session.role === ROLE_COMPANY_ADMIN ||
     session.role === ROLE_CIO ||
     !!proprietaires?.some((p) => p.id === session.utilisateur.id);
@@ -255,6 +257,12 @@ export default function CrmPage(props: Props) {
     const maj = await archiverDossier(params.slug, dossier.id);
     setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
     setMessage(`Lead ${dossier.code} archivé : consultable dans « Archivés », son code reste réservé.`);
+  }
+
+  async function onDesarchiver(dossier: Projet) {
+    const maj = await desarchiverDossier(params.slug, dossier.id);
+    setProjets((actuels) => (actuels ?? []).map((p) => (p.id === maj.id ? maj : p)));
+    setMessage(`Lead ${dossier.code} désarchivé : il revient dans le pipeline et dans les calculs.`);
   }
 
   return (
@@ -687,6 +695,7 @@ export default function CrmPage(props: Props) {
           proprietaires={proprietaires}
           onChangerProprietaire={(id) => onChangerProprietaire(detailProjet, id)}
           onArchiver={() => onArchiver(detailProjet)}
+          onDesarchiver={() => onDesarchiver(detailProjet)}
           onModifierFiche={(champs) => onModifierFiche(detailProjet, champs)}
         />
       )}

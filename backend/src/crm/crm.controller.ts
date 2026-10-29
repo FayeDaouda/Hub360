@@ -93,6 +93,12 @@ export class CrmController {
     return this.crm.archiver(req.user.societeId, req.user, id);
   }
 
+  @Post(':id/desarchivage')
+  @RequiertPermission('crm', 'ecriture')
+  desarchiver(@Req() req: Req, @Param('id') id: string) {
+    return this.crm.desarchiver(req.user.societeId, req.user, id);
+  }
+
   // Lecture suffit à la porte : le niveau réel dépend de l'action (la DAF,
   // en lecture sur le CRM, valide via finances_devis) — tranché par le
   // service, cf. crm/cycle.ts.

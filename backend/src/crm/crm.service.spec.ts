@@ -301,10 +301,68 @@ describe('CrmService.peutReassigner', () => {
   it('COO (écriture CRM, mais pas titulaire) → non', async () => {
     await expect(svcTitulaires(['U1']).peutReassigner('S1', acteur('U9', 'COO'))).resolves.toBe(false);
   });
+
+  it('Administrateur HUB → oui, quel que soit le rôle endossé (même Dir. GC sans en être titulaire)', async () => {
+    await expect(
+      svcTitulaires(['U1']).peutReassigner('S1', { ...acteur('ADM', 'Dir. GC'), adminHub: true }),
+    ).resolves.toBe(true);
+  });
+});
+
+// Désarchivage (décision du 29/10/2026) : mêmes titulaires que l'archivage ;
+// le lead revient, l'archivage effacé reste dans l'historique.
+describe('CrmService.desarchiver', () => {
+  const svcDesarchive = (dossier: object | null, titulaires: string[] = []) => {
+    const tx = {
+      dossierCrm: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      dossierCrmTransition: { create: jest.fn() },
+    };
+    const prisma = {
+      dossierCrm: { findFirst: jest.fn().mockResolvedValue(dossier), findUniqueOrThrow: jest.fn() },
+      utilisateur: {
+        findMany: jest.fn().mockResolvedValue(titulaires.map((id) => ({ id, prenom: 'P', nom: id }))),
+      },
+      $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
+    };
+    const s = new CrmService(
+      prisma as unknown as PrismaService,
+      {} as DevisService,
+      {} as FacturationService,
+      {} as NotificationsService,
+      {} as SeuilCeoService,
+    );
+    return { s, tx };
+  };
+  const cio = { userId: 'C1', role: 'CIO (transverse)', permissions: {} };
+  const archive = { archiveLe: new Date('2026-10-20T10:00:00Z'), archivePar: { prenom: 'Awa', nom: 'Sarr' } };
+
+  it('archivé → rendu au pipeline, trace dans l’historique', async () => {
+    const { s, tx } = svcDesarchive(archive);
+    await s.desarchiver('S1', cio, 'D1').catch(() => undefined); // relecture non simulée
+    expect(tx.dossierCrm.updateMany).toHaveBeenCalledWith({
+      where: { id: 'D1', archiveLe: { not: null } },
+      data: { archiveLe: null, archiveParId: null },
+    });
+    expect(tx.dossierCrmTransition.create.mock.calls[0][0].data).toMatchObject({
+      de: 'nouveau_projet',
+      vers: 'nouveau_projet',
+      parId: 'C1',
+      commentaire: 'Lead désarchivé (archivé le 20/10/2026 par Awa Sarr)',
+    });
+  });
+
+  it('COO → 403 ; lead non archivé → 409', async () => {
+    const coo = svcDesarchive(archive, ['U1']);
+    await expect(coo.s.desarchiver('S1', { userId: 'U9', role: 'COO', permissions: {} }, 'D1')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(coo.tx.dossierCrm.updateMany).not.toHaveBeenCalled();
+    await expect(svcDesarchive({ archiveLe: null }).s.desarchiver('S1', cio, 'D1')).rejects.toThrow(ConflictException);
+  });
 });
 
 // Archivage d'un lead (maquette CRM) : Direction GC ou CIO, « Nouveau
-// projet » seulement, définitif — la ligne reste (code réservé).
+// projet » seulement — la ligne reste (code réservé), désarchivable.
 describe('CrmService.archiver', () => {
   const svcArchive = (dossier: object | null, titulaires: string[] = []) => {
     const prisma = {
@@ -343,7 +401,7 @@ describe('CrmService.archiver', () => {
     expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
   });
 
-  it('déjà archivé → 409 (définitif)', async () => {
+  it('déjà archivé → 409', async () => {
     const { s } = svcArchive({ statut: 'nouveau_projet', archiveLe: new Date() });
     await expect(s.archiver('S1', cio, 'D1')).rejects.toThrow(ConflictException);
   });
