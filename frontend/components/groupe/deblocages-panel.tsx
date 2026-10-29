@@ -10,6 +10,7 @@ import {
   onboarderSansSignature,
   ouvrirProjet,
   rouvrirDossier,
+  supprimerCode,
   type EtatInterventions,
 } from '@/lib/interventions';
 import { STATUTS_CRM } from '@/lib/types';
@@ -18,7 +19,7 @@ import { Modal, ModalHeader } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/feedback';
 import { Pill } from '@/components/ui/pill';
 
-type Action = 'onboard' | 'reouverture' | 'ouverture' | 'cellules';
+type Action = 'onboard' | 'reouverture' | 'ouverture' | 'cellules' | 'suppression';
 
 const ACTIONS: Record<Action, { titre: string; texte: string; confirmer: string }> = {
   onboard: {
@@ -44,6 +45,12 @@ const ACTIONS: Record<Action, { titre: string; texte: string; confirmer: string 
       'Les cellules cochées remplacent celles du projet. Leur chef de team valide les remises et leurs membres voient le projet.',
     confirmer: 'Enregistrer',
   },
+  suppression: {
+    titre: 'Supprimer définitivement',
+    texte:
+      'Le dossier CRM et son projet sont effacés avec tout ce qui en dépend : offres, contrat, factures (émises comprises), avoirs, paiements, cartes et tâches. C’est irréversible ; seule la trace au journal d’audit reste.',
+    confirmer: 'Supprimer définitivement',
+  },
 };
 
 const LIBELLE_INTERVENTION: Record<EtatInterventions['historique'][number]['type'], string> = {
@@ -55,6 +62,7 @@ const LIBELLE_INTERVENTION: Record<EtatInterventions['historique'][number]['type
   module_reactive: 'Module réactivé',
   maintenance_activee: 'Maintenance activée',
   maintenance_levee: 'Maintenance levée',
+  suppression: 'Supprimé définitivement',
 };
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
@@ -192,6 +200,18 @@ export function DeblocagesPanel({ slug }: { slug: string }) {
         </div>
       )}
 
+      {etat && (d || p) && (
+        <div className="deb-danger">
+          <p className="deb-note">
+            Supprimer définitivement {d && p ? 'le dossier et son projet' : d ? 'le dossier' : 'le projet'}{' '}
+            {(d ?? p)!.code}, avec ses offres, factures, paiements et tâches.
+          </p>
+          <button type="button" className="btn-danger" onClick={() => setAction('suppression')}>
+            Supprimer définitivement
+          </button>
+        </div>
+      )}
+
       {etat && etat.historique.length > 0 && (
         <div>
           <h3 className="deb-sous-titre">Interventions sur ce code</h3>
@@ -222,6 +242,7 @@ export function DeblocagesPanel({ slug }: { slug: string }) {
             if (action === 'onboard') return onboarderSansSignature(slug, d!.id, motif);
             if (action === 'reouverture') return rouvrirDossier(slug, d!.id, motif);
             if (action === 'ouverture') return ouvrirProjet(slug, p!.id, motif);
+            if (action === 'suppression') return supprimerCode(slug, (d ?? p)!.code, motif);
             return changerCellulesProjet(slug, p!.id, celluleIds, motif);
           }}
         />
@@ -246,6 +267,10 @@ function ModaleIntervention({
   const a = ACTIONS[action];
   const [motif, setMotif] = useState('');
   const [cellules, setCellules] = useState<string[]>(etat.projet?.cellules.map((c) => c.id) ?? []);
+  // Suppression : le code retapé à l'identique confirme.
+  const code = etat.dossier?.code ?? etat.projet?.code ?? '';
+  const [confirmation, setConfirmation] = useState('');
+  const confirme = action !== 'suppression' || confirmation.trim() === code;
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -291,6 +316,16 @@ function ModaleIntervention({
             autoFocus
           />
         </Field>
+        {action === 'suppression' && (
+          <Field label={`Retapez ${code} pour confirmer`}>
+            <input
+              className="field-input"
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              autoComplete="off"
+            />
+          </Field>
+        )}
         {erreur && (
           <p className="field-erreur" role="alert">
             {erreur}
@@ -300,7 +335,11 @@ function ModaleIntervention({
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={onClose} disabled={envoi}>
             Annuler
           </button>
-          <button type="submit" className="btn-primary" disabled={envoi || motif.trim().length < 3}>
+          <button
+            type="submit"
+            className={action === 'suppression' ? 'btn-danger' : 'btn-primary'}
+            disabled={envoi || motif.trim().length < 3 || !confirme}
+          >
             {envoi ? 'En cours…' : a.confirmer}
           </button>
         </div>

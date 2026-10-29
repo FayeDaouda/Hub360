@@ -6,6 +6,11 @@ export class MotifInterventionDto {
   @IsString() @MinLength(3) @MaxLength(500) motif!: string;
 }
 
+// Suppression définitive : le code à supprimer, retapé pour confirmer.
+export class SuppressionDto extends MotifInterventionDto {
+  @IsString() @MinLength(1) @MaxLength(60) code!: string;
+}
+
 export class CellulesProjetDto extends MotifInterventionDto {
   @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) celluleIds!: string[];
 }
