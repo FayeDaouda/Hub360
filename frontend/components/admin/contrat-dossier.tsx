@@ -13,7 +13,7 @@ import {
   signerContratPapier,
 } from '@/lib/contrats';
 import { lireFichier, FICHIERS_ACCEPTES } from '@/lib/fichiers';
-import { formatCompactAmount, formatDate, formatDayShortMonth } from '@hub/domain';
+import { formatDate, formatDayShortMonth } from '@hub/domain';
 import {
   MODES_SIGNATURE,
   STATUTS_CONTRAT,
@@ -140,6 +140,14 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
     }
   }
 
+  // Réglages manquants (Paramètres → Contrats), dits en clair : « le
+  // signataire », « le modèle de contrat » — pas le détail nom / fonction.
+  const manquants = [
+    ...(prep.reglagesManquants.some((m) => m.includes('signataire'))
+      ? [prep.signataire?.qui === 'ceo' ? 'le signataire (CEO)' : 'le signataire (Architecte DPLG)']
+      : []),
+    ...(prep.reglagesManquants.includes('modèle de contrat') ? ['le modèle de contrat'] : []),
+  ];
   const annexesManquantes = c?.annexes.filter((a) => a.statut === 'a_joindre') ?? [];
   const documentManquant = c?.mode === 'sur_mesure' && !c.document;
 
@@ -159,44 +167,35 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
         {c && <span className="cell-sub">{c.mode === 'modele' ? 'Généré depuis le modèle' : 'Rédigé sur mesure'}</span>}
       </div>
 
-      {/* Pas encore préparé */}
+      {/* Pas encore préparé : une phrase pour la situation, une pour ce qui
+          manque (dit simplement, et à qui le demander), puis l'action. */}
       {!c && (
         <>
           <p className="field-aide">
-            Offre {prep.offreAcceptee?.reference} acceptée ({formatCompactAmount(prep.offreAcceptee?.montantHt ?? 0)}{' '}
-            HT) : le projet est lancé. Contrat à régulariser,{' '}
-            {prep.modePrevu === 'sur_mesure'
-              ? `rédigé sur mesure (offre ≥ seuil de ${formatCompactAmount(prep.seuilSurMesureHt ?? 0)} HT)`
-              : 'généré depuis le modèle de la société'}
-            .
+            Le projet est lancé. Il reste à faire signer le contrat au client — cela ne bloque rien.
           </p>
-          {prep.signataire && prep.offreAcceptee && (
-            <p className="field-aide">
-              Signataire pour la société :{' '}
-              <strong>
-                {prep.signataire.nom
-                  ? `${prep.signataire.nom}, ${prep.signataire.fonction}`
-                  : prep.signataire.qui === 'ceo'
-                    ? 'le CEO (non renseigné)'
-                    : 'l’Architecte DPLG (non renseigné)'}
-              </strong>{' '}
-              — {prep.signataire.qui === 'ceo' ? 'seul le CEO contresigne' : 'l’Architecte DPLG signe'} : offre de{' '}
-              {formatCompactAmount(prep.offreAcceptee.montantTtc)} TTC,{' '}
-              {prep.signataire.qui === 'ceo' ? 'au-delà' : 'en deçà'} du seuil de{' '}
-              {formatCompactAmount(prep.signataire.seuilTtc)}.
-            </p>
-          )}
-          {prep.reglagesManquants.length > 0 && (
+          {manquants.length > 0 ? (
             <p className="field-aide" role="note">
-              Pour préparer le contrat, à renseigner dans Paramètres → Contrats : {prep.reglagesManquants.join(', ')}.
+              Le contrat ne peut pas encore être préparé : il manque {manquants.join(' et ')}. À compléter par
+              l’administrateur ou le CIO dans Paramètres → Contrats.
             </p>
+          ) : (
+            prep.signataire?.nom && (
+              <p className="field-aide">
+                Signé pour la société par{' '}
+                <strong>
+                  {prep.signataire.nom}, {prep.signataire.fonction}
+                </strong>
+                {prep.modePrevu === 'sur_mesure' && ' — montant élevé : contrat rédigé sur mesure, à déposer'}.
+              </p>
+            )
           )}
-          {peutPreparer && (
+          {peutPreparer && manquants.length === 0 && (
             <div className="cycle-dossier-actions">
               <button
                 type="button"
                 className="btn-primary"
-                disabled={enCours || prep.reglagesManquants.length > 0}
+                disabled={enCours}
                 onClick={() => agir(() => preparerContrat(slug, projet.id))}
               >
                 Préparer le contrat
