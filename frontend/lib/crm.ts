@@ -140,6 +140,11 @@ export function archiverDossier(slug: string, id: string): Promise<Projet> {
   return apiSociete(slug, `/dossiers/${id}/archivage`, { method: 'POST' });
 }
 
+// Même règle que l'archivage : le lead revient en « Nouveau projet ».
+export function desarchiverDossier(slug: string, id: string): Promise<Projet> {
+  return apiSociete(slug, `/dossiers/${id}/desarchivage`, { method: 'POST' });
+}
+
 // Fiche apporteur verrouillée depuis la création : le COO seul la modifie
 // (le serveur le vérifie).
 export function modifierApporteur(slug: string, id: string, apporteur: ApporteurSaisi): Promise<Projet> {

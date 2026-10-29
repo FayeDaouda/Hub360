@@ -1116,6 +1116,37 @@
         ]
       }
     },
+    "/api/societes/{slug}/dossiers/{id}/desarchivage": {
+      "post": {
+        "operationId": "CrmController_desarchiver",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Crm"
+        ]
+      }
+    },
     "/api/societes/{slug}/dossiers/{id}/actions": {
       "post": {
         "operationId": "CrmController_agir",

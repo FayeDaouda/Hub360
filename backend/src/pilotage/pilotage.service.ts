@@ -142,7 +142,8 @@ export class PilotageService {
     const debut = new Date(`${mois[0]}-01T00:00:00Z`);
     const [leads, taches, charges] = await Promise.all([
       this.prisma.dossierCrm.findMany({
-        where: { societeId, categorie: 'conception', createdAt: { gte: debut } },
+        // Lead archivé : hors des calculs (décision du 29/10/2026).
+        where: { societeId, categorie: 'conception', archiveLe: null, createdAt: { gte: debut } },
         select: { createdAt: true },
       }),
       this.prisma.tacheProjet.findMany({
@@ -202,6 +203,7 @@ export class PilotageService {
         where: {
           societeId,
           categorie: 'conception',
+          archiveLe: null,
           createdAt: { gte: new Date(`${debut}T00:00:00Z`), lte: new Date(`${fin}T23:59:59.999Z`) },
         },
       }),
