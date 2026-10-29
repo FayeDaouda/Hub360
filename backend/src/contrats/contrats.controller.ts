@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
-import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
+import { ParametresContratGuard } from './parametres-contrat.guard';
 import { ContratsService } from './contrats.service';
 import { AnnexeGabaritDto, FichierContratDto, MajAnnexeContratDto, ParametresContratDto } from './dto';
 
@@ -72,11 +72,11 @@ export class ContratsController {
   }
 }
 
-// Réglages société (Paramètres → Contrats) : modèle, signataire, seuil sur
+// Réglages des contrats de la société : modèle, signataire, seuil sur
 // mesure, liste d'annexes — societe_admin ou CIO, comme les gabarits Foncier
-// et Études (décision G).
+// et Études (décision G), et le Dir. GC (29/10/2026).
 @Controller('societes/:slug/parametres-contrat')
-@UseGuards(JwtAuthGuard, SocieteAdminOuCioGuard)
+@UseGuards(JwtAuthGuard, ParametresContratGuard)
 export class ParametresContratController {
   constructor(private contrats: ContratsService) {}
 

@@ -9,7 +9,8 @@ import { useConfirmer } from '@/components/confirmation';
 import { Skeleton } from '@/components/ui/feedback';
 import { Field, FieldError } from '@/components/ui/field';
 
-// Réglages des contrats de la société (étape G) — societe_admin ou CIO.
+// Réglages des contrats de la société (étape G) — societe_admin, CIO ou
+// Dir. GC (29/10/2026), ici ou depuis le bloc Contrat d'un dossier.
 // Tout est vide au départ : le texte du contrat et le signataire viennent de
 // la société, jamais inventés ; tant qu'ils manquent, la préparation d'un
 // contrat refuse en disant quoi renseigner.
@@ -118,10 +119,10 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
         <h3 className="panel-title">Signataires et seuil</h3>
         <p className="field-aide">
           Le signataire pour la société dépend du montant TTC de l’offre acceptée et du seuil de contresignature
-          (Réglages › Règles et délais) : au-delà, seul le CEO contresigne ; en deçà, l’Architecte DPLG.
+          (Réglages › Règles et délais) : au-delà, seul le CEO contresigne ; en deçà, le Dir. GC.
         </p>
         <div className="field-row">
-          <Field label="Signataire jusqu’au seuil (Architecte DPLG)">
+          <Field label="Signataire jusqu’au seuil (Dir. GC)">
             <input
               className="field-input"
               value={nom}
@@ -136,7 +137,7 @@ export function ParametresContratPanel({ slug }: { slug: string }) {
               value={fonction}
               onChange={(e) => setFonction(e.target.value)}
               maxLength={120}
-              placeholder="ex : Architecte DPLG"
+              placeholder="ex : Dir. GC, architecte DPLG"
             />
           </Field>
         </div>

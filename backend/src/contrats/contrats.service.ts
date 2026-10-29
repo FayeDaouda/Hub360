@@ -46,8 +46,8 @@ const montantTtcLignes = (lignes: LigneMontant[]) =>
     0,
   );
 
-// Nom et fonction du signataire requis, tels que réglés dans Paramètres →
-// Contrats (null si non renseignés).
+// Nom et fonction du signataire requis, tels que réglés dans les réglages
+// des contrats (null si non renseignés).
 function signataireDe(s: SignatairesSociete, qui: Signataire) {
   const [nom, fonction] =
     qui === 'ceo'
@@ -105,7 +105,7 @@ export class ContratsService {
           : null,
         modePrevu: mode,
         seuilSurMesureHt: seuil,
-        // Qui signe pour la société : le CEO au-delà du seuil (TTC), sinon l'Architecte DPLG.
+        // Qui signe pour la société : le CEO au-delà du seuil (TTC), sinon le Dir. GC.
         signataire: requis
           ? {
               qui: requis.qui,
@@ -143,7 +143,7 @@ export class ContratsService {
     const manquants = this.reglagesManquants(dossier.societe, mode, qui);
     if (manquants.length) {
       throw new UnprocessableEntityException(
-        `Contrat impossible à préparer — à renseigner dans Paramètres → Contrats : ${manquants.join(', ')}.`,
+        `Contrat impossible à préparer — à renseigner dans les réglages des contrats : ${manquants.join(', ')}.`,
       );
     }
     const gabarit = await this.prisma.annexeContratGabarit.findMany({
@@ -193,7 +193,7 @@ export class ContratsService {
     const { qui } = await this.signatairePour(societeId, c.devis.lignes);
     const manquants = this.reglagesManquants(societe, 'modele', qui);
     if (manquants.length) {
-      throw new UnprocessableEntityException(`À renseigner dans Paramètres → Contrats : ${manquants.join(', ')}.`);
+      throw new UnprocessableEntityException(`À renseigner dans les réglages des contrats : ${manquants.join(', ')}.`);
     }
     const signataire = signataireDe(societe, qui)!;
     await this.prisma.contrat.update({
@@ -379,7 +379,7 @@ export class ContratsService {
     return this.getPublic(token);
   }
 
-  // -- Réglages société (Paramètres → Contrats) ------------------------------
+  // -- Réglages des contrats de la société ----------------------------------
 
   async getParametres(societeId: string) {
     const [s, annexes] = await Promise.all([
@@ -459,7 +459,7 @@ export class ContratsService {
     qui: Signataire,
   ): string[] {
     const manquants: string[] = [];
-    const titre = qui === 'ceo' ? 'du signataire au-delà du seuil (CEO)' : 'du signataire (Architecte DPLG)';
+    const titre = qui === 'ceo' ? 'du signataire au-delà du seuil (CEO)' : 'du signataire (Dir. GC)';
     const [nom, fonction] =
       qui === 'ceo'
         ? [s.contratSignataireCeoNom, s.contratSignataireCeoFonction]
