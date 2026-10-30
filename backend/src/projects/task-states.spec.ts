@@ -114,7 +114,7 @@ describe('états dérivés (maquette Projets)', () => {
   });
 });
 
-// Visa DPLG (revue Dir. GC, 21/10/2026) : validée par le chef de team, la
+// Visa DPLG (revue Dir. GC, 21/10/2026) : validée par le chef d’équipe, la
 // tâche n'est faite qu'une fois visée par l'architecte DPLG.
 describe('visa DPLG', () => {
   const plans = (o: Partial<TaskSource> = {}) =>

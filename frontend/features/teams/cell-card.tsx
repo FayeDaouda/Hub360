@@ -62,13 +62,13 @@ export function CellCard({
         </span>
       </header>
       <p className="eq-cellule-sous">
-        Pilote :{' '}
+        Chef d’équipe :{' '}
         {canWrite && c.membres.length > 0 ? (
-          // Le pilote est le chef de team de la cellule (dispatcher) : il
+          // Le pilote est le chef d’équipe de la cellule (dispatcher) : il
           // valide les tâches de ses membres — choisi parmi eux.
           <select
             className="field-input eq-pilote"
-            aria-label={`Pilote de ${c.nom}`}
+            aria-label={`Chef d’équipe de ${c.nom}`}
             value={c.pilote?.id ?? ''}
             onChange={(e) => onPilot(c.id, e.target.value || null)}
           >
@@ -87,7 +87,7 @@ export function CellCard({
       {/* Détail (remontée au Dir. GC) : un seul bandeau en tête de la liste. */}
       {c.pilote?.sansCompte && (
         <Pill tone="attention" className="eq-sans-compte">
-          Pilote sans compte HUB
+          Chef d’équipe sans compte HUB
         </Pill>
       )}
       <DecisionsFiche slug={slug} cible={{ cellule: c.id }} />
@@ -158,7 +158,7 @@ export function CellCard({
               <span className="eq-membre">
                 <strong>
                   {m.nom}
-                  {m.estPilote && ' · pilote'}
+                  {m.estPilote && ' · chef d’équipe'}
                 </strong>
                 <small>
                   {m.poste ?? m.role} ·{' '}

@@ -6,7 +6,7 @@ import { ROLE_CEO, ROLE_CFO, ROLE_CTO, ROLE_DIR_GC } from '@hub/domain';
 describe('validation · rôle hors circuit (CEO)', () => {
   const aValider = { statut: 'a_valider', assigneId: 'C1', assigneeIsDplg: false };
 
-  it('le CEO ne valide ni ne qualifie, même chef de team', () => {
+  it('le CEO ne valide ni ne qualifie, même chef d’équipe', () => {
     expect(canDecide({ role: ROLE_CEO, employeeId: 'CHEF', ctoStandsIn: false }, aValider, 'CHEF')).toBe(false);
     expect(
       canQualify(
@@ -65,7 +65,7 @@ describe('validation · escalade au CTO et suppléance', () => {
     expect(canQualify({ ...cto, ctoStandsIn: true }, { assigneId: 'C1', assigneeIsDplg: false }, 'CHEF')).toBe(true);
   });
 
-  it('prolongation qui repousse la livraison : le CTO seul, ni chef de team ni Dir. GC', () => {
+  it('prolongation qui repousse la livraison : le CTO seul, ni chef d’équipe ni Dir. GC', () => {
     expect(canQualify(dplg, { assigneId: 'C1', assigneeIsDplg: false }, 'CHEF', true)).toBe(false);
     expect(
       canQualify(

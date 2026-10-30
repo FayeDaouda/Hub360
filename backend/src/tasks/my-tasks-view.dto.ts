@@ -56,7 +56,7 @@ export class MyTaskDto {
   remisLe!: Date | null;
   valideLe!: Date | null;
   renvoiMotif!: string | null; // tant que la tâche est à reprendre
-  // En validation : qui valide (« Aïssatou Faye (chef de team) »), null si
+  // En validation : qui valide (« Aïssatou Faye (chef d’équipe) »), null si
   // personne à prévenir ; date à partir de laquelle on peut le relancer.
   validateur!: string | null;
   relancePossibleLe!: string | null;

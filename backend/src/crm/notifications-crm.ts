@@ -96,7 +96,7 @@ export function titreNotificationCrm(evenement: EvenementCrm, cible: CibleCrm, c
         return `${dossier} — offre acceptée, ${plural(n, 'facture')} brouillon à émettre`;
       }
       return cible === 'proprietaire'
-        ? `${dossier} — offre acceptée par le client, projet lancé (contrat à régulariser)`
+        ? `${dossier} — offre acceptée, projet lancé : équipe à affecter, contrat à régulariser`
         : `${dossier} — offre acceptée par le client, projet lancé`;
     }
     case 'offre_refusee':

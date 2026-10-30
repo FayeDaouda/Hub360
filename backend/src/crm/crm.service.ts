@@ -56,6 +56,8 @@ const INCLUDE_DOSSIER = {
   apporteurUtilisateur: PERSONNE,
   proprietaire: PERSONNE,
   archivePar: PERSONNE,
+  // Projet né à l'Onboard (ses équipes s'affectent depuis la fiche).
+  projet: { select: { id: true } },
   // L'offre en cours = la plus récente (étape F) — résumée dans la réponse.
   offres: { orderBy: { creeLe: 'desc' }, take: 1, include: { lignes: true } },
   // Dernière transition : celle qui a mené au statut actuel — soumission au

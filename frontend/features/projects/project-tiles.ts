@@ -115,7 +115,7 @@ export function boardTiles(
           id: 'remises',
           label: 'Remises à valider',
           value: count(k?.remisesAValider),
-          hint: 'tous projets · chef de team ou DPLG',
+          hint: 'tous projets · chef d’équipe ou DPLG',
           icon: CheckCheck,
           state: stateOf(k?.remisesAValider, etatATraiter),
         },
@@ -131,7 +131,7 @@ export function boardTiles(
       id: 'prolongations',
       label: 'Prolongations à décider',
       value: count(k?.prolongations),
-      hint: 'le retard est qualifié par le chef de team ou le DPLG',
+      hint: 'le retard est qualifié par le chef d’équipe ou le DPLG',
       icon: CalendarPlus,
       state: stateOf(k?.prolongations, etatATraiter),
     },
@@ -163,6 +163,3 @@ export function invoicePills(file: OpenProjectFile): { libelle: string; ton: Pil
     return { libelle: waits.length ? `${f} attend ${waits.join(', ')}` : `${f} à émettre`, ton };
   });
 }
-
-// « Cellule Archi 3 » est déjà nommée ; « GC-ARC-02 » (maquette) ne l'est pas.
-export const cellLabel = (name: string) => (/^cellule\b/i.test(name) ? name : `Cellule ${name}`);

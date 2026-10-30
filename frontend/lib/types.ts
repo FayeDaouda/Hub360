@@ -246,6 +246,8 @@ export type Projet = {
   programme: string; // résumé automatique de la Fiche Programme ; "" = à remplir
   ficheProgramme: FicheProgramme | null; // null = pas encore commencée
   statut: StatutCrm;
+  // Projet né à l'Onboard (ses équipes s'affectent depuis la fiche) ; null avant.
+  projetId?: string | null;
   // Contenu de la fiche figé dès la soumission à la DAF (propriétaire excepté).
   verrouillee: boolean;
   creeLe: string; // ISO 8601

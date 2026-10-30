@@ -59,7 +59,7 @@ export function TaskSummary({ task: t, manager }: { task: ProjectTask; manager: 
     ) : (
       <>
         {v.nom ?? 'à désigner'} <span className="tp-secondaire">({v.role})</span>
-        {/* Pourquoi pas le chef de team : utile au gestionnaire, pas à l'assigné. */}
+        {/* Pourquoi pas le chef d’équipe : utile au gestionnaire, pas à l'assigné. */}
         {manager && v.motif && <span className="tp-secondaire"> · {v.motif}</span>}
       </>
     ),

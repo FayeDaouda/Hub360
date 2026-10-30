@@ -5,7 +5,7 @@ import { ProjectsBoardService } from './projects-board.service';
 
 // « À décider » (revue Dir. GC, 21/10/2026) : remises et prolongations que la
 // personne connectée peut trancher, sur tous les projets — mêmes règles que
-// les boutons (le DPLG partout sauf ses propres tâches, le chef de team sur
+// les boutons (le DPLG partout sauf ses propres tâches, le chef d’équipe sur
 // son équipe).
 
 const tache = (id: string, statut: string, assigneId: string | null, prolongations: object[] = []) => ({
@@ -82,7 +82,7 @@ describe('ProjectsBoardService.toDecide', () => {
     ]);
   });
 
-  it('chef de team : son équipe, jamais sa propre remise', async () => {
+  it('chef d’équipe : son équipe, jamais sa propre remise', async () => {
     const r = await svc('CHEF').toDecide('S1', { userId: 'U', role: 'Salarié' });
     expect(r.remises.map((x) => x.tacheId)).toEqual(['T1', 'T3']);
   });

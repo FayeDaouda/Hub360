@@ -31,7 +31,7 @@ export class TaskSubmissionService {
 
   // Seul l'assigné remet sa tâche, ouverte (carte non verrouillée), à faire
   // ou en reprise. Sans temps atelier, le dépôt vaut validation (exception
-  // écrite au principe 4) ; sinon la remise vNN attend le chef de team (ou le
+  // écrite au principe 4) ; sinon la remise vNN attend le chef d’équipe (ou le
   // DPLG pour la tâche du chef).
   async submit(
     companyId: string,

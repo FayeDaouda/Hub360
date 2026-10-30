@@ -78,7 +78,7 @@ describe('planNotificationsCrm', () => {
     expect(plan).toEqual([
       {
         destinataireId: 'DG',
-        titre: 'TCP_ALM.26 · Villa Almadies — offre acceptée par le client, projet lancé (contrat à régulariser)',
+        titre: 'TCP_ALM.26 · Villa Almadies — offre acceptée, projet lancé : équipe à affecter, contrat à régulariser',
       },
     ]);
   });
@@ -109,7 +109,7 @@ describe('titreNotificationCrm', () => {
       'TCP_ALM.26 · Villa Almadies — offre acceptée, 6 factures brouillon à émettre',
     );
     expect(titreNotificationCrm('offre_acceptee', 'proprietaire', ctx)).toBe(
-      'TCP_ALM.26 · Villa Almadies — offre acceptée par le client, projet lancé (contrat à régulariser)',
+      'TCP_ALM.26 · Villa Almadies — offre acceptée, projet lancé : équipe à affecter, contrat à régulariser',
     );
     expect(titreNotificationCrm('offre_acceptee', 'daf', { ...CTX, facturesPreparees: 1 })).toContain(
       '1 facture brouillon à émettre',

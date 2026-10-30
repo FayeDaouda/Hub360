@@ -60,8 +60,9 @@ describe('Remise → reprise → validation d’une tâche', () => {
   afterAll(() => app.close());
 
   it('le DPLG assigne la tâche au salarié', async () => {
-    const assignables: { id: string; nom: string }[] = (await dirgc.get('/projets-ouverts/assignables').expect(200))
-      .body;
+    const assignables: { id: string; nom: string }[] = (
+      await dirgc.get(`/projets-ouverts/${projetId}/assignables`).expect(200)
+    ).body;
     const rokhaya = assignables.find((a) => a.nom === 'Rokhaya Ndoye')!;
     await dirgc
       .patch(`/projets-ouverts/${projetId}/taches/${tache.id}/assignation`, { collaborateurId: rokhaya.id })
@@ -116,5 +117,40 @@ describe('Remise → reprise → validation d’une tâche', () => {
     const textes = historique.map((e) => e.detail).join(' | ');
     expect(textes).toContain('Remise v01 · 1 fichier · « Première version »');
     expect(textes).toContain('Remise v02 · 1 fichier');
+  });
+
+  // Équipes du projet (29/10/2026) : le Dir. GC affecte l'équipe et nomme son
+  // chef ; le chef assigne le travail aux seuls membres de son équipe.
+  it('équipe affectée par le Dir. GC : son chef assigne à ses membres, pas aux autres', async () => {
+    const cellules: { id: string; nom: string }[] = (await dirgc.get('/cellules').expect(200)).body;
+    const etudes = cellules.find((c) => c.nom.includes('Études'))!;
+    const personnes: { id: string; nom: string }[] = (
+      await dirgc.get(`/projets-ouverts/${projetId}/assignables`).expect(200)
+    ).body;
+    const id = (nom: string) => personnes.find((p) => p.nom === nom)!.id;
+    // Avant : Rokhaya n'est chef d'aucune équipe du projet.
+    await salarie.get(`/projets-ouverts/${projetId}/assignables`).expect(403);
+
+    await dirgc.patch(`/cellules/${etudes.id}/dispatcher`, { dispatcherId: id('Rokhaya Ndoye') }).expect(200);
+    const equipes = (await dirgc.put(`/projets/${projetId}/equipes`, { celluleIds: [etudes.id] }).expect(200)).body;
+    expect(equipes.equipes.map((e: { id: string }) => e.id)).toEqual([etudes.id]);
+
+    const siens: { nom: string }[] = (await salarie.get(`/projets-ouverts/${projetId}/assignables`).expect(200)).body;
+    expect(siens.map((p) => p.nom)).toEqual(expect.arrayContaining(['Souleymane Fall', 'Malick Sy']));
+    expect(siens.map((p) => p.nom)).not.toContain('Cheikh Sarr');
+
+    const fiche: Fiche = (await salarie.get(`/projets-ouverts/${projetId}`).expect(200)).body;
+    const autre = fiche.cartes
+      .filter((c) => c.etat.code === 'ouverte')
+      .flatMap((c) => c.taches)
+      .find((t) => t.statut === 'a_faire' && t.id !== tache.id)!;
+    const assigner = (nom: string) =>
+      salarie.patch(`/projets-ouverts/${projetId}/taches/${autre.id}/assignation`, { collaborateurId: id(nom) });
+    await assigner('Souleymane Fall').expect(200);
+    await assigner('Cheikh Sarr').expect(403);
+
+    // Remise en état pour les autres parcours (base partagée).
+    await dirgc.put(`/projets/${projetId}/equipes`, { celluleIds: [] }).expect(200);
+    await dirgc.patch(`/cellules/${etudes.id}/dispatcher`, { dispatcherId: null }).expect(200);
   });
 });

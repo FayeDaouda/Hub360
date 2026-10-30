@@ -35,7 +35,7 @@ export function Teams({ slug, canWrite }: { slug: string; canWrite: boolean }) {
   const reassign = (employeeId: string, cellId: string | null) =>
     run(() => updateEmployee(slug, employeeId, { celluleId: cellId }), 'La réaffectation a échoué.');
   const setPilot = (cellId: string, employeeId: string | null) =>
-    run(() => setCellPilot(slug, cellId, employeeId), 'Le pilote n’a pas été modifié.');
+    run(() => setCellPilot(slug, cellId, employeeId), 'Le chef d’équipe n’a pas été modifié.');
   const updateMember = (employeeId: string, patch: { niveau?: EmployeeLevel; photo?: string | null }) =>
     run(() => updateEmployee(slug, employeeId, patch), 'La modification a échoué.');
 
@@ -80,8 +80,8 @@ export function Teams({ slug, canWrite }: { slug: string; canWrite: boolean }) {
       {list === 'cellules' && withoutAccount.length > 0 && (
         <p className="eq-alerte" role="note">
           {withoutAccount.length === 1
-            ? `${withoutAccount[0]} n’a pas de compte HUB : les remises et demandes de sa cellule remontent au Dir. GC. Créez-lui un compte, ou désignez un autre pilote.`
-            : `${withoutAccount.length} pilotes n’ont pas de compte HUB (${withoutAccount.join(', ')}) : les remises et demandes de leur cellule remontent au Dir. GC. Créez-leur un compte, ou désignez d’autres pilotes.`}
+            ? `${withoutAccount[0]} n’a pas de compte HUB : les remises et demandes de sa cellule remontent au Dir. GC. Créez-lui un compte, ou désignez un autre chef d’équipe.`
+            : `${withoutAccount.length} chefs d’équipe n’ont pas de compte HUB (${withoutAccount.join(', ')}) : les remises et demandes de leur cellule remontent au Dir. GC. Créez-leur un compte, ou désignez d’autres chefs d’équipe.`}
         </p>
       )}
       {list === 'cellules' && narrow && (

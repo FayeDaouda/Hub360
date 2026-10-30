@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { NiveauPermission } from '@prisma/client';
+import { aLaPermission } from '../commun/permission.guard';
 import { ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
@@ -31,8 +33,8 @@ type Chief = {
 } | null;
 
 // Validation (maquette) : sans temps atelier, le dépôt du justificatif vaut
-// validation ; sinon le chef de team, et l'Architecte DPLG quand la tâche est
-// celle du chef de team. Noms : les comptes réellement prévenus (même circuit
+// validation ; sinon le chef d’équipe, et l'Architecte DPLG quand la tâche est
+// celle du chef d’équipe. Noms : les comptes réellement prévenus (même circuit
 // que les notifications), le signataire des contrats à défaut. `motif`
 // (pourquoi pas le chef) n'est affiché qu'aux gestionnaires.
 function reviewerOf(
@@ -58,8 +60,8 @@ function reviewerOf(
       motif: `${fullName(chief)} ${ctx.absentEmployees.has(chief.id) ? 'absent' : 'sans compte HUB'}`,
     };
   if (chief && assigneId === chief.id)
-    return { mode: 'personne' as const, nom: names.dplg, role: 'Architecte DPLG', motif: 'tâche du chef de team' };
-  return { mode: 'personne' as const, nom: fullName(chief), role: 'chef de team' };
+    return { mode: 'personne' as const, nom: names.dplg, role: 'Architecte DPLG', motif: 'tâche du chef d’équipe' };
+  return { mode: 'personne' as const, nom: fullName(chief), role: 'chef d’équipe' };
 }
 
 // Dossier d'un projet ouvert (maquette « Projets » du boss) : étapes, cartes,
@@ -72,7 +74,7 @@ export class ProjectFileService {
     private states: ProjectStatesService,
   ) {}
 
-  async file(companyId: string, projectId: string, actor: Actor) {
+  async file(companyId: string, projectId: string, actor: Actor & { permissions?: Record<string, NiveauPermission> }) {
     const { decider, ctx } = await this.states.decider(companyId, actor);
     const p = await this.prisma.projet.findFirst({
       where: {
@@ -172,9 +174,16 @@ export class ProjectFileService {
         F2: trancheStatus(p.factures, 'F2'),
         F3: trancheStatus(p.factures, 'F3'),
       },
+      // Toutes les équipes du projet (la première porte le chef qui valide).
+      equipes: p.cellules.map((c) => ({ nom: c.cellule.nom, chef: fullName(c.cellule.dispatcher) })),
+      // Assigner (même règle que TaskAssignmentService.scope) : l'écriture sur
+      // Projets, le CTO seulement en suppléance d'un Dir. GC (revue CTO) ; ou
+      // le chef d'une équipe du projet.
+      peutAssigner:
+        inCircuit &&
+        ((aLaPermission(actor.permissions, 'projets', 'ecriture') && (actor.role !== ROLE_CTO || ctx.ctoStandsIn)) ||
+          (!!me && p.cellules.some((c) => c.cellule.dispatcher?.id === me))),
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
-      // Assigner : le CTO seulement en suppléance d'un Dir. GC (revue CTO).
-      peutAssigner: actor.role !== ROLE_CTO || ctx.ctoStandsIn,
       optionsTs: dplgConnected
         ? p.cartes.flatMap((c) => {
             const t = c.temps as Temps | null;
@@ -257,7 +266,7 @@ export class ProjectFileService {
               accordeeJusquau: grantedExtension(t.prolongations),
             },
             // Prolongation : l'assigné la demande (tâche ni validée ni « non
-            // nécessaire », aucune demande en attente) ; chef de team ou DPLG décide.
+            // nécessaire », aucune demande en attente) ; chef d’équipe ou DPLG décide.
             peutDemanderProlongation:
               inCircuit &&
               !!me &&

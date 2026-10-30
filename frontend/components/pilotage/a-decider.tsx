@@ -167,7 +167,7 @@ export function ADecider({
       tri: v.valideeLe ?? '',
       icone: Stamp,
       titre: `Visa DPLG à apposer · ${v.code} · ${v.tache}`,
-      detail: `${v.assigne ?? 'Non assignée'} · validée par le chef de team${v.valideeLe ? ` le ${formatDayMonth(v.valideeLe)}` : ''}`,
+      detail: `${v.assigne ?? 'Non assignée'} · validée par le chef d’équipe${v.valideeLe ? ` le ${formatDayMonth(v.valideeLe)}` : ''}`,
       quand: depuis(jours),
       ton: jours > 1 ? 'risque' : 'attention',
       action: 'Viser',

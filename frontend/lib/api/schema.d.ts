@@ -1380,22 +1380,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/societes/{slug}/projets-ouverts/assignables": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["OpenProjectsController_assignable"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/societes/{slug}/projets-ouverts/mentionnables": {
         parameters: {
             query?: never;
@@ -1522,6 +1506,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["OpenProjectsController_setSiteVisitDate"];
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/assignables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_assignable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/charges": {
@@ -1694,6 +1694,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["OpenProjectsController_resolveComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets/{id}/equipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ProjectTeamsController_get"];
+        put: operations["ProjectTeamsController_set"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4338,11 +4354,6 @@ export interface components {
             projets: components["schemas"]["OpenProjectSummaryDto"][];
             kpi: components["schemas"]["BoardKpiDto"];
         };
-        AssignableEmployeeDto: {
-            id: string;
-            nom: string;
-            cellule: string | null;
-        };
         MentionablePersonDto: {
             id: string;
             nom: string;
@@ -4651,6 +4662,7 @@ export interface components {
             code: string;
             client: components["schemas"]["ProjectClientDto"];
             cellule: components["schemas"]["OpenProjectCellDto"] | null;
+            equipes: components["schemas"]["OpenProjectCellDto"][];
             jeSuisChef: boolean;
             pilote: string;
             version: components["schemas"]["TemplateVersionDto"] | null;
@@ -4683,6 +4695,11 @@ export interface components {
         };
         SiteVisitDateResultDto: {
             dateVisiteSite: string | null;
+        };
+        AssignableEmployeeDto: {
+            id: string;
+            nom: string;
+            cellule: string | null;
         };
         EmployeeLoadDto: {
             collaborateurId: string;
@@ -4799,6 +4816,19 @@ export interface components {
         };
         ResolutionDto: {
             ok: boolean;
+        };
+        ProjectTeamDto: {
+            id: string;
+            code: string;
+            nom: string;
+            chef: string | null;
+        };
+        ProjectTeamsDto: {
+            equipes: components["schemas"]["ProjectTeamDto"][];
+            disponibles: components["schemas"]["ProjectTeamDto"][];
+        };
+        SetProjectTeamsDto: {
+            celluleIds: string[];
         };
         CreateCellDto: {
             /** @enum {string} */
@@ -7575,27 +7605,6 @@ export interface operations {
             };
         };
     };
-    OpenProjectsController_assignable: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssignableEmployeeDto"][];
-                };
-            };
-        };
-    };
     OpenProjectsController_mentionable: {
         parameters: {
             query?: never;
@@ -7772,6 +7781,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SiteVisitDateResultDto"];
+                };
+            };
+        };
+    };
+    OpenProjectsController_assignable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableEmployeeDto"][];
                 };
             };
         };
@@ -8078,6 +8109,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResolutionDto"];
+                };
+            };
+        };
+    };
+    ProjectTeamsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTeamsDto"];
+                };
+            };
+        };
+    };
+    ProjectTeamsController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProjectTeamsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectTeamsDto"];
                 };
             };
         };

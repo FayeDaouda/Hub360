@@ -163,7 +163,7 @@ export class InterventionsService {
     return this.state(companyId, project.code);
   }
 
-  // Cellules du projet (chef de team, validation des remises, visibilité des
+  // Cellules du projet (chef d’équipe, validation des remises, visibilité des
   // Salariés) : la liste donnée remplace l'ensemble ; vide = aucune.
   async setCells(companyId: string, projectId: string, cellIds: string[], actorId: string, motif: string) {
     const project = await this.project(companyId, projectId);

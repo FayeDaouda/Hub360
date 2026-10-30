@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { boardFixture, cardFixture, fileFixture, taskFixture } from './fixtures';
-import { boardTiles, cellLabel, defaultStep, employeeTiles, invoicePills, myOpenTasksIn } from './project-tiles';
+import { boardTiles, defaultStep, employeeTiles, invoicePills, myOpenTasksIn } from './project-tiles';
 
 describe('defaultStep', () => {
   it('l’étape de ma première tâche ouverte, sinon la première étape pas finie', () => {
@@ -74,10 +74,5 @@ describe('repères du dossier', () => {
       { libelle: 'F2 attend 02, 03', ton: 'attention' },
       { libelle: 'F3 attend 06', ton: 'neutre' },
     ]);
-  });
-
-  it('nom de cellule', () => {
-    expect(cellLabel('Archi 3')).toBe('Cellule Archi 3');
-    expect(cellLabel('Cellule Archi 3')).toBe('Cellule Archi 3');
   });
 });

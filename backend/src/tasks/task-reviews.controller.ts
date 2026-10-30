@@ -9,7 +9,7 @@ import { TasksService } from './tasks.service';
 
 type R = { user: { userId: string; societeId: string; role: string } };
 
-// Le valideur (chef de team, Architecte DPLG, admin) : le service vérifie
+// Le valideur (chef d’équipe, Architecte DPLG, admin) : le service vérifie
 // qu'il l'est bien pour chaque tâche.
 @GroupScope()
 @Controller('societes/:slug/taches')

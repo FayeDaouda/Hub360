@@ -22,7 +22,7 @@ export type AssignedTask = Tache & {
   valideeLe: Date | null;
   remisLe: Date | null; // dernière remise
   renvoiMotif: string | null; // dernier renvoi en reprise
-  chefId: string | null; // chef de team de la cellule du projet (circuit de validation)
+  chefId: string | null; // chef d’équipe de la cellule du projet (circuit de validation)
   etapeNumero: number;
   fichierObligatoire: boolean;
   parDepot: boolean; // sans temps atelier : le dépôt du justificatif vaut validation

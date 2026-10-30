@@ -108,7 +108,9 @@ async function main() {
   const { projets } = await dirgc('GET', '/projets-ouverts');
   const project = projets[0];
   const sheet = await dirgc('GET', `/projets-ouverts/${project.id}`);
-  const assignable = (await dirgc('GET', '/projets-ouverts/assignables')).find((a) => a.nom === 'Rokhaya Ndoye');
+  const assignable = (await dirgc('GET', `/projets-ouverts/${project.id}/assignables`)).find(
+    (a) => a.nom === 'Rokhaya Ndoye',
+  );
   const tasks = sheet.cartes
     .filter((c) => c.etat.code === 'ouverte')
     .flatMap((c) => c.taches)

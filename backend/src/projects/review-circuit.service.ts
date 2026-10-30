@@ -31,7 +31,7 @@ export class ReviewCircuitService {
     ];
   }
 
-  // Qui prévenir d'une remise ou d'une prolongation : le chef de team s'il a
+  // Qui prévenir d'une remise ou d'une prolongation : le chef d’équipe s'il a
   // un compte et n'est pas absent ; sinon l'Architecte DPLG (ou son
   // suppléant) ; le CTO pour le travail d'un Dir. GC.
   async reviewers(ctx: DecisionContext, assigneeId: string | null, chiefId: string | null): Promise<string[]> {
@@ -47,7 +47,7 @@ export class ReviewCircuitService {
     if (assigneeId && ctx.dplgEmployees.has(assigneeId)) return { ids: ctx.ctoAccounts, role: 'CTO' };
     if (chiefId && chiefId !== assigneeId && !ctx.absentEmployees.has(chiefId)) {
       const chief = await this.accountsOf([chiefId]);
-      if (chief.length) return { ids: chief, role: 'chef de team' };
+      if (chief.length) return { ids: chief, role: 'chef d’équipe' };
     }
     return { ids: ctx.dplgAccounts, role: 'Architecte DPLG' };
   }

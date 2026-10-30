@@ -7,7 +7,7 @@ import { dateOfDay } from './work-calendar';
 // qui est prévenu AUJOURD'HUI, selon les absences validées.
 //   · Un Dir. GC absent désigne un suppléant (autre Dir. GC ou CTO) ; sans
 //     désignation, le CTO tient sa place.
-//   · Un chef de team sans compte HUB, ou absent, ne bloque plus rien : ses
+//   · Un chef d’équipe sans compte HUB, ou absent, ne bloque plus rien : ses
 //     remises et prolongations remontent au Dir. GC (ou à son suppléant).
 //   · Le travail d'un Dir. GC, les prolongations qui repoussent la livraison
 //     et les TS au-delà du seuil remontent au CTO.

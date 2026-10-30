@@ -75,13 +75,6 @@ export class OpenProjectsController {
     return this.boards.board(req.user.societeId, req.user);
   }
 
-  // Segment fixe, déclaré avant ':id'.
-  @Get('assignables')
-  @RequiertPermission('projets', 'ecriture')
-  assignable(@Req() req: R): Promise<AssignableEmployeeDto[]> {
-    return this.assignment.assignable(req.user.societeId);
-  }
-
   @Get('mentionnables')
   @RequiertPermission('projets', 'lecture')
   mentionable(@Req() req: R): Promise<MentionablePersonDto[]> {
@@ -142,11 +135,30 @@ export class OpenProjectsController {
     return this.site.setSiteVisitDate(req.user.societeId, projectId, dto.date);
   }
 
-  // Avant d'assigner : charge de chacun sur la fenêtre de la tâche.
+  // Personnes proposées dans « Assigner » : tout le monde pour le Dir. GC,
+  // les membres de ses équipes pour un chef d'équipe (vérifié par le service).
+  @Get(':id/assignables')
+  @RequiertPermission('projets', 'lecture')
+  assignable(@Req() req: R, @Param('id') projectId: string): Promise<AssignableEmployeeDto[]> {
+    return this.assignment.assignable(req.user.societeId, req.user, projectId);
+  }
+
+  // Avant d'assigner : charge de chacun sur la fenêtre de la tâche — limitée
+  // aux membres de ses équipes pour un chef d'équipe.
   @Get(':id/taches/:tacheId/charges')
-  @RequiertPermission('projets', 'ecriture')
-  workload(@Req() req: R, @Param('id') projectId: string, @Param('tacheId') taskId: string): Promise<TaskWorkloadDto> {
-    return this.productionService.workload(req.user.societeId, projectId, taskId);
+  @RequiertPermission('projets', 'lecture')
+  async workload(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+  ): Promise<TaskWorkloadDto> {
+    const scope = await this.assignment.scopeOrThrow(req.user.societeId, req.user, projectId);
+    return this.productionService.workload(
+      req.user.societeId,
+      projectId,
+      taskId,
+      scope === 'all' ? null : scope.cellIds,
+    );
   }
 
   @Get(':id/taches/:tacheId/historique')
@@ -160,9 +172,10 @@ export class OpenProjectsController {
     return this.assignment.history(req.user.societeId, projectId, taskId);
   }
 
-  // « Lecture et assignation » : l'écriture sur Projets suffit.
+  // Le Dir. GC (écriture sur Projets) ou un chef d'équipe du projet (vérifié
+  // par le service).
   @Patch(':id/taches/:tacheId/assignation')
-  @RequiertPermission('projets', 'ecriture')
+  @RequiertPermission('projets', 'lecture')
   assign(
     @Req() req: R,
     @Param('id') projectId: string,
@@ -198,7 +211,7 @@ export class OpenProjectsController {
     return this.submission.submissionFile(req.user.societeId, projectId, taskId, fileId);
   }
 
-  // Prolongation : demande de l'assigné, décision du chef de team ou du DPLG
+  // Prolongation : demande de l'assigné, décision du chef d’équipe ou du DPLG
   // (droits vérifiés par le service).
   @Post(':id/taches/:tacheId/prolongation')
   @RequiertPermission('projets', 'lecture')
@@ -223,8 +236,8 @@ export class OpenProjectsController {
   }
 
   // Remise : valider ou renvoyer en reprise (droits vérifiés par le service).
-  // Lecture suffit : le chef de team peut être Salarié ; le service vérifie
-  // qu'il s'agit du chef de team du projet ou de l'Architecte DPLG.
+  // Lecture suffit : le chef d’équipe peut être Salarié ; le service vérifie
+  // qu'il s'agit du chef d’équipe du projet ou de l'Architecte DPLG.
   @Post(':id/taches/:tacheId/decision')
   @RequiertPermission('projets', 'lecture')
   decide(

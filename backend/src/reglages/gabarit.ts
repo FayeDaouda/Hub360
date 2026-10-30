@@ -24,7 +24,7 @@ export type TacheGabarit = {
   temps: Temps;
   descriptif?: string; // panneau de la tâche (maquette Projets)
   sourceNative?: boolean; // « source native exigée »
-  // Visa DPLG (revue Dir. GC, 21/10/2026) : validée par le chef de team, la
+  // Visa DPLG (revue Dir. GC, 21/10/2026) : validée par le chef d’équipe, la
   // tâche n'est faite qu'une fois visée par l'architecte DPLG (Dir. GC).
   visaDplg?: boolean;
   // Fichier au dépôt : obligatoire par défaut (lot F, 23/10/2026) ; true =

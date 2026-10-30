@@ -38,7 +38,7 @@ export type TaskState =
   | { code: 'non_necessaire' }
   | { code: 'verrouillee' }
   | { code: 'validee'; ecart: number | null } // heures : + avance, − retard
-  | { code: 'a_viser' } // validée par le chef de team, visa DPLG à apposer
+  | { code: 'a_viser' } // validée par le chef d’équipe, visa DPLG à apposer
   | { code: 'a_valider'; version: number }
   // jours : retard d'une reprise dont l'échéance effective (délai accordé,
   // sinon de référence) est passée ; null dans les délais.

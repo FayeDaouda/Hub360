@@ -36,7 +36,7 @@ const fullName = (c: { prenom: string; nom: string }) => `${c.prenom} ${c.nom}`.
 // Mes tâches, Mon espace (Mes performances, À valider, Ma cellule) : les
 // tâches du gabarit (TacheProjet) assignées, depuis oct. 2026. La remise et
 // la validation passent par les services des tâches de Projets : mêmes règles que la page
-// Projets (l'assigné remet ; le chef de team valide, l'Architecte DPLG
+// Projets (l'assigné remet ; le chef d’équipe valide, l'Architecte DPLG
 // supplée ; jamais sa propre tâche).
 @Injectable()
 export class TasksService {

@@ -556,6 +556,18 @@
 .po-case input {
   margin-top: 0.2rem;
 }
+/* Assigner : le bloc (par défaut) ou cette tâche seulement. */
+.po-portee {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+/* Équipes du projet (en-tête du dossier projet, fiche du dossier CRM). */
+.pt-equipes {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.35rem 0;
+}
 .po-historique {
   display: grid;
   gap: 0.3rem;

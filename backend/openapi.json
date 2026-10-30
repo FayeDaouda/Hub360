@@ -3095,39 +3095,6 @@
         ]
       }
     },
-    "/api/societes/{slug}/projets-ouverts/assignables": {
-      "get": {
-        "operationId": "OpenProjectsController_assignable",
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AssignableEmployeeDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "OpenProjects"
-        ]
-      }
-    },
     "/api/societes/{slug}/projets-ouverts/mentionnables": {
       "get": {
         "operationId": "OpenProjectsController_mentionable",
@@ -3416,6 +3383,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SiteVisitDateResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/assignables": {
+      "get": {
+        "operationId": "OpenProjectsController_assignable",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssignableEmployeeDto"
+                  }
                 }
               }
             }
@@ -4057,6 +4065,90 @@
         },
         "tags": [
           "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets/{id}/equipes": {
+      "get": {
+        "operationId": "ProjectTeamsController_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTeamsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ProjectTeams"
+        ]
+      },
+      "put": {
+        "operationId": "ProjectTeamsController_set",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetProjectTeamsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTeamsDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ProjectTeams"
         ]
       }
     },
@@ -11234,26 +11326,6 @@
           "kpi"
         ]
       },
-      "AssignableEmployeeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "nom": {
-            "type": "string"
-          },
-          "cellule": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "nom",
-          "cellule"
-        ]
-      },
       "MentionablePersonDto": {
         "type": "object",
         "properties": {
@@ -12677,6 +12749,12 @@
               }
             ]
           },
+          "equipes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpenProjectCellDto"
+            }
+          },
           "jeSuisChef": {
             "type": "boolean"
           },
@@ -12758,6 +12836,7 @@
           "code",
           "client",
           "cellule",
+          "equipes",
           "jeSuisChef",
           "pilote",
           "version",
@@ -12832,6 +12911,26 @@
         },
         "required": [
           "dateVisiteSite"
+        ]
+      },
+      "AssignableEmployeeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "cellule": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "cellule"
         ]
       },
       "EmployeeLoadDto": {
@@ -13314,6 +13413,67 @@
         },
         "required": [
           "ok"
+        ]
+      },
+      "ProjectTeamDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "chef": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "nom",
+          "chef"
+        ]
+      },
+      "ProjectTeamsDto": {
+        "type": "object",
+        "properties": {
+          "equipes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectTeamDto"
+            }
+          },
+          "disponibles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectTeamDto"
+            }
+          }
+        },
+        "required": [
+          "equipes",
+          "disponibles"
+        ]
+      },
+      "SetProjectTeamsDto": {
+        "type": "object",
+        "properties": {
+          "celluleIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "celluleIds"
         ]
       },
       "CreateCellDto": {
