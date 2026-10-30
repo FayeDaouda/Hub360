@@ -56,16 +56,41 @@ export class ProductionService {
       select: { id: true, debutLe: true, finLe: true, heures: true },
     });
     if (!task) throw new NotFoundException('Tâche introuvable');
+    return this.workloadOf(companyId, [task], cellIds);
+  }
+
+  // Même charge, sur la fenêtre d'un bloc (du début de sa première tâche
+  // ouverte à l'échéance de la dernière), ses tâches ouvertes comprises.
+  async cardWorkload(companyId: string, projectId: string, cardId: string, cellIds: string[] | null = null) {
+    const card = await this.prisma.carteProjet.findFirst({
+      where: { id: cardId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
+      select: {
+        taches: {
+          where: { statut: { notIn: ['validee', 'non_necessaire'] } },
+          select: { id: true, debutLe: true, finLe: true, heures: true },
+        },
+      },
+    });
+    if (!card) throw new NotFoundException('Carte introuvable');
+    return this.workloadOf(companyId, card.taches, cellIds);
+  }
+
+  private async workloadOf(companyId: string, tasks: LoadTask[], cellIds: string[] | null) {
     const zone = await this.reglages.regle<{ de: number; a: number } | null>(companyId, 'objectif_charge_equipes');
-    if (!task.debutLe || !task.finLe || task.debutLe > task.finLe) return { periode: null, zone, charges: [] };
-    const p = { debut: task.debutLe, fin: task.finLe };
+    const dated = tasks.filter((t) => t.debutLe && t.finLe && t.debutLe <= t.finLe);
+    if (!dated.length) return { periode: null, zone, charges: [] };
+    const p = {
+      debut: dated.map((t) => t.debutLe!).reduce((a, b) => (a < b ? a : b)),
+      fin: dated.map((t) => t.finLe!).reduce((a, b) => (a > b ? a : b)),
+    };
+    const ids = tasks.map((t) => t.id);
     const [employees, holidays] = await Promise.all([
       this.prisma.collaborateur.findMany({
         where: { societeId: companyId, ...(cellIds ? { celluleId: { in: cellIds } } : {}) },
         select: {
           id: true,
           tachesProjet: {
-            where: { id: { not: taskId }, ...openTasksIn(p) },
+            where: { id: { notIn: ids }, ...openTasksIn(p) },
             select: { id: true, debutLe: true, finLe: true, heures: true },
           },
           dossierPersonnel: { select: { absences: absencesIn(p) } },
@@ -81,7 +106,7 @@ export class ProductionService {
         ...workloadOver(
           p,
           c.tachesProjet.map(toLoad),
-          toLoad(task),
+          dated.map(toLoad),
           (c.dossierPersonnel?.absences ?? []).map((a) => ({ debut: a.dateDebut, fin: a.dateFin })),
           holidays,
         ),

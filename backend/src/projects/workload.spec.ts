@@ -25,6 +25,11 @@ describe('workloadOver', () => {
     expect(c).toMatchObject({ disponibles: 16, joursAbsence: 2, pourcentage: 50 });
   });
 
+  it('un bloc entier : toutes ses tâches comptent', () => {
+    const autre = { id: 'T2', debut: P.debut, echeance: P.fin, heures: 12 };
+    expect(workloadOver(P, [], [TACHE, autre], [])).toMatchObject({ assignees: 0, pourcentage: 50 });
+  });
+
   it('absent toute la période : aucun pourcentage', () => {
     expect(workloadOver(P, [], TACHE, [P]).pourcentage).toBeNull();
   });

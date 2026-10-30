@@ -174,6 +174,9 @@
    ailleurs, simple relais de la grille et de son espacement. */
 .po-dossier-defile {
   display: grid;
+  /* Colonne bornée : un contenu large (sélecteur, ligne de tâche) ne pousse
+     plus le dossier au-delà de l'écran du téléphone. */
+  grid-template-columns: minmax(0, 1fr);
   gap: inherit;
   min-width: 0;
 }
@@ -556,12 +559,6 @@
 .po-case input {
   margin-top: 0.2rem;
 }
-/* Assigner : le bloc (par défaut) ou cette tâche seulement. */
-.po-portee {
-  display: grid;
-  gap: 0.3rem;
-  margin-bottom: 0.4rem;
-}
 /* Équipes du projet (en-tête du dossier projet, fiche du dossier CRM). */
 .pt-equipes {
   display: grid;
@@ -845,4 +842,155 @@
   font-family: var(--font-mono);
   font-size: var(--t-12);
   color: var(--text);
+}
+
+/* Bloc d'une carte : qui l'a, et le bouton pour l'assigner (30/10/2026). */
+.po-bloc-assigner,
+.po-bloc-assigne {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 16rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.po-bloc-assigner {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--duree-court) var(--courbe);
+}
+.po-bloc-assigner:hover {
+  border-color: var(--border-hover);
+}
+.po-bloc-assigner:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Personne encore : l'action à faire, en couleur d'action. */
+.po-bloc-assigner.is-vide {
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--action-texte);
+}
+.po-bloc-assigner.is-vide:hover {
+  background: var(--action-survol);
+}
+.po-bloc-assigne {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Fenêtre « Assigner le bloc » : personnes par équipe, charge en barre. */
+.ab-modale {
+  max-width: 600px;
+}
+.ab-liste {
+  display: grid;
+  gap: 0.75rem;
+  /* La liste défile, les boutons restent visibles. */
+  max-height: min(52vh, 28rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.ab-groupe {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ab-groupe legend {
+  margin-bottom: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ab-personne {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.ab-personne:hover {
+  background: var(--surface-2);
+}
+.ab-personne.is-choisie {
+  border-color: var(--action);
+  background: var(--surface-2);
+}
+.ab-nom small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.ab-charge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.ab-barre {
+  width: 4.5rem;
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+.ab-barre span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--action);
+}
+.ab-charge--libre .ab-barre span {
+  background: var(--ok-texte);
+}
+.ab-charge--charge {
+  color: var(--danger-texte);
+}
+.ab-charge--charge .ab-barre span {
+  background: var(--danger-texte);
+}
+.ab-autres summary {
+  color: var(--lien);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.ab-autres[open] summary {
+  margin-bottom: 0.6rem;
+}
+.ab-remplace {
+  margin: 0;
+  color: var(--attention-texte);
+  font-size: 0.85rem;
+}
+.ab-retirer {
+  margin-right: auto;
+}
+/* Téléphone : la fenêtre est plein écran, la liste en prend la hauteur ;
+   la charge passe sous le nom. */
+@media (max-width: 640px) {
+  .ab-liste {
+    max-height: calc(100dvh - 17rem);
+  }
+  .ab-personne {
+    grid-template-columns: auto 1fr;
+  }
+  .ab-charge {
+    grid-column: 2;
+  }
 }

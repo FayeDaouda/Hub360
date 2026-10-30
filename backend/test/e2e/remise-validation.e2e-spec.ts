@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { api, COMPTES, connecter, demarrer } from './app';
 
 type Tache = { id: string; statut: string; heures: number | null; version: number };
-type Carte = { etat: { code: string }; taches: Tache[] };
+type Carte = { id: string; etat: { code: string }; taches: Tache[] };
 type Fiche = { id: string; cartes: Carte[] };
 
 // Parcours 3 — le cœur du travail : une tâche assignée, remise avec son
@@ -148,6 +148,20 @@ describe('Remise → reprise → validation d’une tâche', () => {
       salarie.patch(`/projets-ouverts/${projetId}/taches/${autre.id}/assignation`, { collaborateurId: id(nom) });
     await assigner('Souleymane Fall').expect(200);
     await assigner('Cheikh Sarr').expect(403);
+
+    // Le bloc entier (bouton de l'en-tête de la carte) : ses tâches ouvertes.
+    const bloc = fiche.cartes.find(
+      (c) => c.etat.code === 'ouverte' && c.taches.filter((t) => t.statut === 'a_faire').length > 1,
+    )!;
+    const fait = (
+      await salarie
+        .patch(`/projets-ouverts/${projetId}/cartes/${bloc.id}/assignation`, { collaborateurId: id('Malick Sy') })
+        .expect(200)
+    ).body as { modifiees: number };
+    expect(fait.modifiees).toBeGreaterThan(1);
+    await salarie
+      .patch(`/projets-ouverts/${projetId}/cartes/${bloc.id}/assignation`, { collaborateurId: id('Cheikh Sarr') })
+      .expect(403);
 
     // Remise en état pour les autres parcours (base partagée).
     await dirgc.put(`/projets/${projetId}/equipes`, { celluleIds: [] }).expect(200);

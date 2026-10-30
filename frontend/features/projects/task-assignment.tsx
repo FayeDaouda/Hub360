@@ -4,13 +4,12 @@ import { useEffect, useState } from 'react';
 import { formatDate } from '@hub/domain';
 import { assignTask, getTaskWorkload } from './api';
 import { workloadLabel } from './labels';
-import type { AssignableEmployee, ProjectCard, ProjectTask, TaskWorkload } from './types';
+import type { AssignableEmployee, ProjectTask, TaskWorkload } from './types';
 import type { RunAction } from './use-task-action';
 
 type Props = {
   slug: string;
   projectId: string;
-  card: ProjectCard;
   task: ProjectTask;
   assignable: AssignableEmployee[];
   workload: TaskWorkload | null;
@@ -38,42 +37,20 @@ export function useTaskWorkload(slug: string, projectId: string, task: ProjectTa
   return loaded?.key === key ? loaded.workload : null;
 }
 
-// Assigner le bloc (toutes les tâches encore ouvertes de la carte, par
-// défaut — décision du 29/10/2026) ou cette tâche seulement, avec la charge
-// prévisionnelle de chacun sur la fenêtre de la tâche.
-export function TaskAssignment({ slug, projectId, card, task: t, assignable, workload, busy, run }: Props) {
-  const several = card.taches.length > 1;
-  const [wholeCard, setWholeCard] = useState(true);
+// Assigner CETTE tâche (le bloc entier s'assigne depuis l'en-tête de la
+// carte, 30/10/2026), avec la charge prévisionnelle de chacun sur sa fenêtre.
+export function TaskAssignment({ slug, projectId, task: t, assignable, workload, busy, run }: Props) {
   const loadOf = (id: string) => workload?.charges.find((c) => c.collaborateurId === id);
   const mine = t.assigne ? loadOf(t.assigne.id) : undefined;
 
   const assign = (employeeId: string) =>
-    run(
-      () => assignTask(slug, projectId, t.id, employeeId || null, several && wholeCard),
-      'L’assignation a échoué.',
-      // Portée « tâche seulement » : un seul usage, on revient au bloc.
-      () => setWholeCard(true),
-    );
+    run(() => assignTask(slug, projectId, t.id, employeeId || null, false), 'L’assignation a échoué.');
 
   return (
     <div className="po-panneau-bloc">
       <label className="tp-section" htmlFor="po-assigner">
-        Assigner
+        Assigner cette tâche
       </label>
-      {several && (
-        <div className="po-portee" role="radiogroup" aria-label="Portée de l’assignation">
-          <label className="po-case">
-            <input type="radio" checked={wholeCard} disabled={busy} onChange={() => setWholeCard(true)} />
-            <span>
-              Tout le bloc « {card.libelle} » <span className="po-aide">(ses tâches encore ouvertes)</span>
-            </span>
-          </label>
-          <label className="po-case">
-            <input type="radio" checked={!wholeCard} disabled={busy} onChange={() => setWholeCard(false)} />
-            <span>Cette tâche seulement</span>
-          </label>
-        </div>
-      )}
       <select
         id="po-assigner"
         className="field-input"

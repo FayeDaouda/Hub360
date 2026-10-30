@@ -149,7 +149,7 @@ export function TaskPanel({
       {t.prolongation.enAttente && <ExtensionDecision {...block} />}
       {t.visa && (t.statut === 'validee' || t.visa.le) && <VisaDecision {...block} />}
       {t.peutDecider && <SubmissionReview {...block} onOpenFile={openFile} />}
-      {canAssignHere && <TaskAssignment {...block} card={card} assignable={assignable} workload={workload} />}
+      {canAssignHere && <TaskAssignment {...block} assignable={assignable} workload={workload} />}
 
       <ThreadView
         key={t.id}

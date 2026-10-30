@@ -27,6 +27,11 @@ export class AssignTaskDto {
   @IsOptional() @IsBoolean() carte?: boolean;
 }
 
+// PATCH …/projets-ouverts/:id/cartes/:carteId/assignation — tout le bloc.
+export class AssignCardDto {
+  @ValidateIf((_, v) => v !== null) @IsString() collaborateurId!: string | null;
+}
+
 // POST …/projets-ouverts/:id/fil — la carte OU la tâche ; parentId = réponse.
 export class PostCommentDto {
   @IsOptional() @IsString() carteId?: string;

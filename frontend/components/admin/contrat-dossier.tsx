@@ -418,6 +418,7 @@ export function ContratDossier({ slug, projet, peutPreparer, onMaj }: Props) {
             setRelecture((n) => n + 1);
           }}
           closeOnEscape={false}
+          portal
           labelledBy="reglages-contrats-titre"
           className="modal--large"
           backdropClassName="modal-backdrop--premier-plan"
