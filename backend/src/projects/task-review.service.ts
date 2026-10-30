@@ -22,7 +22,7 @@ export class TaskReviewService {
     private circuit: ReviewCircuitService,
   ) {}
 
-  // Valider une remise, ou la renvoyer en reprise (motif) — chef de team,
+  // Valider une remise, ou la renvoyer en reprise (motif) — chef d’équipe,
   // Architecte DPLG (tâches du chef, suppléance) ; jamais sa propre tâche.
   async decide(
     companyId: string,
@@ -62,7 +62,7 @@ export class TaskReviewService {
           ? 'On ne valide jamais sa propre tâche.'
           : assigneeIsDplg
             ? 'Le travail du Dir. GC est validé par le CTO.'
-            : 'La remise se valide par le chef de team ou l’Architecte DPLG.',
+            : 'La remise se valide par le chef d’équipe ou l’Architecte DPLG.',
       );
     }
     const vNN = versionLabel(task.version);

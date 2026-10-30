@@ -16,12 +16,15 @@ import {
   type StatutCrm,
   type TransitionDossier,
 } from '@/lib/types';
-import { formatDate, formatNumber } from '@hub/domain';
+import { formatDate, formatNumber, ROLE_COMPANY_ADMIN } from '@hub/domain';
 import type { ActionCrm } from '@/lib/cycle-crm';
 import { completudeFiche, getHistorique, libelleCategorie, type OffreEmise } from '@/lib/crm';
 import { CycleDossier } from './cycle-dossier';
 import { OffreDossier } from './offre-dossier';
 import { ContratDossier } from './contrat-dossier';
+import { ProjectTeams } from '@/features/projects/project-teams';
+import { niveauSuffisant } from '@/lib/auth';
+import { useSessionCourante } from '@/lib/layout-contexte';
 import { LocaliteSelect } from './localite-select';
 import { CaracteristiquesProjet } from './caracteristiques-projet';
 import { FicheApporteurSection } from './fiche-apporteur-section';
@@ -113,6 +116,10 @@ export function DetailDossierModal({
   peutFacturer,
   onModifierFiche,
 }: Props) {
+  // Équipes du projet : écriture sur le module « équipe » (le Dir. GC,
+  // l'administration).
+  const session = useSessionCourante();
+  const peutAffecterEquipes = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'equipe', 'ecriture');
   // Lien public émis (validation DAF / relance) : le clair n'existe qu'une
   // fois, affiché jusqu'à fermeture.
   const [lienEmis, setLienEmis] = useState<OffreEmise | null>(null);
@@ -451,6 +458,12 @@ export function DetailDossierModal({
             onLienEmis={setLienEmis}
           />
           <ContratDossier slug={slug} projet={projet} peutPreparer={peutPreparerOffre} onMaj={onMaj} />
+          {/* Onboard : le Dir. GC affecte le projet à une équipe (29/10/2026). */}
+          {projet.statut === 'onboard' && projet.projetId && (
+            <section className="offre-dossier" aria-label="Équipes du projet">
+              <ProjectTeams slug={slug} projectId={projet.projetId} canEdit={peutAffecterEquipes} />
+            </section>
+          )}
           {/* Facture directe du lead, sans offre (maquette Finances) : préparée
                 dans Finances, validée par le CFO avant émission. */}
           {peutFacturer && (

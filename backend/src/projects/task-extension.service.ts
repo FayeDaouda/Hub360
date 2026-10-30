@@ -73,7 +73,7 @@ export class TaskExtensionService {
     return { ok: true };
   }
 
-  // Décision (chef de team, sauf sa propre tâche ; Architecte DPLG partout).
+  // Décision (chef d’équipe, sauf sa propre tâche ; Architecte DPLG partout).
   async decide(
     companyId: string,
     actor: Actor,
@@ -102,7 +102,7 @@ export class TaskExtensionService {
           ? 'Cette prolongation repousse la livraison du projet : elle est décidée par le CTO.'
           : assigneeIsDplg
             ? 'Une prolongation du Dir. GC est décidée par le CTO.'
-            : 'Le retard est qualifié par le chef de team ou l’Architecte DPLG, jamais sur sa propre tâche.',
+            : 'Le retard est qualifié par le chef d’équipe ou l’Architecte DPLG, jamais sur sa propre tâche.',
       );
     }
     const date = formatDate(pending.jusquau);

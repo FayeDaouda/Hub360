@@ -6,12 +6,13 @@ import { SidePanel } from './side-panel';
 import { Pill } from '@/components/ui/pill';
 import { niveauSuffisant } from '@/lib/auth';
 import { useSessionCourante } from '@/lib/layout-contexte';
-import { formatDate } from '@hub/domain';
+import { formatDate, ROLE_COMPANY_ADMIN } from '@hub/domain';
 import { AddTsElement } from './add-ts-element';
 import { CardThreadPanel } from './card-thread-panel';
 import { stepNumber, stepPill } from './labels';
 import { ProjectCardView, SURVEY_CARD_KEY } from './project-card';
-import { cellLabel, invoicePills, myOpenTasksIn } from './project-tiles';
+import { invoicePills, myOpenTasksIn } from './project-tiles';
+import { ProjectTeams } from './project-teams';
 import { SiteStatusField } from './site-fields';
 import { TaskPanel } from './task-panel';
 import type { AssignableEmployee, OpenProjectFile } from './types';
@@ -57,7 +58,10 @@ export function ProjectFile({
     .filter((c) => c.etapeNumero === step)
     .map((c) => (filter ? { ...c, taches: c.taches.filter((t) => t.aMoi) } : c))
     .filter((c) => !filter || c.taches.length > 0);
-  const canWrite = niveauSuffisant(useSessionCourante(), 'projets', 'ecriture');
+  const session = useSessionCourante();
+  const canWrite = niveauSuffisant(session, 'projets', 'ecriture');
+  // Équipes du projet : écriture sur le module « équipe » (le Dir. GC, l'administration).
+  const canEditTeams = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'equipe', 'ecriture');
   const taskId = selection?.type === 'tache' ? selection.id : null;
   const chosen =
     d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === taskId) ?? null;
@@ -87,15 +91,14 @@ export function ProjectFile({
             // Revue Salarié : l'essentiel, sans le vocabulaire de direction.
             <p className="po-aide">
               J{d.jour} sur {d.horizon} · livraison le {formatDate(d.livraisonLe)} ·{' '}
-              {d.jeSuisChef ? 'vous pilotez la cellule' : `votre chef de team : ${d.cellule?.chef ?? 'à désigner'}`}
+              {d.jeSuisChef ? 'vous êtes chef d’équipe' : `votre chef d’équipe : ${d.cellule?.chef ?? 'à désigner'}`}
             </p>
           ) : (
             <>
+              {/* Équipes du projet : le Dir. GC les affecte et les modifie ici. */}
+              <ProjectTeams slug={slug} projectId={d.id} canEdit={canEditTeams} onChange={onUpdate} />
               <p className="po-aide">
-                {d.cellule
-                  ? `${cellLabel(d.cellule.nom)} · chef de team ${d.cellule.chef ?? 'à désigner'}`
-                  : 'Cellule à assigner'}
-                {d.cellule?.chef && ` · validation aujourd’hui : ${d.cellule.chef}`} · pilote des études : {d.pilote}
+                {d.cellule?.chef && `Validation aujourd’hui : ${d.cellule.chef} · `}pilote des études : {d.pilote}
                 {d.version && ` · ${d.version.code} ${d.version.libelle}`}
                 {d.offre && ` depuis ${d.offre}`}
               </p>

@@ -32,6 +32,8 @@ export type ProjectSubmissionBody = CorpsRequete<
 
 // --- Assignation, charge, historique ---------------------------------------------------
 export type AssignableEmployee = SchemaApi<'AssignableEmployeeDto'>;
+// Équipes d'un projet (affectées par le Dir. GC) et cellules proposées.
+export type ProjectTeams = SchemaApi<'ProjectTeamsDto'>;
 // Charge prévisionnelle de chacun sur la fenêtre d'une tâche (avant
 // d'assigner) — mêmes règles que les feuilles de temps ; zone = Réglages.
 export type TaskWorkload = SchemaApi<'TaskWorkloadDto'>;

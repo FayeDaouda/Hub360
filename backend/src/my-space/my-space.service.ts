@@ -137,7 +137,7 @@ export class MySpaceService {
   }
 
   // Ma cellule (lot 5d, maquette « Mon espace » du boss) : l'équipe, son
-  // pilote (chef de team), ses projets et ses tâches (en cours, en retard,
+  // pilote (chef d’équipe), ses projets et ses tâches (en cours, en retard,
   // remises à temps). Aucun montant. Sans cellule : tout à zéro.
   async myCell(a: Actor): Promise<MyCellViewDto> {
     const file = await this.prisma.dossierPersonnel.findFirst({

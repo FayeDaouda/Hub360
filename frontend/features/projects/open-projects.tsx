@@ -34,15 +34,16 @@ export function OpenProjects({ slug }: { slug: string }) {
   const canAssign = niveauSuffisant(session, 'projets', 'ecriture');
   const dplg = session.role === ROLE_DIR_GC;
   const employee = session.role === ROLE_EMPLOYEE;
-  // « Seulement mes tâches » (revue Salarié 19/10/2026) : actif d'office
-  // pour le Salarié, proposé à quiconque a une tâche dans le projet.
-  const [onlyMine, setOnlyMine] = useState(employee);
+  // « Seulement mes tâches » : proposé à quiconque a une tâche dans le
+  // projet ; décoché d'office — chacun voit d'abord tout le projet
+  // (décision du 29/10/2026, remplace la revue Salarié du 19/10).
+  const [onlyMine, setOnlyMine] = useState(false);
   // CEO, CFO : lecture, et les fils en écriture (exception ciblée, revérifiée
   // par le serveur) ; aucune action de circuit.
   const readAndComment = consultationEtCommentaires(session);
   // Fil en écriture : qui écrit sur Projets, le Salarié sur ses projets, CEO et CFO.
   const canWriteThreads = canAssign || employee || readAndComment;
-  const p = useOpenProjects(slug, { canAssign, canWriteThreads, employee });
+  const p = useOpenProjects(slug, { canWriteThreads, employee });
   const { board } = p;
 
   // Le nom du gabarit parle à la direction, pas au Salarié (revue mobile 20/10/2026).
@@ -51,9 +52,9 @@ export function OpenProjects({ slug }: { slug: string }) {
   const horizon = board ? Math.round(board.budgetHeures / HOURS_PER_DAY) : null;
   const compact = !!board && board.projets.length < 3;
   const access = dplg
-    ? 'Architecte DPLG : assignation, désactivation, prolongations, validation en suppléance'
+    ? 'Dir. GC : équipes du projet, assignation, désactivation, prolongations, validation en suppléance'
     : employee
-      ? 'Salarié : remise, prolongation, discussion ; le chef de team valide'
+      ? 'Salarié : remise, prolongation, discussion ; le chef d’équipe assigne et valide'
       : readAndComment
         ? 'Consultation et commentaires'
         : canAssign
@@ -65,12 +66,12 @@ export function OpenProjects({ slug }: { slug: string }) {
       <div className="po-entete">
         <p className="po-sous-titre">
           {employee ? (
-            'Les projets où vous avez une tâche : ce que vous avez à rendre, son échéance et les échanges avec l’équipe.'
+            'Les projets de votre équipe et ceux où vous avez une tâche : tout le projet, ce que vous avez à rendre, son échéance et les échanges avec l’équipe.'
           ) : (
             <>
               Étapes → cartes → tâches générées depuis le devis signé à l’émission de F1
               {horizon !== null && ` · ${horizon} jours ouvrés (${board!.budgetHeures} h)`}, délais figés, validation
-              par le chef de team.
+              par le chef d’équipe.
             </>
           )}
         </p>
@@ -123,7 +124,7 @@ export function OpenProjects({ slug }: { slug: string }) {
                   onStep={p.setStep}
                   selection={p.selection}
                   onSelection={p.setSelection}
-                  assignable={canAssign ? p.assignable : null}
+                  assignable={p.assignable}
                   meId={session.utilisateur.id}
                   mentionable={canWriteThreads ? p.mentionable : null}
                   onUpdate={p.reload}

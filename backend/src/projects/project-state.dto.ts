@@ -176,7 +176,7 @@ export class ReviewByPersonDto {
   mode!: 'personne';
   nom!: string | null;
   role!: string;
-  // Pourquoi ce n'est pas le chef de team (montré aux responsables seulement).
+  // Pourquoi ce n'est pas le chef d’équipe (montré aux responsables seulement).
   motif?: string;
 }
 export const REVIEWER_VARIANTS = [ReviewByDepositDto, ReviewByPersonDto];

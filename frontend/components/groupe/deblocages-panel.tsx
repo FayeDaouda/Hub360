@@ -42,7 +42,7 @@ const ACTIONS: Record<Action, { titre: string; texte: string; confirmer: string 
   cellules: {
     titre: 'Cellules du projet',
     texte:
-      'Les cellules cochées remplacent celles du projet. Leur chef de team valide les remises et leurs membres voient le projet.',
+      'Les cellules cochées remplacent celles du projet. Leur chef d’équipe valide les remises et leurs membres voient le projet.',
     confirmer: 'Enregistrer',
   },
   suppression: {

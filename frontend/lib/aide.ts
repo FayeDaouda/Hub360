@@ -75,7 +75,7 @@ export const FICHES_AIDE: Record<string, FicheAide> = {
   },
   equipe: {
     titre: 'Équipes',
-    resume: 'Cellules de travail, leur chef de team et les collaborateurs affectés.',
+    resume: 'Cellules de travail, leur chef d’équipe et les collaborateurs affectés.',
     actions: {
       lecture: 'Consulter l’organisation des équipes.',
       ecriture: 'Créer les cellules et réaffecter les collaborateurs.',

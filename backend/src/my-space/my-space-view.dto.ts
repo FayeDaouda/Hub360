@@ -110,7 +110,7 @@ export class CellProjectDto {
 
 export class MyCellDto {
   nom!: string;
-  pilote!: string | null; // chef de team ; null = « Pilote à désigner »
+  pilote!: string | null; // chef d’équipe ; null = « Pilote à désigner »
   membres!: CellMateDto[];
   projets!: CellProjectDto[];
 }

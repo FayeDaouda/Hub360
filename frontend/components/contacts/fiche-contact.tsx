@@ -46,13 +46,13 @@ export function FicheContactModal({
               {fiche.cellule ?? 'Sans cellule'}
               {fiche.estChef && (
                 <Pill tone="info" className="fc-chef">
-                  Chef de team
+                  Chef d’équipe
                 </Pill>
               )}
             </dd>
             {fiche.chef && (
               <>
-                <dt>Chef de team</dt>
+                <dt>Chef d’équipe</dt>
                 <dd>{fiche.chef}</dd>
               </>
             )}

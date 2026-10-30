@@ -44,7 +44,7 @@ export const isoDay = (d: Date | null) => (d ? toIsoDay(d) : null);
 // Numéro de remise affiché (« v03 »), le même que dans le nom des fichiers déposés.
 export const versionLabel = (version: number) => `v${String(version).padStart(2, '0')}`;
 
-// Chef de team d'un projet : le dispatcher de sa cellule (la première).
+// Chef d’équipe d'un projet : le dispatcher de sa cellule (la première).
 export const CHIEF_CELL = {
   take: 1,
   select: { cellule: { select: { dispatcherId: true } } },

@@ -48,6 +48,7 @@ export function api(app: INestApplication, jeton: string) {
     get: (c: string) => s.get(chemin(c)).set(auth),
     post: (c: string, corps: object = {}) => s.post(chemin(c)).set(auth).send(corps),
     patch: (c: string, corps: object = {}) => s.patch(chemin(c)).set(auth).send(corps),
+    put: (c: string, corps: object = {}) => s.put(chemin(c)).set(auth).send(corps),
     delete: (c: string) => s.delete(chemin(c)).set(auth),
   };
 }

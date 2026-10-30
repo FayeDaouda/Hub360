@@ -17,7 +17,7 @@ import type { MyCellView } from './types';
 
 // « Mon espace » · Ma cellule (maquette du boss) : projets pilotés, tâches en
 // cours, en retard et remises à temps de toute la cellule ; ses membres et son
-// pilote (chef de team) ; ses projets. Aucun montant. Même écran sans cellule.
+// pilote (chef d’équipe) ; ses projets. Aucun montant. Même écran sans cellule.
 export function MyCell({ slug }: { slug: string }) {
   const base = usePathname().split('/mon-espace')[0];
   const [data, setData] = useState<MyCellView | null>(null);

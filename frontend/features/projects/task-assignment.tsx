@@ -38,20 +38,21 @@ export function useTaskWorkload(slug: string, projectId: string, task: ProjectTa
   return loaded?.key === key ? loaded.workload : null;
 }
 
-// Assigner la tâche (ou toutes les tâches encore ouvertes de sa carte), avec
-// la charge prévisionnelle de chacun sur la fenêtre de la tâche.
+// Assigner le bloc (toutes les tâches encore ouvertes de la carte, par
+// défaut — décision du 29/10/2026) ou cette tâche seulement, avec la charge
+// prévisionnelle de chacun sur la fenêtre de la tâche.
 export function TaskAssignment({ slug, projectId, card, task: t, assignable, workload, busy, run }: Props) {
-  const [wholeCard, setWholeCard] = useState(false);
+  const several = card.taches.length > 1;
+  const [wholeCard, setWholeCard] = useState(true);
   const loadOf = (id: string) => workload?.charges.find((c) => c.collaborateurId === id);
   const mine = t.assigne ? loadOf(t.assigne.id) : undefined;
 
   const assign = (employeeId: string) =>
     run(
-      () => assignTask(slug, projectId, t.id, employeeId || null, wholeCard),
+      () => assignTask(slug, projectId, t.id, employeeId || null, several && wholeCard),
       'L’assignation a échoué.',
-      // Portée « carte » : un seul usage, pour qu'un changement suivant ne
-      // réassigne pas toute la carte par mégarde.
-      () => setWholeCard(false),
+      // Portée « tâche seulement » : un seul usage, on revient au bloc.
+      () => setWholeCard(true),
     );
 
   return (
@@ -59,6 +60,20 @@ export function TaskAssignment({ slug, projectId, card, task: t, assignable, wor
       <label className="tp-section" htmlFor="po-assigner">
         Assigner
       </label>
+      {several && (
+        <div className="po-portee" role="radiogroup" aria-label="Portée de l’assignation">
+          <label className="po-case">
+            <input type="radio" checked={wholeCard} disabled={busy} onChange={() => setWholeCard(true)} />
+            <span>
+              Tout le bloc « {card.libelle} » <span className="po-aide">(ses tâches encore ouvertes)</span>
+            </span>
+          </label>
+          <label className="po-case">
+            <input type="radio" checked={!wholeCard} disabled={busy} onChange={() => setWholeCard(false)} />
+            <span>Cette tâche seulement</span>
+          </label>
+        </div>
+      )}
       <select
         id="po-assigner"
         className="field-input"
@@ -91,12 +106,6 @@ export function TaskAssignment({ slug, projectId, card, task: t, assignable, wor
             </>
           )}
         </p>
-      )}
-      {card.taches.length > 1 && (
-        <label className="po-case">
-          <input type="checkbox" checked={wholeCard} disabled={busy} onChange={(e) => setWholeCard(e.target.checked)} />
-          <span>Toute la carte « {card.libelle} » (ses tâches encore ouvertes)</span>
-        </label>
       )}
     </div>
   );

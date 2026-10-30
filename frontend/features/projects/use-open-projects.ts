@@ -12,8 +12,6 @@ export type Selection = { type: 'tache' | 'carte'; id: string } | null;
 type TaskRef = { projetId: string; tacheId: string };
 
 type Options = {
-  // « Lecture et assignation » : la liste n'est chargée que pour qui assigne.
-  canAssign: boolean;
   // Fil en écriture : qui écrit sur Projets, le Salarié sur ses projets, CEO et CFO.
   canWriteThreads: boolean;
   // Salarié : tuiles de SES tâches.
@@ -26,7 +24,7 @@ const cardOf = (file: OpenProjectFile, taskId: string) =>
 
 // Données de la page Projets : tableau, dossier du projet choisi (étape,
 // sélection), personnes assignables et mentionnables, compteurs du Salarié.
-export function useOpenProjects(slug: string, { canAssign, canWriteThreads, employee }: Options) {
+export function useOpenProjects(slug: string, { canWriteThreads, employee }: Options) {
   const [board, setBoard] = useState<OpenProjectsBoard | null>(null);
   const [error, setError] = useState<string | null>(null);
   // ?projet= : lien d'une notification (mention dans un fil) ; &tache= : la
@@ -43,7 +41,8 @@ export function useOpenProjects(slug: string, { canAssign, canWriteThreads, empl
     requestedProject && requestedTask ? { projetId: requestedProject, tacheId: requestedTask } : null,
   );
   const [counts, setCounts] = useState<EmployeeCounts | null>(null);
-  const [assignable, setAssignable] = useState<AssignableEmployee[] | null>(null);
+  // Liste rattachée à son projet : jamais celle d'un autre projet.
+  const [assignableOf, setAssignableOf] = useState<{ id: string; list: AssignableEmployee[] } | null>(null);
   const [mentionable, setMentionable] = useState<{ id: string; nom: string }[] | null>(null);
 
   const loadBoard = useCallback(
@@ -60,18 +59,28 @@ export function useOpenProjects(slug: string, { canAssign, canWriteThreads, empl
     loadBoard();
   }, [loadBoard]);
 
+  // Personnes assignables : chargées pour le projet ouvert, si on y assigne
+  // (Dir. GC : tout le monde ; chef d'équipe : les membres de ses équipes).
+  const assignFor = file?.peutAssigner ? file.id : null;
   useEffect(() => {
-    if (canAssign) {
-      getAssignableEmployees(slug)
-        .then(setAssignable)
-        .catch(() => setAssignable(null));
-    }
+    if (!assignFor) return;
+    let cancelled = false;
+    getAssignableEmployees(slug, assignFor)
+      .then((list) => !cancelled && setAssignableOf({ id: assignFor, list }))
+      .catch(() => !cancelled && setAssignableOf(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, assignFor]);
+  const assignable = assignFor && assignableOf?.id === assignFor ? assignableOf.list : null;
+
+  useEffect(() => {
     if (canWriteThreads) {
       getMentionablePeople(slug)
         .then(setMentionable)
         .catch(() => setMentionable(null));
     }
-  }, [slug, canAssign, canWriteThreads]);
+  }, [slug, canWriteThreads]);
 
   // Après une écriture : le dossier et les tuiles relus, la tâche choisie gardée.
   const loadCounts = useCallback(() => {

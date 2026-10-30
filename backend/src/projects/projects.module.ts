@@ -7,6 +7,8 @@ import { ProjectAlertsService } from './project-alerts.service';
 import { ProjectFileService } from './project-file.service';
 import { ProjectOpeningService } from './project-opening.service';
 import { ProjectSiteService } from './project-site.service';
+import { ProjectTeamsController } from './project-teams.controller';
+import { ProjectTeamsService } from './project-teams.service';
 import { ProjectStatesService } from './project-states.service';
 import { ProjectThreadsService } from './project-threads.service';
 import { ProjectsBoardService } from './projects-board.service';
@@ -25,9 +27,10 @@ import { TsElementsService } from './ts-elements.service';
 // l'accueil de la direction ; les services des tâches servent aussi Mes
 // tâches et Mon espace (remise, validation) et les avenants TS (ajout en
 // TS) ; ProjectOpeningService sert la facturation (ouverture à l'émission de F1).
+// ProjectTeamsService : équipes d'un projet, affectées par le Dir. GC.
 @Module({
   imports: [ReglagesModule, NotificationsModule],
-  controllers: [OpenProjectsController],
+  controllers: [OpenProjectsController, ProjectTeamsController],
   providers: [
     ProjectStatesService,
     ProjectsBoardService,
@@ -43,6 +46,7 @@ import { TsElementsService } from './ts-elements.service';
     TsElementsService,
     ProjectThreadsService,
     ProjectOpeningService,
+    ProjectTeamsService,
   ],
   exports: [
     ProjectStatesService,

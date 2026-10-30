@@ -51,6 +51,7 @@ export function versDossierCrm(
     archivePar: PersonneRef;
     offres: (Devis & { lignes: LigneDevis[] })[];
     transitions?: { creeLe: Date; de?: string | null; vers?: string; commentaire?: string | null }[];
+    projet?: { id: string } | null;
   },
   // Offre (finances_devis) : absente de la réponse (clé omise, pas null) pour
   // qui n'a pas le droit en lecture.
@@ -74,6 +75,8 @@ export function versDossierCrm(
     // Fiche Programme dynamique (crm/fiche-programme.ts) ; null = pas commencée.
     ficheProgramme: d.ficheProgramme,
     statut: d.statut,
+    // Projet né à l'Onboard ; null avant (ou dossier lu sans son projet).
+    projetId: d.projet?.id ?? null,
     // Contenu figé dès la soumission à la DAF (propriétaire excepté).
     verrouillee: !ficheModifiable(d.statut),
     creeLe: d.createdAt,

@@ -3,9 +3,9 @@ import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_CTO, ROLE_DIR_GC, ROLE_EMPLOYEE } from '@hub/domain';
 
-// Validation d'une remise (maquettes « Projets ») : le chef de team valide ;
-// l'Architecte DPLG (rôle Dir. GC) valide les tâches du chef de team et
-// supplée le chef de team partout. Personne ne valide sa propre tâche.
+// Validation d'une remise (maquettes « Projets ») : le chef d’équipe valide ;
+// l'Architecte DPLG (rôle Dir. GC) valide les tâches du chef d’équipe et
+// supplée le chef d’équipe partout. Personne ne valide sa propre tâche.
 //
 // Revue Dir. GC (21/10/2026, lot 4) — le CTO, niveau au-dessus du Dir. GC :
 //   · valide les tâches assignées à un Dir. GC ;
@@ -31,9 +31,10 @@ export function assertInCircuit(role: string) {
     );
 }
 
-// Salarié (matrice : projets en lecture, 06/10/2026) : il ne voit que les
-// projets où une tâche lui est assignée, et ceux de la cellule qu'il pilote
-// (chef de team : il valide les remises de son équipe).
+// Salarié (matrice : projets en lecture, 06/10/2026) : il voit les projets où
+// une tâche lui est assignée, ceux de la cellule qu'il pilote (chef d'équipe :
+// il valide les remises de son équipe et y assigne le travail) et, depuis le
+// 29/10/2026, tous ceux affectés à son équipe.
 export function projectScope(role: string, employeeId: string | null): Prisma.ProjetWhereInput {
   if (role !== ROLE_EMPLOYEE) return {};
   const id = employeeId ?? '__aucun__';
@@ -41,6 +42,7 @@ export function projectScope(role: string, employeeId: string | null): Prisma.Pr
     OR: [
       { cartes: { some: { taches: { some: { assigneId: id } } } } },
       { cellules: { some: { cellule: { dispatcherId: id } } } },
+      { cellules: { some: { cellule: { membres: { some: { id } } } } } },
     ],
   };
 }
@@ -65,7 +67,7 @@ export function canDecide(d: Decider, t: TaskRule & { statut: string }, chiefId:
   return actsAsDplg(d) || isChiefOf(d, t.assigneId, chiefId);
 }
 
-// Qualifier un retard (décider d'une prolongation) : chef de team, sauf pour
+// Qualifier un retard (décider d'une prolongation) : chef d’équipe, sauf pour
 // sa propre tâche ; Architecte DPLG (et admin société) partout ; le CTO seul
 // quand la nouvelle date repousse la livraison du projet ou que la tâche est
 // celle d'un Dir. GC.

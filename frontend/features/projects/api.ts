@@ -17,13 +17,14 @@ import type {
   TsElementResult,
   TsRequestDecision,
   TsRework,
+  ProjectTeams,
 } from './types';
 
 // -----------------------------------------------------------------------------
 // Projets ouverts selon le gabarit (maquette « Projets » du boss) — API NestJS
 // (backend/src/projects), sous /api/societes/:slug/projets-ouverts :
 //   GET   (liste + tuiles) · GET :id (dossier : étapes, cartes, tâches)
-//   GET   assignables · mentionnables · mes-mentions · a-decider · production
+//   GET   mentionnables · mes-mentions · a-decider · production · :id/assignables
 //   PATCH :id/chantier · :id/visite · :id/taches/:tacheId/assignation
 //   GET   :id/taches/:tacheId/charges · historique · pieces/:pieceId
 //   POST  :id/taches/:tacheId/remise · prolongation(/decision) · decision · visa
@@ -37,8 +38,16 @@ export const getBoard = (slug: string) => apiSociete<OpenProjectsBoard>(slug, '/
 
 export const getProjectFile = (slug: string, id: string) => apiSociete<OpenProjectFile>(slug, `/projets-ouverts/${id}`);
 
-export const getAssignableEmployees = (slug: string) =>
-  apiSociete<AssignableEmployee[]>(slug, '/projets-ouverts/assignables');
+// Le Dir. GC : tout le monde ; un chef d'équipe : les membres de ses équipes.
+export const getAssignableEmployees = (slug: string, projetId: string) =>
+  apiSociete<AssignableEmployee[]>(slug, `/projets-ouverts/${projetId}/assignables`);
+
+// Équipes d'un projet, ouvert ou non (societes/:slug/projets/:id/equipes).
+export const getProjectTeams = (slug: string, projetId: string) =>
+  apiSociete<ProjectTeams>(slug, `/projets/${projetId}/equipes`);
+
+export const setProjectTeams = (slug: string, projetId: string, celluleIds: string[]) =>
+  apiSociete<ProjectTeams>(slug, `/projets/${projetId}/equipes`, { method: 'PUT', body: { celluleIds } });
 
 // À la tâche, ou (carte = true) à toutes les tâches encore ouvertes de sa carte.
 export const assignTask = (
@@ -70,7 +79,7 @@ export async function downloadSubmissionPiece(slug: string, projetId: string, ta
   telechargerFichier(f);
 }
 
-// Prolongation : demande de l'assigné, décision du chef de team ou du DPLG.
+// Prolongation : demande de l'assigné, décision du chef d’équipe ou du DPLG.
 export const requestExtension = (slug: string, projetId: string, tacheId: string, jusquau: string, motif: string) =>
   apiSociete<ReponseApi<Route<'/{id}/taches/{tacheId}/prolongation'>, 'post'>>(
     slug,

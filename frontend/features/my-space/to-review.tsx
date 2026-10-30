@@ -14,7 +14,7 @@ import { TeamRequests } from './team-requests';
 
 // « Mon espace » · À valider (maquette du boss) : les demandes de l'équipe
 // dont on est le N+1 ; et, quand il y en a, les remises des tâches du
-// gabarit que l'on valide (chef de team, Architecte DPLG en suppléance).
+// gabarit que l'on valide (chef d’équipe, Architecte DPLG en suppléance).
 export function ToReview({ slug, onCount }: { slug: string; onCount: (n: number) => void }) {
   const [tasks, setTasks] = useState<TaskToReview[] | null>(null);
   const [absences, setAbsences] = useState(0);

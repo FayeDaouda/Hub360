@@ -90,7 +90,7 @@ export class RequestExtensionDto {
   @IsString() @MinLength(3) @MaxLength(500) motif!: string;
 }
 
-// POST …/taches/:tacheId/prolongation/decision — chef de team ou DPLG.
+// POST …/taches/:tacheId/prolongation/decision — chef d’équipe ou DPLG.
 export class DecideExtensionDto {
   @IsBoolean() accorder!: boolean;
 }

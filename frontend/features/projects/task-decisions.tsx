@@ -46,7 +46,7 @@ export function ExtensionDecision({ slug, projectId, task: t, busy, run }: Props
   );
 }
 
-// Visa DPLG (revue Dir. GC) : validée par le chef de team, la tâche attend la
+// Visa DPLG (revue Dir. GC) : validée par le chef d’équipe, la tâche attend la
 // signature de l'architecte ; apposé, il est daté et nommé.
 export function VisaDecision({ slug, projectId, task: t, busy, run }: Props) {
   // Refus en cours de saisie (motif obligatoire) ; null : pas de refus ouvert.
@@ -66,7 +66,7 @@ export function VisaDecision({ slug, projectId, task: t, busy, run }: Props) {
         </p>
       ) : (
         <p className="po-aide">
-          Validée par le chef de team : le visa de l’architecte DPLG est attendu avant la suite.
+          Validée par le chef d’équipe : le visa de l’architecte DPLG est attendu avant la suite.
         </p>
       )}
       {t.peutViser &&

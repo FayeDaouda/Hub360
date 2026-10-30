@@ -9,7 +9,7 @@ export type FicheContact = {
   nom: string;
   poste: string | null;
   cellule: string | null;
-  chef: string | null; // chef de team de sa cellule (null s'il l'est lui-même, ou sans cellule)
+  chef: string | null; // chef d’équipe de sa cellule (null s'il l'est lui-même, ou sans cellule)
   estChef: boolean;
   telephone: string | null;
   email: string;
@@ -74,7 +74,7 @@ function versFiche(u: LigneContact): FicheContact {
 }
 
 // Fiche contact d'un collègue (revue Salarié 19/10/2026) : l'annuaire de la
-// société — nom, poste, cellule, chef de team, téléphone (décision du user :
+// société — nom, poste, cellule, chef d’équipe, téléphone (décision du user :
 // visible de tous les collègues) et e-mail. Rien d'autre du dossier RH.
 @Injectable()
 export class ContactsService {

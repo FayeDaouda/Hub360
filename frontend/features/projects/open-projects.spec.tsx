@@ -18,6 +18,7 @@ vi.mock('@/features/my-tasks/api', () => ({ getMyTasks: vi.fn() }));
 vi.mock('./task-panel', () => ({ TaskPanel: () => <p>Panneau de la tâche</p> }));
 vi.mock('./card-thread-panel', () => ({ CardThreadPanel: () => null }));
 vi.mock('@/components/pilotage/decisions-fiche', () => ({ DecisionsFiche: () => null }));
+vi.mock('./project-teams', () => ({ ProjectTeams: () => null }));
 const session = vi.hoisted(() => ({
   role: 'CEO (transverse)',
   utilisateur: { id: 'u1', email: 'a@b.c', nom: 'Diop', prenom: 'Awa' },

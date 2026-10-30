@@ -5,14 +5,14 @@ import { Pill } from './pill';
 describe('Pill', () => {
   it('rend les classes d’avant : pill, sa teinte, les classes en plus', () => {
     render(
-      <Pill tone="info" className="fc-chef" title="Chef de team">
+      <Pill tone="info" className="fc-chef" title="Chef d’équipe">
         Chef
       </Pill>,
     );
     const pill = screen.getByText('Chef');
     expect(pill.tagName).toBe('SPAN');
     expect(pill.className).toBe('pill pill--info fc-chef');
-    expect(pill).toHaveAttribute('title', 'Chef de team');
+    expect(pill).toHaveAttribute('title', 'Chef d’équipe');
   });
 
   it('accepte une classe complète venue d’une table de statuts', () => {

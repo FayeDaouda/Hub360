@@ -172,6 +172,7 @@ export class OpenProjectFileDto {
   code!: string;
   client!: ProjectClientDto;
   cellule!: OpenProjectCellDto | null;
+  equipes!: OpenProjectCellDto[];
   // La personne connectée pilote la cellule du projet (elle valide).
   jeSuisChef!: boolean;
   pilote!: string;

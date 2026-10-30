@@ -49,7 +49,8 @@ export class ProductionService {
 
   // Charge prévisionnelle de chaque personne assignable sur la fenêtre de la
   // tâche (avant d'assigner), et la zone normale fixée dans Réglages.
-  async workload(companyId: string, projectId: string, taskId: string) {
+  // `cellIds` : seulement les membres de ces cellules (chef d'équipe).
+  async workload(companyId: string, projectId: string, taskId: string, cellIds: string[] | null = null) {
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: { id: true, debutLe: true, finLe: true, heures: true },
@@ -60,7 +61,7 @@ export class ProductionService {
     const p = { debut: task.debutLe, fin: task.finLe };
     const [employees, holidays] = await Promise.all([
       this.prisma.collaborateur.findMany({
-        where: { societeId: companyId },
+        where: { societeId: companyId, ...(cellIds ? { celluleId: { in: cellIds } } : {}) },
         select: {
           id: true,
           tachesProjet: {
