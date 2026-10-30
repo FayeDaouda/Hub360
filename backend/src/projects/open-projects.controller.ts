@@ -6,6 +6,7 @@ import { BackOfficeGuard } from '../commun/back-office.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { PermissionGuard } from '../commun/permission.guard';
 import {
+  AssignCardDto,
   AssignTaskDto,
   DecideExtensionDto,
   DecideTaskDto,
@@ -170,6 +171,36 @@ export class OpenProjectsController {
   ): Promise<TaskEventDto[]> {
     await this.threads.checkRead(req.user.societeId, req.user, projectId);
     return this.assignment.history(req.user.societeId, projectId, taskId);
+  }
+
+  // Le bloc entier (bouton de l'en-tête de la carte) : ses tâches encore
+  // ouvertes. Mêmes droits que la tâche (vérifiés par le service).
+  @Patch(':id/cartes/:carteId/assignation')
+  @RequiertPermission('projets', 'lecture')
+  assignCard(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('carteId') cardId: string,
+    @Body() dto: AssignCardDto,
+  ): Promise<AssignmentResultDto> {
+    return this.assignment.assignCard(req.user.societeId, req.user, projectId, cardId, dto.collaborateurId);
+  }
+
+  // Charge de chacun sur la fenêtre du bloc, avant de l'assigner.
+  @Get(':id/cartes/:carteId/charges')
+  @RequiertPermission('projets', 'lecture')
+  async cardWorkload(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('carteId') cardId: string,
+  ): Promise<TaskWorkloadDto> {
+    const scope = await this.assignment.scopeOrThrow(req.user.societeId, req.user, projectId);
+    return this.productionService.cardWorkload(
+      req.user.societeId,
+      projectId,
+      cardId,
+      scope === 'all' ? null : scope.cellIds,
+    );
   }
 
   // Le Dir. GC (écriture sur Projets) ou un chef d'équipe du projet (vérifié

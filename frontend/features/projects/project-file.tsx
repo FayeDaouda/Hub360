@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DecisionsFiche } from '@/components/pilotage/decisions-fiche';
 import { SidePanel } from './side-panel';
 import { Pill } from '@/components/ui/pill';
@@ -13,6 +13,7 @@ import { stepNumber, stepPill } from './labels';
 import { ProjectCardView, SURVEY_CARD_KEY } from './project-card';
 import { invoicePills, myOpenTasksIn } from './project-tiles';
 import { ProjectTeams } from './project-teams';
+import { CardAssignment } from './card-assignment';
 import { SiteStatusField } from './site-fields';
 import { TaskPanel } from './task-panel';
 import type { AssignableEmployee, OpenProjectFile } from './types';
@@ -63,6 +64,9 @@ export function ProjectFile({
   // Équipes du projet : écriture sur le module « équipe » (le Dir. GC, l'administration).
   const canEditTeams = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'equipe', 'ecriture');
   const taskId = selection?.type === 'tache' ? selection.id : null;
+  // Bloc dont on choisit la personne (bouton de l'en-tête de la carte).
+  const [blockCardId, setBlockCardId] = useState<string | null>(null);
+  const blockCard = d.cartes.find((c) => c.id === blockCardId) ?? null;
   const chosen =
     d.cartes.flatMap((c) => c.taches.map((t) => ({ carte: c, tache: t }))).find((x) => x.tache.id === taskId) ?? null;
   const threadCard = selection?.type === 'carte' ? (d.cartes.find((c) => c.id === selection.id) ?? null) : null;
@@ -206,10 +210,27 @@ export function ProjectFile({
                   ? { slug, projectId: d.id, date: d.dateVisiteSite, editable: canWrite, onUpdate }
                   : undefined
               }
+              blockTasks={d.cartes.find((x) => x.id === c.id)?.taches}
+              onAssignBlock={d.peutAssigner && assignable ? () => setBlockCardId(c.id) : undefined}
             />
           ))}
         </div>
       </div>
+
+      {blockCard && assignable && (
+        <CardAssignment
+          slug={slug}
+          projectId={d.id}
+          card={blockCard}
+          assignable={assignable}
+          teams={d.equipes}
+          onClose={() => setBlockCardId(null)}
+          onDone={() => {
+            setBlockCardId(null);
+            void onUpdate();
+          }}
+        />
+      )}
 
       {/* Tâche ou fil d'une carte : panneau latéral, le dossier garde la largeur. */}
       {(chosen || threadCard) && (

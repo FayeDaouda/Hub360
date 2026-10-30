@@ -3529,6 +3529,108 @@
         ]
       }
     },
+    "/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/assignation": {
+      "patch": {
+        "operationId": "OpenProjectsController_assignCard",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "carteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCardDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
+    "/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/charges": {
+      "get": {
+        "operationId": "OpenProjectsController_cardWorkload",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "carteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWorkloadDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "OpenProjects"
+        ]
+      }
+    },
     "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/assignation": {
       "patch": {
         "operationId": "OpenProjectsController_assign",
@@ -13033,15 +13135,12 @@
           "le"
         ]
       },
-      "AssignTaskDto": {
+      "AssignCardDto": {
         "type": "object",
         "properties": {
           "collaborateurId": {
             "type": "string",
             "nullable": true
-          },
-          "carte": {
-            "type": "boolean"
           }
         },
         "required": [
@@ -13057,6 +13156,21 @@
         },
         "required": [
           "modifiees"
+        ]
+      },
+      "AssignTaskDto": {
+        "type": "object",
+        "properties": {
+          "collaborateurId": {
+            "type": "string",
+            "nullable": true
+          },
+          "carte": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "collaborateurId"
         ]
       },
       "SubmissionAttachmentDto": {

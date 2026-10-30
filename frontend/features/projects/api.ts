@@ -25,8 +25,8 @@ import type {
 // (backend/src/projects), sous /api/societes/:slug/projets-ouverts :
 //   GET   (liste + tuiles) · GET :id (dossier : étapes, cartes, tâches)
 //   GET   mentionnables · mes-mentions · a-decider · production · :id/assignables
-//   PATCH :id/chantier · :id/visite · :id/taches/:tacheId/assignation
-//   GET   :id/taches/:tacheId/charges · historique · pieces/:pieceId
+//   PATCH :id/chantier · :id/visite · :id/taches/:tacheId/assignation · :id/cartes/:carteId/assignation
+//   GET   :id/taches/:tacheId/charges · historique · pieces/:pieceId · :id/cartes/:carteId/charges
 //   POST  :id/taches/:tacheId/remise · prolongation(/decision) · decision · visa
 //   GET/POST :id/fil · POST :id/fil/:commentaireId/resolution
 //   POST  :id/ts · :id/ts/demandes/:demandeId/decision (avenants TS, module devis)
@@ -180,6 +180,18 @@ export const resolveComment = (slug: string, projetId: string, commentaireId: st
 // --- Charge, historique, à décider, production ------------------------------------------
 export const getTaskWorkload = (slug: string, projetId: string, tacheId: string) =>
   apiSociete<TaskWorkload>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/charges`);
+
+// Le bloc entier (bouton de l'en-tête de la carte) : ses tâches encore ouvertes.
+export const assignCard = (slug: string, projetId: string, carteId: string, collaborateurId: string | null) =>
+  apiSociete<ReponseApi<Route<'/{id}/cartes/{carteId}/assignation'>, 'patch'>>(
+    slug,
+    `/projets-ouverts/${projetId}/cartes/${carteId}/assignation`,
+    { method: 'PATCH', body: { collaborateurId } },
+  );
+
+// Charge de chacun sur la fenêtre du bloc, avant de l'assigner.
+export const getCardWorkload = (slug: string, projetId: string, carteId: string) =>
+  apiSociete<TaskWorkload>(slug, `/projets-ouverts/${projetId}/cartes/${carteId}/charges`);
 
 export const getTaskHistory = (slug: string, projetId: string, tacheId: string) =>
   apiSociete<TaskEvent[]>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/historique`);

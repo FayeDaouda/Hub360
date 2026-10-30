@@ -103,3 +103,69 @@ describe('TaskAssignmentService · chef d’équipe', () => {
     });
   });
 });
+
+// Bouton « Assigner le bloc » (30/10/2026) : toutes les tâches encore ouvertes
+// de la carte, les validées et non nécessaires gardent leur personne.
+describe('TaskAssignmentService.assignCard', () => {
+  const dirgc = { userId: 'DG', role: 'Dir. GC', permissions: { projets: 'ecriture' as const } };
+  function svc(card: object | null) {
+    const tx = {
+      tacheProjet: {
+        findMany: jest.fn(({ where }: { where: { id: { in: string[] } } }) =>
+          Promise.resolve(where.id.in.map((id) => ({ id }))),
+        ),
+        updateMany: jest.fn(),
+      },
+      evenementTacheProjet: { createMany: jest.fn() },
+    };
+    const prisma = {
+      collaborateur: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'C1', prenom: 'Awa', nom: 'Diop', celluleId: 'X' }),
+      },
+      carteProjet: { findFirst: jest.fn().mockResolvedValue(card) },
+      $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
+    };
+    const notifications = { envoyer: jest.fn(), comptesDe: jest.fn().mockResolvedValue(['U-AWA']) };
+    return {
+      tx,
+      notifications,
+      s: new TaskAssignmentService(
+        prisma as unknown as PrismaService,
+        notifications as unknown as NotificationsService,
+      ),
+    };
+  }
+  const carte = (o: object = {}) => ({
+    libelle: 'Livrables',
+    desactivation: null,
+    projet: { code: 'DS_NGO.26' },
+    taches: [
+      { id: 'T1', statut: 'a_faire' },
+      { id: 'T2', statut: 'validee' },
+      { id: 'T3', statut: 'a_reprendre' },
+      { id: 'T4', statut: 'non_necessaire' },
+    ],
+    ...o,
+  });
+
+  it('assigne les tâches ouvertes du bloc, une seule notification', async () => {
+    const { s, tx, notifications } = svc(carte());
+    await expect(s.assignCard('S1', dirgc, 'P1', 'K1', 'C1')).resolves.toEqual({ modifiees: 2 });
+    expect(tx.tacheProjet.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['T1', 'T3'] } },
+      data: { assigneId: 'C1' },
+    });
+    expect(notifications.envoyer).toHaveBeenCalledTimes(1);
+    expect(notifications.envoyer.mock.calls[0][0].titre).toBe('Bloc assigné · DS_NGO.26 · Livrables (2 tâches)');
+  });
+
+  it('carte désactivée → 409', async () => {
+    const { s } = svc(carte({ desactivation: 'hors programme' }));
+    await expect(s.assignCard('S1', dirgc, 'P1', 'K1', 'C1')).rejects.toThrow('Carte désactivée');
+  });
+
+  it('bloc sans tâche ouverte → 409', async () => {
+    const { s } = svc(carte({ taches: [{ id: 'T2', statut: 'validee' }] }));
+    await expect(s.assignCard('S1', dirgc, 'P1', 'K1', 'C1')).rejects.toThrow('Aucune tâche ouverte');
+  });
+});

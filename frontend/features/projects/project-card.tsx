@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle, UserRound, UsersRound } from 'lucide-react';
 import { Pill } from '@/components/ui/pill';
 import { formatDayMonth, plural, stripAccents } from '@hub/domain';
-import { cardPill, HOURS_PER_DAY, taskHoursLabel, taskPill } from './labels';
+import { blockAssignment, cardPill, HOURS_PER_DAY, taskHoursLabel, taskPill } from './labels';
 import { SiteVisitDate, type SiteVisitProps } from './site-fields';
 import type { ProjectCard } from './types';
 
@@ -18,6 +18,11 @@ type Props = {
   onTask: (id: string) => void;
   onThread: () => void;
   visit?: SiteVisitProps;
+  // Bouton « Assigner le bloc » : ouvre la fenêtre de choix (Dir. GC, chef
+  // d'équipe) ; absent = lecture (qui a le bloc, sans bouton).
+  onAssignBlock?: () => void;
+  // Toutes les tâches du bloc, quand « Seulement mes tâches » en masque.
+  blockTasks?: ProjectCard['taches'];
 };
 
 // Clé technique (« laterale_droite ») qui ne fait que répéter le libellé.
@@ -30,7 +35,16 @@ const sameAsLabel = (key: string, label: string) => normalize(key) === normalize
 
 // Carte d'une étape : fenêtre, étiquettes, tâches (assigné, temps, échéance,
 // état, messages) et bouton du fil de la carte.
-export function ProjectCardView({ card: c, taskId, threadActive, onTask, onThread, visit }: Props) {
+export function ProjectCardView({
+  card: c,
+  taskId,
+  threadActive,
+  onTask,
+  onThread,
+  visit,
+  onAssignBlock,
+  blockTasks,
+}: Props) {
   const pill = cardPill(c.etat);
   // Carte close (tout validé) : repliée sur une ligne, dépliable au clic.
   const collapsible = c.etat.code === 'close';
@@ -59,6 +73,9 @@ export function ProjectCardView({ card: c, taskId, threadActive, onTask, onThrea
       ? `J${c.debutJ} → J${c.finJ} · ${formatDayMonth(c.debutLe)} → ${formatDayMonth(c.finLe)}${inHours ? ` · ${(c.finJ! - c.debutJ + 1) * HOURS_PER_DAY} h ouvrées` : ''}`
       : (c.note?.split(' : ')[0] ?? null);
   const tags = [c.etiquette, c.client ? 'CLIENT · hors budget atelier' : null].filter((x): x is string => !!x);
+  // Qui a le bloc (ses tâches encore ouvertes) — rien sur une carte désactivée.
+  const block = disabled ? null : blockAssignment(blockTasks ?? c.taches);
+  const BlockIcon = block && !block.vide && !block.personneId ? UsersRound : UserRound;
 
   return (
     <article className={`po-carte${disabled ? ' is-eteinte' : ''}`}>
@@ -68,6 +85,30 @@ export function ProjectCardView({ card: c, taskId, threadActive, onTask, onThrea
           <h3>{c.libelle}</h3>
         </div>
         <div className="po-carte-droite">
+          {/* Qui a le bloc : en haut à droite, sur la ligne du titre. */}
+          {block &&
+            (onAssignBlock ? (
+              <button
+                type="button"
+                className={`po-bloc-assigner${block.vide ? ' is-vide' : ''}`}
+                onClick={onAssignBlock}
+                title={
+                  block.vide
+                    ? `Assigner les ${block.ouvertes} tâches ouvertes du bloc`
+                    : 'Modifier l’assignation du bloc'
+                }
+              >
+                <BlockIcon size={15} aria-hidden />
+                {block.libelle}
+              </button>
+            ) : (
+              !block.vide && (
+                <span className="po-bloc-assigne">
+                  <BlockIcon size={15} aria-hidden />
+                  {block.libelle}
+                </span>
+              )
+            ))}
           {collapsible && (
             <button
               type="button"

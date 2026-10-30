@@ -1556,6 +1556,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/assignation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OpenProjectsController_assignCard"];
+        trace?: never;
+    };
+    "/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OpenProjectsController_cardWorkload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/assignation": {
         parameters: {
             query?: never;
@@ -4722,12 +4754,15 @@ export interface components {
             /** Format: date-time */
             le: string;
         };
-        AssignTaskDto: {
+        AssignCardDto: {
             collaborateurId: string | null;
-            carte?: boolean;
         };
         AssignmentResultDto: {
             modifiees: number;
+        };
+        AssignTaskDto: {
+            collaborateurId: string | null;
+            carte?: boolean;
         };
         SubmissionAttachmentDto: {
             nom: string;
@@ -7849,6 +7884,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskEventDto"][];
+                };
+            };
+        };
+    };
+    OpenProjectsController_assignCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                carteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignCardDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentResultDto"];
+                };
+            };
+        };
+    };
+    OpenProjectsController_cardWorkload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+                carteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWorkloadDto"];
                 };
             };
         };

@@ -89,3 +89,30 @@ export function workloadLabel(c: EmployeeLoad | undefined, zone: TaskWorkload['z
   const etat = zone && c.pourcentage > zone.a ? ' · surchargé' : zone && c.pourcentage < zone.de ? ' · disponible' : '';
   return `charge ${c.pourcentage} %${etat}`;
 }
+
+// Bouton « Assigner le bloc » (en-tête de la carte, 30/10/2026) : qui a les
+// tâches encore ouvertes du bloc. null = rien à assigner (tout est validé ou
+// non nécessaire).
+export type BlockAssignment = {
+  libelle: string;
+  // Une seule personne sur tout le bloc : préchoisie dans la fenêtre.
+  personneId: string | null;
+  ouvertes: number;
+  vide: boolean;
+};
+
+export function blockAssignment(taches: Pick<ProjectTask, 'statut' | 'assigne'>[]): BlockAssignment | null {
+  const open = taches.filter((t) => t.statut !== 'validee' && t.statut !== 'non_necessaire');
+  if (!open.length) return null;
+  const people = new Map(open.flatMap((t) => (t.assigne ? [[t.assigne.id, t.assigne.nom] as const] : [])));
+  const free = open.filter((t) => !t.assigne).length;
+  const base = { personneId: null, ouvertes: open.length };
+  // Encore du travail sans personne : l'action à faire, en couleur d'action.
+  if (!people.size) return { ...base, libelle: 'Assigner le bloc', vide: true };
+  if (free) return { ...base, libelle: `${free} tâche${free > 1 ? 's' : ''} à assigner`, vide: true };
+  if (people.size === 1) {
+    const [[id, nom]] = [...people];
+    return { libelle: `Assigné à ${nom}`, personneId: id, ouvertes: open.length, vide: false };
+  }
+  return { ...base, libelle: `Assigné à ${people.size} personnes`, vide: false };
+}
