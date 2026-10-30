@@ -6,6 +6,8 @@ import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CrmService } from './crm.service';
 import { OnboardingService } from './onboarding.service';
+import { ProjectOpeningService } from '../projects/project-opening.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { REGLES_ACTIONS } from './cycle';
 
 // Cycle commercial (étape E) — CrmService.agir, contre un Prisma simulé.
@@ -116,7 +118,12 @@ function monter(
         verifierOffreDossier: jest.fn().mockResolvedValue(undefined),
         offreAuDelaDuSeuil: jest.fn().mockResolvedValue(null),
       } as unknown as SeuilCeoService,
-      new OnboardingService(facturation as unknown as FacturationService),
+      new OnboardingService(
+        prisma as unknown as PrismaService,
+        facturation as unknown as FacturationService,
+        { prepare: jest.fn().mockResolvedValue(null) } as unknown as ProjectOpeningService,
+        { regle: jest.fn().mockResolvedValue('onboard') } as unknown as ReglagesService,
+      ),
     ),
   };
 }

@@ -69,7 +69,7 @@ export function OpenProjects({ slug }: { slug: string }) {
             'Les projets de votre équipe et ceux où vous avez une tâche : tout le projet, ce que vous avez à rendre, son échéance et les échanges avec l’équipe.'
           ) : (
             <>
-              Étapes → cartes → tâches générées depuis le devis signé à l’émission de F1
+              Étapes → cartes → tâches générées depuis l’offre acceptée, dès l’acceptation du client
               {horizon !== null && ` · ${horizon} jours ouvrés (${board!.budgetHeures} h)`}, délais figés, validation
               par le chef d’équipe.
             </>
@@ -103,8 +103,8 @@ export function OpenProjects({ slug }: { slug: string }) {
         <section className="panel glass-panel po-vide">
           <h2>Aucun projet ouvert</h2>
           <p className="po-aide">
-            Un projet s’ouvre à l’émission de sa facture F1 (Réglages · Ouverture du projet) : ses étapes, cartes et
-            tâches sont alors générées depuis le gabarit, délais figés.
+            Un projet s’ouvre dès que le client accepte l’offre (Réglages · Ouverture du projet) : ses étapes, cartes et
+            tâches sont alors générées depuis le gabarit, délais figés. Factures et contrat suivent sans bloquer.
           </p>
         </section>
       ) : (
