@@ -144,8 +144,9 @@ export class FacturationService {
     if (facture.montantHt.lte(0)) {
       throw new UnprocessableEntityException("Renseignez un montant HT avant d'émettre la facture.");
     }
-    // F1 (acompte à la signature) ouvre le projet selon son gabarit
-    // (Réglages · « Ouverture du projet ») : J1 = jour d'émission.
+    // Projet encore fermé (réglage « à l'émission de F1 », ou ouverture
+    // manquée à l'Onboard) : F1 l'ouvre selon son gabarit, J1 = jour
+    // d'émission. Déjà ouvert à l'Onboard (défaut) : rien.
     const ouverture =
       facture.jalon === 'signature' && !facture.estAvoir ? await this.ouverture.prepare(projetId, todayIso()) : null;
     // Transition conditionnée sur `statut` dans la transaction : deux émissions

@@ -537,6 +537,7 @@ export class CrmService {
       await dansTransaction(tx);
       return r;
     });
+    await this.onboarding.openIfDue(societeId, onboard.projet.id);
     await this.notifications.notifierDossierCrm({
       societeId,
       dossierId,

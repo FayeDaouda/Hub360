@@ -51,13 +51,20 @@ export const REGLES: DefinitionReglage[] = [
   {
     cle: 'ouverture_projet',
     libelle: 'Ouverture du projet',
+    // Décision du 30/10/2026 : le client accepte, on commence — le projet
+    // s'ouvre à l'Onboard ; factures et contrat suivent sans rien bloquer.
+    // « À l'émission de F1 » reste au choix (et sert de filet : F1 ouvre un
+    // projet encore fermé).
     valeur: {
       type: 'choix',
-      options: [{ valeur: 'emission_f1', libelle: "À l'émission de F1 (défaut)", enService: "à l'émission de F1" }],
+      options: [
+        { valeur: 'onboard', libelle: "À l'acceptation de l'offre (défaut)", enService: "à l'acceptation de l'offre" },
+        { valeur: 'emission_f1', libelle: "À l'émission de F1", enService: "à l'émission de F1" },
+      ],
     },
-    defaut: 'emission_f1',
+    defaut: 'onboard',
     aide: "Déclenche l'instanciation du gabarit (J1). Les projets déjà ouverts ne changent pas.",
-    appliquee: false,
+    appliquee: true, // OnboardingService.openIfDue (Onboard), FacturationService.emettre (F1)
   },
   {
     cle: 'seuil_contresignature_ceo',

@@ -126,7 +126,10 @@ describe('DevisService — offre de dossier CRM', () => {
       $transaction: jest.fn((cb: (t: unknown) => unknown) => cb(tx)),
     } as unknown as PrismaService;
     const notifications = { notifierDossierCrm: jest.fn().mockResolvedValue(undefined) };
-    const onboarding = { onboard: jest.fn().mockResolvedValue({ projet: { id: 'P1' }, facturesPreparees: 3 }) };
+    const onboarding = {
+      onboard: jest.fn().mockResolvedValue({ projet: { id: 'P1' }, facturesPreparees: 3 }),
+      openIfDue: jest.fn().mockResolvedValue(true),
+    };
     const service = new DevisService(
       prisma,
       {} as FacturationService,
@@ -170,6 +173,8 @@ describe('DevisService — offre de dossier CRM', () => {
     await service.repondrePublic('jeton', 'accepte');
     expect(tx.devis.update).toHaveBeenCalled();
     expect(onboarding.onboard).toHaveBeenCalledWith(tx, 'S1', 'DOS1', null, 'offre acceptée par le client');
+    // Le projet s'ouvre aussitôt après (gabarit, J1) : visible dans Projets.
+    expect(onboarding.openIfDue).toHaveBeenCalledWith('S1', 'P1');
     expect(notifications.notifierDossierCrm).toHaveBeenCalledWith({
       societeId: 'S1',
       dossierId: 'DOS1',

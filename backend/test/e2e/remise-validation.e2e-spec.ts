@@ -19,9 +19,9 @@ describe('Remise → reprise → validation d’une tâche', () => {
     dirgc = api(app, await connecter(app, COMPTES.dirgc));
     salarie = api(app, await connecter(app, COMPTES.salarie));
 
-    // Un projet de conception s'ouvre (gabarit instancié) à l'émission de F1.
+    // Un projet de conception s'ouvre (gabarit instancié) à l'acceptation de l'offre.
     // La démo n'en a aucun d'ouvert : l'offre de NF_OUA.26 (envoyée,
-    // conception) est acceptée — Onboard — et on émet sa F1.
+    // conception) est acceptée — Onboard et ouverture — puis on émet sa F1.
     const cfo = api(app, await connecter(app, COMPTES.cfo));
     const dossier = ((await cfo.get('/dossiers').expect(200)).body as { id: string; code: string }[]).find(
       (d) => d.code === 'NF_OUA.26',
@@ -30,6 +30,9 @@ describe('Remise → reprise → validation d’une tâche', () => {
       (await cfo.get('/devis').expect(200)).body as { id: string; statut: string; dossierCrm: { id: string } | null }[]
     ).find((d) => d.dossierCrm?.id === dossier.id && d.statut === 'envoye')!;
     await cfo.post(`/devis/${offre.id}/reponse`, { reponse: 'accepte' }).expect(201);
+    // Le projet s'ouvre dès l'acceptation (30/10/2026), sans attendre F1.
+    const ouverts = (await dirgc.get('/projets-ouverts').expect(200)).body as { projets: { code: string }[] };
+    expect(ouverts.projets.map((p) => p.code)).toContain('NF_OUA.26');
     const f1 = (
       (await cfo.get('/factures').expect(200)).body as {
         id: string;

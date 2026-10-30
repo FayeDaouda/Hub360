@@ -34,9 +34,9 @@ const ACTIONS: Record<Action, { titre: string; texte: string; confirmer: string 
     confirmer: 'Rouvrir',
   },
   ouverture: {
-    titre: 'Ouvrir le projet sans F1',
+    titre: 'Ouvrir le projet',
     texte:
-      'Comme à l’émission de F1 : la version en service du gabarit est recopiée en cartes et tâches, jour 1 aujourd’hui. Les factures restent en brouillon.',
+      'Pour un projet resté fermé (Onboard antérieur au 30/10/2026) : la version en service du gabarit est recopiée en cartes et tâches, jour 1 aujourd’hui. Les factures restent en brouillon.',
     confirmer: 'Ouvrir le projet',
   },
   cellules: {

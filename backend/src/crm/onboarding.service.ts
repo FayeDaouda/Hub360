@@ -1,5 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { todayIso } from '@hub/domain';
+import { PrismaService } from '../prisma/prisma.service';
+import { ProjectOpeningService } from '../projects/project-opening.service';
+import { ReglagesService } from '../reglages/reglages.service';
 import { PHASES_PAR_CATEGORIE } from '../projets/domaine/config';
 import { versProjetExecution } from '../commun/format-contrat';
 import { FacturationService } from '../projets/facturation/facturation.service';
@@ -14,7 +18,32 @@ export const COMMENT_ONBOARD_ACCEPTANCE = 'offre acceptée par le client';
 // des devis, les devis ne peuvent pas dépendre du CRM.
 @Injectable()
 export class OnboardingService {
-  constructor(private facturation: FacturationService) {}
+  private readonly log = new Logger('Onboarding');
+
+  constructor(
+    private prisma: PrismaService,
+    private facturation: FacturationService,
+    private opening: ProjectOpeningService,
+    private reglages: ReglagesService,
+  ) {}
+
+  // Ouverture du projet à l'Onboard (Réglages · « Ouverture du projet », à
+  // l'acceptation de l'offre par défaut, 30/10/2026) : le gabarit est recopié
+  // en étapes, cartes et tâches, J1 = aujourd'hui, et le projet apparaît dans
+  // Projets. Après la transaction de l'Onboard (le projet doit être écrit) ;
+  // un échec n'annule pas l'acceptation du client — F1 ou l'Administrateur
+  // HUB ouvriront le projet ensuite. Rien pour une catégorie sans gabarit.
+  async openIfDue(companyId: string, projectId: string): Promise<boolean> {
+    try {
+      if ((await this.reglages.regle<string>(companyId, 'ouverture_projet')) !== 'onboard') return false;
+      const plan = await this.opening.prepare(projectId, todayIso());
+      if (!plan) return false;
+      return await this.prisma.$transaction((tx) => this.opening.save(tx, plan));
+    } catch (e) {
+      this.log.error(`Projet ${projectId} non ouvert à l'Onboard : ${(e as Error).message}`);
+      return false;
+    }
+  }
 
   // Bascule offre_envoyee → onboard + journal, puis transaction pivot : le
   // projet d'exécution, l'offre acceptée rattachée et transformée en

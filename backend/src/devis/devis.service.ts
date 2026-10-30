@@ -524,6 +524,8 @@ export class DevisService {
       }
       return { societeId, onboard: null };
     });
+    // Le projet s'ouvre aussitôt (gabarit, J1) : il apparaît dans Projets.
+    if (onboard) await this.onboarding.openIfDue(societeId, onboard.projet.id);
     if (dossierCrmId) {
       await this.notifications.notifierDossierCrm({
         societeId,
