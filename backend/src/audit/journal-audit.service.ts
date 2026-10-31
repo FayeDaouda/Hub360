@@ -8,10 +8,13 @@ import { titreReporting } from '../pilotage/suivi-reporting.service';
 import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-rentabilite';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  decodeRights,
   formatAmount,
   formatDate,
   formatMonthYear,
   formatNumericMonth,
+  RIGHT_LABELS,
+  RIGHTS,
   ROLE_CEO,
   ROLE_CIO,
   ROLE_COMPANY_ADMIN,
@@ -84,6 +87,20 @@ const NIVEAUX: Record<NiveauPermission, string> = {
   validation: 'validation',
 };
 const nomDe = (u: { prenom: string; nom: string } | null | undefined) => (u ? `${u.prenom} ${u.nom}`.trim() : null);
+// Avant le 31/10/2026 : un niveau en échelle ; depuis : quatre droits en lettres.
+const nommerDroits = (lettres: string) =>
+  RIGHTS.filter((r) => decodeRights(lettres)[r])
+    .map((r) => RIGHT_LABELS[r])
+    .join(', ') || 'aucun';
+const droitsLus = (d: {
+  avant: NiveauPermission | null;
+  apres: NiveauPermission | null;
+  droitsAvant: string | null;
+  droitsApres: string | null;
+}) =>
+  typeof d.droitsApres === 'string'
+    ? `${nommerDroits(d.droitsAvant ?? '')} → ${nommerDroits(d.droitsApres)}`
+    : `${d.avant ? NIVEAUX[d.avant] : 'aucun'} → ${d.apres ? NIVEAUX[d.apres] : 'aucun'}`;
 
 // Journal d'audit : ce que le HUB enregistre déjà, réuni en une seule liste
 // datée (comptes, droits, finances, réglages, départs). Lecture seule —
@@ -278,7 +295,7 @@ export class JournalAuditService {
         ordre: d.ordreJournal,
         categorie: 'droits' as const,
         action: 'Droits modifiés',
-        detail: `${d.roleNom} · ${d.module} : ${d.avant ? NIVEAUX[d.avant] : 'aucun'} → ${NIVEAUX[d.apres]}`,
+        detail: `${d.roleNom} · ${d.module} : ${droitsLus(d)}`,
         parId: d.parId,
       })),
       ...emises.map((f) => ({

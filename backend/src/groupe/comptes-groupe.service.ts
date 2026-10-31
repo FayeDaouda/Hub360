@@ -5,8 +5,8 @@ import { ComptesService } from '../auth/comptes.service';
 import { estVerrouille } from '../auth/verrouillage';
 import { ROLE_COMPANY_ADMIN, ROLE_DIR_GC, ROLE_EMPLOYEE, ROLE_HOLDING_ADMIN, ROLE_HUB_ADMIN } from '@hub/domain';
 
-// Comptes & rôles du HUB (sept. 2026) — le super admin (le CIO ; ou le
-// compte technique holding_admin, cf. AdministrationHubGuard) attribue à
+// Comptes & rôles du HUB (sept. 2026) — le CIO ou l'Administrateur HUB
+// (cf. AdministrationHubGuard) attribue à
 // chaque compte son rôle dans une société et saisit son salaire brut
 // mensuel. Règles :
 // - UN rôle par personne et par société : la connexion lit une seule

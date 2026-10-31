@@ -1,5 +1,5 @@
 import type { FicheProgramme } from './fiche-programme';
-import { yearOf } from '@hub/domain';
+import { yearOf, type Right, type RightSet } from '@hub/domain';
 export type Societe = {
   id: string;
   nom: string;
@@ -44,10 +44,11 @@ export type Session = {
   // Administrateur HUB (carte blanche, 29/10/2026) : absent pour les autres
   // comptes. Il change de rôle depuis le menu du compte.
   adminHub?: boolean;
-  // Carte module → niveau (matrice RolePermission), identique au JWT. Absente
-  // d'une session ouverte avant son ajout : traitée comme « aucun » partout
-  // (cf. lib/auth.ts::aLaPermission) — une reconnexion la récupère.
-  permissions?: Partial<Record<string, NiveauPermission>>;
+  // Carte étape → droits en lettres (« crm » → « LE », cf. @hub/domain
+  // rights.ts), identique au JWT et relue dès qu'un avis « Vos droits ont
+  // changé » arrive. Absente d'une session ouverte avant son ajout : traitée
+  // comme aucun droit partout (cf. lib/auth.ts::aLaPermission).
+  permissions?: Partial<Record<string, string>>;
   // Heure du poste (ms) à la réception du jeton, posée par lib/auth.ts ;
   // absente d'une session enregistrée avant le lot B.
   recuLe?: number;
@@ -1170,24 +1171,27 @@ export function statutDevisEffectif(
 }
 
 // --- Rôles & permissions ------------------------------------------------
-export type NiveauPermission = 'aucun' | 'lecture' | 'ecriture' | 'validation';
+// Droit exigé par une action (cf. @hub/domain rights.ts) ; « aucun » n'exige rien.
+export type NiveauPermission = Right | 'aucun';
 
-export type ModulePermission = { cle: string; nom: string };
+// Matrice des droits (31/10/2026) : modules découpés en étapes ; chaque
+// étape porte la phrase de chacun des quatre droits (absente = sans objet).
+export type EtapeMatrice = { cle: string; nom: string; libelles: Partial<Record<Right, string>> };
+export type ModuleMatrice = { cle: string; nom: string; etapes: EtapeMatrice[] };
 
-export type RoleAvecPermissions = {
+export type RoleMatrice = {
   id: string;
   nom: string;
   // true = rôle transverse (societeId null, ex. CEO/CTO/CIO).
   transverse: boolean;
-  // Calculé par le serveur pour l'appelant : rôles propres → admin société
-  // ou CIO ; transverses → CIO seul ; rôles socles → personne.
-  modifiable: boolean;
-  permissions: Partial<Record<string, NiveauPermission>>;
+  // Le CIO : carte blanche, sa ligne ne se règle pas.
+  carteBlanche: boolean;
+  droits: Partial<Record<string, RightSet>>;
 };
 
 export type MatriceRoles = {
-  modules: ModulePermission[];
-  roles: RoleAvecPermissions[];
+  modules: ModuleMatrice[];
+  roles: RoleMatrice[];
 };
 
 // --- Contrat (étape G, cadrage validé 27/09/2026) -----------------------------

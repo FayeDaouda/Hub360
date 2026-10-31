@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { identifyCompany } from '../tenancy/tenant-context';
 import { sessionEchue } from './session';
 import { SwitchesService } from '../switches/switches.service';
+import { hasFullAccess, RightsService } from '../rights/rights.service';
 
 // Personne connectée, posée sur req.user par JwtAuthGuard.
 export type UtilisateurConnecte = {
@@ -13,9 +14,12 @@ export type UtilisateurConnecte = {
   societeId: string | null;
   societeSlug: string | null;
   role: string;
+  // Droits par étape (« crm » → « LE »), relus à chaque requête.
   permissions: Record<string, string>;
   // Administrateur HUB (carte blanche) : `role` est le rôle qu'il endosse.
   adminHub: boolean;
+  // Carte blanche (31/10/2026) : Administrateur HUB ou CIO.
+  fullAccess: boolean;
   // Session (src/auth/session.ts) : heure de la connexion et émission du
   // jeton présenté, en secondes.
   debutSession: number;
@@ -27,6 +31,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private prisma: PrismaService,
     private switches: SwitchesService,
+    private rights: RightsService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -76,8 +81,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Session expirée — reconnecte-toi.');
     }
 
-    // Maintenance du HUB : toute requête refusée, sauf l'Administrateur HUB.
-    await this.switches.refuseDuringMaintenance(payload.adminHub === true);
+    // Maintenance du HUB : toute requête refusée, sauf la carte blanche.
+    const fullAccess = hasFullAccess({ adminHub: payload.adminHub === true, role: payload.role });
+    await this.switches.refuseDuringMaintenance(fullAccess);
 
     let societeId = payload.societeId ?? null;
     if (payload.societeSlug) {
@@ -95,17 +101,24 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // qui suivent lisent déjà dans son seul périmètre.
     if (societeId) identifyCompany(societeId);
 
+    // Droits relus ici plutôt que pris dans le jeton : un changement de la
+    // matrice ou un module coupé vaut dès la requête suivante, sans reconnexion.
+    const permissions = await this.rights.forUser({
+      userId: utilisateur.id,
+      societeId,
+      role: payload.role,
+      adminHub: payload.adminHub === true,
+    });
+
     return {
       userId: utilisateur.id,
       email: utilisateur.email,
       societeId,
       societeSlug: payload.societeSlug ?? null,
       role: payload.role,
-      // {} pour un token émis avant l'ajout de ce champ, ou pour un rôle
-      // socle sans RolePermission (cf. auth.service.ts) — PermissionGuard
-      // traite l'absence d'entrée pour un module comme 'aucun' (fail closed).
-      permissions: payload.permissions ?? {},
+      permissions,
       adminHub: payload.adminHub === true,
+      fullAccess,
       debutSession,
       emissionJeton: payload.iat ?? 0,
     };

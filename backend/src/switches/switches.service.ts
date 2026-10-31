@@ -30,13 +30,6 @@ export class SwitchesService {
     return value;
   }
 
-  // Droits effectifs : un module coupé vaut « aucun », quoi que dise la matrice.
-  async effectivePermissions(companyId: string, permissions: Record<string, string>) {
-    const disabled = await this.disabledModules(companyId);
-    if (!disabled.size) return permissions;
-    return Object.fromEntries(Object.entries(permissions).map(([cle, n]) => [cle, disabled.has(cle) ? 'aucun' : n]));
-  }
-
   async maintenance(): Promise<{ actif: boolean; message: string }> {
     if (this.maintenanceCache && Date.now() - this.maintenanceCache.at < CACHE_MS) return this.maintenanceCache.value;
     const row = await this.prisma.maintenanceHub.findUnique({ where: { id: 'hub' } });
@@ -45,9 +38,10 @@ export class SwitchesService {
     return value;
   }
 
-  // Refus pendant la maintenance (connexion, requêtes), sauf l'Administrateur HUB.
-  async refuseDuringMaintenance(adminHub: boolean) {
-    if (adminHub) return;
+  // Refus pendant la maintenance (connexion, requêtes), sauf la carte blanche
+  // (Administrateur HUB, CIO).
+  async refuseDuringMaintenance(fullAccess: boolean) {
+    if (fullAccess) return;
     const m = await this.maintenance();
     if (m.actif) throw new ServiceUnavailableException(m.message.trim() || MAINTENANCE_MESSAGE);
   }

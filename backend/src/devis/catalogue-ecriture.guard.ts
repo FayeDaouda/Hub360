@@ -14,7 +14,7 @@ export class CatalogueEcritureGuard implements CanActivate {
     if (
       user &&
       user.societeSlug === req.params.slug &&
-      (user.adminHub || user.role === ROLE_CEO || user.role === ROLE_COMPANY_ADMIN)
+      (user.fullAccess || user.role === ROLE_CEO || user.role === ROLE_COMPANY_ADMIN)
     ) {
       return true;
     }

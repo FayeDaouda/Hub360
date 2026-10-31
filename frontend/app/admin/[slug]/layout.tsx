@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getSociete } from '@/lib/api';
-import { clearSession, getSession, remplacerSession } from '@/lib/auth';
+import { clearSession, getSession, remplacerSession, SESSION_EVENT } from '@/lib/auth';
 import { premiereSectionAccessible, sectionAccessible } from '@/lib/acces-back-office';
 import { destinationForSession } from '@/lib/session-redirect';
 import { LayoutProvider } from '@/lib/layout-contexte';
@@ -52,6 +52,18 @@ export default function AdminLayout({ children, ...props }: Props) {
       .catch(() => setSociete(null));
   }, [params.slug, router]);
 
+  // Session enregistrée ailleurs (droits relus après un avis, prolongation) :
+  // la coquille et les pages suivent sans rechargement. Une section dont le
+  // droit vient d'être retiré renvoie à la première section encore ouverte.
+  useEffect(() => {
+    const suivre = () => {
+      const s = getSession();
+      if (s && s.societe.slug === params.slug) setSession(s);
+    };
+    window.addEventListener(SESSION_EVENT, suivre);
+    return () => window.removeEventListener(SESSION_EVENT, suivre);
+  }, [params.slug]);
+
   // Section de l'URL non ouverte à ce rôle (lien direct, favori) → sa
   // première section accessible, plutôt qu'une page dont l'API refuserait
   // tous les appels.
@@ -72,10 +84,8 @@ export default function AdminLayout({ children, ...props }: Props) {
         session,
         societe,
         definirTitre: setTitre,
-        majSession: (s) => {
-          remplacerSession(s);
-          setSession(s);
-        },
+        // remplacerSession émet SESSION_EVENT : la coquille suit d'elle-même.
+        majSession: remplacerSession,
       }}
     >
       <AdminShell societe={societe} session={session} active={active} titre={titre}>

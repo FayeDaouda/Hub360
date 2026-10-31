@@ -1,6 +1,12 @@
-import type { NiveauPermission, Session } from './types';
+import { hasRight, type Right } from '@hub/domain';
+import type { Session } from './types';
 
 const STORAGE_KEY = 'hub_session';
+
+// Émis à chaque enregistrement de la session (prolongation, droits relus,
+// nom affiché) : les coquilles (admin, /groupe) se remettent à jour sans
+// rechargement — menus et boutons suivent les droits du moment.
+export const SESSION_EVENT = 'hub:session';
 
 // "Se souvenir de moi" coché -> localStorage (survit à la fermeture du
 // navigateur). Décoché -> sessionStorage (effacé à la fermeture de l'onglet).
@@ -17,6 +23,7 @@ export function saveSession(session: Session, remember: boolean) {
     sessionStorage.setItem(STORAGE_KEY, raw);
     localStorage.removeItem(STORAGE_KEY);
   }
+  window.dispatchEvent(new Event(SESSION_EVENT));
 }
 
 export function getSession(): Session | null {
@@ -71,21 +78,15 @@ export function datesJeton(jeton: string): { iat: number; exp: number } | null {
 
 const emission = (jeton: string) => datesJeton(jeton)?.iat ?? 0;
 
-const ORDRE_NIVEAUX: Record<NiveauPermission, number> = {
-  aucun: 0,
-  lecture: 1,
-  ecriture: 2,
-  validation: 3,
-};
-
 // Affichage seulement (montrer/masquer, rediriger) : le serveur revérifie
-// chaque requête. Même règle que backend/src/commun/permission.guard.ts.
-export function niveauSuffisant(session: Session | null, module: string, niveau: NiveauPermission): boolean {
-  const actuel = session?.permissions?.[module] ?? 'aucun';
-  return ORDRE_NIVEAUX[actuel] >= ORDRE_NIVEAUX[niveau];
+// chaque requête. Même règle que backend/src/commun/permission.guard.ts :
+// quatre droits indépendants (31/10/2026), la validation ne donne pas
+// l'écriture.
+export function niveauSuffisant(session: Session | null, module: string, niveau: Right | 'aucun'): boolean {
+  return hasRight(session?.permissions as Record<string, string> | undefined, module, niveau);
 }
 
 // Raccourci sur la session courante.
-export function aLaPermission(module: string, niveau: NiveauPermission): boolean {
+export function aLaPermission(module: string, niveau: Right | 'aucun'): boolean {
   return niveauSuffisant(getSession(), module, niveau);
 }

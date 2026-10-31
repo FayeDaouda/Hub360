@@ -7,8 +7,10 @@ import { ROLE_COMPANY_ADMIN, ROLE_HOLDING_ADMIN } from '@hub/domain';
 // rôle apparaît.
 export function destinationForSession(session: Session): string {
   switch (session.role) {
-    case ROLE_HOLDING_ADMIN: // compte technique : administration du HUB
-      return '/groupe';
+    // Compte technique : l'administration du HUB lui est fermée depuis le
+    // 31/10/2026 (CIO et Administrateur HUB seuls) — écran générique.
+    case ROLE_HOLDING_ADMIN:
+      return `/espace/${session.societe.slug}`;
     case ROLE_COMPANY_ADMIN:
       return `/admin/${session.societe.slug}`;
     default: {

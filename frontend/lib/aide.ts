@@ -1,4 +1,4 @@
-import type { NiveauPermission } from './types';
+import { RIGHTS, type Right, type RightSet } from '@hub/domain';
 
 // Guide d'aide intégré (bouton « Aide » de la barre du haut) : une fiche par
 // section du HUB, lue selon les droits RÉELS de la personne connectée (même
@@ -9,7 +9,7 @@ export type FicheAide = {
   titre: string;
   resume: string;
   // Ce que permet chaque niveau de la matrice (cumulatif : écriture inclut lecture).
-  actions: Partial<Record<Exclude<NiveauPermission, 'aucun'>, string>>;
+  actions: Partial<Record<Right, string>>;
   // Gestes et raccourcis de la page (hors de la page elle-même, pour ne pas
   // l'encombrer).
   astuces?: string[];
@@ -103,8 +103,7 @@ export const REPERES_AIDE = [
   'Un problème, une question, une idée : « Signaler un problème » ci-dessous. La page où vous êtes est jointe automatiquement.',
 ];
 
-export function phraseNiveau(fiche: FicheAide, niveau: NiveauPermission): string[] {
-  const ordre = ['lecture', 'ecriture', 'validation'] as const;
-  const rang = ordre.indexOf(niveau as (typeof ordre)[number]);
-  return ordre.filter((n, i) => i <= rang && fiche.actions[n]).map((n) => fiche.actions[n]!);
+// Ce que les droits du rôle ouvrent dans la section (droits indépendants).
+export function phraseDroits(fiche: FicheAide, droits: RightSet): string[] {
+  return RIGHTS.filter((r) => droits[r] && fiche.actions[r]).map((r) => fiche.actions[r]!);
 }

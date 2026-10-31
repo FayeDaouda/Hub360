@@ -1,53 +1,29 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { BackOfficeGuard } from '../commun/back-office.guard';
+import { HubAdminGuard } from '../commun/hub-admin.guard';
 import { SocieteAdminOuCioGuard } from '../commun/societe-admin-ou-cio.guard';
 import { AdministrationService } from './administration.service';
 import { RolesService } from './roles.service';
-import { DecisionDroitDto, MajPermissionDto } from './dto';
+import { EnregistrerDroitsDto } from './roles.dto';
 
-type R = { user: { societeId: string; role: string; userId: string; adminHub: boolean } };
+type R = { user: { societeId: string; userId: string } };
 
-// Matrice des rôles d'une société — son admin, ou le CIO (super admin du
-// HUB) connecté sur cette société. Qui modifie quelle ligne : RolesService.
+// Matrice des droits d'une société (31/10/2026) : visible et modifiable par
+// le CIO et l'Administrateur HUB seuls, connectés sur cette société.
 @Controller('societes/:slug/roles')
-@UseGuards(JwtAuthGuard, SocieteAdminOuCioGuard)
+@UseGuards(JwtAuthGuard, HubAdminGuard)
 export class RolesController {
   constructor(private roles: RolesService) {}
 
   @Get()
   lister(@Req() req: R) {
-    return this.roles.listerAvecPermissions(req.user.societeId, req.user.role, req.user.adminHub);
+    return this.roles.matrice(req.user.societeId);
   }
 
-  @Patch(':roleId/modules/:moduleCle')
-  majPermission(
-    @Req() req: R,
-    @Param('roleId') roleId: string,
-    @Param('moduleCle') moduleCle: string,
-    @Body() dto: MajPermissionDto,
-  ) {
-    const u = req.user;
-    return this.roles.majPermission(u.societeId, roleId, moduleCle, dto.niveau, u.role, u.userId, u.adminHub);
-  }
-}
-
-// Droits du rôle CIO (revue CIO, 22/10/2026) : demandes en attente, que le
-// CEO accepte ou refuse — hors de la matrice, le CEO n'y a pas la main.
-@Controller('societes/:slug/droits/demandes')
-@UseGuards(JwtAuthGuard, BackOfficeGuard)
-export class DemandesDroitController {
-  constructor(private roles: RolesService) {}
-
-  @Get()
-  lister(@Req() req: R) {
-    return this.roles.demandes(req.user.societeId, req.user.role);
-  }
-
-  @Post(':id/decision')
-  @HttpCode(200)
-  decider(@Req() req: R, @Param('id') id: string, @Body() dto: DecisionDroitDto) {
-    return this.roles.decider(req.user.societeId, req.user.role, req.user.userId, id, dto.accepter, dto.motif);
+  // Rend la matrice enregistrée (règle de cohérence appliquée par le serveur).
+  @Put('droits')
+  enregistrer(@Req() req: R, @Body() dto: EnregistrerDroitsDto) {
+    return this.roles.enregistrer(req.user.societeId, dto.changements, req.user.userId);
   }
 }
 

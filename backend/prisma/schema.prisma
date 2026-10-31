@@ -151,6 +151,7 @@ model Utilisateur {
   mentionsProjet         CommentaireProjet[]      @relation("CommentaireProjetMentionne")
   transitionsDossier     DossierCrmTransition[]   @relation("TransitionDossierPar")
   signalements           Signalement[]            @relation("SignalementAuteur")
+  avisDroits             RightsNotice[]
 
   @@map("utilisateurs")
 }
@@ -293,6 +294,7 @@ enum NotificationType {
   decision_proposee // au CEO : le CTO ou le COO lui soumet une décision
   decision_arbitree // au CTO : acceptée, modifiée ou refusée
   decision_en_retard
+  own_rights_changed // aux titulaires d'un rôle : leurs droits viennent de changer (matrice, 31/10/2026)
 }
 
 model Notification {
@@ -353,9 +355,13 @@ model JournalDroit {
   id           String            @id @default(uuid())
   societeId    String            @map("societe_id") // société de l'auteur au moment du changement
   roleNom      String            @map("role_nom")
-  module       String // clé du module (crm, projets…)
+  module       String // clé du module (avant le 31/10/2026), puis libellé de l'étape (« CRM › Dossiers »)
+  // Ancienne matrice (jusqu'au 31/10/2026) : niveaux en échelle.
   avant        NiveauPermission? // null = aucune ligne avant
-  apres        NiveauPermission
+  apres        NiveauPermission?
+  // Depuis le 31/10/2026 : droits en lettres (« LE », « » = aucun).
+  droitsAvant  String?           @map("droits_avant")
+  droitsApres  String?           @map("droits_apres")
   parId        String?           @map("par_id") // audit, pas de FK
   // Rôle CIO (revue CIO, 22/10/2026) : la modification demandée (parId) n'est
   // appliquée qu'une fois validée par le CEO (valideParId).
@@ -490,7 +496,7 @@ model Role {
   societe      Societe?                 @relation(fields: [societeId], references: [id], onDelete: Cascade)
   supprimePar  Utilisateur?             @relation("RoleSupprPar", fields: [supprimeParId], references: [id], onDelete: SetNull)
   utilisateurs UtilisateurSocieteRole[]
-  permissions  RolePermission[]
+  droits       RoleRight[]
 
   @@unique([societeId, nom])
   @@index([societeId])
@@ -521,12 +527,14 @@ model Module {
   cle         String  @unique // ex: "projets", "finances", "documents", "communication"
   description String?
 
-  societes    SocieteModule[]
-  permissions RolePermission[]
+  societes SocieteModule[]
+  etapes   ModuleStep[]
 
   @@map("modules")
 }
 
+// Niveaux de l'ancienne matrice (en échelle, jusqu'au 31/10/2026) : ne sert
+// plus qu'aux lignes historiques du journal des droits et des demandes.
 enum NiveauPermission {
   aucun
   lecture
@@ -534,21 +542,58 @@ enum NiveauPermission {
   validation
 }
 
-// Ce qu'un rôle peut faire sur un module : la matrice de droits fine qui
-// remplace le simple binaire admin/collaborateur (ex: Dir. GC = écriture sur
-// "finances", RH = validation sur "rh" mais aucun sur "finances").
-// Absence de ligne pour un (role, module) donné = aucun accès (fail closed).
-model RolePermission {
-  id       String           @id @default(uuid())
-  roleId   String           @map("role_id")
-  moduleId String           @map("module_id")
-  niveau   NiveauPermission @default(aucun)
+// Étape d'un module (matrice des droits, 31/10/2026) : chaque bouton du HUB
+// dépend d'une seule étape et d'un seul des quatre droits. `cle` est ce que
+// portent la session et les routes (« crm », puis « crm.dossiers »…).
+// `libelles` : la phrase de chaque droit pour cette étape
+// ({ lecture, ecriture, validation, suppression }) ; un droit absent est
+// « sans objet » et n'est jamais accordé.
+model ModuleStep {
+  id       String @id @default(uuid())
+  moduleId String @map("module_id")
+  cle      String @unique
+  nom      String
+  ordre    Int    @default(0)
+  libelles Json
 
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  module Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  droits RoleRight[]
 
-  @@unique([roleId, moduleId])
-  @@map("role_permissions")
+  @@index([moduleId])
+  @@map("etapes_module")
+}
+
+// Ce qu'un rôle peut faire sur une étape : quatre droits indépendants
+// (décision du 31/10/2026). Pas de ligne = aucun droit (refus par défaut).
+model RoleRight {
+  id          String  @id @default(uuid())
+  roleId      String  @map("role_id")
+  etapeId     String  @map("etape_id")
+  lecture     Boolean @default(false)
+  ecriture    Boolean @default(false)
+  validation  Boolean @default(false)
+  suppression Boolean @default(false)
+
+  role  Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  etape ModuleStep @relation(fields: [etapeId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, etapeId])
+  @@map("droits_roles")
+}
+
+// Avis « Vos droits ont changé » : bandeau en haut de page de chaque
+// titulaire du rôle, jusqu'à « J'ai compris » (31/10/2026).
+model RightsNotice {
+  id            String    @id @default(uuid())
+  utilisateurId String    @map("utilisateur_id")
+  message       String
+  createdAt     DateTime  @default(now()) @map("created_at")
+  comprisLe     DateTime? @map("compris_le")
+
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@index([utilisateurId, comprisLe])
+  @@map("avis_droits")
 }
 
 // Quels modules sont activés pour quelle société — zéro déploiement pour changer ça.

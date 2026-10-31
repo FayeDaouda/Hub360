@@ -34,6 +34,7 @@ import { AideGlobale, ouvrirAide } from '@/components/admin/aide-globale';
 import { ThemeToggle } from '@/components/admin/theme-toggle';
 import { NavigationMobile } from '@/components/admin/navigation-mobile';
 import { useDefilementCoque } from '@/lib/defilement';
+import { AvisDroitsBandeau } from '@/components/avis-droits-bandeau';
 
 type NavItem = {
   cle: string;
@@ -422,6 +423,7 @@ export function AdminShell({ societe, session, active, titre, children }: Props)
             {titre}
           </h1>
         )}
+        <AvisDroitsBandeau />
         {children}
       </main>
 

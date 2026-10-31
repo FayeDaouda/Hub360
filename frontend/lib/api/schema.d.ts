@@ -2964,7 +2964,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/societes/{slug}/roles/{roleId}/modules/{moduleCle}": {
+    "/api/societes/{slug}/roles/droits": {
         parameters: {
             query?: never;
             header?: never;
@@ -2972,40 +2972,8 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        put: operations["RolesController_enregistrer"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["RolesController_majPermission"];
-        trace?: never;
-    };
-    "/api/societes/{slug}/droits/demandes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["DemandesDroitController_lister"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/societes/{slug}/droits/demandes/{id}/decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["DemandesDroitController_decider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3870,6 +3838,54 @@ export interface paths {
         get?: never;
         put: operations["SwitchesController_setMaintenance"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/moi/droits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RightsNoticesController_droits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/moi/avis-droits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RightsNoticesController_lister"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/moi/avis-droits/compris": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RightsNoticesController_compris"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5342,13 +5358,20 @@ export interface components {
             mois: string;
             commentaire: string;
         };
-        MajPermissionDto: {
-            /** @enum {string} */
-            niveau: "aucun" | "ecriture" | "lecture" | "validation";
+        DroitsEtapeDto: {
+            lecture: boolean;
+            ecriture: boolean;
+            validation: boolean;
+            suppression: boolean;
         };
-        DecisionDroitDto: {
-            accepter: boolean;
-            motif?: string;
+        ChangementDroitsDto: {
+            /** Format: uuid */
+            roleId: string;
+            etapeCle: string;
+            droits: components["schemas"]["DroitsEtapeDto"];
+        };
+        EnregistrerDroitsDto: {
+            changements: components["schemas"]["ChangementDroitsDto"][];
         };
         CreerCompteDto: {
             /** Format: uuid */
@@ -5524,6 +5547,17 @@ export interface components {
             motif: string;
             actif: boolean;
             message: string;
+        };
+        DroitsCourantsDto: {
+            permissions: {
+                [key: string]: string;
+            };
+        };
+        RightsNoticeDto: {
+            id: string;
+            message: string;
+            /** Format: date-time */
+            createdAt: string;
         };
         ClientErrorDto: {
             message: string;
@@ -10108,63 +10142,18 @@ export interface operations {
             };
         };
     };
-    RolesController_majPermission: {
+    RolesController_enregistrer: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 slug: string;
-                roleId: string;
-                moduleCle: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MajPermissionDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DemandesDroitController_lister: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    DemandesDroitController_decider: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DecisionDroitDto"];
+                "application/json": components["schemas"]["EnregistrerDroitsDto"];
             };
         };
         responses: {
@@ -11524,6 +11513,61 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["InterrupteursDto"];
                 };
+            };
+        };
+    };
+    RightsNoticesController_droits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DroitsCourantsDto"];
+                };
+            };
+        };
+    };
+    RightsNoticesController_lister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RightsNoticeDto"][];
+                };
+            };
+        };
+    };
+    RightsNoticesController_compris: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

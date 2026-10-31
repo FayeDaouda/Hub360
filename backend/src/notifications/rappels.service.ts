@@ -646,18 +646,6 @@ export class RappelsService implements OnApplicationBootstrap {
         d.creeParId,
       );
     }
-    for (const d of await this.prisma.demandeDroit.findMany({
-      where: { statut: 'en_attente' },
-      select: { id: true, societeId: true, module: true, createdAt: true },
-    })) {
-      const p = palier(d.createdAt);
-      if (p < 1) continue;
-      await pousser({
-        cle: `ceo:droit:${d.id}:${p}`,
-        societeId: d.societeId,
-        titre: `Droits du CIO à valider · ${d.module} · en attente depuis ${ouvres(d.createdAt)} jours ouvrés`,
-      });
-    }
     // Salaire du CFO : seul cas où le CEO valide un salaire.
     for (const c of await this.prisma.changementSalaire.findMany({
       where: { statut: 'a_valider' },
