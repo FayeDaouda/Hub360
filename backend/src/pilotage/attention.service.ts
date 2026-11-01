@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { JalonFacture, NiveauPermission } from '@prisma/client';
+import type { JalonFacture } from '@prisma/client';
+import type { Right } from '@hub/domain';
 import { aLaPermission } from '../commun/permission.guard';
 import { SeuilCeoService } from '../finances/seuil-ceo.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,7 +14,7 @@ export type ActeurAttention = {
   userId: string;
   societeId: string;
   role: string;
-  permissions?: Record<string, NiveauPermission>;
+  permissions?: Record<string, string>;
 };
 
 const TRANCHE_PAR_JALON: Partial<Record<JalonFacture, 'F1' | 'F2' | 'F3'>> = {
@@ -38,7 +39,7 @@ export class AttentionService {
   ) {}
 
   async attention(a: ActeurAttention) {
-    const voit = (module: string, niveau: NiveauPermission = 'lecture') =>
+    const voit = (module: string, niveau: Right = 'lecture') =>
       a.role === ROLE_COMPANY_ADMIN || aLaPermission(a.permissions, module, niveau);
     const [projets, factures, ts] = [voit('projets'), voit('finances_factures'), voit('finances_devis')];
     const jour = todayIso();

@@ -87,3 +87,14 @@ export function describeRightsChange(before: RightSet, after: RightSet): string 
   }
   return parts.join(', ');
 }
+
+// Clés des étapes lues par le code (routes du serveur, boutons de l'écran) :
+// des noms, comme ceux des rôles. Leurs phrases et leurs droits de départ
+// vivent au serveur (backend/src/rights/catalogue.ts, migrations).
+export const ETAPE = {
+  crmDossiers: 'crm.dossiers',
+  crmSoumission: 'crm.soumission',
+  crmProprietaire: 'crm.proprietaire',
+  crmApporteur: 'crm.apporteur',
+  crmTotaux: 'crm.totaux',
+} as const;

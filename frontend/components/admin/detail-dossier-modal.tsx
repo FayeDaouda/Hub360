@@ -326,14 +326,17 @@ export function DetailDossierModal({
         </section>
       )}
 
-      <FicheApporteurSection
-        slug={slug}
-        projet={projet}
-        onModifie={async () => {
-          await onMaj();
-          setVersionHistorique((v) => v + 1);
-        }}
-      />
+      {/* Sans la Lecture de « Fiche apporteur », la section n'est pas envoyée. */}
+      {'apporteur' in projet && (
+        <FicheApporteurSection
+          slug={slug}
+          projet={projet}
+          onModifie={async () => {
+            await onMaj();
+            setVersionHistorique((v) => v + 1);
+          }}
+        />
+      )}
 
       <section className="fiche-crm-section">
         <h3 className="fiche-crm-titre">Passation de la fiche</h3>
@@ -343,29 +346,32 @@ export function DetailDossierModal({
             <strong>{projet.creePar?.nom ?? 'Non renseigné'}</strong>
             <span className="fiche-crm-aide">automatique, non modifiable</span>
           </div>
-          <ArrowRight size={18} aria-hidden className="fiche-crm-fleche" />
-          <div className="fiche-crm-carte fiche-crm-carte--proprio">
-            <span className="fiche-crm-aide">Propriétaire</span>
-            {peutReassigner && !archive && proprietaires && proprietaires.length > 0 ? (
-              <select
-                className="field-input"
-                aria-label="Propriétaire de la fiche"
-                value={projet.proprietaire?.id ?? ''}
-                disabled={reassignation}
-                onChange={(e) => reassigner(e.target.value)}
-              >
-                {!projet.proprietaire && <option value="">À assigner…</option>}
-                {proprietaires.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nom}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <strong>{projet.proprietaire?.nom ?? 'À assigner'}</strong>
-            )}
-            <span className="fiche-crm-aide">pilote la fiche jusqu’au contrat</span>
-          </div>
+          {/* Sans la Lecture de « Propriétaire du dossier », pas de propriétaire. */}
+          {'proprietaire' in projet && <ArrowRight size={18} aria-hidden className="fiche-crm-fleche" />}
+          {'proprietaire' in projet && (
+            <div className="fiche-crm-carte fiche-crm-carte--proprio">
+              <span className="fiche-crm-aide">Propriétaire</span>
+              {peutReassigner && !archive && proprietaires && proprietaires.length > 0 ? (
+                <select
+                  className="field-input"
+                  aria-label="Propriétaire de la fiche"
+                  value={projet.proprietaire?.id ?? ''}
+                  disabled={reassignation}
+                  onChange={(e) => reassigner(e.target.value)}
+                >
+                  {!projet.proprietaire && <option value="">À assigner…</option>}
+                  {proprietaires.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nom}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <strong>{projet.proprietaire?.nom ?? 'À assigner'}</strong>
+              )}
+              <span className="fiche-crm-aide">pilote la fiche jusqu’au contrat</span>
+            </div>
+          )}
         </div>
         {erreurProprio && <FieldError>{erreurProprio}</FieldError>}
       </section>

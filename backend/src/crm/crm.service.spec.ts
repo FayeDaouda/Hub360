@@ -189,7 +189,11 @@ describe('CrmService — fiche apporteur', () => {
     );
     return { s, tx };
   }
-  const cio = { userId: 'U-CIO', role: 'CIO (transverse)', permissions: { crm: 'ecriture' as const } };
+  const cio = {
+    userId: 'U-CIO',
+    role: 'CIO (transverse)',
+    permissions: { 'crm.dossiers': 'LE', 'crm.apporteur': 'L', 'crm.proprietaire': 'L' },
+  };
 
   it('affaire directe → colonnes à null, tracée sur la ligne de création', async () => {
     const { s, tx } = svcCreation();
@@ -227,8 +231,16 @@ describe('CrmService — fiche apporteur', () => {
       commissionApporteur: 4,
     });
     expect(data.transitions.create.commentaire).toBe('Fiche apporteur : Aïssatou Ba (Notaire), validée et verrouillée');
-    // Partie de la fiche apporteur : toujours dans la réponse.
+    // Partie de la fiche apporteur : dans la réponse avec la Lecture de l'étape.
     expect(projet.commissionApporteur).toBe(4);
+  });
+
+  it('sans la Lecture de « Fiche apporteur » ni de « Propriétaire » : ni apporteur, ni propriétaire dans la réponse', async () => {
+    const { s } = svcCreation();
+    const projet = await s.creer('S1', { ...cio, permissions: { 'crm.dossiers': 'LE' } }, DTO as never);
+    expect(projet).not.toHaveProperty('apporteur');
+    expect(projet).not.toHaveProperty('commissionApporteur');
+    expect(projet).not.toHaveProperty('proprietaire');
   });
 
   function svcModif(dossier: object | null) {
@@ -245,19 +257,8 @@ describe('CrmService — fiche apporteur', () => {
     );
     return { s, prisma };
   }
-  const coo = { userId: 'U-COO', role: 'COO', permissions: { crm: 'ecriture' as const } };
+  const coo = { userId: 'U-COO', role: 'COO', permissions: { 'crm.apporteur': 'LE' } };
   const NOUVELLE = { type: 'externe', nom: 'Aïssatou Ba', commission: 3.5 } as never;
-
-  it.each(['societe_admin', 'CIO (transverse)', 'Dir. GC'])(
-    'modification par %s → 403, rien écrit (le COO seul)',
-    async (role) => {
-      const { s, prisma } = svcModif({ statut: 'nouveau_projet', archiveLe: null });
-      await expect(s.modifierApporteur('S1', { userId: 'X', role, permissions: {} }, 'D1', NOUVELLE)).rejects.toThrow(
-        ForbiddenException,
-      );
-      expect(prisma.dossierCrm.update).not.toHaveBeenCalled();
-    },
-  );
 
   it('modification par le COO → fiche remplacée, événement tracé sans changer d’étape', async () => {
     const { s, prisma } = svcModif({ statut: 'offre_envoyee', archiveLe: null });
@@ -278,44 +279,7 @@ describe('CrmService — fiche apporteur', () => {
   });
 });
 
-// Réassignation (étape C2) : titulaires Dir. GC, societe_admin, CIO — pas
-// tout rôle qui a l'écriture sur le CRM.
-describe('CrmService.peutReassigner', () => {
-  const svcTitulaires = (ids: string[]) =>
-    new CrmService(
-      {
-        utilisateur: {
-          findMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id, prenom: 'P', nom: id }))),
-        },
-      } as unknown as PrismaService,
-      {} as DevisService,
-      {} as FacturationService,
-      {} as NotificationsService,
-      {} as SeuilCeoService,
-      {} as OnboardingService,
-    );
-  const acteur = (userId: string, role: string) => ({ userId, role, permissions: {} });
-
-  it.each(['societe_admin', 'CIO (transverse)'])('%s → oui, en supervision', async (role) => {
-    await expect(svcTitulaires([]).peutReassigner('S1', acteur('X', role))).resolves.toBe(true);
-  });
-
-  it('titulaire Dir. GC → oui (transfert entre collègues)', async () => {
-    await expect(svcTitulaires(['U1', 'U2']).peutReassigner('S1', acteur('U1', 'Dir. GC'))).resolves.toBe(true);
-  });
-
-  it('COO (écriture CRM, mais pas titulaire) → non', async () => {
-    await expect(svcTitulaires(['U1']).peutReassigner('S1', acteur('U9', 'COO'))).resolves.toBe(false);
-  });
-
-  it('Administrateur HUB → oui, quel que soit le rôle endossé (même Dir. GC sans en être titulaire)', async () => {
-    await expect(
-      svcTitulaires(['U1']).peutReassigner('S1', { ...acteur('ADM', 'Dir. GC'), adminHub: true }),
-    ).resolves.toBe(true);
-  });
-});
-
-// Désarchivage (décision du 29/10/2026) : mêmes titulaires que l'archivage ;
+// Désarchivage (décision du 29/10/2026) : même droit que l'archivage (route) ;
 // le lead revient, l'archivage effacé reste dans l'historique.
 describe('CrmService.desarchiver', () => {
   const svcDesarchive = (dossier: object | null, titulaires: string[] = []) => {
@@ -358,18 +322,13 @@ describe('CrmService.desarchiver', () => {
     });
   });
 
-  it('COO → 403 ; lead non archivé → 409', async () => {
-    const coo = svcDesarchive(archive, ['U1']);
-    await expect(coo.s.desarchiver('S1', { userId: 'U9', role: 'COO', permissions: {} }, 'D1')).rejects.toThrow(
-      ForbiddenException,
-    );
-    expect(coo.tx.dossierCrm.updateMany).not.toHaveBeenCalled();
+  it('lead non archivé → 409', async () => {
     await expect(svcDesarchive({ archiveLe: null }).s.desarchiver('S1', cio, 'D1')).rejects.toThrow(ConflictException);
   });
 });
 
-// Archivage d'un lead (maquette CRM) : Direction GC ou CIO, « Nouveau
-// projet » seulement — la ligne reste (code réservé), désarchivable.
+// Archivage d'un lead (maquette CRM) : Suppression de « Dossiers et leads »
+// (vérifiée par la route), « Nouveau projet » seulement — la ligne reste (code réservé), désarchivable.
 describe('CrmService.archiver', () => {
   const svcArchive = (dossier: object | null, titulaires: string[] = []) => {
     const prisma = {
@@ -394,14 +353,6 @@ describe('CrmService.archiver', () => {
   };
   const cio = { userId: 'C1', role: 'CIO (transverse)', permissions: {} };
   const lead = { statut: 'nouveau_projet', archiveLe: null };
-
-  it('COO (écriture CRM, pas Direction GC) → 403, rien écrit', async () => {
-    const { s, prisma } = svcArchive(lead, ['U1']);
-    await expect(s.archiver('S1', { userId: 'U9', role: 'COO', permissions: {} }, 'D1')).rejects.toThrow(
-      ForbiddenException,
-    );
-    expect(prisma.dossierCrm.updateMany).not.toHaveBeenCalled();
-  });
 
   it.each(['en_validation', 'offre_envoyee', 'onboard', 'perdu'])('statut %s → 409', async (statut) => {
     const { s, prisma } = svcArchive({ statut, archiveLe: null });

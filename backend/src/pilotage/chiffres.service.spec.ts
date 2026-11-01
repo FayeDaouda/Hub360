@@ -45,10 +45,10 @@ function svc(o: { dossiers?: object[] } = {}) {
 describe('ChiffresPilotageService', () => {
   it('rangée selon la matrice : Finances + Projets, sinon CRM, sinon RH', async () => {
     const s = svc();
-    const jeu = async (permissions: Record<string, 'lecture'>) =>
+    const jeu = async (permissions: Record<string, string>) =>
       (await s.tuiles({ societeId: 'S', role: 'X', permissions }, JOUR, FEUILLES))?.jeu ?? null;
-    expect(await jeu({ finances_factures: 'lecture', projets: 'lecture', crm: 'lecture' })).toBe('finances');
-    expect(await jeu({ crm: 'lecture', pilotage: 'lecture' })).toBe('crm');
+    expect(await jeu({ finances_factures: 'lecture', projets: 'lecture', 'crm.dossiers': 'L' })).toBe('finances');
+    expect(await jeu({ 'crm.dossiers': 'L', pilotage: 'lecture' })).toBe('crm');
     expect(await jeu({ rh: 'lecture', pilotage: 'lecture' })).toBe('rh');
     expect(await jeu({ pilotage: 'lecture' })).toBeNull();
   });
@@ -91,7 +91,11 @@ describe('ChiffresPilotageService', () => {
           transitions: [{ creeLe: new Date(maintenant - 10 * HEURE) }],
         },
       ],
-    }).tuiles({ societeId: 'S', role: 'COO', permissions: { crm: 'ecriture' } }, JOUR, FEUILLES);
+    }).tuiles(
+      { societeId: 'S', role: 'COO', permissions: { 'crm.dossiers': 'LE', 'crm.soumission': 'E' } },
+      JOUR,
+      FEUILLES,
+    );
     expect(r!.tuiles.find((t) => t.cle === 'fiches')).toMatchObject({ valeur: 1, etat: 'risque' });
     expect(r!.tuiles.find((t) => t.cle === 'cfo')).toMatchObject({ valeur: 1, etat: 'attention' });
     expect(r!.tuiles.find((t) => t.cle === 'pipeline')).toMatchObject({ valeur: 2, etat: 'marque' });

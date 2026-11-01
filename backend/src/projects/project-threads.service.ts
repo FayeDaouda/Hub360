@@ -6,7 +6,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { NiveauPermission } from '@prisma/client';
 import { nomPublic } from '../auth/profil';
 import { aLaPermission } from '../commun/permission.guard';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -139,7 +138,7 @@ export class ProjectThreadsService {
   // discussion »), ou CEO (exception ciblée : commentaires seulement).
   async checkWrite(
     companyId: string,
-    actor: Actor & { role: string; permissions?: Record<string, NiveauPermission> },
+    actor: Actor & { role: string; permissions?: Record<string, string> },
     projectId: string,
   ) {
     if (aLaPermission(actor.permissions, 'projets', 'ecriture')) return;

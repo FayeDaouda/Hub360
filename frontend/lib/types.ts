@@ -254,10 +254,12 @@ export type Projet = {
   creeLe: string; // ISO 8601
   creePar: Personne | null; // null = dossier antérieur à l'étape C1
   // null = aucun apporteur (affaire directe), ou dossier antérieur à la fiche.
-  apporteur: Apporteur | null;
+  // Absent (clé omise) sans la Lecture de « Fiche apporteur ».
+  apporteur?: Apporteur | null;
   // % attribué — partie de la fiche apporteur ; null = aucun.
-  commissionApporteur: number | null;
-  proprietaire: Personne | null; // null = « à assigner »
+  commissionApporteur?: number | null;
+  // null = « à assigner » ; absent sans la Lecture de « Propriétaire du dossier ».
+  proprietaire?: Personne | null;
   // CO1/CO2/CO3 — fixée à l'envoi de l'offre (null avant). SU en découle.
   categorieConception: string | null;
   // Offre en cours (étape F). Clé absente sans finances_devis en lecture ;
@@ -300,7 +302,7 @@ export type Apporteur =
   | { type: 'interne'; utilisateur: Personne | null }
   | { type: 'externe'; nom: string; structure?: string; telephone?: string; email?: string };
 
-// Fiche apporteur saisie (création, puis modification par le COO seul) :
+// Fiche apporteur saisie (création, puis modification avec l'Écriture de « Fiche apporteur ») :
 // aucun apporteur (affaire directe), ou un tiers avec nom et % attribué.
 export type ApporteurSaisi =
   | { type: 'aucun' }

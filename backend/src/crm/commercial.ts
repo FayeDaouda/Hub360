@@ -103,7 +103,7 @@ export function aTraiterCommercial(dossiers: DossierCommercial[], jour: string, 
         tri: d.offre.valideJusquau,
       });
     }
-    // 4. Fiche apporteur : le COO seul la modifie.
+    // 4. Fiche apporteur incomplète : à reprendre par qui a l’Écriture de « Fiche apporteur ».
     const apporteur = manquesApporteur(d);
     if (apporteur.length) {
       elements.push({

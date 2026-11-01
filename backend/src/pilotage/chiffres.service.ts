@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import type { NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../commun/permission.guard';
 import { champsManquants } from '../crm/fiche';
 import { DELAI_RELANCE_FICHE_MS } from '../crm/notifications-crm';
@@ -9,6 +8,7 @@ import { ventilationTva } from '../projets/domaine/gardes';
 import { IntegrationService } from '../rh/integration.service';
 import { bornesMois, moisDe } from '../rh/regles-temps';
 import { plural, ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { ETAPE } from '../rights/catalogue';
 
 // Tuiles du Pilotage (décision du 12/10/2026, option A) : des chiffres clés
 // au lieu des compteurs déjà présents plus bas. La rangée suit la matrice :
@@ -26,7 +26,7 @@ export type EtatTuile = 'risque' | 'attention' | 'succes' | 'marque';
 export type JeuTuiles = 'finances' | 'crm' | 'rh';
 export type TuileChiffre = { cle: string; valeur: number; aide: string; etat: EtatTuile };
 
-type Acteur = { societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
+type Acteur = { societeId: string; role: string; permissions?: Record<string, string> };
 
 // Délai de validation d'une offre par le CFO (tuile CRM de la maquette :
 // « offres soumises · délai 48 h »).
@@ -52,7 +52,7 @@ export class ChiffresPilotageService {
     const voit = (module: string) => a.role === ROLE_COMPANY_ADMIN || aLaPermission(a.permissions, module, 'lecture');
     if (voit('finances_factures') && voit('projets'))
       return { jeu: 'finances', tuiles: await this.finances(a.societeId, jour) };
-    if (voit('crm')) return { jeu: 'crm', tuiles: await this.crm(a.societeId, jour) };
+    if (voit(ETAPE.crmDossiers)) return { jeu: 'crm', tuiles: await this.crm(a.societeId, jour) };
     if (voit('rh')) return { jeu: 'rh', tuiles: await this.rh(jour, feuilles) };
     return null;
   }

@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiExtraModels } from '@nestjs/swagger';
-import { NiveauPermission } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
@@ -51,7 +50,7 @@ import { TaskExtensionService } from './task-extension.service';
 import { TaskReviewService } from './task-review.service';
 import { TaskSubmissionService } from './task-submission.service';
 
-type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, NiveauPermission> } };
+type R = { user: { societeId: string; userId: string; role: string; permissions?: Record<string, string> } };
 
 // Projets ouverts selon le gabarit (maquette « Projets » du boss).
 @ApiExtraModels(...PROJECT_STATE_MODELS)

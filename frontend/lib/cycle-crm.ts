@@ -1,3 +1,4 @@
+import { ETAPE } from '@hub/domain';
 import { niveauSuffisant } from './auth';
 import { completudeFiche } from './crm';
 import type { NiveauPermission, Projet, Session, StatutCrm } from './types';
@@ -23,7 +24,8 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
   soumettre: {
     libelle: 'Soumettre à la DAF',
     de: ['nouveau_projet'],
-    module: 'crm',
+    // Étape à part (31/10/2026) : le bouton se donne seul.
+    module: ETAPE.crmSoumission,
     niveau: 'ecriture',
     consequence: 'Le dossier part en validation chez la DAF ; sa fiche sera figée.',
     ton: 'principal',
@@ -49,7 +51,7 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
   onboarder: {
     libelle: 'Client acquis — Onboard',
     de: ['offre_envoyee'],
-    module: 'crm',
+    module: ETAPE.crmDossiers,
     niveau: 'ecriture',
     consequence: 'Client acquis : un projet d’exécution sera créé dans « Projets ». Définitif.',
     ton: 'principal',
@@ -57,7 +59,7 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
   refaire: {
     libelle: 'Refaire une offre',
     de: ['offre_envoyee'],
-    module: 'crm',
+    module: ETAPE.crmDossiers,
     niveau: 'ecriture',
     consequence:
       'Le dossier revient en « Nouveau projet » pour préparer une nouvelle offre. L’offre expirée reste dans l’historique.',
@@ -66,7 +68,7 @@ export const ACTIONS_CRM: Record<ActionCrm, DefAction> = {
   perdre: {
     libelle: 'Déclarer perdu',
     de: ['nouveau_projet', 'en_validation', 'offre_envoyee'],
-    module: 'crm',
+    module: ETAPE.crmDossiers,
     niveau: 'ecriture',
     texte: { label: 'Motif de la perte', placeholder: 'Pourquoi le dossier est perdu…' },
     consequence: 'Le dossier sort du pipeline. Définitif.',

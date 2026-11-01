@@ -5,7 +5,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Client, NiveauPermission, Prisma } from '@prisma/client';
+import { Client, Prisma } from '@prisma/client';
+import { ETAPE } from '../rights/catalogue';
 import { PrismaService } from '../prisma/prisma.service';
 import { avecDelegataire } from '../commun/delegation-ceo';
 import { versDossierCrm } from '../commun/format-contrat';
@@ -28,22 +29,13 @@ import {
   resume,
   type FicheProgramme,
 } from './fiche-programme';
-import {
-  formatAmount,
-  formatDate,
-  ROLE_CEO,
-  ROLE_CIO,
-  ROLE_COMPANY_ADMIN,
-  ROLE_COO,
-  todayIso,
-  toIsoDay,
-} from '@hub/domain';
+import { formatAmount, formatDate, RIGHT_LABELS, ROLE_CEO, todayIso, type Right, toIsoDay } from '@hub/domain';
 
-// Qui agit : l'utilisateur connecté et sa carte de permissions (JWT).
+// Qui agit : l'utilisateur connecté et ses droits par étape (relus à chaque requête).
 export type Acteur = {
   userId: string;
   role: string;
-  permissions: Record<string, NiveauPermission>;
+  permissions: Record<string, string>;
   // Administrateur HUB (carte blanche), quel que soit le rôle endossé.
   adminHub?: boolean;
 };
@@ -68,10 +60,6 @@ const INCLUDE_DOSSIER = {
     select: { creeLe: true, de: true, vers: true, commentaire: true },
   },
 } as const;
-
-// Seul rôle habilité à modifier la fiche apporteur après sa création — pas
-// même l'administration (maquette « Nouveau projet », oct. 2026).
-export const ROLE_MODIF_APPORTEUR = ROLE_COO;
 
 @Injectable()
 export class CrmService {
@@ -174,11 +162,9 @@ export class CrmService {
     return titulaires.map((u) => ({ id: u.id, nom: `${u.prenom} ${u.nom}` }));
   }
 
-  // Réassigne le dossier à un autre titulaire du rôle. Qui peut le faire
-  // (décision sept. 2026) : les titulaires Dir. GC eux-mêmes (transfert entre
-  // collègues), societe_admin et le CIO en supervision — PAS n'importe quel
-  // rôle ayant l'écriture sur le CRM (le COO crée des fiches mais ne
-  // réassigne pas).
+  // Réassigne le dossier à un autre titulaire du rôle. Qui peut le faire :
+  // l'Écriture de « Propriétaire du dossier » (matrice, 31/10/2026 ; au
+  // départ les Dir. GC eux-mêmes et l'administration), vérifiée par la route.
   async changerProprietaire(societeId: string, acteur: Acteur, id: string, proprietaireId: string) {
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
@@ -186,11 +172,6 @@ export class CrmService {
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
     exigerNonArchive(dossier);
-    if (!(await this.peutReassigner(societeId, acteur))) {
-      throw new ForbiddenException(
-        `Réassigner un dossier est réservé aux titulaires ${ROLE_PROPRIETAIRE_DOSSIER}, à l’administration et au CIO.`,
-      );
-    }
     await this.resoudreProprietaire(this.prisma, societeId, proprietaireId);
 
     const maj = await this.prisma.dossierCrm.update({
@@ -201,13 +182,11 @@ export class CrmService {
     return versDossierCrm(maj, this.optsFormat(acteur));
   }
 
-  // Modifie la fiche apporteur, verrouillée depuis la création : le COO seul
-  // (pas même l'administration). Toute étape du cycle, hors lead archivé ;
-  // la modification est tracée dans l'historique de la fiche.
+  // Modifie la fiche apporteur, verrouillée depuis la création : l'Écriture
+  // de « Fiche apporteur » (matrice, 31/10/2026 ; au départ le COO seul),
+  // vérifiée par la route. Toute étape du cycle, hors lead archivé ; la
+  // modification est tracée dans l'historique de la fiche.
   async modifierApporteur(societeId: string, acteur: Acteur, id: string, dto: ApporteurDto) {
-    if (acteur.role !== ROLE_MODIF_APPORTEUR) {
-      throw new ForbiddenException(`Après création, seul le ${ROLE_MODIF_APPORTEUR} peut modifier la fiche apporteur.`);
-    }
     const dossier = await this.prisma.dossierCrm.findFirst({
       where: { id, societeId },
       select: { statut: true, archiveLe: true },
@@ -263,8 +242,8 @@ export class CrmService {
     return versDossierCrm(maj, this.optsFormat(acteur));
   }
 
-  // Archive un lead (maquette CRM) : Direction GC ou CIO — mêmes titulaires
-  // que la réassignation. Seul un lead en « Nouveau projet » s'archive (aucune
+  // Archive un lead (maquette CRM) : la Suppression de « Dossiers et leads »
+  // (matrice, 31/10/2026), vérifiée par la route. Seul un lead en « Nouveau projet » s'archive (aucune
   // offre partie) ; jamais supprimé, il reste consultable et son code réservé
   // (la ligne demeure, cf. resoudreCode). Figé tant qu'il est archivé ; les
   // mêmes titulaires peuvent le désarchiver (décision du 29/10/2026).
@@ -274,11 +253,6 @@ export class CrmService {
       select: { statut: true, archiveLe: true },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
-    if (!(await this.peutReassigner(societeId, acteur))) {
-      throw new ForbiddenException(
-        `Archiver un lead est réservé aux titulaires ${ROLE_PROPRIETAIRE_DOSSIER}, à l’administration et au CIO.`,
-      );
-    }
     exigerNonArchive(dossier);
     if (dossier.statut !== 'nouveau_projet') {
       throw new ConflictException('Seul un lead en « Nouveau projet » s’archive.');
@@ -296,7 +270,7 @@ export class CrmService {
     return versDossierCrm(maj, this.optsFormat(acteur));
   }
 
-  // Désarchive un lead (décision du 29/10/2026) : mêmes titulaires que
+  // Désarchive un lead (décision du 29/10/2026) : même droit que
   // l'archivage ; il revient en « Nouveau projet », dans tous les calculs.
   // L'archivage effacé reste dans l'historique du dossier (transition).
   async desarchiver(societeId: string, acteur: Acteur, id: string) {
@@ -305,11 +279,6 @@ export class CrmService {
       select: { archiveLe: true, archivePar: { select: { prenom: true, nom: true } } },
     });
     if (!dossier) throw new NotFoundException('Dossier introuvable');
-    if (!(await this.peutReassigner(societeId, acteur))) {
-      throw new ForbiddenException(
-        `Désarchiver un lead est réservé aux titulaires ${ROLE_PROPRIETAIRE_DOSSIER}, à l’administration et au CIO.`,
-      );
-    }
     if (!dossier.archiveLe) throw new ConflictException('Ce lead n’est pas archivé.');
     const archivage = `archivé le ${formatDate(toIsoDay(dossier.archiveLe))}${
       dossier.archivePar ? ` par ${dossier.archivePar.prenom} ${dossier.archivePar.nom}` : ''
@@ -403,7 +372,7 @@ export class CrmService {
 
     if (!aLaPermission(acteur.permissions, regle.module, regle.niveau)) {
       throw new ForbiddenException(
-        `Action « ${action} » : accès insuffisant sur le module « ${regle.module} » (niveau requis : ${regle.niveau}).`,
+        `Action « ${action} » : il faut le droit ${RIGHT_LABELS[regle.niveau as Right]} sur « ${regle.module} ».`,
       );
     }
     // Validation de l'offre : au-delà du seuil de contresignature, le CEO seul
@@ -612,17 +581,14 @@ export class CrmService {
     }));
   }
 
-  async peutReassigner(societeId: string, acteur: Acteur): Promise<boolean> {
-    if (acteur.adminHub || acteur.role === ROLE_COMPANY_ADMIN || acteur.role === ROLE_CIO) return true;
-    const titulaires = await this.titulairesProprietaire(this.prisma, societeId);
-    return titulaires.some((u) => u.id === acteur.userId);
-  }
-
   private optsFormat(acteur: Acteur) {
     return {
       // Montant de l'offre = donnée devis : absente pour qui n'a pas
       // finances_devis en lecture (le COO voit le cycle, pas le chiffrage).
       voitOffre: aLaPermission(acteur.permissions, 'finances_devis', 'lecture'),
+      // Lecture des étapes « Fiche apporteur » et « Propriétaire du dossier ».
+      voitApporteur: aLaPermission(acteur.permissions, ETAPE.crmApporteur, 'lecture'),
+      voitProprietaire: aLaPermission(acteur.permissions, ETAPE.crmProprietaire, 'lecture'),
     };
   }
 

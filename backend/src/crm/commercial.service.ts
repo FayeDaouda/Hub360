@@ -1,20 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import type { NiveauPermission } from '@prisma/client';
 import { aLaPermission } from '../commun/permission.guard';
 import { montantHtLignes } from '../devis/domaine';
 import { PrismaService } from '../prisma/prisma.service';
 import { aTraiterCommercial, performanceCommerciale, totauxPipeline, type DossierCommercial } from './commercial';
 import { CommissionsService } from './commissions.service';
-import { ROLE_COMPANY_ADMIN, toIsoDay } from '@hub/domain';
+import { toIsoDay } from '@hub/domain';
+import { ETAPE } from '../rights/catalogue';
 
-type Acteur = { societeId: string; role: string; permissions?: Record<string, NiveauPermission> };
+type Acteur = { societeId: string; role: string; permissions?: Record<string, string> };
 
 // Montants du pipeline (revue COO, lot D) : totaux HT, jamais le détail des
-// offres — module « crm_totaux » de la matrice, ou déjà les offres (finances_devis).
-export const voitMontantsPipeline = (a: Acteur) =>
-  a.role === ROLE_COMPANY_ADMIN ||
-  aLaPermission(a.permissions, 'crm_totaux', 'lecture') ||
-  aLaPermission(a.permissions, 'finances_devis', 'lecture');
+// offres — Lecture de l'étape « Totaux du pipeline » (matrice, 31/10/2026 ;
+// au départ : qui voyait l'ancien module crm_totaux ou les offres).
+export const voitMontantsPipeline = (a: Acteur) => aLaPermission(a.permissions, ETAPE.crmTotaux, 'lecture');
 
 // Vue commerciale (revue COO, 22/10/2026) : « À traiter aujourd'hui » du CRM,
 // performance de l'année par apporteur et, avec le droit, totaux HT par étape.

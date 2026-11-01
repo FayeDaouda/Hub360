@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { NiveauPermission, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { aLaPermission } from '../commun/permission.guard';
 import { chercherCollegues } from '../contacts/contacts.service';
 import { refDevis } from '../devis/domaine';
@@ -7,12 +7,13 @@ import { refFacture } from '../projets/domaine/config';
 import { employeeOfAccount, projectScope } from '../projects/review-rules';
 import { PrismaService } from '../prisma/prisma.service';
 import { runInGroupScope } from '../tenancy/tenant-context';
+import { ETAPE } from '../rights/catalogue';
 
 export type Acteur = {
   userId: string;
   societeId: string;
   role: string;
-  permissions?: Record<string, NiveauPermission>;
+  permissions?: Record<string, string>;
 };
 export type TypeResultat = 'dossier' | 'projet' | 'devis' | 'facture' | 'salarie' | 'collegue';
 export type Resultat = { type: TypeResultat; id: string; titre: string; detail: string };
@@ -41,7 +42,7 @@ export class RechercheService {
     if (q.length < LONGUEUR_MIN) return [];
     const peut = (module: string) => aLaPermission(a.permissions, module, 'lecture');
     const groupes = await Promise.all([
-      peut('crm') ? this.dossiers(a.societeId, q) : [],
+      peut(ETAPE.crmDossiers) ? this.dossiers(a.societeId, q) : [],
       peut('projets') ? this.projets(a, q) : [],
       peut('finances_devis') ? this.devis(a.societeId, q) : [],
       peut('finances_factures') ? this.factures(a.societeId, q) : [],
