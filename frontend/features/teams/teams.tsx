@@ -22,7 +22,15 @@ import { useTeamsView } from './use-teams-view';
 // Équipes (maquette du boss, oct. 2026) : cinq indicateurs, chacun ouvre sa
 // liste pour agir directement ; « Cellules » par défaut, avec la création et
 // la nomenclature ISO 9001. Écriture selon la matrice (module équipe).
-export function Teams({ slug, canWrite }: { slug: string; canWrite: boolean }) {
+export function Teams({
+  slug,
+  canWrite,
+  canDelete = canWrite,
+}: {
+  slug: string;
+  canWrite: boolean;
+  canDelete?: boolean;
+}) {
   const { view, pendingAbsences, setPendingAbsences, error, reload, run } = useTeamsView(slug);
   // ?liste=affecter : depuis « À décider aujourd'hui » (nouvel arrivant).
   const requested = useSearchParams().get('liste');
@@ -97,6 +105,7 @@ export function Teams({ slug, canWrite }: { slug: string; canWrite: boolean }) {
                 cell={c}
                 cells={view.cellules}
                 canWrite={canWrite}
+                canDelete={canDelete}
                 onReassign={reassign}
                 onRename={setToRename}
                 onDelete={setToDelete}

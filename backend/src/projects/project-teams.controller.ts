@@ -5,6 +5,7 @@ import { PermissionGuard } from '../commun/permission.guard';
 import { RequiertPermission } from '../commun/permission.decorator';
 import { ProjectTeamsService } from './project-teams.service';
 import { ProjectTeamsDto, SetProjectTeamsDto } from './project-teams.dto';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { societeId: string } };
 
@@ -23,7 +24,7 @@ export class ProjectTeamsController {
   }
 
   @Put()
-  @RequiertPermission('equipe', 'ecriture')
+  @RequiertPermission(ETAPE.equipeProjets, 'ecriture')
   set(@Req() req: R, @Param('id') projectId: string, @Body() dto: SetProjectTeamsDto): Promise<ProjectTeamsDto> {
     return this.teams.setTeams(req.user.societeId, projectId, dto.celluleIds);
   }

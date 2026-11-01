@@ -14,6 +14,8 @@ type Props = {
   cell: TeamCell;
   cells: TeamCell[]; // destinations d'une réaffectation
   canWrite: boolean;
+  // Supprimer une équipe : la Suppression de l'étape (matrice, 31/10/2026).
+  canDelete?: boolean;
   onReassign: (employeeId: string, cellId: string | null) => void;
   // Reprises de l'ancienne page Équipe (phase 1, G1 à G4) — en écriture.
   onRename: (cell: TeamCell) => void;
@@ -30,6 +32,7 @@ export function CellCard({
   cell: c,
   cells,
   canWrite,
+  canDelete = canWrite,
   onReassign,
   onRename,
   onDelete,
@@ -96,14 +99,16 @@ export function CellCard({
           <button type="button" className="btn-ghost btn-ghost--sm" onClick={() => onRename(c)}>
             Renommer
           </button>
-          <button
-            type="button"
-            className="btn-ghost btn-ghost--sm"
-            onClick={() => onDelete(c)}
-            title={c.membres.length ? 'Réaffectez d’abord ses membres' : undefined}
-          >
-            Supprimer
-          </button>
+          {canDelete && (
+            <button
+              type="button"
+              className="btn-ghost btn-ghost--sm"
+              onClick={() => onDelete(c)}
+              title={c.membres.length ? 'Réaffectez d’abord ses membres' : undefined}
+            >
+              Supprimer
+            </button>
+          )}
         </div>
       )}
 

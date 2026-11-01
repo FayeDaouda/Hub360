@@ -120,4 +120,7 @@ export const ETAPE = {
   projetsTs: 'projets.ts',
   projetsFils: 'projets.fils',
   projetsProduction: 'projets.production',
+  // Équipe (lot 6).
+  equipe: 'equipe',
+  equipeProjets: 'equipe.projets',
 } as const;
