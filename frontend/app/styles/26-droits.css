@@ -488,3 +488,74 @@
     min-height: 0;
   }
 }
+
+/* --- Annonces (lot 12) -------------------------------------------------- */
+.annonces {
+  display: grid;
+  gap: var(--e-16);
+  max-width: 860px;
+}
+.annonces-barre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-12);
+}
+.annonces-intro {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-14);
+}
+.annonces-a-valider {
+  display: grid;
+  gap: var(--e-12);
+}
+.annonces-a-valider h2 {
+  margin: 0;
+  font-size: var(--t-16);
+}
+.annonce {
+  display: grid;
+  gap: var(--e-8);
+  padding: var(--e-16);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+}
+.annonce--importante {
+  border-color: color-mix(in oklch, var(--attention) 60%, var(--border));
+}
+.annonce-tete h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0;
+  font-size: var(--t-16);
+}
+.annonce-meta {
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
+.annonce-contenu {
+  margin: 0;
+  font-size: var(--t-14);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.annonce-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.annonce-formulaire {
+  display: grid;
+  gap: var(--e-12);
+}
+.annonce-importante {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-8);
+  font-size: var(--t-14);
+}

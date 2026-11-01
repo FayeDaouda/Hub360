@@ -466,4 +466,18 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 2,
     libelles: { lecture: 'Voit l’agenda d’un collègue' },
   },
+
+  // Annonces (lot 12, 01/11/2026).
+  {
+    module: 'annonces',
+    cle: ETAPE.annonces,
+    nom: 'Annonces',
+    ordre: 0,
+    libelles: {
+      lecture: 'Lit les annonces de sa société, du groupe et de son équipe',
+      ecriture: 'Rédige une annonce',
+      validation: 'Publie une annonce sans validation, ou valide celle d’un autre',
+      suppression: 'Retire une annonce publiée',
+    },
+  },
 ];

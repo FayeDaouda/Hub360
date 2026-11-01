@@ -14,6 +14,7 @@ import { InterventionsModule } from './interventions/interventions.module';
 import { SwitchesModule } from './switches/switches.module';
 import { RightsModule } from './rights/rights.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { AnnoncesModule } from './annonces/annonces.module';
 import { TeamsModule } from './teams/teams.module';
 import { TasksModule } from './tasks/tasks.module';
 import { MySpaceModule } from './my-space/my-space.module';
@@ -81,6 +82,7 @@ import { FiltreExceptionsGlobal } from './commun/exception.filter';
     SwitchesModule,
     RightsModule,
     AgendaModule,
+    AnnoncesModule,
     MonitoringModule,
   ],
   providers: [

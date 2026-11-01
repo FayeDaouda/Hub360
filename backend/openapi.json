@@ -9597,6 +9597,160 @@
         ]
       }
     },
+    "/api/societes/{slug}/annonces": {
+      "get": {
+        "operationId": "AnnoncesController_vue",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VueAnnoncesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Annonces"
+        ]
+      },
+      "post": {
+        "operationId": "AnnoncesController_creer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreerAnnonceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Annonces"
+        ]
+      }
+    },
+    "/api/societes/{slug}/annonces/{id}/validation": {
+      "post": {
+        "operationId": "AnnoncesController_valider",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Annonces"
+        ]
+      }
+    },
+    "/api/societes/{slug}/annonces/{id}/retrait": {
+      "post": {
+        "operationId": "AnnoncesController_retirer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Annonces"
+        ]
+      }
+    },
+    "/api/societes/{slug}/annonces/{id}/lecture": {
+      "post": {
+        "operationId": "AnnoncesController_lire",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Annonces"
+        ]
+      }
+    },
     "/api/sante": {
       "get": {
         "operationId": "HealthController_etat",
@@ -16803,6 +16957,160 @@
           "titre",
           "debut",
           "fin"
+        ]
+      },
+      "AnnonceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titre": {
+            "type": "string"
+          },
+          "contenu": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "equipe",
+              "groupe",
+              "societe"
+            ]
+          },
+          "destinataires": {
+            "type": "string"
+          },
+          "importante": {
+            "type": "boolean"
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "a_valider",
+              "publiee",
+              "retiree"
+            ]
+          },
+          "auteur": {
+            "type": "string"
+          },
+          "societe": {
+            "type": "string"
+          },
+          "publieeLe": {
+            "type": "string",
+            "nullable": true
+          },
+          "lue": {
+            "type": "boolean"
+          },
+          "lectures": {
+            "type": "number",
+            "nullable": true
+          },
+          "peutRetirer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "titre",
+          "contenu",
+          "audience",
+          "destinataires",
+          "importante",
+          "statut",
+          "auteur",
+          "societe",
+          "publieeLe",
+          "lue",
+          "lectures",
+          "peutRetirer"
+        ]
+      },
+      "VueAnnoncesDto": {
+        "type": "object",
+        "properties": {
+          "annonces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnonceDto"
+            }
+          },
+          "aValider": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnonceDto"
+            }
+          },
+          "peutRediger": {
+            "type": "boolean"
+          },
+          "publieDirectement": {
+            "type": "boolean"
+          },
+          "equipes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nom": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "nom"
+              ]
+            }
+          }
+        },
+        "required": [
+          "annonces",
+          "aValider",
+          "peutRediger",
+          "publieDirectement",
+          "equipes"
+        ]
+      },
+      "CreerAnnonceDto": {
+        "type": "object",
+        "properties": {
+          "titre": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 160
+          },
+          "contenu": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 5000
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "equipe",
+              "groupe",
+              "societe"
+            ]
+          },
+          "celluleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "importante": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "titre",
+          "contenu",
+          "audience"
         ]
       },
       "ClientErrorDto": {

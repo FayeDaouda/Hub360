@@ -85,6 +85,8 @@ model Societe {
 
   rendezVous RendezVous[]
 
+  annonces Annonce[]
+
   @@map("societes")
 }
 
@@ -299,6 +301,8 @@ enum NotificationType {
   own_rights_changed // aux titulaires d'un rôle : leurs droits viennent de changer (matrice, 31/10/2026)
   rdv_invitation // Agenda (01/11/2026) : vous êtes invité à une réunion
   rdv_annule // Agenda : une réunion où vous étiez invité est annulée
+  annonce_importante // Annonces (01/11/2026) : une annonce importante à lire
+  annonce_a_valider // Annonces : une annonce attend sa validation avant publication
 }
 
 model Notification {
@@ -2972,4 +2976,53 @@ model InviteRendezVous {
   @@id([rendezVousId, utilisateurId])
   @@index([utilisateurId])
   @@map("invites_rendez_vous")
+}
+
+// Annonces (lot 12, 01/11/2026) : à une société, à tout le groupe, ou à une
+// équipe. Publication directe pour qui a la Validation de l'étape ; sinon,
+// l'annonce attend d'être validée. « Importante » : accusé de lecture.
+enum AudienceAnnonce {
+  societe
+  groupe
+  equipe
+}
+
+enum StatutAnnonce {
+  a_valider
+  publiee
+  retiree
+}
+
+model Annonce {
+  id           String          @id @default(uuid())
+  societeId    String          @map("societe_id") // société de l'auteur
+  titre        String
+  contenu      String
+  audience     AudienceAnnonce
+  celluleId    String?         @map("cellule_id") // audience « equipe »
+  importante   Boolean         @default(false)
+  statut       StatutAnnonce
+  auteurId     String          @map("auteur_id") // compte, sans clé (comme parId)
+  publieeLe    DateTime?       @map("publiee_le")
+  valideeParId String?         @map("validee_par_id")
+  retireeLe    DateTime?       @map("retiree_le")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  societe  Societe          @relation(fields: [societeId], references: [id], onDelete: Cascade)
+  lectures LectureAnnonce[]
+
+  @@index([societeId, statut, publieeLe])
+  @@index([audience, statut])
+  @@map("annonces")
+}
+
+model LectureAnnonce {
+  annonceId     String   @map("annonce_id")
+  utilisateurId String   @map("utilisateur_id")
+  luLe          DateTime @default(now()) @map("lu_le")
+
+  annonce Annonce @relation(fields: [annonceId], references: [id], onDelete: Cascade)
+
+  @@id([annonceId, utilisateurId])
+  @@map("lectures_annonces")
 }
