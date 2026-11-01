@@ -130,4 +130,11 @@ export const ETAPE = {
   rhTemps: 'rh.temps',
   rhIntegration: 'rh.integration',
   rhDemandes: 'rh.demandes',
+  // Pilotage (lot 8) : « pilotage » reste l'étape principale.
+  pilotage: 'pilotage',
+  pilotageRegistre: 'pilotage.registre',
+  pilotageDecisions: 'pilotage.decisions',
+  pilotageSynthese: 'pilotage.synthese',
+  pilotageDelegation: 'pilotage.delegation',
+  pilotageJournal: 'pilotage.journal',
 } as const;

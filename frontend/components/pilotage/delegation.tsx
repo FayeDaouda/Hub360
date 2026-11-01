@@ -3,15 +3,13 @@
 import { useEffect, useState } from 'react';
 import { UserCog } from 'lucide-react';
 import { deleguer, getDelegation, revoquerDelegation, type VueDelegation } from '@/lib/pilotage';
-import { useSessionCourante } from '@/lib/layout-contexte';
-import { formatDate, ROLE_CEO, todayIso } from '@hub/domain';
+import { formatDate, todayIso } from '@hub/domain';
 import { Field, FieldError } from '@/components/ui/field';
 
-// Délégation du CEO (revue CEO, 22/10/2026). Le CEO : sa carte (déléguer,
-// révoquer). Le délégataire : un bandeau tant que la délégation court. Les
-// autres : rien.
+// Délégation du CEO (revue CEO, 22/10/2026). Qui a la Validation de l'étape
+// (le CEO au départ) : sa carte (déléguer, révoquer). Le délégataire : un
+// bandeau tant que la délégation court. Les autres : rien.
 export function Delegation({ slug }: { slug: string }) {
-  const session = useSessionCourante();
   const [vue, setVue] = useState<VueDelegation | null>(null);
   const [saisie, setSaisie] = useState<{ delegataireId: string; du: string; au: string } | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -38,10 +36,10 @@ export function Delegation({ slug }: { slug: string }) {
     }
   }
 
-  // Délégataire : bandeau.
-  if (session.role !== ROLE_CEO) {
+  // Sans la Validation de « Délégation du CEO » : bandeau du délégataire.
+  if (!vue.peutGerer) {
     const d = vue.delegations.find((x) => x.enCours);
-    if (!d || vue.peutGerer) return null;
+    if (!d) return null;
     return (
       <p className="dl-bandeau" role="status">
         <UserCog size={16} aria-hidden /> Vous remplacez le CEO jusqu’au {formatDate(d.au)} : {d.perimetre.join(', ')}.

@@ -120,16 +120,37 @@ function svc() {
 
 describe('JournalAuditService', () => {
   it('réservé au CEO, au CIO et à l’administration', async () => {
-    await expect(svc().journal({ userId: 'U1', societeId: 'S1', role: 'CFO' })).rejects.toThrow(ForbiddenException);
+    await expect(
+      svc().journal({ userId: 'U1', societeId: 'S1', role: 'CFO', permissions: { 'pilotage.synthese': 'LE' } }),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('ouvert à l’Administrateur HUB, quel que soit le rôle endossé', async () => {
-    await expect(svc().journal({ userId: 'U1', societeId: 'S1', role: 'CFO', adminHub: true })).resolves.toBeDefined();
+    await expect(
+      svc().journal({
+        userId: 'U1',
+        societeId: 'S1',
+        role: 'CFO',
+        adminHub: true,
+        permissions: { 'pilotage.journal': 'LEVS' },
+      }),
+    ).resolves.toBeDefined();
   });
 
   it('réunit les sources, du plus récent au plus ancien, auteur nommé', async () => {
     const { lignes } = await svc().journal(
-      { userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' },
+      {
+        userId: 'U1',
+        societeId: 'S1',
+        role: 'CEO (transverse)',
+        permissions: {
+          'pilotage.registre': 'E',
+          'pilotage.decisions': 'V',
+          'pilotage.synthese': 'L',
+          'pilotage.delegation': 'LV',
+          'pilotage.journal': 'L',
+        },
+      },
       '2026-10-01',
       '2026-10-14',
     );
@@ -194,7 +215,18 @@ describe('JournalAuditService', () => {
       ]),
     };
     const { lignes } = await s.journal(
-      { userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' },
+      {
+        userId: 'U1',
+        societeId: 'S1',
+        role: 'CEO (transverse)',
+        permissions: {
+          'pilotage.registre': 'E',
+          'pilotage.decisions': 'V',
+          'pilotage.synthese': 'L',
+          'pilotage.delegation': 'LV',
+          'pilotage.journal': 'L',
+        },
+      },
       '2026-10-01',
       '2026-10-14',
     );
@@ -227,7 +259,18 @@ describe('JournalAuditService', () => {
           { id: 'C9', mois: '2026-09', action: 'cloture', motif: '', parId: 'U9', createdAt: meme, ordreJournal: 15n },
         ]);
       const { lignes } = await s.journal(
-        { userId: 'U1', societeId: 'S1', role: 'CEO (transverse)' },
+        {
+          userId: 'U1',
+          societeId: 'S1',
+          role: 'CEO (transverse)',
+          permissions: {
+            'pilotage.registre': 'E',
+            'pilotage.decisions': 'V',
+            'pilotage.synthese': 'L',
+            'pilotage.delegation': 'LV',
+            'pilotage.journal': 'L',
+          },
+        },
         '2026-10-01',
         '2026-10-14',
       );

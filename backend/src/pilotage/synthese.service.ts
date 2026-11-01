@@ -14,22 +14,25 @@ import { ReportingRhService } from './reporting-rh.service';
 import { runAsSystem, runInCompany } from '../tenancy/tenant-context';
 import {
   addDays,
+  ETAPE,
   formatAmount,
   formatDate,
   formatMonthYear,
+  hasRight,
   plural,
   ROLE_CEO,
-  ETAPE,
   ROLE_CFO,
-  ROLE_COMPANY_ADMIN,
   todayIso,
 } from '@hub/domain';
 
-type Acteur = { userId: string; societeId: string; role: string };
+type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 export type LigneSynthese = { libelle: string; valeur: string; ton?: 'risque' | 'attention' | 'succes' };
 export type SectionSynthese = { titre: string; lignes: LigneSynthese[] };
 
-const LECTEURS = new Set([ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN]);
+// Lire : Lecture de « Synthèse mensuelle » (au départ CEO, CFO,
+// administration) ; commenter : son Écriture (le CFO).
+const lit = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageSynthese, 'lecture');
+const commente = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageSynthese, 'ecriture');
 
 // Synthèse mensuelle du CEO (revue CEO, 22/10/2026) : générée par le HUB
 // après la clôture du mois par le CFO, avec ce qu'il sait déjà — facturation,
@@ -352,7 +355,7 @@ export class SyntheseService {
       : [];
     const noms = new Map(auteurs.map((u) => [u.id, `${u.prenom} ${u.nom}`]));
     return {
-      peutCommenter: a.role === ROLE_CFO,
+      peutCommenter: commente(a),
       syntheses: syntheses.map((s) => ({
         mois: s.mois,
         libelle: formatMonthYear(s.mois),
@@ -370,7 +373,8 @@ export class SyntheseService {
   }
 
   async commenter(a: Acteur, mois: string, texte: string) {
-    if (a.role !== ROLE_CFO) throw new ForbiddenException('Le commentaire de la synthèse est celui du CFO.');
+    if (!commente(a))
+      throw new ForbiddenException('Commenter la synthèse demande l’Écriture de « Synthèse mensuelle ».');
     const propre = texte.trim();
     if (propre.length > 2000) throw new BadRequestException('Commentaire trop long (2 000 caractères au plus).');
     const s = await this.prisma.syntheseMensuelle.findUnique({
@@ -387,6 +391,6 @@ export class SyntheseService {
   }
 
   private exigerLecteur(a: Acteur) {
-    if (!LECTEURS.has(a.role)) throw new ForbiddenException('La synthèse mensuelle est réservée au CEO et au CFO.');
+    if (!lit(a)) throw new ForbiddenException('La synthèse mensuelle demande la Lecture de son étape.');
   }
 }

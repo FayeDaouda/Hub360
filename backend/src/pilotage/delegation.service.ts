@@ -8,9 +8,15 @@ import {
 import { ROLES_DELEGATAIRES } from '../commun/delegation-ceo';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatDate, ROLE_CEO, ROLE_CFO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, formatDate, hasRight, ROLE_CFO, ROLE_CIO, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 
-type Acteur = { userId: string; societeId: string; role: string };
+type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
+
+// Voir toutes les délégations : Lecture de « Délégation du CEO » (au départ le
+// CEO, l'administration ; le CIO par sa carte blanche) ; déléguer, révoquer :
+// sa Validation (le CEO). Le délégataire voit toujours la sienne.
+const voitTout = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageDelegation, 'lecture');
+const gere = (a: Acteur) => hasRight(a.permissions, ETAPE.pilotageDelegation, 'validation');
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const libelleRole = (r: string) => r.replace(/\s*\(transverse\)$/, '');
 
@@ -52,13 +58,13 @@ export class DelegationService {
       enCours: d.du <= jour,
       perimetre: PERIMETRE_DELEGATION[d.roleDelegataire] ?? [],
     });
-    if (a.role === ROLE_CEO || a.role === ROLE_COMPANY_ADMIN) {
+    if (gere(a) || (voitTout(a) && a.role === ROLE_COMPANY_ADMIN)) {
       const candidats = await this.prisma.utilisateurSocieteRole.findMany({
         where: { societeId: a.societeId, role: { nom: { in: [...ROLES_DELEGATAIRES] } }, utilisateur: { actif: true } },
         select: { role: { select: { nom: true } }, utilisateur: { select: { id: true, prenom: true, nom: true } } },
       });
       return {
-        peutGerer: a.role === ROLE_CEO,
+        peutGerer: gere(a),
         delegations: delegations.map(vers),
         candidats: candidats.map((c) => ({
           id: c.utilisateur.id,
@@ -68,13 +74,13 @@ export class DelegationService {
         jamais: JAMAIS_DELEGUE,
       };
     }
-    // Le délégataire voit la sienne ; le CIO, toutes (contrôle).
-    const visibles = a.role === ROLE_CIO ? delegations : delegations.filter((d) => d.delegataireId === a.userId);
+    // Le délégataire voit la sienne ; la Lecture de l'étape, toutes (contrôle).
+    const visibles = voitTout(a) ? delegations : delegations.filter((d) => d.delegataireId === a.userId);
     return { peutGerer: false, delegations: visibles.map(vers), candidats: [], jamais: JAMAIS_DELEGUE };
   }
 
   async creer(a: Acteur, dto: { delegataireId: string; du: string; au: string }) {
-    if (a.role !== ROLE_CEO) throw new ForbiddenException('Seul le CEO délègue ses décisions.');
+    if (!gere(a)) throw new ForbiddenException('Déléguer demande la Validation de « Délégation du CEO ».');
     if (!DATE.test(dto.du) || !DATE.test(dto.au)) throw new BadRequestException('Dates invalides (AAAA-MM-JJ).');
     if (dto.du < todayIso()) throw new BadRequestException('Une délégation ne commence pas dans le passé.');
     if (dto.au < dto.du) throw new BadRequestException('La fin précède le début.');
@@ -116,7 +122,7 @@ export class DelegationService {
   }
 
   async revoquer(a: Acteur, id: string) {
-    if (a.role !== ROLE_CEO) throw new ForbiddenException('Seul le CEO révoque une délégation.');
+    if (!gere(a)) throw new ForbiddenException('Révoquer demande la Validation de « Délégation du CEO ».');
     const d = await this.prisma.delegationCeo.findFirst({ where: { id, societeId: a.societeId } });
     if (!d) throw new NotFoundException('Délégation introuvable.');
     if (d.revoqueLe) throw new ConflictException('Délégation déjà révoquée.');

@@ -260,3 +260,30 @@ describe('Matrice des droits · RH', () => {
     await api(app, cfo).post(`/rh/dossiers/${dossier.id}/archivage`, {}).expect(400);
   });
 });
+
+// Lot 8 (Pilotage) : le journal d'audit suit sa case.
+describe('Matrice des droits · Pilotage', () => {
+  let app: INestApplication;
+  let cio: string;
+  const roles: Record<string, string> = {};
+  beforeAll(async () => {
+    app = await demarrer();
+    cio = await connecter(app, COMPTES.cio);
+    for (const r of ((await api(app, cio).get('/roles').expect(200)).body as Matrice).roles) roles[r.nom] = r.id;
+  });
+  const regler = (droits: Record<string, boolean>) =>
+    api(app, cio)
+      .put('/roles/droits', { changements: [{ roleId: roles.CFO, etapeCle: 'pilotage.journal', droits }] })
+      .expect(200);
+  afterAll(async () => {
+    await regler(AUCUN);
+    await app.close();
+  });
+
+  it('journal d’audit : refusé au CFO, puis ouvert par la case', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    await api(app, cfo).get('/journal-audit').expect(403);
+    await regler({ ...AUCUN, lecture: true });
+    await api(app, cfo).get('/journal-audit').expect(200);
+  });
+});

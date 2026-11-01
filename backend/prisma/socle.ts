@@ -129,6 +129,25 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
   droits[ETAPE.rhTemps] = { ...NO_RIGHTS, lecture: rh.lecture, ecriture: rh.ecriture, validation: rh.ecriture };
   droits[ETAPE.rhIntegration] = { ...NO_RIGHTS, lecture: rh.lecture, ecriture: rh.ecriture };
   droits[ETAPE.rhDemandes] = { ...NO_RIGHTS, lecture: rh.lecture, ecriture: rh.ecriture, validation: rh.ecriture };
+  // Pilotage (lot 8, migration 20261102000000_pilotage_etapes) : mêmes règles.
+  droits[ETAPE.pilotage] = { ...NO_RIGHTS, lecture: versDroits(niveaux.pilotage).lecture };
+  droits[ETAPE.pilotageRegistre] = { ...NO_RIGHTS, ecriture: est(ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN) };
+  droits[ETAPE.pilotageDecisions] = {
+    ...NO_RIGHTS,
+    ecriture: est(ROLE_CTO, ROLE_COO),
+    validation: est(ROLE_CEO, ROLE_COMPANY_ADMIN),
+  };
+  droits[ETAPE.pilotageSynthese] = {
+    ...NO_RIGHTS,
+    lecture: est(ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN),
+    ecriture: est(ROLE_CFO),
+  };
+  droits[ETAPE.pilotageDelegation] = {
+    ...NO_RIGHTS,
+    lecture: est(ROLE_CEO, ROLE_COMPANY_ADMIN),
+    validation: est(ROLE_CEO),
+  };
+  droits[ETAPE.pilotageJournal] = { ...NO_RIGHTS, lecture: est(ROLE_CEO, ROLE_COMPANY_ADMIN) };
   return droits;
 }
 

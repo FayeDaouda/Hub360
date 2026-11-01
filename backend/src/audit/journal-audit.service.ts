@@ -9,19 +9,24 @@ import { PARAMETRES, type CleParametre } from '../finances/rentabilite/regles-re
 import { PrismaService } from '../prisma/prisma.service';
 import {
   decodeRights,
+  ETAPE,
   formatAmount,
   formatDate,
   formatMonthYear,
   formatNumericMonth,
+  hasRight,
   RIGHT_LABELS,
   RIGHTS,
-  ROLE_CEO,
-  ROLE_CIO,
-  ROLE_COMPANY_ADMIN,
   toIsoDay,
 } from '@hub/domain';
 
-type Acteur = { userId: string; societeId: string; role: string; adminHub?: boolean };
+type Acteur = {
+  userId: string;
+  societeId: string;
+  role: string;
+  adminHub?: boolean;
+  permissions?: Record<string, string>;
+};
 export type CategorieAudit =
   'comptes' | 'droits' | 'finances' | 'reglages' | 'rh' | 'paie' | 'pilotage' | 'administration';
 export type LigneAudit = {
@@ -45,8 +50,8 @@ const ACTIONS_INTERVENTION: Record<TypeInterventionHub, string> = {
   suppression: 'Dossier / projet supprimé définitivement',
 };
 
-// Qui lit le journal : CEO et CIO (phase 4), et l'administration de la société.
-export const ROLES_JOURNAL = new Set([ROLE_CEO, ROLE_CIO, ROLE_COMPANY_ADMIN]);
+// Qui lit le journal : la Lecture de « Journal d’audit » (matrice, 31/10/2026 ; au
+// départ le CEO et l'administration, le CIO par sa carte blanche).
 // Période par défaut et plafond : le journal se lit par tranches.
 const JOURS_PAR_DEFAUT = 30;
 const JOURS_MAX = 366;
@@ -150,7 +155,8 @@ export class JournalAuditService {
   constructor(private prisma: PrismaService) {}
 
   async journal(a: Acteur, debut?: string, fin?: string) {
-    if (!a.adminHub && !ROLES_JOURNAL.has(a.role)) throw new ForbiddenException('Journal réservé au CEO et au CIO.');
+    if (!hasRight(a.permissions, ETAPE.pilotageJournal, 'lecture'))
+      throw new ForbiddenException('Le journal d’audit demande la Lecture de son étape.');
     const { de, a: jusque } = periode(debut, fin);
     const dans = { gte: de, lt: jusque };
     const S = a.societeId;
