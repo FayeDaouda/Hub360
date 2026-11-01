@@ -408,12 +408,15 @@
 .agenda-jour.is-aujourdhui {
   border-color: var(--action);
 }
+/* « lundi 2 novembre » : la première lettre en capitale. */
+.agenda-jour h3::first-letter {
+  text-transform: uppercase;
+}
 .agenda-jour h3 {
   margin: 0;
   color: var(--text-muted);
   font-size: var(--t-13);
   font-weight: 600;
-  text-transform: capitalize;
 }
 .agenda-jour ul {
   display: grid;
