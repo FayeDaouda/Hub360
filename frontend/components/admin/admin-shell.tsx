@@ -65,10 +65,11 @@ const NAV: NavItem[] = [
   { cle: 'facturation', libelle: 'Finances', icone: ReceiptText, chemin: 'facturation' },
   { cle: 'rh', libelle: 'RH', icone: IdCard, chemin: 'rh' },
   { cle: 'equipe', libelle: 'Équipes', icone: Users, chemin: 'equipe' },
+  { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
+  // Nouveaux modules (01/11/2026), après Mon espace (barre du bas sur téléphone).
   { cle: 'agenda', libelle: 'Agenda', icone: CalendarDays, chemin: 'agenda' },
   { cle: 'annonces', libelle: 'Annonces', icone: Megaphone, chemin: 'annonces' },
   { cle: 'recrutement', libelle: 'Recrutement', icone: BriefcaseBusiness, chemin: 'recrutement' },
-  { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
 ];
 
 // Dérive l'entrée de nav active depuis l'URL — un seul point de vérité (avant

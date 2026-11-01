@@ -47,10 +47,12 @@ export const ORDRE_SECTIONS = [
   'facturation',
   'rh',
   'equipe',
+  'mon-espace',
+  // Nouveaux modules (01/11/2026) : après Mon espace, qui garde sa place
+  // dans la barre du bas sur téléphone.
   'agenda',
   'annonces',
   'recrutement',
-  'mon-espace',
 ];
 const CHEMINS: Record<string, string> = {
   'mes-taches': 'mes-taches',
