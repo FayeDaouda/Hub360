@@ -10784,6 +10784,61 @@
           "valeur"
         ]
       },
+      "AjoutLigneDto": {
+        "type": "object",
+        "properties": {
+          "carte": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "libelle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "debut": {
+            "type": "number"
+          },
+          "fin": {
+            "type": "number"
+          },
+          "heures": {
+            "type": "number",
+            "nullable": true
+          },
+          "visaDplg": {
+            "type": "boolean"
+          },
+          "fichierObligatoire": {
+            "type": "boolean"
+          },
+          "descriptif": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "carte",
+          "libelle"
+        ]
+      },
+      "RetraitLigneDto": {
+        "type": "object",
+        "properties": {
+          "carte": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "tache": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "carte",
+          "tache"
+        ]
+      },
       "GabaritDto": {
         "type": "object",
         "properties": {
@@ -10794,6 +10849,20 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ChangementDto"
+            }
+          },
+          "ajouts": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AjoutLigneDto"
+            }
+          },
+          "retraits": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetraitLigneDto"
             }
           },
           "motif": {

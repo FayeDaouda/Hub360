@@ -221,6 +221,100 @@
   color: var(--accent, var(--text));
   font-weight: 600;
 }
+/* Lignes ajoutées ou retirées (01/11/2026). */
+.reg-ligne > span.reg-tache-libelle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.reg-tache-texte {
+  min-width: 0;
+}
+.reg-ligne-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.reg-ligne-action:hover:not(:disabled) {
+  border-color: var(--border);
+  color: var(--text);
+}
+.reg-ligne-action--retirer:hover:not(:disabled) {
+  border-color: color-mix(in oklch, var(--pill-risque) 45%, var(--border));
+  color: var(--pill-risque);
+}
+.reg-ligne-action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.reg-ligne--tache.is-retiree del {
+  color: var(--text-subtle);
+}
+.reg-ligne--tache.is-ajoutee {
+  background: color-mix(in oklch, var(--pill-succes) 9%, transparent);
+  box-shadow: inset 3px 0 0 var(--pill-succes);
+}
+.reg-ligne--ajout {
+  padding-block: 0.1rem 0.4rem;
+}
+.reg-ligne--ajout > span:nth-child(2) {
+  padding-left: 1.25rem;
+}
+.reg-ajouter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  padding: 0.25rem 0.55rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.reg-ajouter:hover {
+  border-color: var(--action);
+  color: var(--action);
+}
+.reg-ajout-form {
+  display: grid;
+  gap: 0.85rem;
+}
+.reg-ajout-ligne {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  align-items: end;
+  gap: 0.75rem;
+}
+.reg-ajout-temps {
+  margin: 0 0 0.6rem;
+}
+.reg-ajout-cases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+.reg-ajout-cases .reg-visa {
+  margin-left: 0;
+  font-size: 0.88rem;
+}
+@media (max-width: 640px) {
+  .reg-ajout-ligne {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 .reg-fenetre,
 .reg-temps {
   display: inline-flex;
