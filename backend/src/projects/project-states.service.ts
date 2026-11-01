@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
+import { ETAPE, hasRight, ROLE_COMPANY_ADMIN, ROLE_CTO, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import {
@@ -118,7 +118,10 @@ export class ProjectStatesService {
       employeeOfAccount(this.prisma, companyId, actor.userId),
       decisionContext(this.prisma, companyId, todayIso()),
     ]);
-    return { decider: { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn }, ctx };
+    return {
+      decider: { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn, permissions: actor.permissions },
+      ctx,
+    };
   }
 
   // Tâche lue par les règles de décision : son assigné est-il l'Architecte DPLG ?
@@ -137,9 +140,10 @@ export class ProjectStatesService {
     return names.length ? names.join(' ou ') : null;
   }
 
-  // Demandes de TS en attente sur ces projets, si la personne peut les trancher (CTO).
+  // Demandes de TS en attente sur ces projets, si la personne peut les trancher
+  // (Validation des Travaux supplémentaires ; au départ le CTO).
   async tsRequestsToDecide(companyId: string, decider: Decider, projectIds: string[]) {
-    if (decider.role !== ROLE_CTO && decider.role !== ROLE_COMPANY_ADMIN) return [];
+    if (!hasRight(decider.permissions, ETAPE.projetsTs, 'validation')) return [];
     const requests = await this.prisma.demandeTs.findMany({
       where: { societeId: companyId, statut: 'a_valider', projetId: { in: projectIds } },
       orderBy: { demandeLe: 'asc' },

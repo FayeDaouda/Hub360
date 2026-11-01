@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { addDays, ROLE_CEO, ROLE_COMPANY_ADMIN, ROLE_CTO, ROLE_DIR_GC, todayIso } from '@hub/domain';
+import { addDays, ETAPE, hasRight, ROLE_DIR_GC, todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReglagesService } from '../reglages/reglages.service';
 import { dateOfDay, workdayRank } from './work-calendar';
@@ -114,13 +114,14 @@ export class ProductionService {
     };
   }
 
-  // Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : un écran pour
-  // le Dir. GC (les projets dont il porte le dossier), le CTO et le CEO (tous) —
+  // Tableau de production (revue Dir. GC, 21/10/2026, lot 6) : la Lecture de
+  // son étape (matrice, 31/10/2026 ; au départ le Dir. GC — les projets dont
+  // il porte le dossier —, le CTO et le CEO, tous) —
   // avancement, calendrier, retards, décisions en attente, prochaine tranche,
   // charge des cellules sur deux semaines, échéances des 14 jours.
   async production(companyId: string, actor: Actor) {
-    if (![ROLE_DIR_GC, ROLE_CTO, ROLE_CEO, ROLE_COMPANY_ADMIN].includes(actor.role)) {
-      throw new ForbiddenException('Le tableau de production est réservé au Dir. GC, au CTO et au CEO.');
+    if (!hasRight(actor.permissions, ETAPE.projetsProduction, 'lecture')) {
+      throw new ForbiddenException('Le tableau de production demande la Lecture de « Tableau de production ».');
     }
     const today = todayIso();
     const holidays = await this.states.holidays(companyId);

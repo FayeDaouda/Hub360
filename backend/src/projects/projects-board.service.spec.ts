@@ -3,6 +3,29 @@ import { ReglagesService } from '../reglages/reglages.service';
 import { ProjectStatesService } from './project-states.service';
 import { ProjectsBoardService } from './projects-board.service';
 
+// Droits de départ du lot 5 (matrice, 31/10/2026), par rôle.
+const DG = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.visa': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'E',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CTO_P = {
+  projets: 'LE',
+  'projets.assignation': 'E',
+  'projets.validation': 'V',
+  'projets.prolongations': 'V',
+  'projets.ts': 'EV',
+  'projets.fils': 'E',
+  'projets.production': 'L',
+};
+const CEO_P = { projets: 'L', 'projets.fils': 'E', 'projets.production': 'L' };
+const SAL = { projets: 'L', 'projets.fils': 'E' };
+
 // « À décider » (revue Dir. GC, 21/10/2026) : remises et prolongations que la
 // personne connectée peut trancher, sur tous les projets — mêmes règles que
 // les boutons (le DPLG partout sauf ses propres tâches, le chef d’équipe sur
@@ -63,7 +86,7 @@ function svc(collaborateurId: string, projet: object = PROJET) {
 
 describe('ProjectsBoardService.toDecide', () => {
   it('Dir. GC (DPLG) : toutes les remises sauf la sienne, les prolongations en attente', async () => {
-    const r = await svc('DPLG').toDecide('S1', { userId: 'U', role: 'Dir. GC' });
+    const r = await svc('DPLG').toDecide('S1', { userId: 'U', role: 'Dir. GC', permissions: DG });
     expect(r.remises.map((x) => x.tacheId)).toEqual(['T1', 'T2']);
     expect(r.remises[0]).toMatchObject({
       code: 'FS_POI.26',
@@ -83,20 +106,26 @@ describe('ProjectsBoardService.toDecide', () => {
   });
 
   it('chef d’équipe : son équipe, jamais sa propre remise', async () => {
-    const r = await svc('CHEF').toDecide('S1', { userId: 'U', role: 'Salarié' });
+    const r = await svc('CHEF').toDecide('S1', { userId: 'U', role: 'Salarié', permissions: SAL });
     expect(r.remises.map((x) => x.tacheId)).toEqual(['T1', 'T3']);
   });
 
   it('CEO (hors circuit) : rien à décider', async () => {
-    const r = await svc('AUTRE').toDecide('S1', { userId: 'U', role: 'CEO (transverse)' });
+    const r = await svc('AUTRE').toDecide('S1', { userId: 'U', role: 'CEO (transverse)', permissions: CEO_P });
     expect(r).toEqual({ remises: [], prolongations: [], visas: [], ts: [] });
   });
 
   it('prolongation qui repousse la livraison : au CTO, plus au Dir. GC', async () => {
     // Ouvert le 01/10, 80 h de budget = 10 jours ouvrés → livraison le 14/10.
     const projet = { ...PROJET, ouvertLe: '2026-10-01', budgetHeures: 80 };
-    expect((await svc('DPLG', projet).toDecide('S1', { userId: 'U', role: 'Dir. GC' })).prolongations).toEqual([]);
-    const cto = await svc('AUTRE', projet).toDecide('S1', { userId: 'U', role: 'CTO (transverse)' });
+    expect(
+      (await svc('DPLG', projet).toDecide('S1', { userId: 'U', role: 'Dir. GC', permissions: DG })).prolongations,
+    ).toEqual([]);
+    const cto = await svc('AUTRE', projet).toDecide('S1', {
+      userId: 'U',
+      role: 'CTO (transverse)',
+      permissions: CTO_P,
+    });
     expect(cto.prolongations).toEqual([expect.objectContaining({ tacheId: 'T4', repousseLivraison: '2026-10-14' })]);
     expect(cto.remises).toEqual([]); // le travail des équipes reste au Dir. GC
   });

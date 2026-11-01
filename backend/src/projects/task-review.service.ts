@@ -8,7 +8,7 @@ import {
 import { todayIso } from '@hub/domain';
 import { PrismaService } from '../prisma/prisma.service';
 import { decisionContext } from './decision-context';
-import { assertInCircuit, canDecide, canVisa, employeeOfAccount } from './review-rules';
+import { canDecide, canVisa, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
 import type { ReviewDecisionResultDto, VisaResultDto } from './open-projects-view.dto';
 import { ReviewCircuitService } from './review-circuit.service';
@@ -32,7 +32,6 @@ export class TaskReviewService {
     decision: 'valider' | 'renvoyer',
     reason?: string,
   ): Promise<ReviewDecisionResultDto> {
-    assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: {
@@ -52,7 +51,7 @@ export class TaskReviewService {
     const assigneeIsDplg = !!task.assigneId && ctx.dplgEmployees.has(task.assigneId);
     if (
       !canDecide(
-        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn },
+        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn, permissions: actor.permissions },
         { ...task, assigneeIsDplg },
         chiefOf(task.projet),
       )
@@ -130,8 +129,7 @@ export class TaskReviewService {
     affix: boolean,
     reason?: string,
   ): Promise<VisaResultDto> {
-    assertInCircuit(actor.role);
-    if (!canVisa(actor.role))
+    if (!canVisa(actor))
       throw new ForbiddenException('Le visa DPLG engage la signature de l’architecte : le Dir. GC seul l’appose.');
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },

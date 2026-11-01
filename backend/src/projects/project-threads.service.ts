@@ -10,7 +10,7 @@ import { nomPublic } from '../auth/profil';
 import { aLaPermission } from '../commun/permission.guard';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { commentsWithoutWrite, employeeOfAccount, projectScope } from './review-rules';
+import { canWriteThreads, employeeOfAccount, projectScope } from './review-rules';
 import { isOpenComment, resolutionRefusal } from './thread-rules';
 import { ROLE_EMPLOYEE } from '@hub/domain';
 
@@ -133,27 +133,24 @@ export class ProjectThreadsService {
     if (!project) throw new NotFoundException('Projet introuvable');
   }
 
-  // Écrire dans un fil : écriture sur Projets (matrice), Salarié sur un
-  // projet où une tâche lui est assignée (maquette : « remise, prolongation,
-  // discussion »), ou CEO (exception ciblée : commentaires seulement).
+  // Écrire dans un fil : l'Écriture de « Fils de discussion » (matrice,
+  // 31/10/2026 ; au départ qui écrivait dans Projets, le CEO, le CFO et le
+  // Salarié) ; le Salarié, sur un projet de son périmètre seulement.
   async checkWrite(
     companyId: string,
     actor: Actor & { role: string; permissions?: Record<string, string> },
     projectId: string,
   ) {
-    if (aLaPermission(actor.permissions, 'projets', 'ecriture')) return;
-    if (commentsWithoutWrite(actor.role)) return;
-    if (actor.role === ROLE_EMPLOYEE) {
-      const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
-      const project = await this.prisma.projet.findFirst({
-        where: { id: projectId, societeId: companyId, ...projectScope(actor.role, employeeId) },
-        select: { id: true },
-      });
-      if (project) return;
+    if (!canWriteThreads(actor)) {
+      throw new ForbiddenException('Écrire dans ce fil demande l’Écriture de « Fils de discussion ».');
     }
-    throw new ForbiddenException(
-      'Écrire dans ce fil demande l’écriture sur Projets, ou une tâche assignée dans ce projet.',
-    );
+    if (actor.role !== ROLE_EMPLOYEE) return;
+    const employeeId = await employeeOfAccount(this.prisma, companyId, actor.userId);
+    const project = await this.prisma.projet.findFirst({
+      where: { id: projectId, societeId: companyId, ...projectScope(actor.role, employeeId) },
+      select: { id: true },
+    });
+    if (!project) throw new ForbiddenException('Ce projet n’est pas dans votre périmètre (tâche ou équipe).');
   }
 
   async post(

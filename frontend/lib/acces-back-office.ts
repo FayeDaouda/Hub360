@@ -2,7 +2,6 @@ import { niveauSuffisant } from './auth';
 import type { Session } from './types';
 import {
   ETAPE,
-  ROLE_CEO,
   ROLE_CFO,
   ROLE_CIO,
   ROLE_COMPANY_ADMIN,
@@ -63,12 +62,6 @@ const CHEMINS: Record<string, string> = {
 // Rôle socle qui a son propre espace (/groupe) — même liste que
 // backend/src/commun/back-office.guard.ts.
 const ROLES_HORS_BACK_OFFICE = new Set([ROLE_HOLDING_ADMIN]);
-
-// Lecture et commentaires dans les fils, sans action sur les tâches — même
-// liste que backend/src/projects/review-rules.ts (THREAD_COMMENT_ROLES).
-export function consultationEtCommentaires(session: Session): boolean {
-  return [ROLE_CEO, ROLE_CFO].includes(session.role);
-}
 
 // Administration du HUB (/groupe : comptes, rôles, salaires, matrice des
 // droits, journal, déblocages, interrupteurs) — même règle que

@@ -118,7 +118,7 @@ export class ProjectsBoardService {
           request && canQualify(decider, this.states.ruleFor(ctx, t), chiefId, pushesBack),
       );
     // Visas DPLG à apposer (l'architecte DPLG seul).
-    const visas = canVisa(actor.role)
+    const visas = canVisa(actor)
       ? rows.filter(({ t }) => t.statut === 'validee' && t.visaRequis && !t.visaLe && !t.visaNonTrace)
       : [];
     // Date de la dernière remise de chaque tâche à valider.

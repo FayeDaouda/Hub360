@@ -13,7 +13,7 @@ import type { SubmitTaskDto } from './open-projects.dto';
 import { workdaysAfter } from './work-calendar';
 import { submissionFileName } from './submission-file-name';
 import { decisionContext } from './decision-context';
-import { assertInCircuit, canQualify, employeeOfAccount } from './review-rules';
+import { canQualify, employeeOfAccount } from './review-rules';
 import { CHIEF_CELL, chiefOf, versionLabel, type Actor } from './project-query';
 import { ReviewCircuitService } from './review-circuit.service';
 import { reminderPossibleOn } from './task-reminder';
@@ -40,7 +40,6 @@ export class TaskSubmissionService {
     taskId: string,
     body: SubmitTaskDto = {},
   ): Promise<SubmissionResultDto> {
-    assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: {
@@ -157,7 +156,6 @@ export class TaskSubmissionService {
   // après la relance précédente. Prévient les mêmes personnes que le dépôt et
   // laisse une trace dans l'historique de la tâche.
   async remind(companyId: string, actor: Actor, projectId: string, taskId: string) {
-    assertInCircuit(actor.role);
     const task = await this.prisma.tacheProjet.findFirst({
       where: { id: taskId, projetId: projectId, projet: { societeId: companyId, ouvertLe: { not: null } } },
       select: {
@@ -234,7 +232,14 @@ export class TaskSubmissionService {
       assigneId: task.assigneId,
       assigneeIsDplg: !!task.assigneId && ctx.dplgEmployees.has(task.assigneId),
     };
-    if (canQualify({ role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn }, t, chiefOf(task.projet))) return;
+    if (
+      canQualify(
+        { role: actor.role, employeeId, ctoStandsIn: ctx.ctoStandsIn, permissions: actor.permissions },
+        t,
+        chiefOf(task.projet),
+      )
+    )
+      return;
     throw new ForbiddenException('Fichier réservé à l’assigné et à son valideur.');
   }
 

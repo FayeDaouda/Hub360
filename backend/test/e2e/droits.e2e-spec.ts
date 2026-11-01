@@ -204,3 +204,30 @@ describe('Finances du groupe', () => {
       .expect(403);
   });
 });
+
+// Lot 5 (Projets) : le tableau de production suit sa case.
+describe('Matrice des droits · Projets', () => {
+  let app: INestApplication;
+  let cio: string;
+  const roles: Record<string, string> = {};
+  beforeAll(async () => {
+    app = await demarrer();
+    cio = await connecter(app, COMPTES.cio);
+    for (const r of ((await api(app, cio).get('/roles').expect(200)).body as Matrice).roles) roles[r.nom] = r.id;
+  });
+  const regler = (role: string, droits: Record<string, boolean>) =>
+    api(app, cio)
+      .put('/roles/droits', { changements: [{ roleId: roles[role], etapeCle: 'projets.production', droits }] })
+      .expect(200);
+  afterAll(async () => {
+    await regler('CFO', AUCUN);
+    await app.close();
+  });
+
+  it('tableau de production : refusé au CFO, puis ouvert par la case', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    await api(app, cfo).get('/projets-ouverts/production').expect(403);
+    await regler('CFO', { ...AUCUN, lecture: true });
+    await api(app, cfo).get('/projets-ouverts/production').expect(200);
+  });
+});
