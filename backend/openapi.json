@@ -9466,6 +9466,137 @@
         ]
       }
     },
+    "/api/societes/{slug}/agenda": {
+      "get": {
+        "operationId": "AgendaController_semaine",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "du",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "personne",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SemaineAgendaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      },
+      "post": {
+        "operationId": "AgendaController_creer",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreerRendezVousDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/personnes": {
+      "get": {
+        "operationId": "AgendaController_personnes",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
+    "/api/societes/{slug}/agenda/{id}": {
+      "delete": {
+        "operationId": "AgendaController_annuler",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Agenda"
+        ]
+      }
+    },
     "/api/sante": {
       "get": {
         "operationId": "HealthController_etat",
@@ -16521,6 +16652,157 @@
           "id",
           "message",
           "createdAt"
+        ]
+      },
+      "ElementAgendaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "conge",
+              "echeance",
+              "rendez_vous"
+            ]
+          },
+          "titre": {
+            "type": "string"
+          },
+          "jour": {
+            "type": "string"
+          },
+          "debut": {
+            "type": "string",
+            "nullable": true
+          },
+          "fin": {
+            "type": "string",
+            "nullable": true
+          },
+          "lieu": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "organisateur": {
+            "type": "string",
+            "nullable": true
+          },
+          "invites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "annulable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "titre",
+          "jour",
+          "debut",
+          "fin",
+          "lieu",
+          "detail",
+          "organisateur",
+          "invites",
+          "annulable"
+        ]
+      },
+      "SemaineAgendaDto": {
+        "type": "object",
+        "properties": {
+          "du": {
+            "type": "string"
+          },
+          "au": {
+            "type": "string"
+          },
+          "personne": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "nom": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nom"
+            ]
+          },
+          "elements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ElementAgendaDto"
+            }
+          },
+          "peutVoirAutres": {
+            "type": "boolean"
+          },
+          "peutCreer": {
+            "type": "boolean"
+          },
+          "peutInviter": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "du",
+          "au",
+          "personne",
+          "elements",
+          "peutVoirAutres",
+          "peutCreer",
+          "peutInviter"
+        ]
+      },
+      "CreerRendezVousDto": {
+        "type": "object",
+        "properties": {
+          "titre": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "debut": {
+            "type": "string"
+          },
+          "fin": {
+            "type": "string"
+          },
+          "lieu": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inviteIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "titre",
+          "debut",
+          "fin"
         ]
       },
       "ClientErrorDto": {

@@ -3924,6 +3924,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/societes/{slug}/agenda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgendaController_semaine"];
+        put?: never;
+        post: operations["AgendaController_creer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/personnes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["AgendaController_personnes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/societes/{slug}/agenda/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["AgendaController_annuler"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sante": {
         parameters: {
             query?: never;
@@ -5607,6 +5655,40 @@ export interface components {
             message: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        ElementAgendaDto: {
+            id: string;
+            /** @enum {string} */
+            type: "conge" | "echeance" | "rendez_vous";
+            titre: string;
+            jour: string;
+            debut: string | null;
+            fin: string | null;
+            lieu: string | null;
+            detail: string | null;
+            organisateur: string | null;
+            invites: string[];
+            annulable: boolean;
+        };
+        SemaineAgendaDto: {
+            du: string;
+            au: string;
+            personne: {
+                id: string;
+                nom: string;
+            };
+            elements: components["schemas"]["ElementAgendaDto"][];
+            peutVoirAutres: boolean;
+            peutCreer: boolean;
+            peutInviter: boolean;
+        };
+        CreerRendezVousDto: {
+            titre: string;
+            debut: string;
+            fin: string;
+            lieu?: string;
+            description?: string;
+            inviteIds?: string[];
         };
         ClientErrorDto: {
             message: string;
@@ -11653,6 +11735,92 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_semaine: {
+        parameters: {
+            query: {
+                du: string;
+                personne?: string;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemaineAgendaDto"];
+                };
+            };
+        };
+    };
+    AgendaController_creer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreerRendezVousDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_personnes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgendaController_annuler: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

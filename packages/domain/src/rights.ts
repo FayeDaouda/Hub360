@@ -140,4 +140,8 @@ export const ETAPE = {
   // Documents et Communication (lot 9).
   documents: 'documents',
   communication: 'communication',
+  // Agenda (lot 11).
+  agenda: 'agenda',
+  agendaReunions: 'agenda.reunions',
+  agendaAutres: 'agenda.autres',
 } as const;

@@ -370,3 +370,121 @@
   flex-wrap: wrap;
   gap: var(--e-8);
 }
+
+/* --- Agenda (lot 11) ---------------------------------------------------- */
+.agenda {
+  display: grid;
+  gap: var(--e-16);
+}
+.agenda-barre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-12);
+}
+.agenda-nav,
+.agenda-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.agenda-semaine {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--e-8);
+}
+.agenda-jour {
+  display: grid;
+  align-content: start;
+  gap: var(--e-8);
+  min-height: 140px;
+  padding: var(--e-12);
+  border: 1px solid var(--border);
+  border-radius: var(--r-14);
+  background: var(--surface);
+}
+.agenda-jour.is-aujourdhui {
+  border-color: var(--action);
+}
+.agenda-jour h3 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-13);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.agenda-jour ul {
+  display: grid;
+  gap: var(--e-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agenda-vide {
+  margin: 0;
+  color: var(--text-subtle);
+}
+.agenda-element {
+  display: grid;
+  gap: var(--e-4);
+  padding: var(--e-8);
+  border-radius: var(--r-10);
+  background: var(--surface-2);
+  font-size: var(--t-13);
+  overflow-wrap: anywhere;
+}
+.agenda-element-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-8);
+}
+.agenda-heure,
+.agenda-detail {
+  color: var(--text-muted);
+  font-size: var(--t-12);
+}
+.agenda-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-4);
+}
+.agenda-formulaire {
+  display: grid;
+  gap: var(--e-12);
+}
+.agenda-formulaire-ligne {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--e-8);
+}
+.agenda-invites {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--e-4) var(--e-12);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.agenda-invite {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
+  font-size: var(--t-14);
+}
+@media (max-width: 1100px) {
+  .agenda-semaine {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .agenda-semaine,
+  .agenda-formulaire-ligne {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agenda-jour {
+    min-height: 0;
+  }
+}

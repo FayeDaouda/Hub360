@@ -152,6 +152,10 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
   droits[ETAPE.documents] = { ...versDroits(niveaux.documents), validation: false };
   const communication = versDroits(niveaux.communication);
   droits[ETAPE.communication] = { ...NO_RIGHTS, lecture: communication.lecture, ecriture: communication.ecriture };
+  // Agenda (lot 11, migration 20261102030000_agenda) : chacun son agenda et
+  // ses réunions ; l'agenda des autres n'est ouvert à personne au départ.
+  droits[ETAPE.agenda] = { ...NO_RIGHTS, lecture: true, ecriture: true, suppression: true };
+  droits[ETAPE.agendaReunions] = { ...NO_RIGHTS, ecriture: true };
   return droits;
 }
 
@@ -201,6 +205,8 @@ export async function installerSocle(prisma: PrismaClient) {
     { nom: 'Pilotage', cle: 'pilotage' },
     { nom: 'Documents', cle: 'documents' },
     { nom: 'Communication', cle: 'communication' },
+    // Lot 11 (01/11/2026).
+    { nom: 'Agenda', cle: 'agenda' },
   ]) {
     await prisma.module.upsert({ where: { cle: m.cle }, update: {}, create: m });
   }

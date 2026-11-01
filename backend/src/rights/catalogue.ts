@@ -439,4 +439,31 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       ecriture: 'Écrit, ouvre une conversation directe',
     },
   },
+
+  // Agenda (lot 11, 01/11/2026).
+  {
+    module: 'agenda',
+    cle: ETAPE.agenda,
+    nom: 'Mon agenda',
+    ordre: 0,
+    libelles: {
+      lecture: 'Voit son agenda : rendez-vous, réunions, échéances de ses tâches, congés validés',
+      ecriture: 'Crée un rendez-vous',
+      suppression: 'Annule un rendez-vous qu’il organise',
+    },
+  },
+  {
+    module: 'agenda',
+    cle: ETAPE.agendaReunions,
+    nom: 'Réunions',
+    ordre: 1,
+    libelles: { ecriture: 'Organise une réunion et y invite des collègues' },
+  },
+  {
+    module: 'agenda',
+    cle: ETAPE.agendaAutres,
+    nom: 'Agenda des autres',
+    ordre: 2,
+    libelles: { lecture: 'Voit l’agenda d’un collègue' },
+  },
 ];
