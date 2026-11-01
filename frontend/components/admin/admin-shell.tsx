@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  BriefcaseBusiness,
   CalendarDays,
   ChevronLeft,
   Contact,
@@ -66,6 +67,7 @@ const NAV: NavItem[] = [
   { cle: 'equipe', libelle: 'Équipes', icone: Users, chemin: 'equipe' },
   { cle: 'agenda', libelle: 'Agenda', icone: CalendarDays, chemin: 'agenda' },
   { cle: 'annonces', libelle: 'Annonces', icone: Megaphone, chemin: 'annonces' },
+  { cle: 'recrutement', libelle: 'Recrutement', icone: BriefcaseBusiness, chemin: 'recrutement' },
   { cle: 'mon-espace', libelle: 'Mon espace', icone: UserRound, chemin: 'mon-espace' },
 ];
 

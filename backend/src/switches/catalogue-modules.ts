@@ -33,7 +33,7 @@ export const CATALOGUE_MODULES: FamilleModules[] = [
       { nom: 'Notes de frais', statut: 'en_partie', module: 'rh', note: 'Demandes de remboursement' },
       { nom: 'Validation congés et temps', statut: 'en_service', module: 'rh' },
       { nom: 'Performance équipe', statut: 'en_partie', module: 'equipe', note: 'Indicateurs, charge des équipes' },
-      { nom: 'Recrutement', statut: 'a_venir' },
+      { nom: 'Recrutement', statut: 'en_service', module: 'recrutement' },
       { nom: 'Gestion RH (dossiers, contrats)', statut: 'en_service', module: 'rh' },
       { nom: 'Formation et habilitations', statut: 'a_venir' },
       { nom: 'Paie', statut: 'en_partie', module: 'rh', note: 'Salaires, bulletins déposés (pas de calcul)' },
