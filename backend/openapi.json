@@ -9487,6 +9487,14 @@
             }
           },
           {
+            "name": "au",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "personne",
             "required": false,
             "in": "query",
@@ -17134,6 +17142,7 @@
             "type": "string",
             "enum": [
               "conge",
+              "demande",
               "echeance",
               "rendez_vous"
             ]
@@ -17172,6 +17181,35 @@
           },
           "annulable": {
             "type": "boolean"
+          },
+          "demande": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "autre",
+                  "conge_paye",
+                  "maladie",
+                  "permission_exceptionnelle"
+                ],
+                "type": "string"
+              },
+              "jours": {
+                "type": "number"
+              },
+              "validationFinale": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "jours",
+              "validationFinale"
+            ]
           }
         },
         "required": [

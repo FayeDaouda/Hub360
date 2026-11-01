@@ -1,13 +1,16 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { addDays, ETAPE, hasRight, toIsoDay } from '@hub/domain';
+import { addDays, daysBetween, ETAPE, formatDate, hasRight, toIsoDay } from '@hub/domain';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DemandesService } from '../rh/demandes.service';
 import type { CreerRendezVousDto, ElementAgendaDto, SemaineAgendaDto } from './agenda.dto';
 
 type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 
 const nomDe = (u: { prenom: string; nom: string }) => `${u.prenom} ${u.nom}`.trim();
 const JOUR = /^\d{4}-\d{2}-\d{2}$/;
+// Vue « Année » : jusqu'à 366 jours d'un coup.
+const JOURS_MAX = 366;
 
 // Agenda (lot 11, décision du 01/11/2026) : ses rendez-vous et réunions, plus
 // — à la lecture, jamais copiés — les échéances de ses tâches et ses congés
@@ -18,10 +21,17 @@ export class AgendaService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private demandes: DemandesService,
   ) {}
 
-  async semaine(a: Acteur, du: string, personneId?: string): Promise<SemaineAgendaDto> {
+  // Une période (semaine, mois ou année, 01/11/2026) : `au` inclus, une
+  // semaine par défaut.
+  async semaine(a: Acteur, du: string, personneId?: string, auDemande?: string): Promise<SemaineAgendaDto> {
     if (!JOUR.test(du)) throw new BadRequestException('Date de début invalide (AAAA-MM-JJ).');
+    const au = auDemande ?? addDays(du, 6);
+    if (!JOUR.test(au) || au < du || daysBetween(du, au) >= JOURS_MAX) {
+      throw new BadRequestException('Période invalide (366 jours au plus).');
+    }
     const cible = personneId ?? a.userId;
     const peutVoirAutres = hasRight(a.permissions, ETAPE.agendaAutres, 'lecture');
     if (cible !== a.userId && !peutVoirAutres) {
@@ -32,9 +42,9 @@ export class AgendaService {
       select: { id: true, prenom: true, nom: true },
     });
     if (!personne) throw new NotFoundException('Personne introuvable');
-    const au = addDays(du, 6);
     const debut = new Date(`${du}T00:00:00Z`);
-    const finExclue = new Date(`${addDays(du, 7)}T00:00:00Z`);
+    const finExclue = new Date(`${addDays(au, 1)}T00:00:00Z`);
+    const jours = daysBetween(du, au) + 1;
 
     const [rdv, taches, conges] = await Promise.all([
       this.prisma.rendezVous.findMany({
@@ -105,9 +115,9 @@ export class AgendaService {
         invites: [],
         annulable: false,
       })),
-      // Un congé : un élément par jour de la semaine qu'il couvre.
+      // Un congé : un élément par jour de la période qu'il couvre.
       ...conges.flatMap((c) =>
-        Array.from({ length: 7 }, (_, i) => addDays(du, i))
+        Array.from({ length: jours }, (_, i) => addDays(du, i))
           .filter((j) => j >= c.dateDebut && j <= c.dateFin)
           .map((j) => ({
             id: `${c.id}:${j}`,
@@ -117,12 +127,15 @@ export class AgendaService {
             debut: null,
             fin: null,
             lieu: null,
-            detail: `du ${c.dateDebut} au ${c.dateFin}`,
+            detail: `du ${formatDate(c.dateDebut)} au ${formatDate(c.dateFin)}`,
             organisateur: null,
             invites: [],
             annulable: false,
           })),
       ),
+      // Demandes d'absence qu'on doit trancher (son agenda seulement) : la
+      // file « À valider » du N+1 (et de la validation finale du CEO).
+      ...(cible === a.userId ? await this.demandesADecider(a, du, au, jours) : []),
     ].sort((x, y) => x.jour.localeCompare(y.jour) || (x.debut ?? '').localeCompare(y.debut ?? ''));
 
     return {
@@ -134,6 +147,30 @@ export class AgendaService {
       peutCreer: hasRight(a.permissions, ETAPE.agenda, 'ecriture'),
       peutInviter: hasRight(a.permissions, ETAPE.agendaReunions, 'ecriture'),
     };
+  }
+
+  private async demandesADecider(a: Acteur, du: string, au: string, jours: number): Promise<ElementAgendaDto[]> {
+    const file = await this.demandes.aValider(a);
+    return file
+      .filter((d) => d.dateDebut <= au && d.dateFin >= du)
+      .flatMap((d) =>
+        Array.from({ length: jours }, (_, i) => addDays(du, i))
+          .filter((j) => j >= d.dateDebut && j <= d.dateFin)
+          .map((j) => ({
+            id: `${d.id}:${j}`,
+            type: 'demande' as const,
+            titre: `${d.salarie.prenom} ${d.salarie.nom}`,
+            jour: j,
+            debut: null,
+            fin: null,
+            lieu: null,
+            detail: `du ${formatDate(d.dateDebut)} au ${formatDate(d.dateFin)}`,
+            organisateur: null,
+            invites: [],
+            annulable: false,
+            demande: { id: d.id, type: d.type, jours: d.jours, validationFinale: d.validationFinale },
+          })),
+      );
   }
 
   async creer(a: Acteur, dto: CreerRendezVousDto) {

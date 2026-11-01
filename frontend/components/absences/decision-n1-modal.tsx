@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CalendarCheck, CalendarPlus, Hourglass, Plane } from 'lucide-react';
 import { ApiError } from '@/lib/client-api';
 import { CalendrierCellule } from './calendrier-cellule';
 import { deciderAbsence, getPreparationDecision, LIBELLE_MOTIF_REFUS, LIBELLE_TYPE_ABSENCE } from '@/lib/demandes';
-import type { DecisionN1, MotifRefusAbsence, PreparationDecision } from '@/lib/types';
+import type { DecisionN1, MotifRefusAbsence, PreparationDecision, SoldeConges } from '@/lib/types';
 import { formatDate } from '@hub/domain';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
+import { KpiStrip } from '@/components/ui/kpi';
 
 const DECISIONS: { cle: DecisionN1; libelle: string; aide: string }[] = [
   {
@@ -127,6 +129,7 @@ export function DecisionN1Formulaire({
               au {formatDate(d!.dateFin)}
               {d!.commentaire && <span className="cell-sub"> — « {d!.commentaire} »</span>}
             </p>
+            {prep.solde && <SoldeDemandeur solde={prep.solde} />}
             {/* Qui d'autre de la cellule est absent ces jours-là (calendrier). */}
             <CalendrierCellule slug={slug} demandeId={id} source="decideur" />
 
@@ -262,5 +265,42 @@ export function DecisionN1Formulaire({
         )}
       </div>
     </>
+  );
+}
+
+// Jours restants du demandeur, comme il les voit dans Mon espace : la demande
+// en cours est déjà déduite (« en attente »).
+function SoldeDemandeur({ solde }: { solde: SoldeConges }) {
+  return (
+    <KpiStrip
+      compact
+      tiles={[
+        {
+          id: 'restant',
+          label: 'Restant',
+          value: `${solde.disponible} j`,
+          hint: solde.enAttente
+            ? `${solde.enAttente} j en attente déjà déduits, cette demande comprise`
+            : 'à poser cette année',
+          icon: Plane,
+          state: solde.disponible < 0 ? 'risque' : undefined,
+        },
+        {
+          id: 'acquis',
+          label: `Acquis ${solde.annee}`,
+          value: `${solde.acquis} j`,
+          hint: '2 jours ouvrables par mois de service',
+          icon: CalendarPlus,
+        },
+        {
+          id: 'report',
+          label: `Report de ${solde.annee - 1}`,
+          value: `${solde.report} j`,
+          hint: solde.plafondReport ? `plafonné à ${solde.plafondReport} j` : 'aucun report',
+          icon: Hourglass,
+        },
+        { id: 'pris', label: 'Pris', value: `${solde.pris} j`, hint: 'congés payés validés', icon: CalendarCheck },
+      ]}
+    />
   );
 }

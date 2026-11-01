@@ -15,11 +15,17 @@ type R = { user: { userId: string; societeId: string; role: string; permissions:
 export class AgendaController {
   constructor(private agenda: AgendaService) {}
 
-  // Semaine du `du` (AAAA-MM-JJ) ; `personne` : l'agenda d'un collègue.
+  // Du `du` au `au` (AAAA-MM-JJ, une semaine par défaut ; mois ou année) ;
+  // `personne` : l'agenda d'un collègue.
   @Get()
   @RequiertPermission(ETAPE.agenda, 'lecture')
-  semaine(@Req() req: R, @Query('du') du: string, @Query('personne') personne?: string): Promise<SemaineAgendaDto> {
-    return this.agenda.semaine(req.user, du, personne || undefined);
+  semaine(
+    @Req() req: R,
+    @Query('du') du: string,
+    @Query('au') au?: string,
+    @Query('personne') personne?: string,
+  ): Promise<SemaineAgendaDto> {
+    return this.agenda.semaine(req.user, du, personne || undefined, au || undefined);
   }
 
   @Get('personnes')

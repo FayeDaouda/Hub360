@@ -1465,6 +1465,8 @@ export type DemandeRemboursement = {
 export type LivrableAbsence = { cle: string; source: string; projet: string; groupe: string; echeance: string };
 export type PreparationDecision = {
   demande: DemandeAbsence;
+  // Solde de congés du demandeur (cette demande comprise dans « en attente »).
+  solde: SoldeConges | null;
   livrables: LivrableAbsence[];
   candidats: { id: string; libelle: string; cellule: string | null }[];
   alerteCellule: { absents: number; membres: number; preselection: boolean };
