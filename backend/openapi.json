@@ -9289,6 +9289,36 @@
         ]
       }
     },
+    "/api/societes/{slug}/interrupteurs/catalogue": {
+      "get": {
+        "operationId": "SwitchesController_catalogue",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueModulesDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Switches"
+        ]
+      }
+    },
     "/api/societes/{slug}/interrupteurs/modules/{cle}": {
       "put": {
         "operationId": "SwitchesController_setModule",
@@ -16344,6 +16374,79 @@
         "required": [
           "modules",
           "maintenance"
+        ]
+      },
+      "ModuleCatalogueDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "a_venir",
+              "en_partie",
+              "en_service"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "module": {
+            "type": "object",
+            "properties": {
+              "cle": {
+                "type": "string"
+              },
+              "actif": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "cle",
+              "actif"
+            ]
+          }
+        },
+        "required": [
+          "nom",
+          "statut",
+          "note",
+          "module"
+        ]
+      },
+      "FamilleModulesDto": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModuleCatalogueDto"
+            }
+          }
+        },
+        "required": [
+          "nom",
+          "modules"
+        ]
+      },
+      "CatalogueModulesDto": {
+        "type": "object",
+        "properties": {
+          "familles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FamilleModulesDto"
+            }
+          }
+        },
+        "required": [
+          "familles"
         ]
       },
       "InterrupteurModuleDto": {
