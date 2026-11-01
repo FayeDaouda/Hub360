@@ -137,4 +137,7 @@ export const ETAPE = {
   pilotageSynthese: 'pilotage.synthese',
   pilotageDelegation: 'pilotage.delegation',
   pilotageJournal: 'pilotage.journal',
+  // Documents et Communication (lot 9).
+  documents: 'documents',
+  communication: 'communication',
 } as const;
