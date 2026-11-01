@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FinancesGroupeService } from './facturation/finances-groupe.service';
 import { AuthModule } from '../auth/auth.module';
 import { FinancesModule } from '../finances/finances.module';
 import { ReglagesModule } from '../reglages/reglages.module';
@@ -16,7 +17,13 @@ import { FacturationCentraleController } from './facturation/facturation-central
 // frontière métier unique. Voir l'artifact « Backend Grey Concrete » §05 / §08.
 @Module({
   imports: [AuthModule, NotificationsModule, ReglagesModule, FinancesModule, ProjectsModule],
-  providers: [AccesProjetGuard, FacturationService, ControleInterneService, ParametresFacturationService],
+  providers: [
+    AccesProjetGuard,
+    FacturationService,
+    ControleInterneService,
+    ParametresFacturationService,
+    FinancesGroupeService,
+  ],
   controllers: [FacturationController, FacturationCentraleController],
   // FacturationService exporté pour DevisModule (conversion d'un devis
   // accepté en facture, cf. FacturationService.creerDepuisDevis).

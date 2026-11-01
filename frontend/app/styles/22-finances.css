@@ -1171,3 +1171,28 @@
     display: none;
   }
 }
+
+/* Onglet « Groupe » (lot 4, 31/10/2026) : une carte par société. */
+.fin-groupe {
+  display: grid;
+  gap: var(--e-16);
+}
+.fin-groupe-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-8) var(--e-16);
+  margin-bottom: var(--e-12);
+}
+.fin-groupe-tete h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-8);
+  margin: 0;
+  font-size: var(--t-16);
+}
+.fin-groupe-chiffres {
+  color: var(--text-muted);
+  font-size: var(--t-13);
+}

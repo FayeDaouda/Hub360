@@ -18,6 +18,7 @@ import {
 import { ParametresFacturationService } from './parametres-facturation.service';
 import { ControleInterneService } from './controle-interne.service';
 import { ETAPE } from '@hub/domain';
+import { FinancesGroupeService } from './finances-groupe.service';
 
 type R = { user: { societeId: string; userId: string; role: string } };
 
@@ -32,6 +33,7 @@ export class FacturationCentraleController {
     private facturation: FacturationService,
     private controle: ControleInterneService,
     private parametres: ParametresFacturationService,
+    private groupeService: FinancesGroupeService,
   ) {}
 
   @Get()
@@ -120,6 +122,13 @@ export class FacturationCentraleController {
 
   // --- Facture directe d'un lead (sans offre) — maquette Finances, oct. 2026 ---
   // Segments fixes, déclarés avant les routes ':id'.
+  // Finances du groupe (lot 4, 31/10/2026) : consolidé de toutes les sociétés.
+  @Get('groupe')
+  @RequiertPermission(ETAPE.financesGroupe, 'lecture')
+  groupe() {
+    return this.groupeService.consolide();
+  }
+
   @Get('leads')
   @RequiertPermission('finances_factures', 'ecriture')
   leads(@Req() req: R) {

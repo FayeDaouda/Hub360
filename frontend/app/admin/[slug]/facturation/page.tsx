@@ -56,10 +56,11 @@ import { ParametresFacturationFenetre } from '@/components/finances/parametres-f
 import { OngletTresorerie } from '@/components/finances/onglet-tresorerie';
 import { Delegation } from '@/components/pilotage/delegation';
 import { OngletRentabilite } from '@/components/finances/onglet-rentabilite';
+import { OngletGroupe } from '@/components/finances/onglet-groupe';
 import { Pill } from '@/components/ui/pill';
 import { Skeleton } from '@/components/ui/feedback';
 
-type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps';
+type Onglet = 'tableau' | 'tresorerie' | 'rentabilite' | 'devis' | 'factures' | 'temps' | 'groupe';
 type Props = { params: Promise<{ slug: string }> };
 
 // Finances · Devis et factures (maquette du boss, oct. 2026) : direction
@@ -84,6 +85,8 @@ export default function FinancesPage(props: Props) {
     // Rentabilité par projet (lot 7, décision 8) : CFO, CEO (montants), CTO (taux).
     // La matrice fait foi (revue CIO) : marges en lecture = Rentabilité (montants au CFO et au CEO, taux aux autres).
     rentabilite: niveauSuffisant(session, 'finances_marges', 'lecture'),
+    // Finances consolidées de toutes les sociétés (lot 4, 31/10/2026).
+    groupe: niveauSuffisant(session, ETAPE.financesGroupe, 'lecture'),
   };
   const validateur = droits.devisValidation || droits.facturesValidation;
   // CEO : validation des seules affaires au-delà du seuil de contresignature.
@@ -563,6 +566,17 @@ export default function FinancesPage(props: Props) {
           >
             Factures · {factures ? facturesFiltrees.length : '…'}
           </button>
+          {droits.groupe && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={onglet === 'groupe'}
+              className={onglet === 'groupe' ? 'is-active' : ''}
+              onClick={() => setOnglet('groupe')}
+            >
+              Groupe
+            </button>
+          )}
           {droits.tableauDeBord && (
             <button
               type="button"
@@ -599,6 +613,8 @@ export default function FinancesPage(props: Props) {
         )
       ) : onglet === 'rentabilite' ? (
         <OngletRentabilite slug={params.slug} />
+      ) : onglet === 'groupe' ? (
+        <OngletGroupe slug={params.slug} />
       ) : onglet === 'temps' ? (
         <OngletFeuilleTemps
           slug={params.slug}

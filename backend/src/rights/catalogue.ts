@@ -160,6 +160,16 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
       ecriture: 'Modifie la numérotation des factures et le profil de facturation',
     },
   },
+  // Lot 4 (Holding, 31/10/2026) : vue consolidée de toutes les sociétés.
+  {
+    module: 'finances_factures',
+    cle: ETAPE.financesGroupe,
+    nom: 'Finances du groupe',
+    ordre: 4,
+    libelles: {
+      lecture: 'Voit les finances consolidées de toutes les sociétés du groupe (facturé, encaissé, à encaisser)',
+    },
+  },
   {
     module: 'finances_marges',
     cle: ETAPE.financesMarges,

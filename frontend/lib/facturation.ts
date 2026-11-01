@@ -366,3 +366,29 @@ export function formaterNumero(f: FormatNumero, annee: number, sequence: number)
   const an = f.formatAnnee === 'AA' ? String(annee % 100).padStart(2, '0') : String(annee);
   return [f.prefixe, an, String(sequence).padStart(f.chiffres, '0')].filter(Boolean).join(f.separateur);
 }
+
+// Finances du groupe (lot 4, 31/10/2026) : consolidé de toutes les sociétés.
+type ChiffresGroupe = {
+  offresEnCours: number;
+  facture: number;
+  encaisse: number;
+  resteAEncaisser: number;
+  enRetard: { nombre: number; montant: number };
+};
+export type FinancesGroupe = {
+  societes: (ChiffresGroupe & {
+    societe: { id: string; nom: string; slug: string };
+    aEncaisser: {
+      id: string;
+      reference: string | null;
+      libelle: string;
+      client: string | null;
+      montantTtc: number;
+      resteAPayer: number;
+      echeanceLe: string | null;
+      joursRetard: number;
+    }[];
+  })[];
+  total: ChiffresGroupe;
+};
+export const getFinancesGroupe = (slug: string) => apiSociete<FinancesGroupe>(slug, '/factures/groupe');

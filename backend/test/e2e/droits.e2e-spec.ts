@@ -182,3 +182,25 @@ describe('Matrice des droits · Finances', () => {
     await api(app, cfo).post('/factures/parametres/numerotation', {}).expect(403);
   });
 });
+
+// Lot 4 : finances consolidées du groupe, ouvertes par une étape de la matrice.
+describe('Finances du groupe', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    app = await demarrer();
+  });
+  afterAll(() => app.close());
+
+  it('le CFO voit chaque société et le total ; le Dir. GC n’y a pas accès', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    const r = (await api(app, cfo).get('/factures/groupe').expect(200)).body as {
+      societes: { societe: { nom: string }; facture: number }[];
+      total: { facture: number };
+    };
+    expect(r.societes.map((s) => s.societe.nom)).toContain('Grey Concrete');
+    expect(r.total.facture).toBe(r.societes.reduce((t, s) => t + s.facture, 0));
+    await api(app, await connecter(app, COMPTES.dirgc))
+      .get('/factures/groupe')
+      .expect(403);
+  });
+});

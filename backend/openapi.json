@@ -2846,6 +2846,29 @@
         ]
       }
     },
+    "/api/societes/{slug}/factures/groupe": {
+      "get": {
+        "operationId": "FacturationCentraleController_groupe",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "FacturationCentrale"
+        ]
+      }
+    },
     "/api/societes/{slug}/factures/leads": {
       "get": {
         "operationId": "FacturationCentraleController_leads",

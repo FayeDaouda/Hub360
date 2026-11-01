@@ -106,6 +106,7 @@ export const ETAPE = {
   financesEncaissements: 'finances.encaissements',
   financesCloture: 'finances.cloture',
   financesParametres: 'finances.parametres',
+  financesGroupe: 'finances.groupe',
   financesMarges: 'finances_marges',
   financesRentabiliteDetail: 'finances.rentabilite_detail',
   financesCharges: 'finances_charges',

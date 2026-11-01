@@ -86,6 +86,7 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
     suppression: est(ROLE_CEO),
   };
   droits[ETAPE.financesParametres] = { ...NO_RIGHTS, lecture: factures.lecture, ecriture: est(ROLE_CFO) };
+  droits[ETAPE.financesGroupe] = { ...NO_RIGHTS, lecture: factures.lecture && est(ROLE_CEO, ROLE_CFO, ROLE_CTO) };
   droits[ETAPE.financesRentabiliteDetail] = {
     ...NO_RIGHTS,
     lecture: marges.lecture && est(ROLE_CFO, ROLE_CEO),
@@ -278,7 +279,8 @@ export async function installerSocle(prisma: PrismaClient) {
       },
     },
     [ROLE_CFO]: {
-      transverse: false,
+      // transverse (31/10/2026, lot 4) : le CFO travaille pour toutes les sociétés.
+      transverse: true,
       permissions: {
         crm: 'lecture',
         projets: 'lecture',
