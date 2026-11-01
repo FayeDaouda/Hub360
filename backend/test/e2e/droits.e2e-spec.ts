@@ -231,3 +231,32 @@ describe('Matrice des droits · Projets', () => {
     await api(app, cfo).get('/projets-ouverts/production').expect(200);
   });
 });
+
+// Lot 7 (RH) : archiver un dossier est la Suppression de « Dossiers du personnel ».
+describe('Matrice des droits · RH', () => {
+  let app: INestApplication;
+  let cio: string;
+  const roles: Record<string, string> = {};
+  beforeAll(async () => {
+    app = await demarrer();
+    cio = await connecter(app, COMPTES.cio);
+    for (const r of ((await api(app, cio).get('/roles').expect(200)).body as Matrice).roles) roles[r.nom] = r.id;
+  });
+  const regler = (droits: Record<string, boolean>) =>
+    api(app, cio)
+      .put('/roles/droits', { changements: [{ roleId: roles.CFO, etapeCle: 'rh', droits }] })
+      .expect(200);
+  afterAll(async () => {
+    await regler({ ...AUCUN, lecture: true });
+    await app.close();
+  });
+
+  it('archiver : refusé au CFO (lecture seule), la porte s’ouvre avec la case', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    const [dossier] = (await api(app, cfo).get('/rh/dossiers').expect(200)).body as { id: string }[];
+    await api(app, cfo).post(`/rh/dossiers/${dossier.id}/archivage`, {}).expect(403);
+    await regler({ ...AUCUN, lecture: true, suppression: true });
+    // Corps vide : la porte passe (400 de validation), rien n'est archivé.
+    await api(app, cfo).post(`/rh/dossiers/${dossier.id}/archivage`, {}).expect(400);
+  });
+});

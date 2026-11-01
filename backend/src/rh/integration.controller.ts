@@ -2,10 +2,11 @@ import { Body, Controller, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Req, U
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
-import { PermissionSelonMethode } from '../commun/permission.decorator';
+import { PermissionSelonMethode, RequiertPermission } from '../commun/permission.decorator';
 import { IntegrationService } from './integration.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
 import { PointIntegrationDto } from './integration.dto';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { userId: string } };
 
@@ -23,6 +24,7 @@ export class IntegrationController {
   }
 
   @Post(':dossierId/points/:jalon')
+  @RequiertPermission(ETAPE.rhIntegration, 'ecriture')
   point(
     @Req() req: R,
     @Param('dossierId', ParseUUIDPipe) dossierId: string,
@@ -33,6 +35,7 @@ export class IntegrationController {
   }
 
   @Post(':dossierId/confirmation')
+  @RequiertPermission(ETAPE.rhIntegration, 'ecriture')
   confirmer(@Req() req: R, @Param('dossierId', ParseUUIDPipe) dossierId: string) {
     return this.integration.confirmer(req.user, dossierId);
   }

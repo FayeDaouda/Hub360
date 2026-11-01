@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ApiError } from '@/lib/client-api';
-import { formatAmount, formatDate, todayIso } from '@hub/domain';
+import { ETAPE, formatAmount, formatDate, todayIso } from '@hub/domain';
 import {
   dateEffetMin,
   getSalaireDossier,
@@ -16,6 +16,8 @@ import {
 import type { DossierPersonnel } from '@/lib/types';
 import { Pill } from '@/components/ui/pill';
 import { Field, FieldError } from '@/components/ui/field';
+import { niveauSuffisant } from '@/lib/auth';
+import { useSessionCourante } from '@/lib/layout-contexte';
 
 const message = (e: unknown, repli: string) => (e instanceof ApiError ? e.message : repli);
 const STATUT: Record<ChangementSalaire['statut'], { libelle: string; pill: string }> = {
@@ -36,6 +38,10 @@ export function SalaireDossier({
   dossier: DossierPersonnel;
   ecriture: boolean;
 }) {
+  // Proposer un salaire : l'Écriture de l'étape « Salaires » (matrice,
+  // 31/10/2026), en plus de l'écriture du dossier.
+  const session = useSessionCourante();
+  const peutProposer = ecriture && niveauSuffisant(session, ETAPE.rhSalaires, 'ecriture');
   const [historique, setHistorique] = useState<HistoriqueSalaire | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -91,7 +97,7 @@ export function SalaireDossier({
             disabled={envoi}
             onClick={() => lancer(() => getSalaireDossier(slug, dossier.id), 'Salaire indisponible.')}
           >
-            {dossier.salaireRenseigne ? 'Afficher' : ecriture ? 'Proposer le salaire d’entrée' : 'Historique'}
+            {dossier.salaireRenseigne ? 'Afficher' : peutProposer ? 'Proposer le salaire d’entrée' : 'Historique'}
           </button>
           {dossier.salaireEnAttente && <Pill tone="attention">Changement en attente de validation</Pill>}
         </span>
@@ -118,7 +124,7 @@ export function SalaireDossier({
             — en attente de validation du {historique.valideur}
             {enAttente.proposePar && ` (proposé par ${enAttente.proposePar})`}
           </span>
-          {ecriture && (
+          {peutProposer && (
             <button
               type="button"
               className="btn-ghost btn-ghost--sm"
@@ -131,7 +137,7 @@ export function SalaireDossier({
         </div>
       )}
 
-      {ecriture && !enAttente && (
+      {peutProposer && !enAttente && (
         <div className="sal-proposer">
           <p className="field-label">{aUnSalaire ? 'Proposer un changement' : 'Proposer le salaire d’entrée'}</p>
           <div className="sal-proposer-champs">

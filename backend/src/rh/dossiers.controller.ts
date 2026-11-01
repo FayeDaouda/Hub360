@@ -16,11 +16,12 @@ import { TypePieceDossier } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { PermissionGuard } from '../commun/permission.guard';
-import { PermissionSelonMethode } from '../commun/permission.decorator';
+import { PermissionSelonMethode, RequiertPermission } from '../commun/permission.decorator';
 import { DossiersPersonnelService } from './dossiers.service';
 import { ArchivageDto, DecisionPaiementDto, DossierPersonnelDto, PieceDto, PropositionSalaireDto } from './dto';
 import { SalairesService } from './salaires.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { userId: string } };
 
@@ -48,6 +49,7 @@ export class DossiersPersonnelController {
 
   // Masse salariale (agrégat) : segment fixe, déclaré avant ':id'.
   @Get('masse-salariale')
+  @RequiertPermission(ETAPE.rhSalaires, 'lecture')
   masseSalariale() {
     return this.dossiers.masseSalariale();
   }
@@ -60,16 +62,19 @@ export class DossiersPersonnelController {
   // Salaire d'un dossier (en vigueur + historique) : affiché à la demande,
   // chaque affichage tracé. La RH propose un changement, le CFO le valide.
   @Get(':id/salaire')
+  @RequiertPermission(ETAPE.rhSalaires, 'lecture')
   salaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.salaires.historique(id, req.user.userId);
   }
 
   @Post(':id/salaires')
+  @RequiertPermission(ETAPE.rhSalaires, 'ecriture')
   proposerSalaire(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: PropositionSalaireDto) {
     return this.salaires.proposer(id, dto, req.user.userId);
   }
 
   @Delete(':id/salaires/:changementId')
+  @RequiertPermission(ETAPE.rhSalaires, 'suppression')
   async retirerSalaire(
     @Req() req: R,
     @Param('id', ParseUUIDPipe) id: string,
@@ -104,11 +109,13 @@ export class DossiersPersonnelController {
   }
 
   @Post(':id/archivage')
+  @RequiertPermission(ETAPE.rh, 'suppression')
   archiver(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ArchivageDto) {
     return this.dossiers.archiver(id, dto.archive, req.user.userId, dto.reaffectations);
   }
 
   @Post(':id/paiement')
+  @RequiertPermission(ETAPE.rh, 'validation')
   deciderPaiement(@Param('id', ParseUUIDPipe) id: string, @Body() dto: DecisionPaiementDto) {
     return this.dossiers.deciderPaiement(id, dto.valide);
   }
@@ -130,6 +137,7 @@ export class DossiersPersonnelController {
   }
 
   @Put(':id/bulletins/:mois')
+  @RequiertPermission(ETAPE.rhBulletins, 'ecriture')
   deposerBulletin(
     @Req() req: R,
     @Param('id', ParseUUIDPipe) id: string,
@@ -140,6 +148,7 @@ export class DossiersPersonnelController {
   }
 
   @Delete(':id/bulletins/:mois')
+  @RequiertPermission(ETAPE.rhBulletins, 'suppression')
   retirerBulletin(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Param('mois') mois: string) {
     return this.dossiers.retirerBulletin(id, mois, req.user.userId);
   }

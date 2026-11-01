@@ -123,4 +123,11 @@ export const ETAPE = {
   // Équipe (lot 6).
   equipe: 'equipe',
   equipeProjets: 'equipe.projets',
+  // RH (lot 7) : « rh » reste l'étape principale (dossiers du personnel).
+  rh: 'rh',
+  rhSalaires: 'rh.salaires',
+  rhBulletins: 'rh.bulletins',
+  rhTemps: 'rh.temps',
+  rhIntegration: 'rh.integration',
+  rhDemandes: 'rh.demandes',
 } as const;

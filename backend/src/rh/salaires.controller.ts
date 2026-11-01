@@ -6,6 +6,7 @@ import { RequiertPermission } from '../commun/permission.decorator';
 import { DecisionSalaireDto } from './dto';
 import { SalairesService } from './salaires.service';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { userId: string } };
 
@@ -30,6 +31,7 @@ export class SalairesController {
   }
 
   @Post(':id/decision')
+  @RequiertPermission(ETAPE.rhSalaires, 'validation')
   decider(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: DecisionSalaireDto) {
     return this.salaires.decider(id, req.user.userId, dto.valide, dto.motifRefus);
   }

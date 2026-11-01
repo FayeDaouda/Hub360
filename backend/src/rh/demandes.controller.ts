@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
 import { MembreSocieteGuard } from '../commun/membre-societe.guard';
 import { PermissionGuard } from '../commun/permission.guard';
-import { PermissionSelonMethode } from '../commun/permission.decorator';
+import { PermissionSelonMethode, RequiertPermission } from '../commun/permission.decorator';
 import { DemandesService } from './demandes.service';
 import {
   DecisionN1Dto,
@@ -17,6 +17,7 @@ import {
 import { PieceDto } from './dto';
 import { GroupScope } from '../tenancy/tenant-scope.decorators';
 import { ROLE_HR } from '@hub/domain';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { userId: string; societeId: string; role: string } };
 
@@ -127,26 +128,31 @@ export class DemandesRhController {
   }
 
   @Post('absences/:id/validation')
+  @RequiertPermission(ETAPE.rhDemandes, 'validation')
   valider(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: ValidationRhDto) {
     return this.demandes.validationRh(req.user, id, dto.valide, dto.motif);
   }
 
   @Post('attestations/:id/delivrance')
+  @RequiertPermission(ETAPE.rhDemandes, 'ecriture')
   delivrer(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: PieceDto) {
     return this.demandes.delivrerAttestation(req.user, id, dto);
   }
 
   @Post('remboursements/:id/transmission')
+  @RequiertPermission(ETAPE.rhDemandes, 'ecriture')
   transmettre(@Req() req: R, @Param('id', ParseUUIDPipe) id: string) {
     return this.demandes.transitionRemboursement(req.user, id, 'transmettre');
   }
 
   @Post('remboursements/:id/remboursement')
+  @RequiertPermission(ETAPE.rhDemandes, 'ecriture')
   rembourse(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: RembourseDto) {
     return this.demandes.transitionRemboursement(req.user, id, 'rembourser', dto);
   }
 
   @Post('remboursements/:id/rejet')
+  @RequiertPermission(ETAPE.rhDemandes, 'ecriture')
   rejeter(@Req() req: R, @Param('id', ParseUUIDPipe) id: string, @Body() dto: RejetDto) {
     return this.demandes.transitionRemboursement(req.user, id, 'rejeter', dto);
   }

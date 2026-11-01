@@ -60,7 +60,7 @@ import { DepotBulletins } from '@/components/rh/depot-bulletins';
 import { SalaireDossier } from '@/components/rh/salaire-dossier';
 import { SalairesAValider } from '@/components/rh/salaires-a-valider';
 import { useConfirmer } from '@/components/confirmation';
-import { addMonths, formatDate, formatMonthYear, plural, ROLE_COMPANY_ADMIN, todayIso } from '@hub/domain';
+import { addMonths, ETAPE, formatDate, formatMonthYear, plural, todayIso } from '@hub/domain';
 import { CloseButton, Modal } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
 import { EmptyState, Skeleton } from '@/components/ui/feedback';
@@ -90,7 +90,14 @@ export default function RhPage(props: Props) {
   const params = use(props.params);
   useTitrePage('Ressources humaines · Groupe');
   const session = useSessionCourante();
-  const ecriture = session.role === ROLE_COMPANY_ADMIN || niveauSuffisant(session, 'rh', 'ecriture');
+  // Une étape de la matrice par onglet (31/10/2026) ; le serveur revérifie.
+  const ecriture = niveauSuffisant(session, ETAPE.rh, 'ecriture');
+  const agitTemps =
+    niveauSuffisant(session, ETAPE.rhTemps, 'ecriture') || niveauSuffisant(session, ETAPE.rhTemps, 'validation');
+  const agitIntegration = niveauSuffisant(session, ETAPE.rhIntegration, 'ecriture');
+  const deposeBulletins = niveauSuffisant(session, ETAPE.rhBulletins, 'ecriture');
+  const agitDemandes =
+    niveauSuffisant(session, ETAPE.rhDemandes, 'ecriture') || niveauSuffisant(session, ETAPE.rhDemandes, 'validation');
 
   const [dossiers, setDossiers] = useState<DossierPersonnel[] | null>(null);
   const [options, setOptions] = useState<OptionsDossiers | null>(null);
@@ -303,15 +310,19 @@ export default function RhPage(props: Props) {
         <p className="rh-sous-titre">
           Dossiers du personnel des sociétés du groupe. Accès : RH, CFO et CEO (manuel §3.7, League Admin).
         </p>
-        {ecriture && (
+        {(ecriture || deposeBulletins) && (
           <span className="rh-entete-actions">
             {/* Tous les bulletins du mois en une fois (revue RH 20/10/2026). */}
-            <button type="button" className="btn-ghost" onClick={() => setDepotBulletins(true)}>
-              <FileStack size={16} aria-hidden /> Bulletins du mois
-            </button>
-            <button type="button" className="btn-primary" onClick={() => setOuvert('nouveau')}>
-              <Plus size={16} aria-hidden /> Nouveau salarié
-            </button>
+            {deposeBulletins && (
+              <button type="button" className="btn-ghost" onClick={() => setDepotBulletins(true)}>
+                <FileStack size={16} aria-hidden /> Bulletins du mois
+              </button>
+            )}
+            {ecriture && (
+              <button type="button" className="btn-primary" onClick={() => setOuvert('nouveau')}>
+                <Plus size={16} aria-hidden /> Nouveau salarié
+              </button>
+            )}
           </span>
         )}
       </div>
@@ -396,9 +407,9 @@ export default function RhPage(props: Props) {
     return (
       <>
         {entete}
-        {onglet === 'temps' && <FeuillesTempsRh slug={params.slug} ecriture={ecriture} />}
-        {onglet === 'integration' && <IntegrationRh slug={params.slug} ecriture={ecriture} />}
-        {onglet === 'demandes' && <DemandesRh slug={params.slug} ecriture={ecriture} />}
+        {onglet === 'temps' && <FeuillesTempsRh slug={params.slug} ecriture={agitTemps} />}
+        {onglet === 'integration' && <IntegrationRh slug={params.slug} ecriture={agitIntegration} />}
+        {onglet === 'demandes' && <DemandesRh slug={params.slug} ecriture={agitDemandes} />}
         {fiche}
         {depot}
       </>
