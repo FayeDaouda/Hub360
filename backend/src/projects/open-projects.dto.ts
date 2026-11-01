@@ -5,6 +5,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
@@ -111,4 +112,28 @@ export class SiteVisitDateDto {
 // 14/10/2026, en attendant les étapes de fin de projet du gabarit).
 export class SiteStatusDto {
   @IsIn(['conception', 'chantier', 'livre']) statut!: 'conception' | 'chantier' | 'livre';
+}
+
+// Personnalisation d'un projet (01/11/2026) — POST …/:id/cartes/:carteId/lignes.
+export class CustomLineDto {
+  @IsString() @MinLength(2) @MaxLength(160) libelle!: string;
+  @IsOptional() @IsInt() debutJ?: number;
+  @IsOptional() @IsInt() finJ?: number;
+  // Absent ou null : sans temps atelier.
+  @IsOptional() @IsNumber() heures?: number | null;
+  @IsOptional() @IsBoolean() visaRequis?: boolean;
+  @IsOptional() @IsBoolean() fichierObligatoire?: boolean;
+  @IsOptional() @IsString() @MaxLength(1000) descriptif?: string;
+}
+
+// PATCH …/:id/taches/:tacheId/ligne — seuls les champs envoyés changent ;
+// debutJ et finJ à null retirent la fenêtre.
+export class UpdateLineDto {
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(160) libelle?: string;
+  @IsOptional() @IsInt() debutJ?: number | null;
+  @IsOptional() @IsInt() finJ?: number | null;
+  @IsOptional() @IsNumber() heures?: number | null;
+  @IsOptional() @IsBoolean() visaRequis?: boolean;
+  @IsOptional() @IsBoolean() fichierObligatoire?: boolean;
+  @IsOptional() @IsString() @MaxLength(1000) descriptif?: string;
 }

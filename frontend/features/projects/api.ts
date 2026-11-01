@@ -1,6 +1,6 @@
 import { apiSociete } from '@/lib/client-api';
 import { telechargerFichier } from '@/lib/fichiers';
-import type { ReponseApi } from '@/lib/api/types';
+import type { CorpsRequete, ReponseApi } from '@/lib/api/types';
 import type {
   AssignableEmployee,
   MyMention,
@@ -135,6 +135,19 @@ export const addTsElement = (slug: string, projetId: string, carteId: string, el
     method: 'POST',
     body: { carteId, element, ...reprise },
   });
+
+// Personnalisation d'un projet (01/11/2026) : ligne ajoutée, modifiée, retirée.
+export type CustomLineBody = CorpsRequete<'/api/societes/{slug}/projets-ouverts/{id}/cartes/{carteId}/lignes', 'post'>;
+export type UpdateLineBody = CorpsRequete<'/api/societes/{slug}/projets-ouverts/{id}/taches/{tacheId}/ligne', 'patch'>;
+export const addProjectLine = (slug: string, projetId: string, carteId: string, body: CustomLineBody) =>
+  apiSociete<{ ok: boolean; tacheId?: string }>(slug, `/projets-ouverts/${projetId}/cartes/${carteId}/lignes`, {
+    method: 'POST',
+    body,
+  });
+export const updateProjectLine = (slug: string, projetId: string, tacheId: string, body: UpdateLineBody) =>
+  apiSociete<{ ok: boolean }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/ligne`, { method: 'PATCH', body });
+export const removeProjectLine = (slug: string, projetId: string, tacheId: string) =>
+  apiSociete<{ ok: boolean }>(slug, `/projets-ouverts/${projetId}/taches/${tacheId}/ligne`, { method: 'DELETE' });
 
 export const decideTsRequest = (slug: string, projetId: string, demandeId: string, accepter: boolean, motif?: string) =>
   apiSociete<TsRequestDecision>(slug, `/projets-ouverts/${projetId}/ts/demandes/${demandeId}/decision`, {

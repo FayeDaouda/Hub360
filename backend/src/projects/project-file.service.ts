@@ -73,6 +73,30 @@ export class ProjectFileService {
     private states: ProjectStatesService,
   ) {}
 
+  // Journal des personnalisations du projet (50 dernières).
+  private async customizations(projectId: string) {
+    const rows = await this.prisma.modificationProjet.findMany({
+      where: { projetId: projectId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    const ids = [...new Set(rows.map((r) => r.parId).filter((x): x is string => !!x))];
+    const names = new Map(
+      (
+        await this.prisma.utilisateur.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, prenom: true, nom: true },
+        })
+      ).map((u) => [u.id, fullName(u)]),
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      libelle: r.libelle,
+      par: r.parId ? (names.get(r.parId) ?? null) : null,
+      le: r.createdAt.toISOString(),
+    }));
+  }
+
   async file(companyId: string, projectId: string, actor: Actor & { permissions?: Record<string, string> }) {
     const { decider, ctx } = await this.states.decider(companyId, actor);
     const p = await this.prisma.projet.findFirst({
@@ -182,6 +206,8 @@ export class ProjectFileService {
         (aLaPermission(actor.permissions, ETAPE.projetsAssignation, 'ecriture') &&
           (actor.role !== ROLE_CTO || ctx.ctoStandsIn)) ||
         (!!me && p.cellules.some((c) => c.cellule.dispatcher?.id === me)),
+      peutPersonnaliser: hasRight(actor.permissions, ETAPE.projetsPersonnalisation, 'ecriture'),
+      personnalisations: await this.customizations(p.id),
       // « Ajouter en TS » (Architecte DPLG) : cartes « par unité » actives.
       optionsTs: dplgConnected
         ? p.cartes.flatMap((c) => {
@@ -220,6 +246,7 @@ export class ProjectFileService {
             id: t.id,
             cle: t.cle,
             libelle: t.libelle,
+            ajouteeAuProjet: t.ajouteeAuProjet,
             descriptif: t.descriptif,
             sourceNative: t.sourceNative,
             fichierObligatoire: t.fichierObligatoire,

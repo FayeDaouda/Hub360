@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, MessageCircle, UserRound, UsersRound } from 'lucide-react';
+import { Check, ChevronDown, Minus, MessageCircle, Pencil, Plus, Trash2, UserRound, UsersRound } from 'lucide-react';
 import { Pill } from '@/components/ui/pill';
 import { formatDayMonth, plural, stripAccents } from '@hub/domain';
 import { blockAssignment, cardPill, HOURS_PER_DAY, taskHoursLabel, taskPill } from './labels';
@@ -23,7 +23,34 @@ type Props = {
   onAssignBlock?: () => void;
   // Toutes les tâches du bloc, quand « Seulement mes tâches » en masque.
   blockTasks?: ProjectCard['taches'];
+  // Personnalisation du projet (01/11/2026) : présente = mode personnalisation.
+  customize?: {
+    onAdd: () => void;
+    onEdit: (t: ProjectCard['taches'][number]) => void;
+    onRemove: (t: ProjectCard['taches'][number]) => void;
+  };
 };
+
+// Coche d'une ligne (01/11/2026) : accomplie = validée (visa compris) ;
+// « non nécessaire » compte comme faite, en gris.
+type Done = 'faite' | 'sans_objet' | null;
+const doneOf = (t: ProjectCard['taches'][number]): Done =>
+  t.etat.code === 'validee' ? 'faite' : t.etat.code === 'non_necessaire' ? 'sans_objet' : null;
+function Coche({ done }: { done: Done }) {
+  return (
+    <span
+      className={`po-coche${done ? ` po-coche--${done}` : ''}`}
+      role="img"
+      aria-label={done === 'faite' ? 'Accomplie' : done === 'sans_objet' ? 'Non nécessaire' : 'Pas encore accomplie'}
+    >
+      {done === 'faite' ? (
+        <Check size={13} strokeWidth={3} aria-hidden />
+      ) : done === 'sans_objet' ? (
+        <Minus size={13} strokeWidth={3} aria-hidden />
+      ) : null}
+    </span>
+  );
+}
 
 // Clé technique (« laterale_droite ») qui ne fait que répéter le libellé.
 const normalize = (x: string) =>
@@ -44,10 +71,14 @@ export function ProjectCardView({
   visit,
   onAssignBlock,
   blockTasks,
+  customize,
 }: Props) {
   const pill = cardPill(c.etat);
-  // Carte close (tout validé) : repliée sur une ligne, dépliable au clic.
-  const collapsible = c.etat.code === 'close';
+  // Lignes accomplies : validées ou non nécessaires.
+  const doneCount = c.taches.filter((t) => doneOf(t)).length;
+  // Carte close (tout validé) : repliée sur une ligne, dépliable au clic —
+  // sauf en personnalisation.
+  const collapsible = c.etat.code === 'close' && !customize;
   const [expanded, setExpanded] = useState(!collapsible);
   if (collapsible && !expanded) {
     return (
@@ -58,7 +89,9 @@ export function ProjectCardView({
             {c.libelle}
           </span>
           <span className="po-carte-repliee-droite">
-            <span className="po-aide">{plural(c.taches.length, 'tâche')}</span>
+            <span className="po-aide">
+              {doneCount} / {plural(c.taches.length, 'tâche')} accomplie{doneCount > 1 ? 's' : ''}
+            </span>
             <Pill tone={pill.ton}>{pill.libelle}</Pill>
           </span>
         </button>
@@ -121,6 +154,11 @@ export function ProjectCardView({
             </button>
           )}
           <Pill tone={pill.ton}>{pill.libelle}</Pill>
+          {c.taches.length > 0 && (
+            <span className={`po-compteur${doneCount === c.taches.length ? ' is-complet' : ''}`}>
+              <Check size={13} strokeWidth={3} aria-hidden /> {doneCount} / {c.taches.length}
+            </span>
+          )}
           {timeWindow && <span className="po-aide">{timeWindow}</span>}
           {tags.map((e) => (
             <Pill key={e} tone="neutre">
@@ -143,9 +181,10 @@ export function ProjectCardView({
           {c.taches.map((t) => {
             const pt = taskPill(t.etat);
             const off = t.etat.code === 'non_necessaire' || t.etat.code === 'desactivee';
-            const keyShown = !sameAsLabel(t.cle, t.libelle);
+            const keyShown = !sameAsLabel(t.cle, t.libelle) && !t.ajouteeAuProjet;
+            const done = doneOf(t);
             return (
-              <li key={t.id}>
+              <li key={t.id} className={customize ? 'po-tache-perso' : undefined}>
                 <button
                   type="button"
                   className={`po-tache${t.id === taskId ? ' is-actif' : ''}${off ? ' is-eteinte' : ''}`}
@@ -153,12 +192,17 @@ export function ProjectCardView({
                   onClick={() => onTask(t.id)}
                 >
                   <span className="po-tache-libelle">
-                    <strong>{t.libelle}</strong>
-                    {(keyShown || t.motif) && (
-                      <span className="po-aide">
-                        {[keyShown && t.cle.replace(/_/g, ' '), t.motif].filter(Boolean).join(' · ')}
-                      </span>
-                    )}
+                    <Coche done={done} />
+                    <span className="po-tache-titre">
+                      <strong className={done ? 'is-faite' : undefined}>{t.libelle}</strong>
+                      {(keyShown || t.motif || t.ajouteeAuProjet) && (
+                        <span className="po-aide">
+                          {[t.ajouteeAuProjet && 'ajoutée au projet', keyShown && t.cle.replace(/_/g, ' '), t.motif]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      )}
+                    </span>
                   </span>
                   <span className="po-tache-assigne">{t.assigne?.nom ?? 'À assigner'}</span>
                   <span className="po-tache-heures">{taskHoursLabel(t)}</span>
@@ -174,10 +218,37 @@ export function ProjectCardView({
                     )}
                   </span>
                 </button>
+                {customize && (
+                  <span className="po-tache-outils">
+                    <button
+                      type="button"
+                      className="po-outil"
+                      aria-label={`Modifier la ligne ${t.libelle}`}
+                      title="Modifier la ligne"
+                      onClick={() => customize.onEdit(t)}
+                    >
+                      <Pencil size={14} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className="po-outil po-outil--retirer"
+                      aria-label={`Retirer la ligne ${t.libelle}`}
+                      title="Retirer la ligne"
+                      onClick={() => customize.onRemove(t)}
+                    >
+                      <Trash2 size={14} aria-hidden />
+                    </button>
+                  </span>
+                )}
               </li>
             );
           })}
         </ul>
+      )}
+      {customize && !c.fichiers && !disabled && (
+        <button type="button" className="po-ajouter-ligne" onClick={customize.onAdd}>
+          <Plus size={14} aria-hidden /> Ajouter une ligne
+        </button>
       )}
       <button
         type="button"

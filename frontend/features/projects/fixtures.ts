@@ -14,6 +14,7 @@ export function taskFixture(over: Partial<ProjectTask> = {}): ProjectTask {
     id: 't1',
     cle: 'plan_masse',
     libelle: 'Plan masse',
+    ajouteeAuProjet: false,
     descriptif: null,
     sourceNative: false,
     fichierObligatoire: true,
@@ -91,6 +92,8 @@ export function fileFixture(over: Partial<OpenProjectFile> = {}): OpenProjectFil
     statutChantier: 'conception',
     factures: { F1: 'emise', F2: 'absente', F3: 'absente' },
     peutAssigner: false,
+    peutPersonnaliser: false,
+    personnalisations: [],
     optionsTs: [],
     attentes: { F2: ['02', '03'], F3: ['06'] },
     etapes: [

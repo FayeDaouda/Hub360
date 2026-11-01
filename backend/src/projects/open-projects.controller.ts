@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiExtraModels } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BackOfficeGuard } from '../commun/back-office.guard';
@@ -7,6 +7,7 @@ import { PermissionGuard } from '../commun/permission.guard';
 import {
   AssignCardDto,
   AssignTaskDto,
+  CustomLineDto,
   DecideExtensionDto,
   DecideTaskDto,
   PostCommentDto,
@@ -15,12 +16,14 @@ import {
   SiteVisitDateDto,
   SubmitTaskDto,
   TaskVisaDto,
+  UpdateLineDto,
 } from './open-projects.dto';
 import { OpenProjectFileDto } from './open-project-file.dto';
 import {
   AssignableEmployeeDto,
   AssignmentResultDto,
   CommentRefDto,
+  CustomizationResultDto,
   ExtensionDecisionResultDto,
   ExtensionRequestResultDto,
   MentionablePersonDto,
@@ -40,6 +43,7 @@ import {
 } from './open-projects-view.dto';
 import { ProductionViewDto } from './production-view.dto';
 import { ProductionService } from './production.service';
+import { ProjectCustomizationService } from './project-customization.service';
 import { ProjectFileService } from './project-file.service';
 import { ProjectSiteService } from './project-site.service';
 import { PROJECT_STATE_MODELS } from './project-state.dto';
@@ -67,6 +71,7 @@ export class OpenProjectsController {
     private review: TaskReviewService,
     private extension: TaskExtensionService,
     private threads: ProjectThreadsService,
+    private customization: ProjectCustomizationService,
   ) {}
 
   @Get()
@@ -277,6 +282,40 @@ export class OpenProjectsController {
     @Body() dto: DecideTaskDto,
   ): Promise<ReviewDecisionResultDto> {
     return this.review.decide(req.user.societeId, req.user, projectId, taskId, dto.decision, dto.motif);
+  }
+
+  // Personnalisation d'un projet (01/11/2026) : ligne ajoutée en fin de
+  // carte, modifiée ou retirée (droit vérifié par le service).
+  @Post(':id/cartes/:carteId/lignes')
+  @RequiertPermission('projets', 'lecture')
+  addLine(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('carteId') cardId: string,
+    @Body() dto: CustomLineDto,
+  ): Promise<CustomizationResultDto> {
+    return this.customization.addLine(req.user.societeId, req.user, projectId, cardId, dto);
+  }
+
+  @Patch(':id/taches/:tacheId/ligne')
+  @RequiertPermission('projets', 'lecture')
+  updateLine(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+    @Body() dto: UpdateLineDto,
+  ): Promise<CustomizationResultDto> {
+    return this.customization.updateLine(req.user.societeId, req.user, projectId, taskId, dto);
+  }
+
+  @Delete(':id/taches/:tacheId/ligne')
+  @RequiertPermission('projets', 'lecture')
+  removeLine(
+    @Req() req: R,
+    @Param('id') projectId: string,
+    @Param('tacheId') taskId: string,
+  ): Promise<CustomizationResultDto> {
+    return this.customization.removeLine(req.user.societeId, req.user, projectId, taskId);
   }
 
   // Visa DPLG d'une tâche validée (droits vérifiés par le service).

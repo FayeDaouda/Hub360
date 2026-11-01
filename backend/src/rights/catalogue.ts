@@ -279,6 +279,14 @@ export const ETAPES_DETAILLEES: EtapeCatalogue[] = [
     ordre: 7,
     libelles: { lecture: 'Voit le tableau de production (le Dir. GC : les projets qu’il porte)' },
   },
+  // Personnalisation (01/11/2026, migration 20261102130000_personnalisation_projet).
+  {
+    module: 'projets',
+    cle: ETAPE.projetsPersonnalisation,
+    nom: 'Personnalisation du projet',
+    ordre: 8,
+    libelles: { ecriture: 'Ajoute, modifie ou retire des lignes d’un projet en cours, sans toucher au gabarit' },
+  },
 
   // Équipe (lot 6, 31/10/2026).
   {

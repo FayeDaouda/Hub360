@@ -1056,6 +1056,8 @@ model Projet {
   taches            TacheProjet[]
   commentaires      CommentaireProjet[]
 
+  modifications ModificationProjet[]
+
   @@map("projets")
 }
 
@@ -2647,6 +2649,9 @@ model TacheProjet {
   // Élément ajouté en TS : devis d'avenant qui le facture (ligne ajoutée à
   // l'ajout). Le devis n'est jamais recréé — seules ses lignes le sont.
   devisTsId          String?           @map("devis_ts_id")
+  // Ligne ajoutée à ce projet par la direction (absente de sa version du
+  // gabarit — personnalisation du 01/11/2026).
+  ajouteeAuProjet    Boolean           @default(false) @map("ajoutee_au_projet")
 
   projet        Projet                 @relation(fields: [projetId], references: [id], onDelete: Cascade)
   devisTs       Devis?                 @relation(fields: [devisTsId], references: [id], onDelete: SetNull)
@@ -3146,4 +3151,19 @@ model PieceCandidature {
 
   @@index([candidatureId])
   @@map("pieces_candidature")
+}
+
+// Journal des personnalisations d'un projet (01/11/2026) : ligne ajoutée,
+// modifiée ou retirée par la direction ; jamais modifié ni supprimé.
+model ModificationProjet {
+  id        String   @id @default(uuid())
+  projetId  String   @map("projet_id")
+  libelle   String // pré-rendu : « Documents du client · NINEA — ligne retirée »
+  parId     String?  @map("par_id") // audit, pas de FK
+  createdAt DateTime @default(now()) @map("created_at")
+
+  projet Projet @relation(fields: [projetId], references: [id], onDelete: Cascade)
+
+  @@index([projetId, createdAt])
+  @@map("modifications_projet")
 }

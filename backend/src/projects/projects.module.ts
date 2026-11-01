@@ -4,6 +4,7 @@ import { ReglagesModule } from '../reglages/reglages.module';
 import { OpenProjectsController } from './open-projects.controller';
 import { ProductionService } from './production.service';
 import { ProjectAlertsService } from './project-alerts.service';
+import { ProjectCustomizationService } from './project-customization.service';
 import { ProjectFileService } from './project-file.service';
 import { ProjectOpeningService } from './project-opening.service';
 import { ProjectSiteService } from './project-site.service';
@@ -47,6 +48,7 @@ import { TsElementsService } from './ts-elements.service';
     ProjectThreadsService,
     ProjectOpeningService,
     ProjectTeamsService,
+    ProjectCustomizationService,
   ],
   exports: [
     ProjectStatesService,

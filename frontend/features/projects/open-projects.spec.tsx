@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConfirmationProvider } from '@/components/confirmation';
 import { ApiError } from '@/lib/client-api';
 import { boardFixture, fileFixture } from './fixtures';
 import { OpenProjects } from './open-projects';
@@ -37,7 +38,11 @@ describe('OpenProjects', () => {
   it('chargement, puis le projet et son dossier ouvert sur l’étape par défaut', async () => {
     api.getBoard.mockResolvedValue(boardFixture());
     api.getProjectFile.mockResolvedValue(fileFixture());
-    const { container } = render(<OpenProjects slug="gc" />);
+    const { container } = render(
+      <ConfirmationProvider>
+        <OpenProjects slug="gc" />
+      </ConfirmationProvider>,
+    );
     expect(container.querySelector('.skeleton, .admin-skeleton, [aria-busy]')).not.toBeNull();
     // Tableau puis dossier : deux chargements enchaînés, plus lents qu'un seul.
     expect(await screen.findByRole('heading', { name: /FS_POI\.26/ }, { timeout: 3000 })).toBeInTheDocument();
@@ -49,7 +54,11 @@ describe('OpenProjects', () => {
   it('une tâche ouvre son panneau ; changer d’étape le ferme', async () => {
     api.getBoard.mockResolvedValue(boardFixture());
     api.getProjectFile.mockResolvedValue(fileFixture());
-    render(<OpenProjects slug="gc" />);
+    render(
+      <ConfirmationProvider>
+        <OpenProjects slug="gc" />
+      </ConfirmationProvider>,
+    );
     await userEvent.click(await screen.findByRole('button', { name: /Plan masse/ }, { timeout: 3000 }));
     expect(screen.getByText('Panneau de la tâche')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: /Esquisse/ }));
@@ -58,14 +67,22 @@ describe('OpenProjects', () => {
 
   it('aucun projet ouvert : le message explique quand un projet s’ouvre', async () => {
     api.getBoard.mockResolvedValue(boardFixture({ projets: [] }));
-    render(<OpenProjects slug="gc" />);
+    render(
+      <ConfirmationProvider>
+        <OpenProjects slug="gc" />
+      </ConfirmationProvider>,
+    );
     expect(await screen.findByRole('heading', { name: 'Aucun projet ouvert' })).toBeInTheDocument();
     expect(api.getProjectFile).not.toHaveBeenCalled();
   });
 
   it('erreur de lecture : le message du serveur', async () => {
     api.getBoard.mockRejectedValue(new ApiError('Projets indisponibles pour le moment.', 503));
-    render(<OpenProjects slug="gc" />);
+    render(
+      <ConfirmationProvider>
+        <OpenProjects slug="gc" />
+      </ConfirmationProvider>,
+    );
     expect(await screen.findByText('Projets indisponibles pour le moment.')).toBeInTheDocument();
   });
 });

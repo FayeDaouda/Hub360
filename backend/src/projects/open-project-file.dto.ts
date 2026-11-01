@@ -107,6 +107,8 @@ export class ProjectTaskDto {
   id!: string;
   cle!: string;
   libelle!: string;
+  // Ligne ajoutée à ce projet (absente de sa version du gabarit).
+  ajouteeAuProjet!: boolean;
   descriptif!: string | null;
   sourceNative!: boolean;
   fichierObligatoire!: boolean;
@@ -167,6 +169,14 @@ export class ProjectCardDto {
   taches!: ProjectTaskDto[];
 }
 
+// Journal des personnalisations du projet (le plus récent d'abord).
+export class ProjectCustomizationDto {
+  id!: string;
+  libelle!: string;
+  par!: string | null;
+  le!: string;
+}
+
 export class OpenProjectFileDto {
   id!: string;
   code!: string;
@@ -187,6 +197,9 @@ export class OpenProjectFileDto {
   statutChantier!: SiteStatus;
   factures!: TrancheStatusesDto;
   peutAssigner!: boolean;
+  // Personnalisation (01/11/2026) : la direction ajoute, modifie, retire des lignes.
+  peutPersonnaliser!: boolean;
+  personnalisations!: ProjectCustomizationDto[];
   optionsTs!: TsOptionDto[];
   attentes!: InvoiceWaitsDto;
   etapes!: ProjectStepDto[];
