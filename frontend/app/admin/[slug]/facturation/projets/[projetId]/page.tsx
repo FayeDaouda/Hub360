@@ -38,7 +38,7 @@ import {
   STATUTS_REGLEMENT_BUREAU,
   type StatutReglementBureau,
 } from '@/lib/types';
-import { daysSince, formatAmount, formatCompactAmount, todayIso } from '@hub/domain';
+import { daysSince, ETAPE, formatAmount, formatCompactAmount, todayIso } from '@hub/domain';
 import { useConfirmer } from '@/components/confirmation';
 import { Modal } from '@/components/ui/dialog';
 import { Pill } from '@/components/ui/pill';
@@ -68,7 +68,8 @@ const PILL_REGLEMENT: Record<StatutReglementBureau, string> = {
 // Selon la matrice (finances_factures) : écriture = préparer les brouillons
 // (Dir. GC) ; validation = émettre, avoir, paiements (« la CFO seule
 // enregistre les paiements »). Affichage seulement — le serveur revérifie.
-type Droits = { ecriture: boolean; validation: boolean };
+// Encaisser : étape « Encaissements » (matrice, 31/10/2026), à part de l'émission.
+type Droits = { ecriture: boolean; validation: boolean; encaissement: boolean };
 
 function actionsPossibles(
   f: Facture,
@@ -82,7 +83,7 @@ function actionsPossibles(
   return {
     modifiable: f.statut === 'brouillon' && d.ecriture,
     emissible: f.statut === 'brouillon' && droits.validation && contresigne(f.affaireTtc),
-    encaissable: f.statut === 'emise' && !f.estAvoir && d.validation,
+    encaissable: f.statut === 'emise' && !f.estAvoir && droits.encaissement && valide(f.affaireTtc),
     annulable: f.statut === 'emise' && !f.estAvoir && d.validation,
   };
 }
@@ -95,6 +96,7 @@ export default function FacturationPage(props: Props) {
   const droits: Droits = {
     ecriture: niveauSuffisant(session, 'finances_factures', 'ecriture'),
     validation: niveauSuffisant(session, 'finances_factures', 'validation'),
+    encaissement: niveauSuffisant(session, ETAPE.financesEncaissements, 'validation'),
   };
   // Régler un bureau d'études = une charge (finances_charges), pas une facture.
   const peutReglerBureau = niveauSuffisant(session, 'finances_charges', 'validation');

@@ -18,17 +18,17 @@ import {
   type LigneParametre,
   type Statut,
 } from './regles-rentabilite';
-import { formatMonthYear, ROLE_CEO, ROLE_CFO, ROLE_COMPANY_ADMIN, ROLE_HR, todayIso, toIsoDay } from '@hub/domain';
+import { ETAPE, formatMonthYear, ROLE_CFO, ROLE_HR, todayIso, toIsoDay } from '@hub/domain';
+import { aLaPermission } from '../../commun/permission.guard';
 
-type Acteur = { userId: string; societeId: string; role: string };
+type Acteur = { userId: string; societeId: string; role: string; permissions?: Record<string, string> };
 type Acces = 'montants' | 'taux';
 
-// Décision 8 (21/10/2026) : les montants (coût, marge) au CFO et au CEO
-// seuls — croisés avec les heures visibles dans Projets, ils permettraient de
-// recalculer les salaires ; tout autre rôle que la matrice ouvre aux marges
-// voit le taux et la couleur (revue CIO, 22/10/2026 : la matrice fait foi,
-// plus de liste parallèle) ; le compte d'administration n'a pas accès.
-const ACCES_MONTANTS = new Set([ROLE_CFO, ROLE_CEO]);
+// Décision 8 (21/10/2026) : les montants (coût, marge) — croisés avec les
+// heures visibles dans Projets, ils permettraient de recalculer les salaires —
+// demandent la Lecture de « Rentabilité en montants » (matrice, 31/10/2026 ;
+// au départ le CFO et le CEO) ; les autres rôles ouverts aux marges voient le
+// taux et la couleur.
 
 const arrondi = (n: number) => Math.round(n);
 const heures1 = (n: number) => Math.round(n * 10) / 10;
@@ -64,9 +64,7 @@ export class RentabiliteService {
   // Le contrôleur exige finances_marges en lecture (matrice) ; ici, le
   // niveau de détail selon la fonction.
   private acces(a: Acteur): Acces {
-    if (a.role === ROLE_COMPANY_ADMIN)
-      throw new ForbiddenException('La rentabilité par projet n’est pas ouverte au compte d’administration.');
-    return ACCES_MONTANTS.has(a.role) ? 'montants' : 'taux';
+    return aLaPermission(a.permissions, ETAPE.financesRentabiliteDetail, 'lecture') ? 'montants' : 'taux';
   }
 
   // --- Calcul ------------------------------------------------------------------
@@ -455,7 +453,7 @@ export class RentabiliteService {
   // affiché est inscrit au journal de la paie (jamais le montant).
   async salaries(a: Acteur, projetId: string) {
     if (this.acces(a) !== 'montants')
-      throw new ForbiddenException('Le détail par salarié est réservé au CFO et au CEO.');
+      throw new ForbiddenException('Le détail par salarié demande la Lecture de « Rentabilité en montants ».');
     const { lignes } = await this.calculer(a.societeId, null);
     const l = lignes.find((x) => x.projet.id === projetId);
     if (!l) throw new NotFoundException('Projet introuvable');
@@ -495,7 +493,7 @@ export class RentabiliteService {
     });
     const noms = new Map(auteurs.map((u) => [u.id, nomDe(u)]));
     return {
-      peutModifier: a.role === ROLE_CFO,
+      peutModifier: aLaPermission(a.permissions, ETAPE.financesRentabiliteDetail, 'ecriture'),
       premierMois: premierMoisModifiable(todayIso()),
       enVigueur: this.parametresEnVigueur(lignes as LigneParametre[]),
       definitions: PARAMETRES,
@@ -512,7 +510,10 @@ export class RentabiliteService {
   }
 
   async modifierParametre(a: Acteur, p: { cle: string; valeur: number | null; dateEffet: string; motif: string }) {
-    if (a.role !== ROLE_CFO) throw new ForbiddenException('Seul le CFO modifie les paramètres de rentabilité.');
+    if (!aLaPermission(a.permissions, ETAPE.financesRentabiliteDetail, 'ecriture'))
+      throw new ForbiddenException(
+        'Modifier les paramètres de rentabilité demande l’Écriture de « Rentabilité en montants ».',
+      );
     const def = PARAMETRES[p.cle as CleParametre];
     if (!def) throw new BadRequestException('Paramètre inconnu.');
     if (p.valeur === null && !def.videPermis)

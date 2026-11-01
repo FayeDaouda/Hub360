@@ -58,8 +58,14 @@ describe('règles de rentabilité (lot 7, phase 1)', () => {
 });
 
 describe('RentabiliteService', () => {
-  const CFO = { userId: 'U-CFO', societeId: 'S1', role: 'CFO' };
-  const CEO = { userId: 'U-CEO', societeId: 'S1', role: 'CEO (transverse)' };
+  // Droits de départ (matrice, 31/10/2026) : montants au CFO et au CEO, paramètres au CFO.
+  const CFO = { userId: 'U-CFO', societeId: 'S1', role: 'CFO', permissions: { 'finances.rentabilite_detail': 'LE' } };
+  const CEO = {
+    userId: 'U-CEO',
+    societeId: 'S1',
+    role: 'CEO (transverse)',
+    permissions: { 'finances.rentabilite_detail': 'L' },
+  };
   const CTO = { userId: 'U-CTO', societeId: 'S1', role: 'CTO (transverse)' };
   const CIO = { userId: 'U-CIO', societeId: 'S1', role: 'CIO (transverse)' };
 
@@ -183,7 +189,7 @@ describe('RentabiliteService', () => {
 
   // Revue CIO (22/10/2026) : la matrice fait foi (le CIO n'a plus les marges,
   // la porte du contrôleur le refuse) ; ici, tout rôle admis hors CFO/CEO voit le taux.
-  it('CTO (et tout rôle que la matrice ouvre) : taux et couleur, aucun montant ; administration : refusée', async () => {
+  it('sans « Rentabilité en montants » (CTO, CIO de test sans droits) : taux et couleur, aucun montant', async () => {
     const r = await svc().s.portefeuille(CTO);
     expect(r.lignes.find((l) => l.projet.id === 'P1')).toMatchObject({
       ht: null,
@@ -194,7 +200,6 @@ describe('RentabiliteService', () => {
     });
     expect(r.totaux).toMatchObject({ ht: null, cout: null, marge: null });
     expect((await svc().s.portefeuille(CIO)).totaux).toMatchObject({ ht: null, cout: null, marge: null });
-    await expect(svc().s.portefeuille({ ...CIO, role: 'societe_admin' })).rejects.toThrow(ForbiddenException);
     await expect(svc().s.salaries(CTO, 'P1')).rejects.toThrow(ForbiddenException);
   });
 

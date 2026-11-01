@@ -19,6 +19,7 @@ import {
   formatMonthYear,
   plural,
   ROLE_CEO,
+  ETAPE,
   ROLE_CFO,
   ROLE_COMPANY_ADMIN,
   todayIso,
@@ -126,7 +127,18 @@ export class SyntheseService {
             paiements: { select: { montant: true } },
           },
         }),
-        this.rentabilite.portefeuille({ userId: '', societeId, role: ROLE_CEO }, mois).catch(() => null),
+        // Synthèse du HUB pour le CEO et le CFO : la rentabilité en montants.
+        this.rentabilite
+          .portefeuille(
+            {
+              userId: '',
+              societeId,
+              role: ROLE_CEO,
+              permissions: { [ETAPE.financesMarges]: 'L', [ETAPE.financesRentabiliteDetail]: 'L' },
+            },
+            mois,
+          )
+          .catch(() => null),
         this.reportingRh.contenu(societeId, mois).catch((): { libelle: string; valeur: string }[] => []),
         this.pilotage.contenuDirection(societeId, mois, jour).catch((): { libelle: string; valeur: string }[] => []),
         this.prisma.dossierCrm.findMany({

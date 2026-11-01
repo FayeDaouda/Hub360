@@ -58,6 +58,45 @@ function droitsDepart(nomRole: string, niveaux: Record<string, NiveauPermission>
     ...NO_RIGHTS,
     lecture: versDroits(niveaux.crm_totaux).lecture || versDroits(niveaux.finances_devis).lecture,
   };
+  // Finances (lot 3, migration 20261101120000_finances_etapes) : mêmes règles.
+  const devis = versDroits(niveaux.finances_devis);
+  const factures = versDroits(niveaux.finances_factures);
+  const marges = versDroits(niveaux.finances_marges);
+  const charges = versDroits(niveaux.finances_charges);
+  const est = (...roles: string[]) => roles.includes(nomRole);
+  droits[ETAPE.financesMarges] = { ...NO_RIGHTS, lecture: marges.lecture };
+  droits[ETAPE.financesCharges] = { ...NO_RIGHTS, lecture: charges.lecture, validation: charges.validation };
+  droits[ETAPE.financesContresignature] = { ...NO_RIGHTS, validation: est(ROLE_CEO) };
+  droits[ETAPE.financesCatalogue] = {
+    ...NO_RIGHTS,
+    lecture: devis.lecture,
+    ecriture: est(ROLE_CEO, ROLE_COMPANY_ADMIN),
+    suppression: est(ROLE_CEO, ROLE_COMPANY_ADMIN),
+  };
+  droits[ETAPE.financesEncaissements] = {
+    ...NO_RIGHTS,
+    lecture: factures.lecture,
+    validation: factures.validation,
+    suppression: factures.validation,
+  };
+  droits[ETAPE.financesCloture] = {
+    ...NO_RIGHTS,
+    lecture: factures.lecture,
+    validation: factures.validation,
+    suppression: est(ROLE_CEO),
+  };
+  droits[ETAPE.financesParametres] = { ...NO_RIGHTS, lecture: factures.lecture, ecriture: est(ROLE_CFO) };
+  droits[ETAPE.financesRentabiliteDetail] = {
+    ...NO_RIGHTS,
+    lecture: marges.lecture && est(ROLE_CFO, ROLE_CEO),
+    ecriture: marges.lecture && est(ROLE_CFO),
+  };
+  droits[ETAPE.financesCommissions] = {
+    ...NO_RIGHTS,
+    lecture: est(ROLE_COO, ROLE_CFO, ROLE_COMPANY_ADMIN) || charges.lecture,
+    ecriture: est(ROLE_COO),
+    validation: est(ROLE_CFO, ROLE_COMPANY_ADMIN),
+  };
   return droits;
 }
 

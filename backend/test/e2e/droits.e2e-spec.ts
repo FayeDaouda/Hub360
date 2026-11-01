@@ -144,3 +144,41 @@ describe('Matrice des droits · CRM', () => {
     expect(((await api(app, cfo).get('/dossiers').expect(200)).body as Dossier[])[0]).not.toHaveProperty('apporteur');
   });
 });
+
+// Lot 3 (Finances) : « seul le CEO modifie le catalogue », « seul le CFO règle
+// la numérotation » sont des cases.
+describe('Matrice des droits · Finances', () => {
+  let app: INestApplication;
+  let cio: string;
+  const roles: Record<string, string> = {};
+  beforeAll(async () => {
+    app = await demarrer();
+    cio = await connecter(app, COMPTES.cio);
+    for (const r of ((await api(app, cio).get('/roles').expect(200)).body as Matrice).roles) roles[r.nom] = r.id;
+  });
+  const regler = (role: string, etapeCle: string, droits: Record<string, boolean>) =>
+    api(app, cio)
+      .put('/roles/droits', { changements: [{ roleId: roles[role], etapeCle, droits }] })
+      .expect(200);
+  afterAll(async () => {
+    await regler('CEO', 'finances.catalogue', { ...AUCUN, lecture: true, ecriture: true, suppression: true });
+    await regler('CFO', 'finances.parametres', { ...AUCUN, lecture: true, ecriture: true });
+    await app.close();
+  });
+
+  it('catalogue : le CEO perd l’Écriture, la porte se ferme à la requête suivante', async () => {
+    const ceo = await connecter(app, COMPTES.ceo);
+    // Corps vide : la porte passe (400 de validation) tant que le droit est là.
+    await api(app, ceo).post('/produits-services', {}).expect(400);
+    await regler('CEO', 'finances.catalogue', { ...AUCUN, lecture: true });
+    await api(app, ceo).post('/produits-services', {}).expect(403);
+  });
+
+  it('paramètres de facturation : le CFO perd l’Écriture', async () => {
+    const cfo = await connecter(app, COMPTES.cfo);
+    expect((await api(app, cfo).get('/factures/parametres').expect(200)).body.peutModifier).toBe(true);
+    await regler('CFO', 'finances.parametres', { ...AUCUN, lecture: true });
+    expect((await api(app, cfo).get('/factures/parametres').expect(200)).body.peutModifier).toBe(false);
+    await api(app, cfo).post('/factures/parametres/numerotation', {}).expect(403);
+  });
+});

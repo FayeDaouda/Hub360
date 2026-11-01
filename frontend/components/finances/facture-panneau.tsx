@@ -26,7 +26,8 @@ type Props = {
   document: FactureDocumentProps | null; // aperçu : le modèle imprimé (lot 6)
   statut: { libelle: string; classe: string };
   societeNom: string;
-  droits: { ecriture: boolean; validation: boolean; emission?: boolean };
+  // encaissement : étape « Encaissements » (à part de l'émission, 31/10/2026).
+  droits: { ecriture: boolean; validation: boolean; emission?: boolean; encaissement?: boolean };
   onMaj: (f: FactureCentrale) => void;
   onSupprimee: () => void;
   onTelecharger: () => void;
@@ -144,7 +145,7 @@ export function FacturePanneau({
               ))}
             </ul>
           )}
-          {droits.validation && encaissable && !paiement && (
+          {(droits.encaissement ?? droits.validation) && encaissable && !paiement && (
             <button
               type="button"
               className="btn-ghost fac-bouton"

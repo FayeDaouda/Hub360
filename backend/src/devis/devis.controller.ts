@@ -7,6 +7,7 @@ import { RequiertPermission } from '../commun/permission.decorator';
 import { ValidationCeoAuDelaDuSeuil } from '../finances/seuil-ceo.guard';
 import { DevisService } from './devis.service';
 import { CreerDevisDto, PatchDevisDto, ReponseDevisDto } from './dto';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { societeId: string; userId: string } };
 
@@ -51,7 +52,7 @@ export class DevisController {
   }
 
   @Delete(':id')
-  @RequiertPermission('finances_devis', 'ecriture')
+  @RequiertPermission(ETAPE.financesOffres, 'suppression')
   @HttpCode(204)
   supprimer(@Req() req: R, @Param('id') id: string) {
     return this.devis.supprimer(req.user.societeId, id);

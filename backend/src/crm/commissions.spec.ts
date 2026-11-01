@@ -169,9 +169,9 @@ describe('CommissionsService', () => {
     expect(prisma.commissionApporteur.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['C2'] } } });
   });
 
-  it('seul le CFO paie ; le COO est prévenu', async () => {
-    const coo = { userId: 'U', societeId: 'S1', role: 'COO' };
-    await expect(svc().s.payer(coo, 'C1', { date: '2026-10-01', mode: 'virement' })).rejects.toThrow('Seul le CFO');
+  it('payer demande la Validation des commissions (le CFO au départ) ; le COO est prévenu', async () => {
+    const coo = { userId: 'U', societeId: 'S1', role: 'COO', permissions: { 'finances.commissions': 'LE' } };
+    await expect(svc().s.payer(coo, 'C1', { date: '2026-10-01', mode: 'virement' })).rejects.toThrow('Validation');
     const { s, prisma, notifications } = svc();
     prisma.commissionApporteur.findFirst.mockResolvedValue({
       id: 'C1',
@@ -185,11 +185,15 @@ describe('CommissionsService', () => {
         apporteurUtilisateur: null,
       },
     });
-    await s.payer({ userId: 'CFO1', societeId: 'S1', role: 'CFO' }, 'C1', {
-      date: '2026-10-01',
-      mode: 'virement',
-      reference: 'VIR-12',
-    });
+    await s.payer(
+      { userId: 'CFO1', societeId: 'S1', role: 'CFO', permissions: { 'finances.commissions': 'LV' } },
+      'C1',
+      {
+        date: '2026-10-01',
+        mode: 'virement',
+        reference: 'VIR-12',
+      },
+    );
     expect(prisma.commissionApporteur.updateMany).toHaveBeenCalledWith({
       where: { id: 'C1', statut: 'a_payer' },
       data: {
@@ -205,15 +209,23 @@ describe('CommissionsService', () => {
     );
   });
 
-  it('coordonnées : le COO seul, identité confirmée, CFO et CEO prévenus sans les numéros', async () => {
+  it('coordonnées : l’Écriture des commissions (le COO au départ), identité confirmée, CFO et CEO prévenus sans les numéros', async () => {
     await expect(
-      svc().s.modifierCoordonnees({ userId: 'C', societeId: 'S1', role: 'CFO' }, 'D1', { rib: 'SN01' }),
-    ).rejects.toThrow('Seul le COO');
+      svc().s.modifierCoordonnees(
+        { userId: 'C', societeId: 'S1', role: 'CFO', permissions: { 'finances.commissions': 'LV' } },
+        'D1',
+        { rib: 'SN01' },
+      ),
+    ).rejects.toThrow('Écriture');
     const { s, prisma, notifications, confirmation } = svc();
-    await s.modifierCoordonnees({ userId: 'COO1', societeId: 'S1', role: 'COO' }, 'D1', {
-      wave: '77 000 00 00',
-      confirmation: 'secret',
-    });
+    await s.modifierCoordonnees(
+      { userId: 'COO1', societeId: 'S1', role: 'COO', permissions: { 'finances.commissions': 'LE' } },
+      'D1',
+      {
+        wave: '77 000 00 00',
+        confirmation: 'secret',
+      },
+    );
     expect(confirmation.verifier).toHaveBeenCalledWith('COO1', 'secret');
     expect(prisma.coordonneesApporteur.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ dossierCrmId: 'D1', wave: '77 000 00 00', confirmation: 'mot_de_passe' }),

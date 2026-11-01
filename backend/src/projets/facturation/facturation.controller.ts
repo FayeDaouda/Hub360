@@ -17,6 +17,7 @@ import {
   DemandeAvoirDto,
 } from './dto';
 import { ControleInterneService } from './controle-interne.service';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { societeId: string; userId: string; role: string } };
 
@@ -106,7 +107,7 @@ export class FacturationController {
   }
 
   @Delete(':factureId')
-  @RequiertPermission('finances_factures', 'ecriture')
+  @RequiertPermission(ETAPE.financesFactures, 'suppression')
   supprimer(@Req() req: R, @Param('id') id: string, @Param('factureId') factureId: string) {
     return this.facturation.supprimer(req.user.societeId, id, factureId);
   }
@@ -126,7 +127,7 @@ export class FacturationController {
   }
 
   @Post(':factureId/paiements')
-  @RequiertPermission('finances_factures', 'validation')
+  @RequiertPermission(ETAPE.financesEncaissements, 'validation')
   @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
   ajouterPaiement(
     @Req() req: R,
@@ -138,7 +139,7 @@ export class FacturationController {
   }
 
   @Delete(':factureId/paiements/:paiementId')
-  @RequiertPermission('finances_factures', 'validation')
+  @RequiertPermission(ETAPE.financesEncaissements, 'suppression')
   @ValidationCeoAuDelaDuSeuil('facture', 'factureId')
   supprimerPaiement(
     @Req() req: R,

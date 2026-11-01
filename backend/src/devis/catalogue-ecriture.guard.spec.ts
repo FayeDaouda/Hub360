@@ -1,23 +1,34 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { CatalogueEcritureGuard } from './catalogue-ecriture.guard';
 
-const ctx = (role: string, societeSlug = 'grey') =>
+const ctx = (permissions: Record<string, string>, societeSlug = 'grey', method = 'POST') =>
   ({
-    switchToHttp: () => ({ getRequest: () => ({ user: { role, societeSlug }, params: { slug: 'grey' } }) }),
+    switchToHttp: () => ({
+      getRequest: () => ({ method, user: { permissions, societeSlug }, params: { slug: 'grey' } }),
+    }),
   }) as unknown as ExecutionContext;
 
+// Écriture de l'étape « Catalogue » (matrice, 31/10/2026 ; au départ le CEO
+// et l'administration).
 describe('CatalogueEcritureGuard', () => {
-  it.each([['CEO (transverse)'], ['societe_admin']])('%s de la société → autorisé', (role) => {
-    expect(new CatalogueEcritureGuard().canActivate(ctx(role))).toBe(true);
+  it('Écriture du catalogue, sur la société de son jeton → autorisé', () => {
+    expect(new CatalogueEcritureGuard().canActivate(ctx({ 'finances.catalogue': 'LE' }))).toBe(true);
   });
 
-  it.each([['CFO'], ['CIO (transverse)'], ['Dir. GC'], ['Salarié']])('%s → 403', (role) => {
-    expect(() => new CatalogueEcritureGuard().canActivate(ctx(role))).toThrow(ForbiddenException);
+  it.each([[{ 'finances.catalogue': 'L' }], [{ finances_devis: 'LEVS' }], [{}]])('sans l’Écriture → 403', (p) => {
+    expect(() => new CatalogueEcritureGuard().canActivate(ctx(p))).toThrow(ForbiddenException);
   });
 
-  it('CEO connecté sur une autre société → 403', () => {
-    expect(() => new CatalogueEcritureGuard().canActivate(ctx('CEO (transverse)', 'autre'))).toThrow(
+  it('connecté sur une autre société → 403', () => {
+    expect(() => new CatalogueEcritureGuard().canActivate(ctx({ 'finances.catalogue': 'LE' }, 'autre'))).toThrow(
       ForbiddenException,
     );
   });
+});
+
+it('retirer une prestation demande la Suppression du catalogue', () => {
+  expect(() => new CatalogueEcritureGuard().canActivate(ctx({ 'finances.catalogue': 'LE' }, 'grey', 'DELETE'))).toThrow(
+    ForbiddenException,
+  );
+  expect(new CatalogueEcritureGuard().canActivate(ctx({ 'finances.catalogue': 'LES' }, 'grey', 'DELETE'))).toBe(true);
 });

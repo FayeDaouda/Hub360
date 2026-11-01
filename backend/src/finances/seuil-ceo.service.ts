@@ -4,9 +4,9 @@ import { signataireRequis } from '../contrats/domaine';
 import { montantTtcLignes } from '../devis/domaine';
 import { ventilationTva } from '../projets/domaine/gardes';
 import { PrismaService } from '../prisma/prisma.service';
-import { agitPourCeo } from '../commun/delegation-ceo';
+import { agitPourCeo, estContresignataire } from '../commun/delegation-ceo';
 import { ReglagesService } from '../reglages/reglages.service';
-import { formatAmount, ROLE_CEO, ROLE_COMPANY_ADMIN } from '@hub/domain';
+import { formatAmount, ROLE_COMPANY_ADMIN } from '@hub/domain';
 
 // Validation financière du CEO au-delà du seuil (décision du 12/10/2026) : le
 // CEO voit toutes les Finances, mais ne valide (envoi d'une offre, émission,
@@ -31,7 +31,7 @@ type FactureAffaire = {
   projetId: string | null;
 };
 
-export type ActeurSeuil = { userId: string; role: string };
+export type ActeurSeuil = { userId: string; role: string; permissions?: Record<string, string>; fullAccess?: boolean };
 
 @Injectable()
 export class SeuilCeoService {
@@ -103,7 +103,7 @@ export class SeuilCeoService {
   // encaissements et les avoirs (circuit propre) ne sont pas exclusifs.
 
   async verifierDevis(acteur: ActeurSeuil, societeId: string, devisId: string, exclusif = false) {
-    if (acteur.role !== ROLE_CEO && !exclusif) return;
+    if (!estContresignataire(acteur) && !exclusif) return;
     const devis = await this.prisma.devis.findFirst({
       where: { id: devisId, societeId },
       select: { lignes: LIGNES_TTC },
@@ -137,7 +137,7 @@ export class SeuilCeoService {
   }
 
   async verifierFacture(acteur: ActeurSeuil, societeId: string, factureId: string, exclusif = false) {
-    if (acteur.role !== ROLE_CEO && !exclusif) return;
+    if (!estContresignataire(acteur) && !exclusif) return;
     const f = await this.prisma.facture.findFirst({
       where: { id: factureId, societeId },
       select: {
@@ -155,7 +155,10 @@ export class SeuilCeoService {
   }
 
   private async controler(acteur: ActeurSeuil, societeId: string, montantTtc: number, exclusif: boolean) {
-    if (acteur.role === ROLE_CEO) return this.exigerAuDela(societeId, montantTtc);
+    // Carte blanche : aucune limite ; titulaire de la contresignature : au-delà
+    // du seuil seulement.
+    if (acteur.fullAccess) return;
+    if (estContresignataire(acteur)) return this.exigerAuDela(societeId, montantTtc);
     if (!exclusif || acteur.role === ROLE_COMPANY_ADMIN) return;
     const seuil = await this.seuil(societeId);
     if (signataireRequis(montantTtc, seuil) !== 'ceo') return;

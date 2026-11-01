@@ -43,7 +43,12 @@ const CEO = {
   userId: 'U',
   societeId: 'S',
   role: 'CEO (transverse)',
-  permissions: { projets: 'lecture', finances_factures: 'validation', finances_devis: 'validation' } as const,
+  permissions: {
+    projets: 'lecture',
+    finances_factures: 'validation',
+    finances_devis: 'validation',
+    'finances.contresignature': 'V',
+  },
 };
 
 describe('AttentionService', () => {

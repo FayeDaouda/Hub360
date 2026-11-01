@@ -7,7 +7,7 @@ import { FacturationService } from './facturation.service';
 
 const dec = (n: number) => new Prisma.Decimal(n);
 const CFO = { userId: 'U-CFO', role: 'CFO' };
-const CEO = { userId: 'U-CEO', role: 'CEO (transverse)' };
+const CEO = { userId: 'U-CEO', role: 'CEO (transverse)', permissions: { 'finances.contresignature': 'V' } };
 
 function svc(
   o: {
@@ -94,7 +94,7 @@ describe('ControleInterneService · avoirs (revue CFO 20/10/2026)', () => {
     );
   });
 
-  it('décision : le CEO seul, jamais sur sa propre demande ; refus motivé', async () => {
+  it('décision : la contresignature (le CEO au départ), jamais sur sa propre demande ; refus motivé', async () => {
     const { s, facturation } = svc();
     await s.deciderAvoir('S1', 'D1', CEO, true);
     expect(facturation.creerAvoir).toHaveBeenCalledWith('S1', 'P1', 'F1', CEO.userId);
@@ -120,9 +120,9 @@ describe('ControleInterneService · clôture mensuelle', () => {
     });
   });
 
-  it('réouverture : le CEO, avec un motif ; le CFO est prévenu', async () => {
+  // Qui rouvre : la Suppression de « Clôture du mois », vérifiée par la route.
+  it('réouverture : avec un motif ; le CFO est prévenu', async () => {
     const clos = { clotures: [{ mois: '2026-09', action: 'cloture' }] };
-    await expect(svc(clos).s.rouvrir('S1', '2026-09', CFO, 'Erreur de date')).rejects.toThrow(/CEO/);
     await expect(svc(clos).s.rouvrir('S1', '2026-09', CEO, 'x')).rejects.toThrow(/motif/);
     const { s, prisma, notifications } = svc(clos);
     await s.rouvrir('S1', '2026-09', CEO, 'Paiement du 30/09 mal daté');

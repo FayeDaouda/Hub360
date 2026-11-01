@@ -6,6 +6,7 @@ import { RequiertPermission } from '../commun/permission.decorator';
 import { CatalogueEcritureGuard } from './catalogue-ecriture.guard';
 import { ProduitsServicesService } from './produits-services.service';
 import { CreerProduitServiceDto, PatchProduitServiceDto } from './produits-services.dto';
+import { ETAPE } from '@hub/domain';
 
 type R = { user: { societeId: string } };
 
@@ -18,7 +19,7 @@ export class ProduitsServicesController {
 
   @Get()
   @UseGuards(BackOfficeGuard, PermissionGuard)
-  @RequiertPermission('finances_devis', 'lecture')
+  @RequiertPermission(ETAPE.financesCatalogue, 'lecture')
   findAll(@Req() req: R) {
     return this.produits.findAll(req.user.societeId);
   }
