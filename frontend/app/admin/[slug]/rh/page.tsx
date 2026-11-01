@@ -53,6 +53,7 @@ import { PAYMENT_MODE_LABELS } from '@/features/my-space/constants';
 import type { DossierPersonnel, OptionsDossiers, TypePieceDossier } from '@/lib/types';
 import { DemandesRh } from '@/components/absences/demandes-rh';
 import { IntegrationRh } from '@/components/rh/integration-rh';
+import { RecrutementVue } from '@/components/recrutement/recrutement-vue';
 import { FeuillesTempsRh } from '@/components/rh/feuilles-temps-rh';
 import { ATraiterRh, type DonneesRh } from '@/components/rh/a-traiter-rh';
 import { getQuestionsOuvertes, getReportingsADeposer } from '@/lib/pilotage';
@@ -77,7 +78,7 @@ function messageErreur(e: unknown, repli: string) {
   return e instanceof ApiError ? e.message : repli;
 }
 
-type Onglet = 'personnel' | 'temps' | 'integration' | 'demandes';
+type Onglet = 'personnel' | 'temps' | 'integration' | 'demandes' | 'recrutement';
 type Compteurs = { feuilles: number; demandes: number; integrations: number; points: number };
 
 // « Grey Concrete » → « Concrete » (tuile Effectif, maquette).
@@ -95,6 +96,8 @@ export default function RhPage(props: Props) {
   const agitTemps =
     niveauSuffisant(session, ETAPE.rhTemps, 'ecriture') || niveauSuffisant(session, ETAPE.rhTemps, 'validation');
   const agitIntegration = niveauSuffisant(session, ETAPE.rhIntegration, 'ecriture');
+  // Onglet « Recrutement » (01/11/2026) : la vue du module, côté RH.
+  const voitRecrutement = niveauSuffisant(session, ETAPE.recrutementPostes, 'lecture');
   const deposeBulletins = niveauSuffisant(session, ETAPE.rhBulletins, 'ecriture');
   const agitDemandes =
     niveauSuffisant(session, ETAPE.rhDemandes, 'ecriture') || niveauSuffisant(session, ETAPE.rhDemandes, 'validation');
@@ -113,7 +116,10 @@ export default function RhPage(props: Props) {
   const ongletDemande = parametres.get('onglet');
   const dossierDemande = parametres.get('dossier');
   const [onglet, setOnglet] = useState<Onglet>(
-    ongletDemande === 'temps' || ongletDemande === 'integration' || ongletDemande === 'demandes'
+    ongletDemande === 'temps' ||
+      ongletDemande === 'integration' ||
+      ongletDemande === 'demandes' ||
+      ongletDemande === 'recrutement'
       ? ongletDemande
       : 'personnel',
   );
@@ -362,6 +368,7 @@ export default function RhPage(props: Props) {
               ['temps', `Feuilles de temps${compte(compteurs?.feuilles)}`],
               ['integration', `Intégration${compte(compteurs?.integrations)}`],
               ['demandes', `Demandes${compte(compteurs ? compteurs.demandes + paiementsAValider : null)}`],
+              ...(voitRecrutement ? [['recrutement', 'Recrutement'] as const] : []),
             ] as const
           ).map(([o, libelle]) => (
             <button
@@ -410,6 +417,7 @@ export default function RhPage(props: Props) {
         {onglet === 'temps' && <FeuillesTempsRh slug={params.slug} ecriture={agitTemps} />}
         {onglet === 'integration' && <IntegrationRh slug={params.slug} ecriture={agitIntegration} />}
         {onglet === 'demandes' && <DemandesRh slug={params.slug} ecriture={agitDemandes} />}
+        {onglet === 'recrutement' && voitRecrutement && <RecrutementVue slug={params.slug} />}
         {fiche}
         {depot}
       </>

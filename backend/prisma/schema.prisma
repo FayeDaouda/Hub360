@@ -308,6 +308,9 @@ enum NotificationType {
   poste_a_approuver // Recrutement (01/11/2026) : ouverture d'un poste à approuver
   poste_decide // Recrutement : votre demande d'ouverture de poste a été tranchée
   embauche_decidee // Recrutement : un candidat embauché, dossier RH ouvert
+  poste_ouvert // Recrutement : un poste vient d'ouvrir, candidats à trouver (RH)
+  entretien_planifie // Recrutement : entretien fixé (au demandeur du poste)
+  candidat_decide // Recrutement : candidat embauché ou refusé (au demandeur du poste)
 }
 
 model Notification {
@@ -3061,6 +3064,7 @@ model PosteRecrutement {
   approuveParId String?     @map("approuve_par_id")
   approuveLe    DateTime?   @map("approuve_le")
   motifRefus    String?     @map("motif_refus")
+  direct        Boolean     @default(false) // embauche directe : pourvu d'emblée
   createdAt     DateTime    @default(now()) @map("created_at")
 
   societe      Societe       @relation(fields: [societeId], references: [id], onDelete: Cascade)
@@ -3071,20 +3075,21 @@ model PosteRecrutement {
 }
 
 model Candidature {
-  id          String           @id @default(uuid())
-  posteId     String           @map("poste_id")
-  prenom      String
-  nom         String
-  email       String?
-  telephone   String?
-  notes       String           @default("")
-  etape       EtapeCandidature @default(candidature)
-  decideParId String?          @map("decide_par_id")
-  decideLe    DateTime?        @map("decide_le")
-  motif       String?
-  dossierId   String?          @map("dossier_id") // dossier du personnel ouvert à l'embauche
-  creeParId   String           @map("cree_par_id")
-  createdAt   DateTime         @default(now()) @map("created_at")
+  id           String           @id @default(uuid())
+  posteId      String           @map("poste_id")
+  prenom       String
+  nom          String
+  email        String?
+  telephone    String?
+  notes        String           @default("")
+  etape        EtapeCandidature @default(candidature)
+  decideParId  String?          @map("decide_par_id")
+  decideLe     DateTime?        @map("decide_le")
+  motif        String?
+  dossierId    String?          @map("dossier_id") // dossier du personnel ouvert à l'embauche
+  rendezVousId String?          @map("rendez_vous_id") // entretien : rendez-vous de l'Agenda
+  creeParId    String           @map("cree_par_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
 
   poste PosteRecrutement @relation(fields: [posteId], references: [id], onDelete: Cascade)
 

@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { refFacture } from '../projets/domaine/config';
 import { joursRetardFacture, ventilationTva } from '../projets/domaine/gardes';
 import { ProjectAlertsService } from '../projects/project-alerts.service';
+import { RecrutementService } from '../recrutement/recrutement.service';
 import { DemandesService } from '../rh/demandes.service';
 import { ROLE_CEO, ROLE_COMPANY_ADMIN, todayIso } from '@hub/domain';
 
@@ -27,7 +28,8 @@ const TRANCHE_PAR_JALON: Partial<Record<JalonFacture, 'F1' | 'F2' | 'F3'>> = {
 // « À votre attention » (accueil du CEO, Pilotage) : ce qui attend une
 // décision ou une relance, rassemblé depuis les modules — projets en retard
 // (dont retards qualifiés), factures F1 à F3 prêtes à émettre ou impayées
-// après échéance, avenants TS non acceptés, absences dont on est le N+1.
+// après échéance, avenants TS non acceptés, absences dont on est le N+1,
+// recrutement (postes à approuver, candidats à décider — 01/11/2026).
 // Chaque rubrique suit la matrice de l'acteur (null = rubrique hors de ses
 // droits) ; décisions et reportings viennent de la vue Pilotage elle-même.
 @Injectable()
@@ -37,6 +39,7 @@ export class AttentionService {
     private projectAlerts: ProjectAlertsService,
     private seuilCeo: SeuilCeoService,
     private demandes: DemandesService,
+    private recrutement: RecrutementService,
   ) {}
 
   async attention(a: ActeurAttention) {
@@ -44,10 +47,11 @@ export class AttentionService {
       a.role === ROLE_COMPANY_ADMIN || aLaPermission(a.permissions, module, niveau);
     const [projets, factures, ts] = [voit('projets'), voit('finances_factures'), voit('finances_devis')];
     const jour = todayIso();
-    const [alertes, impayees, absences] = await Promise.all([
+    const [alertes, impayees, absences, recrutement] = await Promise.all([
       projets || factures || ts ? this.projectAlerts.alerts(a.societeId) : null,
       factures ? this.impayees(a.societeId, jour) : [],
       this.demandes.aValider(a),
+      this.recrutement.aTraiter(a),
     ]);
     return {
       retards: projets ? alertes!.retards : null,
@@ -63,6 +67,7 @@ export class AttentionService {
         dateFin: d.dateFin,
         jours: d.jours,
       })),
+      recrutement,
     };
   }
 

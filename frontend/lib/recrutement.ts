@@ -1,6 +1,7 @@
 import { apiSociete } from './client-api';
 
-// Recrutement (lot 13, 01/11/2026) — API NestJS sous …/recrutement.
+// Recrutement (lot 13, 01/11/2026 ; côté RH le même jour) — API NestJS sous
+// …/recrutement.
 export type Poste = {
   id: string;
   intitule: string;
@@ -9,11 +10,13 @@ export type Poste = {
   statut: 'a_approuver' | 'ouvert' | 'pourvu' | 'ferme';
   demandePar: string;
   motifRefus: string | null;
+  direct: boolean; // embauche directe : pourvu d'emblée
   candidats: { candidature: number; entretien: number; embauche: number; refusee: number };
 };
 export type VueRecrutement = {
   postes: Poste[];
   equipes: { id: string; nom: string }[];
+  personnes: { id: string; nom: string }[]; // à inviter à un entretien
   droits: {
     demanderPoste: boolean;
     approuverPoste: boolean;
@@ -22,6 +25,8 @@ export type VueRecrutement = {
     gererCandidats: boolean;
     retirerCandidats: boolean;
     decider: boolean;
+    embaucheDirecte: boolean;
+    voirGroupe: boolean;
   };
 };
 export type Candidat = {
@@ -35,7 +40,23 @@ export type Candidat = {
   motif: string | null;
   decideLe: string | null;
   dossierId: string | null;
+  entretien: { debut: string; fin: string; lieu: string | null } | null; // rendez-vous de l'Agenda
 };
+export type RecrutementSociete = {
+  societe: { id: string; nom: string; slug: string };
+  embauches12Mois: number;
+  postes: { id: string; intitule: string; statut: 'a_approuver' | 'ouvert'; candidature: number; entretien: number }[];
+};
+export type EmbaucheDirecte = {
+  prenom: string;
+  nom: string;
+  intitule: string;
+  dateEntree: string;
+  celluleId?: string;
+  email?: string;
+  telephone?: string;
+};
+export type Entretien = { debut: string; fin: string; lieu?: string; inviteIds?: string[] };
 
 const base = '/recrutement';
 const post = <T>(slug: string, chemin: string, body: object) =>
@@ -63,3 +84,8 @@ export const deciderEmbauche = (
 ) => post<{ ok: true }>(slug, `/candidats/${id}/decision`, d);
 export const retirerCandidat = (slug: string, id: string) =>
   apiSociete<{ ok: true }>(slug, `${base}/candidats/${id}`, { method: 'DELETE' });
+export const getRecrutementGroupe = (slug: string) => apiSociete<RecrutementSociete[]>(slug, `${base}/groupe`);
+export const embaucheDirecte = (slug: string, e: EmbaucheDirecte) =>
+  post<{ ok: true; dossierId: string }>(slug, '/embauche-directe', e);
+export const planifierEntretien = (slug: string, id: string, e: Entretien) =>
+  post<{ ok: true }>(slug, `/candidats/${id}/entretien`, e);

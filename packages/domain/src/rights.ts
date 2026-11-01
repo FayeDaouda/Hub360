@@ -150,4 +150,7 @@ export const ETAPE = {
   recrutementPostes: 'recrutement.postes',
   recrutementCandidatures: 'recrutement.candidatures',
   recrutementDecision: 'recrutement.decision',
+  // Recrutement côté RH (01/11/2026).
+  recrutementDirect: 'recrutement.direct',
+  recrutementGroupe: 'recrutement.groupe',
 } as const;

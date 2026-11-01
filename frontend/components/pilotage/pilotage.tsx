@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   AlarmClock,
   Banknote,
+  Briefcase,
   CalendarCheck,
   ChevronDown,
   Clock3,
@@ -71,6 +72,7 @@ const TUILES: Record<string, { libelle: string; icone: LucideIcon; montant?: boo
   remboursements: { libelle: 'Remboursements à traiter', icone: HeartPulse, chemin: 'rh?onglet=demandes' },
   feuilles: { libelle: 'Feuilles de temps à contrôler', icone: Timer, chemin: 'rh?onglet=temps' },
   integration: { libelle: 'Points d’intégration à faire', icone: UserPlus, chemin: 'rh?onglet=integration' },
+  recrutement: { libelle: 'Recrutements en cours', icone: Briefcase, chemin: 'recrutement' },
 };
 
 // Valeur d'un indicateur : rouge hors objectif, vert atteint, couleur de

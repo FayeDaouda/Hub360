@@ -3,6 +3,7 @@ import type { SeuilCeoService } from '../finances/seuil-ceo.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { ProjectAlertsService } from '../projects/project-alerts.service';
 import type { DemandesService } from '../rh/demandes.service';
+import type { RecrutementService } from '../recrutement/recrutement.service';
 import { AttentionService } from './attention.service';
 
 const d = (n: number) => new Prisma.Decimal(n);
@@ -36,7 +37,10 @@ function svc(affaire: number) {
     montantsAffaire: jest.fn().mockResolvedValue(new Map([['F2', affaire]])),
   } as unknown as SeuilCeoService;
   const demandes = { aValider: jest.fn().mockResolvedValue([]) } as unknown as DemandesService;
-  return new AttentionService(prisma, projets, seuil, demandes);
+  const recrutement = {
+    aTraiter: jest.fn().mockResolvedValue({ postes: [], candidats: [] }),
+  } as unknown as RecrutementService;
+  return new AttentionService(prisma, projets, seuil, demandes, recrutement);
 }
 
 const CEO = {
